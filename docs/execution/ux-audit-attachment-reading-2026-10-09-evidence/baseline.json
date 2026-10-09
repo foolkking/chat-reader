@@ -1,0 +1,25 @@
+{
+  "recorded_on": "2026-10-09",
+  "node": {
+    "total": 13,
+    "passed": 0,
+    "failed": 13,
+    "skipped": 0
+  },
+  "scope": "Real AST fragments with synthetic hooks/DOM/transport/canvas; not browser or measured pixels/RSS",
+  "harness_preflight": "First attempt had 9 fixture ReferenceErrors (missing exports binding) and 4 behavioral failures. The harness was corrected before this unchanged-production baseline; preflight is not product evidence.",
+  "sources": [
+    {
+      "sha256": "ec3305f8e6611931aa6ef46cafbe325d013db7f67e79caeda6a05affaf64929a",
+      "path": "apps/web/features/attachments/attachment-viewer.tsx"
+    },
+    {
+      "sha256": "95cf907d86018bef575f1d8ddbe114db9f1bffe18ed1531764c922eac2f621c6",
+      "path": "apps/web/features/attachments/pdfjs-runtime.ts"
+    },
+    {
+      "sha256": "1f60ba594dea46ca6ca019d772ec44b7a1bedcfaaecfa0c0e8c24a8fb9b52259",
+      "path": "scripts/ux/attachment-reading.test.mjs"
+    }
+  ]
+}

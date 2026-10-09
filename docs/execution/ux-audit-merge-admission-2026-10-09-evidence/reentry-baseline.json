@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "ERR-03 continuation before page-level re-entry edits, after the local confirmed-close correction",
+  "command": "node --test scripts/ux/merge-reentry.test.mjs",
+  "passed": 3,
+  "failed": 19,
+  "skipped": 0,
+  "duration_ms": 1638.7654,
+  "passing_controls": ["HTTP 401 hides project merge UI", "HTTP 403 hides project merge UI", "HTTP 404 hides project merge UI"],
+  "evidence": "Actual transpiled page/dialog JSX and installed React static rendering. State setters, queries, admission hydration, transport and portals are explicit doubles. Missing owners/entries are measured in this static execution; runtime timing, focus and layout remain unverified.",
+  "not_distinct_ux_findings": "19 failures are desired contract cases for ERR-03, not 19 separate defects.",
+  "prior_fbk02_correction": "Old bulk components close on selection count below two in an effect. The captured busy-callback failure did not establish a permanently stuck rendered dialog; the explicit accepted-close correction is defensive.",
+  "source_sha256_before_reentry": {
+    "apps/web/features/conversations/conversation-list.tsx": "4aed836d8a0a752cef7e80f629c091d0f0b8819841558b1754213e31b841a989",
+    "apps/web/features/projects/project-conversation-list.tsx": "ddd27c724b94e37d9b8c13d8d0f0b0cf8b2b68008ff825f72c7224fbc386d132",
+    "apps/web/features/conversations/merge-conversations-dialog.tsx": "a6deb34edda43afa88bb2c36b5c823b899a113723dc2fbf8db07cc29b6e1ef6b",
+    "apps/web/features/conversations/use-merge-admission.ts": "b96c41b402913b0f8f27005e4b64873bb7aaff8b23b52777f4cc85c6f95ecc8a",
+    "scripts/ux/merge-reentry.test.mjs": "34470dc5210b7375a66accab8fbb3d976be4b5c6f055f1184ebc855cb43a56a4"
+  }
+}

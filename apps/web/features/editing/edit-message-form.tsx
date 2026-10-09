@@ -164,7 +164,7 @@ export function EditMessageForm({
   const previewTextRef = useRef(previewText);
   previewTextRef.current = previewText;
   const trimmedText = text.trim();
-  const isUnchanged = trimmedText === baselineText.trim();
+  const isUnchanged = text === baselineText;
   const hasAttachmentWork = Object.values(attachmentDrafts).some((draft) => draft.status !== "removed");
   const visibleAttachmentDrafts = Object.values(attachmentDrafts).filter((draft) => draft.status !== "removed");
   useLayoutEffect(() => {
@@ -771,7 +771,6 @@ export function EditMessageForm({
     setRevisionConflict(false);
     setReloadStatus("idle");
     const authoritativeSource = editorViewRef.current?.state.doc.toString() ?? text;
-    const nextTrimmedText = authoritativeSource.trim();
     const unresolvedReferences = findTransientUploadReferences(authoritativeSource);
     const unresolved = Object.values(attachmentDrafts).find((draft) => draft.status !== "ready" && draft.status !== "removed");
     if (unresolved) {
@@ -784,8 +783,8 @@ export function EditMessageForm({
         : `The attachment on line ${unresolvedReferences[0].lineNumber} is still resolving. Wait for it to finish or remove the reference.`);
       return;
     }
-    if (!nextTrimmedText || nextTrimmedText === baselineText.trim()) return;
-    const removedIds = removedAttachmentIds(baselineText, nextTrimmedText);
+    if (!authoritativeSource.trim() || authoritativeSource === baselineText) return;
+    const removedIds = removedAttachmentIds(baselineText, authoritativeSource);
     if (removedIds.length && !confirmedRemoval) {
       setRemovedActions(Object.fromEntries(removedIds.map((attachmentId) => [attachmentId, "keep_in_conversation"])));
       setRemovedConfirmMode(mode);
@@ -795,14 +794,14 @@ export function EditMessageForm({
     const requestToken = ++saveRequestRef.current;
     try {
       const saved = await onSave(
-        nextTrimmedText,
+        authoritativeSource,
         reason.trim() || undefined,
         mode,
         removedIds.map((attachmentId) => ({ attachment_id: attachmentId, action: removedActions[attachmentId] ?? "keep_in_conversation" })),
         editorRevisionRef.current,
       );
       if (requestToken !== saveRequestRef.current) return;
-      const canonicalText = saved?.canonicalText ?? nextTrimmedText;
+      const canonicalText = saved?.canonicalText ?? authoritativeSource;
       setBaselineText(canonicalText);
       setEditorDocument(canonicalText);
       setText(canonicalText);
@@ -1036,14 +1035,14 @@ export function EditMessageForm({
           <section className="relative max-h-[80dvh] w-full overflow-y-auto rounded-t-xl border border-ui bg-raised p-5 shadow-2xl sm:max-w-xl sm:rounded-xl">
             <h2 id={`removed-attachments-${versionNumber}`} className="text-base font-semibold text-primary">{zh ? "已从正文移除附件引用" : "Attachment references were removed"}</h2>
             <p className="mt-1 text-sm text-secondary">{zh ? "默认继续保留在当前对话文件中。" : "Files remain in the conversation by default."}</p>
-            <div className="mt-4 space-y-2">{removedAttachmentIds(baselineText, trimmedText).map((attachmentId) => {
+            <div className="mt-4 space-y-2">{removedAttachmentIds(baselineText, text).map((attachmentId) => {
               const attachment = conversationAttachments.find((item) => item.id === attachmentId);
               const canDetach = canDetachRemovedAttachment(attachmentId);
               return <div key={attachmentId} className="rounded-lg border border-ui bg-surface p-3"><p className="truncate text-sm font-medium text-primary">{attachment?.display_name ?? attachmentId}</p>{!canDetach ? <p className="mt-1 text-xs text-secondary">{zh ? "本次只移除这一处引用，该文件仍在其他位置使用。" : "Only this occurrence is removed; the file is still used elsewhere."}</p> : null}<div className="mt-2 flex flex-wrap gap-3 text-xs"><label className="flex items-center gap-1.5"><input type="radio" name={`removed-${attachmentId}`} checked={(removedActions[attachmentId] ?? "keep_in_conversation") === "keep_in_conversation"} onChange={() => setRemovedActions((current) => ({ ...current, [attachmentId]: "keep_in_conversation" }))} />{zh ? "保留在当前对话文件" : "Keep in conversation"}</label><label className={`flex items-center gap-1.5 ${canDetach ? "" : "opacity-50"}`}><input type="radio" name={`removed-${attachmentId}`} disabled={!canDetach} checked={removedActions[attachmentId] === "detach_from_conversation"} onChange={() => setRemovedActions((current) => ({ ...current, [attachmentId]: "detach_from_conversation" }))} />{zh ? "同时从当前对话文件移除" : "Detach from conversation"}</label></div></div>;
             })}</div>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, trimmedText).map((id) => [id, "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部保留" : "Keep all"}</button>
-              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, trimmedText).map((id) => [id, canDetachRemovedAttachment(id) ? "detach_from_conversation" : "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部移除" : "Detach all eligible"}</button>
+              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, text).map((id) => [id, "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部保留" : "Keep all"}</button>
+              <button type="button" onClick={() => setRemovedActions(Object.fromEntries(removedAttachmentIds(baselineText, text).map((id) => [id, canDetachRemovedAttachment(id) ? "detach_from_conversation" : "keep_in_conversation"])))} className="min-h-9 rounded-lg px-3 text-sm text-secondary hover:bg-subtle">{zh ? "全部移除" : "Detach all eligible"}</button>
               <button type="button" onClick={() => setRemovedConfirmMode(null)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm text-primary">{zh ? "取消保存" : "Cancel save"}</button>
               <button type="button" onClick={() => { const mode = removedConfirmMode; setRemovedConfirmMode(null); void submit(mode, true); }} className="min-h-9 rounded-lg bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)]">{zh ? "确认并保存" : "Confirm and save"}</button>
             </div>

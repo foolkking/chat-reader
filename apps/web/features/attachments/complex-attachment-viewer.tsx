@@ -37,25 +37,34 @@ export function ComplexAttachmentViewer({ attachment, kind, onPresentationMetric
       return;
     }
     const controller = new AbortController();
-    const worker = new Worker(new URL("./complex-attachment-worker.ts", import.meta.url), { type: "module" });
-    const requestId = crypto.randomUUID();
     setResult(null);
     setError(null);
+    let worker: Worker;
+    try {
+      worker = new Worker(new URL("./complex-attachment-worker.ts", import.meta.url), { type: "module" });
+    } catch {
+      setError("预览组件未能启动。请重试加载。");
+      return () => controller.abort();
+    }
+    const requestId = crypto.randomUUID();
     worker.onmessage = (event: MessageEvent<{ requestId: string; ok: boolean; result?: ParseResult; error?: string }>) => {
-      if (event.data.requestId !== requestId) return;
+      if (controller.signal.aborted || event.data.requestId !== requestId) return;
       if (event.data.ok && event.data.result) setResult(event.data.result);
       else setError(event.data.error ?? "无法生成预览，请下载原文件。");
       worker.terminate();
     };
     worker.onerror = () => {
-      setError("预览组件加载失败，请下载原文件。");
+      if (controller.signal.aborted) return;
+      setError("预览组件加载失败。请重试加载。");
+      controller.abort();
       worker.terminate();
     };
     void readPreviewBytes(withAttempt(attachment.content_url, attempt), MAX_SOURCE_BYTES, controller.signal).then((bytes) => {
+      if (controller.signal.aborted) return;
       worker.postMessage({ requestId, kind, filename: attachment.display_name, bytes }, [bytes]);
     }).catch((reason) => {
-      if (reason instanceof DOMException && reason.name === "AbortError") return;
-      setError(reason instanceof Error ? reason.message : "附件读取失败，请下载原文件。");
+      if (controller.signal.aborted || (reason instanceof DOMException && reason.name === "AbortError")) return;
+      setError(reason instanceof Error && reason.message.includes("50 MiB") ? reason.message : "附件读取失败。请重试读取。");
       worker.terminate();
     });
     return () => {
@@ -201,6 +210,7 @@ function formatBytes(bytes: number): string {
 function withAttempt(url: string, attempt: number): string {
   if (!attempt) return url;
   const parsed = new URL(url, window.location.origin);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return url;
   parsed.searchParams.set("complex_viewer_retry", String(attempt));
   return parsed.toString();
 }

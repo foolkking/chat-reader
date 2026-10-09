@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "finding": "FBK-02",
+  "phase": "Before autosave feedback application edits",
+  "command": "node --test --test-reporter=tap scripts/ux/reader-autosave-feedback.test.mjs",
+  "tests": 29,
+  "passed": 10,
+  "failed": 19,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 471.4171,
+  "method": "Compile the complete production ReadingPositionSyncStatus and render actual React static markup. Hook state/lifecycle, Dexie observation/storage, online state, browser events, transport and navigation are explicit doubles; no browser DOM or actual saving/sync service is executed.",
+  "failure_groups": [
+    "Passive Reader status creates a row/live announcement for ordinary queued, submitted or offline-pending positions and repeated save cycles",
+    "A storage failure can include routine saved/pending copy",
+    "Explicit sync details can claim saved success beside storage/read/action/locate errors",
+    "A still-mounted observer's ordinary pending publication cannot remain visually silent"
+  ],
+  "source_sha256": {
+    "apps/web/components/reading-position-sync-status.tsx": "6ef1de6b39a382fd2c79814f8d181db3fbe5618115d4d5c108a7b959397bc068",
+    "scripts/ux/reader-autosave-feedback.test.mjs": "3340b023264851d54ecd62375a568a5a368e8a9c10b99f6f2b1a18e239a4fd34"
+  },
+  "not_verified": ["Live Reader geometry and focus", "Real React scheduling", "Dexie transaction and outbox synchronization", "Browser execution"],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

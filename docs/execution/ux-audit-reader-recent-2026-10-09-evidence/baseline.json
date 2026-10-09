@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "phase": "Before Reader application edits",
+  "command": "node --test --test-reporter=tap scripts/ux/reader-recent-recovery.test.mjs",
+  "tests": 24,
+  "passed": 7,
+  "failed": 17,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 1689.4957,
+  "findings_not_test_count": 4,
+  "method": "Exact AST-extracted recent-open effect and owner declarations from ConversationReader, compiled with TypeScript. Installed QueryClient/Observer; explicit hook/effect, transport and account-generation doubles. Other Reader code is excluded.",
+  "controls": [
+    "Valid same-revision open is recorded once and preserves full detail",
+    "No request before conversation data is available",
+    "Later reading time may carry lower progress",
+    "No fabrication of missing detail",
+    "Accepted same-visit data refresh does not repost",
+    "Synthetic effect replay does not double-admit",
+    "Position, complete-turn and offline cache namespaces remain untouched"
+  ],
+  "failure_groups": [
+    "Lower canonical revision, older/equal reading time and invalid identity/revision/timestamp overwrite current state",
+    "Higher partial summary labels old detail instead of requesting complete canonical detail",
+    "Recent list is not invalidated; offline recording invalidates remote lists",
+    "Rejected open and A-B-A stale failure re-enable the non-idempotent POST",
+    "Route/unmount/account changes do not fence publication or old-view admission",
+    "Changing data source reuses the other source's id-only reservation",
+    "Rejected detached refresh promises are not handled"
+  ],
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-reader.tsx": "bd45902276aa3731e1a243cdd251e8cbb688f05a33757592074ff359a9188d5e",
+    "scripts/ux/reader-recent-recovery.test.mjs": "6305fa62a010a4bf38ee56ac22c8c34f7a5ad74bb27f87f03c86069aefcd6ace"
+  },
+  "not_verified": ["real React lifecycle", "browser navigation/rendering", "real transport races", "PostgreSQL concurrency"],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

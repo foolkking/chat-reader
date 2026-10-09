@@ -256,10 +256,11 @@ export async function getConversation(conversationId: string, signal?: AbortSign
 export async function updateConversation(
   conversationId: string,
   input: ConversationUpdateInput,
+  signal?: AbortSignal,
 ): Promise<ConversationManagementResponse> {
   return fetchJson<ConversationManagementResponse>(
     `/api/conversations/${conversationId}`,
-    jsonRequest("PATCH", input),
+    { ...jsonRequest("PATCH", input), signal },
   );
 }
 
@@ -553,7 +554,7 @@ export async function mergeConversations(input: {
   title?: string;
   projectId?: string;
   idempotencyKey?: string;
-}): Promise<BackgroundTaskRead> {
+}, signal?: AbortSignal): Promise<BackgroundTaskRead> {
   return fetchJson<BackgroundTaskRead>(
     "/api/conversations/merge",
     {
@@ -566,8 +567,13 @@ export async function mergeConversations(input: {
         "Content-Type": "application/json",
         ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : {}),
       },
+      signal: archiveRequestSignal(signal),
     },
   );
+}
+
+export function getConversationMergeRequest(requestKey: string, signal?: AbortSignal): Promise<{ found: boolean; task: BackgroundTaskRead | null }> {
+  return fetchJson(`/api/conversations/merge/requests/${encodeURIComponent(requestKey)}`, { signal: archiveRequestSignal(signal) });
 }
 
 export async function splitConversation(
@@ -759,12 +765,12 @@ export async function getProjects(input: {
   includeArchived?: boolean;
   sort?: ProjectSortMode;
   direction?: SortDirection;
-} = {}): Promise<ProjectRead[]> {
+} = {}, signal?: AbortSignal): Promise<ProjectRead[]> {
   const params = new URLSearchParams();
   if (input.includeArchived) params.set("include_archived", "true");
   if (input.sort) params.set("sort", input.sort);
   if (input.direction) params.set("direction", input.direction);
-  return fetchJson<ProjectRead[]>(`/api/projects${params.size ? `?${params.toString()}` : ""}`);
+  return fetchJson<ProjectRead[]>(`/api/projects${params.size ? `?${params.toString()}` : ""}`, { signal });
 }
 
 export async function createProject(input: ProjectCreate): Promise<ProjectRead> {
@@ -863,10 +869,11 @@ export async function moveConversationToProject(
 export async function placeConversation(
   conversationId: string,
   input: ConversationPlacementInput,
+  signal?: AbortSignal,
 ): Promise<ConversationPlacementResponse> {
   return fetchJson<ConversationPlacementResponse>(
     `/api/conversations/${conversationId}/placement`,
-    jsonRequest("PUT", input),
+    { ...jsonRequest("PUT", input), signal },
   );
 }
 

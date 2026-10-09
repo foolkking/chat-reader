@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "scope": "Review of the first archive-recovery implementation before three local corrections",
+  "first_repaired_run": {
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 733.7758
+  },
+  "expanded_review_run": {
+    "passed": 33,
+    "failed": 3,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 751.0355,
+    "command": "node --test --test-reporter=tap scripts/ux/archived-project-recovery.test.mjs",
+    "failed_cases": [
+      "acknowledgement region is not inside a fetch-busy section during held refresh",
+      "explicit check cancels an older background read instead of remaining disabled behind it",
+      "delayed row removal retains the logical focus owner until focus is actually lost"
+    ]
+  },
+  "evidence": "Actual component markup plus controlled effect/focus callbacks and real QueryObserver/MutationObserver. The busy-ancestor finding is semantic source/static-markup evidence, not an observed screen-reader announcement; focus timing is an explicit double, not a React/browser scheduling reproduction.",
+  "source_sha256_before_correction": {
+    "apps/web/features/projects/archived-project-list.tsx": "35b7cb44ff23d4bec00609d1985cf2614951dcd995015e371e77e8f261b4cee0",
+    "scripts/ux/archived-project-recovery.test.mjs": "d6061ab988c3207951d222b08ed640b050db6f570e66ddccf7f5aab03bf1228c"
+  },
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

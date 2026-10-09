@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "previous_checkpoint": "../ux-audit-reader-recent-2026-10-09-evidence/local-verification.json",
+  "phase": "Before detail-read application edits",
+  "command": "node --test --test-reporter=tap scripts/ux/reader-detail-recovery.test.mjs",
+  "tests": 22,
+  "passed": 5,
+  "failed": 17,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 671.5455,
+  "findings_not_test_count": 2,
+  "method": "Exact AST-extracted Reader early returns, ReaderState JSX and document-title effect with installed QueryObserver. Other Reader markup is an explicit retained-surface marker. Hooks, transport, owner/auth and DOM focus are doubles, not full React/browser acceptance.",
+  "controls": [
+    "Offline detail failure retains its existing error boundary",
+    "Merged source still offers its existing destination action",
+    "Mismatched cached id is not used for retained reading after failure",
+    "Successful reading has no failure recovery UI",
+    "A transient error retains the known cached title and QueryClient snapshot"
+  ],
+  "failure_groups": [
+    "Cached 503/network failures take the blocking ReaderState return despite retained data",
+    "No rendered Retry control exists for initial or cached remote errors; proposed pending/owner/focus contracts cannot be exercised",
+    "Raw transport error text appears instead of localized recovery copy",
+    "Unavailable cached data does not clear the document title"
+  ],
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-reader.tsx": "ed3cd65f5f38c02ba1029d93896914528088ca1cccecf8b072c5d0edc290cd0b",
+    "scripts/ux/reader-detail-recovery.test.mjs": "e91e85e15111998f4d6166f4e8c7932697d0611cfb5161153c774a8f4cf281d7"
+  },
+  "not_verified": ["Full React lifecycle", "Reader DOM identity and scrolling", "Real focus and rendering", "Browser execution"],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "findings": ["STATE-01", "FBK-01"],
+  "phase": "Before Reader readiness/navigation application edits; quiet-autosave feedback is independently repaired",
+  "command": "node --test --test-reporter=tap scripts/ux/reader-navigation-readiness.test.mjs",
+  "tests": 29,
+  "passed": 11,
+  "failed": 18,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 703.2033,
+  "method": "Exact AST-extracted navigation/input/window-application callbacks and readiness, listener, restore, persistence and first-content effects, with real complete-turn helpers, rendered-block registry, active-target resolver and position payload builder. Query snapshots, React hooks/dependency cleanup, transport, timers, DOM geometry, block leases and target alignment are explicit deterministic doubles. Not browser/React lifecycle or real server persistence.",
+  "controls": [
+    "Unresolved content remains unready; a cached-detail mount already has listeners",
+    "Normal remote/offline whole-turn and genuine empty first loads finish readiness",
+    "Programmatic scroll and saved-position restoration do not fabricate new intent or saves",
+    "Real input can cancel an active restore; failed empty target reads cannot fabricate an anchor",
+    "Cleanup removes handlers/cancels scheduled paint; ordinary refreshes do not duplicate listeners or first-content reports"
+  ],
+  "failure_groups": [
+    "Cold-mounted Reader listeners do not attach after detail becomes available while the initial window stays failed",
+    "Accepted independent target content cannot complete readiness or first-content reporting",
+    "Ordinary index/message navigation leaves restore admission unresolved and later valid position saves blocked",
+    "A late original-window success or pending saved restore can reclaim ownership from newer index navigation",
+    "Readiness callback does not fence retired visit/account/window state; hidden Reader listeners remain attached"
+  ],
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-reader.tsx": "fd34ab61c82f6e0075fb6d087ac0d01be5567dfbea22682ed4f50cad859bd659",
+    "scripts/ux/reader-navigation-readiness.test.mjs": "906db0f70a8d92c0c46b03b9e9d2dc069acb16ca24a8af54b29a23b4bfc4a6d1"
+  },
+  "not_verified": ["Real React commit/effect order", "Browser input and DOM geometry", "Actual first paint", "Live position saving/synchronization", "Browser execution"],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

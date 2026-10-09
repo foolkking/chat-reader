@@ -1,5 +1,272 @@
 # Testing
 
+## Attachment/manual-source integrated checkpoint — 2026-10-09
+
+The [attachment ledger](execution/ux-audit-attachment-reading-2026-10-09-evidence/local-verification.json)
+extends, without rewriting, the preceding 72-file Reader checkpoint. One complete
+local Node execution passes **601 / 0 failed / 0 skipped**: the preceding 527,
+26 exact-Markdown, 34 attachment and 14 PDF-policy checks. Tests execute production
+callbacks/components and the installed virtualizer with explicit DOM/transport/
+hook doubles; numerical allocation bounds are not observed CPU/RSS.
+
+An isolated SQLite TestClient batch passes **103 / 0 failed / 0 skipped** across
+manual/edit/split-merge/version, project/metadata/placement/merge recovery and
+recent/reading-position contracts. No PostgreSQL/API/worker service is started.
+Lint, `pnpm --filter web exec tsc --noEmit --incremental false`, a one-worker
+non-standalone Web build and the single Alembic head `20261008_0050` pass.
+
+`playwright test --list` discovers **125 cases in six files**, executing none:
+`attachment-reading` 20, `manual-markdown-fidelity` four, `pdfjs-migration` 12,
+`pdfjs-share` one, `ux-recovery-followup` 79 and `release-stabilization-contract`
+nine. The authorized complete CI keeps all 13 existing Web gates and adds the
+new files to their existing mutation/attachment gates. Full API retains the
+PostgreSQL concurrency opt-in; settings retains its 439-case matrix and separate
+fresh-instance restore. Browser/visual acceptance and exact-source images remain
+pending, as recorded in the [release record](execution/ATTACHMENT_READING_RELEASE_2026-10-09.md).
+The earlier denied local Web start is not retried through another launcher.
+
+## Local-only optimization — 2026-10-09
+
+The latest [Reader quiet-autosave/readiness checkpoint](execution/ux-audit-reader-navigation-readiness-2026-10-09.md)
+passes **527 Node checks**: 31 autosave, 29 navigation/readiness and the preceding
+467. Set task-local TEMP/TMP, collect `$uxScripts = @(rg --files scripts/ux -g '*.test.mjs')`,
+then run `node --test --test-reporter=tap @uxScripts`. Both initial baselines had
+29 cases: autosave 10 passed / 19 failed, readiness 11 passed / 18 failed; both
+same-script repairs passed 29. Autosave's final 31 include two unread-snapshot
+checks and a corrected storage-failure fixture using an actual undefined snapshot.
+Historical baseline/repair records and source hashes are retained separately.
+
+Autosave compiles the complete production component and uses real React static
+markup; hooks/lifecycle, Dexie, transport and browser events are doubles. Readiness
+executes four actual AST-extracted callbacks and seven effects with real complete-
+turn helpers, block registry, active-target resolver and position payload builder.
+Query snapshots, hook/effect scheduling, DOM geometry, time, transport, block
+leases and target alignment are explicit doubles. These checks do not mount a
+full Reader or prove real browser/React scheduling, anchoring or network saving.
+
+Final lint, nonincremental typecheck and bounded one-worker Web build pass.
+Playwright discovery finds **79 tests / 0 executed**: four new 375px Chinese/light
+and 1440px English/dark autosave cases, plus two strengthened index-recovery cases.
+They intend to verify real wheel input, queued local positions, stable Reader
+bounds, eventual server/outbox completion and scoped storage failure/retry. Index
+recovery additionally asserts settled navigation, one first-content mark and a
+real subsequent position save while the original body read stays failed. These
+browser assertions and screenshots remain unexecuted; no visual score is claimed.
+No API change/rerun, service/browser start, commit, CI or deployment occurred.
+
+The preceding [Reader initial-window checkpoint](execution/ux-audit-reader-initial-window-2026-10-09.md)
+passes **467 Node checks**: 32 initial-window and the preceding 435. Use an explicit
+Windows array, `$initialScripts = @(rg --files scripts/ux -g '*.test.mjs')`, then
+`node --test --test-reporter=tap @initialScripts`, after setting task-local TEMP/TMP.
+The initial 24-case baseline was 5 passed / 19 failed; all 24 passed after repair,
+then all 32 expanded cases passed. An earlier extractor-construction assertion
+failed before those cases ran; it is recorded separately, not a product failure.
+
+The harness runs real query options, initial-state JSX, retry/focus callbacks and
+the apply-once effect using installed QueryObserver and the actual complete-turn
+helper. Other Reader UI, hooks, transport, owner/auth, navigation and DOM focus are
+excluded or explicit doubles. The paused-query guard is a controlled cache-state
+test, not a real offline simulation. Whole turns, original/saved anchors, fallback,
+stale action guards and late results are checked; browser scheduling is not.
+
+Final lint, nonincremental typecheck and bounded one-worker Web build pass. The
+browser file discovers **75 tests / 0 executed**, adding six intended cases: initial
+retry with/without saved position and alternate index navigation, at 375px Chinese/light
+and 1440px English/dark. Source message/root preservation, read-only scope, focus
+and stale-error retirement are unexecuted assertions. The separate first-paint/
+position-readiness candidate is not accepted by these tests. No API change/rerun,
+server/browser start, new CI or deployment occurred; prior SQLite counts remain separate.
+
+The preceding [Reader detail-read checkpoint](execution/ux-audit-reader-detail-recovery-2026-10-09.md)
+passes **435 Node checks**: 27 detail recovery and the preceding 408. Run an explicit
+Windows script array, `$detailScripts = @(rg --files scripts/ux -g '*.test.mjs')`, then
+`node --test --test-reporter=tap @detailScripts`, with task-local TEMP/TMP. The 22-case
+baseline was 5 passed / 17 failed, then 22 passed; expanded 27 cases also pass. The
+test executes exact AST-extracted early returns, ReaderState/recovery JSX and retry,
+title and focus callbacks with installed QueryClient/Observer. The rest of Reader
+is an explicit retained-surface marker; hooks, owner/auth, transport and focus are
+doubles. Separate AST checks inspect the notice's real JSX placement. This is not
+full React lifecycle, DOM identity, scroll or browser acceptance.
+
+Lint, nonincremental typecheck and the bounded one-worker Web build pass after final
+edits. Browser discovery finds **69 tests / 0 executed**, adding four cases at 375px
+Chinese/light and 1440px English/dark. They cover initial failure/retry and a real
+sidebar rename followed by failed detail refresh, held read retry, original DOM
+nodes/scroll position, focus and no repeated write/open. The mobile test uses a real
+upward gesture to reveal the auto-hiding header before recording its scroll baseline.
+These assertions, selectors and screenshots remain unexecuted. No server/browser
+started, no CI/deployment is authorized, and API contracts were not changed or rerun.
+The earlier 11/18/19/41-case SQLite checkpoints remain separate and non-additive.
+
+The preceding [Reader recent-open checkpoint](execution/ux-audit-reader-recent-2026-10-09.md)
+passes **408 Node checks**: 37 recent-open cases plus the preceding 371. On Windows,
+use `$recentScripts = @(rg --files scripts/ux -g '*.test.mjs')`, then
+`node --test --test-reporter=tap @recentScripts`, with process-local TEMP/TMP in this
+task's `wkkk` directory. The initial 24-case baseline had 7 passes / 17 failures;
+all 24 passed after repair, then all 37 expanded cases passed. The harness compiles
+the real Reader effect/owner AST statements and uses installed QueryClient/Observer;
+hooks, scheduling, transport and authentication are explicit doubles. It verifies
+revision/time ordering, exact full-detail refresh including failed/older in-flight
+GETs, cache age, same-visit retry prevention, owner/auth retirement and offline scope.
+It does not mount the whole Reader or verify real React lifecycle.
+
+`python -m pytest tests/test_recent_items_api.py tests/test_reading_positions_api.py tests/test_reading_position_sync.py`
+passes **11 tests** (5 recent, 2 position, 4 sync) on disposable SQLite TestClient,
+with task-local storage and a unique `--basetemp`. The sync suite uses its existing
+test-auth fixture; this is not production-auth or PostgreSQL concurrency evidence.
+The new recent tests preserve canonical content/revision and establish that repeated
+POSTs increment count, reading progress has independent time and can decrease, and
+a recent summary is not a full detail. No API implementation or migration changed.
+
+Lint, nonincremental typecheck and the bounded one-worker Web build pass. The
+follow-up browser file discovers **65 tests / 0 executed**, adding four recent-open
+cases at 375px Chinese/light and 1440px English/dark. They use real fixture recent
+POSTs with delayed/lost replies and actual sidebar rename, holding subsequent GETs.
+An intentionally intercepted, non-applied message insertion probes the real dialog's
+expected revision; assertions also check one open and unchanged source. These tests
+remain unexecuted: selectors, scheduling, rendering, focus and screenshots are not
+accepted. `--list` started no service or browser. No CI/deployment is authorized.
+
+The preceding [single-conversation placement checkpoint](execution/ux-audit-conversation-placement-2026-10-09.md)
+passes **371 Node checks**, including 60 placement and the preceding 311 cases.
+On Windows, pass an explicit script array: `$placementScripts = @(rg --files scripts/ux -g '*.test.mjs')`,
+then `node --test --test-reporter=tap @placementScripts`. Set process-local TEMP/TMP
+to this task's `wkkk` directory first. Node does not expand the wildcard itself.
+The placement baseline was 3 passed / 19 failed; the recovery-edge baseline was
+38 passed / 6 failed; the final focus baseline was 58 passed / 2 failed. All failures
+and separate harness/integration corrections remain in the adjacent evidence.
+Actual compiled callbacks/static JSX and installed QueryClient/Observer are used;
+hooks/effects, transport, focus and portals are explicit doubles, not React lifecycle.
+
+`python -m pytest tests/test_conversation_placement_recovery.py tests/test_projects_api.py`
+passes **18 tests** (8 placement + 10 project) with disposable SQLite TestClient,
+task-local storage and a unique `--basetemp`. It verifies canonical acknowledgement,
+revision conflicts/no-ops, preserved reading/message data, inactive targets and the
+default-versus-archived null-summary distinction. The first run's single failure
+used the wrong test response field (`messages` instead of `items`); it is recorded
+as a test correction, not an API fix. No backend implementation or migration changed.
+The prior 19- and 41-case API checkpoints are separate, not newly rerun or additive.
+
+Lint, nonincremental typecheck and the bounded one-worker Web build pass. The
+follow-up browser file discovers **61 tests / 0 executed**: eight new placement
+cases at 375px Chinese/light and 1440px English/dark. Intended assertions cover
+failed picker reads, Home/End/search/session selection, confirmed sidebar moves
+while GETs are held, unchanged real Reader position/source, one-click Unclassified,
+read-only unknown checks and explicit fresh-revision retry. Held move/check phases
+also assert restored Close focus and Tab/Shift+Tab containment. These DOM/focus,
+IME, screenshot and PostgreSQL concurrency claims remain **NOT_VERIFIED**. Discovery
+starts no service or browser; no additional CI submission or deployment is authorized.
+
+The preceding [conversation metadata checkpoint](execution/ux-audit-conversation-metadata-2026-10-09.md)
+passes **311 Node checks**: run the nine scripts in its adjacent verification
+ledger, adding `scripts/ux/conversation-metadata-recovery.test.mjs` (63 cases) to
+the preceding 248-case set below. The initial metadata baseline was 5 passed / 15
+failed, then 20 passed; a separate harness-construction failure is not product evidence.
+The recovery-edge checkpoint was 58 passed / 5 failed, then all 63 passed; it
+covers complete title comparisons, untouched initial no-ops and stale check actions.
+These tests execute real compiled callbacks/JSX and Query behavior, with explicit
+hook/effect, transport, focus, authentication and portal doubles, not React lifecycle.
+
+`python -m pytest tests/test_conversation_metadata.py tests/test_conversation_management_api.py`
+passes **19 tests** on disposable SQLite (11 new metadata + 8 management). Set
+process-local TEMP/TMP and storage roots under the task directory, and supply a
+unique `--basetemp` there. No API implementation or migration changed. Prior 41-case
+API and two skipped PostgreSQL concurrency checkpoints retain their separate meaning.
+Lint, nonincremental typecheck and the bounded one-worker Web build pass. Browser discovery
+finds **53 tests / 0 executed**, adding ten metadata cases at 375px Chinese/light
+and 1440px English/dark: retained/Unicode/cleared input, real Reader updates while
+refresh GETs are held, complete stored/display title comparison and applied/unapplied
+unknown outcomes with failed read checks. The Reader case waits for its initial
+visible title before inspecting the sidebar toggle.
+Their focus, DOM, screenshot and source-invariance assertions remain unexecuted.
+No further CI submission or deployment is authorized.
+
+The preceding project-action/sidebar/archive/list/merge checkpoint passed **248 Node checks**
+with `node --test scripts/ux/project-archive-recovery.test.mjs scripts/ux/sidebar-read-recovery.test.mjs scripts/ux/project-fixture-cleanup.test.mjs scripts/ux/archived-project-recovery.test.mjs scripts/ux/conversation-list-recovery.test.mjs scripts/ux/merge-admission.test.mjs scripts/ux/project-recovery.test.mjs scripts/ux/merge-reentry.test.mjs`:
+43 archive-action, 41 sidebar, 3 synthetic fixture-cleanup, 40 archived-project, 28 list, 43 admission,
+21 project and 29 re-entry cases. They execute actual
+hook/callback/static JSX code and subscribed QueryObserver/MutationObserver transitions with
+explicit scheduling, transport/storage/portal/selection doubles; they are not
+React lifecycle or browser evidence. Coverage includes cached-read recovery,
+truthful active-empty states, read-only retries, no-selection merge recovery,
+permission hiding and old callbacks before passive cleanup. Archived-project checks
+add confirmed restore/cache publication, unknown-result read-only checking, surviving
+result ownership, focus-owner callbacks and current-selection/deletion-confirmation
+guards. Focus and lifecycle scheduling are doubles, not browser acceptance. Lint, separate
+nonincremental typecheck and bounded one-worker Web build pass at this checkpoint.
+Sidebar checks retain actual link/drop identifiers in static markup, distinguish
+initial/empty/error states, hide denied-access rows and verify scoped original GETs.
+The cleanup helper checks enforce the existing archived-before-delete rule through
+a transport double; they are not API or browser execution.
+Archive-action checks exercise the real compiled controller/menu/feedback with
+synthetic confirmation and transport: one owner across menu copies, held-read
+acknowledgement, active/archive cache separation, stale-confirmation/late-response
+fencing and explicit read-only unknown-result recovery. Their focus tests use DOM
+doubles, not real layout. No full-navigation or cross-tab persistence is claimed.
+
+The previous **41 API passes** (disposable SQLite; admission/history/cancellation/
+split-merge/project settings) apply to unchanged backend files, not a rerun here.
+The earlier 54-, 85-, 93-, 121-, 157-, 161- and 205-case Node runs overlap these 248; do not sum them.
+Failed baselines remain intact, including the 19 re-entry failures and eight
+render-fence failures, plus 17 list contract failures across two findings.
+Archived-project evidence preserves the original 9-pass/21-fail baseline, first
+30-pass repair, 33-pass/3-fail review and 36-pass/4-fail selection review.
+Sidebar evidence records its initial harness setup error separately, a 2-pass/33-fail
+desired-contract run, an 8-pass/33-fail run with six passing controls, and the
+41-pass repair. Fixture cleanup separately had 1 pass/2 failures before correction.
+Archive-action evidence preserves its 4-pass/16-fail baseline, 20-pass first repair
+and 43-pass expansion. Its ordinary failed-GET control prevents misreporting a
+default non-throwing invalidation as an archive mutation failure.
+The audit corrects the earlier confirmed-close inference:
+callback-only failure did not prove a permanently stuck rendered dialog.
+
+`test_merge_admission_postgres.py` adds two concurrent same-key cases; both are
+**skipped**, not passed, with `SETTINGS_POSTGRES_INTEGRATION=0`. No PostgreSQL
+fixture is restarted. At that checkpoint, `playwright test --config=playwright.config.ts
+ux-recovery-followup.spec.ts --list` discovered **43 cases**: the nine prior cases,
+four merge, six list-recovery, ten archived-project, eight sidebar and six project-archive cases.
+No browser case ran in this local batch.
+The merge cases use the isolated mutation
+fixture and intended real POST/worker/reload checks, original-key retry and failed
+GET. Recovery now opens without selection; project cases remove only synthetic
+source memberships, while all-list cases explicitly double empty/failed list reads.
+Result visibility/focus must complete while an actual task refresh is held;
+source-message invariance and 375/1440 synthetic screenshots remain required.
+The six list cases require actual reading-node/focus and selection continuity,
+held read-only Retry, unchanged synthetic messages/status, and a real Archive
+destination. Empty active/existence responses are explicit read doubles; an
+injected 503 is not a real outage. Ten archived-project cases add selected-node
+continuity, single/bulk acknowledgement while reads are held, applied/unapplied
+lost-response checks with failed GET recovery, and single/bulk deletion cancellation
+after actual refreshed membership changes. They assert unchanged synthetic source
+messages and membership; final-row responses explicitly filter real results and do
+not claim an empty database. Discovery starts no server and does not execute
+these assertions. The eight sidebar cases require retained actual DOM/focus through
+failure, held scoped Retry without other reads/writes, initial-project error versus
+empty guidance, unchanged synthetic source/membership and 375/1440 screenshots.
+Sidebar/archive reconnect probes advance beyond QueryProvider's existing 15-second
+stale time. Synthetic project cleanup re-archives only its created fixture before
+DELETE; earlier discovery did not exercise this missing precondition. The six new
+archive-action cases require acknowledgement/focus while actual reads are held,
+recovery after menu/drawer closure, failed result-check recovery and explicit retry
+only after an active result. They assert the original PATCH payload, unchanged
+synthetic messages/relations and exactly one applied archive revision bump. These
+assertions and their screenshots have not run. No new CI is authorized. See
+[merge evidence](execution/ux-audit-merge-admission-2026-10-09.md) and the separate
+[earlier list checkpoint](execution/ux-audit-conversation-list-recovery-2026-10-09.md)
+and [archived-project checkpoint](execution/ux-audit-archived-project-recovery-2026-10-09.md),
+then [the sidebar checkpoint](execution/ux-audit-sidebar-read-recovery-2026-10-09.md)
+and [the project-archive checkpoint](execution/ux-audit-project-archive-feedback-2026-10-09.md).
+
+Local-only project recovery (2026-10-09): `node --test scripts/ux/project-recovery.test.mjs`
+passes 21 callback/query/static-markup checks. The project settings API suite
+passes 7 cases; the combined settings/projects/ownership batch passes 20, including
+those same 7 (do not sum them). Lint, nonincremental typecheck and the bounded
+one-worker Web build pass. No local Web server, PostgreSQL fixture or browser was
+started; real layout/focus acceptance remains NOT_VERIFIED. This batch is excluded
+from CI 37812290017 and remains uncommitted. See the
+[verification ledger](execution/ux-audit-project-recovery-2026-10-09.md#verification-ledger).
+
 ## Current release verification — 2026-10-08
 
 The [release record](execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact-source
@@ -12,6 +279,21 @@ Default PWA retains 588 conditional skips; adaptive-import recovery retains one.
 Production HTTP/data acceptance is recorded separately from browser execution.
 No local specified-Chromium application acceptance is inferred. Other dated
 sections below retain their original checkpoint meaning.
+
+### Follow-up CI acceptance — a12ce9e
+
+[CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017)
+passes all five jobs at a12ce9e: API **1,181 passed / 3 skipped / 16 warnings**;
+all 13 Web gates, including **18 negative PWA / 26 mutation passes**; settings
+**439 passed** plus one fresh-instance restore; image build and independent
+inspection. Default PWA has **135 passes / 597 conditional skips**, adaptive
+import **8 passes / 1 conditional skip**. Eight exact-source synthetic recovery
+screenshots were reviewed. This completes the authorized CI repair cycle.
+Artifact 11567238870 is **not deployed**, and excludes the new local project/merge
+batches. No more commit/push, CI or deployment without explicit user direction.
+Exact IDs/digests are in [the acceptance evidence](execution/ux-audit-post-release-recovery-2026-10-08-evidence/ci-a12ce9e.json).
+
+### Earlier follow-up checkpoints — historical
 
 The [follow-on recovery audit](execution/ux-audit-post-release-recovery-2026-10-08.md)
 adds `e2e/ux-recovery-followup.spec.ts` to the existing `source-editor-mutation`

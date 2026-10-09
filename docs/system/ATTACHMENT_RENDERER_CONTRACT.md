@@ -1,5 +1,53 @@
 # Attachment Renderer Contract
 
+## Current reading implementation — 2026-10-09
+
+This section supersedes conflicting baseline capability/limit descriptions below;
+their dated verification remains historical. Release status belongs to
+[Project State](../../PROJECT_STATE.md) and the
+[attachment audit](../execution/ux-audit-attachment-reading-2026-10-09.md).
+
+- One shared owner/Share/offline Viewer and the existing permission/URL routing
+  remain. Empty, missing, uploading and unsupported states are resolved before
+  mounting a renderer; child recovery never grants a download the session denies.
+- PDF.js remains 6.2.108 with a lazy same-package worker, HTTP 64 KiB ranges,
+  disabled streaming/autofetch and no WASM. Fit Page mounts the active page;
+  Fit Width/custom retain continuous scrolling. Pages and optional thumbnails use
+  the installed virtualizer with overscan one, at most two concurrent renders
+  per document and main-page priority. Each bitmap is limited to 4 Mi pixels,
+  4096px per edge and DPR two, independently of CSS zoom. Cancelled rendering
+  settles before canvas reuse; unmounted canvases release their bitmap and the
+  last page lease releases PDF.js page resources. This is a work/allocation bound,
+  not a measured device memory or CPU guarantee.
+- PDF page entry validates on submission, current pages survive fit/zoom/resize,
+  the short final page is reported at the scroll limit, and a failed page has its
+  own retry. Fit-scale labels reflect the actual page; controls wrap in the
+  existing toolbar with 44px targets. Closing fences late module/document work.
+- Gallery keyboard navigation uses the current item, stays inside the dialog and
+  excludes inputs, media, IME and browser modifiers. New items reset transforms;
+  only lost/body focus is recovered after renderer replacement.
+- JSON is a bounded formatted-source/Raw view, not an interactive tree. Transport
+  failure has explicit retry and is not described as invalid/complex JSON.
+  Formatting retains the 8 MiB/depth/node/children bounds. Raw/formatted controls
+  remain reachable. CSV parsing is memoized; the current parser keeps at most
+  10,001 rows (including the header), each accepted row at most 256 columns.
+  Text reads may fetch up to 50 MiB in 8 MiB ranges, not just one 8 MiB range.
+  The old 250,000-cell/64 KiB-field claims are not fully enforced by this parser;
+  extreme-size text/table rendering remains a separate, unaccepted improvement.
+- DOCX/ODT, XLSX/ODS, PPTX/ODP and ZIP use existing bounded lazy browser workers;
+  they are not globally unimplemented. Worker startup failures offer retry before
+  reading bytes; stale bytes/messages are fenced and failed workers terminated.
+  Server complex-derivative capability is a separate feature, not this browser
+  viewer. No additional format/parser dependency or server job is introduced.
+- Retry queries are HTTP(S)-only; Blob/data URLs keep their exact identity. Audio
+  and video keep native controls, metadata preload and no autoplay. Unknown or
+  unsupported formats retain truthful close/download guidance without text decode.
+
+The local integrated checkpoint passes 601 Node and 103 SQLite API cases, lint,
+nonincremental types and a bounded Web build. The 125 discovered browser/contract
+cases are not locally executed. Actual layout, touch, focus, PDF rendering and
+CPU/RSS require their own evidence; no new visual-conformance claim is made here.
+
 ## Offline cache-miss hardening addendum (2026-08-15)
 
 Offline attachment bytes are checked against cached byte-size metadata before

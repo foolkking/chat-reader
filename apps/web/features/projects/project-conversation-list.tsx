@@ -7,6 +7,7 @@ import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, ty
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ApiRequestError,
   archiveConversation,
   getProjectConversations,
   getProjects,
@@ -19,8 +20,9 @@ import {
 } from "../../lib/api";
 import type { BackgroundTaskRead, ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
+import { ConversationPlacementSurface, useConversationPlacement } from "../conversations/conversation-placement";
 import { ConversationUndoNotice, createConversationUndo, type UndoAction } from "../conversations/conversation-undo";
-import { MergeConversationsDialog } from "../conversations/merge-conversations-dialog";
+import { MergeAdmissionNotice, MergeConversationsDialog } from "../conversations/merge-conversations-dialog";
 import { stripLeadingTimestamp } from "../conversations/markdown-renderer";
 import { ProjectSymbol } from "./project-symbol";
 import { ProjectSidebar } from "./project-sidebar";
@@ -48,7 +50,9 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const [undo, setUndo] = useState<UndoAction | null>(null);
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
-  const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const [batchNotice, setBatchNotice] = useState<ReactNode>(null);
+  const [mergeOpenScope, setMergeOpenScope] = useState<string | null>(null);
+  const mergeResultRef = useRef<HTMLParagraphElement>(null);
   const sortBusy = useRef(false);
   const [sortError, setSortError] = useState(false);
   const [activeSortId, setActiveSortId] = useState<string | null>(null);
@@ -68,12 +72,19 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const conversationsQuery = useQuery({
     queryKey: ["project-conversations", projectId, conversationSortMode, conversationSortDirection],
     queryFn: () => getProjectConversations(projectId, { sort: conversationSortMode, direction: conversationSortDirection, limit: 5000 }),
-    placeholderData: (previous) => previous,
+    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === projectId ? previous : undefined,
     staleTime: 10_000,
   });
-  const project = projectsQuery.data?.find((item) => item.id === projectId);
+  const projectUnavailable = conversationsQuery.isError
+    && conversationsQuery.error instanceof ApiRequestError
+    && [401, 403, 404].includes(conversationsQuery.error.status);
+  const project = projectUnavailable ? undefined : projectsQuery.data?.find((item) => item.id === projectId);
   const zh = resolvedLocale === "zh-CN";
-  const conversations = conversationsQuery.data ?? [];
+  const conversations = projectUnavailable ? [] : conversationsQuery.data ?? [];
+  const placement = useConversationPlacement({ scope: "project-list:" + projectId, unavailable: projectUnavailable, onChanged: refreshProject });
+  const selectedMergeConversations = mergeOrderIds
+    .map((id) => conversations.find((conversation) => conversation.id === id))
+    .filter((conversation): conversation is ProjectConversationRead => Boolean(conversation));
   const linearSelection = useLinearSelection({
     ids: conversations.map((conversation) => conversation.id),
     selectedIds: selectedConversationIds,
@@ -117,7 +128,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   }
 
   async function handleSortEnd(event: DragEndEvent) {
-    if (sortBusy.current || conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id || !conversationsQuery.data) return;
+    if (projectUnavailable || sortBusy.current || conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id || !conversationsQuery.data) return;
     const oldIndex = conversationsQuery.data.findIndex((item) => item.id === event.active.id);
     const newIndex = conversationsQuery.data.findIndex((item) => item.id === event.over?.id);
     if (oldIndex < 0 || newIndex < 0) return;
@@ -149,6 +160,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
     setSelectedConversationIds(new Set());
     setMergeOrderIds([]);
     setSelectionMode(false);
+    setMergeOpenScope(null);
   }, [projectId]);
 
   useEffect(() => {
@@ -217,10 +229,31 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               />
             ) : null}
             {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
-      {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
+            {!projectUnavailable ? <MergeConversationsDialog key={projectId} open={mergeOpenScope === projectId}
+              conversations={selectedMergeConversations} title={mergeTitle} busy={bulkBusy === "merge"}
+              recoveryDisabled={bulkBusy !== null} projectId={projectId}
+              onTitleChange={setMergeTitle} onReorder={setMergeOrderIds}
+              onOpen={() => setMergeOpenScope(projectId)} onClose={() => { if (bulkBusy !== "merge") setMergeOpenScope(null); }}
+              resultFocus={() => mergeResultRef.current}
+              onMerge={async (request, signal) => {
+                setBulkBusy("merge");
+                try {
+                  return await mergeConversations({ conversationIds: request.conversationIds, title: request.title,
+                    projectId, idempotencyKey: request.idempotencyKey }, signal);
+                } finally { setBulkBusy(null); }
+              }}
+              onAccepted={(task) => {
+                setMergeOpenScope(null);
+                setSelectedConversationIds(new Set());
+                setMergeOrderIds([]);
+                setMergeTitle(`${project?.name ?? "Project"} merged`);
+                setBatchNotice(<MergeAdmissionNotice task={task} zh={zh} />);
+              }} /> : null}
+            {!projectUnavailable && batchNotice ? <p ref={mergeResultRef} tabIndex={-1} className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
+            <ConversationPlacementSurface placement={placement} />
 
             {batchExport.feedback}
-            {selectionMode ? <SelectionToolbar
+            {selectionMode && !projectUnavailable ? <SelectionToolbar
               selectedCount={selectedConversationIds.size}
               totalCount={conversations.length}
               busy={bulkBusy !== null}
@@ -231,14 +264,10 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               onDone={exitSelectionMode}
             >
               <ProjectBulkActions
-                selectedConversations={mergeOrderIds
-                  .map((id) => conversationsQuery.data?.find((conversation) => conversation.id === id))
-                  .filter((conversation): conversation is ProjectConversationRead => Boolean(conversation))}
-                title={mergeTitle}
-                onTitleChange={setMergeTitle}
+                selectedConversations={selectedMergeConversations}
                 busy={bulkBusy}
                 projects={(projectsQuery.data ?? []).filter((item) => !item.is_default && !item.is_archived && item.id !== projectId)}
-                onReorder={setMergeOrderIds}
+                onOpenMerge={() => setMergeOpenScope(projectId)}
                 onMove={async (ids, targetProjectId) => {
                   setBulkBusy("move");
                   try {
@@ -263,23 +292,6 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                     const result = await runBatchSelection(ids, (id) => removeConversationFromProject(projectId, id));
                     applyBatchResult(result);
                     await refreshProject();
-                  } finally {
-                    setBulkBusy(null);
-                  }
-                }}
-                onMerge={async (ids, title) => {
-                  setBulkBusy("merge");
-                  try {
-                    await mergeConversations({
-                      conversationIds: ids,
-                      title: title.trim() || "Merged conversation",
-                      projectId,
-                      idempotencyKey: crypto.randomUUID(),
-                    });
-                    setSelectedConversationIds(new Set());
-                    setMergeOrderIds([]);
-                    setMergeTitle(`${project?.name ?? "Project"} merged`);
-                    await queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
                   } finally {
                     setBulkBusy(null);
                   }
@@ -324,14 +336,20 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             </SelectionToolbar> : null}
 
             {conversationsQuery.isLoading ? <StateBlock label={resolvedLocale === "zh-CN" ? "正在加载项目对话…" : "Loading project conversations…"} /> : null}
-            {conversationsQuery.isError ? <StateBlock label={conversationsQuery.error.message} /> : null}
+            {conversationsQuery.isError ? <StateBlock error
+              label={projectUnavailable
+                ? (zh ? "项目不存在或当前账户无法访问。" : "This project is unavailable or your account cannot access it.")
+                : conversations.length
+                  ? (zh ? "项目对话更新失败，仍显示上次内容。" : "Could not update project conversations. Previously loaded items are shown.")
+                  : (zh ? "项目对话加载失败，请重试。" : "Could not load project conversations. Try again.")}
+              retry={() => void conversationsQuery.refetch()} retryLabel={zh ? "重试" : "Retry"} busy={conversationsQuery.isFetching} /> : null}
             {conversationsQuery.isSuccess && conversationsQuery.data.length === 0 ? (
               <StateBlock label={resolvedLocale === "zh-CN" ? "这个项目还没有对话" : "No conversations in this project"} />
             ) : null}
 
-            {conversationsQuery.isSuccess && conversationsQuery.data.length > 0 ? (
-              <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversationsQuery.data.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">
-                {conversationsQuery.data.map((conversation) => (
+            {conversations.length > 0 ? (
+              <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface shadow-[var(--shadow-subtle)]">
+                {conversations.map((conversation) => (
                   <SortableProjectConversationRow key={conversation.id} id={conversation.id} enabled={conversationSortMode === "custom" && !selectionMode}><article {...linearSelection.itemHandlers(conversation.id)} data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined} aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined} className="reader-interactive-row group border-b border-ui px-5 py-4 last:border-b-0">
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_190px] md:items-start">
                       <div className="flex min-w-0 gap-3">
@@ -370,7 +388,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                           <p className="text-xs text-secondary" title={fullActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(projectConversationActivity(conversation, conversationSortMode), resolvedLocale)}</p>
                           <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                         </div>
-                        {!selectionMode ? <ConversationActionMenu conversation={conversation} projectId={projectId} projectPinned={conversation.project_relation.is_pinned} onChanged={refreshProject} onUndo={setUndo} /> : null}
+                        {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} projectId={projectId} projectPinned={conversation.project_relation.is_pinned} onChanged={refreshProject} onUndo={setUndo} /> : null}
                       </div>
                     </div>
                   </article></SortableProjectConversationRow>
@@ -405,38 +423,28 @@ function projectConversationActivity(conversation: ProjectConversationRead, mode
 
 function ProjectBulkActions({
   selectedConversations,
-  title,
-  onTitleChange,
   busy,
   projects,
-  onReorder,
   onMove,
   onExport,
   onRemove,
-  onMerge,
+  onOpenMerge,
   onArchive,
   onDelete,
 }: {
   selectedConversations: ProjectConversationRead[];
-  title: string;
-  onTitleChange: (title: string) => void;
   busy: string | null;
   projects: ProjectRead[];
-  onReorder: (ids: string[]) => void;
   onMove: (ids: string[], projectId: string | null) => Promise<void>;
   onExport: (conversations: ProjectConversationRead[]) => Promise<void>;
   onRemove: (ids: string[]) => Promise<void>;
-  onMerge: (ids: string[], title: string) => Promise<void>;
+  onOpenMerge: () => void;
   onArchive: (ids: string[]) => Promise<void>;
   onDelete: (ids: string[]) => Promise<void>;
 }) {
   const selectedIds = selectedConversations.map((conversation) => conversation.id);
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [mergeOpen, setMergeOpen] = useState(false);
-  useEffect(() => {
-    if (selectedIds.length < 2) setMergeOpen(false);
-  }, [selectedIds.length]);
   return (
     <>
       <div className="selection-toolbar-action-group flex flex-wrap justify-end gap-1.5">
@@ -468,16 +476,15 @@ function ProjectBulkActions({
         >
           {zh ? "归档" : "Archive"}
         </button>
-        <button type="button" disabled={busy !== null || selectedIds.length < 2} onClick={() => setMergeOpen(true)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40">{zh ? "合并对话" : "Merge"}</button>
+        <button type="button" disabled={busy !== null || selectedIds.length < 2} onClick={onOpenMerge} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40">{zh ? "合并对话" : "Merge"}</button>
         <button type="button" disabled={busy !== null || selectedIds.length === 0} onClick={() => void onDelete(selectedIds)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-40">{zh ? "删除所选" : "Delete selected"}</button>
       </div>
-      <MergeConversationsDialog open={mergeOpen} conversations={selectedConversations} title={title} busy={busy === "merge"} onTitleChange={onTitleChange} onReorder={onReorder} onMerge={() => onMerge(selectedIds, title)} onClose={() => { if (busy !== "merge") setMergeOpen(false); }} />
     </>
   );
 }
 
-function StateBlock({ label }: { label: string }) {
-  return <div className="rounded-xl border border-ui bg-surface p-5 text-sm text-secondary">{label}</div>;
+function StateBlock({ label, error = false, retry, retryLabel = "Retry", busy = false }: { label: string; error?: boolean; retry?: () => void; retryLabel?: string; busy?: boolean }) {
+  return <div className="rounded-xl border border-ui bg-surface p-5 text-sm text-secondary" role={error ? "alert" : undefined}>{label}{retry ? <button type="button" onClick={retry} disabled={busy} className="btn-secondary ml-3 min-h-11 px-3 py-1 text-xs disabled:opacity-60">{retryLabel}</button> : null}</div>;
 }
 
 function previewConversationText(text?: string | null): string {

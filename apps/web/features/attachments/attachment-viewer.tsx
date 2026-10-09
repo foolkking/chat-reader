@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode, type UIEvent } from "react";
+import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronLeft, ChevronRight, Download, Grid2X2, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { getAttachment } from "../../lib/api";
@@ -15,6 +16,7 @@ import type { AttachmentAccess } from "./attachment-access";
 import {
   friendlyAttachmentType,
   resolveAttachmentCapability,
+  resolveAttachmentDataState,
   type AttachmentViewerKind,
   type AttachmentViewerMode,
 } from "./preview-adapter-registry";
@@ -27,6 +29,7 @@ import {
   type ViewerViewport,
 } from "./viewer-presentation";
 import { parseDelimitedRows } from "./attachment-table-policy";
+import { acquirePdfPage, createPdfRenderQueue, isViewerShortcut, parsePdfPageInput, pdfPageLayout, type PdfFitMode, type PdfPageSize, type PdfRenderQueue } from "./pdf-viewer-policy";
 
 const ComplexAttachmentViewer = lazy(() => import("./complex-attachment-viewer").then((module) => ({ default: module.ComplexAttachmentViewer })));
 
@@ -173,9 +176,18 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
     setContentMetrics(null);
   }, [item?.attachmentId]);
 
+  useLayoutEffect(() => {
+    // Replacing the active renderer can remove its focused zoom/next control.
+    // Recover only lost focus; never interrupt another control the reader chose.
+    if (!document.activeElement || document.activeElement === document.body) {
+      closeRef.current?.focus({ preventScroll: true });
+    }
+  }, [activeKey, attachment?.id]);
+
   useEffect(() => {
     acquireViewerScrollLock();
     const onKeyDown = (event: KeyboardEvent) => {
+      if (!isViewerShortcut(event) || !dialogRef.current?.contains(event.target as Node)) return;
       if (event.key === "ArrowLeft" && session.items.length > 1) {
         event.preventDefault();
         setActiveIndex(-1);
@@ -183,9 +195,11 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
         event.preventDefault();
         setActiveIndex(1);
       } else if (event.key === "+" || event.key === "=") {
-        document.querySelector<HTMLButtonElement>('[data-viewer-zoom="in"]')?.click();
+        const button = dialogRef.current.querySelector<HTMLButtonElement>('[data-viewer-zoom="in"]:not([disabled])');
+        if (button) { event.preventDefault(); button.click(); }
       } else if (event.key === "-") {
-        document.querySelector<HTMLButtonElement>('[data-viewer-zoom="out"]')?.click();
+        const button = dialogRef.current.querySelector<HTMLButtonElement>('[data-viewer-zoom="out"]:not([disabled])');
+        if (button) { event.preventDefault(); button.click(); }
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -193,11 +207,14 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
       document.removeEventListener("keydown", onKeyDown);
       releaseViewerScrollLock();
     };
-  }, [session.items.length]);
+  }, [session.items]);
 
   function setActiveIndex(delta: number) {
-    const next = (index + delta + session.items.length) % session.items.length;
-    setActiveKey(session.items[next]?.itemKey ?? activeKey);
+    setActiveKey((current) => {
+      const currentIndex = Math.max(0, session.items.findIndex((candidate) => candidate.itemKey === current));
+      const next = (currentIndex + delta + session.items.length) % session.items.length;
+      return session.items[next]?.itemKey ?? current;
+    });
     setMode(null);
   }
 
@@ -227,7 +244,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
             <h2 className="truncate text-sm font-semibold text-primary" title={attachment?.display_name}>{attachment?.display_name ?? "正在加载附件"}</h2>
             <p className="truncate text-xs text-secondary">{attachment ? `${friendlyAttachmentType(attachment)} · ${formatBytes(attachment.asset_object?.byte_size ?? 0)}${attachment.scan_status === "scanner_disabled" || attachment.scan_status === "unscanned" ? " · 未扫描" : ""}` : ""}{session.items.length > 1 ? ` · ${index + 1} / ${session.items.length}` : ""}</p>
           </div>
-          <div ref={setToolbarHost} className="order-3 flex min-w-0 basis-full items-center justify-center gap-1 overflow-x-auto sm:order-none sm:basis-auto">
+          <div ref={setToolbarHost} className="order-3 flex min-w-0 max-w-full basis-full flex-wrap items-center justify-start gap-1 sm:order-none sm:basis-auto">
             {viewerKind === "markdown" ? <><ModeButton active={effectiveMode === "markdown-rendered"} onClick={() => setMode("markdown-rendered")}>Rendered</ModeButton><ModeButton active={effectiveMode === "markdown-source"} onClick={() => setMode("markdown-source")}>Source</ModeButton></> : null}
             {viewerKind === "table" ? <><ModeButton active={effectiveMode === "table"} onClick={() => setMode("table")}>Table</ModeButton><ModeButton active={effectiveMode === "table-raw"} onClick={() => setMode("table-raw")}>Raw</ModeButton></> : null}
           </div>
@@ -236,7 +253,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
           {viewerKind === "image" && session.items.length > 1 ? <button type="button" className="hidden h-11 shrink-0 items-center gap-1 rounded-md px-3 text-sm text-secondary hover:bg-subtle sm:inline-flex" onClick={() => setMode("image-overview")} aria-label="查看全部图片" title="查看全部图片"><Grid2X2 className="h-4 w-4" />全部</button> : null}
         </header>
         <div className="min-h-0 overflow-hidden overscroll-contain" data-testid="attachment-viewer-content">
-          {attachmentQuery.isPending ? <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div> : attachmentQuery.isError || !attachment ? <ViewerError message="附件无法加载" onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : offlineUnavailable ? <ViewerError message="离线资源未缓存。重新联网或更新离线副本后重试。" onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : <ViewerBody attachment={attachment} kind={viewerKind} mode={effectiveMode} onModeChange={setMode} session={session} activeIndex={index} onSelect={(next) => { setActiveKey(session.items[next]?.itemKey ?? activeKey); setMode("image-focus"); }} onPrevious={() => setActiveIndex(-1)} onNext={() => setActiveIndex(1)} onMediaDimensions={setMediaDimensions} onPdfPageCount={setPdfPageCount} onComplexPresentationMetrics={setContentMetrics} toolbarHost={toolbarHost} />}
+          {attachmentQuery.isPending ? <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div> : attachmentQuery.isError || !attachment ? <ViewerError message="附件无法加载" onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : offlineUnavailable ? <ViewerError message="离线资源未缓存。重新联网或更新离线副本后重试。" onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : <ViewerBody key={item.itemKey} attachment={attachment} kind={viewerKind} mode={effectiveMode} onModeChange={setMode} session={session} activeIndex={index} onSelect={(next) => { setActiveKey(session.items[next]?.itemKey ?? activeKey); setMode("image-focus"); }} onPrevious={() => setActiveIndex(-1)} onNext={() => setActiveIndex(1)} onMediaDimensions={setMediaDimensions} onPdfPageCount={setPdfPageCount} onComplexPresentationMetrics={setContentMetrics} toolbarHost={toolbarHost} />}
         </div>
         {viewerKind === "image" && session.items.length > 1 && effectiveMode !== "image-overview" ? <div className="flex min-h-16 gap-2 overflow-x-auto border-t border-ui bg-subtle p-2" role="list" aria-label="图片缩略图列表">{session.items.map((candidate, candidateIndex) => <ViewerThumbnail key={candidate.itemKey} item={candidate} access={access} active={candidate.itemKey === activeKey} label={`第 ${candidateIndex + 1} 张`} onClick={() => { setActiveKey(candidate.itemKey); setMode("image-focus"); }} />)}</div> : null}
       </section>
@@ -245,9 +262,19 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   );
 }
 
-function ViewerBody({ attachment, kind, mode, onModeChange, session, activeIndex, onSelect, onPrevious, onNext, onMediaDimensions, onPdfPageCount, onComplexPresentationMetrics, toolbarHost }: { attachment: AttachmentRead; kind: AttachmentViewerKind | null; mode: AttachmentViewerMode | null; onModeChange: (mode: AttachmentViewerMode) => void; session: AttachmentViewerSession; activeIndex: number; onSelect: (index: number) => void; onPrevious: () => void; onNext: () => void; onMediaDimensions: (dimensions: ViewerMediaDimensions) => void; onPdfPageCount: (count: number | null) => void; onComplexPresentationMetrics: (metrics: ViewerContentMetrics | null) => void; toolbarHost: HTMLDivElement | null }) {
+function ViewerBody({ attachment: sourceAttachment, kind, mode, onModeChange, session, activeIndex, onSelect, onPrevious, onNext, onMediaDimensions, onPdfPageCount, onComplexPresentationMetrics, toolbarHost }: { attachment: AttachmentRead; kind: AttachmentViewerKind | null; mode: AttachmentViewerMode | null; onModeChange: (mode: AttachmentViewerMode) => void; session: AttachmentViewerSession; activeIndex: number; onSelect: (index: number) => void; onPrevious: () => void; onNext: () => void; onMediaDimensions: (dimensions: ViewerMediaDimensions) => void; onPdfPageCount: (count: number | null) => void; onComplexPresentationMetrics: (metrics: ViewerContentMetrics | null) => void; toolbarHost: HTMLDivElement | null }) {
+  const dataState = resolveAttachmentDataState(sourceAttachment);
+  const downloadUrl = session.permissions.downloadOriginal && dataState !== "missing" && sourceAttachment.resolution_status !== "offline_unavailable" ? sourceAttachment.download_url ?? undefined : undefined;
+  // All renderer recovery actions obey the same session permission as the header.
+  const attachment = useMemo(() => downloadUrl ? sourceAttachment : { ...sourceAttachment, download_url: null }, [sourceAttachment, downloadUrl]);
+  if (dataState === "uploading" || dataState === "upload_failed") return <ViewerError message={dataState === "uploading" ? "附件尚未上传完成。" : "附件上传未完成，请返回编辑器重试上传。"} />;
+  if (attachment.resolution_status === "offline_unavailable" || dataState === "missing" || !attachment.content_url) {
+    return <ViewerError message="附件内容暂不可用。请关闭后重新打开；离线时可先更新本机副本。" downloadUrl={downloadUrl} />;
+  }
+  if (dataState === "empty") return <ViewerError message="这是空文件，没有可预览的内容。" downloadUrl={downloadUrl} />;
+  if (!kind) return <ViewerError message={downloadUrl ? "此格式暂不支持浏览器内预览。可下载后使用相应应用打开。" : "此格式暂不支持浏览器内预览。"} downloadUrl={downloadUrl} />;
   if ((attachment.asset_object?.byte_size ?? 0) > 50 * 1024 * 1024) {
-    return <ViewerError message="文件超过 50 MiB 浏览器预览上限，请下载原文件。" downloadUrl={attachment.download_url ?? undefined} />;
+    return <ViewerError message="文件超过 50 MiB 浏览器预览上限。" downloadUrl={downloadUrl} />;
   }
   if (kind === "image") return <ImageViewer attachment={attachment} session={session} activeIndex={activeIndex} mode={mode === "image-overview" ? "overview" : "focus"} onSelect={onSelect} onPrevious={onPrevious} onNext={onNext} onMediaDimensions={onMediaDimensions} />;
   if (kind === "markdown") return <TextualViewer attachment={attachment} mode={mode === "markdown-source" ? "source" : "rendered"} onModeChange={onModeChange} markdown />;
@@ -271,10 +298,10 @@ function ImageViewer({ attachment, session, activeIndex, mode, onSelect, onPrevi
     setAttempt(0);
   }, [attachment.id]);
   if (mode === "overview") return <div className="h-full overflow-y-auto overscroll-contain p-4" data-testid="image-overview"><div className="columns-2 gap-3 md:columns-3 lg:columns-4">{session.items.map((item, index) => <ViewerOverviewImage key={item.itemKey} item={item} access={session.access ?? { kind: "owner" }} index={index} onSelect={onSelect} />)}</div></div>;
-  if (failed) return <ViewerError message="无法加载图片预览，原文件仍可下载。" onRetry={() => { setFailed(false); setAttempt((value) => value + 1); }} downloadUrl={attachment.download_url ?? undefined} />;
+  if (failed) return <ViewerError message="无法加载图片预览。" onRetry={() => { setFailed(false); setAttempt((value) => value + 1); }} downloadUrl={attachment.download_url ?? undefined} />;
   return (
     <div className="relative flex h-full min-h-0 items-center justify-center bg-black p-4" data-testid="image-focus">
-      <TransformWrapper initialScale={1} minScale={0.25} maxScale={8} centerOnInit doubleClick={{ mode: "toggle", step: 1 }} wheel={{ step: 0.12 }} panning={{ disabled: false }}>
+      <TransformWrapper key={attachment.id} initialScale={1} minScale={0.25} maxScale={8} centerOnInit doubleClick={{ mode: "toggle", step: 1 }} wheel={{ step: 0.12 }} panning={{ disabled: false }}>
         {({ zoomIn, zoomOut, resetTransform }) => (
           <>
             <TransformComponent wrapperClass="!h-full !w-full" contentClass="flex !h-full !w-full items-center justify-center">
@@ -291,7 +318,7 @@ function ImageViewer({ attachment, session, activeIndex, mode, onSelect, onPrevi
 
 function ViewerOverviewImage({ item, access, index, onSelect }: { item: AttachmentViewerItem; access: AttachmentAccess; index: number; onSelect: (index: number) => void }) {
   const query = useViewerAttachment(item.attachmentId, access);
-  return <button type="button" onClick={() => onSelect(index)} className="mb-3 flex min-h-28 w-full break-inside-avoid items-center justify-center rounded-lg border border-ui bg-subtle p-2 focus-visible:ring-2 focus-visible:ring-[var(--accent)]" aria-label={`查看第 ${index + 1} 张图片`}>{query.data ? <ViewerThumbnailImage attachment={query.data} alt={item.alt ?? query.data.display_name} fallbackLabel={`${index + 1}`} className="h-auto max-h-80 max-w-full object-contain" /> : <Loader2 className="h-4 w-4 animate-spin text-secondary" />}</button>;
+  return <button type="button" onClick={() => onSelect(index)} className="mb-3 flex min-h-28 w-full break-inside-avoid items-center justify-center rounded-lg border border-ui bg-subtle p-2 focus-visible:ring-2 focus-visible:ring-[var(--accent)]" aria-label={`查看第 ${index + 1} 张图片`}>{query.data ? <ViewerThumbnailImage attachment={query.data} alt={item.alt ?? query.data.display_name} fallbackLabel={`${index + 1}`} className="h-auto max-h-80 max-w-full object-contain" /> : query.isError ? <span className="text-sm text-secondary">第 {index + 1} 张 · 打开重试</span> : <Loader2 className="h-4 w-4 animate-spin text-secondary" />}</button>;
 }
 
 function ViewerThumbnail({ item, access, active, label, onClick }: { item: AttachmentViewerItem; access: AttachmentAccess; active: boolean; label: string; onClick: () => void }) {
@@ -327,13 +354,15 @@ function TextualViewer({ attachment, mode, onModeChange: _onModeChange, markdown
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    if (!attachment.content_url) return () => controller.abort();
     setText(null);
     setError(false);
-    void readPreviewText(retryableUrl(attachment.content_url, attempt)!, controller.signal).then(setText).catch((reason) => { if (reason?.name !== "AbortError") setError(true); });
+    if (!attachment.content_url) { setError(true); return () => controller.abort(); }
+    void readPreviewText(retryableUrl(attachment.content_url, attempt)!, controller.signal).then((value) => {
+      if (!controller.signal.aborted) setText(value);
+    }).catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
   }, [attachment.content_url, attempt]);
-  if (error) return <ViewerError message="预览加载失败，原文件仍可下载。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
+  if (error) return <ViewerError message="预览加载失败。请重试读取。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
   if (text === null) return <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div>;
   if (markdown && mode === "rendered") return <div className="h-full overflow-y-auto overscroll-contain bg-page p-5"><div className="mx-auto max-w-[900px]"><MarkdownRenderer text={text} isAssistant={false} scopeId={`attachment-${attachment.id}`} /></div></div>;
   if (table && mode === "rendered") return <DelimitedTableViewer text={text} delimiter={attachment.display_name.toLowerCase().endsWith(".tsv") ? "\t" : ","} />;
@@ -341,7 +370,7 @@ function TextualViewer({ attachment, mode, onModeChange: _onModeChange, markdown
 }
 
 function DelimitedTableViewer({ text, delimiter }: { text: string; delimiter: string }) {
-  const rows = parseDelimitedRows(text, delimiter);
+  const rows = useMemo(() => parseDelimitedRows(text, delimiter), [text, delimiter]);
   if (!rows.length) return <div className="flex h-full items-center justify-center p-6 text-sm text-secondary">空表格 · 没有可显示的行</div>;
   const columns = Math.max(...rows.map((row) => row.length));
   return (
@@ -359,19 +388,33 @@ function DelimitedTableViewer({ text, delimiter }: { text: string; delimiter: st
 function JsonViewer({ attachment }: { attachment: AttachmentRead }) {
   const [text, setText] = useState<string | null>(null);
   const [raw, setRaw] = useState(false);
-  useEffect(() => { if (!attachment.content_url) return; const controller = new AbortController(); void readPreviewText(attachment.content_url, controller.signal).then(setText).catch(() => setText("无法加载 JSON。")); return () => controller.abort(); }, [attachment.content_url]);
-  if (text === null) return <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div>;
-  if (raw || (attachment.asset_object?.byte_size ?? 0) > 8 * 1024 * 1024) return <pre className="h-full overflow-auto whitespace-pre-wrap break-words bg-page p-5 font-mono text-sm text-primary">{text}</pre>;
-  try {
-    const value = JSON.parse(text);
-    const complexity = inspectJsonComplexity(value);
-    if (!complexity.valid) throw new Error(complexity.reason);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setText(null);
+    setError(false);
+    if (!attachment.content_url) { setError(true); return () => controller.abort(); }
+    void readPreviewText(retryableUrl(attachment.content_url, attempt)!, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) setText(value); })
+      .catch(() => { if (!controller.signal.aborted) setError(true); });
+    return () => controller.abort();
+  }, [attachment.content_url, attempt]);
+  const formatted = useMemo(() => {
+    if (text === null || raw) return null;
+    if ((attachment.asset_object?.byte_size ?? 0) > 8 * 1024 * 1024 || text.length > 8 * 1024 * 1024) return { error: "文件较大，已显示原文。" };
+    let value: unknown;
+    try { value = JSON.parse(text); } catch { return { error: "内容不是有效的 JSON，已显示原文。" }; }
+    if (!inspectJsonComplexity(value).valid) return { error: "JSON 结构超出格式化预览上限，已显示原文。" };
     const json = JSON.stringify(value, null, 2);
-    if (json.length > 8 * 1024 * 1024) throw new Error("large");
-    return <div className="h-full overflow-auto bg-page p-5"><div className="mb-3 flex justify-end"><ModeButton active={!raw} onClick={() => setRaw(false)}>Tree</ModeButton><ModeButton active={raw} onClick={() => setRaw(true)}>Raw</ModeButton></div><pre className="whitespace-pre-wrap break-words font-mono text-sm text-primary">{json}</pre></div>;
-  } catch {
-    return <div className="flex h-full flex-col items-center justify-center gap-3 text-secondary"><p>JSON 结构过于复杂，已降级为 Raw。</p><button type="button" onClick={() => setRaw(true)} className="min-h-11 rounded-md border border-ui px-4">打开 Raw</button></div>;
-  }
+    return json.length > 8 * 1024 * 1024 ? { error: "格式化内容较大，已显示原文。" } : { text: json };
+  }, [text, raw, attachment.asset_object?.byte_size]);
+  if (error) return <ViewerError message="JSON 读取失败。请重试读取。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
+  if (text === null) return <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  return <div className="flex h-full min-h-0 flex-col bg-page" data-testid="json-viewer">
+    <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-ui px-3 py-1"><ModeButton active={!raw} onClick={() => setRaw(false)}>格式化</ModeButton><ModeButton active={raw} onClick={() => setRaw(true)}>Raw</ModeButton></div>
+    <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-5">{formatted?.error ? <p className="mb-3 text-sm text-secondary">{formatted.error}</p> : null}<pre className="whitespace-pre-wrap break-words font-mono text-sm text-primary">{formatted?.text ?? text}</pre></div>
+  </div>;
 }
 
 const TEXT_PREVIEW_LIMIT = 50 * 1024 * 1024;
@@ -427,8 +470,6 @@ function inspectJsonComplexity(root: unknown): { valid: true } | { valid: false;
   return { valid: true };
 }
 
-type PdfFitMode = "page" | "width" | "custom";
-
 function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment: AttachmentRead; toolbarHost: HTMLDivElement | null; onPageCountChange: (count: number | null) => void }) {
   const [documentProxy, setDocumentProxy] = useState<import("pdfjs-dist").PDFDocumentProxy | null>(null);
   const [pdfjsVersion, setPdfjsVersion] = useState<string | null>(null);
@@ -437,19 +478,33 @@ function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment:
   const [fitMode, setFitMode] = useState<PdfFitMode>("page");
   const [zoom, setZoom] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageDraft, setPageDraft] = useState<string | null>(null);
+  const [pageInputError, setPageInputError] = useState(false);
+  const [scrollRequest, setScrollRequest] = useState({ page: 1 });
   const [thumbnailRail, setThumbnailRail] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+  const pageSizesRef = useRef(new Map<number, PdfPageSize>());
+  const [, setGeometryRevision] = useState(0);
+  const renderQueue = useMemo(() => createPdfRenderQueue(), [documentProxy]);
+  const onPageSize = useCallback((pageNumber: number, size: PdfPageSize) => {
+    const previous = pageSizesRef.current.get(pageNumber);
+    if (previous?.width === size.width && previous.height === size.height) return;
+    pageSizesRef.current.set(pageNumber, size);
+    setGeometryRevision((value) => value + 1);
+  }, []);
   useEffect(() => {
-    if (!attachment.content_url) return;
     let active = true;
     let task: import("pdfjs-dist").PDFDocumentLoadingTask | null = null;
     setDocumentProxy(null);
     setPdfjsVersion(null);
     setError(false);
+    pageSizesRef.current.clear();
+    if (!attachment.content_url) { setError(true); return; }
     const sourceUrl = retryableUrl(attachment.content_url, attempt)!;
     void loadPdfJs().then((pdfjs) => {
-      if (active) setPdfjsVersion(pdfjs.version);
+      if (!active) return null;
+      setPdfjsVersion(pdfjs.version);
       task = pdfjs.getDocument({
         url: sourceUrl,
         ...(sourceUrl.startsWith("/api/") || /^https?:/i.test(sourceUrl)
@@ -459,133 +514,225 @@ function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment:
       });
       return task.promise;
     }).then((pdf) => {
-      if (!active) return;
+      if (!active || !pdf) return;
       setDocumentProxy(pdf);
       setCurrentPage(1);
+      setPageDraft(null);
+      setPageInputError(false);
+      setScrollRequest({ page: 1 });
       setFitMode("page");
       setZoom(1);
       onPageCountChange(pdf.numPages);
     }).catch(() => { if (active) setError(true); });
-    return () => { active = false; void task?.destroy(); };
+    return () => { active = false; void task?.destroy().catch(() => undefined); };
   }, [attachment.content_url, attempt, onPageCountChange]);
   useEffect(() => () => onPageCountChange(null), [onPageCountChange]);
   useEffect(() => {
     const viewportElement = viewportRef.current;
     if (!viewportElement) return;
-    const update = () => setViewportSize({ width: viewportElement.clientWidth, height: viewportElement.clientHeight });
+    const update = () => setViewportSize((current) => current.width === viewportElement.clientWidth && current.height === viewportElement.clientHeight ? current : { width: viewportElement.clientWidth, height: viewportElement.clientHeight });
     update();
     const observer = new ResizeObserver(update);
     observer.observe(viewportElement);
     return () => observer.disconnect();
   }, [documentProxy, thumbnailRail]);
-  if (error) return <ViewerError message="无法加载 PDF 预览，原文件仍可下载。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
+  if (error) return <ViewerError message="无法加载 PDF 预览。请重试读取。" onRetry={() => setAttempt((value) => value + 1)} downloadUrl={attachment.download_url ?? undefined} />;
   if (!documentProxy) return <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  let actualScale: number | null = null;
+  const currentSize = pageSizesRef.current.get(currentPage);
+  if (currentSize && viewportSize.width && viewportSize.height) {
+    try { actualScale = pdfPageLayout(currentSize, viewportSize, fitMode, zoom).scale; } catch { /* The page supplies local recovery. */ }
+  }
   const selectPage = (pageNumber: number) => {
     const nextPage = Math.min(documentProxy.numPages, Math.max(1, pageNumber));
     setCurrentPage(nextPage);
-    if (fitMode === "page") return;
-    window.requestAnimationFrame(() => {
-      const root = viewportRef.current;
-      const target = root?.querySelector<HTMLElement>(`[data-pdf-page="${nextPage}"]`);
-      if (root && target) root.scrollTo({ top: Math.max(0, target.offsetTop - 12), behavior: "smooth" });
-    });
+    setPageDraft(null);
+    setPageInputError(false);
+    setScrollRequest({ page: nextPage });
+  };
+  const changeFit = (next: PdfFitMode) => {
+    setFitMode(next);
+    setScrollRequest({ page: currentPage });
+  };
+  const changeZoom = (next: number) => {
+    setZoom(Math.min(4, Math.max(0.25, next)));
+    changeFit("custom");
   };
   const toolbar = toolbarHost ? createPortal(
-    <div className="flex min-w-max items-center gap-1" aria-label="PDF 查看工具">
-      {documentProxy.numPages > 1 ? <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => setThumbnailRail((value) => !value)} aria-label={thumbnailRail ? "收起页面缩略图" : "展开页面缩略图"} title={thumbnailRail ? "收起页面缩略图" : "展开页面缩略图"}>{thumbnailRail ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}</button> : null}
-      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" onClick={() => selectPage(currentPage - 1)} disabled={currentPage <= 1} aria-label="上一页"><ChevronLeft className="h-4 w-4" /></button>
-      <span className="min-w-14 text-center text-xs text-secondary" aria-label={`第 ${currentPage} 页，共 ${documentProxy.numPages} 页`}>{currentPage} / {documentProxy.numPages}</span>
-      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" onClick={() => selectPage(currentPage + 1)} disabled={currentPage >= documentProxy.numPages} aria-label="下一页" data-testid="pdf-next-page"><ChevronRight className="h-4 w-4" /></button>
-      <ModeButton active={fitMode === "page"} onClick={() => setFitMode("page")}>Fit page</ModeButton>
-      <ModeButton active={fitMode === "width"} onClick={() => setFitMode("width")}>Fit width</ModeButton>
-      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => { setFitMode("custom"); setZoom((value) => Math.max(0.25, value - 0.1)); }} aria-label="缩小 PDF"><ZoomOut className="h-4 w-4" /></button>
-      <button type="button" className="min-h-10 min-w-14 rounded-md px-2 text-xs text-secondary hover:bg-subtle" onClick={() => { setFitMode("custom"); setZoom(1); }} aria-label="PDF 缩放 100%">{Math.round(zoom * 100)}%</button>
-      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => { setFitMode("custom"); setZoom((value) => Math.min(4, value + 0.1)); }} aria-label="放大 PDF"><ZoomIn className="h-4 w-4" /></button>
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1" aria-label="PDF 查看工具">
+      <div className="flex items-center gap-1">
+        {documentProxy.numPages > 1 ? <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => setThumbnailRail((value) => !value)} aria-expanded={thumbnailRail} aria-label={thumbnailRail ? "收起页面缩略图" : "展开页面缩略图"} title={thumbnailRail ? "收起页面缩略图" : "展开页面缩略图"}>{thumbnailRail ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}</button> : null}
+        <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" onClick={() => selectPage(currentPage - 1)} disabled={currentPage <= 1} aria-label="上一页"><ChevronLeft className="h-4 w-4" /></button>
+        <form className="flex items-center gap-1" onSubmit={(event) => {
+          event.preventDefault();
+          const pageNumber = parsePdfPageInput(pageDraft ?? String(currentPage), documentProxy.numPages);
+          if (pageNumber === null) { setPageInputError(true); return; }
+          selectPage(pageNumber);
+        }}>
+          <input aria-label="PDF 页码" aria-describedby={pageInputError ? "pdf-page-error pdf-page-total" : "pdf-page-total"} aria-invalid={pageInputError} inputMode="numeric" enterKeyHint="go" autoComplete="off" value={pageDraft ?? String(currentPage)} onChange={(event) => { setPageDraft(event.target.value); setPageInputError(false); }} className="h-11 w-14 rounded-md border border-ui bg-surface px-2 text-center text-base tabular-nums text-primary" />
+          <span id="pdf-page-total" className="text-xs tabular-nums text-secondary" aria-label={`共 ${documentProxy.numPages} 页`}>/ {documentProxy.numPages}</span>
+          <button type="submit" className="min-h-11 rounded-md px-2 text-xs text-secondary hover:bg-subtle">跳转</button>
+        </form>
+        <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" onClick={() => selectPage(currentPage + 1)} disabled={currentPage >= documentProxy.numPages} aria-label="下一页" data-testid="pdf-next-page"><ChevronRight className="h-4 w-4" /></button>
+      </div>
+      <div className="flex items-center gap-1"><ModeButton active={fitMode === "page"} onClick={() => changeFit("page")}>Fit page</ModeButton><ModeButton active={fitMode === "width"} onClick={() => changeFit("width")}>Fit width</ModeButton></div>
+      <div className="flex items-center gap-1">
+        <button type="button" data-viewer-zoom="out" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" disabled={actualScale === null || actualScale <= 0.25} onClick={() => changeZoom((actualScale ?? zoom) - 0.1)} aria-label="缩小 PDF"><ZoomOut className="h-4 w-4" /></button>
+        <button type="button" className="min-h-11 min-w-14 rounded-md px-2 text-xs tabular-nums text-secondary hover:bg-subtle" onClick={() => changeZoom(1)} aria-label="PDF 缩放 100%" title="恢复 100%" data-testid="pdf-zoom">{actualScale === null ? "—" : `${Math.round(actualScale * 100)}%`}</button>
+        <button type="button" data-viewer-zoom="in" className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle disabled:opacity-40" disabled={actualScale === null || actualScale >= 4} onClick={() => changeZoom((actualScale ?? zoom) + 0.1)} aria-label="放大 PDF"><ZoomIn className="h-4 w-4" /></button>
+      </div>
+      {pageInputError ? <p id="pdf-page-error" role="alert" className="basis-full text-sm text-secondary">请输入 1 到 {documentProxy.numPages} 之间的页码。</p> : null}
     </div>,
     toolbarHost,
   ) : null;
-  const handleScroll = (event: UIEvent<HTMLDivElement>) => {
-    if (fitMode === "page") return;
-    const root = event.currentTarget;
-    const rootTop = root.getBoundingClientRect().top;
-    let nearestPage = currentPage;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-    for (const node of Array.from(root.querySelectorAll<HTMLElement>("[data-pdf-page]"))) {
-      const distance = Math.abs(node.getBoundingClientRect().top - rootTop - 12);
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestPage = Number(node.dataset.pdfPage ?? currentPage);
-      }
-    }
-    if (nearestPage !== currentPage) setCurrentPage(nearestPage);
-  };
   return (
     <div className="flex h-full min-h-0 bg-subtle" data-testid="pdf-viewer" data-pdfjs-version={pdfjsVersion ?? undefined}>
       {toolbar}
-      {thumbnailRail && documentProxy.numPages > 1 ? <aside className="w-28 shrink-0 overflow-y-auto border-r border-ui bg-page p-2" aria-label="PDF 页面缩略图">{Array.from({ length: documentProxy.numPages }, (_, index) => <PdfThumbnail key={index + 1} documentProxy={documentProxy} pageNumber={index + 1} active={currentPage === index + 1} onClick={() => { setCurrentPage(index + 1); setFitMode("page"); }} />)}</aside> : null}
-      <div ref={viewportRef} className={`min-h-0 min-w-0 flex-1 overscroll-contain ${fitMode === "page" ? "overflow-hidden" : "overflow-auto"}`} onScroll={handleScroll} data-testid="pdf-viewer-pages" data-pdf-fit={fitMode}>
-        {fitMode === "page" ? <div className="flex h-full min-h-0 items-center justify-center p-3"><PdfPage documentProxy={documentProxy} pageNumber={currentPage} fitMode="page" zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} /></div> : <div className="mx-auto flex w-max min-w-full flex-col items-center gap-4 p-4">{Array.from({ length: documentProxy.numPages }, (_, index) => <PdfPage key={index + 1} documentProxy={documentProxy} pageNumber={index + 1} fitMode={fitMode} zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} lazy={index > 1} />)}</div>}
+      {thumbnailRail && documentProxy.numPages > 1 ? <PdfThumbnailRail documentProxy={documentProxy} currentPage={currentPage} onSelect={selectPage} renderQueue={renderQueue} /> : null}
+      <div ref={viewportRef} tabIndex={0} aria-label="PDF 阅读区域" className={`min-h-0 min-w-0 flex-1 overscroll-contain ${fitMode === "page" ? "overflow-hidden" : "overflow-auto"}`} data-testid="pdf-viewer-pages" data-pdf-fit={fitMode}>
+        {fitMode === "page" ? <div className="flex h-full min-h-0 items-center justify-center p-3"><PdfPage documentProxy={documentProxy} pageNumber={currentPage} fitMode="page" zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} renderQueue={renderQueue} onPageSize={onPageSize} /></div> : <PdfPageList documentProxy={documentProxy} currentPage={currentPage} scrollRequest={scrollRequest} onVisiblePageChange={setCurrentPage} fitMode={fitMode} zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} viewportRef={viewportRef} pageSizesRef={pageSizesRef} renderQueue={renderQueue} onPageSize={onPageSize} />}
       </div>
     </div>
   );
 }
 
-function PdfPage({ documentProxy, pageNumber, fitMode, zoom, containerWidth, containerHeight, lazy = false }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; pageNumber: number; fitMode: PdfFitMode; zoom: number; containerWidth: number; containerHeight: number; lazy?: boolean }) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [visible, setVisible] = useState(!lazy);
+function PdfPageList({ documentProxy, currentPage, scrollRequest, onVisiblePageChange, fitMode, zoom, containerWidth, containerHeight, viewportRef, pageSizesRef, renderQueue, onPageSize }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; currentPage: number; scrollRequest: { page: number }; onVisiblePageChange: (page: number) => void; fitMode: PdfFitMode; zoom: number; containerWidth: number; containerHeight: number; viewportRef: RefObject<HTMLDivElement | null>; pageSizesRef: RefObject<Map<number, PdfPageSize>>; renderQueue: PdfRenderQueue; onPageSize: (page: number, size: PdfPageSize) => void }) {
+  const currentPageRef = useRef(currentPage);
+  currentPageRef.current = currentPage;
+  const estimateLayout = (index: number) => {
+    try { return pdfPageLayout(pageSizesRef.current.get(index + 1) ?? { width: 612, height: 792 }, { width: containerWidth, height: containerHeight }, fitMode, zoom); }
+    catch { return { width: Math.max(1, containerWidth - 32), height: 240 }; }
+  };
+  const virtualizer = useVirtualizer({
+    count: documentProxy.numPages,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: (index) => estimateLayout(index).height,
+    overscan: 1,
+    gap: 16,
+    paddingStart: 16,
+    paddingEnd: 16,
+    scrollPaddingStart: 16,
+  });
+  useLayoutEffect(() => {
+    if (!containerWidth || !containerHeight) return;
+    virtualizer.measure();
+    virtualizer.scrollToIndex(currentPageRef.current - 1, { align: "start", behavior: "auto" });
+  }, [containerWidth, containerHeight, fitMode, zoom, virtualizer]);
+  useLayoutEffect(() => {
+    virtualizer.scrollToIndex(scrollRequest.page - 1, { align: "start", behavior: "auto" });
+  }, [scrollRequest, virtualizer]);
   useEffect(() => {
-    const host = hostRef.current;
-    if (!host || visible) return;
-    const observer = new IntersectionObserver((entries) => { if (entries.some((entry) => entry.isIntersecting)) { setVisible(true); observer.disconnect(); } }, { rootMargin: "800px 0px" });
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, [visible]);
-  useEffect(() => {
-    if (!visible || !canvasRef.current) return;
-    let cancelled = false;
-    let renderTask: import("pdfjs-dist").RenderTask | null = null;
-    void documentProxy.getPage(pageNumber).then((page) => {
-      if (cancelled || !canvasRef.current) return;
-      const base = page.getViewport({ scale: 1 });
-      const availableWidth = Math.max(160, containerWidth - 32);
-      const availableHeight = Math.max(160, containerHeight - 32);
-      const scale = fitMode === "page" ? Math.min(availableWidth / base.width, availableHeight / base.height) : fitMode === "width" ? availableWidth / base.width : zoom;
-      const viewport = page.getViewport({ scale: Math.max(0.1, scale) });
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      const canvas = canvasRef.current;
-      canvas.width = Math.floor(viewport.width * ratio);
-      canvas.height = Math.floor(viewport.height * ratio);
-      canvas.style.width = `${Math.floor(viewport.width)}px`;
-      canvas.style.height = `${Math.floor(viewport.height)}px`;
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
-      renderTask = page.render({ canvas, viewport, transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0] });
-      return renderTask.promise;
-    }).catch(() => undefined);
-    return () => { cancelled = true; renderTask?.cancel(); };
-  }, [containerHeight, containerWidth, documentProxy, fitMode, pageNumber, visible, zoom]);
-  return <div ref={hostRef} data-pdf-page={pageNumber} className="flex shrink-0 items-center justify-center">{visible ? <canvas ref={canvasRef} className="bg-white shadow" aria-label={`PDF 第 ${pageNumber} 页`} /> : <div className="h-[28rem] w-[20rem] animate-pulse bg-surface" />}</div>;
+    const root = viewportRef.current;
+    if (!root) return;
+    const update = () => {
+      // A short final page cannot align with the viewport top once scrolling
+      // reaches its limit. Keep the end-of-document page number truthful.
+      if (root.scrollTop > 0 && root.scrollHeight - root.clientHeight - root.scrollTop <= 2) {
+        onVisiblePageChange(documentProxy.numPages);
+        return;
+      }
+      const item = virtualizer.getVirtualItemForOffset(root.scrollTop + 16);
+      if (item) onVisiblePageChange(item.index + 1);
+    };
+    root.addEventListener("scroll", update, { passive: true });
+    return () => root.removeEventListener("scroll", update);
+  }, [documentProxy.numPages, onVisiblePageChange, viewportRef, virtualizer]);
+  const items = virtualizer.getVirtualItems();
+  const width = Math.max(containerWidth, ...items.map((item) => estimateLayout(item.index).width + 32));
+  return <div className="relative min-w-full" style={{ height: virtualizer.getTotalSize(), width }} data-testid="pdf-virtual-pages">
+    {items.map((item) => <div key={item.key} data-index={item.index} ref={virtualizer.measureElement} className="absolute left-0 top-0 flex w-full justify-center px-4" style={{ transform: `translateY(${item.start}px)` }}>
+      <PdfPage documentProxy={documentProxy} pageNumber={item.index + 1} fitMode={fitMode} zoom={zoom} containerWidth={containerWidth} containerHeight={containerHeight} renderQueue={renderQueue} onPageSize={onPageSize} />
+    </div>)}
+  </div>;
 }
 
-function PdfThumbnail({ documentProxy, pageNumber, active, onClick }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; pageNumber: number; active: boolean; onClick: () => void }) {
+function PdfPage({ documentProxy, pageNumber, fitMode, zoom, containerWidth, containerHeight, renderQueue, onPageSize }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; pageNumber: number; fitMode: PdfFitMode; zoom: number; containerWidth: number; containerHeight: number; renderQueue: PdfRenderQueue; onPageSize?: (page: number, size: PdfPageSize) => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const renderingRef = useRef<Promise<void>>(Promise.resolve());
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [attempt, setAttempt] = useState(0);
+  const [size, setSize] = useState<PdfPageSize | null>(null);
   useEffect(() => {
-    let cancelled = false;
+    const canvas = canvasRef.current;
+    if (!canvas || !containerWidth || !containerHeight) return;
+    const controller = new AbortController();
+    let lease: ReturnType<typeof acquirePdfPage> | null = null;
     let renderTask: import("pdfjs-dist").RenderTask | null = null;
-    void documentProxy.getPage(pageNumber).then((page) => {
-      if (cancelled || !canvasRef.current) return;
+    setError(false);
+    setLoading(true);
+    // A cancelled PDF.js task must settle before the same canvas is reused.
+    const work = renderingRef.current.then(() => renderQueue.run(controller.signal, async () => {
+      lease = acquirePdfPage(documentProxy, pageNumber);
+      const page = await lease.promise;
+      if (controller.signal.aborted) return;
       const base = page.getViewport({ scale: 1 });
-      const viewport = page.getViewport({ scale: 82 / base.width });
-      const canvas = canvasRef.current;
-      canvas.width = Math.ceil(viewport.width);
-      canvas.height = Math.ceil(viewport.height);
-      renderTask = page.render({ canvas, viewport });
-      return renderTask.promise;
-    }).catch(() => undefined);
-    return () => { cancelled = true; renderTask?.cancel(); };
-  }, [documentProxy, pageNumber]);
-  return <button type="button" onClick={onClick} aria-current={active ? "page" : undefined} aria-label={`打开 PDF 第 ${pageNumber} 页`} className={`mb-2 flex min-h-24 w-full flex-col items-center gap-1 rounded-md border p-1 text-xs ${active ? "border-[var(--accent)]" : "border-ui"}`}><canvas ref={canvasRef} className="max-w-full bg-white" /><span>{pageNumber}</span></button>;
+      const layout = pdfPageLayout(base, { width: containerWidth, height: containerHeight }, fitMode, zoom, window.devicePixelRatio);
+      onPageSize?.(pageNumber, { width: base.width, height: base.height });
+      setSize({ width: layout.width, height: layout.height });
+      canvas.width = layout.pixelWidth;
+      canvas.height = layout.pixelHeight;
+      canvas.style.width = `${layout.width}px`;
+      canvas.style.height = `${layout.height}px`;
+      renderTask = page.render({ canvas, viewport: page.getViewport({ scale: layout.scale }), transform: layout.ratio === 1 ? undefined : [layout.ratio, 0, 0, layout.ratio, 0, 0] });
+      await renderTask.promise;
+      if (!controller.signal.aborted) setLoading(false);
+    })).catch(() => { if (!controller.signal.aborted) { setError(true); setLoading(false); } });
+    renderingRef.current = work;
+    return () => {
+      controller.abort();
+      renderTask?.cancel();
+      void work.then(() => { canvas.width = 0; canvas.height = 0; lease?.release(); });
+    };
+  }, [containerHeight, containerWidth, documentProxy, fitMode, pageNumber, zoom, attempt, renderQueue, onPageSize]);
+  let displaySize = size;
+  if (!displaySize) {
+    try { const estimate = pdfPageLayout({ width: 612, height: 792 }, { width: containerWidth, height: containerHeight }, fitMode, zoom); displaySize = { width: estimate.width, height: estimate.height }; }
+    catch { displaySize = { width: Math.max(1, Math.min(320, containerWidth - 32)), height: Math.max(1, Math.min(240, containerHeight - 32)) }; }
+  }
+  return <div data-pdf-page={pageNumber} aria-busy={loading} className="relative flex shrink-0 items-center justify-center" style={displaySize}>
+    <canvas ref={canvasRef} width={0} height={0} hidden={error || loading} className="bg-white shadow" aria-label={`PDF 第 ${pageNumber} 页`} />
+    {error ? <div className="absolute inset-0 overflow-auto"><ViewerError message={`第 ${pageNumber} 页预览失败。`} onRetry={() => setAttempt((value) => value + 1)} /></div> : loading ? <span className="absolute text-sm text-secondary">正在加载第 {pageNumber} 页…</span> : null}
+  </div>;
+}
+
+function PdfThumbnailRail({ documentProxy, currentPage, onSelect, renderQueue }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; currentPage: number; onSelect: (page: number) => void; renderQueue: PdfRenderQueue }) {
+  const viewportRef = useRef<HTMLElement | null>(null);
+  const virtualizer = useVirtualizer({ count: documentProxy.numPages, getScrollElement: () => viewportRef.current, estimateSize: () => 144, gap: 8, paddingStart: 8, paddingEnd: 8, overscan: 1 });
+  useEffect(() => { virtualizer.scrollToIndex(currentPage - 1, { align: "auto", behavior: "auto" }); }, [currentPage, virtualizer]);
+  return <aside ref={viewportRef} className="w-28 shrink-0 overflow-y-auto overscroll-contain border-r border-ui bg-page" aria-label="PDF 页面缩略图">
+    <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+      {virtualizer.getVirtualItems().map((item) => <div key={item.key} className="absolute left-0 top-0 w-full px-2" style={{ height: item.size, transform: `translateY(${item.start}px)` }}><PdfThumbnail documentProxy={documentProxy} pageNumber={item.index + 1} active={currentPage === item.index + 1} onClick={() => onSelect(item.index + 1)} renderQueue={renderQueue} /></div>)}
+    </div>
+  </aside>;
+}
+
+function PdfThumbnail({ documentProxy, pageNumber, active, onClick, renderQueue }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; pageNumber: number; active: boolean; onClick: () => void; renderQueue: PdfRenderQueue }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const renderingRef = useRef<Promise<void>>(Promise.resolve());
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const controller = new AbortController();
+    let lease: ReturnType<typeof acquirePdfPage> | null = null;
+    let renderTask: import("pdfjs-dist").RenderTask | null = null;
+    setFailed(false);
+    const work = renderingRef.current.then(() => renderQueue.run(controller.signal, async () => {
+      lease = acquirePdfPage(documentProxy, pageNumber);
+      const page = await lease.promise;
+      if (controller.signal.aborted) return;
+      const base = page.getViewport({ scale: 1 });
+      const layout = pdfPageLayout(base, { width: 114, height: 136 }, "page", 1);
+      canvas.width = layout.pixelWidth;
+      canvas.height = layout.pixelHeight;
+      renderTask = page.render({ canvas, viewport: page.getViewport({ scale: layout.scale }) });
+      await renderTask.promise;
+    }, 1)).catch(() => { if (!controller.signal.aborted) setFailed(true); });
+    renderingRef.current = work;
+    return () => { controller.abort(); renderTask?.cancel(); void work.then(() => { canvas.width = 0; canvas.height = 0; lease?.release(); }); };
+  }, [documentProxy, pageNumber, renderQueue]);
+  return <button type="button" onClick={onClick} aria-current={active ? "page" : undefined} aria-label={`打开 PDF 第 ${pageNumber} 页`} className={`flex h-full w-full flex-col items-center justify-between gap-1 rounded-md border p-1 text-xs text-secondary ${active ? "border-[var(--accent)] font-semibold" : "border-ui"}`}><canvas ref={canvasRef} width={0} height={0} hidden={failed} className="max-w-full bg-white" />{failed ? <span>预览不可用</span> : null}<span>{pageNumber}</span></button>;
 }
 
 function MediaViewer({ attachment, audio = false, onMediaDimensions }: { attachment: AttachmentRead; audio?: boolean; onMediaDimensions: (dimensions: ViewerMediaDimensions) => void }) {
@@ -605,7 +752,7 @@ function ViewerError({ message, onRetry, downloadUrl }: { message: string; onRet
 }
 
 function ModeButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
-  return <button type="button" onClick={onClick} className={`min-h-10 rounded-md px-3 text-xs ${active ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>{children}</button>;
+  return <button type="button" onClick={onClick} aria-pressed={active} className={`min-h-11 shrink-0 rounded-md px-3 text-xs ${active ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>{children}</button>;
 }
 
 function defaultMode(kind: AttachmentViewerKind | null): AttachmentViewerMode | null {
@@ -646,6 +793,7 @@ function retryableUrl(url: string | null | undefined, attempt: number): string |
   if (!url) return undefined;
   if (attempt === 0) return url;
   const parsed = new URL(url, window.location.origin);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return url;
   parsed.searchParams.set("viewer_retry", String(attempt));
   return parsed.toString();
 }

@@ -6,12 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
+  ApiRequestError,
   deleteMessage,
   getTask,
   mergeMessages,
   restoreDeletedMessage,
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
+import { authenticationGeneration } from "../../lib/offline-access";
 import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
 import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
@@ -119,7 +121,15 @@ export function ConversationReader({
   const [tocRefreshOpen, setTocRefreshOpen] = useState(false);
   const [tocRefreshTask, setTocRefreshTask] = useState<{ task: BackgroundTaskRead; input: TocRefreshInput } | null>(null);
   const filesPreferenceReadyRef = useRef(false);
-  const recordedRecentConversationRef = useRef<string | null>(null);
+  const recentOwner = useMemo(() => ({ conversationId, dataSource, epoch: authenticationGeneration(), active: true, attempted: false }), [conversationId, dataSource]);
+  const recentOwnerRef = useRef(recentOwner);
+  recentOwnerRef.current = recentOwner;
+  useLayoutEffect(() => {
+    recentOwner.active = true;
+    return () => { recentOwner.active = false; };
+  }, [recentOwner]);
+  const readRetryButtonRef = useRef<HTMLButtonElement | null>(null);
+  const readRetryFocusRef = useRef<{ owner: typeof recentOwner; trigger: HTMLElement } | null>(null);
   const [splitWorkspaceOpen, setSplitWorkspaceOpen] = useState(false);
   const [annotationsOpen, setAnnotationsOpen] = useState(searchParams?.get("annotations") === "open");
   const [focusMode, setFocusMode] = useState(false);
@@ -452,37 +462,65 @@ export function ConversationReader({
     queryKey: ["conversation", dataSource.mode, conversationId],
     queryFn: () => dataSource.getConversation(conversationId),
   });
+  const conversationReadUnavailable = !isOffline && conversationQuery.isError
+    && conversationQuery.error instanceof ApiRequestError && [401, 403, 404].includes(conversationQuery.error.status);
+  const retainReaderOnReadError = !isOffline && conversationQuery.data?.id === conversationId
+    && !conversationReadUnavailable && !mergedIntoConversationId;
+  const readerSurfaceAvailable = conversationQuery.data?.id === conversationId && !conversationQuery.isLoading
+    && (!conversationQuery.isError || retainReaderOnReadError);
 
   useEffect(() => {
-    const conversation = conversationQuery.data;
+    const conversation = conversationReadUnavailable || conversationQuery.data?.id !== conversationId ? null : conversationQuery.data;
     document.title = conversation ? formatConversationTitle(conversation) : APP_TITLE;
     return () => {
       document.title = APP_TITLE;
     };
-  }, [conversationQuery.data]);
+  }, [conversationId, conversationQuery.data, conversationReadUnavailable]);
+
+  useLayoutEffect(() => {
+    const request = readRetryFocusRef.current;
+    if (!request) return;
+    if (!ownsReaderReadRecovery(request.owner)) { readRetryFocusRef.current = null; return; }
+    if (conversationQuery.isFetching) return;
+    const focused = document.activeElement;
+    readRetryFocusRef.current = null;
+    if (focused === request.trigger && request.trigger.isConnected) return;
+    if (focused && focused !== document.body && focused.isConnected) return;
+    const target = conversationQuery.isError ? readRetryButtonRef.current : scrollContainerRef.current;
+    target?.focus({ preventScroll: true });
+  }, [conversationId, conversationQuery.isError, conversationQuery.isFetching, dataSource]);
 
   useEffect(() => {
-    if (!conversationQuery.data || recordedRecentConversationRef.current === conversationId) return;
-    recordedRecentConversationRef.current = conversationId;
+    const currentOwner = () => recentOwner.active && recentOwnerRef.current === recentOwner && recentOwner.epoch === authenticationGeneration();
+    if (conversationQuery.data?.id !== conversationId || recentOwner.attempted || !currentOwner()) return;
+    // A lost response may have counted the open. Query refreshes must not replay
+    // this non-idempotent POST; another Reader visit gets a separate reservation.
+    recentOwner.attempted = true;
     void dataSource.recordRecent(conversationId, projectContextId ?? null).then((canonicalConversation) => {
-      if (canonicalConversation) {
-        queryClient.setQueryData<ConversationDetail>(["conversation", dataSource.mode, conversationId], (current) => (
-          current
-            ? {
-                ...current,
-                offline_revision: canonicalConversation.offline_revision,
-                last_read_at: canonicalConversation.last_read_at,
-                reading_progress: canonicalConversation.reading_progress,
-              }
-            : current
-        ));
+      if (!currentOwner() || dataSource.mode !== "remote" || !canonicalConversation
+        || canonicalConversation.id !== conversationId || !Number.isSafeInteger(canonicalConversation.offline_revision)
+        || canonicalConversation.offline_revision < 1) return;
+      const key = ["conversation", dataSource.mode, conversationId];
+      const current = queryClient.getQueryData<ConversationDetail>(key);
+      const refreshDetail = current?.id === conversationId && canonicalConversation.offline_revision > current.offline_revision;
+      if (current?.id === conversationId && current.offline_revision === canonicalConversation.offline_revision) {
+        const incomingTime = Date.parse(canonicalConversation.last_read_at ?? "");
+        const currentTime = Date.parse(current.last_read_at ?? "");
+        // Reading progress can go backwards while rereading. Order the pair by
+        // its time, independently of the unchanged canonical content revision.
+        if (Number.isFinite(incomingTime) && (!Number.isFinite(currentTime) || incomingTime > currentTime)) {
+          queryClient.setQueryData<ConversationDetail>(key, { ...current,
+            last_read_at: canonicalConversation.last_read_at, reading_progress: canonicalConversation.reading_progress });
+        }
       }
-      void queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      void queryClient.invalidateQueries({ queryKey: ["projects"] });
-    }).catch(() => {
-      if (recordedRecentConversationRef.current === conversationId) recordedRecentConversationRef.current = null;
-    });
-  }, [conversationId, conversationQuery.data, dataSource, projectContextId, queryClient]);
+      // A newer ListItem cannot stand in for a complete Reader Detail. Fetch it
+      // without relabelling old fields or invalidating the turn/position keys.
+      if (refreshDetail) void queryClient.invalidateQueries({ queryKey: key, exact: true }).catch(() => undefined);
+      for (const queryKey of [["conversations"], ["projects"], ["recent-items"]]) {
+        void queryClient.invalidateQueries({ queryKey }).catch(() => undefined);
+      }
+    }).catch(() => undefined);
+  }, [conversationId, conversationQuery.data, dataSource, projectContextId, queryClient, recentOwner]);
 
   const positionQuery = useQuery({
     queryKey: ["reading-position", dataSource.mode, conversationId],
@@ -515,6 +553,28 @@ export function ConversationReader({
     ),
     enabled: canLoadInitialWindow && conversationQuery.isSuccess,
   });
+  const initialWindowReadScope = useMemo(() => ({ visit: recentOwner, anchor: initialAnchorMessageId }), [initialAnchorMessageId, recentOwner]);
+  const initialWindowReadScopeRef = useRef(initialWindowReadScope);
+  initialWindowReadScopeRef.current = initialWindowReadScope;
+  const initialWindowRetryButtonRef = useRef<HTMLButtonElement | null>(null);
+  const initialWindowRetryFocusRef = useRef<{ scope: typeof initialWindowReadScope; trigger: HTMLElement; navigationToken: number } | null>(null);
+  const initialWindowReadUnavailable = windowQuery.error instanceof ApiRequestError && [401, 403, 404].includes(windowQuery.error.status);
+
+  useLayoutEffect(() => {
+    const request = initialWindowRetryFocusRef.current;
+    if (!request) return;
+    if (!ownsInitialWindowReadRecovery(request.scope) || navigationTokenRef.current !== request.navigationToken || navigationInProgressRef.current) {
+      initialWindowRetryFocusRef.current = null;
+      return;
+    }
+    if (windowQuery.fetchStatus !== "idle") return;
+    const focused = document.activeElement;
+    initialWindowRetryFocusRef.current = null;
+    if (focused === request.trigger && request.trigger.isConnected) return;
+    if (focused && focused !== document.body && focused.isConnected) return;
+    const target = windowQuery.isError ? initialWindowRetryButtonRef.current : scrollContainerRef.current;
+    target?.focus({ preventScroll: true });
+  }, [initialWindowReadScope, windowQuery.fetchStatus, windowQuery.isError]);
 
   const markReaderScrollIntent = useCallback((direction: ScrollDirection = null) => {
     const root = scrollContainerRef.current;
@@ -541,7 +601,7 @@ export function ConversationReader({
 
   useEffect(() => {
     const root = scrollContainerRef.current;
-    if (!root) return;
+    if (!readerSurfaceAvailable || !root) return;
     let lastTouchY: number | null = null;
     const markWheelIntent = (event: WheelEvent) => {
       if (event.deltaY === 0) return;
@@ -607,7 +667,7 @@ export function ConversationReader({
       window.removeEventListener("keydown", markKeyboardIntent);
       delete root.dataset.readerPointerDragging;
     };
-  }, [initialPaintReady, markReaderScrollIntent]);
+  }, [readerSurfaceAvailable, markReaderScrollIntent]);
 
   const hasPrevious = loadedWindow.hasPrevious;
   const hasMore = loadedWindow.hasMore;
@@ -693,10 +753,20 @@ export function ConversationReader({
   }, [savedPosition?.message_id, targetMessageId]);
 
   useEffect(() => {
-    if (!conversationQuery.isSuccess || !windowQuery.isSuccess) return;
-    const frame = window.requestAnimationFrame(() => setInitialPaintReady(true));
+    const root = scrollContainerRef.current;
+    if (initialPaintReady || !readerSurfaceAvailable || !root || !initialWindowAppliedRef.current
+      || loadedWindowRef.current !== loadedWindow) return;
+    // An independently accepted target window can be readable while the original
+    // initial query remains failed. Wait for this committed surface, not that GET.
+    const frame = window.requestAnimationFrame(() => {
+      if (recentOwner.active && recentOwnerRef.current === recentOwner && recentOwner.epoch === authenticationGeneration()
+        && scrollContainerRef.current === root && root.isConnected && initialWindowAppliedRef.current
+        && loadedWindowRef.current === loadedWindow && windowGenerationRef.current === loadedWindow.generation) {
+        setInitialPaintReady(true);
+      }
+    });
     return () => window.cancelAnimationFrame(frame);
-  }, [conversationQuery.isSuccess, windowQuery.isSuccess]);
+  }, [initialPaintReady, loadedWindow, readerSurfaceAvailable, recentOwner]);
 
   useEffect(() => {
     if (!windowQuery.isSuccess || initialWindowAppliedRef.current) return;
@@ -879,7 +949,9 @@ export function ConversationReader({
       navigationTokenRef.current = token;
       lastNavigationTargetRef.current = target;
       navigationInProgressRef.current = true;
-      if (targetFirst && !options?.restorePosition) {
+      // Every explicit choice, including a dialogue-index/message jump, replaces
+      // the initial saved-position decision. A restore itself adds no new intent.
+      if (!options?.restorePosition) {
         restoreAttemptedRef.current = true;
         readingRestoreTokenRef.current += 1;
         restoreInProgressRef.current = false;
@@ -1445,7 +1517,7 @@ export function ConversationReader({
 
   useEffect(() => {
     const root = scrollContainerRef.current;
-    if (!root) {
+    if (!readerSurfaceAvailable || !root) {
       return undefined;
     }
 
@@ -1552,7 +1624,7 @@ export function ConversationReader({
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pagehide", onPageHide);
     };
-  }, [conversationId, dataSource, initialPaintReady, markReaderScrollIntent, refreshActiveMessageFromLayout]);
+  }, [conversationId, dataSource, readerSurfaceAvailable, markReaderScrollIntent, refreshActiveMessageFromLayout]);
 
   const conversation = conversationQuery.data;
   const loadingProgress = initialPaintReady
@@ -2171,11 +2243,56 @@ export function ConversationReader({
     });
   }
 
+  function ownsReaderReadRecovery(owner = recentOwner) {
+    return owner.active && recentOwnerRef.current === owner && owner.epoch === authenticationGeneration();
+  }
+
+  function ownsInitialWindowReadRecovery(scope = initialWindowReadScope) {
+    return initialWindowReadScopeRef.current === scope && ownsReaderReadRecovery(scope.visit);
+  }
+
+  async function retryInitialWindowRead() {
+    if (isOffline || !ownsInitialWindowReadRecovery() || initialWindowAppliedRef.current
+      || loadedWindowRef.current.items.length > 0 || navigationInProgressRef.current) return;
+    const state = queryClient.getQueryState(["reader-turn-window", dataSource.mode, conversationId, initialAnchorMessageId]);
+    if (state?.status !== "error" || state.fetchStatus !== "idle") return;
+    const trigger = initialWindowRetryButtonRef.current;
+    if (trigger && document.activeElement === trigger) {
+      initialWindowRetryFocusRef.current = { scope: initialWindowReadScope, trigger, navigationToken: navigationTokenRef.current };
+    }
+    // Keep the original complete-turn key/anchor and the existing apply-once guard.
+    // An accepted target window must not be replaced by this initial read's result.
+    await windowQuery.refetch({ cancelRefetch: false }).catch(() => undefined);
+  }
+
+  async function retryConversationRead() {
+    if (!ownsReaderReadRecovery() || queryClient.getQueryState(["conversation", dataSource.mode, conversationId])?.fetchStatus === "fetching") return;
+    const trigger = readRetryButtonRef.current;
+    if (trigger && document.activeElement === trigger) readRetryFocusRef.current = { owner: recentOwner, trigger };
+    // Refetch only this read, joining rather than restarting an in-flight GET.
+    // Its normal dependent initial reads can resume; no visit or write is replayed.
+    await conversationQuery.refetch({ cancelRefetch: false }).catch(() => undefined);
+  }
+
+  const initialWindowRetryControl = <button ref={initialWindowRetryButtonRef} type="button" data-reader-initial-read-retry="true"
+    onClick={() => void retryInitialWindowRead()} disabled={windowQuery.fetchStatus !== "idle" || navigationStatus === "loading"}
+    className="btn-secondary min-h-11 px-3 disabled:opacity-60">{resolvedLocale === "zh-CN" ? "重试读取正文" : "Retry messages"}</button>;
+  const retryConversationControl = <button ref={readRetryButtonRef} type="button" data-reader-read-retry="true"
+    onClick={() => void retryConversationRead()} disabled={conversationQuery.isFetching}
+    className="btn-secondary min-h-11 shrink-0 px-3 disabled:opacity-60">{resolvedLocale === "zh-CN" ? "重试读取对话" : "Retry conversation"}</button>;
+  const conversationReadNotice = conversationQuery.isError && retainReaderOnReadError ? (
+    <div role="alert" aria-busy={conversationQuery.isFetching} data-reader-read-recovery="true"
+      className="absolute inset-x-3 bottom-3 z-40 mx-auto flex max-w-lg flex-wrap items-center gap-3 rounded-lg border border-ui bg-raised p-3 text-sm text-secondary">
+      <span className="min-w-0 flex-1">{resolvedLocale === "zh-CN" ? "对话更新失败，仍显示上次读取的内容。" : "Could not update the conversation. Previously loaded content is shown."}</span>
+      {retryConversationControl}
+    </div>
+  ) : null;
+
   if (conversationQuery.isLoading) {
     return <ReaderLoadingShell progress={loadingProgress} embedded={libraryMode} />;
   }
 
-  if (conversationQuery.isError) {
+  if (conversationQuery.isError && !retainReaderOnReadError) {
     if (mergedIntoConversationId) {
       const zh = resolvedLocale === "zh-CN";
       return <ReaderState
@@ -2184,7 +2301,11 @@ export function ConversationReader({
         action={<button type="button" className="rounded-lg border border-ui bg-surface px-3 py-2 text-sm font-medium text-primary hover:bg-subtle" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{zh ? "打开合并后的对话" : "Open merged conversation"}</button>}
       />;
     }
-    return <ReaderState title={t("conversationUnavailable")} detail={conversationQuery.error.message} />;
+    return <ReaderState title={t("conversationUnavailable")}
+      detail={isOffline ? conversationQuery.error.message : conversationReadUnavailable
+        ? (resolvedLocale === "zh-CN" ? "当前账户无法访问此对话，请恢复访问后重试。" : "This conversation is unavailable for your account. Restore access, then retry.")
+        : (resolvedLocale === "zh-CN" ? "暂时无法读取对话，请重试。" : "Could not read this conversation. Try again.")}
+      action={isOffline ? undefined : retryConversationControl} />;
   }
 
   if (!conversation) {
@@ -2389,6 +2510,7 @@ export function ConversationReader({
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
 
+        {conversationReadNotice}
         <ReadingPositionSyncStatus conversationId={conversationId} storageError={readingSaveError} onRetryStorage={async () => {
           if (latestStablePositionRef.current) await dataSource.saveReadingPosition(conversationId, latestStablePositionRef.current);
           setReadingSaveError(false);
@@ -2409,7 +2531,7 @@ export function ConversationReader({
             source: "message-action" }, { restorePosition: true });
           if (!result.ok) throw new Error("Unable to locate the saved reading position.");
         }} />
-        <div ref={scrollContainerRef} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
+        <div ref={scrollContainerRef} role="region" tabIndex={-1} aria-label={resolvedLocale === "zh-CN" ? "对话正文" : "Conversation content"} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-14 [overflow-anchor:none] md:pt-0">
           <ResponsiveReaderFrame
             focusMode={focusMode}
             index={<ConversationIndex
@@ -2428,8 +2550,16 @@ export function ConversationReader({
                 <ReaderState title={t("loadingMessages")} detail={t("loadingInitialMessages")} />
               ) : null}
 
-              {windowQuery.isError ? (
-                <ReaderState title={t("loadFailed")} detail={windowQuery.error.message} />
+              {windowQuery.isError && (isOffline || !initialWindowAppliedRef.current && messages.length === 0) ? (
+                isOffline ? <ReaderState title={t("loadFailed")} detail={windowQuery.error.message} /> : (
+                  <div role="alert" aria-busy={windowQuery.fetchStatus !== "idle"} data-reader-initial-read-recovery="true">
+                    <ReaderState title={t("loadFailed")}
+                      detail={initialWindowReadUnavailable
+                        ? (resolvedLocale === "zh-CN" ? "当前账户无法读取此正文，请恢复访问后重试。" : "Messages are unavailable for your account. Restore access, then retry.")
+                        : (resolvedLocale === "zh-CN" ? "暂时无法读取正文，请重试。" : "Could not read the messages. Try again.")}
+                      action={initialWindowRetryControl} />
+                  </div>
+                )
               ) : null}
 
               {windowQuery.isSuccess && messages.length === 0 ? (

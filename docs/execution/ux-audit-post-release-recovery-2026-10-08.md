@@ -385,3 +385,43 @@ settings/read-recovery audit and its intentionally failing baseline tests stay
 local. Full exact-source CI for the next candidate remains pending. Once that
 cycle passes, retain further optimization and verification notes locally;
 do not dispatch another CI or deploy without a new explicit user request.
+
+Repair source `a12ce9e287fdddfd4df8a6039a212cec04629568` is committed and pushed;
+[CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017)
+was dispatched once for that source. All seven committed files belong to this
+repair; project-recovery source/tests/docs and unrelated residues were excluded.
+The local document check resolves 172 links across 13 scoped documents, with
+none missing. This running candidate is not accepted or deployed.
+
+## CI cycle accepted; further work is local-only
+
+At 2026-10-09 China time, exact-source run **37812290017** completed successfully.
+All five jobs pass: API **1,181 passed / 3 skipped / 16 warnings**; all **13 Web
+gates**; settings **439 passed (38.0m)** plus fresh-instance restore **1 passed
+(34.6s)**; image build; and the independent original-artifact inspection.
+The negative PWA gate passes all **18** cases, including the original mixed
+critical/optional recovery and the new unchanged-revision optional-only case.
+Mutation passes **26**, including all nine UX additions. Default PWA retains
+**135 passed / 597 conditional skips**, and adaptive import **8 / 1 conditional
+skip**. No skip is counted as a pass.
+
+Image artifact **11567238870**, producer attempt **1**, was independently
+downloaded with its matching GitHub SHA-256 and inspected in CI. It has not been
+deployed. See [exact-source acceptance](ux-audit-post-release-recovery-2026-10-08-evidence/ci-a12ce9e.json)
+for job/artifact IDs, digests and limits. A corrupt CLI cached-log ZIP did not
+indicate a failed job; direct read-only retrieval succeeded.
+
+Eight exact-source synthetic screenshots were reviewed and retained beside this
+report with `a12ce9e-` prefixes. Pending/checking Undo, final-row Undo, selected
+search identity, retained Recent cards and project-filter recovery remain visible
+without overlap in these frames. English Undo singular agreement is corrected.
+The separate “1 conversations” project heading is minor copy polish, not a CI
+blocker. These screenshots are not full-app accessibility or local Chromium
+acceptance; zero-success Undo still has assertion evidence only.
+
+This closes the authorized CI repair cycle. **No further commit, push, CI dispatch
+or deployment is authorized without another explicit user request.** Acceptance
+notes and the separate project/merge audits remain uncommitted. Production stays
+at accepted **30a0d32**; its release helpers, backups, configuration and database
+were not replayed or changed. The optimization goal remains active for useful
+local work.

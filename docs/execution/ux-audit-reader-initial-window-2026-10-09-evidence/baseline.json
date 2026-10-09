@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "previous_checkpoint": "../ux-audit-reader-detail-recovery-2026-10-09-evidence/local-verification.json",
+  "phase": "Before initial complete-turn recovery application edits",
+  "command": "node --test --test-reporter=tap scripts/ux/reader-initial-window-recovery.test.mjs",
+  "tests": 24,
+  "passed": 5,
+  "failed": 19,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 656.6163,
+  "findings_not_test_count": 2,
+  "method": "Exact AST-extracted initial query options, loading/error/empty JSX, ReaderState and apply-once effect with installed QueryObserver and real reader-window complete-turn helpers. Other Reader UI is excluded. Transport, hook scheduling, owner/auth, navigation state and DOM focus are doubles.",
+  "controls": [
+    "Successful initial data is applied once as complete turns",
+    "Genuine empty success remains distinct from failure",
+    "Offline errors retain the original raw error branch with no new remote retry",
+    "A missing remembered anchor uses the existing first-turn fallback",
+    "The original query key and position/detail enablement decision are unchanged"
+  ],
+  "failure_groups": [
+    "No localized Retry messages control exists in the initial error, so the new retry/ownership/focus contracts cannot yet run",
+    "Raw transport errors appear instead of plain localized recovery/access copy",
+    "The original query error remains after an independent target window has been accepted"
+  ],
+  "harness_correction_before_baseline": {
+    "tests": 1,
+    "passed": 0,
+    "failed": 1,
+    "duration_ms": 474.3735,
+    "cause": "The first extractor counted the containing JSX content prop as a fourth state because it searched descendants rather than each conditional's own condition.",
+    "correction": "Require a ConditionalExpression and inspect its condition; exactly the three real loading/error/empty state expressions are selected.",
+    "product_failure": false,
+    "application_changed": false
+  },
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-reader.tsx": "ea4bab0d4999d291050a03abb7dbfb256491ef17bca5725df7193679e6b79f2b",
+    "scripts/ux/reader-initial-window-recovery.test.mjs": "5707c0c607351089b006d0d7822211552f2bb62095084710aceaf41c18c6df14"
+  },
+  "not_verified": ["Full React lifecycle", "Actual target navigation", "Real focus, DOM and scroll", "Browser execution"],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

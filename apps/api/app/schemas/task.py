@@ -38,5 +38,10 @@ class ConversationProjectMoveRequest(BaseModel):
     project_id: UUID | None = None
 
 
+class ConversationMergeRequestRead(BaseModel):
+    found: bool
+    task: BackgroundTaskRead | None = None
+
+
 class ConversationBatchDeleteRequest(BaseModel):
     conversation_ids: list[UUID] = Field(min_length=1, max_length=5000)

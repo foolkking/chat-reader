@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "source": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "frontend": {
+    "command": "node docs/execution/ux-audit-merge-admission-2026-10-09-evidence/reproduce.mjs",
+    "mechanism": "Actual transpiled callbacks and JSX with explicit transport, state, React static-rendering and portal doubles.",
+    "checks": 5,
+    "passed": 0,
+    "failed": 5,
+    "both_list_entry_points": {
+      "lost_response_post_attempts": 2,
+      "distinct_keys_for_same_order_and_title": 2,
+      "confirmed_admission_waits_for_task_refresh": true
+    },
+    "pending_title": { "disabled": false, "read_only": false, "accepts_edit": true, "completion_clears_edit": true }
+  },
+  "api": {
+    "command": "python -m pytest tests/test_merge_admission.py --basetemp <task-temp>/pytest-merge-admission-baseline -q --tb=short",
+    "passed": 5,
+    "failed": 7,
+    "seconds": 24.21,
+    "backend": "Disposable SQLite and FastAPI TestClient, no application listener or worker.",
+    "passing_controls": ["Two deliberate distinct keys create two distinct jobs", "Same-key queued, processing, cancelling and committed return original task"],
+    "failing_checks": ["Same-key failed job creates another task", "Same-key cancelled job creates another task", "Changed order returns 202 instead of conflict", "Changed title returns 202 instead of conflict", "Changed project returns 202 instead of conflict", "Archived source hides existing receipt behind 400 validation", "Proposed read-only admission lookup is absent, returning 404"]
+  },
+  "limits": {
+    "browser": "NOT_VERIFIED",
+    "real_network_response_loss": "NOT_VERIFIED; simulated transport failure is explicit",
+    "postgresql_concurrent_admission": "NOT_VERIFIED",
+    "production_access": false,
+    "project_recovery_changes_are_separate": true
+  }
+}

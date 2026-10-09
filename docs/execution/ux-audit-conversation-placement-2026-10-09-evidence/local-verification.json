@@ -1,0 +1,302 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "Single-conversation project/Unclassified placement, destination read/selection safety, explicit unknown-result checking/retry, acknowledged cache publication and lost-focus recovery; preceding local regressions",
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "production_source_unchanged": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "passing_ci_does_not_cover_this_batch": "37812290017",
+  "previous_checkpoint": "../ux-audit-conversation-metadata-2026-10-09-evidence/local-verification.json",
+  "baseline": {
+    "file": "baseline.json",
+    "tests": 22,
+    "passed": 3,
+    "failed": 19,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 1799.2393,
+    "initial_findings": 5,
+    "adapter_correction": "Legacy picker reopening was corrected before the valid baseline; no application change. Initial adapter run also had 3 passes/19 failures, 2318.101ms, with one harness rather than product failure."
+  },
+  "recovery_edge_baseline": {
+    "file": "recovery-edge-baseline.json",
+    "tests": 44,
+    "passed": 38,
+    "failed": 6,
+    "duration_ms": 3325.5473
+  },
+  "focus_baseline": {
+    "file": "focus-baseline.json",
+    "tests": 60,
+    "passed": 58,
+    "failed": 2,
+    "duration_ms": 4173.8093,
+    "additional_finding": "A11Y-02; body/lost focus after removal of pending actions. Browser effect remains inferred."
+  },
+  "earlier_repair_checkpoints": [
+    {
+      "scope": "Initial placement repair",
+      "tests": 22,
+      "passed": 22,
+      "failed": 0,
+      "duration_ms": 2790.3939
+    },
+    {
+      "scope": "Combined after recovery-edge repair",
+      "tests": 355,
+      "passed": 355,
+      "failed": 0,
+      "duration_ms": 6253.8498
+    },
+    {
+      "scope": "Expanded combined before focus review",
+      "tests": 367,
+      "passed": 367,
+      "failed": 0,
+      "duration_ms": 7381.4354
+    },
+    {
+      "scope": "Combined after focus repair, before browser assertion additions",
+      "tests": 371,
+      "passed": 371,
+      "failed": 0,
+      "duration_ms": 7213.2356
+    }
+  ],
+  "integration_harness_corrections": [
+    {
+      "status": "Failed before discovery",
+      "cause": "Windows Node does not expand scripts/ux/*.test.mjs; use an explicit rg file array."
+    },
+    {
+      "tests": 333,
+      "passed": 224,
+      "failed": 109,
+      "duration_ms": 5702.7927,
+      "cause": "Four pre-existing isolated harnesses rejected the new placement dependency. Added no-op dependency mocks only; old assertions unchanged.",
+      "product_failure_evidence": false
+    }
+  ],
+  "node_regression": {
+    "command": "$placementScripts = @(rg --files scripts/ux -g '*.test.mjs'); node --test --test-reporter=tap @placementScripts",
+    "tests": 371,
+    "passed": 371,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 7741.3425,
+    "placement_cases": 60,
+    "preceding_cases": 311,
+    "evidence": "Actual transpiled callbacks/JSX, installed React static renderer and QueryClient/Observer. Hook/effect scheduling, project-read state, transport, authentication, portals and focus are explicit doubles; not React lifecycle or browser acceptance.",
+    "after_final_application_and_browser_test_edits": true
+  },
+  "placement_api_verification": {
+    "command": "python -m pytest tests/test_conversation_placement_recovery.py tests/test_projects_api.py --basetemp <task-temp>/<unique-run> -q --tb=short --show-capture=no",
+    "working_directory": "apps/api",
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 37.02,
+    "placement_cases": 8,
+    "project_cases": 10,
+    "database": "Disposable SQLite through the existing in-process TestClient fixture; no API/PostgreSQL/worker service started",
+    "environment": {
+      "APP_ENV": "test",
+      "AUTH_ENABLED": "false",
+      "SETTINGS_POSTGRES_INTEGRATION": "0",
+      "TEMP": "<task-temp>",
+      "TMP": "<task-temp>",
+      "storage": "Explicit DATABASE_URL and IMPORT/EXPORT/ASSET/OFFLINE_STORAGE_DIR under this task's temporary directory"
+    },
+    "contract": "Canonical placement acknowledgement and counts, same-project pin/order/revision no-op, stale revision conflict and deliberate fresh-revision retry, ambiguous archived/default null summaries, single relation, inactive targets/conversations, preserved message/reading/recent data and normal-section rules",
+    "first_run": {
+      "passed": 17,
+      "failed": 1,
+      "seconds": 37.47,
+      "cause": "New test used messages instead of the actual message-window items key; corrected the test and added HTTP 200 assertion, then reran all 18. Not an API implementation defect."
+    },
+    "sources_unchanged_since_run": true,
+    "rerun_after_final_web_only_focus_repair": false,
+    "api_implementation_changed_for_this_batch": false
+  },
+  "previous_api_verification": {
+    "metadata": {
+      "ledger": "../ux-audit-conversation-metadata-2026-10-09-evidence/local-verification.json",
+      "passed": 19,
+      "rerun_in_this_batch": false
+    },
+    "admission_and_project": {
+      "ledger": "../ux-audit-merge-admission-2026-10-09-evidence/local-verification.json",
+      "passed": 41,
+      "rerun_in_this_batch": false
+    },
+    "interpretation": "Relevant prior API hashes remain unchanged. Separate checkpoints overlap; do not sum as unique cases."
+  },
+  "postgresql_concurrency": {
+    "cases": 2,
+    "passed": 0,
+    "skipped_at_earlier_checkpoint": 2,
+    "rerun_in_this_batch": false,
+    "acceptance": "NOT_VERIFIED"
+  },
+  "browser_discovery": {
+    "command": "corepack pnpm --filter web exec playwright test e2e/ux-recovery-followup.spec.ts --list --output <task-temp>/browser-discovery-final",
+    "discovered": 61,
+    "existing_cases": 53,
+    "new_placement_cases": 8,
+    "executed_in_this_batch": 0,
+    "acceptance": "NOT_VERIFIED",
+    "intended_assertions": [
+      "375px Chinese/light and 1440px English/dark: project read failure/retry; labelled search Home/End; hidden and old-session selection invalidation.",
+      "Sidebar acknowledgement and actual Reader title/position/source invariance while refresh GETs are held; one write despite repeated activation.",
+      "Unknown PUT uses GET-only current-state checks and an explicit retry with a newer read revision. Failed checks preserve uncertainty; reopening does not read/write automatically.",
+      "One-click Unclassified retains lost-result recovery and explains that a null summary can mean archived membership, not a receipt.",
+      "Held write/check phases assert actual Close focus and Tab/Shift+Tab boundaries. Synthetic fixture cleanup and screenshots run only with a future authorized browser run."
+    ],
+    "services_or_browser_started": false
+  },
+  "implementation": {
+    "ownership": "One mounted list/sidebar owner and surface outside removed rows; shared desktop/mobile sidebar owner, surface outside cloned ReaderSidebarFrame children.",
+    "destination": "Independent pending/error/empty/filter-empty reads; retry GET only; labelled search/native radios; new-session reset and current successful idle QueryClient target/search checks.",
+    "recovery": "Synchronous admission; 15-second signals; no automatic replay; GET observes current state, then explicit fresh-revision retry; unknown/closed review retained only within owner.",
+    "acknowledgement": "Publish existing remote/list/project/recent canonical location before detached handled refresh. Preserve higher revisions/detail fields/reading anchors/global pins. Remove confirmed old-source rows, never add missing rows or guess counts/relation timestamps.",
+    "focus": "After phase changes, only body/lost focus targets the existing first enabled Close button with preventScroll; another selected control and closed dialog are left alone. Explicit DOM/effect doubles only.",
+    "privacy_and_lifecycle": "Account/scope/unmount, unavailable owner and closed/stale comparison guards; denied access hides retained conversation and target names.",
+    "compatibility": "Optional getProjects/placeConversation signals only; legacy argument calls and HTTP payloads retained. Existing server default/archive mapping, atomic placement and pin/no-op rules unchanged. No migration/dependency/offline/Share/bulk/DnD changes."
+  },
+  "checks": {
+    "web_lint": {
+      "status": "passed",
+      "command": "corepack pnpm run lint",
+      "after_final_application_and_browser_test_edits": true
+    },
+    "nonincremental_typecheck": {
+      "status": "passed",
+      "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false"
+    },
+    "one_worker_web_build": {
+      "status": "passed",
+      "command": "corepack pnpm --filter web build",
+      "next_version": "16.3.8",
+      "NEXT_BUILD_CPUS": "1",
+      "NEXT_STANDALONE": "0",
+      "compile_seconds": 15.9,
+      "built_in_typescript_seconds": 7.1,
+      "static_pages": 14,
+      "static_generation_seconds": 3.6,
+      "after_final_application_edit": true,
+      "note": "Browser-only focus assertions added afterward and checked separately with lint/typecheck/discovery; no application source changed after build.",
+      "application_server_started": false
+    },
+    "git_diff_check": {
+      "status": "passed",
+      "command": "git diff --check",
+      "note": "Repository-default CRLF normalization; conversion notices only, no whitespace error.",
+      "earlier_check_command_failure": {
+        "command": "git -c core.autocrlf=false diff --check",
+        "exit_code": 2,
+        "cause": "The one-command override disabled this Windows checkout's CRLF normalization and treated existing carriage returns as trailing whitespace. No file or Git configuration was modified; the normal command then passed."
+      }
+    },
+    "scoped_document_links": {
+      "status": "passed",
+      "files": 24,
+      "local_links_checked": 281,
+      "missing": 0,
+      "scope": "Current/release/audit entry documents; local targets only, not external URLs or anchor validation"
+    },
+    "source_and_evidence_consistency": {
+      "status": "passed",
+      "source_files": 50,
+      "compared_previous_files": 45,
+      "unchanged_previous_files": 35,
+      "expected_changed_files": 10,
+      "prior_api_sources_unchanged": true,
+      "retained_baselines": 3,
+      "head_equals_recorded_origin": true,
+      "staged_files": 0,
+      "migration_import_dependency_deployment_diff_empty": true,
+      "limitation": "Local refs only; no remote fetch or production access, and historical API results are not reruns"
+    },
+    "visual_checklist_score": "NOT_VERIFIED; no rendered score or accessibility conformance claim"
+  },
+  "source_file_count": 50,
+  "previous_source_comparison": {
+    "compared_files": 45,
+    "unchanged_files": 35,
+    "expected_changed_files": [
+      "apps/web/features/conversations/conversation-list.tsx",
+      "apps/web/features/projects/project-conversation-list.tsx",
+      "apps/web/lib/api.ts",
+      "apps/web/e2e/ux-recovery-followup.spec.ts",
+      "scripts/ux/project-recovery.test.mjs",
+      "scripts/ux/merge-reentry.test.mjs",
+      "scripts/ux/conversation-list-recovery.test.mjs",
+      "apps/web/features/projects/project-sidebar.tsx",
+      "scripts/ux/sidebar-read-recovery.test.mjs",
+      "apps/web/features/conversations/conversation-action-menu.tsx"
+    ],
+    "note": "Only this batch's menu/owner/API-helper/browser and four harness dependency maps differ; historical hashes are not rewritten."
+  },
+  "verified_file_sha256_at_checkpoint": {
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "apps/api/app/schemas/task.py": "cad472a799a7019d2ba99ea2ed54c3df854b5f11ed7c702e6bb34572a47d52f5",
+    "apps/api/app/services/background_jobs.py": "c4a568aa4fc0d6b562d6f604f83e67af4e8168457be986cca077b3db1fbbee38",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/tests/test_merge_admission.py": "360f3a43e72e4c9a7ea7b31af958a1ef6e3c9047a44a15ddbbefce1251cacaa5",
+    "apps/api/tests/test_merge_admission_postgres.py": "318523b034d66bed693704c4b476fba7e53a6ec17064d66ebcd50cbae8f63be7",
+    "apps/api/tests/test_project_settings.py": "52f7c93028e1a545110ed740928e18831ea51d1631570f44115867dc99268648",
+    "apps/web/features/conversations/use-merge-admission.ts": "21138a79553855344a53cd9884ad0d720e3a20ac3877e78da6a3508c3c0544a8",
+    "apps/web/features/conversations/merge-conversations-dialog.tsx": "00ee5f375d070d49256e3620ca64714056d8ad36801cc92798f3fb2cd9648e1b",
+    "apps/web/features/conversations/conversation-list.tsx": "d5e1c5586a8831bef6176b6f8eaa418c585e0e79695e1b348cd8a4539a75bf24",
+    "apps/web/features/projects/project-conversation-list.tsx": "11c55417d1bccad449f796fd0c0b0677fbd35a0544b9d5fa8a339f4c5fac1a2e",
+    "apps/web/features/projects/project-settings-dialog.tsx": "d95440c37ea67b491cccb6ec280365c5b5745f6036c461ead37fc9343f17b5c9",
+    "apps/web/lib/api.ts": "a10fb2f30cfa4c0f6b726beb09875076f190bda33dbaf66694db5ddfaaee2e2c",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "817173d1de9e518c98a1b344fb33ffdefec7a1d896fa0476dd34882845f0fe02",
+    "scripts/ux/merge-admission.test.mjs": "1cedb16d71eaade5844dcceb39e18dbc4881d9e078b8d2b8ba81619f427136d0",
+    "scripts/ux/project-recovery.test.mjs": "043aa7d925e11b05adf976a785c2749709d0d8606d8a7a163d0eb93e1be557e8",
+    "scripts/ux/merge-reentry.test.mjs": "86eef3c9568360c62124478e5db4149030b8daac7f095d7b49e4bc060cef5a13",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/features/conversations/merge-order-list.tsx": "453edbc5c0a586c2013d746109f0c0b972de6bd63bbc09639fe250876a7c53bd",
+    "apps/web/playwright.config.ts": "400581d5a48a200df9bce919a05e8dc289b01668c6e510576858bd7846830e3d",
+    "scripts/ux/conversation-list-recovery.test.mjs": "8d9a1721f515bc742fce351cc0d8cba7dab618abbb6f3e15904d9b9fe5bdbb8b",
+    "apps/web/features/reading/recent-items.tsx": "3453509920f9c0590a77551de8e92709543f18a81c0b3999707291d127152223",
+    "apps/web/features/projects/archived-project-list.tsx": "c97a937208e2a265e3d69d05c0054428e9f6e05f8654c4056c06821840d442a0",
+    "scripts/ux/archived-project-recovery.test.mjs": "6c0f149f6f1ef4f5c123cc6f6b56f888b70504bb60b61a8c7e1ac39ae3f59cf9",
+    "apps/web/lib/batch-selection.ts": "1c332034083b045468bf1ecacf5a69cb437806f5e499a2b7f72fdea0f5691d23",
+    "apps/api/app/api/routes/projects.py": "e44ac92eb1a4733a222a67bd175869ef0236f3d241ded658d1275fa15c9464bb",
+    "apps/web/features/projects/project-sidebar.tsx": "42fbda18ddf11900a759c79c9dd1520f6fa56390f30f607e7d6b535186d1db10",
+    "scripts/ux/sidebar-read-recovery.test.mjs": "cbbcc343d74593b32f5335d1ca52542ea22533ff3d599ec376679f547ed1e744",
+    "scripts/ux/project-fixture-cleanup.test.mjs": "719e4ee51c0a02bf4e513eaf4a601553e4f032a0164b0772644a04941f7df94c",
+    "apps/web/components/query-provider.tsx": "8fd50a362d460cc53d45fe9fad06b3fca75f6e25cbd2e6e3557eff5969398d49",
+    "apps/web/components/reader-sidebar-frame.tsx": "dacacca218a9b78a6e1d9f0a5c218b66ea6d60b7cebaf65728c283dee5e18a13",
+    "apps/web/lib/i18n.ts": "c6dac6cec3e9f849294144858b5e38118aa33f2a815a6ba61dffb8b5d1d362bd",
+    "apps/web/features/projects/project-action-menu.tsx": "4db965f77353589cae40d88c8cc52263b4596866746c1d85cb3377661e96bfa8",
+    "scripts/ux/project-archive-recovery.test.mjs": "3bc82e768506221f8d7d81a0e0a6683515244748a1b380eca2f3c4343df4a7e5",
+    "apps/web/features/conversations/conversation-metadata-dialog.tsx": "aa41815eb5bf77d3a3cc574cc9e8b28b1b0c825cf70af56caad12eb488f07916",
+    "apps/web/features/conversations/conversation-action-menu.tsx": "75ecba84ebe77b32dc3757b9f0abcf01ab4ab1a1c47ba22934c5cd29bf1b1683",
+    "apps/web/components/interaction-dialog-provider.tsx": "937c5d5d2b8f9ef75d24717327b373efa62d96b1a05709b7b83f2db24941fd89",
+    "apps/web/features/conversations/conversation-reader.tsx": "bd45902276aa3731e1a243cdd251e8cbb688f05a33757592074ff359a9188d5e",
+    "apps/web/lib/reader-data-source.ts": "22ff40ca44debe0cc2469e45168fd672cc6eb3b95e8bf6c60892243418d944a2",
+    "apps/web/lib/types.ts": "6d8d1d7218e5b4687ab8152d344e8feca823076dc3ff45124e869781584dd4eb",
+    "apps/web/lib/offline-access.ts": "8007ede171ee4189a9e284319b7bc71dff39e962ecd4feb1c634698379bcbc37",
+    "apps/api/app/schemas/conversation.py": "a55ce60f05a4b25824f94c9558fdc1da3a0d42f45632a471343fdd8023d25c30",
+    "apps/api/tests/test_conversation_metadata.py": "74c011c4540ad9972dfec84f56518a1bb9a07966d8091e162f632afe1160a767",
+    "apps/api/tests/test_conversation_management_api.py": "b8b002f47e62686c898e51fc209386831be2fd226fc2f4a99f5e4b588d19452c",
+    "scripts/ux/conversation-metadata-recovery.test.mjs": "7c07ae8d295610880df17d8c2942089dc00a9fb3ee73c6e13851a26c75e10065",
+    "apps/web/features/conversations/conversation-placement.tsx": "358a692509c3d4472e9ed5f49a3b7667472a6841c0b287837c31aae7f7eafa3c",
+    "scripts/ux/conversation-placement-recovery.test.mjs": "d7d2f6f3348975765ad2e089074bb51e83a0c4ec2c3c082a6d3034bae1689b8e",
+    "apps/api/tests/test_conversation_placement_recovery.py": "41c4d62399a118283a556f67bad0f3f1b51185455a800e1dcb545940d7866717",
+    "apps/api/tests/test_projects_api.py": "13dad399f447e38711a1ce6dc5d1e2bb89e0379a382b96cea2428b5927064d88",
+    "apps/api/tests/test_import_preview_api.py": "aea82c010bb2aaf8fba4b62c4305cc77a60a1c40b8817fcc96599a7ae46d1793"
+  },
+  "not_verified": [
+    "Real React lifecycle",
+    "Browser focus/IME/Tab/screen reader",
+    "Desktop/mobile visual checklist",
+    "PostgreSQL locking/concurrency",
+    "Current local code in CI or production"
+  ]
+}

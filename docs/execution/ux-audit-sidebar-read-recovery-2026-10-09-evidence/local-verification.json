@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "Sidebar scoped read recovery, synthetic project fixture cleanup, and earlier local archive/list/merge/project regressions",
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "production_source_unchanged": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "passing_ci_does_not_cover_this_batch": "37812290017",
+  "previous_checkpoint": "../ux-audit-archived-project-recovery-2026-10-09-evidence/local-verification.json",
+  "node_regression": {
+    "command": "node --test --test-reporter=tap scripts/ux/sidebar-read-recovery.test.mjs scripts/ux/project-fixture-cleanup.test.mjs scripts/ux/archived-project-recovery.test.mjs scripts/ux/conversation-list-recovery.test.mjs scripts/ux/merge-admission.test.mjs scripts/ux/project-recovery.test.mjs scripts/ux/merge-reentry.test.mjs",
+    "passed": 205,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 3541.3467,
+    "sidebar_cases": 41,
+    "fixture_cleanup_cases": 3,
+    "archived_project_cases": 40,
+    "list_cases": 28,
+    "merge_cases": 43,
+    "project_cases": 21,
+    "reentry_cases": 29,
+    "evidence": "Actual compiled components/hooks/callbacks/JSX, installed React static markup and subscribed QueryObserver/MutationObserver transitions. Actual sidebar query callbacks invoke explicit synthetic transport. Expansion, selection, lifecycle/focus scheduling, storage, DnD, unrelated children and server state are doubles. Three cases run actual extracted browser fixture helpers, not an API or browser."
+  },
+  "baseline": {
+    "file": "baseline.json",
+    "tests": 41,
+    "passed": 8,
+    "failed": 33,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 1472.9144,
+    "findings_not_test_count": 3,
+    "note": "Six passing controls preserve existing healthy links/drop ids/query scope, cached project/branch retention and collapsed-branch disabling. Earlier harness setup failure and 35-case 2-pass/33-fail run are recorded in baseline.json."
+  },
+  "first_sidebar_repair": {
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 1229.619
+  },
+  "fixture_cleanup": {
+    "baseline": "../ux-audit-archived-project-recovery-2026-10-09-evidence/fixture-cleanup-baseline.json",
+    "before": {
+      "passed": 1,
+      "failed": 2,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 420.1489
+    },
+    "after": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 409.8689
+    },
+    "correction": "Re-archive only the exact synthetic project before cleanup DELETE after a restore or fixture-creation failure.",
+    "counter_evidence": "Existing project_service.py:204-207 and projects.py:103-111 reject deleting active projects with HTTP 422. Earlier ERR-02 proves stale request admission in a callback double, not successful active-project deletion. No server guard changed.",
+    "browser_clock_review": "Archive/sidebar reconnect probes advance 20 seconds, exceeding the unchanged QueryProvider 15-second staleTime. An earlier 11-second advance alone did not establish staleness. No browser failure is claimed."
+  },
+  "previous_api_verification": {
+    "ledger": "../ux-audit-merge-admission-2026-10-09-evidence/local-verification.json",
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 83.43,
+    "database": "Disposable SQLite, not PostgreSQL",
+    "rerun_in_this_batch": false,
+    "basis": "Seven previously checked API implementation/test hashes are unchanged; the unchanged projects route is also included in the source inventory."
+  },
+  "postgresql_concurrency": {
+    "cases": 2,
+    "passed": 0,
+    "skipped": 2,
+    "rerun_in_this_batch": false,
+    "acceptance": "NOT_VERIFIED"
+  },
+  "browser_discovery": {
+    "command": "corepack pnpm --filter web exec playwright test e2e/ux-recovery-followup.spec.ts --list --output <task-temp>/sidebar-read-discovery",
+    "discovered": 37,
+    "existing_cases": 29,
+    "new_sidebar_cases": 8,
+    "executed_in_this_batch": 0,
+    "acceptance": "NOT_VERIFIED",
+    "intended_assertions": [
+      "375px Chinese/light and 1440px English/dark: project list, Unclassified and expanded-project regions retain actual reading-link identity and focus through injected read errors.",
+      "Held Retry keeps the same node and scopes busy status to its query. Only its GET count increases; no project/conversation write or navigation occurs.",
+      "Two initial expanded-project failures show explicit Retry, not empty drop guidance, and recover without collapsing the branch.",
+      "Synthetic message JSON and project/Unclassified memberships remain unchanged. Existing real project/history endpoints are used without fabricating list contents.",
+      "Only synthetic fixtures are created/cleaned. Reconnect staleness is advanced past the existing default. No screenshots were generated and no browser was launched in this batch."
+    ]
+  },
+  "implementation": {
+    "retained_read": "Current-query cached rows and links remain through transient errors, with localized status and a scoped read-only Retry. No second data cache.",
+    "initial_error": "Initial/empty-cache failures remain errors. Project drop guidance requires a successful empty read. Unknown Unclassified count is not represented as zero.",
+    "access": "HTTP 401/403/404 hides affected cached rows; archived/default projects are excluded from the active sidebar. Unrelated caches are not cleared.",
+    "unchanged": "DnD sensors, placement/revision mutation functions, query keys, route hrefs, project creation/archive actions, API/schema, dependencies and approved design tokens.",
+    "limitation": "No guarantee of previous data after a new sort key fails without a current cache; static evidence does not prove actual focus/drag continuity."
+  },
+  "checks": {
+    "web_lint": "passed after final application/browser-test changes",
+    "nonincremental_typecheck": "passed: corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "one_worker_web_build": "passed: Next 16.3.8; NEXT_BUILD_CPUS=1; NEXT_STANDALONE=0; compile 26.2s; built-in TypeScript 9.1s; 14 pages",
+    "git_diff_check": "passed; existing LF-to-CRLF notices only",
+    "scoped_document_links": {
+      "status": "passed",
+      "files": 21,
+      "local_links_checked": 261,
+      "missing": 0
+    },
+    "unchanged_sidebar_source": {
+      "declarations": 17,
+      "method": "TypeScript AST extracts placement/query declarations and compares their source text with HEAD, normalizing CRLF only.",
+      "result": "passed; source equivalence, not runtime drag/focus proof"
+    },
+    "visual_checklist_score": "NOT_VERIFIED; no rendered score or conformance claim"
+  },
+  "verified_file_sha256_at_checkpoint": {
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "apps/api/app/schemas/task.py": "cad472a799a7019d2ba99ea2ed54c3df854b5f11ed7c702e6bb34572a47d52f5",
+    "apps/api/app/services/background_jobs.py": "c4a568aa4fc0d6b562d6f604f83e67af4e8168457be986cca077b3db1fbbee38",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/tests/test_merge_admission.py": "360f3a43e72e4c9a7ea7b31af958a1ef6e3c9047a44a15ddbbefce1251cacaa5",
+    "apps/api/tests/test_merge_admission_postgres.py": "318523b034d66bed693704c4b476fba7e53a6ec17064d66ebcd50cbae8f63be7",
+    "apps/api/tests/test_project_settings.py": "52f7c93028e1a545110ed740928e18831ea51d1631570f44115867dc99268648",
+    "apps/web/features/conversations/use-merge-admission.ts": "21138a79553855344a53cd9884ad0d720e3a20ac3877e78da6a3508c3c0544a8",
+    "apps/web/features/conversations/merge-conversations-dialog.tsx": "00ee5f375d070d49256e3620ca64714056d8ad36801cc92798f3fb2cd9648e1b",
+    "apps/web/features/conversations/conversation-list.tsx": "f16a8de45282c7015886de89c71691f158946387f87962ac61676b7224ae26e0",
+    "apps/web/features/projects/project-conversation-list.tsx": "5aa263cff05aa3daceab91b2d7f18f05b08201fcf70290485f3e5466a6e70630",
+    "apps/web/features/projects/project-settings-dialog.tsx": "d95440c37ea67b491cccb6ec280365c5b5745f6036c461ead37fc9343f17b5c9",
+    "apps/web/lib/api.ts": "2cc1177187b044b69886a013885b30e61375bdf518b75da6bec95836112116f4",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "ed9c5989dc729b3f0649ab11787bde68d7de44b671eae51aab8c5f0d5d7efd3b",
+    "scripts/ux/merge-admission.test.mjs": "1cedb16d71eaade5844dcceb39e18dbc4881d9e078b8d2b8ba81619f427136d0",
+    "scripts/ux/project-recovery.test.mjs": "4cdff5848f864e7794bb562db2e0c3a270e5f5efaeb5cd662d25987b5811f44a",
+    "scripts/ux/merge-reentry.test.mjs": "2d68abb3290850dbfbfde6c591e4b5be40f78382e1c48439c395d506c35a3504",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/features/conversations/merge-order-list.tsx": "453edbc5c0a586c2013d746109f0c0b972de6bd63bbc09639fe250876a7c53bd",
+    "apps/web/playwright.config.ts": "400581d5a48a200df9bce919a05e8dc289b01668c6e510576858bd7846830e3d",
+    "scripts/ux/conversation-list-recovery.test.mjs": "2f500a616d102a3d47d3870cd9b89fe2e242bc79c67fb108cceb52be81789065",
+    "apps/web/features/reading/recent-items.tsx": "3453509920f9c0590a77551de8e92709543f18a81c0b3999707291d127152223",
+    "apps/web/features/projects/archived-project-list.tsx": "c97a937208e2a265e3d69d05c0054428e9f6e05f8654c4056c06821840d442a0",
+    "scripts/ux/archived-project-recovery.test.mjs": "6c0f149f6f1ef4f5c123cc6f6b56f888b70504bb60b61a8c7e1ac39ae3f59cf9",
+    "apps/web/lib/batch-selection.ts": "1c332034083b045468bf1ecacf5a69cb437806f5e499a2b7f72fdea0f5691d23",
+    "apps/api/app/api/routes/projects.py": "e44ac92eb1a4733a222a67bd175869ef0236f3d241ded658d1275fa15c9464bb",
+    "apps/web/features/projects/project-sidebar.tsx": "c34ef3011ad5c0ddf604632b85eeb6922da08ccd470f7532103c8cf9e2225e3c",
+    "scripts/ux/sidebar-read-recovery.test.mjs": "cc6add7e0134c67a7b08fc5e05b001bd051a6b727b52f629aac41017797cd4cb",
+    "scripts/ux/project-fixture-cleanup.test.mjs": "719e4ee51c0a02bf4e513eaf4a601553e4f032a0164b0772644a04941f7df94c",
+    "apps/web/components/query-provider.tsx": "8fd50a362d460cc53d45fe9fad06b3fca75f6e25cbd2e6e3557eff5969398d49",
+    "apps/web/components/reader-sidebar-frame.tsx": "dacacca218a9b78a6e1d9f0a5c218b66ea6d60b7cebaf65728c283dee5e18a13",
+    "apps/web/lib/i18n.ts": "c6dac6cec3e9f849294144858b5e38118aa33f2a815a6ba61dffb8b5d1d362bd"
+  },
+  "safety": {
+    "local_web_started": false,
+    "postgresql_api_worker_fixture_restarted": false,
+    "production_accessed_for_this_batch": false,
+    "application_images_built_locally_or_on_king": false,
+    "existing_imports_modified": false,
+    "migration_required": false,
+    "dependencies_added": false,
+    "unrelated_workspace_residues_preserved": true,
+    "older_checkpoints_rewritten": false
+  }
+}

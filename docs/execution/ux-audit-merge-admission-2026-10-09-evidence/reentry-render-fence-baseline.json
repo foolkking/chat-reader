@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "ERR-03 implementation review: old actions and acknowledgements between a changed render and passive cleanup",
+  "command": "node --test --test-name-pattern='before passive effects' scripts/ux/merge-admission.test.mjs",
+  "passed": 0,
+  "failed": 8,
+  "skipped": 35,
+  "duration_ms": 610.7292,
+  "evidence": "Actual transpiled hook callbacks with deterministic React state/ref/effect, storage and transport doubles. Rendering updated props without draining passive effects exposes missing immediate scope checks. Not a reproduced browser scheduling race or eight independent UX defects.",
+  "failure_cases": [
+    "close render fences captured start before passive effects",
+    "close render fences captured check before passive effects",
+    "close render fences captured retry before passive effects",
+    "close render fences late acknowledgement before passive effects",
+    "project switch render fences captured start before passive effects",
+    "project switch render fences captured check before passive effects",
+    "project switch render fences captured retry before passive effects",
+    "project switch render fences late acknowledgement before passive effects"
+  ],
+  "source_sha256_before_render_fence": {
+    "apps/web/features/conversations/use-merge-admission.ts": "754dff037ca6609e350a58af6cb5a56d918eac44ca57e35632305c7f2fc94e31",
+    "scripts/ux/merge-admission.test.mjs": "1cedb16d71eaade5844dcceb39e18dbc4881d9e078b8d2b8ba81619f427136d0"
+  },
+  "pre_correction_active_guard": "value.open && context.current === value && value.epoch === authenticationGeneration() && value.owner === getCurrentOfflineRuntimeUserId() && (value.owner !== null || !offlineAuthenticationRequired())",
+  "recommendation": "Compare the latest rendered open flag and scope key as well as the existing effect-owned context, account and authentication generation before every request and acknowledgement."
+}

@@ -74,12 +74,13 @@ test("PDF.js 6 uses a real version-matched worker and renders single and multi-p
     const multiTrigger = previewButton(page, attachments[1].id);
     await multiTrigger.click();
     await expect(viewer).toBeVisible();
-    await expect(viewer).toContainText("1 / 2");
+    await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("1");
+    await expect(viewer.locator("#pdf-page-total")).toHaveText("/ 2");
     await viewer.getByRole("button", { name: /Fit width/i }).click();
     await expect(viewer.getByTestId("pdf-viewer-pages")).toHaveAttribute("data-pdf-fit", "width");
     await viewer.getByTestId("pdf-next-page").click();
-    await expect(viewer).toContainText("2 / 2");
-    await expectCanvasRendered(viewer.locator("canvas").first());
+    await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("2");
+    await expectCanvasRendered(viewer.locator('[data-pdf-page="2"] canvas'));
     await page.keyboard.press("Escape");
     await expect(viewer).toBeHidden();
     await expect(multiTrigger).toBeFocused();
@@ -121,6 +122,121 @@ test("malicious and corrupted PDFs fail safely without escaping the unified View
     expect((await page.request.delete(`/api/conversations/${conversationId}`)).ok()).toBe(true);
   }
 });
+
+for (const width of [375, 1440]) {
+  test(`long mixed-size PDF stays oriented with bounded canvases at ${width}px`, async ({ page }, info) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width, height: 900 });
+    const conversationId = await createConversation(page.request);
+    const attachment = await uploadAttachment(page.request, conversationId, "long-reading.pdf", createPdf(120, { mixedSizes: true }));
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    try {
+      await openConversationFiles(page, conversationId);
+      await previewButton(page, attachment.id).click();
+      const viewer = page.getByTestId("attachment-viewer-shell");
+      const pages = viewer.getByTestId("pdf-viewer-pages");
+      const pageInput = viewer.getByRole("textbox", { name: "PDF 页码" });
+      await expectCanvasRendered(pages.locator('[data-pdf-page="1"] canvas'));
+      await pageInput.fill("90");
+      await pageInput.press("ArrowLeft");
+      await expect(pages.locator('[data-pdf-page="1"]')).toBeVisible();
+      await pageInput.press("Enter");
+      await expect(pageInput).toHaveValue("90");
+      await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
+
+      await viewer.getByRole("button", { name: "Fit width", exact: true }).click();
+      await expect(pages).toHaveAttribute("data-pdf-fit", "width");
+      await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
+      await expect(pages.locator('[data-pdf-page="90"]')).toBeInViewport();
+      await expect(pageInput).toHaveValue("90");
+      const scale = Number((await viewer.getByTestId("pdf-zoom").textContent())!.replace("%", ""));
+      await viewer.getByRole("button", { name: "放大 PDF", exact: true }).click();
+      await expect(pages).toHaveAttribute("data-pdf-fit", "custom");
+      await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
+      await expect(pageInput).toHaveValue("90");
+      const newScale = Number((await viewer.getByTestId("pdf-zoom").textContent())!.replace("%", ""));
+      expect(newScale - scale).toBeGreaterThanOrEqual(9);
+      expect(newScale - scale).toBeLessThanOrEqual(11);
+
+      await viewer.getByRole("button", { name: "展开页面缩略图", exact: true }).click();
+      const rail = viewer.getByRole("complementary", { name: "PDF 页面缩略图" });
+      await expect(rail.getByRole("button", { name: "打开 PDF 第 90 页", exact: true })).toBeInViewport();
+      await expect.poll(() => rail.locator("canvas").count()).toBeLessThanOrEqual(9);
+      await expect.poll(() => pages.locator("canvas").count()).toBeLessThanOrEqual(8);
+      await page.screenshot({ path: info.outputPath(`pdf-long-${width}-${locale}.png`) });
+      await viewer.getByRole("button", { name: "收起页面缩略图", exact: true }).click();
+      await expect(rail).toHaveCount(0);
+
+      await page.setViewportSize({ width: width === 375 ? 430 : 1180, height: 800 });
+      await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
+      await expect(pages.locator('[data-pdf-page="90"]')).toBeInViewport();
+      await expect(pageInput).toHaveValue("90");
+      await pageInput.fill("121");
+      await pageInput.press("Enter");
+      await expect(pageInput).toHaveAttribute("aria-invalid", "true");
+      await expect(pages.locator('[data-pdf-page="90"]')).toBeInViewport();
+      await pageInput.fill("120");
+      await pageInput.press("Enter");
+      await expectCanvasRendered(pages.locator('[data-pdf-page="120"] canvas'));
+      await expect(pages.locator('[data-pdf-page="120"]')).toBeInViewport();
+      await expect(pageInput).toHaveValue("120");
+      await expect(viewer.getByTestId("pdf-next-page")).toBeDisabled();
+
+      await viewer.getByRole("button", { name: "Fit page", exact: true }).click();
+      await expectCanvasRendered(pages.locator('[data-pdf-page="120"] canvas'));
+      await expect(pageInput).toHaveValue("120");
+      await expect.poll(() => pages.evaluate(node => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(2);
+      expect(await viewer.locator("canvas").evaluateAll(nodes => nodes.every(node => {
+        const canvas = node as HTMLCanvasElement;
+        return canvas.width * canvas.height <= 4 * 1024 * 1024 && Math.max(canvas.width, canvas.height) <= 4096;
+      }))).toBe(true);
+      expect(await viewer.evaluate(node => node.scrollWidth <= node.clientWidth + 2)).toBe(true);
+      await page.screenshot({ path: info.outputPath(`pdf-final-page-${width}-${locale}.png`) });
+      await page.keyboard.press("Escape");
+      await expect(viewer).toHaveCount(0);
+      expect(errors).toEqual([]);
+    } finally {
+      expect((await page.request.delete(`/api/conversations/${conversationId}`)).ok()).toBe(true);
+    }
+  });
+
+  test(`PDF page failure retries in place at ${width}px`, async ({ page }, info) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width, height: 900 });
+    const conversationId = await createConversation(page.request);
+    const attachment = await uploadAttachment(page.request, conversationId, "retry-page.pdf", createPdf(2));
+    try {
+      await page.addInitScript(() => {
+        const original = HTMLCanvasElement.prototype.getContext;
+        let failed = false;
+        HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, ...args: Parameters<typeof original>) {
+          if (!failed && this.closest('[data-pdf-page="1"]')) {
+            failed = true;
+            throw new Error("Synthetic PDF canvas failure");
+          }
+          return original.apply(this, args);
+        } as typeof original;
+      });
+      await openConversationFiles(page, conversationId);
+      await previewButton(page, attachment.id).click();
+      const viewer = page.getByTestId("attachment-viewer-shell");
+      const firstPage = viewer.locator('[data-pdf-page="1"]');
+      await expect(firstPage).toContainText("第 1 页预览失败。");
+      await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("1");
+      await page.screenshot({ path: info.outputPath(`pdf-page-retry-${width}-${locale}.png`) });
+      await firstPage.getByRole("button", { name: "重试", exact: true }).click();
+      await expectCanvasRendered(firstPage.locator("canvas"));
+      await expect(firstPage.getByRole("button", { name: "重试", exact: true })).toHaveCount(0);
+      await viewer.getByTestId("pdf-next-page").click();
+      await expectCanvasRendered(viewer.locator('[data-pdf-page="2"] canvas'));
+      await page.keyboard.press("Escape");
+      await expect(viewer).toHaveCount(0);
+    } finally {
+      expect((await page.request.delete(`/api/conversations/${conversationId}`)).ok()).toBe(true);
+    }
+  });
+}
 
 });
 
@@ -183,7 +299,7 @@ async function uploadAttachment(request: APIRequestContext, conversationId: stri
 
 async function openConversationFiles(page: Page, conversationId: string): Promise<void> {
   await page.goto(`/conversations/${conversationId}`);
-  const actions = page.getByRole("button", { name: /^(Message actions|消息操作)$/ });
+  const actions = page.getByRole("button", { name: (page.viewportSize()?.width ?? 1280) < 768 ? /^(More|更多)$/ : /^(Message actions|消息操作)$/ });
   await expect(actions).toBeVisible();
   await actions.click();
   await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
@@ -209,7 +325,7 @@ async function expectCanvasRendered(canvas: ReturnType<Page["locator"]>): Promis
   })).toBe(true);
 }
 
-function createPdf(pageCount: number, options: { paddingBytes?: number; javascript?: boolean } = {}): Buffer {
+function createPdf(pageCount: number, options: { paddingBytes?: number; javascript?: boolean; mixedSizes?: boolean } = {}): Buffer {
   const objects: string[] = [];
   const pageIds = Array.from({ length: pageCount }, (_, index) => 3 + index * 2);
   const fontId = 3 + pageCount * 2;
@@ -220,8 +336,9 @@ function createPdf(pageCount: number, options: { paddingBytes?: number; javascri
     const pageId = pageIds[index];
     const contentId = pageId + 1;
     const padding = index === 0 && options.paddingBytes ? `%${"x".repeat(options.paddingBytes)}\n` : "";
-    const stream = `${padding}BT /F1 24 Tf 72 720 Td (Synthetic page ${index + 1}) Tj ET`;
-    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`;
+    const [width, height] = options.mixedSizes && index === pageCount - 1 ? [792, 240] : options.mixedSizes && index % 3 === 2 ? [792, 612] : [612, 792];
+    const stream = `${padding}BT /F1 24 Tf 72 ${height - 72} Td (Synthetic page ${index + 1}) Tj ET`;
+    objects[pageId] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`;
     objects[contentId] = `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`;
   }
   objects[fontId] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";

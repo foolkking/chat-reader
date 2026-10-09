@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "Remote Reader detail-read recovery: retain matching cached reading surface on transient failures, localize blocking errors and add explicit owner-scoped detail retry with lost-focus recovery; preceding local regressions",
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "production_source_at_last_acceptance": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "production_checked_in_this_batch": false,
+  "passing_ci_does_not_cover_this_batch": "37812290017",
+  "previous_checkpoint": "../ux-audit-reader-recent-2026-10-09-evidence/local-verification.json",
+  "baseline": {
+    "file": "baseline.json",
+    "sha256": "7c1469e5a0d709e3a1e8949b622074ded3baeeaa9087079617d79e87bd238c3b",
+    "tests": 22,
+    "passed": 5,
+    "failed": 17,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 671.5455,
+    "findings_not_test_count": 2
+  },
+  "earlier_repair_checkpoints": [
+    {
+      "scope": "Initial repair on the same initial tests",
+      "tests": 22,
+      "passed": 22,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 589.9979
+    },
+    {
+      "scope": "Expanded detail recovery, pending, focus and actual JSX placement checks",
+      "tests": 27,
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0,
+      "cancelled": 0,
+      "duration_ms": 638.6627
+    }
+  ],
+  "node_regression": {
+    "command": "$detailScripts = @(rg --files scripts/ux -g '*.test.mjs'); node --test --test-reporter=tap @detailScripts",
+    "tests": 435,
+    "passed": 435,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 7778.5554,
+    "detail_cases": 27,
+    "preceding_cases": 408,
+    "after_final_application_and_browser_test_edits": true,
+    "evidence": "Exact Reader AST-extracted early returns, ReaderState JSX, title/focus effects, recovery JSX and callbacks with installed QueryClient/Observer. Other Reader markup is an explicit retained-surface marker. Hooks/scheduling, transport, owner/auth and DOM focus are doubles. Separate AST assertions inspect notice placement in real Reader JSX. Not full React, DOM identity, scrolling or browser acceptance."
+  },
+  "previous_api_verification": {
+    "recent_and_positions": {
+      "ledger": "../ux-audit-reader-recent-2026-10-09-evidence/local-verification.json",
+      "passed": 11,
+      "rerun_in_this_batch": false
+    },
+    "placement_and_project": {
+      "ledger": "../ux-audit-conversation-placement-2026-10-09-evidence/local-verification.json",
+      "passed": 18,
+      "rerun_in_this_batch": false
+    },
+    "metadata": {
+      "ledger": "../ux-audit-conversation-metadata-2026-10-09-evidence/local-verification.json",
+      "passed": 19,
+      "rerun_in_this_batch": false
+    },
+    "admission_and_project": {
+      "ledger": "../ux-audit-merge-admission-2026-10-09-evidence/local-verification.json",
+      "passed": 41,
+      "rerun_in_this_batch": false
+    },
+    "interpretation": "No API implementation/test, schema or migration changed in this batch; all prior bound API hashes are unchanged. Previous SQLite TestClient checkpoints overlap and are not an additive unique count or a PostgreSQL/production authentication acceptance."
+  },
+  "browser_discovery": {
+    "command": "corepack pnpm --filter web exec playwright test e2e/ux-recovery-followup.spec.ts --list --output <task-temp>/browser-discovery",
+    "discovered": 69,
+    "existing_cases": 65,
+    "new_detail_cases": 4,
+    "executed_in_this_batch": 0,
+    "acceptance": "NOT_VERIFIED",
+    "intended_assertions": [
+      "375px Chinese/light and 1440px English/dark: a real sidebar rename followed by intercepted detail GET 503 keeps original Reader and message ElementHandles connected, scroll position, canonical title and unchanged fixture messages.",
+      "Explicit held detail retry disables its own control with local aria-busy; only one retry GET is admitted and prior rename/recent writes are not replayed; recovery returns lost focus to Reader without scrolling.",
+      "An initial detail GET failure offers generic localized retry before any recent POST; pending retry has no fabricated Reader content; after success normal initial reads and exactly one first recent-open may proceed.",
+      "Mobile test setup uses a real upward wheel gesture to reveal the auto-hiding header and records its baseline only after that intentional movement. This is a source-reviewed test correction, not a demonstrated product defect.",
+      "Selectors, DOM identity, actual scheduling, focus, scroll, screenshots and cleanup are code only and remain unexecuted."
+    ],
+    "services_or_browser_started": false
+  },
+  "implementation": {
+    "retain": "Remote detail errors with the same cached conversation id retain the main Reader tree unless HTTP 401/403/404 or a known merged destination. A single compact alert outside scroll/header content identifies the prior snapshot.",
+    "unavailable": "Denied/missing or wrong-id cache does not retain a Reader on error; denied/missing and wrong-id document titles are generic. Existing merged destination and offline error behavior remain intact.",
+    "retry": "One explicit detail QueryObserver refetch with cancelRefetch:false, current visit/auth guard and live fetch-state duplicate guard. No navigation, window reset, mutation resubmission or visit recreation. Normal dependent initial reads and first recent-open can follow successful first detail.",
+    "focus": "Capture only the focused retry trigger. Current-owner layout effect restores only lost/body focus to the existing labelled scroll region or current retry button with preventScroll; selected controls and retired owners keep their boundaries.",
+    "unchanged": "No complete-turn or reading-position query/anchor algorithm, message-window error policy, mutation admission/receipt, Share, offline package/Dexie, dependency, API implementation/test/schema or migration change."
+  },
+  "checks": {
+    "web_lint": {
+      "status": "passed",
+      "command": "corepack pnpm run lint",
+      "after_final_application_and_browser_test_edits": true
+    },
+    "nonincremental_typecheck": {
+      "status": "passed",
+      "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+      "after_final_application_and_browser_test_edits": true
+    },
+    "one_worker_web_build": {
+      "status": "passed",
+      "command": "corepack pnpm --filter web build",
+      "next_version": "16.3.8",
+      "NEXT_BUILD_CPUS": "1",
+      "NEXT_STANDALONE": "0",
+      "NEXT_TELEMETRY_DISABLED": "1",
+      "compile_seconds": 28.2,
+      "built_in_typescript_seconds": 8.1,
+      "static_pages": 14,
+      "static_generation_seconds": 3.1,
+      "application_server_started": false,
+      "after_final_application_and_browser_test_edits": true
+    },
+    "git_diff_check": {
+      "status": "passed",
+      "command": "git diff --check",
+      "note": "Repository-default Windows CRLF normalization; no autocrlf override."
+    },
+    "scoped_document_links": {
+      "status": "passed",
+      "files": 26,
+      "local_links_checked": 293,
+      "missing": 0,
+      "scope": "Current/release/audit entry documents; local file targets only, not external URL or anchor validation"
+    },
+    "source_and_evidence_consistency": {
+      "status": "passed",
+      "source_files": 61,
+      "compared_previous_files": 60,
+      "unchanged_previous_files": 58,
+      "expected_changed_files": 2,
+      "retained_baseline": true,
+      "head_equals_recorded_origin": true,
+      "staged_files": 0,
+      "protected_tracked_diff_empty": true,
+      "unrelated_buildinfo_unchanged": true,
+      "legacy_auth_directories_preserved": true,
+      "limitation": "Local refs only, no remote fetch or production access; previous API passes are not reruns."
+    },
+    "visual_checklist_score": "NOT_VERIFIED; no rendered score or accessibility conformance claim"
+  },
+  "source_file_count": 61,
+  "previous_source_comparison": {
+    "compared_files": 60,
+    "unchanged_files": 58,
+    "expected_changed_files": [
+      "apps/web/e2e/ux-recovery-followup.spec.ts",
+      "apps/web/features/conversations/conversation-reader.tsx"
+    ]
+  },
+  "verified_file_sha256_at_checkpoint": {
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "apps/api/app/schemas/task.py": "cad472a799a7019d2ba99ea2ed54c3df854b5f11ed7c702e6bb34572a47d52f5",
+    "apps/api/app/services/background_jobs.py": "c4a568aa4fc0d6b562d6f604f83e67af4e8168457be986cca077b3db1fbbee38",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/tests/test_merge_admission.py": "360f3a43e72e4c9a7ea7b31af958a1ef6e3c9047a44a15ddbbefce1251cacaa5",
+    "apps/api/tests/test_merge_admission_postgres.py": "318523b034d66bed693704c4b476fba7e53a6ec17064d66ebcd50cbae8f63be7",
+    "apps/api/tests/test_project_settings.py": "52f7c93028e1a545110ed740928e18831ea51d1631570f44115867dc99268648",
+    "apps/web/features/conversations/use-merge-admission.ts": "21138a79553855344a53cd9884ad0d720e3a20ac3877e78da6a3508c3c0544a8",
+    "apps/web/features/conversations/merge-conversations-dialog.tsx": "00ee5f375d070d49256e3620ca64714056d8ad36801cc92798f3fb2cd9648e1b",
+    "apps/web/features/conversations/conversation-list.tsx": "d5e1c5586a8831bef6176b6f8eaa418c585e0e79695e1b348cd8a4539a75bf24",
+    "apps/web/features/projects/project-conversation-list.tsx": "11c55417d1bccad449f796fd0c0b0677fbd35a0544b9d5fa8a339f4c5fac1a2e",
+    "apps/web/features/projects/project-settings-dialog.tsx": "d95440c37ea67b491cccb6ec280365c5b5745f6036c461ead37fc9343f17b5c9",
+    "apps/web/lib/api.ts": "a10fb2f30cfa4c0f6b726beb09875076f190bda33dbaf66694db5ddfaaee2e2c",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "95a780cb331bd61e9288de6dcc48270900d5d2f34e622765b7acccca6a127523",
+    "scripts/ux/merge-admission.test.mjs": "1cedb16d71eaade5844dcceb39e18dbc4881d9e078b8d2b8ba81619f427136d0",
+    "scripts/ux/project-recovery.test.mjs": "043aa7d925e11b05adf976a785c2749709d0d8606d8a7a163d0eb93e1be557e8",
+    "scripts/ux/merge-reentry.test.mjs": "86eef3c9568360c62124478e5db4149030b8daac7f095d7b49e4bc060cef5a13",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/features/conversations/merge-order-list.tsx": "453edbc5c0a586c2013d746109f0c0b972de6bd63bbc09639fe250876a7c53bd",
+    "apps/web/playwright.config.ts": "400581d5a48a200df9bce919a05e8dc289b01668c6e510576858bd7846830e3d",
+    "scripts/ux/conversation-list-recovery.test.mjs": "8d9a1721f515bc742fce351cc0d8cba7dab618abbb6f3e15904d9b9fe5bdbb8b",
+    "apps/web/features/reading/recent-items.tsx": "3453509920f9c0590a77551de8e92709543f18a81c0b3999707291d127152223",
+    "apps/web/features/projects/archived-project-list.tsx": "c97a937208e2a265e3d69d05c0054428e9f6e05f8654c4056c06821840d442a0",
+    "scripts/ux/archived-project-recovery.test.mjs": "6c0f149f6f1ef4f5c123cc6f6b56f888b70504bb60b61a8c7e1ac39ae3f59cf9",
+    "apps/web/lib/batch-selection.ts": "1c332034083b045468bf1ecacf5a69cb437806f5e499a2b7f72fdea0f5691d23",
+    "apps/api/app/api/routes/projects.py": "e44ac92eb1a4733a222a67bd175869ef0236f3d241ded658d1275fa15c9464bb",
+    "apps/web/features/projects/project-sidebar.tsx": "42fbda18ddf11900a759c79c9dd1520f6fa56390f30f607e7d6b535186d1db10",
+    "scripts/ux/sidebar-read-recovery.test.mjs": "cbbcc343d74593b32f5335d1ca52542ea22533ff3d599ec376679f547ed1e744",
+    "scripts/ux/project-fixture-cleanup.test.mjs": "719e4ee51c0a02bf4e513eaf4a601553e4f032a0164b0772644a04941f7df94c",
+    "apps/web/components/query-provider.tsx": "8fd50a362d460cc53d45fe9fad06b3fca75f6e25cbd2e6e3557eff5969398d49",
+    "apps/web/components/reader-sidebar-frame.tsx": "dacacca218a9b78a6e1d9f0a5c218b66ea6d60b7cebaf65728c283dee5e18a13",
+    "apps/web/lib/i18n.ts": "c6dac6cec3e9f849294144858b5e38118aa33f2a815a6ba61dffb8b5d1d362bd",
+    "apps/web/features/projects/project-action-menu.tsx": "4db965f77353589cae40d88c8cc52263b4596866746c1d85cb3377661e96bfa8",
+    "scripts/ux/project-archive-recovery.test.mjs": "3bc82e768506221f8d7d81a0e0a6683515244748a1b380eca2f3c4343df4a7e5",
+    "apps/web/features/conversations/conversation-metadata-dialog.tsx": "aa41815eb5bf77d3a3cc574cc9e8b28b1b0c825cf70af56caad12eb488f07916",
+    "apps/web/features/conversations/conversation-action-menu.tsx": "75ecba84ebe77b32dc3757b9f0abcf01ab4ab1a1c47ba22934c5cd29bf1b1683",
+    "apps/web/components/interaction-dialog-provider.tsx": "937c5d5d2b8f9ef75d24717327b373efa62d96b1a05709b7b83f2db24941fd89",
+    "apps/web/features/conversations/conversation-reader.tsx": "ea4bab0d4999d291050a03abb7dbfb256491ef17bca5725df7193679e6b79f2b",
+    "apps/web/lib/reader-data-source.ts": "22ff40ca44debe0cc2469e45168fd672cc6eb3b95e8bf6c60892243418d944a2",
+    "apps/web/lib/types.ts": "6d8d1d7218e5b4687ab8152d344e8feca823076dc3ff45124e869781584dd4eb",
+    "apps/web/lib/offline-access.ts": "8007ede171ee4189a9e284319b7bc71dff39e962ecd4feb1c634698379bcbc37",
+    "apps/api/app/schemas/conversation.py": "a55ce60f05a4b25824f94c9558fdc1da3a0d42f45632a471343fdd8023d25c30",
+    "apps/api/tests/test_conversation_metadata.py": "74c011c4540ad9972dfec84f56518a1bb9a07966d8091e162f632afe1160a767",
+    "apps/api/tests/test_conversation_management_api.py": "b8b002f47e62686c898e51fc209386831be2fd226fc2f4a99f5e4b588d19452c",
+    "scripts/ux/conversation-metadata-recovery.test.mjs": "7c07ae8d295610880df17d8c2942089dc00a9fb3ee73c6e13851a26c75e10065",
+    "apps/web/features/conversations/conversation-placement.tsx": "358a692509c3d4472e9ed5f49a3b7667472a6841c0b287837c31aae7f7eafa3c",
+    "scripts/ux/conversation-placement-recovery.test.mjs": "d7d2f6f3348975765ad2e089074bb51e83a0c4ec2c3c082a6d3034bae1689b8e",
+    "apps/api/tests/test_conversation_placement_recovery.py": "41c4d62399a118283a556f67bad0f3f1b51185455a800e1dcb545940d7866717",
+    "apps/api/tests/test_projects_api.py": "13dad399f447e38711a1ce6dc5d1e2bb89e0379a382b96cea2428b5927064d88",
+    "apps/api/tests/test_import_preview_api.py": "aea82c010bb2aaf8fba4b62c4305cc77a60a1c40b8817fcc96599a7ae46d1793",
+    "scripts/ux/reader-recent-recovery.test.mjs": "a060b3db356d3f18c7fcaecead77fb2a0a230bbccb299f0e59f4c1cc3c0097f2",
+    "apps/api/tests/test_recent_items_api.py": "aeaa11c1607a612b98c7c4ccab0e73909b028d880123b507f5a39f1b51a97c3d",
+    "apps/api/tests/test_reading_positions_api.py": "ea44b0dcc896462a135400720b32c23bc02fbf8dd17cfc25fd4311d6aa84e32d",
+    "apps/api/tests/test_reading_position_sync.py": "0db3bf0a1a02b151f912ec51f9b16fb87e1b5e278bd286ce83a10213d5839157",
+    "apps/api/tests/test_auth.py": "d94823ae4a6d2b98f2288a06bcdadee048abc6694d5aee1dfad2111c21195aa8",
+    "apps/api/app/services/reading/reading_service.py": "4be1d9e902cf79495a8236e711ee66c64502c50331b3af0cdf01487bff0f38bf",
+    "apps/api/app/api/routes/reading.py": "54532a882e6c23906a949c155298ebc6f646eecfd3c49c98849ef72454fa6d73",
+    "apps/api/app/schemas/reading.py": "ef5405a03496dd103be039c19c7435037fb497d3b2ff36b3c9e5be06f589588e",
+    "apps/web/features/conversations/message-item.tsx": "ff5591dfdf0e59ad2103080e783aca484b2484b120267e6031a5b821bd86b04d",
+    "apps/web/features/conversations/message-insert-dialog.tsx": "f12105da58b02dbbe771cef581c222a9478570919e307fcded3f62c04f9ba1ff",
+    "scripts/ux/reader-detail-recovery.test.mjs": "668dba2f4b0fb886beaf1471043ac93c0022a17505522b512bfb811df0fceb85"
+  },
+  "not_verified": [
+    "Full React lifecycle and browser scheduling",
+    "Actual retained DOM identity and scroll continuity",
+    "Keyboard/screen-reader focus and mobile visual layout",
+    "Browser execution",
+    "PostgreSQL concurrency",
+    "Production behavior of this local-only batch"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "recorded_on": "2026-10-09",
+  "scope": "Pre-repair synthetic source fidelity baseline; no browser/server/production execution",
+  "node": {
+    "total": 26,
+    "passed": 7,
+    "failed": 19,
+    "skipped": 0
+  },
+  "api": {
+    "total": 12,
+    "passed": 3,
+    "failed": 9,
+    "skipped": 0,
+    "engine": "disposable SQLite TestClient"
+  },
+  "sources": [
+    {
+      "sha256": "83b3b7d42c418b72b8059421bbd45d823496f5f72c076d43e5ca55110c33bfdf",
+      "path": "apps/web/features/conversations/new-conversation-dialog.tsx"
+    },
+    {
+      "sha256": "372072233b5e2b37a575ad7faf4bb65b2e5b8a33d80711c05af12ab755b5fc2a",
+      "path": "apps/web/features/editing/edit-message-form.tsx"
+    },
+    {
+      "sha256": "3665d6967dc4fee32ee07cdaf4aabdbb2a110be864f3ef639ffee9607d27a934",
+      "path": "apps/api/app/services/editing/message_edit_service.py"
+    },
+    {
+      "sha256": "c6f51da85898d876bfa9f062f4697ea9f32c755d9f9ab13917eae9d7577ae139",
+      "path": "scripts/ux/manual-markdown-fidelity.test.mjs"
+    },
+    {
+      "sha256": "651c0867c652a95a4ce29dfb321f6225de550b8de6aebfb2a0ba41886b80d6e4",
+      "path": "apps/api/tests/test_manual_markdown_fidelity.py"
+    }
+  ],
+  "failure_summary": [
+    "Create trims both Markdown bodies",
+    "Edit submission and unchanged comparison discard intentional whitespace",
+    "API trims canonical source, undercounts padded limit and offsets transient-upload line numbers"
+  ]
+}

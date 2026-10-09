@@ -165,6 +165,9 @@ jobs:
       - name: Offline shell reconciliation regressions
         run: node --test scripts/pwa/offline-shell.test.mjs
 
+      - name: Ordinary-user recovery and bounded attachment regressions
+        run: node --test scripts/ux/*.test.mjs
+
       - name: Dependency audit from official npm registry
         run: |
           set +e
@@ -280,6 +283,7 @@ jobs:
           e2e/release-mutation-lifecycle.spec.ts
           e2e/ux-whole-site.spec.ts
           e2e/ux-recovery-followup.spec.ts
+          e2e/manual-markdown-fidelity.spec.ts
 
       - name: Source Editor content cleanup browser gate
         timeout-minutes: 20
@@ -311,6 +315,7 @@ jobs:
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/ai-rich-markdown-attachment.spec.ts
+          e2e/attachment-reading.spec.ts
 
       - name: PDF.js maintained-line browser checks
         timeout-minutes: 20

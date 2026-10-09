@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-09",
+  "application_source": "eceadc622fb880ffaaa0ad4ceab69db4cd48b757",
+  "application_edited_before_baseline": false,
+  "api": {
+    "test_file": "apps/api/tests/test_project_settings.py",
+    "runtime": "FastAPI TestClient, disposable SQLite, synthetic metadata and conversations",
+    "initial_attempt": {
+      "passed": 3,
+      "failed": 4,
+      "product_failures": 3,
+      "fixture_failures": 1,
+      "fixture_correction": "Conversation creation requires exactly one user/assistant pair; message snapshots use their actual detail endpoints."
+    },
+    "corrected_baseline": {
+      "passed": 3,
+      "failed": 4,
+      "skipped": 0,
+      "seconds": 14.65,
+      "product_failures": [
+        "Explicit null description returns 200 and retains the old description.",
+        "Explicit null color returns 200 and retains the old color.",
+        "Explicit null icon returns 200 and retains the old icon.",
+        "A project with a linked conversation also retains its cleared description."
+      ]
+    }
+  },
+  "synthetic_component_checks": {
+    "test_file": "scripts/ux/project-recovery.test.mjs",
+    "runtime": "Actual transpiled component callbacks and JSX, installed React static markup and TanStack MutationObserver/QueryObserver; explicit API and child doubles",
+    "passed": 1,
+    "failed": 8,
+    "skipped": 0,
+    "confirmed_mechanisms": [
+      "Description-only draft submits all four opening fields.",
+      "An unrelated name edit submits fallback color and icon for original null values.",
+      "A held follow-up callback keeps the confirmed form unclosed.",
+      "A rejected follow-up callback converts a confirmed write into mutation error.",
+      "Cached project variants do not receive the canonical save response.",
+      "A failed refresh retains a QueryObserver row but removes it from component markup.",
+      "Initial load failure exposes raw detail without the local Retry action.",
+      "The placeholder callback accepts another project's previous rows."
+    ],
+    "passing_guard": "A 404 currently hides retained rows; preserve this boundary during repair."
+  },
+  "boundaries": {
+    "browser_executed": false,
+    "effects_focus_hydration_layout_verified": false,
+    "production_accessed": false,
+    "postgres_fixture_restarted": false,
+    "included_in_running_ci": false,
+    "new_ci_or_deployment_authorized": false
+  }
+}

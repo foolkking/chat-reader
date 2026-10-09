@@ -40,7 +40,11 @@ export function ReadingPositionSyncStatus({ conversationId, onUseServer, storage
     try { await action(); } catch { setError(zh ? "进度已变化或操作未完成，请重新核对后重试。" : "Progress changed or the action did not finish. Review and retry."); }
     finally { setBusy(false); }
   };
-  if (!showIdle && !storageError && !readFailed && !view?.conflict && !view?.pending && !error && !navigationTarget) return null;
+  // Routine autosaves must not add/remove a row above the Reader on every
+  // scroll. Keep observing silently; only actionable problems interrupt reading.
+  // The explicitly opened sync detail can still show ordinary queue/saved state.
+  if (!showIdle && !storageError && !readFailed && !view?.conflict && !view?.failed && !error && !navigationTarget) return null;
+  const showRoutineStatus = showIdle && !storageError && !readFailed && !error && !navigationTarget;
   const choose = (choice: "local" | "server") => perform(async () => {
     if (!view?.local || !view.server) return;
     const result = await resolveReadingPosition(conversationId, choice, view.server.revision ?? 1, readingSignature(view.local));
@@ -51,12 +55,12 @@ export function ReadingPositionSyncStatus({ conversationId, onUseServer, storage
       <p className="font-medium">{zh ? "另一设备也更新了阅读位置" : "Another device updated your reading position"}</p>
       <p>{zh ? "本机" : "Local"}: {describe(view.local, zh)} · {zh ? "另一设备" : "Other device"}: {describe(view.server, zh)}</p>
       <div className="flex flex-wrap gap-2"><button className="btn-secondary min-h-9 px-3" disabled={busy || view.submitted} onClick={() => void choose("local")}>{zh ? "继续本机位置" : "Continue here"}</button><button className="btn-secondary min-h-9 px-3" disabled={busy || view.submitted} onClick={() => void choose("server")}>{zh ? "使用另一设备位置" : "Use other device position"}</button></div>
-    </> : view?.pending ? <p role="status">{view.failed ? (zh ? "阅读进度同步失败，本机位置已保留。" : "Reading progress sync failed. Your local position is saved.") : (zh ? "阅读进度已保存在本机，等待同步。" : "Reading progress is saved locally and waiting to sync.")}</p> : null}
+    </> : view?.pending && (view.failed || showRoutineStatus) ? <p role="status">{view.failed ? (zh ? "阅读进度同步失败，本机位置已保留。" : "Reading progress sync failed. Your local position is saved.") : (zh ? "阅读进度已保存在本机，等待同步。" : "Reading progress is saved locally and waiting to sync.")}</p> : null}
     {storageError ? <p role="alert">{zh ? "阅读进度尚未保存，请重试；正文仍可阅读。" : "Reading progress could not be saved. Retry; the text remains readable."}</p> : null}
     {readFailed ? <p role="alert">{zh ? "无法读取本机进度，请检查浏览器存储。" : "Cannot read local progress. Check browser storage."}</p> : null}
     {error ? <p role="alert">{error}</p> : null}
     {navigationTarget && error ? <button className="btn-secondary min-h-9 px-3" disabled={busy} onClick={() => void perform(async () => { await onUseServer?.(navigationTarget); setNavigationTarget(null); })}>{zh ? "重新定位已选位置" : "Retry locating the chosen position"}</button> : null}
-    {showIdle && view && !view.conflict && !view.pending ? <p role="status">{zh ? "阅读位置已保存" : "Reading position saved"}</p> : null}
+    {showRoutineStatus && view && !view.conflict && !view.pending ? <p role="status">{zh ? "阅读位置已保存" : "Reading position saved"}</p> : null}
     {view?.failed || storageError || readFailed ? <button className="btn-secondary min-h-9 px-3" disabled={busy} onClick={() => void perform(async () => {
       await offlineDb.open();
       if (readFailed) await readSyncedReadingPosition(conversationId, navigator.onLine, true);

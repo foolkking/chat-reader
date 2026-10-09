@@ -21,6 +21,140 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-manual-markdown-2026-10-09.md` owns the source-fidelity finding,
+26-case Node and 12-case API failure baselines, repair and block-projection limit.
+`execution/ux-audit-attachment-reading-2026-10-09.md` owns the PDF/gallery/JSON/
+unsupported and later Blob/worker/short-last-page findings, three distinct
+baselines and the integrated local ledger. That ledger inherits the previous
+72-file checkpoint without changing its hashes and records 601 Node, 103 SQLite
+API, lint/types/build/head and 125 discovered/zero executed browser cases.
+`system/ATTACHMENT_RENDERER_CONTRACT.md` owns current bounded-rendering and
+recovery behavior, correcting old blanket Office/ZIP and 8 MiB text-read claims;
+`system/PDFJS_MIGRATION_CONTRACT.md` distinguishes the unchanged engine from this
+follow-up. `api-reference.md` owns exact-source validation; `testing.md` owns gate
+placement and evidence limits. `execution/ATTACHMENT_READING_RELEASE_2026-10-09.md`
+owns the one newly authorized exact-source CI/deployment cycle. Old dated records
+are not rewritten as acceptance of these changes.
+
+`execution/ux-audit-reader-navigation-readiness-2026-10-09.md` owns three pre-edit
+findings, including the user's routine-autosave feedback request. Adjacent separate
+baselines retain 10-pass/19-fail autosave and 11-pass/18-fail readiness results;
+the new ledger owns 31/29 focused and 527 combined passes, 72 source/test hashes,
+lint/typecheck/bounded build and 79 discovered, unexecuted browser cases.
+`system/USER_FLOWS.md` owns quiet routine feedback, preserved exceptional recovery,
+accepted-window readiness and explicit-navigation restore ownership. No saving
+payload, database, API or migration change is implied. Prior ledgers remain
+unchanged; browser/visual acceptance, new commits, CI and deployment remain excluded.
+
+`execution/ux-audit-reader-initial-window-2026-10-09.md` owns two initial complete-
+turn recovery findings, the 5-pass/19-fail baseline and separate extractor correction.
+Its adjacent ledger owns 32 focused / 467 combined passing Node checks, 64 bound
+source/test hashes, lint/typecheck/bounded build and 75 discovered, unexecuted browser
+cases. `system/USER_FLOWS.md` owns same-query retry and current-window error scope.
+Original turn/anchor and navigation/position algorithms remain unchanged. First-paint
+readiness after alternate navigation was an unaccepted candidate at that checkpoint.
+Prior ledgers remain historical; no API rerun, CI, commit or deployment is implied.
+
+`execution/ux-audit-reader-detail-recovery-2026-10-09.md` owns the two pre-edit
+detail-read findings, 5-pass/17-fail baseline, retained/error/access branches and
+scoped retry/focus decisions. Its adjacent ledger binds 61 source/test hashes,
+27 focused and 435 combined passing Node checks, lint/typecheck/bounded build and
+69 discovered, unexecuted browser cases. `system/USER_FLOWS.md` owns current behavior;
+current entries advance without rewriting earlier ledgers. API sources/tests are
+unchanged and not rerun. No real DOM/scroll/focus, visual, CI or production acceptance
+is implied; commits and deployment still require a new explicit user request.
+
+`execution/ux-audit-reader-recent-2026-10-09.md` owns the four pre-edit recent-open
+findings, 7-pass/17-fail baseline, full-detail/time-ordering decisions and owner/auth
+boundaries. Its adjacent ledger owns 37 focused and 408 combined passing Node checks,
+11 passing SQLite recent/position/sync contracts, final source hashes and 65 discovered,
+unexecuted browser cases. `system/USER_FLOWS.md` owns mounted-visit behavior;
+`api-reference.md` clarifies unchanged count/revision/summary contracts. Current
+entries advanced to that checkpoint without rewriting placement or older evidence.
+No browser, PostgreSQL concurrency, CI or production acceptance is implied.
+
+`execution/ux-audit-conversation-placement-2026-10-09.md` owns five pre-edit
+placement findings plus the later, separately recorded lost-focus finding.
+Its adjacent evidence preserves the 3-pass/19-fail, 38-pass/6-fail and 58-pass/2-fail
+baselines, harness corrections, 371-pass combined Node checkpoint, 18-pass SQLite
+placement/project contract batch and exact checkpoint source hashes. The browser
+file discovers 61 cases; none executed locally. `system/USER_FLOWS.md` owns the
+list/sidebar request owner, explicit current-state check/retry, acknowledgement
+publication and local lifecycle/focus boundaries. `api-reference.md` clarifies
+the unchanged placement endpoint and ambiguous null GET summary. No historical
+hash is rewritten, no prior API counts are added, and no CI/deployment is authorized.
+
+`execution/ux-audit-conversation-metadata-2026-10-09.md` owns the five scoped
+metadata findings delivered before edits, the 5-pass/15-fail baseline, separately
+identified harness failure and local editor repair. Its adjacent ledger owns the
+311-pass Node checkpoint, the separate 58-pass/5-fail recovery-edge baseline,
+19-pass SQLite metadata/management batch, 45 source hashes at that checkpoint and 53 discovered,
+unexecuted browser cases. `system/USER_FLOWS.md` owns the editor/current-value-check
+behavior and its instance/concurrency limits; `api-reference.md` records unchanged
+server clearing/Unicode/PATCH semantics. Current entries link this checkpoint
+without rewriting previous source hashes or granting further CI/deployment.
+
+`execution/ux-audit-project-archive-feedback-2026-10-09.md` owns the next scoped
+project-archive feedback/admission review, delivered before application edits.
+Its source findings distinguish slow invalidation from ordinary non-throwing GET
+failures. Adjacent evidence preserves the 4-pass/16-fail baseline, 20-pass initial
+repair and 43-pass expanded controller/menu checks. The final combined checkpoint
+is 248 Node passes and 43 discovered, unexecuted browser cases. `system/USER_FLOWS.md`
+owns sidebar-instance recovery, active/archive cache separation and explicit
+result-check/retry behavior. This does not change older source hashes or authorize
+additional CI/deployment.
+
+`execution/ux-audit-sidebar-read-recovery-2026-10-09.md` owns three local-only
+sidebar read/recovery findings, its separately identified test-harness setup
+failure, 8-pass/33-fail baseline and 41-case repair. Its final evidence owns the
+205-pass combined checkpoint and 37 discovered, unexecuted browser cases.
+`system/USER_FLOWS.md` owns scoped read-only Retry, retained links, error/empty
+distinctions and unchanged placement boundaries. The preceding archived-project
+audit adds backend counter-evidence: active-project deletion was already rejected,
+so its callback reproduction demonstrates a stale request, not successful deletion.
+Its new `fixture-cleanup-baseline.json` records a distinct 1-pass/2-fail browser
+helper check before correction. Historical source hashes and discovery-only
+checkpoints remain intact. No new CI or deployment is authorized.
+
+`execution/ux-audit-archived-project-recovery-2026-10-09.md` owns the local-only
+archived-project read/restore/result audit and later current-selection guard.
+Its adjacent evidence preserves 9-pass/21-fail, 33-pass/3-fail and 36-pass/4-fail
+baselines, plus a separate 161-pass final Node checkpoint. It records 29 discovered,
+unexecuted browser cases and unchanged earlier API hashes; 54/93/121-case snapshots
+are not rewritten when shared files change. `system/USER_FLOWS.md` owns retained
+rows, acknowledged results, explicit unknown-result checks and the post-confirmation
+rendered-scope recheck. No browser, PostgreSQL, CI or deployment acceptance is implied.
+
+`execution/ux-audit-conversation-list-recovery-2026-10-09.md` owns the local-only
+active/archive list audit, its pre-edit 11-pass/17-fail baseline, the recorded
+test-harness corrections and separate 121-case `local-verification.json`.
+It does not rewrite the older 54/93-case merge evidence when shared source hashes
+change. Browser discovery is 19 cases, none executed in this batch; seven backend
+hashes still match the earlier 41-pass SQLite checkpoint. Current entries and
+`system/USER_FLOWS.md` own retained-list/read-only retry and truthful empty-state
+behavior. `system/PAGE_AND_ROUTE_MAP.md` corrects root scope to all active rows.
+No CI or deployment authority is implied by this documentation update.
+
+`execution/ux-audit-merge-admission-2026-10-09.md` owns the local-only merge
+admission/recovery audit, exact-source failed baselines, later confirmed-close
+inference correction, selection-independent re-entry and render-time callback
+fencing. Its separate `reentry-verification.json` preserves the prior 54-case
+checkpoint and records 93 Node passes at its own checkpoint, unchanged 41-case SQLite API
+evidence, two skipped PostgreSQL cases and 13 discovered—but unexecuted in this
+batch—browser cases. This is not browser or deployment acceptance. `api-reference.md`
+owns owner/key/payload replay and read-only lookup; `system/USER_FLOWS.md` owns
+explicit checking/retry, independent re-entry and permission/focus boundaries; `system/RETENTION_CONTRACT.md`
+distinguishes receipt retention from Task Center visibility. Current entries
+separate passing a12ce9e CI from accepted 30a0d32 production and local follow-ups.
+
+`execution/ux-audit-project-recovery-2026-10-09.md` owns the next local-only
+project settings/read recovery audit. It was written before application edits
+and distinguishes source observations, synthetic/API reproductions and pending
+browser acceptance. It is outside CI 37812290017 and carries no release authority.
+Its local verification records 21 Node checks and a 20-case combined API batch;
+`api-reference.md` owns explicit-null PATCH semantics and `system/USER_FLOWS.md`
+owns dirty-field saves, confirmed acknowledgement and same-project read recovery.
+
 `execution/ux-audit-post-release-recovery-2026-10-08.md` is the pre-fix follow-on
 audit of six recovery/navigation defects, plus the later CI-observed optional
 shell repair and singular-copy findings, recorded before those edits. Its
@@ -29,10 +163,10 @@ computed token contrast, eight reviewed 56930fe screenshots and sanitized failed
 CI/trace facts. Synthetic checks are not browser acceptance.
 `system/USER_FLOWS.md` owns shared Undo, identity-based selection and cached-read
 recovery behavior; `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` owns same-revision
-missing-only shell repair; `testing.md` owns nine passing new cases, the six
-synthetic shell regressions and the new optional-only negative case. Current
-state separates partial follow-up verification from accepted production and
-records the user's boundary: after this CI passes, no further CI submission or
+missing-only shell repair and canonical URL inventory; `testing.md` owns nine
+passing new cases, nine synthetic shell regressions and the optional-only negative case. Current
+state separates passing a12ce9e follow-up CI from accepted production and
+records the user's boundary: this CI cycle has passed, with no further CI submission or
 deployment without a new explicit request.
 
 `execution/ux-audit-search-filter-race-2026-10-08.md` records the CI-observed

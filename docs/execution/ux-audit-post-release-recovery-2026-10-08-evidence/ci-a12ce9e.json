@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "source": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "run_id": 37812290017,
+  "conclusion": "success",
+  "deployed": false,
+  "api": { "job_id": 113431954029, "conclusion": "success", "passed": 1181, "skipped": 3, "warnings": 16, "seconds": 764.57 },
+  "web": {
+    "job_id": 113431954151,
+    "conclusion": "success",
+    "artifact_id": 11566861926,
+    "github_artifact_digest": "sha256:0e12c4166fb497a55a3b89f4cd2d01ac6ed166044bc36bb2bf86d573db212b7e",
+    "gates": { "pass": 13, "fail": 0, "not_verified": 0, "skipped": 0 },
+    "mutation": { "passed": 26, "failed": 0, "skipped": 0, "new_followup_cases_passed": 9 },
+    "negative_pwa": { "passed": 18, "failed": 0, "skipped": 0 },
+    "default_pwa": { "passed": 135, "conditional_skips": 597 },
+    "adaptive_import": { "passed": 8, "conditional_skips": 1 }
+  },
+  "settings": {
+    "job_id": 113431953772,
+    "conclusion": "success",
+    "artifact_id": 11568420421,
+    "github_artifact_digest": "sha256:b1f4b1d9272e9b439e9f367652e60df1543502567a5dc498b2df573fbcc9ad20",
+    "matrix_log": { "passed": 439, "failed": 0, "skipped": 0, "minutes": 38.0 },
+    "fresh_instance_restore_log": { "passed": 1, "seconds": 34.6 }
+  },
+  "images": {
+    "build_job_id": 113450128179,
+    "build_conclusion": "success",
+    "inspection_job_id": 113451225622,
+    "inspection_conclusion": "success",
+    "artifact_id": 11567238870,
+    "producer_attempt": 1,
+    "size_bytes": 201767757,
+    "github_artifact_digest": "sha256:ddf7929476c18de29e22b5ba01fb0273edc695c1be31ad79f50562bfcfae5491",
+    "independent_download_digest_matches": true,
+    "downloaded_to_production": false
+  },
+  "reviewed_synthetic_screenshots": [
+    { "file": "a12ce9e-undo-unconfirmed-375.png", "sha256": "619c2e14d1586f9362903b757ca87b426305647295802d36b898f94ceaa0d9bf" },
+    { "file": "a12ce9e-undo-unconfirmed-1440.png", "sha256": "1594c028a17403f3dc57631156098d9a689d88fa85c2e026718cb8bc11c5e001" },
+    { "file": "a12ce9e-undo-empty-archive.png", "sha256": "d848900dd1d6433a6ed48f5acfb5f28a19e579330cea4b70a74bc3e8b864d2e2" },
+    { "file": "a12ce9e-undo-empty-restore.png", "sha256": "97193b479606a858332649f609ea8a1cc8de5a11a2570fb459840976deb769fb" },
+    { "file": "a12ce9e-search-stable-selection.png", "sha256": "81d8f92666a8bb0b3f2dae391a383e94f89ca54642d47bfd187c8eb6f4eb7876" },
+    { "file": "a12ce9e-recent-refresh-375.png", "sha256": "e687a9b4a75af34c73c4fb8f8b4fd485473acce31a49668645be5680e2bd22d5" },
+    { "file": "a12ce9e-recent-refresh-1440.png", "sha256": "d065a009fff9206e9779019f3e61dc418d15b5570ad9b79c8016a92ade5e17f2" },
+    { "file": "a12ce9e-project-filter-error-mobile.png", "sha256": "c22d5af30145c13ad2be436292f1569d054acda76843e71c1a83a2411c69bb83" }
+  ],
+  "verification_boundaries": {
+    "production_source": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+    "production_browser_tested": false,
+    "specified_windows_chromium_application_tested": false,
+    "followup_deployment_authorized": false,
+    "separate_project_and_merge_recovery_batches_included": false,
+    "further_commit_push_ci_or_deployment_requires_explicit_user_request": true,
+    "log_retrieval_note": "A gh cached-log ZIP was invalid; direct read-only job-log retrieval succeeded. This was not a workflow failure."
+  }
+}

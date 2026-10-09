@@ -28,6 +28,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  ApiRequestError,
   createProject,
   getConversations,
   getProjectConversations,
@@ -37,6 +38,7 @@ import {
 } from "../../lib/api";
 import type { ConversationCreateResponse, ConversationListItem, ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
+import { ConversationPlacementSurface, useConversationPlacement, type ConversationPlacementController } from "../conversations/conversation-placement";
 import { NewConversationDialog } from "../conversations/new-conversation-dialog";
 import { ImportTaskMonitor } from "../import/import-task-monitor";
 import { ProjectSymbol } from "./project-symbol";
@@ -49,7 +51,7 @@ import { useImportDialog } from "../../components/import-dialog-provider";
 import { SidebarSearch } from "../search/sidebar-search";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
-import { ProjectActionMenu } from "./project-action-menu";
+import { ProjectActionMenu, ProjectArchiveFeedback, useProjectArchive, type ProjectArchiveController } from "./project-action-menu";
 
 type DragConversation = { activeType: "conversation"; id: string; title: string; description?: string; projectName?: string | null; projectId: string | null; projectPinned: boolean; offlineRevision: number };
 type DragProject = { activeType: "project"; id: string };
@@ -334,8 +336,12 @@ export function ProjectSidebar({
     }
   }
 
-  const projects = useMemo(() => (projectsQuery.data ?? []).filter((project) => !project.is_default), [projectsQuery.data]);
-  const conversations = conversationsQuery.data ?? [];
+  const projectsUnavailable = projectsQuery.isError && isSidebarReadUnavailable(projectsQuery.error);
+  const conversationsUnavailable = conversationsQuery.isError && isSidebarReadUnavailable(conversationsQuery.error);
+  const projects = useMemo(() => projectsUnavailable ? [] : (projectsQuery.data ?? []).filter((project) => !project.is_default && !project.is_archived), [projectsQuery.data, projectsUnavailable]);
+  const conversations = conversationsUnavailable ? [] : conversationsQuery.data ?? [];
+  const projectArchive = useProjectArchive({ projects, unavailable: projectsUnavailable, onChanged: refreshSidebar });
+  const placement = useConversationPlacement({ scope: "sidebar:" + (pathname ?? ""), unavailable: projectsUnavailable || conversationsUnavailable, onChanged: refreshSidebar });
 
   async function refreshSidebar() {
     await Promise.all([
@@ -466,10 +472,14 @@ export function ProjectSidebar({
       currentProjectId={currentProjectId}
       projects={projects}
       projectsLoading={projectsQuery.isLoading}
-      projectsError={projectsQuery.isError ? projectsQuery.error.message : null}
+      projectsError={projectsQuery.isError}
+      projectsFetching={projectsQuery.isFetching}
+      onRetryProjects={() => { void projectsQuery.refetch(); }}
       conversations={conversations}
       conversationsLoading={conversationsQuery.isLoading}
-      conversationsError={conversationsQuery.isError ? conversationsQuery.error.message : null}
+      conversationsError={conversationsQuery.isError}
+      conversationsFetching={conversationsQuery.isFetching}
+      onRetryConversations={() => { void conversationsQuery.refetch(); }}
       expandedProjects={expandedProjects}
       toggleProject={(projectId) => setExpandedProjects((current) => toggleSet(current, projectId))}
       onImportClick={() => {
@@ -490,6 +500,8 @@ export function ProjectSidebar({
       onCreateProject={() => { const trimmed = name.trim(); if (trimmed) createMutation.mutate({ name: trimmed, icon: "folder" }); }}
       onConversationChanged={refreshSidebar}
       onProjectChanged={refreshSidebar}
+      projectArchive={projectArchive}
+      placement={placement}
       closeMobile={() => setShowMobileDrawer(false)}
       onCollapse={readerMode ? () => setReaderSidebarExpanded(false) : undefined}
     />
@@ -525,6 +537,7 @@ export function ProjectSidebar({
         }}
       />
       <TaskCenterDialog open={showTaskCenter} onClose={() => setShowTaskCenter(false)} />
+      <ConversationPlacementSurface placement={placement} floating />
     </DndContext>
   );
 }
@@ -592,10 +605,14 @@ type SidebarContentProps = {
   currentProjectId?: string;
   projects: ProjectRead[];
   projectsLoading: boolean;
-  projectsError: string | null;
+  projectsError: boolean;
+  projectsFetching: boolean;
+  onRetryProjects: () => void;
   conversations: ConversationListItem[];
   conversationsLoading: boolean;
-  conversationsError: string | null;
+  conversationsError: boolean;
+  conversationsFetching: boolean;
+  onRetryConversations: () => void;
   expandedProjects: Set<string>;
   toggleProject: (projectId: string) => void;
   onImportClick: () => void;
@@ -610,6 +627,8 @@ type SidebarContentProps = {
   onCreateProject: () => void;
   onConversationChanged: () => Promise<void>;
   onProjectChanged: () => Promise<void>;
+  projectArchive: ProjectArchiveController;
+  placement: ConversationPlacementController;
   closeMobile: () => void;
   onCollapse?: () => void;
 };
@@ -643,7 +662,8 @@ function SidebarContent(props: SidebarContentProps) {
           <NavLink href="/archived" label={t("archived")} active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
         </nav>
 
-        <div className="mt-5">
+        <ProjectArchiveFeedback archive={props.projectArchive} />
+        <section className="mt-5" aria-label={t("projects")} aria-busy={props.projectsFetching}>
           <div className="flex items-center justify-between px-2">
             <h2 className="text-xs font-semibold text-secondary">{t("projects")}</h2>
             <button ref={projectCreateTriggerRef} type="button" aria-label={zh ? "新建项目" : "New project"} title={zh ? "新建项目" : "New project"} aria-expanded={props.showProjectForm} onClick={() => props.setShowProjectForm(!props.showProjectForm)} className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-surface"><Plus className="h-4 w-4" /></button>
@@ -661,14 +681,22 @@ function SidebarContent(props: SidebarContentProps) {
                 closeMobile={props.closeMobile}
                 onChanged={props.onConversationChanged}
                 onProjectChanged={props.onProjectChanged}
+                projectArchive={props.projectArchive}
+                placement={props.placement}
               />
             ))}
           </div></SortableContext>
           {props.projectsLoading ? <p role="status" className="px-2 py-2 text-xs text-secondary">{t("loadingProjects")}</p> : null}
-          {props.projectsError ? <p className="mt-2 rounded-md bg-[var(--danger-soft)] px-2 py-1 text-xs text-[var(--danger)]">{props.projectsError}</p> : null}
-        </div>
+          {props.projectsError ? <SidebarReadError
+            message={props.projects.length
+              ? (zh ? "项目更新失败，仍显示上次内容。" : "Could not update projects. Previously loaded items are shown.")
+              : (zh ? "项目加载失败。" : "Could not load projects.")}
+            fetching={props.projectsFetching}
+            onRetry={props.onRetryProjects}
+          /> : null}
+        </section>
 
-        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} onNewConversation={props.onNewConversation} />
+        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} fetching={props.conversationsFetching} onRetry={props.onRetryConversations} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} onNewConversation={props.onNewConversation} placement={props.placement} />
       </div>
       <div className="shrink-0 border-t border-ui p-3">
         <SidebarPreferences onNavigate={props.closeMobile} />
@@ -688,8 +716,9 @@ function ProjectCreateForm(props: SidebarContentProps & { onCancel: () => void }
   );
 }
 
-function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobile, onChanged, onProjectChanged }: { project: ProjectRead; expanded: boolean; active: boolean; pathname: string; toggle: () => void; closeMobile: () => void; onChanged: () => Promise<void>; onProjectChanged: () => Promise<void> }) {
+function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobile, onChanged, onProjectChanged, projectArchive, placement }: { project: ProjectRead; expanded: boolean; active: boolean; pathname: string; toggle: () => void; closeMobile: () => void; onChanged: () => Promise<void>; onProjectChanged: () => Promise<void>; projectArchive: ProjectArchiveController; placement: ConversationPlacementController }) {
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   const sortable = useSortable({ id: `project-order:${project.id}`, data: { activeType: "project", dropType: "project-order-slot", id: project.id, projectId: project.id } satisfies DragProject & ProjectOrderDrop });
   const { setNodeRef, isOver } = useDroppable({ id: `project-conversation-container:${project.id}`, data: { dropType: "project-conversation-container", projectId: project.id } satisfies ConversationContainerDrop });
   const conversationsQuery = useQuery({
@@ -698,52 +727,79 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
     enabled: expanded,
     placeholderData: (previous) => previous,
   });
-  const conversations = conversationsQuery.data ?? [];
+  const unavailable = conversationsQuery.isError && isSidebarReadUnavailable(conversationsQuery.error);
+  const conversations = unavailable ? [] : conversationsQuery.data ?? [];
   const projectActivityTime = project.last_read_at ?? project.updated_at;
   return (
     <div data-testid={`project-order-slot-${project.id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}><div ref={setNodeRef} data-testid={`project-conversation-container-${project.id}`} className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
       <div ref={sortable.setNodeRef} {...sortable.attributes} {...sortable.listeners} data-state={sortable.isDragging ? "dragging" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} className={`reader-interactive-row group flex min-h-9 items-center rounded-lg text-primary outline-none ${sortable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>
         <button type="button" aria-label={`${expanded ? "Collapse" : "Expand"} ${project.name}`} data-no-dnd onPointerDown={(event) => event.stopPropagation()} onClick={toggle} className="flex h-9 w-8 shrink-0 items-center justify-center text-secondary">{expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button>
         <Link href={`/projects/${project.id}`} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={closeMobile} className="flex min-w-0 flex-1 items-center gap-2 py-2 text-sm text-primary" title={`${fullActivityTime(projectActivityTime, resolvedLocale)} · ${project.conversation_count}`}><ProjectSymbol project={project} /><span className="min-w-0 flex-1 truncate font-medium">{project.name}</span><span className="shrink-0 text-[11px] text-secondary">{formatActivityTime(projectActivityTime, resolvedLocale)}</span></Link>
-        <ProjectActionMenu project={project} onChanged={onProjectChanged} />
+        <ProjectActionMenu project={project} onChanged={onProjectChanged} archive={projectArchive} />
       </div>
       {expanded ? (
-        <div className="ml-6 border-l border-ui pl-1">
-          {conversations.map((conversation, index) => <div key={conversation.id}><ConversationInsertSlot projectId={project.id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} /><DraggableConversationRow conversation={conversation} projectId={project.id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} /></div>)}
+        <div className="ml-6 border-l border-ui pl-1" role="group" aria-label={zh ? `项目对话：${project.name}` : `Conversations in ${project.name}`} aria-busy={conversationsQuery.isFetching}>
+          {conversations.map((conversation, index) => <div key={conversation.id}><ConversationInsertSlot projectId={project.id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} /><DraggableConversationRow conversation={conversation} projectId={project.id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} placement={placement} /></div>)}
           {conversations.length ? <ConversationInsertSlot projectId={project.id} beforeConversationId={null} afterConversationId={conversations[conversations.length - 1].id} /> : null}
-          {conversationsQuery.isLoading ? <p className="px-3 py-2 text-xs text-secondary">正在加载对话…</p> : null}
-          {!conversationsQuery.isLoading && conversations.length === 0 ? <p className="px-3 py-2 text-xs text-secondary">拖动对话到这里</p> : null}
+          {conversationsQuery.isLoading ? <p role="status" className="px-3 py-2 text-xs text-secondary">{zh ? "正在加载项目对话…" : "Loading project conversations…"}</p> : null}
+          {conversationsQuery.isError ? <SidebarReadError
+            message={conversations.length
+              ? (zh ? "项目对话更新失败，仍显示上次内容。" : "Could not update project conversations. Previously loaded items are shown.")
+              : (zh ? "项目对话加载失败。" : "Could not load project conversations.")}
+            fetching={conversationsQuery.isFetching}
+            onRetry={() => { void conversationsQuery.refetch(); }}
+          /> : null}
+          {conversationsQuery.isSuccess && conversations.length === 0 ? <p className="px-3 py-2 text-xs text-secondary">{zh ? "拖动对话到这里" : "Drag conversations here"}</p> : null}
         </div>
       ) : null}
     </div></div>
   );
 }
 
-function HistoryDropZone({ pathname, conversations, loading, error, closeMobile, onChanged, onNewConversation }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: string | null; closeMobile: () => void; onChanged: () => Promise<void>; onNewConversation: () => void }) {
+function HistoryDropZone({ pathname, conversations, loading, error, fetching, onRetry, closeMobile, onChanged, onNewConversation, placement }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: boolean; fetching: boolean; onRetry: () => void; closeMobile: () => void; onChanged: () => Promise<void>; onNewConversation: () => void; placement: ConversationPlacementController }) {
   const { setNodeRef, isOver } = useDroppable({ id: "unclassified-container", data: { dropType: "unclassified-container", projectId: null } satisfies ConversationContainerDrop });
   const t = useTranslations();
+  const zh = usePreferences().resolvedLocale === "zh-CN";
   return (
     <div className="mt-5 rounded-lg p-1">
       <div ref={setNodeRef} data-testid="unclassified-container" className={`flex min-h-9 items-center justify-between rounded-lg px-2 ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
         <h2 className="text-xs font-semibold text-secondary">{t("unclassified")}</h2>
         <div className="flex items-center gap-1">
           <ConversationSortMenu compact />
-          <span className="text-[11px] text-secondary">{conversations.length}</span>
+          <span className="text-[11px] text-secondary">{loading || error && conversations.length === 0 ? "—" : conversations.length}</span>
           <button type="button" data-testid="unclassified-new-conversation-button" onClick={() => { onNewConversation(); closeMobile(); }} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface hover:text-primary" aria-label="新建对话" title="新建对话"><Plus className="h-4 w-4" /></button>
         </div>
       </div>
-      <nav className="mt-2 space-y-1">
-        {loading ? <p role="status" className="px-2 py-2 text-xs text-secondary">正在加载对话…</p> : null}
-        {error ? <p role="alert" className="px-2 py-2 text-xs text-[var(--danger)]">加载失败</p> : null}
-        {!loading && !error ? conversations.map((conversation, index) => <div key={conversation.id}><ConversationInsertSlot projectId={null} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} /><DraggableConversationRow conversation={conversation} projectId={conversation.project_id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} /></div>) : null}
-        {!loading && !error && conversations.length ? <ConversationInsertSlot projectId={null} beforeConversationId={null} afterConversationId={conversations[conversations.length - 1].id} /> : null}
+      <nav className="mt-2 space-y-1" aria-label={t("unclassified")} aria-busy={fetching}>
+        {loading ? <p role="status" className="px-2 py-2 text-xs text-secondary">{zh ? "正在加载对话…" : "Loading conversations…"}</p> : null}
+        {error ? <SidebarReadError
+          message={conversations.length
+            ? (zh ? "对话更新失败，仍显示上次内容。" : "Could not update conversations. Previously loaded items are shown.")
+            : (zh ? "对话加载失败。" : "Could not load conversations.")}
+          fetching={fetching}
+          onRetry={onRetry}
+        /> : null}
+        {conversations.map((conversation, index) => <div key={conversation.id}><ConversationInsertSlot projectId={null} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} /><DraggableConversationRow conversation={conversation} projectId={conversation.project_id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} placement={placement} /></div>)}
+        {conversations.length ? <ConversationInsertSlot projectId={null} beforeConversationId={null} afterConversationId={conversations[conversations.length - 1].id} /> : null}
         {!loading && !error && conversations.length === 0 ? <p className="px-2 py-2 text-xs leading-5 text-secondary">{t("noUnclassified")}</p> : null}
       </nav>
     </div>
   );
 }
 
-function DraggableConversationRow({ conversation, projectId, beforeConversationId, afterConversationId, active, closeMobile, onChanged }: { conversation: ConversationListItem | ProjectConversationRead; projectId: string | null; beforeConversationId: string; afterConversationId: string | null; active: boolean; closeMobile: () => void; onChanged: () => Promise<void> }) {
+function isSidebarReadUnavailable(error: unknown) {
+  return error instanceof ApiRequestError && [401, 403, 404].includes(error.status);
+}
+
+function SidebarReadError({ message, fetching, onRetry }: { message: string; fetching: boolean; onRetry: () => void }) {
+  const zh = usePreferences().resolvedLocale === "zh-CN";
+  return <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-ui bg-surface p-2 text-xs text-secondary">
+    <p className="min-w-0 flex-1">{message}</p>
+    <button type="button" disabled={fetching} onClick={onRetry} className="btn-secondary min-h-11 shrink-0 px-3 text-xs disabled:opacity-60">{zh ? "重试" : "Retry"}</button>
+  </div>;
+}
+
+function DraggableConversationRow({ conversation, projectId, beforeConversationId, afterConversationId, active, closeMobile, onChanged, placement }: { conversation: ConversationListItem | ProjectConversationRead; projectId: string | null; beforeConversationId: string; afterConversationId: string | null; active: boolean; closeMobile: () => void; onChanged: () => Promise<void>; placement: ConversationPlacementController }) {
   const title = conversation.display_title || conversation.title;
   const { resolvedLocale } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -758,7 +814,7 @@ function DraggableConversationRow({ conversation, projectId, beforeConversationI
     <div ref={setRowRef} data-testid={`conversation-row-${conversation.id}`} data-project-id={projectId ?? "unclassified"} data-state={draggable.isDragging ? "dragging" : droppable.isOver ? "drop-target" : active ? "current" : "hover"} aria-current={active ? "page" : undefined} style={{ transform: CSS.Translate.toString(draggable.transform) }} {...draggable.attributes} {...draggable.listeners} className={`reader-interactive-row group flex min-h-12 touch-pan-y items-start gap-1 rounded-lg pl-1 pr-1 text-primary outline-none ${draggable.isDragging ? "cursor-grabbing" : "cursor-pointer"}`}>
       <Link href={`/conversations/${conversation.id}${projectId ? `?projectId=${projectId}` : ""}`} draggable={false} onDragStart={(event) => event.preventDefault()} onClick={closeMobile} className="min-w-0 flex-1 py-2 text-primary"><span className="block truncate text-sm font-medium">{title}</span><span className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{conversation.description_markdown || conversation.first_user_message || "无摘要"}</span>{conversation.project_name ? <span className="mt-0.5 block truncate text-[10px] text-accent">{conversation.project_name}</span> : null}</Link>
       <span className="shrink-0 text-[11px] text-secondary group-hover:hidden group-focus-within:hidden" title={fullActivityTime(conversation.last_read_at, resolvedLocale)}>{formatActivityTime(conversation.last_read_at, resolvedLocale)}</span>
-      <div data-no-dnd onPointerDown={(event) => event.stopPropagation()} className={active || menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}><ConversationActionMenu compact conversation={conversation} projectId={projectId ?? undefined} projectPinned={projectPinned} onChanged={onChanged} onOpenChange={setMenuOpen} /></div>
+      <div data-no-dnd onPointerDown={(event) => event.stopPropagation()} className={active || menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}><ConversationActionMenu compact conversation={conversation} placement={placement} projectId={projectId ?? undefined} projectPinned={projectPinned} onChanged={onChanged} onOpenChange={setMenuOpen} /></div>
     </div>
   );
 }

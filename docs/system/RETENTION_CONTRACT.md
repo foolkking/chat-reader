@@ -1,6 +1,8 @@
 # Task And Offline Retention Contract
 
-Last updated locally: 2026-10-08; production release remains 2026-10-06.
+Last reviewed locally: 2026-10-09. Accepted production is 30a0d32/0050;
+see [Project State](../../PROJECT_STATE.md). The merge-admission addition below
+is local-only and not part of that production acceptance.
 
 ## Scope
 
@@ -15,6 +17,7 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 | Object | Current window | What expiry/replacement means |
 | --- | --- | --- |
 | Terminal Task Center result | `TASK_TERMINAL_RESULT_RETENTION_SECONDS`, default 600 seconds; accepted range 60 seconds to 24 hours | `/api/tasks/active` may return committed, failed, or cancelled jobs/imports completed inside this window so users can reopen a result after navigation or refresh. Falling outside the window removes it from this active-result view; it does not create or promise a permanent task history. |
+| Merge admission receipt (local-only) | While its owned `BackgroundJob` exists; not limited by the terminal-result window | Read-only request lookup and same-key replay return the original task across statuses, including failed/cancelled. This creates no permanent history UI, new retention promise or automatic retry. |
 | Completed account deletion with pending file cleanup | Until cleanup completes | Canonical deletion remains committed. `/api/tasks/active` includes a separate bounded window of up to 20 pending cleanup results beyond terminal retention, without consuming the active-job limit. Tasks groups them under Needs attention and retries only remaining cleanup; file keys stay in the worker payload. This is unfinished work, not a permanent completed-task history. |
 | Temporary user-facing Export | Successful publication pins the Root policy: default 180 seconds, allowed 1–60 minutes | Explicit close requests early release when enabled. Active downloads are protected; expired files are reclaimed by the worker, and retained task metadata allows regeneration from current owned data. Legacy deadlines remain unchanged. |
 | Current server Offline Package | No time-based expiry | One canonical `OfflinePackageArtifact` is retained per owner/scope. A successfully committed replacement becomes current; the prior row is removed in the same transaction and its file is eligible for best-effort post-commit cleanup. A failed replacement leaves the previous canonical package available. |
@@ -22,6 +25,15 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 | Downloaded browser Offline Library | Browser-managed, no server TTL | Imported data lives in the Library Dexie/Cache Storage boundary until the user updates/removes it or the browser evicts storage. Server package replacement or Task Center expiry does not delete an already imported local library. Persistent-storage approval reduces eviction risk but is not an infinite-retention guarantee. |
 
 ## Re-entry contract
+
+- Local merge recovery (2026-10-09) checks the owned original request without
+  queueing work. Only an explicit missing receipt permits original-key resubmission;
+  a failed read is not absence. Finding a failed/cancelled task does not restart it.
+  A completed receipt can link to the merged conversation after active-result expiry,
+  but deleting that conversation does not guarantee the link remains readable.
+  The receipt does not keep sources or results alive. No purge policy changes.
+  See [API semantics](../api-reference.md) and
+  [the audit and verification limits](../execution/ux-audit-merge-admission-2026-10-09.md).
 
 - Local offline task recovery (2026-10-08) opens Offline & sync and finds this
   device's matching download; missing local records require an explicit download.

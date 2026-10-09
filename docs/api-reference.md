@@ -1,5 +1,27 @@
 # API 参考
 
+Conversation metadata contract (unchanged backend, verified 2026-10-09): PATCH
+`/api/conversations/{conversation_id}` returns canonical `ConversationDetail`.
+Omitted description preserves it; explicit null/empty/whitespace clears it. The
+description schema allows at most 500 Unicode code points, before server trimming;
+internal newlines are preserved. A changed description bumps offline_revision;
+repeating its current value does not. Rename accepts title/display_title, requires
+a nonempty effective title and preserves omitted description/status. Repeating a
+title PATCH still bumps revision; the local Web editor avoids untouched initial
+writes and compares both title fields before dropping an explicitly reviewed rename.
+GET on the same owner-scoped endpoint reads current state, not a save receipt.
+The Web helper's optional AbortSignal changes no HTTP payload or backend contract.
+See [metadata audit and scoped tests](execution/ux-audit-conversation-metadata-2026-10-09.md).
+
+Project metadata (local-only, 2026-10-09): PATCH `/api/projects/{project_id}`
+distinguishes omitted fields from explicit null for `description`, `color` and
+`icon`. Omission preserves the stored value; null clears these already-nullable
+fields. Null `name`, `sort_order` and `is_archived` retain the legacy no-op
+behavior. Ownership, duplicate-name checks and the response shape are unchanged;
+no migration is needed. Linked-conversation revision behavior is preserved.
+See the [project recovery audit](execution/ux-audit-project-recovery-2026-10-09.md)
+for local HTTP verification and the pending browser boundary.
+
 Local offline task recovery (2026-10-08): `BackgroundTaskRead` responses, including
 GET `/api/tasks/active` and `/api/tasks/{job_id}`, add nullable `offline_target`.
 It contains `scope=conversation|project|all`, `include_assets=none|small|all` and
@@ -482,6 +504,7 @@ Adaptive JSON / Markdown：
 | PATCH | `/api/conversations/{id}` | 重命名或修改 active/archived 状态 |
 | DELETE | `/api/conversations/{id}` | 不可恢复硬删除；同事务删除关系，仅在无真实引用时删除 AssetObject |
 | POST | `/api/conversations/merge` | 按请求顺序排队非破坏式合并，返回 `202 BackgroundTaskRead` |
+| GET | `/api/conversations/merge/requests/{request_key}` | 本人原合并请求的只读回执；返回 `{found, task}`，不排队或重试（本地新增，未部署） |
 | POST | `/api/conversations/{id}/split` | 从连续消息范围创建新会话 |
 | POST | `/api/conversations/{id}/split-workspace/preview` | 校验并预览 range/boundary/discrete 拆分计划，不写数据 |
 | POST | `/api/conversations/{id}/split-workspace` | 按已校验计划创建一个或两个新会话，来源不变 |
@@ -557,7 +580,22 @@ reads a fresh snapshot. No partial-success artifact is published on corruption.
 `expires_at`，与归档历史使用相同服务；文件移除或过期不改变任务已完成的事实，
 但不再显示为可用于新的恢复。读取仍受当前账户归属限制，不返回物理存储路径。
 
-Conversation merge 可携带 `Idempotency-Key` 请求头。相同 key 的 queued、processing 或 committed 请求返回已有任务，不会重复创建结果。
+Conversation merge 的本地更新（2026-10-09，未部署）保留可选的
+`Idempotency-Key` 请求头；非空 key 最长 200 字符。相同账户/key 绑定解析后的
+原 conversation ID **顺序**、title 与 project ID。相同请求返回最早保留的任务，
+包括 queued、processing、cancelling、committed、failed、cancelled；失败或取消
+不会通过重复 admission 静默重开。字段不同返回 `409 MERGE_REQUEST_CONFLICT`。
+原回执读取先于当前源对话、项目和消息上限校验；明确的新 key 仍可创建新的合并。
+PostgreSQL 使用账户/key 事务 advisory lock 串行化 admission；本地并发验收未运行。
+
+`GET /api/conversations/merge/requests/{request_key}` 的 key 长度为 1–200 字符。
+只读查询当前账户的保留任务：存在时 `found=true` 并返回正常 `BackgroundTaskRead`，
+不存在时 `{found:false, task:null}`。不返回原 payload、key 或物理路径，不校验源内容
+是否仍存在；读取不受 Task Center active-result 窗口限制，但仅在原任务记录仍存在
+时可恢复。失败读取不能当作不存在，恢复也不自动 POST；现有任务 retry/cancel
+和源内容保留语义不变，无 migration。实现与验收边界见
+[合并审查](execution/ux-audit-merge-admission-2026-10-09.md)和
+[保留合同](system/RETENTION_CONTRACT.md)。
 
 ## Search And TOC
 
@@ -603,6 +641,15 @@ Owner 可通过 `POST /api/conversations/{id}/toc/refresh` 手动排队目录更
 | POST | `/api/conversations/{id}/recent` | 记录最近打开 |
 | GET | `/api/recent-items` | 最近项目，仅 active 会话 |
 
+最近打开 POST 不是幂等接口：每次重复请求都会增加 `open_count`，但不推进
+conversation 的 canonical `offline_revision`。响应中的 `conversation` 是
+`ConversationListItem` 摘要，不含完整详情的 `render_version/content_hash`。
+阅读位置保存可更新最近阅读时间／进度，但不增加既有打开次数，也不推进内容版本；
+向前或向后阅读均有效，进度不能简单取最大值。客户端按较新时间比较同版本的
+阅读字段，遇到较新内容版本则重新 GET 完整详情，不将摘要充当详情或自动重发
+丢失响应的 POST。未知结果及 mounted-visit 边界见[用户流程](system/USER_FLOWS.md)。
+这些是既有服务合同及本地客户端修复，没有新增接口或 migration。
+
 位置读响应增加 `revision`。同步请求为 `{operation_id, base_revision, position}`；
 `position` 沿用既有写入字段，anchor JSON 上限 64 KiB。相同账户/operation 重试
 返回原回执；同 ID 改内容或会话返回 409。过期基础版本且内容不同返回 conflict，
@@ -617,6 +664,18 @@ Owner 可通过 `POST /api/conversations/{id}/toc/refresh` 手动排队目录更
 | POST | `/api/conversations/{id}/unarchive` | 取消归档并恢复项目归属 |
 | DELETE | `/api/conversations/{id}` | 兼容单项硬删除接口；产品批量/列表删除使用后台有序任务，无 Trash/restore |
 | PUT | `/api/conversations/{id}/placement` | 单事务跨 Project/未分类移动或同区排序，支持 revision 冲突检查 |
+
+单会话菜单继续使用已有 placement PUT，发送 `target_project_id`（项目 UUID 或
+`null`）、`target_section: "normal"` 和 `expected_offline_revision`；它不发送排序锚点。
+版本不符返回 409，不可用目标或非 active 会话返回 422。成功响应含 conversation
+摘要、实际 placement 和计数；同项目无锚点操作保留置顶、顺序和 revision。
+`target_project_id: null` 明确移到内部默认项目；这是已有合同，没有新增协议或 migration。
+
+普通 conversation GET 的 `project_id/project_name: null` 同时用于默认项目和
+已归档项目，不能单凭这两个字段判断关系已物理移入默认项目。未知移动结果的
+客户端核对只读当前 conversation；GET 不是上次 PUT 的回执，也不是其未提交的证明。
+再次移动必须由用户明确选择并携带新读到的 revision；客户端不自动重发。
+当前交互与生命周期边界见[用户流程](system/USER_FLOWS.md)。
 
 ## Shares
 
@@ -741,6 +800,14 @@ Web 只提交用户实际更改的字段。冲突保留草稿，读取最新设�
 # 2026-08-09 API Addendum
 
 ## Conversation editing
+
+Create, insert and message PATCH validate that Markdown is nonblank without
+trimming the accepted source. Leading/trailing whitespace and whitespace-only
+edits round-trip through canonical source/version history; size checks and
+transient-upload line validation use that original source. Titles/reasons retain
+their existing normalization. This does not change block-builder paragraph
+projection, historical blocks, endpoint shapes or migration state. See the
+[fidelity audit](execution/ux-audit-manual-markdown-2026-10-09.md).
 
 - `POST /api/conversations`: atomically create a titled conversation with a project and exactly two non-empty initial messages (`user`, then `assistant`).
 - `POST /api/conversations/{conversation_id}/messages/insert`: body contains `anchor_message_id`, `position` (`before|after`), `mode` (`single|pair`), messages, and optional `expected_offline_revision`.

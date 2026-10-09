@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "phase": "Final source review, before lost-focus repair",
+  "finding": "A11Y-02",
+  "method": "Actual compiled placement surface with explicit hook/effect and document/focus doubles; no real DOM lifecycle or browser",
+  "command": "node --test --test-reporter=tap scripts/ux/conversation-placement-recovery.test.mjs",
+  "tests": 60,
+  "passed": 58,
+  "failed": 2,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 4173.8093,
+  "failures": [
+    "No recovery focus when the move action disappears and activeElement is body",
+    "No recovery focus when the check action disappears and activeElement is body"
+  ],
+  "controls": [
+    "No focus steal from a deliberately focused control",
+    "No focus to a closed dialog"
+  ],
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-placement.tsx": "ca44bb52afd51edee16636717678f7d8d108c53da5026c47df0e2dafb71a46e3",
+    "scripts/ux/conversation-placement-recovery.test.mjs": "d7d2f6f3348975765ad2e089074bb51e83a0c4ec2c3c082a6d3034bae1689b8e"
+  },
+  "not_verified": ["real focus loss on removal", "Tab and Shift+Tab", "screen reader", "preventScroll in a browser"],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

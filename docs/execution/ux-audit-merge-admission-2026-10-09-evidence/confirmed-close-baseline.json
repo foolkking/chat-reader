@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "FBK-02: uncommitted merge implementation before confirmed-close correction",
+  "command": "node --test --test-name-pattern='closes confirmed admission' scripts/ux/merge-admission.test.mjs",
+  "passed": 0,
+  "failed": 2,
+  "skipped_by_name_filter": 31,
+  "duration_ms": 456.1807,
+  "actual": "Both captured pending-render callback pairs acknowledge the task but never call setMergeOpen(false).",
+  "expected": "User close remains guarded while pending; confirmed admission closes independently of the prior busy prop.",
+  "evidence_boundary": "Actual transpiled JSX callbacks, explicitly supplied pending values; not React lifecycle, timing-frequency or browser evidence.",
+  "sha256_before_correction": {
+    "apps/web/features/conversations/conversation-list.tsx": "a32deb3115d08f4958ce3a05d5f4e7ab3cd927428937a9e3adebff0a66b6b6a6",
+    "apps/web/features/projects/project-conversation-list.tsx": "41b7ce1bba84a7db864413bf0543fd40108340acd0c97f056537660fe60a63b3",
+    "scripts/ux/merge-admission.test.mjs": "9b7197731f747145c3aa74ed1c289c50b104197a5359dd3730d1b43761c712ca"
+  }
+}

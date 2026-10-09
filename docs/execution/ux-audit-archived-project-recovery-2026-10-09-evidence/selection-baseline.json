@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "scope": "ERR-02 stale archived-project selection and confirmation recheck, before correction",
+  "command": "node --test --test-reporter=tap scripts/ux/archived-project-recovery.test.mjs",
+  "passed": 36,
+  "failed": 4,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 782.8356,
+  "failed_cases": [
+    "a project leaving the archive no longer counts as a selected actionable row",
+    "a captured bulk Restore callback cannot submit a project that left the current archive",
+    "deletion rechecks current archive membership after the confirmation dialog",
+    "a captured single Restore callback cannot act after its row has disappeared"
+  ],
+  "evidence": "A successful actual QueryObserver refetch changes a synthetic project's archive membership; compiled component markup and retained callbacks still count/act on its old selection. An explicit Promise holds the existing confirmation callback. Server rows, confirmation transport and React scheduling are doubles; no real deletion, cross-device race or browser run was performed.",
+  "source_sha256_before_correction": {
+    "apps/web/features/projects/archived-project-list.tsx": "cfacbcb372b5eec910719d51132b2b98b176ef0b21b3d600bd8716cde8e18d57",
+    "scripts/ux/archived-project-recovery.test.mjs": "6c0f149f6f1ef4f5c123cc6f6b56f888b70504bb60b61a8c7e1ac39ae3f59cf9"
+  },
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

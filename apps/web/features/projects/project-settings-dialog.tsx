@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { updateProject } from "../../lib/api";
-import type { ProjectRead } from "../../lib/types";
+import type { ProjectRead, ProjectUpdate } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { useUnsavedClose } from "../../components/use-unsaved-close";
@@ -28,16 +28,26 @@ export function ProjectSettingsDialog({ project, open, onClose, onChanged }: {
   const base = useRef(project);
   const submitting = useRef(false);
   const mutation = useMutation({
-    mutationFn: () => updateProject(project.id, {
-      name: name.trim(),
-      description: description.trim() || null,
-      color,
-      icon: icon.trim() || "folder",
-    }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      await onChanged?.();
+    mutationFn: () => {
+      const updates: ProjectUpdate = {};
+      const cleanName = name.trim();
+      const cleanDescription = description.trim() || null;
+      const cleanIcon = icon.trim() || "folder";
+      if (cleanName !== base.current.name.trim()) updates.name = cleanName;
+      if (cleanDescription !== (base.current.description?.trim() || null)) updates.description = cleanDescription;
+      if (color !== (base.current.color ?? "#0f766e")) updates.color = color;
+      if (cleanIcon !== (base.current.icon?.trim() || "folder")) updates.icon = cleanIcon;
+      return updateProject(project.id, updates);
+    },
+    onSuccess: (saved) => {
+      // Cancel older reads before publishing the confirmed canonical response.
+      void queryClient.cancelQueries({ queryKey: ["projects"] });
+      queryClient.setQueriesData<ProjectRead[]>({ queryKey: ["projects"] }, (current) =>
+        current?.map((item) => item.id === saved.id ? saved : item));
       onClose();
+      // A failed or slow refresh cannot turn the completed write into a failure.
+      void queryClient.invalidateQueries({ queryKey: ["projects"] }).catch(() => undefined);
+      void Promise.resolve().then(() => onChanged?.()).catch(() => undefined);
     },
     onSettled: () => { submitting.current = false; },
   });

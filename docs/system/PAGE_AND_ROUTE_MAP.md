@@ -1,14 +1,14 @@
 # 页面与路由地图
 
-## Current account routes (working tree, 2026-09-01)
+## Current account routes (2026-10-09)
 
 The owner workspace is session-protected. Public auth pages are `/login`,
 `/register` (subject to registration mode), `/account-upgrade`,
 `/password-reset` and `/reset-password`. `/share/[token]` remains a separate
 public capability and `/library` remains the Offline boundary. The account
-route additions are implemented in the working tree but await migration and
-deployment; the route table below is historical where it still says that no
-account system exists.
+routes are deployed in the accepted release; exact source and verification status
+belong to [Project State](../../PROJECT_STATE.md). This update checks the root
+list's data scope, not every route's complete interaction flow.
 
 ## Current route access rule (2026-08-18)
 
@@ -20,13 +20,13 @@ passwordless by default; an optional independent Share password unlocks only
 that Share through a scoped credential. Direct artifact downloads and all
 private application routes remain owner-session protected.
 
-最后核验：2026-08-05
+完整路由盘点：2026-08-05；根列表与账户状态定点同步：2026-10-09。
 
 ## 页面路由
 
 | 路由 | 身份/数据源 | 主要职责 | 可见入口 |
 | --- | --- | --- | --- |
-| `/` | 在线资料拥有者 | Project + 未归类资料总览、导入和管理 | 域名根路径 |
+| `/` | 在线资料拥有者 | 全部活动对话（含项目内对话）的阅读、导入和管理；项目树仍在侧栏 | 域名根路径 |
 | `/archived` | 在线资料拥有者 | 已归档 conversation/Project 的恢复、删除和批量管理 | 侧栏 |
 | `/projects/[projectId]` | 在线资料拥有者 | Project 内对话和批量管理 | Project 树 |
 | `/conversations/[conversationId]` | 在线资料拥有者 | Reader、搜索、批注、Share、Export、编辑/版本、当前对话文件 | 各列表、搜索、最近 |

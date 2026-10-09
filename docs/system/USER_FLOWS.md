@@ -1,6 +1,324 @@
 # 当前用户流程
 
+## Reader quiet autosave and navigation readiness (local-only, 2026-10-09)
+
+Passive Reader use does not display a row, toast, blinking indicator or repeated
+live announcement for normal position saving, queued/submitted synchronization or
+idle state, including an ordinary offline queue. The status component keeps its
+observation and recovery effects mounted. Local saving, outbox synchronization,
+retry rules and position payload/throttling are unchanged.
+
+Real storage/read/sync failures and cross-device conflicts retain their current
+explanations and explicit recovery controls. Failed locating of a chosen position
+still offers its exact retry. These exceptional notices keep their existing
+placement and can affect layout; the quiet policy is for routine autosaves, not
+suppression of failures. Explicitly opened sync-center detail (`showIdle`) still
+shows normal pending/saved state, but not routine success beside a current
+storage/read/action/locate error.
+
+First-content readiness now follows an accepted, rendered current complete-turn
+window on an available Reader surface, including genuine empty success. The
+scheduled frame checks visit/auth ownership, connected root identity and current
+window/generation. A separate target read can therefore finish readiness while
+the obsolete initial query remains failed. Exact locating can still fail after
+content becomes readable; its navigation error is not hidden by readiness.
+
+Input and position listeners bind/clean up when the actual Reader surface becomes
+available/unavailable, independently of the initial query result. Every explicit
+non-restore index/message navigation settles the initial saved-position decision
+and cancels an older restore. `restorePosition: true` and programmatic scrolling
+do not create user intent. The stable real-DOM anchor algorithm, complete-turn
+queries and apply-once window protection remain intact.
+
+The [audit and checkpoint](../execution/ux-audit-reader-navigation-readiness-2026-10-09.md)
+separate source/static-markup/extracted-code checks from unexecuted browser tests.
+Real geometry, paint timing, touch/focus and network persistence remain unverified.
+
+## Reader initial complete-turn recovery (local-only, 2026-10-09)
+
+When detail is available but its first body window fails, **Retry messages /
+重试读取正文** retries the existing complete-turn query with its original URL/saved
+anchor. Generic localized error/access copy replaces raw transport text. Loading
+does not claim an empty conversation; a genuine successful empty result retains
+the existing empty state. Offline errors are unchanged.
+
+Retry requires the current visit/authentication and anchor scope, a live idle/error
+query, no accepted current window/messages and no in-progress navigation. It joins
+the existing read with `cancelRefetch: false`; it does not reopen the conversation,
+repeat recent-open, refresh detail or resubmit a mutation. The original five-turn
+loader, missing-anchor fallback, query key and enablement remain intact.
+
+An independently accepted target window retires the original initial error/retry.
+The unchanged apply-once guard also prevents a late initial result from replacing
+that window. Current-scope focus recovery restores only lost/body focus with
+`preventScroll`; another chosen control or newer navigation retains ownership.
+The [audit](../execution/ux-audit-reader-initial-window-2026-10-09.md) distinguishes
+extracted-code checks from unexecuted browser navigation/focus/scroll assertions.
+First-paint and position readiness are covered by the separate local behavior
+above; the initial-error checkpoint alone did not establish that broader path.
+
+## Reader detail-read recovery (local-only, 2026-10-09)
+
+A temporary remote detail GET failure keeps the matching cached Reader available,
+with **Could not update the conversation. Previously loaded content is shown.**
+and **Retry conversation / 重试读取对话**. The compact notice is inside the reading
+section but outside its header and scroll subtree; it does not replace loaded
+messages or add a new layout key. HTTP 401/403/404, a different cached id and known
+merged sources do not retain this reading surface on error. Denied/missing and
+wrong-id data also cannot provide the document title. The merged destination
+action and existing offline error policy are unchanged.
+
+The same localized read retry exists on an initial remote detail error. It refetches
+only that detail query, guards the current visit/authentication generation and
+ignores duplicate activation while fetching. Explicit retry joins an in-flight
+read (`cancelRefetch: false`); this differs from a newer recent summary invalidating
+an older detail GET. Recovery does not recreate a visit, reset a loaded turn window
+or replay a mutation. After first successful detail, normal initial dependent reads
+and the first recent-open POST can still proceed.
+
+When the focused retry disappears, current-owner recovery targets only lost/body
+focus. It focuses the existing labelled **Conversation content / 对话正文** region
+with `preventScroll`; another chosen control is left alone. A failed retry can
+return lost focus to the current retry control. Real focus, retained DOM identity
+and scrolling remain unverified; the [audit](../execution/ux-audit-reader-detail-recovery-2026-10-09.md)
+separates source/extracted-code checks from browser acceptance.
+
+## Reader recent-open reconciliation (local-only, 2026-10-09)
+
+Opening a loaded conversation reserves one recent-open attempt for that mounted
+conversation/data-source visit. Query refreshes, project-context changes and lost
+responses do not automatically post another open; leaving and revisiting can.
+Unmount, a different owner or authentication-generation changes fence old admission
+and publication. This does not cancel or undo an already-sent server request.
+Bookkeeping failures remain non-blocking, without a new error dialog or retry UI.
+
+The recent response contains a list summary, not a complete Reader detail. An older
+revision leaves cached detail and its freshness timestamp unchanged. A newer one
+invalidates only the exact remote detail key for a full GET, superseding an older
+in-flight detail read; it never labels old canonical fields with the new revision.
+At equal revisions, only a strictly newer valid reading timestamp replaces the
+time/progress pair. Rereading may lower progress. Invalid identity/revision, missing
+detail and equal-time results cannot manufacture or regress a detail snapshot.
+
+Valid current remote replies independently refresh `conversations`, `projects`
+and `recent-items`; failed refreshes do not replay the open. Offline recording uses
+its existing local timestamp update without refreshing remote lists. Complete-turn,
+reading-position, DOM-anchor, Share and offline-package behavior is unchanged.
+Recent's navigation project context is not redefined as canonical membership.
+The [audit](../execution/ux-audit-reader-recent-2026-10-09.md) separates synthetic
+Query/API evidence from unexecuted browser and real React lifecycle acceptance.
+
+## Single-conversation placement recovery (local-only, 2026-10-09)
+
+**Move to project / 移动到项目** opens a labelled project picker from the existing
+conversation menu. **Move to unclassified / 移到未分类** remains a one-click command.
+One mounted list/sidebar owns the request and feedback outside the source row;
+the sidebar's desktop/mobile copies share one owner and one dialog outside the
+cloned sidebar contents. Removing a moved row does not erase its result.
+
+Project reads distinguish loading, failure, no active destinations and no search
+match. Failed reads offer an explicit read-only Retry; cached names are contextual,
+not actionable. Native radio choices and labelled search retain normal editing
+keys. A new picker clears selection; filtering away a target clears it too. Just
+before PUT, the target must still be present, active and non-default in the latest
+successful, idle project query and match the current search.
+
+The existing placement PUT sends `target_project_id`, `target_section: normal`
+and `expected_offline_revision`. A synchronous reservation admits only one request.
+Writes/checks use 15-second timeout/abort signals; abort does not undo a server
+commit. Unknown results retain **Check current location / 核对当前归属**, a GET only.
+The resulting comparison enables **Move again using current state / 按当前状态再次移动**
+only as a new explicit decision, using that read's revision. Checks/reopening never
+automatically resend; newer checks retire older comparisons and failed reads do
+not leave stale retry actions enabled.
+
+GET's null public project summary can mean either Unclassified/default or an
+archived project. The comparison says **Unclassified (may belong to an archived
+project) / 未分类（也可能属于归档项目）**. It is a current observation, not a receipt
+or proof that an earlier request did not commit. The unchanged atomic PUT is the
+authority for an explicitly requested move to the internal default project.
+
+A valid acknowledgement publishes only to existing remote Reader/list/project/
+recent entries before independently refreshing. It preserves higher revisions,
+detail-only data, reading anchors and global pins. Confirmed old-project/history
+rows are removed; missing target rows, ordering, relation timestamps and counts
+come from GET, not guesses. Same-project no-ops preserve pin/order/revision.
+Offline data, Share, bulk actions and DnD remain unchanged.
+
+Closing pending/unknown recovery keeps a page-level review entry without cancelling
+the request. Dismissing a check does not undo the server move. Scope/account/unmount
+guards fence old actions and late responses; unavailable access hides retained
+names. Recovery is local to this owner, not persisted across full navigation/reload
+or tabs. When a phase removes its focused action, only lost/body focus is restored
+to the persistent Close control with `preventScroll`. Another chosen control keeps
+focus. The [audit](../execution/ux-audit-conversation-placement-2026-10-09.md) records
+synthetic/API verification separately from unexecuted browser/focus/visual checks.
+
+## Conversation metadata recovery (local-only, 2026-10-09)
+
+Rename conversation / Edit description opens a field-specific draft using the
+existing modal/focus system. Titles remain required; descriptions allow clearing,
+internal Markdown newlines and at most 500 Unicode code points after trimming.
+Long drafts remain intact with inline validation. No-op edits send no PATCH.
+Rename writes only title/display_title; description writes only that field.
+
+Save locks repeat submissions and keeps the draft until acknowledged. The Web
+helper accepts an optional abort signal; this editor bounds writes/checks to
+15 seconds. A timeout cannot cancel or undo a server commit. Unknown responses
+retain read-only **Check current value / 核对当前内容**. A match acknowledges the
+desired current state without replay. A differing value is shown for comparison;
+**Continue editing draft / 保留草稿继续编辑** or **Use current value / 采用当前内容**
+is explicit. Keeping the draft alone sends no write. When stored and display titles
+differ, both appear in the comparison; a reviewed rename compares the full pair
+before becoming a no-op. Untouched initial editors still send nothing. Every new
+check retires the old comparison actions, even if the new read also succeeds.
+A GET is not a receipt or proof of non-application.
+
+Confirmed metadata updates only existing remote Reader/list/project/recent entries
+before detached refresh. Newer cached revisions, unrelated records, project
+relations and recent reading anchors are preserved; offline/Share namespaces are
+not rewritten. Dirty close confirms; unknown close also explains that discarding
+the local draft/check state does not cancel the server save. Stale callbacks after
+close, unmount or account change cannot submit or publish. Recovery is not persisted
+across full navigation/reload or shared across separate menu instances/tabs.
+
+The [audit](../execution/ux-audit-conversation-metadata-2026-10-09.md) separates
+callback/query/API checks from unexecuted browser, focus, IME and visual acceptance.
+Same-field metadata concurrency remains last-write-wins; no backend/migration change.
+
+## Merge admission recovery (local-only, 2026-10-09)
+
+Select conversations → set title/order → submit one merge request. The title and
+order describe the submitted request and stay read-only while submitting or
+unconfirmed. An uncertain response offers **Check merge result**, a read-only
+owner-scoped lookup. Failed/incomplete reads preserve uncertainty. Only a confirmed
+missing result enables **Resubmit original merge**, with the original key/title/order;
+checking/reopening never automatically submits. A found failed/cancelled task is
+reported as that same task, not silently restarted.
+
+One unresolved request per account/tab/project scope is retained in sessionStorage,
+with in-memory fallback and an explicit storage warning. Reopening retains it;
+locking/changing accounts fences late callbacks. Confirmed admission closes the
+dialog and announces the outcome before independent task-list refresh; a completed
+receipt may link to its merged conversation. Existing source data and the global
+Task Center remain authoritative. Receipt lifetime is separate from the
+[active-result window](RETENTION_CONTRACT.md).
+
+Both list pages keep one recovery owner outside their loading/empty/error and
+selection branches. A retained request shows **Review merge request / 核对原合并**
+without selecting anything. Opening restores the original title/order with safe
+labels for missing source rows; it does not automatically look up or submit a
+merge. The dialog's existing account-capabilities GET may still run on open.
+Fresh merges still require two selections. Project 401/403/404 hides retained
+project rows and merge UI.
+Closing or switching project fences old callbacks immediately, before passive
+cleanup; the pending request remains in its original scope.
+
+Manual close targets the recovery entry; confirmed admission targets the result
+notice, which also survives empty/error list branches. These are locally tested
+focus-target contracts, not observed browser focus. The
+[audit](../execution/ux-audit-merge-admission-2026-10-09.md) records exact evidence.
+Browser/focus/layout and PostgreSQL concurrency remain unverified; none of this
+batch is in passing CI 37812290017.
+
+## Archived-project recovery (local-only, 2026-10-09)
+
+`/archived` retains cached project rows and selection during transient read errors,
+with a localized stale-content notice and read-only Retry. Initial/empty-cache
+errors are not known emptiness; HTTP 401/403/404 hides cached rows and results.
+Confirmed single/bulk restores publish acknowledged canonical metadata to existing
+cache entries and announce completion before independent refresh. The result owner
+survives loading, error and removal of the final archived row, outside fetch-wide
+`aria-busy`. It only restores lost focus, not a later user-chosen focus target.
+
+An unknown restore offers **Check restore result / 核对恢复结果**, which only reads
+the full owner-scoped project list. It distinguishes restored, still archived and
+unavailable; a failed check keeps uncertainty and prevents blind restore/delete.
+Only an explicit action can retry known still-archived projects. Checks may replace
+an older background read; unresolved state belongs to this mounted section.
+
+Actionable selection contains only current archived ids. Captured callbacks and
+confirmed container deletion recheck the latest rendered scope; changed scope
+causes no deletion request and asks the user to review selection. The API already
+rejects deleting an active project; this client check avoids a stale request and
+does not establish server atomicity. Existing deletion confirmation and conversation-preservation
+semantics remain intact. Browser focus/layout and cross-device timing are unverified;
+see the [audit and local checks](../execution/ux-audit-archived-project-recovery-2026-10-09.md).
+
+## Project archive feedback (local-only, 2026-10-09)
+
+**Archive project / 归档项目** uses one controller in the sidebar, shared by desktop
+and mobile menu copies. Admission is reserved before confirmation; cancellation
+sends no write. Confirmation rechecks the latest rendered active/non-default scope
+and access. Late confirmation/response callbacks after owner unmount do not submit
+or publish, but an already-sent server request is not cancelled or rolled back.
+
+A confirmed archive immediately leaves active project choices and updates an
+existing include-archived cache record. The notice stays outside the disappearing
+row and fetch-busy list while background reads refresh; it links to `/archived`.
+No conversation membership or revision is guessed from cached data. The unchanged
+API preserves project relations and returns archived conversations to Unclassified.
+
+An uncertain response retains **Check archive result / 核对归档结果** outside the menu.
+This reads the full owner-scoped project list only. Failed checks stay uncertain;
+successful checks distinguish archived, active and unavailable. An active result
+allows a fresh explicit archive from its menu, with confirmation, never automatic
+replay. The state survives closing menus/mobile drawers within this sidebar instance;
+it is not persisted across navigation, unmount, reload or tabs. Access denial hides
+private notice identity and blocks actions until access/read recovery.
+
+The [audit](../execution/ux-audit-project-archive-feedback-2026-10-09.md) owns the
+pre-edit baseline and local checks. Focus restoration is conditional on a lost
+opener, not a new user-chosen target; real browser focus/layout remains unverified.
+
+## Sidebar read recovery (local-only, 2026-10-09)
+
+The sidebar's project list, Unclassified list and expanded project conversations
+each own their read-only Retry. Transient failures retain current-query rows and
+real reading links with a localized stale-content notice. Initial/empty-cache
+failures say the read failed; expanded projects show drop guidance only after a
+successful empty read. Unknown Unclassified counts use a dash, not a claimed zero.
+HTTP 401/403/404 hides the affected cached private rows; it does not clear unrelated
+query caches. Archived/default project records remain excluded from the active
+sidebar even when present in an existing cache.
+
+Retry repeats only that region's GET with the same sort/scope. Its busy state
+does not disable navigation, expand another project, mutate membership or replay
+a drag. Existing DnD sensors, placement/revision logic and links are unchanged.
+This does not guarantee old rows after a new sort key's terminal read error.
+The [audit](../execution/ux-audit-sidebar-read-recovery-2026-10-09.md) separates
+static/query evidence from unexecuted browser DOM/focus/drag assertions.
+
 ## Conversation undo and read recovery
+
+Project settings saves only normalized fields changed from the opening draft.
+Clearing the description is a real metadata update; untouched color/icon defaults
+are not written back. The confirmed canonical response updates existing project
+cache variants and closes the dialog before follow-up reads. Older pending reads
+are cancelled; refresh failure does not turn the completed write into an error.
+Dirty-field updates protect unrelated edits, not same-field concurrency.
+
+The project conversation list retains same-project rows/selection during a
+transient refresh failure, with a localized Retry that only repeats the read.
+An initial error is not an empty project. HTTP 401/403/404 hide cached rows and
+bulk actions; sort placeholders never reuse another project's rows. These
+project changes are local-only; current verification is in
+[the audit](../execution/ux-audit-project-recovery-2026-10-09.md).
+
+The `/` active-conversation and `/archived` lists also retain cached current-mode
+rows/selection through transient read failures, with a read-only Retry and an
+explicit stale-content notice. HTTP 401/403/404 still hides cached rows and bulk
+controls. Same-mode sort placeholders do not borrow the other mode; a new sort
+key's final error may have no retained result. With no cached rows, a read error
+is not a confirmed empty list.
+
+The root list requests all active conversations, including those in projects.
+When empty, a successful empty saved-conversation check keeps the first-run
+import action. Otherwise **No active conversations / 暂无活动对话** links to
+**View archive / 查看归档**; it does not claim that records were filed in projects.
+A failed secondary check explicitly retries only that read. These local-only
+changes and their unexecuted browser coverage are recorded in the
+[conversation-list audit](../execution/ux-audit-conversation-list-recovery-2026-10-09.md).
 
 Archive/restore → Undo keeps one owner outside loading/empty/error list branches.
 Only successfully acknowledged initial changes create an Undo. Pending clicks are

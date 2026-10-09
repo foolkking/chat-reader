@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "All-conversation and archive list read/empty states before application edits, after locally verified merge re-entry",
+  "command": "node --test scripts/ux/conversation-list-recovery.test.mjs",
+  "passed": 11,
+  "failed": 17,
+  "skipped": 0,
+  "duration_ms": 652.9394,
+  "evidence": "Installed QueryClient/QueryObserver with actual subscription/refetch/cache state, transpiled ConversationList and React static rendering. Network, seeded selection and unrelated children are explicit doubles. No browser, service, real network outage or user data exercised.",
+  "passing_controls": "Six access-denial hiding checks, two successful retry/selection checks, two status-filter checks, and the existing first-run import state.",
+  "failed_cases": [
+    "active: failed refresh keeps the cached reading link and a localized retry notice",
+    "active: a transient failure retains selected rows and controls",
+    "active: initial failure is not a confirmed empty list",
+    "active: empty cached failure is not a confirmed empty list",
+    "active: held retry keeps cached content and disables its retry control",
+    "active: sort placeholders belong only to the same list scope",
+    "archived: failed refresh keeps the cached reading link and a localized retry notice",
+    "archived: a transient failure retains selected rows and controls",
+    "archived: initial failure is not a confirmed empty list",
+    "archived: empty cached failure is not a confirmed empty list",
+    "archived: held retry keeps cached content and disables its retry control",
+    "archived: sort placeholders belong only to the same list scope",
+    "an archived-only workspace points to Archive, not project filing",
+    "initial archive check failure stays explicit and retries only that read",
+    "cached archive check failure stays explicit and retries only that read",
+    "Chinese retained content uses readable feedback and the existing retry action",
+    "Chinese archived-only empty state gives an actual archive link"
+  ],
+  "findings_not_test_count": 2,
+  "prior_harness_run": {
+    "passed": 11,
+    "failed": 17,
+    "duration_ms": 681.699,
+    "note": "Two held-read cases first failed because the observers were not subscribed. Explicit subscriptions corrected that harness gap; both then failed on the actual missing cached reading link, as recorded here. The first-run assertion was also split to require both title and import."
+  },
+  "source_sha256_before_repair": {
+    "apps/web/features/conversations/conversation-list.tsx": "ac5bf58fa5fb214d8979197e2c3d563bffa42bef8b5732dd6036ceb44f790964",
+    "apps/web/features/projects/project-conversation-list.tsx": "5aa263cff05aa3daceab91b2d7f18f05b08201fcf70290485f3e5466a6e70630",
+    "apps/web/features/reading/recent-items.tsx": "3453509920f9c0590a77551de8e92709543f18a81c0b3999707291d127152223",
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "scripts/ux/conversation-list-recovery.test.mjs": "c258f70f7f27e4bc051d4a38c32268dab52d2881e6f04ab8b8074ab2b2be908a"
+  }
+}

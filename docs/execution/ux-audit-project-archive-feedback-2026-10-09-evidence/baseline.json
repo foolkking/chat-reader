@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "command": "node --test --test-reporter=tap scripts/ux/project-archive-recovery.test.mjs",
+  "tests": 20,
+  "passed": 4,
+  "failed": 16,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 697.2523,
+  "findings_not_test_count": 3,
+  "evidence": "Actual compiled original ProjectActionMenu callbacks and static JSX with installed QueryClient/QueryObserver. Hook scheduling, portals, confirmation, focus, server state and transport are explicit doubles, not React lifecycle, browser or backend acceptance.",
+  "passing_controls": [
+    "Successful archive sends exactly one original is_archived=true PATCH and calls refresh once.",
+    "Cancelled confirmation does not write or refresh.",
+    "Held write is busy and disables project settings.",
+    "Ordinary invalidateQueries failure does not invoke the archive failure catch after a successful PATCH."
+  ],
+  "failed_contracts": [
+    "Confirmed archive remains busy during an actual held query refresh.",
+    "Acknowledged canonical response does not update active/include-archived cache scopes.",
+    "A rejecting refresh callback replaces confirmed success with an archive failure message; this is a defensive double, not an ordinary GET failure.",
+    "Uncertain result has no owner outside a closed/unmounted menu and no read-only check.",
+    "Captured callbacks replay uncertain writes and admit duplicate confirmations, including two menu copies.",
+    "Missing/archived/default/unavailable targets are not rechecked after confirmation.",
+    "Unmounted owner can still submit a resolved old confirmation.",
+    "Already archived, failed-read, still-active and localized result-check paths are absent."
+  ],
+  "verified_file_sha256_at_checkpoint": {
+    "apps/web/features/projects/project-action-menu.tsx": "207f5eaf3472d525abfecdd05b7b87bf7b896264bc5188f2dc468f30d33b240f",
+    "scripts/ux/project-archive-recovery.test.mjs": "06d80b4d648cf119d0b7a02465f8428d368965d64cdf38bf12d7872028e6590e",
+    "apps/web/features/projects/project-sidebar.tsx": "c34ef3011ad5c0ddf604632b85eeb6922da08ccd470f7532103c8cf9e2225e3c",
+    "apps/web/components/reader-sidebar-frame.tsx": "dacacca218a9b78a6e1d9f0a5c218b66ea6d60b7cebaf65728c283dee5e18a13",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/app/api/routes/projects.py": "e44ac92eb1a4733a222a67bd175869ef0236f3d241ded658d1275fa15c9464bb"
+  },
+  "application_changed_before_baseline": false,
+  "browser_executed": false,
+  "production_accessed": false,
+  "ci_or_deployment_triggered": false
+}

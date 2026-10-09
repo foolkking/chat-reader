@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-09",
+  "stage": "After the original 13 repairs; before Blob retry and complex-worker recovery repairs",
+  "command": "node --test --test-reporter=tap scripts/ux/attachment-reading.test.mjs",
+  "result": { "tests": 17, "passed": 13, "failed": 4, "skipped": 0 },
+  "failures": [
+    "retryableUrl changes a real Blob URL by adding a query",
+    "withAttempt changes a real Blob URL by adding a query",
+    "synchronous Worker construction error escapes the effect",
+    "late bytes are posted to a terminated worker and stale worker messages update state"
+  ],
+  "evidence_boundary": "Real compiled production functions and Node Blob URLs; React effects, worker and transport are doubles. No browser, CPU/RSS or rendering acceptance.",
+  "source_sha256": {
+    "apps/web/features/attachments/attachment-viewer.tsx": "d0473de7655f8d4cc8fba6a8f65a37b6aefc483e38f5a705b61e2690a9967572",
+    "apps/web/features/attachments/complex-attachment-viewer.tsx": "96d358aa1f792b804aea8f165348d0d7865ed23d08abf2be31cb009421bd0c37",
+    "scripts/ux/attachment-reading.test.mjs": "a16ac8d49790fbc544dbd246592f5f129cc003d8df83b8d82876350b75a40b00"
+  }
+}

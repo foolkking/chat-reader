@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "phase": "before application edits",
+  "method": "Actual transpiled conversation menu callbacks/JSX with explicit hook, project-read, focus, portal and transport doubles; installed React static renderer and QueryClient/Observer",
+  "command": "node --test --test-reporter=tap scripts/ux/conversation-placement-recovery.test.mjs",
+  "passed": 3,
+  "failed": 19,
+  "skipped": 0,
+  "cancelled": 0,
+  "tests": 22,
+  "duration_ms": 1799.2393,
+  "findings_not_test_count": 5,
+  "controls": [
+    "Placement PUT retains target_section normal and expected_offline_revision",
+    "Move to Unclassified remains one click without confirmation",
+    "Offline copies, reading anchors and global pin remain unchanged"
+  ],
+  "reproduced_failures": [
+    "Whole-menu opening enables project reads",
+    "Pending/error/empty project reads are not distinguished",
+    "Filtered empty result has no clear-search action",
+    "Search lacks a persistent label; project selection lacks checked semantics",
+    "Menu Home consumes the embedded search editing key",
+    "Hidden, old-session, removed or failed-read destinations can still submit",
+    "Two immediate submit callbacks issue two PUTs",
+    "Unknown-result recovery is absent, including after source-row removal",
+    "Read-only checking and explicit fresh-revision retry are absent",
+    "Null visible project has no archived-membership-aware recovery explanation",
+    "Confirmed completion remains blocked on an owning-list refresh",
+    "The active remote Reader retains its old project"
+  ],
+  "harness_correction_before_valid_baseline": {
+    "initial_passed": 3,
+    "initial_failed": 19,
+    "initial_duration_ms": 2318.101,
+    "detail": "The session-reopen adapter originally toggled an already retained legacy picker closed. It now detects that picker before toggling; the valid case fails on an actual stale-destination PUT rather than a missing test action.",
+    "application_was_unchanged": true
+  },
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-action-menu.tsx": "83b3739592366f646acededd3f355bf6388186083ffc5faf91725cbb0c02ee73",
+    "apps/web/features/conversations/conversation-reader.tsx": "bd45902276aa3731e1a243cdd251e8cbb688f05a33757592074ff359a9188d5e",
+    "apps/web/lib/api.ts": "3092fe2f4c155ccd56c269128049a309c7ae6ce55b4f9529a71f2b6a99c1dad1",
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "scripts/ux/conversation-placement-recovery.test.mjs": "1ce39f4d8a890fd3ab28019ec62ce624a7e8a0c4b715e7ecce29e511fbf1e9c9"
+  },
+  "not_verified": ["real React lifecycle", "browser", "focus/IME/screen reader", "viewport/visual checklist", "PostgreSQL concurrency"],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

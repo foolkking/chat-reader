@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "uncommitted project settings and conversation-list recovery",
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "project_settings_api": { "passed": 7, "failed": 0, "skipped": 0, "seconds": 14.64 },
+  "combined_api": {
+    "files": ["test_project_settings.py", "test_projects_api.py", "test_ownership_scope.py"],
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 39.84,
+    "includes_project_settings_cases": true,
+    "database": "disposable SQLite fixtures"
+  },
+  "node_regressions": {
+    "command": "node --test scripts/ux/project-recovery.test.mjs",
+    "passed": 21,
+    "failed": 0,
+    "skipped": 0,
+    "evidence": "Actual transpiled callbacks and JSX; installed React static rendering and TanStack observers. API, input state, portals and unrelated children are explicit doubles."
+  },
+  "checks": {
+    "web_lint": "passed",
+    "nonincremental_typecheck": "passed",
+    "one_worker_web_build": "passed",
+    "real_browser": "NOT_VERIFIED",
+    "focus_and_layout": "NOT_VERIFIED"
+  },
+  "verified_file_sha256_at_checkpoint": {
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/web/features/projects/project-settings-dialog.tsx": "d95440c37ea67b491ccbcb6ec280365c5b5745f6036c461ead37fc9343f17b5c9",
+    "apps/web/features/projects/project-conversation-list.tsx": "eb3cc7bb2352b8d942d244bd1518db33e7ba39dcac8f56c97af9eda2dcbc38b5",
+    "apps/api/tests/test_project_settings.py": "52f7c93028e1a545110ed740928e18831ea51d1631570f44115867dc99268648",
+    "scripts/ux/project-recovery.test.mjs": "21e04b74ef46217d3a4b015ef7bb35431c6afe7c6485b1bdac6a532a9a166418"
+  },
+  "safety": {
+    "postgresql_fixture_restarted": false,
+    "web_server_started": false,
+    "production_accessed": false,
+    "existing_imports_modified": false,
+    "migration_required": false,
+    "same_field_concurrency_protocol_added": false
+  }
+}

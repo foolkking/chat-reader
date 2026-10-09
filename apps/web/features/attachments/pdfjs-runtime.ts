@@ -8,7 +8,10 @@ export function getPdfJsWorkerUrl(): string {
 }
 
 export async function loadPdfJs(): Promise<PdfJsModule> {
-  modulePromise ??= import("pdfjs-dist");
+  modulePromise ??= import("pdfjs-dist").catch((error) => {
+    modulePromise = null;
+    throw error;
+  });
   const pdfjs = await modulePromise;
   pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
   return pdfjs;

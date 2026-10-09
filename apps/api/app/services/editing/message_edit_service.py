@@ -907,13 +907,14 @@ def _get_current_version(db: Session, message: Message) -> MessageVersion:
 
 
 def _validate_text(text: str) -> str:
-    clean_text = text.strip()
-    if not clean_text:
+    # Whitespace may be Markdown/code content. Validate without rewriting source
+    # so saved text, dirty comparisons and upload-error line numbers agree.
+    if not text.strip():
         raise MessageEditError("Message content cannot be empty.")
-    if len(clean_text) > MAX_EDIT_TEXT_LENGTH:
+    if len(text) > MAX_EDIT_TEXT_LENGTH:
         raise MessageEditError("Message content is too large.")
-    _ensure_no_transient_upload_references(clean_text)
-    return clean_text
+    _ensure_no_transient_upload_references(text)
+    return text
 
 
 def _ensure_no_transient_upload_references(text: str) -> None:

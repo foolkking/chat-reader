@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "Conversation-list transient read/empty-state recovery with existing merge admission, re-entry and project regressions",
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "production_source_unchanged": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "passing_ci_does_not_cover_this_batch": "37812290017",
+  "previous_checkpoint": "../ux-audit-merge-admission-2026-10-09-evidence/reentry-verification.json",
+  "node_regression": {
+    "command": "node --test scripts/ux/conversation-list-recovery.test.mjs scripts/ux/merge-admission.test.mjs scripts/ux/project-recovery.test.mjs scripts/ux/merge-reentry.test.mjs",
+    "passed": 121,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 2471.5196,
+    "list_cases": 28,
+    "merge_cases": 43,
+    "project_cases": 21,
+    "reentry_cases": 29,
+    "evidence": "Actual transpiled components/hooks/callbacks, installed React static markup and subscribed QueryObserver/cache/refetch transitions. Scheduling, transport, seeded selection, storage and unrelated children are explicit doubles; not actual React lifecycle, browser focus, layout or performance acceptance."
+  },
+  "baseline": {
+    "file": "baseline.json",
+    "passed": 11,
+    "failed": 17,
+    "skipped": 0,
+    "duration_ms": 652.9394,
+    "findings": 2
+  },
+  "first_repaired_run": {
+    "passed": 24,
+    "failed": 4,
+    "skipped": 0,
+    "duration_ms": 694.0581,
+    "correction": "The harness counted constructed but unused Retry JSX. It now records only the actual React-rendered Retry component; no assertions removed. The earlier observer-subscription correction remains recorded separately in baseline.json."
+  },
+  "previous_api_verification": {
+    "ledger": "../ux-audit-merge-admission-2026-10-09-evidence/local-verification.json",
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 83.43,
+    "database": "Disposable SQLite, not PostgreSQL",
+    "rerun_in_this_batch": false,
+    "basis": "Seven API implementation/test hashes match the earlier checkpoint; no backend edit in this batch."
+  },
+  "postgresql_concurrency": {
+    "cases": 2,
+    "passed": 0,
+    "skipped": 2,
+    "rerun_in_this_batch": false,
+    "acceptance": "NOT_VERIFIED"
+  },
+  "browser_discovery": {
+    "command": "corepack pnpm --filter web exec playwright test e2e/ux-recovery-followup.spec.ts --list --output <task-temp>/list-recovery-discovery",
+    "discovered": 19,
+    "existing_cases": 9,
+    "merge_cases": 4,
+    "new_list_cases": 6,
+    "executed_in_this_batch": 0,
+    "acceptance": "NOT_VERIFIED",
+    "intended_assertions": [
+      "Active/archived list at 375px Chinese/light and 1440px English/dark retains actual reading node and focus after injected 503.",
+      "A real browser offline/online transition requests stale refetch; injected 503 does not establish a real network outage.",
+      "Selection remains checked through held read-only Retry; recovery performs no conversation writes and preserves synthetic messages/status.",
+      "Two empty-active/existence-error cases retry only the secondary read and use a real synthetic archived row and Archive destination.",
+      "Empty active/existence reads are explicit doubles, not database-emptiness claims; screenshots were not generated."
+    ]
+  },
+  "implementation": {
+    "retained_read": "Current-mode cached rows/selection survive transient failure with localized stale notice; no second cache.",
+    "no_cached_read": "Initial or empty-cache failure remains an explicit retryable error.",
+    "access": "HTTP 401/403/404 hides cached rows/bulk controls; sort placeholders only accept the same list mode.",
+    "empty": "First-run import retained after successful empty existence read. Other active-empty states name no active conversations and link to Archive; failed secondary read is explicit and retries only itself.",
+    "unchanged": "Existing mutations, backend, merged request owner, Undo owner, cache freshness policy, tokens and dependencies.",
+    "limitation": "A new sort key's final error may have no cached rows.",
+    "merge_wording_correction": "Prior no-HTTP shorthand refers to automatic merge lookup/POST. Opening the dialog may still run its existing account-capabilities GET."
+  },
+  "checks": {
+    "web_lint": "passed after current application and browser-test changes",
+    "nonincremental_typecheck": "passed: corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "one_worker_web_build": "passed, Next 16.3.8, NEXT_BUILD_CPUS=1, NEXT_STANDALONE=0, 14 pages generated",
+    "git_diff_check": "passed; existing LF-to-CRLF notices only",
+    "scoped_document_links": {
+      "status": "passed",
+      "files": 19,
+      "local_links_checked": 248,
+      "missing": 0
+    },
+    "visual_checklist_score": "NOT_VERIFIED; no full-score claim"
+  },
+  "verified_file_sha256_at_checkpoint": {
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "apps/api/app/schemas/task.py": "cad472a799a7019d2ba99ea2ed54c3df854b5f11ed7c702e6bb34572a47d52f5",
+    "apps/api/app/services/background_jobs.py": "c4a568aa4fc0d6b562d6f604f83e67af4e8168457be986cca077b3db1fbbee38",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/tests/test_merge_admission.py": "360f3a43e72e4c9a7ea7b31af958a1ef6e3c9047a44a15ddbbefce1251cacaa5",
+    "apps/api/tests/test_merge_admission_postgres.py": "318523b034d66bed693704c4b476fba7e53a6ec17064d66ebcd50cbae8f63be7",
+    "apps/api/tests/test_project_settings.py": "52f7c93028e1a545110ed740928e18831ea51d1631570f44115867dc99268648",
+    "apps/web/features/conversations/use-merge-admission.ts": "21138a79553855344a53cd9884ad0d720e3a20ac3877e78da6a3508c3c0544a8",
+    "apps/web/features/conversations/merge-conversations-dialog.tsx": "00ee5f375d070d49256e3620ca64714056d8ad36801cc92798f3fb2cd9648e1b",
+    "apps/web/features/conversations/conversation-list.tsx": "f16a8de45282c7015886de89c71691f158946387f87962ac61676b7224ae26e0",
+    "apps/web/features/projects/project-conversation-list.tsx": "5aa263cff05aa3daceab91b2d7f18f05b08201fcf70290485f3e5466a6e70630",
+    "apps/web/features/projects/project-settings-dialog.tsx": "d95440c37ea67b491cccb6ec280365c5b5745f6036c461ead37fc9343f17b5c9",
+    "apps/web/lib/api.ts": "2cc1177187b044b69886a013885b30e61375bdf518b75da6bec95836112116f4",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "85766fd9d1907dd6aafa6276cec0d438b53eb4f49a350b23cfbf7069397daa08",
+    "scripts/ux/merge-admission.test.mjs": "1cedb16d71eaade5844dcceb39e18dbc4881d9e078b8d2b8ba81619f427136d0",
+    "scripts/ux/project-recovery.test.mjs": "4cdff5848f864e7794bb562db2e0c3a270e5f5efaeb5cd662d25987b5811f44a",
+    "scripts/ux/merge-reentry.test.mjs": "2d68abb3290850dbfbfde6c591e4b5be40f78382e1c48439c395d506c35a3504",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/features/conversations/merge-order-list.tsx": "453edbc5c0a586c2013d746109f0c0b972de6bd63bbc09639fe250876a7c53bd",
+    "apps/web/playwright.config.ts": "400581d5a48a200df9bce919a05e8dc289b01668c6e510576858bd7846830e3d",
+    "scripts/ux/conversation-list-recovery.test.mjs": "2f500a616d102a3d47d3870cd9b89fe2e242bc79c67fb108cceb52be81789065",
+    "apps/web/features/reading/recent-items.tsx": "3453509920f9c0590a77551de8e92709543f18a81c0b3999707291d127152223"
+  },
+  "safety": {
+    "local_web_started": false,
+    "postgresql_api_worker_fixture_restarted": false,
+    "production_accessed_for_this_batch": false,
+    "application_images_built_locally_or_on_king": false,
+    "existing_imports_modified": false,
+    "migration_required": false,
+    "dependencies_added": false,
+    "unrelated_workspace_residues_preserved": true,
+    "older_merge_checkpoints_rewritten": false
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "phase": "Review of the initial local placement repair, before the edge fixes",
+  "initial_repair": { "tests": 22, "passed": 22, "failed": 0, "duration_ms": 2790.3939 },
+  "expanded_checks": { "tests": 44, "passed": 38, "failed": 6, "skipped": 0, "cancelled": 0, "duration_ms": 3325.5473 },
+  "new_checks": 22,
+  "failures": [
+    "Captured entry can start with old conversation data after account change before effect cleanup",
+    "Captured entry can start after owner scope changes before effect cleanup",
+    "Captured reviewed submit can write after closing the retained dialog",
+    "Captured dialog check can read after closing to the feedback surface",
+    "Null placement acknowledgement throws instead of entering unknown-result recovery",
+    "HTTP 403 hides conversation title but leaves the retained destination name visible"
+  ],
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-placement.tsx": "7f1f7186cd5f0e0247b225a43e6623e1a10e1a8201c381e00274e834384b48b4",
+    "scripts/ux/conversation-placement-recovery.test.mjs": "a383d9816d8cce8ac260d62a8254fe66d5f59efba3c14e2d1d8338574957b271"
+  },
+  "integration_construction_checks": [
+    { "status": "command failed before discovery", "cause": "Windows Node did not expand scripts/ux/*.test.mjs; subsequently passed an explicit rg file array" },
+    { "tests": 333, "passed": 224, "failed": 109, "duration_ms": 5702.7927,
+      "cause": "Four existing isolated fixtures rejected the new placement import. Added no-op placement mocks only to their dependency maps; existing assertions were not changed. Placement itself runs separately as real compiled code." }
+  ],
+  "not_browser_evidence": true,
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

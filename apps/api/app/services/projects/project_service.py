@@ -170,8 +170,12 @@ def update_project(db: Session, project: Project, updates: dict) -> Project:
         if duplicate is not None:
             raise ProjectServiceError("Project name already exists.")
 
-    for field in ("name", "description", "color", "icon", "sort_order"):
+    for field in ("name", "sort_order"):
         if field in updates and updates[field] is not None:
+            setattr(project, field, updates[field])
+    # Omission keeps metadata; explicit null clears these nullable fields.
+    for field in ("description", "color", "icon"):
+        if field in updates:
             setattr(project, field, updates[field])
     if "is_archived" in updates and updates["is_archived"] is not None:
         project.is_archived = updates["is_archived"]

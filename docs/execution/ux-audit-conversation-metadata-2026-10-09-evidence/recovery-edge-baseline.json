@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "phase": "Recovery-edge review of the initial local metadata repair, before the final application edits",
+  "command": "node --test --test-reporter=tap scripts/ux/conversation-metadata-recovery.test.mjs",
+  "result": {
+    "passed": 58,
+    "failed": 5,
+    "skipped": 0,
+    "cancelled": 0,
+    "total": 63,
+    "duration_ms": 5039.6127,
+    "exit_code": 1
+  },
+  "failing_checks": [
+    "rename comparison exposes a different saved title even when the display title matches",
+    "reviewed rename is not a no-op when only the saved title differs",
+    "reviewed rename is not a no-op when only the unset display title differs",
+    "a later successful check retires the previous Continue editing draft callback",
+    "a later successful check retires the previous Use current value callback"
+  ],
+  "new_checks": 7,
+  "passing_new_controls": 2,
+  "preceding_checks_still_passing": 56,
+  "interpretation": "Five failing checks reproduce two scoped recovery edges, not five new product findings. Initial unchanged-title controls still pass.",
+  "evidence_boundary": "Actual compiled callbacks/JSX and installed QueryClient/QueryObserver; explicit hook/effect, transport, auth, focus and portal doubles. No browser or real React lifecycle execution.",
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-metadata-dialog.tsx": "93240e1026f791554bd9ae69df987f160fe23e830212f9853d6ab38737a50bc2",
+    "apps/web/features/conversations/conversation-action-menu.tsx": "83b3739592366f646acededd3f355bf6388186083ffc5faf91725cbb0c02ee73",
+    "apps/web/lib/api.ts": "3092fe2f4c155ccd56c269128049a309c7ae6ce55b4f9529a71f2b6a99c1dad1",
+    "scripts/ux/conversation-metadata-recovery.test.mjs": "7c07ae8d295610880df17d8c2942089dc00a9fb3ee73c6e13851a26c75e10065"
+  },
+  "safety": {
+    "committed": false,
+    "pushed": false,
+    "ci_triggered": false,
+    "deployed": false,
+    "services_started": false,
+    "production_accessed": false
+  }
+}

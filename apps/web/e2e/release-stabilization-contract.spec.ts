@@ -32,8 +32,11 @@ test("conversation mutations hand the committed revision to the client", () => {
   expect(reader).toContain("router.push(buildReaderUrl");
   expect(reader).not.toContain("window.location.href = buildReaderUrl");
   expect(reader).toContain("canonicalConversation.offline_revision");
-  expect(reader).toContain("recordedRecentConversationRef.current === conversationId");
-  expect(reader).toContain("if (!conversationQuery.data");
+  expect(reader).toContain("recentOwner.active");
+  expect(reader).toContain("recentOwnerRef.current === recentOwner");
+  expect(reader).toContain("recentOwner.epoch === authenticationGeneration()");
+  expect(reader).toContain("if (conversationQuery.data?.id !== conversationId || recentOwner.attempted || !currentOwner()) return;");
+  expect(reader).toContain("recentOwner.attempted = true;");
   expect(dataSource).toContain("return recent.conversation");
   expect(reader).toContain("\\u64a4\\u9500\\u5931\\u8d25");
   expect(source("lib/api.ts")).toContain("response.status >= 500");

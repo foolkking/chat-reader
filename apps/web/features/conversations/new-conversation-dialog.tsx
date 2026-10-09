@@ -59,8 +59,8 @@ export function NewConversationDialog({
         title: title.trim() || defaultTitle,
         project_id: projectId || null,
         messages: [
-          { role: "user", content_markdown: userText.trim() },
-          { role: "assistant", content_markdown: assistantText.trim() },
+          { role: "user", content_markdown: userText },
+          { role: "assistant", content_markdown: assistantText },
         ],
       });
       onCreated(result);

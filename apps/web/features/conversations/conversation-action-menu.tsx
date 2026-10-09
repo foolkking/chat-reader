@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
   FileJson,
@@ -24,16 +24,15 @@ import { usePreferences } from "../../components/preferences-provider";
 import {
   archiveConversation,
   getConversationExportUrl,
-  getProjects,
-  placeConversation,
   queueConversationBatchDelete,
   setConversationGlobalPin,
   setProjectConversationPin,
   unarchiveConversation,
-  updateConversation,
 } from "../../lib/api";
 import type { BackgroundTaskRead, ConversationListItem, ProjectConversationRead } from "../../lib/types";
 import { createConversationUndo, type UndoAction } from "./conversation-undo";
+import { ConversationMetadataDialog } from "./conversation-metadata-dialog";
+import type { ConversationPlacementController } from "./conversation-placement";
 
 export function ConversationActionMenu({
   conversation,
@@ -44,6 +43,7 @@ export function ConversationActionMenu({
   onChanged,
   onUndo,
   onOpenChange,
+  placement,
 }: {
   conversation: ConversationListItem | ProjectConversationRead;
   projectId?: string;
@@ -53,6 +53,7 @@ export function ConversationActionMenu({
   onChanged?: () => Promise<void> | void;
   onUndo?: (undo: UndoAction) => void;
   onOpenChange?: (open: boolean) => void;
+  placement?: ConversationPlacementController;
 }) {
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -62,31 +63,21 @@ export function ConversationActionMenu({
   const zh = resolvedLocale === "zh-CN";
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [showProjectPicker, setShowProjectPicker] = useState(false);
-  const [projectSearch, setProjectSearch] = useState("");
-  const [targetProjectId, setTargetProjectId] = useState("");
+  const [metadataField, setMetadataField] = useState<"title" | "description" | null>(null);
+  const [metadataNotice, setMetadataNotice] = useState("");
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 288, maxHeight: 620 });
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
   const title = conversation.display_title || conversation.title;
 
-  const projectsQuery = useQuery({
-    queryKey: ["projects", "custom", "asc"],
-    queryFn: () => getProjects({ sort: "custom", direction: "asc" }),
-    enabled: open,
-  });
-  const projects = (projectsQuery.data ?? []).filter(
-    (project) => !project.is_default && project.name.toLowerCase().includes(projectSearch.trim().toLowerCase()),
-  );
-
   useEffect(() => setOpen(false), [closeSignal]);
 
   useEffect(() => {
     onOpenChange?.(open);
-    if (wasOpenRef.current && !open) buttonRef.current?.focus({ preventScroll: true });
+    if (wasOpenRef.current && !open && !metadataField && !placement?.state?.open) buttonRef.current?.focus({ preventScroll: true });
     wasOpenRef.current = open;
-  }, [onOpenChange, open]);
+  }, [metadataField, onOpenChange, open, placement?.state?.open]);
 
   useEffect(() => {
     if (!open) return;
@@ -171,11 +162,14 @@ export function ConversationActionMenu({
       <button
         ref={buttonRef}
         type="button"
+        disabled={metadataField !== null}
         data-no-dnd
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
+          if (metadataField !== null) return;
+          setMetadataNotice("");
           setOpen((current) => !current);
         }}
         className={`inline-flex items-center justify-center border text-sm font-semibold text-secondary transition hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)] ${
@@ -189,6 +183,10 @@ export function ConversationActionMenu({
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
+      <span role="status" className="sr-only">{metadataNotice}</span>
+      {metadataField ? <ConversationMetadataDialog key={conversation.id + ":" + metadataField}
+        conversation={conversation} field={metadataField} onClose={() => setMetadataField(null)}
+        onAccepted={setMetadataNotice} onChanged={onChanged} restoreFocus={() => buttonRef.current} /> : null}
 
       {open
         ? createPortal(
@@ -198,6 +196,9 @@ export function ConversationActionMenu({
               aria-label={`${zh ? "对话操作" : "Conversation actions"} ${title}`}
               onPointerDown={(event) => event.stopPropagation()}
               onKeyDown={(event) => {
+                // This portal still has a draggable row as its React ancestor.
+                event.stopPropagation();
+                if (event.key === "Escape") { event.preventDefault(); setOpen(false); return; }
                 const items = Array.from(
                   menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
                 );
@@ -221,17 +222,7 @@ export function ConversationActionMenu({
                 <MenuButton
                   icon={<Pencil className="h-4 w-4" />}
                   disabled={busy !== null}
-                  onClick={() => void run("rename", async () => {
-                    const nextTitle = await dialog.prompt({
-                      title: zh ? "重命名对话" : "Rename conversation",
-                      label: zh ? "对话标题" : "Conversation title",
-                      initialValue: title,
-                      confirmLabel: zh ? "保存" : "Save",
-                    });
-                    if (nextTitle === null) return;
-                    const trimmed = nextTitle.trim();
-                    if (trimmed) await updateConversation(conversation.id, { title: trimmed, display_title: trimmed });
-                  })}
+                  onClick={() => { setMetadataField("title"); setOpen(false); }}
                 >
                   {zh ? "重命名对话" : "Rename conversation"}
                 </MenuButton>
@@ -239,17 +230,7 @@ export function ConversationActionMenu({
                 <MenuButton
                   icon={<StickyNote className="h-4 w-4" />}
                   disabled={busy !== null}
-                  onClick={() => void run("description", async () => {
-                    const description = await dialog.prompt({
-                      title: zh ? "编辑简介" : "Edit description",
-                      label: zh ? "Markdown 简介（最多 500 字）" : "Markdown description (500 characters max)",
-                      initialValue: conversation.description_markdown ?? "",
-                      confirmLabel: zh ? "保存" : "Save",
-                    });
-                    if (description !== null) {
-                      await updateConversation(conversation.id, { description_markdown: description.slice(0, 500) });
-                    }
-                  })}
+                  onClick={() => { setMetadataField("description"); setOpen(false); }}
                 >
                   {zh ? "编辑简介" : "Edit description"}
                 </MenuButton>
@@ -293,69 +274,27 @@ export function ConversationActionMenu({
                   <div className="my-1 border-t border-ui pt-1">
                     <MenuButton
                       icon={<FolderInput className="h-4 w-4" />}
-                      disabled={busy !== null}
-                      onClick={() => setShowProjectPicker((value) => !value)}
+                      disabled={busy !== null || !placement || placement.blocked}
+                      onClick={() => {
+                        if (!placement || placement.blocked) return;
+                        setOpen(false);
+                        placement.start(conversation, () => buttonRef.current);
+                      }}
                     >
                       {zh ? "移动到项目" : "Move to project"}
                     </MenuButton>
-                    {showProjectPicker ? (
-                      <div className="mt-1 rounded-lg bg-subtle p-2">
-                        <input
-                          value={projectSearch}
-                          onChange={(event) => setProjectSearch(event.target.value)}
-                          placeholder={zh ? "搜索项目" : "Search projects"}
-                          className="min-h-9 w-full rounded-lg border border-ui bg-surface px-2 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]"
-                        />
-                        <div className="mt-1 max-h-32 overflow-y-auto rounded-lg bg-subtle p-1">
-                          {projects.map((project) => (
-                            <button
-                              key={project.id}
-                              type="button"
-                              onClick={() => setTargetProjectId(project.id)}
-                              className={`block min-h-8 w-full truncate rounded-md px-2 text-left text-sm ${
-                                targetProjectId === project.id
-                                  ? "bg-surface font-medium text-primary shadow-sm"
-                                  : "text-secondary hover:bg-surface"
-                              }`}
-                            >
-                              {project.name}
-                            </button>
-                          ))}
-                          {projects.length === 0 ? (
-                            <p className="px-2 py-1.5 text-xs text-secondary">
-                              {zh ? "没有匹配的项目" : "No matching projects"}
-                            </p>
-                          ) : null}
-                        </div>
-                        <MenuButton
-                          icon={<FolderInput className="h-4 w-4" />}
-                          disabled={!targetProjectId || busy !== null}
-                          onClick={() => void run("move-project", async () => {
-                            await placeConversation(conversation.id, {
-                              target_project_id: targetProjectId,
-                              target_section: "normal",
-                              expected_offline_revision: conversation.offline_revision,
-                            });
-                          })}
-                        >
-                          {zh ? "移动到所选项目" : "Move to selected project"}
-                        </MenuButton>
-                      </div>
-                    ) : null}
                   </div>
                 ) : null}
 
                 {projectId && conversation.status !== "archived" ? (
                   <MenuButton
                     icon={<History className="h-4 w-4" />}
-                    disabled={busy !== null}
-                    onClick={() => void run("remove-project", async () => {
-                      await placeConversation(conversation.id, {
-                        target_project_id: null,
-                        target_section: "normal",
-                        expected_offline_revision: conversation.offline_revision,
-                      });
-                    })}
+                    disabled={busy !== null || !placement || placement.blocked}
+                    onClick={() => {
+                      if (!placement || placement.blocked) return;
+                      setOpen(false);
+                      placement.start(conversation, () => buttonRef.current, true);
+                    }}
                   >
                     {zh ? "移到未分类" : "Move to unclassified"}
                   </MenuButton>

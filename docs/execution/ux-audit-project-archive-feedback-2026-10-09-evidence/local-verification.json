@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "Project archive acknowledgement, instance-scoped read-only recovery and confirmation admission; earlier local sidebar/archive/list/merge/project regressions",
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "production_source_unchanged": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "passing_ci_does_not_cover_this_batch": "37812290017",
+  "previous_checkpoint": "../ux-audit-sidebar-read-recovery-2026-10-09-evidence/local-verification.json",
+  "node_regression": {
+    "command": "node --test --test-reporter=tap scripts/ux/project-archive-recovery.test.mjs scripts/ux/sidebar-read-recovery.test.mjs scripts/ux/project-fixture-cleanup.test.mjs scripts/ux/archived-project-recovery.test.mjs scripts/ux/conversation-list-recovery.test.mjs scripts/ux/merge-admission.test.mjs scripts/ux/project-recovery.test.mjs scripts/ux/merge-reentry.test.mjs",
+    "passed": 248,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 2937.0355,
+    "project_archive_cases": 43,
+    "sidebar_cases": 41,
+    "fixture_cleanup_cases": 3,
+    "archived_project_cases": 40,
+    "list_cases": 28,
+    "merge_cases": 43,
+    "project_cases": 21,
+    "reentry_cases": 29,
+    "evidence": "Actual compiled components/hooks/callbacks/JSX, installed React static markup and subscribed QueryObserver/MutationObserver transitions. New archive cases execute the actual controller/menu/feedback with explicit hook/effect scheduling, confirmation, portal, focus, server-state and transport doubles. Not real React lifecycle, DOM identity/focus, browser or backend acceptance."
+  },
+  "baseline": {
+    "file": "baseline.json",
+    "tests": 20,
+    "passed": 4,
+    "failed": 16,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 697.2523,
+    "findings_not_test_count": 3,
+    "control": "Ordinary invalidateQueries GET failure resolves by default; held refresh delays completion, but default GET failure does not establish false archive-failure feedback."
+  },
+  "first_repair": {
+    "tests": 20,
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 686.5225
+  },
+  "expanded_archive_checks": {
+    "tests": 43,
+    "passed": 43,
+    "failed": 0,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 823.0833
+  },
+  "final_assertion_review": {
+    "changes": "Strengthened held-write archive-disabled assertion and rerendered after an attempted busy dismissal before checking the retained state.",
+    "earlier_combined_passed": 248,
+    "earlier_combined_failed": 0,
+    "earlier_combined_duration_ms": 3471.0667,
+    "application_code_changed": false
+  },
+  "previous_api_verification": {
+    "ledger": "../ux-audit-merge-admission-2026-10-09-evidence/local-verification.json",
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 83.43,
+    "database": "Disposable SQLite, not PostgreSQL",
+    "rerun_in_this_batch": false,
+    "basis": "Seven previously checked API implementation/test hashes are unchanged; no API or migration edit in this batch."
+  },
+  "postgresql_concurrency": {
+    "cases": 2,
+    "passed": 0,
+    "skipped": 2,
+    "rerun_in_this_batch": false,
+    "acceptance": "NOT_VERIFIED"
+  },
+  "browser_discovery": {
+    "command": "corepack pnpm --filter web exec playwright test e2e/ux-recovery-followup.spec.ts --list --output <task-temp>/project-archive-discovery",
+    "discovered": 43,
+    "existing_cases": 37,
+    "new_project_archive_cases": 6,
+    "executed_in_this_batch": 0,
+    "acceptance": "NOT_VERIFIED",
+    "intended_assertions": [
+      "375px Chinese/light and 1440px English/dark: archive acknowledgement and lost-opener focus remain outside fetch-busy list after row removal while actual refresh GETs are held.",
+      "Unknown outcomes survive closing menus/mobile drawer. Failed result checks do not write. Applied loss is confirmed by GET; unapplied loss permits only an explicit newly confirmed archive.",
+      "Exact is_archived=true PATCH payloads; unchanged synthetic message JSON and project relations; Unclassified visibility and exactly one applied archive revision bump.",
+      "Synthetic-only fixture setup/cleanup and screenshots execute only in a future authorized browser run. No browser, server or fixture was started for discovery."
+    ]
+  },
+  "implementation": {
+    "owner": "One controller in ProjectSidebar is passed to desktop/mobile menu copies; feedback is outside each project row and the project list's fetch-busy section.",
+    "acknowledgement": "Canonical archive is published before detached handled refresh. Remove target from existing active project caches, update existing include-archived record, do not create absent caches or rewrite conversation data.",
+    "uncertainty": "One retained unresolved archive per mounted sidebar. Only explicit full owner-scoped project GET checks it; failed checks stay uncertain. Only a successful active result permits a new explicit confirmed archive.",
+    "admission": "Synchronous reservation before confirmation; latest rendered active/non-default/access scope rechecked before PATCH. Owner unmount generation fences late callbacks without cancelling a request already sent.",
+    "access": "Denied reads/unknown write responses do not republish private cache data. Unavailable sidebar hides notice; check-specific denial hides private notice identity.",
+    "limitations": [
+      "No atomic server archive precondition or cross-tab lock.",
+      "No persistence across full owner unmount, navigation or reload.",
+      "Focus/layout/browser continuity remain unverified; synthetic hook scheduling is not real React lifecycle."
+    ]
+  },
+  "checks": {
+    "web_lint": "passed after final application/browser-test changes",
+    "nonincremental_typecheck": "passed: corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "one_worker_web_build": "passed: Next 16.3.8; NEXT_BUILD_CPUS=1; NEXT_STANDALONE=0; compile 19.6s; built-in TypeScript 9.5s; 14 pages",
+    "git_diff_check": "passed; existing LF-to-CRLF notices only",
+    "scoped_document_links": {
+      "status": "passed",
+      "files": 22,
+      "local_links_checked": 266,
+      "missing": 0
+    },
+    "unchanged_sidebar_source": {
+      "status": "passed",
+      "declarations": 17,
+      "method": "TypeScript AST extracts placement/query declarations and compares source text with HEAD, normalizing CRLF only.",
+      "single_owner_calls": 1,
+      "feedback_outside_fetch_busy_section": true,
+      "limitation": "Source structure/text equivalence only, not real runtime drag, layout or lifecycle proof."
+    },
+    "visual_checklist_score": "NOT_VERIFIED; no rendered score or conformance claim"
+  },
+  "verified_file_sha256_at_checkpoint": {
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "apps/api/app/schemas/task.py": "cad472a799a7019d2ba99ea2ed54c3df854b5f11ed7c702e6bb34572a47d52f5",
+    "apps/api/app/services/background_jobs.py": "c4a568aa4fc0d6b562d6f604f83e67af4e8168457be986cca077b3db1fbbee38",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/tests/test_merge_admission.py": "360f3a43e72e4c9a7ea7b31af958a1ef6e3c9047a44a15ddbbefce1251cacaa5",
+    "apps/api/tests/test_merge_admission_postgres.py": "318523b034d66bed693704c4b476fba7e53a6ec17064d66ebcd50cbae8f63be7",
+    "apps/api/tests/test_project_settings.py": "52f7c93028e1a545110ed740928e18831ea51d1631570f44115867dc99268648",
+    "apps/web/features/conversations/use-merge-admission.ts": "21138a79553855344a53cd9884ad0d720e3a20ac3877e78da6a3508c3c0544a8",
+    "apps/web/features/conversations/merge-conversations-dialog.tsx": "00ee5f375d070d49256e3620ca64714056d8ad36801cc92798f3fb2cd9648e1b",
+    "apps/web/features/conversations/conversation-list.tsx": "f16a8de45282c7015886de89c71691f158946387f87962ac61676b7224ae26e0",
+    "apps/web/features/projects/project-conversation-list.tsx": "5aa263cff05aa3daceab91b2d7f18f05b08201fcf70290485f3e5466a6e70630",
+    "apps/web/features/projects/project-settings-dialog.tsx": "d95440c37ea67b491cccb6ec280365c5b5745f6036c461ead37fc9343f17b5c9",
+    "apps/web/lib/api.ts": "2cc1177187b044b69886a013885b30e61375bdf518b75da6bec95836112116f4",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "ae107b522f7a87055f08132385a65c50474f682844b9b5fd885224be9f0b28c3",
+    "scripts/ux/merge-admission.test.mjs": "1cedb16d71eaade5844dcceb39e18dbc4881d9e078b8d2b8ba81619f427136d0",
+    "scripts/ux/project-recovery.test.mjs": "4cdff5848f864e7794bb562db2e0c3a270e5f5efaeb5cd662d25987b5811f44a",
+    "scripts/ux/merge-reentry.test.mjs": "2d68abb3290850dbfbfde6c591e4b5be40f78382e1c48439c395d506c35a3504",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/features/conversations/merge-order-list.tsx": "453edbc5c0a586c2013d746109f0c0b972de6bd63bbc09639fe250876a7c53bd",
+    "apps/web/playwright.config.ts": "400581d5a48a200df9bce919a05e8dc289b01668c6e510576858bd7846830e3d",
+    "scripts/ux/conversation-list-recovery.test.mjs": "2f500a616d102a3d47d3870cd9b89fe2e242bc79c67fb108cceb52be81789065",
+    "apps/web/features/reading/recent-items.tsx": "3453509920f9c0590a77551de8e92709543f18a81c0b3999707291d127152223",
+    "apps/web/features/projects/archived-project-list.tsx": "c97a937208e2a265e3d69d05c0054428e9f6e05f8654c4056c06821840d442a0",
+    "scripts/ux/archived-project-recovery.test.mjs": "6c0f149f6f1ef4f5c123cc6f6b56f888b70504bb60b61a8c7e1ac39ae3f59cf9",
+    "apps/web/lib/batch-selection.ts": "1c332034083b045468bf1ecacf5a69cb437806f5e499a2b7f72fdea0f5691d23",
+    "apps/api/app/api/routes/projects.py": "e44ac92eb1a4733a222a67bd175869ef0236f3d241ded658d1275fa15c9464bb",
+    "apps/web/features/projects/project-sidebar.tsx": "90b6e1e208c9a90206044d03fb1d267d252f9dd075c09154b5f1e4d66285a1e4",
+    "scripts/ux/sidebar-read-recovery.test.mjs": "569a2cda8bf52a071c8952867f33eaacc903984ee45ab219db838f980427ac33",
+    "scripts/ux/project-fixture-cleanup.test.mjs": "719e4ee51c0a02bf4e513eaf4a601553e4f032a0164b0772644a04941f7df94c",
+    "apps/web/components/query-provider.tsx": "8fd50a362d460cc53d45fe9fad06b3fca75f6e25cbd2e6e3557eff5969398d49",
+    "apps/web/components/reader-sidebar-frame.tsx": "dacacca218a9b78a6e1d9f0a5c218b66ea6d60b7cebaf65728c283dee5e18a13",
+    "apps/web/lib/i18n.ts": "c6dac6cec3e9f849294144858b5e38118aa33f2a815a6ba61dffb8b5d1d362bd",
+    "apps/web/features/projects/project-action-menu.tsx": "4db965f77353589cae40d88c8cc52263b4596866746c1d85cb3377661e96bfa8",
+    "scripts/ux/project-archive-recovery.test.mjs": "3bc82e768506221f8d7d81a0e0a6683515244748a1b380eca2f3c4343df4a7e5"
+  },
+  "safety": {
+    "local_web_started": false,
+    "postgresql_api_worker_fixture_restarted": false,
+    "production_accessed_for_this_batch": false,
+    "application_images_built_locally_or_on_king": false,
+    "existing_imports_modified": false,
+    "migration_required": false,
+    "dependencies_added": false,
+    "unrelated_workspace_residues_preserved": true,
+    "older_checkpoints_rewritten": false
+  }
+}

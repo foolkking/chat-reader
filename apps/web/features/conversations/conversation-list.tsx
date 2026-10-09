@@ -7,6 +7,7 @@ import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, ty
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ApiRequestError,
   archiveConversation,
   getConversations,
   getProjects,
@@ -19,8 +20,9 @@ import {
 import type { BackgroundTaskRead, ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu } from "./conversation-action-menu";
+import { ConversationPlacementSurface, useConversationPlacement } from "./conversation-placement";
 import { ConversationUndoNotice, createConversationUndo, type UndoAction } from "./conversation-undo";
-import { MergeConversationsDialog } from "./merge-conversations-dialog";
+import { MergeAdmissionNotice, MergeConversationsDialog } from "./merge-conversations-dialog";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { QuickStartGuide } from "../../components/quick-start-guide";
@@ -41,6 +43,7 @@ export function ConversationList({
 }) {
   const queryClient = useQueryClient();
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   const batchExport = useBatchExport(resolvedLocale === "zh-CN");
   const dialog = useInteractionDialog();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
@@ -50,7 +53,9 @@ export function ConversationList({
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [batchNotice, setBatchNotice] = useState<string | null>(null);
+  const [batchNotice, setBatchNotice] = useState<ReactNode>(null);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const mergeResultRef = useRef<HTMLParagraphElement>(null);
   const sortBusy = useRef(false);
   const [sortError, setSortError] = useState(false);
   const [activeSortId, setActiveSortId] = useState<string | null>(null);
@@ -70,7 +75,7 @@ export function ConversationList({
       limit: 5000,
     }),
     // Keep the visible list stable while a sort change or mutation refreshes it.
-    placeholderData: (previous) => previous,
+    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === mode ? previous : undefined,
     staleTime: 10_000,
   });
   const projectsQuery = useQuery({
@@ -93,7 +98,13 @@ export function ConversationList({
     staleTime: 30_000,
   });
   const isArchivedMode = mode === "archived";
-  const conversations = (conversationsQuery.data ?? []).filter((conversation) => conversation.status === mode);
+  const listUnavailable = conversationsQuery.isError && conversationsQuery.error instanceof ApiRequestError
+    && [401, 403, 404].includes(conversationsQuery.error.status);
+  const conversations = listUnavailable ? [] : (conversationsQuery.data ?? []).filter((conversation) => conversation.status === mode);
+  const placement = useConversationPlacement({ scope: "conversation-list:" + mode, unavailable: listUnavailable, onChanged: refreshLists });
+  const selectedMergeConversations = mergeOrderIds
+    .map((id) => conversations.find((conversation) => conversation.id === id))
+    .filter((conversation): conversation is ConversationListItem => Boolean(conversation));
   const linearSelection = useLinearSelection({
     ids: conversations.map((conversation) => conversation.id),
     selectedIds: selectedConversationIds,
@@ -134,7 +145,7 @@ export function ConversationList({
   }
 
   async function handleSortEnd(event: DragEndEvent) {
-    if (sortBusy.current || conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
+    if (listUnavailable || sortBusy.current || conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
     const rows = conversationsQuery.data ?? [];
     const oldIndex = rows.findIndex((item) => item.id === event.active.id);
     const newIndex = rows.findIndex((item) => item.id === event.over?.id);
@@ -169,8 +180,29 @@ export function ConversationList({
 
   function withUndo(content: ReactNode) {
     return <div className="space-y-3">
+      <ConversationPlacementSurface placement={placement} />
       {undo ? <ConversationUndoNotice key={undo.id} undo={undo} disabled={bulkBusy !== null || isMerging}
         onDone={() => setUndo((current) => current === undo ? null : current)} /> : null}
+      <MergeConversationsDialog key="merge" open={mergeOpen} conversations={selectedMergeConversations}
+        title={mergeTitle} busy={isMerging} recoveryDisabled={bulkBusy !== null}
+        onTitleChange={setMergeTitle} onReorder={setMergeOrderIds}
+        onOpen={() => setMergeOpen(true)} onClose={() => { if (!isMerging) setMergeOpen(false); }}
+        resultFocus={() => mergeResultRef.current}
+        onMerge={async (request, signal) => {
+          setIsMerging(true);
+          try {
+            return await mergeConversations({ conversationIds: request.conversationIds, title: request.title,
+              idempotencyKey: request.idempotencyKey }, signal);
+          } finally { setIsMerging(false); }
+        }}
+        onAccepted={(task) => {
+          setMergeOpen(false);
+          setSelectedConversationIds(new Set());
+          setMergeOrderIds([]);
+          setMergeTitle("Merged conversation");
+          setBatchNotice(<MergeAdmissionNotice task={task} zh={resolvedLocale === "zh-CN"} />);
+        }} />
+      {batchNotice ? <p ref={mergeResultRef} tabIndex={-1} className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
       {content}
     </div>;
   }
@@ -179,20 +211,21 @@ export function ConversationList({
     return withUndo(<StateBlock title={resolvedLocale === "zh-CN" ? "正在加载对话" : "Loading conversations"} detail={resolvedLocale === "zh-CN" ? "正在读取对话列表…" : "Fetching conversation list…"} loading />);
   }
 
-  if (conversationsQuery.isError) {
+  const retryConversations = <button type="button" onClick={() => void conversationsQuery.refetch()} disabled={conversationsQuery.isFetching}
+    className="btn-secondary min-h-11 px-3 disabled:opacity-60">{zh ? "重试" : "Retry"}</button>;
+  const readError = conversationsQuery.isError ? <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-ui bg-surface px-3 py-2 text-sm text-secondary">
+    <span>{zh ? "对话更新失败，仍显示上次内容。" : "Could not update conversations. Previously loaded items are shown."}</span>
+    {retryConversations}
+  </div> : null;
+
+  if (conversationsQuery.isError && conversations.length === 0) {
     return withUndo(
       <StateBlock
         title={resolvedLocale === "zh-CN" ? "对话加载失败" : "Failed to load conversations"}
-        detail={conversationsQuery.error.message}
-        action={
-          <button
-            type="button"
-            onClick={() => void conversationsQuery.refetch()}
-            className="rounded-md bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)]"
-          >
-            {resolvedLocale === "zh-CN" ? "重试" : "Retry"}
-          </button>
-        }
+        detail={listUnavailable
+          ? (zh ? "当前账户无法访问此对话列表，请恢复访问后重试。" : "This conversation list is unavailable for your account. Restore access, then retry.")
+          : (zh ? "暂时无法读取对话，请重试。" : "The conversation list is unavailable. Try again.")}
+        error busy={conversationsQuery.isFetching} action={retryConversations}
       />
     );
   }
@@ -222,7 +255,7 @@ export function ConversationList({
       return withUndo(
         <StateBlock
           title={resolvedLocale === "zh-CN" ? "正在加载对话" : "Loading conversations"}
-          detail={resolvedLocale === "zh-CN" ? "正在确认对话归属…" : "Checking conversation locations…"}
+          detail={zh ? "正在检查已保存的对话…" : "Checking saved conversations…"}
           loading
         />
       );
@@ -231,6 +264,7 @@ export function ConversationList({
       !isArchivedMode
       && globalExistenceQuery.isSuccess
       && (globalExistenceQuery.data?.length ?? 0) === 0;
+    const existenceFailed = !isArchivedMode && globalExistenceQuery.isError;
     return withUndo(
       <StateBlock
         title={
@@ -238,15 +272,18 @@ export function ConversationList({
             ? (resolvedLocale === "zh-CN" ? "暂无已归档对话" : "No archived conversations")
             : shouldShowImportCta
               ? (resolvedLocale === "zh-CN" ? "这里还没有对话" : "There are no conversations here yet")
-              : (resolvedLocale === "zh-CN" ? "暂无未分类对话" : "No unfiled conversations")
+              : (zh ? "暂无活动对话" : "No active conversations")
         }
         detail={
           isArchivedMode
             ? (resolvedLocale === "zh-CN" ? "归档的对话会保留在这里，恢复后回到原项目或对话记录。" : "Archived conversations return to their previous location when restored.")
             : shouldShowImportCta
               ? (resolvedLocale === "zh-CN" ? "导入对话，开始阅读。" : "Import a conversation to start reading.")
-              : (resolvedLocale === "zh-CN" ? "现有对话已归入项目，可在左侧展开项目查看。" : "Existing conversations are filed in projects. Expand a project in the sidebar to view them.")
+              : existenceFailed
+                ? (zh ? "无法检查已保存的对话，请重试或查看归档。" : "Could not check saved conversations. Retry, or open the archive.")
+                : (zh ? "已归档的对话仍会保留，可在归档中查看或恢复。" : "Archived conversations are kept in Archive, where they can be opened or restored.")
         }
+        error={existenceFailed} busy={!isArchivedMode && globalExistenceQuery.isFetching}
         action={shouldShowImportCta ? (
           <div className="flex flex-wrap justify-center gap-2">
             <button
@@ -258,7 +295,11 @@ export function ConversationList({
             </button>
             <QuickStartGuide onImport={onImportClick} />
           </div>
-        ) : undefined}
+        ) : !isArchivedMode ? <div className="flex flex-wrap justify-center gap-2">
+          {existenceFailed ? <button type="button" disabled={globalExistenceQuery.isFetching} onClick={() => void globalExistenceQuery.refetch()}
+            className="btn-secondary min-h-11 px-3 disabled:opacity-60">{zh ? "重试" : "Retry"}</button> : null}
+          <a href="/archived" className="btn-secondary inline-flex min-h-11 items-center px-3">{zh ? "查看归档" : "View archive"}</a>
+        </div> : undefined}
       />
     );
   }
@@ -278,8 +319,8 @@ export function ConversationList({
           <SelectionModeButton active={selectionMode} locale={resolvedLocale} onClick={selectionMode ? exitSelectionMode : () => setSelectionMode(true)} />
         </div>
       </div>
+      {readError}
       {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
-      {batchNotice ? <p className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
       {batchExport.feedback}
       {selectionMode ? <SelectionToolbar
         selectedCount={selectedConversationIds.size}
@@ -293,15 +334,10 @@ export function ConversationList({
       >
         <BulkActions
             mode={mode}
-            selectedConversations={mergeOrderIds
-              .map((id) => conversations.find((conversation) => conversation.id === id))
-              .filter((conversation): conversation is ConversationListItem => Boolean(conversation))}
-            title={mergeTitle}
-            onTitleChange={setMergeTitle}
-            isMerging={isMerging}
+            selectedConversations={selectedMergeConversations}
             bulkBusy={bulkBusy}
             projects={(projectsQuery.data ?? []).filter((project) => !project.is_default && !project.is_archived)}
-            onReorder={setMergeOrderIds}
+            onOpenMerge={() => setMergeOpen(true)}
             onMove={async (ids, projectId) => {
               setBulkBusy("move");
               try {
@@ -318,22 +354,6 @@ export function ConversationList({
                 await batchExport.submit(selected);
               } finally {
                 setBulkBusy(null);
-              }
-            }}
-            onMerge={async (ids, title) => {
-              setIsMerging(true);
-              try {
-                await mergeConversations({
-                  conversationIds: ids,
-                  title: title.trim() || "Merged conversation",
-                  idempotencyKey: crypto.randomUUID(),
-                });
-                setSelectedConversationIds(new Set());
-                setMergeOrderIds([]);
-                setMergeTitle("Merged conversation");
-                await queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
-              } finally {
-                setIsMerging(false);
               }
             }}
             onArchive={async (ids) => {
@@ -434,7 +454,7 @@ export function ConversationList({
                   <p className="text-xs text-secondary" title={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)} aria-label={fullActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}>{formatActivityTime(activityTimestamp(conversation, conversationSortMode), resolvedLocale)}</p>
                   <p className="mt-1 text-sm text-secondary">{resolvedLocale === "zh-CN" ? `${conversation.message_count} 条消息` : `${conversation.message_count} messages`}</p>
                 </div>
-                {!selectionMode ? <ConversationActionMenu conversation={conversation} onChanged={refreshLists} onUndo={setUndo} /> : null}
+                {!selectionMode ? <ConversationActionMenu conversation={conversation} placement={placement} onChanged={refreshLists} onUndo={setUndo} /> : null}
               </div>
             </div>
           </article></SortableConversationRow>
@@ -470,30 +490,22 @@ function activityTimestamp(conversation: ConversationListItem, mode: string): st
 function BulkActions({
   mode,
   selectedConversations,
-  title,
-  onTitleChange,
-  isMerging,
   bulkBusy,
   projects,
-  onReorder,
   onMove,
   onExport,
-  onMerge,
+  onOpenMerge,
   onArchive,
   onRestore,
   onDelete,
 }: {
   mode: "active" | "archived";
   selectedConversations: ConversationListItem[];
-  title: string;
-  onTitleChange: (title: string) => void;
-  isMerging: boolean;
   bulkBusy: string | null;
   projects: ProjectRead[];
-  onReorder: (ids: string[]) => void;
   onMove: (ids: string[], projectId: string | null) => Promise<void>;
   onExport: (conversations: ConversationListItem[]) => Promise<void>;
-  onMerge: (ids: string[], title: string) => Promise<void>;
+  onOpenMerge: () => void;
   onArchive: (ids: string[]) => Promise<void>;
   onRestore: (ids: string[]) => Promise<void>;
   onDelete: (ids: string[]) => Promise<void>;
@@ -502,10 +514,6 @@ function BulkActions({
   const isArchivedMode = mode === "archived";
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [mergeOpen, setMergeOpen] = useState(false);
-  useEffect(() => {
-    if (selectedIds.length < 2) setMergeOpen(false);
-  }, [selectedIds.length]);
   return (
     <>
       <div className="selection-toolbar-action-group flex flex-wrap items-center gap-1.5">
@@ -540,10 +548,9 @@ function BulkActions({
             {zh ? "归档" : "Archive"}
           </button>
         )}
-        {mode === "active" ? <button type="button" disabled={bulkBusy !== null || selectedIds.length < 2} onClick={() => setMergeOpen(true)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40">{zh ? "合并对话" : "Merge"}</button> : null}
+        {mode === "active" ? <button type="button" disabled={bulkBusy !== null || selectedIds.length < 2} onClick={onOpenMerge} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40">{zh ? "合并对话" : "Merge"}</button> : null}
         <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0} onClick={() => void onDelete(selectedIds)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-40">{zh ? "删除所选" : "Delete selected"}</button>
       </div>
-      <MergeConversationsDialog open={mergeOpen} conversations={selectedConversations} title={title} busy={isMerging} onTitleChange={onTitleChange} onReorder={onReorder} onMerge={() => onMerge(selectedIds, title)} onClose={() => { if (!isMerging) setMergeOpen(false); }} />
     </>
   );
 }
@@ -553,14 +560,19 @@ function StateBlock({
   detail,
   action,
   loading = false,
+  error = false,
+  busy = false,
 }: {
   title: string;
   detail: string;
   action?: ReactNode;
   loading?: boolean;
+  error?: boolean;
+  busy?: boolean;
 }) {
   return (
-    <section className="flex min-h-64 items-center justify-center rounded-xl border border-ui bg-surface p-8 text-center">
+    <section role={error ? "alert" : loading ? "status" : undefined} aria-busy={loading || busy}
+      className="flex min-h-64 items-center justify-center rounded-xl border border-ui bg-surface p-8 text-center">
       <div>
         {loading ? <div className="mx-auto mb-4 h-10 w-10 animate-pulse rounded-full bg-subtle" /> : null}
         <h2 className="text-base font-semibold text-primary">{title}</h2>

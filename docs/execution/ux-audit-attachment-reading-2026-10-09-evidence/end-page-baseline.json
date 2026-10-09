@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-09",
+  "stage": "before final-page scroll-clamp repair",
+  "command": "node --test --test-name-pattern='final page selected' scripts/ux/attachment-reading.test.mjs",
+  "result": { "passed": 0, "failed": 1, "skippedByNameFilter": 33, "exitCode": 1 },
+  "case": "continuous PDF keeps the final page selected when its top cannot reach the viewport top",
+  "expectedPage": 120,
+  "actualPage": 118,
+  "viewport": { "width": 375, "height": 640 },
+  "sourceSha256": {
+    "apps/web/features/attachments/attachment-viewer.tsx": "6f4ecbc8e2f173ab488649368b9beb68cc2cac75da83dc56313969eb923854a0",
+    "scripts/ux/attachment-reading.test.mjs": "bbc81e8ba676da857b87258b896bc10358b4a0de34861c1b89bba104dd22f190"
+  },
+  "boundary": "Production callback with installed TanStack virtualizer and synthetic scroll geometry; not a browser render or CPU/RSS measurement."
+}

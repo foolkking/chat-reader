@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "parent_commit": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "scope": "Local merge-admission recovery plus the existing project-recovery batch; ERR-03 entry remains open",
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "production_source_unchanged": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+  "passing_ci_does_not_cover_this_batch": "37812290017",
+  "api_regression": {
+    "command": "python -m pytest tests/test_merge_admission.py tests/test_merge_history_and_cancellation.py tests/test_split_merge_api.py tests/test_project_settings.py --basetemp <task-temp>/pytest-merge-project-regression -q --tb=short --show-capture=no",
+    "passed": 41,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 83.43,
+    "database": "Disposable SQLite fixtures, not PostgreSQL",
+    "overlaps_previous_project_and_merge_checkpoints": true
+  },
+  "node_regression": {
+    "command": "node --test scripts/ux/merge-admission.test.mjs scripts/ux/project-recovery.test.mjs",
+    "passed": 54,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 1645.4637,
+    "merge_cases": 33,
+    "project_cases": 21,
+    "evidence": "Actual transpiled hook/callback/JSX and installed React static rendering; React state/effect scheduling, transport, storage, portals and unrelated children are explicit doubles. Not browser, focus, layout or interactive React lifecycle evidence."
+  },
+  "postgresql_concurrency": {
+    "file": "apps/api/tests/test_merge_admission_postgres.py",
+    "cases": 2,
+    "passed": 0,
+    "skipped": 2,
+    "seconds": 2.22,
+    "reason": "SETTINGS_POSTGRES_INTEGRATION=0; fixture restart is outside this local batch",
+    "acceptance": "NOT_VERIFIED"
+  },
+  "browser_discovery": {
+    "command": "corepack pnpm --filter web exec playwright test --config=playwright.config.ts ux-recovery-followup.spec.ts --list",
+    "discovered": 13,
+    "existing_cases": 9,
+    "new_merge_cases": 4,
+    "executed_in_this_batch": 0,
+    "new_case_matrix": ["all-conversations 1440px English/dark", "project 375px Chinese/light"],
+    "new_case_variants": ["accepted POST response lost, read original after reload", "initial POST not admitted, read missing before original-key retry"],
+    "acceptance": "NOT_VERIFIED"
+  },
+  "checks": {
+    "web_lint": "passed after confirmed-close correction",
+    "nonincremental_typecheck": "passed after confirmed-close correction",
+    "one_worker_web_build": "passed after confirmed-close correction, Next 16.3.8, NEXT_BUILD_CPUS=1, NEXT_STANDALONE=0",
+    "migration_head": "20261008_0050, single head, unchanged",
+    "git_diff_check": "passed",
+    "scoped_document_links": "17 files checked, no missing local targets",
+    "real_browser_focus_layout": "NOT_VERIFIED",
+    "visual_checklist_score": "NOT_VERIFIED; no full-score claim"
+  },
+  "open_finding": {
+    "id": "ERR-03",
+    "status": "not_fixed_at_this_checkpoint",
+    "evidence": "Source observation: both merge dialogs still belong to a bulk toolbar whose opener requires two current selections. The all-conversations toolbar is absent in loading/error/empty branches.",
+    "next": "Keep recovery entry/dialog outside selection-dependent branches, preserving one owner and explicit checking."
+  },
+  "verified_file_sha256_at_checkpoint": {
+    "apps/api/app/api/routes/conversations.py": "5087243f49b7946a84d9c74db9811ac7b5eb1992016fefadf32722273f21c212",
+    "apps/api/app/schemas/task.py": "cad472a799a7019d2ba99ea2ed54c3df854b5f11ed7c702e6bb34572a47d52f5",
+    "apps/api/app/services/background_jobs.py": "c4a568aa4fc0d6b562d6f604f83e67af4e8168457be986cca077b3db1fbbee38",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/tests/test_merge_admission.py": "360f3a43e72e4c9a7ea7b31af958a1ef6e3c9047a44a15ddbbefce1251cacaa5",
+    "apps/api/tests/test_merge_admission_postgres.py": "318523b034d66bed693704c4b476fba7e53a6ec17064d66ebcd50cbae8f63be7",
+    "apps/api/tests/test_project_settings.py": "52f7c93028e1a545110ed740928e18831ea51d1631570f44115867dc99268648",
+    "apps/web/features/conversations/use-merge-admission.ts": "b96c41b402913b0f8f27005e4b64873bb7aaff8b23b52777f4cc85c6f95ecc8a",
+    "apps/web/features/conversations/merge-conversations-dialog.tsx": "a6deb34edda43afa88bb2c36b5c823b899a113723dc2fbf8db07cc29b6e1ef6b",
+    "apps/web/features/conversations/conversation-list.tsx": "4aed836d8a0a752cef7e80f629c091d0f0b8819841558b1754213e31b841a989",
+    "apps/web/features/projects/project-conversation-list.tsx": "ddd27c724b94e37d9b8c13d8d0f0b0cf8b2b68008ff825f72c7224fbc386d132",
+    "apps/web/features/projects/project-settings-dialog.tsx": "d95440c37ea67b491cccb6ec280365c5b5745f6036c461ead37fc9343f17b5c9",
+    "apps/web/lib/api.ts": "2cc1177187b044b69886a013885b30e61375bdf518b75da6bec95836112116f4",
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "80eaa014a0526a3d4b30b7e7fcb0eab33c88fe89333211d6417a240b91df3fa1",
+    "scripts/ux/merge-admission.test.mjs": "9b7197731f747145c3aa74ed1c289c50b104197a5359dd3730d1b43761c712ca",
+    "scripts/ux/project-recovery.test.mjs": "21e04b74ef46217d3a4b015ef7bb35431c6afe7c6485b1bdac6a532a9a166418"
+  },
+  "safety": {
+    "local_web_started": false,
+    "postgresql_api_worker_fixture_restarted": false,
+    "production_accessed_for_this_batch": false,
+    "application_images_built_locally_or_on_king": false,
+    "existing_imports_modified": false,
+    "migration_required": false,
+    "dependencies_added": false,
+    "unrelated_workspace_residues_preserved": true
+  }
+}

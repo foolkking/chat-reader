@@ -54,6 +54,21 @@ class BackgroundJobCancelled(RuntimeError):
     pass
 
 
+def find_conversation_merge_request(
+    db: Session, idempotency_key: str, ownership_scope: OwnershipScope,
+) -> BackgroundJob | None:
+    return (
+        db.query(BackgroundJob)
+        .filter(
+            BackgroundJob.job_type == "conversation_merge",
+            ownership_scope.predicate(BackgroundJob),
+            BackgroundJob.idempotency_key == idempotency_key,
+        )
+        .order_by(BackgroundJob.created_at.asc(), BackgroundJob.id.asc())
+        .first()
+    )
+
+
 def queue_conversation_merge(
     db: Session,
     *,
@@ -67,6 +82,29 @@ def queue_conversation_merge(
         raise MessageEditError("At least two conversations are required for merge.")
     if len(set(conversation_ids)) != len(conversation_ids):
         raise MessageEditError("Duplicate conversation ids are not allowed.")
+    request_payload = {
+        "conversation_ids": [str(item) for item in conversation_ids],
+        "title": title,
+        "project_id": str(project_id) if project_id else None,
+    }
+    if idempotency_key:
+        if len(idempotency_key) > 200:
+            raise MessageEditError("Idempotency key is too long.", 422)
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            lock = int.from_bytes(hashlib.sha256(
+                f"conversation-merge:{ownership_scope.owner_user_id}:{idempotency_key}".encode()
+            ).digest()[:8], "big", signed=True)
+            db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock})
+        # Receipt replay precedes mutable source/limit checks. Cancelled/failed
+        # work is still the same admission; execution retry is a separate action.
+        existing = find_conversation_merge_request(db, idempotency_key, ownership_scope)
+        if existing is not None:
+            if any((existing.payload or {}).get(key) != value for key, value in request_payload.items()):
+                raise MessageEditError(
+                    "This request key was already used for different merge options.",
+                    409, code="MERGE_REQUEST_CONFLICT",
+                )
+            return existing
     conversations = (
         db.query(Conversation)
         .filter(
@@ -83,21 +121,6 @@ def queue_conversation_merge(
         project = get_owned(db, Project, project_id, ownership_scope)
         if project is None or project.is_archived:
             raise MessageEditError("Project not found.")
-
-    if idempotency_key:
-        existing = (
-            db.query(BackgroundJob)
-            .filter(
-                BackgroundJob.job_type == "conversation_merge",
-                ownership_scope.predicate(BackgroundJob),
-                BackgroundJob.idempotency_key == idempotency_key,
-                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
-            )
-            .order_by(BackgroundJob.created_at.desc())
-            .first()
-        )
-        if existing is not None:
-            return existing
 
     total_items = int(
         db.query(func.count(Message.id))
@@ -125,9 +148,7 @@ def queue_conversation_merge(
         processed_items=0,
         total_items=total_items,
         payload={
-            "conversation_ids": [str(item) for item in conversation_ids],
-            "title": title,
-            "project_id": str(project_id) if project_id else None,
+            **request_payload,
             "accepted_message_limit": maximum_message_count,
         },
         result={},

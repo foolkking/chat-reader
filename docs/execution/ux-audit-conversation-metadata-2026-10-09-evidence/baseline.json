@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-09",
+  "parent": "a12ce9e287fdddfd4df8a6039a212cec04629568",
+  "application_modified": false,
+  "command": "node --test --test-reporter=tap scripts/ux/conversation-metadata-recovery.test.mjs",
+  "harness_sha256": "01f57c94319e92342d571101701726a52afc85a193ede395b7839bac2adebc60",
+  "menu_sha256": "63c0072ab20606033360e471fcd74bd1a111a750e8d86e4eb57628a2abed7010",
+  "result": {
+    "tests": 20,
+    "passed": 5,
+    "failed": 15,
+    "skipped": 0,
+    "cancelled": 0,
+    "duration_ms": 1695.3325
+  },
+  "passing_controls": [1, 2, 3, 9, 19],
+  "failing_checks": [4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20],
+  "test_construction_failure": {
+    "passed": 0,
+    "failed": 20,
+    "duration_ms": 1620.1744,
+    "cause": "The useCallback double incorrectly invoked its callback instead of returning it.",
+    "resolution": "Corrected the double and reran before modifying application code.",
+    "product_defect_evidence": false
+  },
+  "method": "Actual compiled menu/shared-prompt callbacks and JSX, installed React static markup and QueryClient/QueryObserver; explicit hook/effect, portal, focus, transport and authentication doubles.",
+  "promise_instrumentation": "Discarded promises are caught by the harness to observe legacy rejection without crashing node:test. This does not supply application error UI.",
+  "not_verified": ["Browser rendering", "React lifecycle", "Focus and IME", "Screen-reader announcements", "Live HTTP or production failure frequency"],
+  "writes": "Synthetic transport in memory only; no service, user data, commit, CI or deployment."
+}

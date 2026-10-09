@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-09",
+  "scope": "Unexecuted browser fixture cleanup review; not a new product defect",
+  "command": "node --test --test-reporter=tap scripts/ux/project-fixture-cleanup.test.mjs",
+  "tests": 3,
+  "passed": 1,
+  "failed": 2,
+  "skipped": 0,
+  "cancelled": 0,
+  "duration_ms": 420.1489,
+  "failed_cases": [
+    "synthetic project cleanup respects archived-before-delete after a restore",
+    "fixture-creation failure cleans its newly created active project and preserves the original error"
+  ],
+  "evidence": "Actual extracted/compiled browser fixture helpers against an explicit transport double enforcing the existing archived-before-delete rule. No browser, backend or database executed.",
+  "backend_counter_evidence": "project_service.py:204-207 already rejects deleting a default or currently active project. projects.py:103-111 turns that service error into HTTP 422. The earlier ERR-02 callback reproduction proves a stale DELETE request attempt, not successful deletion of an active project.",
+  "correction": "Re-archive only the exact synthetic project before fixture cleanup DELETE, both after a restore and after fixture setup fails. Keep all behavioral assertions and historical discovery evidence.",
+  "source_sha256_before_correction": {
+    "apps/web/e2e/ux-recovery-followup.spec.ts": "e28a12d5729bde08287392c3029dfc425688263c6d19e9cca2d38e00f0a80f22",
+    "scripts/ux/project-fixture-cleanup.test.mjs": "719e4ee51c0a02bf4e513eaf4a601553e4f032a0164b0772644a04941f7df94c",
+    "apps/api/app/services/projects/project_service.py": "4f61d86e0dd2a3d3e68107fc814219e1833abbbf8097da78bfd531a2b157aee3",
+    "apps/api/app/api/routes/projects.py": "e44ac92eb1a4733a222a67bd175869ef0236f3d241ded658d1275fa15c9464bb"
+  },
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false
+}

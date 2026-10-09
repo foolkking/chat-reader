@@ -1,5 +1,17 @@
 # PDF.js Maintained Stable-Line Migration Contract
 
+## Current reading follow-up — 2026-10-09
+
+The engine/worker version remains 6.2.108. The reading implementation now bounds
+continuous page and thumbnail rendering, adds direct page entry and page-local
+retry, preserves orientation through fit/zoom/resize and releases obsolete work.
+See the current [attachment contract](ATTACHMENT_RENDERER_CONTRACT.md) and
+[audit/evidence](../execution/ux-audit-attachment-reading-2026-10-09.md).
+This is not a second engine migration or a new worker/dependency. The earlier
+Release G acceptance below does not establish acceptance of the new follow-up.
+Current Next is 16.3.8, Dexie is v2 and offline packages retain v1/v2/v3 reads;
+the older platform snapshot below describes Release G only.
+
 Last updated: 2026-08-16
 
 Current status: `RELEASE_G = PASS`. PDF.js 6.2.108, final CI artifact,
