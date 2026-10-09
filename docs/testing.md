@@ -1,5 +1,30 @@
 # Testing
 
+## Third-CI gesture-readiness test correction — 2026-10-09
+
+CI 37906779236 completed: API **1,239 passed / 3 skipped / 20 warnings** in
+870.04 seconds; settings **439 passed** in 41.7 minutes plus one fresh-instance
+restore in 35.9 seconds. Web mutation was **99 passed / 1 failed / no timed-out,
+skipped or interrupted cases**, 579,266 ms. Later gates and images did not run.
+The mobile placement test failed at its first `scrollTop > 100`, before any move.
+Its only preparation was a visible title, which precedes body readiness.
+
+The E2E-only correction waits for real message count, the existing settled
+`chat-reader:first-content` mark and more than 500px of actual scrollable range
+before the unchanged wheel gesture. No original position/payload/focus assertion
+is removed. Only these two viewport cases manually record a trace, retaining it
+on failure. A first attempt at describe-level `test.use({ trace })` was rejected
+by discovery before execution because tracing is worker-scoped; the final scoped
+fixture passes discovery. No browser ran locally and no product code changed.
+
+Final lint/nonincremental types, 622 integrated Node cases and eight-file/144-case
+discovery pass. API and Web build were not rerun locally for this test-only delta;
+their runtime sources are unchanged from the preceding successful build checks.
+The [readiness ledger](execution/ux-audit-mobile-release-2026-10-09-evidence/readiness-verification.json)
+inherits 110 source hashes, with only the E2E file changed. The original third-CI
+checkpoint retains its then-running settings state; final totals live here and
+in the release record. Full exact-source CI/image acceptance remains required.
+
 ## Second attachment-release CI repair — 2026-10-09
 
 [CI 37897405546](https://github.com/foolkking/chat-reader/actions/runs/37897405546),

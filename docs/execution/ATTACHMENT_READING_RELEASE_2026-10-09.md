@@ -193,3 +193,52 @@ Docker builds were used; King was not accessed or changed in this repair.
 The third complete CI still requires all original gates and independent image
 inspection. This is a repair in the same authorized release cycle, not permission
 for a later unrelated release. No candidate image has been accepted or deployed.
+
+## Repair 2ac23ce — third complete CI started
+
+Committed and pushed `2ac23ceb638b7e8912b5c67f29ffdd2c7c0ab27b` using an explicit
+18-file allowlist. The 110 source hashes, unchanged earlier/pre-edit ledgers and
+unrelated buildinfo were checked before staging. All 147 links in seven scoped
+documents resolve; staged scope and whitespace checks pass. The two unrelated
+auth-test directories remain unstaged. No product file changed after acceptance
+of these local checks.
+
+[CI 37906779236](https://github.com/foolkking/chat-reader/actions/runs/37906779236)
+was dispatched exactly once on 2026-10-09 at 08:44 UTC. The run's `headSha` matches
+the full repair commit. This is the third complete run of the same authorized
+release cycle, not a new release authorization. The local ledger remains an
+immutable pre-commit checkpoint. CI, image inspection and deployment acceptance
+are not claimed while the run is queued/running; King remains unchanged.
+
+## Third CI failed; Reader preparation test corrected
+
+The run finished with API **1,239 passed / 3 skipped / 20 warnings** in 870.04
+seconds, settings **439 passed** in 41.7 minutes plus one fresh-instance restore
+in 35.9 seconds, and failed Web mutation: **99 passed / 1 failed / zero timed
+out, skipped or interrupted**, 579,266 ms. Later Web gates and both image jobs
+did not run. Original quality artifact **11605961476**, 13,249,511 bytes, belongs
+to source 2ac23ce, producer attempt 1. The initial run-log command was unavailable
+while settings still ran; the artifact and completed-job API logs were readable.
+
+The sole failure is the mobile placement test's pre-move scroll predicate. It
+awaited only the title, not the asynchronously loaded scrollable body. Exact
+event timing is inferred because the original file disabled tracing. The
+[mobile report](ux-audit-mobile-release-2026-10-09.md) recorded this before editing.
+The scoped test now awaits actual articles, settled first-content and overflow
+before the same wheel gesture; all later move/focus/position assertions remain.
+Only these two viewport tests capture failure traces. An unsupported nested trace
+configuration was caught and corrected by local discovery before any new CI.
+
+Final lint, nonincremental types, 622 Node regressions and 144-test discovery pass;
+no browser executed locally. No product code changed and local API/build were
+not rerun. The new ledger verifies 109 unchanged hashes and the single changed
+E2E file against the 110-source parent. Two mobile first-message screenshots and
+the passing desktop pending-dialog screenshot were actually reviewed and retained;
+the mobile pending action still has no passing result in this run.
+
+A read-only King probe still found accepted 30a0d32/0050 healthy, worker idle,
+unchanged PostgreSQL start and both backups. It stopped/replaced nothing. The
+probe's final shell line rejected a PowerShell-added CR after all checks; this
+is not a production failure or a complete capacity acceptance. Its disposable
+helper was corrected, not the operational checkout. Fresh release preflight,
+backup, rollback and data checks remain necessary after candidate acceptance.

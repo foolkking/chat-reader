@@ -1,5 +1,25 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test as base, type Page } from "@playwright/test";
 import type { BackgroundTaskRead, ConversationCreateResponse, ConversationDetail, ProjectConversationRead, ProjectRead, ReadingPositionInput, ReadingPositionRead, RecentItemRead, SearchResultItem } from "../lib/types";
+
+const test = base.extend<{ readerPlacementTrace: void }>({
+  readerPlacementTrace: [async ({ context }, use, info) => {
+    // Keep the large recovery matrix untraced; capture only this timing-sensitive
+    // flow and retain its trace only on failure. Trace options are worker-scoped.
+    if (!info.title.endsWith("px: sidebar placement acknowledges before held reads and preserves the Reader")) {
+      await use(); return;
+    }
+    await context.tracing.start({ screenshots: true, snapshots: true });
+    let failed = false;
+    try { await use(); } catch (error) { failed = true; throw error; }
+    finally {
+      if (failed || info.status !== info.expectedStatus) {
+        const tracePath = info.outputPath("placement-trace.zip");
+        await context.tracing.stop({ path: tracePath });
+        await info.attach("placement-trace", { path: tracePath, contentType: "application/zip" });
+      } else await context.tracing.stop();
+    }
+  }, { auto: true, timeout: 30_000 }],
+});
 
 test.use({ trace: "off", actionTimeout: 20_000, serviceWorkers: "block", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
 test.skip(process.env.E2E_MUTATION_FLOW !== "1", "Requires the isolated mutation API fixture");
@@ -578,6 +598,21 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       await page.goto(path.replace("/api", "") + "?projectId=" + fixture.projects[0].id);
       await expect(page.locator("[data-reader-main-section]").getByRole("heading", { name: fixture.conversation.conversation.title, exact: true }).filter({ visible: true })).toBeVisible();
       const readerUrl = page.url(), scroll = page.getByTestId("reader-scroll-root");
+      // The header can appear before the complete-turn body. A wheel event
+      // on that non-scrollable loading surface is not a placement regression.
+      await expect(scroll.locator("article[data-message-id]")).toHaveCount(fixture.conversation.messages.length);
+      await expect.poll(() => page.evaluate(() => performance.getEntriesByName("chat-reader:first-content").length)).toBe(1);
+      await expect.poll(() => scroll.evaluate(element => element.scrollHeight - element.clientHeight)).toBeGreaterThan(500);
+      await info.attach("placement-scroll-ready", {
+        contentType: "application/json",
+        body: Buffer.from(JSON.stringify(await scroll.evaluate(element => ({
+          scrollTop: element.scrollTop,
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+          root: element.getBoundingClientRect().toJSON(),
+          header: document.querySelector('[data-testid="mobile-reader-header"]')?.getBoundingClientRect().toJSON(),
+        })), null, 2)),
+      });
       await scroll.hover(); await page.mouse.wheel(0, 500);
       await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
       const expand = page.getByRole("button", { name: zh ? "打开侧栏" : "Open sidebar", exact: true }).filter({ visible: true });

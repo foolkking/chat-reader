@@ -30,6 +30,12 @@ owns the 68-pass/13-fail baseline, 81-case repair, 622 integrated Node passes an
 `system/USER_FLOWS.md` owns the actual-header sizing and pending-pointer contract.
 The release owner records final second-run API/settings totals and the next
 same-cycle complete CI, without treating a local pass as image/deploy acceptance.
+The same mobile audit now appends the third-run pre-edit checkpoint and explicitly
+inferred gesture/readiness race. `third-ci.json` retains 99-pass/1-fail Web and
+then-running settings state; `readiness-verification.json` owns final totals,
+the E2E-only correction and its 110-file hash comparison. Three actually reviewed
+same-source synthetic screenshots remain adjacent; they do not imply full visual
+or mobile-placement acceptance. Older local/pre-edit ledgers are unchanged.
 
 `execution/ux-audit-release-interaction-2026-10-09.md` owns the first complete
 attachment-release CI's pending-placement dismissal finding and separately

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "checkpoint": "third CI Web failure; before readiness test edit",
+  "source_commit": "2ac23ceb638b7e8912b5c67f29ffdd2c7c0ab27b",
+  "run_id": 37906779236,
+  "run_attempt": 1,
+  "quality_artifact_id": 11605961476,
+  "quality_artifact_bytes": 13249511,
+  "run_status_at_checkpoint": "in_progress",
+  "api": {
+    "status": "success",
+    "passed": 1239,
+    "skipped": 3,
+    "warnings": 20,
+    "duration_seconds": 870.04
+  },
+  "settings": "in_progress",
+  "web": {
+    "status": "failure",
+    "mutation": {
+      "discovered": 100,
+      "passed": 99,
+      "failed": 1,
+      "timed_out": 0,
+      "skipped": 0,
+      "interrupted": 0,
+      "duration_ms": 579266
+    },
+    "later_gates": "not_run"
+  },
+  "images_accepted": false,
+  "deployed": false,
+  "failure": {
+    "test": "375px: sidebar placement acknowledges before held reads and preserves the Reader",
+    "line": 582,
+    "expected": "scrollTop > 100",
+    "actual": 0,
+    "before_placement": true,
+    "trace_recorded": false,
+    "evidence": "error context + exact-source code",
+    "observed_test_gap": "Only header title is awaited before the wheel gesture",
+    "cause_confidence": "Inferred; no event timeline proves whether wheel preceded body readiness"
+  },
+  "scoped_render_review": {
+    "mobile_first_message": [
+      "375px en-US dark",
+      "375px zh-CN light"
+    ],
+    "guide_present": true,
+    "first_action_below_header": true,
+    "desktop_pending_placement": "1440px reviewed; test passed",
+    "mobile_pending_placement": "NOT_REACHED",
+    "whole_app_score": "NOT_SCORED"
+  },
+  "proposed_test_only_change": "Await actual message count, settled first-content mark and scrollable range; retain ordinary wheel and later assertions; enable failure-only tracing for these two cases"
+}

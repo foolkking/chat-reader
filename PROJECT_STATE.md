@@ -12,7 +12,7 @@ Last updated: 2026-10-09. This is the current snapshot, not a release history.
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
 | Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
-| Authorized next release | Source `3e82323668a7843a5bfbebc7ea1d03a5dca61c1e` [CI 37897405546](https://github.com/foolkking/chat-reader/actions/runs/37897405546) failed: Web mutation 97 passed / 2 failed / 1 timed out, without reaching its gate limit; API 1,239 passed / 3 skipped; settings 439 plus fresh-instance restore passed. Local mobile repairs are ready for a third complete same-cycle run. No candidate image or deployment. [Attachment and recovery release](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns both failed runs and the next retry |
+| Authorized next release | Source `2ac23ceb638b7e8912b5c67f29ffdd2c7c0ab27b` [CI 37906779236](https://github.com/foolkking/chat-reader/actions/runs/37906779236) failed: Web mutation 99 passed / 1 failed, no timeout; API 1,239 passed / 3 skipped; settings 439 plus fresh-instance restore passed. The remaining test now waits for the actual scrollable body before its wheel gesture; only that E2E file changed. No candidate image or deployment. [Attachment and recovery release](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns the next same-cycle complete retry |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -269,7 +269,7 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: submit the locally verified second-CI mobile/header/focus and test-path repairs to the
+Next: submit the locally verified third-CI Reader gesture-readiness test correction to the
 same authorized exact-source complete CI cycle. Repair real failures,
 review synthetic desktop/mobile screenshots, independently accept the resulting
 images, then perform fresh King capacity/backup/rollback/data checks before

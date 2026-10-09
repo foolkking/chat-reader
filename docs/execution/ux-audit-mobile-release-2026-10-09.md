@@ -165,3 +165,56 @@ fresh-instance restore**, 34.7 seconds. This completes the missing totals withou
 rewriting the earlier pre-edit JSON. Web remains failed and no image was built.
 The next step is a complete third exact-source CI in the same authorized cycle;
 King remains unchanged until all release acceptance conditions hold.
+
+## Third CI checkpoint — before the next test edit
+
+Source `2ac23ceb638b7e8912b5c67f29ffdd2c7c0ab27b`, run **37906779236**, attempt 1,
+has a failed Web job and a successful API job; settings is still running at this
+checkpoint. Original quality artifact **11605961476**, 13,249,511 bytes, reports
+**99 passed / 1 failed / zero timed out, skipped or interrupted** in 579,266 ms
+for the 100-case mutation gate. Later Web gates and image acceptance remain absent.
+API passed **1,239 / 3 skipped / 20 warnings** in 870.04 seconds, not added to
+overlapping Bundle/cleanup totals.
+
+The one failure is `375px: sidebar placement acknowledges before held reads and
+preserves the Reader`, at the initial `scrollTop > 100` predicate: actual 0.
+The test has not reached placement, double-click or focus assertions. It awaits
+only the conversation title before its single wheel gesture. The Reader's title
+and body load independently; neighbouring autosave tests already wait for actual
+message articles and the `chat-reader:first-content` mark. This missing readiness
+precondition is Observed (code). Whether the failed wheel specifically preceded
+overflow/readiness is Inferred: this file disables tracing, and the failure
+context cannot recover the initial event timeline. It is not proof of a new
+product scroll defect or of successful mobile pending-focus acceptance.
+
+The next scoped test correction will wait for the expected real message count,
+the existing settled first-content mark and actual scrollable range before the
+same ordinary wheel input. It will retain all position, payload, one-write,
+double-click and keyboard-cycle assertions and enable retain-on-failure tracing
+only for these two viewport cases. No product scrolling, restore, header or focus
+implementation is proposed to change from this evidence alone.
+
+The original same-source English/dark and Chinese/light 375px manual-first-message
+screenshots were actually reviewed: the guide remains open, both first-message
+action triggers are below the header, and content is readable. All four manual
+source cases and the revised archive test pass in the 99-case result. The desktop
+pending-dialog screenshot was also reviewed and its test passes; mobile does not
+reach that state. These are scoped rendered observations, not a full design score,
+device CPU/RSS measurement or release acceptance. The original pre-edit and local
+ledgers remain unchanged; this checkpoint has its own evidence JSON.
+
+Reviewed original frames: [English first message](ux-audit-mobile-release-2026-10-09-evidence/third-ci-first-message-375-en-US.png),
+[Chinese first message](ux-audit-mobile-release-2026-10-09-evidence/third-ci-first-message-375-zh-CN.png),
+[desktop pending move](ux-audit-mobile-release-2026-10-09-evidence/third-ci-pending-1440.png).
+
+The E2E-only preparation correction is now locally checked: lint, independent
+nonincremental types, 622 Node checks and 144-case/eight-file discovery pass.
+Describe-level tracing was rejected by discovery before execution; a scoped
+automatic fixture now manually traces only the two placement cases, retaining
+failure traces. No product source, API, CI limit or original assertion changed.
+Build/API were not repeated locally for this test-only delta. The separate
+[readiness ledger](ux-audit-mobile-release-2026-10-09-evidence/readiness-verification.json)
+binds all 110 prior sources with one expected E2E change. The third run later
+completed with settings **439 passed** in 41.7 minutes and one fresh-instance
+restore in 35.9 seconds; both image jobs were skipped. These later totals do not
+rewrite the original pre-edit checkpoint. The complete retry is still required.
