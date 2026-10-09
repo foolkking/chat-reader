@@ -1,0 +1,272 @@
+{
+  "trace_case": "attachment-reading-375px-z-a0d15-reserve-their-original-text",
+  "members": [
+    "test.trace",
+    "0-trace.trace",
+    "0-trace.network",
+    "0-trace.stacks"
+  ],
+  "calls": [
+    {
+      "action": "click",
+      "selector": "internal:role=button[name=/^(More|更多)$/]",
+      "beforeSnapshot": "before@call@149",
+      "afterSnapshot": "after@call@149",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "click",
+      "selector": "internal:role=button[name=/^(Conversation files|当前对话文件)$/]",
+      "beforeSnapshot": "before@call@151",
+      "afterSnapshot": "after@call@151",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid=\"conversation-file-row\"][data-attachment-id=\"[synthetic-id]\"] >> internal:role=button[name=/^(Preview|预览)$/]",
+      "beforeSnapshot": "before@call@167",
+      "afterSnapshot": "after@call@167",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "click",
+      "selector": "internal:testid=[data-testid=\"attachment-viewer-shell\"s] >> internal:role=button[name=\"重试\"s]",
+      "beforeSnapshot": "before@call@199",
+      "afterSnapshot": "after@call@199",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "click",
+      "selector": "internal:testid=[data-testid=\"attachment-viewer-shell\"s] >> internal:role=button[name=\"Raw\"s]",
+      "beforeSnapshot": "before@call@205",
+      "afterSnapshot": "after@call@205",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "click",
+      "selector": "internal:testid=[data-testid=\"attachment-viewer-shell\"s] >> internal:role=button[name=\"格式化\"s]",
+      "beforeSnapshot": "before@call@209",
+      "afterSnapshot": "after@call@209",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "screenshot",
+      "beforeSnapshot": "before@call@233",
+      "afterSnapshot": "after@call@233",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "screenshot",
+      "beforeSnapshot": "before@call@258",
+      "afterSnapshot": "after@call@258",
+      "completion_recorded": true,
+      "failed": null
+    },
+    {
+      "action": "click",
+      "selector": "[data-testid=\"conversation-file-row\"][data-attachment-id=\"[synthetic-id]\"] >> internal:role=button[name=/^(Preview|预览)$/]",
+      "beforeSnapshot": "before@call@260",
+      "completion_recorded": false,
+      "failed": null
+    }
+  ],
+  "explicit_snapshot_layers": [
+    {
+      "name": "after@call@163",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "overlay",
+          "classes": "fixed inset-0 z-50 bg-black/30 md:hidden",
+          "style": "pointer-events: auto; transition: opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1); opacity: 0;",
+          "path": [
+            3,
+            6
+          ]
+        },
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto; transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); transform: translate3d(0px, 360px, 0px);",
+          "path": [
+            3,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "name": "input@call@167",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto; transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); transform: translate3d(0px, 360px, 0px);",
+          "path": [
+            3,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "name": "after@call@151",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "overlay",
+          "classes": "fixed inset-0 z-50 bg-black/30 md:hidden",
+          "style": "pointer-events: auto;",
+          "path": [
+            3,
+            6
+          ]
+        },
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto;",
+          "path": [
+            3,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "name": "input@call@163",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto;",
+          "path": [
+            3,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "name": "before@call@169",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto; transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); transform: translate3d(0px, 360px, 0px);",
+          "inert": "",
+          "path": [
+            3,
+            6
+          ]
+        },
+        {
+          "node": "DIV",
+          "layer": "viewer",
+          "classes": "pointer-events-auto fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-0 outline-none sm:p-4",
+          "path": [
+            3,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "name": "before@call@225",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "viewer",
+          "classes": "pointer-events-auto fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-0 outline-none sm:p-4",
+          "path": [
+            3,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "name": "after@call@233",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto; transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); transform: translate3d(0px, 360px, 0px);",
+          "inert": "",
+          "path": [
+            3,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "name": "after@call@235",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto; transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); transform: translate3d(0px, 360px, 0px);",
+          "path": [
+            3,
+            6
+          ]
+        },
+        {
+          "node": "DIV",
+          "layer": "overlay",
+          "classes": "fixed inset-0 z-50 bg-black/30 md:hidden",
+          "style": "pointer-events: auto; transition: opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1); opacity: 0;",
+          "path": [
+            3,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "name": "input@call@260",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "drawer",
+          "classes": "fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden",
+          "style": "--snap-point-height: 360px; pointer-events: auto; transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1); transform: translate3d(0px, 360px, 0px);",
+          "path": [
+            3,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "name": "before@call@245",
+      "matches": [
+        {
+          "node": "DIV",
+          "layer": "overlay",
+          "classes": "fixed inset-0 z-50 bg-black/30 md:hidden",
+          "style": "pointer-events: auto; transition: opacity 0.5s cubic-bezier(0.32, 0.72, 0, 1); opacity: 0;",
+          "path": [
+            3,
+            8
+          ]
+        }
+      ]
+    }
+  ]
+}

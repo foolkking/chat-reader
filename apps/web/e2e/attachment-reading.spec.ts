@@ -60,12 +60,25 @@ async function openFile(page: Page, attachment: Attachment) {
 async function closeFile(page: Page, attachment: Attachment) {
   await page.keyboard.press("Escape");
   await expect(page.getByTestId("attachment-viewer-shell")).toHaveCount(0);
-  await expect(page.locator(`[data-testid="conversation-file-row"][data-attachment-id="${attachment.id}"]`).getByRole("button", { name: /^(Preview|预览)$/ })).toBeFocused();
+  const preview = page.locator(`[data-testid="conversation-file-row"][data-attachment-id="${attachment.id}"]`).getByRole("button", { name: /^(Preview|预览)$/ });
+  await expect(preview).toBeFocused();
   if ((page.viewportSize()?.width ?? 1280) < 768) {
     const drawer = page.locator("[data-vaul-drawer]").filter({ has: page.getByTestId("conversation-files-panel") });
     await expect(drawer).toHaveJSProperty("inert", false);
-    await expect(page.locator("[data-vaul-overlay]")).toHaveCount(1);
+    const overlay = page.locator("[data-vaul-overlay]");
+    await expect(overlay).toHaveCount(1);
+    const overlayLayer = await overlay.evaluate(node => Number(getComputedStyle(node).zIndex));
+    expect(await drawer.evaluate(node => Number(getComputedStyle(node).zIndex))).toBeGreaterThan(overlayLayer);
+    // The remounted scrim must still block the exposed page, but never the
+    // retained sheet. Opacity alone does not establish pointer ownership.
+    await expect.poll(() => overlay.evaluate(node => node.contains(document.elementFromPoint(window.innerWidth / 2, 1)))).toBe(true);
   }
+  // Read-only hit testing does not scroll the list or manufacture a click.
+  // Subsequent openFile calls below still exercise real pointer actions.
+  await expect.poll(() => preview.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && node.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+  })).toBe(true);
 }
 
 for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.describe(`${width}px ${locale}`, () => {

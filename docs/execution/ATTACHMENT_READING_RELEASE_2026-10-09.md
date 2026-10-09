@@ -288,3 +288,57 @@ the earlier 144 plus CSP and rich-attachment coverage. API sources were not
 changed or rerun locally; complete CI will rerun the full PostgreSQL suite.
 The unrelated buildinfo hash is unchanged. No dependency, migration, original
 assertion removal or case/gate timeout increase is included.
+
+## Repair f4719c9 — fifth complete CI started
+
+Committed/pushed `f4719c96d3b2da4bcf2629872ed330ee50510142` with an explicit
+23-file allowlist. Remote master was checked before staging; all 115 bound
+source hashes, preserved earlier ledgers/buildinfo, 84 links in seven scoped
+documents and staged whitespace/scope passed. No unrelated auth-test residue,
+imports or environment file was staged. Command-local existing author identity
+was reused without changing global Git configuration.
+
+[CI 37924985537](https://github.com/foolkking/chat-reader/actions/runs/37924985537)
+was dispatched exactly once at 11:38 UTC on 2026-10-09. Its complete `headSha`
+matches the repair. The fifth run is still within the same authorized release
+cycle; no passing CI, candidate image or deployment is claimed at dispatch.
+The local verification ledger remains its immutable pre-commit checkpoint.
+
+## Fifth CI failed; returned mobile scrim identified before editing
+
+CI 37924985537/attempt 1 completes with API **1,239 passed / 3 skipped / 20
+warnings**, 878.43 seconds, single current/head 0050; settings **439 passed**
+and independent fresh-instance restore **one passed**. Web mutation passes
+**100**, 545,980 ms. Attachment is **15 passed / zero failed / 6 timed out**,
+594,796 ms; the console's six-failed summary is not six extra failures.
+The later PDF/default-PWA/auth/negative-PWA gates are unverified and both image
+jobs skipped. Original diagnostic artifact is 11614434251, 30,517,520 bytes.
+
+The [pre-edit report](ux-audit-attachment-release-2026-10-09.md#9-fifth-ci-transparent-returned-overlay-intercepts-the-next-file-pre-edit)
+records actual layer order reversal: a transparent remounted Overlay follows
+retained mobile Content with equal z-50, intercepting the second file click.
+The preceding first-file JSON/Office recovery and all ten desktop cases pass
+their reached assertions; the six full mobile cases remain timed out. Four
+new synthetic screenshots and recorded snapshot topology were inspected and
+retained. A narrow layer fix is next; no unrelated follow-up product change,
+candidate image or deployment is included. No King access or local service
+start occurred during diagnosis.
+
+## Mobile return-layer repair — local verification complete
+
+The narrow product delta makes mobile Content explicitly higher than its scrim
+(51 versus 50), without changing the foreground Viewer or modal lifecycle.
+The new 37-case source/handler baseline fails **one** layer assertion; the same
+suite passes all **37** after repair. The complete Node suite passes **660**,
+zero failures/skips, in 8,763.8816 ms. Lint, nonincremental TypeScript and bounded
+one-worker/non-standalone build pass. Browser discovery remains **149 in ten
+files**, none executed locally. Added real-browser hit tests retain all original
+assertions and subsequent normal clicks; no time budget increases.
+
+The [additive checkpoint](ux-audit-attachment-release-2026-10-09-evidence/return-layer-verification.json)
+inherits 115 bound sources and permits only the three reported product/test
+changes. Prior ledgers, fifth-run evidence and unrelated buildinfo remain intact.
+The API is unchanged and not rerun locally. Next is one full exact-source workflow
+for this repair within the same authorization; no image/deployment is yet accepted.
+The separately delivered follow-up annotation/table report is evidence only,
+not additional product changes in this candidate or another release permission.

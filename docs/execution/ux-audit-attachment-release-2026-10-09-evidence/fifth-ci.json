@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "source_sha": "f4719c96d3b2da4bcf2629872ed330ee50510142",
+  "run_id": 37924985537,
+  "producer_attempt": 1,
+  "run_conclusion": "failure",
+  "quality_artifact": {
+    "id": 11614434251,
+    "name": "release-a-quality-evidence-f4719c96d3b2da4bcf2629872ed330ee50510142",
+    "size_in_bytes": 30517520,
+    "expired_at_read": false,
+    "deployable": false
+  },
+  "api": { "passed": 1239, "skipped": 3, "warnings": 20, "duration_seconds": 878.43, "head_current": "20261008_0050" },
+  "settings": { "passed": 439, "failed": 0, "skipped": 0, "duration_display": "41.0m", "fresh_instance_restore_passed": 1, "fresh_instance_restore_duration_seconds": 35.7 },
+  "mutation": { "passed": 100, "failed": 0, "timedOut": 0, "skipped": 0, "interrupted": 0, "duration_ms": 545980 },
+  "attachments": { "passed": 15, "failed": 0, "timedOut": 6, "skipped": 0, "interrupted": 0, "duration_ms": 594796, "gate_timeout_reached": false },
+  "web_gate_totals": { "PASS": 8, "FAIL": 1, "NOT_VERIFIED": 4, "SKIPPED": 0 },
+  "not_run": ["pdfjs-maintained-line", "default-pwa", "single-owner-auth", "pwa-negative", "build-images", "inspect-release-artifact"],
+  "remaining_failure": "Six mobile cases time out on the next Preview click after the first Viewer closes. A reinserted opacity-zero, pointer-active overlay follows retained Content at the same z-50 layer.",
+  "trace_topology": {
+    "before_viewer": { "snapshot": "after@call@163", "overlay_path": [3, 6], "content_path": [3, 7] },
+    "after_viewer": { "snapshot": "after@call@235", "content_path": [3, 6], "overlay_path": [3, 8] }
+  },
+  "candidate_image_accepted": false,
+  "deployed": false,
+  "local_browser_cases_executed": 0,
+  "cpu_rss_measured": false
+}

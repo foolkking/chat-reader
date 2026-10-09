@@ -42,6 +42,18 @@ test("a suspended drawer releases only its Overlay-owned scroll lock", () => {
   assert.equal(find(sheet(false), Drawer.Root).props.modal, true);
 });
 
+test("retained sheet content stays above its remounted scrim regardless of portal insertion order", () => {
+  const reopened = sheet(false);
+  const layer = node => {
+    const classes = node.props.className.split(/\s+/);
+    const value = classes.map(name => /^(?:z-(\d+)|z-\[(\d+)\])$/.exec(name)).find(Boolean);
+    assert.ok(value, "Each modal surface declares an explicit stacking level");
+    return Number(value[1] ?? value[2]);
+  };
+  assert.ok(layer(find(reopened, Drawer.Content)) > layer(find(reopened, Drawer.Overlay)),
+    "A later-mounted transparent Overlay cannot cover the retained file controls");
+});
+
 test("returning from an attachment re-enables the same drawer structure and child identity", () => {
   const child = { type: "synthetic-files", props: {} };
   const before = sheet(false, { children: child }), during = sheet(true, { children: child }), after = sheet(false, { children: child });

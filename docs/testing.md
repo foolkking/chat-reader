@@ -1,5 +1,31 @@
 # Testing
 
+## Fifth-CI mobile return-layer repair — 2026-10-09
+
+[CI 37924985537](https://github.com/foolkking/chat-reader/actions/runs/37924985537)
+passes API **1,239 / 3 skipped**, settings **439** plus **one** fresh-instance
+restore and mutation **100**. Attachment is **15 passed / 0 failed / 6 timed out**;
+the six timed-out mobile multi-file cases are not six additional failures.
+Their second normal Preview click is intercepted by a transparent reinserted
+Overlay at the same z-index as retained Content. Later four gates and both image
+jobs are unverified. See the [pre-edit report](execution/ux-audit-attachment-release-2026-10-09.md).
+
+Only Content's layer and two test files change: Content must remain above its
+scrim regardless of portal insertion order. The browser helper retains focus,
+inert, Overlay and subsequent real-click assertions, adding actual computed
+layer order, exposed-page interception and Preview-center hit tests. No forced
+click, timeout increase, assertion removal, dependency or migration is used.
+
+The 37-case baseline is **36 passed / 1 failed**, repaired to **37 passed**.
+One complete Node run passes **660 / 0 failed / 0 skipped**, 8,763.8816 ms.
+Lint, nonincremental typecheck and one-worker/non-standalone build pass.
+Discovery remains **149 in ten files, zero local browser execution**.
+The [return-layer ledger](execution/ux-audit-attachment-release-2026-10-09-evidence/return-layer-verification.json)
+inherits 115 bindings: 112 unchanged and three expected changes. Earlier ledgers,
+pre-edit screenshots and unrelated buildinfo are retained. The API is unchanged
+and not rerun locally; complete exact-source CI must rerun all API/PostgreSQL,
+13 Web gates and settings checks before independent image/deployment acceptance.
+
 ## Third-CI gesture-readiness test correction — 2026-10-09
 
 CI 37906779236 completed: API **1,239 passed / 3 skipped / 20 warnings** in

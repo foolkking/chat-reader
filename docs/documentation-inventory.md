@@ -21,6 +21,13 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-followup-annotations-tables-2026-10-09.md` owns the next-batch,
+pre-edit audit of partial/overlapping annotation reads, filtered bulk scope and
+CSV fidelity/rendering budgets. Its adjacent exact-f4719c9 probe and JSON execute
+committed callbacks/parsers with synthetic inputs and count React elements, not
+browser DOM/CPU/RSS. Candidate product source stays frozen; no further release
+authorization or implementation acceptance is implied.
+
 `execution/ux-audit-attachment-release-2026-10-09.md` owns the fourth complete
 CI's pre-edit mobile modal, Blob-CSP and ZIP-backed Office findings, separately
 identified Worker-injection/teardown issues, and scoped repair acceptance plan.
@@ -39,6 +46,16 @@ The adjacent `local-verification.json` binds 115 source/test files, comparing
 five bindings. It retains the 54-pass/17-fail baseline, 71-case repair, 659 complete
 Node passes, lint/types/bounded build and 149 discovered/zero locally executed
 browser cases. Prior checkpoints and unrelated buildinfo remain unchanged.
+
+The same attachment audit's fifth-run section owns the newly observed transparent
+returned-scrim defect. Adjacent `fifth-ci.json`, `fifth-mobile-return-trace.json`
+and four inspected frames retain exact failed-run evidence. The additive
+`return-layer-verification.json` owns the 36-pass/1-fail baseline, 37-case repair,
+660 complete Node passes, lint/types/bounded build and unchanged 149-case
+discovery with zero local browser executions. It inherits all 115 bindings,
+accepting only three expected changes; the earlier ledger is not rewritten.
+`testing.md` and the attachment contract distinguish this layer fix from actual
+browser acceptance. The release owner tracks the sixth same-cycle complete CI.
 
 `execution/ux-audit-mobile-release-2026-10-09.md` owns the second complete CI's
 observed mobile header obstruction and pending-focus failure, the inferred

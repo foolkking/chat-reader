@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "recorded_at_utc": "2026-10-09T11:57:33.097Z",
+  "source_commit": "f4719c96d3b2da4bcf2629872ed330ee50510142",
+  "scope": "Read-only next-batch audit. Candidate production source is unchanged.",
+  "confidence": "Observed extracted production callbacks, parser output and React element tree. No browser execution, real data, network request, CPU/RSS or rendered DOM measurement.",
+  "executed_source": "Committed git blobs; worktree equality verified after CRLF/LF normalization only",
+  "source_matches_commit_after_checkout_line_endings": true,
+  "annotation_subread_failures": [
+    {
+      "failed_part": "notebook",
+      "successful_annotation_read_published": false,
+      "reload_rejected": true
+    },
+    {
+      "failed_part": "conflicts",
+      "successful_annotation_read_published": false,
+      "reload_rejected": true
+    }
+  ],
+  "overlapping_reload_publication_order": [
+    "synthetic-newer",
+    "synthetic-older"
+  ],
+  "annotation_bulk_scope": {
+    "selection_count": 2,
+    "visible_selected_count": 1,
+    "style_targets": [
+      "synthetic-visible",
+      "synthetic-hidden"
+    ],
+    "delete_targets": [
+      "synthetic-visible",
+      "synthetic-hidden"
+    ],
+    "note_targets": [
+      "synthetic-visible"
+    ],
+    "confirmation_names_total_count": true,
+    "hidden_item_disclosure_in_confirmation": false
+  },
+  "csv_over_256_columns": {
+    "all_wide_rows_returned": 0,
+    "wide_header_then_short_row_returned": 1,
+    "short_data_row_becomes_first_row": true
+  },
+  "csv_field_limit": {
+    "input_code_units": 66560,
+    "accepted_code_units": 66560,
+    "nominal_64_KiB_field_limit_enforced": false
+  },
+  "table_element_probe": {
+    "data_rows": 100,
+    "columns": 64,
+    "tags": {
+      "div": 1,
+      "table": 1,
+      "thead": 1,
+      "tr": 101,
+      "th": 165,
+      "tbody": 1,
+      "td": 6400,
+      "span": 6400,
+      "p": 1
+    },
+    "extrapolated_max_data_cells_from_code_limits": 2560000,
+    "extrapolation_is_browser_measurement": false
+  },
+  "generic_503_error": {
+    "fixed_chinese_message": true,
+    "upstream_detail_hidden": true
+  },
+  "source_sha256": {
+    "apps/web/features/annotations/annotation-workspace.tsx": "43a62390bdf6f8fa1212527b7f28f7e4913a0d7b469be2896d267f400ae03c71",
+    "apps/web/lib/annotation-repository.ts": "a71087a12a48870d6b2aa72972e30d346da8487bac55bbcda823b18236f2e8ed",
+    "apps/web/features/annotations/notebook-view.tsx": "3d0b445066dae783f5dbc878f3a87d92c5b56bbc91a00c891c95ed68b4b59003",
+    "apps/web/features/attachments/attachment-viewer.tsx": "8cb1b50ec824476aa655ed7c41c2835d367c2fa91fec9d4f450d440b4668f426",
+    "apps/web/features/attachments/attachment-table-policy.ts": "8e7542de9c6f7d329c6ace0a08ab973f523556db573601a0eb0a0acd7b0ac6b3",
+    "apps/web/lib/api.ts": "a10fb2f30cfa4c0f6b726beb09875076f190bda33dbaf66694db5ddfaaee2e2c"
+  },
+  "executed_commit_blob_sha256": {
+    "apps/web/features/annotations/annotation-workspace.tsx": "38b2611deb73d253b2e2d73dbbe2da2518ca79815c04ca638ae616cd4af1d7a2",
+    "apps/web/lib/annotation-repository.ts": "ee33312e77a016cd2615cfaec788d6d3b13a94f78c985270707f6b7b7e0d0122",
+    "apps/web/features/annotations/notebook-view.tsx": "1fd8d6535961fbeb4fd7ec928c157cf9b941b3a893db8f7b2e32a68d420b5aaf",
+    "apps/web/features/attachments/attachment-viewer.tsx": "8ad89d509b2a267a2660ff13543d8b37f00f3efab67aaae4855c438354022838",
+    "apps/web/features/attachments/attachment-table-policy.ts": "8e7542de9c6f7d329c6ace0a08ab973f523556db573601a0eb0a0acd7b0ac6b3",
+    "apps/web/lib/api.ts": "a0afb4bac2723198e037b7effaef193f20921075e51a9d3cd872a9435ffb9040"
+  }
+}

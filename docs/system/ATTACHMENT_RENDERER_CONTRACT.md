@@ -15,7 +15,10 @@ their dated verification remains historical. Release status belongs to
   the command context stays stable. Mobile drawer Content remains mounted/modal
   but inert and accessibility-hidden while the Viewer is open; its Overlay-owned
   scroll lock is temporarily removed and outside/Escape/close-focus callbacks
-  are suspended. Closing restores the same file panel, not a fresh list. Actual
+  are suspended. Closing restores the same file panel, not a fresh list. Content
+  is explicitly above its Overlay (51 versus 50), so reinserted portal order
+  cannot leave a transparent scrim blocking the returned controls. The exposed
+  page remains covered; the global Viewer layer is unchanged. Actual
   browser reacceptance is required by the
   [attachment blocker repair](../execution/ux-audit-attachment-release-2026-10-09.md).
 - PDF.js remains 6.2.108 with a lazy same-package worker, HTTP 64 KiB ranges,
@@ -62,9 +65,10 @@ their dated verification remains historical. Release status belongs to
   [CSP contract](CSP_ENFORCEMENT_CONTRACT.md). URL identity, ownership and existing
   offline-package/cache consumption are unchanged.
 
-The local integrated checkpoint passes 601 Node and 103 SQLite API cases, lint,
-nonincremental types and a bounded Web build. The 125 discovered browser/contract
-cases are not locally executed. Actual layout, touch, focus, PDF rendering and
+The latest return-layer local checkpoint passes 660 Node cases, lint,
+nonincremental types and a bounded Web build; the preceding unchanged-API batch
+passed 103 SQLite cases and was not rerun for this UI-only repair. The 149
+discovered browser/contract cases are not locally executed. Actual layout, touch, focus, PDF rendering and
 CPU/RSS require their own evidence; no new visual-conformance claim is made here.
 
 ## Offline cache-miss hardening addendum (2026-08-15)

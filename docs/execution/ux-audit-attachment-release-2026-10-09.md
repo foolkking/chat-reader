@@ -200,3 +200,90 @@ adding the CSP and rich-attachment cases. The
 verifies 105 unchanged / five expected changes from the 110-source parent and
 binds five additional sources (115 total). Earlier ledgers and unrelated buildinfo
 are unchanged. Complete exact-source CI and deployment are not yet accepted.
+
+## 9. Fifth CI: transparent returned Overlay intercepts the next file (pre-edit)
+
+The fifth complete [CI 37924985537](https://github.com/foolkking/chat-reader/actions/runs/37924985537)
+tested exact source `f4719c96d3b2da4bcf2629872ed330ee50510142`, producer attempt 1.
+API passes **1,239 / 3 skipped / 20 warnings**, 878.43 seconds, current/head 0050.
+Settings passes **439**, followed by the independent fresh-instance restore
+**one**. Mutation passes **100**, 545,980 ms. Attachment is **15 passed / zero
+failed / 6 timed out / zero skipped or interrupted**, 594,796 ms, not the
+20-minute gate timeout. Playwright's terminal summary groups those six as
+"failed"; the machine-readable counts retain their actual `timedOut` status.
+Four later gates and both image jobs do not run. Original quality artifact
+**11614434251**, 30,517,520 bytes, is diagnostic only. See
+[fifth-ci.json](ux-audit-attachment-release-2026-10-09-evidence/fifth-ci.json).
+
+### FLOW-AR04 · A returned mobile file sheet looks usable but cannot receive a click
+
+- Kind/dimension: **Defect**, modal lifecycle / error prevention.
+- Severity: **High**; effort **S**.
+- Confidence: **Observed (CI pointer-action log, recorded DOM snapshots and
+  inspected source)**. The returned-sheet screenshot alone cannot show an
+  invisible input-interception defect.
+- Location: `apps/web/components/mobile-reader-sheet.tsx:53,76`; the next
+  `openFile` after `closeFile` in `attachment-reading.spec.ts`.
+- Evidence: all six remaining failures are the three mobile multi-file cases
+  in both locales. Their first JSON/DOCX/empty Viewer opens and closes. The next
+  Preview click is repeatedly intercepted by `[data-vaul-overlay]`.
+  Recorded `after@call@163` has Overlay then Content at HTML paths `[3,6]` and
+  `[3,7]`. After Escape, `after@call@235` has retained Content at `[3,6]` and
+  reinserted Overlay at `[3,8]`. Both have `z-50`; Overlay is `opacity:0` and
+  `pointer-events:auto`. Equal stacking levels therefore rely on mount order,
+  which the retained-Content / remounted-Overlay lifecycle reverses.
+- User consequence: after reading one file, a person sees the same searchable
+  file list and restored focus but cannot open the next file with the pointer.
+- Recommendation: give mobile Content a strictly higher stacking level than its
+  Overlay, preserving the existing Viewer/global-dialog levels and all modal,
+  inert, focus and scroll ownership. Do not remount the file list, disable the
+  scrim globally, force-click through it, raise timeouts or bypass normal input.
+  Add a source-layer invariant and browser assertions for actual computed layer
+  order and Preview hit testing after closing, retaining the next real click.
+
+Design intent: the reader returns to the same quiet file workbench. Existing
+paper/graphite/sea-green palette, border/shadow treatment, fonts and 4px spacing
+stay unchanged. Only the sheet/scrim relationship becomes explicit; there is no
+new request, timer, observer, renderer or CPU/memory allocation policy.
+
+The [trace extract](ux-audit-attachment-release-2026-10-09-evidence/fifth-mobile-return-trace.json)
+contains only synthetic selectors and layer records. Actual snapshots and
+request logs remain in the task's CI evidence directory. Four new screenshots
+were actually viewed:
+
+- [Returned mobile sheet](ux-audit-attachment-release-2026-10-09-evidence/fifth-mobile-files-returned.png),
+  before the failing second click.
+- [Recovered mobile JSON](ux-audit-attachment-release-2026-10-09-evidence/fifth-mobile-json-recovered.png),
+  after normal Retry/Raw/formatted/scroll assertions in the ultimately failed case.
+- [Recovered mobile DOCX](ux-audit-attachment-release-2026-10-09-evidence/fifth-mobile-docx-recovered.png),
+  after named-worker failure/retry and real paragraph parsing, before return.
+- [Desktop CSV](ux-audit-attachment-release-2026-10-09-evidence/fifth-desktop-csv.png),
+  from a passing complete case.
+
+All ten desktop attachment cases pass. Mobile Gallery and Blob cases pass;
+successful first-file assertions do **not** convert the other six mobile cases
+to passes. The next repair is confined to this newly evidenced return-layer
+defect. This section and evidence were delivered before that product edit.
+
+## 10. Local return-layer repair checkpoint
+
+After delivery of section 9, mobile Content changes from z-50 to z-[51]; its
+Overlay stays z-50 and the Viewer stays z-[1000]. No mounting, scroll-lock,
+focus, snap-point or renderer behavior is replaced. The new source-layer test
+fails on the prior component: **37 tests, 36 passed / 1 failed**, 829.9649 ms.
+The same suite then passes **37 / 0 failed / 0 skipped**, 801.2995 ms.
+These JSX/hook doubles verify declared structure, not native browser hit testing.
+
+The real browser helper now checks computed Content > Overlay, verifies the
+scrim still blocks the exposed top of the page, and hit-tests the returned
+Preview center without scrolling or manufacturing a click. All previous focus,
+inert, content and subsequent normal Preview-click assertions remain. Case and
+gate timeouts are unchanged; no browser case has run locally for this repair.
+
+Integrated local results: **660 Node passed / 0 failed / 0 skipped**, 8,763.8816 ms;
+lint, nonincremental types and one-worker/non-standalone build pass. Discovery is
+still **149 cases in ten files**. API code is unchanged and was not rerun locally.
+The [new ledger](ux-audit-attachment-release-2026-10-09-evidence/return-layer-verification.json)
+binds the same 115 sources (112 unchanged / three expected changes), preserves
+the preceding ledgers and fifth-CI screenshots, and checks unrelated buildinfo.
+No device performance, full visual score, complete CI or deployment is implied.

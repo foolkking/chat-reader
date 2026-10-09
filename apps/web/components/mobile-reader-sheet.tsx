@@ -49,7 +49,8 @@ export function MobileReaderSheet({
       <Drawer.Portal>
         {/* Vaul's Overlay owns RemoveScroll. Pause that lock while the global
             Viewer owns scrolling; keep modal Content mounted to retain files,
-            search, selection and the original focus target. */}
+            search, selection and the original focus target. Content must stay
+            above the scrim even when its portal is reinserted after Content. */}
         {!viewerOpen ? <Drawer.Overlay className="fixed inset-0 z-50 bg-black/30 md:hidden" /> : null}
         <Drawer.Content
           ref={contentRef}
@@ -73,7 +74,7 @@ export function MobileReaderSheet({
             event.preventDefault();
             target.focus({ preventScroll: true });
           }}
-          className="fixed inset-x-0 bottom-0 z-50 h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden"
+          className="fixed inset-x-0 bottom-0 z-[51] h-full overflow-clip rounded-t-2xl border border-b-0 border-ui bg-page text-primary shadow-2xl outline-none md:hidden"
         >
           {/* Vaul translates by viewport minus snap height. Size the working
               area to that visible height, not the offscreen drawer surface. */}
