@@ -1,0 +1,37 @@
+{
+  "source_commit": "2f046f9fa2017e6c1d50833860b81f29896dbc60",
+  "command": "node --test scripts/ux/attachment-reading.test.mjs",
+  "test_state": "seven added actual-component regression cases before product edits",
+  "tests": 48,
+  "pass": 41,
+  "fail": 7,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "duration_ms": 1173.0601,
+  "failures": [
+    "callback-only redraw: four opens instead of one after three parent redraws",
+    "attachment replacement: one obsolete parent-close notification instead of zero",
+    "375px floor: page 94 instead of 90 before reconciliation",
+    "375px round: page 94 instead of 90 before reconciliation",
+    "1267px floor: page 109 instead of 90 before reconciliation",
+    "1267px round: page 109 instead of 90 before reconciliation",
+    "queued bitmap: wrapper retains old scale geometry"
+  ],
+  "intermediate_failed_checks": [
+    {
+      "tests": 48,
+      "pass": 47,
+      "fail": 1,
+      "duration_ms": 1237.846,
+      "reason": "new exact-floating-point assertion expected 398, observed 397.99999999999994; corrected to numerical tolerance 1e-8"
+    },
+    {
+      "check": "nonincremental TypeScript",
+      "exit_code": 1,
+      "errors": 4,
+      "reason": "getMeasurements and scrollState are private Virtualizer members; replaced with public APIs and native alignment, no casts or type suppression"
+    }
+  ],
+  "browser_executions": 0
+}

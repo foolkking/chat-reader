@@ -21,6 +21,10 @@ their dated verification remains historical. Release status belongs to
   page remains covered; the global Viewer layer is unchanged. Actual
   browser reacceptance is required by the
   [attachment blocker repair](../execution/ux-audit-attachment-release-2026-10-09.md).
+- The file-panel bridge separates the latest close callback from session identity.
+  Callback-only redraws retain the current document; explicit close notifies once.
+  Disposal closes the old session without letting its late callback dismiss a
+  replacement. It does not recreate the shared provider or alter permissions.
 - PDF.js remains 6.2.108 with a lazy same-package worker, HTTP 64 KiB ranges,
   disabled streaming/autofetch and no WASM. Fit Page mounts the active page;
   Fit Width/custom retain continuous scrolling. Pages and optional thumbnails use
@@ -36,6 +40,13 @@ their dated verification remains historical. Release status belongs to
   the short final page is reported at the scroll limit, and a failed page has its
   own retry. Fit-scale labels reflect the actual page; controls wrap in the
   existing toolbar with 44px targets. Closing fences late module/document work.
+- PDF intrinsic size is scoped to the page/document and reused from its existing
+  cache. CSS dimensions follow current fit/zoom immediately, independently of
+  queued bitmap rendering. Continuous alignment refreshes via the public size
+  API, waits for the sizer's committed extent, then scrolls natively once.
+  Intermediate layout scrolls do not select a new page. Local wheel/touch/pointer
+  and scrolling-key input interrupts pending alignment; cleanup removes listeners.
+  No timer, polling, extra observer or eager all-page rendering is added.
 - Gallery keyboard navigation uses the current item, stays inside the dialog and
   excludes inputs, media, IME and browser modifiers. New items reset transforms;
   only lost/body focus is recovered after renderer replacement.
@@ -67,12 +78,12 @@ their dated verification remains historical. Release status belongs to
   [CSP contract](CSP_ENFORCEMENT_CONTRACT.md). URL identity, ownership and existing
   offline-package/cache consumption are unchanged.
 
-The latest PDF repair local checkpoint passes 666 Node cases, lint,
+The latest PDF repair local checkpoint passes 699 repository-script Node cases, lint,
 nonincremental types and a bounded Web build; the preceding unchanged-API batch
 passed 103 SQLite cases and was not rerun for this UI-only repair. The 149
-discovered browser/contract cases are not locally executed. Sixth CI passes all
+discovered browser/contract cases are not locally executed. Seventh CI passes all
 21 attachment cases but fails six PDF assertions; the
-[PDF repair report](../execution/ux-audit-pdf-release-2026-10-10.md) owns that
+[PDF repair report](../execution/ux-audit-pdf-session-2026-10-10.md) owns that
 distinction and the still-pending complete reacceptance. Actual layout, touch, focus, PDF rendering and
 CPU/RSS require their own evidence; no new visual-conformance claim is made here.
 

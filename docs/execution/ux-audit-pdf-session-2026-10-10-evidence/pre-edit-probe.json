@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "source_commit": "2f046f9fa2017e6c1d50833860b81f29896dbc60",
+  "evidence": "actual component source with explicit hook/DOM/PDF doubles and installed Virtualizer; no local browser or real pixels",
+  "source_sha256": {
+    "apps/web/features/attachments/attachment-viewer.tsx": "52b3a807408681908e1104d8b54016a5bb9e21d96e61fa0d993721c9e7ca42cd",
+    "apps/web/features/attachments/pdf-viewer-policy.ts": "870f48144996fae25f5c4837135f975c4da51f156d2cedcd446852554991aac1",
+    "apps/web/features/attachments/complex-attachment-viewer.tsx": "5eb04f1418e26b2f8cbca9b83b31d1ca3e92065d4b941ba0ce6fd41dd9de68fa",
+    "apps/web/features/attachments/preview-adapter-registry.ts": "1b2dbc2cc5309ccb0375fda304b3aaf66b3cb4dd9d52e6952f9dfef502c34780",
+    "scripts/ux/attachment-reading.test.mjs": "ecb52a9f2a21670d8d84a733357d9b1779253c78b26ec65259fd0f291ac05c29"
+  },
+  "callbackChurn": {
+    "opened": 2,
+    "closed": 1,
+    "oldCallback": 1,
+    "latestCallback": 0
+  },
+  "geometry": [
+    {
+      "width": 375,
+      "before": {
+        "page": 90,
+        "offset": 40930,
+        "target": 40945.52941176462
+      },
+      "afterMeasure": {
+        "offset": 40930,
+        "target": 39015.799999999996
+      },
+      "intermediatePage": 94,
+      "finalPage": 94,
+      "finalOffset": 40657
+    },
+    {
+      "width": 1267,
+      "before": {
+        "page": 90,
+        "offset": 143667,
+        "target": 143682.9411764708
+      },
+      "afterMeasure": {
+        "offset": 143667,
+        "target": 118403.79999999983
+      },
+      "intermediatePage": 109,
+      "finalPage": 109,
+      "finalOffset": 143363
+    }
+  ],
+  "cssGeometry": {
+    "before": {
+      "width": 343,
+      "height": 265.04545454545456
+    },
+    "duringQueuedRender": {
+      "width": 343,
+      "height": 265.04545454545456
+    },
+    "expected": {
+      "width": 422.2,
+      "height": 326.24545454545455
+    }
+  }
+}

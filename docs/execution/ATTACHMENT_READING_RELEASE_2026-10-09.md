@@ -391,3 +391,47 @@ inherits all 115 source bindings with only three expected deltas and preserves
 historical evidence and unrelated buildinfo. Next is precise commit/push and one
 seventh **complete** CI within this cycle. No candidate image, King mutation or
 deployment has occurred; later annotation/table optimization stays separate.
+
+## Repair 2f046f9 — seventh complete CI started
+
+Committed/pushed `2f046f9fa2017e6c1d50833860b81f29896dbc60` with an explicit
+19-file allowlist: three runtime/test files plus scoped documentation/evidence.
+Verified all 115 source bindings, prior ledgers and screenshots, unrelated
+buildinfo, 169 links in nine documents and the unchanged remote parent before
+staging. No imports, API test residue or unrelated file was staged.
+
+[CI 37967470601](https://github.com/foolkking/chat-reader/actions/runs/37967470601)
+was dispatched once, created **17:36:28 UTC on 2026-10-09** (2026-10-10 locally).
+The run's full head SHA matches the repair; API/Web/settings are in progress.
+This is the seventh complete run in the current authorized cycle, not a partial
+retry. The local checkpoint remains immutable; no candidate image or production
+change has been accepted.
+
+## Seventh CI failed; PDF session/geometry repair locally verified
+
+Run 37967470601/attempt one completes with API **1239 passed / three skipped /
+20 warnings**, 1310.44s; settings **439 passed** plus **one** independent restore.
+Web mutation passes **100**, attachment **21**; PDF is **seven passed / six failed /
+zero timedOut / zero skipped / zero interrupted**, 408445ms. Default PWA/auth/
+negative PWA and both image jobs remain unverified. Original diagnostic ZIP
+11635037421 is 24065430 bytes and matches its GitHub SHA256 digest.
+
+The [new pre-edit report](ux-audit-pdf-session-2026-10-10.md) and frozen evidence
+preceded edits. Callback-only redraw closes the file-panel preview; stale
+measurement plus intermediate scroll feedback reproduces the mobile 90-to-94
+drift. Current repair retains session identity, fences disposed callbacks, and
+computes current CSS geometry from page/document-scoped intrinsic size. Native
+alignment uses public measurement APIs after the sizer commits; real input
+interrupts immediately. No polling, dependency or render-budget increase.
+
+Baseline: **48 tests / 41 passes / seven failures**; expanded focused result:
+**53 passed**. All 25 repository-script suites pass **699 / zero failed / zero
+skipped**, 9413.6934ms; lint, nonincremental types and bounded one-worker build
+pass. An intermediate floating-point assertion and private-API type error are
+retained as failed checks before correction. Discovery stays **149 in ten files**,
+zero local browser cases. E2E retains every assertion/time budget and adds actual
+DOM identity and zoom/resize screenshots. The
+[additive ledger](ux-audit-pdf-session-2026-10-10-evidence/local-verification.json)
+inherits 115 bindings with three expected changes; older evidence/buildinfo are
+unchanged. Next is a precise commit/push and the eighth **complete** CI in this
+same authorized cycle. No candidate image or production deployment is accepted.

@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "source_sha": "2f046f9fa2017e6c1d50833860b81f29896dbc60",
+  "generated_at": "2026-10-09T18:01:49.467Z",
+  "overall_status": "FAIL",
+  "counts": {
+    "PASS": 9,
+    "FAIL": 1,
+    "NOT_VERIFIED": 3,
+    "SKIPPED": 0
+  },
+  "gates": [
+    {
+      "gate_id": "adaptive-import-recovery",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 9,
+      "result_counts": {
+        "passed": 8,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 1,
+        "interrupted": 0
+      },
+      "duration_ms": 27543
+    },
+    {
+      "gate_id": "csp-enforcement",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 4,
+      "result_counts": {
+        "passed": 4,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 4352
+    },
+    {
+      "gate_id": "context-files",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 35,
+      "result_counts": {
+        "passed": 35,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 198765
+    },
+    {
+      "gate_id": "focused-online-security",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 45,
+      "result_counts": {
+        "passed": 45,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 93237
+    },
+    {
+      "gate_id": "share-focus",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 2,
+      "result_counts": {
+        "passed": 2,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 7768
+    },
+    {
+      "gate_id": "source-editor-mutation",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 100,
+      "result_counts": {
+        "passed": 100,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 492383
+    },
+    {
+      "gate_id": "source-editor-cleanup",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 1,
+      "result_counts": {
+        "passed": 1,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 4786
+    },
+    {
+      "gate_id": "upload-token-atomicity",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 18,
+      "result_counts": {
+        "passed": 18,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 41012
+    },
+    {
+      "gate_id": "markdown-image-viewer",
+      "status": "PASS",
+      "evidence_status": "passed",
+      "test_count": 21,
+      "result_counts": {
+        "passed": 21,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 57084
+    },
+    {
+      "gate_id": "pdfjs-maintained-line",
+      "status": "FAIL",
+      "evidence_status": "failed",
+      "test_count": 13,
+      "result_counts": {
+        "passed": 7,
+        "failed": 6,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      },
+      "duration_ms": 408445
+    },
+    {
+      "gate_id": "default-pwa",
+      "status": "NOT_VERIFIED",
+      "reason": "evidence_missing"
+    },
+    {
+      "gate_id": "single-owner-auth",
+      "status": "NOT_VERIFIED",
+      "reason": "evidence_missing"
+    },
+    {
+      "gate_id": "pwa-negative",
+      "status": "NOT_VERIFIED",
+      "reason": "evidence_missing"
+    }
+  ]
+}

@@ -21,6 +21,17 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-pdf-session-2026-10-10.md` owns the seventh complete CI's
+pre-edit session-disposal and stale-geometry findings, frozen actual-source
+probe, two inspected synthetic frames and exact run/artifact evidence. Its
+additive ledger inherits all 115 source bindings with three expected changes.
+The 48-case baseline has 41 passes/seven failures; expanded coverage passes
+53 cases and all 25 repository-script suites pass 699 checks. It preserves the
+intermediate numerical-assertion and private-library-API typecheck failures,
+then records public-API/native alignment, successful lint/types/build and 149
+discovered/zero locally executed browser cases. Contracts describe implementation;
+the attachment release owner tracks complete CI and deployment, not this ledger.
+
 `execution/ux-audit-pdf-release-2026-10-10.md` owns the sixth complete CI's
 pre-edit page-indicator/retry-evidence findings, four inspected synthetic
 screenshots, actual-source/Virtualizer probe and sanitized run/trace extract.

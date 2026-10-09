@@ -1,5 +1,33 @@
 # Testing
 
+## Seventh-CI PDF session/geometry repair — 2026-10-10
+
+[CI 37967470601](https://github.com/foolkking/chat-reader/actions/runs/37967470601)
+passes API **1,239 / three skipped**, settings **439** plus **one** independent
+restore, mutation **100** and attachment **21**. PDF is **seven passed / six
+failed / zero timedOut / zero skipped**, 408445ms; later three gates and images
+are unverified. The [pre-edit report](execution/ux-audit-pdf-session-2026-10-10.md)
+distinguishes recorded browser failures from explicit Node scheduling doubles.
+
+The new 48-case baseline has **41 passes/seven failures**. Expanded coverage is
+**53 passed**; all 25 repository-script test files pass **699 / zero failed /
+zero skipped**, 9413.6934ms. This broader run is not added to the earlier
+666-case selection. Lint, nonincremental types and one-worker/non-standalone
+build pass. Discovery remains **149 in ten files**, zero local browser cases.
+An intermediate exact floating-point assertion and private-library-API type
+errors were corrected, not presented as passing checkpoints.
+
+Regressions deliver layout-scroll feedback before the next reconciliation,
+including growth against a stale DOM extent, multiple scales, rounded native
+offsets and scrollbar resize. Callback-only redraw, disposed callbacks, explicit
+close and page/document-scoped CSS geometry are separate cases. Real input can
+cancel pending alignment, with listener cleanup and reserved/editing key guards.
+E2E retains all assertions/budgets and adds actual PDF DOM identity through
+resize, post-zoom viewport checks and zoom/resize screenshots. The
+[additive ledger](execution/ux-audit-pdf-session-2026-10-10-evidence/local-verification.json)
+inherits 115 bindings and preserves earlier evidence and unrelated buildinfo.
+Full exact-source CI and image/screenshot acceptance still precede deployment.
+
 ## Sixth-CI PDF orientation/retry repair — 2026-10-10
 
 [CI 37936101205](https://github.com/foolkking/chat-reader/actions/runs/37936101205)

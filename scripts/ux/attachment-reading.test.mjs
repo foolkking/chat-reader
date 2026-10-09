@@ -240,6 +240,7 @@ test("continuous PDF keeps the final page selected when its top cannot reach the
   const { Virtualizer } = appRequire("@tanstack/react-virtual");
   let onScroll, visiblePage;
   const root = { clientWidth: 375, clientHeight: 640, scrollTop: 0, scrollHeight: 0,
+    scrollTo: ({ top }) => { root.scrollTop = top; },
     addEventListener: (name, callback) => { if (name === "scroll") onScroll = callback; }, removeEventListener: noop };
   let virtualizer;
   const f = fixture("PdfPageList", { documentProxy: { numPages: 120 }, currentPage: 120, scrollRequest: { page: 120 },
@@ -252,6 +253,7 @@ test("continuous PDF keeps the final page selected when its top cannot reach the
   try {
     f.render(); await f.runEffects();
     root.scrollHeight = virtualizer.getTotalSize();
+    f.render(); await f.runEffects();
     root.scrollTop = root.scrollHeight - root.clientHeight;
     virtualizer.scrollOffset = root.scrollTop;
     assert.ok(virtualizer.getVirtualItemForOffset(root.scrollTop + 16).index < 119, "the short final page is genuinely scroll-clamped");
@@ -265,6 +267,7 @@ for (const width of [375, 1267]) for (const round of [Math.floor, Math.round]) {
     const { Virtualizer } = appRequire("@tanstack/react-virtual");
     let onScroll, visiblePage, virtualizer, nextFrame;
     const root = { clientWidth: width, clientHeight: 730, scrollTop: 0, scrollHeight: 200000,
+      scrollTo: ({ top }) => { root.scrollTop = round(top); virtualizer.scrollOffset = root.scrollTop; },
       addEventListener: (name, callback) => { if (name === "scroll") onScroll = callback; }, removeEventListener: noop };
     const props = { documentProxy: { numPages: 120 }, currentPage: 90, scrollRequest: { page: 90 },
       onVisiblePageChange: page => { visiblePage = page; }, fitMode: "width", zoom: 1, containerWidth: width, containerHeight: 730,
@@ -282,10 +285,11 @@ for (const width of [375, 1267]) for (const round of [Math.floor, Math.round]) {
       },
     });
     const settle = async () => {
-      // Pump actual Virtualizer reconciliation after the hook double's render;
-      // observing its intermediate old measurements would not model a browser.
+      // Check the settled fractional boundary here. The separate interleaving
+      // cases below also deliver native-scroll feedback before reconciliation.
       for (let tick = 0; tick < 4; tick++) {
         f.render(); await f.runEffects();
+        root.scrollHeight = virtualizer.getTotalSize();
         f.render(); await f.runEffects();
         const callback = nextFrame; nextFrame = undefined; callback?.();
       }
@@ -311,6 +315,153 @@ for (const width of [375, 1267]) for (const round of [Math.floor, Math.round]) {
       props.scrollRequest = { page: 90 };
       await settle(); assertPageAndRealScroll();
     } finally { f.dispose(); }
+  });
+}
+
+test("file-panel preview callback-only redraw keeps the same session and calls the latest close", async () => {
+  let session, opened = 0, closed = 0, oldCallback = 0, latestCallback = 0;
+  const viewer = { open: value => { opened++; session = value; }, close: () => { closed++; const previous = session; session = null; previous?.onClosed?.(); } };
+  const props = { attachment, onClose: () => { oldCallback++; } };
+  const f = fixture("AttachmentPreviewDialog", props, {}, { useAttachmentViewer: () => viewer, document: { activeElement: null }, HTMLElement: class {} });
+  try {
+    f.render(); await f.runEffects(); const original = session;
+    for (let i = 0; i < 3; i++) {
+      props.onClose = () => { latestCallback++; };
+      f.render(); await f.runEffects();
+    }
+    assert.equal(opened, 1); assert.equal(closed, 0); assert.equal(session, original);
+    assert.equal(oldCallback, 0); assert.equal(latestCallback, 0);
+    viewer.close(); assert.equal(latestCallback, 1); assert.equal(oldCallback, 0);
+    original.onClosed(); assert.equal(latestCallback, 1, "an obsolete close callback cannot notify twice");
+  } finally { f.dispose(); }
+});
+
+test("replacing or unmounting a file preview closes its session without dismissing the replacement", async () => {
+  let session, opened = 0, closed = 0, notifications = 0;
+  const viewer = { open: value => { opened++; session = value; }, close: () => { closed++; const previous = session; session = null; previous?.onClosed?.(); } };
+  const props = { attachment, onClose: () => { notifications++; } };
+  const f = fixture("AttachmentPreviewDialog", props, {}, { useAttachmentViewer: () => viewer, document: { activeElement: null }, HTMLElement: class {} });
+  f.render(); await f.runEffects(); const old = session;
+  props.attachment = { ...attachment, id: "synthetic-second-preview" };
+  f.render(); await f.runEffects();
+  assert.equal(session.activeItemKey, "single:synthetic-second-preview");
+  assert.equal(opened, 2); assert.equal(closed, 1); assert.equal(notifications, 0);
+  old.onClosed(); assert.equal(notifications, 0, "a retired attachment cannot dismiss the current one");
+  const current = session;
+  f.dispose(); assert.equal(session, null); assert.equal(closed, 2); assert.equal(notifications, 0);
+  current.onClosed(); assert.equal(notifications, 0, "unmounted bridge ignores late notifications");
+});
+
+for (const width of [375, 1267]) for (const round of [Math.floor, Math.round]) {
+  test(`PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at ${width}px/${round.name}`, async () => {
+    const { Virtualizer } = appRequire("@tanstack/react-virtual");
+    let onScroll, virtualizer, nextFrame;
+    const root = { clientWidth: width, clientHeight: 730, scrollTop: 0, scrollHeight: 200000,
+      scrollTo: ({ top }) => { root.scrollTop = round(Math.min(root.scrollHeight - root.clientHeight, top)); virtualizer.scrollOffset = root.scrollTop; },
+      addEventListener: (name, callback) => { if (name === "scroll") onScroll = callback; }, removeEventListener: noop };
+    const props = { documentProxy: { numPages: 120 }, currentPage: 90, scrollRequest: { page: 90 },
+      onVisiblePageChange: page => { props.currentPage = page; }, fitMode: "width", zoom: 1, containerWidth: width, containerHeight: 730,
+      viewportRef: { current: root }, pageSizesRef: { current: new Map([[90, { width: 792, height: 612 }]]) },
+      renderQueue: policy.createPdfRenderQueue(), onPageSize: noop };
+    const f = fixture("PdfPageList", props, {}, {
+      useVirtualizer: options => {
+        if (!virtualizer) {
+          virtualizer = new Virtualizer({ ...options, initialRect: { width, height: 730 }, observeElementRect: noop, observeElementOffset: noop,
+            scrollToFn: (offset, { adjustments = 0 }) => { root.scrollTop = round(Math.min(root.scrollHeight - root.clientHeight, offset + adjustments)); virtualizer.scrollOffset = root.scrollTop; } });
+          virtualizer.scrollElement = root;
+          virtualizer.targetWindow = { requestAnimationFrame: callback => { nextFrame = callback; return 1; }, cancelAnimationFrame: noop };
+        } else virtualizer.setOptions({ ...virtualizer.options, ...options });
+        return virtualizer;
+      },
+    });
+    const draw = async () => { f.render(); await f.runEffects(); f.render(); root.scrollHeight = virtualizer.getTotalSize(); };
+    const frame = () => { const callback = nextFrame; nextFrame = undefined; callback?.(); };
+    const settle = async () => { for (let i = 0; i < 5; i++) { await draw(); frame(); onScroll?.(); } };
+    try {
+      await settle(); assert.equal(props.currentPage, 90);
+      for (const scale of [(width - 32) / 792 + 0.1, 3, 0.25]) {
+        props.fitMode = "custom"; props.zoom = scale; props.scrollRequest = { page: 90 };
+        await draw(); onScroll();
+        assert.equal(props.currentPage, 90, "programmatic layout scroll is not a new page choice");
+        props.containerHeight = props.containerHeight === 715 ? 730 : 715; root.clientHeight = props.containerHeight;
+        await settle(); assert.equal(virtualizer.scrollState, null); assert.equal(props.currentPage, 90);
+        const target = virtualizer.getMeasurements()[89];
+        assert.ok(Math.abs(root.scrollTop + 16 - target.start) < 1, "same page is aligned, not just its toolbar label");
+        root.scrollTop = Math.ceil(virtualizer.getMeasurements()[90].start - 16) + 2;
+        onScroll(); assert.equal(props.currentPage, 91, "genuine forward scrolling is not pinned");
+        root.scrollTop = Math.floor(target.start - 16) - 2;
+        onScroll(); assert.equal(props.currentPage, 89, "genuine backward scrolling is not pinned");
+        props.currentPage = 90; props.scrollRequest = { page: 90 }; await settle();
+      }
+    } finally { f.dispose(); }
+  });
+}
+
+test("PDF page CSS follows current geometry before a queued bitmap redraw", async () => {
+  let finishFirst;
+  const rendering = new Promise(resolve => { finishFirst = resolve; });
+  const page = { getViewport: ({ scale }) => ({ width: 792 * scale, height: 612 * scale }), cleanup: noop,
+    render: () => ({ promise: rendering, cancel: noop }) };
+  const props = { documentProxy: { getPage: async () => page }, pageNumber: 90, fitMode: "width", zoom: 1,
+    containerWidth: 375, containerHeight: 730, renderQueue: policy.createPdfRenderQueue() };
+  const f = fixture("PdfPage", props);
+  try {
+    f.render(); await f.runEffects();
+    assert.equal(f.render().props.style.width, 343);
+    props.fitMode = "custom"; props.zoom = 343 / 792 + 0.1;
+    const next = f.render();
+    assert.ok(Math.abs(next.props.style.width - 422.2) < 1e-8);
+    assert.ok(Math.abs(next.props.style.height - 326.24545454545455) < 1e-8);
+    assert.equal(named(next, "canvas")[0].props.style.width, next.props.style.width, "old bitmap cannot impose stale layout dimensions");
+    props.fitMode = "width"; props.containerWidth = 430;
+    assert.ok(Math.abs(f.render().props.style.width - 398) < 1e-8, "resize geometry is independent of pending PDF work");
+  } finally { finishFirst(); f.dispose(); await flush(); }
+});
+
+test("PDF geometry uses the current page cache and never inherits a different page or document", async () => {
+  const landscape = { getViewport: ({ scale }) => ({ width: 792 * scale, height: 612 * scale }), cleanup: noop,
+    render: () => ({ promise: Promise.resolve(), cancel: noop }) };
+  const props = { documentProxy: { getPage: async () => landscape }, pageNumber: 90, fitMode: "custom", zoom: 1,
+    containerWidth: 1000, containerHeight: 800, knownSize: { width: 792, height: 612 }, renderQueue: policy.createPdfRenderQueue() };
+  const f = fixture("PdfPage", props);
+  try {
+    assert.deepEqual(f.render().props.style, props.knownSize, "cached intrinsic geometry is available before a read");
+    await f.runEffects(); assert.equal(f.render().props.style.width, 792);
+    props.pageNumber = 91; props.knownSize = { width: 612, height: 792 };
+    assert.deepEqual(f.render().props.style, props.knownSize, "another page does not inherit landscape geometry");
+    props.pageNumber = 90; props.documentProxy = { getPage: async () => landscape };
+    assert.deepEqual(f.render().props.style, props.knownSize, "same number in another PDF does not inherit geometry");
+  } finally { f.dispose(); await flush(); }
+});
+
+for (const [kind, event] of [["wheel", {}], ["touchstart", {}], ["pointerdown", {}], ["keydown", { key: "PageDown", target: { closest: () => null } }]]) {
+  test(`real ${kind} takes over an in-progress PDF alignment and listeners are released`, async () => {
+    const listeners = new Map();
+    const root = { clientHeight: 730, scrollTop: 900, scrollHeight: 90000,
+      scrollTo: noop,
+      addEventListener: (name, callback) => listeners.set(name, callback), removeEventListener: (name, callback) => { assert.equal(listeners.get(name), callback); listeners.delete(name); } };
+    let visiblePage = 90;
+    // Deliberately uncommitted new extent: alignment remains pending until a
+    // later layout or real input, with no library-private state manipulation.
+    const virtualizer = { measure: noop, getOffsetForIndex: () => [900, "start"],
+      getVirtualItems: () => [], getTotalSize: () => 95000, getVirtualItemForOffset: () => ({ index: 90 }) };
+    const f = fixture("PdfPageList", { documentProxy: { numPages: 120 }, currentPage: 90, scrollRequest: { page: 90 },
+      onVisiblePageChange: page => { visiblePage = page; }, fitMode: "width", zoom: 1, containerWidth: 375, containerHeight: 730,
+      viewportRef: { current: root }, pageSizesRef: { current: new Map() }, renderQueue: policy.createPdfRenderQueue(), onPageSize: noop }, {}, {
+      useVirtualizer: () => virtualizer,
+    });
+    try {
+      f.render(); await f.runEffects();
+      listeners.get("scroll")(); assert.equal(visiblePage, 90, "layout read-back must not change reading choice");
+      if (kind === "keydown") {
+        listeners.get(kind)({ ...event, ctrlKey: true }); assert.equal(f.refs.get("pendingPageRef").current, 90, "reserved browser shortcuts do not cancel alignment");
+        listeners.get(kind)({ ...event, target: { closest: () => ({}) } }); assert.equal(f.refs.get("pendingPageRef").current, 90, "editing keys stay with the input");
+      }
+      assert.equal(typeof listeners.get(kind), "function"); listeners.get(kind)(event);
+      assert.equal(f.refs.get("pendingPageRef").current, null);
+      listeners.get("scroll")(); assert.equal(visiblePage, 91);
+    } finally { f.dispose(); }
+    assert.equal(listeners.size, 0);
   });
 }
 

@@ -593,7 +593,7 @@ function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment:
       {toolbar}
       {thumbnailRail && documentProxy.numPages > 1 ? <PdfThumbnailRail documentProxy={documentProxy} currentPage={currentPage} onSelect={selectPage} renderQueue={renderQueue} /> : null}
       <div ref={viewportRef} tabIndex={0} aria-label="PDF 阅读区域" className={`min-h-0 min-w-0 flex-1 overscroll-contain ${fitMode === "page" ? "overflow-hidden" : "overflow-auto"}`} data-testid="pdf-viewer-pages" data-pdf-fit={fitMode}>
-        {fitMode === "page" ? <div className="flex h-full min-h-0 items-center justify-center p-3"><PdfPage documentProxy={documentProxy} pageNumber={currentPage} fitMode="page" zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} renderQueue={renderQueue} onPageSize={onPageSize} /></div> : <PdfPageList documentProxy={documentProxy} currentPage={currentPage} scrollRequest={scrollRequest} onVisiblePageChange={setCurrentPage} fitMode={fitMode} zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} viewportRef={viewportRef} pageSizesRef={pageSizesRef} renderQueue={renderQueue} onPageSize={onPageSize} />}
+        {fitMode === "page" ? <div className="flex h-full min-h-0 items-center justify-center p-3"><PdfPage documentProxy={documentProxy} pageNumber={currentPage} fitMode="page" zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} knownSize={currentSize} renderQueue={renderQueue} onPageSize={onPageSize} /></div> : <PdfPageList documentProxy={documentProxy} currentPage={currentPage} scrollRequest={scrollRequest} onVisiblePageChange={setCurrentPage} fitMode={fitMode} zoom={zoom} containerWidth={viewportSize.width} containerHeight={viewportSize.height} viewportRef={viewportRef} pageSizesRef={pageSizesRef} renderQueue={renderQueue} onPageSize={onPageSize} />}
       </div>
     </div>
   );
@@ -602,6 +602,7 @@ function PdfViewer({ attachment, toolbarHost, onPageCountChange }: { attachment:
 function PdfPageList({ documentProxy, currentPage, scrollRequest, onVisiblePageChange, fitMode, zoom, containerWidth, containerHeight, viewportRef, pageSizesRef, renderQueue, onPageSize }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; currentPage: number; scrollRequest: { page: number }; onVisiblePageChange: (page: number) => void; fitMode: PdfFitMode; zoom: number; containerWidth: number; containerHeight: number; viewportRef: RefObject<HTMLDivElement | null>; pageSizesRef: RefObject<Map<number, PdfPageSize>>; renderQueue: PdfRenderQueue; onPageSize: (page: number, size: PdfPageSize) => void }) {
   const currentPageRef = useRef(currentPage);
   currentPageRef.current = currentPage;
+  const pendingPageRef = useRef<number | null>(currentPage);
   const estimateLayout = (index: number) => {
     try { return pdfPageLayout(pageSizesRef.current.get(index + 1) ?? { width: 612, height: 792 }, { width: containerWidth, height: containerHeight }, fitMode, zoom); }
     catch { return { width: Math.max(1, containerWidth - 32), height: 240 }; }
@@ -618,16 +619,31 @@ function PdfPageList({ documentProxy, currentPage, scrollRequest, onVisiblePageC
   });
   useLayoutEffect(() => {
     if (!containerWidth || !containerHeight) return;
+    pendingPageRef.current = currentPageRef.current;
     virtualizer.measure();
-    virtualizer.scrollToIndex(currentPageRef.current - 1, { align: "start", behavior: "auto" });
   }, [containerWidth, containerHeight, fitMode, zoom, virtualizer]);
   useLayoutEffect(() => {
-    virtualizer.scrollToIndex(scrollRequest.page - 1, { align: "start", behavior: "auto" });
-  }, [scrollRequest, virtualizer]);
+    pendingPageRef.current = scrollRequest.page;
+  }, [scrollRequest]);
+  useLayoutEffect(() => {
+    const root = viewportRef.current;
+    if (!root || !containerWidth || !containerHeight || pendingPageRef.current === null) return;
+    // measure() only invalidates. Rebuild through the public size API, then
+    // wait for that sizer to commit so native scrolling cannot clamp against
+    // the previous scale's extent. Existing measurement renders retry this.
+    const total = virtualizer.getTotalSize();
+    if (Math.abs(root.scrollHeight - Math.max(root.clientHeight, total)) > 2) return;
+    const target = virtualizer.getOffsetForIndex(pendingPageRef.current - 1, "start");
+    if (!target) return;
+    root.scrollTo({ top: target[0], behavior: "auto" });
+    pendingPageRef.current = null;
+  });
   useEffect(() => {
     const root = viewportRef.current;
     if (!root) return;
     const update = () => {
+      // A layout scroll before the new sizer commits is not a reading choice.
+      if (pendingPageRef.current !== null) return;
       // A short final page cannot align with the viewport top once scrolling
       // reaches its limit. Keep the end-of-document page number truthful.
       if (root.scrollTop > 0 && root.scrollHeight - root.clientHeight - root.scrollTop <= 2) {
@@ -639,25 +655,41 @@ function PdfPageList({ documentProxy, currentPage, scrollRequest, onVisiblePageC
       const item = virtualizer.getVirtualItemForOffset(root.scrollTop + 17);
       if (item) onVisiblePageChange(item.index + 1);
     };
+    // Real input takes over immediately, including while an alignment is still
+    // reconciling. No timer, polling or additional page render is needed.
+    const interruptAlignment = () => { pendingPageRef.current = null; };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isViewerShortcut(event) && ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) interruptAlignment();
+    };
     root.addEventListener("scroll", update, { passive: true });
-    return () => root.removeEventListener("scroll", update);
+    root.addEventListener("wheel", interruptAlignment, { passive: true });
+    root.addEventListener("touchstart", interruptAlignment, { passive: true });
+    root.addEventListener("pointerdown", interruptAlignment, { passive: true });
+    root.addEventListener("keydown", onKeyDown);
+    return () => {
+      root.removeEventListener("scroll", update);
+      root.removeEventListener("wheel", interruptAlignment);
+      root.removeEventListener("touchstart", interruptAlignment);
+      root.removeEventListener("pointerdown", interruptAlignment);
+      root.removeEventListener("keydown", onKeyDown);
+    };
   }, [documentProxy.numPages, onVisiblePageChange, viewportRef, virtualizer]);
   const items = virtualizer.getVirtualItems();
   const width = Math.max(containerWidth, ...items.map((item) => estimateLayout(item.index).width + 32));
   return <div className="relative min-w-full" style={{ height: virtualizer.getTotalSize(), width }} data-testid="pdf-virtual-pages">
     {items.map((item) => <div key={item.key} data-index={item.index} ref={virtualizer.measureElement} className="absolute left-0 top-0 flex w-full justify-center px-4" style={{ transform: `translateY(${item.start}px)` }}>
-      <PdfPage documentProxy={documentProxy} pageNumber={item.index + 1} fitMode={fitMode} zoom={zoom} containerWidth={containerWidth} containerHeight={containerHeight} renderQueue={renderQueue} onPageSize={onPageSize} />
+      <PdfPage documentProxy={documentProxy} pageNumber={item.index + 1} fitMode={fitMode} zoom={zoom} containerWidth={containerWidth} containerHeight={containerHeight} knownSize={pageSizesRef.current.get(item.index + 1)} renderQueue={renderQueue} onPageSize={onPageSize} />
     </div>)}
   </div>;
 }
 
-function PdfPage({ documentProxy, pageNumber, fitMode, zoom, containerWidth, containerHeight, renderQueue, onPageSize }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; pageNumber: number; fitMode: PdfFitMode; zoom: number; containerWidth: number; containerHeight: number; renderQueue: PdfRenderQueue; onPageSize?: (page: number, size: PdfPageSize) => void }) {
+function PdfPage({ documentProxy, pageNumber, fitMode, zoom, containerWidth, containerHeight, knownSize, renderQueue, onPageSize }: { documentProxy: import("pdfjs-dist").PDFDocumentProxy; pageNumber: number; fitMode: PdfFitMode; zoom: number; containerWidth: number; containerHeight: number; knownSize?: PdfPageSize; renderQueue: PdfRenderQueue; onPageSize?: (page: number, size: PdfPageSize) => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const renderingRef = useRef<Promise<void>>(Promise.resolve());
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
-  const [size, setSize] = useState<PdfPageSize | null>(null);
+  const [geometry, setGeometry] = useState<{ documentProxy: import("pdfjs-dist").PDFDocumentProxy; pageNumber: number; size: PdfPageSize } | null>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !containerWidth || !containerHeight) return;
@@ -674,7 +706,7 @@ function PdfPage({ documentProxy, pageNumber, fitMode, zoom, containerWidth, con
       const base = page.getViewport({ scale: 1 });
       const layout = pdfPageLayout(base, { width: containerWidth, height: containerHeight }, fitMode, zoom, window.devicePixelRatio);
       onPageSize?.(pageNumber, { width: base.width, height: base.height });
-      setSize({ width: layout.width, height: layout.height });
+      setGeometry((previous) => previous?.documentProxy === documentProxy && previous.pageNumber === pageNumber && previous.size.width === base.width && previous.size.height === base.height ? previous : { documentProxy, pageNumber, size: { width: base.width, height: base.height } });
       canvas.width = layout.pixelWidth;
       canvas.height = layout.pixelHeight;
       canvas.style.width = `${layout.width}px`;
@@ -690,13 +722,14 @@ function PdfPage({ documentProxy, pageNumber, fitMode, zoom, containerWidth, con
       void work.then(() => { canvas.width = 0; canvas.height = 0; lease?.release(); });
     };
   }, [containerHeight, containerWidth, documentProxy, fitMode, pageNumber, zoom, attempt, renderQueue, onPageSize]);
-  let displaySize = size;
-  if (!displaySize) {
-    try { const estimate = pdfPageLayout({ width: 612, height: 792 }, { width: containerWidth, height: containerHeight }, fitMode, zoom); displaySize = { width: estimate.width, height: estimate.height }; }
-    catch { displaySize = { width: Math.max(1, Math.min(320, containerWidth - 32)), height: Math.max(1, Math.min(240, containerHeight - 32)) }; }
-  }
+  // Intrinsic size belongs to this document/page, while CSS size always belongs
+  // to the current layout. A queued/cancelled bitmap must not freeze old geometry.
+  const baseSize = geometry?.documentProxy === documentProxy && geometry.pageNumber === pageNumber ? geometry.size : knownSize ?? { width: 612, height: 792 };
+  let displaySize: PdfPageSize;
+  try { const layout = pdfPageLayout(baseSize, { width: containerWidth, height: containerHeight }, fitMode, zoom); displaySize = { width: layout.width, height: layout.height }; }
+  catch { displaySize = { width: Math.max(1, Math.min(320, containerWidth - 32)), height: Math.max(1, Math.min(240, containerHeight - 32)) }; }
   return <div data-pdf-page={pageNumber} aria-busy={loading} className="relative flex shrink-0 items-center justify-center" style={displaySize}>
-    <canvas ref={canvasRef} width={0} height={0} hidden={error || loading} className="bg-white shadow" aria-label={`PDF 第 ${pageNumber} 页`} />
+    <canvas ref={canvasRef} width={0} height={0} hidden={error || loading} style={displaySize} className="bg-white shadow" aria-label={`PDF 第 ${pageNumber} 页`} />
     {error ? <div className="absolute inset-0 overflow-auto"><ViewerError message={`第 ${pageNumber} 页预览失败。`} onRetry={() => setAttempt((value) => value + 1)} /></div> : loading ? <span className="absolute text-sm text-secondary">正在加载第 {pageNumber} 页…</span> : null}
   </div>;
 }
@@ -805,7 +838,10 @@ function retryableUrl(url: string | null | undefined, attempt: number): string |
 
 export function AttachmentPreviewDialog({ attachment, alt, onClose }: { attachment: AttachmentRead; alt?: string; onClose: () => void }) {
   const viewer = useAttachmentViewer();
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
+    let active = true;
     const item: AttachmentViewerItem = { itemKey: `single:${attachment.id}`, attachmentId: attachment.id, alt, displayMode: "auto" };
     viewer.open({
       source: "file-panel",
@@ -814,10 +850,16 @@ export function AttachmentPreviewDialog({ attachment, alt, onClose }: { attachme
       activeItemKey: item.itemKey,
       permissions: { downloadOriginal: true, enumerateConversationImages: true, batchDownload: true },
       trigger: document.activeElement instanceof HTMLElement ? document.activeElement : null,
-      onClosed: onClose,
+      onClosed: () => {
+        if (!active) return;
+        active = false;
+        onCloseRef.current();
+      },
     });
-    return () => viewer.close();
-  }, [attachment.id, alt, onClose, viewer]);
+    // Disposing an old bridge is not a user close of its replacement. Callback
+    // identity changes (e.g. a responsive parent redraw) do not dispose it.
+    return () => { active = false; viewer.close(); };
+  }, [attachment.id, alt, viewer]);
   return null;
 }
 

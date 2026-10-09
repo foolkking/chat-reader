@@ -39,7 +39,11 @@ PDF 七通过／六断言失败／零用例超时，后续三个 Web gate 未运
 [附件发布阻塞审查](execution/ux-audit-attachment-release-2026-10-09.md)保留第四／第五轮历史；
 [PDF 发布阻塞审查](execution/ux-audit-pdf-release-2026-10-10.md)记录小数滚动边界造成页码回退，
 并区分重绘消耗一次性故障的测试问题。窄修后 666 项 Node、lint／非增量类型／单 worker
-构建通过；149 项浏览器用例仅发现、本地执行 0 项，下一步是同一周期的第七轮完整 CI。
+构建通过；149 项浏览器用例仅发现、本地执行 0 项。修复提交 2f046f9 已进入同一周期的
+[第七轮完整 CI](https://github.com/foolkking/chat-reader/actions/runs/37967470601)，同样在 PDF 后续步骤失败，未构建镜像或部署。
+[会话与几何修复审查](execution/ux-audit-pdf-session-2026-10-10.md)记录父组件重绘误关闭、缩放中间滚动反馈造成定位漂移的复现。
+窄修后 53 项附件专项、699 项仓库脚本 Node 检查及 lint／非增量类型／单 worker 构建通过；149 项浏览器用例仅发现。
+下一步仍是同一授权周期内的第八轮完整 CI，不放宽断言、预算或部署条件。
 
 [项目设置与读取恢复审查](execution/ux-audit-project-recovery-2026-10-09.md)
 是接续的本地批次，记录清空元数据、局部保存和刷新失败的源码证据与验证边界；
