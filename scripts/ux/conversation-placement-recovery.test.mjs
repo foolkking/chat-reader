@@ -54,7 +54,7 @@ async function fixture({ outcome = "success", locale = "en-US", refresh = "norma
   let writeOutcome = outcome, checkError = null, projectError = null, readerError = null, scope = "synthetic-scope", unavailable = false;
   let frameNow = null, controller = null, mounted = true, rowVisible = true, epoch = 0, refreshCalls = 0, projectReads = 0;
   const frames = new Map(), definitions = new Map(), holds = new Map(), writes = [], checks = [], failures = [], queryOptions = [];
-  const buttons = [], fields = [], forms = [], containers = [], signals = [], focusOptions = [], confirms = [];
+  const buttons = [], fields = [], forms = [], containers = [], backdrops = [], signals = [], focusOptions = [], confirms = [];
   const document = { body: {}, activeElement: null, querySelector: () => null };
   const opener = { isConnected: true, getClientRects: () => [1], focus: () => { document.activeElement = opener; },
     getBoundingClientRect: () => ({ right: 300, bottom: 100 }) };
@@ -98,6 +98,7 @@ async function fixture({ outcome = "success", locale = "en-US", refresh = "norma
     if (type === "input") fields.push(props);
     if (type === "form") forms.push(props);
     if (typeof type === "string" && props?.onKeyDown) containers.push(props);
+    if (typeof type === "string" && props?.["data-dialog-backdrop"]) backdrops.push(props);
     return factory(type, props, key);
   };
   const setProjects = (status, rows) => {
@@ -199,7 +200,7 @@ async function fixture({ outcome = "success", locale = "en-US", refresh = "norma
   }));
   const Surface = () => inFrame("surface", "ConversationPlacementSurface", () => placement.ConversationPlacementSurface({ placement: controller }));
   const render = ({ effects = true } = {}) => {
-    buttons.length = fields.length = forms.length = containers.length = queryOptions.length = focusOptions.length = 0;
+    buttons.length = fields.length = forms.length = containers.length = backdrops.length = queryOptions.length = focusOptions.length = 0;
     for (const f of frames.values()) f.seen = false;
     if (mounted && placement) controller = inFrame("owner", "useConversationPlacement", () => placement.useConversationPlacement({ scope, unavailable, onChanged }));
     const html = renderToStaticMarkup(React.createElement(React.Fragment, null,
@@ -238,7 +239,7 @@ async function fixture({ outcome = "success", locale = "en-US", refresh = "norma
   render();
   return { client, keys, initial, other, recent, position, relation, writes, checks, failures, signals, confirms, observer, opener, document,
     render, openMenu, open, select, submit, submitHandler, search, close, hold, button, click,
-    fields: () => fields, queryOptions: () => queryOptions, containers: () => containers, focusOptions: () => focusOptions,
+    fields: () => fields, queryOptions: () => queryOptions, containers: () => containers, backdrops: () => backdrops, focusOptions: () => focusOptions,
     controller: () => controller, refreshCalls: () => refreshCalls, projectReads: () => projectReads,
     setProjects, setOutcome: value => { writeOutcome = value; }, setCheckError: value => { checkError = value; },
     setServer: value => { server = value; }, server: () => server,
@@ -534,12 +535,87 @@ function focusProbe(f) {
   return { calls, close };
 }
 
-test("removing the move button recovers only lost focus to the persistent Close control", async () => {
+test("disabling the move button recovers only lost focus to the persistent Close control", async () => {
   const f = await fixture(); try { await f.open(); await f.select("target");
     const probe = focusProbe(f), release = f.hold("write"); f.document.activeElement = f.document.body;
     await f.submit(); assert.equal(f.controller().state.phase, "moving");
     assert.deepEqual(probe.calls, [{ preventScroll: true }]); assert.equal(f.document.activeElement, probe.close);
     release(); await flush(); f.render(); assert.equal(probe.calls.length, 1);
+  } finally { await f.dispose(); }
+});
+
+for (const [locale, label] of [["en-US", "Move to selected project"], ["zh-CN", "移动到所选项目"]]) {
+  test(locale + ": a pending move retains its disabled submit footprint and label", async () => {
+    const f = await fixture({ locale }); try {
+      const release = f.hold("write"); await f.open(); await f.select("target");
+      const before = f.button(label);
+      assert.equal(before.disabled, false);
+      await f.submit();
+      const pending = f.button(label);
+      assert.equal(pending.disabled, true); assert.equal(pending.className, before.className);
+      assert.equal(f.writes.length, 1); assert.equal(f.controller().state.open, true);
+      release(); await flush(); f.render(); assert.equal(f.controller().state.phase, "confirmed");
+    } finally { await f.dispose(); }
+  });
+}
+
+test("a pending explicit retry keeps its reviewed submit label without retaining a stale comparison", async () => {
+  const f = await fixture({ outcome: "lost" }); try {
+    await f.open(); await f.select("target"); await f.submit(); await f.click("Check current location");
+    const label = "Move again using current state", before = f.button(label);
+    const release = f.hold("write"); await f.submit();
+    assert.equal(f.button(label).disabled, true); assert.equal(f.button(label).className, before.className);
+    assert.equal(f.controller().state.checked, null);
+    release(); await flush(); f.render();
+    assert.equal(f.controller().state.phase, "unknown"); assert.equal(f.controller().state.checked, null);
+  } finally { await f.dispose(); }
+});
+
+for (const phase of ["moving", "checking"]) {
+  test("a " + phase + " backdrop cannot dismiss, while explicit Close stays available", async () => {
+    const f = await fixture({ outcome: "lost" }); try {
+      await f.open(); await f.select("target");
+      if (phase === "checking") await f.submit();
+      const release = f.hold(phase === "moving" ? "write" : "check");
+      if (phase === "moving") await f.submit(); else await f.click("Check current location");
+      assert.equal(f.controller().state.phase, phase);
+      assert.equal(f.backdrops().length, 1);
+      let prevented = 0;
+      f.backdrops()[0].onPointerDown({ preventDefault: () => { prevented += 1; } }); f.render();
+      assert.equal(f.controller().state.open, true); assert.equal(f.writes.length, 1);
+      assert.equal(prevented, 1);
+      await f.close(); assert.equal(f.controller().state.open, false);
+      release(); await flush(); f.render(); assert.equal(f.controller().state.open, false);
+    } finally { await f.dispose(); }
+  });
+}
+
+test("an idle backdrop still dismisses a picker without submitting", async () => {
+  const f = await fixture(); try {
+    await f.open(); await f.select("target");
+    let prevented = false;
+    f.backdrops()[0].onPointerDown({ preventDefault: () => { prevented = true; } }); f.render();
+    assert.equal(f.controller().state, null); assert.equal(f.writes.length, 0);
+    assert.equal(prevented, false);
+  } finally { await f.dispose(); }
+});
+
+test("a captured idle backdrop uses the live pending guard before React rerenders", async () => {
+  const f = await fixture(); try {
+    await f.open(); await f.select("target"); const backdrop = f.backdrops()[0];
+    f.hold("write"); const submit = f.submitHandler(); submit({ preventDefault: noop });
+    let prevented = false;
+    backdrop.onPointerDown({ preventDefault: () => { prevented = true; } }); f.render();
+    assert.equal(prevented, true); assert.equal(f.controller().state.open, true); assert.equal(f.writes.length, 1);
+  } finally { await f.dispose(); }
+});
+
+test("a browser retaining focus on the newly disabled submit recovers to Close", async () => {
+  const f = await fixture(); try {
+    await f.open(); await f.select("target"); const probe = focusProbe(f);
+    const submit = {}; f.button("Move to selected project").ref.current = submit; f.document.activeElement = submit;
+    f.hold("write"); await f.submit();
+    assert.equal(f.document.activeElement, probe.close); assert.deepEqual(probe.calls, [{ preventScroll: true }]);
   } finally { await f.dispose(); }
 });
 

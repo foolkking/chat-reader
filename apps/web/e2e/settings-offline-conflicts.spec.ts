@@ -188,8 +188,14 @@ test("annotation merge removes its conflict and persists the canonical comment",
     await page.goto(`${baseURL}/library?conversationId=${conversationId}&annotations=open`);
     await page.getByRole("button", { name: /Download offline copy|下载离线副本/, exact: true }).click();
     await expect.poll(async () => (await readLocal(page, userId)).conversations.length).toBe(1);
-    const comment = page.getByPlaceholder("Markdown comment", { exact: true }).first();
+    const annotationPanel = page.locator('section[aria-label="批注"]');
+    // This conflict targets a known annotation, independently of which message
+    // the real Reader position makes Current. Do not depend on initial geometry.
+    await annotationPanel.getByRole("button", { name: "All", exact: true }).click();
+    const comment = annotationPanel.getByPlaceholder("Markdown comment", { exact: true });
+    await expect(comment).toHaveCount(1);
     await expect(comment).toBeVisible();
+    await expect(comment).toHaveValue("Synthetic initial comment");
     await context.setOffline(true);
     await comment.fill("Synthetic local comment"); await comment.press("Tab");
     await expect.poll(async () => (await readLocal(page, userId)).outbox.length).toBe(1);
@@ -217,6 +223,8 @@ test("annotation merge removes its conflict and persists the canonical comment",
     const rows = await (await context.request.get(`${baseURL}/api/conversations/${conversationId}/annotations?include_deleted=true`)).json();
     expect(rows).toHaveLength(1); expect(rows[0].comment_markdown).toBe("Synthetic combined comment"); expect(rows[0].revision).toBe(3);
     await page.reload();
-    await expect(page.getByPlaceholder("Markdown comment", { exact: true }).first()).toHaveValue("Synthetic combined comment");
+    await annotationPanel.getByRole("button", { name: "All", exact: true }).click();
+    await expect(comment).toHaveCount(1);
+    await expect(comment).toHaveValue("Synthetic combined comment");
   } finally { await context.close(); await admin.dispose(); }
 });

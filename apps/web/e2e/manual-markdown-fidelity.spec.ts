@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Locator } from "@playwright/test";
 import { settingsAppearance } from "./settings-test-helper";
 
 test.skip(process.env.E2E_MUTATION_FLOW !== "1", "Requires the isolated mutation API");
@@ -14,6 +14,14 @@ async function expectSource(request: APIRequestContext, messageId: string, expec
   expect(message.current_version.display_text).toBe(expected);
   expect(message.current_version.plain_text).toBe(expected);
   expect(message.char_count).toBe(Array.from(expected).length);
+}
+
+async function openMessageActions(message: Locator) {
+  await expect(message).toBeVisible();
+  const trigger = message.getByTestId("mobile-message-actions-trigger");
+  if (await trigger.isVisible() && await trigger.getAttribute("aria-expanded") !== "true") {
+    await trigger.click();
+  }
 }
 
 for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) {
@@ -42,6 +50,7 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       for (const [index, expected] of [question, answer].entries()) await expectSource(page.request, created.messages[index].id, expected);
 
       const firstMessage = page.locator(`article[data-message-id="${created.messages[0].id}"]`);
+      await openMessageActions(firstMessage);
       await firstMessage.getByRole("button", { name: /Edit Markdown source|编辑 Markdown 源码/ }).click();
       const editor = page.getByTestId("source-editor-codemirror").locator(".cm-content");
       const save = page.getByTestId("source-editor-create-version");
@@ -62,6 +71,7 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await page.locator("button[data-source-editor-close='true']").click();
 
       for (const mode of ["single", "pair"] as const) {
+        await openMessageActions(firstMessage);
         await firstMessage.getByRole("button", { name: /^(Insert message here|在此处插入消息)$/ }).click();
         const insert = page.getByRole("dialog", { name: /^(Insert messages|插入消息)$/ });
         await insert.getByRole("combobox", { name: /^(Mode|方式)$/ }).selectOption(mode);

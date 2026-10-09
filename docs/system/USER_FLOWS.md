@@ -149,10 +149,15 @@ Closing pending/unknown recovery keeps a page-level review entry without cancell
 the request. Dismissing a check does not undo the server move. Scope/account/unmount
 guards fence old actions and late responses; unavailable access hides retained
 names. Recovery is local to this owner, not persisted across full navigation/reload
-or tabs. When a phase removes its focused action, only lost/body focus is restored
-to the persistent Close control with `preventScroll`. Another chosen control keeps
-focus. The [audit](../execution/ux-audit-conversation-placement-2026-10-09.md) records
-synthetic/API verification separately from unexecuted browser/focus/visual checks.
+or tabs. A pending write retains its disabled submit button's label and footprint
+so Back cannot replace that action. The compact pending body can still resize;
+live pending-state guards ignore backdrop clicks and prevent them from blurring
+the recovered focus. Explicit Close, Back and Escape remain usable and do not
+cancel the server request. Lost/body focus, or focus retained on the newly disabled
+submit, returns to Close with `preventScroll`; another chosen control keeps focus.
+The [initial audit](../execution/ux-audit-conversation-placement-2026-10-09.md) and
+[CI repair](../execution/ux-audit-release-interaction-2026-10-09.md) distinguish
+synthetic checks, CI failures and pending browser reacceptance.
 
 ## Conversation metadata recovery (local-only, 2026-10-09)
 

@@ -1,0 +1,49 @@
+{
+  "source_sha": "eca207ffe14dd117aa3a938878777ae45a385500",
+  "run_id": 37889682904,
+  "run_conclusion": "failure",
+  "evidence_kind": "sanitized excerpts from original synthetic CI artifacts plus source review",
+  "web": {
+    "job_id": 113687544812,
+    "artifact_id": 11598608651,
+    "artifact_name": "release-a-quality-evidence-eca207ffe14dd117aa3a938878777ae45a385500",
+    "failed_gate": "source-editor-mutation",
+    "discovered_cases": 100,
+    "failure_contexts": 21,
+    "gate_evidence_status": "running",
+    "step_limit_minutes": 20,
+    "complete_suite_counts_available": false,
+    "later_attachment_and_pdf_gates_executed": false,
+    "pending_placement_failure": {
+      "test": "1440px: sidebar placement acknowledges before held reads and preserves the Reader",
+      "action": "double-click Move to selected project, then verify exactly one held PUT",
+      "failure": "Close button focus assertion: element(s) not found",
+      "snapshot": "Reader present; move dialog absent",
+      "precise_second_pointer_target_recorded": false
+    }
+  },
+  "api": {
+    "job_id": 113687544997,
+    "conclusion": "success",
+    "passed": 1239,
+    "skipped": 3,
+    "warnings": 20,
+    "duration_seconds": 823.75,
+    "merge_postgres_concurrency_cases_passed": 2
+  },
+  "settings": {
+    "job_id": 113687544995,
+    "artifact_id": 11598998334,
+    "artifact_name": "settings-quality-evidence-eca207ffe14dd117aa3a938878777ae45a385500",
+    "passed": 438,
+    "failed": 1,
+    "skipped": 0,
+    "test": "annotation merge removes its conflict and persists the canonical comment",
+    "failure": "Markdown comment field not found before offline editing",
+    "snapshot": "Downloaded conversation; open annotation workspace with Current/All/Notes and no visible annotation",
+    "fresh_instance_executed": false
+  },
+  "images": "build and independent inspection skipped after quality failure",
+  "production_changed": false,
+  "local_browser_executions": 0
+}

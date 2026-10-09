@@ -21,6 +21,12 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-release-interaction-2026-10-09.md` owns the first complete
+attachment-release CI's pending-placement dismissal finding and separately
+identified test-path/setup corrections. Its adjacent evidence summary preserves
+the failed run and original artifact identities, not a replacement passing ledger.
+The attachment release record continues to own repair commits and deployment.
+
 `execution/ux-audit-manual-markdown-2026-10-09.md` owns the source-fidelity finding,
 26-case Node and 12-case API failure baselines, repair and block-projection limit.
 `execution/ux-audit-attachment-reading-2026-10-09.md` owns the PDF/gallery/JSON/

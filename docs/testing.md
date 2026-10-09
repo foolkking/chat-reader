@@ -1,5 +1,31 @@
 # Testing
 
+## First attachment-release CI repair — 2026-10-09
+
+[CI 37889682904](https://github.com/foolkking/chat-reader/actions/runs/37889682904)
+failed: full API **1,239 passed / 3 skipped**, Web `source-editor-mutation`
+reached its 20-minute limit, and settings **438 passed / 1 failed**. The mutation
+gate discovered 100 cases and left 21 failure contexts without a final suite
+count; its later attachment/PDF/PWA gates did not execute. Settings' fresh-instance
+restore and both image jobs did not execute. This is not release acceptance.
+
+The [interaction repair](execution/ux-audit-release-interaction-2026-10-09.md)
+records the pending-placement dismissal defect separately from test setup and
+selector corrections. Six initial pending-action checks expanded the 60-case
+placement suite to 66: **61 passed / 5 failed** before the product edit. Two further
+live-guard/disabled-focus probes bring it to **68 passing** cases. The complete
+Node suite now passes **609 / 0 failed / 0 skipped**; do not add old checkpoint
+counts. Lint, nonincremental typecheck and bounded one-worker/non-standalone build
+pass. The new [ledger](execution/ux-audit-release-interaction-2026-10-09-evidence/local-verification.json)
+inherits the original 106-file checkpoint without rewriting it.
+
+Discovery adds `settings-offline-conflicts.spec.ts` to the six-file command below:
+**129 cases in seven files, zero local browser executions**. All original payload,
+position/outbox, conflict, retained-Reader and double-submit assertions remain.
+The next complete workflow must run all 13 Web gates, API/PostgreSQL and all
+439 settings cases plus fresh-instance restore. No timeout increase or skipped
+failure is used as a repair. The denied local service start is not retried.
+
 ## Attachment/manual-source integrated checkpoint — 2026-10-09
 
 The [attachment ledger](execution/ux-audit-attachment-reading-2026-10-09-evidence/local-verification.json)

@@ -14,8 +14,11 @@
 [Markdown 原文保真](execution/ux-audit-manual-markdown-2026-10-09.md)与
 [附件阅读审查](execution/ux-audit-attachment-reading-2026-10-09.md)现已完成本地修复：
 PDF 有界渲染／定位／失败重试、图片切换、JSON／Blob／Worker 恢复和明确不可预览状态。
-最新整合检查为 601 项 Node、103 项隔离 SQLite API 通过，lint／非增量类型检查／
-受限构建／单一 migration head 通过。六文件发现 125 项测试、浏览器执行 0 项。
+附件检查点为 601 项 Node、103 项隔离 SQLite API 通过。首轮完整 CI 的 API 通过
+1,239 项、跳过 3 项；Web 变更专项超时，设置矩阵 438 通过／1 失败，尚未部署。
+[本轮交互修复](execution/ux-audit-release-interaction-2026-10-09.md)区分处理中误关闭
+与测试路径问题；修复后 609 项 Node、lint／非增量类型检查／受限构建通过。
+七文件发现 129 项测试、本地浏览器执行 0 项，等待同一授权周期的完整 CI 重跑。
 [本轮发布记录](execution/ATTACHMENT_READING_RELEASE_2026-10-09.md)负责接下来的
 完整 CI、截图与独立镜像验收、备份和部署；旧 CI 不代表这批改动已验收。
 

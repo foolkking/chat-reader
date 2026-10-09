@@ -1,0 +1,18 @@
+{
+  "application_source": "eca207ffe14dd117aa3a938878777ae45a385500",
+  "test": "scripts/ux/conversation-placement-recovery.test.mjs",
+  "command": "node --test --test-reporter=spec scripts/ux/conversation-placement-recovery.test.mjs",
+  "tests": 66,
+  "passed": 61,
+  "failed": 5,
+  "skipped": 0,
+  "duration_ms": 4289.5157,
+  "failures": [
+    "en-US: pending selected-project submit action is missing",
+    "zh-CN: pending selected-project submit action is missing",
+    "pending reviewed-submit action is missing",
+    "moving backdrop dismisses the dialog",
+    "checking backdrop dismisses the dialog"
+  ],
+  "limits": "Actual transpiled controller/JSX with installed QueryClient; explicit hook, transport and DOM doubles. No browser hit-testing, layout or runtime focus acceptance."
+}

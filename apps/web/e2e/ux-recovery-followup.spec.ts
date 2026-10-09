@@ -278,8 +278,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       failDetail = true;
       await editor.getByRole("button", { name: zh ? "保存" : "Save", exact: true }).click();
       await expect(editor).toHaveCount(0);
-      const closeSidebar = page.getByRole("button", { name: "Close sidebar", exact: true }).filter({ visible: true });
-      if (await closeSidebar.count()) await closeSidebar.click();
+      await closeMobileSidebar(page);
       const notice = page.locator("[data-reader-read-recovery]");
       await expect(notice).toContainText(zh ? "仍显示上次读取的内容" : "Previously loaded content");
       await expect(reader).toBeVisible();
@@ -431,8 +430,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
           // The callback's list invalidations establish that it ran in the page.
           await expect.poll(() => heldReads).toBeGreaterThan(readsBeforeRecent);
         }
-        const closeSidebar = page.getByRole("button", { name: "Close sidebar", exact: true }).filter({ visible: true });
-        if (await closeSidebar.count()) await closeSidebar.click();
+        await closeMobileSidebar(page);
         const firstMessage = page.locator('article[data-message-id="' + created.messages[0].id + '"]');
         if (width < 640) await firstMessage.getByTestId("mobile-message-actions-trigger").click();
         else await firstMessage.hover();
@@ -440,7 +438,10 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         const insert = page.getByRole("dialog", { name: zh ? "插入消息" : "Insert messages", exact: true });
         await insert.getByLabel(zh ? "消息内容" : "Message content", { exact: true }).fill("Synthetic revision probe, never persisted");
         await insert.getByRole("button", { name: zh ? "插入消息" : "Insert messages", exact: true }).click();
-        await expect(insert.getByRole("alert")).toHaveText("Synthetic insert is intentionally not applied");
+        // The API client deliberately maps 503 to safe generic copy, even when
+        // the upstream fixture includes a more detailed diagnostic.
+        await expect(insert.getByRole("alert")).toHaveText("服务暂时不可用，请稍后重试。");
+        await expect(insert).not.toContainText("Synthetic insert is intentionally not applied");
         expect(insertRequests).toEqual([expect.objectContaining({
           expected_offline_revision: renamedRevision, anchor_message_id: created.messages[0].id,
         })]);
@@ -509,8 +510,6 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
     const fixture = await createPlacementFixture(page, "Synthetic picker " + width);
     let failRead = true, reads = 0, writes = 0;
     try {
-      await page.goto("/projects/" + fixture.projects[0].id);
-      await expect(page.getByTestId("project-conversation-sortable-row-" + fixture.conversation.conversation.id)).toBeVisible();
       await page.route(url => url.pathname === "/api/projects", async route => {
         if (route.request().method() !== "GET") return route.continue();
         reads += 1;
@@ -518,7 +517,12 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         else await route.continue();
       });
       await page.route(url => url.pathname.endsWith("/placement"), async route => { if (route.request().method() === "PUT") writes += 1; await route.continue(); });
+      // Intercept before the page can populate the shared, briefly fresh
+      // projects cache; opening a picker need not refetch a fresh success.
+      await page.goto("/projects/" + fixture.projects[0].id);
+      await expect(page.getByTestId("project-conversation-sortable-row-" + fixture.conversation.conversation.id)).toBeVisible();
       const picker = await openPlacementFromProject(page, fixture, zh);
+      await expect.poll(() => reads).toBeGreaterThan(0);
       await expect(picker.getByRole("alert")).toContainText(zh ? "项目读取失败" : "Could not read projects");
       await expect(picker.getByRole("button", { name: zh ? "移动到所选项目" : "Move to selected project", exact: true })).toBeDisabled();
       await picker.screenshot({ path: info.outputPath("placement-project-read-failed-" + width + ".png") });
@@ -576,8 +580,14 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       const readerUrl = page.url(), scroll = page.getByTestId("reader-scroll-root");
       await scroll.hover(); await page.mouse.wheel(0, 500);
       await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
-      const scrollBefore = await scroll.evaluate(element => element.scrollTop);
       const expand = page.getByRole("button", { name: zh ? "打开侧栏" : "Open sidebar", exact: true }).filter({ visible: true });
+      if (width < 768) {
+        const downPosition = await scroll.evaluate(element => element.scrollTop);
+        await page.mouse.wheel(0, -80);
+        await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBeLessThan(downPosition);
+        await expect(expand).toBeInViewport();
+      }
+      const scrollBefore = await scroll.evaluate(element => element.scrollTop);
       if (await expand.count()) await expand.click();
       const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
       const row = sidebar.getByTestId("conversation-row-" + fixture.conversation.conversation.id);
@@ -586,13 +596,16 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       await page.getByRole("menuitem", { name: zh ? "移动到项目" : "Move to project", exact: true }).click();
       const picker = page.getByRole("dialog", { name: zh ? "移动对话" : "Move conversation", exact: true });
       await picker.getByRole("radio", { name: fixture.projects[1].name, exact: true }).check();
-      await picker.getByRole("button", { name: zh ? "移动到所选项目" : "Move to selected project", exact: true }).dblclick();
+      const submit = picker.getByRole("button", { name: zh ? "移动到所选项目" : "Move to selected project", exact: true });
+      await submit.dblclick();
       await expect.poll(() => writes.length).toBe(1);
+      await expect(submit).toBeDisabled();
       const close = picker.getByRole("button", { name: zh ? "关闭" : "Close", exact: true });
       await expect(close).toBeFocused();
       await close.press("Shift+Tab");
       await expect(picker.getByRole("button", { name: zh ? "返回" : "Back", exact: true })).toBeFocused();
       await page.keyboard.press("Tab"); await expect(close).toBeFocused();
+      await picker.screenshot({ path: info.outputPath("placement-pending-double-click-" + width + ".png") });
       releaseWrite();
       await expect.poll(() => heldReads).toBeGreaterThan(0);
       await expect(picker).toHaveCount(0);
@@ -936,11 +949,15 @@ async function createConversation(page: Page, title: string, projectId?: string,
 }
 
 async function localReadingSnapshot(page: Page, id: string) {
-  return page.evaluate(async conversationId => {
+  const allowUnownedLegacy = process.env.APP_ENV === "test" && process.env.AUTH_ENABLED !== "true";
+  return page.evaluate(async ({ conversationId, allowUnownedLegacy }) => {
     const userId = localStorage.getItem("chat-reader:offline-active-user-v1");
-    if (!userId) throw new Error("Synthetic Reader has no verified offline storage owner");
-    const hex = Array.from(new TextEncoder().encode(userId), byte => byte.toString(16).padStart(2, "0")).join("");
-    const name = localStorage.getItem("chat-reader:offline-legacy-owner-v1") === userId
+    const legacyOwner = localStorage.getItem("chat-reader:offline-legacy-owner-v1");
+    // AuthBoundary does not activate an account namespace in the explicit
+    // auth-disabled fixture. Its Reader opens the unowned legacy database.
+    if (!userId && (!allowUnownedLegacy || legacyOwner)) throw new Error("Synthetic Reader has no verified offline storage owner");
+    const hex = userId ? Array.from(new TextEncoder().encode(userId), byte => byte.toString(16).padStart(2, "0")).join("") : "";
+    const name = !userId || legacyOwner === userId
       ? "chat-reader-offline-library" : `chat-reader-offline-library--user-${hex}`;
     return new Promise<{ position: ReadingPositionRead | null; pending: number }>((resolve, reject) => {
       const request = indexedDB.open(name);
@@ -955,7 +972,22 @@ async function localReadingSnapshot(page: Page, id: string) {
         tx.onabort = () => { db.close(); reject(tx.error); };
       };
     });
-  }, id);
+  }, { conversationId: id, allowUnownedLegacy });
+}
+
+async function closeMobileSidebar(page: Page) {
+  const backdrop = page.getByRole("button", { name: "Close sidebar", exact: true }).filter({ visible: true });
+  if (!await backdrop.count()) return;
+  const cover = await backdrop.boundingBox();
+  const drawer = await page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true }).boundingBox();
+  expect(cover).not.toBeNull(); expect(drawer).not.toBeNull();
+  const left = Math.max(cover!.x, drawer!.x + drawer!.width);
+  const right = Math.min(cover!.x + cover!.width, page.viewportSize()!.width);
+  expect(right).toBeGreaterThan(left);
+  // The center of the full-screen scrim is under the drawer. Click the actual
+  // exposed portion, with normal pointer hit-testing and no forced interaction.
+  await backdrop.click({ position: { x: (left + right) / 2 - cover!.x, y: cover!.height / 2 } });
+  await expect(backdrop).toHaveCount(0);
 }
 
 async function status(page: Page, id: string) {
@@ -1138,7 +1170,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         await openMenu(); await expect(page.getByRole("menuitem", { name: zh ? "归档项目" : "Archive project", exact: true })).toBeDisabled();
         await page.keyboard.press("Escape");
         if (width === 375) {
-          await page.getByRole("button", { name: "Close sidebar", exact: true }).filter({ visible: true }).click();
+          await closeMobileSidebar(page);
           await page.getByTestId("mobile-sidebar-button").filter({ visible: true }).click();
         }
         await expect(notice).toBeVisible(); expect(checks).toBe(0); expect(writes).toHaveLength(1);
@@ -1596,9 +1628,16 @@ for (const [projectView, width, zh] of [[false, 1440, false], [true, 375, true]]
         await recoveryEntry.click();
         await expect(check).toBeEnabled(); await expect(title).toHaveValue("Synthetic retained merge request");
         await expect(title).toHaveAttribute("readonly", "");
-        expect(await dialog.locator("[data-merge-order-title]").allTextContents()).toEqual(zh
+        const recoveredTitles = zh
           ? ["之前选择的对话 1", "之前选择的对话 2"]
-          : ["Previously selected conversation 1", "Previously selected conversation 2"]);
+          : ["Previously selected conversation 1", "Previously selected conversation 2"];
+        const orderTitles = dialog.locator("[data-merge-order-title]");
+        await expect(orderTitles).toHaveCount(recoveredTitles.length);
+        for (const [index, title] of recoveredTitles.entries()) {
+          await expect(orderTitles.nth(index)).toHaveAttribute("title", title);
+          await expect(orderTitles.nth(index)).toHaveText(`${index + 1}${title}`);
+          await expect(orderTitles.nth(index).locator('span[aria-hidden="true"]')).toHaveText(String(index + 1));
+        }
         expect(reads).toBe(1); expect(writes).toHaveLength(1);
         await page.keyboard.press("Escape");
         await expect(dialog).toHaveCount(0);

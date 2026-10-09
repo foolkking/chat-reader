@@ -22,6 +22,7 @@ type PlacementState = {
   phase: PlacementPhase;
   open: boolean;
   attempted: boolean;
+  pendingSubmit: "selected" | "review" | null;
   checked: ConversationDetail | null;
   error: string | null;
 };
@@ -141,7 +142,8 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
     }
     const base = op.checked ?? op.conversation;
     if (base.status !== "active") return;
-    const pending: PlacementState = { ...op, conversation: base, target, phase: "moving", attempted: true, checked: null, error: null };
+    const pending: PlacementState = { ...op, conversation: base, target, phase: "moving", attempted: true,
+      pendingSubmit: op.open ? (op.phase === "review" ? "review" : "selected") : null, checked: null, error: null };
     update(pending); // Synchronous reservation, before the first await.
     const controller = new AbortController();
     requestController.current = controller;
@@ -183,7 +185,7 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
     previousFocus.current = restoreFocus();
     const op: PlacementState = { ticket: {}, scope: latest.current.scope, epoch: authenticationGeneration(), conversation,
       target: unclassified ? { id: null, name: "" } : null, search: "", phase: "choosing", open: !unclassified,
-      attempted: false, checked: null, error: null };
+      attempted: false, pendingSubmit: null, checked: null, error: null };
     update(op);
     if (unclassified) void send(op);
   }
@@ -242,6 +244,12 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
     if (!op || !visible || !usable(op) || op.ticket !== visible.ticket) return;
     update(op.attempted ? { ...op, open: false } : null);
   }
+  function closeFromBackdrop(event: { preventDefault: () => void }) {
+    // The pending body may shrink under a second click. Do not turn that click
+    // into dismissal or let it blur the dialog's recovered keyboard focus.
+    if (busy(stateRef.current)) { event.preventDefault(); return; }
+    close();
+  }
   function reopen() {
     const op = stateRef.current;
     if (!op || !visible || !usable(op) || op.ticket !== visible.ticket || op.phase === "confirmed") return;
@@ -253,7 +261,7 @@ export function useConversationPlacement({ scope, unavailable, onChanged }: {
     update(null);
   }
 
-  return { state: visible, projects, projectsReady, projectsQuery, choose, changeSearch, submit, check, close, reopen, dismiss,
+  return { state: visible, projects, projectsReady, projectsQuery, choose, changeSearch, submit, check, close, closeFromBackdrop, reopen, dismiss,
     start, noticeRef, previousFocus, busy: busy(visible), blocked: unavailable || Boolean(visible && visible.phase !== "confirmed"),
     canSubmit: Boolean(visible && editable(visible) && destination(visible)),
     restoreFocus: () => {
@@ -273,12 +281,14 @@ export function ConversationPlacementSurface({ placement, floating = false }: {
   const id = useId();
   const rootRef = useRef<HTMLFormElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const submitRef = useRef<HTMLButtonElement | null>(null);
   const { state } = placement;
   useDialogFocus({ open: Boolean(state?.open), rootRef, initialFocusRef: inputRef,
     onClose: placement.close, restoreFocus: placement.restoreFocus });
   useLayoutEffect(() => {
-    if (state?.open && document.activeElement === document.body) {
-      // Pending phases remove their action. Keep lost focus at the trap's first
+    if (state?.open && (document.activeElement === document.body
+      || (state.phase === "moving" && document.activeElement === submitRef.current))) {
+      // Pending phases disable or remove their action. Keep lost focus at the trap's first
       // enabled control (Close), without moving focus from a chosen control.
       rootRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])")?.focus({ preventScroll: true });
     }
@@ -323,7 +333,7 @@ export function ConversationPlacementSurface({ placement, floating = false }: {
   return <>{notice}{state.open ? createPortal(
     <div role="dialog" aria-modal="true" aria-labelledby={id + "-title"} onPointerDown={event => event.stopPropagation()}
       className="fixed inset-0 z-[260] flex items-end justify-center bg-[var(--overlay)] sm:items-center sm:p-4">
-      <div aria-hidden="true" data-dialog-backdrop className="absolute inset-0" onPointerDown={placement.close} />
+      <div aria-hidden="true" data-dialog-backdrop className="absolute inset-0" onPointerDown={placement.closeFromBackdrop} />
       <form ref={rootRef} tabIndex={-1} className="relative flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-ui bg-raised shadow-2xl outline-none sm:max-w-lg sm:rounded-xl"
         onSubmit={event => { event.preventDefault(); void placement.submit(); }}>
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-ui px-5 py-3">
@@ -368,8 +378,8 @@ export function ConversationPlacementSurface({ placement, floating = false }: {
         <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-ui px-5 py-3">
           {checkButton}
           <button type="button" onClick={placement.close} className="btn-secondary min-h-11 px-3">{zh ? "返回" : "Back"}</button>
-          {editable(state) ? <button type="submit" disabled={!placement.canSubmit} className="btn-primary min-h-11 px-4 disabled:opacity-50">
-            {state.phase === "review" ? (zh ? "按当前状态再次移动" : "Move again using current state") : (zh ? "移动到所选项目" : "Move to selected project")}
+          {editable(state) || (state.phase === "moving" && state.pendingSubmit) ? <button ref={submitRef} type="submit" disabled={!placement.canSubmit} className="btn-primary min-h-11 px-4 disabled:opacity-50">
+            {state.phase === "review" || (state.phase === "moving" && state.pendingSubmit === "review") ? (zh ? "按当前状态再次移动" : "Move again using current state") : (zh ? "移动到所选项目" : "Move to selected project")}
           </button> : null}
         </footer>
       </form>

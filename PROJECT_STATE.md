@@ -11,8 +11,8 @@ Last updated: 2026-10-09. This is the current snapshot, not a release history.
 | Data acceptance | 84 stopped-writer table fingerprints and four storage roots unchanged; 36 expected source hashes backfilled; 67 stable table counts unchanged after restart |
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
-| Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md) and [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md), including earlier quiet-autosave/recovery batches; local checks pass, exact-source browser/CI acceptance pending |
-| Authorized next release | [Attachment and recovery release](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns the one newly authorized CI/deployment cycle; passing CI 37812290017 does not cover these changes |
+| Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and earlier quiet-autosave/recovery batches; first complete CI failed, scoped [interaction repair](docs/execution/ux-audit-release-interaction-2026-10-09.md) passes local checks |
+| Authorized next release | Candidate `eca207ffe14dd117aa3a938878777ae45a385500` is committed/pushed. [CI 37889682904](https://github.com/foolkking/chat-reader/actions/runs/37889682904): API 1,239 passed / 3 skipped; Web mutation gate timed out; settings 438 passed / 1 failed, fresh-instance restore not run. No accepted image or deployment. [Attachment and recovery release](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns the same-cycle repair/retry |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -89,6 +89,10 @@ receipt for a move to Unclassified. Confirmed moves update existing remote cache
 before independent refresh, preserving newer revisions, reading data and offline
 copies. Recovery survives row/menu/drawer closure, not full owner navigation.
 Pending-action focus recovery only targets lost/body focus, never a chosen control.
+The placement repair keeps the disabled submit's label/footprint during a write,
+guards backdrop dismissal against live pending state and prevents its second click
+from blurring recovered focus. Explicit Close/Back/Escape remain available. A
+newly disabled submit can return focus to Close; unrelated chosen controls cannot.
 Reader recent-open responses now belong to one mounted conversation/data-source
 visit and its authentication generation. Failed responses do not automatically
 repost a non-idempotent open. Older summaries cannot lower the detail revision;
@@ -136,16 +140,18 @@ limits. Unsupported/empty/missing states do not mount a false renderer. Blob URL
 retain identity on retry. Office/ZIP worker startup and late callbacks recover
 locally. Native audio/video remain metadata-only preload and no autoplay.
 
-Latest local integrated checks: **601 Node passed / 0 failed / 0 skipped** and
-**103 API passed / 0 failed / 0 skipped** in isolated SQLite TestClient; lint,
-nonincremental typecheck, bounded one-worker Web build and single Alembic head
-`20261008_0050` pass. Older checkpoint counts overlap and are not added. Discovery
-finds **125 tests in six files**, including 79 recovery, 20 attachment, 12 PDF,
-four manual-source, one Share-PDF and nine contract cases; **zero browser cases
-executed locally**. No local service start, PostgreSQL concurrency, CPU/RSS
-measurement, visual score or production acceptance is implied. The next complete
-CI retains all 13 Web gates, full API/PostgreSQL and 439-case settings matrix plus
-fresh-instance restore. Exact hashes and limitations are in the attachment ledger.
+Latest local integrated checks: **609 Node passed / 0 failed / 0 skipped** after
+the pending-placement repair; lint, nonincremental typecheck and bounded one-worker
+Web build pass. The preceding unchanged-API SQLite batch passed **103 / 0 failed /
+0 skipped**; it was not rerun for this UI/test-only repair. Source still has one
+Alembic head `20261008_0050`. Older checkpoint counts overlap and are not added.
+Discovery finds **129 tests in seven files**, including the previous 125 cases and
+four settings-conflict cases; **zero browser cases executed locally**. First CI's
+full API/PostgreSQL passed, but Web/settings did not; no CPU/RSS measurement,
+visual score or production acceptance is implied. The next complete CI retains
+all 13 Web gates, full API/PostgreSQL and 439-case settings matrix plus fresh-instance
+restore. The repair ledger inherits 106 hashes, changes four expected files and
+adds the settings-conflict test; the original attachment ledger remains unchanged.
 
 ## Verification boundaries and release safety
 
@@ -255,8 +261,8 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: submit the locally verified attachment/manual-source and preceding recovery
-changes to the one authorized exact-source complete CI cycle. Repair real failures,
+Next: submit the locally verified first-CI interaction/test-path repairs to the
+same authorized exact-source complete CI cycle. Repair real failures,
 review synthetic desktop/mobile screenshots, independently accept the resulting
 images, then perform fresh King capacity/backup/rollback/data checks before
 `--no-build` deployment. Do not retry the denied local service start. Keep accepted
