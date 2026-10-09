@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type APIResponse, type Page } from "@playwright/test";
 
 const runUploadFlow = process.env.E2E_ATTACHMENT_UPLOAD === "1";
 
@@ -90,7 +90,18 @@ async function saveNewVersion(page: Page, messageId: string): Promise<void> {
 async function deleteConversation(request: APIRequestContext, conversationId: string): Promise<void> {
   let lastStatus = 0;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const response = await request.delete(`/api/conversations/${conversationId}`);
+    let response: APIResponse;
+    try {
+      response = await request.delete(`/api/conversations/${conversationId}`);
+    } catch (error) {
+      if (error instanceof Error && /\bECONNRESET\b/.test(error.message)) {
+        // A lost response does not establish the DELETE outcome. Read only the
+        // same fixture; uncertain or denied readback must preserve the failure.
+        const remaining = await request.get(`/api/conversations/${conversationId}`).catch(() => null);
+        if (remaining?.status() === 404) return;
+      }
+      throw error;
+    }
     lastStatus = response.status();
     if (response.ok()) {
       expect((await request.get(`/api/conversations/${conversationId}`)).status()).toBe(404);

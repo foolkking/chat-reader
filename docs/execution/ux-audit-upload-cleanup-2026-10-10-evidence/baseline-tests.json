@@ -1,0 +1,29 @@
+{
+  "checkpoint": "Before changing the upload E2E cleanup helper",
+  "date": "2026-10-10",
+  "parent_commit": "96b31b011a7ad161f2b98f39f409ef39caf399b3",
+  "command": "node --test scripts/ux/project-fixture-cleanup.test.mjs",
+  "node_version": "v20.13.1",
+  "exit_code": 1,
+  "tests": 30,
+  "pass": 21,
+  "fail": 9,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "duration_ms": 496.4094,
+  "scope": "Three existing project cleanup cases plus 27 upload cleanup cases; actual TypeScript helper with request/timer doubles, no browser/API/service execution",
+  "source_sha256": {
+    "apps/web/e2e/attachment-upload-flow.spec.ts": "47e9ee840659368100d30de632977a45e0a63d42a2991bd0300c2999b4551832",
+    "scripts/ux/project-fixture-cleanup.test.mjs": "81439f0499a1296dc6004e97649ad128b11244c735fb5f546ce6619f7f5fe8ad"
+  },
+  "local_log_sha256": "46455c90d9a77af565cccb5d653f61743365901456b2117d622544dca09f3403",
+  "failed_test_numbers": [11, 12, 13, 14, 15, 16, 17, 24, 30],
+  "failure_groups": {
+    "confirmed_absence_after_delete_reset": 1,
+    "readback_must_occur_without_accepting_present_denied_or_failed_status": 4,
+    "readback_transport_failure_preserves_original_delete_error": 2,
+    "reset_after_existing_http_500_retry": 1,
+    "prior_business_assertion_survives_confirmed_cleanup": 1
+  }
+}

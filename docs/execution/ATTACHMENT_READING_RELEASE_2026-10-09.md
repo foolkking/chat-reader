@@ -435,3 +435,56 @@ DOM identity and zoom/resize screenshots. The
 inherits 115 bindings with three expected changes; older evidence/buildinfo are
 unchanged. Next is a precise commit/push and the eighth **complete** CI in this
 same authorized cycle. No candidate image or production deployment is accepted.
+
+## Repair 96b31b0 — eighth complete CI started
+
+Committed/pushed `96b31b011a7ad161f2b98f39f409ef39caf399b3` with an explicit
+19-file allowlist. All 115 source bindings, preserved earlier ledgers/evidence,
+unrelated buildinfo and 159 links across eight documents were checked. Remote
+master matched the parent; no unrelated residue or user data was staged.
+The single source Alembic head remains `20261008_0050`.
+
+[CI 37979802613](https://github.com/foolkking/chat-reader/actions/runs/37979802613)
+was dispatched exactly once, created **2026-10-09 19:22:36 UTC**. Its complete
+head SHA matches this repair. This is the eighth complete run in the same
+authorized cycle, not a failed-job-only retry. The local ledger remains its
+immutable pre-commit checkpoint. No candidate image or production change is
+accepted at dispatch; subsequent product work remains outside this candidate.
+
+## Eighth CI cleanup failure; test-only repair locally verified
+
+Source 96b31b0/run 37979802613 passes API **1239 / three skipped / 20 warnings**,
+858.58s, and mutation **100**, 506921ms. Upload is **17 passed / one failed /
+zero timedOut / zero skipped / zero interrupted**, 46397ms. Its final business
+assertion passes; the terminating failure is ECONNRESET during synthetic-fixture
+DELETE cleanup. The intermediate Expected-2/Received-1 poll succeeds later and
+is not a terminal business failure. Settings is still running at this checkpoint.
+Web has **seven PASS / one FAIL / five NOT_VERIFIED**; no PDF, Markdown/image,
+default-PWA/auth/negative-PWA or image acceptance is claimed.
+
+The original diagnostic ZIP 11641460126 is 21104107 bytes and matches GitHub's
+SHA256 digest. The [pre-edit report](ux-audit-upload-cleanup-2026-10-10.md) retains
+the sanitized trace, inspected frame and two frozen helper probes; neither the
+server's DELETE outcome nor the socket-reset cause is invented. The new 30-case
+Node baseline is **21 passed / nine failed**; all **30** pass after the helper
+allows one same-fixture readback only following DELETE ECONNRESET. Only 404
+confirms absence; all other outcomes remain failures and no DELETE retry is
+added. Existing HTTP-500 behavior remains bounded and separately tested.
+
+Full local Node is **726 passed / zero failed / zero skipped**, 9432.6716ms,
+across 25 files. Lint and nonincremental types pass. Discovery stays **149 in ten
+files**, zero local browser cases. The
+[additive ledger](ux-audit-upload-cleanup-2026-10-10-evidence/local-verification.json)
+inherits 115 bindings with one changed Node test and adds the upload E2E file,
+for 116 total. Only these two test files differ; E2E business assertions and all
+product/API source are unchanged. Prior build/API evidence is
+retained, not counted as a new execution. No local service, King operation or
+candidate image acceptance occurred. Next is precise staging/commit and one
+ninth complete CI in the same cycle, with all original release prerequisites.
+
+Final eighth-run status subsequently confirmed: settings **439 passed** (39.1m)
+and independent fresh-instance restore **one passed** (34.9s), overall failure,
+both image jobs skipped. The
+[final sanitized record](ux-audit-upload-cleanup-2026-10-10-evidence/ci-final.json)
+retains the exact source/run and job-log digest. The earlier in-progress wording
+above is the diagnosis checkpoint, not the final state.

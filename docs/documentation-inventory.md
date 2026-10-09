@@ -21,6 +21,16 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-upload-cleanup-2026-10-10.md` owns the eighth complete CI's
+lost fixture-DELETE response, sanitized trace, inspected synthetic frame and
+frozen helper probes. It distinguishes a successful intermediate poll/final
+business assertion from terminal cleanup failure; PDF was not reached. No
+socket-reset cause, production acceptance or subsequent product edit is inferred.
+Its pre-edit evidence precedes the scoped test-helper repair. The additive local
+ledger owns the 21/30 failing baseline, 30/30 repair and 726-case complete Node
+run; it preserves previous checkpoints and product assertions. The connection
+reset's cause remains unverified, and no readback result is invented for CI eight.
+
 `execution/ux-audit-pdf-session-2026-10-10.md` owns the seventh complete CI's
 pre-edit session-disposal and stale-geometry findings, frozen actual-source
 probe, two inspected synthetic frames and exact run/artifact evidence. Its

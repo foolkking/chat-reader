@@ -1,5 +1,35 @@
 # Testing
 
+## Eighth-CI upload fixture cleanup repair — 2026-10-10
+
+[CI 37979802613](https://github.com/foolkking/chat-reader/actions/runs/37979802613),
+source 96b31b0, passes API **1239 / three skipped**, mutation **100**. Upload is
+**17 passed / one failed / zero timedOut / zero skipped / zero interrupted**:
+the final business assertion completes before DELETE cleanup loses its response
+with ECONNRESET. PDF/Markdown and the later three Web gates did not run. Settings
+finishes with **439 passed** (39.1m), plus **one** fresh-instance restore (34.9s).
+Both image jobs are skipped. This is not acceptance of the PDF repair.
+
+The [pre-edit report](execution/ux-audit-upload-cleanup-2026-10-10.md) precedes the
+test-only change. The actual E2E helper, compiled with transport/timer doubles,
+has **21 passes/nine failures** across 30 cases before repair; all **30** pass
+afterward. A lost DELETE response permits one GET for the same synthetic fixture;
+only 404 is accepted. Present/denied/failed reads preserve the original failure,
+unrelated exceptions are not swallowed, and no blind DELETE retry is added.
+The existing three-attempt HTTP-500/250ms behavior is separately covered.
+Confirmed cleanup preserves any prior business assertion failure.
+
+All 25 repository-script suites pass **726 / zero failed / zero skipped**,
+9432.6716ms. Lint and nonincremental TypeScript pass. The 149 browser cases in ten
+files remain discovery only, zero local executions. No product/API source,
+business assertion or case/gate time budget changed; the preceding successful
+build and API checks were not rerun locally. The
+[additive ledger](execution/ux-audit-upload-cleanup-2026-10-10-evidence/local-verification.json)
+preserves prior evidence/buildinfo and binds the two test-file deltas. Full
+exact-source CI, actual screenshots and independent image acceptance still
+precede deployment. The socket-reset cause and eighth-run DELETE outcome remain
+unknown; readback recovery is not a claim to have repaired the proxy connection.
+
 ## Seventh-CI PDF session/geometry repair — 2026-10-10
 
 [CI 37967470601](https://github.com/foolkking/chat-reader/actions/runs/37967470601)

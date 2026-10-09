@@ -12,7 +12,7 @@ Last updated: 2026-10-10. This is the current snapshot, not a release history.
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
 | Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
-| Authorized next release | Seventh complete [CI 37967470601](https://github.com/foolkking/chat-reader/actions/runs/37967470601), source `2f046f9fa2017e6c1d50833860b81f29896dbc60`, failed PDF: seven passed / six failed / zero timedOut; API/settings, mutation 100 and attachment 21 passed. The [session/geometry repair](docs/execution/ux-audit-pdf-session-2026-10-10.md) passes 53 focused and 699 full repository-script Node checks, lint/types/build locally, pending the eighth complete run in this same cycle. No candidate image or deployment accepted; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
+| Authorized next release | Eighth complete [CI 37979802613](https://github.com/foolkking/chat-reader/actions/runs/37979802613), source `96b31b011a7ad161f2b98f39f409ef39caf399b3`, fails in synthetic upload-fixture cleanup after the business assertions passed. API 1239/three skipped, settings 439 plus one fresh restore, and mutation 100 pass; upload is 17 passed/one failed, PDF and four other gates not reached. The [test-only repair](docs/execution/ux-audit-upload-cleanup-2026-10-10.md) passes 30 focused/726 repository-script Node cases and lint/types; product code stays frozen. Ninth complete CI is next within the same cycle. No image/deployment accepted; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -155,13 +155,17 @@ native scroll after the new sizer commits; intermediate layout scrolls do not
 select another page and real input can interrupt immediately. There is no new
 polling, observer, dependency or render-budget increase.
 
-Latest local integrated checks: **699 Node passed / 0 failed / 0 skipped** across
-all 25 repository-script test files. The new 48-case baseline has 41 passes/seven
-failures; expanded focused coverage passes all 53. Earlier 666-case selection is
-not added to this broader run. Fractional-boundary and persistent page-local
-outage checks remain; seventh CI verified all 21 attachment cases, but not this
-session/geometry repair. Lint, nonincremental typecheck and bounded one-worker
-Web build pass. The preceding unchanged-API SQLite batch passed **103 / 0 failed /
+Latest local integrated checks: **726 Node passed / 0 failed / 0 skipped** across
+all 25 repository-script test files. Upload cleanup's 30-case baseline has
+21 passes/nine failures, then all 30 pass after the test-only repair. Only an
+ECONNRESET from DELETE permits one same-fixture GET; only 404 confirms cleanup.
+Other errors remain failures and the existing HTTP-500 bound is unchanged.
+The earlier PDF baseline (41/48) and repaired 53 cases remain historical; their
+product code is unchanged. Earlier 699/666 counts overlap, not additional passes.
+Lint and nonincremental types pass; the preceding bounded one-worker build is
+retained, not rerun for the test-only delta. Fractional-boundary and persistent
+page-local outage checks remain; PDF browser acceptance is still missing.
+The preceding unchanged-API SQLite batch passed **103 / 0 failed /
 0 skipped**; it was not rerun for this UI/test-only repair. Source still has one
 Alembic head `20261008_0050`. Older checkpoint counts overlap and are not added.
 Discovery finds **149 tests in ten files**, retaining the previous 144 and adding
@@ -170,9 +174,10 @@ Seventh CI's full API/PostgreSQL, settings, 100-case mutation and 21-case attach
 passed, but PDF did not; no CPU/RSS measurement,
 visual score or production acceptance is implied. The next complete CI retains
 all 13 Web gates, full API/PostgreSQL and 439-case settings matrix plus fresh-instance
-restore. The new [PDF checkpoint](docs/execution/ux-audit-pdf-session-2026-10-10-evidence/local-verification.json)
-inherits all 115 source bindings with only the three expected changes, verifies
-the preserved earlier ledgers and leaves unrelated buildinfo unchanged.
+restore. The new [cleanup checkpoint](docs/execution/ux-audit-upload-cleanup-2026-10-10-evidence/local-verification.json)
+inherits all 115 source bindings with only its cleanup Node test changed, and
+adds the upload E2E file for 116 bindings. It verifies unchanged product/assertions,
+preserved earlier ledgers and unrelated buildinfo. No browser or service executed locally.
 Earlier ledgers remain unchanged.
 
 ## Verification boundaries and release safety
@@ -291,8 +296,9 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: commit the locally verified session/geometry repair and run eighth complete
-exact-source CI within this authorization; fix any genuine failures. Retain earlier passing mutation results
+Next: commit the verified upload-cleanup repair and run ninth complete exact-source
+CI within this authorization; eighth settings and fresh restore both passed.
+Retain earlier passing mutation results
 without treating them as acceptance of this new source;
 review synthetic desktop/mobile screenshots, independently accept the resulting
 images, then perform fresh King capacity/backup/rollback/data checks before

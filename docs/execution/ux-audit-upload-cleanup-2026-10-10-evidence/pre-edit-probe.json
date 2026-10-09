@@ -1,0 +1,26 @@
+{
+  "source_sha": "96b31b011a7ad161f2b98f39f409ef39caf399b3",
+  "source_file": "apps/web/e2e/attachment-upload-flow.spec.ts",
+  "source_blob_sha256": "47e9ee840659368100d30de632977a45e0a63d42a2991bd0300c2999b4551832",
+  "executed": "Frozen committed E2E cleanup function with explicit transport doubles; no browser, API, production data or network.",
+  "cases": [
+    {
+      "prior_business_failure": false,
+      "calls": [
+        "DELETE"
+      ],
+      "read_back_performed": false,
+      "cleanup_rejected_despite_available_404": true,
+      "prior_failure_masked": false
+    },
+    {
+      "prior_business_failure": true,
+      "calls": [
+        "DELETE"
+      ],
+      "read_back_performed": false,
+      "cleanup_rejected_despite_available_404": true,
+      "prior_failure_masked": true
+    }
+  ]
+}

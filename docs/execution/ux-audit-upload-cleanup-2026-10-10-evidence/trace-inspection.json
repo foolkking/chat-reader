@@ -1,0 +1,267 @@
+{
+  "source_sha": "96b31b011a7ad161f2b98f39f409ef39caf399b3",
+  "run_id": 37979802613,
+  "artifact_id": 11641460126,
+  "errors": [
+    {
+      "action": {
+        "call_id": "expect@68",
+        "time": 4789.479,
+        "class": "Test",
+        "method": "expect",
+        "title": "Expect \"toBe\"",
+        "stack": [
+          {
+            "line": 208,
+            "column": 5
+          }
+        ]
+      },
+      "completed_at": 4793.267,
+      "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m2\u001b[39m\nReceived: \u001b[31m1\u001b[39m"
+    },
+    {
+      "action": {
+        "call_id": "pw:api@153",
+        "time": 11457.976,
+        "class": "Test",
+        "method": "pw:api",
+        "title": "DELETE \"/api/conversations/[synthetic-id]\"",
+        "api_method": "DELETE",
+        "url": "/api/conversations/[synthetic-id]",
+        "stack": [
+          {
+            "line": 93,
+            "column": 42
+          }
+        ]
+      },
+      "completed_at": 11466.64,
+      "error": "Error: apiRequestContext.delete: read ECONNRESET\nCall log:\n\u001b[2m  - → DELETE http://127.0.0.1:3107/api/conversations/[synthetic-id]\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n"
+    },
+    {
+      "action": {
+        "call_id": "call@210",
+        "time": 11458.366,
+        "class": "APIRequestContext",
+        "method": "fetch",
+        "api_method": "DELETE",
+        "url": "/api/conversations/[synthetic-id]"
+      },
+      "completed_at": 11465.362,
+      "error": "read ECONNRESET"
+    }
+  ],
+  "action_tail": [
+    {
+      "call_id": "call@164",
+      "time": 7037.507,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:testid=[data-testid=\"conversation-files-workspace\"s] >> internal:role=button[name=/Close|关闭/]"
+    },
+    {
+      "call_id": "call@166",
+      "time": 7088.309,
+      "class": "Page",
+      "method": "setViewportSize"
+    },
+    {
+      "call_id": "call@168",
+      "time": 7113.261,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:role=button[name=/More|更多/]"
+    },
+    {
+      "call_id": "call@170",
+      "time": 7188.159,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:role=button[name=/Conversation files|当前对话文件/]"
+    },
+    {
+      "call_id": "call@172",
+      "time": 8150.641,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toBeVisible\"",
+      "selector": "internal:testid=[data-testid=\"conversation-files-panel\"s]"
+    },
+    {
+      "call_id": "call@174",
+      "time": 8157.025,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:testid=[data-testid=\"conversation-file-row\"s] >> internal:has-text=\"later-file.txt\"i >> internal:role=button[name=\"Locate in conversation\"i]"
+    },
+    {
+      "call_id": "call@176",
+      "time": 9103.783,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toHaveCount\"",
+      "selector": "internal:testid=[data-testid=\"conversation-files-panel\"s]",
+      "expected_number": 0
+    },
+    {
+      "call_id": "call@178",
+      "time": 9121,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toHaveCount\"",
+      "selector": "internal:role=dialog[name=/inline-image\\.png|later-file\\.txt/]",
+      "expected_number": 0
+    },
+    {
+      "call_id": "call@180",
+      "time": 9128.244,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toBeInViewport\"",
+      "selector": "[data-attachment-id=\"[synthetic-id]\"][data-occurrence-key=\"block-1-c3e48b2c\"] >> nth=0"
+    },
+    {
+      "call_id": "call@182",
+      "time": 9145.301,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:role=button[name=/More|更多/]"
+    },
+    {
+      "call_id": "call@184",
+      "time": 9222.665,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:role=button[name=/Conversation files|当前对话文件/]"
+    },
+    {
+      "call_id": "call@186",
+      "time": 10178.225,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toBeVisible\"",
+      "selector": "internal:testid=[data-testid=\"conversation-files-panel\"s]"
+    },
+    {
+      "call_id": "call@188",
+      "time": 10185.05,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:testid=[data-testid=\"conversation-file-row\"s] >> internal:has-text=\"inline-image.png\"i >> internal:role=button[name=\"Show references\"i]"
+    },
+    {
+      "call_id": "call@190",
+      "time": 11105.148,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toBeVisible\"",
+      "selector": "internal:testid=[data-testid=\"conversation-file-row\"s] >> internal:has-text=\"inline-image.png\"i >> internal:role=list[name=\"Message references\"i]"
+    },
+    {
+      "call_id": "call@192",
+      "time": 11112.466,
+      "class": "Frame",
+      "method": "click",
+      "selector": "internal:testid=[data-testid=\"conversation-file-row\"s] >> internal:has-text=\"inline-image.png\"i >> internal:role=button >> internal:has-text=/Current|当前/"
+    },
+    {
+      "call_id": "call@194",
+      "time": 11165.448,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toHaveCount\"",
+      "selector": "internal:testid=[data-testid=\"conversation-files-panel\"s]",
+      "expected_number": 0
+    },
+    {
+      "call_id": "call@196",
+      "time": 11175.068,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toHaveCount\"",
+      "selector": "internal:role=dialog[name=/inline-image\\.png|later-file\\.txt/]",
+      "expected_number": 0
+    },
+    {
+      "call_id": "call@198",
+      "time": 11183.612,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toBeInViewport\"",
+      "selector": "[data-attachment-id=\"[synthetic-id]\"][data-occurrence-key=\"block-0-eb194a7b\"] >> nth=0"
+    },
+    {
+      "call_id": "call@200",
+      "time": 11194.895,
+      "class": "Page",
+      "method": "setViewportSize"
+    },
+    {
+      "call_id": "call@202",
+      "time": 11231.135,
+      "class": "Frame",
+      "method": "click",
+      "selector": "#message-[synthetic-id] >> internal:role=button[name=/Previous version|上一版/]"
+    },
+    {
+      "call_id": "call@204",
+      "time": 11279.809,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toHaveCount\"",
+      "selector": "#message-[synthetic-id] >> internal:testid=[data-testid=\"attachment-block\"s]",
+      "expected_number": 1
+    },
+    {
+      "call_id": "call@206",
+      "time": 11335.246,
+      "class": "Frame",
+      "method": "click",
+      "selector": "#message-[synthetic-id] >> internal:role=button[name=/Next version|下一版/]"
+    },
+    {
+      "call_id": "call@208",
+      "time": 11399.154,
+      "class": "Frame",
+      "method": "expect",
+      "title": "Expect \"toHaveCount\"",
+      "selector": "#message-[synthetic-id] >> internal:testid=[data-testid=\"attachment-block\"s]",
+      "expected_number": 2
+    },
+    {
+      "call_id": "call@210",
+      "time": 11458.366,
+      "class": "APIRequestContext",
+      "method": "fetch",
+      "api_method": "DELETE",
+      "url": "/api/conversations/[synthetic-id]"
+    }
+  ],
+  "images": [
+    {
+      "name": "upload-before-cleanup-0.jpg",
+      "timestamp": 11444.097,
+      "width": 1440,
+      "height": 900
+    }
+  ],
+  "final_business_assertion": {
+    "call_id": "call@208",
+    "time": 11399.154,
+    "class": "Frame",
+    "method": "expect",
+    "title": "Expect \"toHaveCount\"",
+    "selector": "#message-[synthetic-id] >> internal:testid=[data-testid=\"attachment-block\"s]",
+    "expected_number": 2,
+    "completed_at": 11449.168,
+    "passed": true
+  },
+  "intermediate_poll_error": {
+    "call_id": "expect@68",
+    "source_line": 208,
+    "interpretation": "The first poll sees one attachment; the poll subsequently completes and all later business steps execute."
+  },
+  "console_errors": [],
+  "limitations": "Synthetic isolated CI trace only. A lost DELETE response does not establish its database outcome."
+}

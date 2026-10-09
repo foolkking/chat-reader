@@ -49,3 +49,147 @@ test("fixture-creation failure cleans its newly created active project and prese
   assert.ok(f.calls.some(call => call.method === "PATCH" && call.data.is_archived === true));
   assert.equal(f.calls.at(-1).path, "/api/projects/synthetic-cleanup-project");
 });
+
+const uploadSource = readFileSync(new URL("../../apps/web/e2e/attachment-upload-flow.spec.ts", import.meta.url), "utf8");
+const uploadAst = ts.createSourceFile("attachment-upload-flow.spec.ts", uploadSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const uploadCleanup = uploadAst.statements.filter(node => ts.isFunctionDeclaration(node)
+  && node.name?.text === "deleteConversation");
+assert.equal(uploadCleanup.length, 1);
+const uploadCompiled = ts.transpileModule(uploadCleanup[0].getText(uploadAst), {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+}).outputText;
+
+// Only the real helper is compiled. Requests and the existing HTTP-500 delay
+// are explicit doubles; no network, browser, service or wall-clock sleep runs.
+function uploadFixture(deleteOutcomes = [200], getOutcomes = [404]) {
+  const calls = [];
+  const delays = [];
+  const request = Object.fromEntries([["delete", deleteOutcomes], ["get", getOutcomes]].map(([method, outcomes]) => [
+    method,
+    async path => {
+      calls.push({ method: method.toUpperCase(), path });
+      assert.ok(outcomes.length, `Unexpected ${method} request`);
+      const outcome = outcomes.shift();
+      if (typeof outcome !== "number") throw outcome;
+      return { status: () => outcome, ok: () => outcome >= 200 && outcome < 300 };
+    },
+  ]));
+  const deleteConversation = new Function("expect", "setTimeout", `${uploadCompiled}\nreturn deleteConversation;`)(
+    expect,
+    (resolve, milliseconds) => { delays.push(milliseconds); resolve(); },
+  );
+  return {
+    calls,
+    delays,
+    cleanup: () => deleteConversation(request, "synthetic-cleanup-upload-conversation"),
+  };
+}
+
+const cleanupRequest = method => ({ method, path: "/api/conversations/synthetic-cleanup-upload-conversation" });
+const resetError = () => new Error("apiRequestContext.delete: read ECONNRESET");
+
+for (const status of [200, 204]) {
+  test(`upload cleanup accepts HTTP ${status} only with confirmed absence`, async () => {
+    const f = uploadFixture([status]);
+    await f.cleanup();
+    assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("GET")]);
+    assert.deepEqual(f.delays, []);
+  });
+}
+
+for (const status of [200, 401, 403, 503]) {
+  test(`upload cleanup rejects HTTP ${status} readback after a successful DELETE`, async () => {
+    const f = uploadFixture([200], [status]);
+    await assert.rejects(f.cleanup(), { name: "AssertionError" });
+    assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("GET")]);
+    assert.deepEqual(f.delays, []);
+  });
+}
+
+test("upload cleanup does not reconcile a reset of the normal readback a second time", async () => {
+  const original = new Error("apiRequestContext.get: read ECONNRESET");
+  const f = uploadFixture([200], [original, 404]);
+  await assert.rejects(f.cleanup(), error => error === original);
+  assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("GET")]);
+});
+
+test("upload cleanup reconciles a lost DELETE response with one same-fixture GET, never another DELETE", async () => {
+  const f = uploadFixture([resetError()]);
+  await f.cleanup();
+  assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("GET")]);
+  assert.deepEqual(f.delays, []);
+});
+
+for (const status of [200, 401, 403, 503]) {
+  test(`upload cleanup retains the original reset when readback returns HTTP ${status}`, async () => {
+    const original = resetError();
+    const f = uploadFixture([original], [status]);
+    await assert.rejects(f.cleanup(), error => error === original);
+    assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("GET")]);
+    assert.deepEqual(f.delays, []);
+  });
+}
+
+for (const message of ["apiRequestContext.get: read ECONNRESET", "readback unavailable"]) {
+  test(`upload cleanup retains the original DELETE reset after failed readback: ${message}`, async () => {
+    const original = resetError();
+    const f = uploadFixture([original], [new Error(message)]);
+    await assert.rejects(f.cleanup(), error => error === original);
+    assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("GET")]);
+    assert.deepEqual(f.delays, []);
+  });
+}
+
+for (const original of [new Error("request timed out"), new Error("ECONNREFUSED"), new Error("NOT_ECONNRESET"), "ECONNRESET"]) {
+  test(`upload cleanup does not swallow or read back an unrelated exception: ${String(original)}`, async () => {
+    const f = uploadFixture([original]);
+    await assert.rejects(f.cleanup(), error => error === original);
+    assert.deepEqual(f.calls, [cleanupRequest("DELETE")]);
+    assert.deepEqual(f.delays, []);
+  });
+}
+
+test("upload cleanup retains its existing HTTP-500 retry schedule and final absence check", async () => {
+  const f = uploadFixture([500, 500, 200]);
+  await f.cleanup();
+  assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("DELETE"), cleanupRequest("DELETE"), cleanupRequest("GET")]);
+  assert.deepEqual(f.delays, [250, 250]);
+});
+
+test("upload cleanup retains the three-attempt HTTP-500 bound", async () => {
+  const f = uploadFixture([500, 500, 500, 200]);
+  await assert.rejects(f.cleanup(), /Conversation cleanup failed with HTTP 500/);
+  assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("DELETE"), cleanupRequest("DELETE")]);
+  assert.deepEqual(f.delays, [250, 250, 250]);
+});
+
+test("upload cleanup can confirm absence after HTTP 500 followed by a lost DELETE response", async () => {
+  const f = uploadFixture([500, resetError()]);
+  await f.cleanup();
+  assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("DELETE"), cleanupRequest("GET")]);
+  assert.deepEqual(f.delays, [250]);
+});
+
+for (const status of [401, 403, 404, 503]) {
+  test(`upload cleanup keeps HTTP ${status} DELETE failures as failures without retry or readback`, async () => {
+    const f = uploadFixture([status]);
+    await assert.rejects(f.cleanup(), new RegExp(`Conversation cleanup failed with HTTP ${status}`));
+    assert.deepEqual(f.calls, [cleanupRequest("DELETE")]);
+    assert.deepEqual(f.delays, []);
+  });
+}
+
+for (const outcome of [200, resetError()]) {
+  test(`confirmed upload cleanup preserves the prior business assertion after ${typeof outcome === "number" ? "HTTP success" : "a lost response"}`, async () => {
+    const original = new Error("Synthetic business assertion failed");
+    const f = uploadFixture([outcome]);
+    await assert.rejects((async () => {
+      try {
+        throw original;
+      } finally {
+        await f.cleanup();
+      }
+    })(), error => error === original);
+    assert.deepEqual(f.calls, [cleanupRequest("DELETE"), cleanupRequest("GET")]);
+  });
+}

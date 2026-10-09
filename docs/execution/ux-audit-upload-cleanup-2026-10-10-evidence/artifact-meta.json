@@ -1,0 +1,13 @@
+{
+  "repository": "foolkking/chat-reader",
+  "run_id": 37979802613,
+  "source_sha": "96b31b011a7ad161f2b98f39f409ef39caf399b3",
+  "producer_attempt": 1,
+  "artifact_id": 11641460126,
+  "artifact_name": "release-a-quality-evidence-96b31b011a7ad161f2b98f39f409ef39caf399b3",
+  "artifact_expired": false,
+  "artifact_digest": "sha256:b067f2e4588a2ea2aebc1f9fe8fc7b16e18199741acdbdd38f99e7858be700fd",
+  "artifact_size_in_bytes": 21104107,
+  "created_at": "2026-10-09T19:40:46Z",
+  "purpose": "Non-deployable exact-source diagnostic quality evidence"
+}
