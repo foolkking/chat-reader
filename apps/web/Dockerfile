@@ -1,4 +1,5 @@
-FROM node:22.13.1-alpine AS dependencies
+ARG NODE_BASE_IMAGE=node:22.13.1-alpine
+FROM ${NODE_BASE_IMAGE} AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -34,7 +35,7 @@ ENV NODE_OPTIONS="--max-old-space-size=${WEB_BUILD_HEAP_MB}"
 ENV NEXT_BUILD_CPUS=1
 RUN pnpm --filter web build
 
-FROM node:22.13.1-alpine AS runtime
+FROM ${NODE_BASE_IMAGE} AS runtime
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

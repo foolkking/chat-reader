@@ -1,5 +1,26 @@
 # Testing
 
+## Official CI image sources — 2026-10-10
+
+Tenth run 37991317201 failed before checkout because all three PostgreSQL
+service pulls hit Docker Hub's anonymous rate limit. No product test ran and
+no artifact exists. The [registry repair](execution/CI_REGISTRY_SOURCE_2026-10-10.md)
+pins the same official image indexes from ECR Public without changing test
+versions, quality steps, timeouts or acceptance conditions. Dockerfile defaults
+remain the original Hub references; CI alone supplies immutable base arguments.
+
+The additive `node --test scripts/ci/release-image-sources.test.mjs` checks all
+three service pins, both build inputs/defaults, the built-in Docker driver and
+explicit Linux/amd64 targets. Ten source-contract assertions fail before the
+configuration change and all ten pass afterward. All 26 repository-script test
+files pass **740 / zero failed / zero skipped** in 7797.545ms; this overlaps the
+prior 730 cases, not 740 additional cases. Parsed-workflow comparison proves
+that all 13 Web gates and all existing job steps/conditions/budgets are unchanged,
+apart from the documented source/build arguments and one additive check.
+Actionlint 1.7.12 passes workflow/expression validation; optional shellcheck and
+pyflakes are not used. This is not container, browser or release acceptance.
+Complete exact-source CI, fresh screenshots and image inspection remain required.
+
 ## Ninth-CI archived-project contract repair — 2026-10-10
 
 [CI 37986179840](https://github.com/foolkking/chat-reader/actions/runs/37986179840),

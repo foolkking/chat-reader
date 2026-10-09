@@ -12,7 +12,7 @@ Last updated: 2026-10-10. This is the current snapshot, not a release history.
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
 | Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
-| Authorized next release | Ninth complete [CI 37986179840](https://github.com/foolkking/chat-reader/actions/runs/37986179840), source `87eae8ddd6ff50b3a606ec92d6f9fcbef8a10f4f`, passes API/mutation/upload/attachment/PDF but fails an obsolete archived-project refresh string assertion in default PWA. The [test-only repair](docs/execution/ux-audit-archive-contract-2026-10-10.md) passes 18 source-only Playwright, 44 focused/730 repository-script Node cases and lint/types; product code stays frozen. Full same-cycle retry, screenshot and image acceptance remain required; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
+| Authorized next release | Test-only repair `da04e626d63d440b0c3ffd444dd65eb4740045f1` reached tenth complete [CI 37991317201](https://github.com/foolkking/chat-reader/actions/runs/37991317201), which failed before checkout: Docker Hub anonymous PostgreSQL pulls were rate-limited in all three quality jobs. Zero product tests/artifacts, both image jobs skipped. The [registry diagnosis](docs/execution/CI_REGISTRY_SOURCE_2026-10-10.md) verifies identical official ECR/Hub image metadata before a narrow CI repair; product code stays frozen. Prior ninth-run passes are not this source's acceptance. Screenshot and image acceptance remain required; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
@@ -155,15 +155,22 @@ native scroll after the new sizer commits; intermediate layout scrolls do not
 select another page and real input can interrupt immediately. There is no new
 polling, observer, dependency or render-budget increase.
 
-Latest local integrated checks: **730 Node passed / 0 failed / 0 skipped** across
-all 25 repository-script test files. The archived-project source contract is
+Latest local integrated checks: **740 Node passed / 0 failed / 0 skipped** across
+all 26 repository-script test files, including ten new official-image source
+contracts. Actionlint and parsed-workflow comparison pass with all existing gates,
+steps and budgets preserved; lint and nonincremental types pass. This is not a
+container/browser execution or a passing CI. The CI-source
+[checkpoint](docs/execution/ci-registry-source-2026-10-10-evidence/local-verification.json)
+inherits 117 bindings with only workflow changed and adds two Dockerfiles plus
+the new source-contract file, for 120; prior evidence/buildinfo remain intact.
+The preceding archived-project source contract is
 repaired without changing product code: 18 source-only Playwright cases across
 six files go from 17 passes/one failure to all 18 passing, without Web or browser
 fixtures. The original 40 archive callbacks remain unchanged and four added
 single/bulk held/failed-refresh cases pass. Lint and nonincremental types pass;
 build/API were not rerun. The new
 [checkpoint](docs/execution/ux-audit-archive-contract-2026-10-10-evidence/local-verification.json)
-inherits 116 source bindings, changes one Node test and adds the static E2E file
+inherited 116 source bindings, changed one Node test and added the static E2E file
 for 117; prior ledgers and unrelated buildinfo remain unchanged.
 Upload cleanup's preceding 30-case baseline has
 21 passes/nine failures, then all 30 pass after the test-only repair. Only an
@@ -305,8 +312,10 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: finalize ninth CI 37986179840 evidence and submit the narrow static-contract
-repair for a tenth complete exact-source run within this authorization. Ninth
+Next: commit the locally verified tenth-CI registry-source repair using verified
+identical official distribution metadata, then run complete exact-source CI
+within this authorization. No test ran in 37991317201. Ninth settings 439 and fresh restore one pass;
+ninth
 PDF passes 13, attachment 21, upload 18 and mutation 100; default PWA passes 134,
 fails one obsolete source assertion and conditionally skips 699. Auth/negative
 PWA are not reached. Retain these results without treating them as acceptance

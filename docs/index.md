@@ -56,6 +56,11 @@ PDF 七通过／六断言失败／零用例超时，后续三个 Web gate 未运
 条件跳过**，后续认证与负向 PWA 未运行。[诊断与测试合同修复](execution/ux-audit-archive-contract-2026-10-10.md)
 保持产品源码不变，18 条本地源码合同、44 条归档专项和完整 730 条 Node 检查通过；
 lint／非增量类型检查通过。本地未启动 Web、未运行浏览器，等待同一周期完整重跑。
+修复已提交为 da04e62，[第十次完整 CI](https://github.com/foolkking/chat-reader/actions/runs/37991317201)
+于 2026-10-09 21:05:52 UTC 启动，三个质量任务均因 Docker Hub 匿名拉取限流在
+checkout 前失败；产品测试未开始、产物为零，两项镜像任务跳过。
+[镜像来源诊断](execution/CI_REGISTRY_SOURCE_2026-10-10.md)已核实 ECR Public 的
+Docker 官方镜像与 Hub 内容摘要一致，接续进行窄范围 CI 配置修复；未部署。
 
 [项目设置与读取恢复审查](execution/ux-audit-project-recovery-2026-10-09.md)
 是接续的本地批次，记录清空元数据、局部保存和刷新失败的源码证据与验证边界；

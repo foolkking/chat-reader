@@ -1,5 +1,15 @@
 # Release Safety Baseline
 
+2026-10-10 CI distribution repair: disposable PostgreSQL and CI Python/Node base
+inputs use digest-pinned ECR Public Docker Official Images. Their indexes,
+Linux/amd64 manifests and configs were independently checked against Docker Hub
+before configuration edits; see the [registry evidence](../execution/CI_REGISTRY_SOURCE_2026-10-10.md).
+Optional Dockerfile base arguments retain the original defaults. The runner's
+Docker driver avoids a separate BuildKit image pull. Every existing quality
+gate, budget, artifact identity/inspection rule and production boundary remains
+unchanged. Source tests are additive; successful metadata or static validation
+does not establish a passing CI or accepted release.
+
 2026-10-08 release prerequisite: the first accumulated-optimization CI detected
 new high advisories GHSA-cjq9-62q9-8jv4 (Next image optimization) and
 GHSA-wq5f-xc86-pv6w (sharp/librsvg). Next is patched to **16.3.8** and the sharp

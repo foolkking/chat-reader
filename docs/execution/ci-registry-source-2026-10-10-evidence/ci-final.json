@@ -1,0 +1,22 @@
+{
+  "source_commit": "da04e626d63d440b0c3ffd444dd65eb4740045f1",
+  "workflow_run_id": 37991317201,
+  "workflow_run_attempt": 1,
+  "created_at": "2026-10-09T21:05:52Z",
+  "completed_at": "2026-10-09T21:06:14Z",
+  "status": "completed",
+  "conclusion": "failure",
+  "category": "pre-checkout infrastructure failure",
+  "cause": "Docker Hub unauthenticated pull rate limit for postgres:16-alpine",
+  "product_tests_executed": 0,
+  "artifact_count": 0,
+  "jobs": [
+    {"name":"web-quality", "id":114025920600, "conclusion":"failure", "failed_step":"Initialize containers", "checkout":"skipped", "job_log_sha256":"4ce84ca5be1d7edf297582f7ecd83ef092689aaa1c6fc074630702c1983263d3"},
+    {"name":"settings-quality", "id":114025920872, "conclusion":"failure", "failed_step":"Initialize containers", "checkout":"skipped", "job_log_sha256":"c863232793f1c500bda7059d2c2b1badba320f56f3345384dde996698c1b7a2d"},
+    {"name":"api-quality", "id":114025920907, "conclusion":"failure", "failed_step":"Initialize containers", "checkout":"skipped", "job_log_sha256":"c1ca471d50157d625d33d138b6465274bb9c4fb5c4d0b735a2aeeae6a3cc9011"},
+    {"name":"build-images", "id":114026049868, "conclusion":"skipped"},
+    {"name":"inspect-release-artifact", "id":114026050055, "conclusion":"skipped"}
+  ],
+  "web_summary_error": "Consequential: checkout did not run; no tracked-source absence is inferred",
+  "deployed": false
+}

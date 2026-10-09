@@ -21,6 +21,16 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/CI_REGISTRY_SOURCE_2026-10-10.md` owns the tenth CI's pre-checkout
+Docker Hub rate limit, its original job-log identities and verified official
+ECR/Hub index/platform/config evidence. Adjacent evidence retains metadata and
+the additive checkpoint without relabelling the previous run's product passes.
+`testing.md`, `deployment.md` and `system/RELEASE_SAFETY_BASELINE.md` describe
+immutable CI sources, unchanged defaults, all retained gates and the boundary
+between metadata/static checks and exact-source container acceptance. The
+attachment release record still owns final CI, screenshot, image and production
+acceptance; no new deployment or migration is implied by this configuration fix.
+
 `execution/ux-audit-archive-contract-2026-10-10.md` owns the ninth complete CI's
 obsolete archived-project refresh assertion and its pre-edit source-only
 reproduction. Adjacent evidence retains original ZIP provenance, all Web gate

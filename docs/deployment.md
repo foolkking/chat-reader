@@ -1,5 +1,25 @@
 # 生产部署
 
+## CI image distribution — 2026-10-10, not a new deployment
+
+The [CI registry repair](execution/CI_REGISTRY_SOURCE_2026-10-10.md) uses the ECR
+Public **Docker Official Images** namespace with verified immutable indexes for
+the existing PostgreSQL 16 Alpine, Python 3.11 slim and Node 22.13.1 Alpine tags.
+This addresses CI's Docker Hub anonymous pull limit, not an application failure.
+The workflow supplies `PYTHON_BASE_IMAGE` / `NODE_BASE_IMAGE`; Dockerfile defaults
+remain unchanged. Both Web base stages share the same argument. Buildx uses the
+runner's built-in Docker driver, and both ordinary builds target Linux/amd64.
+
+Pins must be deliberately refreshed with verified official provenance when base
+maintenance is required; they do not automatically acquire later base-image fixes.
+ECR Public has its own service limits and can still fail. Do not replace a pin
+with an unverified source or bypass quality gates on a download failure.
+Production Compose, `.env`, backup-tool image defaults, PostgreSQL and operational
+checkout are unchanged. No local/King image build is introduced. The currently
+authorized attachment release is **0050→0050**, with no migration, reconcile or
+backfill. Production acceptance remains the separate release record below until
+new exact-source CI, independent image checks and deployment acceptance pass.
+
 ## Current accepted release — 2026-10-08
 
 Production source `30a0d321fe2d538b0fa0bbd61b3e982452f822cb`, full CI

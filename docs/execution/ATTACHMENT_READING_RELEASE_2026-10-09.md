@@ -538,3 +538,38 @@ instance restore **one passed** (35.0s), overall failure and both image jobs
 skipped. The [final record](ux-audit-archive-contract-2026-10-10-evidence/ci-final.json)
 preserves its exact job identities and log digests; the in-progress wording
 above is the earlier diagnosis checkpoint.
+
+## Repair da04e62 — tenth complete CI started
+
+Committed/pushed `da04e626d63d440b0c3ffd444dd65eb4740045f1` with an exact
+12-file allowlist: two test files and scoped documentation/evidence. Verified
+all 117 source bindings, 21 previous ledgers and their selected evidence,
+unchanged product text, five retained deletion safety assertions, all original
+Node statements and unrelated buildinfo. Scoped documentation has 161 valid
+links before commit. No API/import/residue or workflow change was staged, and
+remote master matched the verified parent before commit and this source after
+push.
+
+[CI 37991317201](https://github.com/foolkking/chat-reader/actions/runs/37991317201)
+was dispatched exactly once at **2026-10-09 21:05:52 UTC**, after checking that no
+exact-source run already existed. The returned full head SHA matches the repair.
+This is the tenth complete run in the same authorized cycle. No partial retry,
+local Web start, candidate-image acceptance or production change occurred.
+
+## Tenth CI blocked before checkout by registry rate limiting
+
+Run 37991317201/attempt one completed at **2026-10-09 21:06:14 UTC** with all
+three quality jobs failing `Initialize containers`. Docker Hub rejected the
+anonymous `postgres:16-alpine` pulls with `toomanyrequests`; no checkout or
+product tests ran, both image jobs were skipped and zero artifacts exist.
+The Web summary-file error is consequential, not a source defect. Ninth-run
+passes remain historical and are not acceptance of da04e62.
+
+The [pre-edit registry diagnosis](CI_REGISTRY_SOURCE_2026-10-10.md) records the
+three log hashes, official source documentation and exact Hub/ECR index plus
+Linux/amd64 manifest/config verification for PostgreSQL, Python and Node. It
+proposes only digest-pinned CI distribution and optional unchanged-default base
+arguments, preserving every gate and production configuration. No new CI was
+dispatched before this verification and no King resource was accessed. This
+cycle still requires complete exact-source CI, new screenshots and independently
+accepted images before the 0050→0050 no-migration deployment.
