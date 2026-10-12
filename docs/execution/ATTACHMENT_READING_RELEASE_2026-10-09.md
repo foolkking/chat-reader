@@ -573,3 +573,54 @@ arguments, preserving every gate and production configuration. No new CI was
 dispatched before this verification and no King resource was accessed. This
 cycle still requires complete exact-source CI, new screenshots and independently
 accepted images before the 0050→0050 no-migration deployment.
+
+## Repair 5d03744 — eleventh complete CI started
+
+Committed/pushed `5d03744e6058029b838e14a10e9085065ab43c8a` with an exact
+15-file allowlist. Verified all 120 source bindings, 22 preceding ledgers and
+their selected evidence, unrelated buildinfo and 179 links in eight documents.
+Only CI distribution, optional unchanged-default Dockerfile base arguments and
+one additive source-contract test change outside documentation. No application,
+dependency, migration, user import or unrelated residue was staged.
+
+Local checks pass **740 Node / zero failed / zero skipped**, lint, nonincremental
+types and Actionlint. Parsed workflow/Dockerfile comparisons preserve every old
+quality step, condition, timeout, build instruction and independent artifact
+check outside the explicitly planned source/driver/platform changes.
+
+[CI 37995454022](https://github.com/foolkking/chat-reader/actions/runs/37995454022)
+was dispatched exactly once at **2026-10-09 21:46:31 UTC**, after confirming the
+remote SHA and no existing exact-source run. Full `headSha` matches the repair.
+This is the eleventh complete run in the same authorized cycle. It is not
+passing CI or image/deployment acceptance; the local ledger stays immutable.
+No local Web/Docker process or King operation was performed for this repair.
+
+## Eleventh CI failed; immediate Context draft protection repaired
+
+Run 37995454022/source 5d03744 completed with API **1239 / three skipped /
+20 warnings**, 806.99s; settings **439**, 38.6m, plus fresh restore **one**,
+34.6s. Web Context is **34 passed / one failed**, with no timeout/skip. The two
+earlier Web gates pass; ten later gates are unverified and both image jobs are
+skipped. All PostgreSQL service pulls succeed. No images or deployment exist
+for this run. The [final facts](ux-audit-context-drop-2026-10-12-evidence/ci-final.json)
+retain exact identities and the original diagnostic ZIP/log hashes.
+
+The [pre-edit audit](ux-audit-context-drop-2026-10-12.md) identifies passive
+dirty-state propagation as a reproducible guard gap, while preserving uncertainty
+about the original CI schedule because that spec collected no trace. Real TSX
+callbacks produce 4/12 passes before repair, 12/12 after repair and 16/16 after
+expanded lifecycle coverage. Input/resume transitions now reach live panel and
+workspace guards immediately; failed writes preserve drafts. The browser case
+requires actual confirmations and retains failure traces; no old data/generation
+assertion or budget is removed.
+
+Local integrated checks pass **756 Node / zero failed / zero skipped** across
+27 script files, lint, nonincremental types and one-worker Web build. Three
+Context files discover **11 browser cases**, with **zero local execution**.
+API/schema, dependencies, workflow, production and unrelated residue remain
+unchanged. The [additive checkpoint](ux-audit-context-drop-2026-10-12-evidence/local-verification.json)
+owns exact source bindings and unchanged historical evidence. This is still
+within the current release cycle. Per the user's 2026-10-12 instruction, dispatch
+one complete CI for the repaired commit and then pause for their result. No
+deployment before the original image/screenshot/backup/data checks; database
+remains 0050→0050 with no migration, reconcile or backfill.

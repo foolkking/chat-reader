@@ -38,18 +38,22 @@ export function ContinuationDocument({ conversationId: id, member, revision, gen
   const local = useContinuationDraft(id, member);
   useEffect(() => { onDiscardReady?.(local.discard); return () => onDiscardReady?.(null); }, [local.discard, onDiscardReady]);
   const dirty = editing && draft !== original;
-  useEffect(() => { onDirtyChange(dirty); return () => onDirtyChange(false); }, [dirty, onDirtyChange]);
+  // Guard the next event synchronously; a passive effect can run after a drop
+  // or close has already consulted the parent. Clear only on actual cleanup.
+  useEffect(() => () => onDirtyChange(false), [onDirtyChange]);
   useEffect(() => { onSavingChange?.(saving); return () => onSavingChange?.(false); }, [saving, onSavingChange]);
   const text = query.data ?? "";
   const begin = (saved?: SavedContinuationDraft) => {
     const initial = text || (member === "index" ? "{}\n" : "");
-    local.begin(saved); setDraft(saved?.value.text ?? initial); setOriginal(saved?.value.original ?? initial);
+    const nextDraft = saved?.value.text ?? initial, nextOriginal = saved?.value.original ?? initial;
+    onDirtyChange(nextDraft !== nextOriginal);
+    local.begin(saved); setDraft(nextDraft); setOriginal(nextOriginal);
     setEditGeneration(saved?.value.base_generation ?? generation ?? 0); setEditing(true); setError(""); setNotice(""); setLatest(null);
   };
   const discard = async () => {
     if (dirty && !window.confirm(t("放弃未保存的编辑？", "Discard unsaved edits?"))) return;
     setSaving(true);
-    try { await local.discard(); setEditing(false); setError(""); await local.list.refetch(); void cache.invalidateQueries({ queryKey: ["continuation", id] }); }
+    try { await local.discard(); onDirtyChange(false); setEditing(false); setError(""); await local.list.refetch(); void cache.invalidateQueries({ queryKey: ["continuation", id] }); }
     catch { setError(t("未能清除本机草稿，请重试。", "Could not clear the local draft. Retry.")); }
     finally { setSaving(false); }
   };
@@ -80,7 +84,7 @@ export function ContinuationDocument({ conversationId: id, member, revision, gen
       const form = new FormData(); form.append("base_generation", String(compared?.generation ?? editGeneration));
       form.append(member, new File([draft], member === "current" ? "current.md" : "index.json", { type: "text/plain" }));
       await cache.cancelQueries({ queryKey: ["continuation", id] });
-      const saved = await api.updateFiles(id, form); setEditing(false); setOriginal(draft); setLatest(null);
+      const saved = await api.updateFiles(id, form); onDirtyChange(false); setEditing(false); setOriginal(draft); setLatest(null);
       try { await local.discard(); }
       catch { setError(t("文件已保存，但本机草稿未清除。可在草稿列表中删除。", "File saved, but the local draft was not cleared. Remove it from the draft list.")); }
       await local.list.refetch();
@@ -109,7 +113,7 @@ export function ContinuationDocument({ conversationId: id, member, revision, gen
     {editing && dirty ? <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-secondary"><span role="status">{local.status === "saved" ? t("草稿已保存在本机", "Draft saved on this device") : local.status === "saving" ? t("正在保存本机草稿…", "Saving local draft…") : t("本机草稿保存失败，请重试或下载", "Local draft could not be saved. Retry or download it.")}</span>{local.status === "failed" ? <button className={action} onClick={() => local.retain(draft, original, editGeneration)}>{t("重试保存草稿", "Retry saving draft")}</button> : null}<button className={action} onClick={() => { const url = URL.createObjectURL(new Blob([draft], { type: "text/plain;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = member === "current" ? "current.md" : "index.json"; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}>{t("下载草稿", "Download draft")}</button></div> : null}
     {!editing && local.list.isError ? <p className="mb-3 text-xs text-secondary">{t("本机草稿暂时无法读取。", "Local drafts are unavailable.")}<button className={action} onClick={() => void local.list.refetch()}>{t("重试", "Retry")}</button></p> : null}
     {!editing && local.list.data?.length ? <section aria-label={t("本机接续草稿", "Local continuation drafts")} className="mb-6 divide-y divide-[var(--border)] border-y border-ui">{local.list.data.map(saved => <div key={saved.key} className="flex flex-wrap items-center gap-2 py-2"><span className="min-w-0 flex-1 text-xs text-secondary">{t("未保存草稿 · ", "Unsaved draft · ")}{new Date(saved.value.updated_at).toLocaleString(resolvedLocale)}</span><button className={action} onClick={() => begin(saved)}>{t("继续编辑", "Resume draft")}</button><button className={action} onClick={() => { if (window.confirm(t("删除这份本机草稿？已保存文件不受影响。", "Delete this local draft? Saved files are unchanged."))) void local.remove(saved).then(() => setError(""), () => setError(t("草稿已变化或无法删除，请重新读取。", "Draft changed or could not be deleted. Reload it."))); }}>{t("删除草稿", "Delete draft")}</button></div>)}</section> : null}
-    {editing ? <textarea autoFocus aria-label={t("编辑 ", "Edit ") + member} spellCheck={false} value={draft} onChange={e => { setDraft(e.target.value); local.retain(e.target.value, original, editGeneration); }} disabled={saving} className="min-h-96 w-full resize-y rounded-lg border border-ui bg-subtle p-4 font-mono text-base leading-7 text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]" /> : present && query.isPending ? <p role="status" className="py-12 text-secondary">{t("正在读取内容…", "Loading content…")}</p> : !present ? <div className="py-16 text-center"><h3 className="text-xl font-semibold">{member === "current" ? t("把接下来的事情留在这里", "Keep what comes next here") : t("为历史留一份索引", "Keep an index of the history")}</h3><p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-secondary">{t("可以直接编写，也可以上传外部维护好的文件。", "Write here, or upload files maintained externally.")}</p><button className="mt-6 min-h-11 rounded-md border border-ui px-5 text-sm hover:bg-subtle" onClick={onUpload}>{t("上传文件", "Upload files")}</button></div> : raw ? <ContinuationFind zh={zh} contentKey={text}><pre className="overflow-auto whitespace-pre-wrap break-all font-mono text-sm leading-7">{text}</pre></ContinuationFind> : member === "current" ? <ContinuationFind zh={zh} contentKey={text}>
+    {editing ? <textarea autoFocus aria-label={t("编辑 ", "Edit ") + member} spellCheck={false} value={draft} onChange={e => { onDirtyChange(e.target.value !== original); setDraft(e.target.value); local.retain(e.target.value, original, editGeneration); }} disabled={saving} className="min-h-96 w-full resize-y rounded-lg border border-ui bg-subtle p-4 font-mono text-base leading-7 text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]" /> : present && query.isPending ? <p role="status" className="py-12 text-secondary">{t("正在读取内容…", "Loading content…")}</p> : !present ? <div className="py-16 text-center"><h3 className="text-xl font-semibold">{member === "current" ? t("把接下来的事情留在这里", "Keep what comes next here") : t("为历史留一份索引", "Keep an index of the history")}</h3><p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-secondary">{t("可以直接编写，也可以上传外部维护好的文件。", "Write here, or upload files maintained externally.")}</p><button className="mt-6 min-h-11 rounded-md border border-ui px-5 text-sm hover:bg-subtle" onClick={onUpload}>{t("上传文件", "Upload files")}</button></div> : raw ? <ContinuationFind zh={zh} contentKey={text}><pre className="overflow-auto whitespace-pre-wrap break-all font-mono text-sm leading-7">{text}</pre></ContinuationFind> : member === "current" ? <ContinuationFind zh={zh} contentKey={text}>
       {metadata ? <details className="mb-6 text-xs text-secondary"><summary className="min-h-11 cursor-pointer py-3">{t("文件元数据", "File metadata")}</summary><pre className="overflow-auto whitespace-pre-wrap break-all bg-subtle p-3 leading-6">{metadata}</pre></details> : null}
       <div data-testid="continuation-reading" className="max-w-prose text-base leading-7 [&_h1]:mt-0 [&_h1]:border-0 [&_h2]:mt-8 [&_h3]:mt-6 [&_p]:my-4 [&_ul]:my-4 [&_ol]:my-4 [&_li]:my-1"><MarkdownRenderer text={metadata ? text.slice(metadata.length) : text} isAssistant={false} preserveSourceOffsets /></div>
     </ContinuationFind> : <IndexReading text={text} zh={zh} onNavigate={onNavigate} viewState={viewState} />}

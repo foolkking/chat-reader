@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { zipSync, strToU8 } from "fflate";
 import { settingsAppearance } from "./settings-test-helper";
 
-test.use({ trace: "off", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
+test.use({ trace: "retain-on-failure", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
 test.skip(process.env.E2E_CONTEXT_EXPORT !== "1", "Requires isolated API and live worker");
 
 async function drop(page: Page, name: string, data: Uint8Array) {
@@ -14,6 +14,17 @@ async function drop(page: Page, name: string, data: Uint8Array) {
   await page.getByTestId("continuation-drop-target").dispatchEvent("dragenter", { dataTransfer: transfer });
   await page.getByTestId("continuation-drop-target").dispatchEvent("drop", { dataTransfer: transfer });
   await transfer.dispose();
+}
+
+async function dropWithConfirmation(page: Page, name: string, data: Uint8Array, accept: boolean) {
+  await Promise.all([
+    page.waitForEvent("dialog").then(async dialog => {
+      expect(dialog.type()).toBe("confirm");
+      expect(dialog.message()).toMatch(/用拖入的文件替换未保存的编辑|Replace unsaved edits with the dropped file/);
+      if (accept) await dialog.accept(); else await dialog.dismiss();
+    }),
+    drop(page, name, data),
+  ]);
 }
 
 for (const width of [375, 1440]) {
@@ -56,17 +67,16 @@ for (const width of [375, 1440]) {
     await expect(panel.getByText("Dropped index", { exact: true })).toBeVisible();
     await panel.getByRole("button", { name: /^(编辑|Edit)$/ }).click();
     await panel.getByRole("textbox").fill('{"note":"Unsaved draft"}');
-    page.once("dialog", dialog => dialog.dismiss());
-    await drop(page, "index.json", strToU8('{"note":"Declined replacement"}'));
+    await dropWithConfirmation(page, "index.json", strToU8('{"note":"Declined replacement"}'), false);
     await expect(panel.getByRole("textbox")).toHaveValue('{"note":"Unsaved draft"}');
     expect(await generation()).toBe(2);
-    page.once("dialog", dialog => dialog.accept());
-    await drop(page, "index.json", strToU8("broken JSON"));
+    expect(await read("index")).toBe('{"note":"Dropped index"}');
+    await page.screenshot({ path: testInfo.outputPath(`declined-drop-${width}.png`) });
+    await dropWithConfirmation(page, "index.json", strToU8("broken JSON"), true);
     await expect(panel.getByRole("alert")).toContainText(/操作未完成|Operation incomplete/);
     await expect(panel.getByRole("textbox")).toHaveValue('{"note":"Unsaved draft"}');
     expect(await read("index")).toBe('{"note":"Dropped index"}');
-    page.once("dialog", dialog => dialog.accept());
-    await drop(page, "index.json", strToU8('{"note":"Replaced index"}'));
+    await dropWithConfirmation(page, "index.json", strToU8('{"note":"Replaced index"}'), true);
     await expect.poll(generation).toBe(3);
     await expect(panel.getByText("Replaced index", { exact: true })).toBeVisible();
     const bundle = zipSync({ "manifest.json": strToU8("{}"),

@@ -1,5 +1,25 @@
 # Testing
 
+## Immediate Context draft protection — 2026-10-12
+
+Eleventh CI 37995454022 passes API 1,239 / three skips, settings 439 and one
+fresh-instance restore. Web Context fails one of 35 cases: a dropped replacement
+advances generation despite a pending draft and intended decline. Ten later
+Web gates do not run and both image jobs are skipped. The
+[pre-edit diagnosis](execution/ux-audit-context-drop-2026-10-12.md) records this
+and the missing trace; original browser scheduling is not established.
+
+`node --test scripts/ux/continuation-drop-guard.test.mjs` executes actual TSX
+callbacks with controlled hook/render/effect timing. The first 12 go from four
+passes/eight failures to all passing; four additional lifecycle cases bring the
+suite to 16. The unchanged workflow automatically includes this new regression
+file. All 27 script suites pass 756 with no failure/skip. Lint, nonincremental
+types and bounded one-worker Web build pass; no API rerun or local browser run.
+The three Context browser files discover 11 cases. The drop case now requires
+the confirmation, adds a saved-file readback and retains failure traces without
+loosening old assertions, timeouts or gates. Full exact-source CI and image/
+screenshot acceptance remain required. The user requested a pause after dispatch.
+
 ## Official CI image sources — 2026-10-10
 
 Tenth run 37991317201 failed before checkout because all three PostgreSQL

@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-10. This is the current snapshot, not a release history.
+Last updated: 2026-10-12. This is the current snapshot, not a release history.
 
 ## Release and active work
 
@@ -12,12 +12,12 @@ Last updated: 2026-10-10. This is the current snapshot, not a release history.
 | Latest release CI | API **1,181 passed / 3 skipped**; all 13 Web gates pass; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
 | Follow-up CI | Canonical-URL revision repair `a12ce9e287fdddfd4df8a6039a212cec04629568` passes all five jobs in [CI 37812290017](https://github.com/foolkking/chat-reader/actions/runs/37812290017); independently inspected artifact 11567238870 is **not deployed** |
 | Active work | [Manual Markdown fidelity](docs/execution/ux-audit-manual-markdown-2026-10-09.md), [bounded attachment reading](docs/execution/ux-audit-attachment-reading-2026-10-09.md) and quiet-autosave/recovery batches; [mobile release repair](docs/execution/ux-audit-mobile-release-2026-10-09.md) passes local checks after the second complete CI failed |
-| Authorized next release | Test-only repair `da04e626d63d440b0c3ffd444dd65eb4740045f1` reached tenth complete [CI 37991317201](https://github.com/foolkking/chat-reader/actions/runs/37991317201), which failed before checkout: Docker Hub anonymous PostgreSQL pulls were rate-limited in all three quality jobs. Zero product tests/artifacts, both image jobs skipped. The [registry diagnosis](docs/execution/CI_REGISTRY_SOURCE_2026-10-10.md) verifies identical official ECR/Hub image metadata before a narrow CI repair; product code stays frozen. Prior ninth-run passes are not this source's acceptance. Screenshot and image acceptance remain required; [release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns acceptance |
+| Authorized next release | Eleventh complete [CI 37995454022](https://github.com/foolkking/chat-reader/actions/runs/37995454022), source `5d03744e6058029b838e14a10e9085065ab43c8a`, failed Web Context (34 pass / one fail); API 1,239 / three skips, settings 439 plus fresh restore one pass. Ten later Web gates and both image jobs did not run. The [Context guard repair](docs/execution/ux-audit-context-drop-2026-10-12.md) passes 16 focused / 756 total Node checks, lint, types and bounded build. Next: one complete repaired-source CI, then pause for the user's result. [Release record](docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md) owns remaining screenshot/image/deployment acceptance |
 | Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
 
 The user authorized this order: commit accumulated improvements, pass complete
 exact-source CI, deploy those verified images to King, then continue the
-ordinary-user product audit. The persistent goal remains active. At least 15
+ordinary-user product audit. The overall goal remains unfinished. At least 15
 improvements was not a ceiling; over 30 scoped batches are already accumulated.
 Do not repeat the previously accepted Context/Skill/Task Center deployments.
 Do not use subagents unless the user newly requests them.
@@ -48,6 +48,9 @@ all 13 Web gates, including 18 negative PWA cases, plus API, settings, image bui
 and independent inspection. All nine expanded synthetic shell regressions, lint,
 nonincremental typecheck and the bounded Web build also pass locally.
 The newly authorized follow-up deployment is conditional on attachment-work and CI acceptance.
+Latest instruction (2026-10-12): repair the failed CI and submit the next complete
+run, then pause until the user returns its result. Do not monitor or deploy in
+the waiting interval. Production remains 30a0d32/0050; this release has no migration.
 The [search filter audit](docs/execution/ux-audit-search-filter-race-2026-10-08.md)
 records the separately reproduced and CI-verified rapid-input/history repair.
 
@@ -155,7 +158,20 @@ native scroll after the new sizer commits; intermediate layout scrolls do not
 select another page and real input can interrupt immediately. There is no new
 polling, observer, dependency or render-budget increase.
 
-Latest local integrated checks: **740 Node passed / 0 failed / 0 skipped** across
+Context editing now propagates dirty transitions synchronously to panel and
+workspace guards, so immediate drops, tab navigation and close cannot depend on
+a later passive effect. Reverting to original and confirmed save/discard clear
+the guard immediately; failed writes retain it. The callback baseline reproduces
+eight failures in 12 cases; all 12 pass after repair, with four extra lifecycle
+cases bringing the focused suite to 16. Exact original CI scheduling remains
+unknown. All **756 Node cases pass / zero failed / zero skipped** in 27 script
+files, plus lint, nonincremental types and one-worker Web build. Three Context
+browser files discover 11 cases, with zero local execution; the drop case now
+requires actual confirmation and retains failure traces. The new
+[checkpoint](docs/execution/ux-audit-context-drop-2026-10-12-evidence/local-verification.json)
+preserves all preceding source and evidence ledgers and unrelated buildinfo.
+
+Preceding CI-source local checks: **740 Node passed / 0 failed / 0 skipped** across
 all 26 repository-script test files, including ten new official-image source
 contracts. Actionlint and parsed-workflow comparison pass with all existing gates,
 steps and budgets preserved; lint and nonincremental types pass. This is not a
@@ -312,9 +328,11 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: commit the locally verified tenth-CI registry-source repair using verified
-identical official distribution metadata, then run complete exact-source CI
-within this authorization. No test ran in 37991317201. Ninth settings 439 and fresh restore one pass;
+Next: submit the Context guard repair to one complete exact-source CI within this
+authorization, then pause for the user's result. Eleventh CI 37995454022 failed
+Context; its API/settings passes do not accept the repaired source. No product
+test ran in 37991317201.
+Ninth settings 439 and fresh restore one pass;
 ninth
 PDF passes 13, attachment 21, upload 18 and mutation 100; default PWA passes 134,
 fails one obsolete source assertion and conditionally skips 699. Auth/negative

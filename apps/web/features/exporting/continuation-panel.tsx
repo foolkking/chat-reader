@@ -18,6 +18,12 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   const [surface, setSurface] = useState<"read" | "upload" | "history">("read");
   const [member, setMember] = useState<"current" | "index">(viewState?.member ?? "current");
   const [editorDirty, setEditorDirty] = useState(false);
+  const editorDirtyRef = useRef(false);
+  const reportEditorDirty = useCallback((value: boolean) => {
+    editorDirtyRef.current = value; setEditorDirty(value);
+    // The editor exists only on the read surface, without upload selections.
+    onDirtyChange?.(value);
+  }, [onDirtyChange]);
   const discardEditor = useRef<(() => Promise<void>) | null>(null);
   const registerDiscard = useCallback((discard: (() => Promise<void>) | null) => { discardEditor.current = discard; onDiscardReady?.(discard); }, [onDiscardReady]);
   const [editorBusy, setEditorBusy] = useState(false);
@@ -40,11 +46,11 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
       if (resetAfterReturn.current) {
         resetAfterReturn.current = false;
         void discardEditor.current?.().catch(() => undefined);
-        setDocumentKey(value => value + 1); setEditorDirty(false);
+        setDocumentKey(value => value + 1); reportEditorDirty(false);
       }
       void cache.invalidateQueries({ queryKey: ["continuation", id] });
     }
-  }, [taskStatus, taskId, cache, id]);
+  }, [taskStatus, taskId, cache, id, reportEditorDirty]);
   const [files, setFiles] = useState<Record<string, File>>({});
   const [baseGeneration, setBaseGeneration] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,7 +59,7 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   const [formKey, setFormKey] = useState(0);
   const dirty = editorDirty || Object.keys(files).length > 0 || Boolean(packageFile);
   const taskBusy = Boolean(taskId) && !["committed", "failed", "cancelled"].includes(taskStatus ?? "");
-  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => { onDirtyChange?.(editorDirtyRef.current || Object.keys(files).length > 0 || Boolean(packageFile)); }, [editorDirty, files, packageFile, onDirtyChange]);
   useEffect(() => { onBusyChange?.(busy || editorBusy); return () => onBusyChange?.(false); }, [busy, editorBusy, onBusyChange]);
   useEffect(() => {
     if (!dirty) return;
@@ -71,11 +77,12 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   };
   const navigate = async (next: "read" | "upload" | "history", nextMember = member) => {
     if (busy || editorBusy) return;
-    if (dirty && !window.confirm(t("放弃未保存的更改？", "Discard unsaved changes?"))) return;
-    if (dirty) {
+    const unsaved = editorDirtyRef.current || Object.keys(files).length > 0 || Boolean(packageFile);
+    if (unsaved && !window.confirm(t("放弃未保存的更改？", "Discard unsaved changes?"))) return;
+    if (unsaved) {
       try { await discardEditor.current?.(); }
       catch { setError(t("未能清除本机草稿，请重试。", "Could not clear the local draft. Retry.")); return; }
-      setFiles({}); setPackageFile(null); setEditorDirty(false); setFormKey(v => v + 1); setBaseGeneration(null);
+      setFiles({}); setPackageFile(null); reportEditorDirty(false); setFormKey(v => v + 1); setBaseGeneration(null);
     }
     if (next === "upload" || next === "history") {
       setBusy(true);
@@ -104,7 +111,7 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
     if (!packageInput && file.size > (targetMember === "current" ? 1 : 8) * 1024 * 1024) {
       setError(t("文件超过大小限制。", "The file exceeds its size limit.")); return;
     }
-    if (dirty && !window.confirm(t("用拖入的文件替换未保存的编辑？更新失败时仍保留编辑内容。", "Replace unsaved edits with the dropped file? Your edits remain if the update fails."))) return;
+    if ((editorDirtyRef.current || Object.keys(files).length > 0 || Boolean(packageFile)) && !window.confirm(t("用拖入的文件替换未保存的编辑？更新失败时仍保留编辑内容。", "Replace unsaved edits with the dropped file? Your edits remain if the update fails."))) return;
     setDroppedFile(selection); uploadInFlight.current = true;
     try {
       await run(async () => {
@@ -120,7 +127,7 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
           const result = await api.updateFiles(id, form);
           cache.setQueryData(["continuation", id, "state"], { generation: result.generation, adopted_revision_id: result.revision_id });
           await discardEditor.current?.().catch(() => { setError(t("文件已更新，但本机草稿未清除。", "File updated, but the local draft was not cleared.")); });
-          setDocumentKey(value => value + 1); setEditorDirty(false);
+          setDocumentKey(value => value + 1); reportEditorDirty(false);
           setNotice(t("文件已更新。", "Files updated."));
           await refresh();
         }
@@ -153,7 +160,7 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
     {surface === "read" && document ? <ContinuationDropTarget member={member} zh={resolvedLocale === "zh-CN"} disabled={busy || editorBusy || taskBusy} onFiles={selected => {
       if (selected.length !== 1) { setError(t("请一次拖入一个文件；同时更新两份文件可拖入 .context.zip。", "Drop one file at a time, or a .context.zip to update both.")); return; }
       void saveDropped({ file: selected[0], member, key: crypto.randomUUID() });
-    }}><ContinuationDocument key={`${member}:${documentKey}`} conversationId={id} member={member} revision={document.revision} generation={document.generation} onDirtyChange={setEditorDirty} onSavingChange={setEditorBusy} onDiscardReady={registerDiscard} locked={busy || taskBusy} onUpload={() => navigate("upload")} onNavigate={onNavigate} viewState={viewState} />
+    }}><ContinuationDocument key={`${member}:${documentKey}`} conversationId={id} member={member} revision={document.revision} generation={document.generation} onDirtyChange={reportEditorDirty} onSavingChange={setEditorBusy} onDiscardReady={registerDiscard} locked={busy || taskBusy} onUpload={() => navigate("upload")} onNavigate={onNavigate} viewState={viewState} />
       <p className="mt-8 pb-3 text-xs text-secondary">{member === "current" ? t("拖入 current.md 或 .context.zip 即可更新", "Drop current.md or .context.zip to update") : t("拖入 index.json 或 .context.zip 即可更新", "Drop index.json or .context.zip to update")}</p>
     </ContinuationDropTarget> : null}
     {surface === "upload" ? <div><h3 className="text-lg font-semibold">{t("更新接续文件", "Update continuation files")}</h3><p className="mt-2 text-sm leading-6 text-secondary">{t("上传 Current、Index 或整包。未替换的文件保持不变。", "Upload Current, Index or a package. Other files stay unchanged.")}</p></div> : null}

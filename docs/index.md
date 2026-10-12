@@ -1,5 +1,12 @@
 # 文档导航
 
+[Context 拖放保护修复](execution/ux-audit-context-drop-2026-10-12.md)接续第十一次 CI：
+API 1,239 通过／3 跳过，设置 439 及独立恢复 1 通过；Web Context 34 通过／1 失败，
+后十个 gate 未执行，镜像任务跳过。草稿状态的异步传递存在保护空窗，窄修后 16 项
+专项、756 项完整 Node、lint／非增量类型／单 worker 构建通过。11 项 Context 浏览器
+测试仅发现、本地执行 0。按用户 2026-10-12 要求，提交下一次完整 CI 后暂停，等用户
+返回结果再继续；未部署，数据库仍为 0050，本轮不迁移。
+
 [后续批注与表格审查](execution/ux-audit-followup-annotations-tables-2026-10-09.md)
 记录当前冻结候选上新复现的读取恢复／乱序、批量选择范围和 CSV 完整性／资源预算问题。
 仅为下一批 pre-edit 证据，不混入当前附件发布候选，也不代表再次授权发布。
@@ -61,6 +68,9 @@ lint／非增量类型检查通过。本地未启动 Web、未运行浏览器，
 checkout 前失败；产品测试未开始、产物为零，两项镜像任务跳过。
 [镜像来源诊断](execution/CI_REGISTRY_SOURCE_2026-10-10.md)已核实 ECR Public 的
 Docker 官方镜像与 Hub 内容摘要一致，接续进行窄范围 CI 配置修复；未部署。
+修复已提交为 5d03744，[第十一次完整 CI](https://github.com/foolkking/chat-reader/actions/runs/37995454022)
+于 2026-10-09 21:46:31 UTC 启动。740 项 Node、lint／非增量类型和工作流语法／
+完整差异核对通过；全部原有 gate、预算与镜像验收保留，仍在同一授权周期。
 
 [项目设置与读取恢复审查](execution/ux-audit-project-recovery-2026-10-09.md)
 是接续的本地批次，记录清空元数据、局部保存和刷新失败的源码证据与验证边界；

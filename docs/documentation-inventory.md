@@ -21,6 +21,14 @@ replace its runtime source identity. Post-deployment audit work is a new phase.
 
 ## Record ownership chronology
 
+`execution/ux-audit-context-drop-2026-10-12.md` owns eleventh-CI failure diagnosis,
+the pre-edit 4/12 callback baseline, synchronous draft protection and 16 passing
+scoped regressions. Adjacent evidence owns final CI facts and the additive source
+checkpoint. It distinguishes the reproduced guard gap from the unknown original
+browser scheduling sequence. No API/schema, rendering budget or deployment
+change is implied. The attachment release record owns the next full CI; per the
+user's 2026-10-12 instruction, pause after dispatch until they return the result.
+
 `execution/CI_REGISTRY_SOURCE_2026-10-10.md` owns the tenth CI's pre-checkout
 Docker Hub rate limit, its original job-log identities and verified official
 ECR/Hub index/platform/config evidence. Adjacent evidence retains metadata and

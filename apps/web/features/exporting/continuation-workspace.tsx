@@ -19,7 +19,8 @@ export function ContinuationWorkspace({ conversationId, onClose, restoreFocus, o
 }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
-  const [dirty, setDirty] = useState(false);
+  const dirty = useRef(false);
+  const setDirty = useCallback((value: boolean) => { dirty.current = value; }, []);
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [closeError, setCloseError] = useState(false);
@@ -29,8 +30,8 @@ export function ContinuationWorkspace({ conversationId, onClose, restoreFocus, o
   const titleRef = useRef<HTMLHeadingElement>(null);
   const close = async () => {
     if (busy) return;
-    if (dirty && !window.confirm(zh ? "放弃未保存的更改？已保存内容会保留。" : "Discard unsaved changes? Saved content will remain.")) return;
-    if (dirty) {
+    if (dirty.current && !window.confirm(zh ? "放弃未保存的更改？已保存内容会保留。" : "Discard unsaved changes? Saved content will remain.")) return;
+    if (dirty.current) {
       setBusy(true);
       try { await discard.current?.(); }
       catch { setCloseError(true); return; }
@@ -41,7 +42,7 @@ export function ContinuationWorkspace({ conversationId, onClose, restoreFocus, o
   };
   useDialogFocus({ open: true, rootRef, initialFocusRef: titleRef, onClose: close, restoreFocus });
   const navigate: ContinuationNavigate | undefined = onNavigate ? async target => {
-    if (busy || dirty) return false;
+    if (busy || dirty.current) return false;
     setBusy(true);
     try { const found = await onNavigate(target); if (found) { releaseExportScope(`maintenance:${conversationId}`); onClose(); } return found; }
     finally { setBusy(false); }
