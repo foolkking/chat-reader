@@ -126,7 +126,9 @@ for (const width of [375, 768, 1440]) {
       await f.devices.getByRole("button", { name: /^(刷新|Refresh)$/ }).click();
       await expect.poll(() => oldReadStarted).toBe(true);
       await f.devices.getByRole("button", { name: /^(退出其他设备|Log out other devices)$/ }).click();
+      const logoutResponse = f.page.waitForResponse((response) => response.url().includes("/api/auth/sessions/logout-others") && response.request().method() === "POST");
       await f.page.getByRole("dialog", { name: /退出其他设备？|Log out other devices\?/ }).getByRole("button", { name: /^(退出其他设备|Log out other devices)$/ }).click();
+      await expect(await logoutResponse).toHaveProperty("status", 204);
       await expect.poll(async () => (await other.get("/api/auth/me")).status()).toBe(401);
       release();
       await expect.poll(() => requests).toBe(2);
