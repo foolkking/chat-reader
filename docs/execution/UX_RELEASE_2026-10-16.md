@@ -357,3 +357,60 @@ own services. Original logs/ZIPs remain in the task TEMP directory, not the
 repository. Existing data, imports and production remain untouched. New
 exact-source full CI is still required; after dispatch, stop for the user
 instead of watching or deploying.
+
+## Negative PWA Viewer locale adapter
+
+After the user reported the specific failed Web job, run **38879420622**,
+attempt 1, was read through the existing local credential provider. It used
+exact source `59ce9d73e0168150c3c7c0e565382a9d18fff3bc` and completed:
+
+- API **1,288 passed / 3 skipped**, with single migration head/current 0051.
+- Settings **463 passed / zero skipped**, plus **one** passing fresh-instance
+  system archive restore. The previously pending settings job in run
+  38874465008 also finished successfully.
+- The first **12 Web gates passed**, including repaired authentication
+  **18/18**, default PWA **139 / 737 conditional skips**, attachment **25**
+  and PDF **13**.
+- Only the final production-build negative PWA gate failed:
+  **17 passed / 1 failed / zero skipped**. Image build and independent
+  inspection were skipped; no release artifact was accepted or deployed.
+
+Original Web quality artifact **12038312446** matched its API ZIP SHA256
+`a096d22cfe7329b1f2a5d8b24640b9b202f96a9fd00a9ad9b4251ffa328bbd76`;
+settings artifact **12038274782** matched
+`3fbd826f46541130ba2987ed71a84d253296f9d0fc1f24d3968b978515fee1a1`.
+Their source/attempt-scoped summaries and the failed browser context were
+checked. The Viewer showed the correct English uncached-attachment message,
+Retry and Close controls; the test still required Chinese-only text and
+button labels. This is a stale locale adapter, not a cache-recovery defect.
+The original actual case reproduced locally as **one failed case**, 21.52 s,
+using a 10-second assertion bound rather than CI's unchanged 60-second bound.
+
+Only `pwa-negative.spec.ts` changes. The original Viewer case now runs once
+per real server locale (`en-US`, `zh-CN`), checking the rendered document locale,
+exact full recovery message and localized controls. It also requires successful
+deletion of the existing cached resource, a visible/enabled Retry button and
+initial modal focus. Escape closure and return focus to the original file
+button remain mandatory. The synthetic server's previous locale is restored
+in `finally`; product code, API, migration, dependencies, workflow, test
+selection and timeouts are unchanged. The complete matrix grows from 18 to
+19 cases; none is removed or skipped.
+
+Local verification used the actual repository test file, fresh task-only
+PostgreSQL 17 databases, isolated API/worker/storage and a newly built
+production negative-test bundle:
+
+| Check | Result |
+| --- | --- |
+| Complete negative PWA matrix, including v1/v2 compatibility, shell/cache faults, transaction rollback, restart and recovery | **19 passed / 0 failed / 0 skipped / 0 flaky**, 60.71 s |
+| Chinese/English Viewer case, five repetitions each, separate fresh fixture | **10 passed / 0 failed / 0 skipped / 0 flaky**, 52.09 s |
+| Attachment reading, inline locale and offline-query Node files | **65/65**, no skips |
+| Full Web lint, targeted test lint, nonincremental Web typecheck, negative-test production build and diff whitespace | Passed |
+
+The build's generated `next-env.d.ts` path change was restored, not committed.
+Each fixture dropped only its uniquely named synthetic database and stopped
+its own services. Original CI ZIPs and local evidence remain in the task TEMP
+directories; no user data, import storage or production configuration changed.
+Local results do not accept the failed CI. The next complete exact-source
+run remains required; dispatch once, then stop and wait for the user's result
+without watching CI or deploying.

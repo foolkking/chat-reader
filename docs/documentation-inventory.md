@@ -49,6 +49,17 @@ The test-only follow-up retains and strengthens capability assertions; local
 auth **18/18**, separate protected-Share **5/5** and Share lifecycle **23/23**
 are not promoted to full exact-source CI or deployment acceptance.
 
+The same record now owns completed run **38879420622**: API/0051, settings
+**463 plus one restore**, and 12 Web gates passed; only the final negative
+PWA gate failed (**17/18**) on a Chinese-only Viewer assertion against the
+correct English recovery copy. Original Web/settings ZIP digests and the
+failure context were verified. Its test-only bilingual follow-up preserves
+and strengthens cache/focus/recovery assertions and restores the synthetic
+locale. Local negative **19/19**, separate repetitions **10/10**, attachment
+Node **65/65**, lint, typecheck and negative-test production build are bounded
+local evidence, not complete CI/deployment acceptance. No current product or
+compatibility contract changed.
+
 ## Service-free UX continuation — 2026-10-16
 
 `execution/ux-audit-service-free-regression-2026-10-16.md` owns the serialized

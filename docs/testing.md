@@ -64,6 +64,24 @@ no owner-session cookie for the guest. The actual full auth files then passed
 Node checks **23/23**, full lint and nonincremental typecheck passed.
 Production code, API/auth behavior, test inclusion and CI bounds are unchanged;
 new-source full CI remains required.
+
+The following run **38879420622** (`59ce9d7`) passed API **1,288 / 3 skipped**,
+head/current 0051, settings **463 plus one fresh-instance restore**, and the
+first 12 Web gates, including all **18** authentication cases. Its last
+negative PWA gate passed 17 and failed a Chinese-only Viewer assertion against
+the correct English uncached-resource message. Both original quality ZIP
+digests and the failed browser context were verified. That original case also
+failed locally before editing. The test-only follow-up runs the Viewer case
+with real `en-US` and `zh-CN` server preferences, restoring the original locale
+in `finally`; it requires actual cache deletion, exact localized text, visible
+and enabled Retry, modal focus, Escape and trigger-focus restoration.
+The complete actual negative file passed **19/19**, with a separate bilingual
+five-repetition run **10/10**, no skips or flaky cases. Attachment Node checks
+passed **65/65**; full lint, nonincremental typecheck and the production
+negative-test build passed. This does not accept the failed CI or replace the
+next exact-source complete run; no product, API, schema, workflow or timeout
+changed.
+
 The staged source/document whitespace check excludes archived `*-evidence/`
 console transcripts: those raw logs intentionally retain emitted whitespace
 and initial-failure output rather than being rewritten as clean test results.
