@@ -50,6 +50,20 @@ response barrier, the actual five associated settings files passed **105/105**
 skips / zero failed**. Earlier intermittent failures and diagnostic-copy
 results are listed separately; these do not assert full CI or deployment
 acceptance.
+Run 38874465008 (`a1322b6`) then passed the full PostgreSQL 16 API suite
+**1,288 / 3 skipped**, head/current 0051, and default PWA **139 / 737 conditional
+skips**, but its authentication gate passed 16, failed one obsolete Share-unlock
+error-copy assertion and did not run the final serial case. The negative PWA
+gate was not reached. Original ZIP digest/trace verification proves the actual
+unlock returned 401 and kept content protected with the current bounded copy.
+The original assertion also reproduced locally (**16 passed / 1 failed /
+1 not run**). Its test-only repair requires that exact current copy plus
+rejected/accepted statuses, retained input, one POST per explicit attempt and
+no owner-session cookie for the guest. The actual full auth files then passed
+**18/18**; a separate protected-Share repetition passed **5/5**, Share lifecycle
+Node checks **23/23**, full lint and nonincremental typecheck passed.
+Production code, API/auth behavior, test inclusion and CI bounds are unchanged;
+new-source full CI remains required.
 The staged source/document whitespace check excludes archived `*-evidence/`
 console transcripts: those raw logs intentionally retain emitted whitespace
 and initial-failure output rather than being rewritten as clean test results.

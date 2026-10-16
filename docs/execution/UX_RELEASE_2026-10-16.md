@@ -309,3 +309,51 @@ These remain local bounded results, not full settings/PostgreSQL 16/CI
 acceptance. No API, migration, dependency or workflow gate changed; no
 existing test was omitted or timeout extended. After the next dispatch, do
 not watch CI or deploy until the user supplies its result.
+
+## Authentication copy adapter after registry recovery
+
+Run **38874465008**, attempt 1, uses exact pushed source
+`a1322b6642e0676dc027f204e618d06034fbb605`. Container initialization succeeded
+in all three quality jobs, so the earlier registry failure did not recur.
+The PostgreSQL 16 API suite passed **1,288 / 3 skipped**, and migration
+validation reported single head/current `20261015_0051`.
+
+Web passed the preceding browser gates, including Context **35**, mutation
+**100**, cleanup **3**, attachment **25**, PDF **13**, and default PWA
+**139 / 737 conditional skips**. Authentication finished **16 passed /
+1 failed / 1 not run**. The obsolete assertion expected “Incorrect share
+password.”; the current bounded recovery message deliberately states that
+the password was incorrect or the share could not be unlocked right now.
+The later negative PWA gate was not reached. The settings job is still
+running at this checkpoint; this is not complete CI acceptance.
+
+Original quality artifact **12035294907** was downloaded through the local
+credential provider, its ZIP SHA256 matched the API digest
+`5755d476554a2493e91d2f6e16e93f53c93df000ffa741a318fd869005126fef`, and its
+gate summary matches this source. The trace confirms the attempted unlock
+actually returned **401**, with the password gate still present and current
+recovery text visible. The failure is a stale browser adapter, not a failed
+Share protection check.
+
+Only `auth-gate.spec.ts` changes. It requires the exact current error text
+and additionally checks the rejected **401**, retained input, no protected
+heading, one POST per explicit attempt, accepted **200**, and a guest with
+no owner-session cookie. Correct password, `/library` rejection, public Share,
+session-revoking password change and all recovery cases remain included.
+No product/auth/API, dependency, migration, workflow, test selection or timeout
+is changed.
+
+The original actual files reproduced the failure locally (**16 passed /
+1 failed / 1 not run**, 91.92 s). After the test repair, both actual auth
+files passed **18/18 / zero skipped / zero flaky**, 85.48 s. A separate
+five-repetition protected-Share run passed **5/5**, 70.85 s. The existing
+Share-unlock lifecycle Node file passed **23/23**; full Web lint, targeted
+test lint, nonincremental typecheck and diff whitespace passed.
+
+These used the task-only PostgreSQL 17/API/worker fixture and an existing
+production Web build; no new Web build is claimed for this test-only repair.
+Each run dropped only its uniquely named synthetic database and stopped its
+own services. Original logs/ZIPs remain in the task TEMP directory, not the
+repository. Existing data, imports and production remain untouched. New
+exact-source full CI is still required; after dispatch, stop for the user
+instead of watching or deploying.

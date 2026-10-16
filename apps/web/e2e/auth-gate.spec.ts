@@ -111,12 +111,28 @@ test.describe("multi-account authentication boundary", () => {
     const protectedPage = await guest.newPage();
     await protectedPage.goto(`${baseURL}/share/${protectedShare.token}`);
     await expect(protectedPage.getByRole("heading", { name: "This share is password protected" })).toBeVisible();
+    const unlockPath = `/api/shared/${protectedShare.token}/unlock`;
+    let unlockRequests = 0;
+    protectedPage.on("request", (request) => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === unlockPath) unlockRequests += 1;
+    });
     await protectedPage.locator("#share-password").fill(password!);
+    const rejectedUnlock = protectedPage.waitForResponse((response) =>
+      response.request().method() === "POST" && new URL(response.url()).pathname === unlockPath);
     await protectedPage.getByRole("button", { name: "View shared content" }).click();
-    await expect(protectedPage.getByText("Incorrect share password.")).toBeVisible();
+    expect((await rejectedUnlock).status()).toBe(401);
+    await expect(protectedPage.locator("p[role='alert']")).toHaveText("The password was incorrect, or the share could not be unlocked right now.");
+    await expect(protectedPage.locator("#share-password")).toHaveValue(password!);
+    await expect(protectedPage.getByRole("heading", { name: "Public Share QA fixture" })).toHaveCount(0);
+    expect(unlockRequests).toBe(1);
     await protectedPage.locator("#share-password").fill(sharePassword);
+    const acceptedUnlock = protectedPage.waitForResponse((response) =>
+      response.request().method() === "POST" && new URL(response.url()).pathname === unlockPath);
     await protectedPage.getByRole("button", { name: "View shared content" }).click();
+    expect((await acceptedUnlock).status()).toBe(200);
     await expect(protectedPage.getByRole("heading", { name: "Public Share QA fixture" })).toBeVisible();
+    expect(unlockRequests).toBe(2);
+    expect((await guest.cookies()).find((item) => item.name === "chat_reader_session")).toBeUndefined();
     await protectedPage.goto(`${baseURL}/library`);
     await expect(protectedPage).toHaveURL(/\/login(?:\?|$)/);
 

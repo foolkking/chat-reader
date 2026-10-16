@@ -41,6 +41,14 @@ and the secondary missing-summary-module message is explicitly classified as
 a checkout cascade. The run is not release acceptance; a new exact-source
 retry remains required.
 
+The same release record and current state/testing/index summaries now own
+run **38874465008**: passing API/0051 and default PWA, failed auth copy
+adapter, and a not-reached negative PWA gate. The original quality ZIP digest
+and trace distinguish a real 401/current recovery copy from an access failure.
+The test-only follow-up retains and strengthens capability assertions; local
+auth **18/18**, separate protected-Share **5/5** and Share lifecycle **23/23**
+are not promoted to full exact-source CI or deployment acceptance.
+
 ## Service-free UX continuation — 2026-10-16
 
 `execution/ux-audit-service-free-regression-2026-10-16.md` owns the serialized
