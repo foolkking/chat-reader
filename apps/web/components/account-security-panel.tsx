@@ -8,7 +8,7 @@ import { AuthRequestError, changeOwnerPassword, logoutCurrentDevice, type AuthSe
 import { authenticationGeneration } from "../lib/offline-access";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { usePreferences } from "./preferences-provider";
-import { readOfflinePending, type OfflinePendingSnapshot } from "../lib/offline-pending";
+import { OfflinePendingChangedError, readOfflinePending, type OfflinePendingSnapshot } from "../lib/offline-pending";
 import { PendingChangesPanel } from "./pending-changes-panel";
 import { EmailChangePanel } from "./email-change-panel";
 import { pendingSignoutCleanups, SIGNOUT_CLEANUP_EVENT } from "../lib/signout-cleanup";
@@ -130,15 +130,28 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     setSessionBusy(true);
     setError("");
     try {
-      const snapshot = await (async () => {
-        try { await persistPreferenceDraft(); const value = await readOfflinePending(); setStorageUnavailable(false); return value; }
-        catch (cause) { setStorageUnavailable(true); throw cause; }
-      })();
-      if (snapshot.count) { setPendingSignout({ snapshot, intent: "logout" }); setSessionBusy(false); return; }
+      await persistPreferenceDraft();
+    } catch {
+      setError(copy.preferenceSaveFailed);
+      setSessionBusy(false);
+      return;
+    }
+    let snapshot: OfflinePendingSnapshot;
+    try {
+      snapshot = await readOfflinePending();
+      setStorageUnavailable(false);
+    } catch {
+      setStorageUnavailable(true);
+      setError(copy.localStateUnreadable);
+      setSessionBusy(false);
+      return;
+    }
+    if (snapshot.count) { setPendingSignout({ snapshot, intent: "logout" }); setSessionBusy(false); return; }
+    try {
       await logoutCurrentDevice(snapshot.fingerprint);
       finishSignout();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.logoutFailed);
+      setError(logoutErrorMessage(cause, copy));
       setSessionBusy(false);
     }
   };
@@ -148,7 +161,7 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     if (!await confirm({ title: zh ? "无法检查本机修改，仍然退出？" : "Sign out without checking local changes?", description: zh ? "浏览器存储不可用，无法检查或导出未同步修改、偏好与草稿。继续将放弃这些本机修改，并尝试清除本账户的本机资料；服务器资料保留。" : "Browser storage is unavailable, so unsynced changes, preferences and drafts cannot be checked or exported. Continuing discards those local changes and attempts to clear this account's local data. Server data remains.", confirmLabel: zh ? "放弃本机修改并退出" : "Discard local changes and sign out", danger: true })) return;
     setSessionBusy(true); setError("");
     try { await logoutCurrentDevice(undefined, true); finishSignout(); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : copy.logoutFailed); setSessionBusy(false); }
+    catch (cause) { setError(logoutErrorMessage(cause, copy)); setSessionBusy(false); }
   };
 
   const logoutOthers = async () => {
@@ -181,12 +194,25 @@ export function AccountSecurityPanel({ focused = false, onDirtyChange }: { focus
     setError("");
     try {
       await persistPreferenceDraft();
-      const snapshot = await readOfflinePending();
-      if (snapshot.count) { setPendingSignout({ snapshot, intent: "password" }); setPasswordBusy(false); return; }
+    } catch {
+      setError(copy.preferenceSaveFailed);
+      setPasswordBusy(false);
+      return;
+    }
+    let snapshot: OfflinePendingSnapshot;
+    try {
+      snapshot = await readOfflinePending();
+    } catch {
+      setError(copy.passwordPreflightFailed);
+      setPasswordBusy(false);
+      return;
+    }
+    if (snapshot.count) { setPendingSignout({ snapshot, intent: "password" }); setPasswordBusy(false); return; }
+    try {
       await changeOwnerPassword({ currentPassword: passwords.current, newPassword: passwords.next, confirmPassword: passwords.confirm }, snapshot.fingerprint);
       finishSignout();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.passwordFailed);
+      setError(passwordErrorMessage(cause, copy));
       setPasswordBusy(false);
     }
   };
@@ -261,12 +287,51 @@ function formatDate(value: string, locale: "zh-CN" | "en-US"): string {
 
 function accountCopy(zh: boolean) {
   return zh ? {
+    preferenceSaveFailed: "\u504f\u597d\u5c1a\u672a\u4fdd\u5b58\uff0c\u5bc6\u7801\u6216\u9000\u51fa\u64cd\u4f5c\u5c1a\u672a\u63d0\u4ea4\u3002\u8bf7\u5148\u91cd\u8bd5\u4fdd\u5b58\u504f\u597d\u3002",
+    localStateUnreadable: "\u65e0\u6cd5\u68c0\u67e5\u672c\u673a\u4fee\u6539\uff0c\u9000\u51fa\u64cd\u4f5c\u5c1a\u672a\u63d0\u4ea4\u3002\u53ef\u5148\u68c0\u67e5\u672c\u673a\u5b58\u50a8\uff0c\u6216\u660e\u786e\u786e\u8ba4\u653e\u5f03\u672c\u673a\u4fee\u6539\u540e\u9000\u51fa\u3002",
+    passwordPreflightFailed: "\u65e0\u6cd5\u68c0\u67e5\u672c\u673a\u4fee\u6539\uff0c\u5bc6\u7801\u5c1a\u672a\u63d0\u4ea4\u3002\u8bf7\u5148\u68c0\u67e5\u672c\u673a\u5b58\u50a8\u540e\u91cd\u8bd5\u3002",
+    pendingChanged: "\u672c\u673a\u4fee\u6539\u5df2\u53d8\u5316\uff0c\u8bf7\u91cd\u65b0\u68c0\u67e5\u540e\u518d\u64cd\u4f5c\u3002",
+    sessionExpired: "\u4f1a\u8bdd\u5df2\u5931\u6548\u6216\u65e0\u6cd5\u786e\u8ba4\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u540e\u518d\u8bd5\u3002",
+    logoutUnconfirmed: "\u9000\u51fa\u7ed3\u679c\u5c1a\u672a\u786e\u8ba4\u3002\u8bf7\u91cd\u8bd5\uff1b\u5982\u4ecd\u5931\u8d25\uff0c\u8bf7\u5237\u65b0\u540e\u786e\u8ba4\u767b\u5f55\u72b6\u6001\u3002",
+    passwordCurrentInvalid: "\u5f53\u524d\u5bc6\u7801\u4e0d\u6b63\u786e\uff0c\u6216\u767b\u5f55\u4f1a\u8bdd\u5df2\u5931\u6548\u3002\u8bf7\u91cd\u65b0\u767b\u5f55\u540e\u91cd\u8bd5\u3002",
+    passwordRejected: "\u65b0\u5bc6\u7801\u672a\u901a\u8fc7\u6821\u9a8c\u3002\u8bf7\u786e\u8ba4\u4e24\u6b21\u8f93\u5165\u4e00\u81f4\uff0c\u4e14\u65b0\u5bc6\u7801\u957f\u5ea6\u7b26\u5408\u8981\u6c42\u3002",
+    tooManyRequests: "\u64cd\u4f5c\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002",
+    passwordOutcomeUnconfirmed: "\u65e0\u6cd5\u786e\u8ba4\u5bc6\u7801\u662f\u5426\u5df2\u66f4\u6539\u3002\u8bf7\u5148\u5728\u65b0\u6807\u7b7e\u9875\u5c1d\u8bd5\u4f7f\u7528\u65b0\u5bc6\u7801\u767b\u5f55\uff1b\u786e\u8ba4\u524d\u8bf7\u52ff\u91cd\u590d\u63d0\u4ea4\u3002",
     retryProfile: "重新读取账户信息", profileRetry: "账户信息未获保存确认，输入已保留，请重试。", newerDraft: "当前输入还有未保存的新修改。",
     loadingDevices: "正在读取设备…", refreshingDevices: "正在更新设备列表…", devicesFailed: "暂时无法读取设备列表，请点击刷新重试。", staleDevices: "设备列表刷新失败，当前显示上次读取的结果，请点击刷新重试。", revokeUnconfirmed: "退出请求未获确认，请刷新设备列表核对结果。",
     title: "\u8d26\u6237\u4e0e\u5b89\u5168", identity: "\u8d26\u6237\u8eab\u4efd", identityDescription: "\u90ae\u7bb1\u7528\u4e8e\u767b\u5f55\uff1b\u663e\u793a\u540d\u79f0\u7528\u4e8e\u8bc6\u522b\u5f53\u524d\u8d26\u6237\u3002", email: "\u90ae\u7bb1", displayName: "\u663e\u793a\u540d\u79f0", displayNamePlaceholder: "\u53ef\u9009", saveProfile: "\u4fdd\u5b58\u8d26\u6237\u4fe1\u606f", profileSaved: "\u8d26\u6237\u4fe1\u606f\u5df2\u4fdd\u5b58\u3002", profileFailed: "\u65e0\u6cd5\u4fdd\u5b58\u8d26\u6237\u4fe1\u606f\u3002", devices: "\u5df2\u767b\u5f55\u8bbe\u5907", devicesDescription: "\u6bcf\u53f0\u8bbe\u5907\u4f7f\u7528\u72ec\u7acb\u4f1a\u8bdd\uff1b\u9000\u51fa\u5176\u4ed6\u8bbe\u5907\u4e0d\u4f1a\u4e2d\u65ad\u5f53\u524d\u8bbe\u5907\u3002", currentDevice: "\u5f53\u524d\u8bbe\u5907", lastActive: "\u6700\u8fd1\u6d3b\u52a8", noSessions: "\u6682\u65e0\u53ef\u663e\u793a\u7684\u8bbe\u5907\u4f1a\u8bdd\u3002", refresh: "\u5237\u65b0", logoutOthers: "\u9000\u51fa\u5176\u4ed6\u8bbe\u5907", logoutOthersTitle: "\u9000\u51fa\u5176\u4ed6\u8bbe\u5907\uff1f", logoutOthersDescription: (count: number) => "\u5c06\u7acb\u5373\u64a4\u9500 " + count + " \u4e2a\u5176\u4ed6\u8bbe\u5907\u4f1a\u8bdd\uff0c\u5f53\u524d\u8bbe\u5907\u4fdd\u6301\u767b\u5f55\u3002", otherSessionsClosed: "\u5176\u4ed6\u8bbe\u5907\u5df2\u9000\u51fa\u3002", sessionsFailed: "\u65e0\u6cd5\u66f4\u65b0\u8bbe\u5907\u4f1a\u8bdd\u3002", password: "\u5bc6\u7801", passwordDescription: "\u4fee\u6539\u5bc6\u7801\u4f1a\u64a4\u9500\u6240\u6709\u8bbe\u5907\u4f1a\u8bdd\uff0c\u5e76\u8981\u6c42\u91cd\u65b0\u767b\u5f55\u3002", changePassword: "\u4fee\u6539\u5bc6\u7801", cancelPassword: "\u6536\u8d77\u5bc6\u7801\u8868\u5355", currentPassword: "\u5f53\u524d\u5bc6\u7801", newPassword: "\u65b0\u5bc6\u7801", confirmPassword: "\u786e\u8ba4\u65b0\u5bc6\u7801", changePasswordAndLogout: "\u4fee\u6539\u5bc6\u7801\u5e76\u9000\u51fa\u6240\u6709\u8bbe\u5907", passwordFailed: "\u65e0\u6cd5\u4fee\u6539\u5bc6\u7801\u3002", logoutCurrent: "\u9000\u51fa\u5f53\u524d\u8d26\u6237", logoutFailed: "\u9000\u51fa\u5931\u8d25\u3002", loadFailed: "\u65e0\u6cd5\u52a0\u8f7d\u8d26\u6237\u4fe1\u606f\u3002", loading: "\u6b63\u5728\u52a0\u8f7d\u8d26\u6237\u4fe1\u606f\u2026", saving: "\u6b63\u5728\u4fdd\u5b58\u2026",
   } : {
+    preferenceSaveFailed: "Your preferences are not saved. The password or sign-out action was not submitted. Retry saving preferences first.",
+    localStateUnreadable: "Local changes could not be checked, so sign-out was not submitted. Check local storage, or explicitly confirm discarding local changes before signing out.",
+    passwordPreflightFailed: "Local changes could not be checked, so the password was not submitted. Check local storage and retry.",
+    pendingChanged: "Local changes changed during review. Check them again before continuing.",
+    sessionExpired: "The session expired or could not be confirmed. Sign in again, then retry.",
+    logoutUnconfirmed: "Sign-out was not confirmed. Retry; if it still fails, refresh to check your sign-in status.",
+    passwordCurrentInvalid: "The current password is incorrect or the session expired. Sign in again, then retry.",
+    passwordRejected: "The new password did not pass validation. Check that both entries match and meet the password requirements.",
+    tooManyRequests: "There have been too many attempts. Wait a little, then retry.",
+    passwordOutcomeUnconfirmed: "The password change could not be confirmed. First try signing in with the new password in a new tab; do not submit again until you check.",
     retryProfile: "Reload account details", profileRetry: "Account save was not confirmed. Your input is kept; retry.", newerDraft: "Your newer input is still unsaved.",
     loadingDevices: "Loading devices…", refreshingDevices: "Updating device list…", devicesFailed: "The device list could not load. Use Refresh to retry.", staleDevices: "The device list could not refresh. The previous list is shown; use Refresh to retry.", revokeUnconfirmed: "Sign-out was not confirmed. Refresh the device list to check the result.",
     title: "Account & security", identity: "Account identity", identityDescription: "Your email signs you in; the display name identifies this account.", email: "Email", displayName: "Display name", displayNamePlaceholder: "Optional", saveProfile: "Save account details", profileSaved: "Account details saved.", profileFailed: "Unable to save account details.", devices: "Signed-in devices", devicesDescription: "Each device has its own session. Signing out other devices keeps this device active.", currentDevice: "Current device", lastActive: "Last active", noSessions: "No device sessions are available.", refresh: "Refresh", logoutOthers: "Log out other devices", logoutOthersTitle: "Log out other devices?", logoutOthersDescription: (count: number) => "This immediately revokes " + count + " other device " + (count === 1 ? "session" : "sessions") + ". This device stays signed in.", otherSessionsClosed: "Other devices have been logged out.", sessionsFailed: "Unable to update device sessions.", password: "Password", passwordDescription: "Changing your password revokes every device session and requires a fresh sign-in.", changePassword: "Change password", cancelPassword: "Collapse password form", currentPassword: "Current password", newPassword: "New password", confirmPassword: "Confirm new password", changePasswordAndLogout: "Change password and log out all devices", passwordFailed: "Unable to change password.", logoutCurrent: "Log out current account", logoutFailed: "Logout failed.", loadFailed: "Unable to load account details.", loading: "Loading account details...", saving: "Saving...",
   };
+}
+
+type AccountSecurityCopy = ReturnType<typeof accountCopy>;
+
+function logoutErrorMessage(cause: unknown, copy: AccountSecurityCopy): string {
+  if (cause instanceof OfflinePendingChangedError) return copy.pendingChanged;
+  if (cause instanceof AuthRequestError && cause.status === 401) return copy.sessionExpired;
+  if (cause instanceof AuthRequestError && cause.status === 429) return copy.tooManyRequests;
+  return copy.logoutUnconfirmed;
+}
+
+function passwordErrorMessage(cause: unknown, copy: AccountSecurityCopy): string {
+  if (cause instanceof OfflinePendingChangedError) return copy.pendingChanged;
+  if (cause instanceof AuthRequestError) {
+    if (cause.status === 401) return copy.passwordCurrentInvalid;
+    if (cause.status === 422) return copy.passwordRejected;
+    if (cause.status === 429) return copy.tooManyRequests;
+  }
+  return copy.passwordOutcomeUnconfirmed;
 }

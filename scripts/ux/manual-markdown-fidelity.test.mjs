@@ -23,6 +23,12 @@ const unchangedExpression = find(editSource, node => ts.isVariableDeclaration(no
 const unchanged = (text, baselineText) => new Function("text", "baselineText", "trimmedText", "return " + unchangedExpression)(text, baselineText, text.trim());
 const noop = () => {};
 const event = { preventDefault: noop };
+// Use the production bounded-feedback chain introduced after the original
+// exact-source tests; do not replace it with a permissive error stub.
+const isRevisionConflictMessage = compile(editSource, "isRevisionConflictMessage", {});
+const editorErrorKind = compile(editSource, "editorErrorKind", { isRevisionConflictMessage });
+const editorErrorMessage = compile(editSource, "editorErrorMessage", {});
+const editorErrorFeedback = compile(editSource, "editorErrorFeedback", { editorErrorKind, editorErrorMessage });
 
 // Execute actual production submit/dirty/close AST fragments, not a duplicate
 // implementation. Hooks, network, CodeMirror and attachment parsing are doubles.
@@ -36,7 +42,7 @@ function editFixture(text, baselineText = "Synthetic original", { authoritative 
   const saved = [], updates = {}, scope = { text, baselineText, reason: "  Synthetic reason  ", attachmentDrafts: drafts,
     editorViewRef: { current: { state: { doc: { toString: () => authoritative } } } }, saveRequestRef: { current: 0 },
     editorRevisionRef: { current: 9 }, zh: false, removedActions: {},
-    findTransientUploadReferences: () => [], removedAttachmentIds: () => [], isRevisionConflictMessage: () => false,
+    findTransientUploadReferences: () => [], removedAttachmentIds: () => [], isRevisionConflictMessage, editorErrorFeedback,
     t: key => key, onDirtyChange: value => { updates.dirty = value; },
     onSave: async (...args) => { saved.push(args); if (fail) throw new Error("Synthetic offline"); return canonical === undefined ? undefined : { canonicalText: canonical }; },
   };
@@ -86,7 +92,10 @@ test("submission takes exact current CodeMirror source, not a lagging state valu
 });
 test("failed edit does not reset its draft or baseline", async () => {
   const f = editFixture("    Synthetic draft\n", "Synthetic original", { fail: true });
-  await f.submit("create_version"); assert.equal(f.updates.Error, "Synthetic offline");
+  await f.submit("create_version");
+  assert.equal(f.updates.Error, "Unable to save this change. Your draft is preserved; retry or load the latest state before saving again.");
+  assert.equal(f.updates.RevisionConflict, false);
+  assert.doesNotMatch(f.updates.Error, /Synthetic offline/);
   assert.equal("BaselineText" in f.updates, false); assert.equal("Text" in f.updates, false);
 });
 test("explicit canonical reply, including whitespace, is the new baseline", async () => {

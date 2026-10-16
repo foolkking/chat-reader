@@ -6,7 +6,7 @@ import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud } from "lucide-react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent } from "react";
-import { ApiRequestError, cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, previewImport } from "../../lib/api";
+import { ApiRequestError, cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, previewImport, retryTask } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
 import { readAccountCapabilities } from "../../lib/auth-client";
 import { SupportLimitAction } from "../../components/support-limit-action";
@@ -16,6 +16,10 @@ import { FormatConversionGuide } from "./format-conversion-guide";
 import { ImportNoiseReview } from "./import-noise-review";
 
 type ImportMode = "adaptive" | "archive";
+type ImportSessionRestoreState = {
+  phase: "idle" | "loading" | "error";
+  error: unknown | null;
+};
 const ACTIVE_SESSION_KEY = "chat-reader:adaptive-import-session";
 
 function sessionStorageKey(repairProfileId?: string | null): string {
@@ -43,8 +47,12 @@ export function ImportPanel({
   const [files, setFiles] = useState<File[]>([]);
   const [archivePreview, setArchivePreview] = useState<ImportPreviewResponse | null>(null);
   const [session, setSession] = useState<AdaptiveImportSession | null>(null);
+  const [sessionRestore, setSessionRestore] = useState<ImportSessionRestoreState>({ phase: "idle", error: null });
+  const [sessionRestoreRetry, setSessionRestoreRetry] = useState(0);
   const [pendingImportId, setPendingImportId] = useState<string | null>(null);
   const [commitResult, setCommitResult] = useState<CommitImportResponse | null>(null);
+  const [terminalImportError, setTerminalImportError] = useState<string | null>(null);
+  const [terminalImportId, setTerminalImportId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [conversionOpen, setConversionOpen] = useState(false);
   const conversionId = useId();
@@ -58,22 +66,35 @@ export function ImportPanel({
 
   useEffect(() => onWorkspaceChange?.(Boolean(session)), [onWorkspaceChange, session]);
   useEffect(() => {
+    let active = true;
     const importId = window.sessionStorage.getItem(activeSessionKey);
     if (!importId || session) return;
+    setSessionRestore({ phase: "loading", error: null });
     void getAdaptiveImportSession(importId)
       .then((restored) => {
+        if (!active) return;
         if (["COMPLETED", "CANCELED", "FAILED"].includes(restored.state)) {
           window.sessionStorage.removeItem(activeSessionKey);
+          setSessionRestore({ phase: "idle", error: null });
           return;
         }
         setSession(restored);
+        setSessionRestore({ phase: "idle", error: null });
       })
-      .catch(() => window.sessionStorage.removeItem(activeSessionKey));
-  }, [activeSessionKey, session]);
+      .catch((error: unknown) => {
+        if (!active) return;
+        setSessionRestore({ phase: "error", error });
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeSessionKey, session, sessionRestoreRetry]);
 
   const finishCommittedImport = useCallback((result: CommitImportResponse) => {
     if (completedImportRef.current === result.import_id) return;
     completedImportRef.current = result.import_id;
+    setTerminalImportError(null);
+    setTerminalImportId(null);
     window.sessionStorage.removeItem(activeSessionKey);
     // The adaptive workspace owns the pre-commit session. Once the server has
     // committed it, release that surface so the terminal result summary can be
@@ -85,6 +106,12 @@ export function ImportPanel({
     void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
   }, [activeSessionKey, queryClient]);
+  const finishTerminalImport = useCallback((result: CommitImportResponse) => {
+    setPendingImportId(null);
+    setCommitResult(null);
+    setTerminalImportId(result.import_id);
+    setTerminalImportError(result.status === "cancelled" ? "IMPORT_COMMIT_CANCELLED" : "IMPORT_COMMIT_FAILED");
+  }, []);
 
   const importStatusQuery = useQuery({
     queryKey: ["import-status", pendingImportId],
@@ -93,8 +120,11 @@ export function ImportPanel({
     refetchInterval: (query) => ["queued", "processing"].includes(query.state.data?.status ?? "") ? 1200 : false,
   });
   useEffect(() => {
-    if (importStatusQuery.data?.status === "committed") finishCommittedImport(importStatusQuery.data);
-  }, [finishCommittedImport, importStatusQuery.data]);
+    const result = importStatusQuery.data;
+    if (!result) return;
+    if (result.status === "committed") finishCommittedImport(result);
+    else if (result.status === "failed" || result.status === "cancelled") finishTerminalImport(result);
+  }, [finishCommittedImport, finishTerminalImport, importStatusQuery.data]);
 
   const adaptiveMutation = useMutation({
     mutationFn: (selectedFiles: File[]) => createAdaptiveImportSession(selectedFiles, repairProfileId),
@@ -118,12 +148,26 @@ export function ImportPanel({
   const commitMutation = useMutation({
     mutationFn: ({ importId, policy }: { importId: string; policy: ImportDuplicatePolicy }) => commitImport(importId, { duplicatePolicy: policy }),
     onSuccess: (result) => {
+      setTerminalImportError(null);
       setCommitResult(result);
       if (result.status === "committed") finishCommittedImport(result);
+      else if (result.status === "failed" || result.status === "cancelled") finishTerminalImport(result);
       else setPendingImportId(result.import_id);
     },
   });
-  const busy = adaptiveMutation.isPending || archiveMutation.isPending || commitMutation.isPending || Boolean(pendingImportId);
+  const retryImportMutation = useMutation({
+    mutationFn: (importId: string) => retryTask(importId),
+    onSuccess: (task) => {
+      setTerminalImportError(null);
+      setTerminalImportId(null);
+      setCommitResult(null);
+      setPendingImportId(task.job_id);
+      if (session) {
+        void getAdaptiveImportSession(task.job_id).then(setSession).catch(() => undefined);
+      }
+    },
+  });
+  const busy = sessionRestore.phase === "loading" || adaptiveMutation.isPending || archiveMutation.isPending || commitMutation.isPending || retryImportMutation.isPending || Boolean(pendingImportId);
 
   const validationError = useMemo(() => {
     if (capabilities.data && !capabilities.data.allow_user_import) return tr("管理员已关闭导入功能。");
@@ -138,18 +182,23 @@ export function ImportPanel({
     setFiles([]);
     setArchivePreview(null);
     setSession(null);
+    setSessionRestore({ phase: "idle", error: null });
     setPendingImportId(null);
     setCommitResult(null);
+    setTerminalImportError(null);
+    setTerminalImportId(null);
     setConversionOpen(false);
     setDuplicatePolicy("clone");
     completedImportRef.current = null;
     adaptiveMutation.reset();
     archiveMutation.reset();
     commitMutation.reset();
+    retryImportMutation.reset();
   }
 
   function chooseFiles(nextFiles: File[], nextMode = mode) {
     if (busy) return;
+    window.sessionStorage.removeItem(activeSessionKey);
     reset(nextMode);
     setFiles(nextFiles);
   }
@@ -171,7 +220,12 @@ export function ImportPanel({
         onBack={() => cancelMutation.mutate(session.import_id)}
         onImport={() => commitMutation.mutate({ importId: session.import_id, policy: duplicatePolicy })}
         importing={commitMutation.isPending || Boolean(pendingImportId)}
-        error={cancelMutation.error?.message ?? commitMutation.error?.message ?? importStatusQuery.data?.error_message ?? null}
+        error={retryImportMutation.error ?? cancelMutation.error ?? commitMutation.error ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
+        onRetryImport={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined}
+        retryingImport={retryImportMutation.isPending}
+        statusError={importStatusQuery.error}
+        onRetryStatus={() => { void importStatusQuery.refetch(); }}
+        statusRetrying={importStatusQuery.isFetching}
       />
     );
   }
@@ -187,6 +241,8 @@ export function ImportPanel({
 
   return (
     <section className="space-y-5">
+      {sessionRestore.phase === "loading" ? <p role="status" className="text-sm text-secondary">{tr("正在恢复已保存的导入会话…")}</p> : null}
+      {sessionRestore.phase === "error" ? <ErrorLine message={sessionRestore.error} onRetry={() => { setSessionRestore({ phase: "loading", error: null }); setSessionRestoreRetry((attempt) => attempt + 1); }} /> : null}
       {repairProfileId ? <p className="text-sm leading-6 text-secondary">{tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。")}</p> : null}
       <div
         onDragEnter={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
@@ -207,9 +263,11 @@ export function ImportPanel({
       {validationError ? <ErrorLine message={validationError} /> : null}
       {capabilities.data ? <SupportLimitAction capabilities={capabilities.data} limit="import_size_mb" active={Boolean(fileOverLimit || !capabilities.data.allow_user_import)} requestedValue={largestFileMiB} returnFocus={() => previewButtonRef.current} onReturn={() => { void capabilities.refetch(); }} /> : null}
       {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
-      {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error.message} /> : null}
-      {archiveMutation.isError ? <ErrorLine message={archiveMutation.error.message} /> : null}
-      {commitMutation.isError ? <ErrorLine message={commitMutation.error.message} /> : null}
+      {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error} action="mutation" /> : null}
+      {archiveMutation.isError ? <ErrorLine message={archiveMutation.error} action="mutation" /> : null}
+      {commitMutation.isError ? <ErrorLine message={commitMutation.error} action="commit" /> : null}
+      {(retryImportMutation.error || terminalImportError) ? <ErrorLine message={retryImportMutation.error ?? terminalImportError} action="commit" onRetry={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined} retrying={retryImportMutation.isPending} /> : null}
+      {importStatusQuery.error ? <ErrorLine message={importStatusQuery.error} onRetry={() => { void importStatusQuery.refetch(); }} retrying={importStatusQuery.isFetching} /> : null}
       {showConversion ? <div className="border-y border-ui">
         <button type="button" disabled={busy} aria-expanded={conversionOpen} aria-controls={conversionId} onClick={() => setConversionOpen(open => !open)} className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left text-sm text-secondary hover:text-primary disabled:opacity-50">{tr("格式不支持？")}<ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${conversionOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button>
         {conversionOpen ? <div id={conversionId} className="pb-4 pt-2"><FormatConversionGuide resultAction={<button type="button" disabled={busy} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => fileInputRef.current?.click()}>{files.length > 1 ? tr("重新选择本批文件") : tr("选择转换后的文件")}</button>} /></div> : null}
@@ -222,7 +280,7 @@ export function ImportPanel({
       </div>
       {archivePreview ? <ImportPreviewCard preview={archivePreview} /> : null}
       {archivePreview?.duplicate_conversation_id ? <div className="border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary"><p>{tr("系统中已有相同归档。默认会创建副本，不覆盖原记录。")}</p><Link href={`/conversations/${archivePreview.duplicate_conversation_id}`} className="mt-2 inline-block font-medium text-accent underline">{tr("打开已有对话")}</Link></div> : null}
-      {commitResult && !pendingImportId ? <ImportCompletionSummary result={commitResult} onClose={() => onImportCommitted?.()} onOpenFirst={(conversationId) => { onImportCommitted?.(); router.push(`/conversations/${conversationId}`); }} /> : null}
+      {commitResult?.status === "committed" && !pendingImportId ? <ImportCompletionSummary result={commitResult} onClose={() => onImportCommitted?.()} onOpenFirst={(conversationId) => { onImportCommitted?.(); router.push(`/conversations/${conversationId}`); }} /> : null}
     </section>
   );
 }
@@ -278,4 +336,19 @@ function fileExtension(filename: string): string {
   return dot >= 0 ? lower.slice(dot) : "";
 }
 
-function ErrorLine({ message }: { message: string }) { const tr = useImportCopy(); return <div role="alert" className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{importErrorMessage(message, tr)}</div>; }
+function ErrorLine({ message, action = "read", onRetry, retrying = false }: {
+  message: unknown;
+  action?: "read" | "mutation" | "commit";
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
+  const tr = useImportCopy();
+  return (
+    <div role="alert" className={`border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)] ${onRetry ? "flex flex-wrap items-center justify-between gap-3" : ""}`}>
+      <span>{importErrorMessage(message, tr, action)}</span>
+      {onRetry ? <button type="button" disabled={retrying} onClick={onRetry} className="btn-secondary inline-flex min-h-9 shrink-0 items-center gap-2 px-3 text-xs font-medium">
+        {retrying ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : null}{tr("重试")}
+      </button> : null}
+    </div>
+  );
+}

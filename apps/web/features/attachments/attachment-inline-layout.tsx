@@ -11,6 +11,7 @@ import { AttachmentBlock, toViewerItem, type AttachmentBlockProps } from "./atta
 import { useAttachmentViewer, type AttachmentViewerItem } from "./attachment-viewer";
 import { computeJustifiedRows } from "./attachment-inline-policy";
 import {
+  attachmentAssetIdentity,
   buildAttachmentRenderPlan,
   resolveInlinePresentation,
   type AttachmentRuntimeRenderState,
@@ -24,6 +25,7 @@ export type AttachmentInlineGroupItem = Omit<AttachmentBlockProps,
 type ResolvedItem = {
   input: AttachmentInlineGroupItem;
   attachment?: AttachmentRead;
+  assetIdentity: string;
   presentation: InlinePresentation;
   runtime: AttachmentRuntimeRenderState;
 };
@@ -45,24 +47,23 @@ export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupI
       enabled: !item.attachment,
     })),
   });
-  const [runtimeByItem, setRuntimeByItem] = useState<Record<string, AttachmentRuntimeRenderState>>({});
-  const runtimeCallbacks = useRef(new Map<string, (state: AttachmentRuntimeRenderState) => void>());
-  const onRuntimeChange = useCallback((itemKey: string) => {
-    const existing = runtimeCallbacks.current.get(itemKey);
-    if (existing) return existing;
-    const callback = (state: AttachmentRuntimeRenderState) => setRuntimeByItem((current) => {
-      if (sameRuntimeState(current[itemKey], state)) return current;
-      return { ...current, [itemKey]: state };
+  const [runtimeByItem, setRuntimeByItem] = useState<Record<string, { assetIdentity: string; state: AttachmentRuntimeRenderState }>>({});
+  const onRuntimeChange = useCallback((itemKey: string, assetIdentity: string) => (state: AttachmentRuntimeRenderState) => {
+    setRuntimeByItem((current) => {
+      const existing = current[itemKey];
+      if (existing?.assetIdentity === assetIdentity && sameRuntimeState(existing.state, state)) return current;
+      return { ...current, [itemKey]: { assetIdentity, state } };
     });
-    runtimeCallbacks.current.set(itemKey, callback);
-    return callback;
   }, []);
   const resolved = items.map((input, index): ResolvedItem => {
     const attachment = input.attachment ?? queries[index]?.data;
-    const runtime = runtimeByItem[input.itemKey] ?? { status: "idle" as const };
+    const assetIdentity = attachmentAssetIdentity(attachment);
+    const stored = runtimeByItem[input.itemKey];
+    const runtime = stored?.assetIdentity === assetIdentity ? stored.state : { status: "idle" as const };
     return {
       input,
       attachment,
+      assetIdentity,
       presentation: attachment ? resolveInlinePresentation(buildAttachmentRenderPlan(attachment, runtime)) : "file-list",
       runtime,
     };
@@ -86,7 +87,7 @@ export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupI
 function PresentationGroup({ run, access, onRuntimeChange }: {
   run: PresentationRun;
   access: ReturnType<typeof useAttachmentAccess>;
-  onRuntimeChange: (itemKey: string) => (state: AttachmentRuntimeRenderState) => void;
+  onRuntimeChange: (itemKey: string, assetIdentity: string) => (state: AttachmentRuntimeRenderState) => void;
 }) {
   const viewer = useAttachmentViewer();
   const [expanded, setExpanded] = useState(false);
@@ -137,7 +138,7 @@ function PresentationGroup({ run, access, onRuntimeChange }: {
             inlinePresentation={run.presentation}
             grouped
             runtimeState={item.runtime}
-            onRuntimeChange={onRuntimeChange(item.input.itemKey)}
+            onRuntimeChange={onRuntimeChange(item.input.itemKey, item.assetIdentity)}
           />
         ))}
         {collapsible && run.items.length > 5 ? (
@@ -165,12 +166,12 @@ function AttachmentLane({ presentation, children }: { presentation: InlinePresen
 function JustifiedImageGallery({ items, galleryItems, onRuntimeChange, onShowAll }: {
   items: ResolvedItem[];
   galleryItems: AttachmentViewerItem[];
-  onRuntimeChange: (itemKey: string) => (state: AttachmentRuntimeRenderState) => void;
+  onRuntimeChange: (itemKey: string, assetIdentity: string) => (state: AttachmentRuntimeRenderState) => void;
   onShowAll: (trigger: HTMLElement) => void;
 }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [width, setWidth] = useState(720);
-  const [ratios, setRatios] = useState<Record<string, number>>({});
+  const [ratios, setRatios] = useState<Record<string, { assetIdentity: string; ratio: number }>>({});
   useEffect(() => {
     const element = rootRef.current;
     if (!element) return;
@@ -184,7 +185,7 @@ function JustifiedImageGallery({ items, galleryItems, onRuntimeChange, onShowAll
   const hiddenCount = items.length > 6 ? items.length - 5 : 0;
   const visible = hiddenCount > 0 ? items.slice(0, 5) : items;
   const layoutItems = [
-    ...visible.map((item) => ({ key: item.input.itemKey, ratio: ratios[item.input.itemKey] ?? 1.5, item })),
+    ...visible.map((item) => ({ key: item.input.itemKey, ratio: ratios[item.input.itemKey]?.assetIdentity === item.assetIdentity ? ratios[item.input.itemKey].ratio : 1.5, item })),
     ...(hiddenCount > 0 ? [{ key: "__more__", ratio: 1.35, item: null }] : []),
   ];
   const rows = computeJustifiedRows(layoutItems, width);
@@ -222,8 +223,13 @@ function JustifiedImageGallery({ items, galleryItems, onRuntimeChange, onShowAll
                 runtimeState={resolved.runtime}
                 galleryItems={galleryItems}
                 galleryItemStyle={style}
-                onImageRatio={(ratio) => setRatios((current) => current[resolved.input.itemKey] === ratio ? current : { ...current, [resolved.input.itemKey]: ratio })}
-                onRuntimeChange={onRuntimeChange(resolved.input.itemKey)}
+                onImageRatio={(ratio) => setRatios((current) => {
+                  const existing = current[resolved.input.itemKey];
+                  return existing?.assetIdentity === resolved.assetIdentity && existing.ratio === ratio
+                    ? current
+                    : { ...current, [resolved.input.itemKey]: { assetIdentity: resolved.assetIdentity, ratio } };
+                })}
+                onRuntimeChange={onRuntimeChange(resolved.input.itemKey, resolved.assetIdentity)}
               />
             );
           })}

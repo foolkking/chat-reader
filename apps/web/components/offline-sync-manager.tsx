@@ -15,7 +15,7 @@ export function OfflineSyncManager() {
       if (running) { requested = true; return; }
       clearTimeout(timer);
       running = true;
-      void Promise.resolve().then(flushAnnotationOutbox).then((result) => {
+      void Promise.resolve().then(() => flushAnnotationOutbox()).then((result) => {
         failures = 0;
         // Finite requests drain in separate ticks. New edits made while waiting
         // for a response also get a turn after the current transaction commits.

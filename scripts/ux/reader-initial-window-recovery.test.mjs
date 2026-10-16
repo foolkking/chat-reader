@@ -45,7 +45,10 @@ const wrappers = ast.statements.filter(node => ts.isFunctionDeclaration(node)
 const queryModule = { exports: {} };
 new Function("module", "loadTurnNeighborhood", "INITIAL_WINDOW_TURNS", compile(`
 ${wrappers.map(node => node.getText(ast)).join("\n")}
-module.exports = ({ dataSource, conversationId, initialAnchorMessageId, canLoadInitialWindow, conversationQuery }) => (${queryOptions});
+module.exports = ({ dataSource, conversationId, initialAnchorMessageId, canLoadInitialWindow, conversationQuery }) => {
+  const ${declarations.get("readerQueryNetworkMode").getText(ast)};
+  return (${queryOptions});
+};
 `))(queryModule, loadTurnNeighborhood, INITIAL_WINDOW_TURNS);
 const buildOptions = queryModule.exports;
 // Only real initial-state JSX, its retry/focus callbacks and apply-once effect
@@ -255,8 +258,10 @@ test("genuine empty success is distinct from failure and has no retry (control)"
     assert.equal(f.control(), undefined); assert.equal(f.initialWindowAppliedRef.current, true);
   } finally { f.dispose(); }
 });
-test("offline initial errors retain their existing message and gain no remote retry (control)", async () => {
-  const f = await fixture({ mode: "offline" }); try { const html = f.render(); assert.match(html, /Synthetic raw body read failure/); assert.equal(f.control(), undefined); }
+test("offline initial errors use finite local-copy guidance and gain no remote retry (control)", async () => {
+  const f = await fixture({ mode: "offline" }); try { const html = f.render();
+    assert.match(html, /Messages in this offline copy could not be loaded\. Check the copy in your library, then reopen the conversation\./);
+    assert.doesNotMatch(html, /Synthetic raw body read failure/); assert.equal(f.control(), undefined); }
   finally { f.dispose(); }
 });
 test("missing remembered anchor uses the existing first-turn compatibility fallback (control)", async () => {

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "parent_checkpoint": "docs/execution/ux-audit-annotation-composition-2026-10-13-evidence/local-verification.json",
+  "parent_checkpoint_sha256": "1e8170e208875d8f0d2ce89ea12f23ec9df47c31b5b7acf1e4d8086fd9fda8e5",
+  "source_sha256": {
+    "apps/web/features/annotations/notebook-view.tsx": "1386bf9ac555bdabbdc8088f0964090212e934c1cf13a503412dadf072cba4bf",
+    "apps/web/lib/notebook-drafts.ts": "6ad93ef32c12441a58e547a4590dea0522a8ad2bdc2f165ca9dace314744435d",
+    "apps/web/features/annotations/annotation-workspace.tsx": "683f61d7670c0066bb171a062037fc5422dcea8c53bca825249eecf9e7b3d384",
+    "scripts/ux/annotation-workspace-reads.test.mjs": "8261611580cefd428a5c35eef653083acefc954daa178dfad10d3c86f68f6f03"
+  },
+  "evidence": "Real compiled NotebookView callbacks with explicit React, IndexedDB, repository and confirmation-dialog doubles; no browser rendering or real storage/network.",
+  "result": {
+    "concurrent_compare": {
+      "get_notebook_requests_before_response": 2
+    },
+    "confirm_discard_race": {
+      "newer_input": "newer edit during confirmation",
+      "retained_storage_after_confirm": null,
+      "local_draft_removals": 1,
+      "editor_value_after_confirm": "current"
+    }
+  }
+}

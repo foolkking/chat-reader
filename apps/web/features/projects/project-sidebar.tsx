@@ -52,6 +52,7 @@ import { SidebarSearch } from "../search/sidebar-search";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { ProjectActionMenu, ProjectArchiveFeedback, useProjectArchive, type ProjectArchiveController } from "./project-action-menu";
+import { projectMutationError } from "./project-error-copy";
 
 type DragConversation = { activeType: "conversation"; id: string; title: string; description?: string; projectName?: string | null; projectId: string | null; projectPinned: boolean; offlineRevision: number };
 type DragProject = { activeType: "project"; id: string };
@@ -162,6 +163,7 @@ export function ProjectSidebar({
   const dropIntentRef = useRef<DropIntent | null>(null);
   const [dragError, setDragError] = useState<string | null>(null);
   const [dragNotice, setDragNotice] = useState<string | null>(null);
+  const dragNoticeTimerRef = useRef<number | null>(null);
   const autoExpandRef = useRef<{ projectId: string; timer: ReturnType<typeof setTimeout> } | null>(null);
   const pendingGlobalSearchFocusRef = useRef(false);
   const sensors = useSensors(
@@ -207,7 +209,7 @@ export function ProjectSidebar({
       }),
     onMutate: async (variables) => {
       setDragError(null);
-      setDragNotice(null);
+      clearDragNotice();
       await Promise.all([
         queryClient.cancelQueries({ queryKey: ["projects"] }),
         queryClient.cancelQueries({ queryKey: ["project-conversations"] }),
@@ -267,10 +269,9 @@ export function ProjectSidebar({
       const movedProjectId = variables.projectId;
       if (typeof movedProjectId === "string") setExpandedProjects((current) => new Set(current).add(movedProjectId));
       const targetName = projects.find((project) => project.id === movedProjectId)?.name;
-      setDragNotice(movedProjectId
+      showDragNotice(movedProjectId
         ? (resolvedLocale === "zh-CN" ? `已移入「${targetName ?? "项目"}」` : `Moved to “${targetName ?? "project"}”`)
         : (resolvedLocale === "zh-CN" ? "已移至未分类" : "Moved to unclassified"));
-      window.setTimeout(() => setDragNotice(null), 3200);
     },
     onError: (error, _variables, context) => {
       for (const [key, value] of context?.projectSnapshots ?? []) queryClient.setQueryData(key, value);
@@ -286,6 +287,13 @@ export function ProjectSidebar({
   useEffect(() => {
     if (currentProjectId) setExpandedProjects((current) => new Set(current).add(currentProjectId));
   }, [currentProjectId]);
+
+  useEffect(() => () => {
+    if (dragNoticeTimerRef.current !== null) window.clearTimeout(dragNoticeTimerRef.current);
+    if (autoExpandRef.current) window.clearTimeout(autoExpandRef.current.timer);
+    dragNoticeTimerRef.current = null;
+    autoExpandRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (mobileOpenSignal > 0) setShowMobileDrawer(true);
@@ -354,7 +362,7 @@ export function ProjectSidebar({
 
   function handleDragStart(event: DragStartEvent) {
     setDragError(null);
-    setDragNotice(null);
+    clearDragNotice();
     window.dispatchEvent(new Event("reader:dnd-start"));
     const raw = event.active.data.current as DragConversation | DragProject | undefined;
     if (raw?.activeType === "conversation" || raw?.activeType === "project") setActiveDrag(raw);
@@ -391,8 +399,7 @@ export function ProjectSidebar({
     if (projectId === data.projectId && !intent.beforeId && !intent.afterId) return;
     if (intent.beforeId || intent.afterId) {
       if (projectId === data.projectId && conversationSortMode !== "custom") {
-        setDragNotice(resolvedLocale === "zh-CN" ? "切换为“自定义”对话排序后，才能调整项目内顺序。" : "Switch conversation sorting to Custom to reorder within a project.");
-        window.setTimeout(() => setDragNotice(null), 3200);
+        showDragNotice(resolvedLocale === "zh-CN" ? "切换为“自定义”对话排序后，才能调整项目内顺序。" : "Switch conversation sorting to Custom to reorder within a project.");
         return;
       }
       const placeBefore = Boolean(intent.beforeId);
@@ -439,6 +446,23 @@ export function ProjectSidebar({
     autoExpandRef.current = null;
   }
 
+  function showDragNotice(message: string) {
+    clearDragNotice();
+    setDragNotice(message);
+    dragNoticeTimerRef.current = window.setTimeout(() => {
+      dragNoticeTimerRef.current = null;
+      setDragNotice(null);
+    }, 3200);
+  }
+
+  function clearDragNotice() {
+    if (dragNoticeTimerRef.current !== null) {
+      window.clearTimeout(dragNoticeTimerRef.current);
+      dragNoticeTimerRef.current = null;
+    }
+    setDragNotice(null);
+  }
+
   async function reorderProject(activeId: string, targetId: string, event: DragEndEvent) {
     const activeRect = event.active.rect.current.translated;
     const beforeTarget = !activeRect || activeRect.top + activeRect.height / 2 < event.over!.rect.top + event.over!.rect.height / 2;
@@ -460,7 +484,7 @@ export function ProjectSidebar({
       });
     } catch (error) {
       for (const [key, value] of snapshots) queryClient.setQueryData(key, value);
-      setDragError(error instanceof Error ? error.message : String(error));
+      setDragError(projectMutationError(error, resolvedLocale === "zh-CN", "reorder"));
     } finally {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
     }
@@ -496,7 +520,7 @@ export function ProjectSidebar({
       name={name}
       setName={setName}
       createPending={createMutation.isPending}
-      createError={createMutation.isError ? createMutation.error.message : null}
+      createError={createMutation.isError ? projectMutationError(createMutation.error, resolvedLocale === "zh-CN", "create") : null}
       onCreateProject={() => { const trimmed = name.trim(); if (trimmed) createMutation.mutate({ name: trimmed, icon: "folder" }); }}
       onConversationChanged={refreshSidebar}
       onProjectChanged={refreshSidebar}
@@ -522,7 +546,7 @@ export function ProjectSidebar({
       </ReaderSidebarFrame>
       <DragOverlay adjustScale={false}>{activeDrag ? <SidebarDragPreview drag={activeDrag} size={activeDragSize} dropIntent={dropIntent} project={activeDrag.activeType === "project" ? projects.find((item) => item.id === activeDrag.id) : undefined} locale={resolvedLocale} /> : null}</DragOverlay>
       {dragError ? <DismissibleDragMessage kind="error" message={dragError} onClose={() => setDragError(null)} /> : null}
-      {dragNotice ? <DismissibleDragMessage kind="notice" message={dragNotice} onClose={() => setDragNotice(null)} /> : null}
+      {dragNotice ? <DismissibleDragMessage kind="notice" message={dragNotice} onClose={clearDragNotice} /> : null}
       {currentProjectDropTargetId ? <CurrentProjectDropPortal projectId={currentProjectDropTargetId} projectName={projects.find((project) => project.id === currentProjectDropTargetId)?.name} zh={resolvedLocale === "zh-CN"} /> : null}
       <NewConversationDialog
         open={showNewConversation}
@@ -592,12 +616,8 @@ function SidebarDragPreview({ drag, size, dropIntent, project, locale }: { drag:
   return <div data-testid="sidebar-drag-overlay" data-drop-intent={dropIntent?.kind ?? "none"} className="reader-drag-overlay px-3 py-2 text-sm text-primary" style={size ? { width: size.width, height: size.height } : undefined} aria-hidden="true"><p className="truncate font-medium">{drag.title}</p>{drag.description ? <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-secondary">{drag.description}</p> : null}{drag.projectName ? <p className="mt-0.5 truncate text-[10px] text-accent">{drag.projectName}</p> : null}</div>;
 }
 
-function formatMoveError(error: Error, zh: boolean): string {
-  const message = error.message.toLowerCase();
-  if (message.includes("revision conflict") || message.includes("其他操作中更新")) {
-    return zh ? "移动失败：对话刚刚发生了变化，请重试。" : "Move failed because the conversation changed. Try again.";
-  }
-  return zh ? `移动失败：${error.message}` : `Move failed: ${error.message}`;
+function formatMoveError(error: unknown, zh: boolean): string {
+  return projectMutationError(error, zh, "move");
 }
 
 type SidebarContentProps = {

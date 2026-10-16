@@ -1,5 +1,396 @@
 # 前端架构
 
+## Cleanup candidate range editor — 2026-10-15, local source
+
+`CleanupReviewWorkspace` retains its existing grouped/paged review while a
+`range` intent mounts `CleanupRangeEditor`; returning restores list scroll and
+trigger focus. The editor owns local ranges, dirty-close confirmation, a
+synchronous request lease and mount/authentication-generation retirement.
+`getCleanupOccurrence` and `saveCleanupRanges` share the existing 20-second
+cleanup deadline. An unconfirmed write keeps the draft, requires a read-only
+check and never automatically replays the write.
+
+`cleanup-range-selection.ts` maps native textarea UTF-16/LF selection to original
+Unicode code-point/CRLF bounds, merges added selections and computes retained
+text without mutating source. Invalid mappings/ranges disable saving. No free-form
+source replacement, new editor dependency, storage format or automatic rule
+learning is introduced. Server-side version/protection checks remain authoritative.
+
+Candidate checkboxes keep their stable accessible names; `aria-describedby`
+links KEEP/DELETE/saving state. Row tint reinforces native checked state without
+decorative side borders. Pending bulk choices affect only eligible rows and
+remain until the awaited list refresh settles. Expanded after-context uses
+the saved refinement rather than pretending the whole candidate will disappear.
+Browser rendering, focus and assistive behavior have not been verified.
+
+The marker follow-up (verified locally 2026-10-16) adds `candidateRemovalParts`
+as the shared validated Unicode splitter for inline removal markers and
+retained text. Only selected refined rows calculate marker parts, memoized by
+item/selection; unselected rows keep the existing highlight. Invalid refinement
+uses plain source and bounded recovery copy. The component independently
+rejects checked/saving/tint state on ineligible rows, prioritizes completed/
+rescan/protected descriptions, and suppresses stale warnings on APPLIED rows.
+Real React server-markup tests do not exercise mounted state, focus, CSS or
+browser input; no new dependency, API or schema change is involved.
+
+## Adaptive import session action lifecycle — 2026-10-15, source only
+
+The adaptive import workspace owns one synchronous session-changing action
+lease and a monotonic token. Profile selection, invalid-artifact replacement,
+group exclusion, legacy reanalysis, grouping confirmation and mapping save
+must acquire it before starting. While held, competing session controls,
+workspace navigation and commit are disabled. A response is published only if
+its token still owns the workspace and its `import_id` matches the current
+session; success and failure release the lease. Existing requests are not
+aborted and the parent import API/session contract is unchanged.
+
+`GroupResolver` rebuilds its local assignment map only when the ordered
+artifact identity signature changes, so server reanalysis cannot leave stale
+artifact IDs in the submitted grouping while ordinary typing remains local.
+Format-health reads are paused while a session-changing action is in flight.
+The [report](../execution/ux-audit-import-session-action-lifecycle-2026-10-15.md)
+and extracted-source regression are source-only and unexecuted; this does not
+prove mounted React, network ordering, API transaction serialization or
+browser keyboard behavior.
+
+## Share unlock lifecycle — 2026-10-15, source only
+
+The password gate reuses the existing token-scoped navigation visit and one
+memory-only owned attempt ref. Admission is synchronous before setting busy,
+so rapid pre-render submissions coalesce. Only an active visit owning that
+exact attempt may start the existing metadata refetch or publish failure/
+password/final-busy updates. A separate small visit layout lifecycle resets
+password/busy/error and retires the attempt, including layout replay.
+
+The native form exposes busy state and disables its password input while
+pending; the edit handler also guards pre-render edits and clears obsolete
+feedback on a permitted edit. Raw password whitespace and current failed
+input remain intact. Only a current successful metadata read clears input;
+a successful POST alone, rejected read or error result does not. Existing
+translated finite 429/other error copy and POST/query/auth policy remain.
+No password persistence, retry, abort, timer, new query key or dependency.
+Retirement cannot reverse a sent POST or its cookie/server effects.
+
+The [report](../execution/ux-audit-share-unlock-lifecycle-2026-10-15.md) and
+extracted-source regression remain source-only and unexecuted. Controlled
+hooks, transport/query outcomes and static gate markup are not mounted React,
+keyboard/password-manager, real session or browser acceptance.
+
+## Share edge-window loading lifecycle — 2026-10-15, local verification
+
+`loadPreviousPage` and `loadNextPage` reject an inactive visit at entry, before
+loading/error setters or a new read. They also require the captured complete-turn
+generation, direction and the token-scoped `navigationVisit.active` flag before
+merging, capturing/restoring a real scroll anchor or publishing an edge error.
+The same active-visit guard prevents final loading-state publication after the
+reader retires; local refs and already-acquired leases still settle/release.
+An in-flight transport is not aborted and no server effect is reversed.
+
+The current merge/trim order, edge serialization, complete-turn API, lease,
+stable DOM anchor and user-direction policy remain unchanged. A same-visit
+direction reversal makes the old catch neutral instead of showing stale
+“earlier/later” failure. A token switch already advances the window generation;
+the added active-visit check also covers a full unmount before that request
+returns.
+
+The [report](../execution/ux-audit-share-edge-loading-lifecycle-2026-10-15.md)
+records nine passing actual-loader adapter checks in the 2026-10-16 local run,
+plus full Web lint and nonincremental typecheck. Controlled
+transport, refs, anchor helpers and state setters are not mounted React,
+real slow-response, scroll geometry, DOM or resource acceptance.
+
+## Source-editor discard-and-switch cleanup — 2026-10-15, source only
+
+The source-editor navigation banner now calls a local `discardAndSwitch`
+lifecycle instead of invoking the parent target switch directly. It synchronously
+claims a memory-only busy ref, marks every upload job cancelled, calls the
+existing request cancel handle, deletes draft-only finalized attachments or
+staging items through the existing APIs, invalidates the conversation-file
+query and clears the job map before awaiting the parent switch. Cleanup failure
+keeps the editor/target in place and shows finite localized feedback; repeated
+clicks and competing banner actions are disabled while cleanup is pending.
+
+The same extracted cleanup serves the existing close/discard path. A workspace
+unmount also retires outstanding jobs and best-effort deletes their server-side
+draft objects; this is cleanup ownership, not a claim that an already-sent
+request or server effect is physically reversible. Save, “keep files and
+close”, normal attachment removal, message versions, canonical Markdown,
+offline packages and attachment protocol remain unchanged.
+
+The [report](../execution/ux-audit-source-editor-discard-switch-2026-10-15.md)
+and extracted-source regression remain source-only and unexecuted. Controlled
+AST assertions do not establish mounted React, upload timing, server cleanup,
+browser focus or resource acceptance.
+
+## Source-editor attachment picker dialog — 2026-10-15, source only
+
+`ConversationAttachmentPicker` now attaches the existing `useDialogFocus`
+lifecycle to its outer modal root and passes the search field as the initial
+focus target. Its backdrop button carries `data-dialog-backdrop`, so it is
+excluded from the shared focusable set. Escape closes through the existing
+`onClose`; Tab/Shift+Tab wrap through the unchanged shared hook and cleanup
+restores the opener when the picker closes.
+
+The current query, retry/error copy, filtering, file-choice callbacks, layout,
+attachment protocol and nested-modal arbitration remain unchanged. The
+[report](../execution/ux-audit-source-editor-attachment-picker-dialog-2026-10-15.md)
+and extracted-source regression remain source-only and unexecuted; source and
+static hook checks do not prove browser keyboard, screen-reader or mobile
+focus behavior.
+
+## Share stored-position shape — 2026-10-15, source only
+
+The existing `readSharePosition` boundary treats parsed JSON as unknown before
+using it as a resume anchor. It requires a non-array record, nonblank string
+message id, non-array anchor record, finite numeric pixel offset and an
+optional/null or nonnegative safe-integer block index. Unusable data yields a
+null anchor before initial query/restore use, without disabling accessible
+storage or deleting/rewriting the key.
+
+Accepted records are returned unchanged: no UUID requirement, exact-key
+filter, new required timestamp/mode/anchor metadata, clamping or migration.
+Both position modes, optional/numeric anchor hints, unknown metadata and
+message-only fallback remain compatible. Existing SHA-256 keys/bytes,
+query/restore order and later save/discard policies remain. Storage access
+errors still reach the separate capability-failure boundary below.
+
+The [report](../execution/ux-audit-share-position-shape-2026-10-15.md) and
+extended actual-helper/initialization/query/restore regression are source-only
+and unexecuted. Synthetic JSON and controlled digest/storage/query/DOM
+adapters are not real browser/durability or restore accuracy evidence.
+Well-shaped but stale/out-of-scope positions remain a separate policy concern.
+
+## Share position-storage recovery — 2026-10-15, source only
+
+The independent Share Reader treats device resume as optional. Current-visit
+digest/storage-read rejection clears the in-memory key/anchor, tags readiness
+for that visit and enables the existing unanchored first-window query.
+`readSharePosition` treats bad JSON and the unusable shape described above as a
+null anchor; storage access
+failure reaches the containing initialization boundary instead of pretending
+the store is empty. No raw-token key, alternative hash or automatic retry.
+
+A visit-tagged memory-only disable ref retires persistence synchronously on
+failure or permanent-access discard. A disabled visit's initialization replay
+does not probe again; a new visit may initialize normally. Discard preserves
+the existing status classification and disables writers before removal,
+clearing the in-memory key/anchor on either outcome. A denied removal is not
+represented as durable deletion. Later write failure clears the key, marks
+finite unavailability and prevents another pre-commit or later storage probe.
+
+Existing idle/cached-unload timing and exact serialized position bytes remain.
+Deferred storage and tracking callbacks are fenced by effect lifetime/visit;
+capture/write also require the current store. The existing fixed-height
+read-only header line carries the current visit's finite translated warning,
+without adding content-flow height. No server/API, Share access/URL, package/
+Dexie, navigation anchor or query policy changes beyond settled readiness.
+No new polling, timer, dependency, mid-reading retry/restore or persistence
+format is introduced.
+
+The [report](../execution/ux-audit-share-position-storage-recovery-2026-10-15.md)
+and authored/updated extracted-source regressions remain unexecuted. DOM,
+storage, digest, query snapshots and timer/layout adapters are not actual
+browser, durability, scroll or announcement evidence. Shape validation has the
+separate source-only follow-up above; well-shaped stale/out-of-scope positions
+and indefinitely pending digest remain separate. Unlock and edge loading have
+the separate source-only lifecycle follow-ups above, not runtime acceptance.
+
+## Share tablet navigation dialog — 2026-10-15, source only
+
+`ShareReadonlyReader` connects a stable tablet section ref to the existing
+`useDialogFocus` hook only when the navigation sheet is actually visible and
+the viewport is tablet. Existing metadata/current-storage render gates remain.
+The section is a translated, labeled modal dialog with a negative fallback
+tab index. The existing scoped open-change handler owns Escape dismissal.
+
+The unchanged shared hook supplies initial focus, boundary Tab/Shift+Tab
+wrapping, top-dialog key arbitration, listener cleanup and delayed
+`preventScroll` restoration. Ordinary status/tab rerenders do not reinstall
+its open-lifetime effect. Existing scrim/header close, phone/Vaul, desktop
+rails, visual width and complete-turn/anchor/storage/access contracts remain.
+No extra keyboard system or dependency is introduced; the existing hook's
+active listener and cleanup timer are reused.
+
+This is not background inertness or a guarantee against every pointer/
+programmatic focus move. The [report](../execution/ux-audit-share-tablet-navigation-dialog-2026-10-15.md)
+and actual-hook/extracted-wiring regression remain source-only and unexecuted,
+with DOM/layout/event/focus ordering modeled. Real keyboard, screen-reader,
+breakpoint/scroll, viewer and geometry acceptance remains pending.
+
+## Reader navigation-sheet lifecycle — 2026-10-15, source only
+
+Common online/offline `ConversationReader` navigation feedback has an effect-
+owned scope for Reader surface availability, source-editor hiding, navigation
+utility activation, tab, viewport and Reader visit. A scope ref connects it to
+the stable internal `setUtilityPanel` callback: existing transition callers
+retire the old action before selecting another surface. A memory-only counter
+advances on explicit navigation opens, forcing a fresh scope even for a
+same-batch close/reopen ending with the same utility value. Retained old
+callbacks cannot regain admission. Layout cleanup retires sequence/pending key
+and releases that ref only if it still owns it.
+
+Index/TOC sheet content shares `navigateFromNavigationSheet`, retaining the
+actual version/locator arguments. Admission and completion also use the
+existing Reader visit/account guard. Latest action owns pending/outcome/close;
+the same serialized pending caller target coalesces, and a different target
+may supersede it. Feedback projection matches scope and sequence, including
+effect replay. Cancellation is neutral, failures keep the surface available,
+and finite feedback translates through the existing status JSX at render time.
+
+Desktop rails, online/offline query and prefetch policies, complete turns,
+true DOM anchors/budgets, saved positions and search return state remain.
+This is not physical cancellation or ownership of delayed workspace-open/
+source-editor confirmation helper internals. MobileReaderSheet, tablet focus/
+presentation and other utility action lifetimes are unchanged. The
+[report](../execution/ux-audit-reader-navigation-sheet-lifecycle-2026-10-15.md)
+and authored extracted-source regression remain source-only and unexecuted;
+real scheduler, remote/offline, geometry/focus/announcement and resource
+acceptance is pending.
+
+## Share navigation-sheet lifecycle — 2026-10-15, source only
+
+The independent Share navigation sheet/drawer has an effect-owned scope for
+actual visibility, tab, viewport and token visit. Visibility also follows the
+existing metadata/local-readiness render gates; hidden/error/loading surfaces
+cannot admit or publish a sheet action. Explicit open/close/tab paths retire
+the scope synchronously. A memory-only activation counter advances on open
+and participates in scope identity, including same-batch close/reopen or a
+same-value explicit open; old callbacks are not reactivated. Layout cleanup
+increments its action sequence.
+Feedback projection checks both scope identity and sequence, so replaying the
+same scope does not retain an obsolete pending/failure notice.
+
+The four mobile/tablet index/TOC callers share `navigateFromNavigationSheet`.
+One latest action owns pending/outcome/auto-close; the same serialized pending
+caller target coalesces, while a different choice may supersede it. Current
+failures keep the sheet open for another choice, cancellation is neutral, and
+finite feedback translates at render time through the existing labels.
+Existing mobile/tablet live-status placements and target arguments remain.
+
+This is local feedback ownership, not physical cancellation of begun core
+navigation. Desktop rails, MobileReaderSheet/Vaul/tablet presentation, complete
+turns, real DOM anchors, Share access/URL, storage bytes and API remain. Common
+Reader sheet completion and Share tablet modal/keyboard wiring have the
+separate source follow-ups above; runtime acceptance remains pending.
+The [report](../execution/ux-audit-share-navigation-sheet-lifecycle-2026-10-15.md)
+and authored extracted-source regression remain source-only and unexecuted;
+real overlay/focus/announcement and resource acceptance is pending.
+
+## Share navigation and saved-position retirement — 2026-10-15, source only
+
+`ShareReadonlyReader` owns a token-scoped effect visit alongside its existing
+navigation token. Admission and exposed resolver/neighborhood/lease/mounted-
+alignment/settle boundaries check both; retired rejection becomes cancellation.
+Lease release remains in `finally`. One highlight timer is cleared on the next
+navigation or visit cleanup, and its callback cannot clear a newer highlight.
+Cleanup increments the token, including effect replay of the same visit.
+
+Explicit navigation marks the saved-position decision settled and advances
+the existing intent sequence. Restoration passes an optional internal fifth
+argument instead of inventing user intent; its existing candidate order and
+character/block offsets remain. The effect stops on cancellation or changed
+intent, and its live-visit cleanup fences completion. A later initial-window
+result cannot restart restoration after an explicit choice.
+
+Local storage readiness is tagged by the visit that settled initialization,
+including the separate optional-storage degradation above.
+The initial complete-turn query uses only that visit's saved anchor and waits
+for current readiness. Token change resets restore/window/active/highlight
+state; late old key completion cannot label the new visit ready. SHA-256
+namespace, stored bytes, Share URLs/access, optional old-server resolver
+fallback, request budgets and real DOM anchors remain unchanged. Begun work
+is not physically aborted. Navigation-sheet feedback has the separate source
+follow-up above; crypto/storage failure has the separate source-only follow-up
+above; unlock has its own source-only follow-up above. Edge loading remains
+separate.
+The [report](../execution/ux-audit-share-navigation-retirement-2026-10-15.md)
+and authored regression remain source-only and unexecuted.
+
+## Reader navigation retirement — 2026-10-15, source only
+
+`navigateToTarget` now combines its existing navigation token with the
+existing `ownsReaderReadRecovery` visit/account guard. Retired admission
+does not start timing/state work; context and neighborhood completion,
+fallback-turn reads, lease acquisition, mounted alignment, layout settling
+and rejection handlers check the same ownership before further caller work
+or publication. Mounted/settle/pulse predicates also use it. Started-work
+performance bookkeeping and lease release remain; the in-progress ref is
+cleared only by its own navigation token, never by an older token.
+
+Current-search context has one state/ref publisher and a synchronous clear.
+Footer previous/next uses captured-context identity plus visit ownership at
+admission and completion; dismiss/replacement cannot be undone by an old
+success. Source/conversation layout reset clears old search context/highlight,
+failure/retry target, pulse/timer and per-source annotation validation memory,
+without resetting the panel's ephemeral query/selection return state.
+Reset cleanup increments the navigation token, so effect replay cannot revive
+a retired transaction by reactivating the same owner. Existing complete-turn loading, locator rules,
+budgets and true DOM anchoring remain. No transport or helper-internal abort
+is added. The [report](../execution/ux-audit-reader-navigation-retirement-2026-10-15.md)
+and authored/adapted regressions are source-only and unexecuted, not browser
+or resource acceptance.
+
+## Conversation TOC stale-read recovery — 2026-10-15, source only
+
+`ConversationToc` distinguishes an initial empty/error state from a failed
+refresh with usable `visibleItems`. The latter retains the existing
+`placeholderData`/`cachedItems`/`activeItems` fallback and renders a compact
+localized stale-read alert with a Retry that only calls `tocQuery.refetch()`.
+The control is disabled while the query is fetching.
+
+The query key, fallback precedence, heading/block DOM ids, navigation callback,
+real DOM scroll anchoring and Reader/Share/offline boundaries are unchanged.
+The [report](../execution/ux-audit-conversation-toc-stale-read-recovery-2026-10-15.md)
+and unexecuted source regression own the acceptance limits. No API, data,
+storage, migration or deployment boundary changed.
+
+## Conversation index read recovery — 2026-10-15, source only
+
+`ConversationIndex` keeps interactive jump and sheet page reads separate from
+the initial TanStack Query state. A loader failure retains the current
+`remotePage`, records the exact ordinal or previous/next intent with its
+bounded `offset`/`limit`, and renders a local alert plus a same-intent Retry.
+Successful page reads clear the local error before the existing jump
+`onNavigate` callback runs; navigation failure is not relabeled as a loader
+failure.
+
+The existing loader contract, query key, initial query retry, filtering,
+pagination, real DOM scroll anchoring and Reader/Share/offline boundaries are
+unchanged. The [report](../execution/ux-audit-conversation-index-read-recovery-2026-10-15.md)
+and unexecuted source regression own the acceptance limits. No API, data,
+storage, migration or deployment boundary changed.
+
+## Conversation-files capability read — 2026-10-15, source only
+
+`ConversationFilesPanel` treats the attachment capability query as an
+explicit upload gate. Pending and initial error-without-data states disable
+only the upload affordance and expose localized local Retry; a stale
+successful capability result continues to authorize the existing upload path.
+Attachment session/item/finalize calls, list reads and permission boundaries
+are unchanged. The [report](../execution/ux-audit-conversation-files-capability-read-2026-10-15.md)
+and unexecuted source regression own the acceptance limits.
+
+## Library download-status subscription — 2026-10-15, source only
+
+`LibraryShell` keeps download-status subscription failure separate from action
+errors and local-library read state. On failure it retires only unverifiable
+progress/failure UI and exposes a status-only Retry generation; it never
+enqueues or cancels a download. A later live emission restores normal mapping.
+The [report](../execution/ux-audit-offline-library-download-status-read-2026-10-15.md)
+and unexecuted source regression own the acceptance limits. No worker, storage,
+package, API or deployment boundary changed.
+
+## Library local read feedback — 2026-10-15, source only
+
+`LibraryShell` tracks local conversation/message read availability independently
+from search-index preparation. The first list read gates empty claims; failed
+initial reads offer local Retry, while a failed refresh preserves successfully
+read rows. Retry reuses the existing serialized reload owner rather than starting
+downloads or navigating. Catalog download deep links retain their existing path.
+The [report](../execution/ux-audit-offline-library-local-read-state-2026-10-15.md)
+owns authored, unexecuted source checks; actual React/Dexie/browser states remain
+unaccepted. No data, package, API, schema or deployment boundary changed.
+
 ## Noise scan lifecycle (local, 2026-10-08)
 
 `CleanupScanProgress` and `CleanupScanCancelAction` share compact progress,
@@ -227,6 +618,51 @@ a result after deliberate keyboard selection on the current query. Stale debounc
 results and IME confirmation cannot navigate. Visual/keyboard order agrees;
 load/error/empty states are distinct and retry preserves the query.
 
+Sidebar quick search preserves its initial first-result shortcut, but explicit
+keyboard/hover selection follows `document_id` across same-query refreshes.
+If that selected result disappears, no replacement is silently selected; Enter
+opens the existing full-results route and arrows restart from a visible row.
+A query edit clears explicit selection. The debounce, eight-result bound,
+fresh-query/IME guards, query key and result URL parameters remain unchanged.
+The compiled handler regression passed **12/12** on 2026-10-16; targeted
+ESLint, nonincremental Web typecheck and diff whitespace also passed. The
+adapter does not establish mounted React, live transport or browser/focus
+acceptance. Details remain in [the selection report](../execution/ux-audit-sidebar-search-selection-2026-10-15.md).
+
+Current-conversation search separately retains an explicit occurrence key
+(document/message/version, block, match range and quote), so reordered matches
+inside one document remain distinct. A disappeared selection has no highlight
+or Enter target, with a neutral notice after a successful refresh; arrows use
+the current visible index or restart at the first row. Query/role/type edits
+clear the identity. The optional `activeOccurrenceKey` travels only through
+the existing in-memory `ConversationSearchPanelState`; old numeric initial
+state remains readable. Activation publishes the chosen key before waiting for
+navigation, including click/tap without hover. Request bounds, ordering,
+debounce, retry preparation, offline network mode and true-anchor navigation
+remain unchanged. This [follow-up](../execution/ux-audit-conversation-search-selection-2026-10-15.md)
+passed 48/48 controlled-component cases on 2026-10-16; targeted ESLint,
+nonincremental Web typecheck and diff whitespace also passed. It is not
+browser/focus/touch/scroll or measured-resource acceptance, and the separate
+navigation-lifecycle/offline-retry regressions remain independent.
+
+Search activation additionally owns a layout-effect scope keyed by raw query,
+role/type, source/conversation and active visibility. Close/unmount or a scope
+change retires completion; only the latest activation may publish feedback or
+close the panel. An optional `isCurrent` callback fences the Reader adapter's
+search context/highlight publication before/after navigation without storing
+that callback in `SearchNavigationContext`. Desktop search receives the
+source-editor visibility gate because the drawer retains hidden children;
+closed mobile sheets already unmount them. Repeated activation of the same
+pending occurrence is ignored before rebuilding targets; a different target
+can supersede it. Localized pending/failure feedback keeps results usable,
+contains rejection and treats cancellation neutrally. No automatic retry or
+active cancellation of begun Reader loads/scrolls is added. Footer search
+previous/next is covered by the separate Reader-retirement section above.
+This [lifecycle follow-up](../execution/ux-audit-conversation-search-navigation-lifecycle-2026-10-15.md)
+has a shared component result of 48/48 through the selection continuation;
+the Reader-retirement-specific regression and browser/cancellation acceptance
+remain unexecuted.
+
 Attachment/export counts stay unknown on failure. File operations retain failed
 names/selections; copying waits for clipboard completion. Export status retry
 reuses the existing job. Task Center keeps detailed progress/actions; sidebar and
@@ -297,12 +733,30 @@ terminal summary. The response's existing conversation IDs are used for
 compact direct links and Library return; no ImportBatch entity or persistent
 results route is introduced.
 
+When the ImportPanel remounts, its saved adaptive-session UUID has an explicit
+restore state. A transient `getAdaptiveImportSession` failure retains the
+sessionStorage pointer and exposes a read-only Retry; it does not create,
+commit, cancel or retry a server task. Only a confirmed terminal session or
+explicit new-file selection removes that pointer. The restore state is separate
+from commit/status errors.
+
 `ImportNoiseReview` links that completion to the latest existing scan of the
 same import, with bounded reads, independent progress/retry and nested-dialog
 focus restoration. `CleanupReviewWorkspace` adds server-paged group title search,
 explicit current scope and conversation-wide rule review; selection remains
 mounted but hidden during preview so expanded contexts and return position survive.
 See [cleanup navigation](CONTENT_CLEANUP_CONTRACT.md#import-entry-and-review-navigation).
+
+`ConversationAttachmentPicker` distinguishes a successful empty attachment list
+from a failed or stale list read. A failed read keeps cached available rows
+visible when present and offers a read-only Query Retry; it never inserts,
+uploads or deletes an attachment. The empty state is only shown after a
+successful read.
+
+Inline attachment blocks read the resolved interface locale once at the block
+boundary and pass it to their loading, error, preview, media, file-row and
+download labels. Shared attachment type metadata accepts the same locale
+without changing the render plan or attachment access contract.
 
 `CleanupRuleEditor` acknowledges a confirmed saved rule before list refresh,
 preserves unconfirmed drafts for an explicit read-only result check, and compares
@@ -356,6 +810,114 @@ transaction commits. Cache quota errors, truncated packages, Dexie aborts,
 browser/SW restarts and corrupted bytes cannot mark partial data ready.
 
 ## Offline shell and offline Reader attachments (2026-08-11)
+
+Sync-center follow-up (2026-10-15, source only): parent local-ledger reads pause
+while conflict/cleanup subviews replace the center, and resume on return.
+Pending/Failures publish their ledgers without inspecting cached attachments;
+only visible Copies invokes the existing mode-specific asset checks. Background
+download/sync managers, cache-validation rules and late-publication guards remain.
+Already-started checks cannot be actively cancelled by these helpers. The
+[inspection report](../execution/ux-audit-sync-center-hidden-inspection-2026-10-15.md)
+records unexecuted regressions; no device cost reduction is claimed as measured.
+
+Its separate [read-state follow-up](../execution/ux-audit-sync-center-read-states-2026-10-15.md)
+binds local result readiness/error to tab/page/asset mode. Ledger rows, empty
+claims and pagination require matching success; that success may remain visible
+during refresh with a loading status. A new scope retires the prior marker before
+shared ledger fields are republished. Storage/assets errors are independent of
+action feedback. Local Retry reopens only the local subscription, and ledger
+failures invalidate older asset-check publication. Preference status and
+download/catalog controls remain independent. The partial-read follow-up below
+supersedes that batch's aggregate-failure boundary; all related adapter/source-
+guard regressions remain unexecuted.
+
+The [tab-read-scope follow-up](../execution/ux-audit-sync-center-tab-read-scope-2026-10-15.md)
+(source only) conditions that same live-query reader on the visible tab.
+Copies keeps conversation page/count and download tasks; Pending keeps
+operations, draft prefixes and conflicts; Failures keeps tasks, conflicts,
+failed rows/count and bounded displayed-copy existence. Initial-job task
+targeting remains on Pending. Existing ordering, paging, read-state markers,
+visible asset checks, managers and writes remain; no runtime/resource
+measurement or reader-suite execution occurred.
+
+The [partial-read follow-up](../execution/ux-audit-sync-center-partial-read-recovery-2026-10-15.md)
+(same date, source only) settles each tab-owned section independently inside
+the same local subscription. Successful siblings publish after settlement even
+when another section fails; the scoped marker records failed section names.
+Each ledger renders only its own confirmed result, missing sections are named,
+and empty/pagination claims require all reads that establish their count.
+Initial-task lookup resolves only from a successful task read. Asset checks
+remain Copies-only with late-result fencing and specific feedback. Cleanup
+requires confirmed download status and combined export requires its full
+pending-read scope. Retry only reopens the subscription; no polling, stored
+record, package, API or background-manager change. Both existing regressions
+are updated but unexecuted; no runtime/resource acceptance follows.
+
+The [visible-inspection coalescing follow-up](../execution/ux-audit-sync-center-inspection-coalescing-2026-10-15.md)
+(same date, source only) keeps one running Copies page and one replaceable
+latest pending page per effect lifetime. All started sibling verifiers settle
+before that page slot is released, even after rejection. New emissions retire
+intermediate pending work; failed ledger/copy reads, navigation returns and
+cleanup retire it without starting another scan. Existing verifier policy,
+row order, mode and sequence/access guards remain; this is not a result cache.
+Already-started work cannot be actively cancelled, including across effect
+lifetimes. No new watcher/timer or measured CPU/RSS benefit; the shared
+extracted-effect regression is updated but unexecuted.
+
+The [conflict merge draft follow-up](../execution/ux-audit-offline-conflict-merge-draft-refresh-2026-10-15.md)
+(same date, source only) initializes the manual merge from the stored draft
+or local comparison once per conflict visit. Later comparisons refresh both
+versions but retain the current merge, including failed/pending saves or edits
+made after a read began. Finite error categories are translated at render time;
+locale changes no longer reload/refocus comparison. An actual conflict-key
+change resets visit state, and generation/version guards retire old read/save
+completions. Explicit local/server-as-draft controls, persistence keys,
+save/retry, dirty protection and underlying resolution services are unchanged. This
+does not cancel existing writes or reconcile cross-tab drafts. The controlled
+component regression is authored but unexecuted; browser/focus/storage
+acceptance remains pending.
+
+Its separate [resolution recovery follow-up](../execution/ux-audit-offline-conflict-resolution-recovery-2026-10-15.md)
+(same date, source only) represents an unconfirmed marker as neither comparison
+nor pending. Failed initial marker reads and failed post-action recovery
+lookups show finite localized status feedback and a read-only recheck; new
+choices and request retry wait for confirmed status. Recheck reads the marker
+and, if eligible, comparison without preparing/submitting a resolution.
+Current merge memory and dirty protection remain. Submit captures the existing
+generation before confirmation and checks it across awaits, so retired work
+does not start its next step, update the later visit or call the old `onBack`.
+Already-started writes/requests are not cancelled. There is no new queue,
+receipt, watcher, API or storage change; the shared regression is updated but
+unexecuted, not browser/storage acceptance.
+
+Offline continuation read-state follow-up (2026-10-15, source only): the existing
+local query distinguishes waiting/error from missing copies/members, normalizes
+missing rows to null and offers non-cancelling local Retry. Matching cached
+content survives transient refresh errors with a notice; locked-access read
+errors hide it. Captured database and access checks fence the awaited read.
+Current/Index choice, source mode, child renderers and reference navigation are
+unchanged. The [read-state report](../execution/ux-audit-offline-continuation-read-states-2026-10-15.md)
+owns source evidence and unexecuted regressions, not browser/focus acceptance.
+
+Source-only follow-up (2026-10-15): core Offline Reader metadata, saved-position,
+initial complete-turn and dialogue/section queries/prefetches use an explicit
+local `always` network mode, passed through all four navigation placements.
+Shared components omit an unspecified override to retain remote/Share caller
+defaults; QueryProvider, keys, enabled conditions, limits and anchor semantics
+are unchanged. Local utility subpanels are separate query owners. The
+[query-policy report](../execution/ux-audit-offline-reader-query-policy-2026-10-15.md)
+records the source evidence and the focused 2026-10-16 regression (**10/10**),
+plus targeted ESLint, nonincremental Web typecheck and diff whitespace checks;
+mounted browser/offline-device acceptance remains open.
+
+Attachment follow-up (same date, source only): local file-list, inline metadata,
+Viewer shell and lazy Viewer-item queries execute independently of the online
+gate; remote/Share/admin defaults and scope arguments remain inherited.
+Query lifetimes, enablement, read helpers, verified bytes and URL cleanup are
+unchanged. The [attachment scheduling report](../execution/ux-audit-offline-attachment-query-policy-2026-10-15.md)
+records separate source bindings and unexecuted regressions. The sampled
+annotation/notebook direct reads and already-local offline continuation query
+needed no scheduling edits; broader recovery acceptance is not implied.
 
 `offline-shell.ts` separates shell availability from background update phase. A complete active service-worker shell is usable immediately; dynamic viewer warming and deterministic shell reconciliation never gate Library interaction or conversation-package downloads. The inventory contains document scripts/styles/icons, the offline search worker, declared viewer runtime chunks and the optional built-in Acquisition ZIP. It deliberately excludes API responses, images and historical `performance` resource entries. If reconciliation fails, the previous active shell remains ready and the UI exposes a retryable background-update state.
 
@@ -454,6 +1016,11 @@ RootLayout + providers
 
 AI Rich Markdown 使用一个共享 semantic core：Reader、Source Editor live preview 与 Markdown 附件 inline/Viewer 均复用 `rich-markdown-config.ts`。`remarkAiMathCompatibility` 在 mdast 阶段恢复 ChatGPT `\(...\)` / `\[...\]`，`remark-math` 处理 dollar delimiters，GFM/footnote/code/link 安全策略保持一致。canonical Markdown 不改写；KaTeX 使用本地 CSS/font、MathML、`trust=false` 与有界 expansion/size。详细合同见 [AI_RICH_MARKDOWN_CONTRACT.md](AI_RICH_MARKDOWN_CONTRACT.md)。
 
+`ai-rich-markdown-v5` 为已识别的 ChatGPT box/row/text/badge/divider 文本增加有界、
+只读展示投影；不是启用 HTML 或接入 widget runtime。完整消息检测结果仅作为临时
+metadata 传给各 block 和思考折叠区，保留源码、复制内容、task key 和真实 DOM 锚点。
+源码预览只映射本次新增投影的偏移；既有数学预处理偏移边界不扩大承诺。
+
 - 在线/Share 读取 `reader-turn`；Offline 从 Dexie 组装同一 response。完整轮次水合后才加入 DOM。
 - 初始/位置恢复窗口最多 5 轮，用真实相邻正文为短消息目标提供阅读线对齐空间；边缘滑动 settled 后通常裁剪为 3 轮。用户进入首/末已加载轮次或接近 sentinel 时预取，返回轮次先按 `turn_key` 合并，锚点恢复后再按整轮裁剪。边缘事务持有阅读 block lease，继续同方向滚动不会取消事务，反向滚动才取消。
 - 上下边缘都保留已加载正文直到新轮次挂载完成；加载中不伪造大块空白，只有 `has_more=false` 的真实会话末尾保留底部阅读留白。
@@ -501,6 +1068,12 @@ Formula rendering continues to use the shared AI Rich Markdown pipeline with loc
 - manifest `scope/start_url` 都是 `/library`；`library-sw.js` 不控制普通管理页面或 API。
 - 壳资源先写 staging cache，完整校验后原子切换 active revision；失败保留旧壳。
 - `/sw.js` 负责注销旧 root-scope worker 和清理 legacy cache。
+- 离线搜索以当前 Worker 的 init promise 和访问代次判定就绪，不把新建空 Worker
+  误当成无结果。Reader 搜索的显式重试通过现有 Library 队列重建一次，再执行本次
+  查询；普通输入不重建。本地搜索 query 使用 `networkMode: "always"`，远程策略
+  不变。2026-10-16 无服务回归 19/19 通过，相关 ESLint 与非增量类型检查通过；
+  真实 Worker/IndexedDB、浏览器和设备验收仍未运行，见
+  [就绪与恢复记录](../execution/ux-audit-offline-search-readiness-2026-10-15.md)。
 - 离线数据更新与壳更新独立：前者是 v3 conversation delta（兼容读 v1/v2/v3），后者是 Cache API revision。Dexie v2 保存附件 metadata/occurrence，小型或全量对象按 `asset_mode` 进入 Cache Storage。
 
 ## 附件 UI
@@ -516,6 +1089,7 @@ Formula rendering continues to use the shared AI Rich Markdown pipeline with loc
 - Viewer Shell 的内容区保持 `min-height: 0; overflow: hidden`，具体 Renderer 是唯一滚动所有者。PDF page/fit/zoom 工具挂载到同一 Shell 顶栏；Fit Page 单页完整居中且不产生纵向滚动，Fit Width/自定义缩放由 PDF viewport 滚动。
 - Owner Reader 的 GFM task checkbox 由 `MarkdownRenderer` 的 `interactiveTasks` 合同驱动，点击后进行局部 optimistic update 并调用稳定 task key 接口；Share、Offline 和附件 Markdown renderer 不传写回调，因此保持只读。
 - 对话导出面板将格式与附件作为一级选项；简介、批注、笔记和 CanJSON 来源引用位于折叠的二级选项。普通导出与附件 ZIP 使用同一组参数。
+- 离线导出面板的附件数量是信息性 Dexie 查询：loading、成功数量和 error 分支分别渲染；error 只重开该查询并保留导出操作，不把本地计数读失败转成零条，也不改变导出参数或离线包合同。
 - 消息保存使用服务端返回的局部 message/version/blocks/occurrences 投影更新 TanStack Query；不重新加载整场对话，受影响消息单独重测布局，其他 MessageItem 引用保持稳定。
 # 2026-08-09 Addendum: Conversation Editing And Complex Viewers
 

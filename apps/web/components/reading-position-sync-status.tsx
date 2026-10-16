@@ -1,7 +1,7 @@
 "use client";
 
 import { liveQuery } from "dexie";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { offlineDb } from "../lib/offline-db";
 import { readingConflictKey, readingSignature, readingSyncKey, readSyncedReadingPosition, resolveReadingPosition, type ReadingSyncState } from "../lib/reading-position-sync";
 import type { ReadingPositionRead } from "../lib/types";
@@ -17,9 +17,22 @@ export function ReadingPositionSyncStatus({ conversationId, onUseServer, storage
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [readFailed, setReadFailed] = useState(false), [readAttempt, setReadAttempt] = useState(0);
   const [navigationTarget, setNavigationTarget] = useState<ReadingPositionRead | null>(null);
+  const visitRef = useRef(0);
+  useLayoutEffect(() => {
+    const visit = ++visitRef.current;
+    setView(undefined);
+    setReadFailed(false);
+    setError("");
+    setNavigationTarget(null);
+    setBusy(false);
+    return () => {
+      if (visitRef.current === visit) visitRef.current += 1;
+    };
+  }, [conversationId]);
   useEffect(() => {
     const db = offlineDb;
     let active = true;
+    const visit = visitRef.current;
     let subscription: { unsubscribe: () => void } | undefined;
     const query = liveQuery(async () => {
       const [local, state, conflict, pending] = await Promise.all([db.readingPositions.get(conversationId), db.settings.get(readingSyncKey(conversationId)), db.settings.get(readingConflictKey(conversationId)), db.outbox.where("conversation_id").equals(conversationId).filter((row) => row.entity_type === "reading_position").toArray()]);
@@ -28,27 +41,50 @@ export function ReadingPositionSyncStatus({ conversationId, onUseServer, storage
     // Dexie's liveQuery intentionally suppresses DatabaseClosedError. Explicit
     // open makes a failed initial connection visible and lets Retry reopen it.
     void db.open().then(() => {
-      if (!active) return;
-      subscription = query.subscribe({ next: (value) => { setView(value); setReadFailed(false); }, error: () => setReadFailed(true) });
-    }).catch(() => { if (active) setReadFailed(true); });
-    const refresh = () => { if (document.visibilityState === "visible" && navigator.onLine) void readSyncedReadingPosition(conversationId, true).catch(() => undefined); };
+      if (!active || visitRef.current !== visit) return;
+      subscription = query.subscribe({
+        next: (value) => {
+          if (active && visitRef.current === visit) { setView(value); setReadFailed(false); }
+        },
+        error: () => { if (active && visitRef.current === visit) setReadFailed(true); },
+      });
+    }).catch(() => { if (active && visitRef.current === visit) setReadFailed(true); });
+    const refresh = () => {
+      if (active && visitRef.current === visit && document.visibilityState === "visible" && navigator.onLine) {
+        void readSyncedReadingPosition(conversationId, true).catch(() => undefined);
+      }
+    };
     window.addEventListener("online", refresh); window.addEventListener("focus", refresh);
     return () => { active = false; subscription?.unsubscribe(); window.removeEventListener("online", refresh); window.removeEventListener("focus", refresh); };
   }, [conversationId, readAttempt]);
-  const perform = async (action: () => Promise<void>) => {
+  const perform = async (action: (isCurrent: () => boolean) => Promise<void>) => {
+    const visit = visitRef.current;
+    const isCurrent = () => visitRef.current === visit;
     setBusy(true); setError("");
-    try { await action(); } catch { setError(zh ? "进度已变化或操作未完成，请重新核对后重试。" : "Progress changed or the action did not finish. Review and retry."); }
-    finally { setBusy(false); }
+    try {
+      await action(isCurrent);
+      if (!isCurrent()) return;
+    } catch {
+      if (isCurrent()) setError(zh ? "进度已变化或操作未完成，请重新核对后重试。" : "Progress changed or the action did not finish. Review and retry.");
+    } finally {
+      if (isCurrent()) setBusy(false);
+    }
   };
   // Routine autosaves must not add/remove a row above the Reader on every
   // scroll. Keep observing silently; only actionable problems interrupt reading.
   // The explicitly opened sync detail can still show ordinary queue/saved state.
   if (!showIdle && !storageError && !readFailed && !view?.conflict && !view?.failed && !error && !navigationTarget) return null;
   const showRoutineStatus = showIdle && !storageError && !readFailed && !error && !navigationTarget;
-  const choose = (choice: "local" | "server") => perform(async () => {
-    if (!view?.local || !view.server) return;
+  const choose = (choice: "local" | "server") => perform(async (isCurrent) => {
+    if (!isCurrent() || !view?.local || !view.server) return;
     const result = await resolveReadingPosition(conversationId, choice, view.server.revision ?? 1, readingSignature(view.local));
-    if (result && onUseServer) { setNavigationTarget(result); await onUseServer(result); setNavigationTarget(null); }
+    if (!isCurrent() || !result || !onUseServer) return;
+    setNavigationTarget(result);
+    try {
+      await onUseServer(result);
+    } finally {
+      if (isCurrent()) setNavigationTarget(null);
+    }
   });
   return <section aria-label={zh ? "阅读进度同步" : "Reading progress sync"} className="space-y-2 border-b border-ui bg-surface px-3 py-2 text-xs">
     {view?.conflict ? <>
@@ -59,15 +95,23 @@ export function ReadingPositionSyncStatus({ conversationId, onUseServer, storage
     {storageError ? <p role="alert">{zh ? "阅读进度尚未保存，请重试；正文仍可阅读。" : "Reading progress could not be saved. Retry; the text remains readable."}</p> : null}
     {readFailed ? <p role="alert">{zh ? "无法读取本机进度，请检查浏览器存储。" : "Cannot read local progress. Check browser storage."}</p> : null}
     {error ? <p role="alert">{error}</p> : null}
-    {navigationTarget && error ? <button className="btn-secondary min-h-9 px-3" disabled={busy} onClick={() => void perform(async () => { await onUseServer?.(navigationTarget); setNavigationTarget(null); })}>{zh ? "重新定位已选位置" : "Retry locating the chosen position"}</button> : null}
+    {navigationTarget && error ? <button className="btn-secondary min-h-9 px-3" disabled={busy} onClick={() => void perform(async (isCurrent) => {
+      const target = navigationTarget;
+      if (!isCurrent() || !target) return;
+      await onUseServer?.(target);
+      if (isCurrent()) setNavigationTarget(null);
+    })}>{zh ? "重新定位已选位置" : "Retry locating the chosen position"}</button> : null}
     {showRoutineStatus && view && !view.conflict && !view.pending ? <p role="status">{zh ? "阅读位置已保存" : "Reading position saved"}</p> : null}
-    {view?.failed || storageError || readFailed ? <button className="btn-secondary min-h-9 px-3" disabled={busy} onClick={() => void perform(async () => {
+    {view?.failed || storageError || readFailed ? <button className="btn-secondary min-h-9 px-3" disabled={busy} onClick={() => void perform(async (isCurrent) => {
       await offlineDb.open();
+      if (!isCurrent()) return;
       if (readFailed) await readSyncedReadingPosition(conversationId, navigator.onLine, true);
+      if (!isCurrent()) return;
       setReadAttempt((value) => value + 1);
       if (storageError) await onRetryStorage?.();
+      if (!isCurrent()) return;
       await offlineDb.outbox.where("conversation_id").equals(conversationId).filter((row) => row.entity_type === "reading_position" && row.last_error !== "CONFLICT").modify({ attempts: 0, last_error: null, retry_after: 0 });
-      window.dispatchEvent(new Event("chat-reader:outbox"));
+      if (isCurrent()) window.dispatchEvent(new Event("chat-reader:outbox"));
     })}>{zh ? "重试进度保存与同步" : "Retry saving and syncing progress"}</button> : null}
     {!onUseServer ? <a className="inline-flex min-h-9 items-center text-accent hover:underline" href={navigator.onLine ? `/conversations/${conversationId}` : `/library?conversationId=${conversationId}`}>{zh ? "打开对话" : "Open conversation"}</a> : null}
   </section>;

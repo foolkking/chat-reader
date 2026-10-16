@@ -1,0 +1,27 @@
+warning: in the working copy of 'PROJECT_STATE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/components/offline-sync-manager.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/conversations/assistant-message-renderer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/conversations/block-renderer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/conversations/markdown-renderer.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/editing/edit-message-form.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/import/import-workspace-copy.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/projects/project-sidebar.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/rich-markdown/rich-markdown-config.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/lib/annotation-sync.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/documentation-inventory.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/index.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/system/AI_RICH_MARKDOWN_CONTRACT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/system/FRONTEND_ARCHITECTURE.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/testing.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/ux/manual-markdown-fidelity.test.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/api/tests/test_chatgpt_rich_text_source.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/conversations/conversation-deletion-provider.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/editing/use-message-version-history.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/execution/ux-audit-chatgpt-rich-text-2026-10-15.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/execution/ux-audit-resumed-source-gates-2026-10-15.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/ux/chatgpt-rich-text.test.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/ux/interaction-confirmation-lifecycle.test.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/ux/message-version-recovery.test.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/ux/resumed-source-gates.test.mjs', LF will be replaced by CRLF the next time Git touches it
+Tracked exit: 0; inspected 10 scoped untracked files; no whitespace findings.

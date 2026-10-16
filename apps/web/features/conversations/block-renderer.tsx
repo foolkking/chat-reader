@@ -2,6 +2,7 @@ import { memo } from "react";
 import type { RenderBlockRead } from "../../lib/types";
 import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownAttachmentOccurrence, type MarkdownTaskItem } from "./markdown-renderer";
 import { AttachmentBlock, embeddedAttachment } from "../attachments/attachment-block";
+import { readChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
 
 const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 
@@ -42,20 +43,21 @@ export const BlockRenderer = memo(function BlockRenderer({
     );
   }
   const text = stripLeadingTimestamp(block.plain_text ?? readText(block));
+  const richTextProfile = readChatGptRichTextProfile(block.data.chatGptRichTextProfile);
 
   if (!text.trim()) {
     return null;
   }
 
   if (block.collapsed_by_default && block.block_type !== "heading" && block.block_type !== "code") {
-    return <ThinkingDisclosure label={THINKING_LABEL} text={text} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} />;
+    return <ThinkingDisclosure label={THINKING_LABEL} text={text} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} richTextProfile={richTextProfile} />;
   }
 
   if (block.block_type === "heading") {
     const level = normalizeHeadingLevel(block.data.level);
     const title = stripLeadingTimestamp(readString(block.data.title) ?? text);
     const baseClass = "reader-heading whitespace-pre-wrap break-words font-semibold tracking-normal text-primary";
-    const content = <InlineHeadingMarkdown text={title} />;
+    const content = <InlineHeadingMarkdown text={title} richTextProfile={richTextProfile} />;
 
     if (level === 1) {
       return <h1 className={`${baseClass} reader-heading-1 border-b border-ui pb-2`}>{content}</h1>;
@@ -75,7 +77,7 @@ export const BlockRenderer = memo(function BlockRenderer({
     return <MarkdownRenderer text={`\`\`\`${language ?? ""}\n${code}\n\`\`\``} isAssistant={false} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
   }
 
-  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
+  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} richTextProfile={richTextProfile} />;
 }, (previous, next) => previous.block === next.block
   && previous.messageId === next.messageId
   && previous.galleryItems === next.galleryItems

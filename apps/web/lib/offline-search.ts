@@ -3,9 +3,12 @@ import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
 
 let worker: Worker | null = null;
 type WorkerReply = { requestId: string; items: OfflineSearchDocument[]; runtime?: { workerUrl: string; assets: string[] } };
+type SearchIndex = { worker: Worker; access: number; ready: Promise<WorkerReply> };
+let searchIndex: SearchIndex | null = null;
 const pending = new Map<string, { resolve: (reply: WorkerReply) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
 
 export function resetOfflineSearch(): void {
+  searchIndex = null;
   worker?.terminate();
   worker = null;
   for (const request of pending.values()) {
@@ -43,15 +46,29 @@ export async function getOfflineSearchRuntime(): Promise<{ workerUrl: string; as
 
 export async function initializeOfflineSearch(documents: OfflineSearchDocument[]): Promise<void> {
   const access = captureOfflineAccess();
-  await request("init", { documents });
+  const current = getWorker();
+  const index = { worker: current, access, ready: request("init", { documents }) };
+  // A synchronous post failure may already have reset this Worker.
+  if (worker === current) searchIndex = index;
+  await index.ready;
   assertOfflineAccess(access);
+  if (worker !== current || searchIndex !== index) throw new Error("Offline search is unavailable.");
 }
 
 export async function searchOffline(query: string, limit = 80): Promise<OfflineSearchDocument[]> {
   const access = captureOfflineAccess();
   if (!query.trim()) return [];
+  const index = searchIndex;
+  if (!index) throw new Error("Offline search is unavailable.");
+  assertOfflineAccess(index.access);
+  // Wait only for an established initialization. Never create a replacement
+  // Worker here and mistake its empty index for a successful no-match search.
+  await index.ready;
+  assertOfflineAccess(access);
+  if (searchIndex !== index || worker !== index.worker) throw new Error("Offline search is unavailable.");
   const result = await request("search", { query, limit });
   assertOfflineAccess(access);
+  if (searchIndex !== index || worker !== index.worker) throw new Error("Offline search is unavailable.");
   return result.items;
 }
 

@@ -80,10 +80,16 @@ export function OfflineExportPanel({ conversationId, maintenance = false }: { co
         <FormatButton active={format === "canjson"} onClick={() => { setFormat("canjson"); resetResult(); }} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />
         <FormatButton active={format === "markdown"} onClick={() => { setFormat("markdown"); resetResult(); }} icon={<FileText className="h-4 w-4" />} label="Markdown" />
       </div> : null}
-      <label className="flex min-h-11 items-center justify-between gap-4 rounded-lg border border-ui px-3 text-sm text-primary">
-        <span className="min-w-0"><span className="block font-medium">{zh ? "包含已缓存附件" : "Include cached attachments"}</span><span className="block text-xs leading-5 text-secondary">{zh ? `${attachmentCountQuery.data ?? 0} 个附件记录` : `${attachmentCountQuery.data ?? 0} attachment records`}</span></span>
-        <input type="checkbox" checked={includeAttachments} onChange={(event) => { setIncludeAttachments(event.target.checked); resetResult(); }} className="h-5 w-5 accent-[var(--accent)]" />
-      </label>
+      <div className="space-y-2">
+        <label className="flex min-h-11 items-center justify-between gap-4 rounded-lg border border-ui px-3 text-sm text-primary">
+          <span className="min-w-0"><span className="block font-medium">{zh ? "包含已缓存附件" : "Include cached attachments"}</span><span className="block text-xs leading-5 text-secondary">{attachmentCountQuery.isLoading ? (zh ? "正在读取附件记录…" : "Reading attachment records…") : attachmentCountQuery.isError ? (zh ? "附件记录数暂时无法确认" : "Attachment count unavailable") : (zh ? `${attachmentCountQuery.data ?? 0} 个附件记录` : `${attachmentCountQuery.data ?? 0} attachment records`)}</span></span>
+          <input type="checkbox" checked={includeAttachments} onChange={(event) => { setIncludeAttachments(event.target.checked); resetResult(); }} className="h-5 w-5 accent-[var(--accent)]" />
+        </label>
+        {attachmentCountQuery.isError ? <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[var(--color-semantic-warning-soft)] px-3 py-2 text-xs leading-5 text-[var(--color-semantic-warning)]">
+          <span>{zh ? "导出仍可继续；重试后可确认当前离线副本中的附件数量。" : "You can still export; retry to confirm the attachment count in this offline copy."}</span>
+          <button type="button" className="min-h-9 rounded-md px-2 font-medium text-primary hover:bg-surface disabled:opacity-60" disabled={attachmentCountQuery.isFetching} onClick={() => void attachmentCountQuery.refetch()}>{attachmentCountQuery.isFetching ? (zh ? "正在重试…" : "Retrying…") : (zh ? "重试读取" : "Retry count")}</button>
+        </div> : null}
+      </div>
       <details className="group rounded-lg border border-ui bg-surface">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-sm font-medium text-primary"><span>{zh ? "更多内容选项" : "More content options"}</span><ChevronDown className="h-4 w-4 text-secondary transition-transform group-open:rotate-180" /></summary>
         <div className="space-y-1 border-t border-ui p-2">
@@ -120,8 +126,18 @@ function CompactOption({ checked, onChange, label }: { checked: boolean; onChang
 }
 
 function localizeOfflineExportError(message: string, zh: boolean): string {
-  if (!zh) return message;
-  if (message.includes("256 MiB")) return "离线导出超过 256 MiB 浏览器安全上限，请联网后导出。";
-  if (message.includes("not found")) return "找不到当前离线对话。";
-  return "无法生成离线导出，请重试。";
+  const normalized = message.toLocaleLowerCase();
+  if (normalized.includes("256 mib")) {
+    return zh
+      ? "离线导出超过 256 MiB 浏览器安全上限，请联网后导出。"
+      : "This offline export exceeds the 256 MiB browser safety limit. Export it while online instead.";
+  }
+  if (normalized.includes("offline conversation was not found")) {
+    return zh
+      ? "找不到当前离线对话，请重新打开离线资料库后重试。"
+      : "This offline conversation is no longer available. Reopen the offline library and try again.";
+  }
+  return zh
+    ? "无法从当前离线副本生成导出，请重试。"
+    : "Unable to create an export from this offline copy. Try again.";
 }

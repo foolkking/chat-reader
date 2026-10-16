@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { createShare, getConversationShares, revokeShare, updateShare } from "../../lib/api";
+import { ApiRequestError, createShare, getConversationShares, revokeShare, updateShare } from "../../lib/api";
 import type { ShareRead } from "../../lib/types";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 
@@ -42,6 +42,15 @@ export function SharePanel({
     queryFn: () => getConversationShares(conversationId),
   });
 
+  async function refreshShares(): Promise<boolean> {
+    try {
+      const result = await sharesQuery.refetch();
+      return !result.isError;
+    } catch {
+      return false;
+    }
+  }
+
   async function submit() {
     setError(null);
     if (passwordProtected && sharePassword.length < 12) {
@@ -71,9 +80,9 @@ export function SharePanel({
         share_password: passwordProtected ? sharePassword : null,
       });
       setCreatedUrl(response.share_url);
-      await sharesQuery.refetch();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (zh ? "无法创建分享链接。" : "Unable to create share."));
+      if (!await refreshShares()) setError(shareRefreshError(zh, "create"));
+    } catch (failure) {
+      setError(shareWriteError(failure, zh, "create"));
     } finally {
       setIsCreating(false);
     }
@@ -193,14 +202,30 @@ export function SharePanel({
       {!compact ? <div className="mt-5 space-y-2">
         <h3 className="text-xs font-semibold text-secondary">{t("createdLinks")}</h3>
         {sharesQuery.isLoading ? <p className="text-sm text-secondary">{zh ? "正在加载分享链接…" : "Loading share links…"}</p> : null}
-        {sharesQuery.isError ? <p className="text-sm text-red-700">{sharesQuery.error.message}</p> : null}
+        {sharesQuery.isError ? (
+          <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-[var(--danger)]">
+            <p>
+              {sharesQuery.data
+                ? (zh ? "暂时无法更新分享链接列表，仍显示上次结果。" : "Unable to refresh share links; showing the previous results.")
+                : (zh ? "无法读取分享链接列表。" : "Unable to read share links.")}
+            </p>
+            <button
+              type="button"
+              disabled={sharesQuery.isFetching}
+              onClick={() => void sharesQuery.refetch()}
+              className="min-h-10 underline disabled:opacity-60"
+            >
+              {sharesQuery.isFetching ? (zh ? "正在重试…" : "Retrying…") : (zh ? "重试" : "Retry")}
+            </button>
+          </div>
+        ) : null}
         {(sharesQuery.data ?? []).map((share) => (
           <ShareManagementRow
             key={share.id}
             conversationId={conversationId}
             share={share}
             onCreatedUrl={setCreatedUrl}
-            onChanged={() => sharesQuery.refetch()}
+            onChanged={refreshShares}
           />
         ))}
       </div> : null}
@@ -217,7 +242,7 @@ function ShareManagementRow({
   conversationId: string;
   share: ShareRead;
   onCreatedUrl: (url: string) => void;
-  onChanged: () => Promise<unknown>;
+  onChanged: () => Promise<boolean>;
 }) {
   const t = useTranslations();
   const { resolvedLocale } = usePreferences();
@@ -239,9 +264,9 @@ function ShareManagementRow({
         theme,
         locale,
       });
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (zh ? "无法更新分享。" : "Unable to update share."));
+      if (!await onChanged()) setError(shareRefreshError(zh, "update"));
+    } catch (failure) {
+      setError(shareWriteError(failure, zh, "update"));
     } finally {
       setBusy(null);
     }
@@ -262,9 +287,9 @@ function ShareManagementRow({
       await updateShare(share.id, { share_password: value });
       setNewPassword("");
       setNewPasswordConfirm("");
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (zh ? "无法更新分享密码。" : "Unable to update share password."));
+      if (!await onChanged()) setError(shareRefreshError(zh, "update"));
+    } catch (failure) {
+      setError(shareWriteError(failure, zh, "update"));
     } finally {
       setBusy(null);
     }
@@ -295,9 +320,9 @@ function ShareManagementRow({
         expires_at: share.expires_at ?? null,
       });
       onCreatedUrl(response.share_url);
-      await onChanged();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (zh ? "无法重新生成分享链接。" : "Unable to regenerate share link."));
+      if (!await onChanged()) setError(shareRefreshError(zh, "regenerate"));
+    } catch (failure) {
+      setError(shareWriteError(failure, zh, "regenerate"));
     } finally {
       setBusy(null);
     }
@@ -354,12 +379,12 @@ function ShareManagementRow({
             type="button"
             onClick={async () => {
               setBusy("revoke");
-              setError(null);
+                setError(null);
               try {
                 await revokeShare(share.id);
-                await onChanged();
-              } catch (err) {
-                setError(err instanceof Error ? err.message : (zh ? "无法撤销分享。" : "Unable to revoke share."));
+                if (!await onChanged()) setError(shareRefreshError(zh, "revoke"));
+              } catch (failure) {
+                setError(shareWriteError(failure, zh, "revoke"));
               } finally {
                 setBusy(null);
               }
@@ -405,6 +430,44 @@ function ShareManagementRow({
       {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
     </div>
   );
+}
+
+type ShareWriteAction = "create" | "update" | "regenerate" | "revoke";
+
+function shareRefreshError(zh: boolean, action: ShareWriteAction): string {
+  if (action === "create") {
+    return zh
+      ? "分享已创建，但列表刷新失败。已生成的链接仍在上方，请刷新列表核对。"
+      : "The share was created, but the list could not refresh. The generated link remains above; refresh the list to verify.";
+  }
+  if (action === "regenerate") {
+    return zh
+      ? "新链接已生成，但列表刷新失败。请刷新列表核对当前分享状态。"
+      : "A new link was generated, but the list could not refresh. Refresh the list to verify the current share state.";
+  }
+  return zh
+    ? "操作已完成，但列表刷新失败。请刷新列表核对当前分享状态。"
+    : "The action completed, but the list could not refresh. Refresh the list to verify the current share state.";
+}
+
+function shareWriteError(failure: unknown, zh: boolean, action: ShareWriteAction): string {
+  if (failure instanceof ApiRequestError) {
+    if (failure.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
+    if (failure.status === 403) return zh ? "当前权限不允许此操作。" : "Your current permissions do not allow this action.";
+    if (failure.status === 404) return zh ? "分享或所属对话已不存在，请刷新列表确认。" : "The share or its conversation is no longer available. Refresh the list to confirm.";
+    if (failure.status === 409) return zh ? "分享状态已发生变化，请刷新列表后重试。" : "The share changed elsewhere. Refresh the list before retrying.";
+    if (failure.status === 410) return zh ? "此分享已撤销或过期，不能继续修改。" : "This share was revoked or has expired and cannot be changed.";
+    if (failure.status === 422) return zh ? "分享设置无效，请检查所选消息、有效期和密码。" : "The share settings are not valid. Check the selected messages, expiry and password.";
+    if (failure.status === 429) return zh ? "操作过于频繁，请稍后重试。" : "Too many requests. Try again shortly.";
+  }
+  if (action === "revoke") {
+    return zh
+      ? "撤销结果尚未确认。请刷新列表核对后再决定是否重试。"
+      : "The revoke result is not confirmed. Refresh the list before deciding whether to retry.";
+  }
+  return zh
+    ? "操作结果尚未确认。请刷新列表核对后再决定是否重试。"
+    : "The action result is not confirmed. Refresh the list before deciding whether to retry.";
 }
 
 function PrivacyToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {

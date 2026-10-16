@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CleanupRuleCreate(BaseModel):
@@ -103,6 +103,19 @@ class CleanupScanRead(BaseModel):
     error_message: str | None
 
 
+class CleanupRemovalRange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    start_offset: int = Field(ge=0, strict=True)
+    end_offset: int = Field(gt=0, strict=True)
+
+
+class CleanupRangeUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    base_edit_token: str = Field(pattern=r"^[0-9a-f]{64}$")
+    # Omission must not reset consent. Send explicit null to restore full bounds.
+    ranges: list[CleanupRemovalRange] | None = Field(min_length=1, max_length=20)
+
+
 class CleanupOccurrenceRead(BaseModel):
     id: UUID
     conversation_id: UUID
@@ -126,6 +139,8 @@ class CleanupOccurrenceRead(BaseModel):
     stale: bool
     match_mode: str
     evidence_codes: list[str] | None
+    reviewed_ranges: list[CleanupRemovalRange] | None = None
+    edit_token: str | None = None
 
 
 class CleanupDecisionInput(BaseModel):

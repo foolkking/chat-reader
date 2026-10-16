@@ -103,6 +103,8 @@ function fixture({ projectView = false, state = "empty", open = false, selection
   };
   for (const prefix of ["./", "../conversations/"]) {
     mocks[`${prefix}conversation-action-menu`] = { ConversationActionMenu: () => null };
+    mocks[`${prefix}conversation-deletion-provider`] = { useConversationDeletion: () => ({ busy: false,
+      submit: async () => { throw new Error("A merge-reentry test must not delete"); } }) };
     mocks[`${prefix}conversation-placement`] = { useConversationPlacement: () => ({}), ConversationPlacementSurface: () => null };
     mocks[`${prefix}conversation-undo`] = {};
     mocks[`${prefix}markdown-renderer`] = { stripLeadingTimestamp: text => text };

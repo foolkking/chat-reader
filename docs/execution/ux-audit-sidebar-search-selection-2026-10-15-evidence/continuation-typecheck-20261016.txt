@@ -1,0 +1,4 @@
+command: continuation-typecheck-20261016.txt
+started: 2026-10-16T00:38:04.6551403+08:00
+exitCode: 0
+finished: 2026-10-16T00:38:30.9523500+08:00

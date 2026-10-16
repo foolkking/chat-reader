@@ -1,0 +1,3 @@
+node_exit=0
+python_exit=0
+temp_root=C:\Users\86182\Desktop\wkkk\chat-reader-richtext-2026-10-15

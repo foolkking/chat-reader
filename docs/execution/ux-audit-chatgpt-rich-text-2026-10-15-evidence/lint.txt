@@ -1,0 +1,22 @@
+
+> chat-reader@0.0.0 lint E:\1project\chat-reader
+> corepack pnpm --filter web lint
+
+
+> web@0.0.0 lint E:\1project\chat-reader\apps\web
+> eslint . --max-warnings=0
+
+
+E:\1project\chat-reader\apps\web\features\conversations\conversation-deletion-provider.tsx
+  74:5  error  Definition for rule 'react-hooks/exhaustive-deps' was not found  react-hooks/exhaustive-deps
+
+E:\1project\chat-reader\apps\web\features\editing\use-message-version-history.ts
+  211:5  error  Definition for rule 'react-hooks/exhaustive-deps' was not found  react-hooks/exhaustive-deps
+  222:5  error  Definition for rule 'react-hooks/exhaustive-deps' was not found  react-hooks/exhaustive-deps
+
+✖ 3 problems (3 errors, 0 warnings)
+
+E:\1project\chat-reader\apps\web:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  web@0.0.0 lint: `eslint . --max-warnings=0`
+Exit status 1
+ ELIFECYCLE  Command failed with exit code 1.

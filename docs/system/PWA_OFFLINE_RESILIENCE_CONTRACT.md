@@ -1,5 +1,50 @@
 # PWA and Offline Resilience Contract
 
+## Library download-status subscription — 2026-10-15, source only
+
+The Library's local `listOfflineDownloads()` subscription has an independent
+read-error state. A failed subscription removes only the UI's unverifiable
+progress and persisted-failure projection; it does not cancel, mark failed or
+retry a background download. The surface says that a download may still be
+running and offers a status-only Retry that creates a new subscription.
+Successful emissions clear the read error and retain the existing completion
+refresh, failure selection and progress mapping.
+
+The [report](../execution/ux-audit-offline-library-download-status-read-2026-10-15.md)
+owns source evidence and authored, unexecuted regressions. Dexie v2, offline
+packages v1/v2/v3, worker/cancellation/retry semantics, canonical data and API
+contracts are unchanged; liveQuery/browser acceptance is not implied.
+
+## Library local read feedback — 2026-10-15, source only
+
+The Library distinguishes local conversation/message loading, successful read,
+initial failure and retained-view refresh failure from search-index availability.
+It does not declare an empty library before a successful local list read.
+Successful local rows can remain visible while refreshing; failed refreshes
+retain the last read rows and offer an explicit local Retry through the existing
+serialized reload path. The local read does not delete copies on failure.
+Search auxiliary reads/initialization remain separately reported, and catalog
+download deep links retain their existing availability.
+
+The [report](../execution/ux-audit-offline-library-local-read-state-2026-10-15.md)
+owns source evidence and authored, unexecuted regressions. This is not a
+React/IndexedDB/browser acceptance claim. Dexie v2, packages v1/v2/v3, original
+content, search corpus, selection, downloads and cleanup contracts remain.
+
+## Adaptive import-session restore — 2026-10-15, source only
+
+The browser-saved adaptive import-session UUID is retained across a transient
+restore-read failure. The Import surface reports restoring/error/ready state
+separately from commit and import-status state, and its Retry reopens only
+`getAdaptiveImportSession` for the same UUID. Confirmed terminal session states
+and explicit new-file selection may remove the pointer; an unconfirmed read
+error may not. No import, worker, canonical-data, package, Dexie or API
+contract changes are implied.
+
+The [report](../execution/ux-audit-import-session-restore-recovery-2026-10-15.md)
+owns source evidence and the authored, unexecuted regression. Browser/API/
+sessionStorage remount acceptance remains pending.
+
 ## Task Center recovery — 2026-10-08 worktree, not deployed
 
 Offline Task Center rows open the existing Offline & sync panel. Opening it does
@@ -156,6 +201,19 @@ removes optional members from the downloaded package; it proves absence handling
 not an actual old deployment or the entire v1/v2 compatibility matrix.
 
 ## Continuation reading and local drafts (2026-10-03)
+
+Source-only follow-up (2026-10-15): the read-only offline Current/Index panel
+distinguishes pending and failed reads from successfully confirmed missing
+conversations or optional members. Missing Dexie rows resolve to null. Transient
+refresh errors retain matching cached content with a previously-read-copy notice;
+read errors reporting locked access hide it. A local Retry is disabled while
+fetching and does not cancel/restart an existing read. The query captures its
+database, checks current database ownership before reading and fences the awaited
+result by offline access generation. Existing account/conversation keys,
+`always` mode, member/source choices and Index navigation are unchanged.
+The [read-state report](../execution/ux-audit-offline-continuation-read-states-2026-10-15.md)
+owns authored, unexecuted regressions. No browser/storage/focus/anchor or resource
+acceptance is implied; older happy-path evidence below does not accept this repair.
 
 Cached Index references navigate through the offline complete-turn Reader; an
 explicit destination cancels any startup reading-position restore. Disconnected
@@ -356,6 +414,63 @@ Concurrent retries apply once; competing base revisions preserve conflict
 copies. A zero notebook base revision only bootstraps an untouched empty note,
 never overwrites an already edited note.
 
+Source-only follow-up (2026-10-15): the center inspects cached attachment
+availability only on visible Copies, not Pending/Failures. Conflict/cleanup
+replacement subviews pause the parent local-ledger subscription; returning
+resubscribes. Global download/sync managers and visible copy verification are
+unchanged. Already-started inspection helpers are not actively cancelled; the
+existing active/sequence guards fence their late publication. The
+[inspection report](../execution/ux-audit-sync-center-hidden-inspection-2026-10-15.md)
+owns source evidence and unexecuted regressions, not a measured resource benefit.
+
+The [scoped read-state follow-up](../execution/ux-audit-sync-center-read-states-2026-10-15.md)
+(same date, source only) binds local read completion to tab/page/asset mode.
+Unread/failed views do not report confirmed empty ledgers or reuse another
+scope's rows/pagination. Matching successful data may remain visible with a
+refreshing status. Entering another scope retires the prior completion marker
+before shared ledger fields are republished. Finite storage/asset feedback is separate from action errors;
+Retry only reopens the local subscription. A ledger failure invalidates earlier
+asset-result publication. Independent preference status and existing download/
+catalog controls remain. The partial-read follow-up below supersedes this
+batch's aggregate-failure boundary. Regressions are authored, not executed;
+no lock/browser acceptance follows.
+
+The [tab-owned read follow-up](../execution/ux-audit-sync-center-tab-read-scope-2026-10-15.md)
+(same date, source only) narrows the existing local subscription to the visible
+owner: Copies reads copy rows/count plus download tasks; Pending reads outbox,
+draft and conflict owners; Failures reads task/conflict/failed-operation
+owners and bounded displayed-copy existence. The initial task entry retains
+download reads even on Pending. Sorts, offsets, limits, read-state
+guards, asset verification and mutations remain; hidden fields are neutral
+placeholders, not displayed success. The inner-reader regressions are unexecuted.
+
+The [partial-read follow-up](../execution/ux-audit-sync-center-partial-read-recovery-2026-10-15.md)
+(same date, source only) settles the existing visible section reads separately.
+Successful siblings publish after settlement even if another read failed.
+Failed section names belong to the current tab/page/mode marker and are shown
+explicitly; their stale in-memory rows are not represented as current, and
+their missing counts do not establish an empty view or clamp a shared page.
+Copies paging depends on its own count; Pending paging depends on operations
+and drafts; Failures paging depends on tasks, conflicts and failed operations.
+Initial-task lookup cannot resolve a failed task read as “no matching record”.
+Copies-only asset verification retains its specific error and late-result fence.
+Local Retry remains read-only. Cleanup still waits for known download status;
+combined pending export waits for its required reads. No stored data, Dexie/
+package version, API, download, synchronization or mutation change. Shared
+regressions are updated but unexecuted; real storage/browser acceptance remains
+pending.
+
+The [visible-inspection coalescing follow-up](../execution/ux-audit-sync-center-inspection-coalescing-2026-10-15.md)
+(same date, source only) bounds Copies scans within one effect to one active
+page and one replaceable latest pending page. Every started sibling settles
+before the next page starts, including when one rejected. New emissions replace
+queued work; ledger/copy read failures, navigation exits and cleanup retire it.
+Existing verifiers, page row bounds/order, asset mode and late-result guards
+remain; no verification result is reused. Already-started work cannot be
+actively cancelled, and retired/current effects may overlap while it settles.
+No extra subscription, timer, cache policy, stored byte or manager change.
+Shared regression cases are unexecuted and no CPU/RSS improvement is measured.
+
 The settings menu and Library menu open the same Offline & sync center. It has
 offline copies, pending edits, and failures/conflicts views, with paged rows,
 asset completeness, manual sync retry, source links, download cancellation and
@@ -366,6 +481,33 @@ titles and comments preserve reference blocks. Resolution checks both canonical
 and conflict-copy revisions under the same PostgreSQL subject lock. Changed
 versions require a fresh comparison; confirmed resolution removes the temporary
 copy and updates annotation search and notebook references.
+
+Source-only [merge-draft follow-up](../execution/ux-audit-offline-conflict-merge-draft-refresh-2026-10-15.md)
+(2026-10-15): the manual annotation/notebook merge initializes from the stored
+draft or local content once per conflict visit. `Compare again` refreshes the
+versions without replacing that merge, including failed/pending saves and
+newer in-memory edits. Explicit local/server-as-draft choices still replace it
+through the same save path. Failed saves retain dirty/exit protection and
+`Retry saving draft` writes the retained merge. Locale changes translate
+feedback without another comparison read/focus reset. A real conflict-key
+change resets visit state and retires old read/save completions; existing
+writes are not cancelled. Draft keys/storage, resolution receipts, descendant
+rebase and conflict policy are unchanged. New controlled-component regressions
+are unexecuted, not covered by the older runtime evidence below.
+
+The separate [resolution recovery follow-up](../execution/ux-audit-offline-conflict-resolution-recovery-2026-10-15.md)
+(same date, source only) contains a failed marker lookup during error recovery
+instead of letting that second failure reject the discarded action promise.
+Unread/failed marker state is explicitly unconfirmed: neither fresh choices
+nor request retry is offered until a successful read. `Recheck resolution
+status` reads the marker and, if no non-STALE request exists, the comparison;
+it never prepares, submits or acknowledges a resolution. Merge memory, dirty
+protection and finite localized feedback remain. Generation checks fence
+already-waiting confirmation/prepare/retry/recovery/invalidation continuations
+and old return callbacks after key change/unmount. A write/request already
+started may finish; its stored request and server receipt rules below remain
+authoritative. No cancellation, cross-tab reconciliation or new queue is added.
+The shared regression remains unexecuted and adds no runtime acceptance.
 
 A resolution request and the specific descendant operation IDs included in its
 comparison are persisted before sending. Retry reuses that operation ID through
@@ -532,6 +674,53 @@ worker and invalidates outstanding access generations. The cold-start browser
 gate clears the ordinary HTTP cache while preserving Cache Storage, disconnects
 the network, and verifies actual search results in a new page.
 
+### Search readiness follow-up — 2026-10-15, source only
+
+The shared bridge now binds index readiness to one Worker/init promise and
+offline access generation. A nonblank query waits for an initialization already
+in progress; without one, or after reset/replacement, it rejects as unavailable
+instead of creating a fresh empty index. A blank query and an initialized empty
+corpus remain legitimate empty results. Runtime resource inventory can create a
+Worker without marking its index initialized. No second corpus is retained.
+
+Offline Reader's explicit search Retry prepares the query through Library's
+existing queued/coalesced local rebuild, on both mobile and desktop surfaces.
+The preparation is scoped and consumed once, not run on ordinary typing or
+automatic query retries. Access checks span preparation and the search response.
+That local search query uses `networkMode: "always"`; remote search retains its
+inherited network policy. No global QueryProvider setting or other Reader query
+policy is changed by this follow-up.
+
+The [readiness report](../execution/ux-audit-offline-search-readiness-2026-10-15.md)
+owns the source evidence and retained continuation outputs. Its two focused
+regression files pass 19/19, with targeted Web ESLint and nonincremental
+typecheck also passing. No browser, service, real Worker/IndexedDB, build, CI,
+deployment or CPU/RSS acceptance ran for it. Earlier cold-start browser
+evidence does not accept this new recovery branch.
+
+### Reader query scheduling follow-up — 2026-10-15, source only
+
+Offline Reader metadata, saved-position and initial complete-turn queries,
+dialogue/section sheet prefetches and both navigation component queries use
+`networkMode: "always"` when the data source is offline. They must not wait for
+Query's online manager before executing IndexedDB reads. Desktop and sheet
+placements pass the same explicit policy. A custom loader or source-key prefix
+alone never implies offline scheduling.
+
+Remote Reader and Share callers retain inherited policies: when no explicit
+mode is provided, the property is omitted rather than set to undefined, so
+provider/key defaults are not overwritten. Global QueryProvider is unchanged.
+Keys, enabled expressions, stale times, placeholders, explicit retry settings,
+complete-turn/anchor loading and saved-position freezing are unchanged. Local
+`always` queries adopt Query's default of no network-reconnect refetch; explicit
+invalidation remains available. Local utility subpanel query owners are outside
+this scoped repair.
+
+The [query-policy report](../execution/ux-audit-offline-reader-query-policy-2026-10-15.md)
+owns pre-edit evidence and authored, unexecuted regressions. No tests/gates,
+services, browser, build, CI, deployment or CPU/RSS acceptance ran for this batch.
+Package versions, Dexie schema and user data are unchanged.
+
 Cached `/library` HTML hydrates with a stable initial shell snapshot, selection
 and connectivity state; the requested conversation and live network status are
 applied after hydration. This avoids replacing the cached tree during a cold
@@ -586,6 +775,18 @@ content-addressed cache identity, but reads do not re-hash file bytes.
 
 Offline misses never enumerate server files, create derivatives, widen access,
 or start jobs.
+
+Source-only query follow-up (2026-10-15): the offline conversation file-list
+query uses `networkMode: "always"`; inline attachment, Viewer shell and Viewer
+item queries add that policy only for `access.kind === "offline"`. Cached
+metadata/byte reads therefore do not wait for Query's connectivity gate.
+Owner/Share/admin paths omit the override and retain inherited defaults and
+access arguments. Existing enablement/lazy gates, stale/GC times, verified-cache
+checks, access-generation fencing and Object URL release effects are unchanged.
+Local `always` queries use Query's normal reconnect default; explicit Retry and
+invalidation remain available. This does not guarantee bytes or viewer runtime
+resources are cached. The [attachment scheduling report](../execution/ux-audit-offline-attachment-query-policy-2026-10-15.md)
+owns authored, unexecuted regressions and the source-only acceptance boundary.
 
 ## Quota, Interruption, and Restart
 

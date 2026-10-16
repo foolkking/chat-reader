@@ -27,6 +27,55 @@ function offlineIdleStatus(page: Page) {
     .first();
 }
 
+for (const width of [375, 1440]) test(`${width}px: offline resource inspection can recover without starting a download`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  let packageRequests = 0;
+  page.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname === "/api/offline/packages") packageRequests += 1; });
+  await page.route("**/api/offline/catalog", route => route.fulfill({ json: {
+    revision: "synthetic-resource-check", generated_at: "2026-10-13T00:00:00Z", estimated_bytes: 1024, projects: [],
+    conversations: [{ id: "offline-fixture", display_title: "离线测试对话", project_id: null, project_name: null,
+      revision: 1, estimated_bytes: 1024, updated_at: null }],
+  } }));
+  await page.goto("/library");
+  await seedOfflineFixture(page);
+  await page.reload();
+  if (width < 768) await page.getByRole("button", { name: /^(打开资料库|Open library)$/ }).click();
+  const update = page.locator("button:visible").filter({ hasText: /^(更新 1 个对话|Update 1 conversations)/ });
+  await expect(update).toBeEnabled();
+  await page.evaluate(() => {
+    const original = IDBDatabase.prototype.transaction;
+    const inspection = window as Window & { resourceCheckFailures?: number; restoreResourceCheck?: () => void };
+    inspection.resourceCheckFailures = 0;
+    IDBDatabase.prototype.transaction = function (...args: Parameters<IDBDatabase["transaction"]>) {
+      const stores = typeof args[0] === "string" ? [args[0]] : Array.from(args[0]);
+      if (this.name === "chat-reader-offline-library" && (args[1] ?? "readonly") === "readonly" && stores.length === 1 && stores[0] === "attachments") {
+        inspection.resourceCheckFailures = (inspection.resourceCheckFailures ?? 0) + 1;
+        throw new DOMException("Synthetic resource inspection failure", "UnknownError");
+      }
+      return original.apply(this, args);
+    };
+    inspection.restoreResourceCheck = () => { IDBDatabase.prototype.transaction = original; };
+  });
+  await page.locator("label:visible").filter({ hasText: /离线附件|Offline attachments/ }).locator("select").selectOption("none");
+  const retry = page.getByRole("button", { name: /^(重新检查离线资源|Retry resource check)$/ });
+  await expect(retry).toBeVisible();
+  await expect(page.locator("p:visible").filter({ hasText: /^离线测试对话$/ })).toBeVisible();
+  await expect(update).toHaveCount(0);
+  const failuresBeforeRetry = await page.evaluate(() => (window as Window & { resourceCheckFailures?: number }).resourceCheckFailures ?? 0);
+  expect(failuresBeforeRetry).toBeGreaterThan(0);
+  await retry.click();
+  await expect.poll(() => page.evaluate(() => (window as Window & { resourceCheckFailures?: number }).resourceCheckFailures ?? 0)).toBeGreaterThan(failuresBeforeRetry);
+  await expect(retry).toBeVisible();
+  expect(packageRequests).toBe(0);
+  await page.screenshot({ path: testInfo.outputPath(`offline-resource-check-${width}.png`) });
+  await page.evaluate(() => { (window as Window & { restoreResourceCheck?: () => void }).restoreResourceCheck?.(); });
+  await retry.click();
+  await expect(update).toBeEnabled();
+  await expect(retry).toHaveCount(0);
+  await expect(page.locator("p:visible").filter({ hasText: /^离线测试对话$/ })).toBeVisible();
+  expect(packageRequests).toBe(0);
+});
+
 test("reads cached continuation without edit or upload controls", async ({ page, context }, testInfo) => {
   await page.goto('/library');
   await expect(offlineReadyStatus(page)).toBeVisible();

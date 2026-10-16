@@ -1,0 +1,56 @@
+{
+  "kind": "additive-local-verification",
+  "captured_at": "2026-10-14",
+  "repository_head": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "scope": "Personal archive callback/confirmation ownership and metadata-only upload-limit recovery",
+  "predecessor": {
+    "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/local-verification.json",
+    "bytes": 5043,
+    "sha256": "7abd364646c83a16f291472d9ced5abedc43fb02af08b34bc379d61c0d7f2d8b",
+    "verified_sources": 5,
+    "verified_evidence_files": 10,
+    "note": "Immediate task-status and its immediate offline predecessor bindings verified; the older missing notebook ledger is not recreated or certified."
+  },
+  "sources": [
+    { "path": "apps/web/components/personal-backup-panel.tsx", "bytes": 27197, "sha256": "22a2710d757983d61cdcf0b46e15a6e7ed10bf0516b3264f5fa5c2f1d1e57b7a" },
+    { "path": "apps/web/e2e/settings-personal-backup.spec.ts", "bytes": 16211, "sha256": "f9199038d6c8bfb8405d6b1052d154fb753a29bdcea52e48948d2336a2392655" },
+    { "path": "scripts/ux/personal-archive-scope.test.mjs", "bytes": 27486, "sha256": "6b517320b9043f6d91fa3dd48b3292403e1d99b0e8d059a71e38cd22fce02d5c" },
+    { "path": "apps/web/lib/archive-task-state.ts", "bytes": 1262, "sha256": "69379f192f1ef8953d1d5a5813fe117cc75fbc962015bb122de6552a8a300ff7" },
+    { "path": "apps/web/lib/archive-recovery.ts", "bytes": 1847, "sha256": "95b05b24e364285f6e265b5c79d286fc82034dc77f8cf626e56d2e12c3265ecd" },
+    { "path": "apps/web/e2e/settings-archive-recovery.spec.ts", "bytes": 7297, "sha256": "99f9657de9cddd81e3eaffa329abe5382ed40ebf60800684c150d73226808305" },
+    { "path": "apps/web/e2e/settings-archive-replacement.spec.ts", "bytes": 10749, "sha256": "6fa6d568a4725bb8dac4fa9997fe74ac4250779e76383fb10c10613583cea8db" }
+  ],
+  "evidence": [
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/all-node.log", "bytes": 191301, "sha256": "0631e886e73c2c6d64afd05b06b919a47ade80c27da351b99f1e587df3e7c9ff" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/baseline.log", "bytes": 10851, "sha256": "3c1c7941faee560365afba89f9b9051a5eeabeedacd530c5f93478a667cf5657" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/discovery.log", "bytes": 2320, "sha256": "585f4bee68a14def08007eb28ed693510b467f4e2daafaf0b273f2ce2d44226c" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/focused-28.log", "bytes": 5592, "sha256": "812f3302465285a8eb4e434fb791a35153ca531666fdd19e8f3a7b954b62f261" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/focused-expanded.log", "bytes": 6240, "sha256": "d6f2b5d271b4ef5aa4f7f58e7a45c9b83054c49cb44408dbc7d3899b96c2096f" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/focused-final.log", "bytes": 6998, "sha256": "5a3af7d78a0bac4a8396bfa93d10807a79005b1bab0a2b78c82ff4b8be184bcb" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/focused-intermediate.log", "bytes": 2195, "sha256": "f683c38a712d2f9d98eeed4f712c37372822d048c9c4342613fc75183a36bf67" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/lint.log", "bytes": 173, "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/pre-edit.json", "bytes": 1189, "sha256": "8cf98678cd30525466f14c182682ff03ba7c90b5a9cf8c07727403154b3e6ad4" },
+    { "path": "docs/execution/ux-audit-personal-archive-scope-2026-10-14-evidence/types-check.json", "bytes": 482, "sha256": "07311790c91168057757c9751318730aee65424b89b0067d6e92c26b91e572cf" }
+  ],
+  "checks": {
+    "baseline": { "passed": 1, "failed": 10, "skipped": 0, "duration_ms": 667.8706 },
+    "first_repair": { "passed": 11, "failed": 0, "skipped": 0, "duration_ms": 749.2385 },
+    "expanded_intermediate": { "passed": 27, "failed": 1, "skipped": 0, "duration_ms": 793.9385, "failure": "Metadata retry button disappeared when QueryObserver moved from error to pending. Retained control and conditional focus recovery added." },
+    "focused_final": { "passed": 36, "failed": 0, "skipped": 0, "duration_ms": 1098.0041 },
+    "full_node": { "files": 33, "passed": 926, "failed": 0, "skipped": 0, "duration_ms": 10518.7251 },
+    "lint": { "command": "corepack pnpm run lint", "exit_code": 0 },
+    "final_scoped_lint": { "command": "corepack pnpm --filter web exec eslint components/personal-backup-panel.tsx e2e/settings-personal-backup.spec.ts --max-warnings=0", "exit_code": 0 },
+    "types": { "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false", "exit_code": 0, "receipt": "types-check.json" },
+    "browser_discovery": { "files": 3, "discovered": 19, "executed": 0, "new_cases": 2 },
+    "scoped_diff_check": { "exit_code": 0, "note": "Expected Git CRLF warnings only." },
+    "head_unchanged": true
+  },
+  "buildinfo_sha256": "70c9f839651026f657520a37ebe7581463bb958107dfbd7857ca815f7e24152b",
+  "limitations": [
+    "Actual component, archive helpers and installed QueryObserver/InfiniteQueryObserver are exercised with controlled hook/transport/confirmation/authentication/DOM doubles.",
+    "Real browser authentication navigation, rendered focus/layout, screen readers, screenshots and device CPU/RSS remain unverified.",
+    "Scope is the personal archive panel; Root system archive, shared API authorization and restore transactions are unchanged.",
+    "No additional dependencies, polling frequency or automatic uploads/mutations.",
+    "No new Web build, API test run, login, commit, CI submission or production deployment."
+  ]
+}

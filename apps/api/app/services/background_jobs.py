@@ -354,6 +354,21 @@ def queue_conversation_auto_clean(
     return job
 
 
+def find_conversation_batch_delete_request(
+    db: Session, idempotency_key: str, ownership_scope: OwnershipScope,
+) -> BackgroundJob | None:
+    return (
+        db.query(BackgroundJob)
+        .filter(
+            BackgroundJob.job_type == "conversation_batch_delete",
+            ownership_scope.predicate(BackgroundJob),
+            BackgroundJob.idempotency_key == idempotency_key,
+        )
+        .order_by(BackgroundJob.created_at.asc(), BackgroundJob.id.asc())
+        .first()
+    )
+
+
 def queue_conversation_batch_delete(
     db: Session,
     *,
@@ -364,6 +379,25 @@ def queue_conversation_batch_delete(
     ordered_ids = list(dict.fromkeys(conversation_ids))
     if not ordered_ids:
         raise MessageEditError("At least one conversation is required.", 422)
+    request_ids = [str(item) for item in ordered_ids]
+    if idempotency_key:
+        if len(idempotency_key) > 200:
+            raise MessageEditError("Idempotency key is too long.", 422)
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            lock = int.from_bytes(hashlib.sha256(
+                f"conversation-delete:{ownership_scope.owner_user_id}:{idempotency_key}".encode()
+            ).digest()[:8], "big", signed=True)
+            db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock})
+        # A partial or completed deletion can remove its own source. Replay the
+        # retained admission before source validation, without restarting work.
+        previous = find_conversation_batch_delete_request(db, idempotency_key, ownership_scope)
+        if previous is not None:
+            if (previous.payload or {}).get("conversation_ids") != request_ids:
+                raise MessageEditError(
+                    "This request key was already used for different deletion targets.",
+                    409, code="DELETE_REQUEST_CONFLICT",
+                )
+            return previous
     existing = db.query(Conversation.id).filter(
         Conversation.id.in_(ordered_ids),
         ownership_scope.predicate(Conversation),
@@ -371,20 +405,6 @@ def queue_conversation_batch_delete(
     ).all()
     if {row[0] for row in existing} != set(ordered_ids):
         raise MessageEditError("One or more conversations were not found.", 404)
-    if idempotency_key:
-        previous = (
-            db.query(BackgroundJob)
-            .filter(
-                BackgroundJob.job_type == "conversation_batch_delete",
-                ownership_scope.predicate(BackgroundJob),
-                BackgroundJob.idempotency_key == idempotency_key,
-                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
-            )
-            .order_by(BackgroundJob.created_at.desc())
-            .first()
-        )
-        if previous is not None:
-            return previous
     job = BackgroundJob(
         id=uuid.uuid4(),
         owner_user_id=ownership_scope.owner_user_id,
@@ -394,7 +414,7 @@ def queue_conversation_batch_delete(
         progress=0,
         processed_items=0,
         total_items=len(ordered_ids),
-        payload={"conversation_ids": [str(item) for item in ordered_ids]},
+        payload={"conversation_ids": request_ids},
         result={},
         idempotency_key=idempotency_key,
     )

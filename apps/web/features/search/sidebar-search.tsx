@@ -13,7 +13,7 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const labels = resolvedLocale === "zh-CN"
     ? { placeholder: "搜索标题和消息内容", all: "查看全部结果", empty: "没有匹配结果" }
     : { placeholder: "Search titles and messages", all: "View all results", empty: "No matching results" };
@@ -35,6 +35,15 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   });
   const currentResults = query.trim() === debounced;
   const items = currentResults ? result.data?.items ?? [] : [];
+  // Keep an explicit selection attached to its document across same-query
+  // refreshes. A removed result must not silently select its replacement.
+  const activeIndex = activeDocumentId === null
+    ? (items.length ? 0 : -1)
+    : items.findIndex((item) => item.document_id === activeDocumentId);
+  const selectIndex = (index: number) => {
+    const item = items[index];
+    if (item) setActiveDocumentId(item.document_id);
+  };
   const openResult = (index: number) => {
     const item = items[index];
     if (!item) return;
@@ -56,14 +65,14 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
       <input
         ref={inputRef}
         value={query}
-        onChange={(event) => { setQuery(event.target.value); setActiveIndex(0); }}
+        onChange={(event) => { setQuery(event.target.value); setActiveDocumentId(null); }}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-          if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((value) => Math.max(0, Math.min(value + 1, items.length - 1))); }
-          if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((value) => Math.max(value - 1, 0)); }
+          if (event.key === "ArrowDown") { event.preventDefault(); selectIndex(Math.max(0, Math.min(activeIndex + 1, items.length - 1))); }
+          if (event.key === "ArrowUp") { event.preventDefault(); selectIndex(Math.max(activeIndex - 1, 0)); }
           if (event.key === "Enter") {
             event.preventDefault();
-            if (items.length) openResult(activeIndex);
+            if (activeIndex >= 0) openResult(activeIndex);
             else { onNavigate?.(); router.push(`/search?q=${encodeURIComponent(query.trim())}`); }
           }
           if (event.key === "Escape") { setQuery(""); inputRef.current?.blur(); }
@@ -77,7 +86,7 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
       {query.trim() ? (
         <div className="absolute inset-x-0 top-11 z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
           {items.map((item, index) => (
-            <button key={item.document_id} type="button" onMouseEnter={() => setActiveIndex(index)} onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
+            <button key={item.document_id} type="button" onMouseEnter={() => selectIndex(index)} onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
               <span className="block truncate text-sm font-medium text-primary">{item.conversation_title}</span>
               <span className="mt-0.5 block truncate text-xs text-secondary">{item.snippet}</span>
             </button>

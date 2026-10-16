@@ -19,6 +19,12 @@ import {
   scopedRichMarkdownRehypePlugins,
 } from "../rich-markdown/rich-markdown-config";
 import { normalizeDisplayMathForRenderer } from "../rich-markdown/remark-ai-math-compatibility";
+import {
+  detectChatGptRichText,
+  projectChatGptRichText,
+  remarkRichTextSourcePositions,
+  type ChatGptRichTextProfile,
+} from "../rich-markdown/chatgpt-rich-text-compatibility";
 
 export type MarkdownTaskItem = {
   taskKey: string;
@@ -297,6 +303,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   scopeId,
   attachmentOccurrences = [],
   preserveSourceOffsets = false,
+  richTextProfile,
 }: {
   text: string;
   className?: string;
@@ -307,9 +314,11 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   scopeId?: string;
   attachmentOccurrences?: MarkdownAttachmentOccurrence[];
   preserveSourceOffsets?: boolean;
+  richTextProfile?: ChatGptRichTextProfile;
 }) {
   const generatedScopeId = useId();
   const resolvedScopeId = scopeId ?? generatedScopeId;
+  const resolvedRichTextProfile = useMemo(() => richTextProfile ?? detectChatGptRichText(text) ?? undefined, [richTextProfile, text]);
   const parts = useMemo(() => canonicalMessagePartsFromText(text, isAssistant), [isAssistant, text]);
   const tasksByPart = useMemo(() => assignTasksToParts(parts, taskItems), [parts, taskItems]);
   if (preserveSourceOffsets) {
@@ -322,6 +331,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           onTaskToggle={onTaskToggle}
           attachmentOccurrences={attachmentOccurrences}
           scopeId={`${resolvedScopeId}-source`}
+          richTextProfile={resolvedRichTextProfile}
         />
       </div>
     );
@@ -337,6 +347,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           onTaskToggle={onTaskToggle}
           attachmentOccurrences={attachmentOccurrences}
           scopeId={`${resolvedScopeId}-part-${index}`}
+          richTextProfile={resolvedRichTextProfile}
         />
       ))}
     </div>
@@ -349,10 +360,11 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   && previous.taskItems === next.taskItems
   && previous.onTaskToggle === next.onTaskToggle
   && previous.attachmentOccurrences === next.attachmentOccurrences
-  && previous.preserveSourceOffsets === next.preserveSourceOffsets);
+  && previous.preserveSourceOffsets === next.preserveSourceOffsets
+  && previous.richTextProfile === next.richTextProfile);
 
-export function InlineHeadingMarkdown({ text }: { text: string }) {
-  const inlineText = text.replace(/\s*\r?\n\s*/g, " ").trim();
+export function InlineHeadingMarkdown({ text, richTextProfile }: { text: string; richTextProfile?: ChatGptRichTextProfile }) {
+  const inlineText = projectChatGptRichText(text, richTextProfile).text.replace(/\s*\r?\n\s*/g, " ").trim();
   recordRichMarkdownPerformance(inlineText);
   return (
     <ReactMarkdown
@@ -388,13 +400,13 @@ export function markdownHeadingLabel(markdown: string): string {
     .trim();
 }
 
-export function ThinkingDisclosure({ label, text, attachmentOccurrences = [] }: { label: string; text: string; attachmentOccurrences?: MarkdownAttachmentOccurrence[] }) {
+export function ThinkingDisclosure({ label, text, attachmentOccurrences = [], richTextProfile }: { label: string; text: string; attachmentOccurrences?: MarkdownAttachmentOccurrence[]; richTextProfile?: ChatGptRichTextProfile }) {
   return (
     <details className="reader-thinking rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]">
       <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-primary">
         {label}
       </summary>
-      {text.trim() ? <AssistantMarkdownPart text={text} className="reader-thinking-content text-[0.875em]" attachmentOccurrences={attachmentOccurrences} /> : null}
+      {text.trim() ? <AssistantMarkdownPart text={text} className="reader-thinking-content text-[0.875em]" attachmentOccurrences={attachmentOccurrences} richTextProfile={richTextProfile} /> : null}
     </details>
   );
 }
@@ -407,6 +419,7 @@ export function AssistantMarkdownPart({
   onTaskToggle,
   scopeId,
   attachmentOccurrences = [],
+  richTextProfile,
 }: {
   text: string;
   className?: string;
@@ -415,18 +428,26 @@ export function AssistantMarkdownPart({
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId?: string;
   attachmentOccurrences?: MarkdownAttachmentOccurrence[];
+  richTextProfile?: ChatGptRichTextProfile;
 }) {
   const generatedScopeId = useId();
   const resolvedScopeId = scopeId ?? generatedScopeId;
+  // Math keeps its existing preprocessing semantics; rich-text projection
+  // additionally maps its own display edits back to the input source offsets.
+  const projection = useMemo(() => projectChatGptRichText(normalizeDisplayMathForRenderer(text), richTextProfile), [richTextProfile, text]);
   if (!text.trim()) {
     return null;
   }
   recordRichMarkdownPerformance(text);
-  const renderText = normalizeDisplayMathForRenderer(text);
+  const renderText = projection.text;
   const interactiveComponents = createTaskAwareComponents(taskItems, pendingTaskKeys, onTaskToggle);
   const taskPlugin = taskItems.length > 0 ? remarkTaskKeys(taskItems) : null;
   const attachmentPlugin = attachmentOccurrences.length > 0 ? remarkAttachmentOccurrences(attachmentOccurrences) : null;
-  const plugins = richMarkdownRemarkPlugins([...(taskPlugin ? [taskPlugin] : []), ...(attachmentPlugin ? [attachmentPlugin] : [])]);
+  const plugins = richMarkdownRemarkPlugins([
+    ...(taskPlugin ? [taskPlugin] : []),
+    ...(attachmentPlugin ? [attachmentPlugin] : []),
+    ...(projection.sourcePosition ? [remarkRichTextSourcePositions(projection)] : []),
+  ]);
   if (onTaskToggle && taskItems.length > 0) {
     return (
       <div className={`reader-prose ${className}`}>
@@ -451,7 +472,7 @@ export function AssistantMarkdownPart({
         remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
         components={interactiveComponents}
         componentsByLanguage={{ mermaid: { SyntaxHighlighter: MermaidDiagram, CodeHeader: MermaidCodeHeader } }}
-        preprocess={normalizeDisplayMathForRenderer}
+        preprocess={() => renderText}
         skipHtml
       />
     </TextMessagePartProvider>
@@ -496,6 +517,7 @@ function CanonicalPartRenderer({
   onTaskToggle,
   scopeId,
   attachmentOccurrences,
+  richTextProfile,
 }: {
   part: CanonicalMessagePart;
   taskItems: MarkdownTaskItem[];
@@ -503,12 +525,13 @@ function CanonicalPartRenderer({
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
   scopeId: string;
   attachmentOccurrences: MarkdownAttachmentOccurrence[];
+  richTextProfile?: ChatGptRichTextProfile;
 }) {
   if (part.type === "reasoning") {
-    return <ThinkingDisclosure label={part.label} text={part.text} attachmentOccurrences={attachmentOccurrences} />;
+    return <ThinkingDisclosure label={part.label} text={part.text} attachmentOccurrences={attachmentOccurrences} richTextProfile={richTextProfile} />;
   }
   if (part.type === "text") {
-    return <AssistantMarkdownPart text={part.text} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={attachmentOccurrences} scopeId={scopeId} />;
+    return <AssistantMarkdownPart text={part.text} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={attachmentOccurrences} scopeId={scopeId} richTextProfile={richTextProfile} />;
   }
   if (part.type === "source") {
     return <CitationPart part={part} />;
@@ -922,7 +945,7 @@ function hashCode(value: string): string {
 }
 
 function MermaidDiagram({ code }: SyntaxHighlighterProps) {
-  const { resolvedTheme } = usePreferences();
+  const { resolvedLocale, resolvedTheme } = usePreferences();
   const [svgUri, setSvgUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -949,10 +972,10 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
           setSvgUri(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
           setError(null);
         }
-      } catch (event) {
+      } catch {
         if (!cancelled) {
           setSvgUri(null);
-          setError(event instanceof Error ? event.message : "Mermaid render failed.");
+          setError("render");
         }
       }
     }
@@ -973,7 +996,7 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
   if (error) {
     return (
       <div className="reader-mermaid-error rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4">
-        <p className="text-xs text-[var(--callout-warning-text)]">Mermaid 渲染失败，已回退为源码。</p>
+        <p className="text-xs text-[var(--callout-warning-text)]">{resolvedLocale === "zh-CN" ? "图表暂时无法渲染，已保留源码。" : "The diagram could not be rendered; the source is preserved."}</p>
         <pre className="max-w-full overflow-x-auto rounded border border-ui bg-surface p-3 text-[0.875em] leading-[1.65] text-primary">
           <code>{code}</code>
         </pre>

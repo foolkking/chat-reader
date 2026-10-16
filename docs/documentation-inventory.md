@@ -1,5 +1,1225 @@
 # Markdown 文档台账
 
+## Service-free UX continuation — 2026-10-16
+
+`execution/ux-audit-service-free-regression-2026-10-16.md` owns the serialized
+63-file run, initial **1,103 passed / 304 failed**, fourteen adapter repairs,
+intermediate results and final **1,412 passed / 0 failed / 0 skipped**.
+Its adjacent evidence retains the outputs and exact file/hash manifest.
+The Share edge report separately owns the pre-edit retired-entry finding and
+7-pass/2-fail reproduction, followed by nine passing actual-loader cases.
+No tests were skipped or removed to obtain the final result.
+
+`PROJECT_STATE.md`, `index.md` and `testing.md` own the current verification
+overlay; older “unexecuted” statements remain original checkpoints and are
+superseded only for the exact Node files in this run. Full Web lint and
+nonincremental typecheck passed. No service/browser, real-storage/Worker,
+PostgreSQL, full API/PWA/build, resource, commit, CI or deployment acceptance
+is implied. No API/schema/format/dependency change in this continuation.
+
+## Noise candidate exact markers — 2026-10-16 verification
+
+`execution/ux-audit-noise-candidate-range-markers-2026-10-15.md` owns the
+pre-edit source findings and precise-marker decision; its adjacent evidence
+directory retains sanitized source observations and final aggregate results.
+The audit started October 15; final local checks completed October 16.
+`system/CONTENT_CLEANUP_CONTRACT.md`, `system/USER_FLOWS.md` and
+`system/FRONTEND_ARCHITECTURE.md` own selected exact markers, retained/plain
+fallback and correct checkbox lifecycle descriptions. `PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize verification.
+
+`cleanup-range-selection.test.mjs` now owns six helper checks;
+`cleanup-candidate-markers.test.mjs` owns seven real React collapsed server-markup
+checks. **13 passed**, targeted Web ESLint, nonincremental typecheck and diff
+whitespace passed. No API/schema change or repeat of the prior API suite;
+no browser/mounted/expanded-event, PostgreSQL, service, build, CI, commit or
+deployment acceptance is implied.
+
+## Noise candidate editable ranges — 2026-10-15
+
+`execution/ux-audit-noise-range-editing-2026-10-15.md` owns the pre-edit evidence,
+two-level bulk/refinement design, error recovery and local verification boundary.
+Its evidence directory retains only sanitized aggregate results, not messages,
+IDs, tokens, credentials or request logs. This batch supersedes the previous
+bulk-only batch's range-editor deferral.
+
+`system/CONTENT_CLEANUP_CONTRACT.md` owns nullable reviewed ranges, source/edit
+token validation, preserved KEEP/reselect consent and shared preview/apply
+expansion. `api-reference.md` owns the two owner-scoped endpoints and payloads;
+`system/USER_FLOWS.md` and `system/FRONTEND_ARCHITECTURE.md` own range selection,
+pending-checkbox and unknown-write recovery. `deployment.md` and
+`system/DEPLOYMENT_AND_ENVIRONMENT.md` distinguish source head 0051 (unapplied)
+from accepted production 0050 and require a safe, separately authorized rollback.
+`testing.md`, `PROJECT_STATE.md` and `index.md` summarize local verification
+without implying PostgreSQL migration, browser, CI or deployment acceptance.
+
+The focused synthetic API suite, Unicode helper tests, nonincremental Web
+typecheck and targeted ESLint are recorded in the execution report. Auth
+isolation and PostgreSQL competing-save/downgrade regressions are authored but
+not executed. No service, browser, full build, new CI, commit or deployment ran.
+
+## Noise review bulk selection and exact-range design — 2026-10-15
+
+Historical partial batch; the range-editor deferral below is superseded by the
+follow-up above.
+
+`execution/ux-audit-noise-bulk-selection-editing-2026-10-15.md` owns the
+source audit, design decision and evidence boundary for multi-candidate noise
+review. The review UI now states the current filtered scope/count, exposes
+bulk-save feedback, and labels each candidate's KEEP/DELETE state. Exact-range
+refinement remains in the existing Markdown source-selection flow; a future
+preview-range editor requires a version-bound API contract and is not implied
+by this batch. Targeted Web ESLint and `git diff --check` passed; no service,
+browser, build, full tests, commit, CI or deployment ran.
+
+## Adaptive import session action lifecycle — 2026-10-15
+
+`execution/ux-audit-import-session-action-lifecycle-2026-10-15.md` owns the
+pre-edit concurrent session-snapshot and stale grouping evidence, implementation
+limits and source checkpoint. `scripts/ux/adaptive-import-session-action-lifecycle.test.mjs`
+owns the authored extraction of the actual session-action lease/token,
+wrong-session suppression, competing-control state and grouping resync. It
+remains unexecuted.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own the current
+source-level action ordering and grouping-state behavior; `PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. Existing import API, parsing,
+source retention, commit, `.cr`, offline package and Share contracts remain.
+No tests/gates, services, browser, commit, CI, deployment or resource
+measurement ran; mounted React, network ordering, API transaction and keyboard
+acceptance remain pending.
+
+## Source-editor attachment picker dialog — 2026-10-15
+
+`execution/ux-audit-source-editor-attachment-picker-dialog-2026-10-15.md`
+owns the pre-edit modal/focus evidence and the narrow hook wiring.
+`scripts/ux/source-editor-attachment-picker-dialog.test.mjs` owns authored
+extraction of the actual picker, root/search refs, backdrop attribute and the
+unchanged shared Escape/Tab/restoration hook. It remains unexecuted.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+source-level dialog focus behavior; `PROJECT_STATE.md`, `index.md` and
+`testing.md` summarize status. Query, filter, retry, layout, attachment and
+API contracts remain. No new modal library, timer, request, dependency,
+storage, `.cr`, offline package or Share change. Browser keyboard, screen-reader,
+mobile and nested-modal acceptance remain pending. No tests/gates, services,
+browser, commit, CI, deployment or resource measurement ran.
+
+## Source-editor discard-and-switch cleanup — 2026-10-15
+
+`execution/ux-audit-source-editor-discard-switch-2026-10-15.md` owns the
+pre-edit bypass evidence and narrow cleanup repair.
+`scripts/ux/source-editor-discard-switch.test.mjs` owns authored extraction of
+the real workspace cleanup/close/discard handlers, unmount job retirement,
+pending-banner feedback and parent switch contract. It remains unexecuted.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own the current
+source-level cleanup order and unchanged save/keep-file policy; `PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. No new upload protocol, retry,
+abort guarantee, message version, canonical Markdown, Share URL, `.cr`, offline
+package, API schema or attachment retention policy. Already-sent/server-side
+effects are not claimed reversible. Real upload timing, browser focus,
+server-object and resource acceptance remain pending. No tests/gates, services,
+browser, commit, CI, deployment or resource measurement ran.
+
+## Share edge-window loading lifecycle — 2026-10-15
+
+`execution/ux-audit-share-edge-loading-lifecycle-2026-10-15.md` owns the
+pre-edit missing active-visit/error-owner evidence and the narrow lifecycle
+repair, plus the 2026-10-16 retired-entry finding and failing reproduction.
+`scripts/ux/share-edge-loading-lifecycle.test.mjs` owns
+extraction of both real nested edge loaders and controlled current success,
+retirement, direction-reversal, entry admission, current failure and finalization
+cases. All nine passed in the full 2026-10-16 service-free run.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+source-level edge merge/anchor/error behavior; `../PROJECT_STATE.md`, `index.md`
+and `testing.md` summarize status. Complete-turn requests, leases, real DOM
+anchors, window/trim policy and no-abort behavior remain unchanged. No API,
+query key, storage, Share URL, package/Dexie, timer, retry or dependency
+change. Browser slow-response, scroll reversal/unmount, resource and
+production acceptance remain pending. Full Web lint and nonincremental typecheck
+passed; no services, browser, build, commit, CI, deployment or resource
+measurement ran.
+
+## Share unlock lifecycle — 2026-10-15
+
+`execution/ux-audit-share-unlock-lifecycle-2026-10-15.md` owns pre-edit
+duplicate/stale attempt and input-state evidence, the local repair and limits.
+`scripts/ux/share-unlock-lifecycle.test.mjs` owns authored extraction of real
+visit/layout, unlock ref/state/callback/reset and gate JSX/helper with controlled
+hooks/transport/query outcomes and static markup. It remains unexecuted.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+source-level admission/retirement/input behavior; `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. Passwords remain memory-only;
+current failure/whitespace are retained and only a current successful metadata
+read clears input. No new request/retry/abort/timer/dependency, API/query key,
+auth/cookie/rate-limit or Share URL/storage/package/Dexie policy. Sent POSTs
+and server effects are not undone. Real auth, browser keyboard/password-manager
+and slow-response acceptance remain pending. No tests/gates, services, browser,
+commit, CI, deployment or resource measurement ran.
+
+## Share stored-position shape — 2026-10-15
+
+`execution/ux-audit-share-position-shape-2026-10-15.md` owns pre-edit unsafe
+record/query/restore evidence, the bounded read guard and compatibility limits.
+`scripts/ux/share-navigation-retirement.test.mjs` extends actual helper/
+initialization/query/restore cases for wrong shapes/overflow, unanchored
+fallback and unchanged current/legacy/minimal/extra metadata. It remains
+unexecuted with controlled digest/storage/query/transport/DOM/hook adapters.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own source-level
+accepted-record conditions and null-anchor behavior; `../PROJECT_STATE.md`, `index.md` and
+`testing.md` summarize status. No stored-format migration, read-time deletion/
+rewrite, exact-key/UUID/new-metadata requirement or new persistence field.
+Key/bytes, real-anchor restore order, API, packages and Dexie remain. Invalid
+records do not falsely disable usable storage. Well-shaped stale/out-of-scope
+targets remain separate. No tests/gates, services, browser, commit, CI,
+deployment or resource measurement ran.
+
+## Share position-storage recovery — 2026-10-15
+
+`execution/ux-audit-share-position-storage-recovery-2026-10-15.md` owns pre-edit
+initialization/storage/discard evidence, optional nonpersistent reading and
+remaining runtime boundaries.
+`scripts/ux/share-navigation-retirement.test.mjs` extends actual initialization/
+key/read/query cases with controlled disable-ref/setter/storage adapters.
+`scripts/ux/share-position-storage-recovery.test.mjs` reuses actual
+persistence/discard effects, status classification/error class and header JSX.
+Both are unexecuted; controlled crypto/storage/queries/position capture/
+time/layout/commits do not prove browser durability, scroll or announcements.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+readiness/failure/discard and no-new-height feedback behavior;
+`../PROJECT_STATE.md`, `index.md` and `testing.md` summarize status. The finite
+unavailable flag and visit-tagged disable ref are memory-only, not stored/API
+fields. SHA-256 keys/bytes, idle/cached-unload save timing, transient/password
+retention, Share URL/access, complete turns/anchors, package/Dexie and schema
+remain. A denied removal is not claimed successful; no automatic retry,
+polling, dependency or mid-reading restore. Position-shape validation has the
+separate source-only follow-up above; well-shaped stale/out-of-scope targets,
+indefinitely pending digest and edge/unlock remain separate. No tests/gates,
+services, browser, commit, CI, deployment or resource measurement ran.
+
+## Share tablet navigation dialog — 2026-10-15
+
+`execution/ux-audit-share-tablet-navigation-dialog-2026-10-15.md` owns pre-edit
+modal/focus evidence, the existing-hook repair and remaining runtime boundaries.
+`scripts/ux/share-tablet-navigation-dialog.test.mjs` is authored and unexecuted,
+with extracted Share visibility/ref/hook wiring/section attributes and the
+actual unchanged dialog hook. Hooks/layout/ref attachment, DOM/order,
+focus/keys and timers are controlled adapters, not mounted browser/assistive
+acceptance.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current tablet
+modal behavior; `../PROJECT_STATE.md`, `index.md` and `testing.md` summarize
+status. Only the tablet section ref/semantics and existing-hook integration
+are new. Phone/Vaul, visual dimensions, desktop rails, navigation/anchors,
+Share access/URL, storage/package/Dexie and API/schema remain. Existing hook
+listener/cleanup-timer behavior is reused, not a new global architecture.
+Background inertness and actual keyboard/screen-reader/breakpoint/scroll/
+viewer acceptance remain unproven. No tests/gates, services, browser, commit,
+CI, deployment or resource measurement ran.
+
+## Reader navigation-sheet lifecycle — 2026-10-15
+
+`execution/ux-audit-reader-navigation-sheet-lifecycle-2026-10-15.md` owns
+pre-edit cross-utility completion and feedback evidence, local intent fences
+and remaining runtime boundaries.
+`scripts/ux/reader-navigation-sheet-lifecycle.test.mjs` is authored and
+unexecuted with actual extracted scope/ref/state/effect, utility/tab/action
+callbacks, visit/account guard, JSX callers, TOC helper and status fragments.
+Hooks, availability/account clock, parent/activation state and core navigation are
+controlled; mode labels/fragment markup are not real remote/offline or
+mounted overlay acceptance.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+surface/sequence ownership; `../PROJECT_STATE.md`, `index.md` and `testing.md`
+summarize status. The stable internal utility callback, activation counter and
+scope ref/feedback flags are memory-only. Query/prefetch, complete-turn/DOM-anchor, position,
+package/Dexie, API/schema, overlay and dependency boundaries remain. Begun
+helpers are not aborted; delayed workspace-open/source-editor confirmation
+and other utility action lifetimes remain separate. No tests/gates, services,
+browser, commit, CI, deployment or resource measurement ran.
+
+## Share navigation-sheet lifecycle — 2026-10-15
+
+`execution/ux-audit-share-navigation-sheet-lifecycle-2026-10-15.md` owns pre-edit
+sheet completion/feedback and same-batch reopening evidence, local scope/
+sequence/activation implementation and remaining browser boundaries.
+`scripts/ux/share-navigation-sheet-lifecycle.test.mjs`
+is authored and unexecuted with actual extracted handlers/effect/state, four
+JSX callers, TOC locator helper and status fragments. Hooks, parent/activation
+state and core navigation are controlled adapters; fragment markup is not a mounted
+overlay or announcement result.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current sheet
+activation/feedback behavior; `../PROJECT_STATE.md`, `index.md` and `testing.md`
+summarize status. New scope/sequence/feedback flags and the explicit-open
+activation counter are memory-only, not API or stored fields. Desktop rails,
+overlay presentation, complete-turn/real-DOM
+navigation, Share access/URL and storage contracts remain. No physical abort,
+new timer/subscription/dependency or measured resource saving is claimed.
+Common Reader sheet completion and Share tablet modal/keyboard wiring have
+the separate source follow-ups above; runtime acceptance remains pending.
+No tests/gates, services, browser, commit, CI or deployment ran.
+
+## Share navigation and saved-position retirement — 2026-10-15
+
+`execution/ux-audit-share-navigation-retirement-2026-10-15.md` owns pre-edit
+late-navigation, restore-replay and unscoped local-readiness evidence.
+`scripts/ux/share-navigation-retirement.test.mjs` is authored with actual
+extracted callbacks/effects/manual intent and key/position/window helpers;
+hooks, query state, digest/storage, transport, leases and geometry are
+controlled adapters. It remains unexecuted; no historical Reader/Share check
+verifies the current batch.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+ephemeral visit/intent/storage-readiness behavior; `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. The optional fifth navigation
+argument and visit tag are internal memory contracts, not stored/API fields.
+Share URL/auth, SHA-256 namespace/position bytes, complete turns, real DOM
+anchors and optional old-server resolver compatibility remain. Already-started
+work is not aborted; sheet-owned feedback and crypto/storage failure have
+separate source follow-ups above, while edge and unlock remain separate.
+No tests/gates, services, browser or CPU/RSS
+measurement ran.
+
+## Reader navigation retirement — 2026-10-15
+
+`execution/ux-audit-reader-navigation-retirement-2026-10-15.md` owns pre-edit
+async-boundary, late-failure and footer-resurrection evidence.
+`scripts/ux/reader-navigation-retirement.test.mjs` is authored with actual
+extracted Reader callbacks, visit guard, reset effect and locator/window
+helpers; transport, neighborhood scheduling, leases, geometry and hooks are
+controlled adapters, including source-reset token replay and per-source
+locator-validation retirement. `scripts/ux/conversation-search-selection.test.mjs` is
+updated to supply the shared publication callback and passed 48/48 in the
+selection continuation. `scripts/ux/reader-navigation-retirement.test.mjs`
+remains unexecuted; earlier navigation/readiness checkpoints do not verify
+the Reader-retirement-specific changes.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+in-memory ownership and dismissal behavior; `../PROJECT_STATE.md`, `index.md`
+and `testing.md` summarize status. Complete-turn/DOM-anchor, stored-data,
+Share/package/Dexie, API and deployment contracts remain unchanged.
+Already-started transport/helper work is not aborted. No tests/gates,
+services, browser or CPU/RSS measurement ran.
+
+## Conversation-search navigation lifecycle — 2026-10-15
+
+`execution/ux-audit-conversation-search-navigation-lifecycle-2026-10-15.md`
+owns the pre-edit late-completion, missing-feedback and duplicate-activation
+evidence. `scripts/ux/conversation-search-selection.test.mjs` is extended with
+controlled lifecycle cases and the extracted actual Reader publication adapter;
+`scripts/ux/offline-search-retry.test.mjs` gains the required layout-effect stub.
+The shared component file passed 48/48 on 2026-10-16 as recorded by the
+selection report; the offline-retry file remains unexecuted. Neither result
+is mounted React/browser or active-cancellation evidence.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+interaction behavior; `../PROJECT_STATE.md`, `index.md` and `testing.md`
+summarize status. The optional callback ownership predicate/active prop are
+in-memory component contracts, not stored/API/package fields. Begun Reader
+navigation and footer previous/next are not cancelled or redesigned.
+No tests/gates, services, browser or resource measurement ran.
+
+## Conversation-search occurrence selection — 2026-10-15, local verification
+
+`execution/ux-audit-conversation-search-selection-2026-10-15.md` owns the
+pre-edit numeric-selection evidence, occurrence-level identity, missing-target
+notice, visible-index arrow behavior and ephemeral return-state compatibility.
+On 2026-10-16, `scripts/ux/conversation-search-selection.test.mjs` passed
+48/48 with no failures or skips. It exercises the actual compiled component
+with controlled hooks, query results, timers and navigation, not mounted React
+or browser/search transport. Targeted ESLint, nonincremental Web typecheck and
+`git diff --check` also passed.
+
+`system/FRONTEND_ARCHITECTURE.md` and `system/USER_FLOWS.md` own current
+interaction behavior; `../PROJECT_STATE.md`, `index.md` and `testing.md`
+summarize status. The optional panel-state key is memory-only, not a new
+persistence/schema/API/package field. Search/read/retry and DOM-anchor
+contracts remain. The separate offline retry and navigation-lifecycle
+regressions remain unexecuted. No service, browser, full API/PWA suite or
+resource measurement ran.
+
+## Conflict resolution recovery — 2026-10-15
+
+`execution/ux-audit-offline-conflict-resolution-recovery-2026-10-15.md`
+owns the pre-edit double-failure and late-submit evidence, unconfirmed marker
+state, read-only recheck and already-waiting continuation guards. It extends,
+not replaces, the preceding merge-draft repair.
+`scripts/ux/offline-conflict-merge-draft-refresh.test.mjs` is updated with
+controlled status failures and retired confirmation/prepare/retry/lookup/
+invalidation/unmount cases; the entire file remains unexecuted.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`, `system/FRONTEND_ARCHITECTURE.md`
+and `system/USER_FLOWS.md` own current behavior; `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. Receipts, descendant rebase,
+draft keys, storage, API, packages, managers and deployment are unchanged.
+No tests/gates, services, browser or resource measurement ran.
+
+## Conflict merge draft refresh protection — 2026-10-15
+
+`execution/ux-audit-offline-conflict-merge-draft-refresh-2026-10-15.md`
+owns the pre-edit overwrite evidence, per-visit draft initialization, locale
+independence and old read/save completion boundary.
+`scripts/ux/offline-conflict-merge-draft-refresh.test.mjs` is authored but
+unexecuted. It adapts the actual compiled component with controlled hooks,
+promises and storage; it is not mounted React, Dexie or browser acceptance.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`, `system/FRONTEND_ARCHITECTURE.md`
+and `system/USER_FLOWS.md` own current behavior; `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. Draft keys, resolution receipt,
+outbox, package, schema, API and deployment contracts are unchanged.
+No tests/gates, services, browser or resource measurement ran.
+
+## Sync-center visible inspection coalescing — 2026-10-15
+
+`execution/ux-audit-sync-center-inspection-coalescing-2026-10-15.md` owns
+pre-edit overlapping-scan evidence, the effect-local active/latest-pending
+scheduling bound and its cancellation/measurement limits.
+`scripts/ux/sync-center-hidden-inspection.test.mjs` is updated with synthetic
+burst, supersession, sibling-rejection settlement and retired-queue cases;
+it remains unexecuted and is not actual Cache Storage/React/browser evidence.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`, `system/FRONTEND_ARCHITECTURE.md`
+and `system/USER_FLOWS.md` own current behavior; `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. Verification rules, stored bytes,
+package compatibility, Dexie, API, managers and dependencies are unchanged.
+No tests/gates, services, browser or CPU/RSS measurement ran.
+
+## Sync-center partial local reads — 2026-10-15
+
+`execution/ux-audit-sync-center-partial-read-recovery-2026-10-15.md` owns
+pre-edit aggregate-failure evidence, independent section settlement, missing-
+section feedback, successful-read guards and the local-only Retry boundary.
+The existing `scripts/ux/sync-center-tab-read-scope.test.mjs` and
+`scripts/ux/sync-center-hidden-inspection.test.mjs` are updated with synthetic
+reader/effect/guard cases but remain unexecuted. They are not React, Dexie,
+browser, focus, access-lock or resource acceptance.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`, `system/FRONTEND_ARCHITECTURE.md`
+and `system/USER_FLOWS.md` own current behavior; `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize status. No stored data, schema, package,
+API, download/sync admission, mutation or deployment contract changed.
+No tests/gates, services, browser or resource measurement ran.
+
+## Conversation TOC stale-read recovery — 2026-10-15
+
+`execution/ux-audit-conversation-toc-stale-read-recovery-2026-10-15.md`
+owns the pre-edit evidence, stale section-list feedback and query-only Retry
+boundary.
+`scripts/ux/conversation-toc-stale-read-recovery.test.mjs` is authored and
+unexecuted source/structure coverage; it is not React, API, navigation,
+browser or screen-reader evidence.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`,
+`../PROJECT_STATE.md`, `index.md` and `testing.md` summarize the current
+behavior. Heading parsing, block/DOM anchors, navigation, canonical data,
+Share URL, offline package and API contracts are unchanged. No validation ran.
+
+## Conversation index read recovery — 2026-10-15
+
+`execution/ux-audit-conversation-index-read-recovery-2026-10-15.md`
+owns the pre-edit evidence, interactive jump/page failure finding and
+same-intent local Retry boundary.
+`scripts/ux/conversation-index-read-recovery.test.mjs` is authored and
+unexecuted source/structure coverage; it is not React, API, navigation,
+browser or screen-reader evidence.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`,
+`../PROJECT_STATE.md`, `index.md` and `testing.md` summarize the current
+behavior. Index offset/limit, navigation, DOM-anchor, canonical data, Share
+URL, offline package and API contracts are unchanged. No validation ran.
+
+## Conversation-files capability read — 2026-10-15
+
+`execution/ux-audit-conversation-files-capability-read-2026-10-15.md`
+owns the pre-edit evidence, unknown-capability upload gate and local
+capability-only Retry boundary.
+`scripts/ux/conversation-files-capability-read.test.mjs` is authored and
+unexecuted source/structure coverage; it is not API, React, browser or
+upload-protocol evidence.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`,
+`../PROJECT_STATE.md`, `index.md` and `testing.md` summarize the current
+behavior. Attachment session/item/finalize, permission, canonical data and
+API contracts are unchanged. No validation ran.
+
+## Offline export attachment-count read — 2026-10-15
+
+`execution/ux-audit-offline-export-attachment-count-read-2026-10-15.md`
+owns the pre-edit false-empty evidence, separate loading/success/error display and
+status-only local Retry boundary.
+`scripts/ux/offline-export-attachment-count-read.test.mjs` is authored and
+unexecuted source/structure coverage; it is not Dexie, React, browser or export
+artifact evidence.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`,
+`../PROJECT_STATE.md`, `index.md` and `testing.md` summarize the current behavior.
+Export options, attachment selection, offline package compatibility, Blob lifecycle
+and API/worker contracts are unchanged. No validation ran.
+
+## Import commit status recovery — 2026-10-15
+
+`execution/ux-audit-import-status-recovery-2026-10-15.md` owns the source
+evidence, terminal-state cleanup, explicit task retry and read-only status
+refetch boundary. The implementation record is complete; runtime/browser
+acceptance is not implied.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`, `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize the behavior. API, worker, database,
+idempotency, parser, migration and task-center contracts are unchanged. No
+validation ran.
+
+## Inline attachment locale feedback — 2026-10-15
+
+`execution/ux-audit-inline-attachment-locale-2026-10-15.md` owns the pre-edit
+evidence, hardcoded-Chinese finding and locale-only display boundary.
+`scripts/ux/inline-attachment-locale.test.mjs` is authored and unexecuted
+source/structure coverage; it is not React, locale-switch, browser or
+screen-reader evidence.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`, `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize the behavior. Attachment access, render,
+cache, download, Viewer, Reader/Share anchor and API contracts are unchanged.
+No validation ran.
+
+## Source editor attachment-picker read recovery — 2026-10-15
+
+`execution/ux-audit-source-editor-attachment-picker-read-recovery-2026-10-15.md`
+owns the pre-edit evidence, false-empty-state finding, stale-row notice and
+read-only Retry boundary.
+`scripts/ux/source-editor-attachment-picker-read-recovery.test.mjs` is authored
+and unexecuted source/structure coverage; it is not attachment API, Query,
+React or browser evidence.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`, `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize the behavior. Upload/finalization,
+attachment cache, editor, permission and API contracts are unchanged. No
+validation ran.
+
+## Adaptive import-session restore — 2026-10-15
+
+`execution/ux-audit-import-session-restore-recovery-2026-10-15.md` owns the
+pre-edit evidence, retained sessionStorage pointer, explicit restore state and
+read-only Retry boundary.
+`scripts/ux/import-session-restore-recovery.test.mjs` is authored and
+unexecuted source/structure coverage; it is not sessionStorage, API, React or
+browser evidence.
+
+`system/FRONTEND_ARCHITECTURE.md`, `system/USER_FLOWS.md`,
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`, `../PROJECT_STATE.md`, `index.md`
+and `testing.md` summarize the current behavior. Import API, worker, canonical
+data, package, Dexie and deployment contracts are unchanged. No validation ran.
+
+## Offline library download status read — 2026-10-15
+
+`execution/ux-audit-offline-library-download-status-read-2026-10-15.md` owns
+the pre-edit evidence, subscription-error copy, stale-progress retirement and
+status-only Retry boundary.
+`scripts/ux/offline-library-download-status-read.test.mjs` is authored and
+unexecuted source/structure coverage; it is not liveQuery or browser evidence.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`,
+`system/FRONTEND_ARCHITECTURE.md`, `../PROJECT_STATE.md`, `index.md` and
+`testing.md` summarize the current boundary. Download records, worker,
+cancellation/retry semantics, packages, Dexie and API contracts are unchanged.
+No validation or resource measurement occurred.
+
+## Offline library local read state — 2026-10-15
+
+`execution/ux-audit-offline-library-local-read-state-2026-10-15.md` owns the
+pre-edit evidence, local-list/search-state distinction, guarded empty state,
+retained refresh view and local-only Retry boundary.
+`scripts/ux/offline-library-local-read-state.test.mjs` is authored and
+unexecuted source/structure coverage; it is not runtime evidence.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` and
+`system/FRONTEND_ARCHITECTURE.md` own current behavior; `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize it. No package, Dexie, API, schema,
+search corpus, mutation or deployment contract change. No tests/gates,
+services, product browser or resource measurement ran.
+
+## Sync-center tab-owned local reads — 2026-10-15
+
+`execution/ux-audit-sync-center-tab-read-scope-2026-10-15.md` owns the
+pre-edit source evidence, visible-tab query ownership, bounded failure
+existence checks and limits.
+`scripts/ux/sync-center-tab-read-scope.test.mjs` contains an authored,
+unexecuted extraction of the actual `liveQuery` reader with synthetic chainable
+Dexie adapters; it does not establish runtime acceptance.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`,
+`system/FRONTEND_ARCHITECTURE.md`, `../PROJECT_STATE.md`, `index.md` and
+`testing.md` summarize the current boundary. No storage/package/API/schema,
+offline format, mutation, dependency or deployment change. No validation or
+resource measurement occurred.
+
+## Sync-center scoped local read states — 2026-10-15
+
+`execution/ux-audit-sync-center-read-states-2026-10-15.md` owns the pre-edit
+source binding, unread/error/empty and result-ownership findings, finite scoped
+read state, local-only Retry and inspection-failure fencing.
+It extends `scripts/ux/sync-center-hidden-inspection.test.mjs` with authored,
+unexecuted effect/view-expression/Retry and JSX-guard checks. Captured inner
+Dexie reads and adapted setters do not establish React or browser acceptance.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` and
+`system/FRONTEND_ARCHITECTURE.md` own current read-state boundaries;
+`../PROJECT_STATE.md`, `index.md` and `testing.md` summarize status. Existing
+action feedback, download/catalog policy, preference status, stored records,
+packages and deployment are not redefined. No validation/gate/performance
+acceptance occurred. That batch left aggregate read failures coupled; the
+partial-local-read follow-up above now owns their isolation.
+
+## Sync-center hidden resource inspection — 2026-10-15
+
+`execution/ux-audit-sync-center-hidden-inspection-2026-10-15.md` owns the
+pre-edit source binding, visible-copy inspection restriction, replacement-subview
+subscription lifetime and acceptance limits.
+`scripts/ux/sync-center-hidden-inspection.test.mjs` contains authored,
+unexecuted extracted-effect/controlled-emission checks; the inner Dexie read,
+React transitions and real Cache Storage are not exercised.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` and
+`system/FRONTEND_ARCHITECTURE.md` own the current local-read boundaries;
+`../PROJECT_STATE.md`, `index.md` and `testing.md` summarize status. No API,
+schema, package, cache-validation policy, background-manager or deployment
+change. No runtime/gate or CPU/RSS acceptance occurred.
+
+## Offline continuation read states — 2026-10-15
+
+`execution/ux-audit-offline-continuation-read-states-2026-10-15.md` owns pre-edit
+source bindings, state/retry findings, null missing-record results, captured
+database/access fencing and all acceptance limits.
+`scripts/ux/offline-continuation-read-states.test.mjs` contains authored,
+unexecuted compiled-panel/child-element and bounded installed QueryClient/
+Observer cases. DB, hooks and access helpers are controlled adapters.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` owns current offline read semantics;
+`system/FRONTEND_ARCHITECTURE.md`, `../PROJECT_STATE.md`, `index.md` and
+`testing.md` summarize them. No renderer, navigation contract, stored byte,
+format, migration, dependency, API or deployment change. No test/gate, browser,
+storage lifecycle, focus, service or performance acceptance occurred.
+
+## Offline attachment query scheduling — 2026-10-15
+
+`execution/ux-audit-offline-attachment-query-policy-2026-10-15.md` owns pre-edit
+bindings, four local attachment query repairs, preserved owner/Share/admin
+defaults and sampled direct annotation/notebook/offline-continuation precedents.
+`scripts/ux/offline-attachment-query-policy.test.mjs` contains authored,
+unexecuted extracted-option/installed QueryClient/Observer regressions.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` owns the local-only scheduling
+contract; `system/FRONTEND_ARCHITECTURE.md`, `../PROJECT_STATE.md`, `index.md`
+and `testing.md` summarize it. No lifetime, verified-cache helper, Object URL
+cleanup, API, format, schema or dependency change. No tests/gates, browser,
+service, CI, deployment or resource acceptance occurred.
+
+## Offline Reader query scheduling — 2026-10-15
+
+`execution/ux-audit-offline-reader-query-policy-2026-10-15.md` owns the pre-edit
+source finding/bindings, local-only query/prefetch policy, four navigation
+placements, inherited remote/Share defaults and acceptance limits.
+`scripts/ux/offline-reader-query-policy.test.mjs` owns the option/component
+adapter, installed QueryClient/Observer and static JSX coverage; on 2026-10-16
+the focused regression passed **10/10**.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` owns the current scheduling boundary;
+`system/FRONTEND_ARCHITECTURE.md`, `../PROJECT_STATE.md`, `index.md` and
+`testing.md` summarize it. Targeted ESLint, nonincremental Web typecheck and
+diff whitespace passed; no query-key, range, migration, storage format,
+dependency, API or deployment change. Mounted browser/offline-device and
+performance acceptance remain open. Utility query owners are outside this
+report; attachment scheduling has its own follow-up above.
+
+## Offline search readiness and explicit retry — 2026-10-15
+
+`execution/ux-audit-offline-search-readiness-2026-10-15.md` owns pre-edit bridge/
+query-policy findings, source bindings, the current-Worker/access init guard,
+one-shot Reader-to-Library rebuild wiring and all verification limits.
+`scripts/ux/offline-search-readiness.test.mjs` and
+`scripts/ux/offline-search-retry.test.mjs` own the explicit bridge/component
+adapters and static wiring checks; the 2026-10-16 continuation ran **19/19**
+cases successfully.
+
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` owns the readiness/retry semantics;
+`system/FRONTEND_ARCHITECTURE.md`, `../PROJECT_STATE.md`, `index.md` and
+`testing.md` summarize the source-only follow-up and its retained evidence.
+No package/Dexie version, API, schema, dependency, global query policy or
+deployment change. Service-free tests/gates passed, but product browser,
+Worker/IndexedDB and performance acceptance did not occur. The separate
+Reader-query report above covers core local reads, not this search-specific
+option.
+
+## Sidebar quick-search selection — 2026-10-15
+
+`execution/ux-audit-sidebar-search-selection-2026-10-15.md` owns the pre-edit
+source finding, source binding, local full-search precedent and identity-based
+selection repair. On 2026-10-16,
+`scripts/ux/sidebar-search-selection.test.mjs` passed **12/12** with explicit
+hook/query/timer/router adapters; targeted Web ESLint, nonincremental typecheck
+and diff whitespace also passed.
+
+`system/FRONTEND_ARCHITECTURE.md` records the quick-search identity/default/
+missing-target behavior; `../PROJECT_STATE.md`, `index.md` and `testing.md`
+summarize status. The adapter is not mounted React or browser acceptance. No
+API, URL, package, schema, dependency or deployment change; no service, build,
+full API/PWA suite, commit, CI or deployment ran.
+
+## ChatGPT rich-text fallback and resumed gates — 2026-10-15
+
+`execution/ux-audit-chatgpt-rich-text-2026-10-15.md` owns the pre-edit findings,
+official in-app-browser research limits, bounded display-only implementation and
+27 focused SSR checks. Its `-evidence/` directory retains failed baselines,
+intermediate harness failures, final 106-case selected Node run, five passing
+pure API checks/one excluded external fixture, the 2026-10-15 continuation
+outputs, lint and nonincremental types.
+`execution/ux-audit-resumed-source-gates-2026-10-15.md` owns the four pre-existing
+type errors, three invalid directives, minimal repairs and stale-fixture review.
+
+`system/AI_RICH_MARKDOWN_CONTRACT.md` owns current v5 semantics, bounds and source
+offset caveats; `system/FRONTEND_ARCHITECTURE.md`, `../PROJECT_STATE.md`,
+`index.md` and `testing.md` summarize and link those facts. No API/schema,
+dependency, deployment or persistent offline contract changes. No product browser,
+build, CI, deployment or CPU/RSS acceptance; other source-only batches remain
+unaccepted except for the specifically exercised local checks.
+
+## Project drag notice lifecycle — 2026-10-15
+
+`execution/ux-audit-project-drag-notice-lifecycle-2026-10-15.md` owns the
+source-backed repair that gives project-sidebar drag feedback one cancellable
+timer, preventing an older notice callback from clearing a newer notice.
+Existing copy, duration, placement, drag mutation, optimistic update and
+rollback semantics are unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Attachment panel refresh state — 2026-10-15
+
+`execution/ux-audit-attachment-panel-refresh-state-2026-10-15.md` owns the
+source-backed repair that keeps online attachment preview/detail surfaces and
+selection IDs aligned with the latest file-list query. Existing attachment
+requests, viewer sessions, permissions, upload protocol and resource budgets
+are unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Inline attachment asset state — 2026-10-15
+
+`execution/ux-audit-inline-attachment-asset-state-2026-10-15.md` owns the
+source-backed repair that scopes inline attachment failure state, image ratios
+and short text preview refreshes to the current attachment asset. Existing
+lazy loading, request cancellation, permissions, cache, layout and resource
+budgets are unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Attachment thumbnail asset state — 2026-10-14
+
+`execution/ux-audit-attachment-thumbnail-asset-state-2026-10-14.md` owns the
+source-backed repair that resets thumbnail failure state when an attachment
+asset changes under the same attachment ID. Existing lazy loading, query,
+permission, Blob URL and resource-budget contracts are unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Attachment viewer session state — 2026-10-14
+
+`execution/ux-audit-attachment-viewer-session-state-2026-10-14.md` owns the
+source-backed repair that gives each attachment-viewer open a fresh local
+session boundary and remounts renderer state when an attachment asset changes.
+Existing navigation, mode controls, download, permission, PDF and resource
+contracts are unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Complex attachment view state — 2026-10-14
+
+`execution/ux-audit-complex-attachment-view-state-2026-10-14.md` owns the
+source-backed repair that resets spreadsheet tabs, presentation slides and
+archive paths when the attachment asset identity changes. Parser, Worker,
+download, permission and resource-budget contracts are unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Inline attachment preview stale content — 2026-10-14
+
+`execution/ux-audit-inline-attachment-preview-stale-content-2026-10-14.md`
+owns the source-backed repair that clears embedded text/Markdown/JSON/table
+content when a new attachment Range read begins, preventing an older
+attachment's text from remaining visible through a load or failure. Range
+limits, cancellation, rendering, download and full-viewer contracts are
+unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Reading position conversation switch — 2026-10-14
+
+`execution/ux-audit-reading-position-conversation-switch-2026-10-14.md` owns
+the source-backed repair that fences Reader reading-position status by
+conversation visit. Switching conversations clears the previous view and
+prevents old live-query, conflict-resolution, locating and retry callbacks from
+publishing into the new conversation. Quiet autosave, sync-center detail,
+offline storage and server contracts are unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Offline library refresh race — 2026-10-14
+
+`execution/ux-audit-offline-library-refresh-race-2026-10-14.md` owns the
+source-backed repair that serializes local-library reloads, coalesces queued
+reloads to the latest request and fences stale/unmounted state writes around
+IndexedDB reads and search-worker initialization. Offline package versions,
+selection, download, deletion, search-content and worker runtime contracts are
+unchanged.
+
+No service, browser, validation, commit, CI or deployment was run per user
+direction.
+
+## Registration availability race — 2026-10-14
+
+`execution/ux-audit-registration-availability-race-2026-10-14.md` owns the
+source-backed repair that gives `/register` setup/session availability checks a
+single latest-request lifecycle. Older retries and unmounted responses no
+longer overwrite the current registration mode or error state; redirect,
+invitation, registration-submit and API contracts are unchanged.
+
+No service, login, validation, commit, CI or deployment was run per user
+direction.
+
+## Admin access independent reads — 2026-10-14
+
+`execution/ux-audit-admin-access-independent-reads-2026-10-14.md` owns the
+source-backed repair that settles administrator access overview, user,
+invitation and profile reads independently, retains successful/previous data,
+avoids false empty states and gates user mutations until identity is known.
+`system/USER_FLOWS.md` owns the partial-read contract; `PROJECT_STATE.md` and
+`index.md` link the checkpoint. Existing request, permission, write, API,
+database, migration and deployment contracts are unchanged. No service, login,
+validation, commit, CI or deployment was run per user direction.
+
+## Admin access error copy — 2026-10-14
+
+`execution/ux-audit-admin-access-error-copy-2026-10-14.md` owns the
+source-backed repair that maps administrator access-panel connection,
+authorization, conflict, validation, rate-limit, service and unknown failures
+to stable bilingual guidance without exposing server `detail` text.
+`system/USER_FLOWS.md` owns the user-facing recovery contract; `PROJECT_STATE.md`
+and `index.md` link the checkpoint. Existing request, permission, confirmation,
+
+one-time-link, API, database, migration and deployment contracts are unchanged.
+No service, login, validation, commit, CI or deployment was run per user
+direction.
+
+## Admin Skill settings error recovery — 2026-10-15
+
+`execution/ux-audit-admin-skill-settings-error-recovery-2026-10-15.md` owns the
+pre-edit evidence and source-only repair for administrator system-Skill default
+unification and built-in restoration. `apps/web/components/admin-skill-settings.tsx`
+keeps confirmed writes separate from list-refresh failures, maps bounded
+`AdminRequestError` states to bilingual recovery copy, and never renders server
+`detail` or unknown exception text. It does not change the API, permissions,
+confirmation, Skill content or cache contracts; browser and production
+acceptance remain pending.
+
+## System archive callback and limit recovery — 2026-10-15
+
+`execution/ux-audit-system-archive-scope-2026-10-15.md` owns the pre-edit
+evidence and source-only repair for `apps/web/components/system-backup-panel.tsx`.
+System backup, upload, restore, retry and refresh callbacks now require the
+mounted authentication generation; delayed destructive confirmations and
+deferred focus are rechecked. Upload-limit copy distinguishes loading, offline
+and failed reads. System archive v4/v5, ownership mapping, `.cr`, request/cache
+keys and server-task behavior remain unchanged. Only diff whitespace was checked;
+browser, service, test, build, CI and production acceptance remain pending.
+
+## Attachment image lazy loading — 2026-10-14
+
+`execution/ux-audit-attachment-image-lazy-loading-2026-10-14.md` owns the
+source-backed repair that limits multi-image overview queries to items near
+the viewport and disables inactive bottom-thumbnail prefetching. Existing
+online/offline query keys, retry, Blob URL release, navigation, zoom,
+download and permission contracts are unchanged.
+
+No service, login, validation, commit, CI or deployment was run per user
+direction.
+
+## Login auth read duplication — 2026-10-14
+
+`execution/ux-audit-login-auth-read-duplication-2026-10-14.md` owns the
+source-backed repair that separates local sign-out-cleanup detection from
+server authentication reads. The login page reads setup/session once after a
+clear local cleanup state, and reads them once again only after a pending
+cleanup is completed. Redirect, reauthentication, password-reset availability,
+login and API contracts are unchanged.
+
+No service, login, validation, commit, CI or deployment was run per user
+direction.
+
+## Offline library navigation reload — 2026-10-14
+
+`execution/ux-audit-offline-library-navigation-reload-2026-10-14.md` owns the
+source-backed repair that separates initial conversation selection from the
+offline library refresh. Selecting or opening a conversation no longer changes
+the refresh callback identity and therefore no longer rebuilds the full local
+search input and worker; download completion, deletion and explicit retry still
+refresh the library. No offline package, search-content or selection semantics
+were changed.
+
+No service, login, validation, commit, CI or deployment was run per user
+direction.
+
+## Mermaid error copy — 2026-10-14
+
+`execution/ux-audit-mermaid-error-copy-2026-10-14.md` owns the source-backed
+Reader repair that keeps Mermaid parser and dynamic-loading exception text out
+of rendered conversation content while retaining the source fallback.
+`system/USER_FLOWS.md` owns the user-facing fallback contract; `PROJECT_STATE.md`
+and `index.md` link the checkpoint. Theme, security, performance-probe,
+request, dependency, API, database, migration and deployment contracts are
+unchanged. No service, login, validation, commit, CI or deployment was run per
+user direction.
+
+## Offline sync failure guidance — 2026-10-14
+
+`execution/ux-audit-offline-sync-failure-guidance-2026-10-14.md` owns the
+source-backed repair that maps offline outbox `NETWORK`, `AUTH`, `INVALID` and
+unknown failures to stable bilingual recovery guidance in the Offline & sync
+center. `system/USER_FLOWS.md` owns the user-facing retention and recovery
+contract; `PROJECT_STATE.md` and `index.md` link the checkpoint. Existing
+outbox, conflict, retry, request, API, database, migration, offline-package and
+deployment contracts are unchanged. No service, login, validation, commit, CI or
+deployment was run per user direction.
+
+## Scoped offline cleanup sync — 2026-10-14
+
+`execution/ux-audit-scoped-offline-cleanup-sync-2026-10-14.md` owns the
+source-backed repair that keeps single-conversation offline cleanup from
+submitting or resetting other conversations' annotation, notebook and
+reading-position outbox records. `system/USER_FLOWS.md` owns the user-facing
+scope contract; `PROJECT_STATE.md` and `index.md` link the checkpoint.
+No API, database, migration, offline-package or deployment contract changed.
+No service, login, validation, commit, CI or deployment was run per user
+direction.
+
+## Message version recovery — 2026-10-14
+
+`execution/ux-audit-message-version-recovery-2026-10-14.md` owns the
+source-backed repair for message version selection/deletion recovery, shared
+desktop/mobile ownership, stale-head checks and derived-task read failures.
+`system/USER_FLOWS.md` owns the current user-facing recovery behavior;
+`PROJECT_STATE.md` and `index.md` link the checkpoint. Existing version,
+reader-anchor, API route, authentication and deployment contracts are
+unchanged. The source regression draft is intentionally unexecuted; no
+service, login, validation, commit, CI or deployment was run.
+
+## Shared confirmation lifecycle — 2026-10-14
+
+`execution/ux-audit-interaction-confirmation-lifecycle-2026-10-14.md` owns
+pre-edit source evidence and the first-pending-wins/token/scope lifecycle contract.
+`system/USER_FLOWS.md` owns current cancellation behavior and caller-scope limits;
+`PROJECT_STATE.md` and `index.md` link the local checkpoint. Existing API,
+authentication, draft and deployment contracts are unchanged. New callback
+regressions use the compiled provider with controlled hooks and scope/focus
+doubles; they have not been executed and are not browser evidence. No service,
+login, validation, commit, CI or deployment was run.
+
+## Conversation deletion admission — 2026-10-14
+
+`execution/ux-audit-conversation-delete-admission-2026-10-14.md` records the
+pre-edit source evidence, immutable-request recovery contract and local repair.
+`api-reference.md` owns the new account-scoped receipt GET, ordered payload
+binding and all-status replay; `system/USER_FLOWS.md` owns user-triggered checks,
+explicit original-key retries and in-memory/browser-lifecycle boundaries.
+`PROJECT_STATE.md` and `index.md` link the source-only checkpoint. No migration,
+retention/worker policy or deployment change was made. Newly written API,
+PostgreSQL and browser regressions have not been executed; no service, login,
+validation, commit, CI or deployment was run.
+
+## Content-cleanup error copy — 2026-10-14
+
+`execution/ux-audit-cleanup-error-copy-2026-10-14.md` records the source-backed
+repair for cleanup scan admission and FAILED/STALE feedback. Known scope,
+permission, rule, task and version cases use stable bilingual recovery copy;
+unknown scan failures state that content is unchanged and retain the existing
+rescan path. Scan, polling, deletion and data contracts are unchanged. No
+service, login, automated validation, CI or deployment was run per user direction.
+
+## Adaptive import error recovery — 2026-10-14
+
+`execution/ux-audit-adaptive-import-error-recovery-2026-10-14.md` records the
+source-backed repair for adaptive import operation errors. API status and safe
+error codes now reach a shared bilingual presenter; known failures are
+classified, validation copy is retained, and unclassified write outcomes are
+marked unconfirmed. No runtime, automated verification, CI or deployment was
+performed per user direction.
+
+## Import format settings recovery copy — 2026-10-14
+
+`execution/ux-audit-import-format-error-recovery-2026-10-14.md` records the
+source-backed repair for raw API/transport exceptions in learned-format list,
+revision and personal-update feedback. Status-aware bilingual messages preserve
+read retry controls and the existing name draft; an unconfirmed write directs the
+user to check current state before retrying. No runtime, automated verification,
+CI or deployment was performed per user direction.
+
+## Account-security error copy — 2026-10-14
+
+`execution/ux-audit-account-security-error-copy-2026-10-14.md` records the
+source-backed audit and local-only repair for account sign-out and password-change
+feedback. Preference persistence and local pending-state reads are distinguished
+from authentication requests; raw errors are replaced with status-aware bilingual
+copy, including a no-blind-resubmit message for unknown password outcomes. The
+existing pending-change review remains. No service, login, test, lint, typecheck,
+build, CI or deployment was run per user direction; user verification is pending.
+
+## Email-change panel lifecycle — 2026-10-15
+
+`execution/ux-audit-email-change-panel-lifecycle-2026-10-15.md` owns the
+source-only repair for `apps/web/components/email-change-panel.tsx`. Email-change
+reads, send/cancel results and profile refresh callbacks are fenced by mount,
+authentication generation and operation sequence; delayed cancel/close
+confirmations are rechecked. Unknown network/5xx write outcomes require a
+read-only status refresh before retry, while input and pending state remain.
+Email grants, expiry, resend replacement, cancellation API, SMTP and session
+contracts are unchanged. Only diff whitespace was checked; browser, service,
+tests, build, CI and production acceptance remain pending.
+
+## Email-change confirmation lifecycle — 2026-10-15
+
+`execution/ux-audit-email-change-confirmation-lifecycle-2026-10-15.md` owns the
+source-only repair for `apps/web/features/auth/email-change-confirmation.tsx`.
+Concurrent checks are rejected; preview, confirmation and lost-response session
+reads are fenced by mount, authentication generation, operation sequence and the
+current URL token. Recovery success still requires the previously previewed user
+UUID and target address. Grant, session, fragment URL and confirmation semantics
+are unchanged. Only diff whitespace was checked; browser, service, tests, build,
+CI and production acceptance remain pending.
+
+## Preferences capability read lifecycle — 2026-10-15
+
+`execution/ux-audit-preferences-capability-read-lifecycle-2026-10-15.md` owns the
+source-only repair for `apps/web/components/preferences-panel.tsx`. The account
+capability read that controls Administration navigation is fenced by mount,
+authentication generation, latest request sequence and an abort signal. Retry
+responses cannot restore a stale role, and unconfirmed admin controls remain
+hidden while reading. Personal settings, backend role checks, permissions and
+the capability-change event key are unchanged. Only diff whitespace was checked;
+browser, service, tests, build, CI and production acceptance remain pending.
+
+## Support Requests capability read lifecycle — 2026-10-15
+
+`execution/ux-audit-support-capability-read-lifecycle-2026-10-15.md` owns the
+source-only repair for the capability bootstrap in
+`apps/web/components/support-requests-panel.tsx`. The account-capability read
+and offline cached-role fallback are fenced by mount, authentication generation,
+latest retry sequence and an abort signal; retry clears unconfirmed role and
+capability state, so stale responses cannot switch inbox mode or expose the
+wrong request surface. Offline access checks, cached fallback, request/draft/API
+contracts and support permissions are unchanged. Only diff whitespace was
+checked; browser, service, tests, build, CI and production acceptance remain
+pending.
+
+## Conversation split workspace lifecycle — 2026-10-15
+
+`execution/ux-audit-conversation-split-lifecycle-2026-10-15.md` owns the
+source-only repair for `apps/web/features/editing/conversation-split-workspace.tsx`.
+The full dialogue-index read now has an in-place Retry and clears old rows and
+selection before a replacement read. Load, preview and execute callbacks are
+fenced by the current workspace and operation; pending preview/execute locks
+the plan controls, and stale execute callbacks do not clear a newer Reader
+selection. Split payloads, server validation, confirmed writes, generated links
+and Reader contracts are unchanged. Only diff whitespace was checked; browser,
+service, tests, build, CI and production acceptance remain pending.
+
+## Project mutation error copy — 2026-10-14
+
+`execution/ux-audit-project-mutation-error-copy-2026-10-14.md` records the
+source-only repair that localizes project creation, settings save, conversation
+move and project reorder failures. Name conflicts, access/not-found, concurrent
+changes, rejected input and transient failures now use stable localized copy;
+draft retention, optimistic rollback and refresh/retry behavior are unchanged.
+No local validation, CI or deployment was run.
+
+## Reader offline error copy — 2026-10-14
+
+`execution/ux-audit-reader-offline-error-copy-2026-10-14.md` records the
+source-only repair for canonical Reader conversation and initial-window failures.
+Offline branches no longer expose local-copy, IndexedDB or adapter `Error.message`
+values directly; they use stable localized recovery copy and preserve the existing
+offline action policy, permissions, reading position and resource behavior. No
+local validation, CI or deployment was run.
+
+## Source editor error recovery — 2026-10-14
+
+`execution/ux-audit-source-editor-error-recovery-2026-10-14.md` records the
+source-only repair that keeps raw API, upload and cleanup exceptions out of the
+Markdown editor's user-facing error panel. Save, close-attachment and latest-state
+reload failures use stable localized recovery copy while preserving drafts and
+conflict recovery. No API, database, migration, request, retry or resource policy
+changed. No local validation, CI or deployment was run.
+
+## Attachment viewer locale consistency — 2026-10-14
+
+`execution/ux-audit-attachment-viewer-locale-2026-10-14.md` records the
+source-only follow-up that localizes the viewer shell, common image/text/JSON/
+media states and complex document/spreadsheet/presentation/archive states.
+Retry, download and navigation names follow the current interface locale;
+worker parse details are not exposed directly. Read, render, permission and
+resource policies are unchanged. No local validation, CI or deployment was run.
+
+## PDF viewer locale consistency — 2026-10-14
+
+`execution/ux-audit-pdf-locale-2026-10-14.md` records the source-only repair for
+PDF toolbar, page, zoom, thumbnail and local recovery labels. The repair only
+branches presentation and accessibility copy by the current interface locale;
+PDF.js rendering, virtualization, queueing and resource budgets are unchanged.
+No local validation, CI or deployment was run per user direction.
+
+## Personal archive callback ownership — 2026-10-14
+
+`execution/ux-audit-personal-archive-scope-2026-10-14.md` and its evidence directory
+own STATE-01/ERR-01/FBK-01 for retired personal-archive callbacks, delayed confirmation
+guards and truthful upload-limit recovery. The 11-case baseline has ten failures;
+the final 36 focused and full 926 script checks pass. The additional intermediate
+retry-control failure is retained. Lint/nonincremental types pass; three browser
+files discover 19, execute zero. Current flows describe metadata-only recovery and
+unchanged accepted-task behavior. Its additive ledger preserves the task-status
+predecessor; this batch changes no API/worker/schema, CI or production deployment.
+
+## Task status recovery — 2026-10-14
+
+`execution/ux-audit-task-status-recovery-2026-10-14.md` and its evidence directory
+own ERR-TASK-01/FBK-TASK-01: query-array mutation after a failed final GET,
+independent final-read Retry, and stale/unknown status feedback. The pre-edit
+9-case probe failed eight; the final 22 checks and full 890-case suite pass.
+Lint/nonincremental types pass; three browser files discover 24, execute zero.
+Raw intermediate failure logs remain alongside the final checkpoint. This batch
+does not change API/worker/schema or polling budgets and has no new CI/deployment.
+
+## Offline resource inspection and sharing closeout — 2026-10-14
+
+`execution/ux-audit-offline-resource-check-2026-10-13.md` and its adjacent evidence
+directory own the pre-edit 5-failure baseline, scoped inspection/retry repair,
+868 passing Node checks, lint/types and 26 discovered/unexecuted browser cases.
+The share report below now records the corrected transient-error policy and
+truthful terminal feedback, with actual QueryObserver coverage. The user asked
+to continue without login; local browser connection refusal remains explicit.
+These local changes have no new CI or deployment. Earlier ledgers are unchanged.
+
+## Offline files and Reader share-panel retries — 2026-10-14
+
+`execution/ux-audit-offline-files-retry-2026-10-14.md` records the offline
+conversation-files panel's local read retry. The sibling
+`execution/ux-audit-share-panel-read-recovery-2026-10-14.md` records the
+Reader share-list error message and cache-preserving local retry. The share
+finding is separate from Settings → My shares. Per user direction, neither
+change has local runtime/test/build, CI or deployment verification.
+
+`execution/ux-audit-shared-reader-initial-recovery-2026-10-14.md` additionally
+owns the public Share reader's missing initial-window error state, safe retry
+copy, and position preservation across transient or password-gated reads.
+This source-only repair is also unverified and unpublished.
+
+`execution/ux-audit-share-recovery-locale-2026-10-14.md` records the follow-up
+that makes public Share loading and recovery copy follow the Share locale, with
+the visitor locale used before the Share payload is available. It also covers
+localized password gating and stable unlock-failure feedback. No local checks,
+CI or deployment were run.
+
+## My shares transient reads — 2026-10-13
+
+`execution/ux-audit-share-transient-read-2026-10-13.md` owns the source-backed
+ordinary-user recovery review for the settings share list. It records the
+bounded two-retry read repair, retained-list status, updated share E2E contract,
+and the unavailable local-browser boundary; local scripts/lint/typecheck pass but
+the batch has not entered CI or deployment.
+
+## Context package upload recovery — 2026-10-13
+
+`execution/ux-audit-context-upload-recovery-2026-10-13.md` owns the read-only
+production diagnosis and local repair for large `.context.zip` updates: the
+package was accepted and committed while transient Docker DNS `EAI_AGAIN`
+failures affected Web-to-API status reads. It records bounded React Query
+retries, stale-data preservation, the transient-502 browser regression and the
+boundary that this local repair has not entered CI or deployment.
+
+## Notebook draft queue — 2026-10-13
+
+`execution/ux-audit-notebook-draft-write-queue-2026-10-13.md` and its adjacent
+pre-edit hashes/baseline result own PERF-NOTE-01: redundant serial draft writes
+while storage is busy. The local repair retains one active plus one latest pending
+snapshot and preserves version/error/save ordering. Its additive checkpoint binds
+the three changed source/test files on top of the immutable predecessor; 848 Node
+checks (78 focused), lint/types/bounded build pass, and 54 browser cases are discovered
+but not executed. State, flows, testing and known issues separate this local batch
+from accepted production 84988a2. The transient ENOSPC and later available-space
+observations remain explicit; no cleanup or new CI/deployment is implied.
+
+## Current release reconciliation — 2026-10-13
+
+`execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md` and
+`evidence/attachment-release-2026-10-12.json` own accepted 84988a2/0050, exact
+CI/image/screenshot identity, no-migration all-column data comparison and final
+84988a2/30a0d32 current/rollback pointers. Two backups remain: 20261008T134403Z
+and 20261012T143850Z. Entry, testing and deployment documents now point here.
+The user-returned CI result ended the requested pause; the release cycle is
+complete. Further local optimization is authorized, additional CI/deployment is not.
+
+`execution/ux-audit-followup-2026-10-13.md` and its adjacent probe/evidence bind
+the five annotations/table findings to accepted 84988a2 before product edits,
+including closed-panel highlights, draft persistence and authentication ownership
+constraints. They do not claim rendered or device-memory verification.
+The same report now owns the five scoped local repairs and their additive
+`local-verification.json` checkpoint; previous source/evidence ledgers stay intact.
+`system/USER_FLOWS.md` describes the new local read/selection/table behavior;
+`testing.md` separates 806 passing Node checks and 40 discovered browser cases
+from the accepted production release. `system/KNOWN_ISSUES_AND_UNCERTAINTIES.md`
+now points to that pending browser/visual boundary instead of an obsolete failed CI.
+
+`execution/ux-audit-annotation-writes-2026-10-13.md` owns the next five write-recovery
+findings and their pre-edit probe. Its `comment-checkpoint.json` is explicitly
+intermediate: comment preservation and saved-notebook draft cleanup pass 46 focused
+and 816 total Node checks plus lint/types; three write findings and browser/build
+acceptance were still open at that intermediate checkpoint. The additive
+`local-verification.json` now owns the complete local five-finding repair: 828
+Node checks including 58 focused, lint/types/bounded build, and 48 discovered
+browser cases with zero execution. The preceding 806/816-case ledgers remain
+immutable. `system/USER_FLOWS.md`, `testing.md`, current state and known issues
+describe this newer local behavior without extending production acceptance.
+
+`execution/ux-audit-annotation-composition-2026-10-13.md` owns the next three
+pre-edit findings and local creation/addition repairs. Its adjacent probe,
+result, cleanup and temporary-evidence-loss records distinguish actual callbacks,
+explicit doubles, resource failures and missing raw logs. New generated Node,
+lint, types, discovery and build logs are retained in that repository evidence
+directory. The additive checkpoint binds 137 sources: 136 inherited (two changed)
+and one new browser file. It records 844 Node passes including 74 focused and
+52 discovered/zero executed browser cases; old 806/816/828 ledgers remain intact.
+Current flows, testing, state and known issues reflect these local-only behaviors
+without extending production acceptance or authorizing another release.
+
+`execution/ux-audit-notebook-editing-2026-10-13.md` audits the title field's
+localized accessible name. Its pre-edit callback probe records two unconfirmed
+race candidates rather than turning simulated-only paths into findings. The
+English/Chinese component contract and affected browser locators now agree with
+the field name. Its additive checkpoint inherits 137 source bindings, changes
+five and preserves 132, with 845 Node passes, lint/types/build and 52 discovered/
+zero executed browser cases. Screen-reader voice and browser behavior remain
+unverified; no release authorization is implied.
+
 ## Entry reconciliation — 2026-10-08
 
 | Path | Action / responsibility |

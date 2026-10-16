@@ -13,13 +13,13 @@ import {
   getProjects,
   mergeConversations,
   moveConversationToProject,
-  queueConversationBatchDelete,
   removeConversationFromProject,
   recordRecentProject,
   updateProjectConversationOrder,
 } from "../../lib/api";
-import type { BackgroundTaskRead, ProjectConversationRead, ProjectRead } from "../../lib/types";
+import type { ProjectConversationRead, ProjectRead } from "../../lib/types";
 import { ConversationActionMenu } from "../conversations/conversation-action-menu";
+import { useConversationDeletion } from "../conversations/conversation-deletion-provider";
 import { ConversationPlacementSurface, useConversationPlacement } from "../conversations/conversation-placement";
 import { ConversationUndoNotice, createConversationUndo, type UndoAction } from "../conversations/conversation-undo";
 import { MergeAdmissionNotice, MergeConversationsDialog } from "../conversations/merge-conversations-dialog";
@@ -29,7 +29,6 @@ import { ProjectSidebar } from "./project-sidebar";
 import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
-import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { useBatchExport } from "../conversations/use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
@@ -42,7 +41,10 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
   const batchExport = useBatchExport(resolvedLocale === "zh-CN");
-  const dialog = useInteractionDialog();
+  const deletion = useConversationDeletion();
+  const deleteFlight = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const workspace = useWorkspaceShell();
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [selectionMode, setSelectionMode] = useState(false);
@@ -309,27 +311,22 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
                   }
                 }}
                 onDelete={async (ids) => {
-                  if (!(await dialog.confirm({ title: zh ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: zh ? "这些对话会在后台按列表顺序逐项删除，无法在系统内恢复；可在任务区域停止后续项目。" : "These conversations are deleted in order in the background and cannot be restored in the app. You can stop pending items in the task area.", confirmLabel: zh ? "永久删除" : "Delete permanently", danger: true }))) {
-                    return;
-                  }
+                  if (deleteFlight.current) return;
+                  deleteFlight.current = true;
+                  const requested = new Set(ids);
+                  const orderedIds = conversations.map(item => item.id).filter(id => requested.has(id));
                   setBulkBusy("delete");
                   try {
-                    const requested = new Set(ids);
-                    const orderedIds = conversations
-                      .map((conversation) => conversation.id)
-                      .filter((conversationId) => requested.has(conversationId));
-                    const task = await queueConversationBatchDelete(orderedIds);
-                    queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
-                      task,
-                      ...current.filter((item) => item.job_id !== task.job_id),
-                    ]);
+                    const task = await deletion.submit(orderedIds);
+                    if (!task || !mounted.current) return;
                     clearSelection();
                     setSelectionMode(false);
                     setBatchNotice(zh
                       ? `已开始按顺序删除 ${orderedIds.length} 个对话；可在任务区域查看进度并停止后续删除`
                       : `Deletion started for ${orderedIds.length} conversations in order. Track progress or stop pending items in the task area.`);
                   } finally {
-                    setBulkBusy(null);
+                    deleteFlight.current = false;
+                    if (mounted.current) setBulkBusy(null);
                   }
                 }}
               />

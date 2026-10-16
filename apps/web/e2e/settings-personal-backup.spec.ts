@@ -153,3 +153,46 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
     } finally { await context.close(); await admin.dispose(); }
   });
 }
+
+for (const [width, locale] of [[375, "zh-CN"], [1440, "en-US"]] as const) {
+  test(`personal archive upload-limit read failure preserves selection and retries only the read ${width}`, async ({ browser, playwright, baseURL }) => {
+    const base = baseURL!, headers = { Origin: base }, admin = await settingsAdmin(playwright.request, base);
+    const context = await browser.newContext({ viewport: { width, height: 900 }, locale });
+    try {
+      const email = `archive-limit-${width}-${Date.now()}@example.test`, password = "synthetic archive limit passphrase";
+      expect((await context.request.post(`${base}/api/auth/register`, { headers, data: { email, password, confirm_password: password } })).status()).toBe(201);
+      await settingsAppearance(context.request, base, locale);
+      const page = await context.newPage();
+      let failLimits = true, limitReads = 0, uploadPosts = 0;
+      await page.route("**/api/me/archive/capabilities", async route => {
+        limitReads++;
+        if (failLimits) await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "Synthetic limit read outage" }) });
+        else await route.continue();
+      });
+      page.on("request", request => {
+        if (request.method() === "POST" && new URL(request.url()).pathname === "/api/me/archive/previews") uploadPosts++;
+      });
+      await page.goto(base);
+      const panel = await openBackup(page), zh = locale === "zh-CN";
+      await panel.getByRole("button", { name: zh ? "恢复归档" : "Restore archive", exact: true }).click();
+      const fileInput = panel.getByLabel(zh ? "个人归档文件 (.cr)" : "Personal archive file (.cr)");
+      await fileInput.setInputFiles({ name: "synthetic-limit-read.cr", mimeType: "application/octet-stream", buffer: Buffer.from("Synthetic selection; never uploaded") });
+      await expect(panel.getByRole("alert")).toContainText(zh ? "无法读取上传限制" : "Unable to load upload limits");
+      await expect(panel.getByText(zh ? "正在读取上传限制…" : "Loading upload limits…", { exact: true })).toHaveCount(0);
+      const upload = panel.getByRole("button", { name: zh ? "上传并预检" : "Upload & preview", exact: true });
+      await expect(upload).toBeDisabled();
+      if (process.env.E2E_SETTINGS_SCREENSHOTS) await panel.screenshot({ path: `${process.env.E2E_SETTINGS_SCREENSHOTS}/personal-archive-limits-failed-${width}.png` });
+      const readsBeforeRetry = limitReads;
+      failLimits = false;
+      await panel.getByRole("button", { name: zh ? "重试读取上传限制" : "Retry loading upload limits", exact: true }).click();
+      await expect(upload).toBeEnabled();
+      expect(limitReads).toBeGreaterThan(readsBeforeRetry);
+      await expect(fileInput).toHaveValue(/synthetic-limit-read\.cr$/);
+      await expect(fileInput).toBeFocused();
+      expect(uploadPosts).toBe(0);
+      const tasks = await (await context.request.get(`${base}/api/me/archive/tasks`)).json();
+      expect(tasks).toHaveLength(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } finally { await context.close(); await admin.dispose(); }
+  });
+}

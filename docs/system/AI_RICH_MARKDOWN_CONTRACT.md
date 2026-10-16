@@ -1,13 +1,14 @@
 # AI Rich Markdown Renderer Contract
 
-Last synchronized: 2026-08-12
+Last synchronized: 2026-10-15
 
 ## Purpose and canonical source
 
 Chat Reader renders modern AI conversation Markdown through one semantic core. PostgreSQL `MessageVersion` Markdown remains canonical. Rendering never rewrites `\[...\]` to `$$...$$`, never persists KaTeX HTML, and does not add a database migration or export field.
 
 ```text
-canonical Markdown source
+canonical Markdown source (unchanged)
+-> bounded display-only compatibility projection where recognized
 -> react-markdown / unified parser
 -> remark-gfm + frozen AI soft breaks + remark-math
 -> AI math compatibility AST transform
@@ -16,11 +17,50 @@ canonical Markdown source
 -> safe React components
 ```
 
-`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v4` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
+`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v5` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
 
 ## Shared consumers
 
 The same semantic and security configuration is used by Reader message Markdown, Source Editor live preview, Markdown attachment inline/Viewer rendering, and existing annotation/import surfaces that consume `MarkdownRenderer`. Presentation wrappers may differ; Math/GFM/footnote/code/link semantics must not diverge.
+
+## Bounded ChatGPT rich-text reading fallback
+
+`chatgpt-rich-text-compatibility.ts` handles the reported lower-case
+`box`/`row`/`text`/`badge`/`divider` export shape. It is a sample-driven reading
+fallback, **not** a documented general ChatGPT export format, HTML/JSX parser or
+ChatKit runtime. A standalone balanced box with a recognized rich child must
+establish the profile outside code. Unknown attributes do not authorize it.
+The narrow attribute allowlist tracks the documented presentation vocabulary
+for the corresponding ChatKit widget names (layout, spacing, border/radius,
+background, color/variant, badge flags and text emphasis) only as a
+recognition boundary; those attributes are discarded and never executed.
+Events, `style`, `className`, arbitrary JSX expressions and unknown attributes
+remain literal/inert and do not establish a profile.
+
+The display projection removes recognized layout wrappers, retains text/badge
+labels and uses a thematic break for a divider. An escaped profile additionally
+recovers bounded heading, paired strong/code delimiters and ordered-list escapes,
+plus export whitespace entities. It does not blindly unescape Markdown, links,
+TeX or HTML. Fenced, inline and standalone indented code stay literal. Missing
+content, original card styling, arbitrary widgets and exporter changes are not
+reconstructed.
+
+Full current-version text supplies ephemeral profile metadata to canonical
+blocks, including both virtualized paths and leading thinking. Block IDs,
+indices, raw copy strings, task identity and canonical data remain unchanged.
+Source-preview positions undo these new display edits relative to the input
+after the **existing** math normalization; this is not a repair or guarantee
+for older math preprocessing offset shifts.
+
+Limits are 524,288 UTF-16 source units, 8,192 tokens/edits and 64 detection nesting
+levels. Invalid detection or exhausted budgets leave input unchanged, not
+truncated. Work runs only through mounted render inputs; it adds no observer,
+timer, request, dependency or persistent field. CPU/RSS and browser geometry
+have not been measured for this fallback.
+
+`skipHtml`, sanitization, safe links/images and local KaTeX policy remain enabled.
+Importer originals, PostgreSQL Markdown, exports, `.cr`, offline packages v1/v2/v3
+and Dexie v2 are not migrated or rewritten.
 
 ## Math delimiter profile
 
@@ -93,12 +133,14 @@ Search and exports continue using canonical Markdown/searchable text. KaTeX span
 
 ## Supported and deferred syntax
 
-Supported now: four math delimiters, common KaTeX aligned/matrix/cases environments, GFM tables/tasks/strike/autolinks, footnotes, fenced/inline code, headings, blockquotes and the frozen existing single-newline visual-break policy.
+Supported now: four math delimiters, common KaTeX aligned/matrix/cases environments, GFM tables/tasks/strike/autolinks, footnotes, fenced/inline code, headings, blockquotes, the frozen existing single-newline visual-break policy and the bounded rich-text reading fallback above.
 
 Deferred by design: MathJax fallback, AsciiMath, `mhchem`, arbitrary raw HTML, new callout syntax and new Mermaid behavior. Unsupported KaTeX commands use the bounded local fallback.
 
 ## Regression evidence
 
+- `scripts/ux/chatgpt-rich-text.test.mjs`: 27 service-free parser/SSR checks for the v5 fallback; actual shared components with explicit assistant-ui/virtualizer adapters, not browser acceptance.
+- `apps/api/tests/test_chatgpt_rich_text_source.py`: three pure importer/block-building checks retain exact synthetic source/hash and task offsets. Current v5 evidence is in [the rich-text report](../execution/ux-audit-chatgpt-rich-text-2026-10-15.md); older browser/production evidence below does not accept this new fallback.
 - `ai-rich-markdown-parser.spec.ts`: parser delimiter, consumed inline/bracket compatibility, prose/date/version/code exclusions, currency and canonical-source invariants.
 - `ai-rich-markdown.spec.ts`: real Reader/Editor DOM, golden formula, 109-formula stress, security, MathML and 360px overflow.
 - `production-rich-markdown-copy.spec.ts`: an ephemeral UTF-8 copy of the reported production source, full Source Preview semantic count and cleanup through the product API.

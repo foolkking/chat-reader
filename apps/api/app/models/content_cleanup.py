@@ -212,6 +212,7 @@ class ContentCleanupOccurrence(Base):
     match_mode: Mapped[str] = mapped_column(String(24), nullable=False, default="RAW_EXACT")
     detector_version: Mapped[str] = mapped_column(String(40), nullable=False, default="noise-v2")
     evidence_codes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    reviewed_ranges: Mapped[list[dict[str, int]] | None] = mapped_column(JSON(none_as_null=True), nullable=True)
 
     scan = relationship("ContentCleanupScan", back_populates="occurrences")
 

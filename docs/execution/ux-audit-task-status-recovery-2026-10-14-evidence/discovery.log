@@ -1,0 +1,26 @@
+Listing tests:
+  context-continuation-drop.spec.ts:31:7 › 375px: drop updates only the intended file, preserves drafts on failure and resumes package updates
+  context-continuation-drop.spec.ts:31:7 › 1440px: drop updates only the intended file, preserves drafts on failure and resumes package updates
+  settings-task-center.spec.ts:40:7 › late retry response cannot repopulate another account's task center
+  settings-task-center.spec.ts:40:7 › late cancel response cannot repopulate another account's task center
+  settings-task-center.spec.ts:104:7 › 375px: task identity survives refresh and delivers its own export
+  settings-task-center.spec.ts:104:7 › 768px: task identity survives refresh and delivers its own export
+  settings-task-center.spec.ts:104:7 › 1440px: task identity survives refresh and delivers its own export
+  task-center-dismissal.spec.ts:26:38 › 375px: unresolved task result has a read-only Retry independent of the active list
+  task-center-dismissal.spec.ts:26:38 › 1440px: unresolved task result has a read-only Retry independent of the active list
+  task-center-dismissal.spec.ts:63:5 › closing the Task Center never cancels its background task
+  task-center-dismissal.spec.ts:90:5 › global Tasks reopens the same active task after route change and refresh
+  task-center-dismissal.spec.ts:109:5 › mobile Tasks is a full-height global surface and closing it does not stop work
+  task-center-dismissal.spec.ts:137:5 › Task Center reports partial results and task-specific result actions truthfully
+  task-center-dismissal.spec.ts:175:5 › failures precede completed results and retry keeps keyboard focus on the moving task
+  task-center-dismissal.spec.ts:207:5 › batch import completion reports the full scope and waits for an explicit destination
+  task-center-dismissal.spec.ts:303:5 › Task Center exposes the current offline packaging store and progress
+  task-center-dismissal.spec.ts:323:5 › recent terminal task results survive refresh and presentation dismissal stays local
+  task-center-dismissal.spec.ts:356:5 › sort menu closes on outside click and Escape and restores trigger focus
+  task-center-dismissal.spec.ts:373:5 › batch mode keeps its trigger width and exposes an explicit Done state
+  task-center-dismissal.spec.ts:389:5 › merge workflow opens in a body-level dialog outside the list frame
+  task-center-dismissal.spec.ts:407:5 › conversation rows remain visibly actionable when custom sorting is disabled
+  task-center-dismissal.spec.ts:462:5 › workspace soft navigation preserves the same Sidebar DOM instance
+  task-center-dismissal.spec.ts:516:5 › project and conversation drag overlays preserve their source row dimensions
+  task-center-dismissal.spec.ts:563:5 › conversation previews wait, flip inside the viewport, and cancel pending presentation
+Total: 24 tests in 3 files

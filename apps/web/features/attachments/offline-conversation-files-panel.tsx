@@ -33,6 +33,7 @@ export function OfflineConversationFilesPanel({
     queryKey: ["offline-conversation-attachments", conversationId],
     queryFn: () => listOfflineConversationAttachments(conversationId),
     staleTime: 10_000,
+    networkMode: "always",
   });
   const files = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -42,9 +43,9 @@ export function OfflineConversationFilesPanel({
       if (filter === "unused" && attachment.is_used) return false;
       if (filter === "unavailable" && !unavailable) return false;
       return !query || attachment.display_name.toLocaleLowerCase().includes(query)
-        || friendlyAttachmentType(attachment).toLocaleLowerCase().includes(query);
+        || friendlyAttachmentType(attachment, zh).toLocaleLowerCase().includes(query);
     });
-  }, [filesQuery.data, filter, search]);
+  }, [filesQuery.data, filter, search, zh]);
 
   function openAttachment(attachment: AttachmentRead, trigger: HTMLElement) {
     if (attachment.resolution_status !== "resolved") return;
@@ -64,13 +65,16 @@ export function OfflineConversationFilesPanel({
     let attachment: AttachmentRead | null = null;
     try {
       attachment = await getOfflineAttachment(attachmentId);
-      if (!attachment.download_url) throw new Error(zh ? "离线状态下此文件不可用。" : "This file is unavailable offline.");
+      if (!attachment.download_url) {
+        setError(zh ? "此文件未缓存，无法在离线状态下下载。" : "This file was not cached and cannot be downloaded offline.");
+        return;
+      }
       const link = document.createElement("a");
       link.href = attachment.download_url;
       link.download = attachment.display_name;
       link.click();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : (zh ? "无法下载离线文件。" : "Unable to download the offline file."));
+    } catch {
+      setError(offlineAttachmentDownloadError(zh));
     } finally {
       const completed = attachment;
       window.setTimeout(() => releaseOfflineAttachmentUrls(completed), 1_000);
@@ -99,7 +103,19 @@ export function OfflineConversationFilesPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {filesQuery.isLoading ? <p className="text-sm text-secondary">{zh ? "正在加载文件…" : "Loading files…"}</p> : null}
-        {filesQuery.isError ? <p role="alert" className="text-sm text-[var(--danger)]">{zh ? "无法读取离线文件列表。" : "Unable to read offline files."}</p> : null}
+        {filesQuery.isError ? (
+          <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-[var(--danger)]">
+            <p>{zh ? "无法读取离线文件列表。" : "Unable to read offline files."}</p>
+            <button
+              type="button"
+              disabled={filesQuery.isFetching}
+              onClick={() => void filesQuery.refetch()}
+              className="min-h-10 underline disabled:opacity-60"
+            >
+              {filesQuery.isFetching ? (zh ? "正在重试…" : "Retrying…") : (zh ? "重试" : "Retry")}
+            </button>
+          </div>
+        ) : null}
         {files.length ? <div className="overflow-hidden rounded-lg border border-ui bg-surface">{files.map((attachment, index) => (
           <OfflineFileRow
             key={attachment.id}
@@ -134,7 +150,7 @@ function OfflineFileRow({ attachment, zh, divided, onOpen, onDownload, onLocate 
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-subtle text-secondary">{image ? <ImageIcon className="h-4 w-4" /> : <File className="h-4 w-4" />}</span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</p>
-        <p className="truncate text-[11px] text-secondary">{friendlyAttachmentType(attachment)} · {formatBytes(attachment.asset_object?.byte_size ?? 0)} · {available ? (zh ? "已缓存" : "Cached") : attachment.resolution_status === "missing" ? (zh ? "文件缺失" : "Missing") : (zh ? "离线不可用" : "Unavailable offline")}</p>
+        <p className="truncate text-[11px] text-secondary">{friendlyAttachmentType(attachment, zh)} · {formatBytes(attachment.asset_object?.byte_size ?? 0)} · {available ? (zh ? "已缓存" : "Cached") : attachment.resolution_status === "missing" ? (zh ? "文件缺失" : "Missing") : (zh ? "离线不可用" : "Unavailable offline")}</p>
         {occurrences.length ? <div className="mt-1 flex flex-wrap gap-1">{occurrences.slice(0, 3).map((occurrence, index) => (
           <button key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`} type="button" onClick={() => void onLocate(attachmentOccurrenceTarget(attachment, occurrence))} className="inline-flex min-h-7 items-center gap-1 rounded px-1.5 text-[11px] text-secondary hover:bg-subtle hover:text-primary">
             <LocateFixed className="h-3 w-3" />{zh ? `引用 ${index + 1}` : `Reference ${index + 1}`}
@@ -154,4 +170,10 @@ function offlineFilterLabel(filter: OfflineFilter, zh: boolean): string {
   if (filter === "unused") return zh ? "未引用" : "Unreferenced";
   if (filter === "unavailable") return zh ? "离线不可用" : "Unavailable";
   return zh ? "全部" : "All";
+}
+
+function offlineAttachmentDownloadError(zh: boolean): string {
+  return zh
+    ? "离线文件暂不可用，请重新打开文件列表后重试。"
+    : "This offline file is temporarily unavailable. Reopen the file list and try again.";
 }

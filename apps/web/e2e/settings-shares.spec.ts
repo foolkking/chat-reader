@@ -224,13 +224,27 @@ for (const width of [375, 1440]) {
       const conversationId = (await source.json()).conversation.id;
       for (const title of ["Retry first", "Retry second", "Retry third"]) expect((await context.request.post(`${base}/api/conversations/${conversationId}/shares`, { headers, data: { title } })).status()).toBe(200);
       const page = await context.newPage();
-      let failList = true;
-      await page.route("**/api/shares?*", async (route) => { if (failList) { failList = false; await route.abort(); } else await route.continue(); });
+      let failList = true, transientFailures = 0, listReads = 0;
+      await page.route("**/api/shares?*", async (route) => {
+        listReads += 1;
+        if (failList) await route.abort();
+        else if (transientFailures > 0) { transientFailures -= 1; await route.abort(); }
+        else await route.continue();
+      });
       await page.goto(base);
       const dialog = await openShares(page);
       await expect(dialog.getByText("Unable to load shares. Refresh to retry.")).toBeVisible();
+      expect(listReads).toBe(3);
+      failList = false;
       await dialog.getByRole("button", { name: "Refresh", exact: true }).click();
       await expect(dialog.getByRole("article")).toHaveCount(3);
+      const beforeTransient = listReads;
+      transientFailures = 1;
+      await dialog.getByRole("button", { name: "Refresh", exact: true }).click();
+      await expect.poll(() => listReads - beforeTransient).toBe(2);
+      await expect(dialog.getByRole("button", { name: "Refresh", exact: true })).toBeEnabled();
+      await expect(dialog.getByRole("article")).toHaveCount(3);
+      await expect(dialog.getByText("Unable to load shares. Refresh to retry.")).not.toBeVisible();
       await dialog.getByRole("article", { name: "Retry first" }).getByRole("button", { name: "Edit share", exact: true }).click();
       await openSection(dialog, /Link appearance/);
       await dialog.getByLabel("Share title", { exact: true }).fill("Retained retry title");

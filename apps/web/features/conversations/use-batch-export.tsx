@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queueConversationBatchExport } from "../../lib/api";
-import { batchExportError } from "../../lib/batch-export-errors";
+import { batchExportError, batchExportFailureCode } from "../../lib/batch-export-errors";
 import { authenticationGeneration, OFFLINE_ACCESS_LOCKED_EVENT } from "../../lib/offline-access";
 import type { BackgroundTaskRead } from "../../lib/types";
 
@@ -46,7 +46,7 @@ export function useBatchExport(zh: boolean) {
       openTasks();
     } catch (error) {
       if (mounted.current && generation === authenticationGeneration()) {
-        setNotice({ generation, error: error instanceof Error ? error.message : "CONNECTION_FAILED" });
+        setNotice({ generation, error: batchExportFailureCode(error) });
       }
     } finally {
       window.clearTimeout(timeout);
@@ -57,7 +57,7 @@ export function useBatchExport(zh: boolean) {
   const visible = notice?.generation === authenticationGeneration() ? notice : null;
   const feedback = visible ? <div role={visible.error ? "alert" : "status"} className="flex flex-wrap items-center gap-x-3 rounded-lg border border-ui bg-surface px-3 py-2 text-sm">
     <span className={visible.error ? "text-[var(--danger)]" : "text-secondary"}>{visible.error
-      ? visible.error.startsWith("BATCH_EXPORT_") ? batchExportError(visible.error, zh) : (zh ? "未确认提交结果。所选对话已保留，再次点击导出可安全重试。" : "Submission was not confirmed. Your selection is retained; click Export to retry safely.")
+      ? batchExportError(visible.error, zh)
       : (zh ? "导出已加入任务，离开页面后仍会继续。" : "Export queued. It continues after you leave this page.")}</span>
     <button type="button" onClick={openTasks} className="min-h-11 text-accent underline underline-offset-2">{zh ? "查看任务" : "View tasks"}</button>
     <button type="button" onClick={() => setNotice(null)} className="min-h-11 text-secondary">{zh ? "关闭" : "Dismiss"}</button>

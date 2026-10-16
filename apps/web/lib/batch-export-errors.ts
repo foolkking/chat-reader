@@ -1,9 +1,25 @@
+import { ApiRequestError } from "./api";
+
+export function batchExportFailureCode(error: unknown): string {
+  if (error instanceof ApiRequestError) {
+    if (error.code?.startsWith("BATCH_EXPORT_")) return error.code;
+    if (error.status === 401 || error.status === 403) return "BATCH_EXPORT_ACCOUNT_UNAVAILABLE";
+    if (error.status === 404) return "BATCH_EXPORT_SOURCE_UNAVAILABLE";
+    if (error.status === 409) return "BATCH_EXPORT_REQUEST_CONFLICT";
+    if (error.status >= 400 && error.status < 500) return "BATCH_EXPORT_REQUEST_REJECTED";
+  }
+  return "BATCH_EXPORT_UNCONFIRMED";
+}
+
 export function batchExportError(code: string | null | undefined, zh: boolean): string {
   switch (code) {
     case "BATCH_EXPORT_SOURCE_UNAVAILABLE": return zh ? "部分对话已删除或不可访问，请刷新列表后重新选择。" : "Some conversations are unavailable. Refresh the list and select again.";
     case "BATCH_EXPORT_ACCOUNT_UNAVAILABLE": return zh ? "账户不可用，请重新登录。" : "Your account is unavailable. Sign in again.";
     case "BATCH_EXPORT_LIMIT": return zh ? "导出超过大小限制，请减少所选对话后重试。" : "This export exceeds the size limit. Select fewer conversations and retry.";
     case "BATCH_EXPORT_STORAGE_UNAVAILABLE": return zh ? "导出空间暂时不可用，请稍后重试。" : "Export storage is temporarily unavailable. Retry later.";
+    case "BATCH_EXPORT_REQUEST_CONFLICT": return zh ? "导出请求状态发生冲突。当前选择已保留，请刷新列表后重新选择。" : "The export request conflicted with another request. Your selection is retained; refresh the list and select again.";
+    case "BATCH_EXPORT_REQUEST_REJECTED": return zh ? "导出请求未被接受。当前选择已保留，请刷新列表后重试。" : "The export request was not accepted. Your selection is retained; refresh the list and retry.";
+    case "BATCH_EXPORT_UNCONFIRMED": return zh ? "未确认提交结果。所选对话已保留，再次点击导出可安全重试。" : "Submission was not confirmed. Your selection is retained; click Export to retry safely.";
     case "ATTACHMENT_EXPORT_SOURCE_UNAVAILABLE": return zh ? "对话已删除或不可访问，请返回列表确认。" : "This conversation is no longer available. Check your conversation list.";
     case "ATTACHMENT_EXPORT_ACCOUNT_UNAVAILABLE": return zh ? "账户不可用，请重新登录。" : "Your account is unavailable. Sign in again.";
     case "ATTACHMENT_EXPORT_ASSET_UNAVAILABLE": return zh ? "附件已不可用，请检查附件后重新导出。" : "An attachment is no longer available. Check attachments and export again.";

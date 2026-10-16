@@ -1,0 +1,53 @@
+{
+  "kind": "additive-local-verification",
+  "captured_at": "2026-10-14",
+  "repository_head": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "scope": "Task final-result checking and truthful stale/package status",
+  "predecessor": {
+    "path": "docs/execution/ux-audit-offline-resource-check-2026-10-13-evidence/local-verification.json",
+    "bytes": 4328,
+    "sha256": "f6faba9b3d65fb1e916331949b3b280cf2d661582fc195fcb645e32aba0f10f4",
+    "verified_sources": 6,
+    "verified_evidence_files": 5,
+    "note": "This immediate predecessor was independently verified; its reported older missing notebook ledger is not recreated or certified here."
+  },
+  "sources": [
+    { "path": "apps/web/features/import/import-task-monitor.tsx", "bytes": 47261, "sha256": "fc5f1fa6f4ef2b9eb195278205a8af70dc8d024832a1267f48a28b18cb105927" },
+    { "path": "apps/web/features/exporting/continuation-panel.tsx", "bytes": 20334, "sha256": "f49a7e726cd5b05ef05b99e8a9e23833c6a5a3498acd310478cca7b55147fabc" },
+    { "path": "apps/web/e2e/task-center-dismissal.spec.ts", "bytes": 36575, "sha256": "a76d9be7dbda7d385f31034585e686864b84b24395a1da8db582a7066f8b47ca" },
+    { "path": "apps/web/e2e/context-continuation-drop.spec.ts", "bytes": 6927, "sha256": "4ab87c9a3cbf78469a9dd9c5731da696f9ab9d9e961d5f20a8ca936b21e4e7c1" },
+    { "path": "scripts/ux/task-status-recovery.test.mjs", "bytes": 19432, "sha256": "73a26698b3a01c98aa01a66c47a9e059244a59c3af7477e99083dd93593d1522" }
+  ],
+  "evidence": [
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/baseline.log", "bytes": 8471, "sha256": "f9b30c4107ad0216233697271ff223da76e798df3893057d69e45c33d411ccda" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/focused-intermediate.log", "bytes": 1846, "sha256": "55332d6778956d2c58316bb7d37c21341c1fc8e084a86a39e5ba96a2d82073b9" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/expanded-intermediate.log", "bytes": 4786, "sha256": "b7c84d7cd7b548451a39701044fecc7a87c7cb96ebe88f994ffc4475529828ad" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/focused-final.log", "bytes": 4172, "sha256": "b23c4c546a223ba6c5706b5ace029a28830e846bc6b60a02c0feb48a3a600dc3" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/focused-22.log", "bytes": 4400, "sha256": "f4f14b7b853f0f5c452d214fe83639ce0332e3eb0db4ae5f7230834ef980aff6" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/all-node.log", "bytes": 184136, "sha256": "225ef6f3a78e5fc990cdcb29283c9c71c6b1a4a606cb213d13c043c21f0cd09b" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/lint.log", "bytes": 173, "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/types.log", "bytes": 0, "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/discovery.log", "bytes": 2903, "sha256": "080e0b47bb1d19ab1d8889a43b5fe160b452ab787178bf9000280f3c8d9ab8be" },
+    { "path": "docs/execution/ux-audit-task-status-recovery-2026-10-14-evidence/pre-edit.json", "bytes": 1359, "sha256": "658f08673705a9c513bcf9dd5164fd376a974b5ab11b4aa9ffe0fe9a2bfa460c" }
+  ],
+  "checks": {
+    "baseline": { "passed": 1, "failed": 8, "skipped": 0, "duration_ms": 862.1603 },
+    "first_repair": { "passed": 9, "failed": 0, "skipped": 0, "duration_ms": 708.7834 },
+    "expanded_intermediate": { "passed": 20, "failed": 1, "skipped": 0, "duration_ms": 924.5887, "failure": "Unresolved final GET was incorrectly blocked by unavailable active-list reads; corrected before final verification." },
+    "focused_final": { "passed": 22, "failed": 0, "skipped": 0, "duration_ms": 877.9391 },
+    "full_node": { "files": 32, "passed": 890, "failed": 0, "skipped": 0, "duration_ms": 13923.8549 },
+    "lint": { "command": "corepack pnpm run lint", "exit_code": 0 },
+    "types": { "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false", "exit_code": 0 },
+    "browser_discovery": { "files": 3, "discovered": 24, "executed": 0 },
+    "scoped_diff_check": { "exit_code": 0, "note": "Expected Git CRLF warnings only." },
+    "head_unchanged": true
+  },
+  "buildinfo_sha256": "70c9f839651026f657520a37ebe7581463bb958107dfbd7857ca815f7e24152b",
+  "limitations": [
+    "Real component and installed QueryObserver logic is exercised with controlled hook/transport/timer/DOM doubles, not browser lifecycle.",
+    "Unresolved check state is in memory per mounted monitor, not durable task history across reload.",
+    "Browser cases and planned screenshots were not executed or reviewed; local service remains unavailable.",
+    "API/worker/schema and existing retry/polling budgets are unchanged.",
+    "No new build, API test run, commit, CI submission or production deployment in this batch."
+  ]
+}

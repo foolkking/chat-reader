@@ -158,6 +158,8 @@ export type CleanupApplyResult = {
   conflicts: number;
 };
 
+export type CleanupRemovalRange = { start_offset: number; end_offset: number };
+
 export type CleanupOccurrenceRead = {
   id: string;
   conversation_id: string;
@@ -181,6 +183,8 @@ export type CleanupOccurrenceRead = {
   stale: boolean;
   match_mode: string;
   evidence_codes: string[] | null;
+  reviewed_ranges?: CleanupRemovalRange[] | null;
+  edit_token?: string | null;
 };
 
 export type CleanupReviewFilter = { rule_id?: string; conversation_id?: string; selected_only?: boolean };

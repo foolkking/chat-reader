@@ -1,0 +1,32 @@
+{
+  "audit_started": "2026-10-15",
+  "verified_date": "2026-10-16",
+  "timezone": "Asia/Shanghai",
+  "scope": "local noise candidate inline markers and checkbox descriptions",
+  "node_tests": {
+    "passed": 13,
+    "failed": 0,
+    "duration_ms": 544.8607,
+    "helper_cases": 6,
+    "actual_react_server_markup_cases": 7,
+    "command": "node --test scripts/ux/cleanup-range-selection.test.mjs scripts/ux/cleanup-candidate-markers.test.mjs",
+    "hooks_mocked": false,
+    "mounted_events_exercised": false,
+    "expanded_row_exercised": false
+  },
+  "targeted_web_eslint": "passed, zero warnings",
+  "nonincremental_web_typecheck": "passed",
+  "diff_whitespace": "passed",
+  "user_import_storage_worktree_changes": false,
+  "api_or_schema_changed": false,
+  "prior_api_suite_rerun": false,
+  "not_run": [
+    "listening services or authentication",
+    "browser CSS, events, focus or assistive verification",
+    "PostgreSQL migration or concurrency tests",
+    "Web build or full release gates",
+    "commit, push, new CI or deployment"
+  ],
+  "production_changed": false,
+  "rendered_design_checklist": "not assessed"
+}

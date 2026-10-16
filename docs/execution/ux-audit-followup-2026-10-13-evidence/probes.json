@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-12T23:38:10.773Z",
+  "source_commit": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "confidence": "Observed: extracted real committed callbacks/parser and computed React element tree. No browser, production data, CPU or RSS measurement.",
+  "execution": "probe.mjs completed successfully; exact HEAD and worktree/blob equality checked after CRLF/LF normalization only.",
+  "findings": {
+    "annotation_subread_failures": [
+      "notebook failure prevents successful annotations publishing",
+      "conflict failure prevents successful annotations publishing"
+    ],
+    "overlapping_reload_publication_order": [
+      "synthetic-newer",
+      "synthetic-older"
+    ],
+    "bulk_scope": {
+      "selected": 2,
+      "visible": 1,
+      "style_targets": 2,
+      "delete_targets": 2,
+      "note_targets": 1,
+      "hidden_disclosure": false
+    },
+    "csv": {
+      "all_257_column_rows_returned": 0,
+      "wide_header_then_short_row_returns_short_as_header": true,
+      "field_code_units": 66560,
+      "accepted_code_units": 66560
+    },
+    "table": {
+      "rows": 100,
+      "columns": 64,
+      "td": 6400,
+      "span": 6400,
+      "maximum_data_cells_calculated": 2560000,
+      "browser_measurement": false
+    },
+    "generic_503": {
+      "fixed_Chinese": true,
+      "upstream_details_hidden": true
+    }
+  },
+  "executed_commit_blob_sha256": {
+    "apps/web/features/annotations/annotation-workspace.tsx": "38b2611deb73d253b2e2d73dbbe2da2518ca79815c04ca638ae616cd4af1d7a2",
+    "apps/web/lib/annotation-repository.ts": "ee33312e77a016cd2615cfaec788d6d3b13a94f78c985270707f6b7b7e0d0122",
+    "apps/web/features/annotations/notebook-view.tsx": "1fd8d6535961fbeb4fd7ec928c157cf9b941b3a893db8f7b2e32a68d420b5aaf",
+    "apps/web/features/attachments/attachment-viewer.tsx": "2cfcabfa6a9db82e53a057b97a3a83836b9ea23b0d4485436afbb967d292f144",
+    "apps/web/features/attachments/attachment-table-policy.ts": "8e7542de9c6f7d329c6ace0a08ab973f523556db573601a0eb0a0acd7b0ac6b3",
+    "apps/web/lib/api.ts": "a0afb4bac2723198e037b7effaef193f20921075e51a9d3cd872a9435ffb9040"
+  }
+}

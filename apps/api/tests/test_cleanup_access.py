@@ -93,6 +93,17 @@ def test_review_groups_previews_and_bulk_decisions_are_owner_scoped(auth_client,
             while not process_scan_chunk(db, uuid.UUID(scan.json()["id"]))["done"]:
                 db.commit()
             db.commit()
+        occurrence = auth_client.get(prefix + "/occurrences").json()[0]
+        occurrence_path = prefix + f"/occurrences/{occurrence['id']}"
+        auth_client.cookies.clear()
+        auth_client.cookies.set("chat_reader_session", other_token)
+        assert auth_client.get(occurrence_path).status_code == 404
+        assert auth_client.put(occurrence_path + "/removal-ranges", json={
+            "base_edit_token": occurrence["edit_token"], "ranges": None,
+        }).status_code == 404
+        auth_client.cookies.clear()
+        auth_client.cookies.set("chat_reader_session", author_token)
+        assert auth_client.get(occurrence_path).json()["decision"] == "KEEP"
         assert auth_client.patch(prefix + "/decisions/filter", json={"decision": "DELETE", "all_matching": True}).status_code == 200
         assert auth_client.post(prefix + "/apply").json()["applied"] == 1
         assert auth_client.get(prefix + "/outcome").json()["status"] == "COMPLETED"

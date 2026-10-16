@@ -25,6 +25,7 @@ from app.schemas.content_cleanup import (
     CleanupApplyInput,
     CleanupFilteredDecision,
     CleanupDecisionBatch,
+    CleanupRangeUpdate,
     CleanupOccurrenceRead,
     CleanupRuleCreate,
     CleanupRuleRead,
@@ -310,6 +311,34 @@ def get_review_groups(scan_id: uuid.UUID, request: Request, limit: int = Query(1
     if _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first() is None:
         raise HTTPException(status_code=404, detail="Noise scan not found.")
     return groups(db, scan_id, limit=limit, offset=offset, q=q)
+
+
+@router.get("/scans/{scan_id}/occurrences/{occurrence_id}", response_model=CleanupOccurrenceRead)
+def get_occurrence(scan_id: uuid.UUID, occurrence_id: uuid.UUID, request: Request, db: Session = Depends(get_db)) -> CleanupOccurrenceRead:
+    if _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first() is None:
+        raise HTTPException(status_code=404, detail="Noise scan not found.")
+    items = preview_occurrences(db, scan_id, occurrence_id=occurrence_id, limit=1)
+    if not items:
+        raise HTTPException(status_code=404, detail="Noise candidate not found.")
+    return CleanupOccurrenceRead(**items[0])
+
+
+@router.put("/scans/{scan_id}/occurrences/{occurrence_id}/removal-ranges", response_model=CleanupScanRead)
+def put_occurrence_ranges(scan_id: uuid.UUID, occurrence_id: uuid.UUID, payload: CleanupRangeUpdate, request: Request, db: Session = Depends(get_db)) -> CleanupScanRead:
+    from app.services.cleanup_ranges import save_ranges
+    scan = _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first()
+    if scan is None:
+        raise HTTPException(status_code=404, detail="Noise scan not found.")
+    try:
+        save_ranges(db, scan_id, occurrence_id, base_edit_token=payload.base_edit_token,
+                    ranges=[item.model_dump() for item in payload.ranges] if payload.ranges is not None else None)
+        db.flush()
+        result = _scan_read(db, scan)
+        db.commit()
+        return result
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/scans/{scan_id}/review")

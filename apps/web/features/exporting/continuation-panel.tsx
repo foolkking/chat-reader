@@ -8,13 +8,15 @@ import { ContinuationHistory } from "./continuation-history";
 import type { ContinuationNavigate, ContinuationViewState } from "./continuation-index";
 import { continuationApi as api, getTask } from "../../lib/api";
 const button = "min-h-11 rounded-md border border-ui px-3 py-2 text-sm text-primary hover:bg-subtle disabled:opacity-50";
+const readRetryDelay = (attemptIndex: number) => Math.min(5000, 750 * 2 ** attemptIndex);
+const terminalTaskStatuses = ["committed", "failed", "cancelled"] as const;
 
 export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyChange, onNavigate, viewState, onDiscardReady }: { conversationId: string; onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void; onNavigate?: ContinuationNavigate; viewState?: ContinuationViewState; onDiscardReady?: (discard: (() => Promise<void>) | null) => void }) {
   const { resolvedLocale } = usePreferences();
   const t = (zh: string, en: string) => resolvedLocale === "zh-CN" ? zh : en;
   const cache = useQueryClient();
-  const state = useQuery({ queryKey: ["continuation", id, "state"], queryFn: () => api.state(id), refetchInterval: 5000 });
-  const history = useQuery({ queryKey: ["continuation", id, "history"], queryFn: () => api.revisions(id), refetchInterval: 5000 });
+  const state = useQuery({ queryKey: ["continuation", id, "state"], queryFn: () => api.state(id), retry: 2, retryDelay: readRetryDelay, refetchInterval: 5000 });
+  const history = useQuery({ queryKey: ["continuation", id, "history"], queryFn: () => api.revisions(id), retry: 2, retryDelay: readRetryDelay, refetchInterval: 5000 });
   const [surface, setSurface] = useState<"read" | "upload" | "history">("read");
   const [member, setMember] = useState<"current" | "index">(viewState?.member ?? "current");
   const [editorDirty, setEditorDirty] = useState(false);
@@ -35,8 +37,17 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const packageKey = useRef(crypto.randomUUID());
   const [taskId, setTaskId] = useState<string | null>(null);
-  const task = useQuery({ queryKey: ["task", taskId], queryFn: () => getTask(taskId!), enabled: Boolean(taskId), refetchInterval: query => ["committed", "failed", "cancelled"].includes(query.state.data?.status ?? "") ? false : 1500 });
+  const task = useQuery({
+    queryKey: ["task", taskId],
+    queryFn: () => getTask(taskId!),
+    enabled: Boolean(taskId),
+    retry: 2,
+    retryDelay: readRetryDelay,
+    refetchInterval: query => terminalTaskStatuses.includes(query.state.data?.status as typeof terminalTaskStatuses[number]) ? false : query.state.error ? 4000 : 1500,
+  });
   const taskStatus = task.data?.status;
+  const taskIsTerminal = terminalTaskStatuses.includes(taskStatus as typeof terminalTaskStatuses[number]);
+  const taskRecovering = Boolean(taskId) && task.isError && !taskIsTerminal;
   useEffect(() => {
     if (!taskId && state.data?.pending_return_task_id) setTaskId(state.data.pending_return_task_id);
   }, [taskId, state.data?.pending_return_task_id]);
@@ -59,6 +70,10 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
   const [formKey, setFormKey] = useState(0);
   const dirty = editorDirty || Object.keys(files).length > 0 || Boolean(packageFile);
   const taskBusy = Boolean(taskId) && !["committed", "failed", "cancelled"].includes(taskStatus ?? "");
+  const stateRecovering = state.isError && Boolean(state.data);
+  const historyRecovering = history.isError && Boolean(history.data);
+  const readRecovering = stateRecovering || historyRecovering;
+  const readUnavailable = (state.isError && !state.data) || (history.isError && !history.data);
   useEffect(() => { onDirtyChange?.(editorDirtyRef.current || Object.keys(files).length > 0 || Boolean(packageFile)); }, [editorDirty, files, packageFile, onDirtyChange]);
   useEffect(() => { onBusyChange?.(busy || editorBusy); return () => onBusyChange?.(false); }, [busy, editorBusy, onBusyChange]);
   useEffect(() => {
@@ -150,11 +165,12 @@ export function ContinuationPanel({ conversationId: id, onDirtyChange, onBusyCha
       <div className="flex gap-1"><button type="button" className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle" aria-pressed={surface === "upload"} onClick={() => navigate("upload")}>{t("更新文件", "Update files")}</button><button type="button" className="min-h-11 rounded-md px-3 text-sm text-secondary hover:bg-subtle" aria-pressed={surface === "history"} onClick={() => navigate("history")}>{t("历史", "History")}</button></div>
     </nav>
     {state.isLoading || history.isLoading ? <p role="status">{t("正在读取…", "Loading…")}</p> : null}
-    {state.isError || history.isError || error ? <div role="alert" className="space-y-2 text-sm text-[var(--danger)]"><p>{error || t("读取失败。", "Could not load files.")}</p><button className={button} disabled={busy} onClick={() => void run(async () => { await refresh(); const latest = await api.state(id); setBaseGeneration(latest.generation); setError(""); })}>{t("重新读取", "Reload")}</button></div> : null}
+    {readUnavailable || error ? <div role="alert" className="space-y-2 text-sm text-[var(--danger)]"><p>{error || t("读取失败。", "Could not load files.")}</p><button className={button} disabled={busy} onClick={() => void run(async () => { await refresh(); const latest = await api.state(id); setBaseGeneration(latest.generation); setError(""); })}>{t("重新读取", "Reload")}</button></div> : null}
+    {readRecovering ? <p role="status" className="text-sm text-secondary">{t("暂时无法读取最新状态，正在自动重试；已保存的内容保持不变。", "The latest status is temporarily unavailable. Retrying automatically; saved content remains unchanged.")}</p> : null}
     {droppedFile ? <button type="button" className={button} disabled={busy || editorBusy || taskBusy} onClick={() => void saveDropped(droppedFile)}>{t("重试文件更新", "Retry file update")}</button> : null}
     {busy ? <p role="status" className="text-sm text-secondary">{t("正在保存，请稍候…", "Saving, please wait…")}</p> : null}
     {taskId ? <p role="status" className={`text-sm ${taskStatus === "failed" ? "text-[var(--danger)]" : "text-secondary"}`}>
-      {taskStatus === "committed" ? t("整包中的接续文件已更新。", "Continuation files updated from package.") : taskStatus === "failed" ? t("更新失败，原文件仍保留。可在任务中心查看原因或重新拖入文件。", "Update failed; previous files remain. See Task Center or drop the file again.") : taskStatus === "cancelled" ? t("更新已取消。", "Update cancelled.") : t("正在后台更新接续文件…可以关闭，重新打开会恢复进度。", "Updating continuation files… You can close and reopen to resume progress.")}
+      {taskRecovering ? t("暂时无法读取更新进度，最新状态尚未确认。会继续检查，也可稍后到任务中心查看。", "Update progress is temporarily unavailable. The latest state is unconfirmed. Status checks will resume; you can review it later in Task Center.") : taskStatus === "committed" ? t("整包中的接续文件已更新。", "Continuation files updated from package.") : taskStatus === "failed" ? t("更新失败，原文件仍保留。可在任务中心查看原因或重新拖入文件。", "Update failed; previous files remain. See Task Center or drop the file again.") : taskStatus === "cancelled" ? t("更新已取消。", "Update cancelled.") : t("正在后台更新接续文件…可以关闭，重新打开会恢复进度。", "Updating continuation files… You can close and reopen to resume progress.")}
     </p> : null}
     {notice ? <p role="status" className="text-sm text-secondary">{notice}</p> : null}
     {surface === "read" && document ? <ContinuationDropTarget member={member} zh={resolvedLocale === "zh-CN"} disabled={busy || editorBusy || taskBusy} onFiles={selected => {

@@ -6,9 +6,10 @@ import { archiveUploadRecovery, archiveUploadRecoveryLabel } from "../lib/archiv
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Download, FileArchive, RefreshCw, Upload } from "lucide-react";
-import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import { cancelTask, confirmPersonalArchiveRestore, discardPersonalArchiveUpload, getPersonalArchiveCapabilities, getPersonalArchiveTasks, getTask, queuePersonalArchiveExport, retryTask, uploadPersonalArchive } from "../lib/api";
 import type { BackgroundTaskRead } from "../lib/types";
+import { authenticationGeneration } from "../lib/offline-access";
 import { ArchivePreview, ArchiveProgress, archiveError, archiveStatus, archiveTaskLabel } from "./archive-ui";
 import { usePreferences } from "./preferences-provider";
 import { useInteractionDialog } from "./interaction-dialog-provider";
@@ -26,9 +27,13 @@ export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId,
   const [file, setFile] = useState<File | null>(null), [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [busy, setBusy] = useState(false), [online, setOnline] = useState(true), [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [limitsRetrying, setLimitsRetrying] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null), uploadHandle = useRef<{ cancel: () => void } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null), focusFile = useRef(false);
+  const limitsRetryButton = useRef<HTMLButtonElement>(null), limitsReading = useRef(false);
   const requestKeys = useRef({ upload: "", backup: "" }), mounted = useRef(true), handled = useRef(new Set<string>());
+  const generation = useRef(authenticationGeneration()), writing = useRef(false), confirming = useRef(false);
+  const current = useCallback(() => mounted.current && generation.current === authenticationGeneration(), []);
   const capabilities = useQuery({ queryKey: ["personal-archive-capabilities"], queryFn: getPersonalArchiveCapabilities, enabled: online, retry: false });
   const history = useInfiniteQuery({ queryKey: ["personal-archive-tasks"], initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => getPersonalArchiveTasks(pageParam), getNextPageParam: (last) => last.length === 30 ? last[last.length - 1].job_id : undefined,
@@ -52,62 +57,96 @@ export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId,
     }
   }, [selectedId, mode]);
   useEffect(() => {
+    if (!current()) return;
     for (const task of [...(selected ? [selected] : []), ...(history.data?.pages.flat() ?? [])]) {
       if (task.job_type !== "personal_archive_restore" || task.status !== "committed" || handled.current.has(task.job_id)) continue;
       handled.current.add(task.job_id);
       for (const key of ["projects", "conversations", "sidebar-conversations", "project-conversations", "offline-catalog"]) void client.invalidateQueries({ queryKey: [key] });
       if (task.result.preferences_imported) void retryPreferenceSync();
     }
-  }, [client, history.data, selected, retryPreferenceSync]);
+  }, [client, current, history.data, selected, retryPreferenceSync]);
 
-  async function refresh() { await Promise.all([client.invalidateQueries({ queryKey: ["personal-archive-tasks"] }), client.invalidateQueries({ queryKey: ["active-tasks"] }), client.invalidateQueries({ queryKey: ["task"] })]); }
+  async function refresh() {
+    if (!current()) return;
+    await Promise.all([client.invalidateQueries({ queryKey: ["personal-archive-tasks"] }), client.invalidateQueries({ queryKey: ["active-tasks"] }), client.invalidateQueries({ queryKey: ["task"] })]);
+  }
+  async function retryLimits() {
+    if (!current() || !online || capabilities.isFetching || limitsReading.current) return;
+    const restoreFocus = typeof document !== "undefined" && document.activeElement === limitsRetryButton.current;
+    limitsReading.current = true; setLimitsRetrying(true);
+    try {
+      const result = await capabilities.refetch();
+      if (current() && !result.isError && result.data && restoreFocus
+        && (document.activeElement === limitsRetryButton.current || document.activeElement === document.body)) fileInput.current?.focus({ preventScroll: true });
+    } finally { limitsReading.current = false; if (current()) setLimitsRetrying(false); }
+  }
   function openTask(task: BackgroundTaskRead) {
+    if (!current()) return;
     releaseExportScope("backup:personal");
     setFile(null); setIncludePreferences(false); setSelectedId(task.job_id); setError("");
     setMode(task.job_type === "personal_archive_export" ? "backup" : "restore");
-    requestAnimationFrame(() => { heading.current?.focus(); heading.current?.scrollIntoView({ block: "nearest" }); });
+    requestAnimationFrame(() => { if (current()) { heading.current?.focus(); heading.current?.scrollIntoView({ block: "nearest" }); } });
+  }
+  function acceptTask(task: BackgroundTaskRead, navigate = false) {
+    if (!current()) return;
+    client.setQueryData(["task", task.job_id], task);
+    if (navigate) openTask(task);
   }
   async function perform(work: () => Promise<void>) {
-    if (busy) return; setBusy(true); setError(""); setNotice("");
+    if (!current() || writing.current || confirming.current || !online) return;
+    writing.current = true; setBusy(true); setError(""); setNotice("");
     try { await work(); void refresh(); }
     catch (failure) {
-      if (mounted.current) {
+      if (current()) {
         if (failure instanceof DOMException && failure.name === "AbortError") setNotice(zh ? "上传已停止，文件选择已保留。已登记的任务可从下方记录查看。" : "Upload stopped; your file selection is retained. Any accepted task appears in the records below.");
         else setError(archiveError(failure instanceof Error ? failure.message : "", zh));
         void refresh();
       }
     }
-    finally { if (mounted.current) setBusy(false); }
+    finally { writing.current = false; if (current()) setBusy(false); }
   }
   async function backup() {
-    requestKeys.current.backup ||= crypto.randomUUID();
-    await perform(async () => { const task = await queuePersonalArchiveExport(includeArchived, requestKeys.current.backup); requestKeys.current.backup = ""; openTask(task); client.setQueryData(["task", task.job_id], task); });
+    await perform(async () => {
+      requestKeys.current.backup ||= crypto.randomUUID();
+      const task = await queuePersonalArchiveExport(includeArchived, requestKeys.current.backup);
+      if (!current()) return;
+      requestKeys.current.backup = ""; acceptTask(task, true);
+    });
   }
   async function upload() {
-    if (!file) return;
-    if (limit && file.size > limit) { setError(zh ? `文件超过 ${bytes(limit)} 的上传上限。` : `The file exceeds the ${bytes(limit)} upload limit.`); return; }
-    requestKeys.current.upload ||= crypto.randomUUID();
+    if (!current() || writing.current || confirming.current || !online || !file || !limit) return;
+    if (file.size > limit) { setError(zh ? `文件超过 ${bytes(limit)} 的上传上限。` : `The file exceeds the ${bytes(limit)} upload limit.`); return; }
     await perform(async () => {
-      setUploadProgress(0); const handle = uploadPersonalArchive(file, requestKeys.current.upload, setUploadProgress); uploadHandle.current = handle;
-      try { const task = await handle.promise; if (mounted.current) { requestKeys.current.upload = ""; openTask(task); client.setQueryData(["task", task.job_id], task); } }
-      finally { uploadHandle.current = null; if (mounted.current) setUploadProgress(null); }
+      requestKeys.current.upload ||= crypto.randomUUID();
+      setUploadProgress(0); const handle = uploadPersonalArchive(file, requestKeys.current.upload, progress => { if (current()) setUploadProgress(progress); }); uploadHandle.current = handle;
+      try { const task = await handle.promise; if (current()) { requestKeys.current.upload = ""; acceptTask(task, true); } }
+      finally { uploadHandle.current = null; if (current()) setUploadProgress(null); }
     });
   }
   async function restore() {
     if (!preview || !available(preview)) return;
-    await perform(async () => { const task = await confirmPersonalArchiveRestore(preview.job_id, String(preview.result.content_digest), includePreferences); openTask(task); client.setQueryData(["task", task.job_id], task); });
+    await perform(async () => { const task = await confirmPersonalArchiveRestore(preview.job_id, String(preview.result.content_digest), includePreferences); acceptTask(task, true); });
   }
   async function discard(task: BackgroundTaskRead) {
-    if (!await confirm({ title: zh ? "移除上传的归档文件？" : "Remove this uploaded archive?", description: zh ? "只移除临时上传文件。已恢复的项目和对话会保留。" : "Only the temporary upload is removed. Restored projects and conversations remain.", confirmLabel: zh ? "移除上传文件" : "Remove upload" })) return;
-    await perform(async () => { await discardPersonalArchiveUpload(task.job_id); setSelectedId(null); });
+    if (!current() || writing.current || confirming.current || !online) return;
+    confirming.current = true;
+    try {
+      if (!await confirm({ title: zh ? "移除上传的归档文件？" : "Remove this uploaded archive?", description: zh ? "只移除临时上传文件。已恢复的项目和对话会保留。" : "Only the temporary upload is removed. Restored projects and conversations remain.", confirmLabel: zh ? "移除上传文件" : "Remove upload" }) || !current()) return;
+    } finally { confirming.current = false; }
+    await perform(async () => { await discardPersonalArchiveUpload(task.job_id); if (current()) setSelectedId(null); });
   }
   async function switchMode(next: "backup" | "restore") {
-    if ((file || includePreferences) && !await confirm({ title: zh ? "放弃当前未提交的选择？" : "Discard the current unsent selection?", confirmLabel: zh ? "切换" : "Switch" })) return;
+    if (!current() || writing.current || confirming.current) return;
+    confirming.current = true;
+    try {
+      if ((file || includePreferences) && !await confirm({ title: zh ? "放弃当前未提交的选择？" : "Discard the current unsent selection?", confirmLabel: zh ? "切换" : "Switch" })) return;
+      if (!current()) return;
+    } finally { confirming.current = false; }
     releaseExportScope("backup:personal");
     setMode(next); setSelectedId(null); setFile(null); setIncludePreferences(false); setError("");
   }
   function replaceUpload() {
-    if (busy || !online) return;
+    if (!current() || writing.current || confirming.current || !online) return;
     focusFile.current = true; requestKeys.current.upload = "";
     setFile(null); setIncludePreferences(false); setError(""); setNotice(""); setMode("restore"); setSelectedId(null);
   }
@@ -126,17 +165,17 @@ export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId,
       {!selectedId && mode === "restore" ? <>
         {onRestoreConversation ? <button type="button" disabled={busy || !online} className="btn-secondary min-h-11 px-3 text-sm" onClick={onRestoreConversation}>{zh ? "恢复单个对话归档 (.cr)" : "Restore a conversation archive (.cr)"}</button> : null}
         <p className="text-sm leading-6 text-secondary">{zh ? "上传后先核对内容。确认恢复会新增项目和对话，不覆盖当前资料。" : "Review the contents after uploading. Confirming restore adds projects and conversations while preserving your current materials."}</p>
-        <div className="grid gap-3 rounded-lg border border-dashed border-ui bg-surface p-4"><label htmlFor="personal-archive-file" className="text-sm font-medium text-primary">{zh ? "个人归档文件 (.cr)" : "Personal archive file (.cr)"}</label><input ref={fileInput} id="personal-archive-file" type="file" accept=".cr" disabled={busy || !online} className="min-h-11 max-w-full text-sm text-secondary file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:px-3" onChange={(event) => { setFile(event.target.files?.[0] ?? null); requestKeys.current.upload = ""; setError(""); }} /><p className="text-xs leading-5 text-secondary">{limit ? (zh ? `上传上限 ${bytes(limit)}。预检结果保留 24 小时。` : `Upload limit ${bytes(limit)}. The preview remains available for 24 hours.`) : (zh ? "正在读取上传限制…" : "Loading upload limits…")}</p></div>
+        <div className="grid gap-3 rounded-lg border border-dashed border-ui bg-surface p-4"><label htmlFor="personal-archive-file" className="text-sm font-medium text-primary">{zh ? "个人归档文件 (.cr)" : "Personal archive file (.cr)"}</label><input ref={fileInput} id="personal-archive-file" type="file" accept=".cr" disabled={busy || !online} className="min-h-11 max-w-full text-sm text-secondary file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:px-3" onChange={(event) => { setFile(event.target.files?.[0] ?? null); requestKeys.current.upload = ""; setError(""); }} /><p role={!limit && capabilities.isError && online && !capabilities.isFetching ? "alert" : undefined} className="text-xs leading-5 text-secondary">{limit ? (zh ? `上传上限 ${bytes(limit)}。预检结果保留 24 小时。` : `Upload limit ${bytes(limit)}. The preview remains available for 24 hours.`) : !online ? (zh ? "联网后可读取上传限制。" : "Reconnect to load upload limits.") : capabilities.isError && !capabilities.isFetching ? (zh ? "无法读取上传限制，请重试。文件选择会保留。" : "Unable to load upload limits. Retry; your file selection is retained.") : (zh ? "正在读取上传限制…" : "Loading upload limits…")}</p></div>
         {uploadProgress !== null ? <div role="status" className="grid gap-2 text-sm text-secondary"><p>{uploadProgress === 100 ? (zh ? "上传完成，正在登记预检任务…" : "Upload complete. Registering preview task…") : (zh ? `正在上传 ${uploadProgress}%` : `Uploading ${uploadProgress}%`)}</p><progress max={100} value={uploadProgress} className="h-2 w-full accent-[var(--accent)]" /><button type="button" className={button} onClick={() => uploadHandle.current?.cancel()}>{zh ? "取消上传" : "Cancel upload"}</button></div> : <button type="button" disabled={busy || !online || !file || !limit} onClick={() => void upload()} className="btn-primary flex min-h-11 items-center justify-center gap-2 px-4 text-sm"><Upload aria-hidden="true" className="h-4 w-4" />{zh ? "上传并预检" : "Upload & preview"}</button>}
-        {capabilities.isError ? <button type="button" onClick={() => void capabilities.refetch()} className={button}>{zh ? "重试读取上传限制" : "Retry loading upload limits"}</button> : null}
+        {capabilities.isError || limitsRetrying ? <button ref={limitsRetryButton} type="button" disabled={busy || !online || capabilities.isFetching || limitsRetrying} onClick={() => void retryLimits()} className={button}>{zh ? "重试读取上传限制" : "Retry loading upload limits"}</button> : null}
       </> : null}
       {selectedId && !selected ? <><p role={selectedQuery.isError ? "alert" : "status"} className="text-sm text-secondary">{selectedQuery.isError ? (zh ? "无法读取任务，请刷新重试。" : "Unable to load this task. Refresh to retry.") : (zh ? "正在读取任务…" : "Loading task…")}</p><button type="button" className={button} onClick={() => void refresh()}>{zh ? "刷新任务" : "Refresh task"}</button></> : null}
       {selected ? <>
         <ArchiveProgress task={selected} zh={zh} />
         {active(selected) ? <p className="text-xs leading-5 text-secondary">{zh ? "可以关闭此窗口，稍后从任务中心或下方记录继续。" : "You can close this panel and return through Tasks or the records below."}</p> : null}
         {selectedQuery.isError ? <div role="alert" className="grid gap-2 text-sm text-secondary"><p>{zh ? "暂时无法刷新任务详情。" : "Task details could not be refreshed."}</p><button type="button" className={button} disabled={busy || !online || selectedQuery.isFetching} onClick={() => void selectedQuery.refetch()}>{zh ? "重新读取任务状态" : "Reload task status"}</button></div> : null}
-        {selected.cancellable ? <button type="button" disabled={busy || !online || selected.status === "cancelling"} className={button} onClick={() => void perform(async () => { const task = await cancelTask(selected.job_id, archiveRequestSignal()); client.setQueryData(["task", task.job_id], task); })}>{selected.status === "cancelling" ? (zh ? "正在取消…" : "Cancelling…") : (zh ? "取消任务" : "Cancel task")}</button> : null}
-        {selected.status === "failed" ? <><p role="alert" className="break-words text-sm text-[var(--danger)]">{archiveError(selected.error_message ?? "", zh)}</p>{recovery ? <button type="button" disabled={busy || !online} className="btn-primary min-h-11 px-4 text-sm" onClick={replaceUpload}>{archiveUploadRecoveryLabel(recovery, zh)}</button> : <button type="button" disabled={busy || !online} className={button} onClick={() => void perform(async () => { const task = await retryTask(selected.job_id, archiveRequestSignal()); client.setQueryData(["task", task.job_id], task); })}>{zh ? "重试任务" : "Retry task"}</button>}</> : null}
+        {selected.cancellable ? <button type="button" disabled={busy || !online || selected.status === "cancelling"} className={button} onClick={() => void perform(async () => { const task = await cancelTask(selected.job_id, archiveRequestSignal()); acceptTask(task); })}>{selected.status === "cancelling" ? (zh ? "正在取消…" : "Cancelling…") : (zh ? "取消任务" : "Cancel task")}</button> : null}
+        {selected.status === "failed" ? <><p role="alert" className="break-words text-sm text-[var(--danger)]">{archiveError(selected.error_message ?? "", zh)}</p>{recovery ? <button type="button" disabled={busy || !online} className="btn-primary min-h-11 px-4 text-sm" onClick={replaceUpload}>{archiveUploadRecoveryLabel(recovery, zh)}</button> : <button type="button" disabled={busy || !online} className={button} onClick={() => void perform(async () => { const task = await retryTask(selected.job_id, archiveRequestSignal()); acceptTask(task); })}>{zh ? "重试任务" : "Retry task"}</button>}</> : null}
         {selected.status === "committed" && selected.job_type === "personal_archive_export" ? <>
           {Number(selected.result.missing_attachments) > 0 ? <p role="status" className="text-sm text-[var(--warning)]">{zh ? `有 ${selected.result.missing_attachments} 个附件缺少文件，这份归档不完整。` : `${selected.result.missing_attachments} attachments have no file. This archive is incomplete.`}</p> : null}
           <p className="text-xs text-secondary">{bytes(Number(selected.result.byte_size))}</p>

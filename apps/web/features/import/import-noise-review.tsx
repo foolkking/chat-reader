@@ -21,7 +21,7 @@ export function ImportNoiseReview({ importId }: { importId: string }) {
         when a rescan replaces it so closing review restores the same control. */}
     {scans.data?.map((scan) => <div key={importId} className="flex flex-wrap items-center justify-between gap-2">
       <span className="text-secondary">{scan.status === "READY"
-        ? (scan.occurrence_count ? (zh ? `${scan.occurrence_count} 个噪声候选，确认前正文不变。` : `${scan.occurrence_count} noise candidates. Content stays unchanged until confirmed.`) : (zh ? "未发现噪声候选。" : "No noise candidates found."))
+        ? (scan.occurrence_count ? (zh ? `${scan.occurrence_count} 个噪声候选，可多选处理；确认前正文不变。` : `${scan.occurrence_count} noise candidates. Select multiple before confirming; content stays unchanged.`) : (zh ? "未发现噪声候选。" : "No noise candidates found."))
         : scan.status === "CANCELLED" ? (zh ? "噪声扫描已取消，导入内容已保留。" : "Noise scan cancelled. Imported content is saved.")
         : ["FAILED", "STALE"].includes(scan.status) ? (zh ? "噪声扫描需要重试，导入内容已保留。" : "Noise scan needs retry. Imported content is saved.")
         : (zh ? `噪声扫描 ${scan.progress}% · 可先打开对话` : `Noise scan ${scan.progress}% · You can open the conversation now`)}</span>

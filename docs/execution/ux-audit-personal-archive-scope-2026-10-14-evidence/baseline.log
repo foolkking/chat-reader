@@ -1,0 +1,271 @@
+TAP version 13
+# Subtest: late backup acknowledgement cannot publish after unmount
+not ok 1 - late backup acknowledgement cannot publish after unmount
+  ---
+  duration_ms: 78.2077
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:152:47'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   cancellable: true,
+    +   completed_at: null,
+    +   heartbeat_at: null,
+    +   job_id: 'synthetic-export',
+    +   job_type: 'personal_archive_export',
+    +   phase: '',
+    +   progress: 0,
+    +   queued_at: '2026-10-14T00:00:00Z',
+    +   result: {},
+    +   started_at: null,
+    +   status: 'queued'
+    + }
+    - undefined
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    job_id: 'synthetic-export'
+    job_type: 'personal_archive_export'
+    status: 'queued'
+    phase: ''
+    progress: 0
+    queued_at: '2026-10-14T00:00:00Z'
+    started_at: ~
+    heartbeat_at: ~
+    completed_at: ~
+    cancellable: true
+    result:
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:158:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async startSubtest (node:internal/test_runner/harness:235:3)
+  ...
+# Subtest: late backup acknowledgement cannot publish after account
+not ok 2 - late backup acknowledgement cannot publish after account
+  ---
+  duration_ms: 6.0603
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:152:47'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   cancellable: true,
+    +   completed_at: null,
+    +   heartbeat_at: null,
+    +   job_id: 'synthetic-export',
+    +   job_type: 'personal_archive_export',
+    +   phase: '',
+    +   progress: 0,
+    +   queued_at: '2026-10-14T00:00:00Z',
+    +   result: {},
+    +   started_at: null,
+    +   status: 'queued'
+    + }
+    - undefined
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    job_id: 'synthetic-export'
+    job_type: 'personal_archive_export'
+    status: 'queued'
+    phase: ''
+    progress: 0
+    queued_at: '2026-10-14T00:00:00Z'
+    started_at: ~
+    heartbeat_at: ~
+    completed_at: ~
+    cancellable: true
+    result:
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:158:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: late restore acknowledgement cannot refill a retired task cache
+not ok 3 - late restore acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 25.4166
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:164:52'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:171:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: late retry acknowledgement cannot refill a retired task cache
+not ok 4 - late retry acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 5.1433
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:164:52'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:171:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: late cancel acknowledgement cannot refill a retired task cache
+not ok 5 - late cancel acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 4.0593
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:164:52'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:171:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: a pending remove-upload confirmation cannot submit after the panel closes
+not ok 6 - a pending remove-upload confirmation cannot submit after the panel closes
+  ---
+  duration_ms: 4.6906
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:177:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:182:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: a cancelled or retired mode-change confirmation cannot alter the panel
+not ok 7 - a cancelled or retired mode-change confirmation cannot alter the panel
+  ---
+  duration_ms: 4.1715
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:186:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    2 !== 1
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 1
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:194:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: an upload acknowledgement also belongs to its original authentication generation
+not ok 8 - an upload acknowledgement also belongs to its original authentication generation
+  ---
+  duration_ms: 4.1387
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:198:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:206:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: en-US: failed upload-limit reads do not claim to be loading
+not ok 9 - en-US: failed upload-limit reads do not claim to be loading
+  ---
+  duration_ms: 7.553
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:211:42'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /Loading upload limits|正在读取上传限制/. Input:
+    
+    'Back up my dataRestore archiveChoose a personal archiveReview the contents after uploading. Confirming restore adds projects and conversations while preserving your current materials.Personal archive file (.cr)Loading upload limits…Upload & previewRetry loading upload limitsBackup and restore recordsNo archive tasks yet. Create a backup or upload a personal archive to get started.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Back up my dataRestore archiveChoose a personal archiveReview the contents after uploading. Confirming restore adds projects and conversations while preserving your current materials.Personal archive file (.cr)Loading upload limits…Upload & previewRetry loading upload limitsBackup and restore recordsNo archive tasks yet. Create a backup or upload a personal archive to get started.'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:216:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: zh-CN: failed upload-limit reads do not claim to be loading
+not ok 10 - zh-CN: failed upload-limit reads do not claim to be loading
+  ---
+  duration_ms: 7.5568
+  location: 'file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:211:42'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /Loading upload limits|正在读取上传限制/. Input:
+    
+    '备份我的数据恢复归档选择一份个人归档上传后先核对内容。确认恢复会新增项目和对话，不覆盖当前资料。个人归档文件 (.cr)正在读取上传限制…上传并预检重试读取上传限制备份与恢复记录还没有归档任务。生成一份备份，或上传个人归档开始恢复。'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '备份我的数据恢复归档选择一份个人归档上传后先核对内容。确认恢复会新增项目和对话，不覆盖当前资料。个人归档文件 (.cr)正在读取上传限制…上传并预检重试读取上传限制备份与恢复记录还没有归档任务。生成一份备份，或上传个人归档开始恢复。'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/personal-archive-scope.test.mjs:216:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: an acknowledged backup still publishes immediately in its live panel
+ok 11 - an acknowledged backup still publishes immediately in its live panel
+  ---
+  duration_ms: 5.7986
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 1
+# fail 10
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 667.8706

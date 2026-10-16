@@ -1,0 +1,70 @@
+TAP version 13
+# Subtest: en-US: unselected quick search keeps its first-result Enter behavior and target parameters
+ok 1 - en-US: unselected quick search keeps its first-result Enter behavior and target parameters
+  ---
+  duration_ms: 19.857
+  ...
+# Subtest: en-US: keyboard selection follows document identity through same-query reorder
+ok 2 - en-US: keyboard selection follows document identity through same-query reorder
+  ---
+  duration_ms: 4.078
+  ...
+# Subtest: en-US: pointer selection follows document identity through same-query reorder
+ok 3 - en-US: pointer selection follows document identity through same-query reorder
+  ---
+  duration_ms: 1.7271
+  ...
+# Subtest: zh-CN: unselected quick search keeps its first-result Enter behavior and target parameters
+ok 4 - zh-CN: unselected quick search keeps its first-result Enter behavior and target parameters
+  ---
+  duration_ms: 1.1448
+  ...
+# Subtest: zh-CN: keyboard selection follows document identity through same-query reorder
+ok 5 - zh-CN: keyboard selection follows document identity through same-query reorder
+  ---
+  duration_ms: 1.7117
+  ...
+# Subtest: zh-CN: pointer selection follows document identity through same-query reorder
+ok 6 - zh-CN: pointer selection follows document identity through same-query reorder
+  ---
+  duration_ms: 1.3908
+  ...
+# Subtest: a removed deliberate selection opens all results, never the replacement document
+ok 7 - a removed deliberate selection opens all results, never the replacement document
+  ---
+  duration_ms: 1.4491
+  ...
+# Subtest: ArrowDown restarts from a visible row after an eight-to-two result shrink
+ok 8 - ArrowDown restarts from a visible row after an eight-to-two result shrink
+  ---
+  duration_ms: 2.3048
+  ...
+# Subtest: ArrowUp restarts from a visible row after an eight-to-two result shrink
+ok 9 - ArrowUp restarts from a visible row after an eight-to-two result shrink
+  ---
+  duration_ms: 2.224
+  ...
+# Subtest: typing a new query clears selection and cannot open the previous debounced results
+ok 10 - typing a new query clears selection and cannot open the previous debounced results
+  ---
+  duration_ms: 1.9321
+  ...
+# Subtest: IME confirmation and composition key codes cannot navigate or change selection
+ok 11 - IME confirmation and composition key codes cannot navigate or change selection
+  ---
+  duration_ms: 1.39
+  ...
+# Subtest: annotation quick results retain their existing destination parameters
+ok 12 - annotation quick results retain their existing destination parameters
+  ---
+  duration_ms: 1.2036
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 488.9173

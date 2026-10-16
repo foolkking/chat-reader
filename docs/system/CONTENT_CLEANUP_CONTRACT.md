@@ -14,6 +14,60 @@ Each occurrence records detector version, match mode and evidence codes in addit
 
 The review workspace groups by rule and conversation, uses a group-list/detail flow on small screens, and supports selected-only filtering. Filtered bulk decisions cover all matching pages, excluding protected and conflicted rows. Full before/after text is paged by message; the apply confirmation names conversation, message and fragment counts. A version/selection-bound preview token rejects changes made after preview. Legacy apply callers remain compatible, but cannot delete candidates without a recorded explicit decision.
 
+## Editable candidate ranges (local source, 2026-10-15)
+
+This completes the [range-editing design](../execution/ux-audit-noise-range-editing-2026-10-15.md);
+the earlier bulk-only batch's source-editor deferral is superseded. Review still
+defaults to KEEP and supports zero, one or many selected candidates. **Adjust
+deletion ranges** narrows an original scanned match to 1–20 absolute Unicode
+code-point intervals. Intervals must be ordered, nonempty, non-overlapping and
+inside the original candidate. The original detector bounds, version, fingerprint
+and evidence remain unchanged; widening or rewriting belongs to the source editor.
+
+Occurrence responses add nullable `reviewed_ranges` and `edit_token`. NULL means
+the original full candidate, including legacy choices. Owner-scoped GET of one
+occurrence is read-only. PUT of its `removal-ranges` requires the current
+`base_edit_token` and explicit `ranges` (null restores full bounds), locks the
+READY scan and validates current source, lifecycle, detector and protection.
+Success saves the ranges and DELETE choice, not a canonical version. Bulk or
+individual KEEP/DELETE preserves those ranges.
+
+Preview tokens bind the refinements. Preview and apply expand the same validated
+ranges; corrupt stored ranges conflict without changing the message. Summary
+fragments count deletion intervals; selected/applied counts still count candidates.
+Existing explicit-consent, nonempty-message, overlap and message-write guards
+remain. No rule is learned or changed by adjusting this review.
+
+The editor retains its draft after unconfirmed writes and blocks another save
+until a read-only GET. A matching current DELETE choice permits returning with
+that state, not a claim that the failed request caused it. A different current
+choice requires explicit adoption as the new base; changed source requires rescan.
+Unmount/account change retires callbacks. Source selection maps native textarea
+LF/UTF-16 offsets back to canonical CRLF/Unicode offsets.
+
+The bulk saving overlay covers only current actionable KEEP/DELETE rows and
+remains through list refresh. Native checked state, selected tint and a linked
+state description supplement—not replace—one another. A failed refresh labels
+old data and disables actions; pending selections are not presented as confirmed.
+
+Candidate display follow-up (local verification 2026-10-16): selected refined
+matches mark/strike only their exact removal intervals; retained words remain
+plain in both summary and expanded context. A shared validated Unicode split
+also produces retained text. Invalid refinements display plain source and
+adjust/rescan guidance, never an invented whole-candidate deletion. Unselected
+suggestions retain the original full-match highlight without deletion styling.
+Completed rows are labelled completed even though their pre-cleanup version is
+now stale; no misleading rescan warning or pending check is projected onto them.
+These display rules add no API, migration or canonical source changes.
+
+Migration `20261015_0051` adds nullable JSON without a source rewrite or backfill.
+It is the **source-only single head, not applied**; production remains 0050.
+Downgrade revokes narrowed DELETE choices to KEEP before dropping the column,
+so old code cannot silently expand consent. Never run the old API against
+narrowed choices in the new schema. See [deployment boundary](../deployment.md#pending-noise-range-migration--2026-10-15-not-deployed).
+SQLite/Unicode checks do not prove PostgreSQL locks, migration execution, browser
+interaction or assistive-technology acceptance.
+
 ## Review recovery (local, 2026-10-07)
 
 ### Validation work reuse (local, 2026-10-08)
@@ -53,8 +107,9 @@ backfills only targets whose conversation revision and current message version
 still match the scan. It streams one source body at a time, without new extensions
 or persisted source copies. Unknown legacy sources remain readable and require
 rescanning; their choices and canonical text are not silently rewritten. Downgrade
-removes only this column. Production remains at 0048; local migration and API
-evidence belong to the dated source-safety record. Browser acceptance is pending.
+removes only this column. The dated source-safety record owns its local migration
+and API evidence; current production is 0050 (see `PROJECT_STATE.md`). The later
+0051 source change above is not deployed. Browser acceptance is pending.
 
 ### Unconfirmed selection writes (local, browser acceptance pending)
 

@@ -35,9 +35,10 @@ export function PendingChangesPanel({ initial, onCancel, onProceed, purpose = "s
   };
   const sync = () => perform(async () => {
     if (!conversationIds) await flushPreferenceSync({ refresh: true, retry: true });
-    await offlineDb.outbox.filter((item) => !["CONFLICT", "INVALID"].includes(item.last_error ?? "")).modify({ attempts: 0, last_error: null, retry_after: 0 });
+    const scope = conversationIds === undefined ? undefined : new Set(conversationIds);
+    await offlineDb.outbox.filter((item) => (!scope || scope.has(item.conversation_id)) && !["CONFLICT", "INVALID"].includes(item.last_error ?? "")).modify({ attempts: 0, last_error: null, retry_after: 0 });
     for (let batch = 0; batch < 10; batch++) {
-      const result = await flushAnnotationOutbox();
+      const result = await flushAnnotationOutbox(conversationIds);
       if (!result.synced || result.conflicts) break;
     }
     const next = await read(); setSnapshot(next);

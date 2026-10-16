@@ -6,9 +6,10 @@ import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { normalizedMessageBlocks } from "../editing/message-source-position";
 import { VersionHistoryPanel } from "../editing/version-history-panel";
+import { useMessageVersionHistory } from "../editing/use-message-version-history";
 import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import { AttachmentAccessProvider, type AttachmentAccess } from "../attachments/attachment-access";
-import { toggleMessageTask } from "../../lib/api";
+import { ApiRequestError, toggleMessageTask } from "../../lib/api";
 
 function MessageItemComponent({
   message,
@@ -60,6 +61,10 @@ function MessageItemComponent({
   const messageDomId = `message-${message.id}`;
   const mobileActionsId = `message-actions-${message.id}`;
   const isNavigationTarget = highlightTargetId === messageDomId || Boolean(highlightTargetId?.startsWith(`block-${message.id}-`));
+  const versionHistory = useMessageVersionHistory({
+    message, enabled: !readOnly && Boolean(onChanged), zh,
+    onChanged: replaceMessagePreservingAnchor,
+  });
 
   useEffect(() => {
     if (!mobileActionsOpen) return;
@@ -111,12 +116,15 @@ function MessageItemComponent({
     }) ?? candidates[0] ?? articleRef.current;
   }
 
-  async function replaceMessagePreservingAnchor(nextMessage: MessageListItem, conversationRevision?: number) {
+  async function replaceMessagePreservingAnchor(nextMessage: MessageListItem, conversationRevision?: number, isCurrent: () => boolean = () => true) {
+    if (!isCurrent()) return;
     const anchor = visibleBlockAnchor();
     const anchorId = anchor?.id;
     const anchorTop = anchor?.getBoundingClientRect().top ?? 96;
     await onChanged?.(nextMessage, conversationRevision);
+    if (!isCurrent()) return;
     await afterLayout();
+    if (!isCurrent()) return;
     const nextAnchor = (anchorId ? document.getElementById(anchorId) : null) ?? articleRef.current;
     if (nextAnchor) scrollBy(nextAnchor.getBoundingClientRect().top - anchorTop);
   }
@@ -130,11 +138,18 @@ function MessageItemComponent({
     setTaskCheckedOverrides(new Map([[taskKey, checked]]));
     try {
       const response = await toggleMessageTask(message.id, taskKey, { baseVersionId, checked });
-      await replaceMessagePreservingAnchor(response.message, response.conversation_revision);
-      setTaskCheckedOverrides(new Map());
+      try {
+        await replaceMessagePreservingAnchor(response.message, response.conversation_revision);
+        setTaskCheckedOverrides(new Map());
+      } catch {
+        setTaskCheckedOverrides(new Map([[taskKey, checked]]));
+        setTaskError(zh
+          ? "任务状态已保存，但正文未能刷新。当前勾选已保留，请稍后刷新消息。"
+          : "The task state was saved, but the message could not refresh. The checked state is retained; refresh the message later.");
+      }
     } catch (error) {
       setTaskCheckedOverrides(new Map());
-      setTaskError(error instanceof Error ? error.message : (zh ? "任务状态保存失败，请重试。" : "Task update failed. Please retry."));
+      setTaskError(taskToggleError(error, zh));
     } finally {
       taskToggleInFlightRef.current = false;
       setPendingTaskKeys(new Set());
@@ -159,7 +174,7 @@ function MessageItemComponent({
           <button type="button" disabled={!onEdit} onClick={() => { setMobileActionsOpen(false); onEdit?.(message, visibleBlockAnchor()?.id); }} className={`inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-subtle disabled:opacity-40 ${editing ? "bg-[var(--accent-soft)] text-accent" : "text-secondary"}`} aria-pressed={editing} aria-label={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={zh ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}>
             <Pencil className="h-4 w-4" />
           </button>
-          <VersionHistoryPanel messageId={message.id} currentVersionId={message.current_version?.id} onChanged={replaceMessagePreservingAnchor} />
+          <VersionHistoryPanel controller={versionHistory} mobile={mobile} />
           {onDelete ? <button type="button" onClick={() => void onDelete(message)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[var(--danger)] hover:bg-[var(--danger-soft)]" aria-label={zh ? "删除消息" : "Delete message"} title={zh ? "删除消息" : "Delete message"}><Trash2 className="h-4 w-4" /></button> : null}
         </>
       ) : null}
@@ -186,7 +201,7 @@ function MessageItemComponent({
           {!isUser ? <span className="hidden font-mono text-[11px] text-secondary group-hover:inline">{message.order_key}</span> : null}
           {hasActions ? (
             <>
-              <div className="ml-auto hidden min-h-10 items-center opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 sm:flex">{actions(false)}</div>
+              <div className={`ml-auto hidden min-h-10 items-center transition group-hover:opacity-100 group-focus-within:opacity-100 sm:flex ${versionHistory.needsAttention ? "opacity-100" : "opacity-0"}`}>{actions(false)}</div>
               <div className="ml-auto sm:hidden">
                 <button
                   ref={mobileActionsTriggerRef}
@@ -208,7 +223,7 @@ function MessageItemComponent({
                     aria-label={t("messageActions")}
                     tabIndex={-1}
                     data-testid="mobile-message-actions-sheet"
-                    className="fixed inset-x-2 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[160] max-h-[min(70dvh,24rem)] overflow-visible rounded-lg border border-ui bg-raised p-3 shadow-2xl outline-none"
+                    className="fixed inset-x-2 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[160] max-h-[min(70dvh,24rem)] overflow-y-auto overscroll-contain rounded-lg border border-ui bg-raised p-3 shadow-2xl outline-none"
                   >
                     {actions(true)}
                   </div>
@@ -262,4 +277,15 @@ function shouldUseWideUserLayout(text: string, blocks: RenderBlockRead[]): boole
   if (text.length > 360 || text.split(/\r?\n/).length > 5) return true;
   const richTypes = new Set(["heading", "code", "table", "blockquote", "image", "attachment", "math", "mermaid"]);
   return blocks.some((block) => richTypes.has(block.block_type));
+}
+
+function taskToggleError(error: unknown, zh: boolean): string {
+  const status = error instanceof ApiRequestError ? error.status : undefined;
+  if (status === 401) return zh ? "登录状态已过期，请重新登录后再保存任务状态。" : "Your session expired. Sign in again before saving the task state.";
+  if (status === 403) return zh ? "当前权限不允许修改此任务状态。" : "Your current permissions do not allow changing this task state.";
+  if (status === 404) return zh ? "任务或消息已不存在，请刷新正文后重试。" : "This task or message is no longer available. Refresh the message and try again.";
+  if (status === 409) return zh ? "消息版本已变化，请刷新正文后重试。" : "The message changed. Refresh it before trying again.";
+  if (status === 422) return zh ? "任务状态请求无效，请刷新正文后重试。" : "The task update was invalid. Refresh the message and try again.";
+  if (status === 429) return zh ? "请求过于频繁，请稍后再试。" : "Too many requests. Try again shortly.";
+  return zh ? "任务状态保存失败，请稍后重试。" : "The task state could not be saved. Try again shortly.";
 }

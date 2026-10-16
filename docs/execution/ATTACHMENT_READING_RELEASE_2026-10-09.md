@@ -624,3 +624,44 @@ within the current release cycle. Per the user's 2026-10-12 instruction, dispatc
 one complete CI for the repaired commit and then pause for their result. No
 deployment before the original image/screenshot/backup/data checks; database
 remains 0050→0050 with no migration, reconcile or backfill.
+
+## Repair 84988a2 — twelfth complete CI submitted; user-requested pause
+
+Committed/pushed `84988a260c48fcafb8b3bed6fcb7a1f16348111d` with an exact
+13-file allowlist: three existing components, the existing drop browser spec,
+one new callback regression and scoped docs/evidence. Verified 125 source
+bindings, all 120 inherited files unchanged, 23 preceding ledgers/evidence,
+24 original browser assertions preserved, three new assertions, unchanged
+buildinfo and 170 local links. Unrelated API residues remain outside the commit.
+
+Remote master was verified at the exact repaired source, with no existing run
+for that source before dispatch. Complete
+[CI 38255213036](https://github.com/foolkking/chat-reader/actions/runs/38255213036)
+was dispatched **once at 2026-10-12 13:22:15 UTC**. A single post-dispatch read
+confirms matching full `headSha` and `in_progress`; no passing outcome is claimed.
+This is the twelfth complete run in the same authorized release cycle.
+
+Per the user's instruction, work now pauses until they return the CI result.
+No monitor, image acceptance, production access or deployment follows dispatch.
+The pre-commit evidence ledger remains immutable. After the user returns,
+inspect all five jobs and all 13 Web gates, new-source synthetic screenshots and
+the original independently verified producer artifact before fresh King backup/
+capacity/data checks and the authorized no-migration deployment.
+
+## Twelfth CI passed; authorized deployment resumed
+
+The user returned the passing result on 2026-10-12. All five jobs completed
+successfully for exact source 84988a2; all 13 Web gates, API 1,239/3 skipped,
+settings 439 and fresh restore 1 pass. Fourteen original synthetic screenshots
+and image artifact 11752048475/attempt 1 were independently verified. The
+[deployment record](ATTACHMENT_DEPLOYMENT_2026-10-12.md) owns fresh King checks,
+no-migration deployment, acceptance and final backup/pointer evidence. The
+earlier requested pause is over; no new CI was dispatched on resumption.
+
+Production acceptance succeeded at 2026-10-12 14:46:19 UTC; after the session
+resumed, fresh health/unchanged-state checks preceded finalization on 2026-10-13
+local. Current/rollback now select 84988a2/30a0d32. The database stayed 0050,
+84 all-column table fingerprints and four storage hashes matched, and the
+fresh backup plus bounded live checks passed. Two verified backups remain;
+only 20261006T141424Z was pruned. This release cycle is complete. The full
+optimization goal continues through scoped local work without further CI/deployment.

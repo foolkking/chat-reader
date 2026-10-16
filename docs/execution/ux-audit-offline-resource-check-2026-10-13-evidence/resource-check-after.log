@@ -1,0 +1,110 @@
+TAP version 13
+# Subtest: en-US: failed inspection ends waiting and exposes read-only retry
+ok 1 - en-US: failed inspection ends waiting and exposes read-only retry
+  ---
+  duration_ms: 80.6601
+  ...
+# Subtest: zh-CN: failed inspection ends waiting and exposes read-only retry
+ok 2 - zh-CN: failed inspection ends waiting and exposes read-only retry
+  ---
+  duration_ms: 12.2973
+  ...
+# Subtest: repeated rejection remains retryable and never claims copies are current
+ok 3 - repeated rejection remains retryable and never claims copies are current
+  ---
+  duration_ms: 3.3958
+  ...
+# Subtest: successful current revisions show up-to-date; unknown copies remain downloadable
+ok 4 - successful current revisions show up-to-date; unknown copies remain downloadable
+  ---
+  duration_ms: 6.7108
+  ...
+# Subtest: assetMode change invalidates ready state before effects run
+ok 5 - assetMode change invalidates ready state before effects run
+  ---
+  duration_ms: 4.661
+  ...
+# Subtest: conversations change invalidates ready state before effects run
+ok 6 - conversations change invalidates ready state before effects run
+  ---
+  duration_ms: 4.6075
+  ...
+# Subtest: late previous-scope success cannot replace the latest result
+ok 7 - late previous-scope success cannot replace the latest result
+  ---
+  duration_ms: 4.7963
+  ...
+# Subtest: late previous-scope failure cannot replace the latest result
+ok 8 - late previous-scope failure cannot replace the latest result
+  ---
+  duration_ms: 3.9688
+  ...
+# Subtest: closing the sidebar fences late completion
+ok 9 - closing the sidebar fences late completion
+  ---
+  duration_ms: 3.1669
+  ...
+# Subtest: inspection error leaves downloaded conversation rows and selection intact
+ok 10 - inspection error leaves downloaded conversation rows and selection intact
+  ---
+  duration_ms: 3.8083
+  ...
+# Subtest: a connection failure retries the same read and recovers without writes or polling
+ok 11 - a connection failure retries the same read and recovers without writes or polling
+  ---
+  duration_ms: 194.4439
+  ...
+# Subtest: exhausted initial read has an explicit error and manual Refresh recovers
+ok 12 - exhausted initial read has an explicit error and manual Refresh recovers
+  ---
+  duration_ms: 75.1258
+  ...
+# Subtest: en-US: cached rows and selection survive retry exhaustion
+ok 13 - en-US: cached rows and selection survive retry exhaustion
+  ---
+  duration_ms: 86.6092
+  ...
+# Subtest: zh-CN: cached rows and selection survive retry exhaustion
+ok 14 - zh-CN: cached rows and selection survive retry exhaustion
+  ---
+  duration_ms: 60.9492
+  ...
+# Subtest: HTTP 401 is not automatically retried
+ok 15 - HTTP 401 is not automatically retried
+  ---
+  duration_ms: 31.9093
+  ...
+# Subtest: HTTP 403 is not automatically retried
+ok 16 - HTTP 403 is not automatically retried
+  ---
+  duration_ms: 38.8883
+  ...
+# Subtest: HTTP 404 is not automatically retried
+ok 17 - HTTP 404 is not automatically retried
+  ---
+  duration_ms: 30.6303
+  ...
+# Subtest: HTTP 422 is not automatically retried
+ok 18 - HTTP 422 is not automatically retried
+  ---
+  duration_ms: 36.5483
+  ...
+# Subtest: HTTP 429 is not automatically retried
+ok 19 - HTTP 429 is not automatically retried
+  ---
+  duration_ms: 27.5108
+  ...
+# Subtest: an unrecognized failure is not automatically retried
+ok 20 - an unrecognized failure is not automatically retried
+  ---
+  duration_ms: 24.196
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1187.351

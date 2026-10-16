@@ -18,6 +18,7 @@ import {
   Search,
   Trash2,
   Upload,
+  RefreshCw,
   X,
 } from "lucide-react";
 import {
@@ -74,21 +75,41 @@ export function ConversationFilesPanel({
   const [filter, setFilter] = useState<FileFilter>("all");
   const [sort, setSort] = useState<FileSort>("recent");
   const [grouped, setGrouped] = useState(true);
-  const [preview, setPreview] = useState<AttachmentRead | null>(null);
-  const [details, setDetails] = useState<AttachmentRead | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const filesQuery = useQuery({
     queryKey: ["conversation-attachments", conversationId],
     queryFn: () => getConversationAttachments(conversationId),
   });
+  const attachmentById = useMemo(
+    () => new Map((filesQuery.data ?? []).map((attachment) => [attachment.id, attachment])),
+    [filesQuery.data],
+  );
+  const preview = previewId ? attachmentById.get(previewId) ?? null : null;
+  const details = detailsId ? attachmentById.get(detailsId) ?? null : null;
+
+  useEffect(() => {
+    const availableIds = new Set(filesQuery.data?.map((attachment) => attachment.id) ?? []);
+    setSelected((current) => {
+      const next = new Set([...current].filter((id) => availableIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+    setPreviewId((current) => current && !availableIds.has(current) ? null : current);
+    setDetailsId((current) => current && !availableIds.has(current) ? null : current);
+  }, [filesQuery.data]);
   const capabilitiesQuery = useQuery({
     queryKey: ["capabilities"],
     queryFn: getCapabilities,
     staleTime: 60_000,
   });
+  const capabilityPending = capabilitiesQuery.isPending && !capabilitiesQuery.data;
+  const capabilityUnavailable = capabilitiesQuery.isError && !capabilitiesQuery.data;
+  const uploadDisabled = capabilityPending || capabilityUnavailable || capabilitiesQuery.data?.attachments.upload_enabled === false;
   const renameMutation = useMutation({
     mutationFn: ({ attachmentId, displayName }: { attachmentId: string; displayName: string }) =>
       updateConversationAttachment(conversationId, attachmentId, displayName),
@@ -135,11 +156,18 @@ export function ConversationFilesPanel({
     : [{ id: "all", title: zh ? "全部文件" : "All files", items: files }];
 
   async function uploadFiles(selectedFiles: File[]) {
-    if (!selectedFiles.length) return;
+    if (!selectedFiles.length || actionLock.current) return;
+    actionLock.current = true;
+    setActionBusy(true);
+    setUploading(true);
     setError(null);
+    setNotice(null);
+    setProgress({});
+    let phase: "session" | "items" | "finalize" | "refresh" = "session";
     try {
       const session = await createAttachmentUploadSession(conversationId);
       const itemIds: string[] = [];
+      phase = "items";
       for (const file of selectedFiles) {
         setProgress((current) => ({ ...current, [file.name]: 0 }));
         const upload = uploadAttachmentItem(session.id, file, (value) => {
@@ -147,11 +175,60 @@ export function ConversationFilesPanel({
         });
         itemIds.push((await upload.promise).id);
       }
+      phase = "finalize";
       await finalizeConversationAttachments(conversationId, itemIds);
+      phase = "refresh";
       await queryClient.invalidateQueries({ queryKey: ["conversation-attachments", conversationId] });
+      setNotice(zh ? "文件已加入当前对话" : "Files added to the conversation");
+    } catch {
+      if (phase === "finalize") {
+        setError(
+          zh
+            ? "附件提交结果尚未确认。请先刷新并核对当前文件列表；未出现的文件再重新选择上传。"
+            : "The upload result is not confirmed. Refresh and check the current file list first; reselect only files that are missing.",
+        );
+      } else if (phase === "refresh") {
+        setError(
+          zh
+            ? "文件已上传，但文件列表刷新失败。请刷新列表核对结果。"
+            : "The files were uploaded, but the file list could not refresh. Refresh the list to verify the result.",
+        );
+      } else if (phase === "items") {
+        setError(
+          zh
+            ? "附件上传中断，文件尚未全部加入当前对话。请重新选择需要的文件后重试。"
+            : "The attachment upload was interrupted before all files were added. Reselect the needed files and try again.",
+        );
+      } else {
+        setError(
+          zh
+            ? "无法开始附件上传。请检查网络连接后重试。"
+            : "Could not start the attachment upload. Check your connection and try again.",
+        );
+      }
+    } finally {
       setProgress({});
-    } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Attachment upload failed.");
+      setUploading(false);
+      setActionBusy(false);
+      actionLock.current = false;
+    }
+  }
+
+  async function refreshAttachmentList() {
+    if (actionLock.current) return;
+    actionLock.current = true;
+    setActionBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await filesQuery.refetch();
+      if (result.isError) throw result.error;
+      setNotice(zh ? "文件列表已刷新" : "File list refreshed");
+    } catch {
+      setError(zh ? "文件列表刷新失败，请稍后重试。" : "Could not refresh the file list. Try again later.");
+    } finally {
+      setActionBusy(false);
+      actionLock.current = false;
     }
   }
 
@@ -251,7 +328,7 @@ export function ConversationFilesPanel({
           />
           <button
             type="button"
-            disabled={capabilitiesQuery.data?.attachments.upload_enabled === false}
+            disabled={uploadDisabled}
             onClick={() => inputRef.current?.click()}
             className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[var(--text)] px-2.5 text-xs font-medium text-[var(--surface)] disabled:opacity-40"
           >
@@ -259,6 +336,8 @@ export function ConversationFilesPanel({
             {zh ? "上传" : "Upload"}
           </button>
         </div>
+        {capabilityPending ? <p role="status" className="text-[11px] text-secondary">{zh ? "正在读取附件上传设置…" : "Checking attachment upload settings…"}</p> : null}
+        {capabilityUnavailable ? <div role="alert" className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--danger)]"><span>{zh ? "暂时无法确认附件上传设置，上传入口已暂停。" : "Attachment upload settings are unavailable, so upload is paused."}</span><button type="button" disabled={capabilitiesQuery.isFetching} onClick={() => void capabilitiesQuery.refetch()} className="min-h-8 underline disabled:opacity-60">{capabilitiesQuery.isFetching ? (zh ? "正在重试…" : "Retrying…") : (zh ? "重试读取设置" : "Retry settings")}</button></div> : null}
         <label className="relative block">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
           <input
@@ -310,8 +389,23 @@ export function ConversationFilesPanel({
           </p>
         ) : null}
         {Object.entries(progress).map(([name, value]) => <UploadProgress key={name} name={name} value={value} />)}
-        {error ? <p role="alert" className="rounded bg-[var(--danger-soft)] p-2 text-xs text-[var(--danger)]">{error}</p> : null}
-        {actionBusy ? <p role="status" className="text-xs text-secondary">{zh ? "正在保存…" : "Saving…"}</p> : notice ? <p role="status" className="text-xs text-secondary">{notice}</p> : null}
+        {error ? (
+          <div role="alert" className="rounded bg-[var(--danger-soft)] p-2 text-xs text-[var(--danger)]">
+            <p>{error}</p>
+            <button
+              type="button"
+              disabled={actionBusy}
+              onClick={() => void refreshAttachmentList()}
+              className="mt-1 inline-flex min-h-7 items-center gap-1 rounded underline"
+            >
+              <RefreshCw className="h-3 w-3" aria-hidden="true" />
+              {zh ? "刷新文件列表" : "Refresh file list"}
+            </button>
+          </div>
+        ) : null}
+        {actionBusy ? (
+          <p role="status" className="text-xs text-secondary">{uploading ? (zh ? "正在上传…" : "Uploading…") : (zh ? "正在保存…" : "Saving…")}</p>
+        ) : notice ? <p role="status" className="text-xs text-secondary">{notice}</p> : null}
       </fieldset>
       <div className="min-h-0 flex-1 overflow-y-auto"><fieldset disabled={actionBusy} className="min-w-0 p-3">
         {filesQuery.isLoading ? <p className="text-sm text-secondary">{zh ? "正在加载文件..." : "Loading files..."}</p> : null}
@@ -327,8 +421,8 @@ export function ConversationFilesPanel({
                   zh={zh}
                   selected={selected.has(attachment.id)}
                   onSelect={() => toggleSelected(attachment.id)}
-                  onPreview={() => setPreview(attachment)}
-                  onShowDetails={() => setDetails(attachment)}
+                  onPreview={() => setPreviewId(attachment.id)}
+                  onShowDetails={() => setDetailsId(attachment.id)}
                   onLocate={(occurrence) => void onLocate(attachmentOccurrenceTarget(attachment, occurrence))}
                   onCopyReference={() => void copyReference(attachment.id)}
                   onInsert={(placement) => onInsert(attachment, placement)}
@@ -355,8 +449,8 @@ export function ConversationFilesPanel({
         ) : null)}
         {!filesQuery.isLoading && !filesQuery.isError && files.length === 0 ? <EmptyFiles filtered={Boolean(search || filter !== "all")} zh={zh} /> : null}
       </fieldset></div>
-      {preview ? <AttachmentPreviewDialog attachment={preview} onClose={() => setPreview(null)} /> : null}
-      {details ? <AttachmentDetailsDialog attachment={details} zh={zh} onClose={() => setDetails(null)} onLocate={onLocate} /> : null}
+      {preview ? <AttachmentPreviewDialog attachment={preview} onClose={() => setPreviewId(null)} /> : null}
+      {details ? <AttachmentDetailsDialog attachment={details} zh={zh} onClose={() => setDetailsId(null)} onLocate={onLocate} /> : null}
     </section>
   );
 }

@@ -87,6 +87,43 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await settingsAppearance(page.request, baseURL!, locale);
   });
 
+  test("CSV pages keep row order and truncated previews preserve the true header and original source", async ({ page, attachmentConversation }, info) => {
+    const id = attachmentConversation.conversation.id;
+    const csv = Array.from({ length: 101 }, (_, row) => Array.from({ length: 64 }, (_, col) => `r${row}c${col}`).join(",")).join("\n");
+    const wide = Array.from({ length: 257 }, (_, col) => `original-header-${col}`).join(",") + "\nshort,value";
+    const long = "original-header\n" + "x".repeat(66_560) + "\nlater";
+    const paged = await upload(page.request, id, "paged.csv", "text/csv", Buffer.from(csv));
+    const wideFile = await upload(page.request, id, "wide.csv", "text/csv", Buffer.from(wide));
+    const longFile = await upload(page.request, id, "long.csv", "text/csv", Buffer.from(long));
+    await openFiles(page, id);
+    const viewer = await openFile(page, paged), table = viewer.getByTestId("attachment-table-viewer");
+    await expect(table.locator("td")).toHaveCount(1_984);
+    await expect(table.getByRole("rowheader", { name: "1", exact: true })).toBeVisible();
+    await table.getByRole("button", { name: /^(Next page|下一页)$/ }).click();
+    await expect(table.getByRole("rowheader", { name: "32", exact: true })).toBeVisible();
+    await expect(table.getByRole("cell", { name: "r32c0", exact: true })).toBeVisible();
+    await table.getByRole("button", { name: /^(Next page|下一页)$/ }).click();
+    await table.getByRole("button", { name: /^(Next page|下一页)$/ }).click();
+    await expect(table.locator("td")).toHaveCount(448);
+    await expect(table.getByRole("button", { name: /^(Next page|下一页)$/ })).toBeDisabled();
+    await table.getByRole("button", { name: /^(Previous page|上一页)$/ }).focus();
+    await page.keyboard.press("Enter");
+    await expect(table.getByRole("rowheader", { name: "63", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath("csv-bounded-page.png") });
+    await closeFile(page, paged);
+    for (const [file, original, reason] of [[wideFile, wide, /Column limit reached|列数较多/], [longFile, long, /A field is too long|单个字段较长/]] as const) {
+      await openFile(page, file);
+      await expect(table.getByRole("status")).toContainText(reason);
+      await expect(table.getByRole("columnheader", { name: file === wideFile ? "original-header-0" : "original-header", exact: true })).toBeVisible();
+      await expect(table.getByRole("columnheader", { name: "short", exact: true })).toHaveCount(0);
+      await page.screenshot({ path: info.outputPath(`csv-limited-${file === wideFile ? "columns" : "field"}.png`) });
+      await table.getByRole("button", { name: /^(View source|查看原文)$/ }).click();
+      expect(await viewer.locator("pre").textContent()).toBe(original);
+      await closeFile(page, file);
+    }
+  });
+
   test("JSON recovers from a read failure, and source/table modes preserve their original text", async ({ page, attachmentConversation }, info) => {
     const made = attachmentConversation, id = made.conversation.id;
     const raw = ' \n' + JSON.stringify({ synthetic: "保留原文", nested: { count: 2 }, lines: Array.from({ length: 80 }, (_, index) => `Synthetic scrollable attachment line ${index + 1}`) }) + '\n\n';

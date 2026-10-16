@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-13",
+  "reason": "C: reported zero free bytes during the attempted single-concurrency Node regression log write",
+  "scope": "C:/Users/86182/Desktop/wkkk/chat-reader-release-resume-20261008 only",
+  "removed_duplicate_bytes": 405809581,
+  "removed": [
+    {
+      "relative_path": "release-30a0d32-helper-v2/chat-reader-images.tar.gz",
+      "bytes": 202776188,
+      "sha256": "2d5d0def797e27a9d015b43b566e613b25561fc96d1b5e10b3803029e0b50561",
+      "retained_recovery_source": "release-30a0d32/chat-reader-images.tar.gz",
+      "verification": "same SHA256 and byte length; exact task path and parent non-reparse checks before nonrecursive removal"
+    },
+    {
+      "relative_path": "accepted-ci-38255213036/images/chat-reader-images.tar.gz",
+      "bytes": 203033393,
+      "sha256": "17667b42444747efd966dce48c8918da0366f4ba92882da1f2043d889e376058",
+      "retained_recovery_source": "accepted-ci-38255213036/images/original-artifact.zip",
+      "archive_entry": "chat-reader-images.tar.gz",
+      "verification": "streamed original ZIP entry SHA256 and byte length equal extracted file; exact task path and non-reparse checks before nonrecursive removal"
+    }
+  ],
+  "recovered_free_bytes_snapshot": 390393856,
+  "original_ci_artifacts_removed": false,
+  "logs_or_repository_evidence_removed": false,
+  "production_touched": false,
+  "user_imports_touched": false,
+  "other_task_files_touched": false,
+  "recursive_deletion": false
+}

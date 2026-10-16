@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-13T07:18:55.741Z",
+  "parent_checkpoint": "docs/execution/ux-audit-annotation-writes-2026-10-13-evidence/local-verification.json",
+  "parent_checkpoint_sha256": "74263a41c5b83def66208d9f6b05de3c22b8eb3158d576e0dc11600cc1627c3e",
+  "evidence": "Real compiled workspace callbacks; explicit React/repository/selection setter doubles. No browser, geometry, real database mutation or frequency measurement.",
+  "source_sha256": {
+    "apps/web/features/annotations/annotation-workspace.tsx": "79fadf3cbfdb524cb83ebc63d18d62191edeccae8baf83c5a004f730f51c3817",
+    "apps/web/features/annotations/use-annotation-workspace-reads.ts": "0c5f391d0b61d82126b40ddd07680ad1692f70d2b790a98d50d6265ecd24962c",
+    "apps/web/lib/annotation-repository.ts": "a71087a12a48870d6b2aa72972e30d346da8487bac55bbcda823b18236f2e8ed",
+    "scripts/ux/annotation-workspace-reads.test.mjs": "8efda9f21a3f64c0b884c0b3ba93e6f770806bf843308525e96630049d3150d2"
+  },
+  "findings": {
+    "repeat_add": {
+      "notebook_requests_before_ack": 2
+    },
+    "add_failure": {
+      "input_selection_retained": true,
+      "rendered_error": false,
+      "unhandled_rejections": 2
+    },
+    "repeat_text_creation": {
+      "prompts": 2,
+      "requests": 2,
+      "stable_ids": [
+        null,
+        null
+      ]
+    },
+    "text_creation_failure": {
+      "escaped_rejections": 2,
+      "comment_in_rendered_tree": false,
+      "failure_in_rendered_tree": false
+    },
+    "late_creation": {
+      "newer_selection_toolbar_retained": false
+    }
+  }
+}

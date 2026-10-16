@@ -1,0 +1,10 @@
+Scope: source-only audit. No service/browser/production data.
+Evidence files inspected:
+- apps/web/features/conversations/cleanup-review-workspace.tsx
+- apps/web/features/conversations/cleanup-candidate.tsx
+- apps/web/features/conversations/cleanup-change-preview.tsx
+- apps/web/features/editing/source-editor-workspace.tsx
+- apps/api/app/schemas/content_cleanup.py
+- apps/api/app/services/cleanup_review.py
+Key design decision: keep occurrence decisions and preview/apply contract; make bulk scope/pending/selection state explicit; defer true arbitrary range editing to a version-bound API design.
+Implementation evidence: targeted ESLint passed for cleanup-review-workspace.tsx and cleanup-candidate.tsx; git diff --check passed. No local service, browser, build, full test suite, commit, CI or deployment ran.

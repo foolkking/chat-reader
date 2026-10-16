@@ -4,6 +4,7 @@ import { PreferencesProvider } from "../components/preferences-provider";
 import { ImportDialogProvider } from "../components/import-dialog-provider";
 import { ShortcutManager } from "../components/shortcut-manager";
 import { InteractionDialogProvider } from "../components/interaction-dialog-provider";
+import { ConversationDeletionProvider } from "../features/conversations/conversation-deletion-provider";
 import { ServiceWorkerRegistration } from "../components/service-worker-registration";
 import { OfflineDownloadManager } from "../components/offline-download-manager";
 import { OfflineSyncManager } from "../components/offline-sync-manager";
@@ -49,7 +50,7 @@ export default async function RootLayout({
         <QueryProvider>
           <AuthBoundary authEnabled={authEnabled}>
             <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
-              <InteractionDialogProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager /><OfflineDownloadManager /><SupportRequestLink /><WorkspaceShellBoundary>{children}</WorkspaceShellBoundary></AttachmentViewerProvider></ImportDialogProvider></InteractionDialogProvider>
+              <InteractionDialogProvider><ConversationDeletionProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager /><OfflineDownloadManager /><SupportRequestLink /><WorkspaceShellBoundary>{children}</WorkspaceShellBoundary></AttachmentViewerProvider></ImportDialogProvider></ConversationDeletionProvider></InteractionDialogProvider>
             </PreferencesProvider>
             <ServiceWorkerRegistration />
           </AuthBoundary>

@@ -1,6 +1,6 @@
 "use client";
 
-import { importErrorMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
+import { importErrorMessage, useImportCopy, type ImportCopy, type ImportErrorAction } from "./import-workspace-copy";
 import { useMutation } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -18,7 +18,7 @@ import {
   ShieldAlert,
   Trash2,
 } from "lucide-react";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   excludeAdaptiveImportGroup,
   reanalyzeAdaptiveImportSession,
@@ -36,18 +36,74 @@ import { FormatConversionDialog } from "./format-conversion-guide";
 import { MappingWorkspace } from "./mapping-workspace";
 import { FormatHealthCheck } from "./format-health-check";
 
-export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, importing, error, onMappingStateChange }: {
+type SessionActionControls = {
+  begin: () => number | null;
+  apply: (token: number, session: AdaptiveImportSession) => boolean;
+  finish: (token: number) => void;
+};
+
+function useAdaptiveSessionAction<TVariables>(
+  mutationFn: (variables: TVariables) => Promise<AdaptiveImportSession>,
+  controls: SessionActionControls,
+  onApplied?: (session: AdaptiveImportSession) => void,
+) {
+  const mutation = useMutation({ mutationFn });
+  const run = (variables: TVariables) => {
+    const token = controls.begin();
+    if (token === null) return;
+    void mutation.mutateAsync(variables)
+      .then((next) => {
+        if (controls.apply(token, next)) onApplied?.(next);
+      })
+      .catch(() => undefined)
+      .finally(() => controls.finish(token));
+  };
+  return { ...mutation, run };
+}
+
+export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, importing, error, onRetryImport, retryingImport = false, statusError, onRetryStatus, statusRetrying = false, onMappingStateChange }: {
   onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
   session: AdaptiveImportSession;
   onSession: (session: AdaptiveImportSession) => void;
   onBack: () => void;
   onImport: () => void;
   importing: boolean;
-  error: string | null;
+  error: unknown;
+  onRetryImport?: () => void;
+  retryingImport?: boolean;
+  statusError?: unknown;
+  onRetryStatus?: () => void;
+  statusRetrying?: boolean;
 }) {
   const tr = useImportCopy();
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
   const [groupingOpen, setGroupingOpen] = useState(false);
+  const [sessionActionBusy, setSessionActionBusy] = useState(false);
+  const sessionActionRef = useRef<{ nextToken: number; activeToken: number | null }>({ nextToken: 0, activeToken: null });
+  const currentImportIdRef = useRef(session.import_id);
+  currentImportIdRef.current = session.import_id;
+  const beginSessionAction = useCallback(() => {
+    if (sessionActionRef.current.activeToken !== null) return null;
+    const token = sessionActionRef.current.nextToken + 1;
+    sessionActionRef.current = { nextToken: token, activeToken: token };
+    setSessionActionBusy(true);
+    return token;
+  }, []);
+  const applySessionAction = useCallback((token: number, next: AdaptiveImportSession) => {
+    if (sessionActionRef.current.activeToken !== token || next.import_id !== currentImportIdRef.current) return false;
+    onSession(next);
+    return true;
+  }, [onSession]);
+  const finishSessionAction = useCallback((token: number) => {
+    if (sessionActionRef.current.activeToken !== token) return;
+    sessionActionRef.current.activeToken = null;
+    setSessionActionBusy(false);
+  }, []);
+  const sessionActions = useMemo<SessionActionControls>(() => ({
+    begin: beginSessionAction,
+    apply: applySessionAction,
+    finish: finishSessionAction,
+  }), [applySessionAction, beginSessionAction, finishSessionAction]);
   const activeFamily = session.families.find((family) => family.id === activeFamilyId) ?? null;
   const supportedFamilies = session.families.filter((family) => family.handling_class === "SUPPORTED");
   const mappableFamilies = session.families.filter((family) => family.handling_class === "MAPPABLE");
@@ -64,11 +120,9 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         onMappingStateChange={onMappingStateChange}
         session={session}
         family={activeFamily}
+        sessionAction={sessionActions}
+        sessionActionBusy={sessionActionBusy}
         onBack={() => setActiveFamilyId(null)}
-        onSession={(next) => {
-          setActiveFamilyId(null);
-          onSession(next);
-        }}
       />
     );
   }
@@ -76,11 +130,12 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
     return (
       <GroupResolver
         session={session}
+        sessionAction={sessionActions}
+        sessionActionBusy={sessionActionBusy}
         forced={session.state === "NEEDS_GROUPING"}
         onClose={session.state === "NEEDS_GROUPING" ? onBack : () => setGroupingOpen(false)}
-        onResolved={(next) => {
+        onResolved={() => {
           setGroupingOpen(false);
-          onSession(next);
         }}
       />
     );
@@ -89,7 +144,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
     <section className="space-y-5" aria-labelledby="adaptive-import-title">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-ui pb-4">
         <div>
-          <button type="button" onClick={onBack} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary">
+          <button type="button" disabled={importing || sessionActionBusy} onClick={onBack} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
             <ArrowLeft className="h-3.5 w-3.5" />{tr("重新选择文件")}</button>
           <h3 id="adaptive-import-title" className="text-lg font-semibold text-primary">{tr("导入概览")}</h3>
           <p className="mt-1 text-sm text-secondary">{tr("发现 {0} 个对话，识别出 {1} 种格式", session.group_count, session.family_count)}</p>
@@ -106,7 +161,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
               <p className="mt-1 text-xs leading-5 text-secondary">{tr("其他已识别格式仍可继续设置。替换、排除或重新组合这些文件后，系统会自动重新分析。")}</p>
             </div>
           </div>
-          <button type="button" onClick={() => setGroupingOpen(true)} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium">
+          <button type="button" disabled={sessionActionBusy} onClick={() => setGroupingOpen(true)} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50">
             <FolderCog className="h-4 w-4" />{tr("调整文件组合")}</button>
         </div>
       ) : null}
@@ -116,12 +171,13 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         <StatusSummary icon={<Settings2 className="h-3.5 w-3.5" />} label={tr("可设置格式")} count={mappableCount} tone="warning" />
         <StatusSummary icon={<ShieldAlert className="h-3.5 w-3.5" />} label={tr("暂不可映射")} count={notMappableCount} tone="danger" />
       </div>
-      <FamilySection title={tr("已支持 · 可直接导入")} families={supportedFamilies} session={session} onConfigure={(id) => setActiveFamilyId(id)} onSession={onSession} />
-      <FamilySection title={tr("可设置格式 · 需要确认一次")} families={mappableFamilies} session={session} onConfigure={(id) => setActiveFamilyId(id)} onSession={onSession} />
-      <FamilySection title={tr("暂不可映射 · 需要先转换")} families={notMappableFamilies} session={session} onConfigure={() => undefined} onSession={onSession} />
+      <FamilySection title={tr("已支持 · 可直接导入")} families={supportedFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
+      <FamilySection title={tr("可设置格式 · 需要确认一次")} families={mappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
+      <FamilySection title={tr("暂不可映射 · 需要先转换")} families={notMappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onConfigure={() => undefined} />
 
-      {session.state === "BLOCKED" ? <LegacyBlockedRecovery session={session} onSession={onSession} onRegroup={() => setGroupingOpen(true)} /> : null}
-      {error ? <ErrorLine message={error} /> : null}
+      {session.state === "BLOCKED" ? <LegacyBlockedRecovery session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onRegroup={() => setGroupingOpen(true)} /> : null}
+      {error ? <ErrorLine message={error} action="commit" onRetry={onRetryImport} retrying={retryingImport} /> : null}
+      {statusError ? <ErrorLine message={statusError} onRetry={onRetryStatus} retrying={statusRetrying} /> : null}
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4">
         <div>
           <p className="text-sm text-secondary">
@@ -132,11 +188,11 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
                 : tr("正在整理导入计划。")}
           </p>
           {!invalidCount && session.state !== "READY" ? (
-            <button type="button" onClick={() => setGroupingOpen(true)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary">
+            <button type="button" disabled={sessionActionBusy} onClick={() => setGroupingOpen(true)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
               <FolderCog className="h-3.5 w-3.5" />{tr("调整文件组合")}</button>
           ) : null}
         </div>
-        <button type="button" data-testid="commit-import-button" disabled={!session.can_import || importing} onClick={onImport} className="btn-primary min-h-10 px-5 text-sm font-medium">
+        <button type="button" data-testid="commit-import-button" disabled={!session.can_import || importing || sessionActionBusy} onClick={onImport} className="btn-primary min-h-10 px-5 text-sm font-medium">
           {importing ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在导入")}</> : tr("导入 {0} 个对话", session.conversation_count || session.group_count)}
         </button>
       </footer>
@@ -149,22 +205,23 @@ function StatusSummary({ icon, label, count, tone }: { icon: ReactNode; label: s
   return <span className={`inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 font-semibold ${styles}`}>{icon}{label} {count}</span>;
 }
 
-function FamilySection({ title, families, session, onConfigure, onSession }: { title: string; families: AdaptiveImportFamily[]; session: AdaptiveImportSession; onConfigure: (id: string) => void; onSession: (session: AdaptiveImportSession) => void }) {
+function FamilySection({ title, families, session, sessionAction, sessionActionBusy, onConfigure }: { title: string; families: AdaptiveImportFamily[]; session: AdaptiveImportSession; sessionAction: SessionActionControls; sessionActionBusy: boolean; onConfigure: (id: string) => void }) {
   if (!families.length) return null;
-  return <section aria-labelledby={`family-section-${title}`}><h4 id={`family-section-${title}`} className="mb-1 text-sm font-semibold text-primary">{title}</h4><div className="divide-y divide-ui border-y border-ui">{families.map((family) => <FamilyRow key={family.id} session={session} family={family} onConfigure={() => onConfigure(family.id)} onSession={onSession} />)}</div></section>;
+  return <section aria-labelledby={`family-section-${title}`}><h4 id={`family-section-${title}`} className="mb-1 text-sm font-semibold text-primary">{title}</h4><div className="divide-y divide-ui border-y border-ui">{families.map((family) => <FamilyRow key={family.id} session={session} family={family} sessionAction={sessionAction} sessionActionBusy={sessionActionBusy} onConfigure={() => onConfigure(family.id)} />)}</div></section>;
 }
 
-function FamilyRow({ session, family, onConfigure, onSession }: {
+function FamilyRow({ session, family, sessionAction, sessionActionBusy, onConfigure }: {
   session: AdaptiveImportSession;
   family: AdaptiveImportFamily;
+  sessionAction: SessionActionControls;
+  sessionActionBusy: boolean;
   onConfigure: () => void;
-  onSession: (session: AdaptiveImportSession) => void;
 }) {
   const tr = useImportCopy();
-  const selectMutation = useMutation({
-    mutationFn: (revisionId: string) => selectAdaptiveFamilyProfile(session.import_id, family.id, revisionId),
-    onSuccess: onSession,
-  });
+  const selectMutation = useAdaptiveSessionAction(
+    (revisionId: string) => selectAdaptiveFamilyProfile(session.import_id, family.id, revisionId),
+    sessionAction,
+  );
   const handling = family.handling_class;
   const actionable = handling === "MAPPABLE";
   const candidates = asArray(family.match_evidence.candidates).map(asObject);
@@ -184,7 +241,7 @@ function FamilyRow({ session, family, onConfigure, onSession }: {
           {family.resolution_status === "AMBIGUOUS" && candidates.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {candidates.map((candidate) => (
-                <button key={String(candidate.revision_id)} type="button" disabled={selectMutation.isPending} onClick={() => selectMutation.mutate(String(candidate.revision_id))} className="btn-secondary min-h-9 px-3 text-xs">
+                <button key={String(candidate.revision_id)} type="button" disabled={sessionActionBusy || selectMutation.isPending} onClick={() => selectMutation.run(String(candidate.revision_id))} className="btn-secondary min-h-9 px-3 text-xs">
                   {tr("使用")}{String(candidate.name)}
                 </button>
               ))}
@@ -192,38 +249,37 @@ function FamilyRow({ session, family, onConfigure, onSession }: {
           ) : null}
         </div>
         {actionable ? (
-          <button type="button" onClick={onConfigure} className="btn-secondary inline-flex min-h-9 items-center justify-center gap-2 px-3 text-sm font-medium">
+          <button type="button" disabled={sessionActionBusy} onClick={onConfigure} className="btn-secondary inline-flex min-h-9 items-center justify-center gap-2 px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50">
             {family.resolution_status === "DRIFTED" ? tr("修复格式") : tr("设置格式")}<ChevronRight className="h-4 w-4" />
           </button>
         ) : null}
       </div>
-      {handling === "NOT_MAPPABLE" ? <NotMappableRecovery session={session} family={family} onSession={onSession} /> : null}
-      {handling !== "NOT_MAPPABLE" ? <FormatHealthCheck session={session} family={family} onRepair={actionable ? onConfigure : undefined} /> : null}
-      {selectMutation.isError ? <div className="mt-3"><ErrorLine message={selectMutation.error.message} /></div> : null}
+      {handling === "NOT_MAPPABLE" ? <NotMappableRecovery session={session} family={family} sessionAction={sessionAction} sessionActionBusy={sessionActionBusy} /> : null}
+      {handling !== "NOT_MAPPABLE" ? <FormatHealthCheck session={session} family={family} disabled={sessionActionBusy} onRepair={actionable ? onConfigure : undefined} /> : null}
+      {selectMutation.isError ? <div className="mt-3"><ErrorLine message={selectMutation.error} action="mutation" /></div> : null}
     </article>
   );
 }
 
-function NotMappableRecovery({ session, family, onSession }: {
+function NotMappableRecovery({ session, family, sessionAction, sessionActionBusy }: {
   session: AdaptiveImportSession;
   family: AdaptiveImportFamily;
-  onSession: (session: AdaptiveImportSession) => void;
+  sessionAction: SessionActionControls;
+  sessionActionBusy: boolean;
 }) {
   const tr = useImportCopy();
   const [confirmGroupId, setConfirmGroupId] = useState<string | null>(null);
   const [rescueArtifact, setRescueArtifact] = useState<{ id: string; filename: string } | null>(null);
   const groups = session.groups.filter((group) => family.group_ids.includes(group.id));
-  const replaceMutation = useMutation({
-    mutationFn: ({ artifactId, file }: { artifactId: string; file: File }) => replaceAdaptiveImportArtifact(session.import_id, artifactId, file),
-    onSuccess: onSession,
-  });
-  const excludeMutation = useMutation({
-    mutationFn: (groupId: string) => excludeAdaptiveImportGroup(session.import_id, groupId),
-    onSuccess: (next) => {
-      setConfirmGroupId(null);
-      onSession(next);
-    },
-  });
+  const replaceMutation = useAdaptiveSessionAction(
+    ({ artifactId, file }: { artifactId: string; file: File }) => replaceAdaptiveImportArtifact(session.import_id, artifactId, file),
+    sessionAction,
+  );
+  const excludeMutation = useAdaptiveSessionAction(
+    (groupId: string) => excludeAdaptiveImportGroup(session.import_id, groupId),
+    sessionAction,
+    () => setConfirmGroupId(null),
+  );
 
   return (
     <div className="mt-4 border-t border-ui pt-3">
@@ -247,11 +303,11 @@ function NotMappableRecovery({ session, family, onSession }: {
                   <ReplaceFileButton
                     artifactId={file.artifact_id}
                     filename={file.filename}
-                    disabled={replaceMutation.isPending || excludeMutation.isPending}
+                    disabled={sessionActionBusy || replaceMutation.isPending || excludeMutation.isPending}
                     pending={replaceMutation.isPending}
-                    onSelect={(replacement) => replaceMutation.mutate({ artifactId: file.artifact_id, file: replacement })}
+                    onSelect={(replacement) => replaceMutation.run({ artifactId: file.artifact_id, file: replacement })}
                   />
-                  <button type="button" onClick={() => setRescueArtifact({ id: file.artifact_id, filename: file.filename })} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium">
+                  <button type="button" disabled={sessionActionBusy} onClick={() => setRescueArtifact({ id: file.artifact_id, filename: file.filename })} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50">
                     <ShieldAlert className="h-4 w-4" />{tr("使用格式转换 Skill")}</button>
                 </div>
               ))}
@@ -262,13 +318,13 @@ function NotMappableRecovery({ session, family, onSession }: {
             {confirmGroupId === group.id ? (
               <>
                 <button type="button" onClick={() => setConfirmGroupId(null)} className="btn-secondary min-h-9 px-3 text-xs font-medium">{tr("保留")}</button>
-                <button type="button" disabled={excludeMutation.isPending} onClick={() => excludeMutation.mutate(group.id)} className="inline-flex min-h-9 items-center gap-2 rounded-md bg-[var(--danger)] px-3 text-xs font-semibold text-white disabled:opacity-50">
+                <button type="button" disabled={sessionActionBusy || excludeMutation.isPending} onClick={() => { excludeMutation.run(group.id); setConfirmGroupId(null); }} className="inline-flex min-h-9 items-center gap-2 rounded-md bg-[var(--danger)] px-3 text-xs font-semibold text-white disabled:opacity-50">
                   {excludeMutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}{tr("确认不导入")}</button>
               </>
             ) : (
               <button
                 type="button"
-                disabled={session.group_count <= 1 || replaceMutation.isPending || excludeMutation.isPending}
+                disabled={session.group_count <= 1 || sessionActionBusy || replaceMutation.isPending || excludeMutation.isPending}
                 onClick={() => setConfirmGroupId(group.id)}
                 className="inline-flex min-h-9 items-center gap-2 px-2 text-xs font-medium text-[var(--danger)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                 title={session.group_count <= 1 ? tr("最后一项不能排除，请替换文件或重新选择。") : tr("从本次导入中排除这一项")}
@@ -278,9 +334,9 @@ function NotMappableRecovery({ session, family, onSession }: {
           </div>
         </div>
       ))}
-      {replaceMutation.isError ? <div className="mt-3"><ErrorLine message={replaceMutation.error.message} /></div> : null}
-      {excludeMutation.isError ? <div className="mt-3"><ErrorLine message={excludeMutation.error.message} /></div> : null}
-      {rescueArtifact ? <FormatConversionDialog filename={rescueArtifact.filename} onClose={() => setRescueArtifact(null)} onReplace={(file) => { setRescueArtifact(null); replaceMutation.mutate({ artifactId: rescueArtifact.id, file }); }} /> : null}
+      {replaceMutation.isError ? <div className="mt-3"><ErrorLine message={replaceMutation.error} action="mutation" /></div> : null}
+      {excludeMutation.isError ? <div className="mt-3"><ErrorLine message={excludeMutation.error} action="mutation" /></div> : null}
+      {rescueArtifact ? <FormatConversionDialog filename={rescueArtifact.filename} onClose={() => setRescueArtifact(null)} onReplace={(file) => { setRescueArtifact(null); replaceMutation.run({ artifactId: rescueArtifact.id, file }); }} /> : null}
     </div>
   );
 }
@@ -315,13 +371,17 @@ function ReplaceFileButton({ artifactId, filename, disabled, pending, onSelect }
   );
 }
 
-function LegacyBlockedRecovery({ session, onSession, onRegroup }: {
+function LegacyBlockedRecovery({ session, sessionAction, sessionActionBusy, onRegroup }: {
   session: AdaptiveImportSession;
-  onSession: (session: AdaptiveImportSession) => void;
+  sessionAction: SessionActionControls;
+  sessionActionBusy: boolean;
   onRegroup: () => void;
 }) {
   const tr = useImportCopy();
-  const mutation = useMutation({ mutationFn: () => reanalyzeAdaptiveImportSession(session.import_id), onSuccess: onSession });
+  const mutation = useAdaptiveSessionAction(
+    () => reanalyzeAdaptiveImportSession(session.import_id),
+    sessionAction,
+  );
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3" role="alert">
       <div>
@@ -329,31 +389,43 @@ function LegacyBlockedRecovery({ session, onSession, onRegroup }: {
         <p className="mt-1 text-xs leading-5 text-secondary">{tr("源文件仍然保留。可以使用当前分析器重新检查，或先调整文件组合。")}</p>
       </div>
       <div className="flex gap-2">
-        <button type="button" onClick={onRegroup} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium"><FolderCog className="h-4 w-4" />{tr("调整组合")}</button>
-        <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate()} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium">
+        <button type="button" disabled={sessionActionBusy} onClick={onRegroup} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50"><FolderCog className="h-4 w-4" />{tr("调整组合")}</button>
+        <button type="button" disabled={sessionActionBusy || mutation.isPending} onClick={() => mutation.run(undefined)} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium">
           {mutation.isPending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}{tr("重新分析")}</button>
       </div>
-      {mutation.isError ? <div className="w-full"><ErrorLine message={mutation.error.message} /></div> : null}
+      {mutation.isError ? <div className="w-full"><ErrorLine message={mutation.error} action="mutation" /></div> : null}
     </div>
   );
 }
 
-function GroupResolver({ session, forced, onClose, onResolved }: {
+function GroupResolver({ session, sessionAction, sessionActionBusy, forced, onClose, onResolved }: {
   session: AdaptiveImportSession;
+  sessionAction: SessionActionControls;
+  sessionActionBusy: boolean;
   forced: boolean;
   onClose: () => void;
-  onResolved: (session: AdaptiveImportSession) => void;
+  onResolved: () => void;
 }) {
   const tr = useImportCopy();
-  const initial = useMemo(
-    () => Object.fromEntries(session.groups.flatMap((group, index) => group.files.map((file) => [file.artifact_id, String(index + 1)]))),
+  const artifactSignature = useMemo(
+    () => session.groups.flatMap((group, index) => group.files.map((file) => `${index}:${file.artifact_id}`)).join("|"),
     [session.groups],
   );
+  const initial = useMemo(
+    () => Object.fromEntries(artifactSignature.split("|").filter(Boolean).map((item) => {
+      const [groupIndex, artifactId] = item.split(":");
+      return [artifactId, String(Number(groupIndex) + 1)];
+    })),
+    [artifactSignature],
+  );
   const [assignments, setAssignments] = useState<Record<string, string>>(initial);
+  useEffect(() => {
+    setAssignments(initial);
+  }, [artifactSignature, initial]);
   const files = session.groups.flatMap((group) => group.files);
   const groupingIssue = validateGrouping(files, assignments, tr);
-  const mutation = useMutation({
-    mutationFn: () => {
+  const mutation = useAdaptiveSessionAction(
+    () => {
       const buckets = new Map<string, string[]>();
       for (const [artifactId, group] of Object.entries(assignments)) buckets.set(group, [...(buckets.get(group) ?? []), artifactId]);
       return resolveAdaptiveImportGroups(
@@ -361,12 +433,13 @@ function GroupResolver({ session, forced, onClose, onResolved }: {
         Array.from(buckets.entries()).map(([name, artifact_ids]) => ({ artifact_ids, display_name: tr("对话组合 {0}", name) })),
       );
     },
-    onSuccess: onResolved,
-  });
+    sessionAction,
+    onResolved ? () => onResolved() : undefined,
+  );
   return (
     <section className="space-y-5" aria-labelledby="group-resolver-title">
       <header className="border-b border-ui pb-4">
-        <button type="button" onClick={onClose} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary">
+        <button type="button" disabled={sessionActionBusy || mutation.isPending} onClick={onClose} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
           <ArrowLeft className="h-3.5 w-3.5" />{forced ? tr("取消本次导入") : tr("返回导入概览")}
         </button>
         <h3 id="group-resolver-title" className="text-lg font-semibold text-primary">{tr("确认文件组合")}</h3>
@@ -376,15 +449,15 @@ function GroupResolver({ session, forced, onClose, onResolved }: {
         {files.map((file) => (
           <div key={file.artifact_id} className="grid grid-cols-[minmax(0,1fr)_7rem] items-center gap-4 py-3">
             <div className="min-w-0"><p className="truncate text-sm font-medium text-primary">{file.filename}</p><p className="text-xs text-secondary">{file.extension} · {formatBytes(file.byte_size)}</p></div>
-            <label className="text-xs font-medium text-secondary">{tr("组合")}<input value={assignments[file.artifact_id] ?? ""} onChange={(event) => setAssignments((current) => ({ ...current, [file.artifact_id]: event.target.value.trim() }))} className="mt-1 h-9 w-full rounded-md border border-ui bg-surface px-2 text-sm text-primary" aria-label={tr("{0} 的组合编号", file.filename)} />
+            <label className="text-xs font-medium text-secondary">{tr("组合")}<input disabled={sessionActionBusy || mutation.isPending} value={assignments[file.artifact_id] ?? ""} onChange={(event) => setAssignments((current) => ({ ...current, [file.artifact_id]: event.target.value.trim() }))} className="mt-1 h-9 w-full rounded-md border border-ui bg-surface px-2 text-sm text-primary disabled:opacity-60" aria-label={tr("{0} 的组合编号", file.filename)} />
             </label>
           </div>
         ))}
       </div>
       {groupingIssue ? <ErrorLine message={groupingIssue} /> : null}
-      {mutation.isError ? <ErrorLine message={mutation.error.message} /> : null}
+      {mutation.isError ? <ErrorLine message={mutation.error} action="mutation" /> : null}
       <div className="flex justify-end">
-        <button type="button" disabled={mutation.isPending || Boolean(groupingIssue)} onClick={() => mutation.mutate()} className="btn-primary min-h-10 px-5 text-sm font-medium">
+        <button type="button" disabled={sessionActionBusy || mutation.isPending || Boolean(groupingIssue)} onClick={() => mutation.run(undefined)} className="btn-primary min-h-10 px-5 text-sm font-medium">
           {mutation.isPending ? tr("正在重新分析") : tr("确认组合并继续")}
         </button>
       </div>
@@ -493,4 +566,19 @@ export function modeLabel(mode: string, tr: ImportCopy): string { return mode ==
 export function formatBytes(value: number): string { return value < 1024 ? `${value} B` : value < 1024 * 1024 ? `${Math.round(value / 1024)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`; }
 export function asObject(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 export function asArray(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
-function ErrorLine({ message }: { message: string }) { const tr = useImportCopy(); return <div role="alert" className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{importErrorMessage(message, tr)}</div>; }
+function ErrorLine({ message, action = "read", onRetry, retrying = false }: {
+  message: unknown;
+  action?: ImportErrorAction;
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
+  const tr = useImportCopy();
+  return (
+    <div role="alert" className={`border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)] ${onRetry ? "flex flex-wrap items-center justify-between gap-3" : ""}`}>
+      <span>{importErrorMessage(message, tr, action)}</span>
+      {onRetry ? <button type="button" disabled={retrying} onClick={onRetry} className="btn-secondary inline-flex min-h-9 shrink-0 items-center gap-2 px-3 text-xs font-medium">
+        {retrying ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : null}{tr("重试")}
+      </button> : null}
+    </div>
+  );
+}

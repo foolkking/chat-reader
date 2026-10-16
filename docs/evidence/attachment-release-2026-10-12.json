@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "status": "ACCEPTED",
+  "source": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "accepted_at_utc": "2026-10-12T14:46:19.503489Z",
+  "finalized_local_date": "2026-10-13",
+  "ci": {
+    "run_id": 38255213036,
+    "attempt": 1,
+    "all_five_jobs_passed": true,
+    "artifact_id": 11752048475,
+    "api": {
+      "passed": 1239,
+      "skipped": 3,
+      "warnings": 20,
+      "duration_seconds": 831.56
+    },
+    "quality": {
+      "source_sha": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+      "run_id": 38255213036,
+      "producer_attempt": 1,
+      "status": "PASS",
+      "web_gates": {
+        "adaptive-import-recovery": "PASS",
+        "csp-enforcement": "PASS",
+        "context-files": "PASS",
+        "focused-online-security": "PASS",
+        "share-focus": "PASS",
+        "source-editor-mutation": "PASS",
+        "source-editor-cleanup": "PASS",
+        "upload-token-atomicity": "PASS",
+        "markdown-image-viewer": "PASS",
+        "pdfjs-maintained-line": "PASS",
+        "default-pwa": "PASS",
+        "single-owner-auth": "PASS",
+        "pwa-negative": "PASS"
+      },
+      "settings_passed": 439,
+      "fresh_restore_passed": 1,
+      "pdf_passed": 13,
+      "attachment_passed": 21,
+      "mutation_passed": 100,
+      "context_passed": 35,
+      "screenshots_reviewed": 14,
+      "reviewed_screenshots": [
+        "pdfjs-maintained-line/pdfjs-migration-zh-CN-long-7b0a6-h-bounded-canvases-at-375px/pdf-final-page-375-zh-CN.png",
+        "pdfjs-maintained-line/pdfjs-migration-zh-CN-long-becc6--bounded-canvases-at-1440px/pdf-long-1440-zh-CN.png",
+        "pdfjs-maintained-line/pdfjs-migration-zh-CN-PDF--1ecdd-e-retries-in-place-at-375px/pdf-page-retry-375-zh-CN.png",
+        "pdfjs-maintained-line/pdfjs-migration-zh-CN-PDF--1ecdd-e-retries-in-place-at-375px/pdf-page-recovered-375-zh-CN.png",
+        "source-editor-mutation/ux-recovery-followup-375px-ab2c1-resize-the-reading-viewport/quiet-autosave-375.png",
+        "source-editor-mutation/ux-recovery-followup-1440p-0cf5e-resize-the-reading-viewport/quiet-autosave-1440.png",
+        "context-files/context-continuation-drop--2d1fa-and-resumes-package-updates/declined-drop-375.png",
+        "context-files/context-continuation-drop--9794e-and-resumes-package-updates/declined-drop-1440.png",
+        "markdown-image-viewer/attachment-reading-375px-z-3d2ab-ts-the-next-image-transform/gallery-current-image.png",
+        "markdown-image-viewer/attachment-reading-375px-z-a0d15-reserve-their-original-text/csv-table.png",
+        "markdown-image-viewer/attachment-reading-375px-z-a0d15-reserve-their-original-text/json-recovered.png",
+        "markdown-image-viewer/attachment-reading-1440px--c0065-reserve-their-original-text/file-panel-returned.png",
+        "markdown-image-viewer/attachment-reading-375px-z-59b6a-ilure-without-reading-ahead/document-recovered.png",
+        "markdown-image-viewer/attachment-reading-375px-z-59b6a-ilure-without-reading-ahead/archive-unsupported-entry.png"
+      ],
+      "visual_review": "Reviewed original synthetic CI PNGs: mobile/desktop quiet saving, preserved declined-drop drafts, long PDF/last page/retry, image gallery, JSON/CSV, document and ZIP fallback. Controls and content are visible. English Fit page/Fit width/Table/Raw labels in zh-CN remain a nonblocking localization follow-up. No production interactive browser claim.",
+      "conditional_skips": {
+        "adaptive_import": 1,
+        "default_pwa": 699
+      },
+      "evidence_artifacts": {
+        "web": {
+          "id": 11751795948,
+          "sha256": "d88e3a4014b9d26578d8cd023b5d48212d336531e19697717d534dafd7915ea6"
+        },
+        "settings": {
+          "id": 11752427039,
+          "sha256": "7706b22721698222b8f836250951e1a939d426bec6032eb2dd8f9deb05f83f9c"
+        }
+      }
+    }
+  },
+  "images": {
+    "source_sha": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+    "run_id": 38255213036,
+    "artifact_id": 11752048475,
+    "producer_attempt": 1,
+    "archive_sha256": "17667b42444747efd966dce48c8918da0366f4ba92882da1f2043d889e376058",
+    "verified_image_blobs": 50,
+    "verified_image_configs": 2,
+    "image_tags": {
+      "chat-reader-api:84988a260c48fcafb8b3bed6fcb7a1f16348111d": "sha256:48d10c86e6a549adda077c50bb3e0eb5350c69b88fa2b494d527425df29503c0",
+      "chat-reader-import-worker:84988a260c48fcafb8b3bed6fcb7a1f16348111d": "sha256:48d10c86e6a549adda077c50bb3e0eb5350c69b88fa2b494d527425df29503c0",
+      "chat-reader-migrate:84988a260c48fcafb8b3bed6fcb7a1f16348111d": "sha256:48d10c86e6a549adda077c50bb3e0eb5350c69b88fa2b494d527425df29503c0",
+      "chat-reader-web:84988a260c48fcafb8b3bed6fcb7a1f16348111d": "sha256:4edba2580b5ecbe1baaff138f9a7eed945576dbde0caff38c10112caa402f31a"
+    },
+    "support_files": {
+      "deploy/backup.sh": "b6965a0908511e7ef033fd629f5228e77f844dadecc56be3e15e7a689dcafc0f",
+      "deploy/backup_housekeeping.py": "6c9dd2738fc5bf928cce2b54f48050f59384efdfd09a15b64d7cb0cc19661cc4",
+      "deploy/backup_retention_report.py": "4a094b1916e13fd9bbfb2324600588e89eb9cd289c614a6f3d2859fc9e831f82",
+      "deploy/cleanup_release_transfer.py": "8e18957c8deb2dff9aa59a4041b128b74032a2ba4f13b50de243926dc2f1f074",
+      "deploy/nginx-chat-reader.conf": "4ecb4e2a59a075a0306eacf5786a7756744f5c34e4d6e3c4fbbbe235be3229ee",
+      "deploy/nginx-internal-diagnostics.location.conf": "09d33e50250fa9dfed659b93413d0c6ee4c4d798dcaed68fb45b02f14f430509",
+      "deploy/preflight_release_space.sh": "a46df76cd70916880646c4918b040c8a0d441acb7ccb5a412fe475de25baf0d9",
+      "deploy/recovery_integrity.py": "631783dc3f3f86b21651afef558dd4c2fa1bc6851cc52a1f44254a4a3bdd7057",
+      "deploy/recovery_preflight.py": "1a38c35b9cfe97829b0e72e6442662d130784633f6e0c79ed41979a953c3bbaf",
+      "deploy/verify_backup.sh": "fd86acbf8a17910c0a55132c42b866fb49c71b489131e7ed084c0a5d35ed70a9",
+      "deploy/verify_https_entry.sh": "4bedbc512af3e7f48b77dacb3f63d4748afccfc549d3e1ad1a36ece17100b389",
+      "deploy/verify_postgres_unchanged.sh": "d4cecb1e404f45566e74b960b867df2b19c22eb0b720c4a1d2caf40c78e6e52c",
+      "deploy/verify_release_state.sh": "2aef1c331bca107fd31624a59974c037a5a301724c66308f9bfa151a55fe73ae",
+      "deploy/verify_rollback_smoke.sh": "3221a3e41b04c7e9608abdfe5352c858be094b3e9c61069ea52881c2861ddfd5",
+      "deploy/verify_runtime_health.sh": "7d9c552f02c7a8ebed6c2d111634e31cfb0624ef4fdc3ff29c14e3653be27856",
+      "deploy/verify_runtime_images.sh": "0ebd4cce28ba8323daa83195441f43f999eefd293d5c9b728fc22a1ec53bc581",
+      "docker-compose.production.yml": "687fcc729bd9f37ecf27076ce7a9eca661455aad11e47fb4373639854dc71982"
+    },
+    "builtin_skills": {
+      "/skills/context-acquisition.zip": "0ce84c02163d1d9b33d23103b8a13a23c664becda095e913f4af4a260d19cb2a",
+      "/skills/context-continuation-maintainer.zip": "9f77a4bb3a0d5158ef6956ca6b3694c80a6bf09cc2329053c0fe5372221429e4",
+      "/skills/chat-transcript-normalizer-skill.zip": "55032c9df6eab4fe7fc32afcca183772f0be176ad13581cab752e415a6c59ee5"
+    },
+    "task_helpers": {
+      "release-guard.py": "ae38e7bf11def943f86f22680be3a4d04a17cc31ee6516f45ebf2d92a1f63126",
+      "release-data-check.py": "74a96dad472ce012bdc28f2b4a035d42c729f97bb7ae6773a9b473202b5802d9",
+      "authenticated-release-smoke.py": "178420812719762cebabeb180d69b9bb45649e2b33d70b03c317d7d944b3bd72",
+      "prepare-release.sh": "f32b63447c2f102dbcf3b37c9626758367af2e7292b4c2e568f0760c11c072bc",
+      "backup-and-deploy.sh": "c81672f9c41c68e02cf81c1e0e360f342dfabafdfaf004a2d4651924ba90f34e",
+      "accept-release.sh": "02f62dd4d2fb190466a898bdd80efcb5f1b7458434230d41b61d744551d7e16e",
+      "check-resources.yml": "e9c65d7972241a9b2bebf9ab6fde2e5d341d8c1c26d367014d3d900087f4cd3d"
+    },
+    "quality_verification_sha256": "7fc96b18ebec755b2103fcb87c8f57dec32873ff7689da8c5a3207ce4865bedb",
+    "original_artifact_digest_verified": "sha256:c7ff06f1b521c4667247d9c6ab4e8cc75abd1fb18076447e3c20e14a31338cd6",
+    "producer_checksum_file": false,
+    "transfer_checksums_generated_locally": true
+  },
+  "data": {
+    "migration_from": "20261008_0050",
+    "migration_head_current": "20261008_0050",
+    "migration_performed": false,
+    "reconcile_or_backfill_performed": false,
+    "stopped_writer_all_column_table_fingerprints_equal": 84,
+    "protected_storage_roots_equal": 4,
+    "attachment_audit": {
+      "attachments": 304,
+      "complete": true,
+      "files": 310,
+      "issue_count": 0,
+      "issue_counts": {},
+      "objects": 310,
+      "sha256_verified": 310
+    },
+    "post_start_stable_table_counts_equal": 67,
+    "post_start_attachment_audit": {
+      "attachments": 304,
+      "complete": true,
+      "files": 310,
+      "issue_count": 0,
+      "issue_counts": {},
+      "objects": 310,
+      "sha256_verified": 0
+    },
+    "live_full_hash_sweep_repeated": false
+  },
+  "runtime_at_acceptance": {
+    "api": {
+      "error_keyword_lines": 0,
+      "healthy": "healthy",
+      "image": "sha256:48d10c86e6a549adda077c50bb3e0eb5350c69b88fa2b494d527425df29503c0",
+      "oom_killed": false,
+      "restarts": 0,
+      "revision": "84988a260c48fcafb8b3bed6fcb7a1f16348111d"
+    },
+    "import-worker": {
+      "error_keyword_lines": 0,
+      "healthy": null,
+      "image": "sha256:48d10c86e6a549adda077c50bb3e0eb5350c69b88fa2b494d527425df29503c0",
+      "oom_killed": false,
+      "restarts": 0,
+      "revision": "84988a260c48fcafb8b3bed6fcb7a1f16348111d"
+    },
+    "live_full_hash_sweep_repeated": false,
+    "live_stable_table_counts_checked": 67,
+    "postgres_and_configuration_unchanged": true,
+    "stopped_tables_all_columns_fingerprinted": 84,
+    "web": {
+      "error_keyword_lines": 0,
+      "healthy": "healthy",
+      "image": "sha256:4edba2580b5ecbe1baaff138f9a7eed945576dbde0caff38c10112caa402f31a",
+      "oom_killed": false,
+      "restarts": 0,
+      "revision": "84988a260c48fcafb8b3bed6fcb7a1f16348111d"
+    }
+  },
+  "http_smoke": {
+    "bundled_skill_downloads_verified": 3,
+    "checks": {
+      "admin_support": 200,
+      "attachments": 200,
+      "audit": 200,
+      "build": 200,
+      "capabilities": 200,
+      "cleanup_rules": 200,
+      "home_document": 200,
+      "invitations": 200,
+      "library_document": 200,
+      "login": 200,
+      "pending_reviews": 200,
+      "personal_archive": 200,
+      "preferences": 200,
+      "runtime": 200,
+      "search_document": 200,
+      "session": 200,
+      "shares": 200,
+      "support": 200,
+      "system_archive": 200,
+      "system_skills": 200,
+      "tasks": 200,
+      "users": 200
+    },
+    "logout": 204,
+    "private_after_logout": 401,
+    "status": "PASS"
+  },
+  "retention": {
+    "rollback_source": "30a0d321fe2d538b0fa0bbd61b3e982452f822cb",
+    "rollback_images_loaded": true,
+    "verified_backups": [
+      "chat-reader-20261008T134403Z",
+      "chat-reader-20261012T143850Z"
+    ],
+    "removed_after_acceptance": "chat-reader-20261006T141424Z",
+    "unlinked_bytes": 700526846,
+    "final_verified": 2,
+    "final_held": 0,
+    "final_candidates": 0,
+    "available_disk_kib": 12392424
+  },
+  "private_evidence_sha256": {
+    "attachments-preflight.json": "e71b1a6b584410df0e0896387ea093cd6260f97967e676e8aafd0c324f3a34ce",
+    "services-started.txt": "d3e45e67e6576fe213be0d5d643efb0566bcabe9bdcc391d79ab0c650613db48",
+    "data-before.json": "1492eb2ea07ed18f910b12c93f568214f56deec8f1f3b7d6a86ea3ef4e18de48",
+    "backup-path.txt": "96a43ec491ab20701dcdc81a87cf0cbdb719009e57a1c76e3532dae3a0aff805",
+    "runtime-verification.json": "6a501593bba3ddd8f7402e6e931e842ab49711fc87b27b23a032ed2dd79df93c",
+    "backups-after.json": "b73cdd83b31121eac2766a2b4ab2da9caa4d011e9fb32d4ea5f7e152e4a3234a",
+    "data-after-preflight.json": "1492eb2ea07ed18f910b12c93f568214f56deec8f1f3b7d6a86ea3ef4e18de48",
+    "backups-before.json": "b73cdd83b31121eac2766a2b4ab2da9caa4d011e9fb32d4ea5f7e152e4a3234a",
+    "baseline.json": "bacf4572614a9d96cdf2b8abd61572deecaf3c6d5e3866c2be92adc0815b7212",
+    "data-after-acceptance.json": "84ce6fd95dedb8e5cd2072c4bc7a5d09b34678d735cc85b8635766b83e86e899",
+    "authenticated-smoke.json": "f96445da7af6d910a475be1a3d2d0d19ba6e03611b6f9d7f50115dc305bb12ec",
+    "acceptance-passed.txt": "c2c358f1e5f1f8aa4f56b840bb9f4403d849b64359ba6fb551662e0b5ab39541",
+    "backups-pruned.json": "e2a65fddba5e7276eca8b3d9e652362b97805ebeadba6506b5d52774e1dd97a5"
+  },
+  "limits": {
+    "local_browser_not_executed": true,
+    "production_interactive_browser_not_claimed": true,
+    "synthetic_CI_screenshot_count": 14,
+    "actual_device_CPU_RSS_not_measured": true,
+    "post_release_product_work_requires_new_CI_deploy_authorization": true
+  },
+  "execution_notes": [
+    "Acceptance completed at 2026-10-12T14:46:19.503489Z; after the session resumed nine hours later, the new runtime was still healthy and old pointers were still selected. Fresh health and unchanged-state checks preceded pointer finalization.",
+    "Initial local evidence retrieval raced the still-running retention report and copied an empty backups-after.json. Local validation rejected it. The final completed retention files were copied after the process exited; two verified points, zero held and zero candidates were then confirmed.",
+    "Prune reports held=1 during its own lock; the subsequent read-only report has held=0. No unrelated backup or business volume was removed."
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "captured_at": "2026-10-13",
+  "repository_head": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "product_scope": "Notebook editor local draft writes during input and explicit save",
+  "sources": [
+    {
+      "path": "apps/web/features/annotations/notebook-view.tsx",
+      "sha256": "6ADD138F992FE3BE97B87AA79C4FEBF1DA26536839088852859AAA0DDD8F17A6",
+      "evidence": [
+        "lines 69-77: every retain call appends a promise-chain write capturing the full Working value",
+        "lines 79-86: save waits for the complete current write chain before sending the notebook mutation",
+        "lines 135,143: title and Markdown input changes call retain; text changes map over all blocks to form a new snapshot"
+      ],
+      "worktree_state": "Already modified before this batch for draft safeguards, localized title accessible name and related local behavior; preserved those changes."
+    },
+    {
+      "path": "apps/api/app/schemas/annotation.py",
+      "sha256": "3AB4304075F9C698A8620FAF5346C98E6397752845861AE4250538C4E762A111",
+      "evidence": [
+        "lines 98-116: each Markdown block allows 50,000 characters and a notebook allows 5,000 blocks"
+      ]
+    },
+    {
+      "path": "apps/web/e2e/settings-notebook-drafts.spec.ts",
+      "sha256": "815F2256FA85EC30C7074588DC4731F69C4034FD264D7514F4EFDCFE530145F8",
+      "evidence": [
+        "two existing isolated cases cover retained draft, reload, export, newer server revision and conflict recovery at 375px and 1440px",
+        "no existing case bursts input changes while a local draft write is pending"
+      ]
+    }
+  ],
+  "confidence": "Observed (code); runtime performance impact Inferred",
+  "not_observed": [
+    "No local web service or browser was started",
+    "No rendered interaction timing, IndexedDB latency or device CPU/RSS was measured",
+    "The maximum schema limits are accepted bounds, not a claim that typical notes approach them"
+  ],
+  "recommendation": "Keep one IndexedDB write in flight and only the newest pending whole-note snapshot. Preserve monotonic version checks, retry and error semantics, and make explicit save await persistence of the latest input."
+}

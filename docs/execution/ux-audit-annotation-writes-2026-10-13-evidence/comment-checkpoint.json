@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-13",
+  "checkpoint": "intermediate comment preservation and notebook cleanup; three write findings remain open",
+  "parent_checkpoint": "docs/execution/ux-audit-followup-2026-10-13-evidence/local-verification.json",
+  "parent_checkpoint_sha256": "55a198595e3566a2a849c4627ed180c2d237043bfffef008137d49c7d1946665",
+  "parent_sources": 134,
+  "inherited_unchanged": 130,
+  "changed_sources": [
+    "apps/web/features/annotations/annotation-workspace.tsx",
+    "apps/web/features/annotations/notebook-view.tsx",
+    "apps/web/features/annotations/use-annotation-workspace-reads.ts",
+    "scripts/ux/annotation-workspace-reads.test.mjs"
+  ],
+  "new_sources": [
+    "apps/web/features/annotations/annotation-comment-editor.tsx"
+  ],
+  "source_sha256": {
+    "apps/web/features/annotations/annotation-workspace.tsx": "0e54fe15b519a446ccbcd5480467e29bd04ff9ae44a88b6389c6ee67e1698895",
+    "apps/web/features/annotations/notebook-view.tsx": "1386bf9ac555bdabbdc8088f0964090212e934c1cf13a503412dadf072cba4bf",
+    "apps/web/features/annotations/use-annotation-workspace-reads.ts": "0c5f391d0b61d82126b40ddd07680ad1692f70d2b790a98d50d6265ecd24962c",
+    "scripts/ux/annotation-workspace-reads.test.mjs": "812c99e03fa79c2b08ee1c1ead03b1f29be5d7616659fe945cb3bd036c2f06be",
+    "apps/web/features/annotations/annotation-comment-editor.tsx": "b9f746132c08538d80948266ec154e5d09fd3541c04f1d23aff27864e001acf2"
+  },
+  "pre_edit_probe_sha256": "8324b77cebbda2b6db4c34346b2e8a1bf86b0ff8b76ca43e107309816f9ef5ca",
+  "pre_edit_result_sha256": "b6bb15d94a833979bbc06f2fb2f48e1c498538b81f53d547eb60a2cc9b6ff826",
+  "checks": {
+    "focused": {
+      "pass": 46,
+      "fail": 0,
+      "skip": 0,
+      "duration_ms": 3028.624
+    },
+    "all_node": {
+      "pass": 816,
+      "fail": 0,
+      "skip": 0,
+      "duration_ms": 10284.7645,
+      "overlaps_focused": true
+    },
+    "lint": "PASS",
+    "nonincremental_types": "PASS",
+    "build": "NOT_RUN_FOR_THIS_INTERMEDIATE_CHECKPOINT",
+    "browser_execution": "NOT_RUN",
+    "visual": "NOT_VERIFIED",
+    "cpu_rss": "NOT_MEASURED"
+  },
+  "log_sha256": {
+    "annotation-writes-comment-20261013.log": "c6e975c7d94297a919ce5a41a383f08b0fb769b8e47a65aba574f51e500ad8cd",
+    "annotation-writes-all-node-20261013.log": "b28b312944d202adf872732d24a1f59eceb3b1d5e6918dfd7b638e58edbb7bb2",
+    "annotation-writes-types-20261013.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "annotation-writes-lint-20261013.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+  },
+  "open_findings": [
+    "STATE-ANN-W02",
+    "DATA-ANN-W03",
+    "STATE-ANN-W04"
+  ],
+  "committed": false,
+  "submitted_to_ci": false,
+  "deployed": false,
+  "unrelated_buildinfo_sha256": "532f589f53455b60c9548489f565b9eb425338af5e28a3b3512a59c370f27e22"
+}

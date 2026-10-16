@@ -387,13 +387,18 @@ export async function resolveSkill(category: SkillCategory, locale: SkillLocale)
   return fetchJson<SkillResolve>(`/api/skills/resolve?category=${encodeURIComponent(category)}&locale=${encodeURIComponent(locale)}`);
 }
 
-export async function queueConversationBatchDelete(conversationIds: string[]): Promise<BackgroundTaskRead> {
+export async function queueConversationBatchDelete(
+  conversationIds: string[],
+  idempotencyKey = `conversation-delete-${crypto.randomUUID()}`,
+  signal?: AbortSignal,
+): Promise<BackgroundTaskRead> {
   const request = jsonRequest("POST", { conversation_ids: conversationIds });
   return fetchJson<BackgroundTaskRead>("/api/conversations/batch-delete", {
     ...request,
+    signal: archiveRequestSignal(signal),
     headers: {
       ...request.headers,
-      "Idempotency-Key": `conversation-delete-${crypto.randomUUID()}`,
+      "Idempotency-Key": idempotencyKey,
     },
   });
 }
@@ -572,6 +577,14 @@ export async function mergeConversations(input: {
   );
 }
 
+export function getConversationBatchDeleteRequest(
+  requestKey: string, signal?: AbortSignal,
+): Promise<{ found: boolean; task: BackgroundTaskRead | null }> {
+  return fetchJson(`/api/conversations/batch-delete/requests/${encodeURIComponent(requestKey)}`, {
+    signal: archiveRequestSignal(signal),
+  });
+}
+
 export function getConversationMergeRequest(requestKey: string, signal?: AbortSignal): Promise<{ found: boolean; task: BackgroundTaskRead | null }> {
   return fetchJson(`/api/conversations/merge/requests/${encodeURIComponent(requestKey)}`, { signal: archiveRequestSignal(signal) });
 }
@@ -617,6 +630,10 @@ export async function editMessage(
   );
 }
 
+export async function getMessage(messageId: string, signal?: AbortSignal): Promise<MessageListItem> {
+  return fetchJson<MessageListItem>(`/api/messages/${messageId}`, { signal: archiveRequestSignal(signal) });
+}
+
 export async function toggleMessageTask(
   messageId: string,
   taskKey: string,
@@ -631,15 +648,18 @@ export async function toggleMessageTask(
   );
 }
 
-export async function selectMessageVersion(messageId: string, versionId: string): Promise<MessageEditResponse> {
+export async function selectMessageVersion(messageId: string, versionId: string, signal?: AbortSignal): Promise<MessageEditResponse> {
   return fetchJson<MessageEditResponse>(
     `/api/messages/${messageId}/current-version`,
-    jsonRequest("PUT", { version_id: versionId }),
+    { ...jsonRequest("PUT", { version_id: versionId }), signal: archiveRequestSignal(signal) },
   );
 }
 
-export async function deleteMessageVersion(messageId: string, versionId: string): Promise<MessageVersionDeleteResponse> {
-  return fetchJson<MessageVersionDeleteResponse>(`/api/messages/${messageId}/versions/${versionId}`, { method: "DELETE" });
+export async function deleteMessageVersion(messageId: string, versionId: string, signal?: AbortSignal): Promise<MessageVersionDeleteResponse> {
+  return fetchJson<MessageVersionDeleteResponse>(`/api/messages/${messageId}/versions/${versionId}`, {
+    method: "DELETE",
+    signal: archiveRequestSignal(signal),
+  });
 }
 
 function splitWorkspaceBody(input: ConversationSplitWorkspaceInput) {
@@ -668,8 +688,10 @@ export async function executeConversationSplit(conversationId: string, input: Co
   );
 }
 
-export async function getMessageVersions(messageId: string): Promise<MessageVersionHistoryResponse> {
-  return fetchJson<MessageVersionHistoryResponse>(`/api/messages/${messageId}/versions`);
+export async function getMessageVersions(messageId: string, signal?: AbortSignal): Promise<MessageVersionHistoryResponse> {
+  return fetchJson<MessageVersionHistoryResponse>(`/api/messages/${messageId}/versions`, {
+    signal: archiveRequestSignal(signal),
+  });
 }
 
 export async function restoreMessageVersion(
@@ -1277,6 +1299,18 @@ export async function updateCleanupDecisions(scanId: string, decisions: Array<{ 
   return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}/decisions`, { ...jsonRequest("PATCH", { decisions }), signal: cleanupReadSignal(signal) });
 }
 
+export async function getCleanupOccurrence(scanId: string, occurrenceId: string, signal?: AbortSignal): Promise<CleanupOccurrenceRead> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}`, { signal: cleanupReadSignal(signal) });
+}
+
+export async function saveCleanupRanges(scanId: string, occurrenceId: string, input: {
+  base_edit_token: string; ranges: import("./types").CleanupRemovalRange[] | null;
+}, signal?: AbortSignal): Promise<CleanupScanRead> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/occurrences/${occurrenceId}/removal-ranges`, {
+    ...jsonRequest("PUT", input), signal: cleanupReadSignal(signal),
+  });
+}
+
 export async function applyCleanupScan(scanId: string, previewToken?: string): Promise<CleanupApplyResult> {
   return fetchJson<CleanupApplyResult>(`/api/content-cleanup/scans/${scanId}/apply`, jsonRequest("POST", { preview_token: previewToken }));
 }
@@ -1639,32 +1673,29 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 async function getApiRequestError(response: Response, path: string): Promise<ApiRequestError> {
   const error = (message: string, code?: string) => new ApiRequestError(message, response.status, path, code);
-  if (response.status >= 500) {
-    return error("服务暂时不可用，请稍后重试。");
-  }
+  let payload: { detail?: unknown; error?: { message?: string } } | undefined;
   try {
-    const payload = (await response.json()) as { detail?: unknown; error?: { message?: string } };
-    if (typeof payload.error?.message === "string") {
-      return error(payload.error.message);
-    }
-    if (typeof payload.detail === "string") {
-      if (response.status === 409 && /conversation changed|base version|revision|stale/i.test(payload.detail)) {
-        return error("对话已在其他操作中更新。你的内容仍然保留，请加载最新状态后重试。");
-      }
-      return error(payload.detail);
-    }
-    if (payload.detail && typeof payload.detail === "object") {
-      const detail = payload.detail as { code?: unknown; message?: unknown };
-      if (typeof detail.code === "string") {
-        const localized = localizedImportError(detail.code);
-        if (localized) return error(localized, detail.code);
-        if (detail.code.startsWith("CONTEXT_")) return error(detail.code, detail.code);
-      }
-      if (typeof detail.message === "string") return error(detail.message, typeof detail.code === "string" ? detail.code : undefined);
-    }
+    payload = (await response.json()) as { detail?: unknown; error?: { message?: string } };
   } catch {
     // The response body is not guaranteed to be JSON.
   }
+
+  const detail = payload?.detail && typeof payload.detail === "object" ? payload.detail as { code?: unknown; message?: unknown } : undefined;
+  const code = typeof detail?.code === "string" ? detail.code : undefined;
+  const localized = code ? localizedImportError(code) : null;
+  if (localized) return error(localized, code);
+  if (response.status >= 500) return error("服务暂时不可用，请稍后重试。", code);
+  if (typeof payload?.error?.message === "string") {
+    return error(payload.error.message, code);
+  }
+  if (typeof payload?.detail === "string") {
+    if (response.status === 409 && /conversation changed|base version|revision|stale/i.test(payload.detail)) {
+      return error("对话已在其他操作中更新。你的内容仍然保留，请加载最新状态后重试。", code);
+    }
+    return error(payload.detail, code);
+  }
+  if (code?.startsWith("CONTEXT_")) return error(code, code);
+  if (typeof detail?.message === "string") return error(detail.message, code);
 
   return error(`${path} returned ${response.status}`);
 }

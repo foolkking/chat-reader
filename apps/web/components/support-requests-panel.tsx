@@ -51,12 +51,53 @@ export function SupportRequestsPanel({ initialRequestId, initialKind, initialLim
   const [drafts, setDrafts] = useState<SavedSupportDraft[]>([]), [draftError, setDraftError] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null), listScroll = useRef(0);
   const returnRow = useRef(""), restoreList = useRef(false);
+  const mounted = useRef(true), generation = useRef(authenticationGeneration());
+  const capabilityRequest = useRef<AbortController | null>(null), capabilitySequence = useRef(0);
+  const active = useCallback(() => mounted.current && generation.current === authenticationGeneration(), []);
   useEffect(() => {
-    const controller = new AbortController(); setCapError(false);
-    void (async () => { const access = captureOfflineAccess(); try { const result = await readAccountCapabilities(controller.signal); assertOfflineAccess(access); if (!controller.signal.aborted) { setCaps(result); setRole(result.role); } }
-      catch { if (controller.signal.aborted) return; const cached = await readCachedHelpInfo(); assertOfflineAccess(access); if (!controller.signal.aborted) { if (!navigator.onLine && cached?.capabilities.role) setRole(cached.capabilities.role); else setCapError(true); } } })().catch(() => { if (!controller.signal.aborted) setCapError(true); });
-    return () => controller.abort();
-  }, [capAttempt]);
+    mounted.current = true;
+    return () => { mounted.current = false; capabilityRequest.current?.abort(); };
+  }, []);
+  useEffect(() => {
+    const sequence = ++capabilitySequence.current;
+    capabilityRequest.current?.abort();
+    capabilityRequest.current = null;
+    setCapError(false);
+    setCaps(null);
+    setRole(null);
+    if (!active()) return;
+    const controller = new AbortController();
+    capabilityRequest.current = controller;
+    void (async () => {
+      let access: number | null = null;
+      try {
+        access = captureOfflineAccess();
+        const result = await readAccountCapabilities(controller.signal);
+        assertOfflineAccess(access);
+        if (!active() || controller.signal.aborted || sequence !== capabilitySequence.current) return;
+        setCaps(result);
+        setRole(result.role);
+      } catch {
+        if (!active() || controller.signal.aborted || sequence !== capabilitySequence.current) return;
+        try {
+          if (access === null) { setCapError(true); return; }
+          const cached = await readCachedHelpInfo();
+          assertOfflineAccess(access);
+          if (!active() || controller.signal.aborted || sequence !== capabilitySequence.current) return;
+          if (!navigator.onLine && cached?.capabilities.role) setRole(cached.capabilities.role);
+          else setCapError(true);
+        } catch {
+          if (active() && !controller.signal.aborted && sequence === capabilitySequence.current) setCapError(true);
+        }
+      } finally {
+        if (capabilityRequest.current === controller) capabilityRequest.current = null;
+      }
+    })();
+    return () => {
+      controller.abort();
+      if (capabilityRequest.current === controller) capabilityRequest.current = null;
+    };
+  }, [active, capAttempt]);
   useEffect(() => {
     if (compose || selected) return;
     let active = true; setDraftError(false);

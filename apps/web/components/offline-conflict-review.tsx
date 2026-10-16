@@ -14,24 +14,39 @@ const isNote = (value: Content): value is NotebookRead => "blocks" in value;
 export function OfflineConflictReview({ conflictKey, onBack, onDirtyChange }: { conflictKey: string; onBack: () => void; onDirtyChange?: (dirty: boolean) => void }) {
   const zh = usePreferences().resolvedLocale === "zh-CN", { confirm } = useInteractionDialog(), queries = useQueryClient();
   const [preview, setPreview] = useState<ConflictPreview | null>(null), [merged, setMerged] = useState<Content | null>(null);
-  const [pendingResolution, setPendingResolution] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  // An unread/failed marker is not evidence for either a fresh or saved request.
+  const [pendingResolution, setPendingResolution] = useState<boolean | null>(null), [busy, setBusy] = useState(false);
+  const [error, setError] = useState<"read" | "status" | "changed" | "resolution" | null>(null);
   const [draftState, setDraftState] = useState<"saved" | "saving" | "failed">("saved");
   const generation = useRef(0), draftVersion = useRef(0), heading = useRef<HTMLHeadingElement>(null);
+  useLayoutEffect(() => {
+    generation.current++; draftVersion.current++;
+    setPreview(null); setMerged(null); setPendingResolution(null); setBusy(false); setError(null); setDraftState("saved");
+    return () => { generation.current++; draftVersion.current++; };
+  }, [conflictKey]);
   const load = useCallback(async () => {
     const current = ++generation.current;
-    setBusy(true); setError("");
+    let markerRead = false;
+    setBusy(true); setError(null);
     try {
       const marker = (await offlineDb.settings.get(conflictKey))?.value as ConflictMarker | undefined;
       if (current !== generation.current) return;
+      markerRead = true;
       if (marker?.resolution && marker.resolution.error !== "STALE") { setPendingResolution(true); setPreview(null); return; }
       setPendingResolution(false);
       const data = await loadOfflineConflict(conflictKey);
       const saved = (await offlineDb.settings.get(`sync-resolution-draft:${conflictKey}`))?.value as Content | undefined;
       if (current !== generation.current) return;
-      setPreview(data); setMerged(saved ?? data.local);
-    } catch { if (current === generation.current) setError(zh ? "无法读取当前版本。草稿已保留，请联网后重新比较。" : "Unable to read current versions. Your draft is retained. Reconnect and compare again."); }
-    finally { if (current === generation.current) setBusy(false); }
-  }, [conflictKey, zh]);
+      // A comparison refresh must not replace an initialized merge, especially
+      // after a failed save or an edit made while this read was in flight.
+      setPreview(data); setMerged((previous) => previous ?? saved ?? data.local);
+    } catch {
+      if (current === generation.current) {
+        if (!markerRead) setPendingResolution(null);
+        setError(markerRead ? "read" : "status");
+      }
+    } finally { if (current === generation.current) setBusy(false); }
+  }, [conflictKey]);
   useEffect(() => { void load(); heading.current?.focus(); return () => { generation.current++; }; }, [load]);
   useLayoutEffect(() => { onDirtyChange?.(draftState !== "saved"); return () => onDirtyChange?.(false); }, [draftState, onDirtyChange]);
 
@@ -48,19 +63,29 @@ export function OfflineConflictReview({ conflictKey, onBack, onDirtyChange }: { 
     } catch { if (version === draftVersion.current) setDraftState("failed"); }
   };
   const submit = async (choice?: "local" | "server" | "merge") => {
+    const current = generation.current;
+    const isCurrent = () => current === generation.current;
     if (choice && !await confirm({ title: zh ? "确认解决此冲突？" : "Resolve this conflict?", description: zh ? "将应用所选内容并移除该冲突副本。比较后新写入的本机修改仍会保留。" : "Apply the chosen content and remove this conflict copy. New local edits made after this comparison are retained.", confirmLabel: zh ? "确认应用" : "Apply resolution" })) return;
-    setBusy(true); setError("");
+    if (!isCurrent()) return;
+    setBusy(true); setError(null);
     try {
       if (choice && preview) await prepareOfflineResolution(preview, choice, merged ?? undefined);
+      if (!isCurrent()) return;
       setPendingResolution(true);
       await retryOfflineResolution(conflictKey);
+      if (!isCurrent()) return;
       await queries.invalidateQueries();
-      onBack();
+      if (isCurrent()) onBack();
     } catch (cause) {
-      setError(cause instanceof ConflictChangedError ? (zh ? "本机内容已变化，请重新比较。" : "Local content changed. Compare again.") : (zh ? "处理未完成。内容与处理请求已保留；重试或重新比较当前版本。" : "Resolution did not finish. Content and the request are retained; retry or compare current versions."));
-      const marker = (await offlineDb.settings.get(conflictKey))?.value as ConflictMarker | undefined;
-      setPendingResolution(Boolean(marker?.resolution && marker.resolution.error !== "STALE"));
-    } finally { setBusy(false); }
+      if (!isCurrent()) return;
+      setError(cause instanceof ConflictChangedError ? "changed" : "resolution");
+      try {
+        const marker = (await offlineDb.settings.get(conflictKey))?.value as ConflictMarker | undefined;
+        if (isCurrent()) setPendingResolution(Boolean(marker?.resolution && marker.resolution.error !== "STALE"));
+      } catch {
+        if (isCurrent()) { setPendingResolution(null); setError("status"); }
+      }
+    } finally { if (isCurrent()) setBusy(false); }
   };
   const referenceLabel = (id?: string | null) => {
     const annotation = preview?.references.find((item) => item.id === id);
@@ -75,12 +100,17 @@ export function OfflineConflictReview({ conflictKey, onBack, onDirtyChange }: { 
     {content.quote ? <blockquote className="border-l-2 border-ui pl-3 whitespace-pre-wrap break-words">{content.quote}</blockquote> : null}
     <p className="whitespace-pre-wrap break-words">{content.comment_markdown || (zh ? "无附注" : "No comment")}</p>
   </>;
+  const errorMessage = error === "read"
+    ? (zh ? "无法读取当前版本。草稿已保留，请联网后重新比较。" : "Unable to read current versions. Your draft is retained. Reconnect and compare again.")
+    : error === "status" ? (zh ? "无法确认已保存的处理请求状态。请先重新检查状态，再决定是否重试处理或重新比较。" : "Saved resolution status could not be checked. Recheck status before retrying or choosing a resolution.")
+      : error === "changed" ? (zh ? "本机内容已变化，请重新比较。" : "Local content changed. Compare again.")
+        : error === "resolution" ? (zh ? "处理未完成。内容与处理请求已保留；重试或重新比较当前版本。" : "Resolution did not finish. Content and the request are retained; retry or compare current versions.") : "";
   return <section className="space-y-4" aria-label={zh ? "解决同步冲突" : "Resolve sync conflict"}>
     <button className="btn-secondary min-h-9 px-3 text-sm" disabled={busy || draftState !== "saved"} onClick={onBack}>{zh ? "返回冲突列表" : "Back to conflicts"}</button>
     <h3 ref={heading} tabIndex={-1} className="text-base font-semibold outline-none">{zh ? "比较双方内容" : "Compare both versions"}</h3>
-    {error ? <p role="alert" className="border-l-2 border-[var(--danger)] pl-3 text-sm">{error}</p> : null}
+    {errorMessage ? <p role="alert" className="border-l-2 border-[var(--danger)] pl-3 text-sm">{errorMessage}</p> : null}
     {busy ? <p role="status" className="text-sm text-secondary">{zh ? "处理中…" : "Working…"}</p> : null}
-    {pendingResolution ? <><p className="text-sm text-secondary">{zh ? "已有已保存的处理请求。重试将确认同一次操作，不会重复应用。" : "A saved resolution is awaiting confirmation. Retry acknowledges the same operation without applying it twice."}</p><button className="btn-primary min-h-11 px-3 text-sm" disabled={busy || !navigator.onLine} onClick={() => void submit()}>{zh ? "重试处理" : "Retry resolution"}</button></> : <>
+    {pendingResolution === null ? <><p className="text-sm text-secondary">{zh ? "尚未确认是否有待处理请求，请先读取状态。" : "Whether a resolution is pending has not been confirmed. Check status first."}</p><button className="btn-secondary min-h-11 px-3 text-sm" disabled={busy} onClick={() => void load()}>{zh ? "重新检查处理状态" : "Recheck resolution status"}</button></> : pendingResolution ? <><p className="text-sm text-secondary">{zh ? "已有已保存的处理请求。重试将确认同一次操作，不会重复应用。" : "A saved resolution is awaiting confirmation. Retry acknowledges the same operation without applying it twice."}</p><button className="btn-primary min-h-11 px-3 text-sm" disabled={busy || !navigator.onLine} onClick={() => void submit()}>{zh ? "重试处理" : "Retry resolution"}</button></> : <>
       <button className="btn-secondary min-h-9 px-3 text-sm" disabled={busy || !navigator.onLine} onClick={() => void load()}>{zh ? "重新比较" : "Compare again"}</button>
       {preview && merged ? <>
         <div className="grid gap-4 border-y border-ui py-4 sm:grid-cols-2">

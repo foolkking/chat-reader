@@ -45,3 +45,8 @@ class ConversationMergeRequestRead(BaseModel):
 
 class ConversationBatchDeleteRequest(BaseModel):
     conversation_ids: list[UUID] = Field(min_length=1, max_length=5000)
+
+
+class ConversationBatchDeleteRequestRead(BaseModel):
+    found: bool
+    task: BackgroundTaskRead | None = None

@@ -5,6 +5,7 @@ import { Eraser, Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Pape
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
 import type { AttachmentRead, MessageEditResponse, MessageListItem, NavigateTarget } from "../../lib/types";
 import { ContentCleanupDialog, type CleanupSourceSelection } from "../conversations/content-cleanup-panel";
@@ -55,7 +56,7 @@ export function SourceEditorWorkspace({
   onConversationRevision?: (revision: number) => void;
   onClose: () => void;
   onLocate: (target: NavigateTarget) => void | Promise<void>;
-  onDiscardAndSwitch: () => void;
+  onDiscardAndSwitch: () => void | Promise<void>;
   onAttachmentInsertionApplied?: () => void;
 }) {
   const { resolvedLocale } = usePreferences();
@@ -77,6 +78,9 @@ export function SourceEditorWorkspace({
   const [editorDirty, setEditorDirty] = useState(false);
   const [sourceSelection, setSourceSelection] = useState<SourceTextSelection | null>(null);
   const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [discardSwitchBusy, setDiscardSwitchBusy] = useState(false);
+  const [discardSwitchError, setDiscardSwitchError] = useState<string | null>(null);
+  const discardSwitchBusyRef = useRef(false);
 
   const conversationAttachmentsQuery = useQuery({
     queryKey: ["conversation-attachments", message.conversation_id],
@@ -201,6 +205,11 @@ export function SourceEditorWorkspace({
   }
 
   async function handleAttachmentCancel(preserve: boolean, _itemIds: string[]): Promise<void> {
+    await cancelAttachmentJobs(preserve);
+    onClose();
+  }
+
+  async function cancelAttachmentJobs(preserve: boolean): Promise<void> {
     const cleanup: Promise<unknown>[] = [];
     for (const job of uploadJobsRef.current.values()) {
       job.cancelled = true;
@@ -214,7 +223,24 @@ export function SourceEditorWorkspace({
     await Promise.all(cleanup);
     await queryClient.invalidateQueries({ queryKey: ["conversation-attachments", message.conversation_id] });
     uploadJobsRef.current.clear();
-    onClose();
+  }
+
+  async function discardAndSwitch(): Promise<void> {
+    if (discardSwitchBusyRef.current) return;
+    discardSwitchBusyRef.current = true;
+    setDiscardSwitchBusy(true);
+    setDiscardSwitchError(null);
+    try {
+      await cancelAttachmentJobs(false);
+      await onDiscardAndSwitch();
+    } catch {
+      setDiscardSwitchError(zh
+        ? "附件清理尚未完成，当前编辑器已保留。请稍后重试。"
+        : "Attachment cleanup did not finish. This editor was kept open; try again.");
+    } finally {
+      discardSwitchBusyRef.current = false;
+      setDiscardSwitchBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -227,6 +253,23 @@ export function SourceEditorWorkspace({
     setCleanupOpen(false);
     setEditorToolsOpen(false);
   }, [message.id, message.current_version?.id]);
+
+  useEffect(() => {
+    setDiscardSwitchError(null);
+  }, [pendingTarget?.message.id, pendingTarget?.cursorOffset]);
+
+  useEffect(() => () => {
+    for (const job of uploadJobsRef.current.values()) {
+      job.cancelled = true;
+      job.cancel?.();
+      if (job.attachmentId) {
+        void deleteConversationAttachment(message.conversation_id, job.attachmentId).catch(() => undefined);
+      } else if (job.itemId && job.sessionId) {
+        void deleteAttachmentUploadItem(job.sessionId, job.itemId).catch(() => undefined);
+      }
+    }
+    uploadJobsRef.current.clear();
+  }, [message.conversation_id]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -290,10 +333,11 @@ export function SourceEditorWorkspace({
     <div className="shrink-0 border-b border-[var(--mark-border)] bg-[var(--mark-bg)] p-3 text-sm text-primary" role="status">
       <p className="font-medium">{zh ? "\u6e90\u7801\u6709\u672a\u4fdd\u5b58\u4fee\u6539\uff0c\u5df2\u9501\u5b9a\u5f53\u524d\u6d88\u606f\u3002" : "Unsaved changes keep the editor locked to this message."}</p>
       <p className="mt-1 text-xs text-secondary">{zh ? "\u9605\u8bfb\u4f4d\u7f6e\u5df2\u8fdb\u5165\u4e0b\u4e00\u6761\u6d88\u606f\u3002" : "The reading line has moved into another message."}</p>
+      {discardSwitchError ? <p className="mt-1 text-xs text-[var(--danger)]" role="alert">{discardSwitchError}</p> : null}
       <div className="mt-2 flex flex-wrap gap-2">
-        <button type="button" onClick={() => void locateCurrentSource()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle"><Undo2 className="h-4 w-4" />{zh ? "\u8fd4\u56de\u539f\u6587" : "Return to source"}</button>
-        <button type="submit" form={FORM_ID} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[var(--text)] px-3 text-xs font-medium text-[var(--surface)]"><SaveAll className="h-4 w-4" />{zh ? "\u4fdd\u5b58\u540e\u5207\u6362" : "Save and switch"}</button>
-        <button type="button" onClick={onDiscardAndSwitch} className="min-h-9 rounded-lg px-3 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">{zh ? "\u653e\u5f03\u540e\u5207\u6362" : "Discard and switch"}</button>
+        <button type="button" disabled={discardSwitchBusy} onClick={() => void locateCurrentSource()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary hover:bg-subtle disabled:opacity-50"><Undo2 className="h-4 w-4" />{zh ? "\u8fd4\u56de\u539f\u6587" : "Return to source"}</button>
+        <button type="submit" disabled={discardSwitchBusy} form={FORM_ID} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[var(--text)] px-3 text-xs font-medium text-[var(--surface)] disabled:opacity-50"><SaveAll className="h-4 w-4" />{zh ? "\u4fdd\u5b58\u540e\u5207\u6362" : "Save and switch"}</button>
+        <button type="button" disabled={discardSwitchBusy} onClick={() => void discardAndSwitch()} className="min-h-9 rounded-lg px-3 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50">{discardSwitchBusy ? (zh ? "\u6b63\u5728\u6e05\u7406\u2026" : "Cleaning up\u2026") : (zh ? "\u653e\u5f03\u540e\u5207\u6362" : "Discard and switch")}</button>
       </div>
     </div>
   ) : null;
@@ -491,6 +535,8 @@ function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }:
   onChoose: (attachment: AttachmentRead, placement: "inline" | "after_message") => void;
 }) {
   const [search, setSearch] = useState("");
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const query = useQuery({
     queryKey: ["conversation-attachments", conversationId],
     queryFn: () => getConversationAttachments(conversationId),
@@ -500,9 +546,10 @@ function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }:
     return (query.data ?? []).filter((item) => item.resolution_status === "resolved" && item.status === "available")
       .filter((item) => !needle || `${item.display_name} ${item.original_filename}`.toLocaleLowerCase().includes(needle));
   }, [query.data, search]);
+  useDialogFocus({ open: true, rootRef, initialFocusRef: searchRef, onClose });
   return (
-    <div className="fixed inset-0 z-[240] flex items-end justify-center bg-[var(--overlay)] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={zh ? "选择当前对话文件" : "Choose conversation file"}>
-      <button type="button" className="absolute inset-0" onClick={onClose} aria-label={zh ? "关闭" : "Close"} />
+    <div ref={rootRef} tabIndex={-1} className="fixed inset-0 z-[240] flex items-end justify-center bg-[var(--overlay)] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label={zh ? "选择当前对话文件" : "Choose conversation file"}>
+      <button type="button" data-dialog-backdrop className="absolute inset-0" onClick={onClose} aria-label={zh ? "关闭" : "Close"} />
       <section className="relative flex max-h-[min(78dvh,44rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-xl border border-ui bg-raised shadow-2xl sm:rounded-xl" data-testid="source-editor-attachment-picker">
         <header className="flex min-h-14 items-center gap-3 border-b border-ui px-4">
           <Paperclip className="h-4 w-4 text-accent" />
@@ -511,11 +558,15 @@ function ConversationAttachmentPicker({ conversationId, zh, onClose, onChoose }:
         </header>
         <label className="relative m-3">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} autoFocus className="min-h-10 w-full rounded-lg border border-ui bg-surface pl-9 pr-3 text-sm text-primary outline-none focus:border-[var(--accent)]" placeholder={zh ? "搜索文件" : "Search files"} />
+          <input ref={searchRef} data-dialog-initial-focus value={search} onChange={(event) => setSearch(event.target.value)} className="min-h-10 w-full rounded-lg border border-ui bg-surface pl-9 pr-3 text-sm text-primary outline-none focus:border-[var(--accent)]" placeholder={zh ? "搜索文件" : "Search files"} />
         </label>
         <div className="min-h-0 flex-1 overflow-y-auto border-t border-ui p-3">
           {query.isLoading ? <p className="py-8 text-center text-sm text-secondary">{zh ? "正在加载文件..." : "Loading files..."}</p> : null}
-          {!query.isLoading && items.length === 0 ? <p className="py-8 text-center text-sm text-secondary">{zh ? "没有可用文件" : "No available files"}</p> : null}
+          {query.isError ? <div role="alert" className="mb-3 flex flex-wrap items-center justify-between gap-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">
+            <span>{items.length ? (zh ? "文件列表刷新失败，仍显示上次读取的结果。" : "Could not refresh the file list. Previously loaded files are shown.") : (zh ? "暂时无法读取可用文件，请重试。" : "Available files could not be loaded. Try again.")}</span>
+            <button type="button" disabled={query.isFetching} onClick={() => void query.refetch()} className="btn-secondary min-h-9 shrink-0 px-3 text-xs font-medium">{query.isFetching ? (zh ? "正在重试…" : "Retrying…") : (zh ? "重试" : "Retry")}</button>
+          </div> : null}
+          {!query.isLoading && !query.isError && items.length === 0 ? <p className="py-8 text-center text-sm text-secondary">{zh ? "没有可用文件" : "No available files"}</p> : null}
           <div className="space-y-1">
             {items.map((attachment) => {
               const mime = attachment.detected_mime_type ?? attachment.asset_object?.detected_mime_type ?? attachment.declared_mime_type ?? "";

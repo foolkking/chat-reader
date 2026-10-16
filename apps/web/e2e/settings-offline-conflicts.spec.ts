@@ -20,8 +20,8 @@ async function markers(page: Page, userId: string, prefix = "sync-conflict:") {
   }, { id: userId, prefix });
 }
 async function editTitle(page: Page, title: string) {
-  await page.getByRole("textbox", { name: "Notebook title", exact: true }).fill(title);
-  await page.getByRole("textbox", { name: "Notebook title", exact: true }).press("Tab");
+  await page.getByRole("textbox", { name: /^(Notebook title|精选笔记标题)$/ }).fill(title);
+  await page.getByRole("textbox", { name: /^(Notebook title|精选笔记标题)$/ }).press("Tab");
 }
 
 for (const [width, choice, locale] of [[375, "local", "zh-CN"], [768, "server", "en-US"], [1440, "merge", "en-US"]] as const) {
@@ -134,7 +134,7 @@ for (const [width, choice, locale] of [[375, "local", "zh-CN"], [768, "server", 
         const second = await context.newPage();
         await second.goto(`${baseURL}/library?conversationId=${conversationId}&annotations=open`);
         await second.getByRole("button", { name: "Notes", exact: true }).click();
-        await expect(second.getByRole("textbox", { name: "Notebook title", exact: true })).toHaveValue("Synthetic server draft");
+        await expect(second.getByRole("textbox", { name: /^(Notebook title|精选笔记标题)$/ })).toHaveValue("Synthetic server draft");
         let captured = false;
         const barrier = new Promise<void>((resolve) => { release = resolve; });
         await page.route(`**/api/conversations/${conversationId}/notebook`, async (route) => {

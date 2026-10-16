@@ -1,0 +1,28 @@
+Listing tests:
+  library-offline.spec.ts:7:5 › checks optional offline continuation bytes and legacy absence
+  library-offline.spec.ts:30:38 › 375px: offline resource inspection can recover without starting a download
+  library-offline.spec.ts:30:38 › 1440px: offline resource inspection can recover without starting a download
+  library-offline.spec.ts:73:5 › reads cached continuation without edit or upload controls
+  library-offline.spec.ts:160:5 › only the library advertises the installable PWA
+  library-offline.spec.ts:172:5 › upgrades an active legacy library worker before preparing the shell
+  library-offline.spec.ts:217:5 › keeps the active revision after a failed update and cold-starts offline
+  library-offline.spec.ts:331:5 › offline search exposes worker failure and retries against the retained copy
+  library-offline.spec.ts:358:5 › prepares and cold-starts the library at the mobile PWA viewport
+  library-offline.spec.ts:375:5 › keeps the offline Reader, TOC, and files reachable at 375px
+  library-offline.spec.ts:403:5 › mirrors the unified sidebar and keeps preferences compact in library mode
+  library-offline.spec.ts:440:5 › exports cached files and the pinned Skill ZIP offline with bilingual usage instructions
+  library-offline.spec.ts:554:5 › keeps offline file browsing reflow-safe at exact narrow and tablet viewports
+  library-offline.spec.ts:570:5 › restores the offline reader frame and target-loads a distant annotation
+  library-offline.spec.ts:635:5 › copies a long virtualized offline message as complete Markdown and releases selection pins
+  settings-shares.spec.ts:31:7 › share conflict preserves draft and merges only edited fields at 375
+  settings-shares.spec.ts:31:7 › share conflict preserves draft and merges only edited fields at 768
+  settings-shares.spec.ts:31:7 › share conflict preserves draft and merges only edited fields at 1440
+  settings-shares.spec.ts:95:5 › share conflict can discard a draft and cannot revive a remotely revoked link
+  settings-shares.spec.ts:142:5 › sharing policy changes retain the draft and offer list recovery
+  settings-shares.spec.ts:183:5 › revoking the last filtered share page returns to the remaining active links
+  settings-shares.spec.ts:214:7 › share retry recovery with injected network and per-item failure 375
+  settings-shares.spec.ts:214:7 › share retry recovery with injected network and per-item failure 1440
+  settings-shares.spec.ts:311:7 › owned shares pagination, editing, permissions and revocation 375 zh-CN
+  settings-shares.spec.ts:311:7 › owned shares pagination, editing, permissions and revocation 768 en-US
+  settings-shares.spec.ts:311:7 › owned shares pagination, editing, permissions and revocation 1440 en-US
+Total: 26 tests in 2 files

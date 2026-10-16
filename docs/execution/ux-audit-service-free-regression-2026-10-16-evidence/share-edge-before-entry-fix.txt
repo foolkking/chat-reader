@@ -1,0 +1,105 @@
+TAP version 13
+# Subtest: current edge success keeps existing merge/feedback path and releases its transition
+ok 1 - current edge success keeps existing merge/feedback path and releases its transition
+  ---
+  duration_ms: 2.51
+  ...
+# Subtest: previous invocation after visit retirement starts no read or UI work
+not ok 2 - previous invocation after visit retirement starts no read or UI work
+  ---
+  duration_ms: 2.3222
+  location: 'file:///E:/1project/chat-reader/scripts/ux/share-edge-loading-lifecycle.test.mjs:115:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     anchor: 'synthetic-previous-anchor',
+    +     token: 'synthetic-share'
+    +   }
+    + ]
+    - []
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      token: 'synthetic-share'
+      anchor: 'synthetic-previous-anchor'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/share-edge-loading-lifecycle.test.mjs:120:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: previous current failure retains actionable feedback and releases loading
+ok 3 - previous current failure retains actionable feedback and releases loading
+  ---
+  duration_ms: 0.4293
+  ...
+# Subtest: previous completion after visit retirement cannot merge, capture, restore, error or publish loading
+ok 4 - previous completion after visit retirement cannot merge, capture, restore, error or publish loading
+  ---
+  duration_ms: 6.5632
+  ...
+# Subtest: next invocation after visit retirement starts no read or UI work
+not ok 5 - next invocation after visit retirement starts no read or UI work
+  ---
+  duration_ms: 0.6554
+  location: 'file:///E:/1project/chat-reader/scripts/ux/share-edge-loading-lifecycle.test.mjs:115:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     anchor: 'synthetic-next-anchor',
+    +     token: 'synthetic-share'
+    +   }
+    + ]
+    - []
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      token: 'synthetic-share'
+      anchor: 'synthetic-next-anchor'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/share-edge-loading-lifecycle.test.mjs:120:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: next current failure retains actionable feedback and releases loading
+ok 6 - next current failure retains actionable feedback and releases loading
+  ---
+  duration_ms: 0.2481
+  ...
+# Subtest: next completion after visit retirement cannot merge, capture, restore, error or publish loading
+ok 7 - next completion after visit retirement cannot merge, capture, restore, error or publish loading
+  ---
+  duration_ms: 1.7269
+  ...
+# Subtest: previous rejection after direction reversal does not publish stale error
+ok 8 - previous rejection after direction reversal does not publish stale error
+  ---
+  duration_ms: 0.736
+  ...
+# Subtest: next rejection after direction reversal does not publish stale error
+ok 9 - next rejection after direction reversal does not publish stale error
+  ---
+  duration_ms: 0.7594
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 7
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 404.0787

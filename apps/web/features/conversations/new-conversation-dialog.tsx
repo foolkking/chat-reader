@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Bot, Folder, Loader2, MessageSquarePlus, User, X } from "lucide-react";
-import { createConversation } from "../../lib/api";
+import { ApiRequestError, createConversation } from "../../lib/api";
 import type { ConversationCreateResponse, ProjectRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { useUnsavedClose } from "../../components/use-unsaved-close";
@@ -65,7 +65,7 @@ export function NewConversationDialog({
       });
       onCreated(result);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : (zh ? "新建对话失败，请重试。" : "Could not create the conversation. Try again."));
+      setError(newConversationError(cause, zh));
     } finally {
       submitting.current = false;
       setPending(false);
@@ -145,6 +145,20 @@ export function NewConversationDialog({
       </form>
     </div>
   );
+}
+
+function newConversationError(cause: unknown, zh: boolean): string {
+  if (cause instanceof ApiRequestError) {
+    if (cause.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
+    if (cause.status === 403) return zh ? "当前权限不允许新建对话。" : "Your current permissions do not allow creating a conversation.";
+    if (cause.status === 404) return zh ? "所选项目已不存在，请重新选择后重试。" : "The selected project is no longer available. Choose another project and retry.";
+    if (cause.status === 409) return zh ? "项目状态已发生变化，请重新加载后再创建。" : "The project changed elsewhere. Reload before creating the conversation.";
+    if (cause.status === 413 || cause.status === 422) return zh ? "对话标题或初始消息不符合要求，请检查后重试；输入仍保留。" : "The title or initial messages are not valid. Check them and retry; your input is retained.";
+    if (cause.status === 429) return zh ? "创建过于频繁，请稍后重试。" : "Too many create requests. Try again shortly.";
+  }
+  return zh
+    ? "创建结果尚未确认。表单内容仍保留；请先返回对话列表检查是否已创建，再决定是否重试。"
+    : "The creation result is not confirmed. Your form is retained; check the conversation list before deciding whether to retry.";
 }
 
 function MessageComposer({ role, icon, value, onChange, placeholder, autoFocus = false }: { role: "User" | "Assistant"; icon: React.ReactNode; value: string; onChange: (value: string) => void; placeholder: string; autoFocus?: boolean }) {

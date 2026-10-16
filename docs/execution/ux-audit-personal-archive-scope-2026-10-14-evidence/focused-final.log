@@ -1,0 +1,190 @@
+TAP version 13
+# Subtest: late backup acknowledgement cannot publish after unmount
+ok 1 - late backup acknowledgement cannot publish after unmount
+  ---
+  duration_ms: 101.8869
+  ...
+# Subtest: late backup acknowledgement cannot publish after account
+ok 2 - late backup acknowledgement cannot publish after account
+  ---
+  duration_ms: 5.6747
+  ...
+# Subtest: late restore acknowledgement cannot refill a retired task cache
+ok 3 - late restore acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 27.8204
+  ...
+# Subtest: late retry acknowledgement cannot refill a retired task cache
+ok 4 - late retry acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 4.1448
+  ...
+# Subtest: late cancel acknowledgement cannot refill a retired task cache
+ok 5 - late cancel acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 2.5942
+  ...
+# Subtest: a pending remove-upload confirmation cannot submit after the panel closes
+ok 6 - a pending remove-upload confirmation cannot submit after the panel closes
+  ---
+  duration_ms: 3.5487
+  ...
+# Subtest: a retired mode-change confirmation cannot alter the panel
+ok 7 - a retired mode-change confirmation cannot alter the panel
+  ---
+  duration_ms: 6.1956
+  ...
+# Subtest: an upload acknowledgement also belongs to its original authentication generation
+ok 8 - an upload acknowledgement also belongs to its original authentication generation
+  ---
+  duration_ms: 4.4914
+  ...
+# Subtest: en-US: failed upload-limit reads do not claim to be loading
+ok 9 - en-US: failed upload-limit reads do not claim to be loading
+  ---
+  duration_ms: 6.4958
+  ...
+# Subtest: zh-CN: failed upload-limit reads do not claim to be loading
+ok 10 - zh-CN: failed upload-limit reads do not claim to be loading
+  ---
+  duration_ms: 6.0063
+  ...
+# Subtest: an acknowledged backup still publishes immediately in its live panel
+ok 11 - an acknowledged backup still publishes immediately in its live panel
+  ---
+  duration_ms: 4.4438
+  ...
+# Subtest: a late failure after unmount cannot publish feedback or refresh
+ok 12 - a late failure after unmount cannot publish feedback or refresh
+  ---
+  duration_ms: 3.7792
+  ...
+# Subtest: a late failure after account cannot publish feedback or refresh
+ok 13 - a late failure after account cannot publish feedback or refresh
+  ---
+  duration_ms: 4.1009
+  ...
+# Subtest: a frame queued by a valid acknowledgement cannot steal focus after its owner retires
+ok 14 - a frame queued by a valid acknowledgement cannot steal focus after its owner retires
+  ---
+  duration_ms: 4.7653
+  ...
+# Subtest: two captured backup activations reserve only one in-flight request
+ok 15 - two captured backup activations reserve only one in-flight request
+  ---
+  duration_ms: 5.0646
+  ...
+# Subtest: a failed backup retains the original key for an explicit same-options retry
+ok 16 - a failed backup retains the original key for an explicit same-options retry
+  ---
+  duration_ms: 5.6594
+  ...
+# Subtest: changing backup options after failure deliberately starts a different request key
+ok 17 - changing backup options after failure deliberately starts a different request key
+  ---
+  duration_ms: 6.417
+  ...
+# Subtest: a failed upload retains its File and idempotency key until explicit retry
+ok 18 - a failed upload retains its File and idempotency key until explicit retry
+  ---
+  duration_ms: 7.4237
+  ...
+# Subtest: an upload cancelled on unmount cannot publish subsequent progress
+ok 19 - an upload cancelled on unmount cannot publish subsequent progress
+  ---
+  duration_ms: 4.2213
+  ...
+# Subtest: the user's explicit upload cancellation remains neutral and retains the file
+ok 20 - the user's explicit upload cancellation remains neutral and retains the file
+  ---
+  duration_ms: 9.4161
+  ...
+# Subtest: the known size limit prevents an upload without discarding the chosen file
+ok 21 - the known size limit prevents an upload without discarding the chosen file
+  ---
+  duration_ms: 8.8575
+  ...
+# Subtest: declining removal leaves the preview and server untouched
+ok 22 - declining removal leaves the preview and server untouched
+  ---
+  duration_ms: 4.2869
+  ...
+# Subtest: two removal activations share one confirmation, with no premature DELETE
+ok 23 - two removal activations share one confirmation, with no premature DELETE
+  ---
+  duration_ms: 5.1053
+  ...
+# Subtest: an accepted removal confirmation cannot cross an authentication generation
+ok 24 - an accepted removal confirmation cannot cross an authentication generation
+  ---
+  duration_ms: 2.5531
+  ...
+# Subtest: declining a mode change preserves the selected File without submitting it
+ok 25 - declining a mode change preserves the selected File without submitting it
+  ---
+  duration_ms: 6.291
+  ...
+# Subtest: a failed upload-limit read retries only the metadata and retains the selected File
+ok 26 - a failed upload-limit read retries only the metadata and retains the selected File
+  ---
+  duration_ms: 9.4693
+  ...
+# Subtest: offline limit recovery is paused, not mislabeled as a running read
+ok 27 - offline limit recovery is paused, not mislabeled as a running read
+  ---
+  duration_ms: 5.7085
+  ...
+# Subtest: a cached upload limit remains usable after a failed refresh
+ok 28 - a cached upload limit remains usable after a failed refresh
+  ---
+  duration_ms: 6.428
+  ...
+# Subtest: successful limit recovery respects retry focus
+ok 29 - successful limit recovery respects retry focus
+  ---
+  duration_ms: 8.372
+  ...
+# Subtest: successful limit recovery respects body focus
+ok 30 - successful limit recovery respects body focus
+  ---
+  duration_ms: 6.6205
+  ...
+# Subtest: successful limit recovery respects chosen focus
+ok 31 - successful limit recovery respects chosen focus
+  ---
+  duration_ms: 9.657
+  ...
+# Subtest: a captured metadata retry cannot start duplicate reads before render
+ok 32 - a captured metadata retry cannot start duplicate reads before render
+  ---
+  duration_ms: 8.3306
+  ...
+# Subtest: a retired metadata retry cannot start a new request
+ok 33 - a retired metadata retry cannot start a new request
+  ---
+  duration_ms: 7.5639
+  ...
+# Subtest: a metadata retry settling after unmount cannot update feedback or focus
+ok 34 - a metadata retry settling after unmount cannot update feedback or focus
+  ---
+  duration_ms: 7.8235
+  ...
+# Subtest: an acknowledged remove-upload result cannot change an already closed panel
+ok 35 - an acknowledged remove-upload result cannot change an already closed panel
+  ---
+  duration_ms: 8.1454
+  ...
+# Subtest: old controls cannot start mutations after their panel closes
+ok 36 - old controls cannot start mutations after their panel closes
+  ---
+  duration_ms: 5.7112
+  ...
+1..36
+# tests 36
+# suites 0
+# pass 36
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1098.0041

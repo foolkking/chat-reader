@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { FormEvent, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import { AuthPageShell } from "../../features/auth/auth-page-shell";
 import { PasswordField } from "../../features/auth/password-field";
@@ -34,13 +34,25 @@ function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
   const [pendingApproval, setPendingApproval] = useState(false);
   const [pendingVerification, setPendingVerification] = useState<"sent" | "failed" | null>(null);
+  const availabilityAttemptRef = useRef(0);
+  const mountedRef = useRef(false);
   const destination = safeReturnPath(searchParams?.get("return_to") ?? "/");
   const loginHref = destination === "/" ? "/login" : `/login?return_to=${encodeURIComponent(destination)}`;
 
-  const loadAvailability = () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      availabilityAttemptRef.current += 1;
+    };
+  }, []);
+
+  const loadAvailability = useCallback(() => {
+    const attempt = ++availabilityAttemptRef.current;
     setMode("LOADING");
     Promise.all([readAuthSetup(), readAuthSession()])
       .then(([setup, session]) => {
+        if (!mountedRef.current || attempt !== availabilityAttemptRef.current) return;
         if (setup.setup_required) {
           window.location.replace("/account-upgrade");
           return;
@@ -51,27 +63,14 @@ function RegisterForm() {
         }
         setMode(setup.registration_mode);
       })
-      .catch(() => setMode("ERROR"));
-  };
+      .catch(() => {
+        if (mountedRef.current && attempt === availabilityAttemptRef.current) setMode("ERROR");
+      });
+  }, [destination]);
 
   useEffect(() => {
-    let active = true;
-    Promise.all([readAuthSetup(), readAuthSession()])
-      .then(([setup, session]) => {
-        if (!active) return;
-        if (setup.setup_required) {
-          window.location.replace("/account-upgrade");
-          return;
-        }
-        if (session.authenticated) {
-          window.location.replace(destination);
-          return;
-        }
-        setMode(setup.registration_mode);
-      })
-      .catch(() => active && setMode("ERROR"));
-    return () => { active = false; };
-  }, [destination]);
+    loadAvailability();
+  }, [loadAvailability]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

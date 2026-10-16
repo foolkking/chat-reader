@@ -37,6 +37,84 @@ type ScopeType =
   | "SELECTED_CONVERSATIONS"
   | "ALL_ACTIVE";
 
+function cleanupStartErrorMessage(error: unknown, zh: boolean): string {
+  if (error instanceof ApiRequestError) {
+    const detail = error.message.toLocaleLowerCase();
+    if (error.status === 401) {
+      return zh
+        ? "登录状态已失效，请重新登录后再开始扫描。"
+        : "Your session has expired. Sign in again before starting the scan.";
+    }
+    if (error.status === 404) {
+      return zh
+        ? "当前对话或扫描范围已不存在，请重新选择范围。"
+        : "The conversation or scan scope no longer exists. Choose the scope again.";
+    }
+    if (error.status === 403) {
+      return zh
+        ? "没有权限扫描当前内容，请刷新后重试。"
+        : "You do not have permission to scan this content. Refresh and try again.";
+    }
+    if (
+      error.status === 409 &&
+      /already has a task|已有任务|任务中心/.test(detail)
+    ) {
+      return zh
+        ? "这次扫描已有任务，请先到任务中心查看结果。"
+        : "This scan already has a task. Check the task center before trying again.";
+    }
+    if (error.status === 422) {
+      if (/no active cleanup rules|没有.*规则|活动.*规则/.test(detail)) {
+        return zh
+          ? "请先在规则库启用至少一条噪声规则。"
+          : "Enable at least one noise rule in the rule library first.";
+      }
+      if (/exactly one conversation|需要.*一个.*对话|当前对话扫描/.test(detail)) {
+        return zh
+          ? "当前对话扫描需要一个有效对话，请重新选择范围。"
+          : "A current-conversation scan needs one valid conversation. Choose the scope again.";
+      }
+    }
+    if (error.status >= 500) {
+      return zh
+        ? "扫描请求结果未确认。请先检查任务中心或当前审查列表，再决定是否重试。"
+        : "The scan request was not confirmed. Check the task center or current review before retrying.";
+    }
+  }
+  return zh
+    ? "暂时无法开始扫描，请检查任务中心或当前审查列表后再重试。"
+    : "The scan could not start. Check the task center or current review before retrying.";
+}
+
+function cleanupScanFailureMessage(
+  errorMessage: string | null | undefined,
+  status: string | undefined,
+  zh: boolean,
+): string {
+  const detail = errorMessage?.toLocaleLowerCase() ?? "";
+  if (
+    /version changed|message version|deletion was unsafe|need review|版本.*变化|删除.*安全|需要复核/.test(
+      detail,
+    )
+  ) {
+    return zh
+      ? "部分候选未能安全处理：消息版本已变化或删除条件已失效。正文未改变，请重新扫描并复核。"
+      : "Some candidates could not be safely processed because message versions or deletion conditions changed. Content is unchanged; rescan and review again.";
+  }
+  if (/no active cleanup rules|没有.*规则|活动.*规则/.test(detail)) {
+    return zh
+      ? "当前没有启用的噪声规则。正文未改变，请先在规则库启用规则。"
+      : "No noise rules are active. Content is unchanged; enable a rule in the rule library first.";
+  }
+  return status === "STALE"
+    ? zh
+      ? "这次扫描已失效，正文未改变，请重新扫描。"
+      : "This scan is no longer valid. Content is unchanged; rescan to continue."
+    : zh
+      ? "扫描未完成，正文未改变，请重新扫描。"
+      : "The scan did not finish. Content is unchanged; rescan to continue.";
+}
+
 export type CleanupSourceSelection = {
   messageId: string;
   startOffset: number;
@@ -65,7 +143,7 @@ export function ContentCleanupDialog(
   const { confirm } = useInteractionDialog();
   const zh = usePreferences().resolvedLocale === "zh-CN";
   const close = async () => {
-    if (dirty && !await confirm({ title: zh ? "放弃未保存的规则？" : "Discard unsaved rule?", confirmLabel: zh ? "放弃草稿" : "Discard draft" })) return;
+    if (dirty && !await confirm({ title: zh ? "离开尚未保存或确认的修改？" : "Leave unsaved or unconfirmed changes?", description: zh ? "关闭不会撤销服务器可能已保存的选择或规则。" : "Closing does not undo choices or rules the server may have saved.", confirmLabel: zh ? "离开编辑" : "Leave editor" })) return;
     setDirty(false); onClose?.();
   };
   useEffect(() => {
@@ -250,8 +328,8 @@ export function ContentCleanupPanel({
                   : "Review only the selected Markdown source. Applying creates a normal message version."
                 : scanQuery.data?.source === "IMPORT"
                   ? zh
-                    ? "导入后的异步审查。确认前不会改变正文。"
-                    : "Post-import review. Content stays unchanged until you confirm."
+                    ? "导入后的异步审查。可多选候选，并逐项调整真正要删除的范围；预览确认前正文不变。"
+                    : "Post-import review. Select multiple candidates and adjust the exact removal ranges. Content stays unchanged until preview and confirmation."
                   : zh
                     ? "按规则扫描活动对话；归档对话永远不会被处理。"
                     : "Scan active conversations with stored rules. Archived conversations are never included."}
@@ -352,7 +430,7 @@ export function ContentCleanupPanel({
             className="mb-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
             role="alert"
           >
-            {startMutation.error.message}
+            {cleanupStartErrorMessage(startMutation.error, zh)}
           </p>
         ) : null}
         {view === "review" &&
@@ -407,8 +485,7 @@ export function ContentCleanupPanel({
             className="border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"
             role="alert"
           >
-            {scanQuery.data?.error_message ??
-              (zh ? "扫描失败。" : "Scan failed.")}
+            {cleanupScanFailureMessage(scanQuery.data?.error_message, status, zh)}
           </p>
           <CleanupRescanControls rescan={rescan} selectedCount={scanQuery.data?.delete_count ?? 0} />
           </div>

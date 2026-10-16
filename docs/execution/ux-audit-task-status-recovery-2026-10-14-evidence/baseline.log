@@ -1,0 +1,206 @@
+TAP version 13
+# Subtest: a failed final GET never appends a stale task to the query-owned list
+not ok 1 - a failed final GET never appends a stale task to the query-owned list
+  ---
+  duration_ms: 95.3586
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:105:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + [
+    +   {
+    +     cancellable: true,
+    +     job_id: 'synthetic-task',
+    +     job_type: 'import',
+    +     phase: 'parsing',
+    +     processed_items: 0,
+    +     progress: 42,
+    +     result: {},
+    +     status: 'processing',
+    +     total_items: 1
+    +   }
+    + ]
+    - []
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0:
+      job_id: 'synthetic-task'
+      job_type: 'import'
+      status: 'processing'
+      phase: 'parsing'
+      progress: 42
+      processed_items: 0
+      total_items: 1
+      result:
+      cancellable: true
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:110:44)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async startSubtest (node:internal/test_runner/harness:235:3)
+  ...
+# Subtest: explicit Retry checks an unresolved final result even with an unchanged empty list
+not ok 2 - explicit Retry checks an unresolved final result even with an unchanged empty list
+  ---
+  duration_ms: 8.8482
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:115:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    1 !== 2
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 2
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:120:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: sidebar: stale progress is not presented as live
+not ok 3 - sidebar: stale progress is not presented as live
+  ---
+  duration_ms: 19.5264
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:126:48'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Task status unavailable/. Input:
+    
+    'Import conversations · 42%'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Import conversations · 42%'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:130:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: mobile: stale progress is not presented as live
+not ok 4 - mobile: stale progress is not presented as live
+  ---
+  duration_ms: 14.4237
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:126:48'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Task status unavailable/. Input:
+    
+    'Import conversations · 42%'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Import conversations · 42%'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:130:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: active-tasks: failed cached-empty read is not a confirmed empty state
+not ok 5 - active-tasks: failed cached-empty read is not a confirmed empty state
+  ---
+  duration_ms: 33.2855
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:136:65'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /No active tasks/. Input:
+    
+    'Progress and results0 itemsTask status is temporarily unavailable. Retrying automatically; existing tasks continue running.No active tasks'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Progress and results0 itemsTask status is temporarily unavailable. Retrying automatically; existing tasks continue running.No active tasks'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:141:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: content-cleanup-pending: failed cached-empty read is not a confirmed empty state
+not ok 6 - content-cleanup-pending: failed cached-empty read is not a confirmed empty state
+  ---
+  duration_ms: 16.0632
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:136:65'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /No active tasks/. Input:
+    
+    'Progress and results0 itemsTask status is temporarily unavailable. Retrying automatically; existing tasks continue running.No active tasks'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Progress and results0 itemsTask status is temporarily unavailable. Retrying automatically; existing tasks continue running.No active tasks'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:141:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: en-US: stale feedback does not promise that tasks are still running
+not ok 7 - en-US: stale feedback does not promise that tasks are still running
+  ---
+  duration_ms: 16.0666
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:146:42'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /existing tasks continue running|已有任务会继续运行/. Input:
+    
+    'Progress and results1 itemsTask status is temporarily unavailable. Retrying automatically; existing tasks continue running.'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'Progress and results1 itemsTask status is temporarily unavailable. Retrying automatically; existing tasks continue running.'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:150:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: zh-CN: stale feedback does not promise that tasks are still running
+not ok 8 - zh-CN: stale feedback does not promise that tasks are still running
+  ---
+  duration_ms: 30.1552
+  location: 'file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:146:42'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input was expected to not match the regular expression /existing tasks continue running|已有任务会继续运行/. Input:
+    
+    '任务进度与结果1 项任务状态暂时不可用，正在自动重试；已有任务会继续运行。'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '任务进度与结果1 项任务状态暂时不可用，正在自动重试；已有任务会继续运行。'
+  operator: 'doesNotMatch'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/task-status-recovery.test.mjs:150:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: a late final GET from an old account cannot publish completion
+ok 9 - a late final GET from an old account cannot publish completion
+  ---
+  duration_ms: 4.7613
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 1
+# fail 8
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 862.1603

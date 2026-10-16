@@ -1,0 +1,21 @@
+Listing tests:
+  settings-archive-recovery.spec.ts:25:7 › personal archive uses current failure when history is stale at 375
+  settings-archive-recovery.spec.ts:25:7 › personal archive uses current failure when history is stale at 768
+  settings-archive-recovery.spec.ts:25:7 › personal archive uses current failure when history is stale at 1440
+  settings-archive-recovery.spec.ts:25:7 › system archive uses current failure when history is stale at 375
+  settings-archive-recovery.spec.ts:25:7 › system archive uses current failure when history is stale at 768
+  settings-archive-recovery.spec.ts:25:7 › system archive uses current failure when history is stale at 1440
+  settings-archive-replacement.spec.ts:25:7 › personal corrupt archive leads to replacement and real preview at 375
+  settings-archive-replacement.spec.ts:25:7 › personal corrupt archive leads to replacement and real preview at 768
+  settings-archive-replacement.spec.ts:25:7 › personal corrupt archive leads to replacement and real preview at 1440
+  settings-archive-replacement.spec.ts:25:7 › system corrupt archive leads to replacement and real preview at 375
+  settings-archive-replacement.spec.ts:25:7 › system corrupt archive leads to replacement and real preview at 768
+  settings-archive-replacement.spec.ts:25:7 › system corrupt archive leads to replacement and real preview at 1440
+  settings-personal-backup.spec.ts:20:5 › personal archive recovers lost upload response, keyboard navigation and task-center reentry
+  settings-personal-backup.spec.ts:74:5 › personal archive rejects corrupt file and replacement creates no restore
+  settings-personal-backup.spec.ts:99:7 › personal archive browser round trip, reentry and duplicate protection 375
+  settings-personal-backup.spec.ts:99:7 › personal archive browser round trip, reentry and duplicate protection 768
+  settings-personal-backup.spec.ts:99:7 › personal archive browser round trip, reentry and duplicate protection 1440
+  settings-personal-backup.spec.ts:158:7 › personal archive upload-limit read failure preserves selection and retries only the read 375
+  settings-personal-backup.spec.ts:158:7 › personal archive upload-limit read failure preserves selection and retries only the read 1440
+Total: 19 tests in 3 files

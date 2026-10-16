@@ -11,6 +11,7 @@ import { captureOfflineAccess, assertOfflineAccess } from "../../lib/offline-acc
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
 import {
+  ApiRequestError,
   getConversationAttachments,
   continuationApi,
   getConversationExportUrl,
@@ -192,7 +193,7 @@ export function ExportPanel({
                 setJobId(task.job_id);
                 setJobKey(currentKey);
               } catch (error) {
-                setQueueError(error instanceof Error ? error.message : (zh ? "无法创建导出任务" : "Unable to create export"));
+                setQueueError(exportQueueError(error, zh));
               } finally {
                 submitLock.current = false;
                 setSubmitting(false);
@@ -212,10 +213,25 @@ export function ExportPanel({
 
       {jobKey === currentKey && taskQuery.data?.status === "cancelled" ? <p className="text-sm text-secondary">{zh ? "生成已取消，可以重新生成。" : "Export cancelled. You can generate it again."}</p> : null}
       {queueError ? <p className="text-sm text-[var(--danger)]">{queueError}</p> : null}
-      {jobKey === currentKey && taskQuery.data?.status === "failed" ? <p className="text-sm text-[var(--danger)]">{(/^(ATTACHMENT|CONTEXT)_EXPORT_/.test(taskQuery.data.error_message ?? "") ? batchExportError(taskQuery.data.error_message, zh) : taskQuery.data.error_message) || (zh ? "导出失败，请重试。" : "Export failed. Try again.")}</p> : null}
+      {jobKey === currentKey && taskQuery.data?.status === "failed" ? <p className="text-sm text-[var(--danger)]">{batchExportError(taskQuery.data.error_message, zh)}</p> : null}
       {!compact && unavailableCount > 0 ? <p className="text-xs leading-5 text-secondary">{zh ? "缺失文件仍保留在元数据中，附件完整性会标记为 partial。" : "Missing files remain in metadata and make asset completeness partial."}</p> : null}
     </section>
   );
+}
+
+function exportQueueError(failure: unknown, zh: boolean): string {
+  if (failure instanceof ApiRequestError) {
+    if (failure.code) return batchExportError(failure.code, zh);
+    if (failure.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
+    if (failure.status === 403) return zh ? "当前权限不允许导出此内容。" : "Your current permissions do not allow this export.";
+    if (failure.status === 404) return zh ? "对话已删除或不可访问，请返回列表确认。" : "This conversation is no longer available. Check your conversation list.";
+    if (failure.status === 409) return zh ? "导出内容已发生变化，请刷新后重新生成。" : "The export source changed. Refresh and generate it again.";
+    if (failure.status === 413) return zh ? "导出超过大小限制，请减少内容或关闭附件后重试。" : "This export exceeds the size limit. Reduce the scope or omit attachments and retry.";
+    if (failure.status === 429) return zh ? "导出请求过于频繁，请稍后重试。" : "Too many export requests. Try again shortly.";
+  }
+  return zh
+    ? "导出任务创建结果尚未确认。请先到任务中心核对，再决定是否重试。"
+    : "The export task result is not confirmed. Check Tasks before deciding whether to retry.";
 }
 
 export function ContextPackageDelivery({ downloadUrl, downloadFilename, downloadControl, defaultSkillLocale, offline = false, purpose = "acquisition" }: { downloadUrl: string; downloadFilename?: string; downloadControl?: React.ReactNode; defaultSkillLocale: SkillLocale; offline?: boolean; purpose?: "acquisition" | "maintenance" }) {

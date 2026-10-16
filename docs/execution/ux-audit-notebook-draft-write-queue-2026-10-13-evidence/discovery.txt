@@ -1,0 +1,56 @@
+Listing tests:
+  attachment-inline-layout.spec.ts:26:5 › RenderPlan resolves to the six frozen inline presentations
+  attachment-inline-layout.spec.ts:39:5 › justified gallery keeps aspect ratios and caps the final row at 1.1 target height
+  attachment-inline-layout.spec.ts:54:5 › lane, surface and progressive-disclosure contracts are centralized
+  attachment-inline-layout.spec.ts:72:5 › runtime preview failures move to FileList while static capability stays unchanged
+  attachment-inline-layout.spec.ts:79:5 › CSV and TSV viewer defaults to bounded table mode with a Raw escape hatch
+  attachment-inline-layout.spec.ts:93:5 › legacy attachment labels do not duplicate the filename while real captions remain
+  attachment-reading.spec.ts:90:3 › 375px zh-CN › CSV pages keep row order and truncated previews preserve the true header and original source
+  attachment-reading.spec.ts:127:3 › 375px zh-CN › JSON recovers from a read failure, and source/table modes preserve their original text
+  attachment-reading.spec.ts:198:3 › 375px zh-CN › gallery supports repeated keys after zoom and resets the next image transform
+  attachment-reading.spec.ts:232:3 › 375px zh-CN › Office and ZIP recover from a worker startup failure without reading ahead
+  attachment-reading.spec.ts:270:3 › 375px zh-CN › a cached Blob can be retried without changing its resource URL
+  attachment-reading.spec.ts:304:3 › 375px zh-CN › empty and unsupported files end truthfully, and native audio stays paused
+  attachment-reading.spec.ts:90:3 › 375px en-US › CSV pages keep row order and truncated previews preserve the true header and original source
+  attachment-reading.spec.ts:127:3 › 375px en-US › JSON recovers from a read failure, and source/table modes preserve their original text
+  attachment-reading.spec.ts:198:3 › 375px en-US › gallery supports repeated keys after zoom and resets the next image transform
+  attachment-reading.spec.ts:232:3 › 375px en-US › Office and ZIP recover from a worker startup failure without reading ahead
+  attachment-reading.spec.ts:270:3 › 375px en-US › a cached Blob can be retried without changing its resource URL
+  attachment-reading.spec.ts:304:3 › 375px en-US › empty and unsupported files end truthfully, and native audio stays paused
+  attachment-reading.spec.ts:90:3 › 1440px zh-CN › CSV pages keep row order and truncated previews preserve the true header and original source
+  attachment-reading.spec.ts:127:3 › 1440px zh-CN › JSON recovers from a read failure, and source/table modes preserve their original text
+  attachment-reading.spec.ts:198:3 › 1440px zh-CN › gallery supports repeated keys after zoom and resets the next image transform
+  attachment-reading.spec.ts:232:3 › 1440px zh-CN › Office and ZIP recover from a worker startup failure without reading ahead
+  attachment-reading.spec.ts:270:3 › 1440px zh-CN › a cached Blob can be retried without changing its resource URL
+  attachment-reading.spec.ts:304:3 › 1440px zh-CN › empty and unsupported files end truthfully, and native audio stays paused
+  attachment-reading.spec.ts:90:3 › 1440px en-US › CSV pages keep row order and truncated previews preserve the true header and original source
+  attachment-reading.spec.ts:127:3 › 1440px en-US › JSON recovers from a read failure, and source/table modes preserve their original text
+  attachment-reading.spec.ts:198:3 › 1440px en-US › gallery supports repeated keys after zoom and resets the next image transform
+  attachment-reading.spec.ts:232:3 › 1440px en-US › Office and ZIP recover from a worker startup failure without reading ahead
+  attachment-reading.spec.ts:270:3 › 1440px en-US › a cached Blob can be retried without changing its resource URL
+  attachment-reading.spec.ts:304:3 › 1440px en-US › empty and unsupported files end truthfully, and native audio stays paused
+  settings-annotation-composition.spec.ts:10:7 › 375px zh-CN: text keeps the original input through an unknown write
+  settings-annotation-composition.spec.ts:10:7 › 1440px en-US: text keeps the original input through an unknown write
+  settings-annotation-composition.spec.ts:10:7 › 1440px zh-CN: notes keeps the original input through an unknown write
+  settings-annotation-composition.spec.ts:10:7 › 1440px en-US: notes keeps the original input through an unknown write
+  settings-annotation-reads.spec.ts:9:9 › 375px: annotations read failure is independent and retry preserves the notebook draft
+  settings-annotation-reads.spec.ts:9:9 › 375px: notebook read failure is independent and retry preserves the notebook draft
+  settings-annotation-reads.spec.ts:9:9 › 375px: conflicts read failure is independent and retry preserves the notebook draft
+  settings-annotation-reads.spec.ts:9:9 › 1440px: annotations read failure is independent and retry preserves the notebook draft
+  settings-annotation-reads.spec.ts:9:9 › 1440px: notebook read failure is independent and retry preserves the notebook draft
+  settings-annotation-reads.spec.ts:9:9 › 1440px: conflicts read failure is independent and retry preserves the notebook draft
+  settings-annotation-reads.spec.ts:99:7 › 1440px zh-CN: hidden selections are disclosed and notes/deletion use the same scope
+  settings-annotation-reads.spec.ts:99:7 › 1440px en-US: hidden selections are disclosed and notes/deletion use the same scope
+  settings-annotation-writes.spec.ts:11:9 › 1440px zh-CN: comment recovers without losing input or repeating confirmed writes
+  settings-annotation-writes.spec.ts:11:9 › 1440px zh-CN: style recovers without losing input or repeating confirmed writes
+  settings-annotation-writes.spec.ts:11:9 › 1440px zh-CN: delete recovers without losing input or repeating confirmed writes
+  settings-annotation-writes.spec.ts:11:9 › 1440px zh-CN: bookmark recovers without losing input or repeating confirmed writes
+  settings-annotation-writes.spec.ts:11:9 › 1440px en-US: comment recovers without losing input or repeating confirmed writes
+  settings-annotation-writes.spec.ts:11:9 › 1440px en-US: style recovers without losing input or repeating confirmed writes
+  settings-annotation-writes.spec.ts:11:9 › 1440px en-US: delete recovers without losing input or repeating confirmed writes
+  settings-annotation-writes.spec.ts:11:9 › 1440px en-US: bookmark recovers without losing input or repeating confirmed writes
+  settings-notebook-drafts.spec.ts:11:7 › rapid notebook typing retains the complete draft through reload and save at 375
+  settings-notebook-drafts.spec.ts:64:7 › notebook draft survives failed save and reload, then compares a newer revision at 375
+  settings-notebook-drafts.spec.ts:11:7 › rapid notebook typing retains the complete draft through reload and save at 1440
+  settings-notebook-drafts.spec.ts:64:7 › notebook draft survives failed save and reload, then compares a newer revision at 1440
+Total: 54 tests in 6 files

@@ -90,10 +90,11 @@ export async function readSyncedReadingPosition(id: string, online: boolean, str
 }
 
 // Called under the same account Web Lock as annotation sync and signout.
-export async function flushReadingPositionBatch(db: typeof offlineDb, access: number): Promise<{ synced: number; conflicts: number; retryAt?: number }> {
+export async function flushReadingPositionBatch(db: typeof offlineDb, access: number, conversationIds?: readonly string[]): Promise<{ synced: number; conflicts: number; retryAt?: number }> {
   const seen = new Set<string>();
+  const scope = conversationIds ? new Set(conversationIds) : undefined;
   const selected = await db.outbox.orderBy("queued_at").filter((row) => {
-    if (!isPosition(row) || seen.has(row.conversation_id)) return false;
+    if (!isPosition(row) || (scope && !scope.has(row.conversation_id)) || seen.has(row.conversation_id)) return false;
     seen.add(row.conversation_id);
     return row.attempts < 5 && !["AUTH", "INVALID", "CONFLICT"].includes(row.last_error ?? "") && (row.retry_after ?? 0) <= Date.now();
   }).limit(5).toArray();
@@ -133,7 +134,7 @@ export async function flushReadingPositionBatch(db: typeof offlineDb, access: nu
     }
   }
   window.dispatchEvent(new Event("chat-reader:sync-changed"));
-  const retries = await db.outbox.filter((row) => isPosition(row) && row.last_error === "NETWORK" && row.attempts < 5).toArray();
+  const retries = await db.outbox.filter((row) => isPosition(row) && (!scope || scope.has(row.conversation_id)) && row.last_error === "NETWORK" && row.attempts < 5).toArray();
   return { synced, conflicts, retryAt: retries.length ? Math.min(...retries.map((row) => row.retry_after ?? Date.now())) : undefined };
 }
 

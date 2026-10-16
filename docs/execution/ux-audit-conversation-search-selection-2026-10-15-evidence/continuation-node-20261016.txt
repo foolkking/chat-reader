@@ -1,0 +1,250 @@
+TAP version 13
+# Subtest: first-result and legacy numeric state remain supported, with arrows based on the visible clamped row
+ok 1 - first-result and legacy numeric state remain supported, with arrows based on the visible clamped row
+  ---
+  duration_ms: 38.1645
+  ...
+# Subtest: en-US: keyboard selection follows an exact occurrence through document reorder
+ok 2 - en-US: keyboard selection follows an exact occurrence through document reorder
+  ---
+  duration_ms: 10.6389
+  ...
+# Subtest: en-US: hover selection follows an exact occurrence through document reorder
+ok 3 - en-US: hover selection follows an exact occurrence through document reorder
+  ---
+  duration_ms: 3.6589
+  ...
+# Subtest: zh-CN: keyboard selection follows an exact occurrence through document reorder
+ok 4 - zh-CN: keyboard selection follows an exact occurrence through document reorder
+  ---
+  duration_ms: 3.609
+  ...
+# Subtest: zh-CN: hover selection follows an exact occurrence through document reorder
+ok 5 - zh-CN: hover selection follows an exact occurrence through document reorder
+  ---
+  duration_ms: 4.4717
+  ...
+# Subtest: two matches in the same document keep separate identities when their order changes
+ok 6 - two matches in the same document keep separate identities when their order changes
+  ---
+  duration_ms: 3.8529
+  ...
+# Subtest: a removed selection has no replacement highlight or Enter navigation and exposes a neutral recovery notice
+ok 7 - a removed selection has no replacement highlight or Enter navigation and exposes a neutral recovery notice
+  ---
+  duration_ms: 7.2687
+  ...
+# Subtest: the missing-selection notice waits for confirmed non-fetching search results
+ok 8 - the missing-selection notice waits for confirmed non-fetching search results
+  ---
+  duration_ms: 6.4403
+  ...
+# Subtest: ArrowUp starts at a real row after an eight-to-two shrink removes the selected match
+ok 9 - ArrowUp starts at a real row after an eight-to-two shrink removes the selected match
+  ---
+  duration_ms: 6.3254
+  ...
+# Subtest: ArrowDown starts at a real row after an eight-to-two shrink removes the selected match
+ok 10 - ArrowDown starts at a real row after an eight-to-two shrink removes the selected match
+  ---
+  duration_ms: 6.7364
+  ...
+# Subtest: activation publishes its identity before navigation or a later effect, and a remount restores it after reorder
+ok 11 - activation publishes its identity before navigation or a later effect, and a remount restores it after reorder
+  ---
+  duration_ms: 4.5801
+  ...
+# Subtest: query and role/type edits clear explicit identity while stale debounced results remain non-navigable
+ok 12 - query and role/type edits clear explicit identity while stale debounced results remain non-navigable
+  ---
+  duration_ms: 7.9446
+  ...
+# Subtest: IME composition keeps selection and navigation unchanged
+ok 13 - IME composition keeps selection and navigation unchanged
+  ---
+  duration_ms: 3.5374
+  ...
+# Subtest: changed version/range/quote is not substituted for the selected occurrence; context-only refresh remains navigable
+ok 14 - changed version/range/quote is not substituted for the selected occurrence; context-only refresh remains navigable
+  ---
+  duration_ms: 12.8341
+  ...
+# Subtest: fallback matches retain exact existing locator fields; title-only documents do not become navigable occurrences
+ok 15 - fallback matches retain exact existing locator fields; title-only documents do not become navigable occurrences
+  ---
+  duration_ms: 2.0385
+  ...
+# Subtest: same pending occurrence is admitted once across repeated clicks, Enter and result reorder
+ok 16 - same pending occurrence is admitted once across repeated clicks, Enter and result reorder
+  ---
+  duration_ms: 6.3683
+  ...
+# Subtest: a superseded success cannot close, report failure or clear the newer activation
+ok 17 - a superseded success cannot close, report failure or clear the newer activation
+  ---
+  duration_ms: 4.3477
+  ...
+# Subtest: a superseded failure cannot close, report failure or clear the newer activation
+ok 18 - a superseded failure cannot close, report failure or clear the newer activation
+  ---
+  duration_ms: 7.6553
+  ...
+# Subtest: a superseded reject cannot close, report failure or clear the newer activation
+ok 19 - a superseded reject cannot close, report failure or clear the newer activation
+  ---
+  duration_ms: 4.7902
+  ...
+# Subtest: raw query before debounce retires a later success without completion writes or another close
+ok 20 - raw query before debounce retires a later success without completion writes or another close
+  ---
+  duration_ms: 2.9278
+  ...
+# Subtest: raw query before debounce retires a later rejection without completion writes or another close
+ok 21 - raw query before debounce retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 2.844
+  ...
+# Subtest: role retires a later success without completion writes or another close
+ok 22 - role retires a later success without completion writes or another close
+  ---
+  duration_ms: 3.3146
+  ...
+# Subtest: role retires a later rejection without completion writes or another close
+ok 23 - role retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 3.2831
+  ...
+# Subtest: document type retires a later success without completion writes or another close
+ok 24 - document type retires a later success without completion writes or another close
+  ---
+  duration_ms: 3.1939
+  ...
+# Subtest: document type retires a later rejection without completion writes or another close
+ok 25 - document type retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 3.0493
+  ...
+# Subtest: conversation retires a later success without completion writes or another close
+ok 26 - conversation retires a later success without completion writes or another close
+  ---
+  duration_ms: 3.235
+  ...
+# Subtest: conversation retires a later rejection without completion writes or another close
+ok 27 - conversation retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 3.0078
+  ...
+# Subtest: source key retires a later success without completion writes or another close
+ok 28 - source key retires a later success without completion writes or another close
+  ---
+  duration_ms: 3.6001
+  ...
+# Subtest: source key retires a later rejection without completion writes or another close
+ok 29 - source key retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 4.608
+  ...
+# Subtest: data source retires a later success without completion writes or another close
+ok 30 - data source retires a later success without completion writes or another close
+  ---
+  duration_ms: 3.9581
+  ...
+# Subtest: data source retires a later rejection without completion writes or another close
+ok 31 - data source retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 3.8164
+  ...
+# Subtest: hidden desktop panel retires a later success without completion writes or another close
+ok 32 - hidden desktop panel retires a later success without completion writes or another close
+  ---
+  duration_ms: 5.1254
+  ...
+# Subtest: hidden desktop panel retires a later rejection without completion writes or another close
+ok 33 - hidden desktop panel retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 4.5008
+  ...
+# Subtest: local close retires a later success without completion writes or another close
+ok 34 - local close retires a later success without completion writes or another close
+  ---
+  duration_ms: 4.2115
+  ...
+# Subtest: local close retires a later rejection without completion writes or another close
+ok 35 - local close retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 3.5759
+  ...
+# Subtest: Escape retires a later success without completion writes or another close
+ok 36 - Escape retires a later success without completion writes or another close
+  ---
+  duration_ms: 7.5561
+  ...
+# Subtest: Escape retires a later rejection without completion writes or another close
+ok 37 - Escape retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 5.1215
+  ...
+# Subtest: unmount retires a later success without completion writes or another close
+ok 38 - unmount retires a later success without completion writes or another close
+  ---
+  duration_ms: 3.0907
+  ...
+# Subtest: unmount retires a later rejection without completion writes or another close
+ok 39 - unmount retires a later rejection without completion writes or another close
+  ---
+  duration_ms: 3.95
+  ...
+# Subtest: hiding and reopening desktop search permits a fresh intent without reviving the old one
+ok 40 - hiding and reopening desktop search permits a fresh intent without reviving the old one
+  ---
+  duration_ms: 8.6013
+  ...
+# Subtest: en-US: current failure ends busy state, uses finite feedback and permits an explicit retry
+ok 41 - en-US: current failure ends busy state, uses finite feedback and permits an explicit retry
+  ---
+  duration_ms: 5.6035
+  ...
+# Subtest: en-US: current reject ends busy state, uses finite feedback and permits an explicit retry
+ok 42 - en-US: current reject ends busy state, uses finite feedback and permits an explicit retry
+  ---
+  duration_ms: 5.5558
+  ...
+# Subtest: zh-CN: current failure ends busy state, uses finite feedback and permits an explicit retry
+ok 43 - zh-CN: current failure ends busy state, uses finite feedback and permits an explicit retry
+  ---
+  duration_ms: 5.4075
+  ...
+# Subtest: zh-CN: current reject ends busy state, uses finite feedback and permits an explicit retry
+ok 44 - zh-CN: current reject ends busy state, uses finite feedback and permits an explicit retry
+  ---
+  duration_ms: 6.5947
+  ...
+# Subtest: actual Reader adapter skips retired admission and preserves optional two-argument callers and exact locators
+ok 45 - actual Reader adapter skips retired admission and preserves optional two-argument callers and exact locators
+  ---
+  duration_ms: 1.0569
+  ...
+# Subtest: actual Reader adapter and actual panel suppress late search publication after query retirement
+ok 46 - actual Reader adapter and actual panel suppress late search publication after query retirement
+  ---
+  duration_ms: 4.7967
+  ...
+# Subtest: actual Reader adapter publishes only the latest panel activation despite reversed completion
+ok 47 - actual Reader adapter publishes only the latest panel activation despite reversed completion
+  ---
+  duration_ms: 4.9289
+  ...
+# Subtest: desktop caller passes drawer visibility to its search panel while mobile retains unmount ownership
+ok 48 - desktop caller passes drawer visibility to its search panel while mobile retains unmount ownership
+  ---
+  duration_ms: 6.674
+  ...
+1..48
+# tests 48
+# suites 0
+# pass 48
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 856.4966

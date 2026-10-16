@@ -1,14 +1,25 @@
 # 部署与运行环境
 
-Current production is `30a0d32`, Alembic `20261008_0050`, accepted 2026-10-08.
-[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/OPTIMIZATION_RELEASE_2026-10-08.md)
+Current production is `84988a2`, Alembic `20261008_0050`, accepted 2026-10-12;
+pointers and retention finalized 2026-10-13 local.
+[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md)
 own live status, exact CI images, verified backups and rollback. Never build on the workstation or King.
 
-Current/rollback pointers select 30a0d32/b45f049; both exact rollback images are
-already loaded. The latest verified backups are `chat-reader-20261006T141424Z`
-and `chat-reader-20261008T134403Z`. The older 113958Z point was pruned only after
-acceptance. Migration preserved 84 table fingerprints and four storage roots;
-36 source fingerprints were backfilled exactly. No live full-hash sweep was repeated.
+Pending local noise-range source adds single head `20261015_0051` after 0050;
+it has **not** been applied. New API source requires that schema; production
+remains 0050. PostgreSQL migration/concurrency acceptance and a separately
+authorized release are required. Stop writers and use the safe downgrade before
+starting old API code: it revokes narrowed DELETE choices before removing the
+field, rather than letting old code ignore user refinements. See
+[pending migration boundary](../deployment.md#pending-noise-range-migration--2026-10-15-not-deployed).
+This is documentation of a future boundary, not permission to migrate/deploy.
+
+Current/rollback pointers select 84988a2/30a0d32; both exact rollback images are
+already loaded. The latest verified backups are `chat-reader-20261008T134403Z`
+and `chat-reader-20261012T143850Z`. The older 20261006T141424Z point was pruned
+only after acceptance. This release performed no migration, reconcile or backfill:
+84 all-column table fingerprints and four storage roots matched; 310 attachment
+hashes and 67 stable post-start table counts passed. No live full-hash sweep was repeated.
 Compose 2.27 requires release-only `pull_policy: never`, not `run --pull never`;
 validate the configuration and bounded mounted helper before stopping writers.
 

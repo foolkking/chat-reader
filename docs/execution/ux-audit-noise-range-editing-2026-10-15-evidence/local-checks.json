@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-15",
+  "scope": "synthetic local noise review range editing",
+  "api": {
+    "passed": 65,
+    "failed": 0,
+    "seconds": 67.41,
+    "modules": [
+      "test_cleanup_safety.py",
+      "test_cleanup_source_replacement.py",
+      "test_cleanup_validation_work.py",
+      "test_cleanup_selection_summary.py",
+      "test_cleanup_reviewed_ranges.py",
+      "test_cleanup_preview_ranges.py"
+    ],
+    "transport": "in-process TestClient",
+    "database": "isolated SQLite metadata schema, not Alembic execution",
+    "cross_page_candidates": 60,
+    "cross_page_review_pages": 2,
+    "cross_page_fragments": 61,
+    "earlier_fixture_failure": "An immutable initial version correctly rejected replacement; fixture creates version 2 before same-ID replacement. Product guard unchanged."
+  },
+  "web_helper": {
+    "passed": 4,
+    "failed": 0,
+    "command": "node --test scripts/ux/cleanup-range-selection.test.mjs",
+    "browser": false
+  },
+  "targeted_web_eslint": "passed",
+  "nonincremental_web_typecheck": {
+    "result": "passed",
+    "earlier_failure": "TS2367 in the earlier import restore error branch; removed an impossible loading comparison without changing retry behavior."
+  },
+  "diff_whitespace": "passed",
+  "revision_graph": {
+    "single_head": "20261015_0051",
+    "parent": "20261008_0050",
+    "database_migration_run": false
+  },
+  "unexecuted_migration_postgres_and_access_test_ast": "passed syntax only",
+  "user_import_storage_worktree_changes": false,
+  "not_run": [
+    "PostgreSQL migration and competing-save tests",
+    "owner authentication/isolation test",
+    "Web or API listening service",
+    "browser, render, focus or assistive verification",
+    "Web build or full release gates",
+    "commit, push, new CI or deployment"
+  ],
+  "production_changed": false,
+  "overall_goal": "active, waiting after this local batch"
+}

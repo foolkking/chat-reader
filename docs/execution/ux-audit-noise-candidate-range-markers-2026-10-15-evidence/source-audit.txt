@@ -1,0 +1,11 @@
+Date: 2026-10-15
+Evidence: current local source, recorded before corrective edits.
+Source: apps/web/features/conversations/cleanup-candidate.tsx
+- Lines 41 and 62 highlight the entire original match_text.
+- Lines 27 and 33 already account for reviewed_ranges in retained context/state.
+- Lines 28-34 default unselected APPLIED/stale/CONFLICT rows to Kept.
+- Lines 53-54 separately explain rescan/completed, outside the checkbox description.
+Precedent: apps/web/features/conversations/cleanup-change-preview.tsx
+- Exact validated Unicode removals are marked and struck through.
+- Invalid/conflicted range data falls back to complete plain source text.
+No live product, screenshot, user content, identifiers, credentials or tokens collected.

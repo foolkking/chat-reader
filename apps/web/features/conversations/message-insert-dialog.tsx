@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { X } from "lucide-react";
-import { insertConversationMessages } from "../../lib/api";
+import { ApiRequestError, insertConversationMessages } from "../../lib/api";
 import type { MessageInsertResponse, MessageListItem } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { useUnsavedClose } from "../../components/use-unsaved-close";
@@ -57,7 +57,7 @@ export function MessageInsertDialog({
       });
       onSubmitted(result);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : (zh ? "插入消息失败，请重试。" : "Could not insert messages. Try again."));
+      setError(messageInsertError(cause, zh));
     } finally {
       submitting.current = false;
       setPending(false);
@@ -78,4 +78,18 @@ export function MessageInsertDialog({
       </form>
     </div>
   );
+}
+
+function messageInsertError(cause: unknown, zh: boolean): string {
+  if (cause instanceof ApiRequestError) {
+    if (cause.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
+    if (cause.status === 403) return zh ? "当前权限不允许插入消息。" : "Your current permissions do not allow inserting messages.";
+    if (cause.status === 404) return zh ? "相邻消息或所属对话已不存在，请重新打开对话后重试。" : "The adjacent message or conversation is no longer available. Reopen the conversation and retry.";
+    if (cause.status === 409) return zh ? "对话已在别处更新。请重新打开对话后再插入，当前输入仍保留。" : "The conversation changed elsewhere. Reopen it before inserting; your input is retained.";
+    if (cause.status === 413 || cause.status === 422) return zh ? "消息内容或插入位置不符合要求，请检查后重试；输入仍保留。" : "The message content or insertion position is not valid. Check it and retry; your input is retained.";
+    if (cause.status === 429) return zh ? "插入过于频繁，请稍后重试。" : "Too many insert requests. Try again shortly.";
+  }
+  return zh
+    ? "插入结果尚未确认。消息内容仍保留；请先重新打开对话检查是否已插入，再决定是否重试。"
+    : "The insertion result is not confirmed. Your messages are retained; reopen the conversation to check before deciding whether to retry.";
 }

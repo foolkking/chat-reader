@@ -1,5 +1,27 @@
 # 生产部署
 
+## Pending noise range migration — 2026-10-15, release in progress
+
+Working-tree source has the single Alembic head `20261015_0051`, parent
+`20261008_0050`. Only `alembic heads` was read; **no database upgrade/downgrade
+was run**. Accepted production remains `84988a2`/0050 below. The new API model
+requires 0051 and must not be deployed against 0050.
+
+0051 adds nullable JSON `content_cleanup_occurrences.reviewed_ranges`; NULL
+retains legacy full-candidate behavior, with no source rewrite or backfill.
+The user separately authorized the 2026-10-16 release path. Before production
+changes, verify disposable PostgreSQL upgrade/downgrade, competing edits and all
+required release gates, then follow the existing backup/stopped-writer/data-integrity
+procedure. Current local SQLite checks do not verify PostgreSQL DDL or lock behavior.
+
+Rollback must stop new/old API and worker writes, revoke narrowed DELETE
+choices through the tested downgrade **before** starting an old API, and verify
+source/version/storage integrity. The downgrade changes those choices to KEEP
+before dropping the column; running old code on the new schema can otherwise
+ignore refinements and expand deletion consent. Do not “solve” rollback by
+dropping the column alone. Production remains on the accepted release until the
+new exact-source CI, migration, backup and post-deploy checks all pass.
+
 ## CI image distribution — 2026-10-10, not a new deployment
 
 The [CI registry repair](execution/CI_REGISTRY_SOURCE_2026-10-10.md) uses the ECR
@@ -20,7 +42,32 @@ authorized attachment release is **0050→0050**, with no migration, reconcile o
 backfill. Production acceptance remains the separate release record below until
 new exact-source CI, independent image checks and deployment acceptance pass.
 
-## Current accepted release — 2026-10-08
+## Current accepted release — 2026-10-12, finalized 2026-10-13 local
+
+Production source `84988a260c48fcafb8b3bed6fcb7a1f16348111d` comes from complete
+[CI 38255213036](https://github.com/foolkking/chat-reader/actions/runs/38255213036).
+All five jobs and 13 Web gates passed; original image artifact 11752048475,
+attempt 1, exact-source support and 14 synthetic screenshots were independently
+checked. API/Web/PostgreSQL are healthy and the worker is `alive_idle`.
+See [acceptance](execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md) and its
+[sanitized evidence](evidence/attachment-release-2026-10-12.json).
+
+Database stayed **0050→0050**: no migration, reconcile or backfill. All-column
+fingerprints for 84 stopped-writer tables and four storage roots matched;
+310 attachment hashes and post-start counts for 67 stable tables passed.
+Production Compose, environment, Nginx, operational checkout and PostgreSQL
+identity/start/restarts are unchanged. Live full hashes were not repeated.
+
+Current/rollback pointers select **84988a2/30a0d32**, with exact rollback images
+loaded. Verified backups are `chat-reader-20261008T134403Z` and
+`chat-reader-20261012T143850Z`; the 20261006T141424Z point was removed only after
+acceptance under the two-point policy (700,526,846 unlinked bytes). Final free
+space was 12,392,424 KiB. Do not replay this release's completed helpers.
+This release has no interactive production or local browser claim; CI owns the
+synthetic browser evidence. Further local optimization is not authorization for
+another CI/deployment.
+
+## Previous accepted release — 2026-10-08
 
 Production source `30a0d321fe2d538b0fa0bbd61b3e982452f822cb`, full CI
 [37773748374](https://github.com/foolkking/chat-reader/actions/runs/37773748374),
@@ -73,7 +120,7 @@ honest local-browser limitation.
 
 ### Cleanup source fingerprint — 2026-10-08
 
-Single head/current is `20261008_0050`, parent `20261007_0049`. Apply migration
+That accepted release's head/current is `20261008_0050`, parent `20261007_0049`. Apply migration
 before starting this API/worker code. It adds the nullable exact-source fingerprint
 to cleanup candidates and streams legacy source bodies one at a time to backfill
 only unchanged scan targets. Unknown old candidates need rescanning; canonical

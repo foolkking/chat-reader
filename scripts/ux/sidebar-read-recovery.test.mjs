@@ -28,6 +28,14 @@ const initial = { projects: "Could not load projects.", history: "Could not load
 const chinese = { projects: "项目更新失败，仍显示上次内容。", history: "对话更新失败，仍显示上次内容。", branch: "项目对话更新失败，仍显示上次内容。" };
 const translations = { projects: "Projects", unclassified: "Unclassified", loadingProjects: "Loading projects…", noUnclassified: "No unclassified conversations" };
 class ApiRequestError extends Error { constructor(status) { super("Synthetic raw upstream detail"); this.status = status; } }
+const projectErrors = {};
+new Function("exports", "require", ts.transpileModule(
+  readFileSync(new URL("../../apps/web/features/projects/project-error-copy.ts", import.meta.url), "utf8"),
+  { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } },
+).outputText)(projectErrors, name => {
+  assert.equal(name, "../../lib/api");
+  return { ApiRequestError };
+});
 const source = readFileSync(new URL("../../apps/web/features/projects/project-sidebar.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("project-sidebar.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const component = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ProjectSidebar");
@@ -95,6 +103,7 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
     "../conversations/new-conversation-dialog": { NewConversationDialog: () => null },
     "../import/import-task-monitor": { ImportTaskMonitor: () => null },
     "./project-symbol": { ProjectSymbol: () => null },
+    "./project-error-copy": projectErrors,
     "../import/task-center-dialog": { TaskCenterDialog: () => null },
     "../../components/reader-sidebar-frame": { ReaderSidebarFrame: childrenOnly },
     "../../components/sidebar-preferences": { SidebarPreferences: () => null },

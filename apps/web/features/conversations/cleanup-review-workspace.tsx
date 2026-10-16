@@ -12,6 +12,7 @@ import type { CleanupApplyResult, CleanupOccurrenceRead, CleanupOutcome, Cleanup
 import { CleanupCompletion } from "./cleanup-completion";
 import { CleanupCandidate } from "./cleanup-candidate";
 import { CleanupChangePreview } from "./cleanup-change-preview";
+import { CleanupRangeEditor } from "./cleanup-range-editor";
 import { CleanupRescanButton, CleanupRescanControls, CleanupRescanFeedback, type useCleanupRescan } from "./use-cleanup-rescan";
 
 export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onApplied, onClose, rescan, onDirtyChange, onResultChange }: {
@@ -44,11 +45,12 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
   const [checkedOutcome, setCheckedOutcome] = useState<CleanupOutcome | null>(null);
   const sourceRead = useRef<AbortController | null>(null);
   const [feedback, setFeedback] = useState("");
-  const [intent, setIntent] = useState<{ kind: "ignore" | "learn"; item: CleanupOccurrenceRead } | null>(null);
+  const [intent, setIntent] = useState<{ kind: "ignore" | "learn" | "range"; item: CleanupOccurrenceRead } | null>(null);
   const intentTrigger = useRef<HTMLElement | null>(null);
   const intentScroll = useRef(0);
   const intentReturning = useRef(false);
   const [pendingDecisions, setPendingDecisions] = useState<Record<string, "KEEP" | "DELETE">>({});
+  const [pendingBulkDecision, setPendingBulkDecision] = useState<"KEEP" | "DELETE" | null>(null);
   const [selectionUnconfirmed, setSelectionUnconfirmed] = useState(false);
   const selectionRequest = useRef<AbortController | null>(null);
   const selectionRecoveryRef = useRef<HTMLButtonElement>(null);
@@ -113,6 +115,7 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
     setFeedback("");
     if (filter.selected_only && input.decision === "KEEP") restoreItemFocus.current = true;
     if (input.item) setPendingDecisions((previous) => ({ ...previous, [input.item!.id]: input.decision }));
+    else setPendingBulkDecision(input.decision);
     await Promise.all([client.cancelQueries({ queryKey: ["cleanup-review", scan.id] }), client.cancelQueries({ queryKey: ["content-cleanup-scan", scan.id] })]);
   }, mutationFn: async (input: { item?: CleanupOccurrenceRead; decision: "KEEP" | "DELETE" }) => {
     if (!active()) throw new Error("Review closed");
@@ -123,15 +126,16 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
     } finally { if (selectionRequest.current === controller) selectionRequest.current = null; }
   }, onError: () => {
     if (active()) { setSelectionUnconfirmed(true); setFeedback(""); }
-  }, onSuccess: (saved) => {
+  }, onSuccess: async (saved) => {
     if (generation.current !== authenticationGeneration()) return;
     client.setQueryData(["content-cleanup-scan", scan.id], saved);
     if (mounted.current) setFeedback(zh ? "选择已保存，关闭后可继续审查。" : "Selection saved. You can close and resume this review.");
-    void refresh();
+    await refresh();
   }, onSettled: (_result, _error, input) => {
     if (!active()) return;
     if (_error) restoreItemFocus.current = false;
     if (input.item) setPendingDecisions((previous) => { const next = { ...previous }; delete next[input.item!.id]; return next; });
+    else setPendingBulkDecision(null);
   } });
   const reloadSelection = useMutation({ mutationFn: async () => {
     const controller = new AbortController(); selectionRequest.current = controller;
@@ -203,11 +207,14 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
   };
   const error = selectionUnconfirmed ? null : decisions.error ?? apply.error;
   const selectedCount = scan.delete_count;
-  const writing = decisions.isPending || reloadSelection.isPending || apply.isPending || checkResult.isPending;
+  const writing = decisions.isPending || pendingBulkDecision !== null || reloadSelection.isPending || apply.isPending || checkResult.isPending;
   const pending = writing || selectionUnconfirmed || rescan.blocking;
   const listBusy = pending || page.isFetching || page.isError;
   const groupsBusy = pending || groups.isFetching || groups.isError || groupSearch.trim() !== groupQuery;
   const selectionSummary = !listBusy ? page.data?.selection_summary : undefined;
+  const currentScopeCount = page.data?.total ?? 0;
+  const currentScopeName = scopeLabel.title
+    ?? (scopeLabel.rule ? cleanupRuleLabel(scopeLabel.rule.name, scopeLabel.rule.detector, zh) : (zh ? "当前筛选范围" : "current filter"));
   const scopedSelection = Boolean((filter.rule_id || filter.conversation_id) && selectedCount);
   const showAllSelected = () => {
     setGroupSearch(""); setGroupQuery(""); setGroupOffset(0);
@@ -227,6 +234,10 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
   }}>
     {intent?.kind === "ignore" ? <CleanupExceptionEditor scanId={scan.id} occurrenceId={intent.item.id} onDone={(saved) => { intentReturning.current = true; setIntent(null); if (saved) { void refresh(); setFeedback(zh ? "个人例外已保存，本次候选保留。" : "Personal exception saved; this candidate is kept."); } }} /> : null}
     {intent?.kind === "learn" ? <CleanupRuleEditor initialText={intent.item.match_text} initialRole={intent.item.role} conversationId={intent.item.conversation_id} onDirtyChange={onDirtyChange} onDone={(saved) => { intentReturning.current = true; setIntent(null); onDirtyChange?.(false); if (saved) setFeedback(zh ? "个人规则已保存，后续扫描会使用此规则，正文保持不变。" : "Personal rule saved for future scans. Content is unchanged."); }} /> : null}
+    {intent?.kind === "range" ? <CleanupRangeEditor scanId={scan.id} item={intent.item} onDirtyChange={onDirtyChange} onDone={(saved) => {
+      intentReturning.current = true; setIntent(null); onDirtyChange?.(false);
+      if (saved) { setFeedback(zh ? "删除范围已核对并选中；预览确认后才会修改正文。" : "Deletion ranges reviewed and selected. Content changes only after preview and confirmation."); void refresh(); }
+    }} /> : null}
     {previewing ? <section aria-label={zh ? "清理差异预览" : "Cleanup change preview"} className="space-y-3">
       <button ref={previewBackRef} type="button" disabled={apply.isPending} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => { returningToReview.current = true; setPreviewing(false); }}>{zh ? "返回选择" : "Back to selection"}</button>
       {preview.isLoading ? <p role="status">{zh ? "正在生成完整差异…" : "Preparing complete changes…"}</p> : null}
@@ -277,17 +288,26 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
             {selectionSummary ? <p className="mt-1 text-xs text-secondary">{zh ? `此范围已选 ${selectionSummary.selected} 项` : `${selectionSummary.selected} selected in this scope`}{selectionSummary.protected > 0 ? (zh ? ` · ${selectionSummary.protected} 项受保护` : ` · ${selectionSummary.protected} protected`) : ""}</p> : null}
             {filter.rule_id && filter.conversation_id ? <button type="button" disabled={pending} className="min-h-11 text-xs text-accent underline" onClick={() => selectGroup({ conversation_id: filter.conversation_id }, { title: scopeLabel.title })}>{zh ? "此对话的全部规则" : "All rules in this conversation"}</button> : null}
           </section>
-          <div className="flex flex-wrap gap-2"><button type="button" disabled={listBusy || !page.data?.total} onClick={() => decisions.mutate({ decision: "DELETE" })} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "选择全部匹配项" : "Select all matching"}</button><button type="button" disabled={listBusy || !page.data?.total} onClick={() => decisions.mutate({ decision: "KEEP" })} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "保留全部匹配项" : "Keep all matching"}</button></div>
-          <p className="text-xs text-secondary">{zh ? "覆盖此范围全部分页；保护区与冲突项除外。" : "Covers all pages in this scope; protected content and conflicts are excluded."}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" disabled={listBusy || !currentScopeCount} aria-label={zh ? "选择全部匹配项" : "Select all matching"} aria-busy={pendingBulkDecision === "DELETE"} onClick={() => decisions.mutate({ decision: "DELETE" })} className={`btn-secondary min-h-11 px-3 text-xs ${pendingBulkDecision === "DELETE" ? "bg-[var(--accent-soft)] text-primary" : ""}`}>{zh ? "选择全部匹配项" : "Select all matching"}</button>
+            <button type="button" disabled={listBusy || !currentScopeCount} aria-label={zh ? "保留全部匹配项" : "Keep all matching"} aria-busy={pendingBulkDecision === "KEEP"} onClick={() => decisions.mutate({ decision: "KEEP" })} className={`btn-secondary min-h-11 px-3 text-xs ${pendingBulkDecision === "KEEP" ? "bg-[var(--accent-soft)] text-primary" : ""}`}>{zh ? "保留全部匹配项" : "Keep all matching"}</button>
+            <span className="text-xs text-secondary">{zh ? `${currentScopeName}共 ${currentScopeCount} 项` : `${currentScopeCount} in ${currentScopeName}`}</span>
+          </div>
+          <p className="text-xs text-secondary">{zh ? "批量操作覆盖此范围全部分页；保护区与冲突项除外。" : "Bulk actions cover every page in this scope; protected content and conflicts are excluded."}</p>
+          {pendingBulkDecision ? <p role="status" aria-live="polite" className="rounded-md bg-[var(--accent-soft)] px-3 py-2 text-xs text-primary">{pendingBulkDecision === "DELETE"
+            ? (zh ? `正在把“${currentScopeName}”的候选标记为待删除…` : `Marking candidates in ${currentScopeName} for deletion…`)
+            : (zh ? `正在把“${currentScopeName}”的候选改为保留…` : `Keeping candidates in ${currentScopeName}…`)} {zh ? "请等待保存确认。" : "Wait for the save confirmation."}</p> : null}
           {page.isFetching ? <p role="status" className="text-xs text-secondary">{page.data ? (zh ? "正在更新候选列表…" : "Updating candidates…") : (zh ? "正在读取候选…" : "Loading candidates…")}</p> : null}
           {page.isError ? <Retry error={page.error} onRetry={() => void page.refetch()} zh={zh} message={page.data ? (zh ? "候选刷新失败，下方是上次读取结果。重试可更新选择状态。" : "Candidates could not refresh. The previous list is shown below. Retry to update the selection state.") : undefined} /> : null}
           {page.data?.total === 0 ? <p className="py-5 text-sm text-secondary">{zh ? "当前筛选没有候选，正文保持不变。" : "No candidates in this filter. Content remains unchanged."}</p> : null}
           <div className="divide-y divide-[var(--border)]">{page.data?.items.map((item) => {
             const protectedItem = item.decision === "PROTECTED" || item.evidence_codes?.includes("PROTECTED_RANGE");
-            const disabled = listBusy || item.stale || protectedItem || item.decision === "CONFLICT" || item.decision === "APPLIED";
+            const actionable = !item.stale && !protectedItem && ["KEEP", "DELETE"].includes(item.decision);
+            const disabled = listBusy || !actionable;
             return <CleanupCandidate key={item.id} item={item} zh={zh} reason={reason(item, zh)}
               showConversation={scan.target_count > 1}
-              selected={(pendingDecisions[item.id] ?? item.decision) === "DELETE" && !protectedItem}
+              selected={Boolean(actionable && (pendingDecisions[item.id] ?? pendingBulkDecision ?? item.decision) === "DELETE")}
+              selectionSaving={Boolean(actionable && (pendingDecisions[item.id] || pendingBulkDecision))}
               disabled={Boolean(disabled)} busy={listBusy}
               onDecision={(selected) => decisions.mutate({ item, decision: selected ? "DELETE" : "KEEP" })}
               onIntent={(kind) => { intentTrigger.current = document.activeElement as HTMLElement | null; intentScroll.current = rootRef.current?.closest<HTMLElement>('[data-testid="content-cleanup-scroll"]')?.scrollTop ?? 0; setIntent({ kind, item }); }}

@@ -1,0 +1,105 @@
+TAP version 13
+# Subtest: nonblank search without initialization rejects without creating an empty Worker
+ok 1 - nonblank search without initialization rejects without creating an empty Worker
+  ---
+  duration_ms: 3.8346
+  ...
+# Subtest: blank queries remain empty without an index or Worker
+ok 2 - blank queries remain empty without an index or Worker
+  ---
+  duration_ms: 1.6852
+  ...
+# Subtest: a runtime-only Worker does not authorize a successful empty search
+ok 3 - a runtime-only Worker does not authorize a successful empty search
+  ---
+  duration_ms: 0.7665
+  ...
+# Subtest: search waits for an already-started initialization before dispatching
+ok 4 - search waits for an already-started initialization before dispatching
+  ---
+  duration_ms: 0.5602
+  ...
+# Subtest: a legitimately initialized empty corpus may return no matches
+ok 5 - a legitimately initialized empty corpus may return no matches
+  ---
+  duration_ms: 0.4188
+  ...
+# Subtest: error: idle failure cannot become false emptiness; explicit rebuild recovers
+ok 6 - error: idle failure cannot become false emptiness; explicit rebuild recovers
+  ---
+  duration_ms: 0.5004
+  ...
+# Subtest: messageerror: idle failure cannot become false emptiness; explicit rebuild recovers
+ok 7 - messageerror: idle failure cannot become false emptiness; explicit rebuild recovers
+  ---
+  duration_ms: 0.507
+  ...
+# Subtest: the existing ten-second deadline retires readiness and clears pending timers
+ok 8 - the existing ten-second deadline retires readiness and clears pending timers
+  ---
+  duration_ms: 0.3844
+  ...
+# Subtest: synchronous init post failure leaves no usable readiness record
+ok 9 - synchronous init post failure leaves no usable readiness record
+  ---
+  duration_ms: 0.5801
+  ...
+# Subtest: a new initialization fences an older in-flight search reply
+ok 10 - a new initialization fences an older in-flight search reply
+  ---
+  duration_ms: 0.6174
+  ...
+# Subtest: access generation remains bound to the indexed corpus, not only the next query
+ok 11 - access generation remains bound to the indexed corpus, not only the next query
+  ---
+  duration_ms: 0.4211
+  ...
+# Subtest: reset retires initialization and searches awaiting that initialization
+ok 12 - reset retires initialization and searches awaiting that initialization
+  ---
+  duration_ms: 0.3908
+  ...
+# Subtest: ordinary local searches do not rebuild; manual retry awaits one rebuild before searching
+ok 13 - ordinary local searches do not rebuild; manual retry awaits one rebuild before searching
+  ---
+  duration_ms: 7.132
+  ...
+# Subtest: failed manual rebuild remains a query error and does not dispatch a false empty search
+ok 14 - failed manual rebuild remains a query error and does not dispatch a false empty search
+  ---
+  duration_ms: 3.7238
+  ...
+# Subtest: an unconsumed retry preparation cannot move to another conversation scope
+ok 15 - an unconsumed retry preparation cannot move to another conversation scope
+  ---
+  duration_ms: 1.6566
+  ...
+# Subtest: account retirement while rebuilding cannot issue the old query against a new account
+ok 16 - account retirement while rebuilding cannot issue the old query against a new account
+  ---
+  duration_ms: 1.5543
+  ...
+# Subtest: remote search keeps its inherited network policy and retry without a rebuild callback
+ok 17 - remote search keeps its inherited network policy and retry without a rebuild callback
+  ---
+  duration_ms: 1.2712
+  ...
+# Subtest: actual local query options execute while the installed QueryClient is marked offline
+ok 18 - actual local query options execute while the installed QueryClient is marked offline
+  ---
+  duration_ms: 3.5285
+  ...
+# Subtest: both Reader search surfaces and the Library retain the same explicit rebuild wiring
+ok 19 - both Reader search surfaces and the Library retain the same explicit rebuild wiring
+  ---
+  duration_ms: 126.4957
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 693.8527

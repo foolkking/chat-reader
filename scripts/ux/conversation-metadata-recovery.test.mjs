@@ -138,11 +138,14 @@ async function fixture({ field = "description", locale = "en-US", outcome = "suc
     "next/navigation": { usePathname: () => "/conversations/" + initial.id, useRouter: () => ({ push: noop, replace: noop }) },
     "../../lib/api": api,
     "../../lib/offline-access": { authenticationGeneration: () => epoch, OFFLINE_ACCESS_LOCKED_EVENT: "synthetic-lock" },
+    "../lib/offline-access": { authenticationGeneration: () => epoch, OFFLINE_ACCESS_LOCKED_EVENT: "synthetic-lock" },
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
     "./preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
     "./use-dialog-focus": { useDialogFocus: options => { focusOptions.push(options); } },
     "../../components/use-dialog-focus": { useDialogFocus: options => { focusOptions.push(options); } },
     "./conversation-undo": {},
+    "./conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
+      submit: async () => { throw new Error("A metadata test must not delete"); } }) },
   };
   function load(path, extra = {}) {
     const source = readFileSync(new URL("../../apps/web/" + path, import.meta.url), "utf8");

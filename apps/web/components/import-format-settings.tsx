@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Braces, ChevronDown, ChevronUp, FileText, Layers3, Wrench } from "lucide-react";
 import { useState, useLayoutEffect } from "react";
-import { getImportFormats, getImportFormatRevisions, updateImportFormat } from "../lib/api";
+import { ApiRequestError, getImportFormats, getImportFormatRevisions, updateImportFormat } from "../lib/api";
 import type { ImportFormatProfile } from "../lib/types";
 import { useImportDialog } from "./import-dialog-provider";
 import { usePreferences } from "./preferences-provider";
@@ -22,7 +22,7 @@ export function ImportFormatSettings({ focused = false, onDirtyChange, onOpenImp
     {!focused ? <button type="button" onClick={() => setOpen(!open)} className="flex min-h-11 w-full items-center justify-between text-left text-sm font-medium text-primary" aria-expanded={open}>{title}{open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button> : null}
     {open ? <>
       {query.isLoading ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取格式…" : "Loading formats…"}</p> : null}
-      {query.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{query.error.message}</p><button type="button" className="btn-secondary mt-2 min-h-11 px-3" onClick={() => void query.refetch()}>{zh ? "重试" : "Retry"}</button></div> : null}
+      {query.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{importFormatError(query.error, zh, "list")}</p><button type="button" className="btn-secondary mt-2 min-h-11 px-3" onClick={() => void query.refetch()}>{zh ? "重试" : "Retry"}</button></div> : null}
       {query.data && !query.data.some((profile) => profile.kind === "LEARNED") ? <div className="border-y border-ui py-3"><p className="text-sm text-secondary">{zh ? "尚无个人或系统提供的学习格式，内置格式仍可直接导入。" : "No learned formats are available yet. Built-in formats are ready to use."}</p><button type="button" className="btn-secondary mt-2 min-h-11 px-3 text-sm" onClick={() => (onOpenImport ?? openImportDialog)()}>{zh ? "导入并学习" : "Import and learn"}</button></div> : null}
       <div className="divide-y divide-[var(--border)]">{query.data?.toSorted((left, right) => Number(left.kind === "BUILTIN") - Number(right.kind === "BUILTIN")).map((profile) => {
         const key = profile.id ?? profile.key ?? profile.name;
@@ -64,11 +64,43 @@ function FormatRow({ profile, onDirtyChange, onOpenImport }: { profile: ImportFo
       {profile.kind === "LEARNED" ? <form onSubmit={(event) => { event.preventDefault(); if (dirty && name.trim()) update.mutate({ name: name.trim() }); }} className="space-y-2"><label className="block text-xs font-medium text-secondary">{zh ? "个人显示名称" : "Your display name"}<input value={name} maxLength={200} disabled={update.isPending} onChange={(event) => setNameDraft(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-ui bg-surface px-3 text-sm text-primary" /></label><div className="flex gap-2"><button type="submit" disabled={!dirty || !name.trim() || update.isPending} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "保存名称" : "Save name"}</button>{dirty ? <button type="button" disabled={update.isPending} onClick={() => setNameDraft(null)} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "取消更改" : "Cancel changes"}</button> : null}</div></form> : null}
       <p className="text-xs leading-5 text-secondary">{zh ? "点击重新学习／修复并上传来源，即可运行格式健康检查，查看每组结果和失败原因，再按需修复映射。检查不会创建对话；保存新版本须整批验证通过。" : "Choose Relearn / repair and upload source files to check format health, review each group and repair its mapping if needed. Checking creates no conversations; saving a version requires the whole batch to pass."}</p>
       {revisions.isLoading ? <p role="status" className="text-xs text-secondary">{zh ? "正在读取版本…" : "Loading versions…"}</p> : null}
-      {revisions.isError ? <div role="alert"><p className="text-xs text-[var(--danger)]">{revisions.error.message}</p><button type="button" className="btn-secondary min-h-11 px-3 text-xs" onClick={() => void revisions.refetch()}>{zh ? "重试" : "Retry"}</button></div> : null}
+      {revisions.isError ? <div role="alert"><p className="text-xs text-[var(--danger)]">{importFormatError(revisions.error, zh, "revisions")}</p><button type="button" className="btn-secondary min-h-11 px-3 text-xs" onClick={() => void revisions.refetch()}>{zh ? "重试" : "Retry"}</button></div> : null}
       {revisions.data?.map((revision) => <div key={revision.id} className="border-t border-ui pt-3"><p className="text-xs font-medium text-primary">{zh ? "版本" : "Version"} {revision.revision}{revision.current ? (zh ? " · 当前可用" : " · Current available") : (zh ? " · 历史兼容" : " · Historical compatibility")}{revision.id === profile.published_revision_id ? (zh ? " · 系统发布" : " · Published") : ""}</p><details className="mt-2"><summary className="min-h-8 cursor-pointer text-xs text-accent">{zh ? "查看字段映射" : "View field mapping"}</summary><pre className="max-h-64 overflow-auto rounded-md bg-subtle p-2 text-xs text-secondary">{JSON.stringify(revision.mapping_spec, null, 2)}</pre></details></div>)}
     </div> : null}
     {update.isPending ? <p role="status" className="mt-2 text-xs text-secondary">{zh ? "正在保存…" : "Saving…"}</p> : null}
     {update.isSuccess ? <p role="status" className="mt-2 text-xs text-secondary">{zh ? "个人设置已保存" : "Personal settings saved"}</p> : null}
-    {update.isError ? <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{update.error.message}</p> : null}
+    {update.isError ? <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{importFormatError(update.error, zh, "update", update.variables?.name !== undefined)}</p> : null}
   </article>;
+}
+
+function importFormatError(error: unknown, zh: boolean, operation: "list" | "revisions" | "update", hasNameDraft = false): string {
+  const status = error instanceof ApiRequestError ? error.status : null;
+  if (status === 401 || status === 403) {
+    return zh ? "当前账户无法读取或修改此格式。请确认登录状态和账户权限。" : "This account cannot access this format. Check your sign-in and account permissions.";
+  }
+  if (status === 404) {
+    return operation === "update"
+      ? (zh ? `此格式已不可用。${hasNameDraft ? "名称草稿仍保留；" : ""}请刷新格式列表。` : `This format is no longer available. ${hasNameDraft ? "Your name draft is kept; " : ""}Refresh the format list.`)
+      : (zh ? "格式或版本已不可用，请刷新格式列表后重试。" : "This format or revision is unavailable. Refresh the format list and retry.");
+  }
+  if (status === 409) {
+    return zh ? `格式已在其他操作中更新。${hasNameDraft ? "名称草稿仍保留；" : ""}请刷新并核对最新状态。` : `The format changed elsewhere. ${hasNameDraft ? "Your name draft is kept; " : ""}Refresh and review the latest state.`;
+  }
+  if (status === 422) {
+    return zh ? `此项设置未被接受。${hasNameDraft ? "名称草稿仍保留；" : ""}请核对后重试。` : `The setting was not accepted. ${hasNameDraft ? "Your name draft is kept; " : ""}Review it before retrying.`;
+  }
+  if (status === 429) {
+    return zh ? `操作过于频繁，请稍后重试。${hasNameDraft ? "名称草稿仍保留。" : ""}` : `Too many requests. Retry shortly. ${hasNameDraft ? "Your name draft is kept." : ""}`;
+  }
+  if ((error instanceof Error && error.message === "CONNECTION_FAILED") || (status !== null && (status === 408 || status >= 500))) {
+    return operation === "update"
+      ? (zh ? `暂时无法确认此操作结果。${hasNameDraft ? "名称草稿仍保留；" : ""}请先刷新格式列表核对，再决定是否重试。` : `This operation could not be confirmed. ${hasNameDraft ? "Your name draft is kept; " : ""}Refresh the format list before deciding whether to retry.`)
+      : (zh ? "暂时无法连接服务器。已载入的内容仍保留，请重试读取。" : "The server is temporarily unavailable. Loaded content is kept; retry the read.");
+  }
+  if (operation === "update") {
+    return zh ? `暂时无法确认此操作结果。${hasNameDraft ? "名称草稿仍保留；" : ""}请刷新格式列表核对后再操作。` : `This operation could not be confirmed. ${hasNameDraft ? "Your name draft is kept; " : ""}Refresh the format list before taking further action.`;
+  }
+  return operation === "list"
+    ? (zh ? "无法读取导入格式。已载入的内容仍保留，请点击重试。" : "Could not load import formats. Loaded content is kept; retry the read.")
+    : (zh ? "无法读取此格式的版本。请点击重试。" : "Could not load this format's revisions. Retry the read.");
 }

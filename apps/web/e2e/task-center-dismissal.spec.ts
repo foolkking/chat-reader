@@ -23,6 +23,43 @@ const activeTask = {
   attempt_count: 1,
 };
 
+for (const width of [375, 1440]) test(`${width}px: unresolved task result has a read-only Retry independent of the active list`, async ({ page }, info) => {
+  await page.setViewportSize({ width, height: 900 });
+  let showActive = true, failFinal = true, finalReads = 0;
+  const mutationRequests: string[] = [];
+  await page.route("**/api/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.startsWith("/api/tasks/") && route.request().method() !== "GET") mutationRequests.push(path);
+    if (path === `/api/tasks/${taskId}`) {
+      finalReads += 1;
+      if (failFinal) await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ detail: "Synthetic final-result outage" }) });
+      else await json(route, { ...activeTask, status: "committed", phase: "committed", progress: 100, cancellable: false });
+      return;
+    }
+    await mockOwnerApi(route, [], showActive ? [activeTask] : []);
+  });
+  await page.goto("/");
+  if (width < 768) await page.getByTestId("mobile-sidebar-button").click();
+  await page.getByTestId("sidebar-tasks-button").filter({ visible: true }).click();
+  const panel = page.getByTestId("task-center-panel");
+  await expect(panel.getByTestId("task-conversation_merge-processing")).toBeVisible();
+  showActive = false;
+  const recovery = panel.getByText("A task's final result is unconfirmed. Retry checks its status without resubmitting it.", { exact: true });
+  await expect(recovery).toBeVisible();
+  await expect(panel.getByTestId("task-conversation_merge-processing")).toHaveCount(0);
+  const beforeRetry = finalReads;
+  await panel.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect.poll(() => finalReads).toBeGreaterThan(beforeRetry);
+  await expect(recovery).toBeVisible();
+  expect(mutationRequests).toEqual([]);
+  await page.screenshot({ path: info.outputPath(`task-result-recovery-${width}.png`) });
+  failFinal = false;
+  await panel.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(panel.getByTestId("task-conversation_merge-committed")).toBeVisible();
+  await expect(recovery).toHaveCount(0);
+  expect(mutationRequests).toEqual([]);
+});
+
 test("closing the Task Center never cancels its background task", async ({ page }) => {
   const cancelRequests: string[] = [];
   await page.route("**/api/**", async (route) => mockOwnerApi(route, cancelRequests, [activeTask]));
@@ -158,7 +195,8 @@ test("failures precede completed results and retry keeps keyboard focus on the m
   await expect(row).toContainText("Synthetic failed source");
   await expect(row).toContainText("Markdown");
   await expect(row.getByRole("progressbar")).toHaveCount(0);
-  const guidance = row.getByText(failed.error_message);
+  const guidance = row.getByText("A conversation or attachment needed for export is unavailable. Reopen the conversation and retry.");
+  await expect(row).not.toContainText(failed.error_message);
   expect(await guidance.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
   const retry = row.getByRole("button", { name: "Retry", exact: true });
   await retry.focus(); await page.keyboard.press("Enter");

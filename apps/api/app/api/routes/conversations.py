@@ -50,7 +50,7 @@ from app.schemas.message import (
 )
 from app.schemas.project import ConversationPinUpdate
 from app.schemas.search import MessageWindowResponse
-from app.schemas.task import BackgroundTaskRead, ConversationBatchDeleteRequest, ConversationMergeRequestRead, ConversationProjectMoveRequest
+from app.schemas.task import BackgroundTaskRead, ConversationBatchDeleteRequest, ConversationBatchDeleteRequestRead, ConversationMergeRequestRead, ConversationProjectMoveRequest
 from app.models.import_record import utc_now
 from app.services.conversation_revision import bump_offline_revision
 from app.services.editing.message_edit_service import (
@@ -61,7 +61,7 @@ from app.services.editing.message_edit_service import (
     plan_conversation_split,
     split_conversation,
 )
-from app.services.background_jobs import find_conversation_merge_request, queue_conversation_batch_delete, queue_conversation_merge, queue_conversation_derived_rebuild
+from app.services.background_jobs import find_conversation_batch_delete_request, find_conversation_merge_request, queue_conversation_batch_delete, queue_conversation_merge, queue_conversation_derived_rebuild
 from app.services.projects.project_service import (
     ProjectServiceError,
     add_conversation_to_project,
@@ -259,6 +259,18 @@ def get_conversation_merge_request(
 ) -> ConversationMergeRequestRead:
     job = find_conversation_merge_request(db, request_key, ownership_scope_from_request(request))
     return ConversationMergeRequestRead(
+        found=job is not None, task=background_job_read(job) if job is not None else None,
+    )
+
+
+@router.get("/batch-delete/requests/{request_key}", response_model=ConversationBatchDeleteRequestRead)
+def get_conversation_batch_delete_request(
+    request: Request,
+    request_key: str = Path(min_length=1, max_length=200),
+    db: Session = Depends(get_db),
+) -> ConversationBatchDeleteRequestRead:
+    job = find_conversation_batch_delete_request(db, request_key, ownership_scope_from_request(request))
+    return ConversationBatchDeleteRequestRead(
         found=job is not None, task=background_job_read(job) if job is not None else None,
     )
 

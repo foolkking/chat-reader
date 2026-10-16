@@ -1,0 +1,179 @@
+TAP version 13
+# Subtest: raw rich wrappers retain answer text, emphasis, badge and divider semantics
+ok 1 - raw rich wrappers retain answer text, emphasis, badge and divider semantics # SKIP test name does not match pattern
+  ---
+  duration_ms: 2.2063
+  ...
+# Subtest: multiply escaped rich exports restore headings, emphasis, code and ordered lists
+ok 2 - multiply escaped rich exports restore headings, emphasis, code and ordered lists # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1591
+  ...
+# Subtest: one-, two- and three-slash exported formatting is bounded to an established profile
+ok 3 - one-, two- and three-slash exported formatting is bounded to an established profile # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1032
+  ...
+# Subtest: normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+ok 4 - normal Markdown, deliberately escaped prose and whitespace entities are byte-identical # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0976
+  ...
+# Subtest: malformed, unclosed and excessively deep profiles do not authorize recovery
+ok 5 - malformed, unclosed and excessively deep profiles do not authorize recovery # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1124
+  ...
+# Subtest: raw and escaped layout examples in fenced/inline/indented code never establish a profile
+ok 6 - raw and escaped layout examples in fenced/inline/indented code never establish a profile # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0919
+  ...
+# Subtest: code within a real profile retains literal tags, escapes and longer fences exactly
+ok 7 - code within a real profile retains literal tags, escapes and longer fences exactly # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0907
+  ...
+# Subtest: escaped inline-code recovery restores delimiters only, never its body
+ok 8 - escaped inline-code recovery restores delimiters only, never its body # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1326
+  ...
+# Subtest: raw profiles do not turn deliberately escaped headings and emphasis into formatting
+ok 9 - raw profiles do not turn deliberately escaped headings and emphasis into formatting # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1759
+  ...
+# Subtest: rich and math compatibility compose without changing currency, formulas or code
+ok 10 - rich and math compatibility compose without changing currency, formulas or code # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.3186
+  ...
+# Subtest: unknown attributes, scripts, links, images and JSX expressions are never executed
+ok 11 - unknown attributes, scripts, links, images and JSX expressions are never executed # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1356
+  ...
+# Subtest: tokens beyond the supported escape depth remain literal
+ok 12 - tokens beyond the supported escape depth remain literal # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.102
+  ...
+# Subtest: input/token budgets fail closed without truncating content
+ok 13 - input/token budgets fail closed without truncating content # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1006
+  ...
+# Subtest: repeated projection and CRLF/Unicode content preserve ordered readable content
+ok 14 - repeated projection and CRLF/Unicode content preserve ordered readable content # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1531
+  ...
+# Subtest: cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+ok 15 - cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0989
+  ...
+# Subtest: each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+ok 16 - each block independently recovers inherited profile formatting and orphaned known wrapper fragments # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.165
+  ...
+# Subtest: projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+ok 17 - projection source positions map text back to canonical UTF-16 offsets and CRLF lines # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1443
+  ...
+# Subtest: source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+ok 18 - source-position remark plugin remaps actual parsed Markdown nodes after math plugins # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.2012
+  ...
+# Subtest: actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+ok 19 - actual shared renderer exercises primitive and interactive branches without changing canonical provider input # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1174
+  ...
+# Subtest: actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+ok 20 - actual source-preview renderer exposes original offsets and keeps canonical source unchanged # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1502
+  ...
+# Subtest: actual block renderer reads inherited profile while preserving heading/code boundaries
+ok 21 - actual block renderer reads inherited profile while preserving heading/code boundaries # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1332
+  ...
+# Subtest: actual message wiring propagates the profile across regular block paths with canonical anchors
+ok 22 - actual message wiring propagates the profile across regular block paths with canonical anchors # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0829
+  ...
+# Subtest: actual message wiring propagates the profile across element block paths with canonical anchors
+ok 23 - actual message wiring propagates the profile across element block paths with canonical anchors # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0682
+  ...
+# Subtest: actual message wiring propagates the profile across window block paths with canonical anchors
+ok 24 - actual message wiring propagates the profile across window block paths with canonical anchors # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0666
+  ...
+# Subtest: actual shared safe-link/image components stay inert for projected untrusted content
+ok 25 - actual shared safe-link/image components stay inert for projected untrusted content # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0683
+  ...
+# Subtest: leading thinking disclosure inherits the same full-message rich-text profile
+not ok 26 - leading thinking disclosure inherits the same full-message rich-text profile
+  ---
+  duration_ms: 43.523
+  location: 'file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:368:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /<strong>Synthetic reasoning<\/strong>/. Input:
+    
+    '<div class="reader-block-flow break-words"><div class="reader-block-slot"><div data-block-index="1" data-reader-copy-block="true"><details class="reader-thinking rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]"><summary class="min-h-8 cursor-pointer select-none text-sm font-medium text-primary">思考过程 · 1s</summary><p data-markdown-source-start="0" data-markdown-source-end="36" class="break-words">分析 **Synthetic reasoning**<br/>\n' +
+      '思考 1s</p></details></div></div><div class="reader-block-slot" style="margin-block-start:var(--reader-block-gap)"><div id="block-synthetic-message-1" data-block-id="synthetic-thinking-1" data-block-index="1" data-block-type="paragraph" data-reader-copy-block="true" class="reader-markdown-block max-w-full scroll-mt-3 rounded-xl transition "><div class="aui-chat-markdown max-w-full break-words text-primary " data-rich-markdown-version="ai-rich-markdown-v5"><h1 data-markdown-source-start="1" data-markdown-source-end="20" class="reader-heading reader-heading-1 border-b border-ui pb-2 font-semibold text-primary ">Synthetic heading</h1>\n' +
+      '<p data-markdown-source-start="105" data-markdown-source-end="191" class="break-words"><strong>Synthetic focus</strong><br/>\n' +
+      'Priority</p>\n' +
+      '<hr data-markdown-source-start="216" data-markdown-source-end="216" class="border-ui"/>\n' +
+      '<p data-markdown-source-start="261" data-markdown-source-end="290" class="break-words">Read <code class="rounded-md border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1.5 py-0.5 font-mono text-[0.9em] text-[var(--inline-code-text)]">sample_code</code> now.</p>\n' +
+      '<ol data-markdown-source-start="312" data-markdown-source-end="362" class="list-decimal pl-[1.625em]">\n' +
+      '<li data-markdown-source-start="312" data-markdown-source-end="336" class="pl-[0.375em] marker:text-secondary  ">First synthetic step</li>\n' +
+      '<li data-markdown-source-start="337" data-markdown-source-end="362" class="pl-[0.375em] marker:text-secondary  ">Second synthetic step</li>\n' +
+      '</ol></div></div></div></div>'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    <div class="reader-block-flow break-words"><div class="reader-block-slot"><div data-block-index="1" data-reader-copy-block="true"><details class="reader-thinking rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]"><summary class="min-h-8 cursor-pointer select-none text-sm font-medium text-primary">思考过程 · 1s</summary><p data-markdown-source-start="0" data-markdown-source-end="36" class="break-words">分析 **Synthetic reasoning**<br/>
+    思考 1s</p></details></div></div><div class="reader-block-slot" style="margin-block-start:var(--reader-block-gap)"><div id="block-synthetic-message-1" data-block-id="synthetic-thinking-1" data-block-index="1" data-block-type="paragraph" data-reader-copy-block="true" class="reader-markdown-block max-w-full scroll-mt-3 rounded-xl transition "><div class="aui-chat-markdown max-w-full break-words text-primary " data-rich-markdown-version="ai-rich-markdown-v5"><h1 data-markdown-source-start="1" data-markdown-source-end="20" class="reader-heading reader-heading-1 border-b border-ui pb-2 font-semibold text-primary ">Synthetic heading</h1>
+    <p data-markdown-source-start="105" data-markdown-source-end="191" class="break-words"><strong>Synthetic focus</strong><br/>
+    Priority</p>
+    <hr data-markdown-source-start="216" data-markdown-source-end="216" class="border-ui"/>
+    <p data-markdown-source-start="261" data-markdown-source-end="290" class="break-words">Read <code class="rounded-md border border-[var(--inline-code-border)] bg-[var(--inline-code-bg)] px-1.5 py-0.5 font-mono text-[0.9em] text-[var(--inline-code-text)]">sample_code</code> now.</p>
+    <ol data-markdown-source-start="312" data-markdown-source-end="362" class="list-decimal pl-[1.625em]">
+    <li data-markdown-source-start="312" data-markdown-source-end="336" class="pl-[0.375em] marker:text-secondary  ">First synthetic step</li>
+    <li data-markdown-source-start="337" data-markdown-source-end="362" class="pl-[0.375em] marker:text-secondary  ">Second synthetic step</li>
+    </ol></div></div></div></div>
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:380:10)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 25
+# todo 0
+# duration_ms 1189.7016

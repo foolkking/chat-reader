@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-13T05:52:16.278Z",
+  "parent_checkpoint": "docs/execution/ux-audit-followup-2026-10-13-evidence/local-verification.json",
+  "parent_checkpoint_sha256": "55a198595e3566a2a849c4627ed180c2d237043bfffef008137d49c7d1946665",
+  "evidence": "Real compiled callbacks and React element properties; scheduling, repository, storage and DOM are explicit doubles. No browser execution or actual server mutation.",
+  "source_sha256": {
+    "apps/web/features/annotations/annotation-workspace.tsx": "7442ad331529f848e54c93a0b9df1ecd69ffc2071b01d26435b5eaf6669cbb29",
+    "apps/web/features/annotations/notebook-view.tsx": "3804ecc555786de9bcc88a897d5d129007f6715318fafc995e29957ab6ad09e8",
+    "apps/web/features/annotations/use-annotation-workspace-reads.ts": "7efa4781d310c68482c7e21dc23bf4ae356f39566866a3898fae212968f1cd7e",
+    "apps/web/lib/annotation-repository.ts": "a71087a12a48870d6b2aa72972e30d346da8487bac55bbcda823b18236f2e8ed",
+    "apps/web/lib/notebook-drafts.ts": "6ad93ef32c12441a58e547a4590dea0522a8ad2bdc2f165ca9dace314744435d",
+    "scripts/ux/annotation-workspace-reads.test.mjs": "bafc369d50c0e5a95a277ce33c757977d84432920eed93498780ae723ff48fd1"
+  },
+  "findings": {
+    "comment_revision": {
+      "before_key": "comment:1",
+      "after_key": "comment:2",
+      "replacement_default": "stored",
+      "controlled_value": null,
+      "change_handler": false,
+      "failure_visible_in_tree": true
+    },
+    "partial_style": {
+      "reads_after_failure": 1,
+      "stored_first_revision": 2,
+      "shown_first_revision": 1,
+      "first_attempt_requests": [
+        {
+          "id": "first",
+          "revision": 1
+        },
+        {
+          "id": "second",
+          "revision": 1
+        }
+      ],
+      "retry_requests": [
+        {
+          "id": "first",
+          "revision": 1
+        }
+      ]
+    },
+    "delete_order": {
+      "notebook_saves": 1,
+      "references_after_notebook_save": 0,
+      "annotation_delete_attempts": 1,
+      "confirmed_annotation_deletions": 0
+    },
+    "repeat_bookmark": {
+      "create_calls_before_first_acknowledgement": 2
+    },
+    "cleanup_recovery": {
+      "server_saves": 1,
+      "removes": 1,
+      "draft_writes": 1,
+      "offered_save_draft_instead_of_cleanup": true,
+      "still_says_retry_clearing": true
+    },
+    "unhandled_rejections_observed": 4
+  }
+}

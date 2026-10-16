@@ -16,16 +16,32 @@ import {
   type AccessOverview,
   type AccessUser,
 } from "../lib/account-access-client";
-import type { RegistrationMode } from "../lib/auth-client";
+import { AuthRequestError, type RegistrationMode } from "../lib/auth-client";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { usePreferences } from "./preferences-provider";
 
 type AccessTab = "users" | "registration" | "invitations";
+type AccessLoadSection = "overview" | "users" | "invitations" | "profile";
+
+function accessError(cause: unknown, fallback: string, zh: boolean): string {
+  if (cause instanceof Error && cause.message === "CONNECTION_FAILED") {
+    return zh ? "暂时无法连接服务器，请检查连接后重试。" : "The server could not be reached. Check the connection and retry.";
+  }
+  if (cause instanceof AuthRequestError) {
+    if (cause.status === 401 || cause.status === 403) return zh ? "当前账户的管理权限已变化，请重新登录后刷新。" : "This account's administrator access changed. Sign in again and refresh.";
+    if (cause.status === 409) return zh ? "访问设置已在其他位置变化，请刷新后重试。" : "Access settings changed elsewhere. Refresh and retry.";
+    if (cause.status === 422) return zh ? "提交内容未被接受，请检查设置后重试。" : "The submitted values were not accepted. Review the settings and retry.";
+    if (cause.status === 429) return zh ? "操作过于频繁，请稍后重试。" : "Too many requests. Try again shortly.";
+    if (cause.status >= 500) return zh ? "服务暂时不可用，请稍后重试。" : "The service is temporarily unavailable. Try again later.";
+  }
+  return fallback;
+}
 
 export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) {
   const { resolvedLocale } = usePreferences();
   const { confirm } = useInteractionDialog();
-  const copy = useMemo(() => adminCopy(resolvedLocale === "zh-CN"), [resolvedLocale]);
+  const zh = resolvedLocale === "zh-CN";
+  const copy = useMemo(() => adminCopy(zh), [zh]);
   const [tab, setTab] = useState<AccessTab>("users");
   const [overview, setOverview] = useState<AccessOverview | null>(null);
   const [registration, setRegistration] = useState<RegistrationMode>("CLOSED");
@@ -35,6 +51,7 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
   const [inviteHours, setInviteHours] = useState(168);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [loadFailures, setLoadFailures] = useState<AccessLoadSection[]>([]);
   const [notice, setNotice] = useState("");
   const [oneTimeLink, setOneTimeLink] = useState<{ label: string; url: string; expiresAt: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -44,21 +61,48 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
   const load = useCallback(async () => {
     setBusy("load");
     setError("");
+    setLoadFailures([]);
     try {
-      const [nextOverview, nextUsers, nextInvitations, profile] = await Promise.all([
+      const [overviewResult, usersResult, invitationsResult, profileResult] = await Promise.allSettled([
         getAccessOverview(), getAccessUsers(), getAccessInvitations(), getAccountProfile(),
       ]);
-      setOverview(nextOverview);
-      setRegistration(nextOverview.registration_mode);
-      setUsers(nextUsers);
-      setInvitations(nextInvitations);
-      setCurrentUserId(profile.user_id);
+      const failed: AccessLoadSection[] = [];
+      const causes: unknown[] = [];
+      if (overviewResult.status === "fulfilled") {
+        setOverview(overviewResult.value);
+        setRegistration(overviewResult.value.registration_mode);
+      } else {
+        failed.push("overview");
+        causes.push(overviewResult.reason);
+      }
+      if (usersResult.status === "fulfilled") {
+        setUsers(usersResult.value);
+      } else {
+        failed.push("users");
+        causes.push(usersResult.reason);
+      }
+      if (invitationsResult.status === "fulfilled") {
+        setInvitations(invitationsResult.value);
+      } else {
+        failed.push("invitations");
+        causes.push(invitationsResult.reason);
+      }
+      if (profileResult.status === "fulfilled") {
+        setCurrentUserId(profileResult.value.user_id);
+      } else {
+        failed.push("profile");
+        causes.push(profileResult.reason);
+      }
+      setLoadFailures(failed);
+      if (causes.length) {
+        setError(accessError(causes[0], zh ? "部分访问数据暂时无法读取；已保留可用内容，请刷新后重试。" : "Some access data could not be loaded. Available data is retained; refresh and retry.", zh));
+      }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.loadFailed);
+      setError(accessError(cause, copy.loadFailed, zh));
     } finally {
       setBusy("");
     }
-  }, [copy.loadFailed]);
+  }, [copy.loadFailed, zh]);
 
   useEffect(() => { void load(); }, [load]);
   const registrationDirty = overview !== null && registration !== overview.registration_mode;
@@ -73,7 +117,7 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       setOverview((current) => current ? { ...current, registration_mode: result.registration_mode } : current);
       setNotice(copy.registrationSaved);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.registrationFailed);
+      setError(accessError(cause, copy.registrationFailed, zh));
     } finally {
       setBusy("");
     }
@@ -94,7 +138,7 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       const result = await updateAccessUserStatus(user.id, nextStatus);
       setUsers((items) => items.map((item) => item.id === user.id ? { ...item, status: result.status } : item));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.userFailed);
+      setError(accessError(cause, copy.userFailed, zh));
     } finally {
       setBusy("");
     }
@@ -109,7 +153,7 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       if (result.reset_url) setOneTimeLink({ label: copy.resetLink, url: result.reset_url, expiresAt: result.expires_at });
       setTab("users");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.resetFailed);
+      setError(accessError(cause, copy.resetFailed, zh));
     } finally {
       setBusy("");
     }
@@ -123,7 +167,7 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       if (result.invite_url) setOneTimeLink({ label: copy.inviteLink, url: result.invite_url, expiresAt: result.expires_at });
       setInvitations(await getAccessInvitations());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.inviteFailed);
+      setError(accessError(cause, copy.inviteFailed, zh));
     } finally {
       setBusy("");
     }
@@ -137,7 +181,7 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       await revokeAccessInvitation(invitation.id);
       setInvitations((items) => items.map((item) => item.id === invitation.id ? { ...item, status: "REVOKED" } : item));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : copy.revokeFailed);
+      setError(accessError(cause, copy.revokeFailed, zh));
     } finally {
       setBusy("");
     }
@@ -184,25 +228,25 @@ export function AdminAccessPanel({ onDirtyChange }: { onDirtyChange?: (dirty: bo
       <div className="divide-y divide-[var(--border)]">
       {filteredUsers.map((user) => <div key={user.id} className={`py-4 ${selectedUserId === user.id ? "-mx-2 rounded-lg bg-subtle px-2" : ""}`}>
         <div className="flex items-start gap-3"><UserRound className="mt-0.5 h-4 w-4 shrink-0 text-secondary" aria-hidden="true" /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-primary">{user.display_name || user.email}</p><StateLabel tone={user.status === "ACTIVE" ? "accent" : "muted"}>{user.status === "ACTIVE" ? copy.active : copy.disabled}</StateLabel>{user.role === "ADMIN" ? <StateLabel tone="neutral">{copy.admin}</StateLabel> : null}{user.id === currentUserId ? <StateLabel tone="accent">{copy.you}</StateLabel> : null}</div>{user.display_name ? <p className="mt-0.5 truncate text-xs text-secondary">{user.email}</p> : null}<p className="mt-1 text-xs text-secondary">{copy.joined} {formatDate(user.created_at, resolvedLocale)}</p></div></div>
-        <div className="mt-3 flex flex-wrap justify-end gap-2 pl-7"><button type="button" onClick={() => setSelectedUserId((current) => current === user.id ? null : user.id)} className="btn-secondary min-h-9 px-3 text-xs font-medium">{selectedUserId === user.id ? (resolvedLocale === "zh-CN" ? "收起详情" : "Hide details") : (resolvedLocale === "zh-CN" ? "查看详情" : "View details")}</button>{user.id !== currentUserId ? <><button type="button" onClick={() => void createReset(user)} disabled={Boolean(busy)} className="btn-secondary flex min-h-9 items-center gap-2 px-3 text-xs font-medium"><KeyRound className="h-3.5 w-3.5" />{copy.createReset}</button><button type="button" onClick={() => void toggleUser(user)} disabled={Boolean(busy)} className={"min-h-9 px-3 text-xs font-medium " + (user.status === "ACTIVE" ? "text-[var(--danger)]" : "text-accent")}>{user.status === "ACTIVE" ? copy.disable : copy.enable}</button></> : null}</div>
+        <div className="mt-3 flex flex-wrap justify-end gap-2 pl-7"><button type="button" onClick={() => setSelectedUserId((current) => current === user.id ? null : user.id)} className="btn-secondary min-h-9 px-3 text-xs font-medium">{selectedUserId === user.id ? (resolvedLocale === "zh-CN" ? "收起详情" : "Hide details") : (resolvedLocale === "zh-CN" ? "查看详情" : "View details")}</button>{currentUserId !== null && user.id !== currentUserId ? <><button type="button" onClick={() => void createReset(user)} disabled={Boolean(busy)} className="btn-secondary flex min-h-9 items-center gap-2 px-3 text-xs font-medium"><KeyRound className="h-3.5 w-3.5" />{copy.createReset}</button><button type="button" onClick={() => void toggleUser(user)} disabled={Boolean(busy)} className={"min-h-9 px-3 text-xs font-medium " + (user.status === "ACTIVE" ? "text-[var(--danger)]" : "text-accent")}>{user.status === "ACTIVE" ? copy.disable : copy.enable}</button></> : null}</div>
         {selectedUserId === user.id ? <UserDetails user={user} locale={resolvedLocale} zh={resolvedLocale === "zh-CN"} /> : null}
       </div>)}
-      {!filteredUsers.length && busy !== "load" ? <p className="py-5 text-sm text-secondary">{userQuery ? (resolvedLocale === "zh-CN" ? "没有匹配的用户。" : "No matching users.") : copy.noUsers}</p> : null}
+      {!filteredUsers.length && busy !== "load" ? <p className="py-5 text-sm text-secondary">{loadFailures.includes("users") ? (zh ? "用户列表暂时无法读取，请刷新重试。" : "The user list is unavailable. Refresh and retry.") : userQuery ? (resolvedLocale === "zh-CN" ? "没有匹配的用户。" : "No matching users.") : copy.noUsers}</p> : null}
       </div>
     </div> : null}
 
     {tab === "registration" ? <div role="tabpanel" className="space-y-4">
-      <div className="grid grid-cols-3 rounded-lg bg-subtle p-1">{(["CLOSED", "INVITE_ONLY", "OPEN"] as const).map((mode) => <button key={mode} type="button" onClick={() => setRegistration(mode)} aria-pressed={registration === mode} className={"min-h-9 rounded-md px-2 text-xs " + (registration === mode ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary")}>{copy.modes[mode]}</button>)}</div>
+      <div className="grid grid-cols-3 rounded-lg bg-subtle p-1">{(["CLOSED", "INVITE_ONLY", "OPEN"] as const).map((mode) => <button key={mode} type="button" disabled={!overview} onClick={() => setRegistration(mode)} aria-pressed={registration === mode} className={"min-h-9 rounded-md px-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 " + (registration === mode ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary")}>{copy.modes[mode]}</button>)}</div>
       <p className="text-sm leading-6 text-secondary">{copy.modeDescriptions[registration]}</p>
       {registration === "OPEN" ? <p className="border-l-2 border-[var(--warning)] pl-3 text-xs leading-5 text-secondary">{copy.openWarning}</p> : null}
-      <p className="text-xs text-secondary">{overview?.smtp_configured ? copy.smtpReady : copy.smtpMissing}</p>
+      <p className="text-xs text-secondary">{overview ? (overview.smtp_configured ? copy.smtpReady : copy.smtpMissing) : (zh ? "访问概览暂时无法读取，请刷新后再修改。" : "The access overview is unavailable. Refresh before changing it.")}</p>
       <div className="flex justify-end"><button type="button" onClick={() => void saveRegistration()} disabled={!registrationDirty || busy === "registration"} className="btn-primary min-h-10 px-4 text-xs font-medium disabled:opacity-45">{busy === "registration" ? copy.saving : copy.saveRegistration}</button></div>
     </div> : null}
 
     {tab === "invitations" ? <div role="tabpanel" className="space-y-4">
       <div className="flex flex-wrap items-end gap-3 border-b border-ui pb-4"><label className="min-w-36 flex-1 text-xs font-medium text-secondary">{copy.validFor}<input type="number" min={1} max={2160} value={inviteHours} onChange={(event) => setInviteHours(Math.max(1, Math.min(2160, Number(event.target.value) || 1)))} className="input-base mt-1 min-h-10 w-full px-3" /></label><button type="button" onClick={() => void createInvitation()} disabled={busy === "invitation"} className="btn-primary flex min-h-10 items-center gap-2 px-4 text-xs font-medium"><Link2 className="h-4 w-4" />{busy === "invitation" ? copy.creating : copy.createInvitation}</button></div>
       <div className="divide-y divide-[var(--border)]">{invitations.map((invitation) => <div key={invitation.id} className="flex items-center gap-3 py-3"><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-medium text-primary">{copy.invitation}</p><StateLabel tone={invitation.status === "PENDING" ? "accent" : "muted"}>{copy.invitationStates[invitation.status]}</StateLabel></div><p className="mt-1 text-xs text-secondary">{copy.expires} {formatDate(invitation.expires_at, resolvedLocale)}</p></div>{invitation.status === "PENDING" ? <button type="button" onClick={() => void revokeInvitation(invitation)} disabled={Boolean(busy)} className="min-h-9 px-2 text-xs font-medium text-[var(--danger)]">{copy.revoke}</button> : null}</div>)}</div>
-      {!invitations.length && busy !== "load" ? <p className="py-4 text-sm text-secondary">{copy.noInvitations}</p> : null}
+      {!invitations.length && busy !== "load" ? <p className="py-4 text-sm text-secondary">{loadFailures.includes("invitations") ? (zh ? "邀请列表暂时无法读取，请刷新重试。" : "The invitation list is unavailable. Refresh and retry.") : copy.noInvitations}</p> : null}
     </div> : null}
 
     {busy === "load" ? <p role="status" className="text-sm text-secondary">{copy.loading}</p> : null}

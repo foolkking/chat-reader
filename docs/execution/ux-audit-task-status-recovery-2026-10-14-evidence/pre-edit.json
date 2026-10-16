@@ -1,0 +1,24 @@
+{
+  "captured_at": "2026-10-14",
+  "repository_head": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "sources": [
+    { "path": "apps/web/features/import/import-task-monitor.tsx", "sha256": "87e5af6eafbbe13a2babe7fadcfb7a5e429538f265afd9ce4f809c99453da116" },
+    { "path": "apps/web/features/exporting/continuation-panel.tsx", "sha256": "3bc65c90008a89236d2c825a0f0f002cc73fa49ab52af65739d4dc9c484146b6" }
+  ],
+  "baseline": {
+    "command": "node --test scripts/ux/task-status-recovery.test.mjs",
+    "passed": 1, "failed": 8, "skipped": 0, "duration_ms": 862.1603,
+    "reproduced": [
+      "Failed final GET inserted prior processing row into QueryObserver-owned empty data.",
+      "Manual Retry made only one total final GET rather than the expected two.",
+      "Sidebar/mobile compact text remained Import conversations · 42% after failed status read.",
+      "Both cached-empty error branches offered an unconfirmed empty state.",
+      "Both localized stale feedback strings promised tasks continue running."
+    ],
+    "existing_behavior_passed": "Late final GET from an old authentication generation did not publish completion."
+  },
+  "limitations": [
+    "Transport, React hook scheduling, DOM, timer and event surfaces are controlled doubles.",
+    "No browser, production incident, backend execution or performance measurement follows."
+  ]
+}

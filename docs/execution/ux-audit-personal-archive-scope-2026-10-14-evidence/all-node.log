@@ -1,0 +1,4668 @@
+TAP version 13
+# warning: in the working copy of 'PROJECT_STATE.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/api/tests/test_diagnostics.py', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/components/my-shares-panel.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/components/personal-backup-panel.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/attachment-reading.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/context-continuation-drop.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/library-offline.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/settings-notebook-drafts.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/settings-offline-conflicts.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/settings-personal-backup.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/settings-shares.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/e2e/task-center-dismissal.spec.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/features/annotations/annotation-workspace.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/features/annotations/notebook-view.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/features/attachments/attachment-table-policy.ts', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/features/attachments/attachment-viewer.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/features/exporting/continuation-panel.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/features/import/import-task-monitor.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'apps/web/features/offline/library-shell.tsx', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'deploy/nginx-chat-reader.conf', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/deployment.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/documentation-inventory.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/execution/ATTACHMENT_READING_RELEASE_2026-10-09.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/index.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/system/DEPLOYMENT_AND_ENVIRONMENT.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/system/USER_FLOWS.md', LF will be replaced by CRLF the next time Git touches it
+# warning: in the working copy of 'docs/testing.md', LF will be replaced by CRLF the next time Git touches it
+# Subtest: changed-area selector always keeps the full release gate
+ok 1 - changed-area selector always keeps the full release gate
+  ---
+  duration_ms: 213.8158
+  ...
+# Subtest: selector classifies the current worktree without duplicate commands
+ok 2 - selector classifies the current worktree without duplicate commands
+  ---
+  duration_ms: 2649.8691
+  ...
+# Subtest: api-quality pulls the verified immutable official PostgreSQL index
+ok 3 - api-quality pulls the verified immutable official PostgreSQL index
+  ---
+  duration_ms: 5.2246
+  ...
+# Subtest: web-quality pulls the verified immutable official PostgreSQL index
+ok 4 - web-quality pulls the verified immutable official PostgreSQL index
+  ---
+  duration_ms: 0.4169
+  ...
+# Subtest: settings-quality pulls the verified immutable official PostgreSQL index
+ok 5 - settings-quality pulls the verified immutable official PostgreSQL index
+  ---
+  duration_ms: 0.3803
+  ...
+# Subtest: API base argument preserves the existing Python default
+ok 6 - API base argument preserves the existing Python default
+  ---
+  duration_ms: 0.5304
+  ...
+# Subtest: both Web base stages share the argument and preserve the existing Node default
+ok 7 - both Web base stages share the argument and preserve the existing Node default
+  ---
+  duration_ms: 0.9699
+  ...
+# Subtest: CI passes the verified PYTHON_BASE_IMAGE pin to docker build
+ok 8 - CI passes the verified PYTHON_BASE_IMAGE pin to docker build
+  ---
+  duration_ms: 0.6132
+  ...
+# Subtest: CI passes the verified NODE_BASE_IMAGE pin to docker build
+ok 9 - CI passes the verified NODE_BASE_IMAGE pin to docker build
+  ---
+  duration_ms: 0.2943
+  ...
+# Subtest: builder setup uses Docker's built-in driver without a BuildKit container pull
+ok 10 - builder setup uses Docker's built-in driver without a BuildKit container pull
+  ---
+  duration_ms: 0.5484
+  ...
+# Subtest: both image builds explicitly select the accepted Linux amd64 platform
+ok 11 - both image builds explicitly select the accepted Linux amd64 platform
+  ---
+  duration_ms: 0.5275
+  ...
+# Subtest: the registry source contract runs as an additive CI check
+ok 12 - the registry source contract runs as an additive CI check
+  ---
+  duration_ms: 0.6774
+  ...
+# Subtest: measures bounded ranges and retry cost by media type without retaining content
+ok 13 - measures bounded ranges and retry cost by media type without retaining content
+  ---
+  duration_ms: 181.5713
+  ...
+# Subtest: complete same-revision shells do not fetch or replace existing bytes
+ok 14 - complete same-revision shells do not fetch or replace existing bytes
+  ---
+  duration_ms: 41.9447
+  ...
+# Subtest: same-revision optional misses are repaired without refetching the complete shell
+ok 15 - same-revision optional misses are repaired without refetching the complete shell
+  ---
+  duration_ms: 25.9512
+  ...
+# Subtest: failed same-revision repair preserves the active shell, other account and explicit retry
+ok 16 - failed same-revision repair preserves the active shell, other account and explicit retry
+  ---
+  duration_ms: 30.1011
+  ...
+# Subtest: same-revision critical and navigation misses are repaired without discarding the old record
+ok 17 - same-revision critical and navigation misses are repaired without discarding the old record
+  ---
+  duration_ms: 15.7321
+  ...
+# Subtest: client reconciliation requests same-revision optional repair while keeping reading available
+ok 18 - client reconciliation requests same-revision optional repair while keeping reading available
+  ---
+  duration_ms: 969.8917
+  ...
+# Subtest: client reconciliation retains the no-request fast path for a complete same revision
+ok 19 - client reconciliation retains the no-request fast path for a complete same revision
+  ---
+  duration_ms: 202.3245
+  ...
+# Subtest: equivalent absolute, relative and fragment URLs produce one stable shell revision
+ok 20 - equivalent absolute, relative and fragment URLs produce one stable shell revision
+  ---
+  duration_ms: 128.5853
+  ...
+# Subtest: shell canonicalization preserves distinct queries and excludes disallowed origins and paths
+ok 21 - shell canonicalization preserves distinct queries and excludes disallowed origins and paths
+  ---
+  duration_ms: 95.6952
+  ...
+# Subtest: runtime rediscovery of DOM resources does not rebuild a complete shell
+ok 22 - runtime rediscovery of DOM resources does not rebuild a complete shell
+  ---
+  duration_ms: 144.2242
+  ...
+# Subtest: Tailwind watcher and glob matcher resolve the same patched package
+ok 23 - Tailwind watcher and glob matcher resolve the same patched package
+  ---
+  duration_ms: 6.0747
+  ...
+# Subtest: deep closed, unterminated, parenthesized and mixed patterns fail before stack exhaustion
+ok 24 - deep closed, unterminated, parenthesized and mixed patterns fail before stack exhaustion
+  ---
+  duration_ms: 6.7009
+  ...
+# Subtest: direct AST callers cannot bypass the depth bound
+ok 25 - direct AST callers cannot bypass the depth bound
+  ---
+  duration_ms: 6.2459
+  ...
+# Subtest: ordinary nested alternatives, ranges, escaping and repository globs keep their results
+ok 26 - ordinary nested alternatives, ranges, escaping and repository globs keep their results
+  ---
+  duration_ms: 2.7555
+  ...
+# Subtest: both application PostCSS paths resolve the fixed source-map dependency
+ok 27 - both application PostCSS paths resolve the fixed source-map dependency
+  ---
+  duration_ms: 18.7533
+  ...
+# Subtest: oversized indexed offsets, including accumulated nested offsets, are rejected
+ok 28 - oversized indexed offsets, including accumulated nested offsets, are rejected
+  ---
+  duration_ms: 177.1463
+  ...
+# Subtest: a valid large offset beyond generated code does not allocate millions of empty lines
+ok 29 - a valid large offset beyond generated code does not allocate millions of empty lines
+  ---
+  duration_ms: 239.4744
+  ...
+# Subtest: deeply nested indexed maps preserve source content without exponential traversal
+ok 30 - deeply nested indexed maps preserve source content without exponential traversal
+  ---
+  duration_ms: 480.1161
+  ...
+# Subtest: ordinary generated mappings retain exact positions and source text
+ok 31 - ordinary generated mappings retain exact positions and source text
+  ---
+  duration_ms: 680.5023
+  ...
+# Subtest: notebook failure leaves successful annotations usable and retries only that resource
+ok 32 - notebook failure leaves successful annotations usable and retries only that resource
+  ---
+  duration_ms: 268.0529
+  ...
+# Subtest: conflicts failure leaves successful annotations usable and retries only that resource
+ok 33 - conflicts failure leaves successful annotations usable and retries only that resource
+  ---
+  duration_ms: 86.905
+  ...
+# Subtest: annotation failure leaves notebook and known conflicts independently readable
+ok 34 - annotation failure leaves notebook and known conflicts independently readable
+  ---
+  duration_ms: 80.2393
+  ...
+# Subtest: annotations publishes before an unrelated slow read completes
+ok 35 - annotations publishes before an unrelated slow read completes
+  ---
+  duration_ms: 79.63
+  ...
+# Subtest: notebook publishes before an unrelated slow read completes
+ok 36 - notebook publishes before an unrelated slow read completes
+  ---
+  duration_ms: 56.8239
+  ...
+# Subtest: conflicts publishes before an unrelated slow read completes
+ok 37 - conflicts publishes before an unrelated slow read completes
+  ---
+  duration_ms: 73.8842
+  ...
+# Subtest: a late older reload cannot replace a newer result
+ok 38 - a late older reload cannot replace a newer result
+  ---
+  duration_ms: 98.9583
+  ...
+# Subtest: failed refresh preserves current-scope data without claiming the read succeeded
+ok 39 - failed refresh preserves current-scope data without claiming the read succeeded
+  ---
+  duration_ms: 28.2751
+  ...
+# Subtest: 401 removes inaccessible cached resource data
+ok 40 - 401 removes inaccessible cached resource data
+  ---
+  duration_ms: 64.0115
+  ...
+# Subtest: 403 removes inaccessible cached resource data
+ok 41 - 403 removes inaccessible cached resource data
+  ---
+  duration_ms: 52.1262
+  ...
+# Subtest: 404 removes inaccessible cached resource data
+ok 42 - 404 removes inaccessible cached resource data
+  ---
+  duration_ms: 27.2991
+  ...
+# Subtest: an offline access lock drops cached notebook data
+ok 43 - an offline access lock drops cached notebook data
+  ---
+  duration_ms: 67.494
+  ...
+# Subtest: closing preserves loaded highlights but rejects a pending panel read
+ok 44 - closing preserves loaded highlights but rejects a pending panel read
+  ---
+  duration_ms: 76.6086
+  ...
+# Subtest: closed same-scope confirmed writes remain publishable
+ok 45 - closed same-scope confirmed writes remain publishable
+  ---
+  duration_ms: 77.5987
+  ...
+# Subtest: conversation changes hide old data immediately and reject older callbacks
+ok 46 - conversation changes hide old data immediately and reject older callbacks
+  ---
+  duration_ms: 40.9904
+  ...
+# Subtest: repository changes hide old data immediately and reject older callbacks
+ok 47 - repository changes hide old data immediately and reject older callbacks
+  ---
+  duration_ms: 38.8717
+  ...
+# Subtest: authentication changes hide old data immediately and reject older callbacks
+ok 48 - authentication changes hide old data immediately and reject older callbacks
+  ---
+  duration_ms: 49.1171
+  ...
+# Subtest: authentication changes reject completions even before another render
+ok 49 - authentication changes reject completions even before another render
+  ---
+  duration_ms: 39.8297
+  ...
+# Subtest: confirmed notebook writes retire pending reads before effects or rerender
+ok 50 - confirmed notebook writes retire pending reads before effects or rerender
+  ---
+  duration_ms: 73.8215
+  ...
+# Subtest: notebook readiness changes synchronously when conflict checking begins
+ok 51 - notebook readiness changes synchronously when conflict checking begins
+  ---
+  duration_ms: 49.943
+  ...
+# Subtest: unmount ignores pending reads and previously captured publishers
+ok 52 - unmount ignores pending reads and previously captured publishers
+  ---
+  duration_ms: 20.3868
+  ...
+# Subtest: workspace opens with independent error recovery instead of false empty annotations
+ok 53 - workspace opens with independent error recovery instead of false empty annotations
+  ---
+  duration_ms: 894.9857
+  ...
+# Subtest: a bookmark can still be created from the closed desktop Reader
+ok 54 - a bookmark can still be created from the closed desktop Reader
+  ---
+  duration_ms: 453.2649
+  ...
+# Subtest: notebook title accessible name follows the selected interface language
+ok 55 - notebook title accessible name follows the selected interface language
+  ---
+  duration_ms: 163.0789
+  ...
+# Subtest: notebook draft persistence coalesces pending edits and saves only after the latest snapshot
+ok 56 - notebook draft persistence coalesces pending edits and saves only after the latest snapshot
+  ---
+  duration_ms: 137.8675
+  ...
+# Subtest: coalesced notebook text retains the latest block contents and order
+ok 57 - coalesced notebook text retains the latest block contents and order
+  ---
+  duration_ms: 55.0617
+  ...
+# Subtest: failed notebook draft writes retain the newest input for explicit retry without advancing its version
+ok 58 - failed notebook draft writes retain the newest input for explicit retry without advancing its version
+  ---
+  duration_ms: 125.6783
+  ...
+# Subtest: a blocked deletion explains recovery and never retries the write automatically
+ok 59 - a blocked deletion explains recovery and never retries the write automatically
+  ---
+  duration_ms: 374.8659
+  ...
+# Subtest: a late bookmark completion cannot open a different conversation's workspace
+ok 60 - a late bookmark completion cannot open a different conversation's workspace
+  ---
+  duration_ms: 298.996
+  ...
+# Subtest: a deletion confirmation that outlives its conversation cannot delete or reopen the new one
+ok 61 - a deletion confirmation that outlives its conversation cannot delete or reopen the new one
+  ---
+  duration_ms: 268.5385
+  ...
+# Subtest: unknown conflict reads preserve the notebook draft and block saving without auto-retry
+ok 62 - unknown conflict reads preserve the notebook draft and block saving without auto-retry
+  ---
+  duration_ms: 116.8084
+  ...
+# Subtest: a save waiting for local draft storage rechecks read ownership before writing
+ok 63 - a save waiting for local draft storage rechecks read ownership before writing
+  ---
+  duration_ms: 47.3238
+  ...
+# Subtest: batch style keeps the same two selected targets across filters
+ok 64 - batch style keeps the same two selected targets across filters
+  ---
+  duration_ms: 478.9305
+  ...
+# Subtest: batch notes keeps the same two selected targets across filters
+ok 65 - batch notes keeps the same two selected targets across filters
+  ---
+  duration_ms: 301.9621
+  ...
+# Subtest: batch delete keeps the same two selected targets across filters
+ok 66 - batch delete keeps the same two selected targets across filters
+  ---
+  duration_ms: 218.8726
+  ...
+# Subtest: visible select/invert preserve hidden selections and show-all restores their context
+ok 67 - visible select/invert preserve hidden selections and show-all restores their context
+  ---
+  duration_ms: 319.9015
+  ...
+# Subtest: batch counts exclude bookmark styles and already-added references without dropping hidden selections
+ok 68 - batch counts exclude bookmark styles and already-added references without dropping hidden selections
+  ---
+  duration_ms: 290.2371
+  ...
+# Subtest: confirmation uses current notebook revision and surviving original targets, preserving newer selections
+ok 69 - confirmation uses current notebook revision and surviving original targets, preserving newer selections
+  ---
+  duration_ms: 210.7837
+  ...
+# Subtest: partial style failure publishes confirmed items and requires a read before another write
+ok 70 - partial style failure publishes confirmed items and requires a read before another write
+  ---
+  duration_ms: 211.6634
+  ...
+# Subtest: delete waits for annotation confirmation before touching notebook references
+ok 71 - delete waits for annotation confirmation before touching notebook references
+  ---
+  duration_ms: 172.001
+  ...
+# Subtest: repeated bookmark events share one stable request and unknown results never auto-repeat
+ok 72 - repeated bookmark events share one stable request and unknown results never auto-repeat
+  ---
+  duration_ms: 118.9078
+  ...
+# Subtest: style retry skips matching confirmations and uses the checked revision of remaining items
+ok 73 - style retry skips matching confirmations and uses the checked revision of remaining items
+  ---
+  duration_ms: 164.1881
+  ...
+# Subtest: failed style checks stay recoverable in expanded reading and cannot restart writes
+ok 74 - failed style checks stay recoverable in expanded reading and cannot restart writes
+  ---
+  duration_ms: 100.7058
+  ...
+# Subtest: partial deletion only cleans absent targets after a read and never resumes deleting
+ok 75 - partial deletion only cleans absent targets after a read and never resumes deleting
+  ---
+  duration_ms: 123.3619
+  ...
+# Subtest: failed notebook cleanup is checked and retried independently without re-deleting annotations
+ok 76 - failed notebook cleanup is checked and retried independently without re-deleting annotations
+  ---
+  duration_ms: 188.4598
+  ...
+# Subtest: a deletion check that fails does not enable cleanup or repeat writes
+ok 77 - a deletion check that fails does not enable cleanup or repeat writes
+  ---
+  duration_ms: 117.7247
+  ...
+# Subtest: a missing annotation found by checking is not reported as an acknowledged deletion
+ok 78 - a missing annotation found by checking is not reported as an acknowledged deletion
+  ---
+  duration_ms: 113.6988
+  ...
+# Subtest: a late deletion completion cannot clean or publish into a new conversation
+ok 79 - a late deletion completion cannot clean or publish into a new conversation
+  ---
+  duration_ms: 107.1523
+  ...
+# Subtest: bookmark unknown-result check finds the original id without writing
+ok 80 - bookmark unknown-result check finds the original id without writing
+  ---
+  duration_ms: 95.2532
+  ...
+# Subtest: bookmark unknown-result check allows an explicit retry using the original id
+ok 81 - bookmark unknown-result check allows an explicit retry using the original id
+  ---
+  duration_ms: 94.0155
+  ...
+# Subtest: a new read scope cannot inherit selection even when synthetic repositories reuse IDs
+ok 82 - a new read scope cannot inherit selection even when synthetic repositories reuse IDs
+  ---
+  duration_ms: 92.5326
+  ...
+# Subtest: late mobile annotation navigation cannot close a newly opened conversation
+ok 83 - late mobile annotation navigation cannot close a newly opened conversation
+  ---
+  duration_ms: 85.3533
+  ...
+# Subtest: notebook cleanup retry deletes only the saved draft without resubmitting the notebook
+ok 84 - notebook cleanup retry deletes only the saved draft without resubmitting the notebook
+  ---
+  duration_ms: 16.3764
+  ...
+# Subtest: an old cleanup action cannot delete a newly edited notebook draft
+ok 85 - an old cleanup action cannot delete a newly edited notebook draft
+  ---
+  duration_ms: 19.0105
+  ...
+# Subtest: cleanup rechecks authorization after waiting and never overwrites another tab's draft version
+ok 86 - cleanup rechecks authorization after waiting and never overwrites another tab's draft version
+  ---
+  duration_ms: 15.0445
+  ...
+# Subtest: text creation holds one prompt and one stable request through repeated actions
+ok 87 - text creation holds one prompt and one stable request through repeated actions
+  ---
+  duration_ms: 101.9714
+  ...
+# Subtest: unknown text creation retains quote and comment, checks read-only, and retries the same payload
+ok 88 - unknown text creation retains quote and comment, checks read-only, and retries the same payload
+  ---
+  duration_ms: 100.1476
+  ...
+# Subtest: checking an acknowledged-lost text creation finds its exact id without another create
+ok 89 - checking an acknowledged-lost text creation finds its exact id without another create
+  ---
+  duration_ms: 86.3168
+  ...
+# Subtest: a late text creation clears a recapture of its original selection
+ok 90 - a late text creation clears a recapture of its original selection
+  ---
+  duration_ms: 77.7281
+  ...
+# Subtest: a late text creation preserves a newer selection
+ok 91 - a late text creation preserves a newer selection
+  ---
+  duration_ms: 81.0231
+  ...
+# Subtest: cancelling a comment prompt leaves the selection and releases the creation guard
+ok 92 - cancelling a comment prompt leaves the selection and releases the creation guard
+  ---
+  duration_ms: 100.9013
+  ...
+# Subtest: a late comment prompt cannot create in a different conversation
+ok 93 - a late comment prompt cannot create in a different conversation
+  ---
+  duration_ms: 82.9561
+  ...
+# Subtest: a failed creation check keeps input and cannot enable a blind create retry
+ok 94 - a failed creation check keeps input and cannot enable a blind create retry
+  ---
+  duration_ms: 83.3713
+  ...
+# Subtest: single and batch note additions share a synchronous pending guard
+ok 95 - single and batch note additions share a synchronous pending guard
+  ---
+  duration_ms: 85.7278
+  ...
+# Subtest: a note addition found by checking does not write again
+ok 96 - a note addition found by checking does not write again
+  ---
+  duration_ms: 82.2713
+  ...
+# Subtest: note retry adds only missing original targets to the newest notebook and preserves other blocks
+ok 97 - note retry adds only missing original targets to the newest notebook and preserves other blocks
+  ---
+  duration_ms: 79.1902
+  ...
+# Subtest: failed note checks keep targets without repeating or allowing unrelated notebook writes
+ok 98 - failed note checks keep targets without repeating or allowing unrelated notebook writes
+  ---
+  duration_ms: 78.1221
+  ...
+# Subtest: missing annotations are disclosed and not silently counted as added references
+ok 99 - missing annotations are disclosed and not silently counted as added references
+  ---
+  duration_ms: 82.9361
+  ...
+# Subtest: note capacity is checked without truncating the requested additions
+ok 100 - note capacity is checked without truncating the requested additions
+  ---
+  duration_ms: 79.4541
+  ...
+# Subtest: a captured old add action sees a confirmed notebook before a rerender and avoids a duplicate
+ok 101 - a captured old add action sees a confirmed notebook before a rerender and avoids a duplicate
+  ---
+  duration_ms: 76.4196
+  ...
+# Subtest: late note-add completion cannot publish or switch views in another conversation
+ok 102 - late note-add completion cannot publish or switch views in another conversation
+  ---
+  duration_ms: 76.1256
+  ...
+# Subtest: a failed comment stays editable through style revisions and read-only checking
+ok 103 - a failed comment stays editable through style revisions and read-only checking
+  ---
+  duration_ms: 72.3369
+  ...
+# Subtest: two blur/save events submit once and confirmed saving preserves typing made during the request
+ok 104 - two blur/save events submit once and confirmed saving preserves typing made during the request
+  ---
+  duration_ms: 81.5699
+  ...
+# Subtest: changed stored comments require explicit confirmation and never overwrite on blur
+ok 105 - changed stored comments require explicit confirmation and never overwrite on blur
+  ---
+  duration_ms: 80.1324
+  ...
+# Subtest: new typing invalidates a pending comment-overwrite confirmation
+ok 106 - new typing invalidates a pending comment-overwrite confirmation
+  ---
+  duration_ms: 83.5788
+  ...
+# Subtest: comment drafts survive filtering and panel closure but cannot cross the read scope
+ok 107 - comment drafts survive filtering and panel closure but cannot cross the read scope
+  ---
+  duration_ms: 84.5716
+  ...
+# Subtest: a late comment acknowledgement cannot publish into another conversation
+ok 108 - a late comment acknowledgement cannot publish into another conversation
+  ---
+  duration_ms: 82.2305
+  ...
+# Subtest: the actual comment editor retains the controlled input and checking does not trigger blur saving
+ok 109 - the actual comment editor retains the controlled input and checking does not trigger blur saving
+  ---
+  duration_ms: 7.1027
+  ...
+# Subtest: a transient archived-project refresh retains rows and localized read-only retry
+ok 110 - a transient archived-project refresh retains rows and localized read-only retry
+  ---
+  duration_ms: 362.186
+  ...
+# Subtest: failed refresh retains selected archived projects and retry only reads
+ok 111 - failed refresh retains selected archived projects and retry only reads
+  ---
+  duration_ms: 112.3535
+  ...
+# Subtest: held archived-project Retry preserves content and disables the Retry control
+ok 112 - held archived-project Retry preserves content and disables the Retry control
+  ---
+  duration_ms: 16.0673
+  ...
+# Subtest: initial archived-project error remains an explicit retryable error
+ok 113 - initial archived-project error remains an explicit retryable error
+  ---
+  duration_ms: 6.0895
+  ...
+# Subtest: empty-cache archived-project error remains an explicit retryable error
+ok 114 - empty-cache archived-project error remains an explicit retryable error
+  ---
+  duration_ms: 14.6181
+  ...
+# Subtest: archived-project HTTP 401 hides retained private rows and selection
+ok 115 - archived-project HTTP 401 hides retained private rows and selection
+  ---
+  duration_ms: 6.3518
+  ...
+# Subtest: archived-project HTTP 403 hides retained private rows and selection
+ok 116 - archived-project HTTP 403 hides retained private rows and selection
+  ---
+  duration_ms: 5.4895
+  ...
+# Subtest: archived-project HTTP 404 hides retained private rows and selection
+ok 117 - archived-project HTTP 404 hides retained private rows and selection
+  ---
+  duration_ms: 4.9901
+  ...
+# Subtest: a successful empty archive without a notice stays compact
+ok 118 - a successful empty archive without a notice stays compact
+  ---
+  duration_ms: 3.9659
+  ...
+# Subtest: active projects never appear as archived rows
+ok 119 - active projects never appear as archived rows
+  ---
+  duration_ms: 22.2224
+  ...
+# Subtest: Chinese archived-project read recovery stays localized
+ok 120 - Chinese archived-project read recovery stays localized
+  ---
+  duration_ms: 11.6191
+  ...
+# Subtest: an acknowledged batch notice survives the empty content branch
+ok 121 - an acknowledged batch notice survives the empty content branch
+  ---
+  duration_ms: 14.4212
+  ...
+# Subtest: an acknowledged batch notice survives the loading content branch
+ok 122 - an acknowledged batch notice survives the loading content branch
+  ---
+  duration_ms: 9.0155
+  ...
+# Subtest: an acknowledged batch notice survives the error content branch
+ok 123 - an acknowledged batch notice survives the error content branch
+  ---
+  duration_ms: 10.5027
+  ...
+# Subtest: confirmed single restore settles and acknowledges before an actual held query refresh
+ok 124 - confirmed single restore settles and acknowledges before an actual held query refresh
+  ---
+  duration_ms: 21.9616
+  ...
+# Subtest: ordinary invalidateQueries read failure does not invoke mutation onError (control)
+ok 125 - ordinary invalidateQueries read failure does not invoke mutation onError (control)
+  ---
+  duration_ms: 10.6252
+  ...
+# Subtest: confirmed restore publishes the canonical response to every existing project cache
+ok 126 - confirmed restore publishes the canonical response to every existing project cache
+  ---
+  duration_ms: 13.415
+  ...
+# Subtest: restoring the last project keeps an acknowledgement when the archive is empty
+ok 127 - restoring the last project keeps an acknowledgement when the archive is empty
+  ---
+  duration_ms: 17.8977
+  ...
+# Subtest: bulk restore acknowledges and releases busy state before a held refresh
+ok 128 - bulk restore acknowledges and releases busy state before a held refresh
+  ---
+  duration_ms: 11.2941
+  ...
+# Subtest: partial bulk restore publishes confirmed rows and retains unconfirmed selection
+ok 129 - partial bulk restore publishes confirmed rows and retains unconfirmed selection
+  ---
+  duration_ms: 12.4232
+  ...
+# Subtest: a lost restore acknowledgement is uncertain, not proof that the project is still archived
+ok 130 - a lost restore acknowledgement is uncertain, not proof that the project is still archived
+  ---
+  duration_ms: 9.5463
+  ...
+# Subtest: checking a lost acknowledgement performs one read, confirms restore and never repeats PATCH
+ok 131 - checking a lost acknowledgement performs one read, confirms restore and never repeats PATCH
+  ---
+  duration_ms: 33.4884
+  ...
+# Subtest: a failed explicit restore check keeps uncertainty and prevents a blind retry
+ok 132 - a failed explicit restore check keeps uncertainty and prevents a blind retry
+  ---
+  duration_ms: 26.43
+  ...
+# Subtest: a successful check of still-archived projects enables only an explicit retry
+ok 133 - a successful check of still-archived projects enables only an explicit retry
+  ---
+  duration_ms: 18.1656
+  ...
+# Subtest: a missing project in a successful restore check is unavailable, not a claimed restore
+ok 134 - a missing project in a successful restore check is unavailable, not a claimed restore
+  ---
+  duration_ms: 12.5013
+  ...
+# Subtest: same-turn duplicate Restore callbacks admit one write
+ok 135 - same-turn duplicate Restore callbacks admit one write
+  ---
+  duration_ms: 5.7096
+  ...
+# Subtest: single restore pending also disables project deletion
+ok 136 - single restore pending also disables project deletion
+  ---
+  duration_ms: 12.1239
+  ...
+# Subtest: cancelling permanent deletion keeps the original projects and performs no reads or writes
+ok 137 - cancelling permanent deletion keeps the original projects and performs no reads or writes
+  ---
+  duration_ms: 12.1569
+  ...
+# Subtest: confirmed final project-container deletion keeps its result and conversation-preservation copy
+ok 138 - confirmed final project-container deletion keeps its result and conversation-preservation copy
+  ---
+  duration_ms: 14.4898
+  ...
+# Subtest: single deletion acknowledges and invalidates all affected lists without waiting for a held refresh
+ok 139 - single deletion acknowledges and invalidates all affected lists without waiting for a held refresh
+  ---
+  duration_ms: 14.9518
+  ...
+# Subtest: single deletion acknowledges and invalidates all affected lists without waiting for a failed refresh
+ok 140 - single deletion acknowledges and invalidates all affected lists without waiting for a failed refresh
+  ---
+  duration_ms: 21.6733
+  ...
+# Subtest: bulk deletion acknowledges and invalidates all affected lists without waiting for a held refresh
+ok 141 - bulk deletion acknowledges and invalidates all affected lists without waiting for a held refresh
+  ---
+  duration_ms: 11.4553
+  ...
+# Subtest: bulk deletion acknowledges and invalidates all affected lists without waiting for a failed refresh
+ok 142 - bulk deletion acknowledges and invalidates all affected lists without waiting for a failed refresh
+  ---
+  duration_ms: 12.8566
+  ...
+# Subtest: old cancelled reads cannot replace a confirmed restored project
+ok 143 - old cancelled reads cannot replace a confirmed restored project
+  ---
+  duration_ms: 22.9338
+  ...
+# Subtest: acknowledgement region is not inside a fetch-busy section during held refresh
+ok 144 - acknowledgement region is not inside a fetch-busy section during held refresh
+  ---
+  duration_ms: 12.14
+  ...
+# Subtest: explicit check cancels an older background read instead of remaining disabled behind it
+ok 145 - explicit check cancels an older background read instead of remaining disabled behind it
+  ---
+  duration_ms: 11.9611
+  ...
+# Subtest: delayed row removal retains the logical focus owner until focus is actually lost
+ok 146 - delayed row removal retains the logical focus owner until focus is actually lost
+  ---
+  duration_ms: 8.9043
+  ...
+# Subtest: result focus never steals a later chosen control
+ok 147 - result focus never steals a later chosen control
+  ---
+  duration_ms: 11.0041
+  ...
+# Subtest: unmount before the restore response prevents later cache and notice publication
+ok 148 - unmount before the restore response prevents later cache and notice publication
+  ---
+  duration_ms: 9.549
+  ...
+# Subtest: same-turn duplicate Check callbacks issue one read and no extra write
+ok 149 - same-turn duplicate Check callbacks issue one read and no extra write
+  ---
+  duration_ms: 13.3342
+  ...
+# Subtest: a project leaving the archive no longer counts as a selected actionable row
+ok 150 - a project leaving the archive no longer counts as a selected actionable row
+  ---
+  duration_ms: 16.0646
+  ...
+# Subtest: a captured bulk Restore callback cannot submit a project that left the current archive
+ok 151 - a captured bulk Restore callback cannot submit a project that left the current archive
+  ---
+  duration_ms: 17.387
+  ...
+# Subtest: deletion rechecks current archive membership after the confirmation dialog
+ok 152 - deletion rechecks current archive membership after the confirmation dialog
+  ---
+  duration_ms: 31.3076
+  ...
+# Subtest: a captured single Restore callback cannot act after its row has disappeared
+ok 153 - a captured single Restore callback cannot act after its row has disappeared
+  ---
+  duration_ms: 6.433
+  ...
+# Subtest: an open attachment suspends drawer interaction without removing its content
+ok 154 - an open attachment suspends drawer interaction without removing its content
+  ---
+  duration_ms: 203.1968
+  ...
+# Subtest: a suspended drawer releases only its Overlay-owned scroll lock
+ok 155 - a suspended drawer releases only its Overlay-owned scroll lock
+  ---
+  duration_ms: 254.0642
+  ...
+# Subtest: retained sheet content stays above its remounted scrim regardless of portal insertion order
+ok 156 - retained sheet content stays above its remounted scrim regardless of portal insertion order
+  ---
+  duration_ms: 19.3239
+  ...
+# Subtest: returning from an attachment re-enables the same drawer structure and child identity
+ok 157 - returning from an attachment re-enables the same drawer structure and child identity
+  ---
+  duration_ms: 109.1741
+  ...
+# Subtest: only the foreground Viewer owns onPointerDownOutside while open
+ok 158 - only the foreground Viewer owns onPointerDownOutside while open
+  ---
+  duration_ms: 54.9395
+  ...
+# Subtest: only the foreground Viewer owns onInteractOutside while open
+ok 159 - only the foreground Viewer owns onInteractOutside while open
+  ---
+  duration_ms: 175.1874
+  ...
+# Subtest: only the foreground Viewer owns onEscapeKeyDown while open
+ok 160 - only the foreground Viewer owns onEscapeKeyDown while open
+  ---
+  duration_ms: 99.892
+  ...
+# Subtest: underlying drawer open-change cannot close the attachment's mounted owner
+ok 161 - underlying drawer open-change cannot close the attachment's mounted owner
+  ---
+  duration_ms: 96.6206
+  ...
+# Subtest: a drawer unmount cannot restore focus behind the still-open Viewer
+ok 162 - a drawer unmount cannot restore focus behind the still-open Viewer
+  ---
+  duration_ms: 31.5831
+  ...
+# Subtest: a closed mobile sheet still mounts no modal content
+ok 163 - a closed mobile sheet still mounts no modal content
+  ---
+  duration_ms: 122.3836
+  ...
+# Subtest: the separately portalled Viewer explicitly accepts pointers under a modal body
+ok 164 - the separately portalled Viewer explicitly accepts pointers under a modal body
+  ---
+  duration_ms: 41.8124
+  ...
+# Subtest: Viewer publishes open state separately without changing command context identity
+ok 165 - Viewer publishes open state separately without changing command context identity
+  ---
+  duration_ms: 19.5068
+  ...
+# Subtest: generated document CSP allows same-origin and local Blob reads only
+ok 166 - generated document CSP allows same-origin and local Blob reads only
+  ---
+  duration_ms: 1.3224
+  ...
+# Subtest: Blob reads do not relax worker-src
+ok 167 - Blob reads do not relax worker-src
+  ---
+  duration_ms: 0.5225
+  ...
+# Subtest: Blob reads do not relax frame-src
+ok 168 - Blob reads do not relax frame-src
+  ---
+  duration_ms: 0.2906
+  ...
+# Subtest: Blob reads do not relax object-src
+ok 169 - Blob reads do not relax object-src
+  ---
+  duration_ms: 0.3562
+  ...
+# Subtest: Blob reads do not relax script-src-attr
+ok 170 - Blob reads do not relax script-src-attr
+  ---
+  duration_ms: 0.4653
+  ...
+# Subtest: a generic ZIP detector result refines supported .docx content
+ok 171 - a generic ZIP detector result refines supported .docx content
+  ---
+  duration_ms: 24.4417
+  ...
+# Subtest: a generic ZIP detector result refines supported .odt content
+ok 172 - a generic ZIP detector result refines supported .odt content
+  ---
+  duration_ms: 0.5392
+  ...
+# Subtest: a generic ZIP detector result refines supported .xlsx content
+ok 173 - a generic ZIP detector result refines supported .xlsx content
+  ---
+  duration_ms: 0.5673
+  ...
+# Subtest: a generic ZIP detector result refines supported .ods content
+ok 174 - a generic ZIP detector result refines supported .ods content
+  ---
+  duration_ms: 0.7605
+  ...
+# Subtest: a generic ZIP detector result refines supported .pptx content
+ok 175 - a generic ZIP detector result refines supported .pptx content
+  ---
+  duration_ms: 0.3763
+  ...
+# Subtest: a generic ZIP detector result refines supported .odp content
+ok 176 - a generic ZIP detector result refines supported .odp content
+  ---
+  duration_ms: 0.2852
+  ...
+# Subtest: generic ZIP synthetic.zip cannot become Office through declared MIME alone
+ok 177 - generic ZIP synthetic.zip cannot become Office through declared MIME alone
+  ---
+  duration_ms: 0.3852
+  ...
+# Subtest: generic ZIP synthetic.doc cannot become Office through declared MIME alone
+ok 178 - generic ZIP synthetic.doc cannot become Office through declared MIME alone
+  ---
+  duration_ms: 0.2514
+  ...
+# Subtest: generic ZIP synthetic.xls cannot become Office through declared MIME alone
+ok 179 - generic ZIP synthetic.xls cannot become Office through declared MIME alone
+  ---
+  duration_ms: 0.2083
+  ...
+# Subtest: generic ZIP synthetic.ppt cannot become Office through declared MIME alone
+ok 180 - generic ZIP synthetic.ppt cannot become Office through declared MIME alone
+  ---
+  duration_ms: 0.2962
+  ...
+# Subtest: generic ZIP synthetic.docm cannot become Office through declared MIME alone
+ok 181 - generic ZIP synthetic.docm cannot become Office through declared MIME alone
+  ---
+  duration_ms: 0.2222
+  ...
+# Subtest: generic ZIP synthetic.bin cannot become Office through declared MIME alone
+ok 182 - generic ZIP synthetic.bin cannot become Office through declared MIME alone
+  ---
+  duration_ms: 0.1622
+  ...
+# Subtest: generic ZIP synthetic.zip.exe cannot become Office through declared MIME alone
+ok 183 - generic ZIP synthetic.zip.exe cannot become Office through declared MIME alone
+  ---
+  duration_ms: 0.1424
+  ...
+# Subtest: a filename cannot override strong detected application/pdf
+ok 184 - a filename cannot override strong detected application/pdf
+  ---
+  duration_ms: 0.4089
+  ...
+# Subtest: a filename cannot override strong detected image/png
+ok 185 - a filename cannot override strong detected image/png
+  ---
+  duration_ms: 0.2651
+  ...
+# Subtest: a filename cannot override strong detected audio/wav
+ok 186 - a filename cannot override strong detected audio/wav
+  ---
+  duration_ms: 1.097
+  ...
+# Subtest: a filename cannot override strong detected video/mp4
+ok 187 - a filename cannot override strong detected video/mp4
+  ---
+  duration_ms: 0.6251
+  ...
+# Subtest: the actual DOCX parser yields inert paragraph text from a ZIP-backed document
+ok 188 - the actual DOCX parser yields inert paragraph text from a ZIP-backed document
+  ---
+  duration_ms: 275.3075
+  ...
+# Subtest: renaming arbitrary ZIP bytes as DOCX cannot claim a readable document
+ok 189 - renaming arbitrary ZIP bytes as DOCX cannot claim a readable document
+  ---
+  duration_ms: 207.4382
+  ...
+# Subtest: ordinary ZIP still uses the same read-only directory parser
+ok 190 - ordinary ZIP still uses the same read-only directory parser
+  ---
+  duration_ms: 67.8952
+  ...
+# Subtest: PDF page canvas has an area and edge budget at high zoom/DPR
+ok 191 - PDF page canvas has an area and edge budget at high zoom/DPR
+  ---
+  duration_ms: 232.8888
+  ...
+# Subtest: PDF failed page exposes a local retry instead of an empty canvas
+ok 192 - PDF failed page exposes a local retry instead of an empty canvas
+  ---
+  duration_ms: 124.202
+  ...
+# Subtest: closing PDF before the lazy module arrives does not start a document request
+ok 193 - closing PDF before the lazy module arrives does not start a document request
+  ---
+  duration_ms: 121.4308
+  ...
+# Subtest: PDF direct page entry is a labelled input
+ok 194 - PDF direct page entry is a labelled input
+  ---
+  duration_ms: 168.4968
+  ...
+# Subtest: JSON transport failure has retry and is not called complex JSON
+ok 195 - JSON transport failure has retry and is not called complex JSON
+  ---
+  duration_ms: 55.0446
+  ...
+# Subtest: JSON Raw retains its format/source controls
+ok 196 - JSON Raw retains its format/source controls
+  ---
+  duration_ms: 77.7509
+  ...
+# Subtest: unsupported attachment does not mount a false text/PDF reader
+ok 197 - unsupported attachment does not mount a false text/PDF reader
+  ---
+  duration_ms: 31.4508
+  ...
+# Subtest: missing attachment does not mount a false text/PDF reader
+ok 198 - missing attachment does not mount a false text/PDF reader
+  ---
+  duration_ms: 19.1752
+  ...
+# Subtest: empty attachment does not mount a false text/PDF reader
+ok 199 - empty attachment does not mount a false text/PDF reader
+  ---
+  duration_ms: 18.2227
+  ...
+# Subtest: gallery next reads the latest selected item on every key press
+ok 200 - gallery next reads the latest selected item on every key press
+  ---
+  duration_ms: 33.2141
+  ...
+# Subtest: viewer shortcut leaves browser zoom alone
+ok 201 - viewer shortcut leaves browser zoom alone
+  ---
+  duration_ms: 25.8579
+  ...
+# Subtest: viewer shortcut leaves editable input alone
+ok 202 - viewer shortcut leaves editable input alone
+  ---
+  duration_ms: 12.7671
+  ...
+# Subtest: viewer shortcut leaves handled key alone
+ok 203 - viewer shortcut leaves handled key alone
+  ---
+  duration_ms: 11.4058
+  ...
+# Subtest: retryableUrl preserves real Blob URLs on retry
+ok 204 - retryableUrl preserves real Blob URLs on retry
+  ---
+  duration_ms: 87.6236
+  ...
+# Subtest: withAttempt preserves real Blob URLs on retry
+ok 205 - withAttempt preserves real Blob URLs on retry
+  ---
+  duration_ms: 47.5595
+  ...
+# Subtest: complex worker startup failure offers recovery without starting the byte read
+ok 206 - complex worker startup failure offers recovery without starting the byte read
+  ---
+  duration_ms: 83.6205
+  ...
+# Subtest: complex preview worker has a stable diagnostic identity independent of module bundling
+ok 207 - complex preview worker has a stable diagnostic identity independent of module bundling
+  ---
+  duration_ms: 35.9378
+  ...
+# Subtest: closing complex preview ignores late bytes and stale worker messages
+ok 208 - closing complex preview ignores late bytes and stale worker messages
+  ---
+  duration_ms: 54.6981
+  ...
+# Subtest: PDF page retry reads again and releases the displayed bitmap on unmount
+ok 209 - PDF page retry reads again and releases the displayed bitmap on unmount
+  ---
+  duration_ms: 36.2515
+  ...
+# Subtest: PDF resizing waits for the cancelled render before reusing its canvas
+ok 210 - PDF resizing waits for the cancelled render before reusing its canvas
+  ---
+  duration_ms: 89.7773
+  ...
+# Subtest: PDF unmount during page fetch never starts a late canvas render
+ok 211 - PDF unmount during page fetch never starts a late canvas render
+  ---
+  duration_ms: 87.6333
+  ...
+# Subtest: PDF thumbnail failure retains a selectable page number
+ok 212 - PDF thumbnail failure retains a selectable page number
+  ---
+  duration_ms: 25.4279
+  ...
+# Subtest: continuous PDF keeps the final page selected when its top cannot reach the viewport top
+ok 213 - continuous PDF keeps the final page selected when its top cannot reach the viewport top
+  ---
+  duration_ms: 96.9273
+  ...
+# Subtest: continuous PDF keeps fractional page alignment at 375px with floor scrolling
+ok 214 - continuous PDF keeps fractional page alignment at 375px with floor scrolling
+  ---
+  duration_ms: 87.9994
+  ...
+# Subtest: continuous PDF keeps fractional page alignment at 375px with round scrolling
+ok 215 - continuous PDF keeps fractional page alignment at 375px with round scrolling
+  ---
+  duration_ms: 44.6558
+  ...
+# Subtest: continuous PDF keeps fractional page alignment at 1267px with floor scrolling
+ok 216 - continuous PDF keeps fractional page alignment at 1267px with floor scrolling
+  ---
+  duration_ms: 48.9592
+  ...
+# Subtest: continuous PDF keeps fractional page alignment at 1267px with round scrolling
+ok 217 - continuous PDF keeps fractional page alignment at 1267px with round scrolling
+  ---
+  duration_ms: 109.0839
+  ...
+# Subtest: file-panel preview callback-only redraw keeps the same session and calls the latest close
+ok 218 - file-panel preview callback-only redraw keeps the same session and calls the latest close
+  ---
+  duration_ms: 37.4717
+  ...
+# Subtest: replacing or unmounting a file preview closes its session without dismissing the replacement
+ok 219 - replacing or unmounting a file preview closes its session without dismissing the replacement
+  ---
+  duration_ms: 14.1436
+  ...
+# Subtest: PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 375px/floor
+ok 220 - PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 375px/floor
+  ---
+  duration_ms: 168.7292
+  ...
+# Subtest: PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 375px/round
+ok 221 - PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 375px/round
+  ---
+  duration_ms: 133.3465
+  ...
+# Subtest: PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 1267px/floor
+ok 222 - PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 1267px/floor
+  ---
+  duration_ms: 131.1442
+  ...
+# Subtest: PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 1267px/round
+ok 223 - PDF zoom preserves page through pre-reconcile scroll and scrollbar resize at 1267px/round
+  ---
+  duration_ms: 108.5828
+  ...
+# Subtest: PDF page CSS follows current geometry before a queued bitmap redraw
+ok 224 - PDF page CSS follows current geometry before a queued bitmap redraw
+  ---
+  duration_ms: 18.2797
+  ...
+# Subtest: PDF geometry uses the current page cache and never inherits a different page or document
+ok 225 - PDF geometry uses the current page cache and never inherits a different page or document
+  ---
+  duration_ms: 39.0893
+  ...
+# Subtest: real wheel takes over an in-progress PDF alignment and listeners are released
+ok 226 - real wheel takes over an in-progress PDF alignment and listeners are released
+  ---
+  duration_ms: 60.8804
+  ...
+# Subtest: real touchstart takes over an in-progress PDF alignment and listeners are released
+ok 227 - real touchstart takes over an in-progress PDF alignment and listeners are released
+  ---
+  duration_ms: 27.9495
+  ...
+# Subtest: real pointerdown takes over an in-progress PDF alignment and listeners are released
+ok 228 - real pointerdown takes over an in-progress PDF alignment and listeners are released
+  ---
+  duration_ms: 32.8398
+  ...
+# Subtest: real keydown takes over an in-progress PDF alignment and listeners are released
+ok 229 - real keydown takes over an in-progress PDF alignment and listeners are released
+  ---
+  duration_ms: 23.2096
+  ...
+# Subtest: PDF browser fault stays page-local until a real Retry click on that page
+ok 230 - PDF browser fault stays page-local until a real Retry click on that page
+  ---
+  duration_ms: 87.6893
+  ...
+# Subtest: PDF persistent canvas failure survives resize then actual component Retry recovers
+ok 231 - PDF persistent canvas failure survives resize then actual component Retry recovers
+  ---
+  duration_ms: 124.9358
+  ...
+# Subtest: direct PDF entry changes page only after submission and validates without jumping
+ok 232 - direct PDF entry changes page only after submission and validates without jumping
+  ---
+  duration_ms: 91.2215
+  ...
+# Subtest: PDF fit and zoom retain the selected page and zoom from the actual fit scale
+ok 233 - PDF fit and zoom retain the selected page and zoom from the actual fit scale
+  ---
+  duration_ms: 72.7534
+  ...
+# Subtest: continuous PDF and thumbnail components hand bounded ranges to the installed virtualizer
+ok 234 - continuous PDF and thumbnail components hand bounded ranges to the installed virtualizer
+  ---
+  duration_ms: 48.6114
+  ...
+# Subtest: PDF document loading retains ranged HTTP policy and destroys the session on close
+ok 235 - PDF document loading retains ranged HTTP policy and destroys the session on close
+  ---
+  duration_ms: 46.5743
+  ...
+# Subtest: TextualViewer ignores a successful read received after closure
+ok 236 - TextualViewer ignores a successful read received after closure
+  ---
+  duration_ms: 12.0369
+  ...
+# Subtest: TextualViewer retries a failed read without changing the original source
+ok 237 - TextualViewer retries a failed read without changing the original source
+  ---
+  duration_ms: 49.2039
+  ...
+# Subtest: JsonViewer ignores a successful read received after closure
+ok 238 - JsonViewer ignores a successful read received after closure
+  ---
+  duration_ms: 42.1085
+  ...
+# Subtest: JsonViewer retries a failed read without changing the original source
+ok 239 - JsonViewer retries a failed read without changing the original source
+  ---
+  duration_ms: 40.072
+  ...
+# Subtest: JSON source mode returns to formatting and malformed JSON remains readable
+ok 240 - JSON source mode returns to formatting and malformed JSON remains readable
+  ---
+  duration_ms: 20.3833
+  ...
+# Subtest: every renderer receives the session's original-download restriction
+ok 241 - every renderer receives the session's original-download restriction
+  ---
+  duration_ms: 290.3318
+  ...
+# Subtest: audio retains native low-cost controls and explicit codec recovery
+ok 242 - audio retains native low-cost controls and explicit codec recovery
+  ---
+  duration_ms: 10.8337
+  ...
+# Subtest: video retains native low-cost controls and explicit codec recovery
+ok 243 - video retains native low-cost controls and explicit codec recovery
+  ---
+  duration_ms: 10.1741
+  ...
+# Subtest: CSV/TSV preserve BOM, CRLF, quoted delimiters, escaped quotes and multiline values
+ok 244 - CSV/TSV preserve BOM, CRLF, quoted delimiters, escaped quotes and multiline values
+  ---
+  duration_ms: 5.059
+  ...
+# Subtest: empty, quoted-empty and trailing empty fields remain distinct
+ok 245 - empty, quoted-empty and trailing empty fields remain distinct
+  ---
+  duration_ms: 0.6661
+  ...
+# Subtest: 257-column header stays the header; later short data is not promoted
+ok 246 - 257-column header stays the header; later short data is not promoted
+  ---
+  duration_ms: 5.0099
+  ...
+# Subtest: a wide data row keeps its leading fields and order before stopping
+ok 247 - a wide data row keeps its leading fields and order before stopping
+  ---
+  duration_ms: 1.3584
+  ...
+# Subtest: exact row/column/field boundaries do not claim truncation
+ok 248 - exact row/column/field boundaries do not claim truncation
+  ---
+  duration_ms: 20.5503
+  ...
+# Subtest: row budget preserves the ordered prefix and exposes the stop
+ok 249 - row budget preserves the ordered prefix and exposes the stop
+  ---
+  duration_ms: 50.505
+  ...
+# Subtest: total cell budget bounds retained cells even for wide rows
+ok 250 - total cell budget bounds retained cells even for wide rows
+  ---
+  duration_ms: 74.1981
+  ...
+# Subtest: long fields retain a marked prefix instead of allocating the entire field
+ok 251 - long fields retain a marked prefix instead of allocating the entire field
+  ---
+  duration_ms: 0.7963
+  ...
+# Subtest: field truncation never cuts a surrogate pair in half
+ok 252 - field truncation never cuts a surrogate pair in half
+  ---
+  duration_ms: 6.5671
+  ...
+# Subtest: input budget bounds scanning when each individual field is valid
+ok 253 - input budget bounds scanning when each individual field is valid
+  ---
+  duration_ms: 817.2911
+  ...
+# Subtest: unclosed quotes are explicit and preserve the actual first row
+ok 254 - unclosed quotes are explicit and preserve the actual first row
+  ---
+  duration_ms: 1.1115
+  ...
+# Subtest: page size stays below both row and cell budgets for every supported width
+ok 255 - page size stays below both row and cell budgets for every supported width
+  ---
+  duration_ms: 6.344
+  ...
+# Subtest: 100×64 table renders only one bounded page, with continuous row numbers and reversible navigation
+ok 256 - 100×64 table renders only one bounded page, with continuous row numbers and reversible navigation
+  ---
+  duration_ms: 895.8134
+  ...
+# Subtest: truncated header shows an explicit warning and a working source action, never an empty-file claim
+ok 257 - truncated header shows an explicit warning and a working source action, never an empty-file claim
+  ---
+  duration_ms: 55.6717
+  ...
+# Subtest: current: immediate declined drop cannot write before parent effects settle
+ok 258 - current: immediate declined drop cannot write before parent effects settle
+  ---
+  duration_ms: 1132.6454
+  ...
+# Subtest: index: immediate declined drop cannot write before parent effects settle
+ok 259 - index: immediate declined drop cannot write before parent effects settle
+  ---
+  duration_ms: 499.1663
+  ...
+# Subtest: settled dirty draft also requires confirmation and preserves the text on decline
+ok 260 - settled dirty draft also requires confirmation and preserves the text on decline
+  ---
+  duration_ms: 424.5069
+  ...
+# Subtest: resuming a dirty draft protects an immediate drop before effects
+ok 261 - resuming a dirty draft protects an immediate drop before effects
+  ---
+  duration_ms: 213.9452
+  ...
+# Subtest: accepted immediate replacement waits for save acknowledgement before discarding
+ok 262 - accepted immediate replacement waits for save acknowledgement before discarding
+  ---
+  duration_ms: 311.6843
+  ...
+# Subtest: failed replacement preserves dirty draft and asks again on retry
+ok 263 - failed replacement preserves dirty draft and asks again on retry
+  ---
+  duration_ms: 188.3701
+  ...
+# Subtest: pristine drop writes without an unnecessary draft confirmation
+ok 264 - pristine drop writes without an unnecessary draft confirmation
+  ---
+  duration_ms: 142.0957
+  ...
+# Subtest: reverting to original clears protection immediately even with stale parent render
+ok 265 - reverting to original clears protection immediately even with stale parent render
+  ---
+  duration_ms: 173.3394
+  ...
+# Subtest: in-flight lock still admits only one drop
+ok 266 - in-flight lock still admits only one drop
+  ---
+  duration_ms: 243.4648
+  ...
+# Subtest: immediate panel navigation cannot discard a newly changed draft
+ok 267 - immediate panel navigation cannot discard a newly changed draft
+  ---
+  duration_ms: 205.136
+  ...
+# Subtest: immediate workspace close requires confirmation before losing the editor
+ok 268 - immediate workspace close requires confirmation before losing the editor
+  ---
+  duration_ms: 143.9115
+  ...
+# Subtest: unmount clears the editor guard without deleting the retained local draft
+ok 269 - unmount clears the editor guard without deleting the retained local draft
+  ---
+  duration_ms: 151.4417
+  ...
+# Subtest: confirmed editor save clears the workspace guard before parent effects
+ok 270 - confirmed editor save clears the workspace guard before parent effects
+  ---
+  duration_ms: 149.2274
+  ...
+# Subtest: failed editor save retains the immediate workspace guard
+ok 271 - failed editor save retains the immediate workspace guard
+  ---
+  duration_ms: 146.4281
+  ...
+# Subtest: confirmed editor discard clears the guard without a server write
+ok 272 - confirmed editor discard clears the guard without a server write
+  ---
+  duration_ms: 128.6751
+  ...
+# Subtest: an older panel effect cannot restore a dirty flag after reverting the input
+ok 273 - an older panel effect cannot restore a dirty flag after reverting the input
+  ---
+  duration_ms: 164.0818
+  ...
+# Subtest: active: failed refresh keeps the cached reading link and a localized retry notice
+ok 274 - active: failed refresh keeps the cached reading link and a localized retry notice
+  ---
+  duration_ms: 77.2492
+  ...
+# Subtest: active: a transient failure retains selected rows and controls
+ok 275 - active: a transient failure retains selected rows and controls
+  ---
+  duration_ms: 27.0937
+  ...
+# Subtest: active: initial failure is not a confirmed empty list
+ok 276 - active: initial failure is not a confirmed empty list
+  ---
+  duration_ms: 32.1176
+  ...
+# Subtest: active: empty cached failure is not a confirmed empty list
+ok 277 - active: empty cached failure is not a confirmed empty list
+  ---
+  duration_ms: 4.9365
+  ...
+# Subtest: active: HTTP 401 never reveals retained rows or bulk selection
+ok 278 - active: HTTP 401 never reveals retained rows or bulk selection
+  ---
+  duration_ms: 9.1254
+  ...
+# Subtest: active: HTTP 403 never reveals retained rows or bulk selection
+ok 279 - active: HTTP 403 never reveals retained rows or bulk selection
+  ---
+  duration_ms: 4.1761
+  ...
+# Subtest: active: HTTP 404 never reveals retained rows or bulk selection
+ok 280 - active: HTTP 404 never reveals retained rows or bulk selection
+  ---
+  duration_ms: 6.6824
+  ...
+# Subtest: active: retry reads only the failed query and recovers without clearing selection
+ok 281 - active: retry reads only the failed query and recovers without clearing selection
+  ---
+  duration_ms: 46.4915
+  ...
+# Subtest: active: held retry keeps cached content and disables its retry control
+ok 282 - active: held retry keeps cached content and disables its retry control
+  ---
+  duration_ms: 13.0021
+  ...
+# Subtest: active: sort placeholders belong only to the same list scope
+ok 283 - active: sort placeholders belong only to the same list scope
+  ---
+  duration_ms: 20.6813
+  ...
+# Subtest: active: successful rendering excludes conversations of the other status
+ok 284 - active: successful rendering excludes conversations of the other status
+  ---
+  duration_ms: 3.8834
+  ...
+# Subtest: archived: failed refresh keeps the cached reading link and a localized retry notice
+ok 285 - archived: failed refresh keeps the cached reading link and a localized retry notice
+  ---
+  duration_ms: 14.6617
+  ...
+# Subtest: archived: a transient failure retains selected rows and controls
+ok 286 - archived: a transient failure retains selected rows and controls
+  ---
+  duration_ms: 5.653
+  ...
+# Subtest: archived: initial failure is not a confirmed empty list
+ok 287 - archived: initial failure is not a confirmed empty list
+  ---
+  duration_ms: 2.8772
+  ...
+# Subtest: archived: empty cached failure is not a confirmed empty list
+ok 288 - archived: empty cached failure is not a confirmed empty list
+  ---
+  duration_ms: 5.1508
+  ...
+# Subtest: archived: HTTP 401 never reveals retained rows or bulk selection
+ok 289 - archived: HTTP 401 never reveals retained rows or bulk selection
+  ---
+  duration_ms: 2.6684
+  ...
+# Subtest: archived: HTTP 403 never reveals retained rows or bulk selection
+ok 290 - archived: HTTP 403 never reveals retained rows or bulk selection
+  ---
+  duration_ms: 3.4457
+  ...
+# Subtest: archived: HTTP 404 never reveals retained rows or bulk selection
+ok 291 - archived: HTTP 404 never reveals retained rows or bulk selection
+  ---
+  duration_ms: 3.9372
+  ...
+# Subtest: archived: retry reads only the failed query and recovers without clearing selection
+ok 292 - archived: retry reads only the failed query and recovers without clearing selection
+  ---
+  duration_ms: 39.083
+  ...
+# Subtest: archived: held retry keeps cached content and disables its retry control
+ok 293 - archived: held retry keeps cached content and disables its retry control
+  ---
+  duration_ms: 13.4529
+  ...
+# Subtest: archived: sort placeholders belong only to the same list scope
+ok 294 - archived: sort placeholders belong only to the same list scope
+  ---
+  duration_ms: 4.8178
+  ...
+# Subtest: archived: successful rendering excludes conversations of the other status
+ok 295 - archived: successful rendering excludes conversations of the other status
+  ---
+  duration_ms: 4.4576
+  ...
+# Subtest: a verified first-run empty workspace keeps transcript import and no archive action
+ok 296 - a verified first-run empty workspace keeps transcript import and no archive action
+  ---
+  duration_ms: 3.297
+  ...
+# Subtest: an archived-only workspace points to Archive, not project filing
+ok 297 - an archived-only workspace points to Archive, not project filing
+  ---
+  duration_ms: 3.1477
+  ...
+# Subtest: initial archive check failure stays explicit and retries only that read
+ok 298 - initial archive check failure stays explicit and retries only that read
+  ---
+  duration_ms: 7.0557
+  ...
+# Subtest: cached archive check failure stays explicit and retries only that read
+ok 299 - cached archive check failure stays explicit and retries only that read
+  ---
+  duration_ms: 9.7286
+  ...
+# Subtest: Chinese retained content uses readable feedback and the existing retry action
+ok 300 - Chinese retained content uses readable feedback and the existing retry action
+  ---
+  duration_ms: 7.8806
+  ...
+# Subtest: Chinese archived-only empty state gives an actual archive link
+ok 301 - Chinese archived-only empty state gives an actual archive link
+  ---
+  duration_ms: 3.1269
+  ...
+# Subtest: rename preserves the existing title/display_title patch contract (control)
+ok 302 - rename preserves the existing title/display_title patch contract (control)
+  ---
+  duration_ms: 1440.5061
+  ...
+# Subtest: blank titles never send a metadata write (control)
+ok 303 - blank titles never send a metadata write (control)
+  ---
+  duration_ms: 542.1766
+  ...
+# Subtest: description editor prefills the existing description (control)
+ok 304 - description editor prefills the existing description (control)
+  ---
+  duration_ms: 300.4791
+  ...
+# Subtest: clearing a description sends explicit null and no unrelated fields
+ok 305 - clearing a description sends explicit null and no unrelated fields
+  ---
+  duration_ms: 277.2853
+  ...
+# Subtest: the Markdown description uses a multiline field without native UTF-16 maxlength
+ok 306 - the Markdown description uses a multiline field without native UTF-16 maxlength
+  ---
+  duration_ms: 219.7076
+  ...
+# Subtest: 500 Unicode code points are saved intact
+ok 307 - 500 Unicode code points are saved intact
+  ---
+  duration_ms: 298.4709
+  ...
+# Subtest: an astral character at the old slice boundary is never cut in half
+ok 308 - an astral character at the old slice boundary is never cut in half
+  ---
+  duration_ms: 258.7057
+  ...
+# Subtest: over-limit input is kept with an explicit error and no PATCH
+ok 309 - over-limit input is kept with an explicit error and no PATCH
+  ---
+  duration_ms: 240.3928
+  ...
+# Subtest: description-only edits keep internal Markdown lines and the field scope (control)
+ok 310 - description-only edits keep internal Markdown lines and the field scope (control)
+  ---
+  duration_ms: 178.81
+  ...
+# Subtest: unchanged title sends no write or refresh
+ok 311 - unchanged title sends no write or refresh
+  ---
+  duration_ms: 198.3859
+  ...
+# Subtest: unchanged description sends no write or refresh
+ok 312 - unchanged description sends no write or refresh
+  ---
+  duration_ms: 212.762
+  ...
+# Subtest: an uncertain write retains the submitted draft and exposes a read-only check
+ok 313 - an uncertain write retains the submitted draft and exposes a read-only check
+  ---
+  duration_ms: 229.0948
+  ...
+# Subtest: checking a matching current value does not repeat the PATCH
+ok 314 - checking a matching current value does not repeat the PATCH
+  ---
+  duration_ms: 275.8876
+  ...
+# Subtest: failed checks retain uncertainty and the draft without another write
+ok 315 - failed checks retain uncertainty and the draft without another write
+  ---
+  duration_ms: 165.7755
+  ...
+# Subtest: a confirmed save settles before a held owning-list refresh
+ok 316 - a confirmed save settles before a held owning-list refresh
+  ---
+  duration_ms: 165.8944
+  ...
+# Subtest: a confirmed save refreshes the actual remote Reader key
+ok 317 - a confirmed save refreshes the actual remote Reader key
+  ---
+  duration_ms: 256.6514
+  ...
+# Subtest: confirmed metadata updates existing list and project copies, preserving relations
+ok 318 - confirmed metadata updates existing list and project copies, preserving relations
+  ---
+  duration_ms: 182.5285
+  ...
+# Subtest: recent metadata changes without replacing the real reading anchor
+ok 319 - recent metadata changes without replacing the real reading anchor
+  ---
+  duration_ms: 146.6808
+  ...
+# Subtest: metadata saves never rewrite offline or unrelated detail namespaces (control)
+ok 320 - metadata saves never rewrite offline or unrelated detail namespaces (control)
+  ---
+  duration_ms: 148.4332
+  ...
+# Subtest: a rejecting follow-up callback cannot leak a metadata save rejection
+ok 321 - a rejecting follow-up callback cannot leak a metadata save rejection
+  ---
+  duration_ms: 156.9978
+  ...
+# Subtest: rapid submit callbacks reserve exactly one pending write
+ok 322 - rapid submit callbacks reserve exactly one pending write
+  ---
+  duration_ms: 117.645
+  ...
+# Subtest: pending and unknown states fence captured field edits and submit callbacks
+ok 323 - pending and unknown states fence captured field edits and submit callbacks
+  ---
+  duration_ms: 112.4202
+  ...
+# Subtest: different current values are compared without declaring the previous save unapplied
+ok 324 - different current values are compared without declaring the previous save unapplied
+  ---
+  duration_ms: 119.1962
+  ...
+# Subtest: keeping a differing draft requires a separate explicit save
+ok 325 - keeping a differing draft requires a separate explicit save
+  ---
+  duration_ms: 78.0887
+  ...
+# Subtest: using a differing current value closes without changing the server
+ok 326 - using a differing current value closes without changing the server
+  ---
+  duration_ms: 77.1414
+  ...
+# Subtest: rename comparison exposes a different saved title even when the display title matches
+ok 327 - rename comparison exposes a different saved title even when the display title matches
+  ---
+  duration_ms: 97.7668
+  ...
+# Subtest: reviewed rename is not a no-op when only the saved title differs
+ok 328 - reviewed rename is not a no-op when only the saved title differs
+  ---
+  duration_ms: 70.361
+  ...
+# Subtest: reviewed rename is not a no-op when only the unset display title differs
+ok 329 - reviewed rename is not a no-op when only the unset display title differs
+  ---
+  duration_ms: 66.0697
+  ...
+# Subtest: an untouched initial rename remains a no-op with display title null
+ok 330 - an untouched initial rename remains a no-op with display title null
+  ---
+  duration_ms: 62.8858
+  ...
+# Subtest: an untouched initial rename remains a no-op with display title Synthetic separate display title
+ok 331 - an untouched initial rename remains a no-op with display title Synthetic separate display title
+  ---
+  duration_ms: 62.1558
+  ...
+# Subtest: a later successful check retires the previous Continue editing draft callback
+ok 332 - a later successful check retires the previous Continue editing draft callback
+  ---
+  duration_ms: 84.6887
+  ...
+# Subtest: a later successful check retires the previous Use current value callback
+ok 333 - a later successful check retires the previous Use current value callback
+  ---
+  duration_ms: 90.3034
+  ...
+# Subtest: a failed recheck removes its old comparison and fences the old keep action
+ok 334 - a failed recheck removes its old comparison and fences the old keep action
+  ---
+  duration_ms: 68.5443
+  ...
+# Subtest: held checks suppress duplicate checks, save and close
+ok 335 - held checks suppress duplicate checks, save and close
+  ---
+  duration_ms: 57.7099
+  ...
+# Subtest: a 401 check retains the draft without enabling blind saving
+ok 336 - a 401 check retains the draft without enabling blind saving
+  ---
+  duration_ms: 59.6803
+  ...
+# Subtest: a 403 check retains the draft without enabling blind saving
+ok 337 - a 403 check retains the draft without enabling blind saving
+  ---
+  duration_ms: 68.1892
+  ...
+# Subtest: a 404 check retains the draft without enabling blind saving
+ok 338 - a 404 check retains the draft without enabling blind saving
+  ---
+  duration_ms: 59.084
+  ...
+# Subtest: a rejected validation response retains editable input for explicit correction
+ok 339 - a rejected validation response retains editable input for explicit correction
+  ---
+  duration_ms: 61.4433
+  ...
+# Subtest: unchanged and cancelled dirty dismissal do not write
+ok 340 - unchanged and cancelled dirty dismissal do not write
+  ---
+  duration_ms: 57.6372
+  ...
+# Subtest: pristine dismissal skips confirmation and refresh
+ok 341 - pristine dismissal skips confirmation and refresh
+  ---
+  duration_ms: 48.2522
+  ...
+# Subtest: unknown dismissal explicitly says it does not cancel or undo the server save
+ok 342 - unknown dismissal explicitly says it does not cancel or undo the server save
+  ---
+  duration_ms: 58.689
+  ...
+# Subtest: a pending discard confirmation reserves dismissal and fences save and edit
+ok 343 - a pending discard confirmation reserves dismissal and fences save and edit
+  ---
+  duration_ms: 57.5948
+  ...
+# Subtest: background prop refresh never replaces an open draft
+ok 344 - background prop refresh never replaces an open draft
+  ---
+  duration_ms: 60.8271
+  ...
+# Subtest: a late write after unmount cannot publish to caches
+ok 345 - a late write after unmount cannot publish to caches
+  ---
+  duration_ms: 55.1104
+  ...
+# Subtest: a late write after account cannot publish to caches
+ok 346 - a late write after account cannot publish to caches
+  ---
+  duration_ms: 56.0302
+  ...
+# Subtest: unmount aborts only a result check and ignores its late value
+ok 347 - unmount aborts only a result check and ignores its late value
+  ---
+  duration_ms: 56.6817
+  ...
+# Subtest: account changes fence captured save, check and close before another render
+ok 348 - account changes fence captured save, check and close before another render
+  ---
+  duration_ms: 60.8358
+  ...
+# Subtest: late pre-save Query reads cannot roll back the confirmed detail
+ok 349 - late pre-save Query reads cannot roll back the confirmed detail
+  ---
+  duration_ms: 80.0516
+  ...
+# Subtest: publishing an older acknowledgement preserves newer cached metadata
+ok 350 - publishing an older acknowledgement preserves newer cached metadata
+  ---
+  duration_ms: 57.6538
+  ...
+# Subtest: cache publication neither creates missing lists nor inserts absent records
+ok 351 - cache publication neither creates missing lists nor inserts absent records
+  ---
+  duration_ms: 56.3289
+  ...
+# Subtest: optional empty descriptions already absent are no-ops
+ok 352 - optional empty descriptions already absent are no-ops
+  ---
+  duration_ms: 52.4488
+  ...
+# Subtest: length validation uses the normalized value and clears when corrected
+ok 353 - length validation uses the normalized value and clears when corrected
+  ---
+  duration_ms: 57.7739
+  ...
+# Subtest: composed emoji are counted in Unicode code points, not grapheme clusters
+ok 354 - composed emoji are counted in Unicode code points, not grapheme clusters
+  ---
+  duration_ms: 59.3921
+  ...
+# Subtest: title edits retain the pre-existing lack of a client title length cap
+ok 355 - title edits retain the pre-existing lack of a client title length cap
+  ---
+  duration_ms: 55.1594
+  ...
+# Subtest: description field labels, help and error ids remain associated
+ok 356 - description field labels, help and error ids remain associated
+  ---
+  duration_ms: 52.6208
+  ...
+# Subtest: Chinese recovery and validation use local copy without raw upstream text
+ok 357 - Chinese recovery and validation use local copy without raw upstream text
+  ---
+  duration_ms: 54.6877
+  ...
+# Subtest: the editor passes a bounded abort signal to the existing write helper
+ok 358 - the editor passes a bounded abort signal to the existing write helper
+  ---
+  duration_ms: 51.7968
+  ...
+# Subtest: the focus contract restores the stable menu opener without claiming DOM focus
+ok 359 - the focus contract restores the stable menu opener without claiming DOM focus
+  ---
+  duration_ms: 48.0978
+  ...
+# Subtest: pristine close fences captured callbacks before effect cleanup
+ok 360 - pristine close fences captured callbacks before effect cleanup
+  ---
+  duration_ms: 50.135
+  ...
+# Subtest: no-op save fences captured callbacks before unmount
+ok 361 - no-op save fences captured callbacks before unmount
+  ---
+  duration_ms: 54.1004
+  ...
+# Subtest: a mismatched write response cannot publish another conversation
+ok 362 - a mismatched write response cannot publish another conversation
+  ---
+  duration_ms: 51.6531
+  ...
+# Subtest: the actual update helper preserves JSON and optional signal: true
+ok 363 - the actual update helper preserves JSON and optional signal: true
+  ---
+  duration_ms: 23.2086
+  ...
+# Subtest: the actual update helper preserves JSON and optional signal: false
+ok 364 - the actual update helper preserves JSON and optional signal: false
+  ---
+  duration_ms: 28.1942
+  ...
+# Subtest: moving to a project preserves the placement PUT/revision contract (control)
+ok 365 - moving to a project preserves the placement PUT/revision contract (control)
+  ---
+  duration_ms: 1454.3547
+  ...
+# Subtest: moving to Unclassified remains one click without a confirmation (control)
+ok 366 - moving to Unclassified remains one click without a confirmation (control)
+  ---
+  duration_ms: 340.827
+  ...
+# Subtest: unrelated menu actions do not enable project-picker reads
+ok 367 - unrelated menu actions do not enable project-picker reads
+  ---
+  duration_ms: 326.6519
+  ...
+# Subtest: pending project reads say loading, not no matching projects
+ok 368 - pending project reads say loading, not no matching projects
+  ---
+  duration_ms: 244.5578
+  ...
+# Subtest: failed project reads expose a read-only retry instead of an empty result
+ok 369 - failed project reads expose a read-only retry instead of an empty result
+  ---
+  duration_ms: 235.9117
+  ...
+# Subtest: a successful empty read is distinct from a filtered empty result
+ok 370 - a successful empty read is distinct from a filtered empty result
+  ---
+  duration_ms: 262.9684
+  ...
+# Subtest: a no-match search offers clearing the search without writing
+ok 371 - a no-match search offers clearing the search without writing
+  ---
+  duration_ms: 224.1883
+  ...
+# Subtest: search has a permanent label and selection has checked semantics
+ok 372 - search has a permanent label and selection has checked semantics
+  ---
+  duration_ms: 269.5267
+  ...
+# Subtest: search Home and End are not consumed by the menu navigation handler
+ok 373 - search Home and End are not consumed by the menu navigation handler
+  ---
+  duration_ms: 229.9061
+  ...
+# Subtest: filtering away a selected destination prevents a hidden move
+ok 374 - filtering away a selected destination prevents a hidden move
+  ---
+  duration_ms: 229.5556
+  ...
+# Subtest: a fresh picker session cannot submit the previous selection
+ok 375 - a fresh picker session cannot submit the previous selection
+  ---
+  duration_ms: 237.5404
+  ...
+# Subtest: a destination removed from the latest read cannot be submitted
+ok 376 - a destination removed from the latest read cannot be submitted
+  ---
+  duration_ms: 263.6505
+  ...
+# Subtest: a failed destination refresh leaves cached choices non-actionable
+ok 377 - a failed destination refresh leaves cached choices non-actionable
+  ---
+  duration_ms: 263.6713
+  ...
+# Subtest: two immediate submit callbacks reserve only one move
+ok 378 - two immediate submit callbacks reserve only one move
+  ---
+  duration_ms: 201.0829
+  ...
+# Subtest: lost acknowledgement recovery survives removal of the source row
+ok 379 - lost acknowledgement recovery survives removal of the source row
+  ---
+  duration_ms: 245.2273
+  ...
+# Subtest: a failed check keeps uncertainty and never replays placement
+ok 380 - a failed check keeps uncertainty and never replays placement
+  ---
+  duration_ms: 224.9386
+  ...
+# Subtest: a successful check is an observation, not a receipt or automatic PUT
+ok 381 - a successful check is an observation, not a receipt or automatic PUT
+  ---
+  duration_ms: 207.1225
+  ...
+# Subtest: explicit retry uses the newly reviewed conversation revision
+ok 382 - explicit retry uses the newly reviewed conversation revision
+  ---
+  duration_ms: 205.3312
+  ...
+# Subtest: a null visible project is not asserted to prove default membership
+ok 383 - a null visible project is not asserted to prove default membership
+  ---
+  duration_ms: 133.8507
+  ...
+# Subtest: acknowledgement settles before a held owning-list refresh
+ok 384 - acknowledgement settles before a held owning-list refresh
+  ---
+  duration_ms: 145.3419
+  ...
+# Subtest: canonical placement updates the existing remote Reader and evicts old membership
+ok 385 - canonical placement updates the existing remote Reader and evicts old membership
+  ---
+  duration_ms: 179.9389
+  ...
+# Subtest: placement does not mutate offline copies, reading anchors or global pin (control)
+ok 386 - placement does not mutate offline copies, reading anchors or global pin (control)
+  ---
+  duration_ms: 131.8893
+  ...
+# Subtest: a captured entry cannot start after account changes, before effect cleanup
+ok 387 - a captured entry cannot start after account changes, before effect cleanup
+  ---
+  duration_ms: 74.3355
+  ...
+# Subtest: a captured entry cannot start after scope changes, before effect cleanup
+ok 388 - a captured entry cannot start after scope changes, before effect cleanup
+  ---
+  duration_ms: 75.1531
+  ...
+# Subtest: a captured reviewed submit cannot write after its dialog closes
+ok 389 - a captured reviewed submit cannot write after its dialog closes
+  ---
+  duration_ms: 115.0326
+  ...
+# Subtest: a captured dialog check cannot run after closing to the feedback surface
+ok 390 - a captured dialog check cannot run after closing to the feedback surface
+  ---
+  duration_ms: 75.1221
+  ...
+# Subtest: opening retained recovery is neither a GET nor a PUT
+ok 391 - opening retained recovery is neither a GET nor a PUT
+  ---
+  duration_ms: 76.3371
+  ...
+# Subtest: a failed newer check retires the old reviewed submit
+ok 392 - a failed newer check retires the old reviewed submit
+  ---
+  duration_ms: 74.1622
+  ...
+# Subtest: a successful newer check also retires the old reviewed submit
+ok 393 - a successful newer check also retires the old reviewed submit
+  ---
+  duration_ms: 95.4467
+  ...
+# Subtest: a malformed placement acknowledgement remains unknown, not an unhandled exception
+ok 394 - a malformed placement acknowledgement remains unknown, not an unhandled exception
+  ---
+  duration_ms: 92.6159
+  ...
+# Subtest: HTTP 403 hides retained private identity while allowing an explicit later check
+ok 395 - HTTP 403 hides retained private identity while allowing an explicit later check
+  ---
+  duration_ms: 69.6352
+  ...
+# Subtest: wrong-id acknowledgement does not publish a confirmed cache location
+ok 396 - wrong-id acknowledgement does not publish a confirmed cache location
+  ---
+  duration_ms: 66.2961
+  ...
+# Subtest: wrong-target acknowledgement does not publish a confirmed cache location
+ok 397 - wrong-target acknowledgement does not publish a confirmed cache location
+  ---
+  duration_ms: 58.2369
+  ...
+# Subtest: a late acknowledgement after account changes cannot publish or refresh
+ok 398 - a late acknowledgement after account changes cannot publish or refresh
+  ---
+  duration_ms: 73.6768
+  ...
+# Subtest: a late acknowledgement after scope changes cannot publish or refresh
+ok 399 - a late acknowledgement after scope changes cannot publish or refresh
+  ---
+  duration_ms: 64.4877
+  ...
+# Subtest: a late acknowledgement after unmount changes cannot publish or refresh
+ok 400 - a late acknowledgement after unmount changes cannot publish or refresh
+  ---
+  duration_ms: 56.3413
+  ...
+# Subtest: a captured entry and submit cannot run after owner unmount
+ok 401 - a captured entry and submit cannot run after owner unmount
+  ---
+  duration_ms: 59.1617
+  ...
+# Subtest: writes and checks use bounded abortable signals; unmount aborts the local wait
+ok 402 - writes and checks use bounded abortable signals; unmount aborts the local wait
+  ---
+  duration_ms: 59.9442
+  ...
+# Subtest: same-project placement keeps the server no-op revision and pin contract
+ok 403 - same-project placement keeps the server no-op revision and pin contract
+  ---
+  duration_ms: 63.29
+  ...
+# Subtest: a higher cached revision is neither overwritten nor evicted
+ok 404 - a higher cached revision is neither overwritten nor evicted
+  ---
+  duration_ms: 57.9962
+  ...
+# Subtest: confirmed placement does not create missing caches or destination rows
+ok 405 - confirmed placement does not create missing caches or destination rows
+  ---
+  duration_ms: 57.7729
+  ...
+# Subtest: rejecting refresh callbacks do not turn a confirmed write into an unknown move
+ok 406 - rejecting refresh callbacks do not turn a confirmed write into an unknown move
+  ---
+  duration_ms: 60.1719
+  ...
+# Subtest: default and archived projects cannot be selected from cached rows
+ok 407 - default and archived projects cannot be selected from cached rows
+  ---
+  duration_ms: 58.0696
+  ...
+# Subtest: an in-flight destination refresh disables submission from a cached choice
+ok 408 - an in-flight destination refresh disables submission from a cached choice
+  ---
+  duration_ms: 80.2672
+  ...
+# Subtest: late pre-move reads are cancelled before the acknowledged Reader update
+ok 409 - late pre-move reads are cancelled before the acknowledged Reader update
+  ---
+  duration_ms: 88.0909
+  ...
+# Subtest: closing a pending move retains its acknowledgement without cancelling the server request
+ok 410 - closing a pending move retains its acknowledgement without cancelling the server request
+  ---
+  duration_ms: 76.9075
+  ...
+# Subtest: a pending read can settle behind closed recovery without reopening it
+ok 411 - a pending read can settle behind closed recovery without reopening it
+  ---
+  duration_ms: 66.3847
+  ...
+# Subtest: owner access loss hides state and prevents publishing a late acknowledgement
+ok 412 - owner access loss hides state and prevents publishing a late acknowledgement
+  ---
+  duration_ms: 65.3307
+  ...
+# Subtest: an inactive current conversation cannot enable an explicit retry
+ok 413 - an inactive current conversation cannot enable an explicit retry
+  ---
+  duration_ms: 62.7644
+  ...
+# Subtest: a check for a different conversation never creates a reviewed retry
+ok 414 - a check for a different conversation never creates a reviewed retry
+  ---
+  duration_ms: 67.3049
+  ...
+# Subtest: renamed destinations use the latest visible name at acknowledgement
+ok 415 - renamed destinations use the latest visible name at acknowledgement
+  ---
+  duration_ms: 62.2745
+  ...
+# Subtest: Chinese placement and uncertainty copy is localized
+ok 416 - Chinese placement and uncertainty copy is localized
+  ---
+  duration_ms: 60.9666
+  ...
+# Subtest: disabling the move button recovers only lost focus to the persistent Close control
+ok 417 - disabling the move button recovers only lost focus to the persistent Close control
+  ---
+  duration_ms: 58.8915
+  ...
+# Subtest: en-US: a pending move retains its disabled submit footprint and label
+ok 418 - en-US: a pending move retains its disabled submit footprint and label
+  ---
+  duration_ms: 58.4193
+  ...
+# Subtest: zh-CN: a pending move retains its disabled submit footprint and label
+ok 419 - zh-CN: a pending move retains its disabled submit footprint and label
+  ---
+  duration_ms: 68.3044
+  ...
+# Subtest: a pending explicit retry keeps its reviewed submit label without retaining a stale comparison
+ok 420 - a pending explicit retry keeps its reviewed submit label without retaining a stale comparison
+  ---
+  duration_ms: 69.2804
+  ...
+# Subtest: a moving backdrop cannot dismiss, while explicit Close stays available
+ok 421 - a moving backdrop cannot dismiss, while explicit Close stays available
+  ---
+  duration_ms: 64.0954
+  ...
+# Subtest: a checking backdrop cannot dismiss, while explicit Close stays available
+ok 422 - a checking backdrop cannot dismiss, while explicit Close stays available
+  ---
+  duration_ms: 62.5139
+  ...
+# Subtest: an idle backdrop still dismisses a picker without submitting
+ok 423 - an idle backdrop still dismisses a picker without submitting
+  ---
+  duration_ms: 58.2138
+  ...
+# Subtest: a captured idle backdrop uses the live pending guard before React rerenders
+ok 424 - a captured idle backdrop uses the live pending guard before React rerenders
+  ---
+  duration_ms: 55.9775
+  ...
+# Subtest: a browser retaining focus on the newly disabled submit recovers to Close
+ok 425 - a browser retaining focus on the newly disabled submit recovers to Close
+  ---
+  duration_ms: 53.2132
+  ...
+# Subtest: en-US: another pointer-down on the pending disabled submit prevents a default blur
+ok 426 - en-US: another pointer-down on the pending disabled submit prevents a default blur
+  ---
+  duration_ms: 54.7327
+  ...
+# Subtest: zh-CN: another pointer-down on the pending disabled submit prevents a default blur
+ok 427 - zh-CN: another pointer-down on the pending disabled submit prevents a default blur
+  ---
+  duration_ms: 55.7332
+  ...
+# Subtest: a captured idle submit pointer handler uses live pending state
+ok 428 - a captured idle submit pointer handler uses live pending state
+  ---
+  duration_ms: 56.6706
+  ...
+# Subtest: pending pointer protection does not move chosen focus or block explicit Back
+ok 429 - pending pointer protection does not move chosen focus or block explicit Back
+  ---
+  duration_ms: 53.6158
+  ...
+# Subtest: removing the check button recovers lost focus without a second write
+ok 430 - removing the check button recovers lost focus without a second write
+  ---
+  duration_ms: 66.993
+  ...
+# Subtest: pending placement phases never steal focus from another chosen control
+ok 431 - pending placement phases never steal focus from another chosen control
+  ---
+  duration_ms: 62.4102
+  ...
+# Subtest: closed placement recovery never focuses its absent dialog
+ok 432 - closed placement recovery never focuses its absent dialog
+  ---
+  duration_ms: 61.134
+  ...
+# Subtest: optional API signals preserve the legacy helper URLs, methods and payloads
+ok 433 - optional API signals preserve the legacy helper URLs, methods and payloads
+  ---
+  duration_ms: 26.9578
+  ...
+# Subtest: source integration keeps one placement owner/surface outside moved rows: features/conversations/conversation-list.tsx
+ok 434 - source integration keeps one placement owner/surface outside moved rows: features/conversations/conversation-list.tsx
+  ---
+  duration_ms: 16.0497
+  ...
+# Subtest: source integration keeps one placement owner/surface outside moved rows: features/projects/project-conversation-list.tsx
+ok 435 - source integration keeps one placement owner/surface outside moved rows: features/projects/project-conversation-list.tsx
+  ---
+  duration_ms: 7.3397
+  ...
+# Subtest: source integration keeps one placement owner/surface outside moved rows: features/projects/project-sidebar.tsx
+ok 436 - source integration keeps one placement owner/surface outside moved rows: features/projects/project-sidebar.tsx
+  ---
+  duration_ms: 14.8684
+  ...
+# Subtest: create preserves exact Markdown body 0
+ok 437 - create preserves exact Markdown body 0
+  ---
+  duration_ms: 207.8255
+  ...
+# Subtest: create_version preserves source and accepted baseline 0
+ok 438 - create_version preserves source and accepted baseline 0
+  ---
+  duration_ms: 93.0255
+  ...
+# Subtest: replace_current preserves source and accepted baseline 0
+ok 439 - replace_current preserves source and accepted baseline 0
+  ---
+  duration_ms: 21.3306
+  ...
+# Subtest: create preserves exact Markdown body 1
+ok 440 - create preserves exact Markdown body 1
+  ---
+  duration_ms: 8.1665
+  ...
+# Subtest: create_version preserves source and accepted baseline 1
+ok 441 - create_version preserves source and accepted baseline 1
+  ---
+  duration_ms: 20.4397
+  ...
+# Subtest: replace_current preserves source and accepted baseline 1
+ok 442 - replace_current preserves source and accepted baseline 1
+  ---
+  duration_ms: 17.2926
+  ...
+# Subtest: create preserves exact Markdown body 2
+ok 443 - create preserves exact Markdown body 2
+  ---
+  duration_ms: 8.6684
+  ...
+# Subtest: create_version preserves source and accepted baseline 2
+ok 444 - create_version preserves source and accepted baseline 2
+  ---
+  duration_ms: 53.8776
+  ...
+# Subtest: replace_current preserves source and accepted baseline 2
+ok 445 - replace_current preserves source and accepted baseline 2
+  ---
+  duration_ms: 52.0041
+  ...
+# Subtest: create preserves exact Markdown body 3
+ok 446 - create preserves exact Markdown body 3
+  ---
+  duration_ms: 22.7528
+  ...
+# Subtest: create_version preserves source and accepted baseline 3
+ok 447 - create_version preserves source and accepted baseline 3
+  ---
+  duration_ms: 25.7676
+  ...
+# Subtest: replace_current preserves source and accepted baseline 3
+ok 448 - replace_current preserves source and accepted baseline 3
+  ---
+  duration_ms: 48.1484
+  ...
+# Subtest: create preserves exact Markdown body 4
+ok 449 - create preserves exact Markdown body 4
+  ---
+  duration_ms: 6.3359
+  ...
+# Subtest: create_version preserves source and accepted baseline 4
+ok 450 - create_version preserves source and accepted baseline 4
+  ---
+  duration_ms: 11.4463
+  ...
+# Subtest: replace_current preserves source and accepted baseline 4
+ok 451 - replace_current preserves source and accepted baseline 4
+  ---
+  duration_ms: 32.5937
+  ...
+# Subtest: whitespace-only source changes remain dirty: "    Synthetic original"
+ok 452 - whitespace-only source changes remain dirty: "    Synthetic original"
+  ---
+  duration_ms: 65.0505
+  ...
+# Subtest: whitespace-only source changes remain dirty: "Synthetic original  "
+ok 453 - whitespace-only source changes remain dirty: "Synthetic original  "
+  ---
+  duration_ms: 47.6756
+  ...
+# Subtest: whitespace-only source changes remain dirty: "\\nSynthetic original\\n"
+ok 454 - whitespace-only source changes remain dirty: "\\nSynthetic original\\n"
+  ---
+  duration_ms: 57.066
+  ...
+# Subtest: exact unchanged source is a no-op
+ok 455 - exact unchanged source is a no-op
+  ---
+  duration_ms: 29.585
+  ...
+# Subtest: empty source is rejected without a write: ""
+ok 456 - empty source is rejected without a write: ""
+  ---
+  duration_ms: 22.0259
+  ...
+# Subtest: empty source is rejected without a write: " \\n\\t"
+ok 457 - empty source is rejected without a write: " \\n\\t"
+  ---
+  duration_ms: 38.876
+  ...
+# Subtest: submission takes exact current CodeMirror source, not a lagging state value
+ok 458 - submission takes exact current CodeMirror source, not a lagging state value
+  ---
+  duration_ms: 21.1201
+  ...
+# Subtest: failed edit does not reset its draft or baseline
+ok 459 - failed edit does not reset its draft or baseline
+  ---
+  duration_ms: 20.3227
+  ...
+# Subtest: explicit canonical reply, including whitespace, is the new baseline
+ok 460 - explicit canonical reply, including whitespace, is the new baseline
+  ---
+  duration_ms: 10.7047
+  ...
+# Subtest: unresolved attachment still blocks an edit
+ok 461 - unresolved attachment still blocks an edit
+  ---
+  duration_ms: 9.0141
+  ...
+# Subtest: insert continues to submit exact bodies, revision and anchor
+ok 462 - insert continues to submit exact bodies, revision and anchor
+  ---
+  duration_ms: 10.207
+  ...
+# Subtest: restoring an original request offers checking without any automatic HTTP
+ok 463 - restoring an original request offers checking without any automatic HTTP
+  ---
+  duration_ms: 501.7791
+  ...
+# Subtest: a closed page-level owner restores a pending request without opening or doing HTTP
+ok 464 - a closed page-level owner restores a pending request without opening or doing HTTP
+  ---
+  duration_ms: 129.0131
+  ...
+# Subtest: a closed owner and actions captured before closing cannot read or resubmit
+ok 465 - a closed owner and actions captured before closing cannot read or resubmit
+  ---
+  duration_ms: 139.9221
+  ...
+# Subtest: close render fences captured start before passive effects
+ok 466 - close render fences captured start before passive effects
+  ---
+  duration_ms: 122.3807
+  ...
+# Subtest: close render fences captured check before passive effects
+ok 467 - close render fences captured check before passive effects
+  ---
+  duration_ms: 87.8382
+  ...
+# Subtest: close render fences captured retry before passive effects
+ok 468 - close render fences captured retry before passive effects
+  ---
+  duration_ms: 54.2072
+  ...
+# Subtest: close render fences late acknowledgement before passive effects
+ok 469 - close render fences late acknowledgement before passive effects
+  ---
+  duration_ms: 146.5033
+  ...
+# Subtest: project switch render fences captured start before passive effects
+ok 470 - project switch render fences captured start before passive effects
+  ---
+  duration_ms: 28.3986
+  ...
+# Subtest: project switch render fences captured check before passive effects
+ok 471 - project switch render fences captured check before passive effects
+  ---
+  duration_ms: 29.9439
+  ...
+# Subtest: project switch render fences captured retry before passive effects
+ok 472 - project switch render fences captured retry before passive effects
+  ---
+  duration_ms: 135.4841
+  ...
+# Subtest: project switch render fences late acknowledgement before passive effects
+ok 473 - project switch render fences late acknowledgement before passive effects
+  ---
+  duration_ms: 34.0217
+  ...
+# Subtest: pending double clicks submit once and freeze the original payload
+ok 474 - pending double clicks submit once and freeze the original payload
+  ---
+  duration_ms: 134.4743
+  ...
+# Subtest: unknown writes cannot resubmit until an explicit missing-result read
+ok 475 - unknown writes cannot resubmit until an explicit missing-result read
+  ---
+  duration_ms: 114.9168
+  ...
+# Subtest: a failed read and an incomplete receipt keep the original request and forbid writes
+ok 476 - a failed read and an incomplete receipt keep the original request and forbid writes
+  ---
+  duration_ms: 93.2239
+  ...
+# Subtest: finding the original queued task acknowledges it without another POST
+ok 477 - finding the original queued task acknowledges it without another POST
+  ---
+  duration_ms: 46.4236
+  ...
+# Subtest: finding the original processing task acknowledges it without another POST
+ok 478 - finding the original processing task acknowledges it without another POST
+  ---
+  duration_ms: 69.5467
+  ...
+# Subtest: finding the original cancelling task acknowledges it without another POST
+ok 479 - finding the original cancelling task acknowledges it without another POST
+  ---
+  duration_ms: 68.4779
+  ...
+# Subtest: finding the original committed task acknowledges it without another POST
+ok 480 - finding the original committed task acknowledges it without another POST
+  ---
+  duration_ms: 33.7498
+  ...
+# Subtest: finding the original failed task acknowledges it without another POST
+ok 481 - finding the original failed task acknowledges it without another POST
+  ---
+  duration_ms: 37.9417
+  ...
+# Subtest: finding the original cancelled task acknowledges it without another POST
+ok 482 - finding the original cancelled task acknowledges it without another POST
+  ---
+  duration_ms: 92.5499
+  ...
+# Subtest: HTTP 400 rejection clears only the pending request and retains the error
+ok 483 - HTTP 400 rejection clears only the pending request and retains the error
+  ---
+  duration_ms: 88.8854
+  ...
+# Subtest: HTTP 422 rejection clears only the pending request and retains the error
+ok 484 - HTTP 422 rejection clears only the pending request and retains the error
+  ---
+  duration_ms: 25.0298
+  ...
+# Subtest: a key conflict remains checkable and never becomes a new blind submission
+ok 485 - a key conflict remains checkable and never becomes a new blind submission
+  ---
+  duration_ms: 29.9224
+  ...
+# Subtest: close and reopen retains the original order/title without starting another merge
+ok 486 - close and reopen retains the original order/title without starting another merge
+  ---
+  duration_ms: 33.3706
+  ...
+# Subtest: project scope and account scope never adopt another unresolved request
+ok 487 - project scope and account scope never adopt another unresolved request
+  ---
+  duration_ms: 34.0473
+  ...
+# Subtest: late responses from the previous account do not acknowledge or erase its receipt
+ok 488 - late responses from the previous account do not acknowledge or erase its receipt
+  ---
+  duration_ms: 25.5182
+  ...
+# Subtest: locking the account masks the request and fences even an already captured action
+ok 489 - locking the account masks the request and fences even an already captured action
+  ---
+  duration_ms: 23.7688
+  ...
+# Subtest: an old lookup cannot clear the request restored into a newly opened dialog
+ok 490 - an old lookup cannot clear the request restored into a newly opened dialog
+  ---
+  duration_ms: 53.3137
+  ...
+# Subtest: held acknowledgement callback cannot turn accepted admission into failure
+ok 491 - held acknowledgement callback cannot turn accepted admission into failure
+  ---
+  duration_ms: 20.4055
+  ...
+# Subtest: reject acknowledgement callback cannot turn accepted admission into failure
+ok 492 - reject acknowledgement callback cannot turn accepted admission into failure
+  ---
+  duration_ms: 21.2023
+  ...
+# Subtest: throw acknowledgement callback cannot turn accepted admission into failure
+ok 493 - throw acknowledgement callback cannot turn accepted admission into failure
+  ---
+  duration_ms: 39.1117
+  ...
+# Subtest: unavailable session storage retains recovery in memory across dialog reopen
+ok 494 - unavailable session storage retains recovery in memory across dialog reopen
+  ---
+  duration_ms: 51.666
+  ...
+# Subtest: malformed or duplicate-ID stored requests fail closed without exposing their values
+ok 495 - malformed or duplicate-ID stored requests fail closed without exposing their values
+  ---
+  duration_ms: 21.3937
+  ...
+# Subtest: submitting dialog keeps original title/order read-only and suppresses raw errors
+ok 496 - submitting dialog keeps original title/order read-only and suppresses raw errors
+  ---
+  duration_ms: 290.0818
+  ...
+# Subtest: unknown dialog keeps original title/order read-only and suppresses raw errors
+ok 497 - unknown dialog keeps original title/order read-only and suppresses raw errors
+  ---
+  duration_ms: 69.0759
+  ...
+# Subtest: checking dialog keeps original title/order read-only and suppresses raw errors
+ok 498 - checking dialog keeps original title/order read-only and suppresses raw errors
+  ---
+  duration_ms: 102.6771
+  ...
+# Subtest: retry dialog keeps original title/order read-only and suppresses raw errors
+ok 499 - retry dialog keeps original title/order read-only and suppresses raw errors
+  ---
+  duration_ms: 81.9496
+  ...
+# Subtest: idle title remains editable, while a parent pending state still protects it
+ok 500 - idle title remains editable, while a parent pending state still protects it
+  ---
+  duration_ms: 158.7934
+  ...
+# Subtest: Chinese recovery copy and completed/cancelled receipts distinguish admission from execution
+ok 501 - Chinese recovery copy and completed/cancelled receipts distinguish admission from execution
+  ---
+  duration_ms: 43.4887
+  ...
+# Subtest: features/conversations/conversation-list.tsx closes confirmed admission even with the preceding busy render captured
+ok 502 - features/conversations/conversation-list.tsx closes confirmed admission even with the preceding busy render captured
+  ---
+  duration_ms: 64.8628
+  ...
+# Subtest: features/conversations/conversation-list.tsx forwards the original key/payload/signal and settles independently of refresh
+ok 503 - features/conversations/conversation-list.tsx forwards the original key/payload/signal and settles independently of refresh
+  ---
+  duration_ms: 72.4852
+  ...
+# Subtest: features/projects/project-conversation-list.tsx closes confirmed admission even with the preceding busy render captured
+ok 504 - features/projects/project-conversation-list.tsx closes confirmed admission even with the preceding busy render captured
+  ---
+  duration_ms: 75.8255
+  ...
+# Subtest: features/projects/project-conversation-list.tsx forwards the original key/payload/signal and settles independently of refresh
+ok 505 - features/projects/project-conversation-list.tsx forwards the original key/payload/signal and settles independently of refresh
+  ---
+  duration_ms: 34.7266
+  ...
+# Subtest: all loading: one recovery owner is reachable without selecting rows
+ok 506 - all loading: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 898.5313
+  ...
+# Subtest: all empty: one recovery owner is reachable without selecting rows
+ok 507 - all empty: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 228.4336
+  ...
+# Subtest: all initial-error: one recovery owner is reachable without selecting rows
+ok 508 - all initial-error: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 221.4739
+  ...
+# Subtest: all cached-error: one recovery owner is reachable without selecting rows
+ok 509 - all cached-error: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 190.2865
+  ...
+# Subtest: all single: one recovery owner is reachable without selecting rows
+ok 510 - all single: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 217.5643
+  ...
+# Subtest: all loaded: one recovery owner is reachable without selecting rows
+ok 511 - all loaded: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 173.8752
+  ...
+# Subtest: all: open recovery keeps original payload when sources and selection are gone
+ok 512 - all: open recovery keeps original payload when sources and selection are gone
+  ---
+  duration_ms: 190.983
+  ...
+# Subtest: all: no pending request leaves no recovery notice
+ok 513 - all: no pending request leaves no recovery notice
+  ---
+  duration_ms: 226.8134
+  ...
+# Subtest: all: accepted recovery closes and preserves its notice even from an empty list
+ok 514 - all: accepted recovery closes and preserves its notice even from an empty list
+  ---
+  duration_ms: 426.4158
+  ...
+# Subtest: all empty: new merges still require two selected conversations
+ok 515 - all empty: new merges still require two selected conversations
+  ---
+  duration_ms: 146.2243
+  ...
+# Subtest: all single: new merges still require two selected conversations
+ok 516 - all single: new merges still require two selected conversations
+  ---
+  duration_ms: 100.9063
+  ...
+# Subtest: all loaded: new merges still require two selected conversations
+ok 517 - all loaded: new merges still require two selected conversations
+  ---
+  duration_ms: 102.2837
+  ...
+# Subtest: project loading: one recovery owner is reachable without selecting rows
+ok 518 - project loading: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 108.2415
+  ...
+# Subtest: project empty: one recovery owner is reachable without selecting rows
+ok 519 - project empty: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 209.116
+  ...
+# Subtest: project initial-error: one recovery owner is reachable without selecting rows
+ok 520 - project initial-error: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 167.61
+  ...
+# Subtest: project cached-error: one recovery owner is reachable without selecting rows
+ok 521 - project cached-error: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 120.6433
+  ...
+# Subtest: project single: one recovery owner is reachable without selecting rows
+ok 522 - project single: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 122.8672
+  ...
+# Subtest: project loaded: one recovery owner is reachable without selecting rows
+ok 523 - project loaded: one recovery owner is reachable without selecting rows
+  ---
+  duration_ms: 112.9394
+  ...
+# Subtest: project: open recovery keeps original payload when sources and selection are gone
+ok 524 - project: open recovery keeps original payload when sources and selection are gone
+  ---
+  duration_ms: 187.9309
+  ...
+# Subtest: project: no pending request leaves no recovery notice
+ok 525 - project: no pending request leaves no recovery notice
+  ---
+  duration_ms: 156.0764
+  ...
+# Subtest: project: accepted recovery closes and preserves its notice even from an empty list
+ok 526 - project: accepted recovery closes and preserves its notice even from an empty list
+  ---
+  duration_ms: 260.9655
+  ...
+# Subtest: project empty: new merges still require two selected conversations
+ok 527 - project empty: new merges still require two selected conversations
+  ---
+  duration_ms: 124.6395
+  ...
+# Subtest: project single: new merges still require two selected conversations
+ok 528 - project single: new merges still require two selected conversations
+  ---
+  duration_ms: 99.6687
+  ...
+# Subtest: project loaded: new merges still require two selected conversations
+ok 529 - project loaded: new merges still require two selected conversations
+  ---
+  duration_ms: 109.5194
+  ...
+# Subtest: project HTTP 401 keeps inaccessible project metadata and merge actions hidden
+ok 530 - project HTTP 401 keeps inaccessible project metadata and merge actions hidden
+  ---
+  duration_ms: 76.4673
+  ...
+# Subtest: project HTTP 403 keeps inaccessible project metadata and merge actions hidden
+ok 531 - project HTTP 403 keeps inaccessible project metadata and merge actions hidden
+  ---
+  duration_ms: 82.4711
+  ...
+# Subtest: project HTTP 404 keeps inaccessible project metadata and merge actions hidden
+ok 532 - project HTTP 404 keeps inaccessible project metadata and merge actions hidden
+  ---
+  duration_ms: 83.5792
+  ...
+# Subtest: Chinese recovery entry names its action without submitting or exposing source IDs
+ok 533 - Chinese recovery entry names its action without submitting or exposing source IDs
+  ---
+  duration_ms: 81.6872
+  ...
+# Subtest: a different project's remembered open state cannot open the current project's dialog
+ok 534 - a different project's remembered open state cannot open the current project's dialog
+  ---
+  duration_ms: 76.0792
+  ...
+# Subtest: Reader wires a measured mobile header reserve and native scroll padding, leaving desktop normal flow
+ok 535 - Reader wires a measured mobile header reserve and native scroll padding, leaving desktop normal flow
+  ---
+  duration_ms: 9.4162
+  ...
+# Subtest: the first mounted reserve includes the entire wrapped guide and header border
+ok 536 - the first mounted reserve includes the entire wrapped guide and header border
+  ---
+  duration_ms: 301.7709
+  ...
+# Subtest: locale wrapping and dismissing the guide update the reserve only when its size changes
+ok 537 - locale wrapping and dismissing the guide update the reserve only when its size changes
+  ---
+  duration_ms: 60.041
+  ...
+# Subtest: auto-hide transforms do not collapse reserved space or add repeated style writes
+ok 538 - auto-hide transforms do not collapse reserved space or add repeated style writes
+  ---
+  duration_ms: 123.9158
+  ...
+# Subtest: null or detached headers do not create an observer
+ok 539 - null or detached headers do not create an observer
+  ---
+  duration_ms: 108.7165
+  ...
+# Subtest: hidden or invalid measurements keep the last meaningful size
+ok 540 - hidden or invalid measurements keep the last meaningful size
+  ---
+  duration_ms: 46.1616
+  ...
+# Subtest: unmount disconnects the observer, removes its property and ignores late callbacks
+ok 541 - unmount disconnects the observer, removes its property and ignores late callbacks
+  ---
+  duration_ms: 29.8224
+  ...
+# Subtest: cleanup restores an earlier value but does not overwrite a newer owner's value
+ok 542 - cleanup restores an earlier value but does not overwrite a newer owner's value
+  ---
+  duration_ms: 70.949
+  ...
+# Subtest: replacing the actual header keeps one live observer and retires old callbacks
+ok 543 - replacing the actual header keeps one live observer and retires old callbacks
+  ---
+  duration_ms: 29.8581
+  ...
+# Subtest: en-US: failed inspection ends waiting and exposes read-only retry
+ok 544 - en-US: failed inspection ends waiting and exposes read-only retry
+  ---
+  duration_ms: 227.9655
+  ...
+# Subtest: zh-CN: failed inspection ends waiting and exposes read-only retry
+ok 545 - zh-CN: failed inspection ends waiting and exposes read-only retry
+  ---
+  duration_ms: 16.7051
+  ...
+# Subtest: repeated rejection remains retryable and never claims copies are current
+ok 546 - repeated rejection remains retryable and never claims copies are current
+  ---
+  duration_ms: 14.9563
+  ...
+# Subtest: successful current revisions show up-to-date; unknown copies remain downloadable
+ok 547 - successful current revisions show up-to-date; unknown copies remain downloadable
+  ---
+  duration_ms: 6.2271
+  ...
+# Subtest: assetMode change invalidates ready state before effects run
+ok 548 - assetMode change invalidates ready state before effects run
+  ---
+  duration_ms: 7.8531
+  ...
+# Subtest: conversations change invalidates ready state before effects run
+ok 549 - conversations change invalidates ready state before effects run
+  ---
+  duration_ms: 12.1029
+  ...
+# Subtest: late previous-scope success cannot replace the latest result
+ok 550 - late previous-scope success cannot replace the latest result
+  ---
+  duration_ms: 5.8419
+  ...
+# Subtest: late previous-scope failure cannot replace the latest result
+ok 551 - late previous-scope failure cannot replace the latest result
+  ---
+  duration_ms: 5.2119
+  ...
+# Subtest: closing the sidebar fences late completion
+ok 552 - closing the sidebar fences late completion
+  ---
+  duration_ms: 11.0072
+  ...
+# Subtest: inspection error leaves downloaded conversation rows and selection intact
+ok 553 - inspection error leaves downloaded conversation rows and selection intact
+  ---
+  duration_ms: 5.4002
+  ...
+# Subtest: page input accepts only an entire in-range integer
+ok 554 - page input accepts only an entire in-range integer
+  ---
+  duration_ms: 14.2924
+  ...
+# Subtest: fit page and width keep CSS geometry separate from bitmap budgets
+ok 555 - fit page and width keep CSS geometry separate from bitmap budgets
+  ---
+  duration_ms: 0.8086
+  ...
+# Subtest: canvas budget holds across small, landscape and large high-DPR pages
+ok 556 - canvas budget holds across small, landscape and large high-DPR pages
+  ---
+  duration_ms: 16.3718
+  ...
+# Subtest: invalid PDF dimensions fail before allocating a canvas
+ok 557 - invalid PDF dimensions fail before allocating a canvas
+  ---
+  duration_ms: 0.9223
+  ...
+# Subtest: render queue never exceeds two active tasks and gives pages priority
+ok 558 - render queue never exceeds two active tasks and gives pages priority
+  ---
+  duration_ms: 20.5035
+  ...
+# Subtest: queued cancellation discards work; failure returns the occupied slot
+ok 559 - queued cancellation discards work; failure returns the occupied slot
+  ---
+  duration_ms: 2.6814
+  ...
+# Subtest: an aborted running task retains its slot until work settles
+ok 560 - an aborted running task retains its slot until work settles
+  ---
+  duration_ms: 2.3561
+  ...
+# Subtest: queue validates its concurrency
+ok 561 - queue validates its concurrency
+  ---
+  duration_ms: 1.0187
+  ...
+# Subtest: main page and thumbnail share a lease without cleaning each other's resources
+ok 562 - main page and thumbnail share a lease without cleaning each other's resources
+  ---
+  duration_ms: 2.8006
+  ...
+# Subtest: a released unresolved lease cannot clean a newly acquired consumer
+ok 563 - a released unresolved lease cannot clean a newly acquired consumer
+  ---
+  duration_ms: 2.22
+  ...
+# Subtest: a failed lease is not reused by an immediate explicit retry
+ok 564 - a failed lease is not reused by an immediate explicit retry
+  ---
+  duration_ms: 1.1687
+  ...
+# Subtest: real installed virtualizer mounts a viewport-sized range rather than 5000 pages
+ok 565 - real installed virtualizer mounts a viewport-sized range rather than 5000 pages
+  ---
+  duration_ms: 13.6976
+  ...
+# Subtest: real virtualizer adjusts mixed page measurements without mounting the whole document
+ok 566 - real virtualizer adjusts mixed page measurements without mounting the whole document
+  ---
+  duration_ms: 1.8819
+  ...
+# Subtest: shortcut guard leaves composition, browser commands and media/input controls alone
+ok 567 - shortcut guard leaves composition, browser commands and media/input controls alone
+  ---
+  duration_ms: 3.9367
+  ...
+# Subtest: late backup acknowledgement cannot publish after unmount
+ok 568 - late backup acknowledgement cannot publish after unmount
+  ---
+  duration_ms: 217.0973
+  ...
+# Subtest: late backup acknowledgement cannot publish after account
+ok 569 - late backup acknowledgement cannot publish after account
+  ---
+  duration_ms: 13.5536
+  ...
+# Subtest: late restore acknowledgement cannot refill a retired task cache
+ok 570 - late restore acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 60.335
+  ...
+# Subtest: late retry acknowledgement cannot refill a retired task cache
+ok 571 - late retry acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 9.4666
+  ...
+# Subtest: late cancel acknowledgement cannot refill a retired task cache
+ok 572 - late cancel acknowledgement cannot refill a retired task cache
+  ---
+  duration_ms: 14.0717
+  ...
+# Subtest: a pending remove-upload confirmation cannot submit after the panel closes
+ok 573 - a pending remove-upload confirmation cannot submit after the panel closes
+  ---
+  duration_ms: 6.8149
+  ...
+# Subtest: a retired mode-change confirmation cannot alter the panel
+ok 574 - a retired mode-change confirmation cannot alter the panel
+  ---
+  duration_ms: 9.1455
+  ...
+# Subtest: an upload acknowledgement also belongs to its original authentication generation
+ok 575 - an upload acknowledgement also belongs to its original authentication generation
+  ---
+  duration_ms: 14.3881
+  ...
+# Subtest: en-US: failed upload-limit reads do not claim to be loading
+ok 576 - en-US: failed upload-limit reads do not claim to be loading
+  ---
+  duration_ms: 11.2063
+  ...
+# Subtest: zh-CN: failed upload-limit reads do not claim to be loading
+ok 577 - zh-CN: failed upload-limit reads do not claim to be loading
+  ---
+  duration_ms: 13.4482
+  ...
+# Subtest: an acknowledged backup still publishes immediately in its live panel
+ok 578 - an acknowledged backup still publishes immediately in its live panel
+  ---
+  duration_ms: 9.1621
+  ...
+# Subtest: a late failure after unmount cannot publish feedback or refresh
+ok 579 - a late failure after unmount cannot publish feedback or refresh
+  ---
+  duration_ms: 6.0082
+  ...
+# Subtest: a late failure after account cannot publish feedback or refresh
+ok 580 - a late failure after account cannot publish feedback or refresh
+  ---
+  duration_ms: 7.8273
+  ...
+# Subtest: a frame queued by a valid acknowledgement cannot steal focus after its owner retires
+ok 581 - a frame queued by a valid acknowledgement cannot steal focus after its owner retires
+  ---
+  duration_ms: 10.7849
+  ...
+# Subtest: two captured backup activations reserve only one in-flight request
+ok 582 - two captured backup activations reserve only one in-flight request
+  ---
+  duration_ms: 7.6663
+  ...
+# Subtest: a failed backup retains the original key for an explicit same-options retry
+ok 583 - a failed backup retains the original key for an explicit same-options retry
+  ---
+  duration_ms: 11.467
+  ...
+# Subtest: changing backup options after failure deliberately starts a different request key
+ok 584 - changing backup options after failure deliberately starts a different request key
+  ---
+  duration_ms: 17.7177
+  ...
+# Subtest: a failed upload retains its File and idempotency key until explicit retry
+ok 585 - a failed upload retains its File and idempotency key until explicit retry
+  ---
+  duration_ms: 18.0689
+  ...
+# Subtest: an upload cancelled on unmount cannot publish subsequent progress
+ok 586 - an upload cancelled on unmount cannot publish subsequent progress
+  ---
+  duration_ms: 8.8799
+  ...
+# Subtest: the user's explicit upload cancellation remains neutral and retains the file
+ok 587 - the user's explicit upload cancellation remains neutral and retains the file
+  ---
+  duration_ms: 48.8825
+  ...
+# Subtest: the known size limit prevents an upload without discarding the chosen file
+ok 588 - the known size limit prevents an upload without discarding the chosen file
+  ---
+  duration_ms: 25.8846
+  ...
+# Subtest: declining removal leaves the preview and server untouched
+ok 589 - declining removal leaves the preview and server untouched
+  ---
+  duration_ms: 18.6405
+  ...
+# Subtest: two removal activations share one confirmation, with no premature DELETE
+ok 590 - two removal activations share one confirmation, with no premature DELETE
+  ---
+  duration_ms: 12.0433
+  ...
+# Subtest: an accepted removal confirmation cannot cross an authentication generation
+ok 591 - an accepted removal confirmation cannot cross an authentication generation
+  ---
+  duration_ms: 7.4467
+  ...
+# Subtest: declining a mode change preserves the selected File without submitting it
+ok 592 - declining a mode change preserves the selected File without submitting it
+  ---
+  duration_ms: 21.1627
+  ...
+# Subtest: a failed upload-limit read retries only the metadata and retains the selected File
+ok 593 - a failed upload-limit read retries only the metadata and retains the selected File
+  ---
+  duration_ms: 26.0273
+  ...
+# Subtest: offline limit recovery is paused, not mislabeled as a running read
+ok 594 - offline limit recovery is paused, not mislabeled as a running read
+  ---
+  duration_ms: 14.4213
+  ...
+# Subtest: a cached upload limit remains usable after a failed refresh
+ok 595 - a cached upload limit remains usable after a failed refresh
+  ---
+  duration_ms: 22.3777
+  ...
+# Subtest: successful limit recovery respects retry focus
+ok 596 - successful limit recovery respects retry focus
+  ---
+  duration_ms: 16.9965
+  ...
+# Subtest: successful limit recovery respects body focus
+ok 597 - successful limit recovery respects body focus
+  ---
+  duration_ms: 15.5967
+  ...
+# Subtest: successful limit recovery respects chosen focus
+ok 598 - successful limit recovery respects chosen focus
+  ---
+  duration_ms: 29.9844
+  ...
+# Subtest: a captured metadata retry cannot start duplicate reads before render
+ok 599 - a captured metadata retry cannot start duplicate reads before render
+  ---
+  duration_ms: 13.2915
+  ...
+# Subtest: a retired metadata retry cannot start a new request
+ok 600 - a retired metadata retry cannot start a new request
+  ---
+  duration_ms: 10.4671
+  ...
+# Subtest: a metadata retry settling after unmount cannot update feedback or focus
+ok 601 - a metadata retry settling after unmount cannot update feedback or focus
+  ---
+  duration_ms: 8.2748
+  ...
+# Subtest: an acknowledged remove-upload result cannot change an already closed panel
+ok 602 - an acknowledged remove-upload result cannot change an already closed panel
+  ---
+  duration_ms: 8.5537
+  ...
+# Subtest: old controls cannot start mutations after their panel closes
+ok 603 - old controls cannot start mutations after their panel closes
+  ---
+  duration_ms: 5.7555
+  ...
+# Subtest: archive success sends exactly the original boolean patch and refreshes once (control)
+ok 604 - archive success sends exactly the original boolean patch and refreshes once (control)
+  ---
+  duration_ms: 351.4808
+  ...
+# Subtest: cancelled confirmation does not write or refresh (control)
+ok 605 - cancelled confirmation does not write or refresh (control)
+  ---
+  duration_ms: 21.1237
+  ...
+# Subtest: a held write remains busy and disables archive/settings (control)
+ok 606 - a held write remains busy and disables archive/settings (control)
+  ---
+  duration_ms: 26.2549
+  ...
+# Subtest: confirmed archive settles before an actual held query refresh
+ok 607 - confirmed archive settles before an actual held query refresh
+  ---
+  duration_ms: 29.8255
+  ...
+# Subtest: confirmed archive removes active choices and publishes existing archived-cache metadata
+ok 608 - confirmed archive removes active choices and publishes existing archived-cache metadata
+  ---
+  duration_ms: 15.1524
+  ...
+# Subtest: ordinary query invalidation failure does not turn a successful PATCH into a failure (control)
+ok 609 - ordinary query invalidation failure does not turn a successful PATCH into a failure (control)
+  ---
+  duration_ms: 15.7084
+  ...
+# Subtest: a rejecting refresh callback cannot reverse confirmed archive feedback
+ok 610 - a rejecting refresh callback cannot reverse confirmed archive feedback
+  ---
+  duration_ms: 17.5974
+  ...
+# Subtest: lost archive acknowledgement retains a read-only result check outside the closed menu
+ok 611 - lost archive acknowledgement retains a read-only result check outside the closed menu
+  ---
+  duration_ms: 10.9158
+  ...
+# Subtest: a captured archive action cannot replay an uncertain write
+ok 612 - a captured archive action cannot replay an uncertain write
+  ---
+  duration_ms: 12.1799
+  ...
+# Subtest: rapid archive activation reserves one confirmation before awaiting it
+ok 613 - rapid archive activation reserves one confirmation before awaiting it
+  ---
+  duration_ms: 17.0619
+  ...
+# Subtest: desktop and mobile menu copies share confirmation admission
+ok 614 - desktop and mobile menu copies share confirmation admission
+  ---
+  duration_ms: 22.0546
+  ...
+# Subtest: confirmation rechecks a missing target before PATCH
+ok 615 - confirmation rechecks a missing target before PATCH
+  ---
+  duration_ms: 16.2777
+  ...
+# Subtest: confirmation rechecks a archived target before PATCH
+ok 616 - confirmation rechecks a archived target before PATCH
+  ---
+  duration_ms: 31.5055
+  ...
+# Subtest: confirmation rechecks a default target before PATCH
+ok 617 - confirmation rechecks a default target before PATCH
+  ---
+  duration_ms: 15.6326
+  ...
+# Subtest: confirmation rechecks a unavailable target before PATCH
+ok 618 - confirmation rechecks a unavailable target before PATCH
+  ---
+  duration_ms: 25.0236
+  ...
+# Subtest: unmounted archive owner cannot submit an old confirmation
+ok 619 - unmounted archive owner cannot submit an old confirmation
+  ---
+  duration_ms: 8.0952
+  ...
+# Subtest: checking a lost response performs only an include-archived read and confirms the existing archive
+ok 620 - checking a lost response performs only an include-archived read and confirms the existing archive
+  ---
+  duration_ms: 50.6349
+  ...
+# Subtest: failed result checks stay uncertain without enabling archive replay
+ok 621 - failed result checks stay uncertain without enabling archive replay
+  ---
+  duration_ms: 40.2244
+  ...
+# Subtest: a still-active result permits only a new explicit confirmed archive
+ok 622 - a still-active result permits only a new explicit confirmed archive
+  ---
+  duration_ms: 26.6129
+  ...
+# Subtest: Chinese uncertainty and result-check labels use the existing locale
+ok 623 - Chinese uncertainty and result-check labels use the existing locale
+  ---
+  duration_ms: 11.2988
+  ...
+# Subtest: an initially archived project cannot open archive confirmation
+ok 624 - an initially archived project cannot open archive confirmation
+  ---
+  duration_ms: 35.5528
+  ...
+# Subtest: an initially default project cannot open archive confirmation
+ok 625 - an initially default project cannot open archive confirmation
+  ---
+  duration_ms: 6.9217
+  ...
+# Subtest: an initially unavailable project cannot open archive confirmation
+ok 626 - an initially unavailable project cannot open archive confirmation
+  ---
+  duration_ms: 12.4837
+  ...
+# Subtest: a captured successful archive cannot immediately re-archive the same target
+ok 627 - a captured successful archive cannot immediately re-archive the same target
+  ---
+  duration_ms: 18.9999
+  ...
+# Subtest: held checks reserve a single read and cannot dismiss uncertainty
+ok 628 - held checks reserve a single read and cannot dismiss uncertainty
+  ---
+  duration_ms: 25.7472
+  ...
+# Subtest: a successful missing-project check clears only that target from existing project caches
+ok 629 - a successful missing-project check clears only that target from existing project caches
+  ---
+  duration_ms: 34.5637
+  ...
+# Subtest: archive result-check HTTP 401 keeps uncertainty without private notice identity or cache publication
+ok 630 - archive result-check HTTP 401 keeps uncertainty without private notice identity or cache publication
+  ---
+  duration_ms: 25.8284
+  ...
+# Subtest: archive result-check HTTP 403 keeps uncertainty without private notice identity or cache publication
+ok 631 - archive result-check HTTP 403 keeps uncertainty without private notice identity or cache publication
+  ---
+  duration_ms: 13.0159
+  ...
+# Subtest: archive result-check HTTP 404 keeps uncertainty without private notice identity or cache publication
+ok 632 - archive result-check HTTP 404 keeps uncertainty without private notice identity or cache publication
+  ---
+  duration_ms: 15.278
+  ...
+# Subtest: rendered access denial hides a retained notice and fences old check callbacks
+ok 633 - rendered access denial hides a retained notice and fences old check callbacks
+  ---
+  duration_ms: 14.7939
+  ...
+# Subtest: access denial during PATCH keeps the response unconfirmed without republishing private cache data
+ok 634 - access denial during PATCH keeps the response unconfirmed without republishing private cache data
+  ---
+  duration_ms: 21.7103
+  ...
+# Subtest: late PATCH acknowledgement after owner unmount cannot publish cache data or refresh
+ok 635 - late PATCH acknowledgement after owner unmount cannot publish cache data or refresh
+  ---
+  duration_ms: 23.0275
+  ...
+# Subtest: late result check after owner unmount cannot publish cache data
+ok 636 - late result check after owner unmount cannot publish cache data
+  ---
+  duration_ms: 11.0271
+  ...
+# Subtest: cancelling a checked-active retry preserves its earlier result and sends no second PATCH
+ok 637 - cancelling a checked-active retry preserves its earlier result and sends no second PATCH
+  ---
+  duration_ms: 50.2544
+  ...
+# Subtest: closing and reopening menu copies does not automatically check or replay an unknown archive
+ok 638 - closing and reopening menu copies does not automatically check or replay an unknown archive
+  ---
+  duration_ms: 28.216
+  ...
+# Subtest: older active-list reads are cancelled before canonical archive publication
+ok 639 - older active-list reads are cancelled before canonical archive publication
+  ---
+  duration_ms: 16.0981
+  ...
+# Subtest: archive publication does not create an absent archived cache or alter unrelated conversation data
+ok 640 - archive publication does not create an absent archived cache or alter unrelated conversation data
+  ---
+  duration_ms: 10.1384
+  ...
+# Subtest: settings still opens independently and does not start an archive (control)
+ok 641 - settings still opens independently and does not start an archive (control)
+  ---
+  duration_ms: 12.9027
+  ...
+# Subtest: acknowledged notice exposes the existing archive route and can be dismissed
+ok 642 - acknowledged notice exposes the existing archive route and can be dismissed
+  ---
+  duration_ms: 11.3261
+  ...
+# Subtest: an old check callback cannot rerun after confirmation and dismissal
+ok 643 - an old check callback cannot rerun after confirmation and dismissal
+  ---
+  duration_ms: 15.527
+  ...
+# Subtest: feedback recovers lost focus with an explicit DOM double
+ok 644 - feedback recovers lost focus with an explicit DOM double
+  ---
+  duration_ms: 9.74
+  ...
+# Subtest: feedback does not steal chosen focus with an explicit DOM double
+ok 645 - feedback does not steal chosen focus with an explicit DOM double
+  ---
+  duration_ms: 23.9919
+  ...
+# Subtest: feedback does not steal hidden focus with an explicit DOM double
+ok 646 - feedback does not steal hidden focus with an explicit DOM double
+  ---
+  duration_ms: 11.3686
+  ...
+# Subtest: synthetic project cleanup respects archived-before-delete after a restore
+ok 647 - synthetic project cleanup respects archived-before-delete after a restore
+  ---
+  duration_ms: 5.3866
+  ...
+# Subtest: synthetic project cleanup respects archived-before-delete after an unchanged archive
+ok 648 - synthetic project cleanup respects archived-before-delete after an unchanged archive
+  ---
+  duration_ms: 0.7058
+  ...
+# Subtest: fixture-creation failure cleans its newly created active project and preserves the original error
+ok 649 - fixture-creation failure cleans its newly created active project and preserves the original error
+  ---
+  duration_ms: 29.8481
+  ...
+# Subtest: upload cleanup accepts HTTP 200 only with confirmed absence
+ok 650 - upload cleanup accepts HTTP 200 only with confirmed absence
+  ---
+  duration_ms: 3.1982
+  ...
+# Subtest: upload cleanup accepts HTTP 204 only with confirmed absence
+ok 651 - upload cleanup accepts HTTP 204 only with confirmed absence
+  ---
+  duration_ms: 5.7964
+  ...
+# Subtest: upload cleanup rejects HTTP 200 readback after a successful DELETE
+ok 652 - upload cleanup rejects HTTP 200 readback after a successful DELETE
+  ---
+  duration_ms: 3.2576
+  ...
+# Subtest: upload cleanup rejects HTTP 401 readback after a successful DELETE
+ok 653 - upload cleanup rejects HTTP 401 readback after a successful DELETE
+  ---
+  duration_ms: 1.808
+  ...
+# Subtest: upload cleanup rejects HTTP 403 readback after a successful DELETE
+ok 654 - upload cleanup rejects HTTP 403 readback after a successful DELETE
+  ---
+  duration_ms: 1.7724
+  ...
+# Subtest: upload cleanup rejects HTTP 503 readback after a successful DELETE
+ok 655 - upload cleanup rejects HTTP 503 readback after a successful DELETE
+  ---
+  duration_ms: 1.1075
+  ...
+# Subtest: upload cleanup does not reconcile a reset of the normal readback a second time
+ok 656 - upload cleanup does not reconcile a reset of the normal readback a second time
+  ---
+  duration_ms: 1.2224
+  ...
+# Subtest: upload cleanup reconciles a lost DELETE response with one same-fixture GET, never another DELETE
+ok 657 - upload cleanup reconciles a lost DELETE response with one same-fixture GET, never another DELETE
+  ---
+  duration_ms: 1.0314
+  ...
+# Subtest: upload cleanup retains the original reset when readback returns HTTP 200
+ok 658 - upload cleanup retains the original reset when readback returns HTTP 200
+  ---
+  duration_ms: 1.4151
+  ...
+# Subtest: upload cleanup retains the original reset when readback returns HTTP 401
+ok 659 - upload cleanup retains the original reset when readback returns HTTP 401
+  ---
+  duration_ms: 1.0144
+  ...
+# Subtest: upload cleanup retains the original reset when readback returns HTTP 403
+ok 660 - upload cleanup retains the original reset when readback returns HTTP 403
+  ---
+  duration_ms: 1.0708
+  ...
+# Subtest: upload cleanup retains the original reset when readback returns HTTP 503
+ok 661 - upload cleanup retains the original reset when readback returns HTTP 503
+  ---
+  duration_ms: 0.7933
+  ...
+# Subtest: upload cleanup retains the original DELETE reset after failed readback: apiRequestContext.get: read ECONNRESET
+ok 662 - upload cleanup retains the original DELETE reset after failed readback: apiRequestContext.get: read ECONNRESET
+  ---
+  duration_ms: 1.4275
+  ...
+# Subtest: upload cleanup retains the original DELETE reset after failed readback: readback unavailable
+ok 663 - upload cleanup retains the original DELETE reset after failed readback: readback unavailable
+  ---
+  duration_ms: 1.2894
+  ...
+# Subtest: upload cleanup does not swallow or read back an unrelated exception: Error: request timed out
+ok 664 - upload cleanup does not swallow or read back an unrelated exception: Error: request timed out
+  ---
+  duration_ms: 1.1583
+  ...
+# Subtest: upload cleanup does not swallow or read back an unrelated exception: Error: ECONNREFUSED
+ok 665 - upload cleanup does not swallow or read back an unrelated exception: Error: ECONNREFUSED
+  ---
+  duration_ms: 0.9546
+  ...
+# Subtest: upload cleanup does not swallow or read back an unrelated exception: Error: NOT_ECONNRESET
+ok 666 - upload cleanup does not swallow or read back an unrelated exception: Error: NOT_ECONNRESET
+  ---
+  duration_ms: 0.6339
+  ...
+# Subtest: upload cleanup does not swallow or read back an unrelated exception: ECONNRESET
+ok 667 - upload cleanup does not swallow or read back an unrelated exception: ECONNRESET
+  ---
+  duration_ms: 0.5866
+  ...
+# Subtest: upload cleanup retains its existing HTTP-500 retry schedule and final absence check
+ok 668 - upload cleanup retains its existing HTTP-500 retry schedule and final absence check
+  ---
+  duration_ms: 0.7836
+  ...
+# Subtest: upload cleanup retains the three-attempt HTTP-500 bound
+ok 669 - upload cleanup retains the three-attempt HTTP-500 bound
+  ---
+  duration_ms: 0.6301
+  ...
+# Subtest: upload cleanup can confirm absence after HTTP 500 followed by a lost DELETE response
+ok 670 - upload cleanup can confirm absence after HTTP 500 followed by a lost DELETE response
+  ---
+  duration_ms: 0.7831
+  ...
+# Subtest: upload cleanup keeps HTTP 401 DELETE failures as failures without retry or readback
+ok 671 - upload cleanup keeps HTTP 401 DELETE failures as failures without retry or readback
+  ---
+  duration_ms: 0.7803
+  ...
+# Subtest: upload cleanup keeps HTTP 403 DELETE failures as failures without retry or readback
+ok 672 - upload cleanup keeps HTTP 403 DELETE failures as failures without retry or readback
+  ---
+  duration_ms: 0.49
+  ...
+# Subtest: upload cleanup keeps HTTP 404 DELETE failures as failures without retry or readback
+ok 673 - upload cleanup keeps HTTP 404 DELETE failures as failures without retry or readback
+  ---
+  duration_ms: 0.5127
+  ...
+# Subtest: upload cleanup keeps HTTP 503 DELETE failures as failures without retry or readback
+ok 674 - upload cleanup keeps HTTP 503 DELETE failures as failures without retry or readback
+  ---
+  duration_ms: 0.4339
+  ...
+# Subtest: confirmed upload cleanup preserves the prior business assertion after HTTP success
+ok 675 - confirmed upload cleanup preserves the prior business assertion after HTTP success
+  ---
+  duration_ms: 0.8544
+  ...
+# Subtest: confirmed upload cleanup preserves the prior business assertion after a lost response
+ok 676 - confirmed upload cleanup preserves the prior business assertion after a lost response
+  ---
+  duration_ms: 5.0899
+  ...
+# Subtest: description-only settings changes do not submit untouched opening metadata
+ok 677 - description-only settings changes do not submit untouched opening metadata
+  ---
+  duration_ms: 668.4278
+  ...
+# Subtest: untouched null color and icon are not replaced with display defaults
+ok 678 - untouched null color and icon are not replaced with display defaults
+  ---
+  duration_ms: 114.9398
+  ...
+# Subtest: confirmed settings save closes and settles before held follow-up reads
+ok 679 - confirmed settings save closes and settles before held follow-up reads
+  ---
+  duration_ms: 125.5362
+  ...
+# Subtest: rejecting refresh cannot change a confirmed save into a mutation error
+ok 680 - rejecting refresh cannot change a confirmed save into a mutation error
+  ---
+  duration_ms: 100.5173
+  ...
+# Subtest: all existing project cache variants receive the canonical save without changing other projects
+ok 681 - all existing project cache variants receive the canonical save without changing other projects
+  ---
+  duration_ms: 79.1203
+  ...
+# Subtest: dirty metadata is normalized and clearing a description sends explicit null
+ok 682 - dirty metadata is normalized and clearing a description sends explicit null
+  ---
+  duration_ms: 131.4742
+  ...
+# Subtest: whitespace-only changes do not resubmit untouched metadata
+ok 683 - whitespace-only changes do not resubmit untouched metadata
+  ---
+  duration_ms: 87.2545
+  ...
+# Subtest: synchronous follow-up callback failure does not reject the confirmed save
+ok 684 - synchronous follow-up callback failure does not reject the confirmed save
+  ---
+  duration_ms: 81.7119
+  ...
+# Subtest: rejected writes preserve the open form and existing caches without refreshing
+ok 685 - rejected writes preserve the open form and existing caches without refreshing
+  ---
+  duration_ms: 46.8037
+  ...
+# Subtest: late cancelled reads cannot replace confirmed metadata and active refresh does not delay success
+ok 686 - late cancelled reads cannot replace confirmed metadata and active refresh does not delay success
+  ---
+  duration_ms: 57.3943
+  ...
+# Subtest: failed refresh keeps same-project cached rows, the real reading link and a safe retry notice
+ok 687 - failed refresh keeps same-project cached rows, the real reading link and a safe retry notice
+  ---
+  duration_ms: 214.7769
+  ...
+# Subtest: initial list failure explains retry without showing an empty project or raw error
+ok 688 - initial list failure explains retry without showing an empty project or raw error
+  ---
+  duration_ms: 211.6331
+  ...
+# Subtest: sort placeholders retain only their own project, never another project's rows
+ok 689 - sort placeholders retain only their own project, never another project's rows
+  ---
+  duration_ms: 121.8527
+  ...
+# Subtest: missing projects do not expose retained rows as still available
+ok 690 - missing projects do not expose retained rows as still available
+  ---
+  duration_ms: 93.7506
+  ...
+# Subtest: project HTTP 401 hides cached rows, metadata and selected bulk actions
+ok 691 - project HTTP 401 hides cached rows, metadata and selected bulk actions
+  ---
+  duration_ms: 87.8771
+  ...
+# Subtest: project HTTP 403 hides cached rows, metadata and selected bulk actions
+ok 692 - project HTTP 403 hides cached rows, metadata and selected bulk actions
+  ---
+  duration_ms: 80.7679
+  ...
+# Subtest: project HTTP 404 hides cached rows, metadata and selected bulk actions
+ok 693 - project HTTP 404 hides cached rows, metadata and selected bulk actions
+  ---
+  duration_ms: 67.392
+  ...
+# Subtest: transient failures preserve selected rows and their selection controls
+ok 694 - transient failures preserve selected rows and their selection controls
+  ---
+  duration_ms: 70.1773
+  ...
+# Subtest: an empty cached list with a failed refresh is not represented as a confirmed empty project
+ok 695 - an empty cached list with a failed refresh is not represented as a confirmed empty project
+  ---
+  duration_ms: 59.1859
+  ...
+# Subtest: the retry control requests only the failed query without dropping its cached data
+ok 696 - the retry control requests only the failed query without dropping its cached data
+  ---
+  duration_ms: 78.421
+  ...
+# Subtest: Chinese project recovery uses localized status and retry labels
+ok 697 - Chinese project recovery uses localized status and retry labels
+  ---
+  duration_ms: 70.3519
+  ...
+# Subtest: en: ordinary idle has no status row or announcement
+ok 698 - en: ordinary idle has no status row or announcement
+  ---
+  duration_ms: 25.9621
+  ...
+# Subtest: en: ordinary queued has no status row or announcement
+ok 699 - en: ordinary queued has no status row or announcement
+  ---
+  duration_ms: 11.13
+  ...
+# Subtest: en: ordinary submitted has no status row or announcement
+ok 700 - en: ordinary submitted has no status row or announcement
+  ---
+  duration_ms: 2.5392
+  ...
+# Subtest: en: ordinary offline queue has no status row or announcement
+ok 701 - en: ordinary offline queue has no status row or announcement
+  ---
+  duration_ms: 1.3693
+  ...
+# Subtest: en: repeated normal save/queue/ack cycles stay silent
+ok 702 - en: repeated normal save/queue/ack cycles stay silent
+  ---
+  duration_ms: 8.4788
+  ...
+# Subtest: en: an unread initial snapshot remains silent while observation starts
+ok 703 - en: an unread initial snapshot remains silent while observation starts
+  ---
+  duration_ms: 42.0004
+  ...
+# Subtest: en: explicitly opened sync details retain pending and saved feedback
+ok 704 - en: explicitly opened sync details retain pending and saved feedback
+  ---
+  duration_ms: 38.0504
+  ...
+# Subtest: en: a real sync failure keeps its local-copy explanation and retry
+ok 705 - en: a real sync failure keeps its local-copy explanation and retry
+  ---
+  duration_ms: 17.5505
+  ...
+# Subtest: en: storage failure remains actionable without routine saved/pending copy
+ok 706 - en: storage failure remains actionable without routine saved/pending copy
+  ---
+  duration_ms: 3.7545
+  ...
+# Subtest: en: an active storage error cannot claim success in explicit sync details
+ok 707 - en: an active storage error cannot claim success in explicit sync details
+  ---
+  duration_ms: 2.1174
+  ...
+# Subtest: en: unreadable local progress cannot claim success from an old snapshot
+ok 708 - en: unreadable local progress cannot claim success from an old snapshot
+  ---
+  duration_ms: 3.8629
+  ...
+# Subtest: en: failed explicit conflict action remains visible without a saved-success line
+ok 709 - en: failed explicit conflict action remains visible without a saved-success line
+  ---
+  duration_ms: 1.7304
+  ...
+# Subtest: en: conflicts still require an explicit local/server decision
+ok 710 - en: conflicts still require an explicit local/server decision
+  ---
+  duration_ms: 4.0257
+  ...
+# Subtest: en: a failed chosen-position locate keeps its exact retry
+ok 711 - en: a failed chosen-position locate keeps its exact retry
+  ---
+  duration_ms: 3.4811
+  ...
+# Subtest: zh: ordinary idle has no status row or announcement
+ok 712 - zh: ordinary idle has no status row or announcement
+  ---
+  duration_ms: 1.9704
+  ...
+# Subtest: zh: ordinary queued has no status row or announcement
+ok 713 - zh: ordinary queued has no status row or announcement
+  ---
+  duration_ms: 0.9096
+  ...
+# Subtest: zh: ordinary submitted has no status row or announcement
+ok 714 - zh: ordinary submitted has no status row or announcement
+  ---
+  duration_ms: 0.9456
+  ...
+# Subtest: zh: ordinary offline queue has no status row or announcement
+ok 715 - zh: ordinary offline queue has no status row or announcement
+  ---
+  duration_ms: 0.8412
+  ...
+# Subtest: zh: repeated normal save/queue/ack cycles stay silent
+ok 716 - zh: repeated normal save/queue/ack cycles stay silent
+  ---
+  duration_ms: 1.6033
+  ...
+# Subtest: zh: an unread initial snapshot remains silent while observation starts
+ok 717 - zh: an unread initial snapshot remains silent while observation starts
+  ---
+  duration_ms: 13.863
+  ...
+# Subtest: zh: explicitly opened sync details retain pending and saved feedback
+ok 718 - zh: explicitly opened sync details retain pending and saved feedback
+  ---
+  duration_ms: 2.0233
+  ...
+# Subtest: zh: a real sync failure keeps its local-copy explanation and retry
+ok 719 - zh: a real sync failure keeps its local-copy explanation and retry
+  ---
+  duration_ms: 4.6755
+  ...
+# Subtest: zh: storage failure remains actionable without routine saved/pending copy
+ok 720 - zh: storage failure remains actionable without routine saved/pending copy
+  ---
+  duration_ms: 2.2549
+  ...
+# Subtest: zh: an active storage error cannot claim success in explicit sync details
+ok 721 - zh: an active storage error cannot claim success in explicit sync details
+  ---
+  duration_ms: 1.2201
+  ...
+# Subtest: zh: unreadable local progress cannot claim success from an old snapshot
+ok 722 - zh: unreadable local progress cannot claim success from an old snapshot
+  ---
+  duration_ms: 3.2639
+  ...
+# Subtest: zh: failed explicit conflict action remains visible without a saved-success line
+ok 723 - zh: failed explicit conflict action remains visible without a saved-success line
+  ---
+  duration_ms: 1.2119
+  ...
+# Subtest: zh: conflicts still require an explicit local/server decision
+ok 724 - zh: conflicts still require an explicit local/server decision
+  ---
+  duration_ms: 3.9559
+  ...
+# Subtest: zh: a failed chosen-position locate keeps its exact retry
+ok 725 - zh: a failed chosen-position locate keeps its exact retry
+  ---
+  duration_ms: 2.0929
+  ...
+# Subtest: silent rendering retains observation and can surface a later failure without remount
+ok 726 - silent rendering retains observation and can surface a later failure without remount
+  ---
+  duration_ms: 3.8557
+  ...
+# Subtest: initial browser-storage failure still surfaces while normal initial observation is silent
+ok 727 - initial browser-storage failure still surfaces while normal initial observation is silent
+  ---
+  duration_ms: 2.9991
+  ...
+# Subtest: a submitted conflict retains disabled decisions, not an automatic resolution
+ok 728 - a submitted conflict retains disabled decisions, not an automatic resolution
+  ---
+  duration_ms: 1.4954
+  ...
+# Subtest: cached detail survives a 503 with a compact read retry
+ok 729 - cached detail survives a 503 with a compact read retry
+  ---
+  duration_ms: 40.7627
+  ...
+# Subtest: cached detail survives a transport error without raw details
+ok 730 - cached detail survives a transport error without raw details
+  ---
+  duration_ms: 13.5984
+  ...
+# Subtest: Retry reads only the existing detail query and leaves other caches unchanged
+ok 731 - Retry reads only the existing detail query and leaves other caches unchanged
+  ---
+  duration_ms: 56.1077
+  ...
+# Subtest: held Retry keeps the surface, disables its own control and ignores repeated activation
+ok 732 - held Retry keeps the surface, disables its own control and ignores repeated activation
+  ---
+  duration_ms: 20.2939
+  ...
+# Subtest: a repeated read failure remains recoverable without a raw error or fabricated success
+ok 733 - a repeated read failure remains recoverable without a raw error or fabricated success
+  ---
+  duration_ms: 6.4881
+  ...
+# Subtest: initial failure offers a detail-only Retry instead of fabricating a reading surface
+ok 734 - initial failure offers a detail-only Retry instead of fabricating a reading surface
+  ---
+  duration_ms: 18.2514
+  ...
+# Subtest: HTTP 401 hides cached content and document title while retaining a safe access recheck
+ok 735 - HTTP 401 hides cached content and document title while retaining a safe access recheck
+  ---
+  duration_ms: 3.8744
+  ...
+# Subtest: HTTP 403 hides cached content and document title while retaining a safe access recheck
+ok 736 - HTTP 403 hides cached content and document title while retaining a safe access recheck
+  ---
+  duration_ms: 3.0709
+  ...
+# Subtest: HTTP 404 hides cached content and document title while retaining a safe access recheck
+ok 737 - HTTP 404 hides cached content and document title while retaining a safe access recheck
+  ---
+  duration_ms: 6.1935
+  ...
+# Subtest: offline detail errors keep their original boundary and gain no remote Retry (control)
+ok 738 - offline detail errors keep their original boundary and gain no remote Retry (control)
+  ---
+  duration_ms: 2.6856
+  ...
+# Subtest: known merged conversations keep their existing destination instead of retained stale reading (control)
+ok 739 - known merged conversations keep their existing destination instead of retained stale reading (control)
+  ---
+  duration_ms: 3.0318
+  ...
+# Subtest: a different cached conversation cannot become a retained current Reader (control)
+ok 740 - a different cached conversation cannot become a retained current Reader (control)
+  ---
+  duration_ms: 2.1251
+  ...
+# Subtest: successful reading has no new failure UI (control)
+ok 741 - successful reading has no new failure UI (control)
+  ---
+  duration_ms: 3.0873
+  ...
+# Subtest: transient errors retain the known title as well as the cached snapshot (control)
+ok 742 - transient errors retain the known title as well as the cached snapshot (control)
+  ---
+  duration_ms: 2.8494
+  ...
+# Subtest: unmount retires a previously captured Retry callback
+ok 743 - unmount retires a previously captured Retry callback
+  ---
+  duration_ms: 26.4663
+  ...
+# Subtest: route retires a previously captured Retry callback
+ok 744 - route retires a previously captured Retry callback
+  ---
+  duration_ms: 13.1095
+  ...
+# Subtest: account retires a previously captured Retry callback
+ok 745 - account retires a previously captured Retry callback
+  ---
+  duration_ms: 6.4509
+  ...
+# Subtest: successful Retry restores only lost focus to the existing scroll region without scrolling
+ok 746 - successful Retry restores only lost focus to the existing scroll region without scrolling
+  ---
+  duration_ms: 15.5935
+  ...
+# Subtest: a control the person selected during Retry keeps focus
+ok 747 - a control the person selected during Retry keeps focus
+  ---
+  duration_ms: 4.2508
+  ...
+# Subtest: an old owner cannot restore focus into a later Reader
+ok 748 - an old owner cannot restore focus into a later Reader
+  ---
+  duration_ms: 12.1281
+  ...
+# Subtest: Chinese read recovery uses the same single explicit action
+ok 749 - Chinese read recovery uses the same single explicit action
+  ---
+  duration_ms: 2.8423
+  ...
+# Subtest: a rejecting detached refetch promise remains handled
+ok 750 - a rejecting detached refetch promise remains handled
+  ---
+  duration_ms: 13.8089
+  ...
+# Subtest: initial pending retry shows the loading branch without a cached-content claim
+ok 751 - initial pending retry shows the loading branch without a cached-content claim
+  ---
+  duration_ms: 39.941
+  ...
+# Subtest: lost focus after another failed Retry returns to the current Retry control
+ok 752 - lost focus after another failed Retry returns to the current Retry control
+  ---
+  duration_ms: 12.8289
+  ...
+# Subtest: an account change during Retry cannot reclaim focus
+ok 753 - an account change during Retry cannot reclaim focus
+  ---
+  duration_ms: 8.3628
+  ...
+# Subtest: a wrong-id cached snapshot is never used as the document title
+ok 754 - a wrong-id cached snapshot is never used as the document title
+  ---
+  duration_ms: 3.5864
+  ...
+# Subtest: actual Reader JSX places one recovery notice outside scroll/header content and labels the existing focus region
+ok 755 - actual Reader JSX places one recovery notice outside scroll/header content and labels the existing focus region
+  ---
+  duration_ms: 24.3252
+  ...
+# Subtest: initial body failure has localized recovery instead of raw upstream text
+ok 756 - initial body failure has localized recovery instead of raw upstream text
+  ---
+  duration_ms: 41.0874
+  ...
+# Subtest: Chinese initial recovery offers the same explicit body read
+ok 757 - Chinese initial recovery offers the same explicit body read
+  ---
+  duration_ms: 11.1503
+  ...
+# Subtest: initial HTTP 401 offers a safe access recheck without a success/empty claim
+ok 758 - initial HTTP 401 offers a safe access recheck without a success/empty claim
+  ---
+  duration_ms: 10.7727
+  ...
+# Subtest: initial HTTP 403 offers a safe access recheck without a success/empty claim
+ok 759 - initial HTTP 403 offers a safe access recheck without a success/empty claim
+  ---
+  duration_ms: 4.3152
+  ...
+# Subtest: initial HTTP 404 offers a safe access recheck without a success/empty claim
+ok 760 - initial HTTP 404 offers a safe access recheck without a success/empty claim
+  ---
+  duration_ms: 4.298
+  ...
+# Subtest: Retry preserves the exact saved-anchor query key and loads whole turns without touching other queries
+ok 761 - Retry preserves the exact saved-anchor query key and loads whole turns without touching other queries
+  ---
+  duration_ms: 68.8431
+  ...
+# Subtest: pending initial Retry has loading feedback and rejects repeated captured activation
+ok 762 - pending initial Retry has loading feedback and rejects repeated captured activation
+  ---
+  duration_ms: 26.2536
+  ...
+# Subtest: another failed retry stays recoverable and never invents a complete or empty body
+ok 763 - another failed retry stays recoverable and never invents a complete or empty body
+  ---
+  duration_ms: 11.0026
+  ...
+# Subtest: a loaded target retires the stale initial error surface
+ok 764 - a loaded target retires the stale initial error surface
+  ---
+  duration_ms: 5.8462
+  ...
+# Subtest: a previously captured Retry cannot read after a target window was accepted
+ok 765 - a previously captured Retry cannot read after a target window was accepted
+  ---
+  duration_ms: 5.0575
+  ...
+# Subtest: a navigation already in progress owns the body instead of a newly clicked initial retry
+ok 766 - a navigation already in progress owns the body instead of a newly clicked initial retry
+  ---
+  duration_ms: 4.7988
+  ...
+# Subtest: unmount retires an initial Retry callback
+ok 767 - unmount retires an initial Retry callback
+  ---
+  duration_ms: 9.0033
+  ...
+# Subtest: route retires an initial Retry callback
+ok 768 - route retires an initial Retry callback
+  ---
+  duration_ms: 3.8983
+  ...
+# Subtest: account retires an initial Retry callback
+ok 769 - account retires an initial Retry callback
+  ---
+  duration_ms: 5.4218
+  ...
+# Subtest: anchor retires an initial Retry callback
+ok 770 - anchor retires an initial Retry callback
+  ---
+  duration_ms: 4.4506
+  ...
+# Subtest: successful initial Retry restores lost focus to the existing Reader without scrolling
+ok 771 - successful initial Retry restores lost focus to the existing Reader without scrolling
+  ---
+  duration_ms: 9.1282
+  ...
+# Subtest: initial read recovery does not reclaim a chosen control's focus
+ok 772 - initial read recovery does not reclaim a chosen control's focus
+  ---
+  duration_ms: 6.1992
+  ...
+# Subtest: a late initial retry cannot replace a newer accepted navigation window or reclaim focus
+ok 773 - a late initial retry cannot replace a newer accepted navigation window or reclaim focus
+  ---
+  duration_ms: 7.1475
+  ...
+# Subtest: a detached initial refetch rejection remains handled
+ok 774 - a detached initial refetch rejection remains handled
+  ---
+  duration_ms: 5.1489
+  ...
+# Subtest: successful initial Query data is applied once with real complete turns (control)
+ok 775 - successful initial Query data is applied once with real complete turns (control)
+  ---
+  duration_ms: 3.0219
+  ...
+# Subtest: genuine empty success is distinct from failure and has no retry (control)
+ok 776 - genuine empty success is distinct from failure and has no retry (control)
+  ---
+  duration_ms: 2.5102
+  ...
+# Subtest: offline initial errors retain their existing message and gain no remote retry (control)
+ok 777 - offline initial errors retain their existing message and gain no remote retry (control)
+  ---
+  duration_ms: 3.4158
+  ...
+# Subtest: missing remembered anchor uses the existing first-turn compatibility fallback (control)
+ok 778 - missing remembered anchor uses the existing first-turn compatibility fallback (control)
+  ---
+  duration_ms: 2.6352
+  ...
+# Subtest: initial query enablement still waits for the original position/detail decision (control)
+ok 779 - initial query enablement still waits for the original position/detail decision (control)
+  ---
+  duration_ms: 0.5465
+  ...
+# Subtest: current body items also retire initial recovery before the apply flag settles
+ok 780 - current body items also retire initial recovery before the apply flag settles
+  ---
+  duration_ms: 19.6125
+  ...
+# Subtest: an accepted empty window also retires a prior initial recovery action
+ok 781 - an accepted empty window also retires a prior initial recovery action
+  ---
+  duration_ms: 4.4605
+  ...
+# Subtest: live query success fences a stale Retry before the apply-once effect runs
+ok 782 - live query success fences a stale Retry before the apply-once effect runs
+  ---
+  duration_ms: 15.5334
+  ...
+# Subtest: a paused query state disables and rejects an additional initial read
+ok 783 - a paused query state disables and rejects an additional initial read
+  ---
+  duration_ms: 4.5337
+  ...
+# Subtest: account change while an initial retry is pending cannot reclaim focus
+ok 784 - account change while an initial retry is pending cannot reclaim focus
+  ---
+  duration_ms: 7.9257
+  ...
+# Subtest: anchor change while an initial retry is pending cannot reclaim focus
+ok 785 - anchor change while an initial retry is pending cannot reclaim focus
+  ---
+  duration_ms: 5.7304
+  ...
+# Subtest: lost focus after another failed initial read returns to the current Retry control
+ok 786 - lost focus after another failed initial read returns to the current Retry control
+  ---
+  duration_ms: 5.2054
+  ...
+# Subtest: the real initial recovery scope follows both visit ownership and the query's anchor
+ok 787 - the real initial recovery scope follows both visit ownership and the query's anchor
+  ---
+  duration_ms: 1.3053
+  ...
+# Subtest: an unresolved initial body remains unready and does not claim complete loading
+ok 788 - an unresolved initial body remains unready and does not claim complete loading
+  ---
+  duration_ms: 12.4223
+  ...
+# Subtest: a cold detail mount attaches Reader input and position listeners even if the initial body failed
+ok 789 - a cold detail mount attaches Reader input and position listeners even if the initial body failed
+  ---
+  duration_ms: 25.1433
+  ...
+# Subtest: a cached-detail mount already attaches input while the initial body is unresolved (control)
+ok 790 - a cached-detail mount already attaches input while the initial body is unresolved (control)
+  ---
+  duration_ms: 1.3
+  ...
+# Subtest: accepted alternate complete turns become paint-ready without the failed initial query succeeding
+ok 791 - accepted alternate complete turns become paint-ready without the failed initial query succeeding
+  ---
+  duration_ms: 70.5597
+  ...
+# Subtest: ordinary index navigation settles the initial restore decision
+ok 792 - ordinary index navigation settles the initial restore decision
+  ---
+  duration_ms: 24.1908
+  ...
+# Subtest: cached: real wheel after alternate navigation saves an actual mounted block payload
+ok 793 - cached: real wheel after alternate navigation saves an actual mounted block payload
+  ---
+  duration_ms: 19.7065
+  ...
+# Subtest: cold: real wheel after alternate navigation saves an actual mounted block payload
+ok 794 - cold: real wheel after alternate navigation saves an actual mounted block payload
+  ---
+  duration_ms: 5.4624
+  ...
+# Subtest: a failed position read does not leave saves blocked after a deliberate index navigation
+ok 795 - a failed position read does not leave saves blocked after a deliberate index navigation
+  ---
+  duration_ms: 4.577
+  ...
+# Subtest: an explicit message action shares the same restoration ownership as index navigation
+ok 796 - an explicit message action shares the same restoration ownership as index navigation
+  ---
+  duration_ms: 4.122
+  ...
+# Subtest: a late original-window success cannot restore an old saved message over a newer index choice
+ok 797 - a late original-window success cannot restore an old saved message over a newer index choice
+  ---
+  duration_ms: 10.6467
+  ...
+# Subtest: user wheel can cancel a cold-mounted target read before it commits
+ok 798 - user wheel can cancel a cold-mounted target read before it commits
+  ---
+  duration_ms: 3.4067
+  ...
+# Subtest: navigation cancellation retains a newer already accepted complete-turn window
+ok 799 - navigation cancellation retains a newer already accepted complete-turn window
+  ---
+  duration_ms: 4.1698
+  ...
+# Subtest: remote: normal complete-turn first load becomes ready and only real intent can save
+ok 800 - remote: normal complete-turn first load becomes ready and only real intent can save
+  ---
+  duration_ms: 4.6214
+  ...
+# Subtest: remote: genuine empty success finishes loading without making up an anchor
+ok 801 - remote: genuine empty success finishes loading without making up an anchor
+  ---
+  duration_ms: 3.9376
+  ...
+# Subtest: offline: normal complete-turn first load becomes ready and only real intent can save
+ok 802 - offline: normal complete-turn first load becomes ready and only real intent can save
+  ---
+  duration_ms: 6.2663
+  ...
+# Subtest: offline: genuine empty success finishes loading without making up an anchor
+ok 803 - offline: genuine empty success finishes loading without making up an anchor
+  ---
+  duration_ms: 4.2762
+  ...
+# Subtest: saved-position restoration and its programmed scroll do not invent new user intent
+ok 804 - saved-position restoration and its programmed scroll do not invent new user intent
+  ---
+  duration_ms: 4.3066
+  ...
+# Subtest: real input cancels an in-progress saved-position restore and can later save
+ok 805 - real input cancels an in-progress saved-position restore and can later save
+  ---
+  duration_ms: 10.2587
+  ...
+# Subtest: a new index choice cancels a pending saved-position restore even though it is not target-first
+ok 806 - a new index choice cancels a pending saved-position restore even though it is not target-first
+  ---
+  duration_ms: 4.9866
+  ...
+# Subtest: a failed target read leaves an empty body unready and cannot save a guessed anchor
+ok 807 - a failed target read leaves an empty body unready and cannot save a guessed anchor
+  ---
+  duration_ms: 5.6487
+  ...
+# Subtest: accepted readable content and an unsuccessful exact locate remain distinct states
+ok 808 - accepted readable content and an unsuccessful exact locate remain distinct states
+  ---
+  duration_ms: 3.9984
+  ...
+# Subtest: cached transient detail failure does not block readiness of independently accepted content
+ok 809 - cached transient detail failure does not block readiness of independently accepted content
+  ---
+  duration_ms: 2.6485
+  ...
+# Subtest: denied detail removes listeners from the hidden Reader surface
+ok 810 - denied detail removes listeners from the hidden Reader surface
+  ---
+  duration_ms: 1.1785
+  ...
+# Subtest: account retirement fences a queued first-paint callback
+ok 811 - account retirement fences a queued first-paint callback
+  ---
+  duration_ms: 2.9122
+  ...
+# Subtest: visit retirement fences a queued first-paint callback
+ok 812 - visit retirement fences a queued first-paint callback
+  ---
+  duration_ms: 2.4399
+  ...
+# Subtest: window retirement fences a queued first-paint callback
+ok 813 - window retirement fences a queued first-paint callback
+  ---
+  duration_ms: 3.269
+  ...
+# Subtest: effect cleanup cancels a scheduled paint and removes event handlers
+ok 814 - effect cleanup cancels a scheduled paint and removes event handlers
+  ---
+  duration_ms: 2.3775
+  ...
+# Subtest: routine refreshes do not bind duplicate listeners or report a second first-content event
+ok 815 - routine refreshes do not bind duplicate listeners or report a second first-content event
+  ---
+  duration_ms: 7.7481
+  ...
+# Subtest: a deliberate index navigation can persist its settled real target without requiring extra wheel input
+ok 816 - a deliberate index navigation can persist its settled real target without requiring extra wheel input
+  ---
+  duration_ms: 3.0648
+  ...
+# Subtest: a valid same-revision open records once and preserves the full Reader (control)
+ok 817 - a valid same-revision open records once and preserves the full Reader (control)
+  ---
+  duration_ms: 58.8241
+  ...
+# Subtest: loading without conversation data sends no recent request (control)
+ok 818 - loading without conversation data sends no recent request (control)
+  ---
+  duration_ms: 4.9389
+  ...
+# Subtest: an older recent response cannot lower a confirmed canonical revision
+ok 819 - an older recent response cannot lower a confirmed canonical revision
+  ---
+  duration_ms: 5.2312
+  ...
+# Subtest: a newer summary triggers exact full-detail reading instead of relabelling old detail
+ok 820 - a newer summary triggers exact full-detail reading instead of relabelling old detail
+  ---
+  duration_ms: 7.1658
+  ...
+# Subtest: older reading time cannot overwrite progress at the same canonical revision
+ok 821 - older reading time cannot overwrite progress at the same canonical revision
+  ---
+  duration_ms: 7.7938
+  ...
+# Subtest: equal-time conflicting progress keeps the current observation
+ok 822 - equal-time conflicting progress keeps the current observation
+  ---
+  duration_ms: 6.8042
+  ...
+# Subtest: later reading time may legitimately report lower progress (control)
+ok 823 - later reading time may legitimately report lower progress (control)
+  ---
+  duration_ms: 4.3934
+  ...
+# Subtest: wrong identity does not publish a recent acknowledgement
+ok 824 - wrong identity does not publish a recent acknowledgement
+  ---
+  duration_ms: 4.8092
+  ...
+# Subtest: invalid revision does not publish a recent acknowledgement
+ok 825 - invalid revision does not publish a recent acknowledgement
+  ---
+  duration_ms: 3.9975
+  ...
+# Subtest: a missing detail is not fabricated from the recent summary (control)
+ok 826 - a missing detail is not fabricated from the recent summary (control)
+  ---
+  duration_ms: 4.2871
+  ...
+# Subtest: offline local recording does not invalidate remote query namespaces
+ok 827 - offline local recording does not invalidate remote query namespaces
+  ---
+  duration_ms: 3.4002
+  ...
+# Subtest: an accepted current remote open invalidates the actual Recent list
+ok 828 - an accepted current remote open invalidates the actual Recent list
+  ---
+  duration_ms: 7.0024
+  ...
+# Subtest: an uncertain open is not automatically posted again after a data refresh
+ok 829 - an uncertain open is not automatically posted again after a data refresh
+  ---
+  duration_ms: 6.9465
+  ...
+# Subtest: later same-visit data changes do not record another accepted open (control)
+ok 830 - later same-visit data changes do not record another accepted open (control)
+  ---
+  duration_ms: 3.5233
+  ...
+# Subtest: rejecting detached refreshes remain handled and cannot re-enable the POST
+ok 831 - rejecting detached refreshes remain handled and cannot re-enable the POST
+  ---
+  duration_ms: 17.6803
+  ...
+# Subtest: a route switch fences old publication before effect cleanup
+ok 832 - a route switch fences old publication before effect cleanup
+  ---
+  duration_ms: 4.0223
+  ...
+# Subtest: an unmounted Reader cannot publish or start detached reads
+ok 833 - an unmounted Reader cannot publish or start detached reads
+  ---
+  duration_ms: 2.8904
+  ...
+# Subtest: authentication changes fence a held response without another render
+ok 834 - authentication changes fence a held response without another render
+  ---
+  duration_ms: 3.4043
+  ...
+# Subtest: authentication changes before passive admission send no old-view POST
+ok 835 - authentication changes before passive admission send no old-view POST
+  ---
+  duration_ms: 4.9669
+  ...
+# Subtest: an old failure after A to B to A cannot clear the new visit reservation
+ok 836 - an old failure after A to B to A cannot clear the new visit reservation
+  ---
+  duration_ms: 3.6392
+  ...
+# Subtest: changing data source creates its own recording without accepting the old source
+ok 837 - changing data source creates its own recording without accepting the old source
+  ---
+  duration_ms: 10.5625
+  ...
+# Subtest: synthetic effect replay does not double-admit an open (control)
+ok 838 - synthetic effect replay does not double-admit an open (control)
+  ---
+  duration_ms: 2.8294
+  ...
+# Subtest: recent publication leaves complete turns, positions and offline data alone (control)
+ok 839 - recent publication leaves complete turns, positions and offline data alone (control)
+  ---
+  duration_ms: 2.5608
+  ...
+# Subtest: an invalid reading timestamp cannot replace known reading fields
+ok 840 - an invalid reading timestamp cannot replace known reading fields
+  ---
+  duration_ms: 3.0147
+  ...
+# Subtest: ignoring older revision does not falsely refresh the detail cache age
+ok 841 - ignoring older revision does not falsely refresh the detail cache age
+  ---
+  duration_ms: 3.1379
+  ...
+# Subtest: ignoring older reading time does not falsely refresh the detail cache age
+ok 842 - ignoring older reading time does not falsely refresh the detail cache age
+  ---
+  duration_ms: 8.0714
+  ...
+# Subtest: a failed newer-detail GET preserves coherent old detail and never replays the open
+ok 843 - a failed newer-detail GET preserves coherent old detail and never replays the open
+  ---
+  duration_ms: 12.6913
+  ...
+# Subtest: newer-detail reconciliation supersedes an already in-flight older GET
+ok 844 - newer-detail reconciliation supersedes an already in-flight older GET
+  ---
+  duration_ms: 11.6243
+  ...
+# Subtest: same-visit data rerenders retain the pending owner and preserve unrelated fresh fields
+ok 845 - same-visit data rerenders retain the pending owner and preserve unrelated fresh fields
+  ---
+  duration_ms: 6.4641
+  ...
+# Subtest: a known new reading time fills a previously absent reading observation
+ok 846 - a known new reading time fills a previously absent reading observation
+  ---
+  duration_ms: 6.8048
+  ...
+# Subtest: equivalent timezone representations are not treated as a newer reading observation
+ok 847 - equivalent timezone representations are not treated as a newer reading observation
+  ---
+  duration_ms: 7.7362
+  ...
+# Subtest: null remote results neither fabricate canonical data nor pretend to confirm an open
+ok 848 - null remote results neither fabricate canonical data nor pretend to confirm an open
+  ---
+  duration_ms: 3.2987
+  ...
+# Subtest: changing only project context does not retry an uncertain same-visit open
+ok 849 - changing only project context does not retry an uncertain same-visit open
+  ---
+  duration_ms: 2.9181
+  ...
+# Subtest: leaving and revisiting after a failed response permits a real new open
+ok 850 - leaving and revisiting after a failed response permits a real new open
+  ---
+  duration_ms: 3.9998
+  ...
+# Subtest: an authentication change does not automatically open stale same-view cached data
+ok 851 - an authentication change does not automatically open stale same-view cached data
+  ---
+  duration_ms: 2.8422
+  ...
+# Subtest: mismatched loaded conversation data never admits a recent request
+ok 852 - mismatched loaded conversation data never admits a recent request
+  ---
+  duration_ms: 2.6488
+  ...
+# Subtest: missing reading time never clears a known observation
+ok 853 - missing reading time never clears a known observation
+  ---
+  duration_ms: 2.6933
+  ...
+# Subtest: a connection failure retries the same read and recovers without writes or polling
+ok 854 - a connection failure retries the same read and recovers without writes or polling
+  ---
+  duration_ms: 457.9327
+  ...
+# Subtest: exhausted initial read has an explicit error and manual Refresh recovers
+ok 855 - exhausted initial read has an explicit error and manual Refresh recovers
+  ---
+  duration_ms: 124.0854
+  ...
+# Subtest: en-US: cached rows and selection survive retry exhaustion
+ok 856 - en-US: cached rows and selection survive retry exhaustion
+  ---
+  duration_ms: 127.4957
+  ...
+# Subtest: zh-CN: cached rows and selection survive retry exhaustion
+ok 857 - zh-CN: cached rows and selection survive retry exhaustion
+  ---
+  duration_ms: 92.5133
+  ...
+# Subtest: HTTP 401 is not automatically retried
+ok 858 - HTTP 401 is not automatically retried
+  ---
+  duration_ms: 65.6929
+  ...
+# Subtest: HTTP 403 is not automatically retried
+ok 859 - HTTP 403 is not automatically retried
+  ---
+  duration_ms: 70.8053
+  ...
+# Subtest: HTTP 404 is not automatically retried
+ok 860 - HTTP 404 is not automatically retried
+  ---
+  duration_ms: 57.3851
+  ...
+# Subtest: HTTP 422 is not automatically retried
+ok 861 - HTTP 422 is not automatically retried
+  ---
+  duration_ms: 59.1989
+  ...
+# Subtest: HTTP 429 is not automatically retried
+ok 862 - HTTP 429 is not automatically retried
+  ---
+  duration_ms: 44.2229
+  ...
+# Subtest: an unrecognized failure is not automatically retried
+ok 863 - an unrecognized failure is not automatically retried
+  ---
+  duration_ms: 34.3233
+  ...
+# Subtest: projects: successful reads preserve the existing real links, drop ids and query scope (control)
+ok 864 - projects: successful reads preserve the existing real links, drop ids and query scope (control)
+  ---
+  duration_ms: 191.133
+  ...
+# Subtest: projects: a transient failure retains its actual reading link/drop identifier with localized recovery
+ok 865 - projects: a transient failure retains its actual reading link/drop identifier with localized recovery
+  ---
+  duration_ms: 30.0087
+  ...
+# Subtest: projects: initial failure is an error, not empty guidance
+ok 866 - projects: initial failure is an error, not empty guidance
+  ---
+  duration_ms: 23.9876
+  ...
+# Subtest: projects: empty cached failure is an error, not empty guidance
+ok 867 - projects: empty cached failure is an error, not empty guidance
+  ---
+  duration_ms: 25.6746
+  ...
+# Subtest: projects: Retry only repeats its original GET and keeps the current reading route
+ok 868 - projects: Retry only repeats its original GET and keeps the current reading route
+  ---
+  duration_ms: 50.3808
+  ...
+# Subtest: projects: held Retry retains cached rows and disables only the pending read control
+ok 869 - projects: held Retry retains cached rows and disables only the pending read control
+  ---
+  duration_ms: 40.1622
+  ...
+# Subtest: projects: HTTP 401 hides retained private rows without exposing raw details
+ok 870 - projects: HTTP 401 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 25.1665
+  ...
+# Subtest: projects: HTTP 403 hides retained private rows without exposing raw details
+ok 871 - projects: HTTP 403 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 22.995
+  ...
+# Subtest: projects: HTTP 404 hides retained private rows without exposing raw details
+ok 872 - projects: HTTP 404 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 22.6605
+  ...
+# Subtest: projects: a successful empty result has no error or retry
+ok 873 - projects: a successful empty result has no error or retry
+  ---
+  duration_ms: 21.3044
+  ...
+# Subtest: projects: Chinese cached-read recovery is localized
+ok 874 - projects: Chinese cached-read recovery is localized
+  ---
+  duration_ms: 21.735
+  ...
+# Subtest: projects: an initial held read is busy loading, never confirmed empty
+ok 875 - projects: an initial held read is busy loading, never confirmed empty
+  ---
+  duration_ms: 21.6502
+  ...
+# Subtest: history: successful reads preserve the existing real links, drop ids and query scope (control)
+ok 876 - history: successful reads preserve the existing real links, drop ids and query scope (control)
+  ---
+  duration_ms: 21.3871
+  ...
+# Subtest: history: a transient failure retains its actual reading link/drop identifier with localized recovery
+ok 877 - history: a transient failure retains its actual reading link/drop identifier with localized recovery
+  ---
+  duration_ms: 22.5759
+  ...
+# Subtest: history: initial failure is an error, not empty guidance
+ok 878 - history: initial failure is an error, not empty guidance
+  ---
+  duration_ms: 21.5353
+  ...
+# Subtest: history: empty cached failure is an error, not empty guidance
+ok 879 - history: empty cached failure is an error, not empty guidance
+  ---
+  duration_ms: 16.9417
+  ...
+# Subtest: history: Retry only repeats its original GET and keeps the current reading route
+ok 880 - history: Retry only repeats its original GET and keeps the current reading route
+  ---
+  duration_ms: 29.2606
+  ...
+# Subtest: history: held Retry retains cached rows and disables only the pending read control
+ok 881 - history: held Retry retains cached rows and disables only the pending read control
+  ---
+  duration_ms: 28.463
+  ...
+# Subtest: history: HTTP 401 hides retained private rows without exposing raw details
+ok 882 - history: HTTP 401 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 19.5259
+  ...
+# Subtest: history: HTTP 403 hides retained private rows without exposing raw details
+ok 883 - history: HTTP 403 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 16.6619
+  ...
+# Subtest: history: HTTP 404 hides retained private rows without exposing raw details
+ok 884 - history: HTTP 404 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 14.5252
+  ...
+# Subtest: history: a successful empty result has no error or retry
+ok 885 - history: a successful empty result has no error or retry
+  ---
+  duration_ms: 18.9786
+  ...
+# Subtest: history: Chinese cached-read recovery is localized
+ok 886 - history: Chinese cached-read recovery is localized
+  ---
+  duration_ms: 19.0545
+  ...
+# Subtest: history: an initial held read is busy loading, never confirmed empty
+ok 887 - history: an initial held read is busy loading, never confirmed empty
+  ---
+  duration_ms: 17.3525
+  ...
+# Subtest: branch: successful reads preserve the existing real links, drop ids and query scope (control)
+ok 888 - branch: successful reads preserve the existing real links, drop ids and query scope (control)
+  ---
+  duration_ms: 25.0789
+  ...
+# Subtest: branch: a transient failure retains its actual reading link/drop identifier with localized recovery
+ok 889 - branch: a transient failure retains its actual reading link/drop identifier with localized recovery
+  ---
+  duration_ms: 23.3681
+  ...
+# Subtest: branch: initial failure is an error, not empty guidance
+ok 890 - branch: initial failure is an error, not empty guidance
+  ---
+  duration_ms: 21.7486
+  ...
+# Subtest: branch: empty cached failure is an error, not empty guidance
+ok 891 - branch: empty cached failure is an error, not empty guidance
+  ---
+  duration_ms: 19.7419
+  ...
+# Subtest: branch: Retry only repeats its original GET and keeps the current reading route
+ok 892 - branch: Retry only repeats its original GET and keeps the current reading route
+  ---
+  duration_ms: 29.7475
+  ...
+# Subtest: branch: held Retry retains cached rows and disables only the pending read control
+ok 893 - branch: held Retry retains cached rows and disables only the pending read control
+  ---
+  duration_ms: 24.5029
+  ...
+# Subtest: branch: HTTP 401 hides retained private rows without exposing raw details
+ok 894 - branch: HTTP 401 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 13.987
+  ...
+# Subtest: branch: HTTP 403 hides retained private rows without exposing raw details
+ok 895 - branch: HTTP 403 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 18.3044
+  ...
+# Subtest: branch: HTTP 404 hides retained private rows without exposing raw details
+ok 896 - branch: HTTP 404 hides retained private rows without exposing raw details
+  ---
+  duration_ms: 15.6159
+  ...
+# Subtest: branch: a successful empty result has no error or retry
+ok 897 - branch: a successful empty result has no error or retry
+  ---
+  duration_ms: 13.5686
+  ...
+# Subtest: branch: Chinese cached-read recovery is localized
+ok 898 - branch: Chinese cached-read recovery is localized
+  ---
+  duration_ms: 19.0637
+  ...
+# Subtest: branch: an initial held read is busy loading, never confirmed empty
+ok 899 - branch: an initial held read is busy loading, never confirmed empty
+  ---
+  duration_ms: 18.6957
+  ...
+# Subtest: projects: the existing transient-error path already keeps cached rows (control)
+ok 900 - projects: the existing transient-error path already keeps cached rows (control)
+  ---
+  duration_ms: 12.44
+  ...
+# Subtest: branch: the existing transient-error path already keeps cached rows (control)
+ok 901 - branch: the existing transient-error path already keeps cached rows (control)
+  ---
+  duration_ms: 13.3455
+  ...
+# Subtest: a collapsed project already disables its branch query (control)
+ok 902 - a collapsed project already disables its branch query (control)
+  ---
+  duration_ms: 12.2379
+  ...
+# Subtest: project sidebar excludes archived/default records even when an existing cache contains them
+ok 903 - project sidebar excludes archived/default records even when an existing cache contains them
+  ---
+  duration_ms: 13.8621
+  ...
+# Subtest: retrying Unclassified does not fetch a collapsed project branch
+ok 904 - retrying Unclassified does not fetch a collapsed project branch
+  ---
+  duration_ms: 13.8722
+  ...
+# Subtest: a failed final GET never appends a stale task to the query-owned list
+ok 905 - a failed final GET never appends a stale task to the query-owned list
+  ---
+  duration_ms: 161.3349
+  ...
+# Subtest: explicit Retry checks an unresolved final result even with an unchanged empty list
+ok 906 - explicit Retry checks an unresolved final result even with an unchanged empty list
+  ---
+  duration_ms: 21.3605
+  ...
+# Subtest: sidebar: stale progress is not presented as live
+ok 907 - sidebar: stale progress is not presented as live
+  ---
+  duration_ms: 16.3628
+  ...
+# Subtest: mobile: stale progress is not presented as live
+ok 908 - mobile: stale progress is not presented as live
+  ---
+  duration_ms: 13.3604
+  ...
+# Subtest: active-tasks: failed cached-empty read is not a confirmed empty state
+ok 909 - active-tasks: failed cached-empty read is not a confirmed empty state
+  ---
+  duration_ms: 22.9682
+  ...
+# Subtest: content-cleanup-pending: failed cached-empty read is not a confirmed empty state
+ok 910 - content-cleanup-pending: failed cached-empty read is not a confirmed empty state
+  ---
+  duration_ms: 25.7298
+  ...
+# Subtest: en-US: stale feedback does not promise that tasks are still running
+ok 911 - en-US: stale feedback does not promise that tasks are still running
+  ---
+  duration_ms: 14.057
+  ...
+# Subtest: zh-CN: stale feedback does not promise that tasks are still running
+ok 912 - zh-CN: stale feedback does not promise that tasks are still running
+  ---
+  duration_ms: 17.7682
+  ...
+# Subtest: a late final GET from an old account cannot publish completion
+ok 913 - a late final GET from an old account cannot publish completion
+  ---
+  duration_ms: 7.3707
+  ...
+# Subtest: repeat final-read failure keeps recovery available without resubmitting work
+ok 914 - repeat final-read failure keeps recovery available without resubmitting work
+  ---
+  duration_ms: 8.807
+  ...
+# Subtest: a held final check is deduplicated and disables repeated user Retry
+ok 915 - a held final check is deduplicated and disables repeated user Retry
+  ---
+  duration_ms: 13.6144
+  ...
+# Subtest: multiple unresolved tasks recover independently
+ok 916 - multiple unresolved tasks recover independently
+  ---
+  duration_ms: 15.0869
+  ...
+# Subtest: a confirmed nonterminal GET does not invent completion or discard later checking
+ok 917 - a confirmed nonterminal GET does not invent completion or discard later checking
+  ---
+  duration_ms: 11.4727
+  ...
+# Subtest: unmount fences a held final check's result and notifications
+ok 918 - unmount fences a held final check's result and notifications
+  ---
+  duration_ms: 8.3044
+  ...
+# Subtest: an unresolved final GET can recover even when the task list is still unavailable
+ok 919 - an unresolved final GET can recover even when the task list is still unavailable
+  ---
+  duration_ms: 41.4293
+  ...
+# Subtest: current healthy data still shows genuine live progress
+ok 920 - current healthy data still shows genuine live progress
+  ---
+  duration_ms: 3.4539
+  ...
+# Subtest: a confirmed list result retires an older held lookup without duplicating completion
+ok 921 - a confirmed list result retires an older held lookup without duplicating completion
+  ---
+  duration_ms: 13.8646
+  ...
+# Subtest: en-US: failed package progress read says unknown, not still running
+ok 922 - en-US: failed package progress read says unknown, not still running
+  ---
+  duration_ms: 6.5337
+  ...
+# Subtest: zh-CN: failed package progress read says unknown, not still running
+ok 923 - zh-CN: failed package progress read says unknown, not still running
+  ---
+  duration_ms: 4.4015
+  ...
+# Subtest: confirmed package committed remains visible through a later GET error
+ok 924 - confirmed package committed remains visible through a later GET error
+  ---
+  duration_ms: 2.0491
+  ...
+# Subtest: confirmed package failed remains visible through a later GET error
+ok 925 - confirmed package failed remains visible through a later GET error
+  ---
+  duration_ms: 1.654
+  ...
+# Subtest: confirmed package cancelled remains visible through a later GET error
+ok 926 - confirmed package cancelled remains visible through a later GET error
+  ---
+  duration_ms: 1.8883
+  ...
+1..926
+# tests 926
+# suites 0
+# pass 926
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10518.7251

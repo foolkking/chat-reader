@@ -65,6 +65,8 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     "../../lib/api": { ApiRequestError, getConversations: async input => { apiReads.push(input); return rows; } },
     "./markdown-renderer": { stripLeadingTimestamp: text => text },
     "./conversation-action-menu": { ConversationActionMenu: () => null },
+    "./conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
+      submit: async () => { throw new Error("A read-recovery test must not delete"); } }) },
     // Placement has its own executable suite; this fixture isolates list reads.
     "./conversation-placement": { useConversationPlacement: () => ({}), ConversationPlacementSurface: () => null },
     "./conversation-undo": {},

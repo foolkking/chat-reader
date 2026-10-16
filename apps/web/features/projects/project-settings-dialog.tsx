@@ -9,6 +9,7 @@ import type { ProjectRead, ProjectUpdate } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { useUnsavedClose } from "../../components/use-unsaved-close";
+import { projectMutationError } from "./project-error-copy";
 import { ProjectSymbol, projectSymbols } from "./project-symbol";
 
 export function ProjectSettingsDialog({ project, open, onClose, onChanged }: {
@@ -85,7 +86,7 @@ export function ProjectSettingsDialog({ project, open, onClose, onChanged }: {
             <label className="text-sm font-medium text-primary">{zh ? "图标" : "Icon"}<span className="mt-1 flex items-center gap-2"><ProjectSymbol project={{ icon, color }} className="h-5 w-5 shrink-0" /><select value={icon} onChange={(event) => setIcon(event.target.value)} className="h-11 min-w-0 flex-1 rounded-lg border border-ui bg-page px-3 text-primary focus:ring-2 focus:ring-[var(--focus)]">{!projectSymbols.some((item) => item.value === icon) ? <option value={icon}>{icon}</option> : null}{projectSymbols.map((item) => <option key={item.value} value={item.value}>{zh ? item.zh : item.en}</option>)}</select></span></label>
           </div>
         </fieldset></div>
-        {mutation.isError ? <p role="alert" className="px-5 pb-3 text-sm text-[var(--danger)]">{mutation.error.message}</p> : null}
+        {mutation.isError ? <p role="alert" className="px-5 pb-3 text-sm text-[var(--danger)]">{projectMutationError(mutation.error, zh, "save")}</p> : null}
         <footer className="flex shrink-0 justify-end gap-2 border-t border-ui px-5 py-3"><button type="button" disabled={mutation.isPending} onClick={() => void requestClose()} className="min-h-10 rounded-lg border border-ui px-4 text-sm font-medium text-primary hover:bg-subtle">{zh ? "取消" : "Cancel"}</button><button type="submit" disabled={mutation.isPending || !name.trim()} className="min-h-10 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50">{mutation.isPending ? (zh ? "正在保存" : "Saving") : (zh ? "保存" : "Save")}</button></footer>
       </form>
     </div>,

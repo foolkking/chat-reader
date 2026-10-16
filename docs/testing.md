@@ -1,5 +1,960 @@
 # Testing
 
+## Full service-free UX continuation — 2026-10-16
+
+The [continuation record](execution/ux-audit-service-free-regression-2026-10-16.md)
+owns initial failures, adapter repairs, the separately reproduced Share entry
+defect, and adjacent evidence. All **63** current UX Node files passed
+**1,412/1,412**, with zero failed/skipped/cancelled cases. Full
+`corepack pnpm run lint` and nonincremental Web typecheck passed. Prior
+“unexecuted” notes below describe their original batch; the exact Node file
+manifest in this record supplies the newer result, not acceptance of other
+tests or browser/runtime paths.
+
+For the explicitly authorized 2026-10-16 release path, Web build passed and full
+local API tests finished **1,129 passed / 159 skipped / 0 failed** in 2,622.35 s.
+The skips include PostgreSQL-only cases; CI must run them against its isolated
+PostgreSQL. The local PWA attempt built successfully, then stopped after two
+90-second browser timeouts because the API at `127.0.0.1:8000` was not running.
+This is not PWA acceptance; CI owns the complete-service browser gate.
+`alembic heads` has one head, `20261015_0051`. The existing local database remains
+at `20260823_0028`, so `verify_migration_state.py --require-current` did not pass;
+no upgrade of that pre-existing database was attempted.
+The staged source/document whitespace check excludes archived `*-evidence/`
+console transcripts: those raw logs intentionally retain emitted whitespace
+and initial-failure output rather than being rewritten as clean test results.
+
+Reproduce in PowerShell with task-specific process-local TEMP/TMP:
+
+```powershell
+$tests = Get-ChildItem -LiteralPath scripts/ux -Filter '*.test.mjs' |
+  Sort-Object Name | ForEach-Object { $_.FullName }
+node --test --test-concurrency=1 @tests
+```
+
+These are source, installed-library and controlled-hook/DOM/transport adapters
+(some include actual React server markup), not mounted React, real
+IndexedDB/Worker, browser/focus/assistive, PostgreSQL migration/concurrency,
+full PWA or CPU/RSS acceptance. The newer release preflight is listed separately
+above and does not relabel the earlier service-free batch. CI and deployment
+were explicitly authorized on 2026-10-16 and remain pending; no production
+acceptance is claimed.
+
+## Noise candidate exact inline markers — 2026-10-16, local checks
+
+The [source audit](execution/ux-audit-noise-candidate-range-markers-2026-10-15.md)
+was recorded on October 15 before editing; final verification crossed local
+midnight into October 16. `node --test scripts/ux/cleanup-range-selection.test.mjs
+scripts/ux/cleanup-candidate-markers.test.mjs` passed **13/13**: six actual-helper
+cases and seven real React server-markup cases. They cover exact Unicode/CRLF
+parts, malformed refinements, retained text, full/null legacy choices, stable
+summary/name/description semantics, eligible pending choices, ineligible states,
+APPLIED-with-stale completion and escaped HTML-like text. React hooks/dependencies
+are real, not mocked; the rows remain in their default collapsed SSR state.
+
+Targeted Web ESLint (candidate, helper, range editor, zero warnings),
+nonincremental Web typecheck and diff whitespace passed. The existing layout
+E2E's unselected highlight assertion was preserved, not weakened, but E2E
+did not run. No API or migration changed, so the prior 65-case API result was
+not rerun or relabelled as a new result. No service, auth, browser/CSS,
+mounted-event, expanded-row/focus/assistive verification, PostgreSQL migration,
+build, commit, push, new CI or deployment ran.
+
+## Noise candidate editable ranges — 2026-10-15, local checks
+
+The [range-editing report](execution/ux-audit-noise-range-editing-2026-10-15.md)
+records the focused results and limitations. The synthetic API batch runs
+`test_cleanup_safety.py`, `test_cleanup_source_replacement.py`,
+`test_cleanup_validation_work.py`, `test_cleanup_selection_summary.py`,
+`test_cleanup_reviewed_ranges.py` and `test_cleanup_preview_ranges.py` using
+in-process TestClient/SQLite, not a listening API. It checks refined Unicode
+ranges, preserved detector/source/version data before apply, whole-range reset,
+KEEP/reselect, cross-page bulk choices, stale source/token, malformed ranges,
+protection and exact preview/apply equivalence. Final result: **65 passed**
+(67.41 s), including 60 candidates across two pages and two conversations, with
+61 effective removal intervals. This supersedes the intermediate 61-case run.
+
+`node --test scripts/ux/cleanup-range-selection.test.mjs` passed **4/4** over
+the actual TypeScript helper: retained text, fail-closed validation, native
+UTF-16/LF → canonical Unicode/CRLF mapping and nonmutating merge.
+Targeted Web ESLint and `pnpm --filter web exec tsc --noEmit --incremental false`
+passed. The initial typecheck exposed an impossible loading comparison in the
+earlier import restore error branch; the minimal correction retains its separate
+loading status. The earlier API failure was an invalid test setup attempting to
+replace the immutable initial version; the fixture now creates version 2 before
+testing same-ID replacement. Product immutability was not relaxed.
+
+`test_cleanup_ranges_postgres.py` authors competing-edit and safe-downgrade
+checks; the updated owner-isolation case is in `test_cleanup_access.py`.
+Neither ran. `alembic heads` reports only `20261015_0051`; this is revision-graph
+inspection, **not migration execution**. No PostgreSQL, Web/API service,
+authentication flow, browser/render/focus/assistive test, build, full release
+gate, commit, CI or deployment was run. Future separately authorized acceptance
+must include PostgreSQL upgrade/downgrade/concurrency and keyboard/touch review,
+dirty close, unknown saves, selected-only pagination and all theme/viewport states.
+Task temporary data stays under the batch-specific desktop `wkkk` directory;
+no user import storage was changed.
+
+## Adaptive import session action lifecycle — 2026-10-15, source only
+
+The [session-action report](execution/ux-audit-import-session-action-lifecycle-2026-10-15.md)
+records the pre-edit concurrent full-snapshot publication and stale grouping
+assignment evidence. `scripts/ux/adaptive-import-session-action-lifecycle.test.mjs`
+extracts the actual adaptive workspace, mapping workspace and health-check
+source. It checks the single action lease/token, current import ownership,
+success/failure release path, disabled competing controls and grouping
+resynchronization. It remains **unexecuted**.
+
+The source check does not mount React, exercise Query mutation timing, call the
+API, establish server transaction ordering or prove browser keyboard/
+screen-reader behavior. After authorization, use task TEMP/TMP for the focused
+import checks and related Web gates, then slow-response, rapid-control,
+reanalysis and keyboard acceptance. No tests/gates, syntax check, build,
+services, product browser, commit, CI, deployment or resource measurement ran.
+
+## Source-editor attachment picker dialog — 2026-10-15, source only
+
+The [dialog report](execution/ux-audit-source-editor-attachment-picker-dialog-2026-10-15.md)
+records the picker’s missing shared focus lifecycle. `scripts/ux/source-editor-attachment-picker-dialog.test.mjs`
+extracts the actual picker and checks the shared hook import/call, outer dialog
+ref, initial search focus, backdrop exclusion and the unchanged hook's
+Escape/Tab/restoration branches.
+
+All assertions are **unexecuted**. Static source and shared-hook checks are not
+mounted React, browser keyboard, screen-reader, mobile or nested-modal
+acceptance. After authorization, use task TEMP/TMP for focused editor/dialog
+checks and related Web gates, then real focus/close/scroll acceptance. No
+tests/gates, syntax check, build, services, browser, commit, CI, deployment or
+resource measurement ran.
+
+## Source-editor discard-and-switch cleanup — 2026-10-15, source only
+
+The [source-editor report](execution/ux-audit-source-editor-discard-switch-2026-10-15.md)
+records that the navigation banner bypassed the editor's existing attachment
+cleanup path. `scripts/ux/source-editor-discard-switch.test.mjs` extracts the
+actual workspace cleanup, close handler, discard-and-switch handler, unmount
+effect and pending-banner JSX, then checks cancellation/deletion/invalidation,
+busy-ref coalescing, finite failure feedback and parent switching only after
+cleanup.
+
+All assertions are **unexecuted**. This is an AST/source binding, not mounted
+React, real upload/cancel timing, server-object cleanup, browser focus or
+resource evidence. After authorization, use task TEMP/TMP for the focused
+editor/attachment checks and related Web gates, then slow-upload, navigation
+switch, retry/focus and server-object acceptance. No tests/gates, syntax check,
+build, services, browser, commit, CI, deployment or resource measurement ran.
+
+## Share edge-window loading lifecycle — 2026-10-15, local verification
+
+The [edge-loading report](execution/ux-audit-share-edge-loading-lifecycle-2026-10-15.md)
+records the missing active-visit/error-owner guard in the previous/next
+complete-turn loaders, followed by the 2026-10-16 retired-entry finding.
+`scripts/ux/share-edge-loading-lifecycle.test.mjs`
+extracts both actual nested loaders and asserts current success, unmount
+completion/rejection, same-visit direction reversal, no stale edge error,
+merge/capture/restore suppression, retired-entry zero-work and current-failure
+positive controls. All **9/9** passed in the full 2026-10-16 local run.
+
+Transport, refs, anchor helpers, leases,
+state setters and layout are controlled adapters, not mounted React, browser
+scroll geometry, real slow response or CPU/RSS evidence. Full Web lint and
+nonincremental typecheck also passed. Actual edge scroll/reversal/unmount and
+stable-anchor acceptance remain open. No build, services, browser, commit, CI,
+deployment or resource measurement ran.
+
+## Share unlock lifecycle — 2026-10-15, source only
+
+The [unlock report](execution/ux-audit-share-unlock-lifecycle-2026-10-15.md)
+records pre-edit duplicate/stale submit and gate-state evidence.
+`scripts/ux/share-unlock-lifecycle.test.mjs` extracts the actual visit factory,
+complete visit layout lifecycle, unlock state/ref/reset/edit/submit callbacks
+and actual parent gate JSX/helper. Authored cases cover pre-render duplicate
+admission and pending edit, unchanged whitespace, finite current 401/429/500
+feedback in both locales, error-clearing edit/retry, success versus failed
+metadata read, and delayed POST/read completion or rejection after visit,
+unmount or layout replay. Old finally must not clear a newer owned attempt.
+Native form submission/default prevention and busy/input/label/autocomplete
+markup are included.
+
+All assertions are **unexecuted**. Hook scheduling, unrelated Reader resets,
+transport/query outcomes and static markup are controlled adapters, not mounted
+React, real authentication/cookies, password-manager, keyboard or announcements.
+After authorization, use task TEMP/TMP for the focused regression, related
+Share checks and relevant Web gates, then actual slow-response/token-switch
+and keyboard/password-manager acceptance. No tests/gates, syntax check, build,
+services, browser, commit, CI, deployment or resource measurement ran.
+
+## Share stored-position shape — 2026-10-15, source only
+
+The [shape report](execution/ux-audit-share-position-shape-2026-10-15.md)
+records pre-edit unchecked parsed records reaching query/anchor dereference
+and numeric alignment. `scripts/ux/share-navigation-retirement.test.mjs`
+extends its actual helper/initialization/query/restore extraction with
+synthetic invalid root/message/anchor/offset/index cases, valid overflow JSON,
+normal store readiness and unanchored-query/restore-skip assertions.
+Current v2, legacy v1, numeric anchor hints, minimal message-only records,
+nullable/missing block index, finite pixels and extra metadata have authored
+unchanged-record/query/restore/no-read-time-write assertions.
+
+All additions are **unexecuted**. Digest/storage/queries, hooks, transport,
+DOM/leases/mounted positioning and timers remain controlled adapters. No
+browser storage or accuracy/geometry/CPU result is asserted. After
+authorization, use task-specific TEMP/TMP for the shared regression, existing
+Share storage/sheet/tablet checks and relevant Web gates, then real corrupt/
+current/legacy browser records and true-anchor/no-jump acceptance. This does
+not validate well-shaped stale or out-of-scope targets. No tests/gates,
+syntax check, build, services, browser, commit, CI or deployment ran.
+
+## Share position-storage recovery — 2026-10-15, source only
+
+The [storage-recovery report](execution/ux-audit-share-position-storage-recovery-2026-10-15.md)
+records pre-edit blocked digest readiness, silent/uncaught storage failure and
+post-discard writer resurrection evidence.
+`scripts/ux/share-navigation-retirement.test.mjs` is updated but **unexecuted**:
+its actual initialization/key/read/query extraction now authors digest/read
+failure settlement, unchanged corrupt-JSON fallback, retired rejection,
+disabled-visit replay without probing and a fresh visit recovering normally.
+The fixture adds only the required failure-ref/setter/read adapters.
+
+`scripts/ux/share-position-storage-recovery.test.mjs` is authored but
+**unexecuted**. It reuses exact persistence/discard effects, status
+classification/error class and the actual fixed-header status JSX. Proposed
+cases cover unchanged idle timing/key/bytes and cached unload without capture,
+one contained quota/access failure before/after rerender, successful/denied
+permanent removal that cannot be undone by retained writers, password/
+transient retention, stale visit/store/effect timer/frame/unload guards and
+finite translated current-visit feedback in the original fixed-height line.
+
+Hooks/commit scheduling, position capture, DOM/layout, query snapshots,
+digest/storage and time/events remain controlled adapters. No real crypto,
+blocked/quota browser storage, durable deletion, mounted React, scroll or
+announcement result is asserted. After authorization use task-specific
+TEMP/TMP for both files, existing Share sheet/tablet regressions and relevant
+Web checks, then actual denied/quota/crypto, reload/restore/access/password,
+no-document-shift and announcement acceptance. Position shape has the separate
+source-only follow-up above; well-shaped stale/out-of-scope targets,
+indefinitely pending digest and edge/unlock lifetimes remain separate.
+No tests/gates, syntax check, build, services, browser, commit, CI, deployment
+or resource measurement ran.
+
+## Share tablet navigation dialog — 2026-10-15, source only
+
+The [tablet-dialog report](execution/ux-audit-share-tablet-navigation-dialog-2026-10-15.md)
+records pre-edit missing modal semantics/focus-lifecycle evidence.
+`scripts/ux/share-tablet-navigation-dialog.test.mjs` is authored but
+**unexecuted**. It extracts the actual Share visibility/ref/hook call and
+section attributes and reuses the entire unchanged `useDialogFocus` module.
+Proposed cases cover translated modal name/ref/fallback tab index, visible
+tablet-only ownership, initial focus and boundary Tab wrapping, current close
+handler/Escape, rerenders without refocus, top-dialog arbitration, cleanup
+on close/viewport/hidden/unmount, no-scroll opener restoration and a newer
+modal retaining focus during delayed restoration.
+
+Hooks/layout/ref attachment, DOM geometry/modal ordering, keyboard/focus and
+timers are controlled adapters. No mounted React/Vaul, true tab order,
+background inertness, screen-reader, browser, transport, anchor or resource
+result is asserted. The existing `e2e/share-drawer-focus.spec.ts` exercises
+owner share creation, not this public navigation drawer. After authorization,
+use task-specific TEMP/TMP for the new regression, existing Share sheet/core
+regressions and relevant Web checks, then public/unlocked tablet keyboard/
+screen-reader, close/reopen/breakpoint and no-reading-anchor-movement
+acceptance. No tests/gates, build, services, browser, commit, CI or deployment ran.
+
+## Reader navigation-sheet lifecycle — 2026-10-15, source only
+
+The [Reader sheet report](execution/ux-audit-reader-navigation-sheet-lifecycle-2026-10-15.md)
+owns pre-edit cross-utility auto-close, stale feedback and cancellation evidence.
+`scripts/ux/reader-navigation-sheet-lifecycle.test.mjs` is authored but
+**unexecuted**. It extracts actual scope/ref/state/effect, stable utility/tab/
+activation callbacks and the existing visit/account guard. Actual shared
+index/TOC JSX callers, TOC target helper and both status fragments are reused.
+Proposed cases cover current outcomes in mode/viewport adapters, duplicate/
+newer targets, reversed completion, every utility transition before parent
+render, batched/sequential close/reopen, tab/viewport/source/conversation/
+account/editor/hidden/unmount retirement, same-scope replay, stable callback,
+version/locator/query-policy wiring and render-time translated flags.
+
+Core navigation, hooks/layout scheduling, parent/activation state, availability and
+account clock are controlled adapters; mode labels do not prove real offline
+reads. Fragment static markup is not a mounted overlay, focus or announcement
+result. No pass count or real API/QueryClient/Vaul/DOM/resource result is
+asserted. After authorization, use task-specific TEMP/TMP, run the new file,
+existing Reader retirement and offline query-policy checks/relevant Web gates,
+then online/offline phone/tablet real-anchor, rapid/slow/failing selection,
+manual takeover and navigation-to-other-utility/browser acceptance. Delayed
+workspace-open/source-editor confirmation work remains separate. No tests/
+gates, build, services, browser, commit, CI or deployment ran.
+
+## Share navigation-sheet lifecycle — 2026-10-15, source only
+
+The [sheet-lifecycle report](execution/ux-audit-share-navigation-sheet-lifecycle-2026-10-15.md)
+records pre-edit stale completion and uneven feedback evidence.
+`scripts/ux/share-navigation-sheet-lifecycle.test.mjs` is authored but
+**unexecuted**. It extracts actual Share visibility/scope/state/effect/handlers,
+all four mobile/tablet index/TOC JSX callers, the TOC target helper and both
+status JSX placements. Proposed cases include current success/failure/
+exception/cancel, pending coalescing/newer choice, reversed completion,
+synchronous close/tab retirement, reopen/viewport/visit/hidden-state/unmount,
+same-scope effect replay, unchanged desktop routing and translated status.
+The source-only follow-up adds phone/tablet same-batch close/open and
+same-value explicit open: each gets a fresh activation scope, retained old
+callbacks cannot admit before/after render, and old completion cannot clear
+the new pending state or close the new surface.
+
+Hooks/layout scheduling, parent/activation state and core navigation are controlled
+adapters; authored static-markup assertions concern only extracted status
+fragments, not mounted React/Vaul or announcements. No real API, QueryClient,
+DOM alignment, browser geometry, physical cancellation or CPU/RSS result is
+asserted. After authorization, use task-specific TEMP/TMP, run the new file,
+`scripts/ux/share-navigation-retirement.test.mjs` and relevant Web checks, then
+public/unlocked phone/tablet slow/failing/rapid choice, manual takeover,
+dismiss/reopen, breakpoint and focus/announcement acceptance. Common Reader
+sheet completion and Share tablet modal/keyboard wiring have the separate
+source follow-ups above; runtime acceptance remains pending. No tests/
+gates, build, services, browser, commit, CI or deployment ran.
+
+## Share navigation and saved-position retirement — 2026-10-15, source only
+
+The [Share retirement report](execution/ux-audit-share-navigation-retirement-2026-10-15.md)
+records evidence before product edits. The new
+`scripts/ux/share-navigation-retirement.test.mjs` remains **unexecuted**.
+It extracts the actual Share navigation callback, visit/storage/initial-window/
+restore effects, nested manual-intent callback and local key/position/window
+helpers. Authored cases cover exposed stage success/rejection after replacement,
+unmount/token/input and effect-replay retirement, inactive admission, lease/
+timer cleanup, current finite failures, optional resolver compatibility,
+legacy four-argument navigation, same-intent restore fallback order/offsets,
+cancellation/takeover, early explicit choice and scoped/delayed storage keys.
+The position-storage follow-up above extends its initialization/error cases
+and required controlled adapters; those additions also remain unexecuted.
+
+Hooks, query snapshots, digest bytes, storage, transport, leases, DOM lookup,
+alignment/settling and timers are controlled adapters, not mounted React,
+real Web Crypto/localStorage/QueryClient, browser geometry or physical abort.
+No pass count, focus/announcement or resource result is asserted. After
+authorization, use task-specific TEMP/TMP, run the new file and relevant
+existing Reader/Share/Web gates, then public/unlocked Share real-anchor,
+rapid choice/manual takeover, token switch and close/reopen acceptance.
+Sheet-owned completion and crypto/storage failure recovery have separate
+source-only follow-ups above; edge/unlock remain separate. No tests/gates,
+build, services, browser, commit, CI, deployment or CPU/RSS measurement ran.
+
+## Reader navigation retirement — 2026-10-15, source only
+
+The [retirement report](execution/ux-audit-reader-navigation-retirement-2026-10-15.md)
+records evidence before editing. The new
+`scripts/ux/reader-navigation-retirement.test.mjs` remains **unexecuted**.
+The updated `scripts/ux/conversation-search-selection.test.mjs` was later run
+as a shared adapter and passed 48/48, but that result does not verify the
+Reader-retirement-specific cases below.
+The focused new adapter extracts actual navigation/search publication/clear
+callbacks, visit guard, source reset effect and local locator/window helpers.
+Proposed cases cover late context/neighborhood/fallback reads, lease/mount/
+settle completion and rejection, newer-in-progress protection, visit/account/
+unmount admission and predicates, current finite failures and server locator
+reasons, local/remote/offline paths, footer dismiss/replace/visit retirement,
+normal footer publication, source/conversation locator-validation reset and
+reset-cleanup token retirement even when the same owner becomes active again.
+
+Hooks, timing, state publication, transport/neighborhood loading, leases,
+geometry, mounting/alignment and layout settling are controlled adapters.
+No mounted React, physical request cancellation, true DOM geometry, actual
+device focus/announcements or resource result is asserted. The older
+`scripts/ux/reader-navigation-readiness.test.mjs` remains important acceptance
+coverage but was not rerun; its historical pass count does not verify this
+batch. After authorization, use task-specific TEMP/TMP, run all three focused
+files plus relevant Web gates, and accept remote/offline/Share real-anchor,
+rapid selection, old rejection, source switch, retry and footer dismissal in
+the browser. No tests/gates, build, services, browser, commit, CI, deployment
+or CPU/RSS measurement ran.
+
+## Conversation-search navigation lifecycle — 2026-10-15, source only
+
+The [lifecycle report](execution/ux-audit-conversation-search-navigation-lifecycle-2026-10-15.md)
+records evidence before edits. The shared
+`scripts/ux/conversation-search-selection.test.mjs` now includes controlled
+pending duplicate activation, newer-intent supersession, raw-query/filter/
+source/conversation retirement, desktop hide/return, close/Escape/unmount,
+finite bilingual failure/retry and cancellation cases. It also extracts the
+actual Reader search adapter for preflight, late-publication, reversed
+completion, optional two-argument compatibility and exact locator checks.
+The existing offline-search-retry adapter now supplies the layout hook.
+The shared component file was executed on 2026-10-16 as part of the selection
+continuation and passed 48/48; the offline-retry file remains **unexecuted**.
+
+The harness adapts real source but controls hooks/layout effects, query state,
+timers, navigation promises and publication setters. It does not mount React,
+exercise real QueryClient/Worker/API/DOM anchors, actively cancel navigation,
+verify focus/announcements or measure resources. After authorization, use
+task-specific TEMP/TMP, run the offline-retry file/relevant Web gates, then
+remote/offline rapid tap/Enter, query/filter edits, close/reopen and
+source-editor hide/return browser acceptance. No tests/gates, build, services,
+browser, commit, CI, deployment or CPU/RSS measurement ran.
+
+## Conversation-search occurrence selection — 2026-10-15, local verification
+
+The [conversation-search report](execution/ux-audit-conversation-search-selection-2026-10-15.md)
+records source evidence before editing.
+On 2026-10-16, `scripts/ux/conversation-search-selection.test.mjs` passed
+**48/48** with no failures or skips. Cases cover document/within-document
+match reorder, missing target and shrink, visible-index arrows, default/legacy
+numeric restore, activation publication before navigation and return-state
+restore, query/role/type reset, debounce/IME, changed locator identity,
+context-only refresh and existing exact/fallback navigation targets and
+offline query mode.
+
+The adapter would transpile the actual component but controls hooks/effects,
+query results, timers and navigation without issuing a search. It is not
+mounted React, real QueryClient cache/refetch, API/Worker, keyboard/focus,
+touch, scroll or resource evidence. Targeted ESLint, nonincremental Web
+typecheck and `git diff --check` also passed. The separate
+`scripts/ux/offline-search-retry.test.mjs` and navigation-lifecycle report
+remain unexecuted; real remote/offline reorder, keyboard, touch and
+return-to-search acceptance remain open. No services, browser, build, full
+API/PWA suite, commit, CI, deployment or CPU/RSS measurement ran.
+
+## Conflict resolution recovery — 2026-10-15, source only
+
+The [resolution recovery report](execution/ux-audit-offline-conflict-resolution-recovery-2026-10-15.md)
+records source evidence before editing. The shared
+`scripts/ux/offline-conflict-merge-draft-refresh.test.mjs` is updated but
+**unexecuted**. Proposed additions cover initial and post-failure marker read
+errors, unconfirmed-state action suppression, read-only recovery to comparison/
+pending/STALE, failed merge and locale retention, and retirement while
+confirmation, prepare, retry, recovery lookup or invalidation waits. A
+controlled unmount case checks that a retired failure does not begin a lookup,
+publish state or return from a later view.
+
+This adapter would transpile the actual component; hooks, confirmation,
+requests and storage remain controlled, not mounted React/Dexie/browser or
+server receipt evidence. No pass count is asserted. After authorization, use
+task-specific TEMP/TMP, run the shared focused Node file and relevant Web gates,
+then actual conflict double-failure/status recheck, saved-operation retry,
+switch/close/reopen, locale, dirty protection and focus acceptance.
+No tests, lint/types, build, services, browser, commit, CI, deployment or
+resource measurement ran.
+
+## Conflict merge draft refresh protection — 2026-10-15, source only
+
+The [conflict-draft report](execution/ux-audit-offline-conflict-merge-draft-refresh-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/offline-conflict-merge-draft-refresh.test.mjs` is authored but
+**unexecuted**. Proposed cases cover stored/local initialization, failed and
+pending draft writes across comparison refresh, annotation comment retention,
+a newer edit during a read, failed reads, locale-only feedback changes,
+conflict-key retirement of old reads/saves and the existing merge-submit path.
+
+The actual component is transpiled in memory, but hooks, confirmation,
+requests and local storage are controlled adapters. This does not mount React
+or verify Dexie transactions, actual focus, cross-tab writers, resolution
+receipts, browser navigation or device resources. No pass count is asserted.
+After authorization, set task-specific TEMP/TMP, run the focused Node file
+and relevant Web gates, then exercise actual annotation/notebook comparison,
+quota failure, save retry, locale/focus and exit protection in the browser.
+No tests, lint/types, build, services, product browser, commit, CI, deployment
+or resource measurement ran.
+
+## Sync-center visible inspection coalescing — 2026-10-15, source only
+
+The [coalescing report](execution/ux-audit-sync-center-inspection-coalescing-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/sync-center-hidden-inspection.test.mjs` is updated but
+**unexecuted**. The actual extracted effect is adapted with synthetic promises
+for serialized latest-page publication, a burst replacing intermediate pending
+work, cleanup/failure/page-clamp queue retirement and a rejected sibling that
+must wait for another started verifier before the next page begins.
+
+These proposed checks do not mount React or verify Cache Storage bytes,
+task-progress notifications, cross-effect cancellation, browser behavior or
+device CPU/RSS. After authorization, use task-specific TEMP/TMP, run both
+sync-center Node files and relevant Web gates, then observe actual progress,
+Refresh, tab/subview return, failures and resource use. No pass count is asserted.
+No tests, lint/types, build, services, product browser, commit, CI, deployment or
+performance measurement ran.
+
+## Sync-center partial local reads — 2026-10-15, source only
+
+The [partial-read report](execution/ux-audit-sync-center-partial-read-recovery-2026-10-15.md)
+records evidence before editing. The existing
+`scripts/ux/sync-center-tab-read-scope.test.mjs` and
+`scripts/ux/sync-center-hidden-inspection.test.mjs` are updated but
+**unexecuted**. Synthetic cases cover synchronous/asynchronous section failures,
+successful siblings, scope/empty/render guards, failed deep-link lookup,
+incomplete count protection, asset-error priority, local Retry and required-
+read guards for cleanup/combined export. Earlier fixture/result expectations
+were adapted to the new section-result shape rather than bypassed.
+
+These extract actual source with controlled readers/setters/emissions; they do
+not mount React or exercise Dexie, Cache Storage, browser focus, cross-tab
+notifications or device resources. After authorization, set task-specific
+TEMP/TMP, run both Node files and relevant Web gates, then exercise real
+partial failure/Retry, deep-link, paging, cleanup and export transitions.
+No pass count is asserted. No tests, lint/types, build, services, product browser,
+commit, CI, deployment or CPU/RSS measurement ran.
+
+## Conversation TOC stale-read recovery — 2026-10-15, source only
+
+The [conversation-TOC report](execution/ux-audit-conversation-toc-stale-read-recovery-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/conversation-toc-stale-read-recovery.test.mjs` is authored but
+**unexecuted**. It checks stale-refresh versus initial-empty branches, the local
+alert and query-only Retry; it does not mount React, call the TOC API or
+exercise heading parsing, navigation, focus, scrolling, browser or screen-reader
+behavior.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant Web gates and real TOC refresh failure, Retry, stale-content and
+navigation acceptance. No pass count is asserted; no tests, lint/types, build,
+services, product browser, commit, CI, deployment or resource measurement ran.
+
+## Conversation index read recovery — 2026-10-15, source only
+
+The [conversation-index report](execution/ux-audit-conversation-index-read-recovery-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/conversation-index-read-recovery.test.mjs` is authored but
+**unexecuted**. It checks the interactive jump/page error alert, same-intent
+Retry wiring and separation of loader failures from `onNavigate`; it does not
+mount React, call the index API or exercise navigation, focus, scrolling,
+browser or screen-reader behavior.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant Web gates and real jump/page failure, retry, focus and anchor
+acceptance. No pass count is asserted; no tests, lint/types, build, services,
+product browser, commit, CI, deployment or resource measurement ran.
+
+## Conversation-files capability read — 2026-10-15, source only
+
+The [conversation-files capability report](execution/ux-audit-conversation-files-capability-read-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/conversation-files-capability-read.test.mjs` is authored but
+**unexecuted**. It checks the pending/error capability gate, local retry wiring
+and unchanged upload session/item/finalize calls; it does not mount React, call
+`/api/capabilities`, upload files or exercise a browser.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant Web gates and real capability pending/success/error, stale-data, Retry
+and upload transitions. No pass count is asserted; no tests, lint/types, build,
+services, product browser, commit, CI, deployment or resource measurement ran.
+
+## Offline export attachment-count read — 2026-10-15, source only
+
+The [offline export count report](execution/ux-audit-offline-export-attachment-count-read-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/offline-export-attachment-count-read.test.mjs` is authored but
+**unexecuted**. It checks separate loading/success/error branches, bilingual
+uncertainty copy, local read-only Retry wiring and the fact that export generation
+does not depend on the informational count query; it does not mount React, run
+Dexie/IndexedDB or create an export artifact.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant Web gates and real empty/error/retained-count/Retry/export transitions.
+No pass count is asserted; no tests, lint/types, build, services, product browser,
+commit, CI, deployment or resource measurement ran.
+
+## Import commit status recovery — 2026-10-15, source only
+
+The [import status report](execution/ux-audit-import-status-recovery-2026-10-15.md)
+records source evidence and the implementation boundary.
+The authored import status/state regressions remain **unexecuted**. They cover
+terminal pending cleanup, explicit retry, state-read Retry and stable error
+classification at source level; they do not call the API, run the worker,
+mount React or exercise a browser.
+
+After authorization, use task-specific TEMP/TMP and run the relevant Node files,
+API/Web gates and real queued/processing/committed/failed/cancelled/status-read
+failure transitions. No pass count is asserted; no tests, lint/types, build,
+services, product browser, commit, CI, deployment or resource measurement ran.
+
+## Inline attachment locale feedback — 2026-10-15, source only
+
+The [locale report](execution/ux-audit-inline-attachment-locale-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/inline-attachment-locale.test.mjs` is authored but **unexecuted**.
+It checks locale propagation, English control/ARIA alternatives and localized
+attachment type metadata; it does not mount React, change locale, open a
+Viewer or run a browser/screen reader.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant gates and real Chinese/English locale, attachment state, Viewer and
+screen-reader transitions. No pass count is asserted; no tests, lint/types,
+build, services, product browser, commit, CI, deployment or resource
+measurement ran.
+
+## Source editor attachment-picker read recovery — 2026-10-15, source only
+
+The [attachment picker report](execution/ux-audit-source-editor-attachment-picker-read-recovery-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/source-editor-attachment-picker-read-recovery.test.mjs` is authored
+but **unexecuted**. It checks the query-error branch, stale-row feedback,
+successful-empty gating and read-only Retry; it does not mount React, call the
+attachment API, use Query cache or exercise a browser dialog.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant gates and real empty/error/stale-cache/Retry/focus transitions. No
+pass count is asserted; no tests, lint/types, build, services, product browser,
+commit, CI, deployment or resource measurement ran.
+
+## Adaptive import-session restore — 2026-10-15, source only
+
+The [restore report](execution/ux-audit-import-session-restore-recovery-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/import-session-restore-recovery.test.mjs` is authored but
+**unexecuted**. It checks finite restore state, pointer retention after
+transient read failure, terminal/new-file cleanup boundaries, status feedback
+and Retry wiring; it does not mount React, call the API, use sessionStorage or
+exercise a browser refresh.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant gates and real remount/network-failure/Retry/terminal transitions.
+No pass count is asserted; no tests, lint/types, build, services, product
+browser, commit, CI, deployment or resource measurement ran.
+
+## Offline library download status read — 2026-10-15, source only
+
+The [status-read report](execution/ux-audit-offline-library-download-status-read-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/offline-library-download-status-read.test.mjs` is authored but
+**unexecuted**. It checks subscription error/recovery ownership, stale progress
+retirement, uncertainty copy and status-only Retry wiring; it does not run
+Dexie/liveQuery, background downloads, React or a browser.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant gates and real subscription-failure/recovery/download transitions.
+No pass count is asserted; no tests, lint/types, build, services, product
+browser, commit, CI, deployment or resource measurement ran.
+
+## Offline library local read state — 2026-10-15, source only
+
+The [local-read report](execution/ux-audit-offline-library-local-read-state-2026-10-15.md)
+records pre-edit evidence and limits.
+`scripts/ux/offline-library-local-read-state.test.mjs` is authored but
+**unexecuted**. Its source checks cover finite state, list-before-search
+publication, empty-state gating, retained refresh feedback, Retry wiring and
+catalog download deep-link preservation. It does not mount React, run Dexie,
+simulate real storage faults or establish browser/screen-reader acceptance.
+
+After authorization, use task-specific TEMP/TMP and run the new Node file,
+relevant gates and real cold-start, failed/empty/retained-refresh and local
+Retry scenarios. No pass count is asserted; no tests, lint/types, build,
+services, product browser, commit, CI, deployment or resource measurement ran.
+
+## Sync-center tab-owned local reads — 2026-10-15, source only
+
+The [tab-scope report](execution/ux-audit-sync-center-tab-read-scope-2026-10-15.md)
+records source evidence before editing.
+`scripts/ux/sync-center-tab-read-scope.test.mjs` is authored but
+**unexecuted**. It extracts the actual `liveQuery` callback and uses synthetic
+chainable Dexie adapters to check hidden reads, visible tab owners, displayed
+failure existence, all-scope bounded existence, initial-job task reads and
+offset/limit preservation. It does not execute Dexie, React, a browser,
+subscriptions or CPU/RSS measurement.
+
+After authorization, set task-specific TEMP/TMP and run the new suite plus
+`scripts/ux/sync-center-hidden-inspection.test.mjs`, relevant gates and actual
+tab/task/cleanup/error navigation. No pass count is asserted. No tests, lint/
+types, build, service, product browser, commit, CI, deployment or performance
+measurement ran.
+
+## Sync-center scoped local read states — 2026-10-15, source only
+
+The [read-state report](execution/ux-audit-sync-center-read-states-2026-10-15.md)
+records evidence before changes. The shared
+`scripts/ux/sync-center-hidden-inspection.test.mjs` is extended but remains
+**unexecuted**. Additional cases propose actual scope/view-expression checks,
+first-read failures on each tab, scope-entry marker retirement, retained matching refresh views, failed
+ledger/late-inspection ownership, independent action feedback, the actual
+local-only Retry callback and JSX empty/pagination ancestry guards.
+
+These use controlled setters/emissions/promises, not mounted React. The inner
+Dexie query is captured, not run; there is no browser, physical-storage,
+access-lock, focus or performance acceptance. After authorization, set
+task-specific TEMP/TMP and run the shared Node file, relevant gates and actual
+cold/refresh/error/tab/page/mode transitions with download/sync work.
+No pass count is asserted. No tests, lint/types, build, service, product browser,
+commit, CI, deployment or CPU/RSS measurement ran for this follow-up.
+
+## Sync-center hidden resource inspection — 2026-10-15, source only
+
+The [inspection report](execution/ux-audit-sync-center-hidden-inspection-2026-10-15.md)
+records source findings before editing.
+`scripts/ux/sync-center-hidden-inspection.test.mjs` is authored but
+**unexecuted**. It extracts the actual local-read effect/task helpers and
+adapts live-query emissions, setters and inspection promises. It proposes tab/
+subview ownership, empty/error, late/superseded result, task-navigation and
+dependency checks. The combined Dexie read is captured, not run; separate
+fixtures are not mounted React transition or browser/cache/performance evidence.
+
+After authorization, set task-specific TEMP/TMP and run
+`node --test scripts/ux/sync-center-hidden-inspection.test.mjs`, relevant gates,
+then real settings navigation, conflict/cleanup return, downloads and device
+resource acceptance. No pass count is asserted. No test, lint/types, build,
+service, product browser, commit, CI, deployment or CPU/RSS measurement ran.
+
+## Offline continuation read states — 2026-10-15, source only
+
+The [read-state report](execution/ux-audit-offline-continuation-read-states-2026-10-15.md)
+records pre-edit source findings and bindings.
+`scripts/ux/offline-continuation-read-states.test.mjs` is authored but
+**unexecuted**. It proposes pending/error/missing states, retained cached views,
+locked/wrong-id content, member/source choices, query null/access fencing and
+actual offline QueryObserver Retry/coalescing checks with synthetic adapters.
+Child-element inspection does not render Markdown/Index or mount React.
+
+After authorization, set task-specific TEMP/TMP and run
+`node --test scripts/ux/offline-continuation-read-states.test.mjs`, relevant
+gates, then disconnected Current/Index retry, missing-copy, access-lock,
+source-toggle and real reference-return/focus/anchor acceptance. No pass count
+is asserted. No tests, lint/types, build, service, product browser, commit, CI,
+deployment or CPU/RSS measurement ran for this batch.
+
+## Offline attachment query scheduling — 2026-10-15, source only
+
+The [attachment-policy report](execution/ux-audit-offline-attachment-query-policy-2026-10-15.md)
+records four source-derived local query scheduling gaps.
+`scripts/ux/offline-attachment-query-policy.test.mjs` is authored but
+**unexecuted**: actual option expressions, synthetic state/loaders, installed
+QueryClient/Observer. It proposes local offline, remote scope/defaults, lazy
+gates, lifetimes, refetch/reconnect and empty-versus-error checks; no pass count.
+
+After authorization, use task-specific TEMP/TMP, run
+`node --test scripts/ux/offline-attachment-query-policy.test.mjs`, relevant
+gates, then real disconnected files/inline/Viewer/gallery acceptance, including
+missing bytes, URL lifetime and revoked access. Adapters do not verify those
+browser/storage paths. No tests, lint/types, build, service, product browser,
+commit, CI, deployment or CPU/RSS measurement ran for this batch.
+
+## Offline Reader query scheduling — 2026-10-15, local verification
+
+The [query-policy report](execution/ux-audit-offline-reader-query-policy-2026-10-15.md)
+records source evidence from the Reader, navigation components and installed
+Query retryer/default-option merge. On 2026-10-16,
+`node --test scripts/ux/offline-reader-query-policy.test.mjs` passed **10/10**
+with no failed or skipped cases. Targeted Web ESLint, nonincremental Web
+typecheck and `git diff --check` also passed.
+
+The extracted-option, compiled navigation, QueryClient/Observer and static JSX
+adapters do not establish IndexedDB, complete-turn content, React lifecycle,
+focus or browser correctness. Mounted offline conversation switching, saved
+DOM-anchor restoration and desktop/mobile navigation remain open. No service,
+product browser, full API/PWA suite, full build, commit, CI or deployment ran
+for this batch. Prior rich-text acceptance does not cover these later changes.
+
+## Offline search readiness/retry — 2026-10-15, source only
+
+The [readiness report](execution/ux-audit-offline-search-readiness-2026-10-15.md)
+records source-derived absent-index and offline-query-gate defects.
+`scripts/ux/offline-search-readiness.test.mjs` and
+`scripts/ux/offline-search-retry.test.mjs` were authored before the later
+continuation. On 2026-10-16 they ran with the actual compiled bridge/panel and
+passed **19/19**, with no skipped cases.
+Their bridge/component/clock/access adapters do not establish actual Worker,
+IndexedDB, React lifecycle or browser behavior. The QueryClient and AST cases
+are included in the 19-case result, but remain adapter evidence rather than
+browser evidence.
+
+Targeted Web ESLint, nonincremental Web typecheck and `git diff --check` also
+passed. Outputs are retained under
+`execution/ux-audit-offline-search-readiness-2026-10-15-evidence/`.
+Real disconnected Reader/Library recovery, mounted focus/geometry,
+IndexedDB/Worker behavior, build, CI and deployment remain unexecuted; the
+rich-text checkpoint below does not cover these later source changes.
+
+## Sidebar search selection — 2026-10-15, source only
+
+[The selection report](execution/ux-audit-sidebar-search-selection-2026-10-15.md)
+records source-derived reorder/shrink scenarios and the local verification
+boundary. On 2026-10-16,
+`node --test scripts/ux/sidebar-search-selection.test.mjs` passed **12/12**
+with no skips. It uses the actual compiled sidebar component/handlers with
+controlled hooks, query results, timers and routing; it does not execute
+transport or mount React. Targeted ESLint, nonincremental Web typecheck and
+`git diff --check` also passed. The evidence is retained under
+`execution/ux-audit-sidebar-search-selection-2026-10-15-evidence/`.
+
+The result does not establish live QueryClient/network, mounted React,
+browser keyboard/focus, screen-reader or mobile acceptance. No service, build,
+full API/PWA suite, product browser, CI or deployment ran in this continuation.
+
+## Local ChatGPT rich-text fallback and resumed gates — 2026-10-15
+
+The [rich-text report](execution/ux-audit-chatgpt-rich-text-2026-10-15.md)
+retains the pre-edit 0/2 passing baseline and final **26 focused checks**.
+The actual installed React/Markdown/remark/rehype/KaTeX stack and compiled shared
+components run in SSR; assistant-ui, hooks unrelated to parsing and virtualizer
+geometry have explicit adapters. This is not Reader/Share/offline DOM acceptance.
+
+Five selected Node files pass **106/106 / 0 skipped**: rich text, resumed gates,
+manual Markdown fidelity, message-version recovery and confirmation lifecycle.
+The first combined run was 101/105; four stale fixture failures are explained in
+the [gate report](execution/ux-audit-resumed-source-gates-2026-10-15.md), not
+silently discarded. An added thinking branch first failed and now passes.
+Pure parser tests pass **5 / 1 deselected** (three new source/hash/block/task
+cases and two existing exporter cases); the excluded real paired fixture is not
+a pass. Full lint and nonincremental Web types pass.
+
+Exact commands, failures and final logs are in the report/evidence directory.
+TEMP/TMP and pytest basetemp/cache use only this task's `wkkk` child. No Web/API
+server, full API suite, build, Playwright/PWA execution, production, commit, CI
+or deployment occurred. Only official research pages were visited through the
+in-app browser; no Web Search. Historical broader source-only work is not
+collectively accepted by this limited run.
+
+## Local personal archive ownership and metadata recovery — 2026-10-14
+
+The [personal archive report](execution/ux-audit-personal-archive-scope-2026-10-14.md)
+records a pre-edit **1 pass / 10 fail** baseline. The final **36 focused checks**
+use the actual compiled personal panel, archive helpers and installed query cache/
+observers with controlled hook, transport, confirmation, account and DOM scheduling.
+They cover retired callbacks, post-confirmation guards, immediate live acknowledgement,
+retained File/original-key retries, cancellation, size validation, metadata-only
+recovery and conditional no-scroll focus. An intermediate 28-case expansion found
+the retry control disappearing during loading (27 pass / 1 fail); it is fixed and
+the original failed log is retained.
+
+All **33 script files / 926 cases / 0 failed / 0 skipped** pass; lint and
+nonincremental types pass. Three archive browser files discover **19 cases**,
+including two new 375px Chinese/1440px English limit-read regressions; none execute.
+Planned screenshots and real authentication/focus/layout acceptance remain pending.
+No new Web build, API run, commit, CI or deployment occurred. The already-dirty
+buildinfo hash remains equal to the preceding task-status checkpoint.
+
+## Local task-status recovery — 2026-10-14
+
+The [task-status report](execution/ux-audit-task-status-recovery-2026-10-14.md)
+records 1 passing/8 failing pre-edit checks, then 22 passing focused checks using
+actual compiled components and installed QueryObserver. They cover query-cache
+immutability, final GET/manual retry, repeated/partial failures, deduplicated held
+reads, late obsolete results, account/unmount fences and accurate stale/package
+feedback. An expanded intermediate run found one additional read-independence
+failure (20 pass/1 fail); that failure is retained and fixed.
+
+All **32 script files / 890 cases / 0 failed / 0 skipped** pass; lint and
+nonincremental types pass. The three affected task/context browser files discover
+24 cases, execute zero. Two new synthetic 375/1440px cases exercise final-result
+checking without task mutation. Screenshots are planned, not captured.
+No new Web build, API run, CI or deployment occurred. Buildinfo matches the
+previous local checkpoint; old incremental-check side effects remain documented.
+
+## Local resource inspection and share reads — 2026-10-14
+
+The [offline check report](execution/ux-audit-offline-resource-check-2026-10-13.md)
+records a 10-case compiled-sidebar baseline (5 pass/5 fail), followed by 10 pass.
+The separate [sharing report](execution/ux-audit-share-transient-read-2026-10-13.md)
+has 10 actual QueryObserver/component checks for retries, exhaustion, selection,
+manual refresh and permanent failures. Together with the existing scripts, all
+31 test files pass **868 / 0 failed / 0 skipped**. Lint and nonincremental types
+pass. There is no new Web build or API run for this local Web-only batch.
+
+`library-offline.spec.ts` adds 375/1440px inspection-failure/retry cases;
+`settings-shares.spec.ts` retains manual recovery and adds a transient retry.
+The two files discover 26 cases; none executed. The in-app browser returned local
+connection refusal. Test doubles do not prove browser IDB, layout or CPU/memory
+performance; the user requested continuing without login. No new CI/deployment.
+
+An earlier sharing intermediate check used incremental typecheck and changed the
+already-dirty `tsconfig.tsbuildinfo`; it remains excluded from task source edits.
+This final check uses `tsc --noEmit --incremental false`. Historical notebook
+cache/build claims below describe that earlier checkpoint, not the current cache.
+
+## Local notebook draft write queue — 2026-10-13
+
+The [draft queue audit](execution/ux-audit-notebook-draft-write-queue-2026-10-13.md)
+records the failing pre-edit callback probe and local coalescing repair. Three new
+compiled-component regressions cover a 100-edit burst behind a held write, ordered
+Markdown/Unicode content, latest-write-before-save ordering and explicit recovery
+without advancing a failed version. All 29 script files pass **848 / zero failed /
+zero skipped**, including 78 focused cases. Lint, nonincremental types and the
+one-worker/1024 MiB heap Web build pass. User buildinfo remains unchanged.
+
+Six browser files discover 54 cases (two new typing/reload/save cases), executed zero.
+Storage latency is doubled only in Node; no browser timing or CPU/RSS claim follows.
+The initial Corepack attempt reported cache ENOSPC; a direct Node baseline confirmed
+the queue assertion independently. A later disk check recovered available space
+without task cleanup. Original evidence is retained; no CI or deployment was started.
+
+## Local notebook editor accessible name — 2026-10-13
+
+The [notebook editing audit](execution/ux-audit-notebook-editing-2026-10-13.md)
+localizes the title field name and updates Chinese/English test locators. The
+compiled component test checks both accessible-name attributes. All 29 script
+files pass **845 / zero failed / zero skipped**, including 75 focused annotation
+cases. Lint, nonincremental types and the bounded one-worker/1024 MiB Web build
+pass.
+
+Six associated browser files discover 52 cases, executed zero; an existing
+Chinese/English draft browser case now asserts each exact role name but remains
+unrun locally. This is not a screen-reader voice test. Workflow and budgets are
+unchanged; no API rerun, CI submission or deployment occurred.
+
+## Local annotation creation and note addition — 2026-10-13
+
+The [composition audit](execution/ux-audit-annotation-composition-2026-10-13.md)
+adds 16 callback regressions for one creation request, retained input, original-ID
+recovery, newer-selection ownership and missing-reference addition against the
+latest notebook. All 29 script files pass 844 cases, including 74 focused cases,
+with zero failures/skips. Run `node --test --test-concurrency=1` with every
+`scripts/**/*.test.mjs` file. The concurrency cap limits test processes, not
+application behavior. Lint and nonincremental types also pass.
+
+The full Web build passes with `NEXT_BUILD_CPUS=1`, `NEXT_STANDALONE=0` and
+`NODE_OPTIONS=--max-old-space-size=1024`. Compilation, its TypeScript check and
+all 14 page generations remain enabled. A prior default-parallel script run and
+4096 MiB build failed with V8 native Zone memory exhaustion; a zero-free-space
+attempt produced incomplete logging. These failures are not product assertions
+or passing checks. Later temporary evidence disappeared for an unknown reason;
+the fresh complete verification writes its generated logs into the adjacent
+repository evidence directory. Old checkpoint ledgers are not rewritten.
+
+`settings-annotation-composition.spec.ts` adds four English/Chinese cases;
+discovering it with the previous five files yields 52 cases in six files.
+Executed: zero; new screenshots: zero. Its authored text-selection scenarios use
+a real DOM Range, not native touch gestures. API/schema/workflow/budgets are
+unchanged. No new CI/deployment, local service or image build was started.
+
+## Local annotation write recovery — 2026-10-13
+
+The [write-recovery audit](execution/ux-audit-annotation-writes-2026-10-13.md)
+adds preserved comment input, independent saved-draft cleanup, partial style and
+delete recovery, and stable-ID bookmark creation. All 29 script test files pass
+828 cases / zero failures / zero skips, including 58 annotation cases (overlapping
+earlier totals). Lint, nonincremental types and the one-worker build pass.
+The callback tests use explicit React/repository/DOM doubles; they do not prove
+real browser scheduling, resource usage, focus or visual layout.
+
+`settings-annotation-writes.spec.ts` adds eight English/Chinese synthetic browser
+cases. Discovering it with `settings-annotation-reads.spec.ts`,
+`settings-notebook-drafts.spec.ts`, `attachment-reading.spec.ts` and
+`attachment-inline-layout.spec.ts` yields 48 cases in five files. Executed: zero;
+new screenshots: zero. Existing assertions and CI budgets stay intact; the
+settings workflow's existing filename pattern includes the new file. API/schema
+are unchanged and were not rerun. No new CI or deployment was submitted.
+
+## Local annotation and CSV follow-up — 2026-10-13
+
+The [pre-edit audit and implementation evidence](execution/ux-audit-followup-2026-10-13.md)
+bind five reproduced findings to accepted 84988a2 and record the newer local repair.
+All 29 `scripts/**/*.test.mjs` files pass **806 / 0 failures / 0 skips**, including
+36 annotation ownership/recovery/selection cases and 14 table parser/page cases.
+These run real compiled functions with explicit scheduling/DOM/repository doubles.
+Lint, nonincremental typecheck and one-worker Web build pass. No API/schema change
+or API rerun. Four browser files discover 40 cases, including 12 new cases (eight
+annotation recovery/selection and four CSV). Discovery is not execution; local
+browser execution, new screenshots and device CPU/RSS remain NOT_VERIFIED.
+Previous browser assertions, budgets and release gates remain intact. No new CI
+dispatch or deployment is authorized by this local work.
+
+## Accepted attachment release — 2026-10-12
+
+Exact source 84988a2 passes all five jobs in CI 38255213036: API 1,239 passed /
+3 skipped; all 13 Web gates PASS, including Context 35, mutation 100, attachment
+21 and PDF 13. Settings 439 plus one independent fresh restore pass. Conditional
+skips: adaptive import 1 and default PWA 699; default PWA has 135 passing cases.
+Fourteen original synthetic screenshots were reviewed. Original image artifact
+11752048475 and deployed runtime were independently accepted; see the
+[release evidence](execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md).
+No local or interactive production browser run is claimed. Further local changes
+are not covered by this release and require new authorization for CI/deployment.
+
 ## Immediate Context draft protection — 2026-10-12
 
 Eleventh CI 37995454022 passes API 1,239 / three skips, settings 439 and one

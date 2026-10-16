@@ -1,0 +1,8 @@
+{
+  "captured_at": "2026-10-14",
+  "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+  "exit_code": 0,
+  "stdout_bytes": 0,
+  "note": "Final invocation after strengthening browser file/focus assertions, exec session 51315. PowerShell TeeObject did not create a log for an empty pipeline. This is an explicit execution receipt, not a manufactured compiler log.",
+  "buildinfo_sha256": "70c9f839651026f657520a37ebe7581463bb958107dfbd7857ca815f7e24152b"
+}

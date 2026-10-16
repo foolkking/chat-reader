@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { Activity, CircleHelp, ArrowLeft, ChevronDown, ChevronUp, FileClock, RefreshCw, Library, LockKeyhole, ShieldCheck, SlidersHorizontal, Database, Eraser, Sparkles, Wrench, Link2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ACCOUNT_CAPABILITIES_CHANGED_EVENT, readAccountCapabilities } from "../lib/auth-client";
+import { authenticationGeneration } from "../lib/offline-access";
 import { usePreferences, useTranslations } from "./preferences-provider";
 import { PreferenceSyncStatus } from "./preference-sync-status";
 
@@ -21,6 +22,13 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
   const [capabilityError, setCapabilityError] = useState(false);
   const [capabilityAttempt, setCapabilityAttempt] = useState(0);
   const [accessRole, setAccessRole] = useState<"ADMIN" | "USER" | null>(null);
+  const mounted = useRef(true), generation = useRef(authenticationGeneration());
+  const capabilityRequest = useRef<AbortController | null>(null), capabilitySequence = useRef(0);
+  const active = useCallback(() => mounted.current && generation.current === authenticationGeneration(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; capabilityRequest.current?.abort(); };
+  }, []);
   useEffect(() => {
     const reload = () => setCapabilityAttempt((value) => value + 1);
     window.addEventListener(ACCOUNT_CAPABILITIES_CHANGED_EVENT, reload);
@@ -28,17 +36,29 @@ export function PreferencesPanel({ compact = false, libraryMode = false, onlineH
   }, []);
 
   useEffect(() => {
-    if (libraryMode) return;
-    let active = true;
+    const sequence = ++capabilitySequence.current;
+    capabilityRequest.current?.abort();
+    capabilityRequest.current = null;
     setCapabilityError(false);
-    void readAccountCapabilities().then((session) => {
-      if (!active) return;
+    setAccessRole(null);
+    if (libraryMode || !active()) return;
+    const controller = new AbortController();
+    capabilityRequest.current = controller;
+    void readAccountCapabilities(controller.signal).then((session) => {
+      if (!active() || controller.signal.aborted || sequence !== capabilitySequence.current) return;
       setAccessRole(session.role === "ADMIN" ? "ADMIN" : "USER");
     }).catch(() => {
-      if (active) { setAccessRole("USER"); setCapabilityError(true); }
+      if (!active() || controller.signal.aborted || sequence !== capabilitySequence.current) return;
+      setAccessRole("USER");
+      setCapabilityError(true);
+    }).finally(() => {
+      if (capabilityRequest.current === controller) capabilityRequest.current = null;
     });
-    return () => { active = false; };
-  }, [libraryMode, capabilityAttempt]);
+    return () => {
+      controller.abort();
+      if (capabilityRequest.current === controller) capabilityRequest.current = null;
+    };
+  }, [active, capabilityAttempt, libraryMode]);
 
   const updateFocusDefault = (value: boolean) => {
     void preferences.setReaderDefaultFocus(value);

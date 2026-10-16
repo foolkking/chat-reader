@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ApiRequestError,
   getSharedConversation,
@@ -26,8 +26,9 @@ import {
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc, resolveActiveHeadingId } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
-import { useTranslations } from "../../components/preferences-provider";
+import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 import { X } from "lucide-react";
 import { acquireReaderBlockLease, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "../conversations/block-virtualization";
 import { resolveActiveReadingTarget } from "../conversations/reader-active-position";
@@ -38,9 +39,13 @@ const ACTIVE_READING_OFFSET = 96;
 
 export function ShareReadonlyReader({ token }: { token: string }) {
   const t = useTranslations();
+  const { resolvedLocale } = usePreferences();
+  const navigationVisit = useMemo(() => ({ active: false }), [token]);
   const [navigationOpen, setNavigationOpen] = useState(false);
+  const [navigationActivation, setNavigationActivation] = useState(0);
   const [navigationTab, setNavigationTab] = useState<"dialogue" | "sections">("dialogue");
   const [navigationViewport, setNavigationViewport] = useState<"mobile" | "tablet" | "desktop">("mobile");
+  const tabletNavigationPanelRef = useRef<HTMLElement | null>(null);
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
   const messages = loadedWindow.items;
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
@@ -50,15 +55,16 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [savedPosition, setSavedPosition] = useState<PersistedSharePosition | null>(null);
   const [storageReady, setStorageReady] = useState(false);
+  const [storageVisit, setStorageVisit] = useState<typeof navigationVisit | null>(null);
+  const [positionStorageUnavailable, setPositionStorageUnavailable] = useState(false);
+  const positionStorageDisabledRef = useRef<typeof navigationVisit | null>(null);
+  const storageIsCurrent = storageVisit === navigationVisit;
+  const currentSavedPosition = storageIsCurrent ? savedPosition : null;
   const [positionReady, setPositionReady] = useState(false);
   const [unlockPassword, setUnlockPassword] = useState("");
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
-  const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
-    pending: false,
-    error: null,
-  });
-
+  const unlockAttemptRef = useRef<{ visit: typeof navigationVisit } | null>(null);
   useEffect(() => {
     const update = () => setNavigationViewport(window.innerWidth < 768 ? "mobile" : window.innerWidth < 1280 ? "tablet" : "desktop");
     update();
@@ -70,6 +76,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     if (navigationViewport === "desktop") setNavigationOpen(false);
   }, [navigationViewport]);
   const navigationTokenRef = useRef(0);
+  const targetHighlightTimerRef = useRef<number | null>(null);
   const restoreAttemptedRef = useRef(false);
   const latestStablePositionRef = useRef<PersistedSharePosition | null>(null);
   const messagesRef = useRef<MessageListItem[]>([]);
@@ -109,13 +116,13 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     queryFn: () => getSharedConversation(token),
   });
   const initialWindowQuery = useQuery({
-    queryKey: ["shared-reader-turn-window", token, savedPosition?.message_id ?? null],
+    queryKey: ["shared-reader-turn-window", token, currentSavedPosition?.message_id ?? null],
     queryFn: () => loadSharedCompleteTurnWindow(
       token,
-      savedPosition?.message_id ?? undefined,
+      currentSavedPosition?.message_id ?? undefined,
       INITIAL_WINDOW_TURNS,
     ),
-    enabled: shareQuery.isSuccess && storageReady,
+    enabled: shareQuery.isSuccess && storageReady && storageIsCurrent,
   });
   const tocQuery = useQuery({
     queryKey: ["shared-toc", token, activeMessageId],
@@ -125,6 +132,78 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   });
 
   const payload = shareQuery.data;
+  const zh = (payload?.share.locale ?? resolvedLocale) === "zh-CN";
+  const refetchShare = shareQuery.refetch;
+  const handleUnlockPasswordChange = useCallback((value: string) => {
+    if (!navigationVisit.active || unlockAttemptRef.current?.visit === navigationVisit) return;
+    setUnlockPassword(value);
+    setUnlockError(null);
+  }, [navigationVisit]);
+  const handleUnlock = useCallback(async () => {
+    if (!navigationVisit.active || !unlockPassword || unlockAttemptRef.current?.visit === navigationVisit) return;
+    const attempt = { visit: navigationVisit };
+    unlockAttemptRef.current = attempt;
+    const isCurrent = () => navigationVisit.active && unlockAttemptRef.current === attempt;
+    setUnlockBusy(true);
+    setUnlockError(null);
+    try {
+      await unlockSharedConversation(token, unlockPassword);
+      if (!isCurrent()) return;
+      const result = await refetchShare();
+      if (isCurrent() && result.isSuccess) setUnlockPassword("");
+    } catch (error) {
+      if (!isCurrent()) return;
+      setUnlockError(error instanceof ApiRequestError && error.status === 429
+        ? (zh ? "尝试次数过多，请稍后再试。" : "Too many attempts. Please try again later.")
+        : (zh ? "密码不正确，或暂时无法解锁分享。" : "The password was incorrect, or the share could not be unlocked right now."));
+    } finally {
+      if (isCurrent()) {
+        unlockAttemptRef.current = null;
+        setUnlockBusy(false);
+      }
+    }
+  }, [navigationVisit, refetchShare, token, unlockPassword, zh]);
+  const navigationSheetVisible = navigationOpen && navigationViewport !== "desktop"
+    && shareQuery.isSuccess && storageReady && storageIsCurrent && Boolean(payload);
+  const navigationSheetScope = useMemo(() => ({
+    active: false, sequence: 0, pendingKey: null as string | null,
+  }), [navigationActivation, navigationSheetVisible, navigationTab, navigationViewport, navigationVisit]);
+  const [mobileNavigation, setMobileNavigation] = useState<{
+    scope?: typeof navigationSheetScope; sequence?: number; pending: boolean; error: "failed" | null;
+  }>({ pending: false, error: null });
+  const currentMobileNavigation = navigationSheetVisible && mobileNavigation.scope === navigationSheetScope
+    && mobileNavigation.sequence === navigationSheetScope.sequence
+    ? mobileNavigation : null;
+  useLayoutEffect(() => {
+    navigationSheetScope.active = navigationSheetVisible;
+    return () => {
+      navigationSheetScope.active = false;
+      navigationSheetScope.sequence++;
+      navigationSheetScope.pendingKey = null;
+    };
+  }, [navigationSheetScope, navigationSheetVisible]);
+  const retireNavigationSheet = useCallback(() => {
+    navigationSheetScope.active = false;
+    navigationSheetScope.sequence++;
+    navigationSheetScope.pendingKey = null;
+    setMobileNavigation({ pending: false, error: null });
+  }, [navigationSheetScope]);
+  const handleNavigationOpenChange = useCallback((open: boolean) => {
+    retireNavigationSheet();
+    // A batched close/open needs a fresh scope, not a reactivated old callback.
+    if (open) setNavigationActivation(value => value + 1);
+    setNavigationOpen(open);
+  }, [retireNavigationSheet]);
+  const handleNavigationTabChange = useCallback((tab: "dialogue" | "sections") => {
+    if (tab === navigationTab) return;
+    retireNavigationSheet();
+    setNavigationTab(tab);
+  }, [navigationTab, retireNavigationSheet]);
+  useDialogFocus({
+    open: navigationSheetVisible && navigationViewport === "tablet",
+    rootRef: tabletNavigationPanelRef,
+    onClose: () => handleNavigationOpenChange(false),
+  });
   const toc = tocQuery.data?.items ?? [];
   const activeHeadingId = useMemo(
     () => resolveActiveHeadingId(toc, activeBlockId),
@@ -139,19 +218,34 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   }, [payload]);
 
   useEffect(() => {
+    if (positionStorageDisabledRef.current === navigationVisit) return undefined;
     let cancelled = false;
     void sharePositionStorageKey(token).then((key) => {
-      if (cancelled) return;
+      if (cancelled || !navigationVisit.active || positionStorageDisabledRef.current === navigationVisit) return;
+      const position = readSharePosition(key);
+      positionStorageDisabledRef.current = null;
       setStorageKey(key);
-      setSavedPosition(readSharePosition(key));
+      setSavedPosition(position);
+      setPositionStorageUnavailable(false);
       setStorageReady(true);
+      setStorageVisit(navigationVisit);
+    }).catch(() => {
+      if (cancelled || !navigationVisit.active || positionStorageDisabledRef.current === navigationVisit) return;
+      // Device resume is optional; never replace the hashed key with a raw token.
+      positionStorageDisabledRef.current = navigationVisit;
+      setStorageKey(null);
+      setSavedPosition(null);
+      setPositionStorageUnavailable(true);
+      setStorageReady(true);
+      setStorageVisit(navigationVisit);
     });
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [navigationVisit, token]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    navigationVisit.active = true;
     windowGenerationRef.current += 1;
     navigationTokenRef.current += 1;
     const emptyWindow = emptyLoadedWindow(windowGenerationRef.current);
@@ -168,15 +262,49 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     setEdgeError(null);
     previousTurnAnchorRef.current = null;
     nextTurnAnchorRef.current = null;
-  }, [token]);
+    restoreAttemptedRef.current = false;
+    latestStablePositionRef.current = null;
+    setPositionReady(false);
+    setActiveMessageId(null);
+    setNavigationTargetMessageId(null);
+    setActiveBlockId(null);
+    setTargetHighlightId(null);
+    setMobileNavigation({ pending: false, error: null });
+    return () => {
+      navigationVisit.active = false;
+      navigationTokenRef.current += 1;
+      if (targetHighlightTimerRef.current !== null) window.clearTimeout(targetHighlightTimerRef.current);
+      targetHighlightTimerRef.current = null;
+    };
+  }, [navigationVisit]);
+
+  useLayoutEffect(() => {
+    unlockAttemptRef.current = null;
+    setUnlockPassword("");
+    setUnlockBusy(false);
+    setUnlockError(null);
+    return () => {
+      if (unlockAttemptRef.current?.visit === navigationVisit) unlockAttemptRef.current = null;
+    };
+  }, [navigationVisit]);
 
   useEffect(() => {
-    if (!shareQuery.isError || !storageKey) return;
-    window.localStorage.removeItem(storageKey);
-  }, [shareQuery.isError, storageKey]);
+    if (!navigationVisit.active || !storageIsCurrent || positionStorageDisabledRef.current === navigationVisit
+      || !shareQuery.isError || !storageKey || !shouldDiscardSharePosition(shareQuery.error)) return;
+    // Retire every writer before removing the key, including before state commits.
+    positionStorageDisabledRef.current = navigationVisit;
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch {
+      setPositionStorageUnavailable(true);
+    } finally {
+      setStorageKey(null);
+      setSavedPosition(null);
+    }
+  }, [navigationVisit, shareQuery.error, shareQuery.isError, storageIsCurrent, storageKey]);
 
   useEffect(() => {
-    if (!initialWindowQuery.data || initialWindowAppliedRef.current) return;
+    if (!storageIsCurrent || !initialWindowQuery.data || initialWindowAppliedRef.current) return;
     initialWindowAppliedRef.current = true;
     const page = initialWindowQuery.data;
     previousTurnAnchorRef.current = page.previousTurnAnchorMessageId;
@@ -184,8 +312,8 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const next = replaceLoadedWindow(page, windowGenerationRef.current);
     loadedWindowRef.current = next;
     setLoadedWindow(next);
-    setActiveMessageId(savedPosition?.message_id ?? page.items[0]?.id ?? null);
-  }, [initialWindowQuery.data, savedPosition?.message_id]);
+    setActiveMessageId(currentSavedPosition?.message_id ?? page.items[0]?.id ?? null);
+  }, [currentSavedPosition?.message_id, initialWindowQuery.data, storageIsCurrent]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -201,24 +329,34 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     blockIndex?: number,
     alignmentOffset = 80,
     characterOffset?: number,
+    options?: { restorePosition?: boolean },
   ): Promise<NavigationResult> => {
     const target: NavigateTarget = typeof targetOrMessageId === "string"
       ? { messageId: targetOrMessageId, blockIndex }
       : targetOrMessageId;
     const messageId = target.messageId;
     const resolvedBlockIndex = target.blockIndex ?? blockIndex;
+    const messageDomId = `message-${messageId}`;
+    const blockDomId = resolvedBlockIndex === undefined ? null : `block-${messageId}-${resolvedBlockIndex}`;
+    if (!navigationVisit.active) return { ok: false, targetId: blockDomId ?? messageDomId, reason: "cancelled" };
     let resolvedLocator: ResolvedLocatorResponse | undefined;
     const navigationToken = navigationTokenRef.current + 1;
     navigationTokenRef.current = navigationToken;
+    const tokenIsCurrent = () => navigationVisit.active && navigationTokenRef.current === navigationToken;
+    if (!options?.restorePosition) {
+      restoreAttemptedRef.current = true;
+      setPositionReady(true);
+      scrollIntentSequenceRef.current += 1;
+    }
     const generation = windowGenerationRef.current + 1;
     windowGenerationRef.current = generation;
     applyLoadedWindow({ ...loadedWindowRef.current, generation });
     userScrollIntentRef.current = false;
     scrollDirectionRef.current = null;
-    scrollIntentSequenceRef.current += 1;
     setNavigationTargetMessageId(messageId);
-    const messageDomId = `message-${messageId}`;
-    const blockDomId = resolvedBlockIndex === undefined ? null : `block-${messageId}-${resolvedBlockIndex}`;
+    if (targetHighlightTimerRef.current !== null) window.clearTimeout(targetHighlightTimerRef.current);
+    targetHighlightTimerRef.current = null;
+    setTargetHighlightId(null);
     let blockLease: ReaderBlockLease | null = null;
     try {
       try {
@@ -238,13 +376,14 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       } catch {
         // Older share deployments do not expose the optional resolver yet.
       }
+      if (!tokenIsCurrent()) return { ok: false, targetId: blockDomId ?? messageDomId, reason: "cancelled" };
       const effectiveBlockIndex = resolvedLocator?.block_index ?? resolvedBlockIndex;
       const effectiveRenderBlockId = resolvedLocator?.render_block_id ?? target.renderBlockId;
       const effectiveCharacterOffset = resolvedLocator?.start_offset ?? target.canonicalStart ?? characterOffset ?? target.characterOffset;
       const effectiveBlockDomId = effectiveBlockIndex === undefined ? null : `block-${messageId}-${effectiveBlockIndex}`;
       if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) {
         const page = await loadSharedCompleteTurnWindow(token, messageId);
-        if (navigationTokenRef.current !== navigationToken) {
+        if (!tokenIsCurrent()) {
           return { ok: false, targetId: effectiveBlockDomId ?? messageDomId, reason: "cancelled" };
         }
         initialWindowAppliedRef.current = true;
@@ -256,9 +395,10 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         blockLease = await acquireReaderBlockLease(
           messageId,
           effectiveBlockIndex,
-          () => navigationTokenRef.current === navigationToken,
+          tokenIsCurrent,
         );
       }
+      if (!tokenIsCurrent()) return { ok: false, targetId: effectiveBlockDomId ?? messageDomId, reason: "cancelled" };
       const resolveStableTarget = () => {
         let resolvedTargetId = effectiveBlockDomId ?? messageDomId;
         const messageScope = document.getElementById(messageDomId) ?? document;
@@ -285,10 +425,11 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       const result = await navigateMountedTarget({
         root: null,
         targetId: resolvedTargetId,
-        tokenIsCurrent: () => navigationTokenRef.current === navigationToken,
+        tokenIsCurrent,
         offset: alignmentOffset,
         characterOffset: effectiveCharacterOffset,
       });
+      if (!tokenIsCurrent()) return { ok: false, targetId: result.targetId, reason: "cancelled" };
       if (result.ok) {
         setActiveMessageId(messageId);
         setActiveBlockId(effectiveRenderBlockId ?? effectiveBlockDomId);
@@ -296,10 +437,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         await restoreScrollAnchor({
           root: null,
           anchor: { targetId: result.targetId, offset: alignmentOffset },
-          tokenIsCurrent: () => navigationTokenRef.current === navigationToken && !userScrollIntentRef.current,
+          tokenIsCurrent: () => tokenIsCurrent() && !userScrollIntentRef.current,
         });
-        window.setTimeout(() => {
-          if (navigationTokenRef.current === navigationToken) {
+        if (!tokenIsCurrent()) return { ok: false, targetId: result.targetId, reason: "cancelled" };
+        targetHighlightTimerRef.current = window.setTimeout(() => {
+          if (tokenIsCurrent()) {
+            targetHighlightTimerRef.current = null;
             setTargetHighlightId(null);
             setActiveBlockId(null);
           }
@@ -307,47 +450,79 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       }
       return result;
     } catch {
+      if (!tokenIsCurrent()) return { ok: false, targetId: blockDomId ?? messageDomId, reason: "cancelled" };
       return { ok: false, targetId: blockDomId ?? messageDomId, reason: "load-failed" };
     } finally {
       blockLease?.release();
     }
-  }, [applyLoadedWindow, token]);
+  }, [applyLoadedWindow, navigationVisit, token]);
+
+  const navigateFromNavigationSheet = useCallback(async (target: NavigateTarget | string) => {
+    const scope = navigationSheetScope;
+    if (!scope.active || !navigationVisit.active) return;
+    const key = JSON.stringify(typeof target === "string" ? { messageId: target } : target);
+    if (scope.pendingKey === key) return;
+    const sequence = ++scope.sequence;
+    scope.pendingKey = key;
+    const isCurrent = () => scope.active && navigationVisit.active && scope.sequence === sequence;
+    setMobileNavigation({ scope, sequence, pending: true, error: null });
+    try {
+      const result = await navigateToTarget(target);
+      if (!isCurrent()) return;
+      if (result.ok) handleNavigationOpenChange(false);
+      else setMobileNavigation({ scope, sequence, pending: false, error: result.reason === "cancelled" ? null : "failed" });
+    } catch {
+      if (isCurrent()) setMobileNavigation({ scope, sequence, pending: false, error: "failed" });
+    } finally {
+      if (isCurrent()) scope.pendingKey = null;
+    }
+  }, [handleNavigationOpenChange, navigateToTarget, navigationSheetScope, navigationVisit]);
 
   useEffect(() => {
-    if (restoreAttemptedRef.current || !initialWindowQuery.isSuccess) return;
+    if (!navigationVisit.active || !storageIsCurrent || restoreAttemptedRef.current || !initialWindowQuery.isSuccess) return;
     restoreAttemptedRef.current = true;
-    if (!savedPosition?.message_id) {
+    if (!currentSavedPosition?.message_id) {
       setPositionReady(true);
       return;
     }
     const candidates: Array<number | undefined> = [
       findBlockIndexById(
-        loadedWindowRef.current.items.find((message) => message.id === savedPosition.message_id),
-        typeof savedPosition.anchor_data.block_id === "string" ? savedPosition.anchor_data.block_id : null,
+        loadedWindowRef.current.items.find((message) => message.id === currentSavedPosition.message_id),
+        typeof currentSavedPosition.anchor_data.block_id === "string" ? currentSavedPosition.anchor_data.block_id : null,
       ) ?? undefined,
-      savedPosition.block_index ?? undefined,
-      numberOrNull(savedPosition.anchor_data.heading_block_index) ?? undefined,
+      currentSavedPosition.block_index ?? undefined,
+      numberOrNull(currentSavedPosition.anchor_data.heading_block_index) ?? undefined,
       undefined,
     ].filter((value, index, values) => values.indexOf(value) === index);
-    const savedCharacterOffset = numberOrNull(savedPosition.anchor_data.character_offset);
+    const savedCharacterOffset = numberOrNull(currentSavedPosition.anchor_data.character_offset);
     const exactBlockIndex = candidates.find((candidate) => candidate !== undefined);
+    const restoreIntent = scrollIntentSequenceRef.current;
+    let active = true;
+    const restoreIsCurrent = () => active && navigationVisit.active && scrollIntentSequenceRef.current === restoreIntent;
     void (async () => {
-      for (const candidate of candidates) {
-        const useCharacterAnchor = candidate !== undefined && candidate === exactBlockIndex && savedCharacterOffset !== null;
-        const result = await navigateToTarget(
-          savedPosition.message_id,
-          candidate,
-          useCharacterAnchor
-            ? ACTIVE_READING_OFFSET
-            : candidate === undefined
-            ? ACTIVE_READING_OFFSET
-            : ACTIVE_READING_OFFSET - (numberOrNull(savedPosition.anchor_data.block_offset) ?? savedPosition.scroll_offset),
-          useCharacterAnchor ? savedCharacterOffset : undefined,
-        );
-        if (result.ok) return;
+      try {
+        for (const candidate of candidates) {
+          if (!restoreIsCurrent()) return;
+          const useCharacterAnchor = candidate !== undefined && candidate === exactBlockIndex && savedCharacterOffset !== null;
+          const result = await navigateToTarget(
+            currentSavedPosition.message_id,
+            candidate,
+            useCharacterAnchor
+              ? ACTIVE_READING_OFFSET
+              : candidate === undefined
+              ? ACTIVE_READING_OFFSET
+              : ACTIVE_READING_OFFSET - (numberOrNull(currentSavedPosition.anchor_data.block_offset) ?? currentSavedPosition.scroll_offset),
+            useCharacterAnchor ? savedCharacterOffset : undefined,
+            { restorePosition: true },
+          );
+          if (!restoreIsCurrent() || result.ok || result.reason === "cancelled") return;
+        }
+      } finally {
+        if (active && navigationVisit.active) setPositionReady(true);
       }
-    })().finally(() => setPositionReady(true));
-  }, [initialWindowQuery.isSuccess, navigateToTarget, savedPosition]);
+    })();
+    return () => { active = false; };
+  }, [currentSavedPosition, initialWindowQuery.isSuccess, navigateToTarget, navigationVisit, storageIsCurrent]);
 
   const refreshActiveMessageFromLayout = useCallback((unlockNavigation = false) => {
     if (unlockNavigation) {
@@ -371,20 +546,36 @@ export function ShareReadonlyReader({ token }: { token: string }) {
 
   useEffect(() => {
     if (messages.length === 0) return undefined;
+    let active = true;
     let frame = 0;
     let sampleTimer: number | null = null;
     let persistTimer: number | null = null;
     let lastSampleAt = 0;
     let lastScrollAt = 0;
     let pendingUnlock = false;
+    const canPersist = () => active && Boolean(storageKey) && storageIsCurrent
+      && navigationVisit.active && positionStorageDisabledRef.current !== navigationVisit;
+    const writePosition = (position: PersistedSharePosition) => {
+      if (!canPersist() || !storageKey) return;
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(position));
+      } catch {
+        positionStorageDisabledRef.current = navigationVisit;
+        setPositionStorageUnavailable(true);
+        setStorageKey(null);
+      }
+    };
     const scheduleRefresh = (unlockNavigation = false) => {
+      if (!active || !navigationVisit.active) return;
       pendingUnlock ||= unlockNavigation;
       if (frame || sampleTimer !== null) return;
       const wait = Math.max(0, 80 - (window.performance.now() - lastSampleAt));
       const queueFrame = () => {
         sampleTimer = null;
+        if (!active || !navigationVisit.active) return;
         frame = window.requestAnimationFrame(() => {
           frame = 0;
+          if (!active || !navigationVisit.active) return;
           lastSampleAt = window.performance.now();
           const shouldUnlock = pendingUnlock;
           pendingUnlock = false;
@@ -396,6 +587,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     };
     const onManualIntent = () => scheduleRefresh(true);
     const onScroll = () => {
+      if (!active || !navigationVisit.active) return;
       const current = window.scrollY;
       const delta = current - lastScrollTopRef.current;
       if (userScrollIntentRef.current && edgeTransitionRef.current === null && Math.abs(delta) > 1) {
@@ -404,19 +596,20 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       lastScrollTopRef.current = current;
       scheduleRefresh(false);
       lastScrollAt = window.performance.now();
-      if (persistTimer === null && storageKey && positionReady) {
+      if (persistTimer === null && canPersist() && positionReady) {
         persistTimer = window.setTimeout(persistWhenIdle, 1000);
       }
     };
     const persist = () => {
-      if (!storageKey || !positionReady) return;
+      if (!canPersist() || !positionReady) return;
       const position = captureSharePosition(messagesRef.current);
       if (!position) return;
       latestStablePositionRef.current = position;
-      window.localStorage.setItem(storageKey, JSON.stringify(position));
+      writePosition(position);
     };
     const persistWhenIdle = () => {
       persistTimer = null;
+      if (!canPersist()) return;
       const remaining = 1000 - (window.performance.now() - lastScrollAt);
       if (remaining > 0) {
         persistTimer = window.setTimeout(persistWhenIdle, remaining);
@@ -425,9 +618,9 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       persist();
     };
     const persistCached = () => {
-      if (!storageKey) return;
+      if (!canPersist()) return;
       const position = latestStablePositionRef.current;
-      if (position) window.localStorage.setItem(storageKey, JSON.stringify(position));
+      if (position) writePosition(position);
     };
     const onVisibility = () => {
       if (document.visibilityState === "hidden") persistCached();
@@ -464,6 +657,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     window.addEventListener("pagehide", persistCached);
     scheduleRefresh(false);
     return () => {
+      active = false;
       if (frame) window.cancelAnimationFrame(frame);
       if (sampleTimer !== null) window.clearTimeout(sampleTimer);
       if (persistTimer !== null) window.clearTimeout(persistTimer);
@@ -476,7 +670,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", persistCached);
     };
-  }, [messages.length, positionReady, refreshActiveMessageFromLayout, storageKey]);
+  }, [messages.length, navigationVisit, positionReady, refreshActiveMessageFromLayout, storageIsCurrent, storageKey]);
 
   useEffect(() => {
     const top = topSentinelRef.current;
@@ -510,45 +704,53 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     [activeMessageId, messages.length],
   );
 
-  if (shareQuery.isLoading || !storageReady) {
-    return <ShareState title="正在加载分享" detail="正在获取只读会话信息。" />;
+  if (shareQuery.isLoading || !storageReady || !storageIsCurrent) {
+    return <ShareState zh={zh} title={zh ? "正在加载分享" : "Loading share"} detail={zh ? "正在获取只读会话信息。" : "Loading read-only conversation details."} />;
   }
   if (shareQuery.isError) {
     if (shareQuery.error instanceof ApiRequestError && shareQuery.error.status === 401) {
       return <SharePasswordGate
         password={unlockPassword}
-        onPasswordChange={setUnlockPassword}
+        onPasswordChange={handleUnlockPasswordChange}
         busy={unlockBusy}
         error={unlockError}
-        onSubmit={async () => {
-          setUnlockBusy(true);
-          setUnlockError(null);
-          try {
-            await unlockSharedConversation(token, unlockPassword);
-            await shareQuery.refetch();
-          } catch (error) {
-            setUnlockError(error instanceof Error ? error.message : "Unable to unlock this share.");
-          } finally {
-            setUnlockBusy(false);
-          }
-        }}
+        onSubmit={handleUnlock}
+        zh={zh}
       />;
     }
-    return <ShareState title="分享不可用" detail={shareQuery.error.message} />;
+    return (
+      <ShareState
+        zh={zh}
+        title={zh ? "分享不可用" : "Share unavailable"}
+        detail={canRetryShareRead(shareQuery.error)
+          ? (zh ? "暂时无法读取分享内容，请检查连接后重试。" : "The shared content is temporarily unavailable. Check your connection and retry.")
+          : (zh ? "此分享已不可用，或你没有访问权限。" : "This share is unavailable, or you do not have permission to access it.")}
+        onRetry={canRetryShareRead(shareQuery.error) ? () => void shareQuery.refetch() : undefined}
+        retrying={shareQuery.isFetching}
+      />
+    );
   }
-  if (!payload) return <ShareState title="分享不可用" detail="服务未返回分享信息。" />;
+  if (!payload) return <ShareState zh={zh} title={zh ? "分享不可用" : "Share unavailable"} detail={zh ? "服务未返回分享信息。" : "The server did not return share information."} />;
 
   return (
     <main className="flex min-h-screen flex-col bg-page text-primary [--reader-sticky-top:5rem] [overflow-anchor:none]">
       <header className="sticky top-0 z-10 border-b border-[#e5e5e5] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl flex-col justify-center px-4 sm:px-6">
-          <p className="text-xs font-medium text-[#6b7280]">只读分享</p>
+          <p
+            role="status"
+            title={storageIsCurrent && positionStorageUnavailable
+              ? (zh ? "本次无法保存阅读位置；阅读不受影响。" : "Your place cannot be saved for this visit. Reading is still available.")
+              : undefined}
+            className="truncate text-xs font-medium text-[#6b7280]"
+          >{storageIsCurrent && positionStorageUnavailable
+            ? (zh ? "只读分享 · 本机进度无法保存" : "Read-only share · Progress not saved")
+            : (zh ? "只读分享" : "Read-only share")}</p>
           <div className="flex items-center justify-between gap-3">
             <h1 className="truncate text-lg font-semibold text-[#111827]">
               {payload.share.title || payload.conversation.display_title || payload.conversation.title}
             </h1>
             <div className="flex shrink-0 gap-2">
-              <button type="button" aria-label="展开对话索引 / Open dialogue index" onClick={() => { setNavigationTab("dialogue"); setNavigationOpen(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium xl:hidden">{t("readerNavigation")}</button>
+              <button type="button" aria-label={zh ? "展开对话索引" : "Open dialogue index"} onClick={() => { handleNavigationTabChange("dialogue"); handleNavigationOpenChange(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium xl:hidden">{t("readerNavigation")}</button>
             </div>
           </div>
         </div>
@@ -567,7 +769,18 @@ export function ShareReadonlyReader({ token }: { token: string }) {
             {edgeLoading === "previous" ? <span className="text-sm text-secondary">{t("loadingEarlier")}</span> : null}
             {edgeError === "previous" ? <button type="button" onClick={() => void loadPreviousPage()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryEarlier")}</button> : null}
           </div>
-          {initialWindowQuery.isLoading ? <ShareState title="正在加载消息" detail="正在读取首个消息窗口。" /> : null}
+          {initialWindowQuery.isLoading ? <ShareState zh={zh} title={zh ? "正在加载消息" : "Loading messages"} detail={zh ? "正在读取首个消息窗口。" : "Loading the first message window."} /> : null}
+          {initialWindowQuery.isError && messages.length === 0 ? (
+            <ShareState
+              zh={zh}
+              title={zh ? "正文暂不可用" : "Messages unavailable"}
+              detail={canRetryShareRead(initialWindowQuery.error)
+                ? (zh ? "暂时无法读取分享正文，请检查连接后重试。" : "The shared messages are temporarily unavailable. Check your connection and retry.")
+                : (zh ? "分享正文不可用。" : "The shared messages are unavailable.")}
+              onRetry={canRetryShareRead(initialWindowQuery.error) ? () => void initialWindowQuery.refetch() : undefined}
+              retrying={initialWindowQuery.isFetching}
+            />
+          ) : null}
           {messages.map((message) => {
             return (
               <MessageItem
@@ -599,30 +812,20 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         </div>} />
       <MobileReaderSheet
         open={navigationOpen && navigationViewport === "mobile"}
-        onOpenChange={setNavigationOpen}
+        onOpenChange={handleNavigationOpenChange}
         title={t("navigationTitle")}
-        header={<NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} />}
-        status={<>{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</>}
+        header={<NavigationTabs tab={navigationTab} onTabChange={handleNavigationTabChange} onClose={() => handleNavigationOpenChange(false)} />}
+        status={<>{currentMobileNavigation?.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{currentMobileNavigation?.error ? <p className="text-sm text-[var(--danger)]">{t("locateFailed")}</p> : null}</>}
       >
-        {navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => {
-          setMobileNavigation({ pending: true, error: null });
-          const result = await navigateToTarget(item.messageId);
-          setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-          if (result.ok) setNavigationOpen(false);
-        }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => {
-          setMobileNavigation({ pending: true, error: null });
-          const result = await navigateToTarget(tocNavigationTarget(item));
-          setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-          if (result.ok) setNavigationOpen(false);
-        }} />}
+        {navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={(item) => navigateFromNavigationSheet(item.messageId)} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />}
       </MobileReaderSheet>
       {navigationOpen && navigationViewport === "tablet" ? (
         <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex xl:hidden">
-          <button type="button" className="absolute inset-0" aria-label={t("close")} onClick={() => setNavigationOpen(false)} />
-          <section className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
-            <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={setNavigationTab} onClose={() => setNavigationOpen(false)} /></header>
-            <div className="px-4 py-2" aria-live="polite">{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={async (item) => { const result = await navigateToTarget(item.messageId); if (result.ok) setNavigationOpen(false); }} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={async (item) => { const result = await navigateToTarget(tocNavigationTarget(item)); if (result.ok) setNavigationOpen(false); }} />}</div>
+          <button type="button" data-dialog-backdrop className="absolute inset-0" aria-label={t("close")} onClick={() => handleNavigationOpenChange(false)} />
+          <section ref={tabletNavigationPanelRef} role="dialog" aria-modal="true" aria-label={t("navigationTitle")} tabIndex={-1} className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
+            <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={handleNavigationTabChange} onClose={() => handleNavigationOpenChange(false)} /></header>
+            <div className="px-4 py-2" aria-live="polite">{currentMobileNavigation?.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{currentMobileNavigation?.error ? <p className="text-sm text-[var(--danger)]">{t("locateFailed")}</p> : null}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={(item) => navigateFromNavigationSheet(item.messageId)} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />}</div>
           </section>
         </div>
       ) : null}
@@ -632,7 +835,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   async function loadPreviousPage() {
     const current = loadedWindowRef.current;
     const previousAnchor = previousTurnAnchorRef.current;
-    if (loadingPreviousRef.current || loadingNextRef.current || !current.hasPrevious || !previousAnchor) return;
+    if (!navigationVisit.active || loadingPreviousRef.current || loadingNextRef.current || !current.hasPrevious || !previousAnchor) return;
     loadingPreviousRef.current = true;
     edgeTransitionRef.current = "previous";
     setEdgeLoading("previous");
@@ -640,6 +843,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const generation = current.generation;
     let anchorLease: ReaderBlockLease | null = null;
     const transitionIsCurrent = () => (
+      navigationVisit.active &&
       loadedWindowRef.current.generation === generation &&
       edgeTransitionRef.current === "previous" &&
       scrollDirectionRef.current !== "down"
@@ -673,19 +877,21 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         }
       }
     } catch {
-      if (loadedWindowRef.current.generation === generation) setEdgeError("previous");
+      if (transitionIsCurrent()) setEdgeError("previous");
     } finally {
       anchorLease?.release();
       loadingPreviousRef.current = false;
       if (edgeTransitionRef.current === "previous") edgeTransitionRef.current = null;
-      setEdgeLoading((currentLoading) => currentLoading === "previous" ? null : currentLoading);
+      if (navigationVisit.active) {
+        setEdgeLoading((currentLoading) => currentLoading === "previous" ? null : currentLoading);
+      }
     }
   }
 
   async function loadNextPage() {
     const current = loadedWindowRef.current;
     const nextAnchor = nextTurnAnchorRef.current;
-    if (loadingNextRef.current || loadingPreviousRef.current || !current.hasMore || !nextAnchor) return;
+    if (!navigationVisit.active || loadingNextRef.current || loadingPreviousRef.current || !current.hasMore || !nextAnchor) return;
     loadingNextRef.current = true;
     edgeTransitionRef.current = "next";
     setEdgeLoading("next");
@@ -693,6 +899,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const generation = current.generation;
     let anchorLease: ReaderBlockLease | null = null;
     const transitionIsCurrent = () => (
+      navigationVisit.active &&
       loadedWindowRef.current.generation === generation &&
       edgeTransitionRef.current === "next" &&
       scrollDirectionRef.current !== "up"
@@ -726,12 +933,14 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         }
       }
     } catch {
-      if (loadedWindowRef.current.generation === generation) setEdgeError("next");
+      if (transitionIsCurrent()) setEdgeError("next");
     } finally {
       anchorLease?.release();
       loadingNextRef.current = false;
       if (edgeTransitionRef.current === "next") edgeTransitionRef.current = null;
-      setEdgeLoading((currentLoading) => currentLoading === "next" ? null : currentLoading);
+      if (navigationVisit.active) {
+        setEdgeLoading((currentLoading) => currentLoading === "next" ? null : currentLoading);
+      }
     }
   }
 
@@ -804,22 +1013,61 @@ function NavigationTabs({
   );
 }
 
-function ShareState({ title, detail }: { title: string; detail: string }) {
+function ShareState({
+  zh,
+  title,
+  detail,
+  onRetry,
+  retrying = false,
+}: {
+  zh: boolean;
+  title: string;
+  detail: string;
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-10 text-[#111827]">
       <h1 className="text-lg font-semibold">{title}</h1>
       <p className="mt-2 text-sm leading-6 text-[#6b7280]">{detail}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          disabled={retrying}
+          onClick={onRetry}
+          className="mt-4 min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-60"
+        >
+          {retrying ? (zh ? "正在重试…" : "Retrying…") : zh ? "重试" : "Retry"}
+        </button>
+      ) : null}
     </div>
   );
 }
 
+function canRetryShareRead(error: unknown): boolean {
+  if (error instanceof ApiRequestError) {
+    return error.status === 408 || error.status === 429 || error.status >= 500;
+  }
+  return error instanceof Error && error.message === "CONNECTION_FAILED";
+}
+
+function shouldDiscardSharePosition(error: unknown): boolean {
+  if (!(error instanceof ApiRequestError)) return false;
+  if (error.status === 401 || error.status === 408 || error.status === 429 || error.status >= 500) {
+    return false;
+  }
+  return error.status >= 400 && error.status < 500;
+}
+
 function SharePasswordGate({
+  zh,
   password,
   onPasswordChange,
   busy,
   error,
   onSubmit,
 }: {
+  zh: boolean;
   password: string;
   onPasswordChange: (value: string) => void;
   busy: boolean;
@@ -828,12 +1076,12 @@ function SharePasswordGate({
 }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-page px-4 text-primary">
-      <form className="w-full max-w-sm rounded-xl border border-ui bg-surface p-6 shadow-sm" onSubmit={(event) => { event.preventDefault(); void onSubmit(); }}>
-        <h1 className="text-lg font-semibold">This share is password protected</h1>
-        <label className="mt-5 block text-sm text-secondary" htmlFor="share-password">Password</label>
-        <input id="share-password" data-dialog-initial-focus autoFocus type="password" autoComplete="current-password" value={password} onChange={(event) => onPasswordChange(event.target.value)} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]" />
+      <form aria-busy={busy} className="w-full max-w-sm rounded-xl border border-ui bg-surface p-6 shadow-sm" onSubmit={(event) => { event.preventDefault(); void onSubmit(); }}>
+        <h1 className="text-lg font-semibold">{zh ? "此分享受密码保护" : "This share is password protected"}</h1>
+        <label className="mt-5 block text-sm text-secondary" htmlFor="share-password">{zh ? "密码" : "Password"}</label>
+        <input id="share-password" data-dialog-initial-focus autoFocus type="password" autoComplete="current-password" disabled={busy} value={password} onChange={(event) => onPasswordChange(event.target.value)} className="mt-1 block w-full rounded-lg border border-ui bg-surface px-3 py-2 text-primary outline-none focus:ring-2 focus:ring-[var(--focus)]" />
         {error ? <p role="alert" className="mt-3 text-sm text-red-700">{error}</p> : null}
-        <button type="submit" disabled={busy || !password} className="mt-5 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-wait disabled:opacity-50">{busy ? "Checking..." : "View shared content"}</button>
+        <button type="submit" disabled={busy || !password} className="mt-5 min-h-10 w-full rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-wait disabled:opacity-50">{busy ? (zh ? "检查中…" : "Checking…") : (zh ? "查看分享内容" : "View shared content")}</button>
       </form>
     </main>
   );
@@ -846,9 +1094,18 @@ async function sharePositionStorageKey(token: string): Promise<string> {
 }
 
 function readSharePosition(key: string): PersistedSharePosition | null {
+  const value = window.localStorage.getItem(key);
   try {
-    const value = window.localStorage.getItem(key);
-    return value ? JSON.parse(value) as PersistedSharePosition : null;
+    const parsed: unknown = value ? JSON.parse(value) : null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const position = parsed as Partial<PersistedSharePosition>;
+    if (typeof position.message_id !== "string" || !position.message_id.trim()) return null;
+    if (!position.anchor_data || typeof position.anchor_data !== "object" || Array.isArray(position.anchor_data)) return null;
+    if (typeof position.scroll_offset !== "number" || !Number.isFinite(position.scroll_offset)) return null;
+    if (position.block_index !== undefined && position.block_index !== null
+      && (typeof position.block_index !== "number" || !Number.isSafeInteger(position.block_index) || position.block_index < 0)) return null;
+    // Keep valid legacy/extra anchor metadata intact; this is not a migration.
+    return position as PersistedSharePosition;
   } catch {
     return null;
   }

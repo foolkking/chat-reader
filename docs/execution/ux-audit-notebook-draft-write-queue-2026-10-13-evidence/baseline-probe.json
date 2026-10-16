@@ -1,0 +1,26 @@
+{
+  "captured_at": "2026-10-13",
+  "probe": "Compiled NotebookView callbacks with an injected deferred IndexedDB writer; no browser or real IndexedDB was used.",
+  "command": "node --test --test-reporter=spec --test-name-pattern='notebook draft persistence coalesces' scripts/ux/annotation-workspace-reads.test.mjs",
+  "result": "EXPECTED_FAILURE_BEFORE_REPAIR",
+  "observed_writer_calls": [
+    { "expected_version": 1, "title": "first edit" },
+    { "expected_version": 2, "title": "intermediate edit" },
+    { "expected_version": 3, "title": "latest edit" }
+  ],
+  "expected_writer_calls": [
+    { "expected_version": 1, "title": "first edit" },
+    { "expected_version": 2, "title": "latest edit" }
+  ],
+  "meaning": "The actual component callback path retains each queued snapshot while the first write is pending. The explicit save remains behind that chain.",
+  "limitations": [
+    "Writer latency is a deterministic test double, not measured IndexedDB latency.",
+    "No visual, browser timing, CPU, memory or device-RSS claim is made."
+  ],
+  "environment": {
+    "initial_corepack_attempt": "The focused test ran but Corepack then reported ENOSPC while writing its own cache.",
+    "direct_node_rerun": "Confirmed the same single assertion failure without Corepack.",
+    "read_only_disk_check": { "C_free_bytes": 0, "E_free_bytes": 58991046656 },
+    "cleanup": "No files or caches were deleted."
+  }
+}

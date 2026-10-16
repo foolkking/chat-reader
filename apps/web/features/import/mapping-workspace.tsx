@@ -1,6 +1,6 @@
 "use client";
 
-import { importErrorMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
+import { importErrorMessage, useImportCopy, type ImportCopy, type ImportErrorAction } from "./import-workspace-copy";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Check, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -12,7 +12,13 @@ import { FormatHealthCheck } from "./format-health-check";
 
 type MappingSpec = Record<string, unknown>;
 
-export function MappingWorkspace({ session, family, onBack, onSession, onMappingStateChange }: { session: AdaptiveImportSession; family: AdaptiveImportFamily; onBack: () => void; onSession: (session: AdaptiveImportSession) => void; onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void }) {
+type SessionActionControls = {
+  begin: () => number | null;
+  apply: (token: number, session: AdaptiveImportSession) => boolean;
+  finish: (token: number) => void;
+};
+
+export function MappingWorkspace({ session, family, sessionAction, sessionActionBusy, onBack, onMappingStateChange }: { session: AdaptiveImportSession; family: AdaptiveImportFamily; sessionAction: SessionActionControls; sessionActionBusy: boolean; onBack: () => void; onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void }) {
   const tr = useImportCopy();
   const [mapping, setMapping] = useState<MappingSpec>(() => structuredClone(family.mapping_draft));
   const [profileName, setProfileName] = useState(family.resolution_status === "DRIFTED" ? family.display_name : suggestedProfileName(family, tr));
@@ -26,8 +32,8 @@ export function MappingWorkspace({ session, family, onBack, onSession, onMapping
   const analysis = asObject(asObject(group?.profile_resolution).analysis);
   const candidates = asObject(analysis.mapping_candidates);
   const previewMutation = useMutation({ mutationFn: () => previewAdaptiveFamilyMapping(session.import_id, family.id, { profileName, mappingSpec: mapping, sampleGroupId }), onSuccess: setPreview });
-  const saveMutation = useMutation({ mutationFn: () => saveAdaptiveFamilyMapping(session.import_id, family.id, { profileName, mappingSpec: mapping }), onSuccess: onSession });
-  const busy = previewMutation.isPending || saveMutation.isPending;
+  const saveMutation = useMutation({ mutationFn: () => saveAdaptiveFamilyMapping(session.import_id, family.id, { profileName, mappingSpec: mapping }) });
+  const busy = previewMutation.isPending || saveMutation.isPending || sessionActionBusy;
   useEffect(() => { onMappingStateChange?.({ dirty, busy }); }, [busy, dirty, onMappingStateChange]);
   useEffect(() => () => { onMappingStateChange?.({ dirty: false, busy: false }); }, [onMappingStateChange]);
   async function requestBack() {
@@ -36,6 +42,16 @@ export function MappingWorkspace({ session, family, onBack, onSession, onMapping
     onBack();
   }
   function update(next: MappingSpec) { setMapping(next); setPreview(null); }
+  function save() {
+    const token = sessionAction.begin();
+    if (token === null) return;
+    void saveMutation.mutateAsync()
+      .then((next) => {
+        if (sessionAction.apply(token, next)) onBack();
+      })
+      .catch(() => undefined)
+      .finally(() => sessionAction.finish(token));
+  }
   return (
     <section className="flex min-h-[680px] flex-col" aria-labelledby="mapping-workspace-title">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-ui pb-4">
@@ -45,7 +61,7 @@ export function MappingWorkspace({ session, family, onBack, onSession, onMapping
           <ResolutionBadge status={family.resolution_status} />
         </div>
       </header>
-      <FormatHealthCheck session={session} family={family} />
+      <FormatHealthCheck session={session} family={family} disabled={busy} />
       <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(230px,.75fr)_minmax(360px,1.1fr)_minmax(300px,.9fr)]">
         <SourceStructurePane family={family} group={group} candidates={candidates} />
         <fieldset disabled={busy} aria-label={tr("规范字段映射")} className="min-w-0 border-ui py-5 lg:border-x lg:px-5"><h4 className="text-sm font-semibold text-primary">{tr("规范字段映射")}</h4><p className="mt-1 text-xs leading-5 text-secondary">{tr("只保存结构、字段映射与角色字典，不保存示例正文。")}</p><div className="mt-5 space-y-5">
@@ -56,9 +72,9 @@ export function MappingWorkspace({ session, family, onBack, onSession, onMapping
         </div></fieldset>
         <CanonicalPreviewPane preview={preview} loading={previewMutation.isPending} />
       </div>
-      {previewMutation.isError ? <ErrorLine message={previewMutation.error.message} onBack={() => void requestBack()} /> : null}
-      {saveMutation.isError ? <ErrorLine message={saveMutation.error.message} onBack={() => void requestBack()} /> : null}
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4"><p className="text-xs text-secondary">{tr("验证会运行此格式的全部")}{family.group_count} {tr("个对话，不只检查示例。")}</p><div className="flex gap-2"><button type="button" disabled={busy || !profileName.trim()} onClick={() => previewMutation.mutate()} className="btn-secondary min-h-11 px-4 text-sm font-medium">{previewMutation.isPending ? tr("正在验证") : tr("验证映射")}</button><button type="button" disabled={!preview?.validation.valid || busy || !profileName.trim()} onClick={() => saveMutation.mutate()} className="btn-primary min-h-11 px-4 text-sm font-medium">{saveMutation.isPending ? tr("正在保存") : family.resolution_status === "DRIFTED" ? tr("保存新版本并继续") : tr("保存映射并继续")}</button></div></footer>
+      {previewMutation.isError ? <ErrorLine message={previewMutation.error} action="mutation" onBack={() => void requestBack()} /> : null}
+      {saveMutation.isError ? <ErrorLine message={saveMutation.error} action="mutation" onBack={() => void requestBack()} /> : null}
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4"><p className="text-xs text-secondary">{tr("验证会运行此格式的全部")}{family.group_count} {tr("个对话，不只检查示例。")}</p><div className="flex gap-2"><button type="button" disabled={busy || !profileName.trim()} onClick={() => previewMutation.mutate()} className="btn-secondary min-h-11 px-4 text-sm font-medium">{previewMutation.isPending ? tr("正在验证") : tr("验证映射")}</button><button type="button" disabled={!preview?.validation.valid || busy || !profileName.trim()} onClick={save} className="btn-primary min-h-11 px-4 text-sm font-medium">{saveMutation.isPending ? tr("正在保存") : family.resolution_status === "DRIFTED" ? tr("保存新版本并继续") : tr("保存映射并继续")}</button></div></footer>
     </section>
   );
 }
@@ -128,9 +144,9 @@ type FormProps = { mapping: MappingSpec; candidates: Record<string, unknown>; on
 function MappingSelect({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) { return <label htmlFor={id} className="block text-xs font-semibold text-secondary">{label}<select id={id} value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-11 w-full rounded-md border border-ui bg-surface px-3 font-mono text-xs text-primary">{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }
 function ReadOnlyMapping({ label, value }: { label: string; value: string }) { return <div><p className="text-xs font-semibold text-secondary">{label}</p><p className="mt-1 rounded-md bg-subtle px-3 py-2 font-mono text-xs text-primary">{value}</p></div>; }
 function Segment({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) { return <button type="button" aria-pressed={active} onClick={onClick} className={`min-h-11 rounded-md px-2 text-xs ${active ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary hover:text-primary"}`}>{children}</button>; }
-function ErrorLine({ message, onBack }: { message: string; onBack: () => void }) {
+function ErrorLine({ message, action = "read", onBack }: { message: unknown; action?: ImportErrorAction; onBack: () => void }) {
   const tr = useImportCopy();
-  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"><span>{importErrorMessage(message, tr)}</span><button type="button" onClick={onBack} className="min-h-11 text-xs font-semibold underline">{tr("返回概览处理输入")}</button></div>;
+  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]"><span>{importErrorMessage(message, tr, action)}</span><button type="button" onClick={onBack} className="min-h-11 text-xs font-semibold underline">{tr("返回概览处理输入")}</button></div>;
 }
 function suggestedProfileName(family: AdaptiveImportFamily, tr: ImportCopy): string { return family.source_mode === "JSON_MARKDOWN" ? tr("自定义 JSON + Markdown") : family.source_mode === "MARKDOWN" ? tr("自定义 Markdown") : tr("自定义 JSON"); }
 function roleLabel(role: string, tr: ImportCopy): string { return role === "user" ? tr("你") : role === "assistant" ? "ChatGPT" : role; }

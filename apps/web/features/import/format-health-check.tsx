@@ -5,9 +5,11 @@ import { useEffect, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import { checkAdaptiveFamilyHealth } from "../../lib/api";
 import type { AdaptiveImportFamily, AdaptiveImportSession, ImportFormatHealth } from "../../lib/types";
+import { importErrorMessage, useImportCopy } from "./import-workspace-copy";
 
-export function FormatHealthCheck({ session, family, onRepair }: { session: AdaptiveImportSession; family: AdaptiveImportFamily; onRepair?: () => void }) {
+export function FormatHealthCheck({ session, family, disabled = false, onRepair }: { session: AdaptiveImportSession; family: AdaptiveImportFamily; disabled?: boolean; onRepair?: () => void }) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
+  const tr = useImportCopy();
   const queryClient = useQueryClient();
   const [failedOnly, setFailedOnly] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -28,11 +30,11 @@ export function FormatHealthCheck({ session, family, onRepair }: { session: Adap
   return <section aria-label={title} className="mt-4 space-y-3 border-t border-ui pt-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-sm font-medium text-primary">{title}</p>
-      <button type="button" onClick={() => check.mutate()} disabled={check.isPending} className="btn-secondary min-h-11 px-3 text-xs">{check.isPending ? (zh ? "正在检查全部分组…" : "Checking every group…") : (zh ? "检查已保存格式" : "Check saved format")}</button>
+      <button type="button" onClick={() => check.mutate()} disabled={disabled || check.isPending} className="btn-secondary min-h-11 px-3 text-xs">{check.isPending ? (zh ? "正在检查全部分组…" : "Checking every group…") : (zh ? "检查已保存格式" : "Check saved format")}</button>
     </div>
     <p className="text-xs leading-5 text-secondary">{zh ? `使用已保存版本检查本次来源的全部 ${family.group_count} 组。结果只针对这批来源；检查不会保存新格式或导入对话。` : `Check all ${family.group_count} groups in this batch against the saved version. Results apply to these sources; checking does not save a format or import conversations.`}</p>
     {check.isPending ? <p role="status" className="text-xs text-secondary">{zh ? "检查中，旧结果保留。" : "Checking; previous results are retained."}</p> : null}
-    {check.isError ? <div role="alert" className="text-xs text-[var(--danger)]"><p>{check.error.message}</p><button type="button" className="btn-secondary mt-2 min-h-11 px-3" onClick={() => check.mutate()}>{zh ? "重试" : "Retry"}</button></div> : null}
+    {check.isError ? <div role="alert" className="text-xs text-[var(--danger)]"><p>{importErrorMessage(check.error, tr, "read")}</p><button type="button" disabled={disabled} className="btn-secondary mt-2 min-h-11 px-3 disabled:opacity-50" onClick={() => check.mutate()}>{zh ? "重试" : "Retry"}</button></div> : null}
     {health ? <div ref={resultRef} tabIndex={-1} className="space-y-3 outline-none" aria-label={zh ? "健康检查结果" : "Health check results"}>
       <p role="status" className={`text-sm font-medium ${health.valid ? "text-accent" : "text-[var(--warning)]"}`}>{health.valid ? (zh ? "全部分组通过" : "All groups passed") : (zh ? `${failedCount} 组需要处理` : `${failedCount} ${failedCount === 1 ? "group needs" : "groups need"} attention`)} · {health.revision ? `v${health.revision}` : (zh ? "内置" : "Built-in")}</p>
       <p className="text-xs text-secondary">{new Date(health.checked_at).toLocaleString(zh ? "zh-CN" : "en-US")} · {health.message_count} {zh ? "条消息已验证" : "messages validated"}</p>
@@ -42,7 +44,7 @@ export function FormatHealthCheck({ session, family, onRepair }: { session: Adap
         {group.issues.map((issue, index) => <p key={index} className="mt-1 break-words text-secondary">{issue.code}: {zh ? healthDiagnosticZh[issue.code] ?? issue.message : issue.message}{issue.pointer ? ` (${issue.pointer})` : ""}</p>)}
       </div>)}</div>
       {groups.length > 20 ? <nav aria-label={zh ? "检查结果分页" : "Health results pages"} className="flex items-center gap-3 text-xs"><button type="button" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 20))} className="btn-secondary min-h-11 px-3">{zh ? "上一页" : "Previous"}</button><span>{offset + 1}–{Math.min(offset + 20, groups.length)} / {groups.length}</span><button type="button" disabled={offset + 20 >= groups.length} onClick={() => setOffset(offset + 20)} className="btn-secondary min-h-11 px-3">{zh ? "下一页" : "Next"}</button></nav> : null}
-      {!health.valid && onRepair ? <button type="button" onClick={onRepair} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "打开映射修复" : "Open mapping repair"}</button> : null}
+      {!health.valid && onRepair ? <button type="button" disabled={disabled} onClick={onRepair} className="btn-secondary min-h-11 px-3 text-xs disabled:opacity-50">{zh ? "打开映射修复" : "Open mapping repair"}</button> : null}
     </div> : null}
   </section>;
 }

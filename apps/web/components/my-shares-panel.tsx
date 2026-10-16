@@ -3,13 +3,18 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { Copy, Link2, Pencil, RefreshCw, Search } from "lucide-react";
-import { getMyShares, revokeShares } from "../lib/api";
+import { ApiRequestError, getMyShares, revokeShares } from "../lib/api";
 import type { OwnedShareRead, ShareBatchResult } from "../lib/types";
 import { ShareStatusDetails } from "../features/sharing/share-status-details";
 import { ShareEditor } from "../features/sharing/share-editor";
 import { ShareActionsMenu } from "../features/sharing/share-actions-menu";
 import { usePreferences } from "./preferences-provider";
 import { useInteractionDialog } from "./interaction-dialog-provider";
+
+const shareReadRetryDelay = (attemptIndex: number) => Math.min(5000, 750 * 2 ** attemptIndex);
+const retryShareRead = (failureCount: number, error: Error) => failureCount < 2 && (
+  error instanceof ApiRequestError ? [408, 500, 502, 503, 504].includes(error.status) : error.message === "CONNECTION_FAILED"
+);
 
 export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyChange: (dirty: boolean) => void; onOpenConversation: (id: string) => void }) {
   const { resolvedLocale } = usePreferences(), zh = resolvedLocale === "zh-CN";
@@ -23,7 +28,7 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
   const [results, setResults] = useState<Array<ShareBatchResult & { title: string }>>([]);
   const root = useRef<HTMLDivElement>(null), restore = useRef<{ id: string; scroll: number } | null>(null);
   const pageRecovery = useRef(false);
-  const shares = useQuery({ queryKey: ["my-shares", q, status, conversation?.id, offset], queryFn: () => getMyShares({ q, status, conversationId: conversation?.id, offset }), retry: false, enabled: online });
+  const shares = useQuery({ queryKey: ["my-shares", q, status, conversation?.id, offset], queryFn: () => getMyShares({ q, status, conversationId: conversation?.id, offset }), retry: retryShareRead, retryDelay: shareReadRetryDelay, enabled: online });
   useEffect(() => { const update = () => setOnline(navigator.onLine); update(); window.addEventListener("online", update); window.addEventListener("offline", update); return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); }; }, []);
   useEffect(() => {
     if (!shares.data || shares.isFetching || editing) return;
@@ -62,9 +67,21 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
         }))];
       });
       setNotice(zh ? `已撤销 ${completed.size} 个分享。` : `${completed.size} shares revoked.`);
-      await Promise.all([client.invalidateQueries({ queryKey: ["my-shares"] }), client.invalidateQueries({ queryKey: ["shares"] })]);
-    } catch (failure) { setError(failure instanceof Error ? failure.message : (zh ? "撤销失败，选择已保留。" : "Revoke failed. Your selection is retained.")); }
+      const [listRefreshed] = await Promise.all([
+        refreshCurrentShares(),
+        client.invalidateQueries({ queryKey: ["shares"] }),
+      ]);
+      if (!listRefreshed) setError(mySharesRefreshError(zh));
+    } catch (failure) { setError(mySharesWriteError(failure, zh)); }
     finally { setBusy(false); }
+  }
+  async function refreshCurrentShares(): Promise<boolean> {
+    try {
+      const result = await shares.refetch();
+      return !result.isError;
+    } catch {
+      return false;
+    }
   }
   async function copy(url: string) {
     try { await navigator.clipboard.writeText(url); setNotice(zh ? "链接已复制。" : "Link copied."); }
@@ -72,6 +89,8 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
   }
   const ids = Object.keys(selected), pageItems = shares.data?.items ?? [];
   const failed = results.filter((item) => item.status !== "revoked");
+  const readStale = shares.isError && Boolean(shares.data);
+  const readUnavailable = shares.isError && !shares.data;
   if (editing) return <div ref={root}><ShareEditor key={editing.id} share={editing} onDirtyChange={onDirtyChange} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setNotice(zh ? "分享设置已保存，原链接保持不变。" : "Share settings saved. The existing link is unchanged."); }} /></div>;
   return <div ref={root} className="grid min-w-0 gap-4" aria-busy={busy}>
     {!online ? <p role="status" className="rounded-lg bg-subtle p-3 text-sm text-secondary">{zh ? "分享管理需要联网。请连接后刷新。" : "Share management requires a connection. Reconnect and refresh."}</p> : null}
@@ -91,7 +110,8 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
       </div>
     </div>
     {shares.isPending && online ? <p role="status" className="text-sm text-secondary">{zh ? "正在加载分享…" : "Loading shares…"}</p> : null}
-    {shares.isError ? <p role="alert" className="break-words text-sm text-[var(--danger)]">{zh ? "无法读取分享列表，请刷新重试。" : "Unable to load shares. Refresh to retry."}</p> : null}
+    {readStale ? <p role="status" className="text-sm text-secondary">{zh ? "暂时无法刷新分享列表，当前显示上次结果。请点击刷新重试。" : "Could not refresh the share list. Previously loaded shares are shown. Use Refresh to try again."}</p> : null}
+    {readUnavailable ? <p role="alert" className="break-words text-sm text-[var(--danger)]">{zh ? "无法读取分享列表，请刷新重试。" : "Unable to load shares. Refresh to retry."}</p> : null}
     {notice ? <p role="status" className="rounded-lg bg-subtle px-3 py-2 text-sm text-primary">{notice}</p> : null}
     {error ? <p role="alert" className="break-words text-sm text-[var(--danger)]">{error}</p> : null}
     {failed.length ? <div role="alert" className="grid gap-2 border-y border-ui py-3 text-sm text-primary"><p>{zh ? `${failed.length} 项未完成，其他项已撤销。` : `${failed.length} items incomplete; other items were revoked.`}</p>{failed.map((item) => <div key={item.share_id} className="flex min-w-0 items-center justify-between gap-3"><span className="min-w-0 break-words">{item.title} · {item.status === "not_found" ? (zh ? "已不存在或不可访问" : "Missing or inaccessible") : (zh ? "操作失败" : "Failed")}</span><button type="button" className="btn-secondary min-h-11 shrink-0 px-3 text-xs" disabled={busy || !online} onClick={() => void revoke([item.share_id], { [item.share_id]: item.title })}>{zh ? "重试此项" : "Retry item"}</button></div>)}</div> : null}
@@ -122,4 +142,24 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
     <div className="flex items-center justify-between gap-2 border-t border-ui pt-3"><button type="button" className="btn-secondary min-h-11 px-3 text-xs" disabled={!offset || busy || shares.isFetching} onClick={() => setOffset((v) => Math.max(0, v - 20))}>{zh ? "上一页" : "Previous page"}</button><span className="text-xs text-secondary">{shares.data ? (zh ? `第 ${Math.floor(offset / 20) + 1} 页 · 共 ${shares.data.total} 项` : `Page ${Math.floor(offset / 20) + 1} · ${shares.data.total} total`) : "—"}</span><button type="button" className="btn-secondary min-h-11 px-3 text-xs" disabled={!shares.data?.has_more || busy || shares.isFetching} onClick={() => setOffset((v) => v + 20)}>{zh ? "下一页" : "Next page"}</button></div>
     {selecting ? <div className="sticky -bottom-5 grid gap-2 border-t border-ui bg-raised py-3"><p role="status" className="text-xs text-secondary">{zh ? `已选 ${ids.length} 项（跨页保留，上限 100）` : `${ids.length} selected across pages (up to 100)`}</p><button type="button" className="btn-danger min-h-11 w-full border border-ui px-4 text-sm disabled:opacity-60" disabled={!ids.length || busy || !online} onClick={() => void revoke(ids)}>{busy ? (zh ? "正在撤销…" : "Revoking…") : (zh ? `撤销所选 ${ids.length} 项` : `Revoke ${ids.length} selected`)}</button></div> : null}
   </div>;
+}
+
+function mySharesRefreshError(zh: boolean): string {
+  return zh
+    ? "撤销结果已返回，但分享列表刷新失败。请点击刷新核对当前状态后再决定是否重试。"
+    : "The revoke result was returned, but the share list could not refresh. Use Refresh to verify the current state before retrying.";
+}
+
+function mySharesWriteError(failure: unknown, zh: boolean): string {
+  if (failure instanceof ApiRequestError) {
+    if (failure.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
+    if (failure.status === 403) return zh ? "当前权限不允许撤销这些分享。" : "Your current permissions do not allow these shares to be revoked.";
+    if (failure.status === 404) return zh ? "部分分享或所属对话已不存在，请刷新列表确认。" : "Some shares or their conversations are no longer available. Refresh the list to confirm.";
+    if (failure.status === 409) return zh ? "分享状态已发生变化，请刷新列表后重试。" : "The share state changed elsewhere. Refresh the list before retrying.";
+    if (failure.status === 422) return zh ? "撤销请求无效，请刷新列表后重试。" : "The revoke request was not valid. Refresh the list before retrying.";
+    if (failure.status === 429) return zh ? "操作过于频繁，请稍后重试。" : "Too many requests. Try again shortly.";
+  }
+  return zh
+    ? "撤销结果尚未确认。请刷新列表核对后再决定是否重试，当前选择已保留。"
+    : "The revoke result is not confirmed. Refresh the list before deciding whether to retry; your selection is retained.";
 }

@@ -112,15 +112,16 @@ test("the separately portalled Viewer explicitly accepts pointers under a modal 
 test("Viewer publishes open state separately without changing command context identity", () => {
   const declaration = viewerSource.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "AttachmentViewerProvider");
   let current = null, memoIndex = 0;
-  const memos = [];
+  const memos = [], viewerSessionId = { current: 0 };
   function memo(operation, deps) {
     const index = memoIndex++, old = memos[index];
     if (!old || !deps.every((value, index) => Object.is(value, old.deps[index]))) memos[index] = { value: operation(), deps };
     return memos[index].value;
   }
   const exports = {};
-  new Function("exports", "require", "useState", "useCallback", "useMemo", "AttachmentViewerContext", "AttachmentViewerOpenContext", "AttachmentViewerShell", compile(declaration.getText(viewerSource)))(
+  new Function("exports", "require", "useState", "useRef", "useCallback", "useMemo", "AttachmentViewerContext", "AttachmentViewerOpenContext", "AttachmentViewerShell", compile(declaration.getText(viewerSource)))(
     exports, appRequire, () => [current, update => { current = typeof update === "function" ? update(current) : update; }],
+    () => viewerSessionId,
     (operation, deps) => memo(() => operation, deps), memo,
     { Provider: "commands" }, { Provider: "open-state" }, "viewer-shell",
   );
@@ -132,6 +133,7 @@ test("Viewer publishes open state separately without changing command context id
   assert.equal(find(opened, "open-state")?.props.value, true);
   assert.equal(find(opened, "commands").props.value, commands);
   assert.equal(all(opened).filter(node => node.type === "viewer-shell").length, 1);
+  assert.equal(current.viewerSessionId, 1);
   commands.close();
   const closedAgain = render();
   assert.equal(find(closedAgain, "open-state")?.props.value, false);

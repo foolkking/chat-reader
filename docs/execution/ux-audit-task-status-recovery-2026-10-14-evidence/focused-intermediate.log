@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: a failed final GET never appends a stale task to the query-owned list
+ok 1 - a failed final GET never appends a stale task to the query-owned list
+  ---
+  duration_ms: 76.4487
+  ...
+# Subtest: explicit Retry checks an unresolved final result even with an unchanged empty list
+ok 2 - explicit Retry checks an unresolved final result even with an unchanged empty list
+  ---
+  duration_ms: 8.0399
+  ...
+# Subtest: sidebar: stale progress is not presented as live
+ok 3 - sidebar: stale progress is not presented as live
+  ---
+  duration_ms: 19.1966
+  ...
+# Subtest: mobile: stale progress is not presented as live
+ok 4 - mobile: stale progress is not presented as live
+  ---
+  duration_ms: 15.7607
+  ...
+# Subtest: active-tasks: failed cached-empty read is not a confirmed empty state
+ok 5 - active-tasks: failed cached-empty read is not a confirmed empty state
+  ---
+  duration_ms: 16.2133
+  ...
+# Subtest: content-cleanup-pending: failed cached-empty read is not a confirmed empty state
+ok 6 - content-cleanup-pending: failed cached-empty read is not a confirmed empty state
+  ---
+  duration_ms: 14.9157
+  ...
+# Subtest: en-US: stale feedback does not promise that tasks are still running
+ok 7 - en-US: stale feedback does not promise that tasks are still running
+  ---
+  duration_ms: 16.9823
+  ...
+# Subtest: zh-CN: stale feedback does not promise that tasks are still running
+ok 8 - zh-CN: stale feedback does not promise that tasks are still running
+  ---
+  duration_ms: 13.4714
+  ...
+# Subtest: a late final GET from an old account cannot publish completion
+ok 9 - a late final GET from an old account cannot publish completion
+  ---
+  duration_ms: 4.122
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 708.7834

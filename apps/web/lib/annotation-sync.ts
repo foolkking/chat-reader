@@ -8,34 +8,54 @@ export const OFFLINE_SYNC_CHANGED_EVENT = "chat-reader:sync-changed";
 export const OFFLINE_SYNC_MAX_ATTEMPTS = 5;
 const BATCH_SIZE = 50;
 type SyncResult = { synced: number; conflicts: number; retryAt?: number };
-const running = new WeakMap<typeof offlineDb, Promise<SyncResult>>();
+const running = new WeakMap<typeof offlineDb, Map<string, Promise<SyncResult>>>();
+const tails = new WeakMap<typeof offlineDb, Promise<unknown>>();
 
-export function flushAnnotationOutbox(): Promise<SyncResult> {
+function normalizeConversationIds(conversationIds?: readonly string[]): string[] | undefined {
+  if (conversationIds === undefined) return undefined;
+  return [...new Set(conversationIds)].sort();
+}
+
+export function flushAnnotationOutbox(conversationIds?: readonly string[]): Promise<SyncResult> {
   if (!navigator.onLine) return Promise.resolve({ synced: 0, conflicts: 0 });
   const db = offlineDb;
-  const existing = running.get(db);
+  const scope = normalizeConversationIds(conversationIds);
+  const scopeKey = scope?.join(",") ?? "*";
+  const scopedRunning = running.get(db) ?? new Map<string, Promise<SyncResult>>();
+  running.set(db, scopedRunning);
+  const existing = scopedRunning.get(scopeKey);
   if (existing) return existing;
   const access = captureOfflineAccess();
   const work = async () => {
     assertOfflineAccess(access);
     let annotations = { synced: 0, conflicts: 0 }, failed = false;
-    try { annotations = await flushBatch(db, access); } catch { assertOfflineAccess(access); failed = true; }
-    const positions = await flushReadingPositionBatch(db, access);
+    try { annotations = await flushBatch(db, access, scope); } catch { assertOfflineAccess(access); failed = true; }
+    const positions = await flushReadingPositionBatch(db, access, scope);
     const retryAt = failed ? Math.min(positions.retryAt ?? Infinity, Date.now() + 2_000) : positions.retryAt;
     return { synced: annotations.synced + positions.synced, conflicts: annotations.conflicts + positions.conflicts, retryAt };
   };
-  const promise = (async () => navigator.locks ? await navigator.locks.request(`chat-reader:sync:${db.name}`, work) : await work())()
-    .finally(() => { running.delete(db); });
-  running.set(db, promise);
+  const previous = tails.get(db) ?? Promise.resolve();
+  const promise = previous.catch(() => undefined).then(async () => navigator.locks
+    ? await navigator.locks.request(`chat-reader:sync:${db.name}`, work)
+    : work());
+  tails.set(db, promise);
+  scopedRunning.set(scopeKey, promise);
+  void promise.finally(() => {
+    if (scopedRunning.get(scopeKey) === promise) scopedRunning.delete(scopeKey);
+    if (!scopedRunning.size) running.delete(db);
+    if (tails.get(db) === promise) tails.delete(db);
+  }).catch(() => undefined);
   return promise;
 }
 
-async function flushBatch(db: typeof offlineDb, access: number): Promise<SyncResult> {
+async function flushBatch(db: typeof offlineDb, access: number, conversationIds?: readonly string[]): Promise<SyncResult> {
   const seen = new Set<string>();
+  const scope = conversationIds ? new Set(conversationIds) : undefined;
   // Only the first operation for each entity may advance. A conflict/failure
   // pauses its descendants instead of creating a new conflict for each edit.
   const operations = await db.outbox.orderBy("queued_at").filter((item) => {
     if (item.entity_type === "reading_position") return false;
+    if (scope && !scope.has(item.conversation_id)) return false;
     const key = entityKey(item);
     if (seen.has(key)) return false;
     seen.add(key);

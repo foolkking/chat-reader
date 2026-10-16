@@ -1,0 +1,29 @@
+{
+  "date": "2026-10-13",
+  "kind": "intermediate-local-source-verification",
+  "limitation": "The 848 passing checks did not exercise the new share retry state. Subsequent review found inaccurate auto-retry copy after exhaustion; this is not final acceptance.",
+  "source": {
+    "path": "apps/web/components/my-shares-panel.tsx",
+    "gitBlobOid": "142cc85cfdaf61d70adbfd6f91d9700bcfb701b0",
+    "behavior": [
+      "share list reads retry twice with a capped exponential delay",
+      "retained data shows a quiet recovery status after final failure",
+      "initial failure keeps the explicit blocking error and manual refresh"
+    ]
+  },
+  "tests": {
+    "nodeScripts": { "passed": 848, "failed": 0, "skipped": 0 },
+    "lint": "passed",
+    "typecheck": "passed",
+    "diffCheck": "passed",
+    "browser": "not_run_local_services_unavailable_and_browser_session_unauthenticated",
+    "ci": "not_run",
+    "deployment": "not_run"
+  },
+  "scope": {
+    "changedProduct": ["apps/web/components/my-shares-panel.tsx"],
+    "changedBrowserContract": ["apps/web/e2e/settings-shares.spec.ts"],
+    "noDatabaseOrMigration": true,
+    "noUserData": true
+  }
+}

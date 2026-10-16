@@ -13,13 +13,13 @@ import {
   getProjects,
   mergeConversations,
   moveConversationToProject,
-  queueConversationBatchDelete,
   unarchiveConversation,
   updateConversationOrder,
 } from "../../lib/api";
-import type { BackgroundTaskRead, ConversationListItem, ProjectRead } from "../../lib/types";
+import type { ConversationListItem, ProjectRead } from "../../lib/types";
 import { stripLeadingTimestamp } from "./markdown-renderer";
 import { ConversationActionMenu } from "./conversation-action-menu";
+import { useConversationDeletion } from "./conversation-deletion-provider";
 import { ConversationPlacementSurface, useConversationPlacement } from "./conversation-placement";
 import { ConversationUndoNotice, createConversationUndo, type UndoAction } from "./conversation-undo";
 import { MergeAdmissionNotice, MergeConversationsDialog } from "./merge-conversations-dialog";
@@ -27,7 +27,6 @@ import { ConversationSortMenu } from "../../components/sort-menu";
 import { usePreferences } from "../../components/preferences-provider";
 import { QuickStartGuide } from "../../components/quick-start-guide";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
-import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { useBatchExport } from "./use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
@@ -45,7 +44,10 @@ export function ConversationList({
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const batchExport = useBatchExport(resolvedLocale === "zh-CN");
-  const dialog = useInteractionDialog();
+  const deletion = useConversationDeletion();
+  const deleteFlight = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [isMerging, setIsMerging] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
@@ -381,30 +383,24 @@ export function ConversationList({
               }
             }}
             onDelete={async (ids) => {
-              if (!(await dialog.confirm({ title: resolvedLocale === "zh-CN" ? `永久删除 ${ids.length} 个对话？` : `Permanently delete ${ids.length} conversations?`, description: resolvedLocale === "zh-CN" ? "这些对话会在后台按列表顺序逐项删除，无法在系统内恢复；可在任务区域停止后续项目。" : "These conversations are deleted in order in the background and cannot be restored in the app. You can stop pending items in the task area.", confirmLabel: resolvedLocale === "zh-CN" ? "永久删除" : "Delete permanently", danger: true }))) {
-                return;
-              }
+              if (deleteFlight.current) return;
+              deleteFlight.current = true;
+              // Freeze the visible order before confirmation, not after an
+              // asynchronous list refresh or change of selection.
+              const requested = new Set(ids);
+              const orderedIds = conversations.map(item => item.id).filter(id => requested.has(id));
               setBulkBusy("delete");
               try {
-                // Preserve the visual top-to-bottom order regardless of the
-                // merge-order editor's temporary ordering. The server deletes
-                // one item at a time in this order.
-                const requested = new Set(ids);
-                const orderedIds = conversations
-                  .map((conversation) => conversation.id)
-                  .filter((conversationId) => requested.has(conversationId));
-                const task = await queueConversationBatchDelete(orderedIds);
-                queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
-                  task,
-                  ...current.filter((item) => item.job_id !== task.job_id),
-                ]);
+                const task = await deletion.submit(orderedIds);
+                if (!task || !mounted.current) return;
                 applySelection([]);
                 setSelectionMode(false);
                 setBatchNotice(resolvedLocale === "zh-CN"
                   ? `已开始按顺序删除 ${orderedIds.length} 个对话；可在左侧任务区域查看进度并停止后续删除`
                   : `Deletion started for ${orderedIds.length} conversations in order. Track progress or stop pending items in the task area.`);
               } finally {
-                setBulkBusy(null);
+                deleteFlight.current = false;
+                if (mounted.current) setBulkBusy(null);
               }
             }}
           />

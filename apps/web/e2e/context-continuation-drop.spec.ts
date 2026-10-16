@@ -48,6 +48,15 @@ for (const width of [375, 1440]) {
       await expect(page.getByTestId("continuation-drop-target")).toBeVisible();
     };
     const panel = page.getByRole("region", { name: /^(上下文接续|Context continuation)$/ });
+    let transientTaskFailures = 3;
+    await page.route(/\/api\/tasks\/[^/?]+$/, async route => {
+      if (transientTaskFailures > 0) {
+        transientTaskFailures -= 1;
+        await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ detail: "temporary proxy failure" }) });
+        return;
+      }
+      await route.continue();
+    });
     const generation = async () => (await (await page.request.get(endpoint)).json()).generation;
     const read = async (name: string) => {
       const status = await (await page.request.get(endpoint)).json();
@@ -85,6 +94,7 @@ for (const width of [375, 1440]) {
       "continuation/index.json": strToU8('{"note":"Package index"}'),
     });
     await drop(page, "synthetic.context.zip", bundle);
+    await expect(panel.getByRole("status").filter({ hasText: /暂时无法读取更新进度|Update progress is temporarily unavailable/ })).toBeVisible();
     await expect(panel.getByRole("status").filter({ hasText: /正在后台更新|Updating continuation|整包中的接续文件已更新|Continuation files updated from package/ })).toBeVisible();
     await page.getByRole("button", { name: /^(关闭接续|Close continuation)$/ }).click();
     await open();

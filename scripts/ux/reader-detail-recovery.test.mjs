@@ -158,9 +158,10 @@ for (const status of [401, 403, 404]) {
     } finally { f.dispose(); }
   });
 }
-test("offline detail errors keep their original boundary and gain no remote Retry (control)", async () => {
+test("offline detail errors keep their local boundary and finite recovery copy without remote Retry (control)", async () => {
   const f = await fixture({ mode: "offline" }); try { const html = f.render(); assert.doesNotMatch(html, /data-synthetic-retained-reader/);
-    assert.match(html, /Synthetic raw upstream/); assert.equal(f.control(), undefined);
+    assert.match(html, /This offline conversation could not be opened\. Check its offline copy, then reopen it\./);
+    assert.doesNotMatch(html, /Synthetic raw upstream/); assert.equal(f.control(), undefined);
   } finally { f.dispose(); }
 });
 test("known merged conversations keep their existing destination instead of retained stale reading (control)", async () => {

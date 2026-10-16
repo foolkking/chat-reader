@@ -39,6 +39,9 @@ function loadComponent(relativePath, mocks) {
   const module = { exports: {} };
   const requireModule = (name) => {
     if (Object.hasOwn(mocks, name)) return mocks[name];
+    if (name === "./project-error-copy") return loadComponent("features/projects/project-error-copy.ts", {
+      "../../lib/api": { ApiRequestError },
+    });
     if (name.startsWith(".")) throw new Error(`Unexpected component dependency: ${name}`);
     return appRequire(name);
   };
@@ -247,6 +250,8 @@ async function listFixture({ cached = true, rows = [row], error = new Error("Syn
     "@dnd-kit/utilities": { CSS: { Transform: { toString: noop } } },
     "../../lib/api": { ApiRequestError },
     "../conversations/conversation-action-menu": { ConversationActionMenu: () => null },
+    "../conversations/conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
+      submit: async () => { throw new Error("A project read-recovery test must not delete"); } }) },
     "../conversations/conversation-placement": { useConversationPlacement: () => ({}), ConversationPlacementSurface: () => null },
     "../conversations/conversation-undo": {},
     // The page-level merge owner now remains mounted outside selection. Its

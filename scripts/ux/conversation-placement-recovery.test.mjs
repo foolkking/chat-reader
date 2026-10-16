@@ -158,6 +158,8 @@ async function fixture({ outcome = "success", locale = "en-US", refresh = "norma
     "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({ confirm: async options => { confirms.push(options); return true; } }) },
     "../../components/use-dialog-focus": { useDialogFocus: options => { focusOptions.push(options); } },
     "./conversation-undo": {}, "./conversation-metadata-dialog": { ConversationMetadataDialog: () => null },
+    "./conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
+      submit: async () => { throw new Error("A placement test must not delete"); } }) },
   };
   function load(path) {
     const source = readFileSync(new URL("../../apps/web/" + path, import.meta.url), "utf8");

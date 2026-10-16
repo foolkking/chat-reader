@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-15",
+  "scope": "Selected rich-text and resumed-source checks only; no service/browser/build/release acceptance",
+  "node": {
+    "files": 5,
+    "rich_text_focused": 26,
+    "passed": 106,
+    "failed": 0,
+    "skipped": 0
+  },
+  "api": {
+    "passed": 5,
+    "deselected": 1,
+    "database_or_server": false
+  },
+  "lint_exit": 0,
+  "nonincremental_types_exit": 0,
+  "bindings": [
+    {
+      "git_blob": "355bb8d241b6c0a24935c9b3a45d64186d0fa026",
+      "sha256": "BFC3090311FFB4B1AB23E0B784780F0462B08D1F93088A5B4C57CC01E5F0218A",
+      "path": "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts"
+    },
+    {
+      "git_blob": "0f5ce89802c1eb8f52a65501c6377d06887187c9",
+      "sha256": "E9D2BC9FCC5E8A8EED00A0C2D53422356D9072D1E983FF1E5E0AD5EC7FEBC587",
+      "path": "apps/web/features/rich-markdown/rich-markdown-config.ts"
+    },
+    {
+      "git_blob": "3b64e40e270d258da48e4346cc33b6eaefea9c4d",
+      "sha256": "34F65775380801D51ADD967912539A64B1FEC7D480C3238157394BD8EA83FC2D",
+      "path": "apps/web/features/conversations/markdown-renderer.tsx"
+    },
+    {
+      "git_blob": "644badcb2d3d7901f6be5865581c1a8f8a3d4752",
+      "sha256": "BD66DC79FEE0C2BC6C868463A657E4F3FF72D3D36D35A8DD152BDC1966BFADE0",
+      "path": "apps/web/features/conversations/assistant-message-renderer.tsx"
+    },
+    {
+      "git_blob": "440e37a1e3a863930ba5292a228d7d3a313c7313",
+      "sha256": "F3D78059E27BC990DEEBE6273D8F2878147B3A05F60DF463E46E75701D217F99",
+      "path": "apps/web/features/conversations/block-renderer.tsx"
+    },
+    {
+      "git_blob": "a3db8bff898c672ee11fb35abb53667ca89c764f",
+      "sha256": "A8B9CEB0D8A3ED974FB402B448B1BDF77825C60B1EDF932B827C1B52EA4ECD5A",
+      "path": "apps/web/components/offline-sync-manager.tsx"
+    },
+    {
+      "git_blob": "760c1fadbd25c637377e06b7222099dadd58ccff",
+      "sha256": "4AB9BE2BDB34ACB0C6347C9A11082923E482821CFFA90BAE42EA24B4C12F4392",
+      "path": "apps/web/lib/annotation-sync.ts"
+    },
+    {
+      "git_blob": "870222772bf9c89e022098f04ed63d9aebc6ff48",
+      "sha256": "35C5D8764A7E2DC8F9AC4643A08FFA9D608E566C969FE2D4D4F1A0CEED4FE4EA",
+      "path": "apps/web/features/import/import-workspace-copy.ts"
+    },
+    {
+      "git_blob": "f2edb3f1cc5bb7d6178cd37bdfe59da219cfc005",
+      "sha256": "6B79797EBF6F7B167B99D39B3AC2948F9A728F1EA540E00BD2EC0CE92F89F8CB",
+      "path": "apps/web/features/projects/project-sidebar.tsx"
+    },
+    {
+      "git_blob": "c7884d0dbd83d545af683eb5e4d8414cda282629",
+      "sha256": "001F6CE88CD4C3D17CA29902157DA7B0E189E4BECCF4DAC57408E3C0EC2362E8",
+      "path": "apps/web/features/conversations/conversation-deletion-provider.tsx"
+    },
+    {
+      "git_blob": "aca85b5234a0fad78f6d8763fd421fef23433e76",
+      "sha256": "A78EC3EF17ED8AE49FAEF56B09BB18B07150AB878FBF1FC5DD90BFBFCB7FBB23",
+      "path": "apps/web/features/editing/use-message-version-history.ts"
+    },
+    {
+      "git_blob": "129cc841c7daa2ca0d21046febd2bc0a3cc597a2",
+      "sha256": "8C5725FF0CA998BFB9B56BB31BC00A52757B72753B475D3427E7CE75F122E73A",
+      "path": "apps/web/features/editing/edit-message-form.tsx"
+    },
+    {
+      "git_blob": "651565dc57a46f0be70236bad2cd62e581a6b0db",
+      "sha256": "013D4F7FEF76A3D5459BC30E648E457237C13306C2BB467C7F32E6AB4780D9E1",
+      "path": "scripts/ux/chatgpt-rich-text.test.mjs"
+    },
+    {
+      "git_blob": "cdc9fabc058cf279bd3904c6ba425ebc3e3399f6",
+      "sha256": "BA7AC7F92377991EC6CE465B71410565363AC4DDC4DD2B0590CE522DE07F871E",
+      "path": "scripts/ux/resumed-source-gates.test.mjs"
+    },
+    {
+      "git_blob": "cad37c670bec9684b15b88727e035ee236e91aa6",
+      "sha256": "9E60758CCFE43A3940C7D16B0CA4B54B003F842DC52B31E327186318038583D7",
+      "path": "scripts/ux/manual-markdown-fidelity.test.mjs"
+    },
+    {
+      "git_blob": "6285aed1d0769ebed2d5f6d352bb0189d4415cbf",
+      "sha256": "4EA7D542AD39D7BBF97CDEA4B7447F918EDB3A5746D267AFF3776F8F0196774B",
+      "path": "scripts/ux/message-version-recovery.test.mjs"
+    },
+    {
+      "git_blob": "e694322e537f367403692f549ba56c3b906d15eb",
+      "sha256": "AEFEC9B7A10790D6E01824DCB52DB23C8E09A7901715D3FD1895C13DAED3B1A6",
+      "path": "scripts/ux/interaction-confirmation-lifecycle.test.mjs"
+    },
+    {
+      "git_blob": "223ccaa69ca35e31ca74475c9321f2a02a279a3a",
+      "sha256": "03D34847B97B976E41FFEFD61FF9F0C42A5FA08C0750F14DCD842EF27FDB2AF1",
+      "path": "apps/api/tests/test_chatgpt_rich_text_source.py"
+    }
+  ]
+}

@@ -1,0 +1,172 @@
+TAP version 13
+# Subtest: raw rich wrappers retain answer text, emphasis, badge and divider semantics
+ok 1 - raw rich wrappers retain answer text, emphasis, badge and divider semantics
+  ---
+  duration_ms: 24.6234
+  ...
+# Subtest: multiply escaped rich exports restore headings, emphasis, code and ordered lists
+ok 2 - multiply escaped rich exports restore headings, emphasis, code and ordered lists
+  ---
+  duration_ms: 7.9338
+  ...
+# Subtest: one-, two- and three-slash exported formatting is bounded to an established profile
+ok 3 - one-, two- and three-slash exported formatting is bounded to an established profile
+  ---
+  duration_ms: 13.9134
+  ...
+# Subtest: normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+ok 4 - normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+  ---
+  duration_ms: 0.3183
+  ...
+# Subtest: malformed, unclosed and excessively deep profiles do not authorize recovery
+ok 5 - malformed, unclosed and excessively deep profiles do not authorize recovery
+  ---
+  duration_ms: 0.3182
+  ...
+# Subtest: raw and escaped layout examples in fenced/inline/indented code never establish a profile
+not ok 6 - raw and escaped layout examples in fenced/inline/indented code never establish a profile
+  ---
+  duration_ms: 2.89
+  location: 'file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:114:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + {
+    +   escapedMarkdown: false
+    + }
+    - null
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: ~
+  actual:
+    escapedMarkdown: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:122:12)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: code within a real profile retains literal tags, escapes and longer fences exactly
+ok 7 - code within a real profile retains literal tags, escapes and longer fences exactly
+  ---
+  duration_ms: 0.5173
+  ...
+# Subtest: escaped inline-code recovery restores delimiters only, never its body
+ok 8 - escaped inline-code recovery restores delimiters only, never its body
+  ---
+  duration_ms: 0.2618
+  ...
+# Subtest: raw profiles do not turn deliberately escaped headings and emphasis into formatting
+ok 9 - raw profiles do not turn deliberately escaped headings and emphasis into formatting
+  ---
+  duration_ms: 0.2966
+  ...
+# Subtest: rich and math compatibility compose without changing currency, formulas or code
+not ok 10 - rich and math compatibility compose without changing currency, formulas or code
+  ---
+  duration_ms: 4.883
+  location: 'file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:144:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /katex/. Input:
+    
+    '<p><strong>Synthetic focus</strong></p>\n' +
+      '<p>Priority</p>\n' +
+      '<hr/>\n' +
+      '<p>A synthetic paragraph.</p>\n' +
+      '<p>Inline (x^2), price USD $20 and [<br/>\n' +
+      '\\frac{1}{3}<br/>\n' +
+      ']</p>'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    <p><strong>Synthetic focus</strong></p>
+    <p>Priority</p>
+    <hr/>
+    <p>A synthetic paragraph.</p>
+    <p>Inline (x^2), price USD $20 and [<br/>
+    \frac{1}{3}<br/>
+    ]</p>
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:149:10)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: unknown attributes, scripts, links, images and JSX expressions are never executed
+ok 11 - unknown attributes, scripts, links, images and JSX expressions are never executed
+  ---
+  duration_ms: 7.2094
+  ...
+# Subtest: tokens beyond the supported escape depth remain literal
+ok 12 - tokens beyond the supported escape depth remain literal
+  ---
+  duration_ms: 0.2676
+  ...
+# Subtest: input/token budgets fail closed without truncating content
+ok 13 - input/token budgets fail closed without truncating content
+  ---
+  duration_ms: 9.1533
+  ...
+# Subtest: repeated projection and CRLF/Unicode content preserve ordered readable content
+ok 14 - repeated projection and CRLF/Unicode content preserve ordered readable content
+  ---
+  duration_ms: 1.7808
+  ...
+# Subtest: cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+ok 15 - cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+  ---
+  duration_ms: 3.0877
+  ...
+# Subtest: each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+ok 16 - each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+  ---
+  duration_ms: 9.5704
+  ...
+# Subtest: projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+ok 17 - projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+  ---
+  duration_ms: 0.7236
+  ...
+# Subtest: source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+ok 18 - source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+  ---
+  duration_ms: 4.4935
+  ...
+# Subtest: actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+ok 19 - actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+  ---
+  duration_ms: 17.613
+  ...
+# Subtest: actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+ok 20 - actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+  ---
+  duration_ms: 3.1832
+  ...
+# Subtest: actual block renderer reads inherited profile while preserving heading/code boundaries
+ok 21 - actual block renderer reads inherited profile while preserving heading/code boundaries
+  ---
+  duration_ms: 6.3296
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 19
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1141.0019

@@ -24,14 +24,14 @@ import { usePreferences } from "../../components/preferences-provider";
 import {
   archiveConversation,
   getConversationExportUrl,
-  queueConversationBatchDelete,
   setConversationGlobalPin,
   setProjectConversationPin,
   unarchiveConversation,
 } from "../../lib/api";
-import type { BackgroundTaskRead, ConversationListItem, ProjectConversationRead } from "../../lib/types";
+import type { ConversationListItem, ProjectConversationRead } from "../../lib/types";
 import { createConversationUndo, type UndoAction } from "./conversation-undo";
 import { ConversationMetadataDialog } from "./conversation-metadata-dialog";
+import { useConversationDeletion } from "./conversation-deletion-provider";
 import type { ConversationPlacementController } from "./conversation-placement";
 
 export function ConversationActionMenu({
@@ -59,6 +59,8 @@ export function ConversationActionMenu({
   const pathname = usePathname();
   const router = useRouter();
   const dialog = useInteractionDialog();
+  const deletion = useConversationDeletion();
+  const deleteFlight = useRef(false);
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [open, setOpen] = useState(false);
@@ -364,29 +366,18 @@ export function ConversationActionMenu({
                 <MenuButton
                   icon={<Trash2 className="h-4 w-4" />}
                   danger
-                  disabled={busy !== null}
+                  disabled={busy !== null || deletion.busy}
                   onClick={() => void (async () => {
-                    const confirmed = await dialog.confirm({
-                      title: zh ? `永久删除“${title}”？` : `Permanently delete “${title}”?`,
-                      description: zh
-                        ? "对话会在后台删除，无法在系统内恢复；可在任务区域查看进度。"
-                        : "The conversation and its version history will be deleted in the background. It cannot be restored in the app.",
-                      confirmLabel: zh ? "永久删除" : "Delete permanently",
-                      danger: true,
-                    });
-                    if (!confirmed) return;
+                    if (deleteFlight.current) return;
+                    deleteFlight.current = true;
                     setBusy("delete");
                     try {
-                      const task = await queueConversationBatchDelete([conversation.id]);
-                      queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
-                        task,
-                        ...current.filter((item) => item.job_id !== task.job_id),
-                      ]);
+                      const task = await deletion.submit([conversation.id], title);
+                      if (task && buttonRef.current?.isConnected && pathname === `/conversations/${conversation.id}`) router.replace("/");
                     } finally {
-                      setBusy(null);
-                      setOpen(false);
+                      deleteFlight.current = false;
+                      if (buttonRef.current?.isConnected) { setBusy(null); setOpen(false); }
                     }
-                    if (pathname === `/conversations/${conversation.id}`) router.replace("/");
                   })()}
                 >
                   {zh ? "永久删除对话" : "Delete permanently"}

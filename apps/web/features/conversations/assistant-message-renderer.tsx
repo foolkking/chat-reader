@@ -19,6 +19,7 @@ import {
   type ReaderBlockLayoutMetrics,
 } from "./reader-block-layout";
 import { extractChatGptBareBracketMath, isChatGptBareBracketMath, normalizeChatGptMathBody } from "../rich-markdown/remark-ai-math-compatibility";
+import { detectChatGptRichText, withChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
 
 const THINKING_LABEL = "思考过程";
 const THINKING_DURATION_RE =
@@ -46,6 +47,7 @@ export function AssistantMessageRenderer({
   const t = useTranslations();
   const isAssistant = message.role === "assistant";
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
+  const richTextProfile = useMemo(() => detectChatGptRichText(currentText), [currentText]);
   const allTasks = useMemo(() => extractMarkdownTaskItems(currentText), [currentText]);
   const tasksByBlock = useMemo(
     () => assignTasksToBlocks(blocks, allTasks, taskCheckedOverrides),
@@ -67,8 +69,8 @@ export function AssistantMessageRenderer({
   // Keep this projection outside the hook list. A message can transition from
   // an empty block window to hydrated blocks without changing hook order.
   const semanticBlocks = useMemo(
-    () => resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText)),
-    [currentText, visibleBlocks],
+    () => withChatGptRichTextProfile(resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText)), richTextProfile),
+    [currentText, richTextProfile, visibleBlocks],
   );
   const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
   const displayUnits = useMemo(() => groupAttachmentBlocks(semanticBlocks), [semanticBlocks]);
@@ -76,7 +78,7 @@ export function AssistantMessageRenderer({
   return (
     <div className="reader-block-flow break-words">
       {leadingThinking ? (
-        <div className="reader-block-slot"><CopyableMarkdownBlock messageId={message.id} blockIndex={visibleBlocks[0]?.block_index ?? 0} markdown={leadingThinking.text}><ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} /></CopyableMarkdownBlock></div>
+        <div className="reader-block-slot"><CopyableMarkdownBlock messageId={message.id} blockIndex={visibleBlocks[0]?.block_index ?? 0} markdown={leadingThinking.text}><ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} richTextProfile={richTextProfile ?? undefined} /></CopyableMarkdownBlock></div>
       ) : null}
       {shouldVirtualize ? (
         <div className="reader-block-slot" style={leadingThinking ? slotGapStyle(blockGapVariable(null, semanticBlocks[0])) : undefined}>

@@ -32,10 +32,12 @@ function LoginForm() {
   const resetHref = destination === "/" ? "/reset-password" : `/reset-password?return_to=${encodeURIComponent(destination)}`;
 
   useEffect(() => {
+    setCleanupPending(pendingSignoutCleanups().length > 0);
+  }, []);
+
+  useEffect(() => {
+    if (cleanupPending !== false) return;
     let active = true;
-    const pending = pendingSignoutCleanups().length > 0;
-    if (pending) { setCleanupPending(true); return; }
-    setCleanupPending(false);
     void Promise.all([readAuthSetup(), readAuthSession()]).then(([setup, session]) => {
       if (!active) return;
       if (setup.setup_required) {
@@ -49,7 +51,7 @@ function LoginForm() {
       setPasswordResetAvailable(session.password_reset_available);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [destination, reauthenticate, cleanupPending]);
+  }, [cleanupPending, destination, reauthenticate]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -1,0 +1,9 @@
+
+> chat-reader@0.0.0 typecheck E:\1project\chat-reader
+> corepack pnpm --filter web typecheck "--incremental" "false"
+
+
+> web@0.0.0 typecheck E:\1project\chat-reader\apps\web
+> tsc --noEmit "--incremental" "false"
+
+Exit code: 0

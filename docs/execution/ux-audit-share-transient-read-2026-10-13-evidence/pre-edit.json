@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-13",
+  "kind": "pre-edit-source-evidence",
+  "baseCommit": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "source": {
+    "path": "apps/web/components/my-shares-panel.tsx",
+    "gitBlobOid": "a83e535750b327059759c31acff735305b5a3b12",
+    "observations": [
+      "getMyShares useQuery sets retry:false",
+      "shares.data remains the rendered source when a refresh errors",
+      "shares.isError renders a blocking error message and manual Refresh is the only retry path"
+    ]
+  },
+  "scope": {
+    "authenticatedBrowser": "not_available_login_page_only",
+    "renderedObservation": false,
+    "productionShareFailure": false,
+    "relatedOperationalEvidence": "docs/execution/ux-audit-context-upload-recovery-2026-10-13.md"
+  },
+  "decision": "Proceed with bounded read recovery; do not add polling or success notification."
+}

@@ -1,0 +1,60 @@
+TAP version 13
+# Subtest: all three Reader reads and both sheet prefetch options execute while marked offline
+ok 1 - all three Reader reads and both sheet prefetch options execute while marked offline
+  ---
+  duration_ms: 102.0801
+  ...
+# Subtest: saved anchor, complete-turn budget, query identities and navigation ranges are retained
+ok 2 - saved anchor, complete-turn budget, query identities and navigation ranges are retained
+  ---
+  duration_ms: 78.5888
+  ...
+# Subtest: offline policy does not bypass initial-window enablement
+ok 3 - offline policy does not bypass initial-window enablement
+  ---
+  duration_ms: 87.1496
+  ...
+# Subtest: remote options omit the override, pause under the normal default and resume on reconnect
+ok 4 - remote options omit the override, pause under the normal default and resume on reconnect
+  ---
+  duration_ms: 39.2034
+  ...
+# Subtest: omitted remote policy preserves caller-level defaults instead of overwriting with undefined
+ok 5 - omitted remote policy preserves caller-level defaults instead of overwriting with undefined
+  ---
+  duration_ms: 25.8488
+  ...
+# Subtest: a local read retry can continue without waiting for reconnect
+ok 6 - a local read retry can continue without waiting for reconnect
+  ---
+  duration_ms: 31.833
+  ...
+# Subtest: both shared navigation queries execute local loaders offline without changing ranges or placeholders
+ok 7 - both shared navigation queries execute local loaders offline without changing ranges or placeholders
+  ---
+  duration_ms: 108.7046
+  ...
+# Subtest: default shared/Share navigation retains remote loaders and inherited policy
+ok 8 - default shared/Share navigation retains remote loaders and inherited policy
+  ---
+  duration_ms: 63.3748
+  ...
+# Subtest: supplied navigation items and readiness gates still disable local queries
+ok 9 - supplied navigation items and readiness gates still disable local queries
+  ---
+  duration_ms: 100.0193
+  ...
+# Subtest: all four Reader navigation placements receive the source policy, without altering Share callers
+ok 10 - all four Reader navigation placements receive the source policy, without altering Share callers
+  ---
+  duration_ms: 18.154
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1107.6722

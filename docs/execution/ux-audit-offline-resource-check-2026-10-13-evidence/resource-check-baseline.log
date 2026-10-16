@@ -1,0 +1,178 @@
+TAP version 13
+# Subtest: en-US: failed inspection ends waiting and exposes read-only retry
+not ok 1 - en-US: failed inspection ends waiting and exposes read-only retry
+  ---
+  duration_ms: 81.9019
+  location: 'file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:64:42'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Could not check offline resources/. Input:
+    
+    'CROffline libraryOnlineOffline attachmentsMetadata onlySmall files (≤10 MiB)All attachmentsChecking offline resourcesProjects0Unclassified1Browser storageThe browser may clear this data; clearing site data removes offline copiesCreate a .cr backup online'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'CROffline libraryOnlineOffline attachmentsMetadata onlySmall files (≤10 MiB)All attachmentsChecking offline resourcesProjects0Unclassified1Browser storageThe browser may clear this data; clearing site data removes offline copiesCreate a .cr backup online'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:68:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async startSubtest (node:internal/test_runner/harness:235:3)
+  ...
+# Subtest: zh-CN: failed inspection ends waiting and exposes read-only retry
+not ok 2 - zh-CN: failed inspection ends waiting and exposes read-only retry
+  ---
+  duration_ms: 6.4944
+  location: 'file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:64:42'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /无法检查离线资源/. Input:
+    
+    'CR离线资料库已联网离线附件仅附件信息小附件（≤10 MiB）全部附件正在检查离线资源项目0未归类1浏览器本地存储存储可能被浏览器清理；清除站点数据会删除本地资料前往服务器创建 .cr 备份'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: 'CR离线资料库已联网离线附件仅附件信息小附件（≤10 MiB）全部附件正在检查离线资源项目0未归类1浏览器本地存储存储可能被浏览器清理；清除站点数据会删除本地资料前往服务器创建 .cr 备份'
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:68:12)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: repeated rejection remains retryable and never claims copies are current
+not ok 3 - repeated rejection remains retryable and never claims copies are current
+  ---
+  duration_ms: 6.3312
+  location: 'file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:82:1'
+  failureType: 'testCodeFailure'
+  error: 'Missing button: Retry resource check'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    Object.button (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:54:146)
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:84:29)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: successful current revisions show up-to-date; unknown copies remain downloadable
+ok 4 - successful current revisions show up-to-date; unknown copies remain downloadable
+  ---
+  duration_ms: 9.4406
+  ...
+# Subtest: assetMode change invalidates ready state before effects run
+not ok 5 - assetMode change invalidates ready state before effects run
+  ---
+  duration_ms: 3.2952
+  location: 'file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:99:53'
+  failureType: 'testCodeFailure'
+  error: 'Missing button: Checking offline resources'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    Object.button (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:54:146)
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:104:32)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: conversations change invalidates ready state before effects run
+not ok 6 - conversations change invalidates ready state before effects run
+  ---
+  duration_ms: 3.0436
+  location: 'file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:99:53'
+  failureType: 'testCodeFailure'
+  error: 'Missing button: Checking offline resources'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    Object.button (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:54:146)
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/offline-resource-check.test.mjs:104:32)
+    async Test.run (node:internal/test_runner/test:657:9)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: late previous-scope success cannot replace the latest result
+ok 7 - late previous-scope success cannot replace the latest result
+  ---
+  duration_ms: 5.3051
+  ...
+# Subtest: late previous-scope failure cannot replace the latest result
+ok 8 - late previous-scope failure cannot replace the latest result
+  ---
+  duration_ms: 5.889
+  ...
+# Subtest: closing the sidebar fences late completion
+ok 9 - closing the sidebar fences late completion
+  ---
+  duration_ms: 2.2764
+  ...
+# Subtest: inspection error leaves downloaded conversation rows and selection intact
+ok 10 - inspection error leaves downloaded conversation rows and selection intact
+  ---
+  duration_ms: 4.838
+  ...
+# Subtest: a connection failure retries the same read and recovers without writes or polling
+ok 11 - a connection failure retries the same read and recovers without writes or polling
+  ---
+  duration_ms: 200.6343
+  ...
+# Subtest: exhausted initial read has an explicit error and manual Refresh recovers
+ok 12 - exhausted initial read has an explicit error and manual Refresh recovers
+  ---
+  duration_ms: 91.8945
+  ...
+# Subtest: en-US: cached rows and selection survive retry exhaustion
+ok 13 - en-US: cached rows and selection survive retry exhaustion
+  ---
+  duration_ms: 71.0326
+  ...
+# Subtest: zh-CN: cached rows and selection survive retry exhaustion
+ok 14 - zh-CN: cached rows and selection survive retry exhaustion
+  ---
+  duration_ms: 59.8034
+  ...
+# Subtest: HTTP 401 is not automatically retried
+ok 15 - HTTP 401 is not automatically retried
+  ---
+  duration_ms: 43.2646
+  ...
+# Subtest: HTTP 403 is not automatically retried
+ok 16 - HTTP 403 is not automatically retried
+  ---
+  duration_ms: 31.6266
+  ...
+# Subtest: HTTP 404 is not automatically retried
+ok 17 - HTTP 404 is not automatically retried
+  ---
+  duration_ms: 29.0759
+  ...
+# Subtest: HTTP 422 is not automatically retried
+ok 18 - HTTP 422 is not automatically retried
+  ---
+  duration_ms: 37.9872
+  ...
+# Subtest: HTTP 429 is not automatically retried
+ok 19 - HTTP 429 is not automatically retried
+  ---
+  duration_ms: 32.1784
+  ...
+# Subtest: an unrecognized failure is not automatically retried
+ok 20 - an unrecognized failure is not automatically retried
+  ---
+  duration_ms: 32.6165
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 15
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1254.4147

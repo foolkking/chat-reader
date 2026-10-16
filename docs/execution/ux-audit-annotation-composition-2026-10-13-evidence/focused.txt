@@ -1,0 +1,380 @@
+TAP version 13
+# Subtest: notebook failure leaves successful annotations usable and retries only that resource
+ok 1 - notebook failure leaves successful annotations usable and retries only that resource
+  ---
+  duration_ms: 99.5264
+  ...
+# Subtest: conflicts failure leaves successful annotations usable and retries only that resource
+ok 2 - conflicts failure leaves successful annotations usable and retries only that resource
+  ---
+  duration_ms: 30.7134
+  ...
+# Subtest: annotation failure leaves notebook and known conflicts independently readable
+ok 3 - annotation failure leaves notebook and known conflicts independently readable
+  ---
+  duration_ms: 24.0458
+  ...
+# Subtest: annotations publishes before an unrelated slow read completes
+ok 4 - annotations publishes before an unrelated slow read completes
+  ---
+  duration_ms: 36.8144
+  ...
+# Subtest: notebook publishes before an unrelated slow read completes
+ok 5 - notebook publishes before an unrelated slow read completes
+  ---
+  duration_ms: 16.6496
+  ...
+# Subtest: conflicts publishes before an unrelated slow read completes
+ok 6 - conflicts publishes before an unrelated slow read completes
+  ---
+  duration_ms: 24.005
+  ...
+# Subtest: a late older reload cannot replace a newer result
+ok 7 - a late older reload cannot replace a newer result
+  ---
+  duration_ms: 16.8388
+  ...
+# Subtest: failed refresh preserves current-scope data without claiming the read succeeded
+ok 8 - failed refresh preserves current-scope data without claiming the read succeeded
+  ---
+  duration_ms: 13.7923
+  ...
+# Subtest: 401 removes inaccessible cached resource data
+ok 9 - 401 removes inaccessible cached resource data
+  ---
+  duration_ms: 16.4085
+  ...
+# Subtest: 403 removes inaccessible cached resource data
+ok 10 - 403 removes inaccessible cached resource data
+  ---
+  duration_ms: 12.9171
+  ...
+# Subtest: 404 removes inaccessible cached resource data
+ok 11 - 404 removes inaccessible cached resource data
+  ---
+  duration_ms: 13.6821
+  ...
+# Subtest: an offline access lock drops cached notebook data
+ok 12 - an offline access lock drops cached notebook data
+  ---
+  duration_ms: 10.3384
+  ...
+# Subtest: closing preserves loaded highlights but rejects a pending panel read
+ok 13 - closing preserves loaded highlights but rejects a pending panel read
+  ---
+  duration_ms: 13.6659
+  ...
+# Subtest: closed same-scope confirmed writes remain publishable
+ok 14 - closed same-scope confirmed writes remain publishable
+  ---
+  duration_ms: 10.602
+  ...
+# Subtest: conversation changes hide old data immediately and reject older callbacks
+ok 15 - conversation changes hide old data immediately and reject older callbacks
+  ---
+  duration_ms: 10.0838
+  ...
+# Subtest: repository changes hide old data immediately and reject older callbacks
+ok 16 - repository changes hide old data immediately and reject older callbacks
+  ---
+  duration_ms: 13.111
+  ...
+# Subtest: authentication changes hide old data immediately and reject older callbacks
+ok 17 - authentication changes hide old data immediately and reject older callbacks
+  ---
+  duration_ms: 8.8162
+  ...
+# Subtest: authentication changes reject completions even before another render
+ok 18 - authentication changes reject completions even before another render
+  ---
+  duration_ms: 9.3096
+  ...
+# Subtest: confirmed notebook writes retire pending reads before effects or rerender
+ok 19 - confirmed notebook writes retire pending reads before effects or rerender
+  ---
+  duration_ms: 9.5733
+  ...
+# Subtest: notebook readiness changes synchronously when conflict checking begins
+ok 20 - notebook readiness changes synchronously when conflict checking begins
+  ---
+  duration_ms: 11.3125
+  ...
+# Subtest: unmount ignores pending reads and previously captured publishers
+ok 21 - unmount ignores pending reads and previously captured publishers
+  ---
+  duration_ms: 8.12
+  ...
+# Subtest: workspace opens with independent error recovery instead of false empty annotations
+ok 22 - workspace opens with independent error recovery instead of false empty annotations
+  ---
+  duration_ms: 271.1022
+  ...
+# Subtest: a bookmark can still be created from the closed desktop Reader
+ok 23 - a bookmark can still be created from the closed desktop Reader
+  ---
+  duration_ms: 144.1425
+  ...
+# Subtest: a blocked deletion explains recovery and never retries the write automatically
+ok 24 - a blocked deletion explains recovery and never retries the write automatically
+  ---
+  duration_ms: 111.2732
+  ...
+# Subtest: a late bookmark completion cannot open a different conversation's workspace
+ok 25 - a late bookmark completion cannot open a different conversation's workspace
+  ---
+  duration_ms: 93.0496
+  ...
+# Subtest: a deletion confirmation that outlives its conversation cannot delete or reopen the new one
+ok 26 - a deletion confirmation that outlives its conversation cannot delete or reopen the new one
+  ---
+  duration_ms: 93.8157
+  ...
+# Subtest: unknown conflict reads preserve the notebook draft and block saving without auto-retry
+ok 27 - unknown conflict reads preserve the notebook draft and block saving without auto-retry
+  ---
+  duration_ms: 41.7845
+  ...
+# Subtest: a save waiting for local draft storage rechecks read ownership before writing
+ok 28 - a save waiting for local draft storage rechecks read ownership before writing
+  ---
+  duration_ms: 26.9641
+  ...
+# Subtest: batch style keeps the same two selected targets across filters
+ok 29 - batch style keeps the same two selected targets across filters
+  ---
+  duration_ms: 105.6319
+  ...
+# Subtest: batch notes keeps the same two selected targets across filters
+ok 30 - batch notes keeps the same two selected targets across filters
+  ---
+  duration_ms: 96.069
+  ...
+# Subtest: batch delete keeps the same two selected targets across filters
+ok 31 - batch delete keeps the same two selected targets across filters
+  ---
+  duration_ms: 89.1566
+  ...
+# Subtest: visible select/invert preserve hidden selections and show-all restores their context
+ok 32 - visible select/invert preserve hidden selections and show-all restores their context
+  ---
+  duration_ms: 97.856
+  ...
+# Subtest: batch counts exclude bookmark styles and already-added references without dropping hidden selections
+ok 33 - batch counts exclude bookmark styles and already-added references without dropping hidden selections
+  ---
+  duration_ms: 88.2167
+  ...
+# Subtest: confirmation uses current notebook revision and surviving original targets, preserving newer selections
+ok 34 - confirmation uses current notebook revision and surviving original targets, preserving newer selections
+  ---
+  duration_ms: 96.6028
+  ...
+# Subtest: partial style failure publishes confirmed items and requires a read before another write
+ok 35 - partial style failure publishes confirmed items and requires a read before another write
+  ---
+  duration_ms: 89.8502
+  ...
+# Subtest: delete waits for annotation confirmation before touching notebook references
+ok 36 - delete waits for annotation confirmation before touching notebook references
+  ---
+  duration_ms: 88.7175
+  ...
+# Subtest: repeated bookmark events share one stable request and unknown results never auto-repeat
+ok 37 - repeated bookmark events share one stable request and unknown results never auto-repeat
+  ---
+  duration_ms: 117.3082
+  ...
+# Subtest: style retry skips matching confirmations and uses the checked revision of remaining items
+ok 38 - style retry skips matching confirmations and uses the checked revision of remaining items
+  ---
+  duration_ms: 103.396
+  ...
+# Subtest: failed style checks stay recoverable in expanded reading and cannot restart writes
+ok 39 - failed style checks stay recoverable in expanded reading and cannot restart writes
+  ---
+  duration_ms: 101.5995
+  ...
+# Subtest: partial deletion only cleans absent targets after a read and never resumes deleting
+ok 40 - partial deletion only cleans absent targets after a read and never resumes deleting
+  ---
+  duration_ms: 97.9164
+  ...
+# Subtest: failed notebook cleanup is checked and retried independently without re-deleting annotations
+ok 41 - failed notebook cleanup is checked and retried independently without re-deleting annotations
+  ---
+  duration_ms: 105.285
+  ...
+# Subtest: a deletion check that fails does not enable cleanup or repeat writes
+ok 42 - a deletion check that fails does not enable cleanup or repeat writes
+  ---
+  duration_ms: 96.4671
+  ...
+# Subtest: a missing annotation found by checking is not reported as an acknowledged deletion
+ok 43 - a missing annotation found by checking is not reported as an acknowledged deletion
+  ---
+  duration_ms: 137.4492
+  ...
+# Subtest: a late deletion completion cannot clean or publish into a new conversation
+ok 44 - a late deletion completion cannot clean or publish into a new conversation
+  ---
+  duration_ms: 95.5345
+  ...
+# Subtest: bookmark unknown-result check finds the original id without writing
+ok 45 - bookmark unknown-result check finds the original id without writing
+  ---
+  duration_ms: 87.8483
+  ...
+# Subtest: bookmark unknown-result check allows an explicit retry using the original id
+ok 46 - bookmark unknown-result check allows an explicit retry using the original id
+  ---
+  duration_ms: 99.2992
+  ...
+# Subtest: a new read scope cannot inherit selection even when synthetic repositories reuse IDs
+ok 47 - a new read scope cannot inherit selection even when synthetic repositories reuse IDs
+  ---
+  duration_ms: 88.0245
+  ...
+# Subtest: late mobile annotation navigation cannot close a newly opened conversation
+ok 48 - late mobile annotation navigation cannot close a newly opened conversation
+  ---
+  duration_ms: 81.2375
+  ...
+# Subtest: notebook cleanup retry deletes only the saved draft without resubmitting the notebook
+ok 49 - notebook cleanup retry deletes only the saved draft without resubmitting the notebook
+  ---
+  duration_ms: 14.5926
+  ...
+# Subtest: an old cleanup action cannot delete a newly edited notebook draft
+ok 50 - an old cleanup action cannot delete a newly edited notebook draft
+  ---
+  duration_ms: 17.3954
+  ...
+# Subtest: cleanup rechecks authorization after waiting and never overwrites another tab's draft version
+ok 51 - cleanup rechecks authorization after waiting and never overwrites another tab's draft version
+  ---
+  duration_ms: 17.4283
+  ...
+# Subtest: text creation holds one prompt and one stable request through repeated actions
+ok 52 - text creation holds one prompt and one stable request through repeated actions
+  ---
+  duration_ms: 87.0626
+  ...
+# Subtest: unknown text creation retains quote and comment, checks read-only, and retries the same payload
+ok 53 - unknown text creation retains quote and comment, checks read-only, and retries the same payload
+  ---
+  duration_ms: 94.5353
+  ...
+# Subtest: checking an acknowledged-lost text creation finds its exact id without another create
+ok 54 - checking an acknowledged-lost text creation finds its exact id without another create
+  ---
+  duration_ms: 79.5769
+  ...
+# Subtest: a late text creation clears a recapture of its original selection
+ok 55 - a late text creation clears a recapture of its original selection
+  ---
+  duration_ms: 82.9578
+  ...
+# Subtest: a late text creation preserves a newer selection
+ok 56 - a late text creation preserves a newer selection
+  ---
+  duration_ms: 84.8277
+  ...
+# Subtest: cancelling a comment prompt leaves the selection and releases the creation guard
+ok 57 - cancelling a comment prompt leaves the selection and releases the creation guard
+  ---
+  duration_ms: 73.727
+  ...
+# Subtest: a late comment prompt cannot create in a different conversation
+ok 58 - a late comment prompt cannot create in a different conversation
+  ---
+  duration_ms: 89.654
+  ...
+# Subtest: a failed creation check keeps input and cannot enable a blind create retry
+ok 59 - a failed creation check keeps input and cannot enable a blind create retry
+  ---
+  duration_ms: 75.3761
+  ...
+# Subtest: single and batch note additions share a synchronous pending guard
+ok 60 - single and batch note additions share a synchronous pending guard
+  ---
+  duration_ms: 72.6715
+  ...
+# Subtest: a note addition found by checking does not write again
+ok 61 - a note addition found by checking does not write again
+  ---
+  duration_ms: 75.2058
+  ...
+# Subtest: note retry adds only missing original targets to the newest notebook and preserves other blocks
+ok 62 - note retry adds only missing original targets to the newest notebook and preserves other blocks
+  ---
+  duration_ms: 73.3288
+  ...
+# Subtest: failed note checks keep targets without repeating or allowing unrelated notebook writes
+ok 63 - failed note checks keep targets without repeating or allowing unrelated notebook writes
+  ---
+  duration_ms: 91.8193
+  ...
+# Subtest: missing annotations are disclosed and not silently counted as added references
+ok 64 - missing annotations are disclosed and not silently counted as added references
+  ---
+  duration_ms: 75.2828
+  ...
+# Subtest: note capacity is checked without truncating the requested additions
+ok 65 - note capacity is checked without truncating the requested additions
+  ---
+  duration_ms: 77.6818
+  ...
+# Subtest: a captured old add action sees a confirmed notebook before a rerender and avoids a duplicate
+ok 66 - a captured old add action sees a confirmed notebook before a rerender and avoids a duplicate
+  ---
+  duration_ms: 71.6255
+  ...
+# Subtest: late note-add completion cannot publish or switch views in another conversation
+ok 67 - late note-add completion cannot publish or switch views in another conversation
+  ---
+  duration_ms: 74.6151
+  ...
+# Subtest: a failed comment stays editable through style revisions and read-only checking
+ok 68 - a failed comment stays editable through style revisions and read-only checking
+  ---
+  duration_ms: 87.0626
+  ...
+# Subtest: two blur/save events submit once and confirmed saving preserves typing made during the request
+ok 69 - two blur/save events submit once and confirmed saving preserves typing made during the request
+  ---
+  duration_ms: 72.268
+  ...
+# Subtest: changed stored comments require explicit confirmation and never overwrite on blur
+ok 70 - changed stored comments require explicit confirmation and never overwrite on blur
+  ---
+  duration_ms: 73.9726
+  ...
+# Subtest: new typing invalidates a pending comment-overwrite confirmation
+ok 71 - new typing invalidates a pending comment-overwrite confirmation
+  ---
+  duration_ms: 66.5404
+  ...
+# Subtest: comment drafts survive filtering and panel closure but cannot cross the read scope
+ok 72 - comment drafts survive filtering and panel closure but cannot cross the read scope
+  ---
+  duration_ms: 76.612
+  ...
+# Subtest: a late comment acknowledgement cannot publish into another conversation
+ok 73 - a late comment acknowledgement cannot publish into another conversation
+  ---
+  duration_ms: 88.9931
+  ...
+# Subtest: the actual comment editor retains the controlled input and checking does not trigger blur saving
+ok 74 - the actual comment editor retains the controlled input and checking does not trigger blur saving
+  ---
+  duration_ms: 4.1839
+  ...
+1..74
+# tests 74
+# suites 0
+# pass 74
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5276.5619

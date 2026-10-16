@@ -1,5 +1,27 @@
 # API 参考
 
+Local noise range editing (2026-10-15, migration 0051 **not applied**):
+
+- GET `/api/content-cleanup/scans/{scan_id}/occurrences/{occurrence_id}`
+  reads one owner-scoped `CleanupOccurrenceRead`. Occurrence responses add
+  nullable `reviewed_ranges` and `edit_token`; unknown/other-owner scans or
+  candidates return 404. The token is a state digest, not an access credential.
+- PUT on that path plus `/removal-ranges` requires
+  `{base_edit_token: string, ranges: [{start_offset: integer, end_offset: integer}] | null}`.
+  `ranges` must be present; null restores the full original match. Explicit
+  ranges are 1–20 ordered non-overlapping, nonempty absolute Unicode code-point
+  intervals inside the original candidate. No text, rule or version replacement
+  is accepted. Malformed payloads return 422; stale token/source, invalid bounds,
+  ineligible candidate or non-READY scan returns 409. Other-owner scan returns
+  404. Success returns `CleanupScanRead` after saving ranges and DELETE.
+- A range save never applies cleanup or creates a message version. KEEP/DELETE
+  preserves refinement. Preview/apply use the saved exact ranges; preview
+  `summary.fragments` counts ranges while selected/applied counts remain
+  candidate counts. Refresh preview after any choice/range change.
+
+See [range contract](system/CONTENT_CLEANUP_CONTRACT.md#editable-candidate-ranges-local-source-2026-10-15).
+New API source requires schema 0051; production API/schema remain unchanged.
+
 Conversation metadata contract (unchanged backend, verified 2026-10-09): PATCH
 `/api/conversations/{conversation_id}` returns canonical `ConversationDetail`.
 Omitted description preserves it; explicit null/empty/whitespace clears it. The
@@ -447,8 +469,22 @@ Stable failure codes are `BATCH_EXPORT_SOURCE_UNAVAILABLE`,
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/tasks/{job_id}/cancel` | Cancel a conversation merge or ordered deletion. A running job returns `cancelling`; a queued/already-cancelled job returns `cancelled`; completed or unsupported tasks return `409`. |
-
 | `POST` | `/api/conversations/batch-delete` | Queue ordered permanent deletion of one or more conversations; returns `202 BackgroundTaskRead`. The task commits one conversation at a time, reports `deleted_ids` progress, and supports stopping only the not-yet-started items via `/api/tasks/{job_id}/cancel`. |
+| `GET` | `/api/conversations/batch-delete/requests/{request_key}` | Read the authenticated owner's retained deletion admission; returns `{found, task}` without submitting or restarting deletion. Local source-only addition, not deployed. |
+
+Ordered deletion 的本地更新（2026-10-14，未运行验证、未部署）保留可选
+`Idempotency-Key`；非空 key 最长 200 字符。相同账户/key 绑定按首次出现去重后的
+conversation ID **顺序**，所有保留状态均返回同一个最早任务，包括 failed/cancelled，
+不会自动重新 admission。改变目标或顺序返回 `409 DELETE_REQUEST_CONFLICT`。
+回执 replay 先于当前源对话存在性校验，原任务删掉源之后仍可返回原回执。
+PostgreSQL 沿用账户/key 事务 advisory lock；没有新增 migration 或 worker 并发。
+
+回执 GET 的 key 长度为 1–200 字符，存在时 `found=true` 并返回正常
+`BackgroundTaskRead`，不存在时 `{found:false, task:null}`。不返回原 payload/key，
+不校验源仍存在，不受 Task Center active-result 窗口限制；仅在原任务记录保留时
+可恢复。读取失败不是不存在。前端不自动 GET 或 POST；只在用户主动核对得到
+明确 missing 后，允许再次危险确认并以原 key/目标重试。详见
+[删除请求审查](execution/ux-audit-conversation-delete-admission-2026-10-14.md)。
 
 `GET /api/tasks/{job_id}` and `GET /api/tasks/active` expose `cancellable` and `attempt_count`. Task status includes `cancelling` and `cancelled`. Merge results preserve canonical versions, render blocks, source refs and annotation mappings and commit atomically. Deletion task results contain `deleted_ids` and per-item `failed` entries when applicable.
 

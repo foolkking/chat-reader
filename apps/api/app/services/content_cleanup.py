@@ -920,8 +920,10 @@ def preview_occurrences(
     rule_id: uuid.UUID | None = None,
     conversation_id: uuid.UUID | None = None,
     selected_only: bool = False,
+    occurrence_id: uuid.UUID | None = None,
 ) -> list[dict[str, object]]:
     from app.services.cleanup_review import filter_occurrences
+    from app.services.cleanup_ranges import range_edit_token
     from app.services.cleanup_rule_access import canonical_rule_id, personal_name
     scan = db.get(ContentCleanupScan, scan_id)
     query = (
@@ -940,6 +942,8 @@ def preview_occurrences(
         .join(ContentCleanupRule, ContentCleanupRule.id == ContentCleanupRuleRevision.rule_id)
         .filter(ContentCleanupOccurrence.scan_id == scan_id)
     )
+    if occurrence_id is not None:
+        query = query.filter(ContentCleanupOccurrence.id == occurrence_id)
     rows = (
         filter_occurrences(query, rule_id=rule_id, conversation_id=conversation_id, selected_only=selected_only)
         .order_by(ContentCleanupOccurrence.conversation_id, ContentCleanupOccurrence.message_id, ContentCleanupOccurrence.start_offset)
@@ -970,6 +974,8 @@ def preview_occurrences(
             "decision": occurrence.decision,
             "match_mode": occurrence.match_mode,
             "evidence_codes": occurrence.evidence_codes or [],
+            "reviewed_ranges": occurrence.reviewed_ranges,
+            "edit_token": range_edit_token(occurrence),
             "start_offset": occurrence.start_offset,
             "end_offset": occurrence.end_offset,
             "line_start": occurrence.line_start,
@@ -1107,7 +1113,14 @@ def _apply_scan(db: Session, scan_id: uuid.UUID) -> dict[str, object]:
                     occurrence.decision = "CONFLICT"
                 continue
             text = version.display_text
-            ranges = sorted((item.start_offset, item.end_offset) for item in message_occurrences)
+            from app.services.cleanup_ranges import occurrence_ranges
+            try:
+                ranges = sorted(span for item in message_occurrences for span in occurrence_ranges(item))
+            except ValueError:
+                conflicts += len(message_occurrences)
+                for occurrence in message_occurrences:
+                    occurrence.decision = "CONFLICT"
+                continue
             if any(start < 0 or end > len(text) or start >= end for start, end in ranges):
                 conflicts += len(message_occurrences)
                 for occurrence in message_occurrences:

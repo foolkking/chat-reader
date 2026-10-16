@@ -108,7 +108,7 @@ def preview_token(db: Session, scan_id: uuid.UUID) -> str:
     ).order_by(MessageVersion.id).yield_per(1):
         digest.update(f"{version_id}:{source_fingerprint(source)}\n".encode())
     for row in db.query(Occurrence.id, Occurrence.message_version_id, Message.current_version_id, Message.content_hash, MessageVersion.content_hash, Occurrence.source_content_hash, Occurrence.start_offset,
-        Occurrence.end_offset, Occurrence.decision_updated_at, Message.is_deleted, Conversation.status, Conversation.deleted_at).join(
+        Occurrence.end_offset, Occurrence.decision_updated_at, Occurrence.reviewed_ranges, Message.is_deleted, Conversation.status, Conversation.deleted_at).join(
         Message, Message.id == Occurrence.message_id).join(MessageVersion, MessageVersion.id == Occurrence.message_version_id).join(Conversation, Conversation.id == Occurrence.conversation_id).filter(
         Occurrence.scan_id == scan_id, Occurrence.decision == "DELETE").order_by(Occurrence.id).yield_per(250):
         digest.update(("|".join(str(value) for value in row) + "\n").encode())
@@ -117,13 +117,21 @@ def preview_token(db: Session, scan_id: uuid.UUID) -> str:
 
 def preview_changes(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int) -> dict:
     from app.services.content_cleanup import _MessageValidation, _occurrence_still_matches
+    from app.services.cleanup_ranges import validated_ranges, occurrence_ranges
     if db.query(ContentCleanupScan).filter_by(id=scan_id).with_for_update().one_or_none() is None:
         raise ValueError("Noise scan is no longer available.")
     source_token = preview_token(db, scan_id)
     selected = db.query(Occurrence).filter(Occurrence.scan_id == scan_id, Occurrence.decision == "DELETE")
+    fragment_count = 0
+    for start, end, reviewed in selected.with_entities(Occurrence.start_offset, Occurrence.end_offset, Occurrence.reviewed_ranges).yield_per(250):
+        try:
+            fragment_count += len(validated_ranges(start, end, reviewed))
+        except ValueError:
+            # Count the selected candidate without inventing a usable range.
+            fragment_count += 1
     summary = {"conversations": selected.with_entities(func.count(func.distinct(Occurrence.conversation_id))).scalar(),
         "messages": selected.with_entities(func.count(func.distinct(Occurrence.message_id))).scalar(),
-        "fragments": selected.count()}
+        "fragments": fragment_count}
     message_ids = [row[0] for row in selected.with_entities(Occurrence.message_id).group_by(Occurrence.message_id).order_by(Occurrence.message_id).offset(offset).limit(limit)]
     items = []
     for message_id in message_ids:
@@ -133,7 +141,10 @@ def preview_changes(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int)
         conversation = db.get(Conversation, rows[0].conversation_id)
         before = version.display_text
         conflict = message.is_deleted or message.current_version_id != version.id or conversation.status != "active" or conversation.deleted_at is not None
-        spans = [(row.start_offset, row.end_offset) for row in rows]
+        try:
+            spans = sorted(span for row in rows for span in occurrence_ranges(row))
+        except ValueError:
+            spans, conflict = [], True
         conflict = conflict or any(spans[index][1] > spans[index + 1][0] for index in range(len(spans) - 1))
         validation = _MessageValidation(message.role, before)
         conflict = conflict or any(row.message_version_id != version.id or not _occurrence_still_matches(db, message.role, before, row, validation) for row in rows)
@@ -148,7 +159,7 @@ def preview_changes(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int)
             conflict = not after.strip()
         items.append({"conversation_id": str(conversation.id), "conversation_title": conversation.display_title,
             "message_id": str(message_id), "role": message.role, "before": before, "after": before if conflict else after,
-            "conflict": bool(conflict), "fragments": len(rows),
+            "conflict": bool(conflict), "fragments": len(spans) if spans else len(rows),
             "removed_ranges": [] if conflict else [{"start_offset": start, "end_offset": end} for start, end in spans]})
     if source_token != preview_token(db, scan_id):
         raise ValueError("Source changed while preparing the preview. Preview the changes again.")

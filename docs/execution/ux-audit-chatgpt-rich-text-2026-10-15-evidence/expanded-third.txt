@@ -1,0 +1,167 @@
+TAP version 13
+# Subtest: raw rich wrappers retain answer text, emphasis, badge and divider semantics
+ok 1 - raw rich wrappers retain answer text, emphasis, badge and divider semantics
+  ---
+  duration_ms: 27.1476
+  ...
+# Subtest: multiply escaped rich exports restore headings, emphasis, code and ordered lists
+ok 2 - multiply escaped rich exports restore headings, emphasis, code and ordered lists
+  ---
+  duration_ms: 9.3808
+  ...
+# Subtest: one-, two- and three-slash exported formatting is bounded to an established profile
+ok 3 - one-, two- and three-slash exported formatting is bounded to an established profile
+  ---
+  duration_ms: 16.2303
+  ...
+# Subtest: normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+ok 4 - normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+  ---
+  duration_ms: 0.3737
+  ...
+# Subtest: malformed, unclosed and excessively deep profiles do not authorize recovery
+ok 5 - malformed, unclosed and excessively deep profiles do not authorize recovery
+  ---
+  duration_ms: 0.3854
+  ...
+# Subtest: raw and escaped layout examples in fenced/inline/indented code never establish a profile
+ok 6 - raw and escaped layout examples in fenced/inline/indented code never establish a profile
+  ---
+  duration_ms: 0.3528
+  ...
+# Subtest: code within a real profile retains literal tags, escapes and longer fences exactly
+ok 7 - code within a real profile retains literal tags, escapes and longer fences exactly
+  ---
+  duration_ms: 0.4867
+  ...
+# Subtest: escaped inline-code recovery restores delimiters only, never its body
+ok 8 - escaped inline-code recovery restores delimiters only, never its body
+  ---
+  duration_ms: 0.4251
+  ...
+# Subtest: raw profiles do not turn deliberately escaped headings and emphasis into formatting
+ok 9 - raw profiles do not turn deliberately escaped headings and emphasis into formatting
+  ---
+  duration_ms: 0.3828
+  ...
+# Subtest: rich and math compatibility compose without changing currency, formulas or code
+ok 10 - rich and math compatibility compose without changing currency, formulas or code
+  ---
+  duration_ms: 28.2208
+  ...
+# Subtest: unknown attributes, scripts, links, images and JSX expressions are never executed
+ok 11 - unknown attributes, scripts, links, images and JSX expressions are never executed
+  ---
+  duration_ms: 6.5596
+  ...
+# Subtest: tokens beyond the supported escape depth remain literal
+ok 12 - tokens beyond the supported escape depth remain literal
+  ---
+  duration_ms: 0.239
+  ...
+# Subtest: input/token budgets fail closed without truncating content
+ok 13 - input/token budgets fail closed without truncating content
+  ---
+  duration_ms: 15.9237
+  ...
+# Subtest: repeated projection and CRLF/Unicode content preserve ordered readable content
+ok 14 - repeated projection and CRLF/Unicode content preserve ordered readable content
+  ---
+  duration_ms: 1.3142
+  ...
+# Subtest: cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+ok 15 - cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+  ---
+  duration_ms: 2.617
+  ...
+# Subtest: each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+ok 16 - each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+  ---
+  duration_ms: 4.4957
+  ...
+# Subtest: projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+ok 17 - projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+  ---
+  duration_ms: 0.6042
+  ...
+# Subtest: source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+ok 18 - source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+  ---
+  duration_ms: 3.6865
+  ...
+# Subtest: actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+ok 19 - actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+  ---
+  duration_ms: 13.2369
+  ...
+# Subtest: actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+ok 20 - actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+  ---
+  duration_ms: 4.3198
+  ...
+# Subtest: actual block renderer reads inherited profile while preserving heading/code boundaries
+ok 21 - actual block renderer reads inherited profile while preserving heading/code boundaries
+  ---
+  duration_ms: 6.2298
+  ...
+# Subtest: actual message wiring propagates the profile across regular block paths with canonical anchors
+ok 22 - actual message wiring propagates the profile across regular block paths with canonical anchors
+  ---
+  duration_ms: 8.695
+  ...
+# Subtest: actual message wiring propagates the profile across element block paths with canonical anchors
+not ok 23 - actual message wiring propagates the profile across element block paths with canonical anchors
+  ---
+  duration_ms: 2.3917
+  location: 'file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:343:3'
+  failureType: 'testCodeFailure'
+  error: '(0 , reader_block_layout_1.readerBlockLayoutSignature) is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useVirtualLayoutMeasurements (eval at compileComponent (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:262:3), <anonymous>:459:113)
+    ElementVirtualizedBlocks (eval at compileComponent (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:262:3), <anonymous>:188:5)
+    Object.react_stack_bottom_frame (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:9808:18)
+    renderWithHooks (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5062:19)
+    renderElement (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5497:23)
+    retryNode (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6417:31)
+    renderNodeDestructive (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6367:11)
+    renderNode (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6905:18)
+    renderElement (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5619:18)
+    retryNode (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6417:31)
+  ...
+# Subtest: actual message wiring propagates the profile across window block paths with canonical anchors
+not ok 24 - actual message wiring propagates the profile across window block paths with canonical anchors
+  ---
+  duration_ms: 1.5584
+  location: 'file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:343:3'
+  failureType: 'testCodeFailure'
+  error: '(0 , reader_block_layout_1.readerBlockLayoutSignature) is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    useVirtualLayoutMeasurements (eval at compileComponent (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:262:3), <anonymous>:459:113)
+    WindowVirtualizedBlocks (eval at compileComponent (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:262:3), <anonymous>:240:5)
+    Object.react_stack_bottom_frame (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:9808:18)
+    renderWithHooks (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5062:19)
+    renderElement (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5497:23)
+    retryNode (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6417:31)
+    renderNodeDestructive (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6367:11)
+    renderNode (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6905:18)
+    renderElement (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:5619:18)
+    retryNode (E:\1project\chat-reader\node_modules\.pnpm\react-dom@19.2.8_react@19.2.8\node_modules\react-dom\cjs\react-dom-server-legacy.node.development.js:6417:31)
+  ...
+# Subtest: actual shared safe-link/image components stay inert for projected untrusted content
+ok 25 - actual shared safe-link/image components stay inert for projected untrusted content
+  ---
+  duration_ms: 4.571
+  ...
+1..25
+# tests 25
+# suites 0
+# pass 23
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1321.0657

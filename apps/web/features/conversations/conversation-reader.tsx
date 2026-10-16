@@ -84,12 +84,14 @@ export function ConversationReader({
   libraryMode = false,
   onOpenLibrary,
   onFocusModeChange,
+  onPrepareSearchRetry,
 }: {
   conversationId: string;
   dataSource?: ReaderDataSource;
   libraryMode?: boolean;
   onOpenLibrary?: () => void;
   onFocusModeChange?: (active: boolean) => void;
+  onPrepareSearchRetry?: () => Promise<void>;
 }) {
   const t = useTranslations();
   const { readerDensityMode, readerFontSizePx, readerWidthMode, readerDefaultFocus, resolvedLocale } = usePreferences();
@@ -117,6 +119,15 @@ export function ConversationReader({
   const [searchPanelState, setSearchPanelState] = useState<ConversationSearchPanelState>({ query: "", documentType: "message", role: "all", activeIndex: 0 });
   const [searchNavigation, setSearchNavigation] = useState<SearchNavigationContext | null>(null);
     const [searchHighlight, setSearchHighlight] = useState<{ targetId: string; quote: string; start?: number; end?: number; prefix?: string; suffix?: string } | null>(null);
+  const searchNavigationRef = useRef<SearchNavigationContext | null>(null);
+  const publishSearchNavigation = useCallback((context: SearchNavigationContext | null) => {
+    searchNavigationRef.current = context;
+    setSearchNavigation(context);
+  }, []);
+  const clearSearchNavigation = useCallback(() => {
+    publishSearchNavigation(null);
+    setSearchHighlight(null);
+  }, [publishSearchNavigation]);
   const [showFiles, setShowFiles] = useState(false);
   const [tocRefreshOpen, setTocRefreshOpen] = useState(false);
   const [tocRefreshTask, setTocRefreshTask] = useState<{ task: BackgroundTaskRead; input: TocRefreshInput } | null>(null);
@@ -135,14 +146,28 @@ export function ConversationReader({
   const [focusMode, setFocusMode] = useState(false);
   const [desktopActionsExpanded, setDesktopActionsExpanded] = useState(false);
   const [mobileActionsExpanded, setMobileActionsExpanded] = useState(false);
-  const [utilityPanel, setUtilityPanel] = useState<ReaderUtilityPanel>(null);
+  const [utilityPanel, setUtilityPanelState] = useState<ReaderUtilityPanel>(null);
+  const [navigationActivation, setNavigationActivation] = useState(0);
+  const navigationSheetScopeRef = useRef<{
+    active: boolean; sequence: number; pendingKey: string | null;
+  } | null>(null);
+  const retireNavigationSheet = useCallback(() => {
+    const scope = navigationSheetScopeRef.current;
+    if (!scope) return;
+    scope.active = false;
+    scope.sequence++;
+    scope.pendingKey = null;
+  }, []);
+  const setUtilityPanel = useCallback((panel: ReaderUtilityPanel) => {
+    retireNavigationSheet();
+    // A close/open pair may finish with the same utility value. Its new
+    // activation must get a new scope, never reactivate retained callbacks.
+    if (panel === "navigation") setNavigationActivation((value) => value + 1);
+    setUtilityPanelState(panel);
+  }, [retireNavigationSheet]);
   const [navigationTab, setNavigationTab] = useState<"dialogue" | "sections">("dialogue");
   const [navigationViewport, setNavigationViewport] = useState<"mobile" | "tablet" | "desktop">("mobile");
   const [mobileSidebarOpenSignal, setMobileSidebarOpenSignal] = useState(0);
-  const [mobileNavigation, setMobileNavigation] = useState<{ pending: boolean; error: string | null }>({
-    pending: false,
-    error: null,
-  });
   const [showOfflineGuide, setShowOfflineGuide] = useState(false);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
@@ -172,7 +197,7 @@ export function ConversationReader({
 
   useEffect(() => {
     if (navigationViewport === "desktop" && utilityPanel === "navigation") setUtilityPanel(null);
-  }, [navigationViewport, utilityPanel]);
+  }, [navigationViewport, setUtilityPanel, utilityPanel]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("chat-reader:conversation-files-open");
@@ -256,6 +281,9 @@ export function ConversationReader({
   );
   const firstContentReportedRef = useRef(false);
   const isOffline = dataSource.mode === "offline";
+  // IndexedDB reads must not wait for the network; remote sources keep the
+  // inherited policy. Share this with navigation observers and prefetches.
+  const readerQueryNetworkMode = dataSource.mode === "offline" ? "always" : undefined;
   const canManageCanonical = dataSource.capabilities.canonicalManagement;
   const canBrowseAttachments = dataSource.capabilities.attachments !== "none";
   const annotationRepository = isOffline ? offlineAnnotationRepository : remoteAnnotationRepository;
@@ -335,7 +363,7 @@ export function ConversationReader({
     return () => {
       active = false;
     };
-  }, [focusMode, onFocusModeChange]);
+  }, [focusMode, onFocusModeChange, setUtilityPanel]);
 
   useEffect(() => {
     const capturePreferenceAnchor = () => {
@@ -439,6 +467,23 @@ export function ConversationReader({
   const activeMessageIdRef = useRef<string | null>(null);
   const activeBlockIdRef = useRef<string | null>(null);
 
+  useLayoutEffect(() => {
+    clearSearchNavigation();
+    setNavigationStatus("idle");
+    setNavigationFailureReason(null);
+    lastNavigationTargetRef.current = null;
+    resolvedLocatorKeysRef.current.clear();
+    navigationInProgressRef.current = false;
+    if (locatePulseTimerRef.current) window.clearTimeout(locatePulseTimerRef.current);
+    locatePulseTimerRef.current = null;
+    setLocatePulse(null);
+    return () => {
+      searchNavigationRef.current = null;
+      navigationTokenRef.current += 1;
+      navigationInProgressRef.current = false;
+    };
+  }, [clearSearchNavigation, conversationId, dataSource]);
+
   const mobileHeaderVisible = useMobileHeaderAutoHide({
     scrollRootRef: scrollContainerRef,
     forcedVisible: mobileActionsExpanded || utilityPanel !== null,
@@ -461,6 +506,7 @@ export function ConversationReader({
   const conversationQuery = useQuery({
     queryKey: ["conversation", dataSource.mode, conversationId],
     queryFn: () => dataSource.getConversation(conversationId),
+    ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
   });
   const conversationReadUnavailable = !isOffline && conversationQuery.isError
     && conversationQuery.error instanceof ApiRequestError && [401, 403, 404].includes(conversationQuery.error.status);
@@ -468,6 +514,32 @@ export function ConversationReader({
     && !conversationReadUnavailable && !mergedIntoConversationId;
   const readerSurfaceAvailable = conversationQuery.data?.id === conversationId && !conversationQuery.isLoading
     && (!conversationQuery.isError || retainReaderOnReadError);
+  const navigationSheetVisible = readerSurfaceAvailable && utilityPanel === "navigation"
+    && navigationViewport !== "desktop" && !sourceEditorTarget;
+  const navigationSheetScope = useMemo(() => ({
+    active: false, sequence: 0, pendingKey: null as string | null,
+  }), [navigationActivation, navigationSheetVisible, navigationTab, navigationViewport, recentOwner]);
+  const [mobileNavigation, setMobileNavigation] = useState<{
+    scope?: typeof navigationSheetScope; sequence?: number; pending: boolean; error: "failed" | null;
+  }>({ pending: false, error: null });
+  const currentMobileNavigation = navigationSheetVisible && mobileNavigation.scope === navigationSheetScope
+    && mobileNavigation.sequence === navigationSheetScope.sequence && ownsReaderReadRecovery(recentOwner)
+    ? mobileNavigation : null;
+  useLayoutEffect(() => {
+    navigationSheetScopeRef.current = navigationSheetScope;
+    navigationSheetScope.active = navigationSheetVisible;
+    return () => {
+      navigationSheetScope.active = false;
+      navigationSheetScope.sequence++;
+      navigationSheetScope.pendingKey = null;
+      if (navigationSheetScopeRef.current === navigationSheetScope) navigationSheetScopeRef.current = null;
+    };
+  }, [navigationSheetScope, navigationSheetVisible]);
+  const handleNavigationTabChange = useCallback((tab: "dialogue" | "sections") => {
+    if (tab === navigationTab) return;
+    retireNavigationSheet();
+    setNavigationTab(tab);
+  }, [navigationTab, retireNavigationSheet]);
 
   useEffect(() => {
     const conversation = conversationReadUnavailable || conversationQuery.data?.id !== conversationId ? null : conversationQuery.data;
@@ -525,6 +597,7 @@ export function ConversationReader({
   const positionQuery = useQuery({
     queryKey: ["reading-position", dataSource.mode, conversationId],
     queryFn: () => dataSource.getReadingPosition(conversationId),
+    ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
   });
 
   const positionContext = `${dataSource.mode}:${conversationId}`;
@@ -552,6 +625,7 @@ export function ConversationReader({
       INITIAL_WINDOW_TURNS,
     ),
     enabled: canLoadInitialWindow && conversationQuery.isSuccess,
+    ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
   });
   const initialWindowReadScope = useMemo(() => ({ visit: recentOwner, anchor: initialAnchorMessageId }), [initialAnchorMessageId, recentOwner]);
   const initialWindowReadScopeRef = useRef(initialWindowReadScope);
@@ -936,17 +1010,23 @@ export function ConversationReader({
 
   const navigateToTarget = useCallback(
     async (target: NavigateTarget, options?: { restorePosition?: boolean }): Promise<NavigationResult> => {
+      const { messageId, blockIndex, characterOffset, endCharacterOffset, quote, prefix, suffix, alignmentOffset, allowMessageFallback } = target;
+      const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
+      const messageIdDom = `message-${messageId}`;
+      if (!ownsReaderReadRecovery(recentOwner)) {
+        return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
+      }
       const navigationStartedAt = window.performance.now();
       let resolutionReported = false;
       let mountStartedAt: number | null = null;
       let mountReported = false;
-      const { messageId, blockIndex, characterOffset, endCharacterOffset, quote, prefix, suffix, alignmentOffset, allowMessageFallback } = target;
        const targetFirst = target.source === "annotation" || target.source === "attachment" ||
          target.source === "search" || target.source === "section-toc" || target.source === "source-editor" || target.preferTocPipeline || characterOffset !== undefined;
       let timingPath: "local" | "remote" | "message-window" = targetFirst ? "remote" : "message-window";
       const resolvedAlignmentOffset = alignmentOffset ?? (targetFirst ? ACTIVE_READING_OFFSET : 12);
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
+      const tokenIsCurrent = () => navigationTokenRef.current === token && ownsReaderReadRecovery(recentOwner);
       lastNavigationTargetRef.current = target;
       navigationInProgressRef.current = true;
       // Every explicit choice, including a dialogue-index/message jump, replaces
@@ -967,8 +1047,6 @@ export function ConversationReader({
       // Real wheel/touch/key input still increments its own intent and cancels
       // restoration, so a user taking over is never swallowed by this guard.
       if (!options?.restorePosition) scrollIntentSequenceRef.current += 1;
-      const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
-      const messageIdDom = `message-${messageId}`;
       setActiveMessageId(messageId);
       setActiveBlockId(blockId);
       if (locatePulseTimerRef.current) window.clearTimeout(locatePulseTimerRef.current);
@@ -1004,6 +1082,7 @@ export function ConversationReader({
             let completeWindow: CompleteTurnWindow;
             try {
               targetContext = await dataSource.getTargetContext(conversationId, target);
+              if (!tokenIsCurrent()) return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
               resolvedLocator = targetContext.resolvedLocator;
               completeWindow = await loadCompleteTurnWindow(
                 dataSource,
@@ -1012,17 +1091,17 @@ export function ConversationReader({
                 undefined,
                 targetContext.readerTurn,
               );
+              if (!tokenIsCurrent()) return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
               if (target.source === "annotation" && resolvedLocator?.status === "EXACT") {
                 resolvedLocatorKeysRef.current.add(locatorKey);
               }
             } catch {
-              if (navigationTokenRef.current === token) {
-                setNavigationStatus("failed");
-                setNavigationFailureReason("target-context-failed");
-              }
+              if (!tokenIsCurrent()) return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
+              setNavigationStatus("failed");
+              setNavigationFailureReason("target-context-failed");
               return { ok: false, targetId: blockId ?? messageIdDom, reason: "target-context-failed" };
             }
-            if (navigationTokenRef.current !== token) {
+            if (!tokenIsCurrent()) {
               return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
             }
             targetPage = completeWindow;
@@ -1038,7 +1117,7 @@ export function ConversationReader({
           }
         } else if (!loadedWindowRef.current.items.some((message) => message.id === messageId)) {
           const page = await loadCompleteTurnWindow(dataSource, conversationId, messageId);
-          if (navigationTokenRef.current !== token) {
+          if (!tokenIsCurrent()) {
             return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
           }
           targetPage = page;
@@ -1050,6 +1129,9 @@ export function ConversationReader({
           loadedWindowRef.current.items.find((message) => message.id === messageId);
         if (!knownMessage) {
           knownMessage = (await dataSource.getReaderTurn(conversationId, messageId)).items.find((message) => message.id === messageId);
+        }
+        if (!tokenIsCurrent()) {
+          return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
         }
 
         if (!knownMessage) {
@@ -1092,7 +1174,7 @@ export function ConversationReader({
             ? resolvedMessage.render_blocks?.find((block) => block.id === effectiveRenderBlockId)?.block_index
             : undefined;
 
-        if (navigationTokenRef.current !== token) {
+        if (!tokenIsCurrent()) {
           return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
         }
 
@@ -1133,9 +1215,10 @@ export function ConversationReader({
           blockLease = await acquireReaderBlockLease(
             messageId,
             targetBlockIndex,
-            () => navigationTokenRef.current === token,
+            tokenIsCurrent,
           );
         }
+        if (!tokenIsCurrent()) return { ok: false, targetId: resolvedTargetId, reason: "cancelled" };
         // A virtualized block may not exist during the first lookup. Resolve
         // its stable id again after the lease has mounted the target row.
         resolveStableTarget();
@@ -1144,7 +1227,7 @@ export function ConversationReader({
           root: scrollContainerRef.current,
           targetId: resolvedTargetId,
           fallbackId: resolvedTargetId === messageIdDom ? undefined : messageIdDom,
-          tokenIsCurrent: () => navigationTokenRef.current === token,
+          tokenIsCurrent,
           offset: resolvedAlignmentOffset,
            characterOffset: exactVersionMatches && (resolvedTargetId === effectiveBlockId || Boolean(effectiveRenderBlockId)) ? effectiveCharacterOffset : undefined,
            endCharacterOffset: exactVersionMatches && (resolvedTargetId === effectiveBlockId || Boolean(effectiveRenderBlockId)) ? effectiveEndCharacterOffset : undefined,
@@ -1154,7 +1237,7 @@ export function ConversationReader({
           timeoutMs: 8000,
           allowFallback: allowMessageFallback ?? Boolean(quote || effectiveCharacterOffset !== undefined || effectiveRenderBlockId || target.occurrenceKey),
         });
-        if (navigationTokenRef.current !== token) {
+        if (!tokenIsCurrent()) {
           return { ok: false, targetId: mountedResult.targetId, reason: "cancelled" };
         }
         const result: NavigationResult = mountedResult;
@@ -1179,7 +1262,7 @@ export function ConversationReader({
           await restoreScrollAnchor({
             root,
             anchor: stableAnchor,
-            tokenIsCurrent: () => navigationTokenRef.current === token && !userScrollIntentRef.current,
+            tokenIsCurrent: () => tokenIsCurrent() && !userScrollIntentRef.current,
             // A mounted, exact-version target has already passed the expensive
             // data and virtualization phases. Keep a short layout guard for
             // fonts/attachments, while retaining the conservative window for
@@ -1188,7 +1271,7 @@ export function ConversationReader({
             settleMs: locallyResolved ? 100 : (targetFirst ? 360 : 220),
             timeoutMs: targetFirst ? 5000 : 2800,
           });
-          if (navigationTokenRef.current !== token) {
+          if (!tokenIsCurrent()) {
             return { ok: false, targetId: result.targetId, reason: "cancelled" };
           }
           setNavigationStage(root, result.fallback ? "settled:fallback" : "settled");
@@ -1210,7 +1293,7 @@ export function ConversationReader({
               : { kind: "marker" as const, left: Math.max(4, targetRect.left - 7), top: targetRect.top, width: 3, height: Math.min(32, Math.max(18, targetRect.height)), key: token };
             setLocatePulse(nextPulse);
             locatePulseTimerRef.current = window.setTimeout(() => {
-              if (navigationTokenRef.current === token) setLocatePulse(null);
+              if (tokenIsCurrent()) setLocatePulse(null);
             }, 720);
           }
           if (!result.fallback) setNavigationStatus("idle");
@@ -1220,12 +1303,13 @@ export function ConversationReader({
         }
         return result;
       } catch {
+        if (!tokenIsCurrent()) return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
         setNavigationStage(scrollContainerRef.current, "failed:load-failed");
         setNavigationStatus("failed");
         setNavigationFailureReason("load-failed");
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "load-failed" };
       } finally {
-        const unfinishedOutcome: ReaderPerformanceOutcome = navigationTokenRef.current === token
+        const unfinishedOutcome: ReaderPerformanceOutcome = tokenIsCurrent()
           ? "failed"
           : "cancelled";
         if (!resolutionReported) {
@@ -1250,13 +1334,16 @@ export function ConversationReader({
         }
       }
     },
-    [applyLoadedWindow, conversationId, conversationQuery.data, dataSource, queryClient],
+    [applyLoadedWindow, conversationId, conversationQuery.data, dataSource, queryClient, recentOwner],
   );
 
   const handleSearchNavigate = useCallback(async (
     target: SearchNavigationTarget,
     context: SearchNavigationContext,
+    isCurrent?: () => boolean,
   ): Promise<NavigationResult> => {
+    // Publication ownership only; a begun Reader navigation keeps its own lifecycle.
+    if (isCurrent && !isCurrent()) return { ok: false, targetId: `message-${target.messageId}`, reason: "cancelled" };
     const result = await navigateToTarget({
       messageId: target.messageId,
       messageVersionId: target.messageVersionId,
@@ -1269,17 +1356,39 @@ export function ConversationReader({
       suffix: target.suffix,
       source: "search",
     });
-    if (result.ok) {
-      setSearchNavigation(context);
+    if (result.ok && (!isCurrent || isCurrent())) {
+      publishSearchNavigation(context);
       setSearchHighlight({ targetId: result.targetId, quote: target.quote ?? "", start: target.characterOffset, end: target.endCharacterOffset, prefix: target.prefix, suffix: target.suffix });
     }
     return result;
-  }, [navigateToTarget]);
+  }, [navigateToTarget, publishSearchNavigation]);
+
+  const navigateFromNavigationSheet = useCallback(async (target: NavigateTarget) => {
+    const scope = navigationSheetScope;
+    const ownsSheet = () => scope.active && navigationSheetScopeRef.current === scope && ownsReaderReadRecovery(recentOwner);
+    if (!ownsSheet()) return;
+    const key = JSON.stringify(target);
+    if (scope.pendingKey === key) return;
+    const sequence = ++scope.sequence;
+    scope.pendingKey = key;
+    const isCurrent = () => ownsSheet() && scope.sequence === sequence;
+    setMobileNavigation({ scope, sequence, pending: true, error: null });
+    try {
+      const result = await navigateToTarget(target);
+      if (!isCurrent()) return;
+      if (result.ok) setUtilityPanel(null);
+      else setMobileNavigation({ scope, sequence, pending: false, error: result.reason === "cancelled" ? null : "failed" });
+    } catch {
+      if (isCurrent()) setMobileNavigation({ scope, sequence, pending: false, error: "failed" });
+    } finally {
+      if (isCurrent()) scope.pendingKey = null;
+    }
+  }, [navigateToTarget, navigationSheetScope, recentOwner, setUtilityPanel]);
 
   const navigateSearchResult = useCallback(async (index: number) => {
     const context = searchNavigation;
     const target = context?.targets[index];
-    if (!context || !target) return;
+    if (!context || !target || searchNavigationRef.current !== context || !ownsReaderReadRecovery(recentOwner)) return;
     const result = await navigateToTarget({
       messageId: target.messageId,
       messageVersionId: target.messageVersionId,
@@ -1292,11 +1401,11 @@ export function ConversationReader({
       suffix: target.suffix,
       source: "search",
     });
-    if (result.ok) {
-      setSearchNavigation({ ...context, index });
+    if (result.ok && searchNavigationRef.current === context && ownsReaderReadRecovery(recentOwner)) {
+      publishSearchNavigation({ ...context, index });
         setSearchHighlight({ targetId: result.targetId, quote: target.quote ?? "", start: target.characterOffset, end: target.endCharacterOffset, prefix: target.prefix, suffix: target.suffix });
     }
-  }, [navigateToTarget, searchNavigation]);
+  }, [navigateToTarget, publishSearchNavigation, recentOwner, searchNavigation]);
 
   useEffect(() => applySearchHighlight(searchHighlight), [searchHighlight]);
 
@@ -1976,7 +2085,9 @@ export function ConversationReader({
         preferredAnchorMessageId: result.survivor_message_id,
       });
     } catch (error) {
-      window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: error instanceof Error ? error.message : "Merge failed", tone: "error" } }));
+      window.dispatchEvent(new CustomEvent("chat-reader:toast", {
+        detail: { message: readerMutationError(error, resolvedLocale === "zh-CN", "merge"), tone: "error" },
+      }));
     }
   }
 
@@ -1995,7 +2106,9 @@ export function ConversationReader({
       window.setTimeout(() => setDeletedMessage((current) => current?.message.id === message.id && current.status === "deleted" ? null : current), 8000);
     } catch (error) {
       setNavigationStatus("failed");
-      window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: error instanceof Error ? error.message : "Delete failed" } }));
+      window.dispatchEvent(new CustomEvent("chat-reader:toast", {
+        detail: { message: readerMutationError(error, resolvedLocale === "zh-CN", "delete"), tone: "error" },
+      }));
     }
   }
 
@@ -2015,6 +2128,30 @@ export function ConversationReader({
       setDeletedMessage((current) => current ? { ...current, status: "restore_failed", error: messageText } : current);
       window.dispatchEvent(new CustomEvent("chat-reader:toast", { detail: { message: messageText, tone: "error", persist: true } }));
     }
+  }
+
+  function readerMutationError(cause: unknown, zh: boolean, action: "merge" | "delete"): string {
+    if (cause instanceof ApiRequestError) {
+      if (cause.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
+      if (cause.status === 403) return zh ? "当前权限不允许此操作。" : "Your current permissions do not allow this action.";
+      if (cause.status === 404) return zh
+        ? (action === "merge" ? "所选消息已不存在，请刷新 Reader 后重新选择。" : "这条消息已不存在，请刷新 Reader 后重试。")
+        : (action === "merge" ? "One or more selected messages are no longer available. Refresh the Reader and select again." : "This message is no longer available. Refresh the Reader and retry.");
+      if (cause.status === 409) return zh
+        ? "对话已在别处更新，请刷新 Reader 后再操作。"
+        : "The conversation changed elsewhere. Refresh the Reader before trying again.";
+      if (cause.status === 413 || cause.status === 422) return zh
+        ? (action === "merge" ? "所选消息不满足合并条件，请刷新后重新选择相邻消息。" : "当前消息无法删除，请刷新 Reader 后重试。")
+        : (action === "merge" ? "The selected messages cannot be merged. Refresh and select adjacent messages again." : "This message cannot be deleted. Refresh the Reader and retry.");
+      if (cause.status === 429) return zh ? "操作过于频繁，请稍后重试。" : "Too many requests. Try again shortly.";
+    }
+    return zh
+      ? (action === "merge"
+        ? "合并结果尚未确认。请先刷新 Reader 检查消息，再决定是否重试。"
+        : "删除结果尚未确认。请先刷新 Reader 检查消息状态，再决定是否重试。")
+      : (action === "merge"
+        ? "The merge result is not confirmed. Refresh the Reader to check the messages before retrying."
+        : "The delete result is not confirmed. Refresh the Reader to check the message before retrying.");
   }
 
   const openUtilityPanel = useCallback(async (panel: Exclude<ReaderUtilityPanel, null | "navigation">) => {
@@ -2050,7 +2187,7 @@ export function ConversationReader({
     setShowExport(panel === "export");
     setShowSearch(panel === "search");
     setShowFiles(panel === "files");
-  }, [conversationId, closeSourceEditorForWorkspace, showExport, showFiles, showSearch, showShare]);
+  }, [conversationId, closeSourceEditorForWorkspace, setUtilityPanel, showExport, showFiles, showSearch, showShare]);
 
   const refreshAttachmentReferences = useCallback(async () => {
     setNavigationStatus("idle");
@@ -2156,7 +2293,7 @@ export function ConversationReader({
     setShowSearch(false);
     releaseExportScope(`export:${conversationId}`);
     setAnnotationsOpenPreservingAnchor(true);
-  }, [conversationId, annotationsOpen, closeSourceEditorForWorkspace, setAnnotationsOpenPreservingAnchor]);
+  }, [conversationId, annotationsOpen, closeSourceEditorForWorkspace, setAnnotationsOpenPreservingAnchor, setUtilityPanel]);
 
   const openSplitWorkspace = useCallback(async () => {
     if (!(await closeSourceEditorForWorkspace())) return;
@@ -2198,7 +2335,7 @@ export function ConversationReader({
     };
     window.addEventListener("keydown", closeTopSurface);
     return () => window.removeEventListener("keydown", closeTopSurface);
-  }, [conversationId, desktopActionsExpanded, mobileActionsExpanded, showExport, showFiles, showSearch, showShare, utilityPanel]);
+  }, [conversationId, desktopActionsExpanded, mobileActionsExpanded, setUtilityPanel, showExport, showFiles, showSearch, showShare, utilityPanel]);
 
   async function openNavigation(tab: "dialogue" | "sections", opener?: HTMLElement | null) {
     if (!(await closeSourceEditorForWorkspace())) return;
@@ -2213,12 +2350,14 @@ export function ConversationReader({
       queryKey: ["conversation-index", readerSourceKey, conversationId, anchorMessageId ?? "start", "sheet"],
       queryFn: () => dataSource.getDialogueIndex(conversationId, { anchorMessageId, limit: 80 }),
       staleTime: 60_000,
+      ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
     });
     if (anchorMessageId) {
       void queryClient.prefetchQuery({
         queryKey: ["toc", readerSourceKey, conversationId, anchorMessageId, "sheet"],
         queryFn: () => dataSource.getToc(conversationId, { messageId: anchorMessageId, limit: 200 }),
         staleTime: 30_000,
+        ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
       });
     }
   }
@@ -2302,9 +2441,13 @@ export function ConversationReader({
       />;
     }
     return <ReaderState title={t("conversationUnavailable")}
-      detail={isOffline ? conversationQuery.error.message : conversationReadUnavailable
-        ? (resolvedLocale === "zh-CN" ? "当前账户无法访问此对话，请恢复访问后重试。" : "This conversation is unavailable for your account. Restore access, then retry.")
-        : (resolvedLocale === "zh-CN" ? "暂时无法读取对话，请重试。" : "Could not read this conversation. Try again.")}
+      detail={isOffline
+        ? (resolvedLocale === "zh-CN"
+          ? "无法读取此离线对话，请回到资料库确认离线副本后重新打开。"
+          : "This offline conversation could not be opened. Check its offline copy, then reopen it.")
+        : conversationReadUnavailable
+          ? (resolvedLocale === "zh-CN" ? "当前账户无法访问此对话，请恢复访问后重试。" : "This conversation is unavailable for your account. Restore access, then retry.")
+          : (resolvedLocale === "zh-CN" ? "暂时无法读取对话，请重试。" : "Could not read this conversation. Try again.")}
       action={isOffline ? undefined : retryConversationControl} />;
   }
 
@@ -2391,27 +2534,17 @@ export function ConversationReader({
   const navigationTabs = (
     <div className="flex items-center gap-2">
       <div className="grid min-w-0 flex-1 grid-cols-2 rounded-lg bg-subtle p-1">
-        <button type="button" onClick={() => setNavigationTab("dialogue")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${navigationTab === "dialogue" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("dialogueTab")}</button>
-        <button type="button" onClick={() => setNavigationTab("sections")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${navigationTab === "sections" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("sectionsTab")}</button>
+        <button type="button" onClick={() => handleNavigationTabChange("dialogue")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${navigationTab === "dialogue" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("dialogueTab")}</button>
+        <button type="button" onClick={() => handleNavigationTabChange("sections")} className={`min-h-10 rounded-md px-3 text-sm font-medium ${navigationTab === "sections" ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{t("sectionsTab")}</button>
       </div>
       <button type="button" onClick={() => setUtilityPanel(null)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")} title={t("close")}><X className="h-5 w-5" /></button>
     </div>
   );
 
   const navigationContent = navigationTab === "dialogue" ? (
-    <ConversationIndex conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} fallbackMessages={messages} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={async (item) => {
-      setMobileNavigation({ pending: true, error: null });
-      const result = await navigateToTarget({ messageId: item.messageId, messageVersionId: item.messageVersionId, source: "dialogue-index" });
-      setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-      if (result.ok) setUtilityPanel(null);
-    }} />
+    <ConversationIndex conversationId={conversationId} sourceKey={readerSourceKey} networkMode={readerQueryNetworkMode} activeMessageId={activeMessageId} fallbackMessages={messages} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)} onNavigate={(item) => navigateFromNavigationSheet({ messageId: item.messageId, messageVersionId: item.messageVersionId, source: "dialogue-index" })} />
   ) : (
-    <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={async (item) => {
-      setMobileNavigation({ pending: true, error: null });
-      const result = await navigateToTarget(tocNavigationTarget(item));
-      setMobileNavigation({ pending: false, error: result.ok ? null : t("locateFailed") });
-      if (result.ok) setUtilityPanel(null);
-    }} />
+    <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} networkMode={readerQueryNetworkMode} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />
   );
 
   const navigationTargetIsAttachment = Boolean(lastNavigationTargetRef.current?.attachmentId);
@@ -2504,8 +2637,8 @@ export function ConversationReader({
             <span className="shrink-0 text-xs text-secondary">{searchNavigation.index + 1} / {searchNavigation.targets.length}</span>
             <button type="button" onClick={() => void navigateSearchResult(Math.max(0, searchNavigation.index - 1))} disabled={searchNavigation.index === 0} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "上一个匹配" : "Previous match"}><ChevronUp className="h-4 w-4" /></button>
             <button type="button" onClick={() => void navigateSearchResult(Math.min(searchNavigation.targets.length - 1, searchNavigation.index + 1))} disabled={searchNavigation.index >= searchNavigation.targets.length - 1} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "下一个匹配" : "Next match"}><ChevronDown className="h-4 w-4" /></button>
-            <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); void openUtilityPanel("search"); }} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-surface">{resolvedLocale === "zh-CN" ? "返回搜索" : "Return to search"}</button>
-            <button type="button" onClick={() => { setSearchNavigation(null); setSearchHighlight(null); setLocatePulse(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
+            <button type="button" onClick={() => { clearSearchNavigation(); void openUtilityPanel("search"); }} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-surface">{resolvedLocale === "zh-CN" ? "返回搜索" : "Return to search"}</button>
+            <button type="button" onClick={() => { clearSearchNavigation(); setLocatePulse(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
           </div> : null}
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
@@ -2538,6 +2671,7 @@ export function ConversationReader({
                   conversationId={conversationId}
                   fallbackMessages={messages}
                   sourceKey={readerSourceKey}
+                  networkMode={readerQueryNetworkMode}
                   activeMessageId={activeMessageId}
                   ready={canLoadInitialWindow}
                   loadPage={(options) => dataSource.getDialogueIndex(conversationId, options)}
@@ -2551,7 +2685,11 @@ export function ConversationReader({
               ) : null}
 
               {windowQuery.isError && (isOffline || !initialWindowAppliedRef.current && messages.length === 0) ? (
-                isOffline ? <ReaderState title={t("loadFailed")} detail={windowQuery.error.message} /> : (
+                isOffline ? <ReaderState
+                  title={t("loadFailed")}
+                  detail={resolvedLocale === "zh-CN"
+                    ? "此离线副本中的正文暂时无法读取，请回到资料库确认副本后重新打开。"
+                    : "Messages in this offline copy could not be loaded. Check the copy in your library, then reopen the conversation."} /> : (
                   <div role="alert" aria-busy={windowQuery.fetchStatus !== "idle"} data-reader-initial-read-recovery="true">
                     <ReaderState title={t("loadFailed")}
                       detail={initialWindowReadUnavailable
@@ -2623,6 +2761,7 @@ export function ConversationReader({
                 <ConversationToc
                   conversationId={conversationId}
                   sourceKey={readerSourceKey}
+                  networkMode={readerQueryNetworkMode}
                   activeMessageId={activeMessageId}
                   activeItems={activeTocItems}
                   activeHeadingId={activeHeadingId}
@@ -2684,12 +2823,12 @@ export function ConversationReader({
         title={t("navigationTitle")}
         restoreFocus={restoreNavigationFocus}
         header={navigationTabs}
-        status={<>{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</>}
+        status={<>{currentMobileNavigation?.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{currentMobileNavigation?.error ? <p className="text-sm text-[var(--danger)]">{t("locateFailed")}</p> : null}</>}
       >
         {navigationContent}
       </MobileReaderSheet>
       <MobileReaderSheet open={utilityPanel === "search" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={t("search")} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("search")}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setUtilityPanel(null)} showHeader={false} />
+        <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setUtilityPanel(null)} onPrepareRetry={onPrepareSearchRetry} showHeader={false} />
       </MobileReaderSheet>
       <TabletReaderNavigationDrawer
         open={utilityPanel === "navigation" && navigationViewport === "tablet" && !sourceEditorTarget}
@@ -2698,7 +2837,7 @@ export function ConversationReader({
         onClose={() => setUtilityPanel(null)}
         restoreFocus={restoreNavigationFocus}
         header={navigationTabs}
-        status={<>{mobileNavigation.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{mobileNavigation.error ? <p className="text-sm text-[var(--danger)]">{mobileNavigation.error}</p> : null}</>}
+        status={<>{currentMobileNavigation?.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{currentMobileNavigation?.error ? <p className="text-sm text-[var(--danger)]">{t("locateFailed")}</p> : null}</>}
       >
         {navigationContent}
       </TabletReaderNavigationDrawer>
@@ -2714,7 +2853,7 @@ export function ConversationReader({
       {!focusMode && (showShare || showExport || showSearch) ? (
         <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels} restoreFocus={restoreDesktopUtilityFocus}>
             <div className="flex h-full min-w-0 w-full overflow-hidden">
-              {showSearch ? <ConversationSearchPanel conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+              {showSearch ? <ConversationSearchPanel active={!sourceEditorTarget} conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} onPrepareRetry={onPrepareSearchRetry} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
                 {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} onOpenContinuation={() => { releaseExportScope(`export:${conversationId}`); setShowExport(false); setUtilityPanel(null); setContinuationGuideRequested(true); setContinuationOpen(true); }} /> : null}
               </ReaderPanelShell>}

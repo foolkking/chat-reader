@@ -1,0 +1,540 @@
+TAP version 13
+# Subtest: raw rich wrappers retain answer text, emphasis, badge and divider semantics
+ok 1 - raw rich wrappers retain answer text, emphasis, badge and divider semantics
+  ---
+  duration_ms: 33.9438
+  ...
+# Subtest: multiply escaped rich exports restore headings, emphasis, code and ordered lists
+ok 2 - multiply escaped rich exports restore headings, emphasis, code and ordered lists
+  ---
+  duration_ms: 11.6574
+  ...
+# Subtest: one-, two- and three-slash exported formatting is bounded to an established profile
+ok 3 - one-, two- and three-slash exported formatting is bounded to an established profile
+  ---
+  duration_ms: 21.5898
+  ...
+# Subtest: normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+ok 4 - normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+  ---
+  duration_ms: 0.8048
+  ...
+# Subtest: malformed, unclosed and excessively deep profiles do not authorize recovery
+ok 5 - malformed, unclosed and excessively deep profiles do not authorize recovery
+  ---
+  duration_ms: 0.5089
+  ...
+# Subtest: raw and escaped layout examples in fenced/inline/indented code never establish a profile
+ok 6 - raw and escaped layout examples in fenced/inline/indented code never establish a profile
+  ---
+  duration_ms: 0.4361
+  ...
+# Subtest: code within a real profile retains literal tags, escapes and longer fences exactly
+ok 7 - code within a real profile retains literal tags, escapes and longer fences exactly
+  ---
+  duration_ms: 0.5227
+  ...
+# Subtest: escaped inline-code recovery restores delimiters only, never its body
+ok 8 - escaped inline-code recovery restores delimiters only, never its body
+  ---
+  duration_ms: 0.4012
+  ...
+# Subtest: raw profiles do not turn deliberately escaped headings and emphasis into formatting
+ok 9 - raw profiles do not turn deliberately escaped headings and emphasis into formatting
+  ---
+  duration_ms: 0.3974
+  ...
+# Subtest: rich and math compatibility compose without changing currency, formulas or code
+ok 10 - rich and math compatibility compose without changing currency, formulas or code
+  ---
+  duration_ms: 30.1601
+  ...
+# Subtest: unknown attributes, scripts, links, images and JSX expressions are never executed
+ok 11 - unknown attributes, scripts, links, images and JSX expressions are never executed
+  ---
+  duration_ms: 7.889
+  ...
+# Subtest: tokens beyond the supported escape depth remain literal
+ok 12 - tokens beyond the supported escape depth remain literal
+  ---
+  duration_ms: 0.3195
+  ...
+# Subtest: input/token budgets fail closed without truncating content
+ok 13 - input/token budgets fail closed without truncating content
+  ---
+  duration_ms: 15.5302
+  ...
+# Subtest: repeated projection and CRLF/Unicode content preserve ordered readable content
+ok 14 - repeated projection and CRLF/Unicode content preserve ordered readable content
+  ---
+  duration_ms: 1.5428
+  ...
+# Subtest: cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+ok 15 - cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+  ---
+  duration_ms: 3.3476
+  ...
+# Subtest: each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+ok 16 - each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+  ---
+  duration_ms: 5.9044
+  ...
+# Subtest: projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+ok 17 - projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+  ---
+  duration_ms: 0.7973
+  ...
+# Subtest: source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+ok 18 - source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+  ---
+  duration_ms: 5.4449
+  ...
+# Subtest: actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+ok 19 - actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+  ---
+  duration_ms: 19.1691
+  ...
+# Subtest: actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+ok 20 - actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+  ---
+  duration_ms: 5.3551
+  ...
+# Subtest: actual block renderer reads inherited profile while preserving heading/code boundaries
+ok 21 - actual block renderer reads inherited profile while preserving heading/code boundaries
+  ---
+  duration_ms: 7.7195
+  ...
+# Subtest: actual message wiring propagates the profile across regular block paths with canonical anchors
+ok 22 - actual message wiring propagates the profile across regular block paths with canonical anchors
+  ---
+  duration_ms: 8.9796
+  ...
+# Subtest: actual message wiring propagates the profile across element block paths with canonical anchors
+ok 23 - actual message wiring propagates the profile across element block paths with canonical anchors
+  ---
+  duration_ms: 9.3382
+  ...
+# Subtest: actual message wiring propagates the profile across window block paths with canonical anchors
+ok 24 - actual message wiring propagates the profile across window block paths with canonical anchors
+  ---
+  duration_ms: 10.1223
+  ...
+# Subtest: actual shared safe-link/image components stay inert for projected untrusted content
+ok 25 - actual shared safe-link/image components stay inert for projected untrusted content
+  ---
+  duration_ms: 5.3552
+  ...
+# Subtest: leading thinking disclosure inherits the same full-message rich-text profile
+ok 26 - leading thinking disclosure inherits the same full-message rich-text profile
+  ---
+  duration_ms: 9.0031
+  ...
+# Subtest: confirm then confirm: first decision owns the resolver and draft; later call cancels immediately
+ok 27 - confirm then confirm: first decision owns the resolver and draft; later call cancels immediately
+  ---
+  duration_ms: 12.6881
+  ...
+# Subtest: confirm then prompt: first decision owns the resolver and draft; later call cancels immediately
+ok 28 - confirm then prompt: first decision owns the resolver and draft; later call cancels immediately
+  ---
+  duration_ms: 3.5749
+  ...
+# Subtest: prompt then confirm: first decision owns the resolver and draft; later call cancels immediately
+ok 29 - prompt then confirm: first decision owns the resolver and draft; later call cancels immediately
+  ---
+  duration_ms: 2.5778
+  ...
+# Subtest: prompt then prompt: first decision owns the resolver and draft; later call cancels immediately
+ok 30 - prompt then prompt: first decision owns the resolver and draft; later call cancels immediately
+  ---
+  duration_ms: 3.0282
+  ...
+# Subtest: confirm: close completes with the existing cancellation type
+ok 31 - confirm: close completes with the existing cancellation type
+  ---
+  duration_ms: 1.9771
+  ...
+# Subtest: confirm: cancel completes with the existing cancellation type
+ok 32 - confirm: cancel completes with the existing cancellation type
+  ---
+  duration_ms: 1.4143
+  ...
+# Subtest: confirm: backdrop completes with the existing cancellation type
+ok 33 - confirm: backdrop completes with the existing cancellation type
+  ---
+  duration_ms: 1.6675
+  ...
+# Subtest: confirm: escapeCallback completes with the existing cancellation type
+ok 34 - confirm: escapeCallback completes with the existing cancellation type
+  ---
+  duration_ms: 1.6134
+  ...
+# Subtest: prompt: close completes with the existing cancellation type
+ok 35 - prompt: close completes with the existing cancellation type
+  ---
+  duration_ms: 1.462
+  ...
+# Subtest: prompt: cancel completes with the existing cancellation type
+ok 36 - prompt: cancel completes with the existing cancellation type
+  ---
+  duration_ms: 1.5265
+  ...
+# Subtest: prompt: backdrop completes with the existing cancellation type
+ok 37 - prompt: backdrop completes with the existing cancellation type
+  ---
+  duration_ms: 1.4215
+  ...
+# Subtest: prompt: escapeCallback completes with the existing cancellation type
+ok 38 - prompt: escapeCallback completes with the existing cancellation type
+  ---
+  duration_ms: 0.864
+  ...
+# Subtest: confirm: unmount resolves once, removes listeners and retires held callbacks
+ok 39 - confirm: unmount resolves once, removes listeners and retires held callbacks
+  ---
+  duration_ms: 1.4389
+  ...
+# Subtest: confirm: route transition hides the old decision before passive cancellation
+ok 40 - confirm: route transition hides the old decision before passive cancellation
+  ---
+  duration_ms: 1.9399
+  ...
+# Subtest: confirm: live account change rejects positive old submission before a rerender
+ok 41 - confirm: live account change rejects positive old submission before a rerender
+  ---
+  duration_ms: 3.6803
+  ...
+# Subtest: prompt: unmount resolves once, removes listeners and retires held callbacks
+ok 42 - prompt: unmount resolves once, removes listeners and retires held callbacks
+  ---
+  duration_ms: 1.1268
+  ...
+# Subtest: prompt: route transition hides the old decision before passive cancellation
+ok 43 - prompt: route transition hides the old decision before passive cancellation
+  ---
+  duration_ms: 2.2303
+  ...
+# Subtest: prompt: live account change rejects positive old submission before a rerender
+ok 44 - prompt: live account change rejects positive old submission before a rerender
+  ---
+  duration_ms: 2.3905
+  ...
+# Subtest: confirm: synthetic-unauthorized cancels waiting only; a held positive callback cannot revive it
+ok 45 - confirm: synthetic-unauthorized cancels waiting only; a held positive callback cannot revive it
+  ---
+  duration_ms: 2.873
+  ...
+# Subtest: prompt: synthetic-unauthorized cancels waiting only; a held positive callback cannot revive it
+ok 46 - prompt: synthetic-unauthorized cancels waiting only; a held positive callback cannot revive it
+  ---
+  duration_ms: 1.4977
+  ...
+# Subtest: confirm: synthetic-locked cancels waiting only; a held positive callback cannot revive it
+ok 47 - confirm: synthetic-locked cancels waiting only; a held positive callback cannot revive it
+  ---
+  duration_ms: 1.3893
+  ...
+# Subtest: prompt: synthetic-locked cancels waiting only; a held positive callback cannot revive it
+ok 48 - prompt: synthetic-locked cancels waiting only; a held positive callback cannot revive it
+  ---
+  duration_ms: 1.3182
+  ...
+# Subtest: leaving and returning to the same pathname retires the original scope and functions
+ok 49 - leaving and returning to the same pathname retires the original scope and functions
+  ---
+  duration_ms: 1.3712
+  ...
+# Subtest: old prompt input, form, close and focus callbacks cannot affect a new prompt
+ok 50 - old prompt input, form, close and focus callbacks cannot affect a new prompt
+  ---
+  duration_ms: 4.5062
+  ...
+# Subtest: blank validation and accepted trimming remain unchanged; repeated old submit resolves once
+ok 51 - blank validation and accepted trimming remain unchanged; repeated old submit resolves once
+  ---
+  duration_ms: 2.899
+  ...
+# Subtest: a caller continuation can open a follow-up after settlement without old cleanup erasing it
+ok 52 - a caller continuation can open a follow-up after settlement without old cleanup erasing it
+  ---
+  duration_ms: 1.9299
+  ...
+# Subtest: create preserves exact Markdown body 0
+ok 53 - create preserves exact Markdown body 0
+  ---
+  duration_ms: 17.0819
+  ...
+# Subtest: create_version preserves source and accepted baseline 0
+ok 54 - create_version preserves source and accepted baseline 0
+  ---
+  duration_ms: 23.6432
+  ...
+# Subtest: replace_current preserves source and accepted baseline 0
+ok 55 - replace_current preserves source and accepted baseline 0
+  ---
+  duration_ms: 17.4718
+  ...
+# Subtest: create preserves exact Markdown body 1
+ok 56 - create preserves exact Markdown body 1
+  ---
+  duration_ms: 6.8682
+  ...
+# Subtest: create_version preserves source and accepted baseline 1
+ok 57 - create_version preserves source and accepted baseline 1
+  ---
+  duration_ms: 19.5282
+  ...
+# Subtest: replace_current preserves source and accepted baseline 1
+ok 58 - replace_current preserves source and accepted baseline 1
+  ---
+  duration_ms: 18.385
+  ...
+# Subtest: create preserves exact Markdown body 2
+ok 59 - create preserves exact Markdown body 2
+  ---
+  duration_ms: 8.3493
+  ...
+# Subtest: create_version preserves source and accepted baseline 2
+ok 60 - create_version preserves source and accepted baseline 2
+  ---
+  duration_ms: 20.3022
+  ...
+# Subtest: replace_current preserves source and accepted baseline 2
+ok 61 - replace_current preserves source and accepted baseline 2
+  ---
+  duration_ms: 13.2225
+  ...
+# Subtest: create preserves exact Markdown body 3
+ok 62 - create preserves exact Markdown body 3
+  ---
+  duration_ms: 5.9029
+  ...
+# Subtest: create_version preserves source and accepted baseline 3
+ok 63 - create_version preserves source and accepted baseline 3
+  ---
+  duration_ms: 16.8779
+  ...
+# Subtest: replace_current preserves source and accepted baseline 3
+ok 64 - replace_current preserves source and accepted baseline 3
+  ---
+  duration_ms: 17.0176
+  ...
+# Subtest: create preserves exact Markdown body 4
+ok 65 - create preserves exact Markdown body 4
+  ---
+  duration_ms: 13.6202
+  ...
+# Subtest: create_version preserves source and accepted baseline 4
+ok 66 - create_version preserves source and accepted baseline 4
+  ---
+  duration_ms: 11.3379
+  ...
+# Subtest: replace_current preserves source and accepted baseline 4
+ok 67 - replace_current preserves source and accepted baseline 4
+  ---
+  duration_ms: 12.8417
+  ...
+# Subtest: whitespace-only source changes remain dirty: "    Synthetic original"
+ok 68 - whitespace-only source changes remain dirty: "    Synthetic original"
+  ---
+  duration_ms: 19.089
+  ...
+# Subtest: whitespace-only source changes remain dirty: "Synthetic original  "
+ok 69 - whitespace-only source changes remain dirty: "Synthetic original  "
+  ---
+  duration_ms: 16.7171
+  ...
+# Subtest: whitespace-only source changes remain dirty: "\\nSynthetic original\\n"
+ok 70 - whitespace-only source changes remain dirty: "\\nSynthetic original\\n"
+  ---
+  duration_ms: 15.1656
+  ...
+# Subtest: exact unchanged source is a no-op
+ok 71 - exact unchanged source is a no-op
+  ---
+  duration_ms: 12.2355
+  ...
+# Subtest: empty source is rejected without a write: ""
+ok 72 - empty source is rejected without a write: ""
+  ---
+  duration_ms: 21.3793
+  ...
+# Subtest: empty source is rejected without a write: " \\n\\t"
+ok 73 - empty source is rejected without a write: " \\n\\t"
+  ---
+  duration_ms: 15.9275
+  ...
+# Subtest: submission takes exact current CodeMirror source, not a lagging state value
+ok 74 - submission takes exact current CodeMirror source, not a lagging state value
+  ---
+  duration_ms: 11.1034
+  ...
+# Subtest: failed edit does not reset its draft or baseline
+ok 75 - failed edit does not reset its draft or baseline
+  ---
+  duration_ms: 12.8374
+  ...
+# Subtest: explicit canonical reply, including whitespace, is the new baseline
+ok 76 - explicit canonical reply, including whitespace, is the new baseline
+  ---
+  duration_ms: 10.0069
+  ...
+# Subtest: unresolved attachment still blocks an edit
+ok 77 - unresolved attachment still blocks an edit
+  ---
+  duration_ms: 10.4785
+  ...
+# Subtest: insert continues to submit exact bodies, revision and anchor
+ok 78 - insert continues to submit exact bodies, revision and anchor
+  ---
+  duration_ms: 6.3135
+  ...
+# Subtest: desktop/mobile representations share the synchronous lock before deletion confirmation
+ok 79 - desktop/mobile representations share the synchronous lock before deletion confirmation
+  ---
+  duration_ms: 181.9917
+  ...
+# Subtest: a confirmed delete is not submitted after the visible head changes
+ok 80 - a confirmed delete is not submitted after the visible head changes
+  ---
+  duration_ms: 107.3332
+  ...
+# Subtest: account: pending confirmation and late callbacks cannot write
+ok 81 - account: pending confirmation and late callbacks cannot write
+  ---
+  duration_ms: 78.2183
+  ...
+# Subtest: route: pending confirmation and late callbacks cannot write
+ok 82 - route: pending confirmation and late callbacks cannot write
+  ---
+  duration_ms: 44.3146
+  ...
+# Subtest: unauthorized: pending confirmation and late callbacks cannot write
+ok 83 - unauthorized: pending confirmation and late callbacks cannot write
+  ---
+  duration_ms: 38.1979
+  ...
+# Subtest: unmount: pending confirmation and late callbacks cannot write
+ok 84 - unmount: pending confirmation and late callbacks cannot write
+  ---
+  duration_ms: 34.0158
+  ...
+# Subtest: select: lost response requires reads and explicit current-state acknowledgement, never a replay
+ok 85 - select: lost response requires reads and explicit current-state acknowledgement, never a replay
+  ---
+  duration_ms: 52.4095
+  ...
+# Subtest: delete: lost response requires reads and explicit current-state acknowledgement, never a replay
+ok 86 - delete: lost response requires reads and explicit current-state acknowledgement, never a replay
+  ---
+  duration_ms: 36.8808
+  ...
+# Subtest: acknowledged write and failed body refresh remain separate; recovery performs only reads
+ok 87 - acknowledged write and failed body refresh remain separate; recovery performs only reads
+  ---
+  duration_ms: 30.3746
+  ...
+# Subtest: a read mismatch or subsequent read failure retains the unknown-write fence
+ok 88 - a read mismatch or subsequent read failure retains the unknown-write fence
+  ---
+  duration_ms: 56.698
+  ...
+# Subtest: changed checked head cannot be acknowledged as the current state
+ok 89 - changed checked head cannot be acknowledged as the current state
+  ---
+  duration_ms: 32.5551
+  ...
+# Subtest: a retired response/finally cannot replace the message or release a newer operation
+ok 90 - a retired response/finally cannot replace the message or release a newer operation
+  ---
+  duration_ms: 39.2135
+  ...
+# Subtest: missing history head is not treated as the initial version; initial read error remains recoverable
+ok 91 - missing history head is not treated as the initial version; initial read error remains recoverable
+  ---
+  duration_ms: 45.6775
+  ...
+# Subtest: a canonical head change invalidates the history once, not on disclosure renders
+ok 92 - a canonical head change invalidates the history once, not on disclosure renders
+  ---
+  duration_ms: 31.7508
+  ...
+# Subtest: derived status read failure retains the job, stops interval and offers GET-only checking
+ok 93 - derived status read failure retains the job, stops interval and offers GET-only checking
+  ---
+  duration_ms: 39.4176
+  ...
+# Subtest: readonly readers do not use private cache keys or issue reads/writes/listeners
+ok 94 - readonly readers do not use private cache keys or issue reads/writes/listeners
+  ---
+  duration_ms: 31.4561
+  ...
+# Subtest: write classification preserves definite 4xx and treats timeout/server/transport as unconfirmed
+ok 95 - write classification preserves definite 4xx and treats timeout/server/transport as unconfirmed
+  ---
+  duration_ms: 24.1004
+  ...
+# Subtest: en-US: initial read failure opens real localized recovery without raw response text
+ok 96 - en-US: initial read failure opens real localized recovery without raw response text
+  ---
+  duration_ms: 38.9873
+  ...
+# Subtest: zh-CN: initial read failure opens real localized recovery without raw response text
+ok 97 - zh-CN: initial read failure opens real localized recovery without raw response text
+  ---
+  duration_ms: 27.4678
+  ...
+# Subtest: scope deduplication and serial draining survive fallback path
+ok 98 - scope deduplication and serial draining survive fallback path
+  ---
+  duration_ms: 131.3064
+  ...
+# Subtest: failed queue tails permit an explicit later retry with fallback
+ok 99 - failed queue tails permit an explicit later retry with fallback
+  ---
+  duration_ms: 40.0976
+  ...
+# Subtest: scope deduplication and serial draining survive Web Locks path
+ok 100 - scope deduplication and serial draining survive Web Locks path
+  ---
+  duration_ms: 34.5386
+  ...
+# Subtest: failed queue tails permit an explicit later retry with locks
+ok 101 - failed queue tails permit an explicit later retry with locks
+  ---
+  duration_ms: 27.4332
+  ...
+# Subtest: an empty conversation scope never becomes a global sync request
+ok 102 - an empty conversation scope never becomes a global sync request
+  ---
+  duration_ms: 33.7086
+  ...
+# Subtest: offline sync returns a settled empty result without requesting locks or transport
+ok 103 - offline sync returns a settled empty result without requesting locks or transport
+  ---
+  duration_ms: 20.0596
+  ...
+# Subtest: global offline manager invokes the scope-aware flush with zero arguments and cleans listeners
+ok 104 - global offline manager invokes the scope-aware flush with zero arguments and cleans listeners
+  ---
+  duration_ms: 33.9168
+  ...
+# Subtest: drag notices retain a single cancellable numeric browser timer
+ok 105 - drag notices retain a single cancellable numeric browser timer
+  ---
+  duration_ms: 77.6361
+  ...
+# Subtest: translation dictionaries contain unique keys while preserving the 500-file guidance
+ok 106 - translation dictionaries contain unique keys while preserving the 500-file guidance
+  ---
+  duration_ms: 10.268
+  ...
+1..106
+# tests 106
+# suites 0
+# pass 106
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2037.5617

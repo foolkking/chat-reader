@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type NetworkMode } from "@tanstack/react-query";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useTranslations } from "../../components/preferences-provider";
 import { usePreferences } from "../../components/preferences-provider";
@@ -9,7 +9,7 @@ import { getConversationToc } from "../../lib/api";
 import type { TocItem } from "../../lib/types";
 import { markdownHeadingLabel } from "../conversations/markdown-renderer";
 
-export function ConversationToc({ conversationId, sourceKey = "remote", activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, ready = true, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; ready?: boolean; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
+export function ConversationToc({ conversationId, sourceKey = "remote", networkMode, activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, ready = true, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; networkMode?: NetworkMode; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; ready?: boolean; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
   const t = useTranslations();
   const { resolvedLocale, sectionTocMode, setSectionTocMode } = usePreferences();
   const [cachedItems, setCachedItems] = useState<Record<string, TocItem[]>>({});
@@ -27,7 +27,7 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
   }, [conversationId, sourceKey]);
   useEffect(() => { if (activeMessageId) setLastActiveMessageId(activeMessageId); }, [activeMessageId]);
   const effectiveMessageId = activeMessageId ?? lastActiveMessageId;
-  const tocQuery = useQuery({ queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: effectiveMessageId ?? undefined, limit: 200 }), enabled: items === undefined && ready && Boolean(effectiveMessageId), staleTime: 30_000, placeholderData: (previous) => previous });
+  const tocQuery = useQuery({ queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: effectiveMessageId ?? undefined, limit: 200 }), enabled: items === undefined && ready && Boolean(effectiveMessageId), staleTime: 30_000, placeholderData: (previous) => previous, ...(networkMode ? { networkMode } : {}) });
   useEffect(() => {
     if (!effectiveMessageId || !tocQuery.data) return;
     const matching = tocQuery.data.items.filter((item) => item.message_id === effectiveMessageId);
@@ -69,8 +69,17 @@ export function ConversationToc({ conversationId, sourceKey = "remote", activeMe
   if (items === undefined && tocQuery.isError && visibleItems.length === 0) return <TocShell mode={mode} state="error" label={resolvedLocale === "zh-CN" ? "\u7ae0\u8282\u76ee\u5f55\u52a0\u8f7d\u5931\u8d25" : "Failed to load section contents"} onRetry={() => void tocQuery.refetch()} onCollapse={mode === "panel" ? collapse : undefined} />;
   if (!effectiveMessageId || visibleItems.length === 0) return <TocShell mode={mode} state="empty" label={t("currentNoSections")} onCollapse={mode === "panel" ? collapse : undefined} />;
 
+  const staleReadError = items === undefined && tocQuery.isError && visibleItems.length > 0;
   const body = <TocButtonList items={visibleItems} activeHeadingId={activeHeadingId} activeRowRef={activeRowRef} onNavigate={stableNavigate} />;
-  return <TocFrame mode={mode} title={t("sectionToc")} count={visibleItems.length} scrollContainerRef={scrollContainerRef} onCollapse={mode === "panel" ? collapse : undefined}>{body}</TocFrame>;
+  return <TocFrame mode={mode} title={t("sectionToc")} count={visibleItems.length} scrollContainerRef={scrollContainerRef} onCollapse={mode === "panel" ? collapse : undefined}>
+    {staleReadError ? (
+      <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-md border border-ui bg-subtle px-2 py-2 text-xs text-secondary">
+        <span>{resolvedLocale === "zh-CN" ? "章节目录更新失败，仍显示上次内容。" : "Could not update section contents. Showing the previous entries."}</span>
+        <button type="button" disabled={tocQuery.isFetching} onClick={() => void tocQuery.refetch()} className="min-h-8 shrink-0 rounded-md border border-ui bg-surface px-2 text-xs font-medium text-primary hover:bg-subtle disabled:opacity-50">{t("retry")}</button>
+      </div>
+    ) : null}
+    {body}
+  </TocFrame>;
 }
 
 const TocRail = memo(function TocRail({ items, activeHeadingId, onExpand, onNavigate }: { items: TocItem[]; activeHeadingId: string | null; onExpand: () => void; onNavigate?: (item: TocItem) => void | Promise<void> }) {

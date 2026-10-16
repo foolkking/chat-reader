@@ -1,6 +1,6 @@
 # 已知风险与不确定性
 
-## Current verification boundaries — 2026-10-08
+## Current verification boundaries — 2026-10-14
 
 Read [Project State](../../PROJECT_STATE.md) and the
 [accumulated release record](../execution/OPTIMIZATION_RELEASE_2026-10-08.md) for
@@ -10,7 +10,11 @@ the current debt count or deployment state.
 | Current limitation | Control / next step |
 | --- | --- |
 | Local Web start is rejected before process creation; cause unknown | Preserve the original rejection and fixture; no alternate launcher. Isolated CI is separate from specified-Chromium local acceptance. |
-| Follow-on CI 37795767145 fails optional-shell recovery; settings cancelled | Nine new UX cases pass, but the same-revision shell repair still needs full CI. No production-page testing or follow-up deployment. After this cycle passes, new CI submissions require the user's explicit request. |
+| Local personal-archive callback/limit-read repair has no browser acceptance | All 926 Node checks (36 archive-specific), lint and nonincremental types pass. Three browser files discover 19, execute zero. Controlled authentication/DOM scheduling is not real navigation or rendered-focus evidence; two new screenshots remain planned. Server restore/ownership and Root system archive are unchanged. No new build, CI or deployment. |
+| Local task-status final-read recovery has no browser acceptance | 890 Node checks, lint and nonincremental types pass, including 22 task-specific cases. Three browser files discover 24, execute zero. Pending result checks are per-mounted-monitor in memory, not durable across reload. No additional polling frequency, automatic task mutation, CI or deployment. |
+| Local offline-resource/share-read repairs have no browser acceptance | All 868 Node checks, lint and nonincremental types pass, including 20 new focused checks. Two affected browser files discover 26 cases, executed zero. In-app local navigation returned `ERR_CONNECTION_REFUSED`; user asked to proceed without login. No new build, CI or deployment. Existing cached-response size validation remains unchanged. |
+| Local annotation/CSV, write/composition and notebook label/queue follow-up has no new browser, visual or screen-reader acceptance | Production 84988a2 is accepted through CI 38255213036 and independent deployment checks. Newer local repairs pass 848 Node checks, lint/types and a one-worker/1024 MiB heap build; 54 browser cases are discovered only. Comment and unknown-write state is scoped in memory, not persistent across route changes/reload. Queue tests use explicit storage-latency doubles, not device CPU/RSS measurements. New CI/deployment requires the user's explicit request. |
+| Task temporary logs/archives disappeared during the composition checkpoint for an undetermined reason | Repository ledgers remain unchanged; fresh local verification logs are retained in repository evidence. Earlier raw temporary logs and the previously retained local archive copies can no longer be claimed available. This is separate from the two precisely verified duplicate removals recorded before the disappearance. |
 | King has about 2 GiB RAM | Never build images there; keep PostgreSQL running and bound one-off release checks. |
 | King Compose 2.27 rejects `run --pull never`; `start` may require absent migrate dependencies | Validate a release-only `pull_policy: never` overlay and mounted checks before stopping writers. Guard recovery by migration marker and exact old identities; preserve the actual interruption record. |
 | Dependency policy retains an approved braces exception | Keep its existing mitigation, scope and expiry; a passing policy is not zero advisories. |

@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-16",
+  "regression": {
+    "command": "node --test scripts/ux/conversation-search-selection.test.mjs",
+    "passed": 48,
+    "failed": 0,
+    "skipped": 0
+  },
+  "targetedLint": {
+    "command": "corepack pnpm --filter web exec eslint features/search/conversation-search-panel.tsx features/conversations/conversation-reader.tsx features/offline/library-shell.tsx --max-warnings=0",
+    "exitCode": 0
+  },
+  "typecheck": {
+    "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "exitCode": 0
+  },
+  "diffCheck": {
+    "command": "git -c core.safecrlf=false diff --check",
+    "exitCode": 0
+  },
+  "notRun": [
+    "mounted React/browser",
+    "live QueryClient/API/Worker",
+    "service/login",
+    "full API suite",
+    "PWA suite",
+    "full Web build",
+    "commit/CI/deployment",
+    "CPU/RSS/resource measurement"
+  ],
+  "tempRoot": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-conversation-search-selection-20261016"
+}

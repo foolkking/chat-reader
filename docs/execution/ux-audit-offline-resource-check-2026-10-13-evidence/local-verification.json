@@ -1,0 +1,47 @@
+{
+  "kind": "additive-local-verification",
+  "captured_at": "2026-10-14",
+  "repository_head": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+  "scope": "Offline resource inspection and final sharing transient-read recovery",
+  "predecessor": {
+    "report": "docs/execution/ux-audit-notebook-draft-write-queue-2026-10-13.md",
+    "referenced_ledger_present": false,
+    "limitation": "The report's linked local-verification.json was absent; this checkpoint does not recreate it or claim predecessor-chain verification."
+  },
+  "sources": [
+    { "path": "apps/web/components/my-shares-panel.tsx", "bytes": 17361, "sha256": "a1e569264eaf4c6ddd8f06b87c55b28d7a469812ff7ecf2838a4f19e4f33c5ab" },
+    { "path": "apps/web/features/offline/library-shell.tsx", "bytes": 53317, "sha256": "dc8f442ba48de22a624a1a1e53ae82bd0b1cf91efa3077c9c806c6c44a946ae8" },
+    { "path": "apps/web/e2e/settings-shares.spec.ts", "bytes": 35926, "sha256": "fa0f6b723d0061032cb02ab30aaf05ee4c6a76799d0d59dbef9d24210f1445c4" },
+    { "path": "apps/web/e2e/library-offline.spec.ts", "bytes": 57545, "sha256": "061e07d2dd05723df333168ddf1e89aaef50a8a5da8f580d7bd58b1344120741" },
+    { "path": "scripts/ux/share-read-recovery.test.mjs", "bytes": 7925, "sha256": "2efc123b959647f86efb6ad0a90a40351a88d31398c6e7d862e78da8800ad83f" },
+    { "path": "scripts/ux/offline-resource-check.test.mjs", "bytes": 9199, "sha256": "a8eea438d13d7f4cbbb6569341a6c1ebf800117c4f54886e6d4742599a430df8" }
+  ],
+  "evidence": [
+    { "path": "docs/execution/ux-audit-offline-resource-check-2026-10-13-evidence/resource-check-baseline.log", "bytes": 7607, "sha256": "851aa30b66c24ad5fbc8a9726c40f2c94786b493f4de78ff984ea6284d4dcf2c" },
+    { "path": "docs/execution/ux-audit-offline-resource-check-2026-10-13-evidence/resource-check-after.log", "bytes": 3508, "sha256": "db81fb09c52d29a0226de2f9dc106f5799545b56d42e72749aff507fe9e73286" },
+    { "path": "docs/execution/ux-audit-offline-resource-check-2026-10-13-evidence/resource-check-all-node.log", "bytes": 175364, "sha256": "2f4deac76d26cf705e5f598e653e7fa503ad8608d8247d6c51b27bb823a5f1c4" },
+    { "path": "docs/execution/ux-audit-offline-resource-check-2026-10-13-evidence/resource-check-lint.log", "bytes": 165, "sha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2" },
+    { "path": "docs/execution/ux-audit-offline-resource-check-2026-10-13-evidence/resource-check-discovery.log", "bytes": 2805, "sha256": "874d46457d7e73ffbef2e7cdc08dd093d9a97daa5801911455dcfa4e7d1e8a7e" }
+  ],
+  "checks": {
+    "baseline": { "passed": 15, "failed": 5, "skipped": 0, "duration_ms": 1254.4147, "offline_only": { "passed": 5, "failed": 5 }, "sharing_only": { "passed": 10, "failed": 0 } },
+    "focused_after": { "passed": 20, "failed": 0, "skipped": 0, "duration_ms": 1187.351 },
+    "full_node": { "files": 31, "passed": 868, "failed": 0, "skipped": 0, "duration_ms": 14889.644 },
+    "lint": { "command": "corepack pnpm run lint", "exit_code": 0 },
+    "types_final": { "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false", "exit_code": 0, "stdout": "", "note": "Rerun after strengthening the browser retry assertion; no buildinfo write." },
+    "browser_discovery": { "files": 2, "discovered": 26, "executed": 0, "note": "Rerun after strengthening the browser retry assertion; no local Web process launched." },
+    "diff_check": { "exit_code": 0, "note": "Scoped tracked source/test and current-state docs; Git emitted expected line-ending warnings." }
+  },
+  "unrelated_buildinfo": {
+    "path": "apps/web/tsconfig.tsbuildinfo",
+    "sha256": "70c9f839651026f657520a37ebe7581463bb958107dfbd7857ca815f7e24152b",
+    "note": "Already dirty; the earlier sharing intermediate incremental typecheck changed it. Preserved, not reset, not task source."
+  },
+  "limitations": [
+    "Compiled-component hooks, storage and transport are controlled doubles, not browser acceptance.",
+    "Actual QueryObserver retry lifecycle is exercised; configured delays are recorded and accelerated, not measured.",
+    "Local in-app browser navigation returned ERR_CONNECTION_REFUSED. No login or production upload used.",
+    "No new build, API tests, CI submission or deployment in this batch.",
+    "Other accumulated local edits remain uncommitted and are not bound by this six-file checkpoint."
+  ]
+}

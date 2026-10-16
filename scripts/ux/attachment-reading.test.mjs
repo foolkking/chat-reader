@@ -62,6 +62,7 @@ function fixture(name, props, overrides = {}, extra = {}) {
     effects[index] = { operation, deps, previousDeps: previous?.previousDeps, cleanup: previous?.cleanup }; };
   const scope = { ...policy, ...registry, window, document: {}, UIEvent: class {},
     usePreferences: () => ({ resolvedLocale: "en-US" }),
+    complexErrorMessage: compile(complexFn("complexErrorMessage").getText(complexSource), {}, "complexErrorMessage"),
     useState: initial => { const key = stateNames[stateIndex++]; assert.ok(key, "named state");
       if (!states.has(key)) states.set(key, Object.hasOwn(overrides, key) ? overrides[key] : typeof initial === "function" ? initial() : initial);
       return [states.get(key), value => { states.set(key, typeof value === "function" ? value(states.get(key)) : value); }]; },
@@ -228,11 +229,11 @@ test("PDF unmount during page fetch never starts a late canvas render", async ()
   await flush(); assert.equal(renders, 0); assert.equal(f.canvas.width, 0);
 });
 
-test("PDF thumbnail failure retains a selectable page number", async () => {
-  const f = fixture("PdfThumbnail", { documentProxy: { getPage: async () => { throw new Error("synthetic failed thumbnail"); } }, pageNumber: 20, active: false, onClick: noop, renderQueue: policy.createPdfRenderQueue() });
+for (const zh of [false, true]) test(`${zh ? "zh-CN" : "en-US"}: PDF thumbnail failure retains a selectable page number`, async () => {
+  const f = fixture("PdfThumbnail", { documentProxy: { getPage: async () => { throw new Error("synthetic failed thumbnail"); } }, pageNumber: 20, active: false, onClick: noop, renderQueue: policy.createPdfRenderQueue(), zh });
   try {
     f.render(); await f.runEffects(); const root = f.render();
-    assert.equal(root.type, "button"); assert.equal(root.props.onClick, noop); assert.equal(root.props["aria-label"], "打开 PDF 第 20 页"); assert.equal(f.states.get("failed"), true);
+    assert.equal(root.type, "button"); assert.equal(root.props.onClick, noop); assert.equal(root.props["aria-label"], zh ? "打开 PDF 第 20 页" : "Open PDF page 20"); assert.equal(f.states.get("failed"), true);
   } finally { f.dispose(); }
 });
 
@@ -533,7 +534,7 @@ test("direct PDF entry changes page only after submission and validates without 
 test("PDF fit and zoom retain the selected page and zoom from the actual fit scale", () => {
   const f = fixture("PdfViewer", { attachment, toolbarHost: {}, onPageCountChange: noop }, { documentProxy: { numPages: 1000 }, currentPage: 50, fitMode: "width", zoom: 1, viewportSize: { width: 1000, height: 800 } });
   f.render(); f.refs.get("pageSizesRef").current.set(50, { width: 612, height: 792 });
-  const zoomOut = named(f.render(), "button").find(node => node.props["aria-label"] === "缩小 PDF");
+  const zoomOut = named(f.render(), "button").find(node => node.props["aria-label"] === "Zoom out PDF");
   assert.equal(zoomOut.props.disabled, false); zoomOut.props.onClick();
   assert.ok(Math.abs(f.states.get("zoom") - (968 / 612 - 0.1)) < 1e-8);
   assert.equal(f.states.get("scrollRequest").page, 50); assert.equal(f.states.get("currentPage"), 50);

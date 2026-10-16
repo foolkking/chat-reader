@@ -22,6 +22,27 @@ const english: Record<string, string> = {
   "当前结构不足以安全生成 Conversation。": "This structure cannot safely form a conversation.",
   "无法连接服务器。请检查网络后重试，当前输入仍然保留。": "Cannot connect to the server. Check your network and retry; your input is retained.",
   "服务暂时不可用，请稍后重试。": "The service is temporarily unavailable. Please retry shortly.",
+  "正在恢复已保存的导入会话…": "Restoring the saved import session…",
+  "IMPORT_COMMIT_FAILED": "This import did not complete. Your source files and import session are retained; review them and choose Import again.",
+  "IMPORT_COMMIT_CANCELLED": "This import was cancelled. Your source files and import session are retained; choose Import again when ready.",
+  "这次导入分析未能保存。请重新检查并选择文件后再试。": "This import analysis could not be saved. Review and choose the files again before retrying.",
+  "这次导入分析未完成。请重新检查并选择文件后再试。": "This import analysis did not complete. Review and choose the files again before retrying.",
+  "替换文件未能保存，原文件仍保留，请稍后重试。": "The replacement could not be saved. The original file is retained; please retry shortly.",
+  "本批文件合计超过当前导入总容量限制，请分批导入。": "This batch exceeds the total import limit. Import the files in smaller batches.",
+  "当前导入状态已变化，请返回概览后重试。": "The import state has changed. Return to the overview and retry.",
+  "服务器正在处理另一个大文件，请稍后重试。": "The server is processing another large file. Please retry shortly.",
+  "替换后的文件会超过本次导入总容量限制。": "The replacement would exceed this import session's total size limit.",
+  "导入结果尚未确认。请返回概览检查当前状态，再决定是否重试。": "The import result is not confirmed. Return to the overview to check the current state before deciding whether to retry.",
+  "请求结果尚未确认。请检查当前导入状态，再决定是否重试。": "The request result is not confirmed. Check the current import state before deciding whether to retry.",
+  "登录状态已失效，请重新登录后重试。": "Your sign-in has expired. Sign in again and retry.",
+  "没有权限完成这次导入。": "You do not have permission to complete this import.",
+  "当前导入会话已不存在，请返回后重新选择文件。": "This import session no longer exists. Go back and choose the files again.",
+  "所选文件超过当前导入限制，请分批导入。": "The selected files exceed the current import limit. Import them in smaller batches.",
+  "导入操作失败，请稍后重试。": "The import operation failed. Please retry shortly.",
+  "所选文件超过当前单文件大小限制。": "The selected file exceeds the current per-file limit.",
+  "最后一项不能排除，请替换它的源文件或重新选择文件。": "The last item cannot be excluded. Replace its source or choose files again.",
+  "一次最多分析 500 个文件。": "Analyze up to 500 files at a time.",
+  "请选择至少一个 JSON 或 Markdown 文件。": "Choose at least one JSON or Markdown file.",
   "已提交 {0} 个对话，共 {1} 条消息。": "Imported {0} conversations with {1} messages.",
   "打开第 {0} 条": "Open conversation {0}",
   "发现 {0} 个对话，识别出 {1} 种格式": "Found {0} conversations in {1} formats",
@@ -31,7 +52,7 @@ const english: Record<string, string> = {
   "选择 JSON / Markdown 文件": "Choose JSON / Markdown files", "选择 .cr 归档": "Choose a .cr archive", "支持单 JSON、单 Markdown、JSON + Markdown 及批量文件": "Supports JSON, Markdown, paired files and batches", ".cr 使用独立归档恢复流程": ".cr files use the archive restore flow", "当前单文件上限：": "Current limit per file: ", "无法读取导入限制。": "Import limits are unavailable.", "重试": "Retry", "正在读取导入限制…": "Reading import limits…",
   "正在识别格式": "Recognizing formats…", "分析并继续": "Analyze & continue", "检查归档": "Check archive", "恢复归档": "Restore archive", "系统中已有相同归档。默认会创建副本，不覆盖原记录。": "This archive already exists. By default, restoring creates a copy and preserves the original.", "打开已有对话": "Open existing conversation",
   "导入已完成": "Import complete", "已提交": "Imported ", "个对话，共": " conversations with ", "条消息。": " messages.", "导入提示": "Import notes", "已导入的对话": "Imported conversations", "已导入对话": "Imported conversation", "打开第": "Open conversation ", "条": "", "另有": "There are ", "个对话可在资料库中查看。": " more conversations in the library.", "查看导入的对话": "View imported conversations", "打开对话": "Open conversation", "打开第一条": "Open first conversation",
-  ".cr 归档必须单独导入。": "Import one .cr archive at a time.", "仅支持 JSON、Markdown 或文本源文件。": "Choose JSON, Markdown or text source files.", "一次最多分析 500 个文件。": "Analyze up to 500 files at a time.",
+  ".cr 归档必须单独导入。": "Import one .cr archive at a time.", "仅支持 JSON、Markdown 或文本源文件。": "Choose JSON, Markdown or text source files.",
   "放弃未保存的映射？": "Discard unsaved mapping?", "字段映射尚未保存，导入会话和原始文件仍会保留。": "The field mapping has not been saved. The import session and source files will remain available.", "放弃更改": "Discard changes",
   "返回导入概览": "Back to import overview", "修复导入格式": "Repair import format", "设置新的导入格式": "Learn a new import format",
   "此设置会应用于当前结构的": "This mapping applies to all ", "个对话。": " conversations with this structure.",
@@ -78,8 +99,78 @@ const english: Record<string, string> = {
 };
 
 export type ImportCopy = (key: string, ...values: Array<string | number>) => string;
-export function importErrorMessage(message: string, tr: ImportCopy): string {
-  return tr(message === "CONNECTION_FAILED" ? "无法连接服务器。请检查网络后重试，当前输入仍然保留。" : message);
+
+export type ImportErrorAction = "read" | "mutation" | "commit";
+
+const importCodeCopy: Record<string, string> = {
+  IMPORT_DISABLED: "管理员已关闭导入功能。",
+  IMPORT_TOTAL_SIZE_LIMIT: "本批文件合计超过当前导入总容量限制，请分批导入。",
+  FILE_TOO_LARGE: "所选文件超过当前单文件大小限制。",
+  FILE_COUNT_LIMIT: "一次最多分析 500 个文件。",
+  FILES_REQUIRED: "请选择至少一个 JSON 或 Markdown 文件。",
+  SESSION_PERSISTENCE_FAILED: "这次导入分析未能保存。请重新检查并选择文件后再试。",
+  SESSION_ANALYSIS_FAILED: "这次导入分析未完成。请重新检查并选择文件后再试。",
+  SOURCE_REPLACEMENT_FAILED: "替换文件未能保存，原文件仍保留，请稍后重试。",
+  UPLOAD_STAGING_BUSY: "服务器正在处理另一个大文件，请稍后重试。",
+  SESSION_TOO_LARGE: "替换后的文件会超过本次导入总容量限制。",
+  SESSION_STATE_INVALID: "当前导入状态已变化，请返回概览后重试。",
+  SESSION_WOULD_BE_EMPTY: "最后一项不能排除，请替换它的源文件或重新选择文件。",
+  IMPORT_COMMIT_FAILED: "这次导入未完成，原始文件和导入会话仍保留。检查后可再次点击导入。",
+  IMPORT_COMMIT_CANCELLED: "这次导入已取消，原始文件和导入会话仍保留。准备好后可再次点击导入。",
+};
+
+const diagnosticCodes = new Set([
+  "unsupported_source_profile",
+  "json_required",
+  "invalid_import_form",
+  "invalid_exporter_json",
+  "pairing_candidate_limit",
+  "pairing_complexity_limit",
+  "pairing_timeout",
+  "pairing_ambiguous",
+  "alignment_failed",
+  "JSON_INVALID",
+  "NO_MESSAGE_STRUCTURE",
+  "MARKDOWN_ENCODING_INVALID",
+  "MARKDOWN_EMPTY",
+  "MARKDOWN_FENCE_UNCLOSED",
+  "GROUP_AMBIGUOUS",
+  "GROUPING_INCOMPLETE",
+  "SOURCE_UNSUPPORTED",
+  "FILE_EMPTY",
+]);
+
+export function importErrorMessage(error: unknown, tr: ImportCopy, action: ImportErrorAction = "read"): string {
+  if (typeof error === "string") {
+    if (importCodeCopy[error]) return tr(importCodeCopy[error]);
+    if (action !== "read") {
+      if (error === "CONNECTION_FAILED") return tr("请求结果尚未确认。请检查当前导入状态，再决定是否重试。");
+      return tr("导入结果尚未确认。请返回概览检查当前状态，再决定是否重试。");
+    }
+    return tr(error === "CONNECTION_FAILED" ? "无法连接服务器。请检查网络后重试，当前输入仍然保留。" : error);
+  }
+  if (isApiRequestError(error)) {
+    if (error.code && importCodeCopy[error.code]) return tr(importCodeCopy[error.code]);
+    if (error.code && diagnosticCodes.has(error.code)) return tr(error.message);
+    if (action !== "read" && error.status >= 500) return tr("请求结果尚未确认。请检查当前导入状态，再决定是否重试。");
+    if (error.status >= 500) return tr("服务暂时不可用，请稍后重试。");
+    if (error.status === 401) return tr("登录状态已失效，请重新登录后重试。");
+    if (error.status === 403) return tr("没有权限完成这次导入。");
+    if (error.status === 404) return tr("当前导入会话已不存在，请返回后重新选择文件。");
+    if (error.status === 409) return tr("当前导入状态已变化，请返回概览后重试。");
+    if (error.status === 413) return tr("所选文件超过当前导入限制，请分批导入。");
+    return tr("导入操作失败，请稍后重试。");
+  }
+  if (error instanceof Error && error.message === "CONNECTION_FAILED") {
+    return tr(action === "read" ? "无法连接服务器。请检查网络后重试，当前输入仍然保留。" : "请求结果尚未确认。请检查当前导入状态，再决定是否重试。");
+  }
+  return tr(action === "read" ? "导入操作失败，请稍后重试。" : "请求结果尚未确认。请检查当前导入状态，再决定是否重试。");
+}
+
+function isApiRequestError(error: unknown): error is { status: number; code?: string; message: string } {
+  if (!error || typeof error !== "object") return false;
+  const value = error as { name?: unknown; status?: unknown; code?: unknown; message?: unknown };
+  return value.name === "ApiRequestError" && typeof value.status === "number" && typeof value.message === "string";
 }
 export function useImportCopy(): ImportCopy {
   const { resolvedLocale } = usePreferences();

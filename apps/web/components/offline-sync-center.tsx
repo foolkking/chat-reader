@@ -21,6 +21,18 @@ import type { OfflineDownloadTarget } from "../lib/types";
 
 type Copy = { conversation: OfflineConversationRecord; assets: Awaited<ReturnType<typeof inspectOfflineCopyAssets>> };
 type Conflict = { key: string; conversationId: string };
+type LocalReadSection = "copies" | "downloads" | "pending" | "drafts" | "conflicts" | "failures";
+type LocalReadResult<T> = { section: LocalReadSection; ok: true; value: T } | { section: LocalReadSection; ok: false; error: unknown };
+type LocalReadState = { scope: string; failed: LocalReadSection[]; error: "assets" | null };
+
+async function readLocalSection<T>(section: LocalReadSection, read: () => Promise<T> | T): Promise<LocalReadResult<T>> {
+  try { return { section, ok: true, value: await read() }; }
+  catch (error) { return { section, ok: false, error }; }
+}
+
+function successfulLocalRead<T>(section: LocalReadSection, value: T): LocalReadResult<T> {
+  return { section, ok: true, value };
+}
 
 function downloadNeedsAttention(item: OfflineDownload): boolean {
   return item.state === "failed" || item.state === "cancelled" || item.state === "completed" && item.serverCancellation === "failed";
@@ -29,6 +41,13 @@ function downloadNeedsAttention(item: OfflineDownload): boolean {
 function matchesTarget(item: OfflineDownload, target: OfflineDownloadTarget | null | undefined): boolean {
   if (!target || item.scope !== target.scope || item.assetMode !== target.include_assets) return false;
   return target.scope === "all" || item.scopeId === (target.scope === "conversation" ? target.conversation_id : target.project_id);
+}
+
+function offlineOutboxFailureMessage(code: string | null, zh: boolean): string {
+  if (code === "AUTH") return zh ? "账户授权未确认；本机修改仍保留，请重新确认账户后重试。" : "Account authorization was not confirmed. Local changes are retained; confirm the account and retry.";
+  if (code === "INVALID") return zh ? "服务器拒绝了这项修改；请打开对应内容核对后再重试。" : "The server rejected this change. Open the related content, review it, and retry.";
+  if (code === "NETWORK") return zh ? "暂时无法连接服务器；本机修改仍保留，联网后可以重试。" : "The server is temporarily unreachable. Local changes are retained and can be retried when online.";
+  return zh ? "同步未完成；本机修改仍保留，请打开对应内容核对后重试。" : "Sync did not finish. Local changes are retained; open the related content, review it, and retry.";
 }
 
 // Intent: a reader prepares reliable copies and resolves a specific failed
@@ -57,6 +76,12 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
   const [syncFailures, setSyncFailures] = useState<OfflineOutboxRecord[]>([]), [syncFailureCount, setSyncFailureCount] = useState(0);
   const [page, setPage] = useState(0), [total, setTotal] = useState(0);
   const [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState("");
+  const readScope = `${tab}:${page}:${mode}`;
+  const [localRead, setLocalRead] = useState<LocalReadState | null>(null);
+  const localScopeMatches = localRead?.scope === readScope;
+  const readSectionReady = (section: LocalReadSection) => localScopeMatches && !localRead?.failed.includes(section);
+  const localReadError = localScopeMatches ? localRead?.error ?? (localRead?.failed.length ? "storage" : null) : null;
+  const localLoading = loading || localRead?.scope !== readScope;
   const [refresh, setRefresh] = useState(0);
   const [selectedConflict, setSelectedConflict] = useState<string | null>(initialConflictKey ?? null);
   const [cleanup, setCleanup] = useState<{ conversationId: string; attachmentsOnly: boolean; snapshot: OfflinePendingSnapshot } | null>(null);
@@ -70,37 +95,99 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
     return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
   }, []);
   useEffect(() => {
+    // Conflict/cleanup subviews own their reads. Resume the parent ledger on
+    // return; global download and sync managers are independent of this view.
+    if (selectedConflict || cleanup) return;
     let active = true, inspection = 0;
+    let inspectionRunning = false;
+    let pendingInspection: (() => Promise<void>) | null = null;
+    const drainInspections = async () => {
+      if (inspectionRunning) return;
+      inspectionRunning = true;
+      try {
+        while (active && pendingInspection) {
+          const work: () => Promise<void> = pendingInspection;
+          pendingInspection = null;
+          await work();
+        }
+      } finally { inspectionRunning = false; }
+    };
     const focusBeforeLookup = document.activeElement;
     setLoading(true);
+    // Shared ledger fields will be republished below. A prior scope's marker
+    // cannot survive that read and later make those fields look like its own.
+    setLocalRead((previous) => previous?.scope === readScope ? previous : null);
     const subscription = liveQuery(async () => {
       const db = offlineDb;
       const failed = () => db.outbox.filter((item) => Boolean(item.last_error) && item.last_error !== "CONFLICT");
-      const [count, rows, tasks, operations, operationCount, markers, failedRows, failedCount, draftRows, draftsTotal, contextRows, contextTotal] = await Promise.all([
-        db.conversations.count(), db.conversations.orderBy("downloaded_at").reverse().offset(page * 20).limit(20).toArray(),
-        listOfflineDownloads(db), db.outbox.orderBy("queued_at").offset(tab === "pending" ? page * 20 : 0).limit(20).toArray(), db.outbox.count(),
-        db.settings.where("key").startsWith("sync-conflict:").toArray(),
-        failed().offset(page * 20).limit(20).toArray(), failed().count(),
-        db.settings.where("key").startsWith("notebook-draft:").offset(page * 20).limit(20).toArray(), db.settings.where("key").startsWith("notebook-draft:").count(),
-        db.settings.where("key").startsWith("continuation-draft:").offset(page * 20).limit(20).toArray(), db.settings.where("key").startsWith("continuation-draft:").count(),
+      // Do not let hidden ledgers block this tab or subscribe it to unrelated
+      // writes. An initial-job entry still owns its task card on every tab.
+      const [copyRead, downloadRead, pendingRead, conflictRead, failureRead, draftRead] = await Promise.all([
+        tab === "copies"
+          ? readLocalSection("copies", async () => ({
+            count: await db.conversations.count(),
+            rows: await db.conversations.orderBy("downloaded_at").reverse().offset(page * 20).limit(20).toArray(),
+          }))
+          : Promise.resolve(successfulLocalRead("copies", { count: 0, rows: [] })),
+        tab !== "pending" || initialJobId
+          ? readLocalSection("downloads", async () => {
+            const tasks = await listOfflineDownloads(db);
+            // Inspect only the displayed failure page through existing indexes. A copy
+            // from an unrelated conversation must not imply this download is readable.
+            const failurePage = tab === "failures" ? tasks.filter(downloadNeedsAttention).slice(page * 20, page * 20 + 20) : [];
+            const anyCopy = failurePage.some((item) => item.scope === "all") ? await db.conversations.toCollection().limit(1).count() > 0 : false;
+            const retained = await Promise.all(failurePage
+              .map(async item => [item.id, item.scope === "all" ? anyCopy : Boolean(item.scopeId)
+                && await db.conversations.where(item.scope === "project" ? "project_id" : "id").equals(item.scopeId!).limit(1).count() > 0] as const));
+            return { tasks, retained: Object.fromEntries(retained) };
+          })
+          : Promise.resolve(successfulLocalRead("downloads", { tasks: [], retained: {} })),
+        tab === "pending"
+          ? readLocalSection("pending", async () => ({
+            operations: await db.outbox.orderBy("queued_at").offset(page * 20).limit(20).toArray(),
+            operationCount: await db.outbox.count(),
+          }))
+          : Promise.resolve(successfulLocalRead("pending", { operations: [], operationCount: 0 })),
+        tab !== "copies"
+          ? readLocalSection("conflicts", () => db.settings.where("key").startsWith("sync-conflict:").toArray())
+          : Promise.resolve(successfulLocalRead("conflicts", [])),
+        tab === "failures"
+          ? readLocalSection("failures", async () => ({
+            failedRows: await failed().offset(page * 20).limit(20).toArray(),
+            failedCount: await failed().count(),
+          }))
+          : Promise.resolve(successfulLocalRead("failures", { failedRows: [], failedCount: 0 })),
+        tab === "pending"
+          ? readLocalSection("drafts", async () => ({
+            draftRows: await db.settings.where("key").startsWith("notebook-draft:").offset(page * 20).limit(20).toArray(),
+            draftsTotal: await db.settings.where("key").startsWith("notebook-draft:").count(),
+            contextRows: await db.settings.where("key").startsWith("continuation-draft:").offset(page * 20).limit(20).toArray(),
+            contextTotal: await db.settings.where("key").startsWith("continuation-draft:").count(),
+          }))
+          : Promise.resolve(successfulLocalRead("drafts", { draftRows: [], draftsTotal: 0, contextRows: [], contextTotal: 0 })),
       ]);
-      // Inspect only the displayed failure page through existing indexes. A copy
-      // from an unrelated conversation must not imply this download is readable.
-      const retained = tab === "failures" ? await Promise.all(tasks
-        .filter(downloadNeedsAttention)
-        .slice(page * 20, page * 20 + 20)
-        .map(async item => [item.id, item.scope === "all" ? count > 0 : Boolean(item.scopeId)
-          && await db.conversations.where(item.scope === "project" ? "project_id" : "id").equals(item.scopeId!).limit(1).count() > 0] as const)) : [];
-      return { count, rows, tasks, operations, operationCount, markers, failedRows, failedCount, draftRows, draftsTotal, contextRows, contextTotal, retained: Object.fromEntries(retained) };
+      return { copyRead, downloadRead, pendingRead, conflictRead, failureRead, draftRead };
     }).subscribe({ next: (data) => {
       if (!active) return;
       const currentInspection = ++inspection;
-      const attention = data.tasks.filter(downloadNeedsAttention);
-      if (!entryResolved && initialJobId) {
+      // Retire a queued page even when this newer emission exits for task
+      // navigation, page clamping or a failed copy read.
+      pendingInspection = null;
+      const failedSections = [data.copyRead, data.downloadRead, data.pendingRead, data.conflictRead, data.failureRead, data.draftRead]
+        .filter((result): result is Extract<typeof result, { ok: false }> => !result.ok)
+        .map((result) => result.section);
+      const copyData = data.copyRead.ok ? data.copyRead.value : { count: 0, rows: [] };
+      const downloadData = data.downloadRead.ok ? data.downloadRead.value : { tasks: [], retained: {} };
+      const pendingData = data.pendingRead.ok ? data.pendingRead.value : { operations: [], operationCount: 0 };
+      const conflictData = data.conflictRead.ok ? data.conflictRead.value : [];
+      const failureData = data.failureRead.ok ? data.failureRead.value : { failedRows: [], failedCount: 0 };
+      const draftData = data.draftRead.ok ? data.draftRead.value : { draftRows: [], draftsTotal: 0, contextRows: [], contextTotal: 0 };
+      const attention = downloadData.tasks.filter(downloadNeedsAttention);
+      if (data.downloadRead.ok && !entryResolved && initialJobId) {
         // An older task can lead to the latest local retry of the same scope.
         // This association only navigates; it never resumes work automatically.
-        const selected = data.tasks.find(item => item.jobId === initialJobId)
-          ?? data.tasks.find(item => matchesTarget(item, initialTarget));
+        const selected = downloadData.tasks.find(item => item.jobId === initialJobId)
+          ?? downloadData.tasks.find(item => matchesTarget(item, initialTarget));
         setEntryResolved(true);
         setEntryDownloadId(selected?.id ?? null);
         if (entryNavigation.current && selected) {
@@ -112,20 +199,44 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
         }
       }
       const failures = attention.length;
-      const count = tab === "copies" ? data.count : tab === "pending" ? Math.max(data.operationCount, data.draftsTotal, data.contextTotal) : Math.max(failures, data.markers.length, data.failedCount);
+      const count = tab === "copies" ? copyData.count : tab === "pending" ? Math.max(pendingData.operationCount, draftData.draftsTotal, draftData.contextTotal) : Math.max(failures, conflictData.length, failureData.failedCount);
       const lastPage = Math.max(0, Math.ceil(count / 20) - 1);
-      if (page > lastPage) { setPage(lastPage); return; }
-      setTotal(data.count); setDownloads(data.tasks); setPending(data.operations); setPendingCount(data.operationCount);
-      setRetainedCopies(data.retained);
-      setDrafts(data.draftRows as Array<{ key: string; value: NotebookDraft }>); setDraftCount(data.draftsTotal);
-      setContextDrafts(data.contextRows as SavedContinuationDraft[]); setContextDraftCount(data.contextTotal);
-      setSyncFailures(data.failedRows); setSyncFailureCount(data.failedCount);
-      setConflicts(data.markers.map((row) => ({ key: row.key, conversationId: (row.value as { conversation_id: string }).conversation_id })));
-      void Promise.all(data.rows.map(async (conversation) => ({ conversation, assets: await inspectOfflineCopyAssets(conversation.id, mode) })))
-        .then((value) => { if (active && inspection === currentInspection) { setCopies(value); setLoading(false); } }).catch(() => { if (active && inspection === currentInspection) { setLoading(false); setError(zh ? "无法检查离线资源，请重试。" : "Unable to check offline resources. Retry."); } });
-    }, error: () => { if (active) { setLoading(false); setError(zh ? "无法读取本地存储，请重试。" : "Unable to read local storage. Retry."); } } });
-    return () => { active = false; subscription.unsubscribe(); };
-  }, [page, tab, mode, refresh, zh, entryResolved, initialJobId, initialTarget]);
+      const pageReadReady = tab === "copies" ? data.copyRead.ok : tab === "pending" ? data.pendingRead.ok && data.draftRead.ok : data.downloadRead.ok && data.conflictRead.ok && data.failureRead.ok;
+      if (pageReadReady && page > lastPage) { setPage(lastPage); return; }
+      if (data.copyRead.ok) setTotal(copyData.count);
+      if (data.downloadRead.ok) { setDownloads(downloadData.tasks); setRetainedCopies(downloadData.retained); }
+      if (data.pendingRead.ok) { setPending(pendingData.operations); setPendingCount(pendingData.operationCount); }
+      if (data.draftRead.ok) {
+        setDrafts(draftData.draftRows as Array<{ key: string; value: NotebookDraft }>); setDraftCount(draftData.draftsTotal);
+        setContextDrafts(draftData.contextRows as SavedContinuationDraft[]); setContextDraftCount(draftData.contextTotal);
+      }
+      if (data.failureRead.ok) { setSyncFailures(failureData.failedRows); setSyncFailureCount(failureData.failedCount); }
+      if (data.conflictRead.ok) setConflicts(conflictData.map((row) => ({ key: row.key, conversationId: (row.value as { conversation_id: string }).conversation_id })));
+      // Only Copies displays verified asset counts. Do not materialize cached
+      // attachment Blobs while reviewing unrelated pending edits or failures.
+      if (tab !== "copies" || !data.copyRead.ok) { setLocalRead({ scope: readScope, failed: failedSections, error: null }); setLoading(false); return; }
+      pendingInspection = async () => {
+        try {
+          // A rejected sibling must not release the page slot while other
+          // started verifiers are still materializing cached responses.
+          const results = await Promise.allSettled(copyData.rows.map(async (conversation) => ({ conversation, assets: await inspectOfflineCopyAssets(conversation.id, mode) })));
+          for (const result of results) if (result.status === "rejected") throw result.reason;
+          const value = results.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
+          if (active && inspection === currentInspection) { setCopies(value); setLocalRead({ scope: readScope, failed: failedSections, error: null }); setLoading(false); }
+        } catch {
+          if (active && inspection === currentInspection) { setLoading(false); setLocalRead({ scope: readScope, failed: [...failedSections, "copies"], error: "assets" }); }
+        }
+      };
+      void drainInspections();
+    }, error: () => { if (active) {
+      // A prior asset check must not publish after its owning ledger has failed.
+      inspection += 1;
+      pendingInspection = null;
+      const failed: LocalReadSection[] = tab === "copies" ? ["copies", "downloads"] : tab === "pending" ? ["pending", "drafts", "conflicts", ...(initialJobId ? ["downloads" as const] : [])] : ["downloads", "conflicts", "failures"];
+      setLoading(false); setLocalRead({ scope: readScope, failed, error: null });
+    } } });
+    return () => { active = false; pendingInspection = null; subscription.unsubscribe(); };
+  }, [page, tab, mode, refresh, zh, entryResolved, initialJobId, initialTarget, selectedConflict, cleanup, readScope]);
 
   useLayoutEffect(() => {
     const pending = entryFocus.current;
@@ -184,6 +295,19 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
     entryFocus.current = { id: record.id, owner };
   });
   const pages = Math.ceil((tab === "copies" ? total : tab === "pending" ? Math.max(pendingCount, draftCount, contextDraftCount) : Math.max(failures.length, conflicts.length, syncFailureCount)) / 20);
+  const copiesReady = readSectionReady("copies");
+  const downloadsReady = readSectionReady("downloads");
+  const pendingReady = readSectionReady("pending");
+  const draftsReady = readSectionReady("drafts");
+  const conflictsReady = readSectionReady("conflicts");
+  const failuresReady = readSectionReady("failures");
+  const pendingSectionsReady = pendingReady && draftsReady && conflictsReady;
+  const failureSectionsReady = downloadsReady && conflictsReady && failuresReady;
+  const pageReady = tab === "copies" ? copiesReady : tab === "pending" ? pendingReady && draftsReady : failureSectionsReady;
+  const sectionLabels: Record<LocalReadSection, string> = zh
+    ? { copies: "离线副本", downloads: "下载状态", pending: "待同步修改", drafts: "本机草稿", conflicts: "冲突记录", failures: "同步失败记录" }
+    : { copies: "offline copies", downloads: "download status", pending: "pending edits", drafts: "local drafts", conflicts: "conflict records", failures: "sync failure records" };
+  const unavailableSections = localScopeMatches ? localRead?.failed.map(section => sectionLabels[section]).join(zh ? "、" : ", ") : "";
   const stateLabel = (state: OfflineDownload["state"]) => (zh ? { queued: "排队中", generating: "生成中", downloading: "下载中", writing: "写入中", completed: "已完成", failed: "失败", cancelled: "已取消" } : { queued: "Queued", generating: "Generating", downloading: "Downloading", writing: "Writing", completed: "Completed", failed: "Failed", cancelled: "Cancelled" })[state];
 
   if (selectedConflict?.startsWith("sync-conflict:reading_position:")) return <section className="space-y-3"><button className="btn-secondary min-h-9 px-3 text-sm" onClick={() => setSelectedConflict(null)}>{zh ? "返回同步中心" : "Back to sync center"}</button><ReadingPositionSyncStatus conversationId={selectedConflict.slice("sync-conflict:reading_position:".length)} showIdle /></section>;
@@ -208,18 +332,24 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
       </button>)}
     </div>
     {error ? <p role="alert" className="border-l-2 border-[var(--danger)] pl-3 text-sm text-[var(--danger)]">{error}</p> : null}
-    {initialJobId && !entryResolved ? <p role="status" className="text-sm text-secondary">{zh ? "正在查找本机下载…" : "Finding this device's download…"}</p> : null}
+    {initialJobId && !entryResolved && !localReadError ? <p role="status" className="text-sm text-secondary">{zh ? "正在查找本机下载…" : "Finding this device's download…"}</p> : null}
     {initialJobId && entryResolved && entryDownloadId === null ? <div className="space-y-2 border-b border-ui pb-4" data-testid="offline-task-target">
       <p className="break-words text-sm font-medium">{targetLabel}</p>
       <p className="text-xs text-secondary">{initialTarget ? (zh ? "此设备尚无对应下载记录。" : "This device has no matching download record.") : (zh ? "这项旧任务缺少下载范围，请从资料库重新选择。" : "This older task has no download scope. Choose it again in the library.")}</p>
       {initialTarget ? <button type="button" className="btn-primary min-h-11 px-3 text-sm" disabled={!online || busy || !targetAvailable} onClick={() => void downloadTarget()}>{zh ? "下载到此设备" : "Download to this device"}</button> : <a className="inline-flex min-h-11 items-center text-sm text-accent underline" href="/library">{zh ? "打开资料库" : "Open library"}</a>}
       {initialTarget && online && catalog.data && !targetAvailable ? <p role="status" className="text-xs text-secondary">{zh ? "没有可下载的对话，请从资料库重新选择。" : "No conversations are available for this download. Choose another source in the library."}</p> : null}
     </div> : null}
-    {initialJobId && entryDownload?.state === "completed" && !downloadNeedsAttention(entryDownload) ? <div tabIndex={-1} data-offline-download-id={entryDownload.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-ui pb-4 text-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
+    {initialJobId && downloadsReady && entryDownload?.state === "completed" && !downloadNeedsAttention(entryDownload) ? <div tabIndex={-1} data-offline-download-id={entryDownload.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-ui pb-4 text-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
       <span className="min-w-0 break-words">{entryDownload.label || targetLabel} · {zh ? "下载已完成" : "Download completed"}</span>
       <a className="inline-flex min-h-11 items-center text-accent underline" href={entryDownload.scope === "conversation" && entryDownload.scopeId ? `/library?conversationId=${encodeURIComponent(entryDownload.scopeId)}` : "/library"}>{zh ? "打开资料库" : "Open library"}</a>
     </div> : null}
-    <div role="tabpanel" id={`offline-${tab}`} aria-labelledby={`offline-tab-${tab}`} className="space-y-4">
+    <div role="tabpanel" id={`offline-${tab}`} aria-labelledby={`offline-tab-${tab}`} aria-busy={localLoading} className="space-y-4">
+      {localLoading ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取本机资料…" : "Reading local data…"}</p> : null}
+      {localReadError ? <div role="alert" className="space-y-2 border-l-2 border-[var(--danger)] pl-3 text-sm">
+        <p>{localReadError === "assets" ? (zh ? "无法检查离线资源，请重试。" : "Unable to check offline resources. Retry.") : (zh ? "无法读取本地存储，请重试。" : "Unable to read local storage. Retry.")}</p>
+        {unavailableSections ? <p className="text-xs text-secondary">{zh ? `暂不可用：${unavailableSections}。其他已读取区块仍可使用。` : `Temporarily unavailable: ${unavailableSections}. Other loaded sections remain available.`}</p> : null}
+        <button type="button" className="btn-secondary min-h-9 px-3 text-sm" disabled={busy || localLoading} onClick={() => { if (!busy && !localLoading) setRefresh((value) => value + 1); }}>{zh ? "重试读取" : "Retry local read"}</button>
+      </div> : null}
       {tab === "copies" ? <>
 
         <div className="flex flex-wrap items-end gap-3">
@@ -228,28 +358,31 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
         </div>
         {online && catalog.data?.projects.length ? <div className="flex flex-wrap gap-2"><select aria-label={zh ? "选择项目" : "Choose project"} className="min-h-11 min-w-0 flex-1 rounded-md border border-ui bg-surface px-3 text-sm" value={project} onChange={(event) => setProject(event.target.value)}><option value="">{zh ? "选择项目" : "Choose project"}</option>{catalog.data.projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="btn-secondary min-h-11 px-3 text-sm" disabled={!project || busy} onClick={() => void download("project", project)}>{zh ? "下载项目" : "Download project"}</button></div> : null}
         {catalog.isError && online ? <p className="text-xs text-secondary">{zh ? "服务器目录暂不可用；本地副本仍可访问。" : "Server catalog is unavailable; local copies remain accessible."}</p> : null}
-        {downloads.filter((item) => ["queued", "generating", "downloading", "writing"].includes(item.state)).map((item) => <div key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 border-y border-ui py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]" role="status"><div className="flex items-center gap-3"><span className="min-w-0 flex-1 break-words text-sm">{item.label || (zh ? "全部对话" : "All conversations")} · {item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : !online ? (zh ? "已暂停，联网后继续" : "Paused; resumes when online") : stateLabel(item.state)}</span><button className="btn-secondary min-h-9 px-3 text-xs" disabled={busy || item.cancelRequested} onClick={() => void action(() => cancelOfflineDownload(item.id))}>{item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : (zh ? "取消" : "Cancel")}</button></div><progress className="h-1.5 w-full accent-[var(--accent)]" max={100} value={item.progress} aria-label={zh ? "下载进度" : "Download progress"} /></div>)}
-        {loading ? <p role="status" className="text-sm text-secondary">{zh ? "正在检查离线副本…" : "Checking offline copies…"}</p> : null}
-        <ul className="divide-y divide-[var(--border)]">{copies.map((copy) => <li key={copy.conversation.id} className="space-y-2 py-4">
+        {downloadsReady ? downloads.filter((item) => ["queued", "generating", "downloading", "writing"].includes(item.state)).map((item) => <div key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 border-y border-ui py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]" role="status"><div className="flex items-center gap-3"><span className="min-w-0 flex-1 break-words text-sm">{item.label || (zh ? "全部对话" : "All conversations")} · {item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : !online ? (zh ? "已暂停，联网后继续" : "Paused; resumes when online") : stateLabel(item.state)}</span><button className="btn-secondary min-h-9 px-3 text-xs" disabled={busy || item.cancelRequested} onClick={() => void action(() => cancelOfflineDownload(item.id))}>{item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : (zh ? "取消" : "Cancel")}</button></div><progress className="h-1.5 w-full accent-[var(--accent)]" max={100} value={item.progress} aria-label={zh ? "下载进度" : "Download progress"} /></div>) : null}
+        <ul className="divide-y divide-[var(--border)]">{copiesReady ? copies.map((copy) => <li key={copy.conversation.id} className="space-y-2 py-4">
           <a className="break-words text-sm font-semibold text-primary hover:text-accent" href={`/library?conversationId=${copy.conversation.id}`}>{copy.conversation.display_title}</a>
           <p className="text-xs text-secondary">{copy.conversation.message_count} {zh ? "条消息" : "messages"} · {zh ? "已缓存附件" : "Cached files"} {copy.assets.available}/{copy.assets.total} · {copy.assets.missing ? (zh ? `需补充 ${copy.assets.missing} 个附件` : `${copy.assets.missing} files missing`) : catalog.data?.conversations.some((row) => row.id === copy.conversation.id && row.revision !== copy.conversation.offline_revision) ? (zh ? "正文有更新" : "Content update available") : (zh ? "当前副本可用" : "Current copy available")}</p>
-          <div className="flex flex-wrap gap-2"><button className="btn-secondary min-h-9 px-3 text-xs" disabled={!online || busy} onClick={() => void download("conversation", copy.conversation.id)}>{zh ? "检查并更新" : "Check and update"}</button><button className="btn-secondary min-h-9 px-3 text-xs" disabled={busy || activeDownload || !copy.assets.available} onClick={() => void remove(copy, true)}>{zh ? "仅清附件缓存" : "Clear cached files"}</button><button className="min-h-9 rounded-md px-3 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50" disabled={busy || activeDownload} onClick={() => void remove(copy, false)}>{zh ? "删除副本" : "Delete copy"}</button></div>
-        </li>)}</ul>
-        {!loading && !total ? <p className="py-6 text-center text-sm text-secondary">{zh ? "还没有离线副本。联网后选择全部、项目，或从资料库下载单个对话。" : "No offline copies yet. Connect to download all, a project, or one conversation from the library."}</p> : null}
+          <div className="flex flex-wrap gap-2"><button className="btn-secondary min-h-9 px-3 text-xs" disabled={!online || busy} onClick={() => void download("conversation", copy.conversation.id)}>{zh ? "检查并更新" : "Check and update"}</button><button className="btn-secondary min-h-9 px-3 text-xs" disabled={busy || !downloadsReady || activeDownload || !copy.assets.available} onClick={() => void remove(copy, true)}>{zh ? "仅清附件缓存" : "Clear cached files"}</button><button className="min-h-9 rounded-md px-3 text-xs text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50" disabled={busy || !downloadsReady || activeDownload} onClick={() => void remove(copy, false)}>{zh ? "删除副本" : "Delete copy"}</button></div>
+        </li>) : null}</ul>
+        {copiesReady && !localLoading && !total ? <p className="py-6 text-center text-sm text-secondary">{zh ? "还没有离线副本。联网后选择全部、项目，或从资料库下载单个对话。" : "No offline copies yet. Connect to download all, a project, or one conversation from the library."}</p> : null}
       </> : tab === "pending" ? <>
         <PreferenceSyncStatus />
-        <div className="flex items-center justify-between gap-3"><p className="text-sm text-secondary">{pendingCount} {zh ? "项待同步修改" : "pending edits"}</p><button className="btn-primary min-h-11 px-3 text-sm" disabled={!online || busy || !pendingCount} onClick={() => void retrySync()}>{zh ? "同步／重试" : "Sync / retry"}</button></div>
-        <button className="btn-secondary min-h-9 px-3 text-sm" disabled={busy || !(pendingCount || draftCount || contextDraftCount || conflicts.length || preferenceCount)} onClick={() => void exportChanges()}>{zh ? "导出本机修改与草稿" : "Export local edits and drafts"}</button>
-        {contextDraftCount ? <section className="space-y-2 border-y border-ui py-3"><h3 className="text-sm font-semibold">Current / Index · {contextDraftCount}</h3>{contextDrafts.map(row => <a key={row.key} className="block min-h-11 py-3 text-sm text-accent hover:underline" aria-disabled={!online} onClick={event => { if (!online) event.preventDefault(); }} href={`/conversations/${encodeURIComponent(row.value.conversation_id)}?continuation=${row.value.member}`}>{row.value.member === "current" ? "Current" : "Index"} · {new Date(row.value.updated_at).toLocaleString(resolvedLocale)} · {online ? (zh ? "继续编辑" : "Resume draft") : (zh ? "联网后继续" : "Connect to resume")}</a>)}</section> : null}
-        {draftCount ? <section className="space-y-2 border-y border-ui py-3"><h3 className="text-sm font-semibold">{zh ? "本机笔记草稿" : "Local notebook drafts"} · {draftCount}</h3>{drafts.map((row) => <a key={row.key} className="block min-h-9 break-words py-2 text-sm text-accent hover:underline" href={`${row.value.mode === "offline" ? `/library?conversationId=${row.value.conversation_id}&` : `/conversations/${row.value.conversation_id}?`}annotations=open&notebookDraft=${encodeURIComponent(row.key)}`}>{row.value.title || (zh ? "恢复无标题草稿" : "Restore untitled draft")}</a>)}</section> : null}
-        <ul className="divide-y divide-[var(--border)]">{pending.map((item) => <li key={item.operation_id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><a href={item.entity_type === "reading_position" && online ? `/conversations/${item.conversation_id}` : `/library?conversationId=${item.conversation_id}${item.entity_type === "reading_position" ? "" : "&annotations=open"}`} className="font-medium hover:text-accent">{item.entity_type === "reading_position" ? (zh ? "阅读进度" : "Reading progress") : item.entity_type === "notebook" ? (zh ? "笔记修改" : "Notebook edit") : (zh ? "批注修改" : "Annotation edit")}</a><span className="text-xs text-secondary">{item.last_error === "CONFLICT" ? (zh ? "冲突，等待处理" : "Conflict, awaiting review") : item.last_error ? (zh ? `同步失败 · 已尝试 ${item.attempts} 次` : `Sync failed · ${item.attempts} attempts`) : (zh ? "等待同步" : "Waiting to sync")}</span></li>)}</ul>
-        {!pendingCount && !draftCount && !contextDraftCount && !preferenceCount ? <p className="py-6 text-center text-sm text-secondary">{zh ? "没有待同步修改。" : "No pending edits."}</p> : null}
+        {pendingReady || draftsReady || conflictsReady ? <>
+        {pendingReady ? <div className="flex items-center justify-between gap-3"><p className="text-sm text-secondary">{pendingCount} {zh ? "项待同步修改" : "pending edits"}</p><button className="btn-primary min-h-11 px-3 text-sm" disabled={!online || busy || !pendingCount} onClick={() => void retrySync()}>{zh ? "同步／重试" : "Sync / retry"}</button></div> : null}
+        <button className="btn-secondary min-h-9 px-3 text-sm" disabled={busy || !pendingSectionsReady || !(pendingCount || draftCount || contextDraftCount || conflicts.length || preferenceCount)} onClick={() => void exportChanges()}>{zh ? "导出本机修改与草稿" : "Export local edits and drafts"}</button>
+        {draftsReady && contextDraftCount ? <section className="space-y-2 border-y border-ui py-3"><h3 className="text-sm font-semibold">Current / Index · {contextDraftCount}</h3>{contextDrafts.map(row => <a key={row.key} className="block min-h-11 py-3 text-sm text-accent hover:underline" aria-disabled={!online} onClick={event => { if (!online) event.preventDefault(); }} href={`/conversations/${encodeURIComponent(row.value.conversation_id)}?continuation=${row.value.member}`}>{row.value.member === "current" ? "Current" : "Index"} · {new Date(row.value.updated_at).toLocaleString(resolvedLocale)} · {online ? (zh ? "继续编辑" : "Resume draft") : (zh ? "联网后继续" : "Connect to resume")}</a>)}</section> : null}
+        {draftsReady && draftCount ? <section className="space-y-2 border-y border-ui py-3"><h3 className="text-sm font-semibold">{zh ? "本机笔记草稿" : "Local notebook drafts"} · {draftCount}</h3>{drafts.map((row) => <a key={row.key} className="block min-h-9 break-words py-2 text-sm text-accent hover:underline" href={`${row.value.mode === "offline" ? `/library?conversationId=${row.value.conversation_id}&` : `/conversations/${row.value.conversation_id}?`}annotations=open&notebookDraft=${encodeURIComponent(row.key)}`}>{row.value.title || (zh ? "恢复无标题草稿" : "Restore untitled draft")}</a>)}</section> : null}
+        {pendingReady ? <ul className="divide-y divide-[var(--border)]">{pending.map((item) => <li key={item.operation_id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"><a href={item.entity_type === "reading_position" && online ? `/conversations/${item.conversation_id}` : `/library?conversationId=${item.conversation_id}${item.entity_type === "reading_position" ? "" : "&annotations=open"}`} className="font-medium hover:text-accent">{item.entity_type === "reading_position" ? (zh ? "阅读进度" : "Reading progress") : item.entity_type === "notebook" ? (zh ? "笔记修改" : "Notebook edit") : (zh ? "批注修改" : "Annotation edit")}</a><span className="text-xs text-secondary">{item.last_error === "CONFLICT" ? (zh ? "冲突，等待处理" : "Conflict, awaiting review") : item.last_error ? `${offlineOutboxFailureMessage(item.last_error, zh)} · ${zh ? `已尝试 ${item.attempts} 次` : `${item.attempts} attempts`}` : (zh ? "等待同步" : "Waiting to sync")}</span></li>)}</ul> : null}
+        {pendingSectionsReady && !localLoading && !pendingCount && !draftCount && !contextDraftCount && !preferenceCount ? <p className="py-6 text-center text-sm text-secondary">{zh ? "没有待同步修改。" : "No pending edits."}</p> : null}
+        </> : null}
       </> : <>
-        <ul className="divide-y divide-[var(--border)]">{failures.slice(page * 20, page * 20 + 20).map((item) => <li key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]"><p className="text-sm font-medium">{item.label || (zh ? "全部对话" : "All conversations")} · {stateLabel(item.state)}</p><p className="text-xs text-secondary">{item.state === "cancelled" ? (zh ? `本机下载已取消。${retainedCopies[item.id] ? "现有副本已保留。" : ""}` : `The local download was cancelled.${retainedCopies[item.id] ? " Existing copies are retained." : ""}`) : item.state === "completed" ? (zh ? "离线副本已完成；之前的服务器取消请求仍需处理。" : "The offline copy is ready; an earlier server cancellation still needs attention.") : offlineDownloadFailureMessage(item.error, zh, retainedCopies[item.id] === true)}</p>{item.serverCancellation ? <p className="text-xs text-secondary">{item.serverCancellation === "pending" ? (zh ? "服务器取消请求待确认；联网后自动处理。" : "Server cancellation is awaiting confirmation; it resumes online.") : (zh ? "服务器取消请求未确认，本机不会继续下载。" : "Server cancellation was not confirmed. This device will not continue downloading.")}{item.serverCancellation === "failed" ? <button className="ml-2 min-h-9 text-accent underline" disabled={!online || busy} onClick={() => void action(() => retryOfflineCancellation(item.id))}>{zh ? "重试取消服务器任务" : "Retry server cancellation"}</button> : null}</p> : null}{item.state !== "completed" ? <button disabled={!online || busy} className="btn-secondary min-h-9 px-3 text-xs" onClick={() => void action(() => retryOfflineDownload(item.id))}>{zh ? "重试下载" : "Retry download"}</button> : null}</li>)}{conflicts.slice(page * 20, page * 20 + 20).map((item) => <li key={item.key} className="space-y-2 py-3"><p className="text-sm font-medium">{item.key.startsWith("sync-conflict:reading_position:") ? (zh ? "阅读位置存在冲突" : "Reading position conflict") : (zh ? "批注／笔记存在冲突" : "Annotation / notebook conflict")}</p><button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => setSelectedConflict(item.key)}>{zh ? "比较并解决" : "Compare and resolve"}</button><a className="ml-3 inline-flex min-h-9 items-center text-sm text-accent hover:underline" href={`/library?conversationId=${item.conversationId}&annotations=open`}>{zh ? "打开对话" : "Open conversation"}</a></li>)}</ul>
-        {syncFailures.length ? <section className="space-y-2 border-t border-ui pt-3"><h3 className="text-sm font-semibold">{zh ? "同步失败" : "Sync failures"}</h3><p className="text-xs text-secondary">{syncFailureCount} {zh ? "项修改仍保留在本机" : "edits retained on this device"}</p>{syncFailures.map((item) => <a key={item.operation_id} className="block min-h-9 py-2 text-sm text-accent hover:underline" href={item.entity_type === "reading_position" && online ? `/conversations/${item.conversation_id}` : `/library?conversationId=${item.conversation_id}${item.entity_type === "reading_position" ? "" : "&annotations=open"}`}>{item.entity_type === "reading_position" ? (zh ? "查看未同步进度" : "View unsynced progress") : item.entity_type === "notebook" ? (zh ? "查看未同步笔记" : "View unsynced notebook") : (zh ? "查看未同步批注" : "View unsynced annotation")}</a>)}<button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => void retrySync()}>{zh ? "重试同步" : "Retry sync"}</button></section> : null}
-        {!failures.length && !conflicts.length && !syncFailureCount ? <p className="py-6 text-center text-sm text-secondary">{zh ? "没有失败任务或已记录冲突。" : "No failed tasks or recorded conflicts."}</p> : null}
+        {downloadsReady || conflictsReady || failuresReady ? <>
+        <ul className="divide-y divide-[var(--border)]">{downloadsReady ? failures.slice(page * 20, page * 20 + 20).map((item) => <li key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]"><p className="text-sm font-medium">{item.label || (zh ? "全部对话" : "All conversations")} · {stateLabel(item.state)}</p><p className="text-xs text-secondary">{item.state === "cancelled" ? (zh ? `本机下载已取消。${retainedCopies[item.id] ? "现有副本已保留。" : ""}` : `The local download was cancelled.${retainedCopies[item.id] ? " Existing copies are retained." : ""}`) : item.state === "completed" ? (zh ? "离线副本已完成；之前的服务器取消请求仍需处理。" : "The offline copy is ready; an earlier server cancellation still needs attention.") : offlineDownloadFailureMessage(item.error, zh, retainedCopies[item.id] === true)}</p>{item.serverCancellation ? <p className="text-xs text-secondary">{item.serverCancellation === "pending" ? (zh ? "服务器取消请求待确认；联网后自动处理。" : "Server cancellation is awaiting confirmation; it resumes online.") : (zh ? "服务器取消请求未确认，本机不会继续下载。" : "Server cancellation was not confirmed. This device will not continue downloading.")}{item.serverCancellation === "failed" ? <button className="ml-2 min-h-9 text-accent underline" disabled={!online || busy} onClick={() => void action(() => retryOfflineCancellation(item.id))}>{zh ? "重试取消服务器任务" : "Retry server cancellation"}</button> : null}</p> : null}{item.state !== "completed" ? <button disabled={!online || busy} className="btn-secondary min-h-9 px-3 text-xs" onClick={() => void action(() => retryOfflineDownload(item.id))}>{zh ? "重试下载" : "Retry download"}</button> : null}</li>) : null}{conflictsReady ? conflicts.slice(page * 20, page * 20 + 20).map((item) => <li key={item.key} className="space-y-2 py-3"><p className="text-sm font-medium">{item.key.startsWith("sync-conflict:reading_position:") ? (zh ? "阅读位置存在冲突" : "Reading position conflict") : (zh ? "批注／笔记存在冲突" : "Annotation / notebook conflict")}</p><button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => setSelectedConflict(item.key)}>{zh ? "比较并解决" : "Compare and resolve"}</button><a className="ml-3 inline-flex min-h-9 items-center text-sm text-accent hover:underline" href={`/library?conversationId=${item.conversationId}&annotations=open`}>{zh ? "打开对话" : "Open conversation"}</a></li>) : null}</ul>
+        {failuresReady && syncFailures.length ? <section className="space-y-2 border-t border-ui pt-3"><h3 className="text-sm font-semibold">{zh ? "同步失败" : "Sync failures"}</h3><p className="text-xs text-secondary">{syncFailureCount} {zh ? "项修改仍保留在本机" : "edits retained on this device"}</p>{syncFailures.map((item) => <div key={item.operation_id} className="border-b border-ui py-2 last:border-b-0"><a className="block min-h-9 py-1 text-sm text-accent hover:underline" href={item.entity_type === "reading_position" && online ? `/conversations/${item.conversation_id}` : `/library?conversationId=${item.conversation_id}${item.entity_type === "reading_position" ? "" : "&annotations=open"}`}>{item.entity_type === "reading_position" ? (zh ? "查看未同步进度" : "View unsynced progress") : item.entity_type === "notebook" ? (zh ? "查看未同步笔记" : "View unsynced notebook") : (zh ? "查看未同步批注" : "View unsynced annotation")}</a><p className="text-xs text-secondary">{offlineOutboxFailureMessage(item.last_error, zh)} · {zh ? `已尝试 ${item.attempts} 次` : `${item.attempts} attempts`}</p></div>)}<button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => void retrySync()}>{zh ? "重试同步" : "Retry sync"}</button></section> : null}
+        {failureSectionsReady && !localLoading && !failures.length && !conflicts.length && !syncFailureCount ? <p className="py-6 text-center text-sm text-secondary">{zh ? "没有失败任务或已记录冲突。" : "No failed tasks or recorded conflicts."}</p> : null}
+        </> : null}
       </>}
     </div>
-    {pages > 1 ? <nav className="flex items-center justify-between border-t border-ui pt-3 text-xs" aria-label={zh ? "离线中心分页" : "Offline center pages"}><button className="btn-secondary min-h-9 px-3" disabled={!page} onClick={() => setPage((value) => value - 1)}>{zh ? "上一页" : "Previous"}</button><span>{page + 1} / {pages}</span><button className="btn-secondary min-h-9 px-3" disabled={page + 1 >= pages} onClick={() => setPage((value) => value + 1)}>{zh ? "下一页" : "Next"}</button></nav> : null}
+    {pageReady && pages > 1 ? <nav className="flex items-center justify-between border-t border-ui pt-3 text-xs" aria-label={zh ? "离线中心分页" : "Offline center pages"}><button className="btn-secondary min-h-9 px-3" disabled={!page} onClick={() => setPage((value) => value - 1)}>{zh ? "上一页" : "Previous"}</button><span>{page + 1} / {pages}</span><button className="btn-secondary min-h-9 px-3" disabled={page + 1 >= pages} onClick={() => setPage((value) => value + 1)}>{zh ? "下一页" : "Next"}</button></nav> : null}
   </section>;
 }

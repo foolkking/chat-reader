@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type NetworkMode } from "@tanstack/react-query";
 import { ListTree, Pin, SlidersHorizontal, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "../../components/preferences-provider";
@@ -10,6 +10,10 @@ import type { DialogueIndexPanelState, DialogueIndexItem, DialogueIndexResponse,
 const AROUND_WINDOW = 24;
 const PREVIEW_OPEN_DELAY = 180;
 const PREVIEW_CLOSE_DELAY = 220;
+
+type PageReadIntent =
+  | { kind: "jump"; ordinal: number; offset: number; limit: number }
+  | { kind: "page"; direction: "previous" | "next"; offset: number; limit: number };
 
 export type ConversationIndexItem = {
   messageId: string;
@@ -30,6 +34,7 @@ export function ConversationIndex({
   ready = true,
   mode = "rail",
   sourceKey = "remote",
+  networkMode,
   loadPage,
   onNavigate,
 }: {
@@ -40,6 +45,7 @@ export function ConversationIndex({
   ready?: boolean;
   mode?: "rail" | "sheet";
   sourceKey?: string;
+  networkMode?: NetworkMode;
   loadPage?: (options: { offset?: number; limit?: number; anchorMessageId?: string }) => Promise<DialogueIndexResponse>;
   onNavigate?: (item: ConversationIndexItem) => void | Promise<void>;
 }) {
@@ -52,6 +58,7 @@ export function ConversationIndex({
   const [panelState, setPanelState] = useState<DialogueIndexPanelState>(mode === "sheet" ? "pinned" : "rail");
   const [remotePage, setRemotePage] = useState<DialogueIndexResponse | null>(null);
   const [pageLoading, setPageLoading] = useState(false);
+  const [pageError, setPageError] = useState<PageReadIntent | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const listRef = useRef<HTMLElement | null>(null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
@@ -70,10 +77,12 @@ export function ConversationIndex({
     enabled: messages === undefined && ready,
     staleTime: 60_000,
     placeholderData: (previous) => previous,
+    ...(networkMode ? { networkMode } : {}),
   });
 
   useEffect(() => {
     setRemotePage(null);
+    setPageError(null);
     setRangeMode("around");
     setPanelState(mode === "sheet" ? "pinned" : "rail");
   }, [conversationId, mode, sourceKey]);
@@ -170,6 +179,12 @@ export function ConversationIndex({
     return (
       <section ref={sectionRef} className="flex min-h-0 flex-1 flex-col" aria-label={t("dialogueIndex")}>
         <JumpForm />
+        {pageError ? (
+          <div role="alert" className="mb-3 flex items-center justify-between gap-2 rounded-md border border-ui bg-subtle px-3 py-2 text-sm text-secondary">
+            <span>{t("indexFailed")}</span>
+            <button type="button" disabled={pageLoading} onClick={() => void retryPageRead()} className="min-h-8 shrink-0 rounded-md border border-ui bg-surface px-2 text-xs font-medium text-primary hover:bg-subtle disabled:opacity-50">{t("retry")}</button>
+          </div>
+        ) : null}
         <div ref={(node) => { listRef.current = node; }} className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto pr-1">{rows}</div>
       </section>
     );
@@ -243,20 +258,38 @@ export function ConversationIndex({
   async function jumpToOrdinal() {
     const ordinal = Number.parseInt(jumpOrdinal, 10);
     if (!Number.isFinite(ordinal) || ordinal < 1 || (remotePage && ordinal > remotePage.total)) return;
-    setPageLoading(true);
-    try {
-      const page = await loader({ offset: Math.max(0, ordinal - 40), limit: 80 });
-      setRemotePage(page);
-      const target = page.items.find((item) => item.ordinal === ordinal);
-      if (target) await onNavigate?.(toIndexItem(target));
-    } finally { setPageLoading(false); }
+    await readIndexPage({ kind: "jump", ordinal, offset: Math.max(0, ordinal - 40), limit: 80 });
   }
 
   async function loadIndexPage(direction: "previous" | "next") {
     if (!remotePage || pageLoading) return;
     const nextOffset = direction === "previous" ? Math.max(0, remotePage.offset - remotePage.limit) : remotePage.offset + remotePage.items.length;
+    await readIndexPage({ kind: "page", direction, offset: nextOffset, limit: remotePage.limit });
+  }
+
+  async function retryPageRead() {
+    if (!pageError || pageLoading) return;
+    await readIndexPage(pageError);
+  }
+
+  async function readIndexPage(intent: PageReadIntent) {
+    if (pageLoading) return;
     setPageLoading(true);
-    try { setRemotePage(await loader({ offset: nextOffset, limit: remotePage.limit })); } finally { setPageLoading(false); }
+    setPageError(null);
+    let page: DialogueIndexResponse | null = null;
+    try {
+      page = await loader({ offset: intent.offset, limit: intent.limit });
+    } catch {
+      setPageError(intent);
+    } finally {
+      setPageLoading(false);
+    }
+    if (!page) return;
+    setRemotePage(page);
+    if (intent.kind === "jump") {
+      const target = page.items.find((item) => item.ordinal === intent.ordinal);
+      if (target) await onNavigate?.(toIndexItem(target));
+    }
   }
 }
 

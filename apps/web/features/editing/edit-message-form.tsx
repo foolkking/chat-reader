@@ -813,9 +813,9 @@ export function EditMessageForm({
       onDirtyChange?.(false);
     } catch (err) {
       if (requestToken !== saveRequestRef.current) return;
-      const message = err instanceof Error ? err.message : t("unableSaveEdit");
-      setError(message);
-      setRevisionConflict(isRevisionConflictMessage(message));
+      const feedback = editorErrorFeedback(err, zh, "save");
+      setError(feedback.message);
+      setRevisionConflict(feedback.revisionConflict);
     } finally {
       if (requestToken === saveRequestRef.current) setIsSaving(false);
     }
@@ -835,11 +835,12 @@ export function EditMessageForm({
       .map((draft) => draft.itemId)
       .filter((itemId): itemId is string => Boolean(itemId));
     setError(null);
+    setRevisionConflict(false);
     try {
       await onAttachmentCancel?.(preserve, itemIds);
       if (!onAttachmentCancel) await onCancel(true);
     } catch (closeError) {
-      setError(closeError instanceof Error ? closeError.message : (zh ? "无法处理未保存的附件。" : "Unable to process unsaved attachments."));
+      setError(editorErrorFeedback(closeError, zh, "close").message);
     }
   }
 
@@ -1021,7 +1022,7 @@ export function EditMessageForm({
         </div> : null}
         <button type="button" onClick={() => setShowReason((value) => !value)} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-secondary hover:bg-subtle"><ChevronDown className={`h-4 w-4 transition ${showReason ? "rotate-180" : ""}`} />{zh ? "\u7f16\u8f91\u8bf4\u660e\uff08\u53ef\u9009\uff09" : "Edit note (optional)"}</button>
         {showReason ? <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={t("editReason")} className="min-h-10 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" /> : null}
-        {error ? <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] p-2 text-sm text-[var(--danger)]" role="alert"><p>{error}</p><p className="mt-1 text-xs">{zh ? "\u672a\u4fdd\u5b58\u7684\u6e90\u7801\u5df2\u4fdd\u7559\uff0c\u53ef\u91cd\u8bd5\u6216\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\u540e\u91cd\u65b0\u4fdd\u5b58\u3002" : "Your unsaved source is preserved. Retry, or load the latest state and save again."}</p>{revisionConflict && onReloadLatest ? <button type="button" disabled={reloadStatus === "loading"} onClick={() => { setReloadStatus("loading"); void onReloadLatest().then(() => { setError(null); setRevisionConflict(false); setReloadStatus("ready"); }).catch((reloadError) => { setReloadStatus("idle"); setError(reloadError instanceof Error ? reloadError.message : (zh ? "\u65e0\u6cd5\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\uff0c\u8bf7\u91cd\u8bd5\u3002" : "Unable to load the latest state. Please retry.")); }); }} className="mt-2 min-h-10 rounded-lg border border-[var(--danger)] px-3 font-medium hover:bg-surface disabled:opacity-60">{reloadStatus === "loading" ? (zh ? "\u6b63\u5728\u52a0\u8f7d\u2026" : "Loading…") : (zh ? "\u52a0\u8f7d\u6700\u65b0\u72b6\u6001" : "Load latest state")}</button> : null}</div> : null}
+        {error ? <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] p-2 text-sm text-[var(--danger)]" role="alert"><p>{error}</p><p className="mt-1 text-xs">{zh ? "\u672a\u4fdd\u5b58\u7684\u6e90\u7801\u5df2\u4fdd\u7559\uff0c\u53ef\u91cd\u8bd5\u6216\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\u540e\u91cd\u65b0\u4fdd\u5b58\u3002" : "Your unsaved source is preserved. Retry, or load the latest state and save again."}</p>{revisionConflict && onReloadLatest ? <button type="button" disabled={reloadStatus === "loading"} onClick={() => { setReloadStatus("loading"); void onReloadLatest().then(() => { setError(null); setRevisionConflict(false); setReloadStatus("ready"); }).catch((reloadError) => { setReloadStatus("idle"); setError(editorErrorFeedback(reloadError, zh, "reload").message); setRevisionConflict(true); }); }} className="mt-2 min-h-10 rounded-lg border border-[var(--danger)] px-3 font-medium hover:bg-surface disabled:opacity-60">{reloadStatus === "loading" ? (zh ? "\u6b63\u5728\u52a0\u8f7d\u2026" : "Loading…") : (zh ? "\u52a0\u8f7d\u6700\u65b0\u72b6\u6001" : "Load latest state")}</button> : null}</div> : null}
         {reloadStatus === "ready" ? <div className="rounded-lg border border-ui bg-subtle p-2 text-sm text-primary" role="status">{zh ? "\u5df2\u52a0\u8f7d\u6700\u65b0\u72b6\u6001\uff0c\u4f60\u7684\u8349\u7a3f\u4ecd\u4fdd\u7559\u3002\u8bf7\u68c0\u67e5\u540e\u91cd\u65b0\u4fdd\u5b58\u3002" : "Latest state loaded. Your draft is still preserved; review it and save again."}</div> : null}
         <div className="flex flex-wrap items-center justify-end gap-2">
           <button type="button" data-source-editor-close="true" onClick={requestClose} disabled={isSaving} className="min-h-10 rounded-lg px-3 text-sm font-medium text-secondary hover:bg-subtle">{zh ? "\u9605\u8bfb\u6a21\u5f0f" : "Reading mode"}</button>
@@ -1228,8 +1229,87 @@ function activeToolbarCommands(
   return active;
 }
 
+type EditorErrorKind = "conflict" | "temporary" | "not-found" | "content" | "attachment" | "unknown";
+type EditorErrorOperation = "save" | "close" | "reload";
+
+function editorErrorFeedback(error: unknown, zh: boolean, operation: EditorErrorOperation): { message: string; revisionConflict: boolean } {
+  const raw = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  const statusValue = error && typeof error === "object" ? (error as { status?: unknown }).status : undefined;
+  const status = typeof statusValue === "number"
+    ? statusValue
+    : undefined;
+  const kind = editorErrorKind(raw, status);
+  return {
+    message: editorErrorMessage(kind, zh, operation),
+    revisionConflict: kind === "conflict",
+  };
+}
+
+function editorErrorKind(message: string, status?: number): EditorErrorKind {
+  const normalized = message.toLowerCase();
+  if (isRevisionConflictMessage(message)) return "conflict";
+  if (status === 404 || /message not found|消息不存在|消息已删除|conversation not found|对话不存在/.test(normalized)) return "not-found";
+  if (
+    status === 413
+    || /content (?:is )?too (?:large|long)|message content cannot be empty|内容(?:不能为空|过大|超过)|正文(?:不能为空|过长|过大)/.test(normalized)
+  ) return "content";
+  if (/attachment|附件|upload|上传|finaliz|canonicaliz|cr-asset/.test(normalized)) return "attachment";
+  if (
+    (status !== undefined && status >= 500)
+    || /connection_failed|network|fetch|temporarily unavailable|service unavailable|服务暂时不可用|请求失败|连接|超时|timeout|interrupted/.test(normalized)
+  ) return "temporary";
+  return "unknown";
+}
+
+function editorErrorMessage(kind: EditorErrorKind, zh: boolean, operation: EditorErrorOperation): string {
+  if (kind === "conflict") {
+    return zh
+      ? "这条消息已被其他操作更新。你的修改仍保留，请加载最新状态后检查并重试。"
+      : "This message was updated elsewhere. Your changes are preserved; load the latest state, review it, and retry.";
+  }
+  if (kind === "not-found") {
+    return zh
+      ? "当前消息已不可用。你的草稿仍保留，请加载最新状态或返回阅读。"
+      : "This message is no longer available. Your draft is preserved; load the latest state or return to reading.";
+  }
+  if (kind === "content") {
+    return zh
+      ? "内容不符合当前保存限制。你的草稿仍保留，请调整内容后重试。"
+      : "The content does not meet the current save limits. Your draft is preserved; adjust it and retry.";
+  }
+  if (kind === "attachment") {
+    return operation === "close"
+      ? (zh
+        ? "未保存的附件暂时无法处理。你的源码和附件草稿仍保留，请重试或继续编辑。"
+        : "Unsaved attachments could not be processed. Your source and attachment drafts are preserved; retry or continue editing.")
+      : (zh
+        ? "附件处理未完成。你的源码和附件草稿仍保留，请重试附件或移除引用。"
+        : "Attachment processing did not finish. Your source and attachment drafts are preserved; retry the attachment or remove its reference.");
+  }
+  if (kind === "temporary") {
+    return operation === "reload"
+      ? (zh
+        ? "暂时无法加载最新状态。你的草稿仍保留，请检查连接后重试。"
+        : "The latest state is temporarily unavailable. Your draft is preserved; check the connection and retry.")
+      : (zh
+        ? "暂时无法完成这项操作。你的草稿仍保留，请检查连接后重试。"
+        : "This operation is temporarily unavailable. Your draft is preserved; check the connection and retry.");
+  }
+  return operation === "reload"
+    ? (zh
+      ? "无法加载最新状态。你的草稿仍保留，请稍后重试。"
+      : "Unable to load the latest state. Your draft is preserved; please retry.")
+    : operation === "close"
+      ? (zh
+        ? "无法处理未保存的附件。你的源码和附件草稿仍保留，请重试或继续编辑。"
+        : "Unable to process unsaved attachments. Your source and attachment drafts are preserved; retry or continue editing.")
+      : (zh
+        ? "无法保存这次修改。你的草稿仍保留，请重试或加载最新状态后再保存。"
+        : "Unable to save this change. Your draft is preserved; retry or load the latest state before saving again.");
+}
+
 function isRevisionConflictMessage(message: string): boolean {
-  return /\u5bf9\u8bdd\u5df2\u5728\u5176\u4ed6\u64cd\u4f5c\u4e2d\u66f4\u65b0|conversation.+(?:changed|updated)|revision|stale/i.test(message);
+  return /\u5bf9\u8bdd\u5df2\u5728\u5176\u4ed6\u64cd\u4f5c\u4e2d\u66f4\u65b0|conversation.+(?:changed|updated)|revision|stale|base version|source changed/.test(message.toLowerCase());
 }
 
 function attachmentReferenceCounts(text: string): Map<string, number> {

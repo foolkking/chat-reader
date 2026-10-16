@@ -34,6 +34,11 @@ export type AttachmentRuntimeRenderState =
 export type AttachmentFileRowVariant = "normal" | "empty" | "missing" | "unsupported" | "preview-failed" | "offline-unavailable";
 export type AttachmentImageDisplayMode = "auto" | "small" | "medium" | "large";
 
+export function attachmentAssetIdentity(attachment: Pick<AttachmentRead, "id" | "content_url" | "asset_object"> | null | undefined): string {
+  if (!attachment) return "";
+  return `${attachment.id}:${attachment.asset_object?.sha256 ?? attachment.content_url ?? ""}`;
+}
+
 export type AttachmentRendererCapability = {
   rendererKey: string;
   inlineMode: AttachmentInlineMode;
@@ -248,14 +253,34 @@ function isTextCompatibleRefinement(capability: AttachmentRendererCapability): b
   return ["markdown", "text", "code", "json", "table", "generic"].includes(capability.rendererKey);
 }
 
-export function friendlyAttachmentType(attachment: AttachmentRead): string {
+export function friendlyAttachmentType(attachment: AttachmentRead, zh = true): string {
   const plan = resolveAttachmentCapability(attachment);
   const extension = attachmentExtension(attachment.display_name).toUpperCase();
-  if (plan.rendererKey === "generic") return extension ? `${extension} 文件` : plan.friendlyType;
-  if (plan.rendererKey === "code" && extension) return `${extension} 代码`;
-  if (plan.rendererKey === "audio" && extension) return `${extension} 音频`;
-  if (plan.rendererKey === "video" && extension) return `${extension} 视频`;
-  return extension && !plan.friendlyType.startsWith(extension) ? `${plan.friendlyType} · ${extension}` : plan.friendlyType;
+  const friendlyType = friendlyAttachmentTypeLabel(plan.rendererKey, zh);
+  if (plan.rendererKey === "generic") return extension ? `${extension} ${zh ? "文件" : "file"}` : friendlyType;
+  if (plan.rendererKey === "code" && extension) return `${extension} ${zh ? "代码" : "code"}`;
+  if (plan.rendererKey === "audio" && extension) return `${extension} ${zh ? "音频" : "audio"}`;
+  if (plan.rendererKey === "video" && extension) return `${extension} ${zh ? "视频" : "video"}`;
+  return extension && !friendlyType.startsWith(extension) ? `${friendlyType} · ${extension}` : friendlyType;
+}
+
+function friendlyAttachmentTypeLabel(rendererKey: string, zh: boolean): string {
+  if (zh) {
+    const labels: Record<string, string> = {
+      image: "图片", "converted-image": "TIFF 图片", markdown: "Markdown 文档", text: "文本文件",
+      code: "代码文件", json: "JSON 数据", table: "表格数据", pdf: "PDF 文档", audio: "音频",
+      video: "视频", document: "Office 文档", spreadsheet: "工作簿", presentation: "演示文稿",
+      archive: "ZIP 压缩包", generic: "文件",
+    };
+    return labels[rendererKey] ?? "文件";
+  }
+  const labels: Record<string, string> = {
+    image: "Image", "converted-image": "TIFF image", markdown: "Markdown document", text: "Text file",
+    code: "Code file", json: "JSON data", table: "Table data", pdf: "PDF document", audio: "Audio",
+    video: "Video", document: "Office document", spreadsheet: "Workbook", presentation: "Presentation",
+    archive: "ZIP archive", generic: "File",
+  };
+  return labels[rendererKey] ?? "File";
 }
 
 function capabilityForMime(mime: string): AttachmentRendererCapability | null {

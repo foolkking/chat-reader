@@ -1,0 +1,17 @@
+components/offline-sync-manager.tsx(18,35): error TS2345: Argument of type '(conversationIds?: readonly string[] | undefined) => Promise<SyncResult>' is not assignable to parameter of type '(value: void) => SyncResult | PromiseLike<SyncResult>'.
+  Types of parameters 'conversationIds' and 'value' are incompatible.
+    Type 'void' is not assignable to type 'readonly string[] | undefined'.
+features/import/import-workspace-copy.ts(54,133): error TS1117: An object literal cannot have multiple properties with the same name.
+features/projects/project-sidebar.tsx(452,5): error TS2322: Type 'number' is not assignable to type 'Timeout'.
+lib/annotation-sync.ts(38,56): error TS2345: Argument of type '() => Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }> | Promise<Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }>>' is not assignable to parameter of type '(value: unknown) => { synced: number; conflicts: number; retryAt: number | undefined; } | PromiseLike<{ synced: number; conflicts: number; retryAt: number | undefined; }>'.
+  Type 'Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }> | Promise<Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }>>' is not assignable to type '{ synced: number; conflicts: number; retryAt: number | undefined; } | PromiseLike<{ synced: number; conflicts: number; retryAt: number | undefined; }>'.
+    Type 'Promise<Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }>>' is not assignable to type '{ synced: number; conflicts: number; retryAt: number | undefined; } | PromiseLike<{ synced: number; conflicts: number; retryAt: number | undefined; }>'.
+      Type 'Promise<Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }>>' is not assignable to type 'PromiseLike<{ synced: number; conflicts: number; retryAt: number | undefined; }>'.
+        Types of property 'then' are incompatible.
+          Type '<TResult1 = Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }>, TResult2 = never>(onfulfilled?: ((value: Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }>) => TResult1 | PromiseLike<...>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<.....' is not assignable to type '<TResult1 = { synced: number; conflicts: number; retryAt: number | undefined; }, TResult2 = never>(onfulfilled?: ((value: { synced: number; conflicts: number; retryAt: number | undefined; }) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 m...'.
+            Types of parameters 'onfulfilled' and 'onfulfilled' are incompatible.
+              Types of parameters 'value' and 'value' are incompatible.
+                Type 'Promise<{ synced: number; conflicts: number; retryAt: number | undefined; }>' is missing the following properties from type '{ synced: number; conflicts: number; retryAt: number | undefined; }': synced, conflicts, retryAt
+undefined
+E:\1project\chat-reader\apps\web:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command "tsc" not found
