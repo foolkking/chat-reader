@@ -19,6 +19,7 @@ pending.
 
 | Item | Verified state |
 | --- | --- |
+| Release in progress | [UX release execution](docs/execution/UX_RELEASE_2026-10-16.md): candidate `97d0915` pushed; exact-source CI 38829804840 attempt 1 found an ECR settings-image rate limit and an outdated adaptive-import browser assertion. The latter now checks the exact unconfirmed-outcome recovery text and no automatic replay. New CI/production acceptance is pending; production has not been changed |
 | Production | Source `84988a260c48fcafb8b3bed6fcb7a1f16348111d`; accepted [CI 38255213036](https://github.com/foolkking/chat-reader/actions/runs/38255213036), all five jobs; original artifact 11752048475 independently verified |
 | Production database | Single head/current `20261008_0050`; this release remained 0050→0050 with no migration, reconcile or backfill; API/Web/PostgreSQL healthy and worker `alive_idle` |
 | Data acceptance | 84 stopped-writer all-column table fingerprints and four storage roots unchanged; 310 attachment object hashes verified; 67 stable table counts unchanged after restart |

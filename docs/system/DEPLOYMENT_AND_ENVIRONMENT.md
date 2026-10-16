@@ -7,12 +7,14 @@ own live status, exact CI images, verified backups and rollback. Never build on 
 
 Pending local noise-range source adds single head `20261015_0051` after 0050;
 it has **not** been applied. New API source requires that schema; production
-remains 0050. PostgreSQL migration/concurrency acceptance and a separately
-authorized release are required. Stop writers and use the safe downgrade before
+remains 0050. The user authorized the 2026-10-16 release path; exact-source CI,
+PostgreSQL migration/concurrency and production acceptance are still required.
+Stop writers and use the safe downgrade before
 starting old API code: it revokes narrowed DELETE choices before removing the
 field, rather than letting old code ignore user refinements. See
-[pending migration boundary](../deployment.md#pending-noise-range-migration--2026-10-15-not-deployed).
-This is documentation of a future boundary, not permission to migrate/deploy.
+[pending migration boundary](../deployment.md#pending-noise-range-migration--2026-10-15-release-in-progress)
+and [release execution](../execution/UX_RELEASE_2026-10-16.md).
+Authorization does not replace the required release gates.
 
 Current/rollback pointers select 84988a2/30a0d32; both exact rollback images are
 already loaded. The latest verified backups are `chat-reader-20261008T134403Z`

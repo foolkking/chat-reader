@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+## UX release execution — 2026-10-16
+
+`execution/UX_RELEASE_2026-10-16.md` owns the separately authorized commit/CI/
+deployment attempt, local release-gate limitations and first exact-source CI
+findings. `PROJECT_STATE.md`, `index.md`, `testing.md` and the pending 0051
+deployment boundary remain current summaries, not claims that a failed or
+incomplete CI run has been accepted. Historical service-free boundaries below
+are preserved rather than relabelled as deployment evidence.
+
 ## Service-free UX continuation — 2026-10-16
 
 `execution/ux-audit-service-free-regression-2026-10-16.md` owns the serialized

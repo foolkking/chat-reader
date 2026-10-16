@@ -292,12 +292,19 @@ test("conversion is not offered as recovery for archives, Skills or a service fa
     await expect(page.getByTestId("preview-import-button")).toBeDisabled();
   }
   await input.setInputFiles({ name: "synthetic.json", mimeType: "application/json", buffer: Buffer.from("{}") });
-  await page.route("**/api/adaptive-import/sessions", route => route.fulfill({ status: 503, contentType: "application/json", body: '{}' }));
+  let analysisRequests = 0;
+  await page.route("**/api/adaptive-import/sessions", route => {
+    analysisRequests += 1;
+    return route.fulfill({ status: 503, contentType: "application/json", body: '{}' });
+  });
   await page.getByTestId("preview-import-button").click();
-  await expect(page.getByRole("dialog", { name: "Import data", exact: true }).getByRole("alert")).toContainText("temporarily unavailable");
+  await expect(page.getByRole("dialog", { name: "Import data", exact: true }).getByRole("alert")).toHaveText(
+    "The request result is not confirmed. Check the current import state before deciding whether to retry.",
+  );
   await expect(help).toHaveCount(0);
   expect(await input.evaluate((element: HTMLInputElement) => element.files?.[0]?.name)).toBe("synthetic.json");
   await expect(input).toBeEnabled();
+  expect(analysisRequests).toBe(1);
 });
 
 test("an in-flight analysis keeps its source while exit remains available", async ({ page, baseURL }) => {
