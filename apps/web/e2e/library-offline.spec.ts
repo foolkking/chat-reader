@@ -49,7 +49,7 @@ for (const width of [375, 1440]) test(`${width}px: offline resource inspection c
     inspection.resourceCheckFailures = 0;
     IDBDatabase.prototype.transaction = function (...args: Parameters<IDBDatabase["transaction"]>) {
       const stores = typeof args[0] === "string" ? [args[0]] : Array.from(args[0]);
-      if (this.name === "chat-reader-offline-library" && (args[1] ?? "readonly") === "readonly" && stores.length === 1 && stores[0] === "attachments") {
+      if (this.name === "chat-reader-offline-library" && (args[1] ?? "readonly") === "readonly" && stores.includes("attachments")) {
         inspection.resourceCheckFailures = (inspection.resourceCheckFailures ?? 0) + 1;
         throw new DOMException("Synthetic resource inspection failure", "UnknownError");
       }
