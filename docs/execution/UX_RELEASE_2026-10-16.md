@@ -276,6 +276,29 @@ Final checks of the actual repository files, without diagnostic copies:
 | CI/source-evidence contracts | **15/15** |
 | Full Web lint, nonincremental typecheck and production build | Passed |
 
+## Latest exact-source CI attempt
+
+Run **38867774061**, attempt 1, used the exact pushed source
+`dc865c1402d4be6423e92fd7c44451d46b6c96d5`.
+
+- `settings-quality` completed successfully, including the real settings
+  matrix and the fresh-instance system archive restore.
+- `api-quality` and `web-quality` both failed in `Initialize containers` before
+  checkout. The runner retried the pinned
+  `public.ecr.aws/docker/library/postgres:16-alpine` pull three times and each
+  returned `toomanyrequests: Data limit exceeded`. No API or Web source test
+  ran, and image build/independent inspection were skipped.
+- The Web job's `if: always()` summary step then reported
+  `apps/web/e2e/gate-summary.mjs` as missing because checkout had never run.
+  The tracked file exists at that path in this source; this is a cascading
+  infrastructure diagnostic, not a source-path failure.
+
+This is an external registry-service failure, not a passing or product
+regression result. The pinned official-image contract is intentionally
+unchanged; replacing it with an unverified registry or bypassing the service
+container would invalidate the release gate. A fresh exact-source retry is
+required before artifact verification or King deployment.
+
 The browser fixture used Windows Chrome, task-only PostgreSQL 17 and API
 dependencies matched to the failed CI. Its assertion bound was 10 seconds;
 the repository/CI bounds were not increased. Each run removed only its unique
@@ -284,6 +307,5 @@ data, user imports and production remain untouched.
 
 These remain local bounded results, not full settings/PostgreSQL 16/CI
 acceptance. No API, migration, dependency or workflow gate changed; no
-existing test was omitted or timeout extended.
-The user requires the next dispatch to end this turn immediately: do not
-watch CI or deploy until the user supplies its result.
+existing test was omitted or timeout extended. After the next dispatch, do
+not watch CI or deploy until the user supplies its result.

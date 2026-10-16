@@ -35,7 +35,11 @@ The execution record also retains the post-save-fix 34/35 failure and
 diagnostic-only passes, and documents a finite failed-sync response barrier
 for the explicit cross-tab cleanup edit. Its original destructive/data
 assertions remain; it does not substitute for the independent annotation
-recovery probes.
+recovery probes. Exact-source run **38867774061** is also recorded there:
+settings passed, API/Web failed before checkout on the ECR Public data limit,
+and the secondary missing-summary-module message is explicitly classified as
+a checkout cascade. The run is not release acceptance; a new exact-source
+retry remains required.
 
 ## Service-free UX continuation — 2026-10-16
 
