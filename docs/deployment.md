@@ -1,5 +1,33 @@
 # 生产部署
 
+## OOM 诊断与健康检查边界 — 2026-10-17
+
+旧完整诊断直接在 serving API 容器额外启动 Python/ORM、运行聚合查询并遍历文件；
+在共享约 2 GiB 主机上再次执行与内存约 162 MiB 的 API 同时竞争，实际触发
+kernel `global_oom` 并导致旧 API 非计划退出 137，Compose 随后自动重启。
+额外诊断 Python 当时约 125 MiB。证据确认诊断峰值是触发因素，不证明 API
+业务处理持续泄漏，也不意味着服务“主动停止”。`unless-stopped` 是恢复机制，
+不能消除 OOM 根因。
+
+源码修复拆开两个负载：
+
+- `deploy/verify_runtime_health.sh` 保留容器健康/worker running 检查，仅通过
+  PostgreSQL 只读、5 秒 statement timeout 查询 primary heartbeat；不启动 API
+  Python，不进行 ORM、业务表或文件扫描。阈值从 worker 容器读取并校验。
+- 运维全量报告改用 `deploy/run_internal_diagnostics.sh` 显式运行：主机已知可用
+  内存至少 512 MiB（加锁后重查），host-wide flock 防止跨 release 重叠；只复用
+  当前运行的 immutable API image，one-off 设 256 MiB memory / 384 MiB memory+swap、
+  只读根文件系统和只读数据挂载，35 秒硬超时。仅清理同时匹配本次唯一名称、
+  Compose one-off 标志及镜像 ID 的诊断容器。
+- API 报告自身要求至少 256 MiB 可用内存，否则返回不暴露细节的 503/Retry-After；
+  PostgreSQL 查询使用事务内只读、statement/lock/parallel/work-memory 限制；
+  清理扫描最多 2,000 entries / 150ms 和 1,000 files，各 storage root 同样
+  最多 2,000 entries / 150ms。手工清理的默认合同不变。
+- 不得把 resource overlay 用于 `up`，也不得在 serving API 中执行完整报告。
+  这修复的是已证实的诊断峰值 OOM 路径，不是对共享主机所有业务负载、
+  uploads、其他应用或宿主机故障的零停机保证。当前已部署 aea13fe 尚无这些
+  OOM 源码改动；须经新精确源码 CI 并按正常备份/镜像验收发布后才生效。
+
 ## Current accepted UX release — 2026-10-16
 
 Production is **`aea13fe4ed3a725b0c88138702248eab5c8dac5b` / `20261015_0051`**,

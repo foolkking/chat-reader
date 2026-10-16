@@ -6,10 +6,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
+from app.core.memory import available_memory_bytes
 from app.models.background_job import BackgroundJob
 from app.models.export_artifact import ExportArtifact
 from app.models.import_record import ImportRecord
@@ -23,9 +24,26 @@ ACTIVE_STATUSES = ("queued", "processing", "cancelling")
 TIMING_SAMPLE_LIMIT = 500
 TIMING_BUCKET_UPPER_BOUNDS_SECONDS = (1.0, 5.0, 15.0, 60.0, 300.0)
 STORAGE_ENTRY_LIMIT = 100_000
+DIAGNOSTIC_STORAGE_ENTRY_LIMIT = 2_000
+DIAGNOSTIC_CLEANUP_FILE_LIMIT = 1_000
+DIAGNOSTIC_SCAN_SECONDS = 0.15
+DIAGNOSTIC_MEMORY_RESERVE_BYTES = 256 * 1024 * 1024
+
+
+class DiagnosticsUnavailable(RuntimeError):
+    pass
 
 
 def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None = None) -> dict[str, Any]:
+    available = available_memory_bytes()
+    if available is None or available < DIAGNOSTIC_MEMORY_RESERVE_BYTES:
+        raise DiagnosticsUnavailable("Diagnostics deferred: memory headroom is unavailable.")
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SET TRANSACTION READ ONLY"))
+        db.execute(text("SET LOCAL statement_timeout = '1500ms'"))
+        db.execute(text("SET LOCAL lock_timeout = '1s'"))
+        db.execute(text("SET LOCAL max_parallel_workers_per_gather = 0"))
+        db.execute(text("SET LOCAL work_mem = '4MB'"))
     now = now or datetime.now(timezone.utc)
     job_rows = db.query(BackgroundJob.status, func.count(BackgroundJob.id)).group_by(BackgroundJob.status).all()
     import_rows = db.query(ImportRecord.status, func.count(ImportRecord.id)).group_by(ImportRecord.status).all()
@@ -113,13 +131,17 @@ def collect_diagnostics(db: Session, settings: Settings, *, now: datetime | None
         db,
         roots=roots,
         grace_seconds=settings.artifact_cleanup_grace_hours * 3600,
-        max_files=STORAGE_ENTRY_LIMIT,
+        max_files=DIAGNOSTIC_CLEANUP_FILE_LIMIT,
+        max_entries=DIAGNOSTIC_STORAGE_ENTRY_LIMIT,
+        time_budget_seconds=DIAGNOSTIC_SCAN_SECONDS,
     )
     storage = {
-        "imports": storage_usage(Path(settings.import_storage_dir)),
-        "exports": storage_usage(Path(settings.export_storage_dir)),
-        "offline": storage_usage(Path(settings.offline_storage_dir)),
-        "assets": storage_usage(Path(settings.asset_storage_dir)),
+        name: storage_usage(Path(root), max_entries=DIAGNOSTIC_STORAGE_ENTRY_LIMIT,
+                            time_budget_seconds=DIAGNOSTIC_SCAN_SECONDS)
+        for name, root in (
+            ("imports", settings.import_storage_dir), ("exports", settings.export_storage_dir),
+            ("offline", settings.offline_storage_dir), ("assets", settings.asset_storage_dir),
+        )
     }
     return {
         "generated_at": now.isoformat(),

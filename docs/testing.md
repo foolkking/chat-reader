@@ -1,5 +1,16 @@
 # Testing
 
+## OOM stability repair candidate — 2026-10-17
+
+The follow-up record distinguishes established kernel `global_oom` cause from
+broader unproven memory-leak hypotheses. Targeted application/API and synthetic
+script tests pass **112 / 3 skipped**, a separate disposable PostgreSQL 17 test
+passes **2/2** (transaction-local read-only/timeouts plus the exact production
+heartbeat SQL), and Linux synthetic shell tests pass **27** with zero Docker
+calls. These do not replace the full exact-source workflow or establish that
+production includes this candidate. See
+[OOM stability candidate](execution/OOM_STABILITY_2026-10-17.md).
+
 ## Exact-source CI and production boundary — 2026-10-16
 
 Source `aea13fe4ed3a725b0c88138702248eab5c8dac5b` passes all five jobs

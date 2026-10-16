@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+## OOM stability candidate — 2026-10-17
+
+`execution/OOM_STABILITY_2026-10-17.md` owns the kernel-confirmed shared-host
+OOM cause, evidence boundary, focused API/PostgreSQL/synthetic Linux shell
+results and pending exact-source CI/deployment gate. The observability contract,
+deployment runbook, environment facts, index and Project State distinguish this
+candidate from accepted production `aea13fe`; no host-global settings or other
+applications were changed.
+
 ## Accepted UX release and low-memory deployment — 2026-10-16
 
 `execution/UX_RELEASE_2026-10-16.md` and sanitized

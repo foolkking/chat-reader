@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import ctypes
-import sys
 import threading
 import time
 from contextlib import asynccontextmanager, contextmanager
@@ -11,6 +9,7 @@ from typing import AsyncIterator, Iterable, Iterator
 from fastapi import UploadFile
 
 from app.core.config import get_settings
+from app.core.memory import available_memory_bytes
 
 
 class UploadLimitError(ValueError):
@@ -26,39 +25,6 @@ _staging_slots: threading.BoundedSemaphore | None = None
 _staging_slot_count: int | None = None
 _queue_lock = threading.Lock()
 _queued_heavy_requests = 0
-
-
-def available_memory_bytes() -> int | None:
-    """Best-effort available-memory probe without an optional dependency."""
-    if sys.platform.startswith("linux"):
-        try:
-            with open("/proc/meminfo", encoding="ascii") as handle:
-                for line in handle:
-                    if line.startswith("MemAvailable:"):
-                        return int(line.split()[1]) * 1024
-        except (OSError, ValueError, IndexError):
-            return None
-    if sys.platform == "win32":
-        class MemoryStatus(ctypes.Structure):
-            _fields_ = [
-                ("length", ctypes.c_ulong),
-                ("memory_load", ctypes.c_ulong),
-                ("total_physical", ctypes.c_ulonglong),
-                ("available_physical", ctypes.c_ulonglong),
-                ("total_page_file", ctypes.c_ulonglong),
-                ("available_page_file", ctypes.c_ulonglong),
-                ("total_virtual", ctypes.c_ulonglong),
-                ("available_virtual", ctypes.c_ulonglong),
-                ("available_extended_virtual", ctypes.c_ulonglong),
-            ]
-        status = MemoryStatus()
-        status.length = ctypes.sizeof(MemoryStatus)
-        try:
-            if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
-                return int(status.available_physical)
-        except (AttributeError, OSError):
-            return None
-    return None
 
 
 def _semaphore() -> threading.BoundedSemaphore:

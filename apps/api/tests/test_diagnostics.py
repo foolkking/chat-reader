@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+import pytest
 from sqlalchemy import event
 
 from app.core.config import get_settings
@@ -16,6 +17,12 @@ from app.models.import_record import ImportRecord
 from app.models.worker_runtime_state import WorkerRuntimeState
 from app.services.diagnostics import _timing_percentiles, storage_usage
 from test_import_preview_api import client  # noqa: F401
+
+
+@pytest.fixture(autouse=True)
+def diagnostic_headroom(monkeypatch):
+    # Contract tests must not depend on the runner's current free memory.
+    monkeypatch.setattr("app.services.diagnostics.available_memory_bytes", lambda: 1024**3)
 
 
 def _operator_client() -> TestClient:
@@ -267,3 +274,97 @@ def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
         assert "proxy_request_buffering off;" in location
         assert "proxy_pass http://127.0.0.1:8000;" in location
     assert "client_max_body_size 520m;" in nginx
+
+
+@pytest.mark.parametrize("available", [None, 0, 256 * 1024**2 - 1])
+def test_memory_pressure_defers_diagnostics_before_sql_or_scans(client, monkeypatch, available):
+    from app.services import diagnostics
+
+    monkeypatch.setenv("ENABLE_INTERNAL_DIAGNOSTICS", "true")
+    get_settings.cache_clear()
+    monkeypatch.setattr(diagnostics, "available_memory_bytes", lambda: available)
+
+    class NoQueries:
+        def get_bind(self):
+            pytest.fail("memory admission must precede SQL")
+
+    def no_queries():
+        yield NoQueries()
+
+    def no_scan(*args, **kwargs):
+        pytest.fail("memory admission must precede storage scans")
+
+    app.dependency_overrides[get_db] = no_queries
+    monkeypatch.setattr(diagnostics, "storage_usage", no_scan)
+    monkeypatch.setattr(diagnostics, "scan_cleanup_candidates", no_scan)
+    response = _operator_client().get("/api/internal/diagnostics")
+    assert response.status_code == 503
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["Retry-After"] == "30"
+    assert set(response.json()) == {"detail"}
+    assert client.get("/api/health").status_code == 200
+    # Safety refusal is not a public discovery oracle.
+    assert client.get("/api/internal/diagnostics").status_code == 404
+
+
+def test_full_report_passes_explicit_storage_budgets(client, monkeypatch):
+    from app.services import diagnostics
+
+    monkeypatch.setenv("ENABLE_INTERNAL_DIAGNOSTICS", "true")
+    get_settings.cache_clear()
+    scans = []
+    cleanup = []
+    real_scan = diagnostics.scan_cleanup_candidates
+
+    def bounded_storage(root, **kwargs):
+        scans.append(kwargs)
+        return {"file_count": 0, "bytes": 0, "complete": False}
+
+    def bounded_cleanup(db, **kwargs):
+        cleanup.append(kwargs)
+        return real_scan(db, **kwargs)
+
+    monkeypatch.setattr(diagnostics, "storage_usage", bounded_storage)
+    monkeypatch.setattr(diagnostics, "scan_cleanup_candidates", bounded_cleanup)
+    response = _operator_client().get("/api/internal/diagnostics")
+    assert response.status_code == 200
+    assert len(scans) == 4
+    assert all(item == {"max_entries": 2000, "time_budget_seconds": 0.15} for item in scans)
+    assert len(cleanup) == 1
+    assert cleanup[0]["max_files"] == 1000
+    assert cleanup[0]["max_entries"] == 2000
+    assert cleanup[0]["time_budget_seconds"] == 0.15
+    assert all(not item["complete"] for item in response.json()["storage"].values())
+
+
+def test_postgresql_diagnostics_limits_are_transaction_local(monkeypatch):
+    from types import SimpleNamespace
+    from app.core.config import Settings
+    from app.services.diagnostics import collect_diagnostics
+
+    class StopAfterLimits(Exception):
+        pass
+
+    class PostgreSQLSession:
+        def __init__(self):
+            self.statements = []
+
+        def get_bind(self):
+            return SimpleNamespace(dialect=SimpleNamespace(name="postgresql"))
+
+        def execute(self, statement):
+            self.statements.append(str(statement))
+
+        def query(self, *args):
+            raise StopAfterLimits
+
+    db = PostgreSQLSession()
+    with pytest.raises(StopAfterLimits):
+        collect_diagnostics(db, Settings())
+    assert db.statements == [
+        "SET TRANSACTION READ ONLY",
+        "SET LOCAL statement_timeout = '1500ms'",
+        "SET LOCAL lock_timeout = '1s'",
+        "SET LOCAL max_parallel_workers_per_gather = 0",
+        "SET LOCAL work_mem = '4MB'",
+    ]

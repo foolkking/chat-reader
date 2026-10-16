@@ -342,6 +342,12 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 
 ## 持久化与健康
 
+- 服务在已知可用内存不足、诊断任务互斥等待/超时或 PostgreSQL 只读探针异常时，
+  应健康拒绝诊断／标记 readiness 失败，不应把诊断峰值施加给 serving API。
+  `deploy/verify_runtime_health.sh` 只做轻量容器状态和单行 worker heartbeat 查询；
+  完整报告只可通过 `deploy/run_internal_diagnostics.sh` 的 one-off 限额路径执行。
+  详见 [2026-10-17 OOM 诊断修复记录](../execution/OOM_STABILITY_2026-10-17.md)；
+  该源码候选 CI／生产验收完成前，不代表当前生产已获得修复。
 - named volumes：`postgres-data`、`import-storage`、`export-storage`、`offline-storage`、`asset-storage`；只有启用 `scanner` profile 时才使用 `clamav-data`。
 - 附件对象不使用静态公开目录；发布前必须备份 `asset-storage`，迁移/回滚不得删除该 volume。替换镜像前在 API 容器运行只读 `python -m scripts.verify_attachment_storage`，将数据库对象、活动 Attachment 和 local asset files 对账；非零结果或不完整扫描必须停止发布。`--verify-sha256` 是显式的全内容校验，默认检查存在性和大小。该检查不自动修复或删除，无主对象仍交给独立的人工 cleanup 决策。附件 GC 默认 dry-run，只有人工确认后才使用 `apps/api/scripts/gc_assets.py --execute`。
 - King 的约 2 GiB 单用户部署固定使用 `ATTACHMENT_SCANNER=disabled`、`ALLOW_UNSCANNED_ATTACHMENTS=true`，不启动 `scanner` profile 或 ClamAV。当前部署主动关闭附件恶意软件扫描和内容安全审查。附件以 `scanner_disabled`/`unscanned` 状态正常使用，中文 UI 显示“未扫描”。这是当前单用户部署的已接受策略，不代表文件已经通过安全检测。Scanner Provider 抽象保留，但本轮不部署本地或远程扫描节点。消息保存不重新读取或扫描已提升的附件对象。

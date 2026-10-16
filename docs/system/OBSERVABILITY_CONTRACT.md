@@ -140,13 +140,40 @@ Diagnostics returns only:
 The public `/api/health` endpoint stays coarse and separate. Diagnostics is
 read-only, triggers no cleanup or remediation, hashes no files and caps its
 filesystem scan at 100,000 entries and recent timing sample at 500 rows.
+The heavier explicit report is not a liveness probe: API/worker/PostgreSQL
+readiness must use `deploy/verify_runtime_health.sh`, which checks existing
+container health plus the singleton heartbeat with a read-only, 5-second
+bounded PostgreSQL statement. It never starts another API interpreter or
+walks storage. Its heartbeat threshold is read from the worker environment and
+must be an integer from 1–86,400 seconds; missing, future, stale and unknown
+states fail closed.
+
+The operator full-report wrapper `deploy/run_internal_diagnostics.sh` is
+serialized with a host-wide lock, admits work only with at least 512 MiB known
+host-available memory, and rechecks after acquiring the lock. It runs the
+already-loaded running API image as a one-off only, with a 256 MiB memory /
+384 MiB memory-plus-swap ceiling, read-only filesystem and storage mounts,
+no restart, and a hard 35-second timeout. Its diagnostics additionally require
+256 MiB available at process admission, use transaction-local read-only and
+PostgreSQL statement/lock/work-memory limits, and bound storage scans to 2,000
+entries / 150 ms per root plus 1,000 cleanup files. Unknown/low memory is
+reported as deferred (503 in-app, exit 75 in the operator command), not as a
+service-health failure. Timeout cleanup is restricted to the unique one-off
+whose Compose one-off label and immutable image match this invocation.
+Never apply the resource overlay with `up`, and never run the full report in a
+serving API container. These limits reduce this diagnostic-triggered OOM path;
+they do not guarantee that unrelated host workloads or arbitrary upload/job
+peaks cannot exhaust shared host memory.
 
 ## Failure behavior
 
 A heartbeat or metric write failure is rate-limited in logs and must not expose
 payload data. An unavailable metric degrades to unavailable/incomplete rather
 than failing ordinary API traffic. Release L detects stale workers but does not
-restart, kill, scale or otherwise remediate them automatically.
+restart, kill, scale or otherwise remediate them automatically. Docker
+`restart: unless-stopped` recovers an exited process where possible; it is
+not a prevention or availability guarantee for host-wide OOM, host failure,
+or repeated crash loops.
 
 ## Persistence and configuration
 

@@ -4,8 +4,10 @@ import hashlib
 import logging
 import os
 import re
+import time
 import uuid
 import zipfile
+from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +24,32 @@ _EXPORT_JOB_TYPES = {"system_archive_export", "system_archive_preflight", "perso
 _ELIGIBLE_CATEGORIES = {"SAFE_TEMP", "ORPHAN_FINAL", "SUPERSEDED_ARTIFACT"}
 _MANAGED_ROOTS = {"export", "offline"}
 _REFERENCE_QUERY_CHUNK_SIZE = 500
+
+
+class _ScanIncomplete(Exception):
+    pass
+
+
+def _stream_scan_paths(root: Path, visited: list[int], max_entries: int | None, deadline: float | None):
+    """Do not let Path.rglob materialize a wide directory before checking budgets."""
+    stack = [root]
+    while stack:
+        if deadline is not None and time.monotonic() >= deadline:
+            raise _ScanIncomplete
+        try:
+            with os.scandir(stack.pop()) as entries:
+                for entry in entries:
+                    if (max_entries is not None and visited[0] >= max_entries) or (
+                        deadline is not None and time.monotonic() >= deadline
+                    ):
+                        raise _ScanIncomplete
+                    visited[0] += 1
+                    if entry.is_dir(follow_symlinks=False):
+                        stack.append(Path(entry.path))
+                    else:
+                        yield Path(entry.path)
+        except OSError:
+            raise _ScanIncomplete from None
 
 
 class ArtifactLifecycleError(RuntimeError):
@@ -118,6 +146,8 @@ def scan_cleanup_candidates(
     grace_seconds: int = 24 * 60 * 60,
     now: datetime | None = None,
     max_files: int | None = None,
+    max_entries: int | None = None,
+    time_budget_seconds: float | None = None,
 ) -> CleanupScan:
     """Classify managed export/offline files using canonical references and job state."""
     from app.models.export_artifact import ExportArtifact
@@ -139,38 +169,48 @@ def scan_cleanup_candidates(
     now_timestamp = now.timestamp()
     scanned: list[_ScannedArtifactFile] = []
     scanned_files = 0
+    visited = [0]
+    deadline = time.monotonic() + max(0.0, time_budget_seconds) if time_budget_seconds is not None else None
     for category, root_value in roots.items():
         root = Path(root_value).resolve()
         if not root.exists():
             continue
-        for path in root.rglob("*"):
-            if not path.is_file():
-                continue
-            if max_files is not None and scanned_files >= max_files:
-                complete = False
-                break
-            scanned_files += 1
-            resolved = path.resolve()
-            try:
-                stat = path.stat()
-            except OSError:
-                continue
-            age_seconds = max(0.0, now_timestamp - stat.st_mtime)
-            relative = resolved.relative_to(root) if resolved.is_relative_to(root) else None
-            job_id = _artifact_job_id(category, relative, path.name) if relative is not None else None
-            scanned.append(
-                _ScannedArtifactFile(
-                    category=category,
-                    root=root,
-                    path=resolved,
-                    relative=relative,
-                    stat_size=stat.st_size,
-                    mtime_ns=stat.st_mtime_ns,
-                    age_seconds=age_seconds,
-                    job_id=job_id,
-                    is_symlink=path.is_symlink(),
+        with closing(_stream_scan_paths(root, visited, max_entries, deadline)) as paths:
+            while True:
+                try:
+                    path = next(paths)
+                except StopIteration:
+                    break
+                except _ScanIncomplete:
+                    complete = False
+                    break
+                if not path.is_file():
+                    continue
+                if max_files is not None and scanned_files >= max_files:
+                    complete = False
+                    break
+                scanned_files += 1
+                resolved = path.resolve()
+                try:
+                    stat = path.stat()
+                except OSError:
+                    continue
+                age_seconds = max(0.0, now_timestamp - stat.st_mtime)
+                relative = resolved.relative_to(root) if resolved.is_relative_to(root) else None
+                job_id = _artifact_job_id(category, relative, path.name) if relative is not None else None
+                scanned.append(
+                    _ScannedArtifactFile(
+                        category=category,
+                        root=root,
+                        path=resolved,
+                        relative=relative,
+                        stat_size=stat.st_size,
+                        mtime_ns=stat.st_mtime_ns,
+                        age_seconds=age_seconds,
+                        job_id=job_id,
+                        is_symlink=path.is_symlink(),
+                    )
                 )
-            )
         if not complete:
             break
 

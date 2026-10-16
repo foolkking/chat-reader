@@ -34,6 +34,76 @@ def _factory(tmp_path: Path):
     return sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
+def test_scan_budget_counts_empty_directories_not_only_files(tmp_path: Path):
+    root = tmp_path / "exports"
+    root.mkdir()
+    for index in range(6):
+        (root / f"empty-{index}").mkdir()
+    scan = scan_cleanup_candidates(None, roots={"export": root}, max_entries=2)
+    assert scan.complete is False
+    assert not scan.candidates
+    assert all(item["candidate_count"] == 0 for item in scan.summary.values())
+    assert len(list(root.iterdir())) == 6
+
+
+def test_scan_zero_time_budget_does_not_open_storage(tmp_path: Path, monkeypatch):
+    from app.services import artifact_lifecycle
+    root = tmp_path / "exports"
+    root.mkdir()
+
+    def forbidden(*args):
+        pytest.fail("expired scan must not open a directory")
+
+    monkeypatch.setattr(artifact_lifecycle.os, "scandir", forbidden)
+    scan = scan_cleanup_candidates(None, roots={"export": root}, time_budget_seconds=0)
+    assert scan.complete is False
+    assert not scan.candidates
+
+
+def test_scan_closes_stream_on_file_budget_and_keeps_all_bytes(tmp_path: Path, monkeypatch):
+    from app.services import artifact_lifecycle
+    factory = _factory(tmp_path)
+    root = tmp_path / "exports"
+    root.mkdir()
+    for index in range(5):
+        (root / f"file-{index}.bin").write_bytes(b"synthetic")
+    real_scandir = os.scandir
+    closed = []
+
+    class Directory:
+        def __init__(self, path):
+            self.entries = real_scandir(path)
+
+        def __enter__(self):
+            return self.entries
+
+        def __exit__(self, *args):
+            self.entries.close()
+            closed.append(True)
+
+    monkeypatch.setattr(artifact_lifecycle.os, "scandir", Directory)
+    with factory() as db:
+        scan = scan_cleanup_candidates(db, roots={"export": root}, max_files=1)
+    assert scan.complete is False
+    assert closed == [True]
+    assert sum(item["candidate_count"] for item in scan.summary.values()) == 1
+    assert len(list(root.iterdir())) == 5
+
+
+def test_scan_directory_failure_is_explicitly_incomplete(tmp_path: Path, monkeypatch):
+    from app.services import artifact_lifecycle
+    root = tmp_path / "exports"
+    root.mkdir()
+
+    def denied(*args):
+        raise PermissionError("synthetic private path")
+
+    monkeypatch.setattr(artifact_lifecycle.os, "scandir", denied)
+    scan = scan_cleanup_candidates(None, roots={"export": root})
+    assert scan.complete is False
+    assert not scan.candidates
+
+
 def test_classifier_protects_recent_active_canonical_unknown_and_assets(tmp_path: Path) -> None:
     factory = _factory(tmp_path)
     export_root = tmp_path / "exports"

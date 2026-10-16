@@ -27,16 +27,30 @@ if [ "$worker_status" != "running" ]; then
   exit 1
 fi
 
-diagnostics="$(compose exec -T api python -m scripts.internal_diagnostics)"
-printf '%s' "$diagnostics" | compose exec -T api python -c '
-import json
-import sys
-
-payload = json.load(sys.stdin)
-state = payload["system"]["worker_state"]
-if state not in {"alive_idle", "alive_busy"}:
-    raise SystemExit(f"Worker heartbeat is {state}")
-print(f"import-worker heartbeat={state}")
-'
+# Read only the singleton heartbeat. A health check must not launch a second
+# API interpreter or scan storage/business tables in the serving API cgroup.
+stale_after="$(compose exec -T import-worker sh -c 'printf "%s" "${WORKER_HEARTBEAT_STALE_AFTER_SECONDS:-120}"')"
+case "$stale_after" in
+  ''|*[!0-9]*) echo "Worker heartbeat threshold is invalid." >&2; exit 1 ;;
+esac
+test "${#stale_after}" -le 5 || { echo "Worker heartbeat threshold is too large." >&2; exit 1; }
+if [ "$stale_after" -lt 1 ] || [ "$stale_after" -gt 86400 ]; then
+  echo "Worker heartbeat threshold is outside the supported range." >&2
+  exit 1
+fi
+heartbeat="$(compose exec -T -e PGOPTIONS="-c default_transaction_read_only=on -c statement_timeout=5000 -c lock_timeout=1000" postgres \
+  sh -c 'exec psql -X -q -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "$1"' sh \
+  "SELECT CASE
+     WHEN heartbeat_at IS NULL OR heartbeat_at > CURRENT_TIMESTAMP
+       OR heartbeat_at <= CURRENT_TIMESTAMP - make_interval(secs => $stale_after)
+       THEN 'stale'
+     WHEN state = 'busy' THEN 'alive_busy'
+     WHEN state = 'idle' THEN 'alive_idle'
+     ELSE 'unavailable' END
+   FROM worker_runtime_states WHERE worker_key = 'primary'")"
+case "$heartbeat" in
+  alive_idle|alive_busy) printf 'import-worker heartbeat=%s\n' "$heartbeat" ;;
+  *) echo "Runtime health verification failed: worker heartbeat is unavailable or stale." >&2; exit 1 ;;
+esac
 
 echo "Runtime services and worker heartbeat are healthy"

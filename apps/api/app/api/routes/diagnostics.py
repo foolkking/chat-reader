@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.services.diagnostics import collect_diagnostics
+from app.services.diagnostics import DiagnosticsUnavailable, collect_diagnostics
 
 router = APIRouter(tags=["internal"], include_in_schema=False)
 
@@ -22,4 +22,11 @@ def internal_diagnostics(request: Request, response: Response, db: Session = Dep
     response.headers["Pragma"] = "no-cache"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Robots-Tag"] = "noindex, noarchive"
-    return collect_diagnostics(db, settings)
+    try:
+        return collect_diagnostics(db, settings)
+    except DiagnosticsUnavailable:
+        raise HTTPException(
+            status_code=503,
+            detail="Diagnostics deferred: insufficient memory headroom.",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Retry-After": "30"},
+        ) from None

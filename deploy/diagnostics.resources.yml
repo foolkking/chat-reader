@@ -1,0 +1,14 @@
+# One-off only. NEVER apply this overlay with `up` to serving services.
+services:
+  api:
+    pull_policy: never
+    cpus: 0.5
+    mem_limit: 256m
+    memswap_limit: 384m
+    restart: "no"
+    read_only: true
+    volumes:
+      - import-storage:/data/imports:ro
+      - export-storage:/data/exports:ro
+      - offline-storage:/data/offline:ro
+      - asset-storage:/data/assets:ro

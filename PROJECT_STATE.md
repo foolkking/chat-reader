@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-16. This is the current snapshot, not a release history.
+Last updated: 2026-10-17. This is the current snapshot, not a release history.
 
 ## Release and active work
 
@@ -25,6 +25,18 @@ hashes and 67 live stable-table counts pass. HTTPS and authenticated read-only
 acceptance pass; PostgreSQL/configuration were preserved. The earlier old-API
 OOM remains recorded, not erased by the successful resume. See the
 [accepted release](docs/execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment).
+
+**OOM follow-up (2026-10-17):** kernel evidence identifies `global_oom`, not a
+normal service stop. The old explicit full diagnostic added a second Python
+process (~125 MiB) beside API (~162 MiB) on a shared ~1.87 GiB host and could
+not use the available swap reliably (`swappiness=0`). Source now separates a
+lightweight heartbeat/readiness probe from a serialized, resource-limited
+one-off diagnostic; low/unknown memory defers and filesystem/SQL work is
+bounded. Focused local API suite **112 passed / 3 skipped**, disposable
+PostgreSQL 17 transaction/timeout and actual heartbeat SQL **2/2**, Linux
+synthetic operator-shell/lock checks **27**. Not yet CI or production:
+deployed `aea13fe` still has the old behavior until new exact-source CI and a
+safe release. See [OOM stability candidate](docs/execution/OOM_STABILITY_2026-10-17.md).
 
 | Item | Verified state |
 | --- | --- |
