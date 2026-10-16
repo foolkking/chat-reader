@@ -1,29 +1,50 @@
 # 生产部署
 
-## Pending noise range migration — 2026-10-15, release in progress
+## Current accepted UX release — 2026-10-16
 
-Working-tree source has the single Alembic head `20261015_0051`, parent
-`20261008_0050`. The existing local and production databases were not migrated;
-the task's separate disposable PostgreSQL 17 migration/concurrent-edit suite
-passed **2/2**. PostgreSQL 16/full CI and production acceptance remain required.
-Accepted production remains `84988a2`/0050 below. The new API model
-requires 0051 and must not be deployed against 0050.
+Production is **`aea13fe4ed3a725b0c88138702248eab5c8dac5b` / `20261015_0051`**,
+accepted **2026-10-16 15:34:26 UTC**. Exact-source CI **38902167421**, attempt 2,
+all five jobs / 13 Web gates pass; original image artifact **12050797955**,
+50 OCI blobs and exact-source support were independently verified. Images were
+built only in CI. [Execution and acceptance](execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment)
+and [sanitized evidence](evidence/ux-release-2026-10-16.json) own the full record.
 
-0051 adds nullable JSON `content_cleanup_occurrences.reviewed_ranges`; NULL
-retains legacy full-candidate behavior, with no source rewrite or backfill.
-The user separately authorized the 2026-10-16 release path. Before production
-changes, verify disposable PostgreSQL upgrade/downgrade, competing edits and all
-required release gates, then follow the existing backup/stopped-writer/data-integrity
-procedure. The disposable local PostgreSQL checks do not establish production
-data preservation or replace the exact-source PostgreSQL 16 CI gate.
+The initial preflight blocked on 12 orphan files and a repeated full diagnostics
+check caused host OOM/one automatic old-API restart. That incident remains in
+the record. After explicit user approval, low-memory maintenance stopped only
+Web/API/worker, verified capacity/two existing recovery points and created
+`/opt/chat-reader/backups/chat-reader-20261016T152523Z` before changing storage.
+All 12 originals (974,628 bytes) are preserved in that full backup, an independent
+copy and an isolated original outside active asset storage; nothing was deleted.
+Private exact-path/hash/metadata restore manifests stay on King, not in Git/logs.
 
-Rollback must stop new/old API and worker writes, revoke narrowed DELETE
-choices through the tested downgrade **before** starting an old API, and verify
-source/version/storage integrity. The downgrade changes those choices to KEEP
-before dropping the column; running old code on the new schema can otherwise
-ignore refinements and expand deletion consent. Do not “solve” rollback by
-dropping the column alone. Production remains on the accepted release until the
-new exact-source CI, migration, backup and post-deploy checks all pass.
+Isolation preserved every database row and the other three stores; combining
+active plus isolated originals exactly reconstructs the original asset tree.
+The 0050→0051 upgrade adds only nullable JSON `reviewed_ranges`, with all existing
+values NULL. All old columns in **84** stopped-writer tables and all four clean
+storage roots match across migration; **313** attachment hashes and **67** live
+stable-table counts pass. No source rewrite, owner-auth reconciliation or
+backfill ran. API/Web are healthy; worker is fresh; new services have no
+restarts/OOM/startup error-keyword lines. HTTPS and authenticated read-only
+acceptance pass. No live full-hash sweep or interactive production-browser test
+is claimed. PostgreSQL, Compose, environment, Nginx and operational checkout
+are unchanged; PostgreSQL was not restarted.
+
+Current/rollback pointers are **aea13fe/84988a2**. Exact rollback images remain
+loaded. Retention finalized after acceptance: verified backups are
+`chat-reader-20261012T143850Z` and `chat-reader-20261016T152523Z`;
+only the older 20261008T134403Z point was pruned. Independent orphan preservation
+is outside retention and remains intact. No scheduled/off-site backup is configured.
+
+### Rollback across 0051
+
+Never merely switch images or drop `reviewed_ranges`. Stop API/worker writes,
+take a fresh verified backup, and use the tested new-image Alembic downgrade
+to `20261008_0050` **before** starting old code. It changes narrowed DELETE
+choices to KEEP before dropping the column, preventing old code from expanding
+deletion consent. Verify schema, consent and storage before restart.
+`/etc/chat-reader/release-state/rollback-0051-warning.txt` records this boundary;
+no automatic downgrade or database restore was performed.
 
 ## CI image distribution — 2026-10-10, not a new deployment
 
@@ -47,12 +68,11 @@ progress and a 120-second faulthandler diagnostic; no suite filtering or skip
 override is introduced.
 Production Compose, `.env`, backup-tool image defaults, PostgreSQL and operational
 checkout are unchanged. No local/King image build is introduced. The accepted
-attachment release below was **0050→0050**; the separately authorized pending
-UX release requires **0050→0051** as described above, with no source backfill.
-Production acceptance remains the separate release record below until
-new exact-source CI, independent image checks and deployment acceptance pass.
+attachment release below was **0050→0050**; the now-accepted UX release
+performed **0050→0051** as described above, with no source backfill.
+The current acceptance record above supersedes the earlier production snapshot.
 
-## Current accepted release — 2026-10-12, finalized 2026-10-13 local
+## Previous accepted release — 2026-10-12, finalized 2026-10-13 local
 
 Production source `84988a260c48fcafb8b3bed6fcb7a1f16348111d` comes from complete
 [CI 38255213036](https://github.com/foolkking/chat-reader/actions/runs/38255213036).
@@ -1565,6 +1585,17 @@ third snapshot is expected while acceptance is pending. The older read-only
 now two/latest and zero age days, but its structural report is not full verification.
 
 ## 低内存 King 发布
+
+2026-10-16 operational correction: the legacy `verify_runtime_health.sh` launches
+full in-container diagnostics and caused a real old-API host OOM when repeated.
+Do not run it repeatedly on the shared King host. This accepted release instead
+used checksummed task-scoped Docker health/image checks, fixed read-only SQL for
+the worker heartbeat/head/active work, and public HTTPS. Evidence/migration
+one-offs ran alone with CPU/memory bounds while application writers were stopped.
+Use the [accepted low-memory procedure](execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment),
+not a blind replay of the illustrative legacy health command below. These
+operational guards do not waive attachment, backup, migration or data gates.
+
 
 King 不再承担 Web 镜像编译。2026-08-06 的发布证明，即使暂停 worker，原机 `next build` 仍可能杀死 PostgreSQL checkpointer。必须在 CI 或独立 Linux 构建机完成镜像，再通过 registry 或 `docker save/load` 交付：
 

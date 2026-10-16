@@ -1,6 +1,9 @@
 # UX and editable cleanup ranges release — 2026-10-16
 
-Status: release in progress; production is still the accepted `84988a2`/0050.
+Status: **ACCEPTED** — production `aea13fe`/0051 on 2026-10-16,
+15:34:26 UTC; pointers, safe rollback warning and retention finalized.
+[Final acceptance](#accepted-low-memory-deployment) supersedes the blocked
+checkpoint below without erasing its real old-API OOM incident.
 The user explicitly authorized commit, CI and deployment, then required local
 GitHub-token/CLI use rather than login or the GitHub website. Credentials remain
 in the system credential provider and per-process memory, not this record.
@@ -482,3 +485,202 @@ The existing local database, import materials and King production remain
 untouched at the accepted source/0050 boundary. These local checks do not
 accept the failed CI. Commit the correction, dispatch one complete exact-source
 CI, then stop and wait for the user without watching or deploying.
+
+## Passing CI and blocked King preflight
+
+After the user returned the passing CI result and explicitly requested deployment,
+run **38902167421**, attempt **2**, was checked through the existing local token.
+It uses exact source `aea13fe4ed3a725b0c88138702248eab5c8dac5b`; all five jobs
+pass. Attempt 1's Web job failed before checkout on the ECR Public data limit;
+its missing-summary-module error was secondary. Only failed jobs/dependents
+were retried. Successful API/settings executions were retained.
+
+- API **1,288 / 3 skipped**, single head/current 0051. PostgreSQL 16 concurrent
+  range-save and consent-revoking downgrade cases both pass.
+- All **13 Web gates** pass: Context 35, mutation 100, cleanup 3 (including both
+  375/1440px exact-range cases), attachment 25, PDF 13, authentication 18 and
+  negative PWA 19. Default PWA is 139 / 737 conditional skips; adaptive import
+  is 8 / one separate conditional skip.
+- Settings **463 / zero skipped**, plus one fresh-instance restore. Web quality
+  artifact **12050399624** is producer attempt 2; retained settings artifact
+  **12049136095** is producer attempt 1. Original ZIP digests and summaries match
+  this source. Fourteen selected synthetic screenshots were reviewed, not all
+  440 PNGs. The two full-size noise images show two selected candidates and
+  exact removal strikes while retained text stays plain.
+- Original image artifact **12050797955**, producer attempt 2, independently
+  passes original ZIP integrity/digest, all 50 OCI blob hashes, two configs,
+  every layer diff ID, four Linux/amd64 tags, embedded build revisions,
+  cleanup/migration source, three built-in Skill ZIPs and 17 support paths.
+  No workstation/King application image build is used.
+
+Two task-only verifier defects were corrected without altering application/CI
+source: Linux image inspection must accept Debian's legitimate `:amd64` POSIX
+metadata names without extracting them onto Windows; exact-source `git archive`
+must scope `core.autocrlf=false`/`core.eol=lf` to avoid workstation conversion,
+then compare every committed blob. Outer ZIP/support paths still reject drive
+paths and traversal. The task guard now requires the actual 463-case settings
+matrix rather than the former 439, and rejects the smaller matrix. Artifact
+helper regressions pass **9/9** and migration/data/recovery guard checks **11/11**.
+These helper checks do not override a failed production gate.
+
+The explicit 33-file payload was transferred to a private, exact-SHA King
+release directory; its hashes and host-Python/shell syntax passed.
+The preparation guard verified previous images, preserved configuration and
+operational checkout, and captured the PostgreSQL baseline. It then stopped
+at the read-only attachment audit: **313 asset records, 308 active attachments,
+325 files, 12 ORPHAN_ASSET_FILE issues**. No registered object was reported
+missing. The capacity/two-backup remainder and preflight-passed marker were not
+reached, so they are **not** accepted.
+
+Read-only bounded diagnosis confirms **974,628 bytes** in those 12 files.
+They are older than a day; none matches an existing asset or upload-item
+hash/size pair. They are not newly admitted work (active jobs/imports: zero).
+No identities, paths or payloads were persisted in repository evidence; no file
+was moved, deleted, reclassified or repaired.
+
+A subsequent repeated full internal-diagnostics health check exited **137**.
+The host kernel reports global OOM killing the old API; Docker records its
+137 exit at **2026-10-16 14:35:34 UTC** and automatic restart at **14:35:36 UTC**.
+This is a real production incident during preflight, not a candidate deployment
+or a passing health check. No further heavy full diagnostics was attempted.
+Bounded Docker/HTTPS and a read-only PostgreSQL query confirm the old services
+recovered, worker is idle with a fresh heartbeat, and PostgreSQL identity/start/
+restart count remain unchanged with head 0050; no PostgreSQL recovery-error
+lines were observed. Source/configuration/pointers are not advanced.
+
+**At this blocked checkpoint, not performed:** image load, intentional writer stop, fresh backup, migration,
+service replacement, post-migration data comparison, release acceptance,
+pointer finalization or retention cleanup. All production data files remain in
+place. The [sanitized checkpoint](../evidence/ux-release-2026-10-16.json) separates
+passed CI/artifact checks from these unexecuted production gates.
+
+At that checkpoint, resume required an explicit backup/non-destructive-isolation decision for the
+12 files and a memory-safe maintenance plan. Preserve the failed preparation,
+existing baseline and OOM evidence; do not blindly replay its write-once guard.
+Fresh recovery-point/capacity checks and a consistent backup are still required.
+Do not restart old code after 0051 without the consent-revoking safe downgrade.
+
+
+## Accepted low-memory deployment
+
+The user explicitly approved backing up and non-destructively isolating the 12
+files, then continuing low-memory maintenance. No new CI was dispatched and no
+application/workflow source was changed. Existing exact-source images, quality
+proof and all 17 support files remained unchanged. Before revising task operations,
+the original helper/proof/checksum files were retained in the private release
+directory; the revised ten-helper inventory was rehashed and checked on King.
+A Windows CRLF checksum-manifest staging failure was corrected before maintenance;
+it caused no production-data change. Artifact helper regressions pass **9/9**,
+migration/data/recovery guards **11/11**, and preservation tests **14/14 on Linux**.
+Windows passes 13 with one explicit Linux-only symlink/uid test skip.
+
+### Original recovery point and non-deleting isolation
+
+- Lightweight Docker/read-only SQL/public HTTPS checks confirmed exact old images,
+  head 0050, idle/fresh worker and zero admitted jobs/imports, without loading
+  another full API diagnostics interpreter.
+- Combined capacity gate passed: **10,405,788 KiB available / 4,356,836 KiB required**.
+  Two pre-existing complete recovery points were independently reverified.
+- Only Web/API/worker stopped; PostgreSQL and other applications were not stopped.
+  Evidence/migration one-offs ran alone with CPU 0.5, memory 384 MiB and total
+  memory+swap 768 MiB. These overlays were not applied to runtime `up`.
+- A full original snapshot covered all old database columns/four storage roots.
+  The private stopped-writer plan again found exactly 12 files/974,628 bytes,
+  zero database key references or known payload matches, no admitted work,
+  no symlinks/hardlinks and safe canonical paths.
+- `/opt/chat-reader/backups/chat-reader-20261016T152523Z` is the verified
+  five-component **old-source/0050** recovery point, before isolation/migration.
+  All checksums, four tar streams and PostgreSQL TOC passed. Every orphan's exact
+  bytes was independently verified inside the original assets archive without
+  extraction before any move.
+- Root-private preservation outside active assets retains an independent copied
+  payload set and the original files moved by same-filesystem rename, preserving
+  hashes/size/mode/uid/gid/mtime. No unlink/deletion was used. Exact private keys
+  and restore manifests remain on King; they were never printed or transferred
+  into repository evidence. Restore must stop writers and never overwrite a path.
+- Combining active assets with isolated originals exactly reproduces the original
+  whole-tree fingerprint. All database fingerprints and the other three stores
+  match the original snapshot. The only active-tree delta is those 12 preserved
+  files. A clean pre-migration snapshot verifies **313/313** attachment hashes,
+  **308** active attachments, **313** files and zero issues.
+
+### Migration, runtime and authenticated acceptance
+
+Only the exact 0050→0051 Alembic upgrade ran, using the new verified API image,
+bounded one-off and lock/statement/total deadlines. It did not invoke the Compose
+migrate service's owner-auth reconciliation or any source backfill. The sole
+schema delta is nullable JSON `content_cleanup_occurrences.reviewed_ranges`,
+default NULL; every existing row remains NULL.
+
+| Event | Verified UTC, 2026-10-16 |
+| --- | --- |
+| Intentional maintenance start | 15:22:12 |
+| Migration started | 15:31:03 |
+| Stopped-writer data gates passed | 15:32:53 |
+| New services started | 15:33:02 |
+| Production acceptance passed | 15:34:26.788893 |
+| Final aggregate/pointer/retention check | 15:38:36.390941 |
+
+All **84** tables compare every pre-existing column, including source hashes,
+across the migration; canonical rows are also unchanged across isolation.
+All four **post-isolation** storage fingerprints match before/after migration.
+API/worker/Web were recreated with `--no-deps --no-build`, never PostgreSQL.
+
+| Runtime role | Exact CI image ID |
+| --- | --- |
+| API / worker | `sha256:3ada23cdc9a149bd29f75478053d3ddc78a269172384dbaadefbdb17fe46ebd7` |
+| Web | `sha256:4478af182834c0f1677b71b4d451c45ba34c6b1682d8ec396e8ac9d090c5f4b3` |
+
+All three carry revision `aea13fe4ed3a725b0c88138702248eab5c8dac5b`.
+New API/Web are healthy, worker fresh; all new services have zero restarts,
+OOM and startup error-keyword lines. PostgreSQL identity/start/restarts
+remain the original baseline (started 2026-09-30, restart count zero).
+Production environment, Compose, Nginx and dirty operational checkout are unchanged.
+
+Public HTTPS `/api/health` is 200; HTTP redirects 301 to the same HTTPS origin.
+Ephemeral authenticated acceptance passes **18 read API routes**, three HTML
+documents and three exact built-in Skill ZIP downloads. Logout is 204 and
+private access afterward 401. Existing scanner-disabled/unscanned/basic-preview
+policy and disabled complex preview are unchanged. Read-only bounded live
+acceptance verifies **67** stable table counts and a clean attachment
+binding/size audit; full hashes were **not** repeated with services running.
+No production business conversation was modified for demonstration.
+
+### Recovery and retention finalized
+
+Current/rollback pointers are **aea13fe/84988a2**, with exact old images retained.
+`/etc/chat-reader/release-state/rollback-0051-warning.txt` forbids an old-API/worker
+restart before writers stop, a fresh verified backup and the tested new-image
+consent-revoking downgrade to 0050. Narrowed DELETE choices become KEEP before
+the column is dropped; switching image pointers or dropping the column alone
+is unsafe. No automatic downgrade/database restore ran.
+
+After acceptance, three complete points were verified before pruning only
+`chat-reader-20261008T134403Z` (**203,892,445 unlinked bytes**).
+Final read-only inventory has **two verified / zero held / zero candidates**:
+`chat-reader-20261012T143850Z` and `chat-reader-20261016T152523Z`.
+The operation's own lock explains the prune report's held=1; the separate
+before/after read-only inventories had zero unknown/held entries.
+Backup creation reused one byte-identical component (167,087,373 avoided bytes).
+These are same-host logical snapshots, not independent off-site physical copies.
+The complete original backup and separate orphan originals/independent copies
+remain preserved outside cleanup; no user file was deleted.
+
+### Verification limits and documentation closeout
+
+The earlier 14:35 UTC host OOM was real and remains recorded. The successful
+maintenance used lightweight readiness instead of repeating full diagnostics;
+new services and PostgreSQL did not OOM/restart in this deployment.
+CI owns the synthetic browser/native-pointer evidence and 14 selected screenshots;
+there is no production interactive-browser, real-device touch or assistive claim.
+Observed maintenance memory readings are not a new sustained CPU/RSS benchmark.
+
+| Documentation | Action | Purpose |
+| --- | --- | --- |
+| PROJECT_STATE / docs index | Updated | Current accepted source/schema, recovery and authorization |
+| Deployment / system / testing / user flows / cleanup contract | Updated | Actual operational boundaries, feature availability and verification limits |
+| This execution / sanitized JSON / documentation inventory | Updated | Retain failed history and independently collected final acceptance |
+
+Profile: Next.js/TypeScript + FastAPI/Python/PostgreSQL monorepo; pnpm.
+No broad documentation restructuring, credential/real-body/private-key recording,
+new application change or additional CI/deployment is part of this closeout.

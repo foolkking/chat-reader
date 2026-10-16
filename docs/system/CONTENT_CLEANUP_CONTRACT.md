@@ -63,12 +63,18 @@ now stale; no misleading rescan warning or pending check is projected onto them.
 These display rules add no API, migration or canonical source changes.
 
 Migration `20261015_0051` adds nullable JSON without a source rewrite or backfill.
-It is the single source head; only the separate disposable test database has
-been migrated at this release checkpoint. Existing local/production databases
-remain unchanged, and production remains 0050.
+It is the single source head. Exact-source CI 38902167421 (`aea13fe`) now passes
+the full PostgreSQL 16 suite, including concurrent range saves and safe downgrade;
+the dedicated mobile/desktop browser cases pass native range selection,
+checkbox off/on preservation, exact markers, preview and canonical apply.
+Production accepted `aea13fe`/0051 on 2026-10-16 after the verified original
+backup, authorized non-deleting orphan isolation and all stopped-writer/runtime
+gates. Every old database column is preserved and existing reviewed ranges remain
+NULL. The pre-existing local database was not upgraded. See the
+[accepted release](../execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment).
 Downgrade revokes narrowed DELETE choices to KEEP before dropping the column,
 so old code cannot silently expand consent. Never run the old API against
-narrowed choices in the new schema. See [deployment boundary](../deployment.md#pending-noise-range-migration--2026-10-15-release-in-progress).
+narrowed choices in the new schema. See [deployment boundary](../deployment.md#rollback-across-0051).
 SQLite/Unicode checks do not prove PostgreSQL locks, migration execution, browser
 interaction or assistive-technology acceptance.
 
@@ -112,8 +118,8 @@ still match the scan. It streams one source body at a time, without new extensio
 or persisted source copies. Unknown legacy sources remain readable and require
 rescanning; their choices and canonical text are not silently rewritten. Downgrade
 removes only this column. The dated source-safety record owns its local migration
-and API evidence; current production is 0050 (see `PROJECT_STATE.md`). The later
-0051 source change above is not deployed. Browser acceptance is pending.
+and API evidence. Production is now 0051 (see `PROJECT_STATE.md`); the later
+0051 change above passed exact-source CI and was deployed on 2026-10-16.
 
 ### Unconfirmed selection writes (local, browser acceptance pending)
 

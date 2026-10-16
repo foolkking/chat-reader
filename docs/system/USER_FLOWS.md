@@ -1,6 +1,6 @@
 # 当前用户流程
 
-## Noise review with editable ranges (local, 2026-10-15)
+## Noise review with editable ranges (deployed 2026-10-16)
 
 For many scanned candidates, choose a rule/conversation group, inspect context,
 and select any number of items. Bulk actions explicitly name the current scope
@@ -13,7 +13,8 @@ Selected candidates now strike only exact proposed removal text, with retained
 words left plain after refinement. Unselected candidates keep the original
 suggestion highlight, not a deletion line. Completed rows say completed rather
 than kept/rescan; invalid refinements show recovery guidance instead of guessed
-markers. This follow-up was locally checked on 2026-10-16, not in a browser.
+markers. The local markup checks were followed by passing 375/1440px browser
+cases and original synthetic screenshot review in exact-source CI 38902167421.
 
 Open **Adjust deletion ranges** on a candidate, select the actual noise in its
 read-only text, choose **Only remove selection**, and optionally add more
@@ -30,8 +31,13 @@ save; a differing choice requires explicit adoption, and changed source requires
 rescan. Closing does not undo a choice that may already have saved.
 
 [Contract](CONTENT_CLEANUP_CONTRACT.md#editable-candidate-ranges-local-source-2026-10-15).
-Source/API helpers and local regressions exist; migration 0051, PostgreSQL and
-browser/keyboard/touch/assistive acceptance remain pending. Production is unchanged.
+Exact-source PostgreSQL 16 and dedicated native-pointer mobile/desktop browser
+cases now pass, including checkbox off/on preservation, full preview and exact
+canonical apply. This is not real-device touch or assistive-technology acceptance.
+Production `aea13fe`/0051 was accepted on 2026-10-16 after verified backup,
+user-authorized non-deleting isolation and migration/data/runtime acceptance.
+The earlier preflight/OOM incident remains recorded; it is not the current state.
+No production conversation was edited merely to demonstrate the feature.
 
 ## Conversation split workspace recovery (local source-only repair, 2026-10-15)
 

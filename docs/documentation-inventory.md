@@ -1,5 +1,30 @@
 # Markdown 文档台账
 
+## Accepted UX release and low-memory deployment — 2026-10-16
+
+`execution/UX_RELEASE_2026-10-16.md` and sanitized
+`evidence/ux-release-2026-10-16.json` own exact-source run 38902167421,
+all five jobs/13 Web gates, retained attempt-1 settings evidence, original
+image/support checks and 14 selected synthetic screenshots. The initial
+12-orphan gate and old-API host OOM remain historical, not rewritten as success.
+
+After explicit user approval, low-memory maintenance verified a full original
+backup, preserved/isolate-copied all 12 files without deletion, proved canonical
+rows/other stores unchanged and the original asset tree exactly reconstructible,
+then applied only 0051. All 84 old-column table fingerprints, four storage roots,
+313 attachment hashes and 67 live counts pass; HTTP/auth/runtime acceptance,
+safe rollback warning, pointers and two-backup retention are finalized.
+The new isolation helper passes all 14 Linux synthetic tests.
+
+`PROJECT_STATE.md`, `index.md`, `testing.md`, `deployment.md` and
+`system/DEPLOYMENT_AND_ENVIRONMENT.md` now identify current aea13fe/0051 and
+rollback 84988a2 (safe downgrade first), retaining the earlier blocked checkpoint.
+`system/CONTENT_CLEANUP_CONTRACT.md` and `system/USER_FLOWS.md` align deployed
+editable ranges with their CI evidence without claiming production browser,
+real-device touch or assistive acceptance. No application/workflow source changed
+in this operational/documentation closeout; no new CI was dispatched.
+Current facts are in the short entries/system docs, dated details in execution/evidence.
+
 ## UX release execution — 2026-10-16
 
 `execution/UX_RELEASE_2026-10-16.md` owns the separately authorized commit/CI/

@@ -15,19 +15,27 @@ explicitly authorized the release path; local lint, typecheck and Web build have
 passed. Full local API tests passed **1,129 / 159 skipped**; a separate disposable
 PostgreSQL 17 range migration/concurrency suite passed **2/2**. Full PostgreSQL 16
 acceptance remains for CI. The local PWA attempt stopped after two timeouts because the API
-was not running; it is not a passing browser gate. CI/deployment acceptance is
-pending.
+was not running; it is not a passing browser gate. Those are historical local checkpoints. Exact-source CI **38902167421** attempt 2
+now passes all five jobs for `aea13fe`; original images/support were independently
+verified. Production accepted **`aea13fe` / `20261015_0051`** on 2026-10-16
+at **15:34:26 UTC**. A fresh five-component backup precedes the user-authorized
+non-deleting isolation of **12 files / 974,628 bytes**. All 84 stopped-writer
+pre-existing-column fingerprints, four post-isolation storage roots, 313 attachment
+hashes and 67 live stable-table counts pass. HTTPS and authenticated read-only
+acceptance pass; PostgreSQL/configuration were preserved. The earlier old-API
+OOM remains recorded, not erased by the successful resume. See the
+[accepted release](docs/execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment).
 
 | Item | Verified state |
 | --- | --- |
-| Release in progress | [UX release execution](docs/execution/UX_RELEASE_2026-10-16.md): run 38885644480 attempt 2 on `cb223d7` passed API **1,288 / 3 skipped**, migration head/current 0051, settings **463 + 1 fresh-instance restore**, and 12 Web gates. The final negative PWA gate failed only because both new locale cases called private `/api/preferences` after the authentication gate had restarted the API, receiving **401**. The test now drives SSR language fallback with `Accept-Language`, without test-owned private-session reads/writes; it retains exact Chinese/English copy, cache deletion, Retry, modal focus, Escape and trigger-focus checks. A CI-matched local fixture verifies anonymous preference **401** while Web retains its ordinary PWA mode: unchanged old tests reproduce **2 failures**, corrected complete negative matrix **19/19** and separate bilingual repetitions **10/10** pass. Auth-disabled checks also pass **19/19 + 10/10**; attachment Node checks **65/65**, full lint and nonincremental typecheck pass. Product/API, migration, dependency, workflow gates and timeouts are unchanged. New exact-source CI is required; after dispatch wait for the user, without watching or deploying. Production has not changed |
-| Production | Source `84988a260c48fcafb8b3bed6fcb7a1f16348111d`; accepted [CI 38255213036](https://github.com/foolkking/chat-reader/actions/runs/38255213036), all five jobs; original artifact 11752048475 independently verified |
-| Production database | Single head/current `20261008_0050`; this release remained 0050→0050 with no migration, reconcile or backfill; API/Web/PostgreSQL healthy and worker `alive_idle` |
-| Data acceptance | 84 stopped-writer all-column table fingerprints and four storage roots unchanged; 310 attachment object hashes verified; 67 stable table counts unchanged after restart |
-| Latest release CI | API **1,239 passed / 3 skipped**; all 13 Web gates pass, including Context 35, mutation 100, attachment 21 and PDF 13; settings **439 passed / 0 failed / 0 skipped**, plus one passing fresh-instance restore case |
+| Release accepted | Exact source `aea13fe4ed3a725b0c88138702248eab5c8dac5b`, CI **38902167421** attempt 2, original artifact **12050797955**; all five jobs / 13 Web gates, 50 OCI blobs, exact-source support and 14 selected synthetic screenshots independently checked. User-approved backup/isolation and low-memory maintenance resolved the preflight gate. [Acceptance and prior incident](docs/execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment) |
+| Production | Source `aea13fe4ed3a725b0c88138702248eab5c8dac5b`; accepted 2026-10-16, exact CI images only; API/Web healthy, worker fresh, new services zero restarts/OOM and zero startup error-keyword lines |
+| Production database | Single current/head `20261015_0051`, upgraded from 0050 with only nullable JSON `reviewed_ranges`; all existing values remain NULL. No source rewrite, owner-auth reconciliation or backfill. PostgreSQL identity/start/restarts unchanged |
+| Last accepted data evidence | All 84 stopped-writer table fingerprints compare every old column across isolation and migration; three unrelated stores unchanged and the original asset tree exactly reconstructible from active plus isolated originals. Four clean storage roots match across migration; 313 attachment hashes and 67 live stable-table counts pass. No live full-hash sweep repeated |
+| Latest candidate CI | `aea13fe`: PostgreSQL 16 API **1,288 passed / 3 skipped**, single head/current 0051; all **13 Web gates** pass, including exact noise ranges at 375/1440px, attachment **25**, PDF **13**, auth **18**, negative PWA **19**, default PWA **139 / 737 conditional skips**; settings **463 / zero skips** plus one fresh-instance restore. Retained API/settings success is not a claim of rerunning them in attempt 2 |
 | Earlier candidate CI | Canonical-URL revision repair a12ce9e passed CI 37812290017; its artifact was never deployed separately. Its changes are included in accepted 84988a2 |
 | Local UX closeout | The resumed ordinary-user UX implementation and permitted service-free verification are complete at the pre-release checkpoint. Noise supports cross-page multiple candidates and exact editable removal ranges; rich-text uses bounded display-only compatibility, not arbitrary HTML/widgets. The administrator Skill and system archive recovery changes remain in the same release batch. The user explicitly authorized commit, CI and deployment on 2026-10-16; runtime and release acceptance now proceed through the gates below |
-| Latest local verification | [Service-free UX continuation](docs/execution/ux-audit-service-free-regression-2026-10-16.md): repaired fourteen stale test adapters without skipping cases; all 63 Node files passed **1,412/1,412**, full Web lint, nonincremental typecheck and Web build passed. Release preflight API **1,129 passed / 159 skipped**; local PWA stopped after missing-API timeouts, not accepted. A reproduced Share edge entry defect is fixed: retired callbacks cannot start a read or loading/error work. PostgreSQL/PWA, CI and deployment acceptance remain pending |
+| Latest local verification | [Service-free UX continuation](docs/execution/ux-audit-service-free-regression-2026-10-16.md): repaired fourteen stale test adapters without skipping cases; all 63 Node files passed **1,412/1,412**, full Web lint, nonincremental typecheck and Web build passed. Release preflight API **1,129 passed / 159 skipped**; local PWA stopped after missing-API timeouts, not accepted. A reproduced Share edge entry defect is fixed: retired callbacks cannot start a read or loading/error work. The later exact-source CI and production acceptance above supersede this local-only boundary |
 | Latest local repair | [Noise candidate exact markers](docs/execution/ux-audit-noise-candidate-range-markers-2026-10-15.md), verified 2026-10-16 local: selected refined rows mark/strike only actual removal fragments; retained text stays plain. Unusable refinements fall back to plain source with recovery copy, and completed/stale/conflict/protected states are accurately described beside the checkbox. Existing unselected match highlighting and accessible names remain. **13 passed** (six helper + seven actual React server-markup tests), targeted Web ESLint, nonincremental typecheck and diff whitespace passed. No API/migration change or rerun of the prior API batch; browser/mounted-event/assistive acceptance, services, build, CI and deployment were not performed |
 | Earlier local repair | [Noise review editable ranges](docs/execution/ux-audit-noise-range-editing-2026-10-15.md) completes the earlier bulk-selection batch: many candidates can be selected across filtered pages, and each candidate can retain 1–20 exact deletion subranges, with retained-context feedback and required preview/apply. Saving ranges only saves/selects the review choice; KEEP/reselect preserves refinements. Version-bound edit tokens, source/protection checks and the shared scan lock reject stale edits; preview/apply use the same ranges. Checkbox state/text/tint and scope-wide saving feedback exclude stale/conflict/applied/protected rows. Focused API **65 passed**, Unicode/CRLF helper **4 passed**, targeted Web ESLint, nonincremental Web typecheck and diff whitespace passed in that batch. Source has one Alembic head `20261015_0051` after 0050, **not applied**; production stays 0050. No services, browser, PostgreSQL migration/concurrency run, build, commit, new CI or deployment |
 | Latest source-only repair | Administrator system Skill “unify default” and “restore built-in” now use bounded bilingual `AdminRequestError` recovery copy; confirmed writes are shown separately from list-refresh failure with a read-only reload action. Confirmation, permissions, request/cache contracts and Skill content remain unchanged. Browser and full gates were not run |
@@ -121,13 +129,15 @@ pending.
 | Previous source-only repair | [PDF viewer locale consistency](docs/execution/ux-audit-pdf-locale-2026-10-14.md) follows the current interface locale for PDF controls, page feedback, thumbnails and retry/download labels without changing rendering or resource behavior. Per user direction, no local checks, CI or deployment were run |
 | Previous source-only repair | [Public Share recovery language](docs/execution/ux-audit-share-recovery-locale-2026-10-14.md) follows the configured Share locale for loading, error and retry states, falling back to the visitor locale before Share metadata loads. Per user direction, no local checks, CI or deployment were run |
 | Current diagnosis | [Context package upload recovery](docs/execution/ux-audit-context-upload-recovery-2026-10-13.md) confirms successful large-package acceptance/commit alongside transient Web-to-API Docker DNS `EAI_AGAIN` during status reads. Local Nginx `/api/` loopback routing, Web retry/stale-data repair and one transient-502 browser regression are verified; no CI or deployment was started |
-| Release authorization | The authorized cycle is complete: 14 synthetic screenshots reviewed, original images checked, backup/data/runtime acceptance and pointer/retention finalization passed. [Deployment acceptance](docs/execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md) owns evidence. Further optimization is local; **no additional CI or deployment without a new explicit user request** |
-| Recovery points | Current/rollback 84988a2/30a0d32; exact rollback images loaded. Verified backups 20261008T134403Z and 20261012T143850Z; older 20261006T141424Z removed after acceptance under the two-point policy |
-| Release owner | [Accumulated optimization release](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact commits, every failed run, artifacts and acceptance |
+| Release authorization | The explicitly requested 2026-10-16 UX release cycle is complete: exact CI/artifact, original backup, non-deleting isolation, additive migration, data/runtime acceptance and pointer/retention finalization pass. Further CI/deployment requires a new explicit request |
+| Recovery points | Current/rollback `aea13fe`/`84988a2`; exact old images retained, but old API/worker require the consent-revoking 0051→0050 downgrade before restart. Verified backups `20261012T143850Z` and `20261016T152523Z`; the latter preserves all original files including the 12 isolated items. Independent preserved copies/private restore manifest remain outside active assets. Older 20261008T134403Z pruned only after acceptance |
+| Release owner | [UX release](docs/execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment) owns this accepted cycle; [accumulated optimization](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) and [attachment release](docs/execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md) are historical |
 
-The user authorized this order: commit accumulated improvements, pass complete
+### Earlier authorization and checkpoints (historical)
+
+The user originally authorized this order: commit accumulated improvements, pass complete
 exact-source CI, deploy those verified images to King, then continue the
-ordinary-user product audit. The overall goal remains unfinished. At least 15
+ordinary-user product audit. That earlier audit then continued; the separately authorized 2026-10-16 release goal is now complete. At least 15
 improvements was not a ceiling; over 30 scoped batches are already accumulated.
 Do not repeat the previously accepted Context/Skill/Task Center deployments.
 Do not use subagents unless the user newly requests them.
@@ -140,7 +150,7 @@ exact-source CI acceptance are authorized**. Necessary fixes/retries belong to
 that cycle. Do not publish before the attachment work is ready; subsequent
 optimization requires a new explicit release request. This supersedes the earlier
 release pause, not the deployment safety requirements. The newly authorized
-release is now independently accepted at 84988a2; King retains 30a0d32 for rollback.
+earlier release was accepted at 84988a2/rollback 30a0d32; the current pair above supersedes it.
 
 All three cache-count cases pass, including actual zero-cache, download,
 cancellation and persistence assertions. The import-retry case now retains its
@@ -309,8 +319,8 @@ Lint and nonincremental types pass; the preceding bounded one-worker build is
 retained, not rerun for the test-only delta. Fractional-boundary and persistent
 page-local outage checks remain; PDF browser acceptance is still missing.
 The preceding unchanged-API SQLite batch passed **103 / 0 failed /
-0 skipped**; it was not rerun for this UI/test-only repair. Source still has one
-Alembic head `20261008_0050`. Older checkpoint counts overlap and are not added.
+0 skipped**; it was not rerun for this UI/test-only repair. At that earlier checkpoint source had one
+Alembic head `20261008_0050`; the current source/production head is 0051. Older checkpoint counts overlap and are not added.
 Discovery finds **149 tests in ten files**, retaining the previous 144 and adding
 the CSP and rich-attachment cases; **zero browser cases executed locally**.
 Seventh CI's full API/PostgreSQL, settings, 100-case mutation and 21-case attachment
@@ -326,10 +336,10 @@ Earlier ledgers remain unchanged.
 ## Verification boundaries and release safety
 
 - Local lint, nonincremental typecheck, bounded Web build and single source head
-  0050 have passing evidence. Accepted-production full API CI is **1,239 passed /
+  0051 have passing evidence. Accepted-production full API CI is **1,288 passed /
   3 skipped**. Local and older suites overlap; do not add them as unique cases.
 - In the accepted release CI, all 13 Web gates pass, including the
-  100-case mutation gate. Default PWA: **135 passed / 699 conditional skips**;
+  100-case mutation gate. Default PWA: **139 passed / 737 conditional skips**;
   adaptive-import recovery has one conditional skip. Skips are not passes.
 - The 16 formerly pending selection/offline cases ran in isolated settings CI.
   This is not local acceptance with the user's specified Windows Chromium.
@@ -343,15 +353,16 @@ Earlier ledgers remain unchanged.
 - King is a low-memory host. Build images only in CI, never locally/on King.
   Preserve its operational checkout, Compose, `.env.production` and PostgreSQL.
   Stage exact-source support separately; never pull/reset the server checkout.
-- The completed release verified provenance, 310 attachment hashes, capacity and
+- The current completed release verified provenance, 313 attachment hashes, capacity and
   a consistent five-component backup. Stop application writers, not PostgreSQL,
   when a future migration requires it; use `--no-deps --no-build`. Never replay
   completed release helpers or automatically downgrade/restore the database.
-- Current verified backups: `chat-reader-20261008T134403Z` and
-  `chat-reader-20261012T143850Z`. The exact older 20261006T141424Z point was pruned only
+- Current verified backups: `chat-reader-20261012T143850Z` and
+  `chat-reader-20261016T152523Z`. The exact older 20261008T134403Z point was pruned only
   after acceptance under the two-backup policy; final report has no candidates.
   No off-site or scheduled backup is configured.
-- Current rollback points to 30a0d32; its exact API/Web images are already loaded.
+- Current rollback points to 84988a2; its exact API/Web images are already loaded.
+  Stop writers and perform the tested consent-revoking 0051→0050 downgrade before old-code restart.
   Older rollback pointers are historical, not the active recovery target.
   Follow [deployment](docs/deployment.md), not old commands from dated records.
 - King Compose 2.27 does not accept `run --pull never`. Release-only overlays use

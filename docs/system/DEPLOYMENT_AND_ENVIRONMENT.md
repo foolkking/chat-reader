@@ -1,31 +1,40 @@
 # 部署与运行环境
 
-Current production is `84988a2`, Alembic `20261008_0050`, accepted 2026-10-12;
-pointers and retention finalized 2026-10-13 local.
-[Current snapshot](../../PROJECT_STATE.md) and [release evidence](../execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md)
-own live status, exact CI images, verified backups and rollback. Never build on the workstation or King.
+Current production is **`aea13fe`**, Alembic **`20261015_0051`**, accepted
+2026-10-16 at 15:34:26 UTC. [Current snapshot](../../PROJECT_STATE.md) and
+[release acceptance](../execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment)
+own exact-source CI 38902167421 attempt 2, original artifact 12050797955,
+independently verified images/support and the prior preflight/OOM incident.
+Never build application images on the workstation or King.
 
-Pending local noise-range source adds single head `20261015_0051` after 0050;
-it has **not** been applied to the existing local or production database.
-The task's separate disposable PostgreSQL 17 migration/concurrent-edit suite
-passed 2/2. New API source requires that schema; production
-remains 0050. The user authorized the 2026-10-16 release path; exact-source CI,
-PostgreSQL migration/concurrency and production acceptance are still required.
-Stop writers and use the safe downgrade before
-starting old API code: it revokes narrowed DELETE choices before removing the
-field, rather than letting old code ignore user refinements. See
-[pending migration boundary](../deployment.md#pending-noise-range-migration--2026-10-15-release-in-progress)
-and [release execution](../execution/UX_RELEASE_2026-10-16.md).
-Authorization does not replace the required release gates.
+After user authorization, only Web/API/worker were stopped. A verified
+five-component original backup preceded non-deleting isolation of 12 orphan
+files (974,628 bytes); original bytes, metadata, independent copies and private
+restore manifests remain outside active assets. All database rows/other stores
+were unchanged and the original asset tree is exactly reconstructible.
+The additive 0050→0051 migration leaves existing reviewed ranges NULL: no source
+rewrite, owner-auth reconciliation or backfill. All old columns in 84 tables,
+four storage roots, 313 attachment hashes and 67 live stable counts pass.
+API/Web are healthy, worker fresh, new services zero restarts/OOM/startup errors;
+authenticated read-only HTTPS acceptance passes. No live full-hash sweep or
+production interactive-browser acceptance is claimed.
 
-Current/rollback pointers select 84988a2/30a0d32; both exact rollback images are
-already loaded. The latest verified backups are `chat-reader-20261008T134403Z`
-and `chat-reader-20261012T143850Z`. The older 20261006T141424Z point was pruned
-only after acceptance. This release performed no migration, reconcile or backfill:
-84 all-column table fingerprints and four storage roots matched; 310 attachment
-hashes and 67 stable post-start table counts passed. No live full-hash sweep was repeated.
-Compose 2.27 requires release-only `pull_policy: never`, not `run --pull never`;
-validate the configuration and bounded mounted helper before stopping writers.
+PostgreSQL identity/start/restarts, production environment, Compose, Nginx and
+operational checkout are unchanged. The preflight old-API OOM remains a real
+incident; full internal diagnostics was not repeated. Low-memory verification
+used bounded one-offs while writers stopped and lightweight Docker/SQL/HTTPS
+readiness afterward. Compose 2.27 uses release-only `pull_policy: never`,
+not unsupported `run --pull never`; resource overlays were not used for `up`.
+
+Current/rollback pointers are **aea13fe/84988a2**, with exact old images loaded.
+Rollback must stop writers and run the tested consent-revoking 0051→0050
+downgrade before starting old API/worker; dropping the column or switching
+images alone is unsafe. A warning is installed in release-state.
+See [deployment boundary](../deployment.md#rollback-across-0051).
+Verified backups are `chat-reader-20261012T143850Z` and
+`chat-reader-20261016T152523Z`; the latter preserves every original file,
+including all 12 isolated items. Only the older 20261008T134403Z point was pruned,
+after acceptance. Independent orphan preservation remains outside retention.
 
 Temporary exports use Root-controlled three-minute retention and protected downloads.
 Backup tools are installed; successful release finalization retains two verified

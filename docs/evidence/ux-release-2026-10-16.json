@@ -1,0 +1,603 @@
+{
+  "artifact_verification": {
+    "all_layer_diff_ids_verified": true,
+    "archive_sha256": "f2abe064343df2b2e2149234990838af6b98b85ecf476cc093f0fc8ad0ebce2d",
+    "artifact_id": 12050797955,
+    "builtin_skills": {
+      "/skills/chat-transcript-normalizer-skill.zip": "55032c9df6eab4fe7fc32afcca183772f0be176ad13581cab752e415a6c59ee5",
+      "/skills/context-acquisition.zip": "0ce84c02163d1d9b33d23103b8a13a23c664becda095e913f4af4a260d19cb2a",
+      "/skills/context-continuation-maintainer.zip": "9f77a4bb3a0d5158ef6956ca6b3694c80a6bf09cc2329053c0fe5372221429e4"
+    },
+    "embedded_build_revisions_verified": true,
+    "embedded_source_files": {
+      "apps/api/alembic/versions/20261015_0051_cleanup_reviewed_ranges.py": "eefc0bb121532b540aaea1aba8c7257f0d039bc884749ce6042ab6676971f737",
+      "apps/api/app/services/cleanup_ranges.py": "e6a47a8611e188ce91d36d799b13b24af829a9156d282c706c1bd7f4d175b382",
+      "apps/api/app/services/cleanup_review.py": "66228129ecee6517d712bc9bac96f9e175e99225b4efb62918f3258bdd9d1861",
+      "apps/api/app/services/content_cleanup.py": "6be05b463876e7ececdbdfe115fd9088a6b1b07af8817ae156f600dcda8b04ea"
+    },
+    "forbidden_paths_present": false,
+    "images": {
+      "api": "sha256:3ada23cdc9a149bd29f75478053d3ddc78a269172384dbaadefbdb17fe46ebd7",
+      "web": "sha256:4478af182834c0f1677b71b4d451c45ba34c6b1682d8ec396e8ac9d090c5f4b3"
+    },
+    "original_zip_sha256": "e6abd14e1ee75981fcd5bccb94c84c1491c117649fd15b1a88340ba80dcee5e1",
+    "producer_attempt": 2,
+    "verified_image_blobs": 50,
+    "verified_image_configs": 2
+  },
+  "candidate_source": "aea13fe4ed3a725b0c88138702248eab5c8dac5b",
+  "checked_at_utc": "2026-10-16T15:38:36.390941Z",
+  "ci": {
+    "all_five_jobs_passed": true,
+    "api_migration_head_current": "20261015_0051",
+    "api_passed": 1288,
+    "api_skipped": 3,
+    "jobs": {
+      "api-quality": "success",
+      "build-images": "success",
+      "inspect-release-artifact": "success",
+      "settings-quality": "success",
+      "web-quality": "success"
+    },
+    "postgres_range_concurrency_and_safe_downgrade_passed": 2,
+    "quality": {
+      "api_passed": 1288,
+      "api_skipped": 3,
+      "artifacts": [
+        {
+          "id": 12050399624,
+          "name": "release-a-quality-evidence-aea13fe4ed3a725b0c88138702248eab5c8dac5b-2",
+          "sha256": "bb0de730dfc7907ffe82432ccb43bba5b12bde0708f42f861e49b0060060c6c4"
+        },
+        {
+          "id": 12049136095,
+          "name": "settings-quality-evidence-aea13fe4ed3a725b0c88138702248eab5c8dac5b-1",
+          "sha256": "aa957c2d1825bde520166ce81db9e5d7c3b9c64c95a5b7329efb2de4ba8dc2cf"
+        }
+      ],
+      "attachment_passed": 25,
+      "cleanup_range_browser_passed": 2,
+      "fresh_restore_passed": 1,
+      "migration_head_current": "20261015_0051",
+      "mutation_passed": 100,
+      "pdf_passed": 13,
+      "postgres_concurrent_range_and_safe_downgrade_passed": 2,
+      "private_raw_logs_not_transferred": true,
+      "producer_attempt": 2,
+      "quality_producer_attempts": {
+        "settings": 1,
+        "web": 2
+      },
+      "run_id": 38902167421,
+      "screenshot_review_scope": "Two full-size range screenshots and twelve selected synthetic screenshots in two contact sheets; not all 440 PNGs.",
+      "screenshots_reviewed": 14,
+      "settings_passed": 463,
+      "source_sha": "aea13fe4ed3a725b0c88138702248eab5c8dac5b",
+      "status": "PASS",
+      "web_gate_counts": {
+        "adaptive-import-recovery": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 8,
+          "skipped": 1,
+          "timedOut": 0
+        },
+        "context-files": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 35,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "csp-enforcement": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 4,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "default-pwa": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 139,
+          "skipped": 737,
+          "timedOut": 0
+        },
+        "focused-online-security": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 45,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "markdown-image-viewer": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 25,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "pdfjs-maintained-line": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 13,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "pwa-negative": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 19,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "share-focus": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 2,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "single-owner-auth": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 18,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "source-editor-cleanup": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 3,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "source-editor-mutation": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 100,
+          "skipped": 0,
+          "timedOut": 0
+        },
+        "upload-token-atomicity": {
+          "failed": 0,
+          "interrupted": 0,
+          "passed": 18,
+          "skipped": 0,
+          "timedOut": 0
+        }
+      },
+      "web_gates": {
+        "adaptive-import-recovery": "PASS",
+        "context-files": "PASS",
+        "csp-enforcement": "PASS",
+        "default-pwa": "PASS",
+        "focused-online-security": "PASS",
+        "markdown-image-viewer": "PASS",
+        "pdfjs-maintained-line": "PASS",
+        "pwa-negative": "PASS",
+        "share-focus": "PASS",
+        "single-owner-auth": "PASS",
+        "source-editor-cleanup": "PASS",
+        "source-editor-mutation": "PASS",
+        "upload-token-atomicity": "PASS"
+      }
+    },
+    "run_id": 38902167421,
+    "workflow_attempt": 2
+  },
+  "deployment_operations_performed": {
+    "authorized_non_deleting_file_relocation": true,
+    "configuration_overwrite": false,
+    "fresh_original_backup": true,
+    "image_load": true,
+    "intentional_writer_stop": true,
+    "migration_0050_to_0051": true,
+    "orphan_file_delete": false,
+    "owner_auth_reconcile_or_source_backfill": false,
+    "pointer_finalization": true,
+    "post_migration_fingerprints": true,
+    "postgres_restart": false,
+    "release_acceptance": true,
+    "replacement": true,
+    "retention_prune_after_acceptance": true
+  },
+  "incident": {
+    "docker_die_at_utc": "2026-10-16T14:35:34Z",
+    "docker_start_at_utc": "2026-10-16T14:35:36Z",
+    "full_internal_diagnostics_repeated_after_incident": false,
+    "host_global_oom_matches_old_api_container": true,
+    "kind": "HOST_GLOBAL_OOM_DURING_PREFLIGHT",
+    "old_api_auto_restarts_added": 1,
+    "old_api_exit_code": 137,
+    "old_services_recovered": true,
+    "postgres_recovery_error_lines_since_preflight": 0
+  },
+  "initial_blocked_checkpoint": {
+    "checked_at_utc": "2026-10-16T14:41:51.110915Z",
+    "deployment_operations_performed": {
+      "file_delete_or_relocation": false,
+      "fresh_backup": false,
+      "image_load": false,
+      "intentional_writer_stop": false,
+      "migration": false,
+      "pointer_finalization": false,
+      "post_migration_fingerprints": false,
+      "release_acceptance": false,
+      "replacement": false,
+      "retention_prune": false
+    },
+    "production_database": "20261008_0050",
+    "production_source": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+    "requires_user_decision": "Backup and non-destructive isolation of 12 orphan files, plus memory-safe maintenance; do not bypass audit or replay one-shot preparation blindly.",
+    "status": "BLOCKED_BEFORE_IMAGE_LOAD_AND_WRITER_STOP"
+  },
+  "initial_bounded_recovery_check": {
+    "api_restarts_after_preflight": 1,
+    "api_restarts_before_preflight": 0,
+    "candidate_migration_or_replacement_started": false,
+    "checked_at_utc": "2026-10-16T14:41:51.110915Z",
+    "containers": {
+      "api": {
+        "health": "healthy",
+        "image": "sha256:48d10c86e6a549adda077c50bb3e0eb5350c69b88fa2b494d527425df29503c0",
+        "restarts": 1,
+        "running": true,
+        "started_at": "2026-10-16T14:35:36.145733935Z"
+      },
+      "import-worker": {
+        "health": null,
+        "image": "sha256:48d10c86e6a549adda077c50bb3e0eb5350c69b88fa2b494d527425df29503c0",
+        "restarts": 1,
+        "running": true,
+        "started_at": "2026-10-15T00:00:03.769860022Z"
+      },
+      "postgres": {
+        "health": "healthy",
+        "image": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "restarts": 0,
+        "running": true,
+        "started_at": "2026-09-30T03:05:33.567319401Z"
+      },
+      "web": {
+        "health": "healthy",
+        "image": "sha256:4edba2580b5ecbe1baaff138f9a7eed945576dbde0caff38c10112caa402f31a",
+        "restarts": 0,
+        "running": true,
+        "started_at": "2026-10-13T15:56:23.144776882Z"
+      }
+    },
+    "database": {
+      "migration_heads": [
+        "20261008_0050"
+      ],
+      "worker_heartbeat_age_seconds": 22.964723,
+      "worker_state": "idle"
+    },
+    "diagnostic_exit_137_observed": true,
+    "full_internal_diagnostics_not_repeated": true,
+    "new_application_images_loaded": false,
+    "postgres_identity_start_and_restarts_unchanged": true,
+    "public_https_health_200_verified": true,
+    "read_only": true
+  },
+  "initial_production_preflight": {
+    "attachment_audit": {
+      "applicable": true,
+      "clean": false,
+      "complete": true,
+      "issue_count": 12,
+      "issue_counts": {
+        "ORPHAN_ASSET_FILE": 12
+      },
+      "read_only": true,
+      "scanned_active_attachment_count": 308,
+      "scanned_asset_object_count": 313,
+      "scanned_file_count": 325,
+      "sha256_verified_count": 0,
+      "storage_backend": "local"
+    },
+    "capacity_and_two_backup_reverification": "NOT_REACHED",
+    "fresh_backup": "NOT_RUN",
+    "read_only_orphan_diagnosis": {
+      "active_attachments": 308,
+      "active_jobs_and_imports": 0,
+      "asset_files": 325,
+      "asset_objects": 313,
+      "complete": true,
+      "database_or_storage_modified": false,
+      "issue_counts": {
+        "ORPHAN_ASSET_FILE": 12
+      },
+      "oldest_orphan_age_seconds": 272692,
+      "orphan_bytes": 974628,
+      "orphan_files_hashed_within_64MiB_budget": 12,
+      "orphan_payloads_matching_existing_asset_hash_and_size": 0,
+      "orphan_payloads_matching_upload_item_hash_and_size": 0,
+      "orphan_top_level_categories": {
+        "other": 12
+      },
+      "orphans": 12,
+      "read_only": true,
+      "youngest_orphan_age_seconds": 113239
+    },
+    "status": "FAIL"
+  },
+  "production_acceptance": {
+    "authenticated_smoke": {
+      "bundled_skill_downloads_verified": 3,
+      "checks": {
+        "admin_support": 200,
+        "attachments": 200,
+        "audit": 200,
+        "build": 200,
+        "capabilities": 200,
+        "cleanup_rules": 200,
+        "home_document": 200,
+        "invitations": 200,
+        "library_document": 200,
+        "login": 200,
+        "pending_reviews": 200,
+        "personal_archive": 200,
+        "preferences": 200,
+        "runtime": 200,
+        "search_document": 200,
+        "session": 200,
+        "shares": 200,
+        "support": 200,
+        "system_archive": 200,
+        "system_skills": 200,
+        "tasks": 200,
+        "users": 200
+      },
+      "logout": 204,
+      "private_after_logout": 401,
+      "status": "PASS"
+    },
+    "backup": {
+      "after": {
+        "candidates": 0,
+        "held": 0,
+        "mode": "read_only",
+        "removed": 0,
+        "retained": 2,
+        "unlinked_bytes": 0,
+        "verified": 2
+      },
+      "before": {
+        "candidates": 0,
+        "held": 0,
+        "mode": "read_only",
+        "removed": 0,
+        "retained": 2,
+        "unlinked_bytes": 0,
+        "verified": 2
+      },
+      "contains_all_12_original_files": true,
+      "original_consistent_point": "/opt/chat-reader/backups/chat-reader-20261016T152523Z",
+      "prune": {
+        "candidates": 1,
+        "held": 1,
+        "mode": "apply",
+        "removed": 1,
+        "retained": 2,
+        "unlinked_bytes": 203892445,
+        "verified": 3
+      },
+      "retained": [
+        "chat-reader-20261012T143850Z",
+        "chat-reader-20261016T152523Z"
+      ],
+      "source_sha": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+      "verified_components": 5
+    },
+    "checked_at_utc": "2026-10-16T15:38:36.390941Z",
+    "data_preservation": {
+      "attachment_audit": {
+        "attachments": 308,
+        "complete": true,
+        "files": 313,
+        "issue_count": 0,
+        "issue_counts": {},
+        "objects": 313,
+        "sha256_verified": 313
+      },
+      "canonical_rows_unchanged_across_isolation_and_migration": true,
+      "live_attachment_audit": {
+        "attachments": 308,
+        "complete": true,
+        "files": 313,
+        "issue_count": 0,
+        "issue_counts": {},
+        "objects": 313,
+        "sha256_verified": 0
+      },
+      "live_stable_tables": 67,
+      "original_stores": {
+        "assets": {
+          "bytes": 472172986,
+          "files": 328,
+          "sha256": "cfe60e46fddf2f2e8357829604262d00e9fed7f13ffd1667413060e76670fbcd"
+        },
+        "exports": {
+          "bytes": 50310085,
+          "files": 36,
+          "sha256": "fb64957ff3fc61c16020ad07f4f818f7f41b9ae9f59a42446c92a2e7d98d1415"
+        },
+        "imports": {
+          "bytes": 411572943,
+          "files": 384,
+          "sha256": "3beda3cd124a87a506b176e542222e5682303d9974673c3391dd88ee52121a94"
+        },
+        "offline": {
+          "bytes": 167982006,
+          "files": 20,
+          "sha256": "83c103644bd30f87f882b11456169b22ca06af11fd628c709843479e40bace55"
+        }
+      },
+      "preexisting_columns_compared": true,
+      "preexisting_tables": 84,
+      "protected_stores_compared": {
+        "assets": {
+          "bytes": 471198358,
+          "files": 316,
+          "sha256": "0689dcd9c3660ca8ae461970093614e6ed23167a3cf4bc318d9c611ff71d0866"
+        },
+        "exports": {
+          "bytes": 50310085,
+          "files": 36,
+          "sha256": "fb64957ff3fc61c16020ad07f4f818f7f41b9ae9f59a42446c92a2e7d98d1415"
+        },
+        "imports": {
+          "bytes": 411572943,
+          "files": 384,
+          "sha256": "3beda3cd124a87a506b176e542222e5682303d9974673c3391dd88ee52121a94"
+        },
+        "offline": {
+          "bytes": 167982006,
+          "files": 20,
+          "sha256": "83c103644bd30f87f882b11456169b22ca06af11fd628c709843479e40bace55"
+        }
+      },
+      "reviewed_ranges": {
+        "column_present": true,
+        "non_null_count": 0
+      }
+    },
+    "database_head": "20261015_0051",
+    "evidence_sha256": {
+      "SHA256SUMS": "af3c33d5ce20968dce66735cda5bee1945653f9ed99aa3a237453becfd52f52a",
+      "artifact-verification.json": "49e7938c3e61f0a563e00104014964d97e81d505c9ca31f3f3bf88730cc3c8a4",
+      "authenticated-smoke.json": "f96445da7af6d910a475be1a3d2d0d19ba6e03611b6f9d7f50115dc305bb12ec",
+      "backup-verification.log": "1ca298008755b291bed762bcae2da5f30fc0bade75fe9f9ba18a1654110acc88",
+      "data-after-acceptance.json": "4f5fd542349e926ce1297e70d165be58590c30e3119c6526f9f2bbc99ee4bb0b",
+      "data-after-preflight.json": "21d270b0b33fe85c431094710f16de1127685d96b92bf28a408b20ee749746e8",
+      "data-before.json": "b3069f19e2e25ad5e59211d4a66ae13863e425d578e86253b859083ee44e9f67",
+      "data-original.json": "211151cf4fa0a57957819422b3a65e832d5b785ee73c8d0aa5183a9ec9c3f524",
+      "health-final.json": "e94714939fef29c2c540180d8697031f998b57b84107791d0b636771d228d2fd",
+      "isolation-data-checks-passed.json": "e7ca409b8126e8d9fe916b643fa754957185d4f45bba54cf0f8b4914d69dfd57",
+      "orphan-preservation.json": "953c8ffac9999c95a5c90a3b7df9d2ac68b5e6514cb105133f3c005777f463a5",
+      "runtime-verification.json": "8ab074d5445ae4e1d110603c800e0171c19957695526b20a6bbc44568f1cc118"
+    },
+    "health": {
+      "checked_at": "2026-10-16T15:38:16.201076Z",
+      "database": {
+        "active_work": 0,
+        "heads": [
+          "20261015_0051"
+        ],
+        "heartbeat_age": 12.234977,
+        "worker_state": "idle"
+      },
+      "docker_health_passed": true,
+      "full_internal_diagnostics_repeated": false,
+      "public_https_health": 200,
+      "status": "PASS"
+    },
+    "isolation_data_checks": {
+      "active_attachment_integrity_clean": true,
+      "all_preexisting_database_columns_unchanged": true,
+      "original_asset_tree_reconstructed_exactly": true,
+      "other_three_stores_unchanged": true,
+      "status": "PASS"
+    },
+    "maintenance_utc": {
+      "acceptance-passed": "2026-10-16T15:34:26.788893Z",
+      "data-checks-passed": "2026-10-16T15:32:53Z",
+      "maintenance-started": "2026-10-16T15:22:12Z",
+      "migration-started": "2026-10-16T15:31:03Z",
+      "services-started": "2026-10-16T15:33:02Z"
+    },
+    "orphan_preservation": {
+      "bytes": 974628,
+      "database_modified": false,
+      "files": 12,
+      "independent_copy_verified": true,
+      "original_asset_tree_reconstructed_exactly": true,
+      "original_full_backup_verified": true,
+      "original_metadata_preserved": true,
+      "preservation_root": "/opt/chat-reader/preserved-orphans/aea13fe4ed3a725b0c88138702248eab5c8dac5b",
+      "private_manifest_not_printed": true,
+      "same_filesystem_rename_only": true,
+      "status": "PASS"
+    },
+    "postgres_restarts": 0,
+    "postgres_started_at": "2026-09-30T03:05:33.567319401Z",
+    "postgres_unchanged": true,
+    "private_manifest_transferred": false,
+    "production_configuration_and_operational_checkout_unchanged": true,
+    "production_interactive_browser_acceptance": false,
+    "rollback_schema_warning_installed": true,
+    "rollback_source": "84988a260c48fcafb8b3bed6fcb7a1f16348111d",
+    "runtime": {
+      "additive_migration_0050_to_0051_verified": true,
+      "api": {
+        "error_keyword_lines": 0,
+        "healthy": "healthy",
+        "image": "sha256:3ada23cdc9a149bd29f75478053d3ddc78a269172384dbaadefbdb17fe46ebd7",
+        "oom_killed": false,
+        "restarts": 0,
+        "revision": "aea13fe4ed3a725b0c88138702248eab5c8dac5b"
+      },
+      "import-worker": {
+        "error_keyword_lines": 0,
+        "healthy": null,
+        "image": "sha256:3ada23cdc9a149bd29f75478053d3ddc78a269172384dbaadefbdb17fe46ebd7",
+        "oom_killed": false,
+        "restarts": 0,
+        "revision": "aea13fe4ed3a725b0c88138702248eab5c8dac5b"
+      },
+      "live_full_hash_sweep_repeated": false,
+      "live_stable_table_counts_checked": 67,
+      "postgres_and_configuration_unchanged": true,
+      "stopped_tables_preexisting_columns_fingerprinted": 84,
+      "web": {
+        "error_keyword_lines": 0,
+        "healthy": "healthy",
+        "image": "sha256:4478af182834c0f1677b71b4d451c45ba34c6b1682d8ec396e8ac9d090c5f4b3",
+        "oom_killed": false,
+        "restarts": 0,
+        "revision": "aea13fe4ed3a725b0c88138702248eab5c8dac5b"
+      }
+    },
+    "source_sha": "aea13fe4ed3a725b0c88138702248eab5c8dac5b",
+    "status": "ACCEPTED"
+  },
+  "production_database": "20261015_0051",
+  "production_source": "aea13fe4ed3a725b0c88138702248eab5c8dac5b",
+  "schema_version": 1,
+  "status": "ACCEPTED",
+  "support_files_verified": 17,
+  "task_helpers_verified": 10,
+  "task_verifier_regressions": {
+    "artifact": 9,
+    "migration_data_recovery_guard": 11,
+    "orphan_preservation_linux_passed": 14,
+    "orphan_preservation_windows_passed": 13,
+    "windows_linux_only_skipped": 1
+  },
+  "transfer": {
+    "environment_or_business_storage_transferred": false,
+    "explicit_files": 33,
+    "maintenance_helper_revision": {
+      "helpers": 10,
+      "images_quality_and_source_support_unchanged": true,
+      "original_helpers_and_proof_preserved": true
+    },
+    "private_exact_source_directory": true,
+    "transferred_bytes_checked": true
+  },
+  "user_authorization": {
+    "memory_safe_maintenance": true,
+    "new_ci_dispatched": false,
+    "non_deleting_backup_and_isolation": true
+  },
+  "verification_limits": [
+    "No production interactive-browser, real-device touch or assistive acceptance.",
+    "Fourteen selected original synthetic screenshots were reviewed, not all 440 PNGs.",
+    "No full live database/file hash sweep was repeated after services started.",
+    "The old-API preflight host OOM remains a real recorded incident.",
+    "Two same-host logical snapshots can share components; no scheduled/off-site backup.",
+    "Earlier local/CI failures remain historical, not rewritten as passes."
+  ]
+}

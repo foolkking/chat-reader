@@ -1,5 +1,34 @@
 # Testing
 
+## Exact-source CI and production boundary — 2026-10-16
+
+Source `aea13fe4ed3a725b0c88138702248eab5c8dac5b` passes all five jobs
+of run **38902167421**, attempt 2. API is **1,288 passed / 3 skipped**,
+PostgreSQL 16 single head/current 0051; concurrent range saves and the
+consent-revoking downgrade both pass. All **13 Web gates** pass, including
+dedicated noise-range mobile/desktop cases **2/2**, authentication **18/18**,
+negative PWA **19/19**, and default PWA **139 / 737 conditional skips**.
+Adaptive import has one separate conditional skip. Settings is **463/463**
+plus one fresh-instance restore; its successful attempt-1 artifact is retained,
+not relabelled as newly executed in attempt 2.
+
+Original Web/settings ZIP digests, image artifact **12050797955**, all 50 OCI
+blobs, embedded source/support and 14 selected synthetic screenshots were
+independently checked. These supersede earlier “new exact-source CI required”
+checkpoints only for this exact source. Production acceptance subsequently
+passed on 2026-10-16: verified original backup, user-authorized non-deleting
+isolation of 12 files, exact 0050→0051 upgrade, 84-table all-old-column comparison,
+four storage roots, 313 attachment hashes and 67 live stable counts. HTTPS,
+18 authenticated read API routes, three HTML documents, three exact Skill ZIPs,
+logout 204 and private-after-logout 401 pass. New services have zero restarts/OOM
+and startup error-keyword lines; PostgreSQL/configuration remain unchanged.
+The earlier old-API OOM and blocked preflight are historical, not erased.
+Task artifact/guard tests pass 9/11, and the new isolation helper passes all
+14 Linux synthetic regressions (Windows: 13 pass / one Linux-only skip).
+These are operation-helper checks, not reruns of the application CI.
+No production interactive-browser/real-device/assistive acceptance or live
+full-hash sweep is claimed. See the [accepted release](execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment).
+
 ## Full service-free UX continuation — 2026-10-16
 
 The [continuation record](execution/ux-audit-service-free-regression-2026-10-16.md)
