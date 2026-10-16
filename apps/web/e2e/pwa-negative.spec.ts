@@ -273,47 +273,36 @@ test.describe("Release E PWA negative matrix", () => {
   });
 
   for (const locale of ["en-US", "zh-CN"] as const) {
-    test(`PWA-NEG-007 Viewer cache miss is explicit, closable, and restores focus (${locale})`, async ({ page, baseURL }) => {
-      const preferences = await page.request.get("/api/preferences");
-      expect(preferences.status()).toBe(200);
-      const { locale_mode: previousLocale } = await preferences.json();
+    test(`PWA-NEG-007 Viewer cache miss is explicit, closable, and restores focus (${locale})`, async ({ page }) => {
       const zh = locale === "zh-CN";
-      try {
-        // Exercise the real locale preference instead of assuming a Chinese viewer.
-        const saved = await page.request.patch("/api/preferences", {
-          headers: { Origin: baseURL! }, data: { locale_mode: locale },
-        });
-        expect(saved.status()).toBe(200);
-        await seedMinimalOfflineFixture(page);
-        await openOfflineFiles(page);
-        await expect(page.locator("html")).toHaveAttribute("lang", locale);
-        const panel = page.getByTestId("offline-conversation-files-panel");
-        const view = panel.getByRole("button", { name: zh ? "查看 cached-note.txt" : "View cached-note.txt", exact: true });
-        await expect(view).toBeVisible();
-        expect(await page.evaluate(async (attachmentUrl) => {
-          const cache = await caches.open("chat-reader-offline-assets-v1");
-          return cache.delete(attachmentUrl);
-        }, ATTACHMENT_URL)).toBe(true);
-        await view.click();
-        const viewer = page.getByTestId("attachment-viewer-shell");
-        await expect(viewer).toBeVisible();
-        await expect(viewer.getByText(zh
-          ? "离线资源未缓存。重新联网或更新离线副本后重试。"
-          : "This attachment is not cached offline. Reconnect or update the offline copy, then retry.",
-        { exact: true })).toBeVisible();
-        const retry = viewer.getByRole("button", { name: zh ? "重试" : "Retry", exact: true });
-        await expect(retry).toBeVisible();
-        await expect(retry).toBeEnabled();
-        await expect(viewer.getByRole("button", { name: zh ? "关闭附件查看器" : "Close attachment viewer", exact: true })).toBeFocused();
-        await page.keyboard.press("Escape");
-        await expect(viewer).toBeHidden();
-        await expect(view).toBeFocused();
-      } finally {
-        const restored = await page.request.patch("/api/preferences", {
-          headers: { Origin: baseURL! }, data: { locale_mode: previousLocale },
-        });
-        expect(restored.status()).toBe(200);
-      }
+      // The PWA gate also runs after the authenticated API has been restarted.
+      // Drive the SSR locale fallback through the browser request language
+      // instead of requiring a private preference session.
+      await page.context().setExtraHTTPHeaders({ "Accept-Language": locale });
+      await seedMinimalOfflineFixture(page);
+      await openOfflineFiles(page);
+      await expect(page.locator("html")).toHaveAttribute("lang", locale);
+      const panel = page.getByTestId("offline-conversation-files-panel");
+      const view = panel.getByRole("button", { name: zh ? "查看 cached-note.txt" : "View cached-note.txt", exact: true });
+      await expect(view).toBeVisible();
+      expect(await page.evaluate(async (attachmentUrl) => {
+        const cache = await caches.open("chat-reader-offline-assets-v1");
+        return cache.delete(attachmentUrl);
+      }, ATTACHMENT_URL)).toBe(true);
+      await view.click();
+      const viewer = page.getByTestId("attachment-viewer-shell");
+      await expect(viewer).toBeVisible();
+      await expect(viewer.getByText(zh
+        ? "离线资源未缓存。重新联网或更新离线副本后重试。"
+        : "This attachment is not cached offline. Reconnect or update the offline copy, then retry.",
+      { exact: true })).toBeVisible();
+      const retry = viewer.getByRole("button", { name: zh ? "重试" : "Retry", exact: true });
+      await expect(retry).toBeVisible();
+      await expect(retry).toBeEnabled();
+      await expect(viewer.getByRole("button", { name: zh ? "关闭附件查看器" : "Close attachment viewer", exact: true })).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(viewer).toBeHidden();
+      await expect(view).toBeFocused();
     });
   }
 

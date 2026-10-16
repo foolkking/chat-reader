@@ -414,3 +414,71 @@ directories; no user data, import storage or production configuration changed.
 Local results do not accept the failed CI. The next complete exact-source
 run remains required; dispatch once, then stop and wait for the user's result
 without watching CI or deploying.
+
+## Post-authentication negative PWA fixture correction
+
+Run **38885644480** used exact source
+`cb223d7da02e4d62ef6105a96c2d239369252db5`. Its first attempt again failed API
+and Web container initialization on ECR Public's data limit, before checkout.
+Settings passed **463** cases plus the independent fresh-instance restore.
+After the user returned, only failed jobs/dependents were retried, preserving
+that source's successful settings result.
+
+Attempt **2** completed the API suite **1,288 / 3 skipped**, single migration
+head/current 0051, and the first **12 Web gates**, including authentication
+**18/18** and default PWA **139 / 737 conditional skips**. The final negative
+PWA file passed **17** and failed both new locale cases immediately at their
+private `/api/preferences` GET: expected 200, received **401**. Build and
+independent image inspection were skipped; nothing was deployed.
+
+Web quality artifact **12044955127**, producer attempt 2, matched API ZIP SHA256
+`96def4f4248eeb915d7ff3233b56d40ee597b31d34ed579996846003d50c49d1`.
+The retained settings artifact **12042240149**, producer attempt 1, matched
+`5fa1b977d538d84575a57b54eee18953b034e4785cbbde5caec3748ea67d567e`.
+Their source-scoped summaries and both failed error contexts were checked.
+The older and newer quality attempts were not overwritten or conflated.
+
+The authentication gate restarts the API in the same shell that still has
+`AUTH_ENABLED=true`; the following PWA step starts Web without that step-level
+setting. The API therefore correctly rejects an unauthenticated private
+preference request while the ordinary test PWA remains readable. The previous
+local fixture had API authentication disabled and did not expose the new test
+dependency. This was an error in the prior test repair, not a reason to disable
+authentication, accept 401 as a successful preference read or relax the gate.
+
+Only the browser test changes. Both locale cases set actual browser
+`Accept-Language` and require the rendered SSR document language before opening
+the Viewer. They no longer read or mutate private preferences. Successful
+cache deletion, exact complete localized error text, visible/enabled Retry,
+initial modal focus, Escape closure and restored trigger focus all remain.
+Product behavior, API authentication, workflow/process lifecycle, dependencies,
+migration, case inclusion and timeout bounds are unchanged.
+
+The task-only fixture now provisions a synthetic owner, starts the real API
+with authentication enabled, verifies anonymous preferences return **401**,
+and separately starts Web in the workflow's ordinary PWA mode. No route is
+mocked and no auth request is treated as successful. Its unique PostgreSQL 17
+database and four storage roots remain isolated from existing user data.
+
+| Local check | Result |
+| --- | --- |
+| Unmodified `cb223d7` Viewer test source, same post-auth fixture | **2 failed on 401 / 0 passed**, 5.91 s |
+| Corrected actual full negative file, same post-auth split | **19 passed / 0 failed / 0 skipped / 0 flaky**, 58.66 s |
+| Corrected actual bilingual Viewer, separate post-auth fixture, five repetitions each | **10 passed / 0 failed / 0 skipped / 0 flaky**, 50.74 s |
+| Corrected file with API authentication disabled | **19/19**, 59.09 s; separate Viewer repetitions **10/10**, 50.43 s |
+| Attachment reading, inline locale and offline-query Node files | **65/65**, no skips |
+| Browser-gate summary and immutable-image/CI source contracts | **15/15**, no skips |
+| Full Web lint, targeted test lint, nonincremental typecheck and diff whitespace | Passed |
+
+The first copied-source diagnostic used an incompatible file filter and
+discovered no tests; it is not counted as a red test or a pass. After fixing
+the task-only filter, both original cases ran unchanged and failed on the
+same 401 as CI. The positive runs use the actual repository test file, not
+a diagnostic copy. They reuse the existing production negative-test bundle;
+no application source or new build is claimed in this correction.
+
+All task services stopped and only each fixture's unique database was dropped.
+The existing local database, import materials and King production remain
+untouched at the accepted source/0050 boundary. These local checks do not
+accept the failed CI. Commit the correction, dispatch one complete exact-source
+CI, then stop and wait for the user without watching or deploying.

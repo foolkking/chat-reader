@@ -71,16 +71,30 @@ first 12 Web gates, including all **18** authentication cases. Its last
 negative PWA gate passed 17 and failed a Chinese-only Viewer assertion against
 the correct English uncached-resource message. Both original quality ZIP
 digests and the failed browser context were verified. That original case also
-failed locally before editing. The test-only follow-up runs the Viewer case
-with real `en-US` and `zh-CN` server preferences, restoring the original locale
-in `finally`; it requires actual cache deletion, exact localized text, visible
-and enabled Retry, modal focus, Escape and trigger-focus restoration.
+failed locally before editing. The first test-only follow-up ran the Viewer
+case with real `en-US` and `zh-CN` server preferences, restoring the original
+locale in `finally`; its local fixture had API authentication disabled.
+Run 38885644480 attempt 2 subsequently exposed the private preference calls'
+401 responses after the authenticated API restart. The current test instead
+sets browser `Accept-Language` and checks the actual SSR document language,
+without private preference/session reads or writes. It still requires actual
+cache deletion, exact localized text, visible and enabled Retry, modal focus,
+Escape and trigger-focus restoration.
 The complete actual negative file passed **19/19**, with a separate bilingual
 five-repetition run **10/10**, no skips or flaky cases. Attachment Node checks
 passed **65/65**; full lint, nonincremental typecheck and the production
 negative-test build passed. This does not accept the failed CI or replace the
 next exact-source complete run; no product, API, schema, workflow or timeout
 changed.
+
+The corrected fixture was also run with CI's actual post-auth split:
+API authentication enabled, ordinary PWA Web mode, and an explicit anonymous
+preferences precondition of **401**. Unmodified `cb223d7` Viewer tests reproduced
+**two 401 failures**; the corrected complete file passed **19/19** (58.66 s),
+with a separate five-repetition bilingual run **10/10** (50.74 s). The earlier
+auth-disabled corrected runs passed **19/19 + 10/10** separately. These use
+the existing production negative-test bundle because no application source
+changed; they are not a new build or complete CI pass.
 
 The staged source/document whitespace check excludes archived `*-evidence/`
 console transcripts: those raw logs intentionally retain emitted whitespace

@@ -53,12 +53,23 @@ The same record now owns completed run **38879420622**: API/0051, settings
 **463 plus one restore**, and 12 Web gates passed; only the final negative
 PWA gate failed (**17/18**) on a Chinese-only Viewer assertion against the
 correct English recovery copy. Original Web/settings ZIP digests and the
-failure context were verified. Its test-only bilingual follow-up preserves
-and strengthens cache/focus/recovery assertions and restores the synthetic
-locale. Local negative **19/19**, separate repetitions **10/10**, attachment
-Node **65/65**, lint, typecheck and negative-test production build are bounded
+failure context were verified. Its first test-only bilingual follow-up used
+private preference requests and passed locally with API authentication disabled.
+Run **38885644480 attempt 2** then exposed 401 responses from those requests
+after the authenticated API restart. The corrected adapter uses browser
+`Accept-Language` without a private session and retains the exact locale,
+cache/focus/recovery assertions. Local negative **19/19**, separate repetitions
+**10/10**, attachment Node **65/65**, lint, typecheck and the earlier
+negative-test production build are bounded
 local evidence, not complete CI/deployment acceptance. No current product or
 compatibility contract changed.
+
+The post-auth follow-up also retains the copied-source no-tests-discovered
+diagnostic separately from the actual red/green results. A CI-matched split
+fixture requires anonymous preference **401**, reproduces both old Viewer
+failures, and passes corrected complete negative **19/19** plus separate
+bilingual **10/10**. Auth-disabled passes remain separate evidence, not a
+substitute for this fixture or the next full exact-source CI.
 
 ## Service-free UX continuation — 2026-10-16
 
