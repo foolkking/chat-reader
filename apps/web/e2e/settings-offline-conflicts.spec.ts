@@ -198,6 +198,9 @@ test("annotation merge removes its conflict and persists the canonical comment",
     await expect(comment).toHaveValue("Synthetic initial comment");
     await context.setOffline(true);
     await comment.fill("Synthetic local comment"); await comment.press("Tab");
+    // Tab now intentionally moves into the explicit comment actions without
+    // auto-saving. Activate Save instead of assuming a blur queued a write.
+    await annotationPanel.getByRole("button", { name: "Save comment", exact: true }).click();
     await expect.poll(async () => (await readLocal(page, userId)).outbox.length).toBe(1);
     expect((await context.request.patch(`${baseURL}/api/annotations/${annotation.id}`, { headers, data: { base_revision: 1, comment_markdown: "Synthetic server comment" } })).status()).toBe(200);
     await context.setOffline(false);

@@ -6,7 +6,9 @@ pointers and retention finalized 2026-10-13 local.
 own live status, exact CI images, verified backups and rollback. Never build on the workstation or King.
 
 Pending local noise-range source adds single head `20261015_0051` after 0050;
-it has **not** been applied. New API source requires that schema; production
+it has **not** been applied to the existing local or production database.
+The task's separate disposable PostgreSQL 17 migration/concurrent-edit suite
+passed 2/2. New API source requires that schema; production
 remains 0050. The user authorized the 2026-10-16 release path; exact-source CI,
 PostgreSQL migration/concurrency and production acceptance are still required.
 Stop writers and use the safe downgrade before

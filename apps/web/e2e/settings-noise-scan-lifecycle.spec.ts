@@ -118,7 +118,10 @@ for (const width of [375, 768, 1440]) {
       await expect(f.center.getByRole("region", { name: /^(失败|Failed)$/ })).toContainText(/噪声扫描需要重试|Noise scan needs retry/);
       await expect(f.center.getByRole("region", { name: /^(处理中|In progress)$/ })).toHaveCount(0);
       await f.row.getByRole("button", { name: /打开审查|Open review/ }).click();
-      await expect(f.dialog.getByRole("alert")).toContainText("Synthetic scanner interruption");
+      await expect(f.dialog.getByRole("alert")).toHaveText(width === 768
+        ? "The scan did not finish. Content is unchanged; rescan to continue."
+        : "扫描未完成，正文未改变，请重新扫描。");
+      await expect(f.dialog).not.toContainText("Synthetic scanner interruption");
       await shot(f.page, `scan-failed-${width}`);
       await f.dialog.getByRole("button", { name: /重新扫描原对话|Rescan conversations/ }).click();
       await expect(f.dialog.getByRole("searchbox", { name: /查找对话|Find conversation/ })).toBeVisible();

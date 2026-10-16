@@ -78,7 +78,11 @@ for (const scenario of ["sync", "export", "discard failure", "password"] as cons
           await second.goto(`${baseURL}/library?conversationId=${conversationId}&annotations=open`);
           await second.getByRole("button", { name: "Notes", exact: true }).click();
           const secondTitle = second.getByRole("textbox", { name: "Notebook title", exact: true });
-          await secondTitle.fill("Synthetic newer signout note"); await secondTitle.press("Tab");
+          const secondEditor = second.getByRole("region", { name: "Notebook editor", exact: true });
+          await secondTitle.fill("Synthetic newer signout note");
+          await expect(secondEditor.getByText("Draft saved on this device", { exact: true })).toBeVisible();
+          await expect(secondEditor).toHaveAttribute("data-notebook-save-ready", "true");
+          await secondEditor.getByRole("button", { name: "Save notebook", exact: true }).click();
           await expect.poll(async () => (await readLocal(second, userId)).outbox.length).toBe(2);
           await panel.getByRole("button", { name: "File saved — clear and sign out", exact: true }).click();
           await page.getByRole("button", { name: "Discard and continue", exact: true }).click();

@@ -85,7 +85,11 @@ def list_active_tasks(
     )
     active_tasks = [_import_task(record, db) for record in active_imports] + [_job_task(job) for job in active_jobs]
     terminal_tasks = [_import_task(record, db) for record in recent_imports] + [_job_task(job) for job in [*pending_cleanup_jobs, *recent_jobs]]
-    return sorted(active_tasks, key=_active_task_sort_key) + sorted(terminal_tasks, key=_terminal_task_sort_key, reverse=True)
+    ordered = sorted(active_tasks, key=_active_task_sort_key) + sorted(terminal_tasks, key=_terminal_task_sort_key, reverse=True)
+    # A worker can finish between these bounded READ COMMITTED queries. A row
+    # seen as active can then also enter the terminal window; expose one task,
+    # keeping its position and the latest projection rather than a duplicate.
+    return list({task.job_id: task for task in ordered}.values())
 
 
 def _active_task_sort_key(task: BackgroundTaskRead):

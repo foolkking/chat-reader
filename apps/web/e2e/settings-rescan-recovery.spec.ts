@@ -187,7 +187,8 @@ test("768px: failed scan uses the same recoverable action", async ({ browser, pl
       const result = await route.fetch(); await route.fulfill({ json: { ...await result.json(), status: "FAILED", error_message: "Synthetic scan interrupted" } });
     });
     await f.page.reload(); await f.open();
-    await expect(f.dialog.getByText("Synthetic scan interrupted")).toBeVisible();
+      await expect(f.dialog.getByRole("alert")).toHaveText("The scan did not finish. Content is unchanged; rescan to continue.");
+      await expect(f.dialog).not.toContainText("Synthetic scan interrupted");
     await f.page.route(`**/api/content-cleanup/scans/${f.id}/rescan`, async route => { await route.fetch(); await route.abort("failed"); });
     await f.rescan(); await expect(f.dialog.getByRole("button", { name: "Check rescan result" })).toBeVisible();
     await shot(f.page, "rescan-failed-768");

@@ -3,11 +3,25 @@
 ## UX release execution — 2026-10-16
 
 `execution/UX_RELEASE_2026-10-16.md` owns the separately authorized commit/CI/
-deployment attempt, local release-gate limitations and first exact-source CI
-findings. `PROJECT_STATE.md`, `index.md`, `testing.md` and the pending 0051
+deployment attempt, separate PostgreSQL 17 fixture, initial/second exact-source
+CI findings, 235-plus-six focused local browser results and the separately
+dependency-matched API transport diagnosis. Quality artifact names now
+retain source/attempt separation on retries. `PROJECT_STATE.md`, `index.md`,
+`testing.md` and the pending 0051
 deployment boundary remain current summaries, not claims that a failed or
 incomplete CI run has been accepted. Historical service-free boundaries below
 are preserved rather than relabelled as deployment evidence.
+
+The same execution record now preserves the unfinished 463-case settings gate,
+23 failure contexts and 28-case authenticated follow-up. Current
+`system/CONTENT_CLEANUP_CONTRACT.md`, `system/FRONTEND_ARCHITECTURE.md` and
+`system/BACKEND_AND_API.md` describe independent post-ack metadata reads,
+sibling Share-page invalidation, task-identity uniqueness across worker
+state transitions and notebook draft reads independent of locale changes.
+The same record preserves the 27/28 and 26/28 confirmation failures, the
+separate locale-overwrite evidence, browser-captured input/React-185 rollback
+and transition-only draft risk repair. It does not relabel earlier failed
+browser runs. No API/schema compatibility boundary is removed.
 
 ## Service-free UX continuation — 2026-10-16
 

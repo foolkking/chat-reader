@@ -12,14 +12,15 @@ files, this newer run supersedes “authored but unexecuted.” It does not veri
 unlisted regressions, mounted/browser behavior, IndexedDB/Worker, PostgreSQL,
 full API/PWA/build, resource usage or deployment. On 2026-10-16 the user
 explicitly authorized the release path; local lint, typecheck and Web build have
-passed. Full local API tests passed **1,129 / 159 skipped**; PostgreSQL cases
-remain for CI. The local PWA attempt stopped after two timeouts because the API
+passed. Full local API tests passed **1,129 / 159 skipped**; a separate disposable
+PostgreSQL 17 range migration/concurrency suite passed **2/2**. Full PostgreSQL 16
+acceptance remains for CI. The local PWA attempt stopped after two timeouts because the API
 was not running; it is not a passing browser gate. CI/deployment acceptance is
 pending.
 
 | Item | Verified state |
 | --- | --- |
-| Release in progress | [UX release execution](docs/execution/UX_RELEASE_2026-10-16.md): candidate `97d0915` pushed; exact-source CI 38829804840 attempt 1 found an ECR settings-image rate limit and an outdated adaptive-import browser assertion. The latter now checks the exact unconfirmed-outcome recovery text and no automatic replay. New CI/production acceptance is pending; production has not been changed |
+| Release in progress | [UX release execution](docs/execution/UX_RELEASE_2026-10-16.md): the first two candidates did not pass CI; the second settings matrix reached its bound with 23 failures. Follow-up fixed stale adapters and five runtime defects (cleanup acknowledgment, Share-page cache, duplicate transitioned tasks, locale draft overwrite and per-keystroke risk updates). Latest local checks: UX Node 1,419/1,419, CI contracts 13/13, rapid-input browser repetitions 10/10, focused task API 20/20, lint/typecheck/build passed. Earlier isolated browser batch passed 235 then six repaired probes. New exact-source CI acceptance remains pending. Production has not changed |
 | Production | Source `84988a260c48fcafb8b3bed6fcb7a1f16348111d`; accepted [CI 38255213036](https://github.com/foolkking/chat-reader/actions/runs/38255213036), all five jobs; original artifact 11752048475 independently verified |
 | Production database | Single head/current `20261008_0050`; this release remained 0050→0050 with no migration, reconcile or backfill; API/Web/PostgreSQL healthy and worker `alive_idle` |
 | Data acceptance | 84 stopped-writer all-column table fingerprints and four storage roots unchanged; 310 attachment object hashes verified; 67 stable table counts unchanged after restart |

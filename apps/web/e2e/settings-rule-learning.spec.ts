@@ -56,7 +56,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await editor.getByLabel(/匹配文本|Match text/, { exact: true }).fill(trailer);
       // Escape must retain the draft when the discard dialog is cancelled.
       await page.keyboard.press("Escape");
-      const discard = page.getByRole("dialog").filter({ has: page.getByText(/放弃未保存的规则？|Discard unsaved rule\?/, { exact: true }) });
+      const discard = page.getByRole("dialog", { name: locale === "zh-CN" ? "离开尚未保存或确认的修改？" : "Leave unsaved or unconfirmed changes?", exact: true });
       await expect(discard).toBeVisible();
       await expect(page.getByTestId("task-center-panel")).toBeVisible();
       await expect(editor.getByLabel(/匹配文本|Match text/, { exact: true })).toHaveValue(trailer);

@@ -67,10 +67,11 @@ jobs:
           tests/test_artifact_transaction_boundary.py
           tests/test_import_queue.py
       - name: API full suite
+        timeout-minutes: 45
         env:
           SETTINGS_POSTGRES_INTEGRATION: "1"
           AUTH_SESSION_SECRET: synthetic-settings-postgres-ci-secret-0123456789
-        run: cd apps/api && pytest
+        run: cd apps/api && pytest -vv -o faulthandler_timeout=120
       - name: Alembic single-head and current validation
         run: |
           cd apps/api
@@ -413,7 +414,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: release-a-quality-evidence-${{ github.sha }}
+          name: release-a-quality-evidence-${{ github.sha }}-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/dependency-audit.json
             ${{ runner.temp }}/dependency-audit-report.json
@@ -547,7 +548,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: settings-quality-evidence-${{ github.sha }}
+          name: settings-quality-evidence-${{ github.sha }}-${{ github.run_attempt }}
           path: |
             apps/web/test-results
             ${{ runner.temp }}/settings-api.log

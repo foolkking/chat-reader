@@ -45,10 +45,12 @@ choice requires explicit adoption as the new base; changed source requires resca
 Unmount/account change retires callbacks. Source selection maps native textarea
 LF/UTF-16 offsets back to canonical CRLF/Unicode offsets.
 
-The bulk saving overlay covers only current actionable KEEP/DELETE rows and
-remains through list refresh. Native checked state, selected tint and a linked
-state description supplement—not replace—one another. A failed refresh labels
-old data and disables actions; pending selections are not presented as confirmed.
+The bulk saving overlay covers only current actionable KEEP/DELETE rows until
+the write is acknowledged. Confirmed writes update the scan count immediately;
+metadata refresh does not keep the write lease or block a fresh authoritative
+preview. Candidate editing remains disabled while its page is refreshing or
+failed. Native checked state, selected tint and a linked state description
+supplement—not replace—one another; pending choices are not called confirmed.
 
 Candidate display follow-up (local verification 2026-10-16): selected refined
 matches mark/strike only their exact removal intervals; retained words remain
@@ -61,10 +63,12 @@ now stale; no misleading rescan warning or pending check is projected onto them.
 These display rules add no API, migration or canonical source changes.
 
 Migration `20261015_0051` adds nullable JSON without a source rewrite or backfill.
-It is the **source-only single head, not applied**; production remains 0050.
+It is the single source head; only the separate disposable test database has
+been migrated at this release checkpoint. Existing local/production databases
+remain unchanged, and production remains 0050.
 Downgrade revokes narrowed DELETE choices to KEEP before dropping the column,
 so old code cannot silently expand consent. Never run the old API against
-narrowed choices in the new schema. See [deployment boundary](../deployment.md#pending-noise-range-migration--2026-10-15-not-deployed).
+narrowed choices in the new schema. See [deployment boundary](../deployment.md#pending-noise-range-migration--2026-10-15-release-in-progress).
 SQLite/Unicode checks do not prove PostgreSQL locks, migration execution, browser
 interaction or assistive-technology acceptance.
 

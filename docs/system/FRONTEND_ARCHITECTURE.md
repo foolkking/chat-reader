@@ -1,5 +1,22 @@
 # 前端架构
 
+## Release recovery follow-up — 2026-10-16
+
+Confirmed cleanup choices release the write lease before independent metadata
+refresh; a fresh preview still validates saved server choices. My Shares
+revocation marks all cached list pages stale without fetching inactive pages
+before refreshing the current one. Empty-last-page recovery therefore cannot
+reuse a sibling page's stale total from the global 15-second cache. Existing
+Share URLs, source data, query keys, confirmation and retry policies stay intact.
+The [release record](../execution/UX_RELEASE_2026-10-16.md) owns the isolated
+browser and installed-query lifecycle checks, not production acceptance.
+
+Notebook 草稿读取只随草稿 key 或显式读取重试重启；界面语言切换只更新失败文案，
+不重新读取并覆盖正在输入、尚待持久化的工作副本。两个实际组件受控回归覆盖
+双向语言切换与待完成写入；这不代替真实键盘、IndexedDB 和 reload 验收。
+草稿风险通知只随风险布尔值变化报告；卸载清理与正文对象更新分离，避免连续输入中
+反复向父组件发送 false/true。`beforeunload` 监听同样只随风险状态挂载或移除。
+
 ## Cleanup candidate range editor — 2026-10-15, local source
 
 `CleanupReviewWorkspace` retains its existing grouped/paged review while a
@@ -18,10 +35,14 @@ learning is introduced. Server-side version/protection checks remain authoritati
 
 Candidate checkboxes keep their stable accessible names; `aria-describedby`
 links KEEP/DELETE/saving state. Row tint reinforces native checked state without
-decorative side borders. Pending bulk choices affect only eligible rows and
-remain until the awaited list refresh settles. Expanded after-context uses
+decorative side borders. Pending bulk choices affect only eligible rows until
+the write acknowledgment. Follow-up metadata refresh is independent, keeping
+candidate editing locked but not blocking a new authoritative preview.
+Expanded after-context uses
 the saved refinement rather than pretending the whole candidate will disappear.
-Browser rendering, focus and assistive behavior have not been verified.
+The dated original batch had no browser claim; the separate
+[release execution](../execution/UX_RELEASE_2026-10-16.md) owns newer synthetic
+browser checks, not production or assistive-technology acceptance.
 
 The marker follow-up (verified locally 2026-10-16) adds `candidateRemovalParts`
 as the shared validated Unicode splitter for inline removal markers and

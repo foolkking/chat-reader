@@ -215,16 +215,46 @@ test("a bookmark can still be created from the closed desktop Reader", async () 
 
 function notebookFixture(write = async () => 1, remove = async () => {}, locale = "en-US") {
   let allowed = false; const calls = { writes: 0, published: 0, removed: 0 };
+  let reads = 0;
   const base = note("saved"), repo = repository().value;
   repo.saveNotebook = async () => { calls.writes++; return note("edited"); };
   const r = runtime({ "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
-    "../../lib/notebook-drafts": { notebookDraftKey: () => "synthetic-draft", readNotebookDraft: async () => ({ base, title: "edited", blocks: [], version: 1 }),
+    "../../lib/notebook-drafts": { notebookDraftKey: () => "synthetic-draft", readNotebookDraft: async () => { reads++; return { base, title: "edited", blocks: [], version: 1 }; },
     writeNotebookDraft: write, removeNotebookDraft: async (...args) => { calls.removed++; await remove(...args); } } });
   const props = { notebook: base, conflicts: [], annotations: [], repository: repo, onSaved: () => calls.published++, onReload: async () => {},
     onResolve: async () => {}, onRiskChange: noop, onNavigate: noop, saveBlocked: true, canSave: () => allowed };
   const render = () => r.render("notebook-view.tsx", "NotebookView", props);
-  return { r, calls, render, allow(value) { allowed = value; props.saveBlocked = !value; }, props };
+  return { r, calls, render, allow(value) { allowed = value; props.saveBlocked = !value; }, props,
+    setLocale(value) { locale = value; }, get reads() { return reads; } };
 }
+
+for (const [from, to] of [["en-US", "zh-CN"], ["zh-CN", "en-US"]]) test(`${from} to ${to}: changing notebook language cannot reload over typing while storage waits`, async () => {
+  const waiting = deferred(), f = notebookFixture(() => waiting.promise, undefined, from);
+  try {
+    f.render(); f.r.flush(); await setImmediate();
+    find(f.render(), item => item.type === "input").props.onChange({ target: { value: "latest typed characters 完整草稿" } });
+    f.setLocale(to); f.render(); f.r.flush(); await setImmediate();
+    assert.equal(find(f.render(), item => item.type === "input").props.value, "latest typed characters 完整草稿");
+    assert.equal(f.reads, 1, "language changes do not restart storage reads");
+    assert.equal(f.calls.writes, 0);
+  } finally { waiting.resolve(2); await setImmediate(); f.r.dispose(); }
+});
+
+test("typing within one pending notebook draft reports risk transitions, not false/true per keystroke", async () => {
+  const waiting = deferred(), f = notebookFixture(() => waiting.promise), risks = [];
+  f.props.onRiskChange = value => risks.push(value);
+  try {
+    f.render(); f.r.flush(); await setImmediate(); f.render(); f.r.flush();
+    risks.length = 0;
+    for (let index = 0; index < 80; index++) {
+      find(f.render(), item => item.type === "input").props.onChange({ target: { value: `typed ${index}` } });
+      f.render(); f.r.flush();
+    }
+    assert.deepEqual(risks, [true], "one continuous risk interval must not schedule redundant parent updates");
+    waiting.resolve(2); await setImmediate(); f.render(); f.r.flush();
+    assert.deepEqual(risks, [true, false], "durability clears the risk once");
+  } finally { waiting.resolve(2); await setImmediate(); f.r.dispose(); }
+});
 
 test("notebook title accessible name follows the selected interface language", async () => {
   for (const [locale, expected] of [["en-US", "Notebook title"], ["zh-CN", "精选笔记标题"]]) {

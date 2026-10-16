@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Query, Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -9,6 +10,54 @@ from app.main import app
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from test_import_preview_api import client  # noqa: F401
+
+
+@pytest.mark.parametrize("kind", ["job", "import", "pending_cleanup"])
+def test_task_finishing_between_active_and_terminal_reads_is_returned_once(client, monkeypatch, kind):
+    model = ImportRecord if kind == "import" else BackgroundJob
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    try:
+        row = (ImportRecord(source_profile="fixture", source_fingerprint="synthetic-transition", status="processing")
+               if kind == "import" else BackgroundJob(
+                   job_type="user_account_delete" if kind == "pending_cleanup" else "conversation_merge",
+                   status="processing", phase="processing"))
+        db.add(row)
+        db.commit()
+        identity = row.id
+    finally:
+        db.close()
+        generator.close()
+
+    original = Query.all
+    moved = False
+
+    def finish_after_active_read(query):
+        nonlocal moved
+        rows = original(query)
+        if not moved and any(isinstance(item, model) and item.id == identity for item in rows):
+            moved = True
+            # A real independent commit in the gap between the endpoint's
+            # bounded queries, not a fabricated duplicate response.
+            with Session(query.session.get_bind()) as writer:
+                finished = writer.get(model, identity)
+                finished.status = "committed" if kind == "pending_cleanup" else "failed"
+                finished.completed_at = datetime.now(timezone.utc)
+                if kind == "pending_cleanup":
+                    finished.result = {"account_deleted": True, "asset_cleanup_pending": 1}
+                writer.commit()
+        return rows
+
+    monkeypatch.setattr(Query, "all", finish_after_active_read)
+    response = client.get("/api/tasks/active")
+    assert response.status_code == 200
+    assert moved
+    assert [item["job_id"] for item in response.json()].count(str(identity)) == 1
+    # The next read sees the terminal row too, still as a single task.
+    following = client.get("/api/tasks/active")
+    matching = [item for item in following.json() if item["job_id"] == str(identity)]
+    assert len(matching) == 1
+    assert matching[0]["status"] == ("committed" if kind == "pending_cleanup" else "failed")
 
 
 @pytest.mark.parametrize("job_type,export_format,expected", [

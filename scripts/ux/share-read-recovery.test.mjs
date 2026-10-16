@@ -33,6 +33,7 @@ function fixture({ cached = false, locale = "en-US" } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
   const hooks = [], calls = [], delays = [], writes = [];
   let cursor = 0, observer, options, tree, read = async () => page, stop;
+  let write = () => { throw new Error("Unexpected write"); };
   const hook = init => { const i = cursor++; return hooks[i] ??= init(); };
   const mocks = {
     react: { ...React, useEffect: noop, useLayoutEffect: noop,
@@ -49,7 +50,7 @@ function fixture({ cached = false, locale = "en-US" } = {}) {
       }
       return observer.getCurrentResult();
     } },
-    "../lib/api": { ApiRequestError, getMyShares: input => { calls.push(input); return read(); }, revokeShares: input => { writes.push(input); throw new Error("Unexpected write"); } },
+    "../lib/api": { ApiRequestError, getMyShares: input => { calls.push(input); return read(); }, revokeShares: input => { writes.push(input); return write(input); } },
     "./preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
     "./interaction-dialog-provider": { useInteractionDialog: () => ({ confirm: async () => true }) },
     "../features/sharing/share-status-details": { ShareStatusDetails: "ShareStatusDetails" },
@@ -65,9 +66,27 @@ function fixture({ cached = false, locale = "en-US" } = {}) {
   const render = () => { cursor = 0; return tree = module.exports.MySharesPanel({ onDirtyChange: noop, onOpenConversation: noop }); };
   const button = label => { const result = find(tree, n => n.type === "button" && (n.props["aria-label"] ?? textOf(n)) === label); assert.ok(result, label); return result.props; };
   render();
-  return { calls, writes, delays, observer, render, button, setRead: fn => { read = fn; }, get options() { return options; },
+  return { calls, writes, delays, observer, client, render, button, setRead: fn => { read = fn; }, setWrite: fn => { write = fn; }, get options() { return options; },
     dispose: () => { stop(); observer.destroy(); client.clear(); } };
 }
+
+test("confirmed revocation invalidates cached sibling pages before last-page recovery", async () => {
+  const f = fixture({ cached: true });
+  const sibling = ["my-shares", "", "all", undefined, 20];
+  try {
+    f.client.setQueryData(sibling, { items: [page.items[0]], total: 21, has_more: false });
+    f.setWrite(async ids => ({ results: ids.map(share_id => ({ share_id, status: "revoked" })) }));
+    f.setRead(async () => ({ items: [], total: 0, has_more: false }));
+    f.button("Manage multiple").onClick(); f.render();
+    f.button("Select revocable on this page").onClick(); f.render();
+    f.button("Revoke 1 selected").onClick();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(f.client.getQueryState(sibling).isInvalidated, true);
+    assert.deepEqual(f.writes, [["synthetic-share"]]);
+    assert.equal(f.calls.length, 1);
+    assert.match(textOf(f.render()), /1 shares revoked/);
+  } finally { f.dispose(); }
+});
 
 test("a connection failure retries the same read and recovers without writes or polling", async () => {
   const f = fixture();

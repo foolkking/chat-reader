@@ -43,11 +43,11 @@ async function openFiles(page: Page, conversationId: string) {
   await expect(page.getByTestId("conversation-files-panel")).toBeVisible();
 }
 
-async function openFile(page: Page, attachment: Attachment) {
+async function openFile(page: Page, attachment: Attachment, locale: string) {
   await page.locator(`[data-testid="conversation-file-row"][data-attachment-id="${attachment.id}"]`).getByRole("button", { name: /^(Preview|预览)$/ }).click();
   const viewer = page.getByTestId("attachment-viewer-shell");
   await expect(viewer).toHaveAttribute("aria-label", attachment.display_name);
-  await expect(viewer.getByRole("button", { name: "关闭附件查看器", exact: true })).toBeFocused();
+  await expect(viewer.getByRole("button", { name: locale === "zh-CN" ? "关闭附件查看器" : "Close attachment viewer", exact: true })).toBeFocused();
   if ((page.viewportSize()?.width ?? 1280) < 768) {
     const drawer = page.locator("[data-vaul-drawer]").filter({ has: page.getByTestId("conversation-files-panel") });
     await expect(drawer).toHaveAttribute("inert", "");
@@ -82,6 +82,7 @@ async function closeFile(page: Page, attachment: Attachment) {
 }
 
 for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.describe(`${width}px ${locale}`, () => {
+  const zh = locale === "zh-CN";
   test.beforeEach(async ({ page, baseURL }) => {
     await page.setViewportSize({ width, height: 900 });
     await settingsAppearance(page.request, baseURL!, locale);
@@ -96,7 +97,7 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     const wideFile = await upload(page.request, id, "wide.csv", "text/csv", Buffer.from(wide));
     const longFile = await upload(page.request, id, "long.csv", "text/csv", Buffer.from(long));
     await openFiles(page, id);
-    const viewer = await openFile(page, paged), table = viewer.getByTestId("attachment-table-viewer");
+    const viewer = await openFile(page, paged, locale), table = viewer.getByTestId("attachment-table-viewer");
     await expect(table.locator("td")).toHaveCount(1_984);
     await expect(table.getByRole("rowheader", { name: "1", exact: true })).toBeVisible();
     await table.getByRole("button", { name: /^(Next page|下一页)$/ }).click();
@@ -113,7 +114,7 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await page.screenshot({ path: info.outputPath("csv-bounded-page.png") });
     await closeFile(page, paged);
     for (const [file, original, reason] of [[wideFile, wide, /Column limit reached|列数较多/], [longFile, long, /A field is too long|单个字段较长/]] as const) {
-      await openFile(page, file);
+      await openFile(page, file, locale);
       await expect(table.getByRole("status")).toContainText(reason);
       await expect(table.getByRole("columnheader", { name: file === wideFile ? "original-header-0" : "original-header", exact: true })).toBeVisible();
       await expect(table.getByRole("columnheader", { name: "short", exact: true })).toHaveCount(0);
@@ -146,23 +147,23 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
       if (failed) { failed = false; await route.fulfill({ status: 503, body: "Synthetic unavailable" }); }
       else await route.continue();
     });
-    const viewer = await openFile(page, json);
+    const viewer = await openFile(page, json, locale);
     const fileList = files.locator(":scope > div.overflow-y-auto");
     const listTop = await fileList.evaluate(node => node.scrollTop);
     if (width < 768) expect(listTop).toBeGreaterThan(0);
-    await expect(viewer).toContainText("JSON 读取失败");
-    await expect(viewer).not.toContainText("JSON 结构超出");
+    await expect(viewer).toContainText(zh ? "JSON 读取失败。请重试读取。" : "The JSON could not be read. Please retry.");
+    await expect(viewer).not.toContainText(zh ? "JSON 结构超出" : "The JSON structure exceeds");
     // Start from the actual initial close control; both directions must stay
     // in the foreground dialog, never in the still-mounted file drawer.
     await page.keyboard.press("Shift+Tab");
     expect(await viewer.evaluate(node => node.contains(document.activeElement))).toBe(true);
     await page.keyboard.press("Tab");
-    await expect(viewer.getByRole("button", { name: "关闭附件查看器", exact: true })).toBeFocused();
-    await viewer.getByRole("button", { name: "重试", exact: true }).click();
+    await expect(viewer.getByRole("button", { name: zh ? "关闭附件查看器" : "Close attachment viewer", exact: true })).toBeFocused();
+    await viewer.getByRole("button", { name: zh ? "重试" : "Retry", exact: true }).click();
     await expect(viewer.getByTestId("json-viewer")).toBeVisible();
     await viewer.getByRole("button", { name: "Raw", exact: true }).click();
     expect(await viewer.locator("pre").textContent()).toBe(raw);
-    await viewer.getByRole("button", { name: "格式化", exact: true }).click();
+    await viewer.getByRole("button", { name: zh ? "格式化" : "Formatted", exact: true }).click();
     expect(await viewer.locator("pre").textContent()).toBe(JSON.stringify(JSON.parse(raw), null, 2));
     const textViewport = viewer.locator("pre").locator("..");
     await expect.poll(() => textViewport.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
@@ -179,16 +180,16 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     expect(await fileList.evaluate(node => node.scrollTop)).toBe(listTop);
     await page.screenshot({ path: info.outputPath("file-panel-returned.png") });
 
-    await openFile(page, table);
+    await openFile(page, table, locale);
     await expect(viewer.getByTestId("attachment-table-viewer")).toContainText("synthetic, row");
-    await viewer.getByRole("button", { name: "Raw", exact: true }).click();
+    await viewer.getByRole("button", { name: zh ? "原文" : "Raw", exact: true }).click();
     expect(await viewer.locator("pre").textContent()).toBe(csv);
-    await viewer.getByRole("button", { name: "Table", exact: true }).click();
+    await viewer.getByRole("button", { name: zh ? "表格" : "Table", exact: true }).click();
     await expect(viewer.getByTestId("attachment-table-viewer")).toBeVisible();
     await page.screenshot({ path: info.outputPath("csv-table.png") });
     await closeFile(page, table);
 
-    await openFile(page, source);
+    await openFile(page, source, locale);
     await expect(viewer.locator("pre")).toBeVisible();
     expect(await viewer.locator("pre").textContent()).toBe(code);
     expect(await page.evaluate(() => Boolean((globalThis as typeof globalThis & { __attachmentCodeExecuted?: boolean }).__attachmentCodeExecuted))).toBe(false);
@@ -214,7 +215,7 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     const focusImage = viewer.getByTestId("image-focus").locator("img");
     const scale = () => focusImage.evaluate(image => new DOMMatrix(getComputedStyle(image.parentElement!).transform).a);
     await expect(viewer).toHaveAttribute("aria-label", images[0].display_name);
-    await viewer.getByRole("button", { name: "放大", exact: true }).click();
+    await viewer.getByRole("button", { name: zh ? "放大" : "Zoom in", exact: true }).click();
     await expect.poll(scale).toBeGreaterThan(1.05);
     await page.keyboard.press("ArrowRight");
     await expect(viewer).toHaveAttribute("aria-label", images[1].display_name);
@@ -223,7 +224,7 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await expect(viewer).toHaveAttribute("aria-label", images[2].display_name);
     await page.keyboard.press("ArrowLeft");
     await expect(viewer).toHaveAttribute("aria-label", images[1].display_name);
-    await expect(viewer.locator('[role="listitem"][aria-current="true"]')).toHaveAttribute("aria-label", "第 2 张");
+    await expect(viewer.locator('[role="listitem"][aria-current="true"]')).toHaveAttribute("aria-label", zh ? "第 2 张" : "Image 2");
     await page.screenshot({ path: info.outputPath("gallery-current-image.png") });
     await page.keyboard.press("Escape");
     await expect(viewer).toHaveCount(0);
@@ -251,18 +252,18 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await openFiles(page, id);
     let documentReads = 0;
     page.on("request", request => { if (new URL(request.url()).pathname === `/api/attachments/${document.id}/content`) documentReads += 1; });
-    const viewer = await openFile(page, document);
-    await expect(viewer).toContainText("预览组件未能启动");
+    const viewer = await openFile(page, document, locale);
+    await expect(viewer).toContainText(zh ? "预览组件未能启动。请重试加载。" : "The preview component could not start. Please retry.");
     expect(documentReads).toBe(0);
-    await viewer.getByRole("button", { name: "重试", exact: true }).click();
+    await viewer.getByRole("button", { name: zh ? "重试" : "Retry", exact: true }).click();
     await expect(viewer.getByTestId("document-viewer")).toContainText("Synthetic document paragraph");
     expect(documentReads).toBeGreaterThan(0);
     await page.screenshot({ path: info.outputPath("document-recovered.png") });
     await closeFile(page, document);
-    await openFile(page, archive);
+    await openFile(page, archive, locale);
     await expect(viewer.getByTestId("archive-viewer")).toContainText("Synthetic archive text");
     await viewer.getByRole("button", { name: /opaque.bin/ }).click();
-    await expect(viewer).toContainText("此条目不支持浏览器内预览");
+    await expect(viewer).toContainText(zh ? "此条目不支持浏览器内预览；请下载原压缩包。" : "This entry cannot be previewed in the browser; download the original archive.");
     await page.screenshot({ path: info.outputPath("archive-unsupported-entry.png") });
     await closeFile(page, archive);
   });
@@ -289,10 +290,10 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
       const response = await route.fetch();
       await route.fulfill({ response, json: { ...await response.json(), content_url: blobUrl, download_url: null } });
     });
-    const viewer = await openFile(page, attachment);
-    await expect(viewer).toContainText("JSON 读取失败");
+    const viewer = await openFile(page, attachment, locale);
+    await expect(viewer).toContainText(zh ? "JSON 读取失败。请重试读取。" : "The JSON could not be read. Please retry.");
     await expect(viewer.getByRole("link", { name: /下载|Download/ })).toHaveCount(0);
-    await viewer.getByRole("button", { name: "重试", exact: true }).click();
+    await viewer.getByRole("button", { name: zh ? "重试" : "Retry", exact: true }).click();
     await expect(viewer.getByTestId("json-viewer")).toBeVisible();
     await viewer.getByRole("button", { name: "Raw", exact: true }).click();
     expect(await viewer.locator("pre").textContent()).toBe(raw);
@@ -307,17 +308,17 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     const binary = await upload(page.request, id, "opaque.bin", "application/octet-stream", Buffer.from([0, 255, 0, 255]));
     const audio = await upload(page.request, id, "quiet.wav", "audio/wav", syntheticWav());
     await openFiles(page, id);
-    const viewer = await openFile(page, empty);
-    await expect(viewer).toContainText("这是空文件");
+    const viewer = await openFile(page, empty, locale);
+    await expect(viewer).toContainText(zh ? "这是空文件，没有可预览的内容。" : "This file is empty and has no previewable content.");
     await expect(viewer.locator("pre,canvas,audio,video")).toHaveCount(0);
     await closeFile(page, empty);
-    await openFile(page, binary);
-    await expect(viewer).toContainText("此格式暂不支持浏览器内预览");
+    await openFile(page, binary, locale);
+    await expect(viewer).toContainText(zh ? "此格式暂不支持浏览器内预览。可下载后使用相应应用打开。" : "This format cannot be previewed in the browser. Download it and open it with a suitable application.");
     await expect(viewer.locator("pre,canvas,audio,video")).toHaveCount(0);
-    await expect(viewer.getByRole("link", { name: "下载", exact: true })).toBeVisible();
+    await expect(viewer.getByRole("link", { name: zh ? "下载" : "Download", exact: true })).toBeVisible();
     await page.screenshot({ path: info.outputPath("unsupported-file.png") });
     await closeFile(page, binary);
-    await openFile(page, audio);
+    await openFile(page, audio, locale);
     const player = viewer.locator("audio");
     await expect(player).toHaveAttribute("controls", "");
     await expect(player).toHaveAttribute("preload", "metadata");

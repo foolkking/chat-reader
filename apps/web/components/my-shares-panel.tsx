@@ -68,7 +68,9 @@ export function MySharesPanel({ onDirtyChange, onOpenConversation }: { onDirtyCh
       });
       setNotice(zh ? `已撤销 ${completed.size} 个分享。` : `${completed.size} shares revoked.`);
       const [listRefreshed] = await Promise.all([
-        refreshCurrentShares(),
+        // Mark cached sibling pages stale before an empty last page moves
+        // back to one of them. Otherwise the 15-second cache keeps old totals.
+        client.invalidateQueries({ queryKey: ["my-shares"], refetchType: "none" }).then(() => refreshCurrentShares()),
         client.invalidateQueries({ queryKey: ["shares"] }),
       ]);
       if (!listRefreshed) setError(mySharesRefreshError(zh));

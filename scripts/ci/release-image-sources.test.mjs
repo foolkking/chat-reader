@@ -60,3 +60,16 @@ test("both image builds explicitly select the accepted Linux amd64 platform", ()
 test("the registry source contract runs as an additive CI check", () => {
   assert.match(job("web-quality"), /run: node --test scripts\/ci\/release-image-sources\.test\.mjs(?:\n|$)/);
 });
+
+test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable", () => {
+  assert.match(job("api-quality"), /- name: API full suite\n        timeout-minutes: 45\n/);
+  assert.match(job("api-quality"), /SETTINGS_POSTGRES_INTEGRATION: "1"/);
+  assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv -o faulthandler_timeout=120(?:\n|$)/);
+});
+
+for (const [name, prefix] of [["web-quality", "release-a-quality-evidence"], ["settings-quality", "settings-quality-evidence"]]) {
+  test(`${name} preserves separate evidence for each retry attempt`, () => {
+    assert.ok(job(name).includes(`name: ${prefix}-\${{ github.sha }}-\${{ github.run_attempt }}`));
+    assert.doesNotMatch(job(name), /overwrite:\s*true/);
+  });
+}

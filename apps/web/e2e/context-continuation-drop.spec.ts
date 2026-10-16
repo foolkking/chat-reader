@@ -48,10 +48,22 @@ for (const width of [375, 1440]) {
       await expect(page.getByTestId("continuation-drop-target")).toBeVisible();
     };
     const panel = page.getByRole("region", { name: /^(上下文接续|Context continuation)$/ });
-    let transientTaskFailures = 3;
+    let returnedTaskId: string | undefined;
+    let taskReadFailures = 0;
+    let taskReadsUnavailable = true;
+    let packageRequests = 0;
+    await page.route(`**${endpoint}/returns`, async route => {
+      packageRequests += 1;
+      const response = await route.fetch();
+      expect(response.status()).toBe(202);
+      returnedTaskId = (await response.json()).task_id;
+      await route.fulfill({ response });
+    });
     await page.route(/\/api\/tasks\/[^/?]+$/, async route => {
-      if (transientTaskFailures > 0) {
-        transientTaskFailures -= 1;
+      // The global Task Center also reads task endpoints. Fail only this
+      // returned task, and keep the outage until its recovery UI is observed.
+      if (returnedTaskId && new URL(route.request().url()).pathname === `/api/tasks/${returnedTaskId}` && taskReadsUnavailable) {
+        taskReadFailures += 1;
         await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ detail: "temporary proxy failure" }) });
         return;
       }
@@ -95,10 +107,14 @@ for (const width of [375, 1440]) {
     });
     await drop(page, "synthetic.context.zip", bundle);
     await expect(panel.getByRole("status").filter({ hasText: /暂时无法读取更新进度|Update progress is temporarily unavailable/ })).toBeVisible();
+    expect(taskReadFailures).toBeGreaterThanOrEqual(3);
+    expect(packageRequests).toBe(1);
+    taskReadsUnavailable = false;
     await expect(panel.getByRole("status").filter({ hasText: /正在后台更新|Updating continuation|整包中的接续文件已更新|Continuation files updated from package/ })).toBeVisible();
     await page.getByRole("button", { name: /^(关闭接续|Close continuation)$/ }).click();
     await open();
     await expect.poll(generation).toBe(4);
+    expect(packageRequests).toBe(1);
     await panel.getByRole("button", { name: "Index", exact: true }).click();
     await expect(panel.getByText("Package index", { exact: true })).toBeVisible();
     expect(await read("current")).toBe("# Package current");

@@ -51,12 +51,17 @@ for (const width of [375, 768, 1440]) {
       if (process.env.SETTINGS_SCREENSHOT_DIR) await dialog.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/layout-summary-${width}.png` });
       await expect(dialog.getByRole("button", { name: /以后忽略这种情况|Ignore this case in future/ })).toHaveCount(0);
       const candidate = dialog.locator("article").first();
-      expect((await candidate.boundingBox())!.height).toBeLessThan(210);
+      const collapsedHeight = (await candidate.boundingBox())!.height;
+      // The summary now includes the exact-range action and saved-choice
+      // state. It stays bounded; full source context belongs in disclosure.
+      expect(collapsedHeight).toBeLessThan(900 * 0.28);
+      await expect(candidate.getByTestId("cleanup-context")).toHaveCount(0);
       const toggle = candidate.getByRole("button", { name: /上下文与规则|Context and rules/ });
       await toggle.focus(); await page.keyboard.press("Enter");
       await expect(toggle).toHaveAttribute("aria-expanded", "true");
       const occurrence = occurrences[0];
       await expect(candidate.getByTestId("cleanup-context")).toHaveText(occurrence.context_before + occurrence.match_text + occurrence.context_after);
+      expect((await candidate.boundingBox())!.height).toBeGreaterThan(collapsedHeight);
       await expect(candidate.getByRole("button", { name: /以后忽略这种情况|Ignore this case in future/ })).toBeVisible();
       await candidate.getByRole("checkbox").check();
       await expect.poll(async () => (await scan()).delete_count).toBe(1);

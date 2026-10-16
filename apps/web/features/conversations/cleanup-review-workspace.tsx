@@ -126,11 +126,13 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
     } finally { if (selectionRequest.current === controller) selectionRequest.current = null; }
   }, onError: () => {
     if (active()) { setSelectionUnconfirmed(true); setFeedback(""); }
-  }, onSuccess: async (saved) => {
+  }, onSuccess: (saved) => {
     if (generation.current !== authenticationGeneration()) return;
     client.setQueryData(["content-cleanup-scan", scan.id], saved);
     if (mounted.current) setFeedback(zh ? "选择已保存，关闭后可继续审查。" : "Selection saved. You can close and resume this review.");
-    await refresh();
+    // The write is confirmed. Metadata reads may continue independently;
+    // preview checks the saved choices again and must not wait on these reads.
+    void refresh();
   }, onSettled: (_result, _error, input) => {
     if (!active()) return;
     if (_error) restoreItemFocus.current = false;

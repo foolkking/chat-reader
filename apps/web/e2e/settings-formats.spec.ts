@@ -63,7 +63,7 @@ test.describe("learned format ownership and publication", () => {
         if (width === 1440 && locale === "en-US") {
           await a.route("**/mapping/preview", (route) => route.abort("failed"));
           await a.getByRole("button", { name: "Validate mapping", exact: true }).click();
-          await expect(a.getByRole("alert").filter({ hasText: "Cannot connect to the server. Check your network and retry; your input is retained." })).toBeVisible();
+          await expect(a.getByRole("alert").filter({ hasText: "The request result is not confirmed. Check the current import state before deciding whether to retry." })).toBeVisible();
           await expect(a.getByLabel("Format name")).toHaveValue("Synthetic personal format");
           await a.unroute("**/mapping/preview");
           const pause = new Promise<void>((resolve) => { releaseValidation = resolve; });

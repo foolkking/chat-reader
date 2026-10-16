@@ -9,6 +9,7 @@ test.skip(!enabled, "E2E_PDFJS_MIGRATION=1 is required");
 type Attachment = { id: string; display_name: string; content_url: string };
 
 for (const locale of ["zh-CN", "en-US"]) test.describe(locale, () => {
+  const zh = locale === "zh-CN";
   test.beforeEach(async ({ page, baseURL }) => {
     await settingsAppearance(page.request, baseURL!, locale);
   });
@@ -64,7 +65,7 @@ test("PDF.js 6 uses a real version-matched worker and renders single and multi-p
     expect(workerResponse.headers()["content-type"] ?? "").toMatch(/javascript|ecmascript/);
     expect(await workerResponse.text()).toContain('"6.2.108"');
 
-    await page.getByRole("button", { name: /Maximize Viewer|Viewer/ }).click();
+    await page.getByRole("button", { name: zh ? "最大化查看器" : "Maximize viewer", exact: true }).click();
     await page.keyboard.press("Escape");
     await expect(viewer).toBeVisible();
     await page.keyboard.press("Escape");
@@ -74,12 +75,12 @@ test("PDF.js 6 uses a real version-matched worker and renders single and multi-p
     const multiTrigger = previewButton(page, attachments[1].id);
     await multiTrigger.click();
     await expect(viewer).toBeVisible();
-    await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("1");
+    await expect(viewer.getByRole("textbox", { name: zh ? "PDF 页码" : "PDF page number", exact: true })).toHaveValue("1");
     await expect(viewer.locator("#pdf-page-total")).toHaveText("/ 2");
-    await viewer.getByRole("button", { name: /Fit width/i }).click();
+    await viewer.getByRole("button", { name: zh ? "适合宽度" : "Fit width", exact: true }).click();
     await expect(viewer.getByTestId("pdf-viewer-pages")).toHaveAttribute("data-pdf-fit", "width");
     await viewer.getByTestId("pdf-next-page").click();
-    await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("2");
+    await expect(viewer.getByRole("textbox", { name: zh ? "PDF 页码" : "PDF page number", exact: true })).toHaveValue("2");
     await expectCanvasRendered(viewer.locator('[data-pdf-page="2"] canvas'));
     await page.keyboard.press("Escape");
     await expect(viewer).toBeHidden();
@@ -136,7 +137,7 @@ for (const width of [375, 1440]) {
       await previewButton(page, attachment.id).click();
       const viewer = page.getByTestId("attachment-viewer-shell");
       const pages = viewer.getByTestId("pdf-viewer-pages");
-      const pageInput = viewer.getByRole("textbox", { name: "PDF 页码" });
+      const pageInput = viewer.getByRole("textbox", { name: zh ? "PDF 页码" : "PDF page number", exact: true });
       await expectCanvasRendered(pages.locator('[data-pdf-page="1"] canvas'));
       const originalPdf = await viewer.getByTestId("pdf-viewer").elementHandle();
       expect(originalPdf).not.toBeNull();
@@ -147,7 +148,7 @@ for (const width of [375, 1440]) {
       await expect(pageInput).toHaveValue("90");
       await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
 
-      await viewer.getByRole("button", { name: "Fit width", exact: true }).click();
+      await viewer.getByRole("button", { name: zh ? "适合宽度" : "Fit width", exact: true }).click();
       await expect(pages).toHaveAttribute("data-pdf-fit", "width");
       await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
       await expect(pages.locator('[data-pdf-page="90"]')).toBeInViewport();
@@ -163,7 +164,7 @@ for (const width of [375, 1440]) {
       await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
       await expect(pageInput).toHaveValue("90");
       const scale = Number((await viewer.getByTestId("pdf-zoom").textContent())!.replace("%", ""));
-      await viewer.getByRole("button", { name: "放大 PDF", exact: true }).click();
+      await viewer.getByRole("button", { name: zh ? "放大 PDF" : "Zoom in PDF", exact: true }).click();
       await expect(pages).toHaveAttribute("data-pdf-fit", "custom");
       await expectCanvasRendered(pages.locator('[data-pdf-page="90"] canvas'));
       await expect(pages.locator('[data-pdf-page="90"]')).toBeInViewport();
@@ -173,13 +174,13 @@ for (const width of [375, 1440]) {
       expect(newScale - scale).toBeLessThanOrEqual(11);
       await page.screenshot({ path: info.outputPath(`pdf-zoom-${width}-${locale}.png`) });
 
-      await viewer.getByRole("button", { name: "展开页面缩略图", exact: true }).click();
-      const rail = viewer.getByRole("complementary", { name: "PDF 页面缩略图" });
-      await expect(rail.getByRole("button", { name: "打开 PDF 第 90 页", exact: true })).toBeInViewport();
+      await viewer.getByRole("button", { name: zh ? "展开页面缩略图" : "Show page thumbnails", exact: true }).click();
+      const rail = viewer.getByRole("complementary", { name: zh ? "PDF 页面缩略图" : "PDF page thumbnails", exact: true });
+      await expect(rail.getByRole("button", { name: zh ? "打开 PDF 第 90 页" : "Open PDF page 90", exact: true })).toBeInViewport();
       await expect.poll(() => rail.locator("canvas").count()).toBeLessThanOrEqual(9);
       await expect.poll(() => pages.locator("canvas").count()).toBeLessThanOrEqual(8);
       await page.screenshot({ path: info.outputPath(`pdf-long-${width}-${locale}.png`) });
-      await viewer.getByRole("button", { name: "收起页面缩略图", exact: true }).click();
+      await viewer.getByRole("button", { name: zh ? "收起页面缩略图" : "Hide page thumbnails", exact: true }).click();
       await expect(rail).toHaveCount(0);
 
       await page.setViewportSize({ width: width === 375 ? 430 : 1180, height: 800 });
@@ -199,7 +200,7 @@ for (const width of [375, 1440]) {
       await expect(pageInput).toHaveValue("120");
       await expect(viewer.getByTestId("pdf-next-page")).toBeDisabled();
 
-      await viewer.getByRole("button", { name: "Fit page", exact: true }).click();
+      await viewer.getByRole("button", { name: zh ? "适合页面" : "Fit page", exact: true }).click();
       await expectCanvasRendered(pages.locator('[data-pdf-page="120"] canvas'));
       await expect(pageInput).toHaveValue("120");
       await expect.poll(() => pages.evaluate(node => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(2);
@@ -223,13 +224,13 @@ for (const width of [375, 1440]) {
     const conversationId = await createConversation(page.request);
     const attachment = await uploadAttachment(page.request, conversationId, "retry-page.pdf", createPdf(2));
     try {
-      await page.addInitScript(() => {
+      await page.addInitScript((retryLabel: string) => {
         const original = HTMLCanvasElement.prototype.getContext;
         const state = { failedAttempts: 0, retryClicks: 0 };
         (window as Window & { __pdfPageFailureTest?: typeof state }).__pdfPageFailureTest = state;
         const onRetry = (event: MouseEvent) => {
           const button = event.target instanceof Element ? event.target.closest("button") : null;
-          if (!event.isTrusted || button?.textContent?.trim() !== "重试" || !button.closest('[data-pdf-page="1"]')) return;
+          if (!event.isTrusted || button?.textContent?.trim() !== retryLabel || !button.closest('[data-pdf-page="1"]')) return;
           state.retryClicks++;
           HTMLCanvasElement.prototype.getContext = original;
           document.removeEventListener("click", onRetry, true);
@@ -242,13 +243,13 @@ for (const width of [375, 1440]) {
           }
           return original.apply(this, args);
         } as typeof original;
-      });
+      }, zh ? "重试" : "Retry");
       await openConversationFiles(page, conversationId);
       await previewButton(page, attachment.id).click();
       const viewer = page.getByTestId("attachment-viewer-shell");
       const firstPage = viewer.locator('[data-pdf-page="1"]');
-      await expect(firstPage).toContainText("第 1 页预览失败。");
-      await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("1");
+      await expect(firstPage).toContainText(zh ? "第 1 页预览失败。" : "Page 1 preview failed.");
+      await expect(viewer.getByRole("textbox", { name: zh ? "PDF 页码" : "PDF page number", exact: true })).toHaveValue("1");
       const originalPdf = await viewer.getByTestId("pdf-viewer").elementHandle();
       expect(originalPdf).not.toBeNull();
       await page.screenshot({ path: info.outputPath(`pdf-page-retry-${width}-${locale}.png`) });
@@ -258,13 +259,13 @@ for (const width of [375, 1440]) {
       expect(beforeResize.retryClicks).toBe(0);
       await page.setViewportSize({ width: width === 375 ? 430 : 1180, height: 800 });
       await expect.poll(async () => (await faultState()).failedAttempts).toBeGreaterThan(beforeResize.failedAttempts);
-      await expect(firstPage).toContainText("第 1 页预览失败。");
-      await expect(viewer.getByRole("textbox", { name: "PDF 页码" })).toHaveValue("1");
+      await expect(firstPage).toContainText(zh ? "第 1 页预览失败。" : "Page 1 preview failed.");
+      await expect(viewer.getByRole("textbox", { name: zh ? "PDF 页码" : "PDF page number", exact: true })).toHaveValue("1");
       expect(await originalPdf!.evaluate(node => node.isConnected)).toBe(true);
-      await firstPage.getByRole("button", { name: "重试", exact: true }).click();
+      await firstPage.getByRole("button", { name: zh ? "重试" : "Retry", exact: true }).click();
       expect((await faultState()).retryClicks).toBe(1);
       await expectCanvasRendered(firstPage.locator("canvas"));
-      await expect(firstPage.getByRole("button", { name: "重试", exact: true })).toHaveCount(0);
+      await expect(firstPage.getByRole("button", { name: zh ? "重试" : "Retry", exact: true })).toHaveCount(0);
       await page.screenshot({ path: info.outputPath(`pdf-page-recovered-${width}-${locale}.png`) });
       await viewer.getByTestId("pdf-next-page").click();
       await expectCanvasRendered(viewer.locator('[data-pdf-page="2"] canvas'));

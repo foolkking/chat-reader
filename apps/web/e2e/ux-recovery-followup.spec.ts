@@ -458,9 +458,12 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         const insert = page.getByRole("dialog", { name: zh ? "插入消息" : "Insert messages", exact: true });
         await insert.getByLabel(zh ? "消息内容" : "Message content", { exact: true }).fill("Synthetic revision probe, never persisted");
         await insert.getByRole("button", { name: zh ? "插入消息" : "Insert messages", exact: true }).click();
-        // The API client deliberately maps 503 to safe generic copy, even when
-        // the upstream fixture includes a more detailed diagnostic.
-        await expect(insert.getByRole("alert")).toHaveText("服务暂时不可用，请稍后重试。");
+        // A write 503 is intentionally an unconfirmed outcome, not a promise
+        // that nothing was inserted or an invitation to replay automatically.
+        await expect(insert.getByRole("alert")).toHaveText(zh
+          ? "插入结果尚未确认。消息内容仍保留；请先重新打开对话检查是否已插入，再决定是否重试。"
+          : "The insertion result is not confirmed. Your messages are retained; reopen the conversation to check before deciding whether to retry.");
+        await expect(insert.getByLabel(zh ? "消息内容" : "Message content", { exact: true })).toHaveValue("Synthetic revision probe, never persisted");
         await expect(insert).not.toContainText("Synthetic insert is intentionally not applied");
         expect(insertRequests).toEqual([expect.objectContaining({
           expected_offline_revision: renamedRevision, anchor_message_id: created.messages[0].id,

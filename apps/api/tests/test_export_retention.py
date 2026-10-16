@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import anyio
 import pytest
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
@@ -311,19 +312,24 @@ def test_asgi_disconnect_releases_actual_transfer_lease(exports):
         lease_id = acquire_download(db, db.get(ExportArtifact, identity))
         db.commit()
     response = ExportFileResponse(path, session_factory=factory, artifact_id=identity, lease_id=lease_id)
+    sent_body = False
     async def disconnected_send(message):
+        nonlocal sent_body
         if message["type"] == "http.response.body":
+            sent_body = True
             raise ConnectionError("synthetic disconnect during transfer")
     async def receive():
-        return {"type": "http.disconnect"}
+        # Stay connected until send fails. An immediate disconnect can cancel
+        # FileResponse before any bytes are sent on newer Starlette versions.
+        await anyio.sleep_forever()
     with pytest.raises(ExceptionGroup):
         asyncio.run(response({"type": "http", "method": "GET", "headers": []}, receive, disconnected_send))
+    assert sent_body
     with factory() as db:
         assert db.get(ExportArtifactLease, (identity, lease_id)) is None
 
 
 def test_real_slow_response_crosses_deadline_without_losing_download_bytes(exports):
-    import anyio
     factory, root, make, _ = exports
     identity, path, _ = make(expires=datetime.now(timezone.utc) + timedelta(milliseconds=200))
     with factory() as db:
@@ -345,7 +351,9 @@ def test_real_slow_response_crosses_deadline_without_losing_download_bytes(expor
             checked_expired = True
         blocks.append(message.get("body", b""))
     async def receive():
-        return {"type": "http.request"}
+        # A real ASGI transport blocks once the request has been consumed.
+        # Repeating an immediate http.request starves the disconnect listener.
+        await anyio.sleep_forever()
     asyncio.run(response({"type": "http", "method": "GET", "headers": [], "extensions": {"http.response.pathsend": {}}}, receive, slow_send))
     assert checked_expired and b"".join(blocks) == BODY
     assert reclaim_exports(factory, root)["reclaimed"] == 1 and not path.exists()

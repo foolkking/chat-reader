@@ -19,7 +19,7 @@ for (const [width, locale] of [[375, "zh-CN"], [1440, "en-US"]] as const) {
       expect(registered.status()).toBe(201);
       expect((await context.request.patch(`${baseURL}/api/preferences`, { headers, data: { locale_mode: locale } })).status()).toBe(200);
       const created = await context.request.post(`${baseURL}/api/conversations`, { headers, data: {
-        title: "Synthetic notebook typing", messages: [{ role: "user", content_markdown: "Synthetic source" }],
+        title: "Synthetic notebook typing", messages: [{ role: "user", content_markdown: "Synthetic source" }, { role: "assistant", content_markdown: "Synthetic answer" }],
       } });
       expect(created.status()).toBe(201);
       const id = (await created.json()).conversation.id;
@@ -33,6 +33,8 @@ for (const [width, locale] of [[375, "zh-CN"], [1440, "en-US"]] as const) {
       expect(seeded.status()).toBe(200);
       const base = await seeded.json();
       const page = await context.newPage();
+      const pageErrors: string[] = [];
+      page.on("pageerror", error => pageErrors.push(error.message));
       await page.route(`**/api/conversations/${id}/notebook`, route => route.request().method() === "PUT" ? route.abort("failed") : route.continue());
       await page.goto(`${baseURL}/conversations/${id}?annotations=open`);
       await page.getByRole("button", { name: /^(Notes|精选笔记)$/ }).click();
@@ -58,6 +60,7 @@ for (const [width, locale] of [[375, "zh-CN"], [1440, "en-US"]] as const) {
         .toMatchObject([{ ...blocks[0], markdown: expected }, blocks[1]]);
       expect((await (await context.request.get(url)).json()).revision).toBe(base.revision + 1);
       await expect(editor.getByRole("alert")).toHaveCount(0);
+      expect(pageErrors).toEqual([]);
     } finally { await context.close(); await admin.dispose(); }
   });
 
@@ -81,7 +84,12 @@ for (const [width, locale] of [[375, "zh-CN"], [1440, "en-US"]] as const) {
       const title = page.getByRole("textbox", { name: /^(Notebook title|精选笔记标题)$/ });
       await expect(page.getByRole("textbox", { name: locale === "zh-CN" ? "精选笔记标题" : "Notebook title", exact: true })).toHaveCount(1);
       await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
-      await title.fill("Synthetic retained notebook draft"); await title.press("Tab");
+      await title.fill("Synthetic retained notebook draft");
+      // Draft persistence can trigger independent sync reads. Wait for the
+      // current notebook/conflict read before explicitly attempting the save.
+      await expect(editor.getByText(/Draft saved on this device|草稿已保存在本机/, { exact: true })).toBeVisible();
+      await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
+      await editor.getByRole("button", { name: /^(Save notebook|保存笔记)$/ }).click();
       await expect(page.getByRole("alert").filter({ hasText: /Notebook not saved|笔记未保存/ })).toBeVisible();
       await expect(page.getByText(/Draft saved on this device|草稿已保存在本机/, { exact: true })).toBeVisible();
       if (width === 1440) {

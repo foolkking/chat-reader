@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import { openSettingsNoiseReview, settingsAppearance } from "./settings-test-helper";
 
 test.use({ trace: "off", extraHTTPHeaders: { Origin: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3107" } });
 
@@ -128,3 +129,94 @@ test("reviews a deterministic noise occurrence without silently changing content
   }
   if (cleanupError) throw cleanupError;
 });
+
+async function selectCandidateRange(page: Page, candidate: Locator, start: number, end: number) {
+  await candidate.scrollIntoViewIfNeeded();
+  // Read-only textareas on Windows Chrome do not move a text caret with
+  // Shift+Arrow. Use the real pointer selection path, not setSelectionRange
+  // or a synthetic select event, and verify the native resulting offsets.
+  const points = await candidate.evaluate((element, range) => {
+    const node = element as HTMLTextAreaElement;
+    const style = getComputedStyle(node), bounds = node.getBoundingClientRect();
+    const canvas = document.createElement("canvas"), context = canvas.getContext("2d")!;
+    context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const left = bounds.left + parseFloat(style.borderLeftWidth) + parseFloat(style.paddingLeft) - node.scrollLeft;
+    return {
+      from: left + context.measureText(node.value.slice(0, range.start)).width,
+      to: left + context.measureText(node.value.slice(0, range.end)).width,
+      y: bounds.top + parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop) + parseFloat(style.lineHeight) / 2 - node.scrollTop,
+    };
+  }, { start, end });
+  await page.mouse.move(points.from, points.y);
+  await page.mouse.down();
+  await page.mouse.move(points.to, points.y, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(() => candidate.evaluate(element => [(element as HTMLTextAreaElement).selectionStart, (element as HTMLTextAreaElement).selectionEnd])).toEqual([start, end]);
+}
+
+for (const width of [375, 1440]) {
+  test(`${width}px: multiple candidates retain exact edited ranges across checkbox changes`, async ({ page, baseURL }, info) => {
+    page.setDefaultTimeout(15_000);
+    const zh = width === 375;
+    await page.setViewportSize({ width, height: 900 });
+    await settingsAppearance(page.request, baseURL!, zh ? "zh-CN" : "en-US");
+    const source = "🙂 First Cite turn2search1.\n\nSecond Cite turn3search2.";
+    const created = await page.request.post("/api/conversations", { data: {
+      title: "Synthetic exact noise ranges",
+      messages: [{ role: "user", content_markdown: "Synthetic question" }, { role: "assistant", content_markdown: source }],
+    } });
+    expect(created.status()).toBe(201);
+    const { conversation, messages } = await created.json();
+    try {
+      const started = await page.request.post("/api/content-cleanup/scans", { data: {
+        source: "BATCH", scope_type: "CURRENT_CONVERSATION", conversation_ids: [conversation.id],
+      } });
+      expect(started.status()).toBe(202);
+      const scanId = (await started.json()).id;
+      const scan = async () => (await (await page.request.get(`/api/content-cleanup/scans/${scanId}`)).json());
+      await expect.poll(async () => (await scan()).status).toBe("READY");
+      await page.goto(`/conversations/${conversation.id}`);
+      await openSettingsNoiseReview(page, scanId);
+      const dialog = page.getByTestId("content-cleanup-dialog");
+      if (width < 1024) await dialog.getByRole("button", { name: zh ? "全部候选" : "All candidates", exact: true }).click();
+      await dialog.getByRole("button", { name: zh ? "选择全部匹配项" : "Select all matching", exact: true }).click();
+      await expect.poll(async () => (await scan()).delete_count).toBe(2);
+      const first = dialog.locator("article").filter({ has: page.getByRole("checkbox", { name: `${zh ? "处理" : "Process"} Cite turn2search1`, exact: true }) });
+      await first.getByRole("button", { name: zh ? "调整删除范围" : "Adjust deletion ranges", exact: true }).click();
+      const editor = dialog.getByRole("region", { name: zh ? "调整删除范围" : "Adjust deletion ranges", exact: true });
+      const candidate = editor.getByRole("textbox", { name: zh ? "扫描到的候选（可选择文字，不可改写原文）" : "Scanned candidate (select text; source is read-only)", exact: true });
+      await expect(candidate).toHaveValue("Cite turn2search1");
+      await expect(candidate).toHaveAttribute("readonly", "");
+      await selectCandidateRange(page, candidate, 0, 5);
+      await editor.getByRole("button", { name: zh ? "只删除选区" : "Only remove selection", exact: true }).click();
+      await selectCandidateRange(page, candidate, 10, 17);
+      await editor.getByRole("button", { name: zh ? "加入删除范围" : "Add selection to removals", exact: true }).click();
+      await expect(editor.getByRole("status")).toHaveText(zh ? "待删除 2 处 · 12 个字符" : "2 removal ranges · 12 characters");
+      await expect(editor.getByRole("region", { name: zh ? "调整后上下文" : "Context after adjustment", exact: true }).locator("pre")).toContainText("First turn2.");
+      await editor.getByRole("button", { name: zh ? "保存范围并选中" : "Save ranges and select", exact: true }).click();
+      const checkbox = first.getByRole("checkbox");
+      await expect(checkbox).toBeChecked();
+      await expect(first.locator("[data-cleanup-candidate-removal]")).toHaveText(["Cite ", "search1"]);
+      await expect(first).toContainText(zh ? "将删除 · 已调整为 2 处" : "Marked for deletion · 2 adjusted ranges");
+      await checkbox.uncheck();
+      await expect.poll(async () => (await scan()).delete_count).toBe(1);
+      await expect(first.locator("[data-cleanup-candidate-removal]")).toHaveCount(0);
+      await checkbox.check();
+      await expect.poll(async () => (await scan()).delete_count).toBe(2);
+      await expect(first.locator("[data-cleanup-candidate-removal]")).toHaveText(["Cite ", "search1"]);
+      const before = await (await page.request.get(`/api/messages/${messages[1].id}`)).json();
+      expect(before.current_version.display_text).toBe(source);
+      await dialog.screenshot({ path: info.outputPath(`noise-refined-selected-${width}.png`) });
+      await dialog.getByRole("button", { name: zh ? "预览 2 项清理" : "Preview 2 removals", exact: true }).click();
+      await expect(dialog.getByTestId("cleanup-diff-after")).toHaveText("🙂 First turn2.\n\nSecond .");
+      await expect(dialog.getByTestId("cleanup-diff-before").locator("[data-cleanup-removal]")).toHaveText(["Cite ", "search1", "Cite turn3search2"]);
+      await dialog.getByRole("button", { name: zh ? "确认处理 3 项选择" : "Confirm 3 selections", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      const after = await (await page.request.get(`/api/messages/${messages[1].id}`)).json();
+      expect(after.current_version.display_text).toBe("🙂 First turn2.\n\nSecond .");
+      expect(after.current_version.edit_type).toBe("content_cleanup");
+    } finally {
+      expect((await page.request.delete(`/api/conversations/${conversation.id}`, { timeout: 15_000 })).ok()).toBe(true);
+    }
+  });
+}

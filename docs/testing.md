@@ -20,6 +20,23 @@ This is not PWA acceptance; CI owns the complete-service browser gate.
 `alembic heads` has one head, `20261015_0051`. The existing local database remains
 at `20260823_0028`, so `verify_migration_state.py --require-current` did not pass;
 no upgrade of that pre-existing database was attempted.
+An entirely separate task-local PostgreSQL 17 cluster then supplied unique
+disposable databases: adaptive import **8 passed / 1 conditional skip**, and
+real range migration/concurrent-edit tests **2 passed**. Local browser repair
+and fixture differences are recorded in the [release execution](execution/UX_RELEASE_2026-10-16.md);
+the 241-case batch passed 235 and initially failed six; those six passed after
+adapter repairs. These are separate runs, not one 241-case clean result.
+Dependency-matched API transport reproduction and its retained download/expiry
+assertions are recorded there too. These do not replace PostgreSQL 16/full CI
+acceptance.
+The subsequent settings follow-up preserves its failed 27/28 and 26/28 runs.
+After the notebook risk-effect repair, real keyboard/reload/save cases passed
+**10/10** repetitions at 375/1440px without typing delays or uncaught page
+errors. The current serialized 64-file UX Node suite passes **1,419/1,419**
+without skips; lint, nonincremental typecheck, production build and 13 CI
+source contracts pass. The focused task API file passes **20/20**, including
+three real independent-commit transitions. These are local, bounded checks,
+not complete PostgreSQL 16/settings/PWA/CI acceptance.
 The staged source/document whitespace check excludes archived `*-evidence/`
 console transcripts: those raw logs intentionally retain emitted whitespace
 and initial-failure output rather than being rewritten as clean test results.

@@ -3,8 +3,10 @@
 ## Pending noise range migration — 2026-10-15, release in progress
 
 Working-tree source has the single Alembic head `20261015_0051`, parent
-`20261008_0050`. Only `alembic heads` was read; **no database upgrade/downgrade
-was run**. Accepted production remains `84988a2`/0050 below. The new API model
+`20261008_0050`. The existing local and production databases were not migrated;
+the task's separate disposable PostgreSQL 17 migration/concurrent-edit suite
+passed **2/2**. PostgreSQL 16/full CI and production acceptance remain required.
+Accepted production remains `84988a2`/0050 below. The new API model
 requires 0051 and must not be deployed against 0050.
 
 0051 adds nullable JSON `content_cleanup_occurrences.reviewed_ranges`; NULL
@@ -12,7 +14,8 @@ retains legacy full-candidate behavior, with no source rewrite or backfill.
 The user separately authorized the 2026-10-16 release path. Before production
 changes, verify disposable PostgreSQL upgrade/downgrade, competing edits and all
 required release gates, then follow the existing backup/stopped-writer/data-integrity
-procedure. Current local SQLite checks do not verify PostgreSQL DDL or lock behavior.
+procedure. The disposable local PostgreSQL checks do not establish production
+data preservation or replace the exact-source PostgreSQL 16 CI gate.
 
 Rollback must stop new/old API and worker writes, revoke narrowed DELETE
 choices through the tested downgrade **before** starting an old API, and verify
@@ -36,10 +39,17 @@ Pins must be deliberately refreshed with verified official provenance when base
 maintenance is required; they do not automatically acquire later base-image fixes.
 ECR Public has its own service limits and can still fail. Do not replace a pin
 with an unverified source or bypass quality gates on a download failure.
+Quality evidence artifact names include source SHA and run attempt, so retrying
+a failed job cannot collide with or overwrite its earlier failure evidence.
+Release-image artifacts remain tied to their separate successful producer attempt.
+The complete PostgreSQL-enabled API step has a 45-minute bound, verbose case
+progress and a 120-second faulthandler diagnostic; no suite filtering or skip
+override is introduced.
 Production Compose, `.env`, backup-tool image defaults, PostgreSQL and operational
-checkout are unchanged. No local/King image build is introduced. The currently
-authorized attachment release is **0050→0050**, with no migration, reconcile or
-backfill. Production acceptance remains the separate release record below until
+checkout are unchanged. No local/King image build is introduced. The accepted
+attachment release below was **0050→0050**; the separately authorized pending
+UX release requires **0050→0051** as described above, with no source backfill.
+Production acceptance remains the separate release record below until
 new exact-source CI, independent image checks and deployment acceptance pass.
 
 ## Current accepted release — 2026-10-12, finalized 2026-10-13 local

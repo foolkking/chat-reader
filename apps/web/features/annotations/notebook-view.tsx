@@ -23,6 +23,7 @@ export function NotebookView({ notebook, conflicts, annotations, repository, onS
   saveBlocked?: boolean; canSave?: () => boolean; annotationsLoaded?: boolean;
 }) {
   const zh = usePreferences().resolvedLocale === "zh-CN", { confirm } = useInteractionDialog();
+  const language = useRef(zh); language.current = zh;
   const conversationId = notebook?.conversation_id;
   const requestedDraft = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("notebookDraft");
   const key = conversationId ? (requestedDraft?.startsWith(`notebook-draft:${conversationId}:${repository.mode}:`) ? requestedDraft : notebookDraftKey(conversationId, repository.mode)) : "";
@@ -48,10 +49,10 @@ export function NotebookView({ notebook, conflicts, annotations, repository, onS
       const value = saved ? { base: saved.base, title: saved.title, blocks: saved.blocks }
         : { base: currentNotebook.current, title: currentNotebook.current.title ?? "", blocks: currentNotebook.current.blocks };
       draftRef.current = value; setDraft(value); loadedKey.current = key; setStorage("saved");
-    }).catch(() => { if (active) { setStorage("failed"); setError(zh ? "无法读取本机草稿，请重试。" : "Unable to read this device's draft. Retry."); } })
+    }).catch(() => { if (active) { setStorage("failed"); setError(language.current ? "无法读取本机草稿，请重试。" : "Unable to read this device's draft. Retry."); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [key, loadAttempt, zh]);
+  }, [key, loadAttempt]);
   useEffect(() => {
     if (!notebook || loadedKey.current !== key || busyRef.current) return;
     const value = draftRef.current;
@@ -60,13 +61,15 @@ export function NotebookView({ notebook, conflicts, annotations, repository, onS
       draftRef.current = updated; setDraft(updated);
     }
   }, [notebook, key]);
+  const atRisk = storage !== "saved" && Boolean(draft && edited(draft));
+  useEffect(() => { onRiskChange(atRisk); }, [atRisk, onRiskChange]);
+  useEffect(() => () => onRiskChange(false), [onRiskChange]);
   useEffect(() => {
-    const atRisk = storage !== "saved" && Boolean(draft && edited(draft));
-    onRiskChange(atRisk);
+    if (!atRisk) return;
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
-    if (atRisk) window.addEventListener("beforeunload", guard);
-    return () => { onRiskChange(false); window.removeEventListener("beforeunload", guard); };
-  }, [draft, storage, onRiskChange]);
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [atRisk]);
 
   const retain = (value: Working) => {
     const serial = ++sequence.current;

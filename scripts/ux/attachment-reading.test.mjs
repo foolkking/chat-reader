@@ -468,7 +468,7 @@ for (const [kind, event] of [["wheel", {}], ["touchstart", {}], ["pointerdown", 
 
 // Exercise the actual browser test's injector with explicit DOM/canvas doubles.
 // This is not a browser click or a real PDF render.
-function pdfPageFailureInjector() {
+function pdfPageFailureInjector(retryLabel = "重试") {
   const e2e = ts.createSourceFile("pdfjs-migration.spec.ts", readFileSync(new URL("../../apps/web/e2e/pdfjs-migration.spec.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   let init;
   const visit = node => {
@@ -483,16 +483,16 @@ function pdfPageFailureInjector() {
   }
   class Canvas extends Element { getContext() { return {}; } }
   const document = { addEventListener: (name, callback) => listeners.set(name, callback), removeEventListener: name => listeners.delete(name) };
-  compile(`const install = ${init};`, { HTMLCanvasElement: Canvas, Element, window, document }, "install")();
-  return { Canvas, window, click: (pageNumber = 1, label = "重试", isTrusted = true) => listeners.get("click")?.({ target: new Element(pageNumber, label), isTrusted }) };
+  compile(`const install = ${init};`, { HTMLCanvasElement: Canvas, Element, window, document }, "install")(retryLabel);
+  return { Canvas, window, click: (pageNumber = 1, label = retryLabel, isTrusted = true) => listeners.get("click")?.({ target: new Element(pageNumber, label), isTrusted }) };
 }
 
-test("PDF browser fault stays page-local until a real Retry click on that page", () => {
-  const fault = pdfPageFailureInjector();
+for (const label of ["重试", "Retry"]) test(`${label}: PDF browser fault stays page-local until a real Retry click on that page`, () => {
+  const fault = pdfPageFailureInjector(label);
   const first = new fault.Canvas(1), second = new fault.Canvas(2);
   assert.throws(() => first.getContext("2d"), /Synthetic PDF canvas failure/);
   assert.doesNotThrow(() => second.getContext("2d"));
-  for (const click of [() => fault.click(2), () => fault.click(1, "关闭"), () => fault.click(1, "重试", false)]) {
+  for (const click of [() => fault.click(2), () => fault.click(1, "关闭"), () => fault.click(1, label, false)]) {
     click(); assert.throws(() => first.getContext("2d"), /Synthetic PDF canvas failure/, "unrelated or synthetic clicks must not release the outage");
   }
   fault.click(); assert.doesNotThrow(() => first.getContext("2d"));

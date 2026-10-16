@@ -299,7 +299,7 @@ test("failed local preference storage retains the selection and prevents signout
     expect(Object.keys((await stored(page, userId)).changes)).toHaveLength(0);
     await page.getByRole("button", { name: /Account & security/ }).click();
     await page.getByRole("button", { name: "Log out current account", exact: true }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "Local preferences are not saved" })).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: "Your preferences are not saved. The password or sign-out action was not submitted. Retry saving preferences first." })).toBeVisible();
     expect((await (await context.request.get(`${baseURL}/api/auth/session`)).json()).authenticated).toBe(true);
     await page.evaluate(() => (window as typeof window & { restorePreferencePut?: () => void }).restorePreferencePut?.());
     await page.getByRole("button", { name: "Log out current account", exact: true }).click();

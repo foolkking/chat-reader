@@ -1,5 +1,13 @@
 # 后端与 API
 
+Task query consistency (local release verification, 2026-10-16): the bounded
+active, pending-cleanup and recent-terminal windows can overlap when a worker
+commits between READ COMMITTED queries. `/api/tasks/active` returns one latest
+projection per task identity in the existing active/terminal order, not duplicate
+rows. Ownership, retention windows, per-window limits and task mutation contracts
+are unchanged. Three independent-commit race cases and the full focused task API
+file passed 20/20; full PostgreSQL CI remains the release gate.
+
 Local offline task recovery (2026-10-08): owned task serialization projects a
 nullable `OfflineDownloadTarget` from allowlisted scope/ID/attachment-mode fields.
 Legacy malformed payloads and unrelated tasks yield null; no raw payload, device
