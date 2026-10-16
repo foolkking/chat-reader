@@ -128,8 +128,10 @@ for (const width of [375, 768, 1440]) {
       await f.devices.getByRole("button", { name: /^(退出其他设备|Log out other devices)$/ }).click();
       const logoutResponse = f.page.waitForResponse((response) => response.url().includes("/api/auth/sessions/logout-others") && response.request().method() === "POST");
       await f.page.getByRole("dialog", { name: /退出其他设备？|Log out other devices\?/ }).getByRole("button", { name: /^(退出其他设备|Log out other devices)$/ }).click();
-      await expect(await logoutResponse).toHaveProperty("status", 204);
-      await expect.poll(async () => (await other.get("/api/auth/me")).status()).toBe(401);
+      expect((await logoutResponse).status()).toBe(204);
+      // Only the idempotent verification read may retry a connection reset;
+      // the revocation POST must still run exactly once.
+      await expect.poll(async () => (await other.get("/api/auth/me", { maxRetries: 2 })).status()).toBe(401);
       release();
       await expect.poll(() => requests).toBe(2);
       await shot(f.page, `account-revoked-${width}`);
@@ -144,7 +146,7 @@ for (const width of [375, 768, 1440]) {
       const sessions = await (await f.context.request.get(`${baseURL}/api/auth/sessions`)).json();
       expect(sessions).toHaveLength(1); expect(sessions[0].current).toBe(true);
       expect(writes).toBe(1);
-    } finally { release(); await other.dispose(); await f.context.close(); await f.admin.dispose(); }
+    } finally { release(); await f.page.unrouteAll({ behavior: "wait" }); await other.dispose(); await f.context.close(); await f.admin.dispose(); }
   });
 
   test(`${width}px: failed identity reads and saves keep independent device state`, async ({ browser, playwright, baseURL }) => {

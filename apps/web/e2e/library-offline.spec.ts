@@ -15,6 +15,7 @@ test('checks optional offline continuation bytes and legacy absence', async () =
 });
 
 const OFFLINE_READY_TEXT = /^(可离线启动|现有离线版本可用|Offline ready|Existing offline version is available)/;
+type ResourceCheckWindow = Window & { resourceCheck?: { failReads: boolean; failures: number } };
 
 function offlineReadyStatus(page: Page) {
   return page.locator("p:visible, span:visible", { hasText: OFFLINE_READY_TEXT }).first();
@@ -29,6 +30,22 @@ function offlineIdleStatus(page: Page) {
 
 for (const width of [375, 1440]) test(`${width}px: offline resource inspection can recover without starting a download`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 900 });
+  // Dexie binds the native transaction method when opening the database. Install
+  // the bridge before navigation, then arm it only after the initial read.
+  await page.addInitScript(() => {
+    const original = IDBDatabase.prototype.transaction;
+    const inspection = { failReads: false, failures: 0 };
+    (window as ResourceCheckWindow).resourceCheck = inspection;
+    IDBDatabase.prototype.transaction = function (...args: Parameters<IDBDatabase["transaction"]>) {
+      const stores = typeof args[0] === "string" ? [args[0]] : Array.from(args[0]);
+      if (inspection.failReads && this.name === "chat-reader-offline-library"
+        && (args[1] ?? "readonly") === "readonly" && stores.includes("attachments")) {
+        inspection.failures += 1;
+        throw new DOMException("Synthetic resource inspection failure", "UnknownError");
+      }
+      return original.apply(this, args);
+    };
+  });
   let packageRequests = 0;
   page.on("request", request => { if (request.method() === "POST" && new URL(request.url()).pathname === "/api/offline/packages") packageRequests += 1; });
   await page.route("**/api/offline/catalog", route => route.fulfill({ json: {
@@ -43,32 +60,23 @@ for (const width of [375, 1440]) test(`${width}px: offline resource inspection c
   const update = page.locator("button:visible").filter({ hasText: /^(更新 1 个对话|Update 1 conversations)/ });
   await expect(update).toBeEnabled();
   await page.evaluate(() => {
-    const original = IDBDatabase.prototype.transaction;
-    const inspection = window as Window & { resourceCheckFailures?: number; restoreResourceCheck?: () => void };
-    inspection.resourceCheckFailures = 0;
-    IDBDatabase.prototype.transaction = function (...args: Parameters<IDBDatabase["transaction"]>) {
-      const stores = typeof args[0] === "string" ? [args[0]] : Array.from(args[0]);
-      if ((args[1] ?? "readonly") === "readonly" && stores.includes("attachments")) {
-        inspection.resourceCheckFailures = (inspection.resourceCheckFailures ?? 0) + 1;
-        throw new DOMException("Synthetic resource inspection failure", "UnknownError");
-      }
-      return original.apply(this, args);
-    };
-    inspection.restoreResourceCheck = () => { IDBDatabase.prototype.transaction = original; };
+    (window as ResourceCheckWindow).resourceCheck!.failReads = true;
   });
   await page.locator("label:visible").filter({ hasText: /离线附件|Offline attachments/ }).locator("select").selectOption("none");
   const retry = page.getByRole("button", { name: /^(重新检查离线资源|Retry resource check)$/ });
   await expect(retry).toBeVisible();
   await expect(page.locator("p:visible").filter({ hasText: /^离线测试对话$/ })).toBeVisible();
   await expect(update).toHaveCount(0);
-  const failuresBeforeRetry = await page.evaluate(() => (window as Window & { resourceCheckFailures?: number }).resourceCheckFailures ?? 0);
+  const failuresBeforeRetry = await page.evaluate(() => (window as ResourceCheckWindow).resourceCheck!.failures);
   expect(failuresBeforeRetry).toBeGreaterThan(0);
   await retry.click();
-  await expect.poll(() => page.evaluate(() => (window as Window & { resourceCheckFailures?: number }).resourceCheckFailures ?? 0)).toBeGreaterThan(failuresBeforeRetry);
+  await expect.poll(() => page.evaluate(() => (window as ResourceCheckWindow).resourceCheck!.failures)).toBeGreaterThan(failuresBeforeRetry);
   await expect(retry).toBeVisible();
   expect(packageRequests).toBe(0);
   await page.screenshot({ path: testInfo.outputPath(`offline-resource-check-${width}.png`) });
-  await page.evaluate(() => { (window as Window & { restoreResourceCheck?: () => void }).restoreResourceCheck?.(); });
+  await page.evaluate(() => {
+    (window as ResourceCheckWindow).resourceCheck!.failReads = false;
+  });
   await retry.click();
   await expect(update).toBeEnabled();
   await expect(retry).toHaveCount(0);

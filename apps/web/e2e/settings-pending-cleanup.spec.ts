@@ -13,12 +13,17 @@ for (const action of ["copy", "files"] as const) {
     const admin = await settingsAdmin(playwright.request, baseURL!);
     const context = await browser.newContext({ viewport: { width: action === "copy" ? 375 : 1440, height: 900 }, locale: "en-US" });
     const page = await context.newPage(), headers = { Origin: baseURL! };
+    let holdSync = false, releaseSync!: () => void;
+    const heldSync = new Promise<void>((resolve) => { releaseSync = resolve; });
     try {
       const registered = await context.request.post(`${baseURL}/api/auth/register`, { headers, data: { email: `clear-${action}-${Date.now()}@example.test`, password: "synthetic cleanup password", confirm_password: "synthetic cleanup password" } });
       expect(registered.status()).toBe(201);
       const userId = (await registered.json()).user_id;
       const ids: string[] = [];
-      await context.route("**/api/annotations/sync", (route) => route.abort("failed"));
+      await context.route("**/api/annotations/sync", async (route) => {
+        if (holdSync) await heldSync;
+        await route.abort("failed");
+      });
       for (const name of ["Selected", "Retained"]) {
         const created = await context.request.post(`${baseURL}/api/conversations`, { headers, data: { title: `Synthetic ${name} copy`, messages: [{ role: "user", content_markdown: "Synthetic cleanup question" }, { role: "assistant", content_markdown: "Synthetic cleanup answer" }] } });
         expect(created.status()).toBe(201);
@@ -34,9 +39,13 @@ for (const action of ["copy", "files"] as const) {
         await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
         await expect.poll(async () => (await readLocal(page, userId)).conversations.length).toBe(ids.length);
         await page.getByRole("button", { name: "Notes", exact: true }).click();
+        const editor = page.getByRole("region", { name: "Notebook editor", exact: true });
         const title = page.getByRole("textbox", { name: "Notebook title", exact: true });
+        await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
         await title.fill(`Synthetic ${name} unsynced note`);
-        await page.getByRole("button", { name: "Save notebook", exact: true }).evaluate((button) => (button as HTMLButtonElement).click());
+        await expect(editor.getByText("Draft saved on this device", { exact: true })).toBeVisible();
+        await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
+        await editor.getByRole("button", { name: "Save notebook", exact: true }).click();
         await expect.poll(async () => (await readLocal(page, userId)).outbox.length).toBe(ids.length);
       }
       await page.goto(`${baseURL}/recent`);
@@ -56,13 +65,23 @@ for (const action of ["copy", "files"] as const) {
       expect(content.operations).toHaveLength(1);
       expect(content.operations[0].payload.title).toBe("Synthetic Selected unsynced note");
       expect(JSON.stringify(content)).not.toContain("Synthetic Retained unsynced note");
+      // Own the failed-sync response timing during this explicit cross-tab edit.
+      // Automatic retry/read churn is covered by the annotation recovery probes.
+      holdSync = true;
       const second = await context.newPage();
       await second.goto(`${baseURL}/library?conversationId=${ids[0]}&annotations=open`);
       await second.getByRole("button", { name: "Notes", exact: true }).click();
+      const editor = second.getByRole("region", { name: "Notebook editor", exact: true });
       const title = second.getByRole("textbox", { name: "Notebook title", exact: true });
+      await expect(title).toHaveValue("Synthetic Selected unsynced note");
+      await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
       await title.fill("Synthetic newer selected note");
-      await second.getByRole("button", { name: "Save notebook", exact: true }).evaluate((button) => (button as HTMLButtonElement).click());
+      await expect(title).toHaveValue("Synthetic newer selected note");
+      await expect(editor.getByText("Draft saved on this device", { exact: true })).toBeVisible();
+      await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
+      await editor.getByRole("button", { name: "Save notebook", exact: true }).click();
       await expect.poll(async () => (await readLocal(second, userId)).outbox.length).toBe(3);
+      releaseSync();
       const proceed = action === "copy" ? "Discard local changes and delete copy" : "Clear cached files only";
       await review.getByRole("button", { name: proceed, exact: true }).click();
       await page.getByRole("dialog", { name: action === "copy" ? "Discard these local changes and delete the copy?" : "Export saved — clear cached files only?", exact: true }).getByRole("button", { name: action === "copy" ? "Discard and continue" : "Clear cached files only", exact: true }).click();
@@ -87,6 +106,6 @@ for (const action of ["copy", "files"] as const) {
       }
       expect((await context.request.get(`${baseURL}/api/conversations/${ids[0]}`)).status()).toBe(200);
       expect((await (await context.request.get(`${baseURL}/api/conversations/${ids[0]}/notebook`)).json()).title).toBe(null);
-    } finally { await context.close(); await admin.dispose(); }
+    } finally { releaseSync(); await context.unrouteAll({ behavior: "wait" }); await context.close(); await admin.dispose(); }
   });
 }

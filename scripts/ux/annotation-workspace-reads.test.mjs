@@ -303,6 +303,34 @@ test("notebook draft persistence coalesces pending edits and saves only after th
   } finally { firstWrite.resolve(2); latestWrite.resolve(3); f.r.dispose(); }
 });
 
+test("a ready notebook save is admitted before an unrelated background read begins", async () => {
+  const f = notebookFixture();
+  try {
+    f.allow(true); f.render(); f.r.flush(); await setImmediate();
+    button(f.render(), "Save notebook").onClick();
+    f.allow(false); await setImmediate();
+    assert.equal(f.calls.writes, 1, "a background read cannot steal an already-ready durable save");
+    assert.equal(f.calls.published, 1);
+  } finally { f.r.dispose(); }
+});
+
+test("a notebook save waiting for draft storage still rechecks readiness without replaying", async () => {
+  const pending = deferred(), f = notebookFixture(() => pending.promise);
+  try {
+    f.allow(true); f.render(); f.r.flush(); await setImmediate();
+    find(f.render(), item => item.type === "input").props.onChange({ target: { value: "retained pending draft" } });
+    button(f.render(), "Save notebook").onClick();
+    assert.equal(f.calls.writes, 0);
+    f.allow(false); pending.resolve(2); await setImmediate();
+    assert.equal(f.calls.writes, 0);
+    assert.equal(find(f.render(), item => item.type === "input").props.value, "retained pending draft");
+    f.allow(true); f.render(); await setImmediate();
+    assert.equal(f.calls.writes, 0, "restored reads do not replay the blocked write");
+    button(f.render(), "Save notebook").onClick(); await setImmediate();
+    assert.equal(f.calls.writes, 1);
+  } finally { pending.resolve(2); f.r.dispose(); }
+});
+
 test("coalesced notebook text retains the latest block contents and order", async () => {
   const first = deferred(), writes = [];
   const f = notebookFixture(async (_key, version, value) => {

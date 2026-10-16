@@ -203,3 +203,87 @@ original reload/save assertions. The complete serialized 64-file UX Node
 run passed **1,419/1,419 / zero skipped**, full Web lint and nonincremental
 typecheck passed, and CI source contracts passed **13/13**. Production, the
 existing local database and all user import material remain untouched.
+
+## Repeated CI failure and local reproduction
+
+Run **38852898749** did not pass: Web service initialization hit the ECR
+Public data limit, and settings had one connection-reset failure after 462
+passing cases. The following exact-source run **38857719980**, attempt 1,
+at `feba9560c625548097246b51b5c15d27fece9769` also failed. API passed;
+settings finished **460 passed / 3 failed**, and the default PWA baseline
+finished **137 passed / 2 failed / 737 conditional skips**. Image jobs
+did not run. None of these runs is release acceptance.
+
+- All three settings failures were an incorrect newly added test assertion:
+  Playwright Response exposes `status()` rather than a numeric `status`
+  property. The assertion now calls the method after awaiting the exact
+  revocation response. Only the idempotent verification GET may retry a
+  connection reset; the destructive POST still must occur exactly once.
+  Route cleanup waits for in-flight handlers before disposing their contexts.
+- Both PWA failures were a late IndexedDB fault injection. Installed Dexie
+  binds the database transaction method when it opens, so patching the
+  prototype afterward did not fail its reads. The test now installs a
+  disarmed wrapper before navigation, arms it after seeding the retained
+  copy, and disarms it for explicit recovery. It checks actual fault counts,
+  a new failed read per Retry, retained content and zero package submissions.
+  The original source reproduced **2/2 failures** locally; the repair passed
+  **10/10** repetitions and the full offline file passed **15/15**. Both
+  viewport screenshots were visually inspected.
+- Account confirmed/unconfirmed revocation repetitions passed **20/20**.
+  The initial full account/cleanup batch passed 14 and failed one scoped
+  cleanup probe; a subsequent cleanup repetition passed nine and failed one
+  at the same missing third outbox operation. These failed runs are retained,
+  not combined into a clean result. Replacing synthetic button activation
+  with real actionable clicks and waiting for durable/current draft state
+  did not by itself establish a fix. Separate diagnostic copies passed
+  10 and 20 cases; those passes alone do not disprove the intermittent issue.
+- An actual-component regression isolated an unnecessary save admission gap:
+  even an already-durable draft awaited a settled promise, allowing a
+  background read to make the accepted save return without writing. The new
+  regression failed before the repair (zero writes instead of one).
+  Saving now waits only while draft persistence is pending; after a real
+  wait, readiness is still rechecked. A second case requires no write while
+  blocked, retained text and no automatic replay when reads recover.
+  Both new cases and all **83** annotation component checks pass.
+
+After the save repair, the serialized 64-file UX Node suite passed
+**1,421/1,421**, without failed/skipped/cancelled cases. Production Web build
+and **15/15** CI/source-evidence contracts passed. Cleanup repetitions then
+passed **20/20**, but the expanded real 35-case settings run still passed
+34 and failed one at the same third outbox operation. A 105-case diagnostic
+copy and six stress cases with 15 cross-tab edits each also passed; these are
+not treated as proof that the original fixture was reliable.
+
+The cleanup probe now owns its deliberately failed sync response while the
+second tab creates the changed snapshot. Previously, every immediate abort
+could trigger an unrelated background notebook reload during the edit/save.
+A finite response barrier holds only that edit interval, releases before
+cleanup verification, and always releases/waits for route handlers during
+teardown. The real actionable save, exact three-operation precondition,
+stale-export rejection, retained other conversation, final outbox counts and
+unchanged server notebook assertions remain. Automatic read/write recovery
+is separately exercised by the annotation/notebook probes; no save or
+destructive request is automatically retried.
+
+Final checks of the actual repository files, without diagnostic copies:
+
+| Local check | Result |
+| --- | --- |
+| Complete account recovery, notebook drafts, scoped cleanup, independent annotation reads and annotation writes (five files, three repetitions) | **105 passed / 0 failed / 0 skipped / 0 flaky**, 265.48 s |
+| Default PWA baseline, including both resource-inspection cases | **139 passed / 0 failed / 737 conditional skips / 0 flaky**, 130.79 s |
+| Complete serialized UX Node suite | **64 files / 1,421 passed / 0 failed / 0 skipped** |
+| Annotation component subset, included in that Node suite | **83/83** |
+| CI/source-evidence contracts | **15/15** |
+| Full Web lint, nonincremental typecheck and production build | Passed |
+
+The browser fixture used Windows Chrome, task-only PostgreSQL 17 and API
+dependencies matched to the failed CI. Its assertion bound was 10 seconds;
+the repository/CI bounds were not increased. Each run removed only its unique
+synthetic database and stopped its own cluster/API/worker. Existing local
+data, user imports and production remain untouched.
+
+These remain local bounded results, not full settings/PostgreSQL 16/CI
+acceptance. No API, migration, dependency or workflow gate changed; no
+existing test was omitted or timeout extended.
+The user requires the next dispatch to end this turn immediately: do not
+watch CI or deploy until the user supplies its result.

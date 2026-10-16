@@ -37,6 +37,19 @@ without skips; lint, nonincremental typecheck, production build and 13 CI
 source contracts pass. The focused task API file passes **20/20**, including
 three real independent-commit transitions. These are local, bounded checks,
 not complete PostgreSQL 16/settings/PWA/CI acceptance.
+The later CI-failure repair is separately recorded in the same execution
+record: run 38857719980 passed API but failed settings (460/3) and baseline
+PWA (137/2). Local fault injection reproduced both offline failures before
+repair. The durable-notebook save admission regression also failed before
+repair; its pending-storage counterpart preserves the readiness recheck and
+no-replay rule. After that repair all **64 UX Node files / 1,421 cases**,
+**15 CI contracts**, lint, nonincremental typecheck and production build pass.
+After the scoped-cleanup failed-sync fixture was given an explicit finite
+response barrier, the actual five associated settings files passed **105/105**
+(three repetitions); the default PWA baseline passed **139 / 737 conditional
+skips / zero failed**. Earlier intermittent failures and diagnostic-copy
+results are listed separately; these do not assert full CI or deployment
+acceptance.
 The staged source/document whitespace check excludes archived `*-evidence/`
 console transcripts: those raw logs intentionally retain emitted whitespace
 and initial-failure output rather than being rewritten as clean test results.

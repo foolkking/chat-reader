@@ -23,6 +23,20 @@ separate locale-overwrite evidence, browser-captured input/React-185 rollback
 and transition-only draft risk repair. It does not relabel earlier failed
 browser runs. No API/schema compatibility boundary is removed.
 
+The same release record owns run 38857719980's five failed browser cases,
+the pre-open Dexie fault-injection reproduction, Response-method correction,
+separate intermittent scoped-cleanup failures and durable-save admission
+red/green regression. `system/FRONTEND_ARCHITECTURE.md` documents waiting only
+for pending draft persistence, retaining the post-wait readiness check and
+no-replay rule. Local checks do not accept the failed run or replace the
+required new exact-source CI. The user owns reporting the next CI result;
+dispatch must not start automatic watching or deployment.
+The execution record also retains the post-save-fix 34/35 failure and
+diagnostic-only passes, and documents a finite failed-sync response barrier
+for the explicit cross-tab cleanup edit. Its original destructive/data
+assertions remain; it does not substitute for the independent annotation
+recovery probes.
+
 ## Service-free UX continuation — 2026-10-16
 
 `execution/ux-audit-service-free-regression-2026-10-16.md` owns the serialized

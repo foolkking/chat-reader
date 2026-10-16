@@ -101,7 +101,9 @@ export function NotebookView({ notebook, conflicts, annotations, repository, onS
     if (!value || busyRef.current || !canSave()) return;
     busyRef.current = true; setBusy(true); setError("");
     try {
-      await writes.current;
+      // A durable draft has no pending work to wait for. An idle await would
+      // let an unrelated background read revoke this already-ready save.
+      if (writing.current) await writes.current;
       if (!canSave()) return;
       const saved = await repository.saveNotebook(baseOverride ?? value.base, value.blocks, value.title || null);
       const next = { base: saved, title: saved.title ?? "", blocks: saved.blocks };
