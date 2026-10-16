@@ -35,7 +35,8 @@ for (const action of ["copy", "files"] as const) {
         await expect.poll(async () => (await readLocal(page, userId)).conversations.length).toBe(ids.length);
         await page.getByRole("button", { name: "Notes", exact: true }).click();
         const title = page.getByRole("textbox", { name: "Notebook title", exact: true });
-        await title.fill(`Synthetic ${name} unsynced note`); await title.press("Tab");
+        await title.fill(`Synthetic ${name} unsynced note`);
+        await page.getByRole("button", { name: "Save notebook", exact: true }).evaluate((button) => (button as HTMLButtonElement).click());
         await expect.poll(async () => (await readLocal(page, userId)).outbox.length).toBe(ids.length);
       }
       await page.goto(`${baseURL}/recent`);
@@ -59,7 +60,8 @@ for (const action of ["copy", "files"] as const) {
       await second.goto(`${baseURL}/library?conversationId=${ids[0]}&annotations=open`);
       await second.getByRole("button", { name: "Notes", exact: true }).click();
       const title = second.getByRole("textbox", { name: "Notebook title", exact: true });
-      await title.fill("Synthetic newer selected note"); await title.press("Tab");
+      await title.fill("Synthetic newer selected note");
+      await second.getByRole("button", { name: "Save notebook", exact: true }).evaluate((button) => (button as HTMLButtonElement).click());
       await expect.poll(async () => (await readLocal(second, userId)).outbox.length).toBe(3);
       const proceed = action === "copy" ? "Discard local changes and delete copy" : "Clear cached files only";
       await review.getByRole("button", { name: proceed, exact: true }).click();

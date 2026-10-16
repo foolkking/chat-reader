@@ -40,7 +40,6 @@ for (const width of [375, 1440]) test(`${width}px: offline resource inspection c
   await seedOfflineFixture(page);
   await page.reload();
   await expect(page.locator("p:visible").filter({ hasText: /^离线测试对话$/ })).toBeVisible();
-  if (width < 768) await page.getByTestId("mobile-sidebar-button").click();
   const update = page.locator("button:visible").filter({ hasText: /^(更新 1 个对话|Update 1 conversations)/ });
   await expect(update).toBeEnabled();
   await page.evaluate(() => {
@@ -49,7 +48,7 @@ for (const width of [375, 1440]) test(`${width}px: offline resource inspection c
     inspection.resourceCheckFailures = 0;
     IDBDatabase.prototype.transaction = function (...args: Parameters<IDBDatabase["transaction"]>) {
       const stores = typeof args[0] === "string" ? [args[0]] : Array.from(args[0]);
-      if (this.name === "chat-reader-offline-library" && (args[1] ?? "readonly") === "readonly" && stores.includes("attachments")) {
+      if ((args[1] ?? "readonly") === "readonly" && stores.includes("attachments")) {
         inspection.resourceCheckFailures = (inspection.resourceCheckFailures ?? 0) + 1;
         throw new DOMException("Synthetic resource inspection failure", "UnknownError");
       }
