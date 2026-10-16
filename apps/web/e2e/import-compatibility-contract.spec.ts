@@ -30,7 +30,7 @@ test("import preview exposes bounded alignment diagnostics and localizes structu
   expect(schema).toContain("ignored_markdown_empty_count");
   expect(preview).toContain('data-testid="import-empty-message-summary"');
   expect(preview).toContain('data-testid="import-alignment-issues"');
-  expect(api).toContain('typeof detail.code === "string"');
-  expect(api).toContain("localizedImportError(detail.code)");
+  expect(api).toContain('typeof detail?.code === "string"');
+  expect(api).toContain("localizedImportError(code)");
   expect(api).toContain("JSON 与 Markdown 存在多个同等可靠的配对结果");
 });

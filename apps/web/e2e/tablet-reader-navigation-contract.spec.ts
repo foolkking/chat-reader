@@ -43,6 +43,7 @@ test("all reader section TOC entry points use version and stable render block id
   expect(targets).toContain("messageVersionId: item.message_version_id");
   expect(targets).toContain("renderBlockId: item.render_block_id");
   expect(targets).toContain("blockIndex: item.block_index");
-  expect(reader.match(/navigateToTarget\(tocNavigationTarget\(item\)\)/g)?.length).toBe(2);
+  expect(reader.match(/navigateToTarget\(tocNavigationTarget\(item\)\)/g)?.length).toBe(1);
+  expect(reader).toContain("navigateFromNavigationSheet(tocNavigationTarget(item))");
   expect(reader).toContain("messageVersionId: item.messageVersionId");
 });

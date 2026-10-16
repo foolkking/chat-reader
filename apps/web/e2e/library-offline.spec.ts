@@ -39,7 +39,8 @@ for (const width of [375, 1440]) test(`${width}px: offline resource inspection c
   await page.goto("/library");
   await seedOfflineFixture(page);
   await page.reload();
-  if (width < 768) await page.getByRole("button", { name: /^(打开资料库|Open library)$/ }).click();
+  await expect(page.locator("p:visible").filter({ hasText: /^离线测试对话$/ })).toBeVisible();
+  if (width < 768) await page.getByTestId("mobile-sidebar-button").click();
   const update = page.locator("button:visible").filter({ hasText: /^(更新 1 个对话|Update 1 conversations)/ });
   await expect(update).toBeEnabled();
   await page.evaluate(() => {

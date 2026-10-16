@@ -28,12 +28,18 @@ for (const locale of ["zh-CN", "en-US"] as const) {
         } });
         expect(created.status()).toBe(201);
         const id = (await created.json()).conversation.id, endpoint = `${baseURL}/api/conversations/${id}`;
-        const messages = await (await context.request.get(`${endpoint}/messages`)).json();
+        const messages = await (await context.request.get(`${endpoint}/messages?include_blocks=true`)).json();
         const annotations: AnnotationRead[] = [];
         if (scenario !== "bookmark") for (let index = 0; index < 2; index++) {
+          const block = messages[index].render_blocks?.[0];
+          const quote = block?.plain_text || messages[index].current_version?.display_text || `Synthetic annotation source ${index}`;
+          expect(block).toBeTruthy();
           const added = await context.request.post(`${endpoint}/annotations`, { headers, data: {
             annotation_type: "highlight", color: "green", message_id: messages[index].id,
-            quote: `Synthetic quote ${index}`, comment_markdown: `Synthetic stored comment ${index}`,
+            message_version_id: messages[index].current_version.id,
+            start_block_index: block.block_index, start_offset: 0,
+            end_block_index: block.block_index, end_offset: quote.length,
+            quote, comment_markdown: `Synthetic stored comment ${index}`,
           } });
           expect(added.status()).toBe(201); annotations.push(await added.json());
         }
