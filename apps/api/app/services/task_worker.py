@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
+from sqlalchemy import case
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
@@ -94,19 +95,24 @@ def _requeue_unstarted_task(
 ) -> None:
     now = datetime.now(timezone.utc)
     with (session_factory or SessionLocal)() as db:
-        if task_kind == "import":
-            task = db.get(ImportRecord, task_id)
-        else:
-            task = db.get(BackgroundJob, task_id)
-        if task is None or task.status != "processing":
-            return
-        task.status = "queued"
-        task.phase = "queued"
-        task.queued_at = now
-        task.started_at = None
-        task.heartbeat_at = None
-        task.attempt_count = max(0, task.attempt_count - 1)
-        task.error_message = "Worker stopped or ownership changed before processing; task requeued."
+        model = ImportRecord if task_kind == "import" else BackgroundJob
+        # Check at the write boundary: cancellation may commit after a read.
+        # Preserve that state and leave an already-requeued row unchanged.
+        db.query(model).filter(model.id == task_id, model.status == "processing").update(
+            {
+                model.status: "queued",
+                model.phase: "queued",
+                model.queued_at: now,
+                model.started_at: None,
+                model.heartbeat_at: None,
+                model.attempt_count: case(
+                    (model.attempt_count > 0, model.attempt_count - 1),
+                    else_=0,
+                ),
+                model.error_message: "Worker stopped or ownership changed before processing; task requeued.",
+            },
+            synchronize_session=False,
+        )
         db.commit()
 
 

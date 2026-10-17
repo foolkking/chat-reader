@@ -5,9 +5,12 @@
 `execution/WORKER_SHUTDOWN_2026-10-17.md` distinguishes the planned forced
 idle-worker stops (`OOMKilled=false`) from the prior global OOM. It owns the
 local startup-signal, idle wait, unstarted-claim compensation and active-task
-drain changes, **109 passing / 4 POSIX-only skipped** related tests and explicit
-Windows/POSIX/PID 1 limits. Project State, testing, index and
-`system/OBSERVABILITY_CONTRACT.md` distinguish this unshipped work
+drain changes, and the follow-up cancellation-safe compensation (four real
+SQLite race reproductions before the fix). Current related tests pass
+**127 / 4 POSIX-only skipped**, plus **4/4** disposable PostgreSQL 17 ordering
+cases with confirmed row-lock waits. Initial PostgreSQL missing-owner fixture
+errors and Windows/POSIX/PID 1 limits remain explicit. Project State, testing,
+index and `system/OBSERVABILITY_CONTRACT.md` distinguish this unshipped work
 from production 3e68d1f. No production/CI/push occurs in this continuation.
 The observability contract also corrects its stale 100,000-entry description:
 the deployed diagnostic call explicitly supplies 2,000 entries / 150 ms per root.

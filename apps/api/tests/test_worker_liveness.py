@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 
 from app.core.config import Settings
 from app.core.database import get_db
@@ -206,9 +207,11 @@ def test_worker_iteration_returns_to_idle_when_processing_fails(client: TestClie
 
 
 @pytest.mark.parametrize("task_kind", ["job", "import"])
+@pytest.mark.parametrize("attempt_count", [0, 1, 2])
 def test_unstarted_claim_is_requeued_without_consuming_an_attempt(
     client: TestClient,
     task_kind: str,
+    attempt_count: int,
 ) -> None:
     now = datetime.now(timezone.utc)
     db, generator = _db_session()
@@ -221,7 +224,7 @@ def test_unstarted_claim_is_requeued_without_consuming_an_attempt(
                 queued_at=now - timedelta(minutes=1),
                 started_at=now,
                 heartbeat_at=now,
-                attempt_count=2,
+                attempt_count=attempt_count,
                 payload={},
             )
         else:
@@ -235,7 +238,7 @@ def test_unstarted_claim_is_requeued_without_consuming_an_attempt(
                 queued_at=now - timedelta(minutes=1),
                 started_at=now,
                 heartbeat_at=now,
-                attempt_count=2,
+                attempt_count=attempt_count,
             )
         db.add(task)
         db.commit()
@@ -245,6 +248,7 @@ def test_unstarted_claim_is_requeued_without_consuming_an_attempt(
         _close_db(db, generator)
 
     task_worker._requeue_unstarted_task(task_kind, task_id, factory)
+    task_worker._requeue_unstarted_task(task_kind, task_id, factory)
 
     db, generator = _db_session()
     try:
@@ -252,11 +256,131 @@ def test_unstarted_claim_is_requeued_without_consuming_an_attempt(
         task = db.get(model, task_id)
         assert task is not None
         assert task.status == "queued"
-        assert task.attempt_count == 1
+        assert task.attempt_count == max(0, attempt_count - 1)
         assert task.started_at is None
         assert task.heartbeat_at is None
     finally:
         _close_db(db, generator)
+
+
+@pytest.mark.parametrize(
+    "task_kind,task_status",
+    [
+        (kind, state)
+        for kind in ("job", "import")
+        for state in ("queued", "committed", "failed", "missing")
+    ] + [("job", "cancelling"), ("job", "cancelled")],
+)
+def test_requeue_preserves_a_task_that_is_no_longer_processing(
+    client: TestClient,
+    task_kind: str,
+    task_status: str,
+) -> None:
+    from app.models.import_record import ImportRecord
+
+    model = ImportRecord if task_kind == "import" else BackgroundJob
+    db, generator = _db_session()
+    try:
+        factory = sessionmaker(bind=db.get_bind(), autoflush=False, autocommit=False)
+        task_id = uuid.uuid4()
+        original = None
+        if task_status != "missing":
+            fields = (
+                {"source_profile": "fixture", "source_fingerprint": "synthetic-requeue"}
+                if task_kind == "import"
+                else {"job_type": "content_noise_scan"}
+            )
+            task = model(id=task_id, status=task_status, phase=task_status, attempt_count=2, **fields)
+            db.add(task)
+            db.commit()
+            original = {column.name: getattr(task, column.name) for column in model.__table__.columns}
+    finally:
+        _close_db(db, generator)
+
+    task_worker._requeue_unstarted_task(task_kind, task_id, factory)
+
+    with factory() as reader:
+        current = reader.get(model, task_id)
+        if original is None:
+            assert current is None
+        else:
+            assert current is not None
+            assert {
+                column.name: getattr(current, column.name)
+                for column in model.__table__.columns
+            } == original
+
+
+@pytest.mark.parametrize("job_type", ["conversation_merge", "content_noise_scan"])
+@pytest.mark.parametrize("finish_cancellation", [False, True])
+def test_requeue_does_not_overwrite_a_concurrent_cancellation(
+    client: TestClient,
+    job_type: str,
+    finish_cancellation: bool,
+) -> None:
+    from app.services.background_jobs import (
+        process_background_job,
+        request_background_job_cancellation,
+    )
+
+    db, generator = _db_session()
+    try:
+        engine = db.get_bind()
+        factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+        job = BackgroundJob(
+            job_type=job_type,
+            status="processing",
+            phase="validating",
+            started_at=datetime.now(timezone.utc),
+            heartbeat_at=datetime.now(timezone.utc),
+            attempt_count=2,
+            payload={},
+        )
+        db.add(job)
+        db.commit()
+        task_id = job.id
+    finally:
+        _close_db(db, generator)
+
+    cancelled_snapshot = None
+
+    def cancel_before_requeue_write(connection, cursor, statement, parameters, context, executemany):
+        nonlocal cancelled_snapshot
+        if cancelled_snapshot is not None or not context.isupdate:
+            return
+        # The real cancellation commits on another connection immediately before
+        # the compensation UPDATE. No threads, fabricated return rows or sleeps.
+        cancelled_snapshot = {}
+        with factory() as writer:
+            current = writer.get(BackgroundJob, task_id)
+            assert current is not None
+            request_background_job_cancellation(current)
+            writer.commit()
+        if finish_cancellation:
+            process_background_job(task_id, factory)
+        with factory() as reader:
+            cancelled = reader.get(BackgroundJob, task_id)
+            assert cancelled is not None
+            cancelled_snapshot = {
+                column.name: getattr(cancelled, column.name)
+                for column in BackgroundJob.__table__.columns
+            }
+
+    event.listen(engine, "before_cursor_execute", cancel_before_requeue_write)
+    try:
+        task_worker._requeue_unstarted_task("job", task_id, factory)
+    finally:
+        event.remove(engine, "before_cursor_execute", cancel_before_requeue_write)
+
+    assert cancelled_snapshot is not None
+    assert cancelled_snapshot["status"] == ("cancelled" if finish_cancellation else "cancelling")
+    with factory() as reader:
+        current = reader.get(BackgroundJob, task_id)
+        assert current is not None
+        assert {
+            column.name: getattr(current, column.name)
+            for column in BackgroundJob.__table__.columns
+        } == cancelled_snapshot
 
 
 def test_heartbeat_threshold_requires_three_intervals() -> None:

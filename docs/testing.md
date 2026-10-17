@@ -3,16 +3,23 @@
 ## Local cooperative worker shutdown — 2026-10-17
 
 The [source-only follow-up](execution/WORKER_SHUTDOWN_2026-10-17.md) passes
-**109 / 4 skipped** across eight related API modules: shutdown, liveness,
+**127 / 4 skipped** across eight related API modules: shutdown, liveness,
 import queue, context return, export retention, tasks, observability and offline
 task recovery. Real Python SIGTERM/SIGINT dispatch, early-import stop, handler
 restoration, idle deadlines and import/job/noise claim/drain boundaries pass;
-existing SQLite requeue/liveness coverage remains. Four external POSIX signal
-process cases are explicitly skipped on Windows. Docker Desktop's Linux
-engine is unavailable and was not started; Linux PID 1 and PostgreSQL
-acceptance are not claimed. Cold CLI import does not load ORM/services, four
-Python syntax checks, links and diff checks pass. No CI, push, deployment or
-production change was made for this batch; production remains 3e68d1f/0051.
+SQLite compensation additionally preserves independently committed cancellation,
+non-processing/missing rows and attempt floors. Four external POSIX signal
+process cases are explicitly skipped on Windows. Separate disposable
+PostgreSQL 17 coverage passes **4/4**: real cancellation row-lock waits and the
+reverse compensation-then-cancellation order for ordinary/noise jobs. Its
+initial missing-owner fixture errors were fixed without weakening constraints.
+Both fresh clusters stopped cleanly; existing databases were not used.
+Docker Desktop's Linux engine is unavailable and was not started; Linux PID 1,
+full API/PostgreSQL, memory/load and Web gates are not claimed for this batch.
+Cold CLI import does not load ORM/services; six Python syntax checks, links
+and diff checks pass. One existing Starlette/httpx deprecation warning remains.
+No CI, push, deployment or production change was made for this batch;
+production remains 3e68d1f/0051.
 
 ## OOM stability repair and release — 2026-10-17
 

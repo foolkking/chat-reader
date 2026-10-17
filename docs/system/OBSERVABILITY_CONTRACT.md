@@ -118,11 +118,14 @@ flag; it does not log, acquire locks, query the database or interrupt a task.
 An already-requested startup stops without registering a worker.
 
 Once observed, shutdown prevents another claim. A claim committed but not yet
-processed is requeued through the existing compensation without consuming an
-attempt, including noise jobs. An already-processing task drains with its
-heartbeat still running; repeated signals do not cancel it. The reporter stops
-on all exits, including startup failure. No new liveness state/schema is added:
-the last heartbeat ages normally, and runtime readiness also checks the process.
+processed is requeued through state-conditional compensation without consuming
+an attempt, including noise jobs. The write only changes rows still in
+`processing`, preserving concurrently committed `cancelling`/`cancelled`
+states and leaving already-requeued rows unchanged. An already-processing
+task drains with its heartbeat still running; repeated signals do not cancel
+it. The reporter stops on all exits, including startup failure. No new liveness
+state/schema is added: the last heartbeat ages normally, and runtime readiness
+also checks the process.
 
 Idle polling retains its configured database deadline but checks the flag in
 sleep slices of at most 250 ms. This bounds the **idle sleep**, not a blocked

@@ -34,7 +34,7 @@ interrupting a busy task could also leave it for stale-task recovery.
 - This is not a promise to finish a long/blocking task before Docker's stop
   grace period. It does not handle SIGKILL/OOM or claim a production fix.
 
-## Verification
+## Initial shutdown verification
 
 The initial focused entrypoint run failed **2/2** because the old entrypoint
 had no testable signal-owning `main`; that is a regression boundary, not a
@@ -68,3 +68,58 @@ cases: Windows terminates on `send_signal(SIGTERM)` rather than delivering the
 POSIX signal contract. Local Docker Desktop's Linux engine is not running; it
 was not started, no image was built/pulled, and no remote host was used for tests.
 No Linux PID 1 acceptance is claimed.
+
+## Cancellation-safe compensation follow-up
+
+The shutdown path also exercises the pre-existing unstarted-claim compensation.
+It previously read `processing`, then wrote `queued` without a write-time state
+condition. A cancellation committing between those operations could therefore
+be overwritten, revive the task and reduce its attempt count.
+
+Four deterministic SQLite cases reproduced this before the fix: ordinary
+conversation-merge and noise-scan jobs, each with an independently committed
+`cancelling` or `cancelled` state, were incorrectly returned to `queued`. The
+tests call the real cancellation service on a second connection immediately
+before the compensation UPDATE; terminal cancellation uses the real worker's
+cancellation branch. All four failed on state/snapshot assertions, not setup.
+
+Compensation now uses one state-conditional UPDATE for imports and background
+jobs: only the same ID still in `processing` can return to `queued`. Attempt
+compensation is evaluated in SQL and cannot go below zero. Already queued,
+terminal, cancelling or missing rows remain unchanged. This is not a new
+claim-ownership/fencing protocol; no schema, task API or admission order changes.
+
+Focused SQLite regression passes **20/20**, including both task families,
+attempt counts 0/1/2, repeated compensation, missing/non-processing rows and
+all four cancellation races. Comparisons cover the complete persisted row,
+not just the visible status.
+
+Separate disposable **PostgreSQL 17** integration passes **4/4** after migrating
+each fresh test database to head. For both ordinary and noise jobs:
+
+- A cancellation transaction holds the actual row lock; a second worker
+  connection attempts compensation. `pg_stat_activity` confirms a lock wait
+  before cancellation commits. Compensation then preserves the entire
+  `cancelling` row, including attempts and timestamps.
+- In the reverse serialized order, compensation returns the claim, cancellation
+  makes it terminal, and neither another compensation nor `claim_next_job`
+  revives/reclaims it.
+
+The first PostgreSQL attempt had **four fixture setup errors**: the synthetic
+job omitted the migrated schema's required owner. The fixture now creates a
+synthetic owner; no constraint or production model was weakened. Both newly
+initialized local clusters stopped cleanly afterward, with no PID files or
+listener left on the task's port. No existing database was reused. This narrow
+integration supersedes the initial batch's “no PostgreSQL concurrency coverage”
+boundary only for the cancellation/compensation cases above; it is not full
+PostgreSQL, Linux PID 1, container, memory/load or production acceptance.
+The integration module's opt-in guard was separately checked: all four cases
+skip when `SETTINGS_POSTGRES_INTEGRATION` is unset.
+
+Final related regression across the same eight API modules passes **127 /
+4 skipped**; all skips remain the Windows-inapplicable POSIX external-signal
+cases. The existing Starlette/httpx deprecation warning is not suppressed.
+Cold CLI import, six relevant Python syntax checks, changed-document links,
+added-text secret-pattern scan and `git diff --check` pass. No Web gate was
+rerun and no frontend, schema or service configuration changed. Results are
+local only: no CI, push, deployment or production operation occurred.

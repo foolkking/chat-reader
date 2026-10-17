@@ -47,10 +47,12 @@ do not downgrade for this rollback. See [acceptance and limits](docs/execution/O
 optimization without proactive CI, push or deployment. The current
 [worker shutdown follow-up](docs/execution/WORKER_SHUTDOWN_2026-10-17.md) adds
 cooperative SIGTERM/SIGINT startup/admission/drain boundaries; it is not in
-production. Related local API regression **109 passed / 4 POSIX-only skipped**;
-cold CLI import, syntax, links and diff checks pass. Linux PID 1/Docker and
-PostgreSQL acceptance were not run. No further production operation belongs
-to this local batch.
+production. Cancellation-safe claim compensation now preserves concurrent
+`cancelling`/`cancelled` states. Related local API regression **127 passed /
+4 POSIX-only skipped**, plus **4/4** disposable PostgreSQL 17 cancellation/
+compensation ordering cases; cold CLI import, syntax, links and diff checks
+pass. Full API/PostgreSQL gates and Linux PID 1/Docker remain outside this
+batch. No further production operation belongs to this local continuation.
 
 | Item | Verified state |
 | --- | --- |
