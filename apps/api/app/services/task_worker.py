@@ -1,4 +1,3 @@
-import time
 import uuid
 from datetime import datetime, timezone
 
@@ -19,9 +18,13 @@ from app.services.import_queue import (
     recover_stale_imports,
 )
 from app.services.worker_liveness import WorkerHeartbeatReporter
+from app.workers.shutdown import WorkerShutdown
 
 
-def run_task_worker_forever() -> None:
+def run_task_worker_forever(*, shutdown: WorkerShutdown | None = None) -> None:
+    shutdown = shutdown or WorkerShutdown()
+    if shutdown.requested:
+        return
     settings = get_settings()
     from pathlib import Path
     from app.services.export_retention import reclaim_exports
@@ -31,18 +34,23 @@ def run_task_worker_forever() -> None:
         interval_seconds=settings.worker_heartbeat_interval_seconds,
         maintenance=lambda: reclaim_exports(SessionLocal, Path(settings.export_storage_dir)),
     )
-    reporter.start()
     try:
-        while not reporter.superseded:
-            processed = run_task_worker_iteration(settings, reporter)
+        reporter.start()
+        while not shutdown.requested and not reporter.superseded:
+            processed = run_task_worker_iteration(settings, reporter, shutdown=shutdown)
             if not processed and not reporter.superseded:
-                time.sleep(settings.import_worker_poll_seconds)
+                shutdown.wait(settings.import_worker_poll_seconds)
     finally:
         reporter.stop()
 
 
-def run_task_worker_iteration(settings, reporter: WorkerHeartbeatReporter) -> bool:
-    if reporter.superseded:
+def run_task_worker_iteration(
+    settings,
+    reporter: WorkerHeartbeatReporter,
+    *,
+    shutdown: WorkerShutdown | None = None,
+) -> bool:
+    if reporter.superseded or (shutdown is not None and shutdown.requested):
         return False
     task_kind: str | None
     task_id = None
@@ -52,7 +60,8 @@ def run_task_worker_iteration(settings, reporter: WorkerHeartbeatReporter) -> bo
         recover_stale_imports(db, settings.import_stale_after_seconds)
         recover_stale_jobs(db, settings.import_stale_after_seconds)
         task_kind = _oldest_task_kind(db)
-        task_id = claim_next_import(db) if task_kind == "import" else claim_next_job(db, job_type="content_noise_scan", exclude_job_types=()) if task_kind == "noise" else claim_next_job(db) if task_kind == "job" else None
+        if shutdown is None or not shutdown.requested:
+            task_id = claim_next_import(db) if task_kind == "import" else claim_next_job(db, job_type="content_noise_scan", exclude_job_types=()) if task_kind == "noise" else claim_next_job(db) if task_kind == "job" else None
         db.commit()
     if expired_return_paths:
         from pathlib import Path
@@ -62,10 +71,13 @@ def run_task_worker_iteration(settings, reporter: WorkerHeartbeatReporter) -> bo
         reporter.set_idle()
         return False
     worker_kind = "job" if task_kind == "noise" else task_kind
-    if not reporter.set_busy(worker_kind, task_id):
+    if (shutdown is not None and shutdown.requested) or not reporter.set_busy(worker_kind, task_id):
         _requeue_unstarted_task(worker_kind, task_id)
         return False
     try:
+        if shutdown is not None and shutdown.requested:
+            _requeue_unstarted_task(worker_kind, task_id)
+            return False
         if task_kind == "import":
             process_import(task_id)
         else:
@@ -94,7 +106,7 @@ def _requeue_unstarted_task(
         task.started_at = None
         task.heartbeat_at = None
         task.attempt_count = max(0, task.attempt_count - 1)
-        task.error_message = "Worker ownership changed before processing; task requeued."
+        task.error_message = "Worker stopped or ownership changed before processing; task requeued."
         db.commit()
 
 

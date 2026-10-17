@@ -109,6 +109,28 @@ counts and the most recent task heartbeat remain separate aggregates. This
 distinction permits an orphaned processing row to coexist with an accurately
 reported idle/stale worker state.
 
+### Cooperative shutdown — local source, 2026-10-17
+
+This follow-up is **not** in accepted production `3e68d1f`. The worker CLI
+installs SIGTERM/SIGINT handlers before importing ORM/services and restores
+the previous handlers when it returns or fails. A handler only sets a plain
+flag; it does not log, acquire locks, query the database or interrupt a task.
+An already-requested startup stops without registering a worker.
+
+Once observed, shutdown prevents another claim. A claim committed but not yet
+processed is requeued through the existing compensation without consuming an
+attempt, including noise jobs. An already-processing task drains with its
+heartbeat still running; repeated signals do not cancel it. The reporter stops
+on all exits, including startup failure. No new liveness state/schema is added:
+the last heartbeat ages normally, and runtime readiness also checks the process.
+
+Idle polling retains its configured database deadline but checks the flag in
+sleep slices of at most 250 ms. This bounds the **idle sleep**, not a blocked
+database call, maintenance callback, heartbeat-thread join or active task.
+Docker may still force a task exceeding its stop grace period; SIGKILL/OOM is
+not caught. No service configuration or production deployment changed.
+See [local evidence](../execution/WORKER_SHUTDOWN_2026-10-17.md).
+
 ## Protected diagnostics
 
 `GET /api/internal/diagnostics` is omitted from the public OpenAPI schema and
@@ -139,7 +161,9 @@ Diagnostics returns only:
 
 The public `/api/health` endpoint stays coarse and separate. Diagnostics is
 read-only, triggers no cleanup or remediation, hashes no files and caps its
-filesystem scan at 100,000 entries and recent timing sample at 500 rows.
+filesystem scan at 2,000 entries / 150 ms per root and recent timing sample
+at 500 rows. The general storage helper's higher default is not this report's
+runtime budget.
 The heavier explicit report is not a liveness probe: API/worker/PostgreSQL
 readiness must use `deploy/verify_runtime_health.sh`, which checks existing
 container health plus the singleton heartbeat with a read-only, 5-second

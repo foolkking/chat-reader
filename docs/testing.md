@@ -1,5 +1,19 @@
 # Testing
 
+## Local cooperative worker shutdown — 2026-10-17
+
+The [source-only follow-up](execution/WORKER_SHUTDOWN_2026-10-17.md) passes
+**109 / 4 skipped** across eight related API modules: shutdown, liveness,
+import queue, context return, export retention, tasks, observability and offline
+task recovery. Real Python SIGTERM/SIGINT dispatch, early-import stop, handler
+restoration, idle deadlines and import/job/noise claim/drain boundaries pass;
+existing SQLite requeue/liveness coverage remains. Four external POSIX signal
+process cases are explicitly skipped on Windows. Docker Desktop's Linux
+engine is unavailable and was not started; Linux PID 1 and PostgreSQL
+acceptance are not claimed. Cold CLI import does not load ORM/services, four
+Python syntax checks, links and diff checks pass. No CI, push, deployment or
+production change was made for this batch; production remains 3e68d1f/0051.
+
 ## OOM stability repair and release — 2026-10-17
 
 The follow-up record distinguishes established kernel `global_oom` cause from

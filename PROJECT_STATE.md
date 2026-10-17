@@ -43,6 +43,15 @@ error-keyword lines. PostgreSQL, environment, Compose, Nginx and operational
 checkout are unchanged. Direct rollback is `aea13fe`, on the same 0051 schema;
 do not downgrade for this rollback. See [acceptance and limits](docs/execution/OOM_STABILITY_2026-10-17.md#accepted-release).
 
+**Local-only continuation (2026-10-17):** the user requested continued
+optimization without proactive CI, push or deployment. The current
+[worker shutdown follow-up](docs/execution/WORKER_SHUTDOWN_2026-10-17.md) adds
+cooperative SIGTERM/SIGINT startup/admission/drain boundaries; it is not in
+production. Related local API regression **109 passed / 4 POSIX-only skipped**;
+cold CLI import, syntax, links and diff checks pass. Linux PID 1/Docker and
+PostgreSQL acceptance were not run. No further production operation belongs
+to this local batch.
+
 | Item | Verified state |
 | --- | --- |
 | Release accepted | Exact source `3e68d1f78c7293ef7cb2d45f25a4814da3a70908`, CI **38933466143** attempt 2, original artifact **12082341034**; all five jobs, 50 OCI blobs, embedded repair source and exact-source support independently verified. [OOM repair acceptance](docs/execution/OOM_STABILITY_2026-10-17.md#accepted-release); prior UX acceptance remains historical |
