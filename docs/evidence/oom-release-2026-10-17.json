@@ -1,0 +1,96 @@
+{
+  "accepted_at": "2026-10-17T00:53:53Z",
+  "application_images_built_on_king": false,
+  "archive_sha256": "6c399bc2ba555dd148a1e06502e4a79d9c0fe3bfcbc3c5629c863eb90c2791b3",
+  "artifact_id": 12082341034,
+  "backup_pruning_performed": false,
+  "business_storage_modified_by_release": false,
+  "checked_at": "2026-10-17T00:58:47Z",
+  "ci_run_id": 38933466143,
+  "database_head": "20261015_0051",
+  "direct_rollback_images_loaded": true,
+  "direct_rollback_revision": "aea13fe4ed3a725b0c88138702248eab5c8dac5b",
+  "embedded_source_files": {
+    "apps/api/alembic/versions/20261015_0051_cleanup_reviewed_ranges.py": "eefc0bb121532b540aaea1aba8c7257f0d039bc884749ce6042ab6676971f737",
+    "apps/api/app/api/routes/diagnostics.py": "1da2b27f9b45e72ae5c950d593d45b01a61d14e7ce1b1c01d50b473ce3d87c6c",
+    "apps/api/app/core/memory.py": "0b32cfeb47ae26ac55df813c424fa7475608cfd8d09bc274a09dd1f3c98c3a4c",
+    "apps/api/app/services/artifact_lifecycle.py": "2db9bcc0116d38ff35218a06400fd3b2d4d3d0551acaa39bb5d0774cdb9cd80e",
+    "apps/api/app/services/cleanup_ranges.py": "e6a47a8611e188ce91d36d799b13b24af829a9156d282c706c1bd7f4d175b382",
+    "apps/api/app/services/cleanup_review.py": "66228129ecee6517d712bc9bac96f9e175e99225b4efb62918f3258bdd9d1861",
+    "apps/api/app/services/content_cleanup.py": "6be05b463876e7ececdbdfe115fd9088a6b1b07af8817ae156f600dcda8b04ea",
+    "apps/api/app/services/diagnostics.py": "c9fc2d0c8d09794fdc5f24040f1b885318ba6f1df365e00acd8fdbf475c4ca37",
+    "apps/api/app/services/uploads.py": "65eb024acdc45a73979e02225591dfd64398cb00d271176113f6e9acf988f04d",
+    "apps/api/scripts/internal_diagnostics.py": "82f942733898b79bab696abfa9aa8234a9f06503d0b4ef043af9e858738f9dff"
+  },
+  "existing_stopped_writer_recovery_point_preserved": "chat-reader-20261016T152523Z",
+  "first_attempt": {
+    "database_migration_performed": false,
+    "production_pointers_changed": false,
+    "reason": "task_helper_dotted_label_key_false_negative",
+    "result": "restored_previous_applications"
+  },
+  "fresh_backup": "chat-reader-20261017T003936Z",
+  "fresh_backup_captured_with_writers_running": true,
+  "fresh_backup_cross_component_atomicity_claimed": false,
+  "fresh_backup_integrity_verified": true,
+  "full_diagnostics_run": false,
+  "future_optimization": {
+    "local_only": true,
+    "proactive_ci": false,
+    "proactive_deploy": false,
+    "proactive_push": false
+  },
+  "http_redirect_status": 301,
+  "https_health_status": 200,
+  "live_full_hash_scan_performed": false,
+  "migration_performed": false,
+  "operational_checkout_unchanged": true,
+  "original_zip_sha256": "45665aef11cf223bd62c03333c03d8d6166d28e84a6e35c54b567fdcba213550",
+  "postgres_identity_start_restarts_unchanged": true,
+  "producer_attempt": 2,
+  "production_config_unchanged": true,
+  "public_diagnostics_status": 404,
+  "schema_version": 1,
+  "services": {
+    "api": {
+      "health": "healthy",
+      "image": "sha256:20e1b2dab489f1b43b34cf04bfea4383a6d73b03d584626b6edcf7f640a9320b",
+      "oom_killed": false,
+      "restarts": 0,
+      "revision": "3e68d1f78c7293ef7cb2d45f25a4814da3a70908",
+      "running": true,
+      "startup_error_keyword_lines": 0
+    },
+    "import-worker": {
+      "health": null,
+      "image": "sha256:20e1b2dab489f1b43b34cf04bfea4383a6d73b03d584626b6edcf7f640a9320b",
+      "oom_killed": false,
+      "restarts": 0,
+      "revision": "3e68d1f78c7293ef7cb2d45f25a4814da3a70908",
+      "running": true,
+      "startup_error_keyword_lines": 0
+    },
+    "web": {
+      "health": "healthy",
+      "image": "sha256:c061724f9b93daead02b3e37315897bb2cd8f8b14435ceb6e96894bf7e2081a4",
+      "oom_killed": false,
+      "restarts": 0,
+      "revision": "3e68d1f78c7293ef7cb2d45f25a4814da3a70908",
+      "running": true,
+      "startup_error_keyword_lines": 0
+    }
+  },
+  "source_sha": "3e68d1f78c7293ef7cb2d45f25a4814da3a70908",
+  "status": "PASS",
+  "verified_image_blobs": 50,
+  "worker_graceful_stop_issue": {
+    "fixed_by_deployed_release": false,
+    "forced_exit_code": 137,
+    "idle_stop_timeout_seconds": [
+      60,
+      120
+    ],
+    "observed_on_previous_release": true,
+    "oom_killed": false
+  }
+}

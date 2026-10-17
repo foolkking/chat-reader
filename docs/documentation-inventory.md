@@ -1,13 +1,18 @@
 # Markdown 文档台账
 
-## OOM stability candidate — 2026-10-17
+## OOM stability accepted release — 2026-10-17
 
 `execution/OOM_STABILITY_2026-10-17.md` owns the kernel-confirmed shared-host
 OOM cause, evidence boundary, focused API/PostgreSQL/synthetic Linux shell
-results and pending exact-source CI/deployment gate. The observability contract,
-deployment runbook, environment facts, index and Project State distinguish this
-candidate from accepted production `aea13fe`; no host-global settings or other
-applications were changed.
+results and accepted exact-source **3e68d1f / CI 38933466143 attempt 2**.
+`evidence/oom-release-2026-10-17.json` owns sanitized independent acceptance.
+The deployment runbook, environment facts, testing summary, index and Project
+State identify current/direct rollback **3e68d1f/aea13fe**, both 0051, and keep
+the older 0050 downgrade rule separate. They preserve the initial false-negative
+helper rollback, the live-writer backup's non-atomicity boundary and existing
+stopped-writer recovery point; no host-global settings, other applications,
+business storage or PostgreSQL were changed. No retention cleanup occurred.
+Future optimization is local only; no proactive CI, push or deployment.
 
 ## Accepted UX release and low-memory deployment — 2026-10-16
 

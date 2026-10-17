@@ -25,12 +25,49 @@ kernel `global_oom` 并导致旧 API 非计划退出 137，Compose 随后自动�
   最多 2,000 entries / 150ms。手工清理的默认合同不变。
 - 不得把 resource overlay 用于 `up`，也不得在 serving API 中执行完整报告。
   这修复的是已证实的诊断峰值 OOM 路径，不是对共享主机所有业务负载、
-  uploads、其他应用或宿主机故障的零停机保证。当前已部署 aea13fe 尚无这些
-  OOM 源码改动；须经新精确源码 CI 并按正常备份/镜像验收发布后才生效。
+  uploads、其他应用或宿主机故障的零停机保证。
 
-## Current accepted UX release — 2026-10-16
+## Current accepted OOM repair — 2026-10-17
 
-Production is **`aea13fe4ed3a725b0c88138702248eab5c8dac5b` / `20261015_0051`**,
+Production is **`3e68d1f78c7293ef7cb2d45f25a4814da3a70908` / `20261015_0051`**,
+accepted **2026-10-17 00:53:53 UTC**. Exact-source CI **38933466143** attempt 2
+passes all five jobs. Original artifact **12082341034**, 50 OCI blobs, embedded
+repair source and source-matched deployment support were independently checked.
+Images were built only in CI. See [acceptance](execution/OOM_STABILITY_2026-10-17.md#accepted-release)
+and [sanitized evidence](evidence/oom-release-2026-10-17.json).
+
+Only API/worker/Web were replaced; no migration, data repair, file isolation or
+deletion ran. PostgreSQL identity/start/restarts, production configuration and
+operational checkout match the prior accepted baseline. API/Web/HTTPS are
+healthy, worker is fresh, public diagnostics stays 404; accepted applications
+have zero restarts/OOM/startup error-keyword lines. Use the new lightweight
+health script from this release's `support/deploy` directory with production
+`COMPOSE_FILE` / `COMPOSE_ENV_FILE`; do not replay old one-time release helpers.
+No full production diagnostics or interactive browser acceptance was run.
+
+Fresh five-component backup `chat-reader-20261017T003936Z` passes dump/archive
+integrity checks. It was collected before stopping writers, after an idle check;
+it is **not claimed as an atomic cross-component snapshot**. Existing verified
+`20261012T143850Z` and stopped-writer `20261016T152523Z` recovery points and
+independent orphan preservation remain. No retention pruning occurred.
+
+Current/direct rollback pointers are **3e68d1f/aea13fe**, with exact rollback
+images loaded. Both use **0051**: do **not** downgrade for this direct rollback.
+The historical 0051→0050 rule below applies only when targeting 84988a2 or older.
+The release-state warning distinguishes these cases and preserves its previous
+text. The old direct rollback lacks the OOM repair: keep using the new lightweight
+probe, never full diagnostics inside the serving API.
+
+The first replacement attempt safely returned to aea13fe after a task-helper
+label-key lookup falsely rejected the correct image revision. The corrected
+second attempt passed; the failed attempt remains in the execution record.
+This was planned maintenance with downtime, not a zero-downtime deployment.
+Subsequent optimization is local only: no proactive CI, push or deployment
+without a new user request.
+
+## Previous accepted UX release — 2026-10-16
+
+That release was **`aea13fe4ed3a725b0c88138702248eab5c8dac5b` / `20261015_0051`**,
 accepted **2026-10-16 15:34:26 UTC**. Exact-source CI **38902167421**, attempt 2,
 all five jobs / 13 Web gates pass; original image artifact **12050797955**,
 50 OCI blobs and exact-source support were independently verified. Images were
@@ -58,7 +95,7 @@ acceptance pass. No live full-hash sweep or interactive production-browser test
 is claimed. PostgreSQL, Compose, environment, Nginx and operational checkout
 are unchanged; PostgreSQL was not restarted.
 
-Current/rollback pointers are **aea13fe/84988a2**. Exact rollback images remain
+Its current/rollback pointers were **aea13fe/84988a2**. Exact rollback images remain
 loaded. Retention finalized after acceptance: verified backups are
 `chat-reader-20261012T143850Z` and `chat-reader-20261016T152523Z`;
 only the older 20261008T134403Z point was pruned. Independent orphan preservation
@@ -66,7 +103,8 @@ is outside retention and remains intact. No scheduled/off-site backup is configu
 
 ### Rollback across 0051
 
-Never merely switch images or drop `reviewed_ranges`. Stop API/worker writes,
+This section applies to a target on **0050**, not direct rollback to aea13fe
+on **0051**. Never merely switch to 0050 images or drop `reviewed_ranges`. Stop API/worker writes,
 take a fresh verified backup, and use the tested new-image Alembic downgrade
 to `20261008_0050` **before** starting old code. It changes narrowed DELETE
 choices to KEEP before dropping the column, preventing old code from expanding

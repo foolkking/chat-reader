@@ -1,15 +1,22 @@
 # Testing
 
-## OOM stability repair candidate — 2026-10-17
+## OOM stability repair and release — 2026-10-17
 
 The follow-up record distinguishes established kernel `global_oom` cause from
 broader unproven memory-leak hypotheses. Targeted application/API and synthetic
 script tests pass **112 / 3 skipped**, a separate disposable PostgreSQL 17 test
 passes **2/2** (transaction-local read-only/timeouts plus the exact production
 heartbeat SQL), and Linux synthetic shell tests pass **27** with zero Docker
-calls. These do not replace the full exact-source workflow or establish that
-production includes this candidate. See
-[OOM stability candidate](execution/OOM_STABILITY_2026-10-17.md).
+calls. These focused checks remain distinct from the subsequent full workflow:
+exact-source **3e68d1f**, CI **38933466143** attempt 2 now passes all five jobs.
+Original artifact **12082341034**, 50 OCI blobs, embedded repair source and
+exact-source support independently pass. King accepted this source on
+2026-10-17 at 00:53:53 UTC with no migration/PostgreSQL restart/configuration
+change. Docker images, lightweight worker heartbeat, HTTPS/redirect and public
+diagnostics 404 pass; all three applications have zero restarts/OOM/startup
+error-keyword lines at acceptance. No production full diagnostic, new full
+data-hash sweep or interactive browser verification is claimed. See
+[acceptance and backup limits](execution/OOM_STABILITY_2026-10-17.md#accepted-release).
 
 ## Exact-source CI and production boundary — 2026-10-16
 

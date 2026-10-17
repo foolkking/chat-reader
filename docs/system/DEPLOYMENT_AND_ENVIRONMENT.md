@@ -1,7 +1,33 @@
 # 部署与运行环境
 
-Current production is **`aea13fe`**, Alembic **`20261015_0051`**, accepted
-2026-10-16 at 15:34:26 UTC. [Current snapshot](../../PROJECT_STATE.md) and
+Current production is **`3e68d1f`**, Alembic **`20261015_0051`**, accepted
+2026-10-17 at 00:53:53 UTC. Exact-source CI **38933466143** attempt 2 passes
+all five jobs; original artifact **12082341034**, 50 OCI blobs, embedded repair
+source and source-matched support independently pass. Only application images
+changed: no migration, PostgreSQL restart, configuration/checkout change,
+storage mutation or pruning. API/Web/HTTPS healthy, worker fresh, all three
+applications zero restarts/OOM/startup error-keyword lines at acceptance;
+public diagnostics is 404. No full diagnostics or production-browser test ran.
+See [OOM repair acceptance](../execution/OOM_STABILITY_2026-10-17.md#accepted-release).
+
+Current/direct rollback is **3e68d1f/aea13fe**, both on 0051, exact old images
+loaded. Do **not** downgrade for this pair. Historical rollback to 84988a2 or
+older still requires the tested consent-revoking 0051→0050 downgrade. The
+release-state warning now distinguishes both boundaries; previous text remains
+in the release directory. Use the current release's lightweight health probe
+even if reverting applications; never full diagnostics inside the serving API.
+
+Fresh backup **`chat-reader-20261017T003936Z`** passes all five-component
+integrity checks but was captured before writer stop and is not a cross-component
+atomic snapshot. Existing `20261012T143850Z` and stopped-writer
+`20261016T152523Z` backups and independent orphan preservation remain.
+No backups/images/data were pruned. Subsequent optimization is local only,
+without proactive CI, push or deployment until the user asks again.
+
+## Previous accepted UX release — 2026-10-16
+
+The previous production was **`aea13fe`**, Alembic **`20261015_0051`**, accepted
+2026-10-16 at 15:34:26 UTC. The
 [release acceptance](../execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment)
 own exact-source CI 38902167421 attempt 2, original artifact 12050797955,
 independently verified images/support and the prior preflight/OOM incident.
@@ -26,7 +52,7 @@ used bounded one-offs while writers stopped and lightweight Docker/SQL/HTTPS
 readiness afterward. Compose 2.27 uses release-only `pull_policy: never`,
 not unsupported `run --pull never`; resource overlays were not used for `up`.
 
-Current/rollback pointers are **aea13fe/84988a2**, with exact old images loaded.
+That release's current/rollback pointers were **aea13fe/84988a2**, with exact old images loaded.
 Rollback must stop writers and run the tested consent-revoking 0051→0050
 downgrade before starting old API/worker; dropping the column or switching
 images alone is unsafe. A warning is installed in release-state.
