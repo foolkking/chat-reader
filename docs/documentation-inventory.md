@@ -1,5 +1,17 @@
 # Markdown 文档台账
 
+## Local literal matching — 2026-10-17
+
+`execution/NOISE_LITERAL_MATCHING_2026-10-17.md` owns the normalized-short
+approximate-rule missed matches, no-copy boundary work, rejected Python-loop
+performance iteration, synthetic allocation/timing limits and real API
+trial-to-refined-apply evidence (**194 / 1 capability skip**, separate PostgreSQL
+17 range/source **7/7**). `evidence/noise-literal-matching-2026-10-17.json`
+retains aggregate measurements, source binding and three still-failing Unicode
+equivalence probes without source/rule text. Project State, index, testing and
+`system/CONTENT_CLEANUP_CONTRACT.md` distinguish local work and the open NFKC
+repair from accepted production 3e68d1f/0051.
+
 ## Local worker shutdown — 2026-10-17
 
 `execution/WORKER_SHUTDOWN_2026-10-17.md` distinguishes the planned forced

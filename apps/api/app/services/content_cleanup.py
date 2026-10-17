@@ -818,7 +818,9 @@ def _literal_occurrences(text: str, revision: ContentCleanupRuleRevision) -> lis
     max_edits = max(1, min(getattr(revision, "max_edit_distance", None) or 1, 2))
     window = len(needle)
     if window < 6:
-        return []
+        # Normalization can shorten a valid literal. Retain exact matches, but
+        # do not admit fuzzy matching of the resulting short needle.
+        return result
     anchors = _fuzzy_anchor_starts(shadow, needle, limit=MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE)
     seen: set[tuple[int, int]] = set()
     for start in anchors:
@@ -877,11 +879,27 @@ def _fuzzy_anchor_starts(text: str, needle: str, *, limit: int) -> list[int]:
     return sorted(starts)
 
 
+_BOUNDARY_WHITESPACE = re.compile(r"\s*")
+_LINE_BOUNDARY_WHITESPACE = re.compile(r"[^\S\n]*")
+
+
 def _boundary_allows(text: str, start: int, end: int, mode: str) -> bool:
     if mode == "WHOLE_LINE":
-        return not text[text.rfind("\n", 0, start) + 1:start].strip() and not text[end:text.find("\n", end) if "\n" in text[end:] else len(text)].strip()
+        # Bounded prefix windows avoid repeated whole-prefix searches/copies.
+        # Regex positions keep long whitespace runs in C without slicing.
+        cursor = start
+        while cursor:
+            left = max(0, cursor - 256)
+            newline = text.rfind("\n", left, cursor)
+            if _BOUNDARY_WHITESPACE.fullmatch(text, newline + 1 if newline >= 0 else left, cursor) is None:
+                return False
+            if newline >= 0:
+                break
+            cursor = left
+        suffix_end = _LINE_BOUNDARY_WHITESPACE.match(text, end).end()
+        return suffix_end == len(text) or text[suffix_end] == "\n"
     if mode == "BLOCK_END":
-        return not text[end:].strip()
+        return _BOUNDARY_WHITESPACE.match(text, end).end() == len(text)
     return True
 
 

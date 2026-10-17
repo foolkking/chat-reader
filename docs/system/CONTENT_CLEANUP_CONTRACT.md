@@ -92,6 +92,24 @@ assembled in one pass from retained pieces; version publication remains unchange
 This reduces repeated detector work, not the number of reviewed candidates or
 the scope of checks. No migration or public response change is introduced.
 
+### Literal matching follow-up (local, 2026-10-17)
+
+Valid approximate literals may shrink below six code points after whitespace
+normalization. Their normalized-exact candidates remain available for explicit
+review; only fuzzy matching is disabled below that normalized threshold.
+Rule admission, immutable identity/revisions and KEEP/PROTECTED defaults remain
+unchanged. Boundary checks use positional whitespace matching and bounded
+256-character prefix-search windows, not per-candidate source slices. Existing
+Unicode whitespace, LF line boundaries and absolute source offsets are retained.
+This work is not deployed.
+
+The [local regression and allocation record](../execution/NOISE_LITERAL_MATCHING_2026-10-17.md)
+also records an unresolved normalization defect: per-code-point NFKC does not
+always match equivalent forms spanning characters (including combining marks
+and Hangul Jamo). Full normalization equivalence remains intended behavior,
+not an accepted reduction of scope. Repair must preserve original source/offset
+authority; normalizing canonical text is not an alternative.
+
 ### Source identity and concurrent editing (local, 2026-10-08)
 
 Candidates store SHA-256 of the exact UTF-8 source in `source_content_hash`.

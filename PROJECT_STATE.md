@@ -54,6 +54,17 @@ compensation ordering cases; cold CLI import, syntax, links and diff checks
 pass. Full API/PostgreSQL gates and Linux PID 1/Docker remain outside this
 batch. No further production operation belongs to this local continuation.
 
+**Noise matching continuation (2026-10-17, local only):** the
+[literal-matching follow-up](docs/execution/NOISE_LITERAL_MATCHING_2026-10-17.md)
+restores normalized-exact review candidates discarded by the short fuzzy
+guard and removes per-hit boundary substring copies. The rule trial/bulk/
+refinement/preview/apply API path is exercised with 51 actionable candidates
+and one protected candidate. Final related API regression **194 passed /
+1 symlink-capability skipped** across 20 modules; separate disposable
+PostgreSQL 17 range/source guards **7/7**. A separate probe confirms existing
+cross-character NFKC equivalence misses; bounded normalization with exact
+raw-offset mapping is the next open repair, not claimed complete by this batch.
+
 | Item | Verified state |
 | --- | --- |
 | Release accepted | Exact source `3e68d1f78c7293ef7cb2d45f25a4814da3a70908`, CI **38933466143** attempt 2, original artifact **12082341034**; all five jobs, 50 OCI blobs, embedded repair source and exact-source support independently verified. [OOM repair acceptance](docs/execution/OOM_STABILITY_2026-10-17.md#accepted-release); prior UX acceptance remains historical |

@@ -1,5 +1,25 @@
 # Testing
 
+## Local literal matching — 2026-10-17
+
+The [literal follow-up](execution/NOISE_LITERAL_MATCHING_2026-10-17.md) passes
+**194 / 1 skipped** across all 20 cleanup non-PostgreSQL modules, including
+18 new cases. The skip is the existing environment-dependent outside-symlink
+case; the Starlette/httpx deprecation warning remains. This includes 3,000
+differential Unicode boundary samples and real API trial/learning, cross-page
+selection, two-range refinement, preview and canonical application of 51
+actionable candidates while preserving the protected match.
+
+Separate fresh PostgreSQL 17 range/source suites pass **7/7** after the final
+implementation; both task clusters stopped cleanly. Neither existing databases
+nor production were used. Synthetic boundary-only allocation/timing evidence
+records both improvements and the long-whitespace timing tradeoff; it is not
+service RSS or OOM/load acceptance. Three probes still reproduce cross-character
+NFKC equivalence misses; that repair remains open. No full API/PostgreSQL 16,
+Web/browser/build, Reader/Share/Offline or Linux PID 1 gate is claimed for this
+batch. Syntax, links, source-bound JSON and diff checks pass. No CI, push or
+deployment occurred.
+
 ## Local cooperative worker shutdown — 2026-10-17
 
 The [source-only follow-up](execution/WORKER_SHUTDOWN_2026-10-17.md) passes

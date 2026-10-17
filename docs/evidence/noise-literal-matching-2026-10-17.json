@@ -1,0 +1,162 @@
+{
+  "date": "2026-10-17",
+  "local_only": true,
+  "after_source_sha256_lf": "ae66fed356ce747b474998bc1d47caeb11d11690168227ff16b6c8ea09bb3c51",
+  "boundary_profile": {
+    "scope": "Synthetic boundary checks only; input/import allocations excluded. Not service RSS, load, detector-wide memory or an OOM guarantee.",
+    "baseline_commit": "8a32982359b16408921f527eef0c45ae6417c015",
+    "rows": [
+      {
+        "workload": "short_lines",
+        "mode": "WHOLE_LINE",
+        "source_characters": 81920,
+        "candidates": 8192,
+        "before": {
+          "allowed": 8192,
+          "median_ms": 22.128,
+          "boundary_python_peak_bytes": 164440
+        },
+        "after": {
+          "allowed": 8192,
+          "median_ms": 12.817,
+          "boundary_python_peak_bytes": 1898
+        }
+      },
+      {
+        "workload": "short_lines",
+        "mode": "BLOCK_END",
+        "source_characters": 81920,
+        "candidates": 8192,
+        "before": {
+          "allowed": 1,
+          "median_ms": 28.198,
+          "boundary_python_peak_bytes": 328224
+        },
+        "after": {
+          "allowed": 1,
+          "median_ms": 4.938,
+          "boundary_python_peak_bytes": 1686
+        }
+      },
+      {
+        "workload": "one_long_line",
+        "mode": "WHOLE_LINE",
+        "source_characters": 40960,
+        "candidates": 8192,
+        "before": {
+          "allowed": 0,
+          "median_ms": 47.944,
+          "boundary_python_peak_bytes": 41540
+        },
+        "after": {
+          "allowed": 0,
+          "median_ms": 8.109,
+          "boundary_python_peak_bytes": 1718
+        }
+      },
+      {
+        "workload": "one_long_line",
+        "mode": "BLOCK_END",
+        "source_characters": 40960,
+        "candidates": 8192,
+        "before": {
+          "allowed": 1,
+          "median_ms": 6.572,
+          "boundary_python_peak_bytes": 41444
+        },
+        "after": {
+          "allowed": 1,
+          "median_ms": 4.484,
+          "boundary_python_peak_bytes": 1686
+        }
+      },
+      {
+        "workload": "padded_lines",
+        "mode": "WHOLE_LINE",
+        "source_characters": 536576,
+        "candidates": 2048,
+        "before": {
+          "allowed": 2048,
+          "median_ms": 13.733,
+          "boundary_python_peak_bytes": 536996
+        },
+        "after": {
+          "allowed": 2048,
+          "median_ms": 6.969,
+          "boundary_python_peak_bytes": 1898
+        }
+      },
+      {
+        "workload": "padded_lines",
+        "mode": "BLOCK_END",
+        "source_characters": 536576,
+        "candidates": 2048,
+        "before": {
+          "allowed": 1,
+          "median_ms": 24.004,
+          "boundary_python_peak_bytes": 1073038
+        },
+        "after": {
+          "allowed": 1,
+          "median_ms": 3.243,
+          "boundary_python_peak_bytes": 1686
+        }
+      },
+      {
+        "workload": "single_long_whitespace_tail",
+        "mode": "WHOLE_LINE",
+        "source_characters": 200005,
+        "candidates": 1,
+        "before": {
+          "allowed": 1,
+          "median_ms": 0.082,
+          "boundary_python_peak_bytes": 200581
+        },
+        "after": {
+          "allowed": 1,
+          "median_ms": 1.874,
+          "boundary_python_peak_bytes": 1654
+        }
+      },
+      {
+        "workload": "single_long_whitespace_tail",
+        "mode": "BLOCK_END",
+        "source_characters": 200005,
+        "candidates": 1,
+        "before": {
+          "allowed": 1,
+          "median_ms": 0.067,
+          "boundary_python_peak_bytes": 200489
+        },
+        "after": {
+          "allowed": 1,
+          "median_ms": 0.751,
+          "boundary_python_peak_bytes": 1654
+        }
+      }
+    ]
+  },
+  "unresolved_nfkc_probes": {
+    "unicode_version": "14.0.0",
+    "cases": [
+      {
+        "case": "composed-accent",
+        "stdlib_nfkc_equivalent": true,
+        "shadow_equivalent": false,
+        "observed_matches": 0
+      },
+      {
+        "case": "canonical-mark-order",
+        "stdlib_nfkc_equivalent": true,
+        "shadow_equivalent": false,
+        "observed_matches": 0
+      },
+      {
+        "case": "hangul-jamo",
+        "stdlib_nfkc_equivalent": true,
+        "shadow_equivalent": false,
+        "observed_matches": 0
+      }
+    ]
+  }
+}
