@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-17",
+  "boundary": {
+    "local_only": true,
+    "ci_started": false,
+    "pushed": false,
+    "deployed": false,
+    "production_changed": false,
+    "existing_database_used": false,
+    "schema_head": "20261015_0051"
+  },
+  "baseline_commit": "bb38cb1763a5bca47d9096f6f989c7ba556e5668",
+  "source_lf_sha256": {
+    "apps/api/app/services/cleanup_normalization.py": "cd1a2effe3aeb995a21e10f82bd91bd0452fc5c4246bb0c0fb57fc9ada422c10",
+    "apps/api/app/services/content_cleanup.py": "a0a1044c4bde63879b39b1f0614970d75f8c577a5a4ba8cdc27677671bc751e7",
+    "apps/api/tests/test_cleanup_normalization.py": "57f816c1e54c613b6502f8635e8de00d8e509e17b442387e077a6b79c84853f4",
+    "apps/api/tests/test_cleanup_unicode_normalization.py": "57a3fbfdd53b71128ebe838520b452a00d6478f69a3f2680d36ba04bf1da91ca",
+    "apps/api/tests/test_cleanup_unicode_postgres.py": "547d0cfd160ee8dacae13481269ca31a98a78e1941f088a6b677c43b53cfa4a9"
+  },
+  "tests": {
+    "initial_red": {
+      "tests": 28,
+      "failures": 23,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 5,
+      "duration_seconds": 8.259
+    },
+    "final_focused_subset": {
+      "tests": 43,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 43,
+      "duration_seconds": 16.276
+    },
+    "final_related": {
+      "tests": 238,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "passed": 237,
+      "duration_seconds": 319.349
+    },
+    "related_modules": [
+      "tests.test_cleanup_access",
+      "tests.test_cleanup_dismissal",
+      "tests.test_cleanup_edit_concurrency",
+      "tests.test_cleanup_execution",
+      "tests.test_cleanup_group_search",
+      "tests.test_cleanup_learning",
+      "tests.test_cleanup_literal_matching",
+      "tests.test_cleanup_normalization",
+      "tests.test_cleanup_outcomes",
+      "tests.test_cleanup_preview_ranges",
+      "tests.test_cleanup_publication_recovery",
+      "tests.test_cleanup_rescan_requests",
+      "tests.test_cleanup_reviewed_ranges",
+      "tests.test_cleanup_rule_grants",
+      "tests.test_cleanup_safety",
+      "tests.test_cleanup_scan_lifecycle",
+      "tests.test_cleanup_scan_requests",
+      "tests.test_cleanup_selection_summary",
+      "tests.test_cleanup_source_replacement",
+      "tests.test_cleanup_unicode_normalization",
+      "tests.test_cleanup_validation_work",
+      "tests.test_content_cleanup"
+    ],
+    "new_non_postgres_cases": {
+      "test_cleanup_normalization": 8,
+      "test_cleanup_unicode_normalization": 35
+    },
+    "final_postgres": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 10,
+      "duration_seconds": 62.971
+    },
+    "skip": "existing outside-symlink creation capability unavailable on this Windows environment",
+    "warning": "existing Starlette/httpx TestClient deprecation"
+  },
+  "unicode": {
+    "runtime_ucd_version": "14.0.0",
+    "scalar_selection": "decomposition metadata OR nonzero combining class OR changed casefold OR precomposed Hangul; separate Jamo composition vectors",
+    "sensitive_scalars": 18859,
+    "scalar_context_key_comparisons": 113154,
+    "mixed_key_comparisons": 2000,
+    "long_run_source_codepoints": 8193,
+    "long_run_normalize_calls": {
+      "NFKD": 8192,
+      "NFD": 8192,
+      "NFC": 1
+    }
+  },
+  "equivalence_probes": [
+    {
+      "kind": "accent",
+      "stdlib_nfkc_equivalent": true,
+      "shadow_equivalent": true,
+      "observed_matches": 2,
+      "keep_matches": 1,
+      "protected_matches": 1,
+      "complete_raw_candidate_offsets": true
+    },
+    {
+      "kind": "mark-order",
+      "stdlib_nfkc_equivalent": true,
+      "shadow_equivalent": true,
+      "observed_matches": 2,
+      "keep_matches": 1,
+      "protected_matches": 1,
+      "complete_raw_candidate_offsets": true
+    },
+    {
+      "kind": "hangul",
+      "stdlib_nfkc_equivalent": true,
+      "shadow_equivalent": true,
+      "observed_matches": 2,
+      "keep_matches": 1,
+      "protected_matches": 1,
+      "complete_raw_candidate_offsets": true
+    }
+  ],
+  "resource_profile": {
+    "first_complete_implementation": {
+      "unicode_version": "14.0.0",
+      "repeats": 5,
+      "measurement": "sequential local function-only synthetic measurements, not service RSS or load",
+      "cases": [
+        {
+          "case": "ascii",
+          "input_codepoints": 222000,
+          "before": {
+            "median_ms": 97.097,
+            "peak_python_bytes": 28911353,
+            "output_codepoints": 216000
+          },
+          "after": {
+            "median_ms": 97.458,
+            "peak_python_bytes": 29774897,
+            "output_codepoints": 216000
+          }
+        },
+        {
+          "case": "already_nfkc",
+          "input_codepoints": 220000,
+          "before": {
+            "median_ms": 112.794,
+            "peak_python_bytes": 32079296,
+            "output_codepoints": 220000
+          },
+          "after": {
+            "median_ms": 109.139,
+            "peak_python_bytes": 32039244,
+            "output_codepoints": 220000
+          }
+        },
+        {
+          "case": "mixed_compatibility",
+          "input_codepoints": 198000,
+          "before": {
+            "median_ms": 109.069,
+            "peak_python_bytes": 29630928,
+            "output_codepoints": 204000
+          },
+          "after": {
+            "median_ms": 586.739,
+            "peak_python_bytes": 31529372,
+            "output_codepoints": 198000
+          }
+        },
+        {
+          "case": "combining_run_2048",
+          "input_codepoints": 4097,
+          "before": {
+            "median_ms": 2.482,
+            "peak_python_bytes": 845732,
+            "output_codepoints": 4097
+          },
+          "after": {
+            "median_ms": 10.392,
+            "peak_python_bytes": 1764586,
+            "output_codepoints": 4096
+          }
+        },
+        {
+          "case": "combining_run_4096",
+          "input_codepoints": 8193,
+          "before": {
+            "median_ms": 4.934,
+            "peak_python_bytes": 1708708,
+            "output_codepoints": 8193
+          },
+          "after": {
+            "median_ms": 21.739,
+            "peak_python_bytes": 3535978,
+            "output_codepoints": 8192
+          }
+        },
+        {
+          "case": "combining_run_8192",
+          "input_codepoints": 16385,
+          "before": {
+            "median_ms": 9.76,
+            "peak_python_bytes": 3436772,
+            "output_codepoints": 16385
+          },
+          "after": {
+            "median_ms": 43.916,
+            "peak_python_bytes": 7096938,
+            "output_codepoints": 16384
+          }
+        },
+        {
+          "case": "combining_run_16384",
+          "input_codepoints": 32769,
+          "before": {
+            "median_ms": 20.603,
+            "peak_python_bytes": 6896676,
+            "output_codepoints": 32769
+          },
+          "after": {
+            "median_ms": 91.433,
+            "peak_python_bytes": 14223082,
+            "output_codepoints": 32768
+          }
+        }
+      ]
+    },
+    "compact_origins": {
+      "unicode_version": "14.0.0",
+      "repeats": 5,
+      "measurement": "sequential local function-only synthetic measurements, not service RSS or load",
+      "cases": [
+        {
+          "case": "ascii",
+          "input_codepoints": 222000,
+          "before": {
+            "median_ms": 99.242,
+            "peak_python_bytes": 28911353,
+            "output_codepoints": 216000
+          },
+          "after": {
+            "median_ms": 100.62,
+            "peak_python_bytes": 29774897,
+            "output_codepoints": 216000
+          }
+        },
+        {
+          "case": "already_nfkc",
+          "input_codepoints": 220000,
+          "before": {
+            "median_ms": 111.303,
+            "peak_python_bytes": 32079296,
+            "output_codepoints": 220000
+          },
+          "after": {
+            "median_ms": 111.016,
+            "peak_python_bytes": 32039244,
+            "output_codepoints": 220000
+          }
+        },
+        {
+          "case": "mixed_compatibility",
+          "input_codepoints": 198000,
+          "before": {
+            "median_ms": 104.607,
+            "peak_python_bytes": 29630928,
+            "output_codepoints": 204000
+          },
+          "after": {
+            "median_ms": 488.182,
+            "peak_python_bytes": 31864988,
+            "output_codepoints": 198000
+          }
+        },
+        {
+          "case": "combining_run_2048",
+          "input_codepoints": 4097,
+          "before": {
+            "median_ms": 2.524,
+            "peak_python_bytes": 845732,
+            "output_codepoints": 4097
+          },
+          "after": {
+            "median_ms": 8.652,
+            "peak_python_bytes": 1229758,
+            "output_codepoints": 4096
+          }
+        },
+        {
+          "case": "combining_run_4096",
+          "input_codepoints": 8193,
+          "before": {
+            "median_ms": 4.979,
+            "peak_python_bytes": 1708708,
+            "output_codepoints": 8193
+          },
+          "after": {
+            "median_ms": 17.643,
+            "peak_python_bytes": 2472166,
+            "output_codepoints": 8192
+          }
+        },
+        {
+          "case": "combining_run_8192",
+          "input_codepoints": 16385,
+          "before": {
+            "median_ms": 9.625,
+            "peak_python_bytes": 3436772,
+            "output_codepoints": 16385
+          },
+          "after": {
+            "median_ms": 34.894,
+            "peak_python_bytes": 4964358,
+            "output_codepoints": 16384
+          }
+        },
+        {
+          "case": "combining_run_16384",
+          "input_codepoints": 32769,
+          "before": {
+            "median_ms": 19.621,
+            "peak_python_bytes": 6896676,
+            "output_codepoints": 32769
+          },
+          "after": {
+            "median_ms": 73.892,
+            "peak_python_bytes": 9963670,
+            "output_codepoints": 32768
+          }
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Runtime UCD differential, not the external Unicode conformance corpus or future-runtime acceptance.",
+    "Contiguous raw envelopes can include intervening marks absent from a partial literal; review and explicit raw refinement remain mandatory.",
+    "Full provenance remains costlier than the incorrect baseline; linear storage is not a hard service memory budget.",
+    "Function-only synthetic allocation/timing, not service RSS, load or production OOM acceptance.",
+    "No full API/PostgreSQL 16, Web/browser/build, Reader/Share/Offline package or Linux PID 1 acceptance."
+  ]
+}

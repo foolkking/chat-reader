@@ -1,5 +1,18 @@
 # Markdown 文档台账
 
+## Local Unicode normalization — 2026-10-17
+
+`execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md` owns cross-character NFKC
+red/green reproduction, raw-envelope/old-consent semantics, runtime Unicode
+differentials, compact-origin performance iteration and remaining limits.
+`evidence/noise-unicode-normalization-2026-10-17.json` binds local source,
+aggregate scalar/work counts, synthetic timing/allocation, final related
+**237 / 1 capability skip** and fresh PostgreSQL **10/10**. It stores no raw
+source/rule text or business identities. Project State, index, testing and
+`system/CONTENT_CLEANUP_CONTRACT.md` now resolve the earlier open NFKC item;
+the earlier literal evidence remains unchanged history. Production is still
+3e68d1f/0051; this continuation makes no CI/push/deployment claim.
+
 ## Local literal matching — 2026-10-17
 
 `execution/NOISE_LITERAL_MATCHING_2026-10-17.md` owns the normalized-short
@@ -8,9 +21,10 @@ performance iteration, synthetic allocation/timing limits and real API
 trial-to-refined-apply evidence (**194 / 1 capability skip**, separate PostgreSQL
 17 range/source **7/7**). `evidence/noise-literal-matching-2026-10-17.json`
 retains aggregate measurements, source binding and three still-failing Unicode
-equivalence probes without source/rule text. Project State, index, testing and
-`system/CONTENT_CLEANUP_CONTRACT.md` distinguish local work and the open NFKC
-repair from accepted production 3e68d1f/0051.
+equivalence probes without source/rule text at that checkpoint. The Unicode
+follow-up above owns their later repair; these historical results are not
+rewritten as if already passing. Current summaries distinguish both local
+batches from accepted production 3e68d1f/0051.
 
 ## Local worker shutdown — 2026-10-17
 

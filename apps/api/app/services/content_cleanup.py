@@ -30,6 +30,7 @@ from app.services.editing.message_edit_service import (
     _write_event,
 )
 from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
+from app.services.cleanup_normalization import normalized_shadow, source_span
 from app.services.search.search_indexer import rebuild_search_and_toc_for_conversation
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
@@ -770,21 +771,7 @@ def _merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
 
 
 def _shadow(text: str, *, case_sensitive: bool) -> tuple[str, list[tuple[int, int]]]:
-    output: list[str] = []
-    mapping: list[tuple[int, int]] = []
-    for index, char in enumerate(text):
-        value = unicodedata.normalize("NFKC", char)
-        if not case_sensitive:
-            value = value.casefold()
-        if value.isspace():
-            value = " "
-        for item in value:
-            if item == " " and output and output[-1] == " ":
-                mapping[-1] = (mapping[-1][0], index + 1)
-                continue
-            output.append(item)
-            mapping.append((index, index + 1))
-    return "".join(output), mapping
+    return normalized_shadow(text, case_sensitive=case_sensitive)
 
 
 def _literal_occurrences(text: str, revision: ContentCleanupRuleRevision) -> list[DetectedOccurrence]:
@@ -804,14 +791,14 @@ def _literal_occurrences(text: str, revision: ContentCleanupRuleRevision) -> lis
     if mode == "NORMALIZED":
         for start in _find_all(shadow, needle):
             end = start + len(needle)
-            original_start, original_end = mapping[start][0], mapping[end - 1][1]
+            original_start, original_end = source_span(mapping, start, end)
             if _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
                 result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_NORMALIZED", "NORMALIZED_EXACT", ("NFKC", "WHITESPACE_NORMALIZED")))
         return result
     exact_ranges: set[tuple[int, int]] = set()
     for start in _find_all(shadow, needle):
         end = start + len(needle)
-        original_start, original_end = mapping[start][0], mapping[end - 1][1]
+        original_start, original_end = source_span(mapping, start, end)
         if _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
             exact_ranges.add((original_start, original_end))
             result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_NORMALIZED", "NORMALIZED_EXACT", ("LITERAL_EXACT", "NFKC")))
@@ -838,7 +825,7 @@ def _literal_occurrences(text: str, revision: ContentCleanupRuleRevision) -> lis
         if best is None:
             continue
         distance, candidate_length = best
-        original_start, original_end = mapping[start][0], mapping[start + candidate_length - 1][1]
+        original_start, original_end = source_span(mapping, start, start + candidate_length)
         if (original_start, original_end) in seen or (original_start, original_end) in exact_ranges or not _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
             continue
         seen.add((original_start, original_end))

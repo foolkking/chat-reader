@@ -113,3 +113,8 @@ normalization or claim complete Unicode equivalence. The evidence retains the
 probe counts without source/rule text. Next work must preserve exact original
 offsets and protected ranges while making that normalization bounded and
 correct; canonical source must not be normalized or rewritten.
+
+Subsequent local work: [Unicode normalization repair](NOISE_UNICODE_NORMALIZATION_2026-10-17.md)
+resolves these probes with original-source provenance. The results and source
+binding above remain this earlier batch's historical checkpoint, not its later
+implementation or verification counts.

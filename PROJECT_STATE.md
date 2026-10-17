@@ -61,9 +61,18 @@ guard and removes per-hit boundary substring copies. The rule trial/bulk/
 refinement/preview/apply API path is exercised with 51 actionable candidates
 and one protected candidate. Final related API regression **194 passed /
 1 symlink-capability skipped** across 20 modules; separate disposable
-PostgreSQL 17 range/source guards **7/7**. A separate probe confirms existing
-cross-character NFKC equivalence misses; bounded normalization with exact
-raw-offset mapping is the next open repair, not claimed complete by this batch.
+PostgreSQL 17 range/source guards **7/7** at that checkpoint. The subsequent
+[Unicode repair](docs/execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md)
+fixes cross-character NFKC misses with mapped original-source envelopes, not
+canonical text rewriting. Runtime Unicode 14.0.0 differential checks enumerate
+18,859 selected scalars / 113,154 comparisons plus 2,000 mixed samples;
+the selection predicate and separate Hangul composition cases are documented.
+Current related regression **237 passed / 1 capability skipped** across 22
+modules; fresh PostgreSQL 17 Unicode/range/source suites **10/10**. Refined
+deletion, protected text and pre-repair consent guards pass. Ordinary normalized
+text keeps a fast path; full provenance costs more for compatibility/combining
+input. Function-only allocation/timing is documented, not OOM/load acceptance.
+All these optimizations remain local, not production.
 
 | Item | Verified state |
 | --- | --- |

@@ -1,5 +1,35 @@
 # Testing
 
+## Local Unicode normalization — 2026-10-17
+
+The [Unicode follow-up](execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md)
+reproduced **23 failed / 5 passed** before the repair. Final related cleanup
+regression passes **237 / 1 skipped** across 22 non-PostgreSQL modules, including
+43 new cases. The outside-symlink capability skip and Starlette/httpx warning
+remain explicit. Runtime Unicode 14.0.0 checks enumerate every scalar with
+decomposition metadata, nonzero combining class, changed casefold, or a
+precomposed Hangul value: 18,859 scalars in three contexts/two case settings
+(**113,154 comparisons**), plus 2,000 deterministic mixed cases. Separate
+vectors cover Hangul Jamo composition. These compare the complete shadow key to
+standard-library NFKC → optional casefold → whitespace collapse; they are not
+the external Unicode conformance corpus.
+
+Additional tests cover nonmonotonic source spans, stable equal-class ordering,
+interleaved composition, bounded work on an 8,193-code-point combining run,
+raw exact non-normalization, normalized/fuzzy protection, and four real API
+trial/learn/refine/preview/apply workflows. Pre-repair partial-match consent
+conflicts under current validation instead of expanding to newly matched text.
+Separate fresh PostgreSQL 17 Unicode/range/source suites pass **10/10**,
+including canonical version history and offline revision publication; both
+task clusters stop cleanly. Synthetic function-only timing/allocation retains
+the first implementation's higher costs and the compact-origin follow-up;
+ordinary fast-path and full-provenance costs are distinguished.
+
+No full API/PostgreSQL 16, Web/build/browser, Reader/Share/Offline package,
+Linux PID 1, service RSS/load or production acceptance is implied. Schema stays
+0051; existing databases, imports and production are untouched. No CI, push or
+deployment occurred.
+
 ## Local literal matching — 2026-10-17
 
 The [literal follow-up](execution/NOISE_LITERAL_MATCHING_2026-10-17.md) passes
@@ -15,7 +45,8 @@ implementation; both task clusters stopped cleanly. Neither existing databases
 nor production were used. Synthetic boundary-only allocation/timing evidence
 records both improvements and the long-whitespace timing tradeoff; it is not
 service RSS or OOM/load acceptance. Three probes still reproduce cross-character
-NFKC equivalence misses; that repair remains open. No full API/PostgreSQL 16,
+NFKC equivalence misses at that checkpoint; the Unicode follow-up above owns
+their later repair. No full API/PostgreSQL 16,
 Web/browser/build, Reader/Share/Offline or Linux PID 1 gate is claimed for this
 batch. Syntax, links, source-bound JSON and diff checks pass. No CI, push or
 deployment occurred.

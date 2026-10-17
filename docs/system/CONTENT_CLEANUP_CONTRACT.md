@@ -103,12 +103,35 @@ unchanged. Boundary checks use positional whitespace matching and bounded
 Unicode whitespace, LF line boundaries and absolute source offsets are retained.
 This work is not deployed.
 
-The [local regression and allocation record](../execution/NOISE_LITERAL_MATCHING_2026-10-17.md)
-also records an unresolved normalization defect: per-code-point NFKC does not
-always match equivalent forms spanning characters (including combining marks
-and Hangul Jamo). Full normalization equivalence remains intended behavior,
-not an accepted reduction of scope. Repair must preserve original source/offset
-authority; normalizing canonical text is not an alternative.
+### Unicode normalization follow-up (local, 2026-10-17)
+
+The [subsequent repair](../execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md)
+resolves the earlier per-code-point NFKC misses. Normalized/approximate user
+literals now use full NFKC, optional casefold, then Unicode whitespace collapse.
+Canonical ordering and composition span characters, including Hangul and
+zero-combining-class composition. Raw exact matching is unchanged.
+
+`cleanup_normalization.py` maps decomposition atoms back to original Python
+code-point offsets; already-NFKC text uses direct provenance. Non-starters are
+stably bucketed by their bounded combining class before standard-library NFC.
+Compact source-origin storage avoids a second full source decomposition.
+The raw range is the **smallest contiguous envelope** of all contributing
+atoms, not necessarily a monotonic first/last mapping. It can include an
+intervening mark not present in a partial normalized literal. This is not a
+grapheme editor: the complete original envelope is shown for review, defaults
+to KEEP/PROTECTED, and its original subranges may be explicitly refined.
+Protection applies to the whole envelope. Only confirmed raw intervals are
+removed; retained text, CRLF and protected decomposed text are never normalized.
+
+Old choices retain their exact stored bounds. If a pre-repair candidate no
+longer matches those bounds, preview/apply conflict rather than silently widen
+consent. Rule identities/revisions, matcher profile, APIs and schema remain
+unchanged; no scan or source backfill occurs. The implementation uses the
+runtime Unicode database; the local differential record is Unicode 14.0.0,
+not an external conformance corpus or a future-version guarantee. Full
+provenance uses linear intermediate storage and is costlier than the incorrect
+per-code-point implementation on compatibility/combining input; it is not a
+service memory limit or OOM guarantee. This repair is not deployed.
 
 ### Source identity and concurrent editing (local, 2026-10-08)
 
