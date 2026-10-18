@@ -32,7 +32,7 @@ async function fixture(browser: Browser, request: APIRequest, baseURL: string, w
   const dialog = page.getByTestId("content-cleanup-dialog");
   const select = async () => {
     if (width < 1024) await dialog.getByRole("button", { name: /^(全部候选|All candidates)$/ }).click();
-    await dialog.getByRole("button", { name: /选择全部匹配项|Select all matching/ }).click();
+    await dialog.getByRole("button", { name: /选择全部普通匹配|Select all ordinary matches/ }).click();
     await expect(dialog.getByRole("button", { name: /预览 1 项清理|Preview 1 removals/ })).toBeEnabled();
   };
   const rescan = () => dialog.getByRole("button", { name: /重新扫描原对话|Rescan conversations/, exact: true }).click();

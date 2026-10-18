@@ -246,7 +246,7 @@ test("768px: bulk-save count survives a failed candidate refresh and reopening",
   try {
     const pattern = `**/api/content-cleanup/scans/${f.scanId}/review?*`;
     await f.page.route(pattern, (route) => route.fulfill({ status: 503, json: { detail: "Synthetic candidate read failed" } }));
-    await f.dialog.getByRole("button", { name: "Select all matching", exact: true }).click();
+    await f.dialog.getByRole("button", { name: "Select all ordinary matches", exact: true }).click();
     await expect.poll(async () => (await f.scan()).delete_count).toBe(2);
     await expect(f.dialog.getByText(/Selection saved/)).toBeVisible();
     await expect(f.dialog.getByRole("button", { name: "Preview 2 removals", exact: true })).toBeEnabled();

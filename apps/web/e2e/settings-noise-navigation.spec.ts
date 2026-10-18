@@ -84,7 +84,7 @@ for (const width of [375, 768, 1440]) {
       await expect(scope).toContainText("Synthetic Alpha 000", { timeout: 3_000 });
       await scope.getByRole("button", { name: /此对话的全部规则|All rules in this conversation/ }).click();
       await expect(scope).toContainText(/52 个候选|52 candidates/);
-      await f.dialog.getByRole("button", { name: /选择全部匹配项|Select all matching/ }).click();
+      await f.dialog.getByRole("button", { name: /选择全部普通匹配|Select all ordinary matches/ }).click();
       await expect.poll(async () => (await f.scan()).delete_count).toBe(52);
       const selected = await (await f.context.request.get(`${f.url}/occurrences?selected_only=true&limit=100`)).json();
       expect(selected).toHaveLength(52);
@@ -255,7 +255,7 @@ for (const width of [375, 768, 1440]) {
       if (width < 1024) await dialog.getByRole("button", { name: /^(全部候选|All candidates)$/ }).click();
       await expect(dialog.getByRole("checkbox", { name: /处理|Process/ })).toHaveCount(2);
       await expect(dialog.getByRole("status").filter({ hasText: /已选 0 项|0 selected/ })).toBeVisible();
-      await dialog.getByRole("button", { name: /选择全部匹配项|Select all matching/ }).click();
+      await dialog.getByRole("button", { name: /选择全部普通匹配|Select all ordinary matches/ }).click();
       await expect(dialog.getByRole("button", { name: /预览 1 项清理|Preview 1 removals/ })).toBeEnabled();
       await shot(page, `import-review-${width}`);
       await page.keyboard.press("Escape");

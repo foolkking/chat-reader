@@ -34,7 +34,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       let dialog = await open();
       if (width < 1024) await dialog.getByRole("button", { name: /全部候选|All candidates/, exact: true }).click();
       await expect(dialog.getByRole("checkbox", { name: /处理|Process/ }).first()).not.toBeChecked();
-      await dialog.getByRole("button", { name: /选择全部匹配项|Select all matching/, exact: true }).click();
+      await dialog.getByRole("button", { name: /选择全部普通匹配|Select all ordinary matches/, exact: true }).click();
       await expect.poll(async () => (await scan()).delete_count).toBe(125);
       await dialog.getByRole("button", { name: /下一页|Next/, exact: true }).click();
       await expect(dialog.getByRole("checkbox", { name: /处理|Process/ }).first()).toBeChecked();

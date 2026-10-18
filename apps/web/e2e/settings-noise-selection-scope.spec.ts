@@ -53,7 +53,7 @@ for (const width of [375, 768, 1440]) {
     try {
       await expect(f.dialog.getByRole("button").filter({ hasText: "Synthetic scope 1" })).toContainText(/1 项受保护|1 protected/);
       await f.openGroup(1);
-      await f.dialog.getByRole("button", { name: /选择全部匹配项|Select all matching/ }).click();
+      await f.dialog.getByRole("button", { name: /选择全部普通匹配|Select all ordinary matches/ }).click();
       await expect.poll(async () => (await f.scan()).delete_count).toBe(51);
       await expect(f.dialog.getByRole("region", { name: /当前审查范围|Current review scope/ })).toContainText(/此范围已选 51 项|51 selected in this scope/);
       await f.openGroup(2);
@@ -105,7 +105,7 @@ for (const legacy of [false, true]) {
     const f = await fixture(browser, playwright.request, baseURL!, 375);
     try {
       await f.openGroup(1);
-      await f.dialog.getByRole("button", { name: /选择全部匹配项/ }).click();
+      await f.dialog.getByRole("button", { name: /选择全部普通匹配/ }).click();
       await expect.poll(async () => (await f.scan()).delete_count).toBe(51);
       const pattern = `**/api/content-cleanup/scans/${f.scanId}/review?*`;
       await f.page.route(pattern, async route => {

@@ -179,7 +179,7 @@ for (const width of [375, 1440]) {
       await openSettingsNoiseReview(page, scanId);
       const dialog = page.getByTestId("content-cleanup-dialog");
       if (width < 1024) await dialog.getByRole("button", { name: zh ? "全部候选" : "All candidates", exact: true }).click();
-      await dialog.getByRole("button", { name: zh ? "选择全部匹配项" : "Select all matching", exact: true }).click();
+      await dialog.getByRole("button", { name: zh ? "选择全部普通匹配" : "Select all ordinary matches", exact: true }).click();
       await expect.poll(async () => (await scan()).delete_count).toBe(2);
       const first = dialog.locator("article").filter({ has: page.getByRole("checkbox", { name: `${zh ? "处理" : "Process"} Cite turn2search1`, exact: true }) });
       await first.getByRole("button", { name: zh ? "调整删除范围" : "Adjust deletion ranges", exact: true }).click();

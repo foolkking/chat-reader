@@ -50,7 +50,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       expect((await scan(ignoredScan)).occurrence_count).toBe(0);
       const details = dialog.getByRole("button", { name: /上下文与规则|Context and rules/ });
       if (await details.getAttribute("aria-expanded") !== "true") await details.click();
-      await dialog.getByRole("button", { name: /记住此类噪声|Remember this noise/, exact: true }).click();
+      await dialog.getByRole("button", { name: /查看／修改匹配规则|View \/ edit matching rule/, exact: true }).click();
       const editor = dialog.getByRole("region", { name: /学习噪声规则|Learn noise rule/ });
       await editor.getByLabel(/规则名称|Rule name/).fill("Synthetic learned rule");
       await editor.getByLabel(/匹配文本|Match text/, { exact: true }).fill(trailer);

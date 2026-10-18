@@ -65,7 +65,7 @@ for (const width of [375, 768, 1440]) {
       await expect(candidate.getByRole("button", { name: /以后忽略这种情况|Ignore this case in future/ })).toBeVisible();
       await candidate.getByRole("checkbox").check();
       await expect.poll(async () => (await scan()).delete_count).toBe(1);
-      await expect(candidate.getByRole("button", { name: /记住此类噪声|Remember this noise/ })).toBeEnabled();
+      await expect(candidate.getByRole("button", { name: /查看／修改匹配规则|View \/ edit matching rule/ })).toBeEnabled();
       await expect(toggle).toHaveAttribute("aria-expanded", "true");
       if (process.env.SETTINGS_SCREENSHOT_DIR) await dialog.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/layout-detail-${width}.png` });
       await toggle.focus(); await page.keyboard.press("Enter");

@@ -217,7 +217,7 @@ test("1440px: saving an exception in selected-only view leaves other decisions i
   const f = await fixture(browser, playwright.request, baseURL!, 1440, 2);
   try {
     await f.open();
-    await f.dialog.getByRole("button", { name: /选择全部匹配项|Select all matching/ }).click();
+    await f.dialog.getByRole("button", { name: /选择全部普通匹配|Select all ordinary matches/ }).click();
     await expect.poll(async () => (await f.scan()).delete_count).toBe(2);
     await f.dialog.getByRole("checkbox", { name: /只看已选项|Selected only/ }).check();
     await f.edit();
