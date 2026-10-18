@@ -1,34 +1,37 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.database import get_db
+from app.models.background_job import BackgroundJob
 from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfileAlias, ImportProfilePublication, ImportProfileRevision, ImportStructureFamily
 from app.models.import_record import ImportRecord
+from app.models.project import Project
 from app.models.source_artifact import SourceArtifact
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, publish_revision, related_profile_ids, revision_payload, visible_profile
 from app.services.administration import require_root_admin, record_admin_audit, request_id_from
 from app.services.adaptive_import.service import (
     MAX_ADAPTIVE_FILES,
-    add_session_source,
+    add_session_source_stream,
     begin_session,
     cancel_session,
     check_family_health,
-    finalize_session,
     list_profiles,
     preview_family_mapping,
     reanalyze_session,
     remove_input_group,
     remove_source_paths,
     remove_session_files,
+    queue_session_analysis,
     replace_session_artifact,
     resolve_grouping,
     select_profile_revision,
@@ -38,7 +41,13 @@ from app.services.adaptive_import.service import (
 )
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 from app.services.feature_policies import effective_import_size_mb, get_feature_policy
-from app.services.uploads import UploadLimitError, bounded_upload_analysis, read_upload_bounded
+from app.services.uploads import (
+    UploadLimitError,
+    bounded_analysis_admission_sync,
+    bounded_upload_staging_sync,
+    read_upload_bounded_sync,
+    upload_size,
+)
 
 router = APIRouter(tags=["adaptive-import"])
 
@@ -72,10 +81,15 @@ class ProfileUpdateRequest(BaseModel):
     status: str | None = None
 
 
+class ImportDestinationRequest(BaseModel):
+    target_project_id: uuid.UUID | None = None
+
+
 @router.post("/api/adaptive-import/sessions", status_code=status.HTTP_201_CREATED)
-async def create_adaptive_import_session(
+def create_adaptive_import_session(
     files: list[UploadFile] = File(...),
     repair_profile_id: uuid.UUID | None = Form(default=None),
+    target_project_id: uuid.UUID | None = Form(default=None),
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
@@ -85,27 +99,51 @@ async def create_adaptive_import_session(
         raise HTTPException(status_code=422, detail={"code": "FILE_COUNT_LIMIT", "message": f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once."})
     if not get_feature_policy(db).allow_user_import:
         raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
+    if target_project_id is not None:
+        target_project = get_owned(db, Project, target_project_id, ownership_scope)
+        if target_project is None:
+            raise HTTPException(status_code=404, detail={"code": "IMPORT_PROJECT_NOT_FOUND", "message": "The selected import project is unavailable."})
+        if target_project.is_archived:
+            raise HTTPException(status_code=409, detail={"code": "IMPORT_PROJECT_ARCHIVED", "message": "Restore the selected project before importing into it."})
+        if target_project.is_default:
+            target_project_id = None
     max_bytes = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
     # Keep the existing SESSION_TOO_LARGE contract for the session budget;
     # this additional guard represents only the upload gateway's request ceiling.
     total_limit = get_settings().import_gateway_file_limit_mb * 1024 * 1024
-    read_bytes = 0
+    sizes = [upload_size(item) for item in files]
+    if any(size > max_bytes for size in sizes):
+        raise HTTPException(
+            status_code=413,
+            detail={"code": "FILE_TOO_LARGE", "message": "A source file exceeds the configured per-file limit."},
+        )
+    if sum(sizes) > total_limit:
+        raise HTTPException(
+            status_code=413,
+            detail={"code": "IMPORT_TOTAL_SIZE_LIMIT", "message": "The combined files exceed this deployment's import limit."},
+        )
     record: ImportRecord | None = None
     try:
-        async with bounded_upload_analysis(files):
+        with bounded_upload_staging_sync(files):
             record = begin_session(
                 db,
                 len(files),
                 repair_profile_id=repair_profile_id,
+                target_project_id=target_project_id,
                 owner_user_id=ownership_scope.owner_user_id,
             )
             for item in files:
-                content = await read_upload_bounded(item, max_bytes)
-                read_bytes += len(content)
-                if read_bytes > total_limit:
-                    raise UploadLimitError("IMPORT_TOTAL_SIZE_LIMIT", "The combined files exceed this deployment's import limit.", status_code=413)
-                add_session_source(db, record, item.filename or "upload", content)
-            record = finalize_session(db, record)
+                item.file.seek(0)
+                add_session_source_stream(
+                    db,
+                    record,
+                    item.filename or "upload",
+                    item.file,
+                    max_file_bytes=max_bytes,
+                )
+            queue_session_analysis(db, record)
+            db.commit()
+            db.refresh(record)
         return session_payload(record)
     except UploadLimitError as exc:
         db.rollback()
@@ -144,7 +182,15 @@ def get_adaptive_import_session(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
-    return session_payload(record)
+    result = session_payload(record)
+    task_id = result.get("analysis_task_id")
+    if task_id and record.session_state in {"ANALYZING", "COLLECTING"}:
+        job = get_owned(db, BackgroundJob, uuid.UUID(str(task_id)), ownership_scope)
+        if job is not None and job.job_type == "adaptive_import_analysis":
+            result.update(phase=job.phase, progress=job.progress)
+            if job.status == "cancelling":
+                result["state"] = "CANCELING"
+    return result
 
 
 @router.delete("/api/adaptive-import/sessions/{import_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -155,7 +201,44 @@ def cancel_adaptive_import_session(
 ) -> None:
     record = _record(import_id, db, ownership_scope)
     try:
-        cancel_session(record)
+        task_id = (record.analysis_summary or {}).get("analysis_task_id")
+        job = None
+        if task_id:
+            try:
+                job = (
+                    db.query(BackgroundJob)
+                    .filter(
+                        BackgroundJob.id == uuid.UUID(str(task_id)),
+                        ownership_scope.predicate(BackgroundJob),
+                        BackgroundJob.job_type == "adaptive_import_analysis",
+                    )
+                    .with_for_update()
+                    .one_or_none()
+                )
+            except ValueError:
+                job = None
+        if job is not None and job.status == "processing":
+            now = datetime.now(timezone.utc)
+            job.status = "cancelling"
+            job.phase = "cancelling"
+            job.heartbeat_at = now
+            # The worker owns a transaction on this ImportRecord. Only update
+            # its job here; writing the record would wait on that transaction
+            # and could deadlock the worker's final cancellation check.
+        elif job is not None and job.status == "cancelling":
+            pass
+        else:
+            # A terminal analysis job does not own the record any more. Lock
+            # and refresh it before deleting files: canonical commit may have
+            # started after the initial read above.
+            db.refresh(record, with_for_update=True)
+            if job is not None and job.status == "queued":
+                now = datetime.now(timezone.utc)
+                job.status = "cancelled"
+                job.phase = "cancelled"
+                job.completed_at = now
+                job.heartbeat_at = now
+            cancel_session(record)
         db.commit()
     except AdaptiveImportError as exc:
         db.rollback()
@@ -171,13 +254,17 @@ def update_adaptive_import_groups(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     try:
-        resolve_grouping(db, record, [item.model_dump(mode="json") for item in payload.groups])
+        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            resolve_grouping(db, record, [item.model_dump(mode="json") for item in payload.groups])
         db.commit()
         db.refresh(record)
         return session_payload(record)
     except AdaptiveImportError as exc:
         db.rollback()
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
 
 
 @router.post("/api/adaptive-import/sessions/{import_id}/reanalyze")
@@ -188,17 +275,59 @@ def reanalyze_adaptive_import_session(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     try:
-        reanalyze_session(db, record)
+        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            reanalyze_session(db, record)
         db.commit()
         db.refresh(record)
         return session_payload(record)
     except AdaptiveImportError as exc:
         db.rollback()
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
+
+
+@router.put("/api/adaptive-import/sessions/{import_id}/destination")
+def update_adaptive_import_destination(
+    import_id: uuid.UUID,
+    payload: ImportDestinationRequest,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
+    record = (
+        db.query(ImportRecord)
+        .filter(ImportRecord.id == record.id)
+        .with_for_update()
+        .one()
+    )
+    if record.status in {"queued", "processing", "committed"} or record.session_state in {"IMPORTING", "COMPLETED", "CANCELED"}:
+        raise HTTPException(status_code=409, detail={"code": "IMPORT_DESTINATION_LOCKED", "message": "The destination can no longer be changed for this import."})
+
+    target_project_id = payload.target_project_id
+    if target_project_id is not None:
+        target_project = get_owned(db, Project, target_project_id, ownership_scope)
+        if target_project is None:
+            raise HTTPException(status_code=404, detail={"code": "IMPORT_PROJECT_NOT_FOUND", "message": "The selected import project is unavailable."})
+        if target_project.is_archived:
+            raise HTTPException(status_code=409, detail={"code": "IMPORT_PROJECT_ARCHIVED", "message": "Restore the selected project before importing into it."})
+        if target_project.is_default:
+            target_project_id = None
+
+    summary = dict(record.analysis_summary or {})
+    summary["target_project_id"] = str(target_project_id) if target_project_id else None
+    commit_options = dict(summary.get("commit_options") or {})
+    commit_options["project_id"] = str(target_project_id) if target_project_id else None
+    summary["commit_options"] = commit_options
+    record.analysis_summary = summary
+    db.commit()
+    db.refresh(record)
+    return session_payload(record)
 
 
 @router.put("/api/adaptive-import/sessions/{import_id}/artifacts/{artifact_id}")
-async def replace_adaptive_import_artifact(
+def replace_adaptive_import_artifact(
     import_id: uuid.UUID,
     artifact_id: uuid.UUID,
     file: UploadFile = File(...),
@@ -212,8 +341,10 @@ async def replace_adaptive_import_artifact(
     new_path = None
     try:
         max_bytes = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
-        async with bounded_upload_analysis([file]):
-            content = await read_upload_bounded(file, max_bytes)
+        sizes = [artifact.byte_size for artifact in record.artifacts if artifact.id != artifact_id]
+        sizes.append(upload_size(file))
+        with bounded_analysis_admission_sync(sizes):
+            content = read_upload_bounded_sync(file, max_bytes)
             old_path, new_path = replace_session_artifact(
                 db,
                 record,
@@ -259,7 +390,8 @@ def exclude_adaptive_import_group(
     record = _record(import_id, db, ownership_scope)
     group = _group(import_id, group_id, db)
     try:
-        removed_paths = remove_input_group(db, record, group)
+        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            removed_paths = remove_input_group(db, record, group)
         db.commit()
         db.refresh(record)
         remove_source_paths(removed_paths)
@@ -267,6 +399,9 @@ def exclude_adaptive_import_group(
     except AdaptiveImportError as exc:
         db.rollback()
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
 
 
 @router.post("/api/adaptive-import/sessions/{import_id}/families/{family_id}/mapping")
@@ -280,15 +415,19 @@ def save_family_mapping(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        verify_family_mapping(
-            db, record, family, mapping_spec=payload.mapping_spec, profile_name=payload.profile_name.strip()
-        )
+        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            verify_family_mapping(
+                db, record, family, mapping_spec=payload.mapping_spec, profile_name=payload.profile_name.strip()
+            )
         db.commit()
         db.refresh(record)
         return session_payload(record)
     except AdaptiveImportError as exc:
         db.rollback()
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
     except ValueError as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail={"code": "PROFILE_VALIDATION_FAILED", "message": str(exc)}) from exc
@@ -303,12 +442,16 @@ def check_format_health(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        result = check_family_health(db, record, family)
+        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            result = check_family_health(db, record, family)
         db.commit()
         return result
     except AdaptiveImportError as exc:
         db.rollback()
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
 
 
 @router.post("/api/adaptive-import/sessions/{import_id}/families/{family_id}/mapping/preview")
@@ -322,15 +465,18 @@ def preview_family_mapping_route(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        return preview_family_mapping(
-            record,
-            family,
-            mapping_spec=payload.mapping_spec,
-            profile_name=payload.profile_name.strip(),
-            sample_group_id=payload.sample_group_id,
-        )
+        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            return preview_family_mapping(
+                record,
+                family,
+                mapping_spec=payload.mapping_spec,
+                profile_name=payload.profile_name.strip(),
+                sample_group_id=payload.sample_group_id,
+            )
     except AdaptiveImportError as exc:
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        raise _upload_error(exc) from exc
 
 
 @router.post("/api/adaptive-import/sessions/{import_id}/families/{family_id}/profile")
@@ -344,13 +490,17 @@ def choose_family_profile(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        select_profile_revision(db, record, family, payload.revision_id)
+        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            select_profile_revision(db, record, family, payload.revision_id)
         db.commit()
         db.refresh(record)
         return session_payload(record)
     except AdaptiveImportError as exc:
         db.rollback()
         raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
 
 
 @router.get("/api/import-formats")
@@ -491,6 +641,11 @@ def _record(
     return record
 
 
+def _analysis_sizes(record: ImportRecord) -> list[int]:
+    """Return persisted source sizes for admission without reading file bodies."""
+    return [max(0, int(artifact.byte_size or 0)) for artifact in record.artifacts]
+
+
 def _family(import_id: uuid.UUID, family_id: uuid.UUID, db: Session) -> ImportStructureFamily:
     family = db.get(ImportStructureFamily, family_id)
     if family is None or family.import_id != import_id:
@@ -519,3 +674,11 @@ def _http_error(exc: AdaptiveImportError) -> HTTPException:
         "GROUP_ARTIFACT_SHARED",
     } else 422
     return HTTPException(status_code=status_code, detail={"code": exc.code, "message": str(exc), "diagnostic": exc.diagnostic()})
+
+
+def _upload_error(exc: UploadLimitError) -> HTTPException:
+    return HTTPException(
+        status_code=exc.status_code,
+        detail={"code": exc.code, "message": str(exc)},
+        headers={"Retry-After": "15"} if exc.status_code == 429 else None,
+    )

@@ -4,6 +4,34 @@ from collections.abc import Iterable, Iterator, Sequence
 import unicodedata
 
 
+class _CompactSpans(Sequence[tuple[int, int]]):
+    """Operation-local provenance without one Python tuple/int pair per character."""
+    def __init__(self):
+        self._values = array("Q")
+
+    def __len__(self) -> int:
+        return len(self._values) // 2
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return [self[item] for item in range(*index.indices(len(self)))]
+        if index < 0:
+            index += len(self)
+        if not 0 <= index < len(self):
+            raise IndexError(index)
+        return self._values[index * 2], self._values[index * 2 + 1]
+
+    def __setitem__(self, index: int, span: tuple[int, int]) -> None:
+        if index < 0:
+            index += len(self)
+        if not 0 <= index < len(self):
+            raise IndexError(index)
+        self._values[index * 2], self._values[index * 2 + 1] = span
+
+    def append(self, span: tuple[int, int]) -> None:
+        self._values.extend(span)
+
+
 def _ordered_decomposition(text: str, form: str) -> Iterator[tuple[str, int]]:
     # Bucket non-starters by canonical combining class, preserving equal-class
     # order. Classes are bounded to 0..255: no quadratic insertion ordering of
@@ -54,10 +82,12 @@ def _nfkc_with_spans(text: str) -> tuple[str, Iterable[tuple[int, int]]]:
     return normalized, spans
 
 
-def normalized_shadow(text: str, *, case_sensitive: bool) -> tuple[str, list[tuple[int, int]]]:
+def normalized_shadow(
+    text: str, *, case_sensitive: bool, compact: bool = False,
+) -> tuple[str, Sequence[tuple[int, int]]]:
     normalized, spans = _nfkc_with_spans(text)
     output: list[str] = []
-    mapping: list[tuple[int, int]] = []
+    mapping = _CompactSpans() if compact else []
     for char, span in zip(normalized, spans, strict=True):
         for item in char if case_sensitive else char.casefold():
             if item.isspace():

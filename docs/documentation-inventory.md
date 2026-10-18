@@ -1,5 +1,66 @@
 # Markdown 文档台账
 
+## Current local implementation — 2026-10-17
+
+The current worktree implementation for the table tool, TOC return checkpoint,
+protected cleanup review and annotation projection is described by:
+
+- `system/USER_FLOWS.md` — user-visible behavior and recovery paths.
+- `system/CONTENT_CLEANUP_CONTRACT.md` — rule versions, protection preview,
+  rescan/comparison, scan memory boundary and migration `20261017_0052`.
+- `system/CONTEXT_PACKAGE_CONTRACT.md` — Context 1.1, root `annotations.md`,
+  manifest files/hashes, online download and Skill compatibility.
+- `api-reference.md` — local-only endpoint and compatibility summary.
+- `PROJECT_STATE.md` — current source, verification boundary and no-release
+  status.
+- `execution/CHAT_READER_TABLE_TOC_CLEANUP_ANNOTATIONS_2026-10-17.md` —
+  dated implementation and verification evidence.
+
+The default fixed Skill ZIPs are intentionally not replaced. The two editable
+Skill runtimes and any reviewed local build are separate artifacts. This entry
+does not claim CI, browser/PWA, Linux worker, low-memory soak, push or
+deployment acceptance.
+
+## Plain Markdown and contextual file-drop enhancement — 2026-10-18
+
+`execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md` owns the local
+verification for one-assistant plain Markdown import, route-aware file drops,
+destination persistence and the current-schema browser limitation. The current
+contract is in `system/ADAPTIVE_IMPORT_CONTRACT.md`; no migration, CI, push or
+deployment was performed.
+
+## Multi-file import stability — 2026-10-18
+
+`execution/IMPORT_STABILITY_2026-10-18.md` owns the local stability evidence for
+bounded multi-file upload admission, durable queued initial adaptive analysis,
+Task Center recovery/cancellation and synchronous downstream FastAPI routes, and
+retryable resource-pressure responses, thread-safe admission initialization,
+input-scaled memory headroom, host/cgroup-aware probes, streamed draft rollback
+and per-message compact noise normalization reuse. The import workspace maps
+the new memory/queue failure codes to bilingual recovery instructions.
+Current contracts are `system/ADAPTIVE_IMPORT_CONTRACT.md` and
+`system/CONTENT_CLEANUP_CONTRACT.md`. `testing.md` keeps test boundaries.
+`evidence/import-service-oom-2026-10-18.json` is a sanitized read-only kernel/
+container observation, not a stress test or repair acceptance.
+`evidence/noise-detection-compact-reuse[-mixed]-2026-10-18.json` bind final
+function-only timing/allocation to both source hashes; the corresponding
+non-compact `noise-detection-reuse*` files retain superseded memory-regression
+iterations. `evidence/noise-review-allocation-2026-10-18.json` compares bounded
+synthetic candidate-page source projection with a reduced old-style full-version
+join. `evidence/import-analysis-memory-2026-10-18.json` measures the Python
+allocation ratio for two synthetic JSON shapes and binds the analyzer source
+hash; it supports the configurable admission multiplier but is not RSS/OOM
+acceptance. `scripts/performance/measure-import-analysis-memory.py`,
+`scripts/performance/measure-noise-detection.py` and
+`scripts/performance/measure-noise-review.py` reproduce the synthetic
+measurements without user data.
+The same stability change configures Starlette's pre-route multipart spool
+threshold through `MULTIPART_SPOOL_MAX_SIZE_KB` (default 64 KiB), so a
+multi-file batch cannot accumulate one megabyte of in-memory spool per file
+before route-level admission runs.
+This batch does not claim Linux/PID1, long-run low-memory, CI, or deployment
+acceptance, nor noise-specific production OOM causation.
+
 ## Local Unicode normalization — 2026-10-17
 
 `execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md` owns cross-character NFKC

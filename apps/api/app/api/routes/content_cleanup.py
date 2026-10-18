@@ -24,6 +24,7 @@ from app.schemas.content_cleanup import (
     CleanupApplyRead,
     CleanupApplyInput,
     CleanupFilteredDecision,
+    CleanupProtectionPreview,
     CleanupDecisionBatch,
     CleanupRangeUpdate,
     CleanupOccurrenceRead,
@@ -383,6 +384,18 @@ def get_rescan_request(scan_id: uuid.UUID, request_id: uuid.UUID, request: Reque
         "scan": _scan_read(db, scan).model_dump(mode="json") if scan else None}
 
 
+@router.get("/scans/{scan_id}/comparison")
+def get_scan_comparison(scan_id: uuid.UUID, request: Request, limit: int = Query(20, ge=1, le=50),
+                        offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
+    from app.services.cleanup_comparison import compare_scans
+    try:
+        return compare_scans(db, ownership_scope_from_request(request), scan_id, limit=limit, offset=offset)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
 @router.patch("/scans/{scan_id}/decisions/filter")
 def patch_filtered_decisions(scan_id: uuid.UUID, payload: CleanupFilteredDecision, request: Request, db: Session = Depends(get_db)) -> dict:
     from app.services.cleanup_review import decide_filter
@@ -397,6 +410,21 @@ def patch_filtered_decisions(scan_id: uuid.UUID, payload: CleanupFilteredDecisio
     except ValueError as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/scans/{scan_id}/protection-preview")
+def preview_protected_matches(scan_id: uuid.UUID, request: Request,
+                              payload: CleanupProtectionPreview, db: Session = Depends(get_db)) -> dict:
+    from app.services.cleanup_protection import preview_set
+    if _owned_scan_query(db, request).filter(ContentCleanupScan.id == scan_id).first() is None:
+        raise HTTPException(status_code=404, detail="Noise scan not found.")
+    try:
+        result = preview_set(db, scan_id, **payload.model_dump())
+        result.pop("_authority", None)
+        return result
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/scans/{scan_id}/preview")
@@ -417,7 +445,8 @@ def patch_decisions(scan_id: uuid.UUID, payload: CleanupDecisionBatch, request: 
     if scan is None:
         raise HTTPException(status_code=404, detail="Noise scan not found.")
     try:
-        update_decisions(db, scan_id, {item.occurrence_id: item.decision for item in payload.decisions})
+        update_decisions(db, scan_id, {item.occurrence_id: item.decision for item in payload.decisions},
+                         protection_token=payload.protection_token)
         db.flush()
         result = _scan_read(db, scan)
         db.commit()

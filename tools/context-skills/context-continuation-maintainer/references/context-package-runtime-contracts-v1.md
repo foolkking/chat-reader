@@ -16,6 +16,27 @@ scripts/extract_context_ranges.py
 
 They are read-only with respect to the source Context Package.
 
+## Context Package 1.1 annotation projection
+
+The package format remains major version 1 and continues to read 1.0 packages.
+Version 1.1 may declare a root-level `annotations.md` member through
+`extensions.chat_reader_annotation_export`. The member is a readable projection
+of the structured `annotation` records in `conversation.canjsonl`; it is not
+Raw Conversation evidence and is never an import or return input.
+
+Readers must distinguish these states:
+
+- `included`: verify the declared `annotations.md` path, UTF-8 byte size,
+  SHA-256, and count against structured annotation records;
+- `omitted_by_request`: no path or file checksum may be required;
+- declared but missing, mismatched, or count-inconsistent: integrity error, not
+  zero annotations;
+- no extension in a 1.0 package: normal legacy compatibility.
+
+Current/Index remain under `continuation/` and retain their existing return
+contract. Unknown additive members and extension fields are preserved or
+reported safely; no package member is executed.
+
 ```text
 inspect  = what source exists?
 validate = can persisted continuation still bind safely to that source?

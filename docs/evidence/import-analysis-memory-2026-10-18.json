@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "platform": "Windows",
+  "python": "3.11.7",
+  "measurement": "Synthetic adaptive analyze_json tracemalloc and wall time; not RSS/cgroup/OOM acceptance.",
+  "source_sha256": {
+    "analysis.py": "09e7ab7257b8e577f0743ea50f6751944a19ebc4fc112e2ef20bca3e830af0aa",
+    "contracts.py": "f721410382844f4a51bbfbe9d090ff7c1edabf788d43c1203ef4f1c60e5bae47",
+    "config.py": "a33f4cae08f1ccdb0b862fcaa5afb5eaba89a071516e88b807a39eb2b21b67db"
+  },
+  "data": "Synthetic only; generated in memory; no user or production files.",
+  "rows": [
+    {
+      "case": "transcript-like",
+      "source_bytes": 2700014,
+      "peak_traced_bytes": 12066496,
+      "peak_over_input": 4.47,
+      "milliseconds": 110.629,
+      "outcome": "MAPPABLE",
+      "source_sha256": "f3a2353b5a39992c4955fe817cc3b94b4e72b5b904238fc2d115e50569f1dc91"
+    },
+    {
+      "case": "dense-small-objects",
+      "source_bytes": 1600001,
+      "peak_traced_bytes": 40010852,
+      "peak_over_input": 25.01,
+      "milliseconds": 423.529,
+      "outcome": "NO_MESSAGE_STRUCTURE",
+      "source_sha256": "032c9acf2575a133c792540b71b962af305ea8712f3365be1de94c440a85e655"
+    }
+  ]
+}

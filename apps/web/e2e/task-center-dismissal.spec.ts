@@ -647,6 +647,111 @@ test("conversation previews wait, flip inside the viewport, and cancel pending p
   expect(projectPreviewBox!.y + projectPreviewBox!.height).toBeLessThanOrEqual(280);
 });
 
+for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) for (const theme of ["light", "dark"]) {
+  test(`${width}px ${locale} ${theme}: background import analysis survives closing and exposes its result`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const importId = "77777777-7777-4777-8777-777777777777";
+    const analysisId = "88888888-8888-4888-8888-888888888888";
+    const zh = locale === "zh-CN";
+    let uploaded = 0, cancelled = 0, ready = false, committed = false, failRead = false, sessionReads = 0;
+    const completion = { import_id: importId, status: "committed", conversation_ids: [
+      "99999999-9999-4999-8999-999999999991", "99999999-9999-4999-8999-999999999992",
+    ], conversation_count: 2, message_count: 4, warnings: [], phase: "committed", progress: 100 };
+    const session = () => ({
+      import_id: importId, analysis_task_id: analysisId,
+      state: committed ? "COMPLETED" : ready ? "READY" : "ANALYZING",
+      status: committed ? "committed" : ready ? "previewed" : "analyzing",
+      phase: committed ? "committed" : ready ? "ready" : "queued", progress: ready ? 100 : 0,
+      file_count: 2, total_bytes: 32, group_count: ready ? 2 : 0, family_count: ready ? 1 : 0,
+      conversation_count: ready ? 2 : 0, message_count: ready ? 4 : 0, can_import: ready && !committed,
+      groups: [], warnings: [], analysis_summary: {}, families: ready ? [{
+        id: "44444444-4444-4444-8444-444444444443", source_mode: "JSON", display_name: "Synthetic supported format",
+        resolution_status: "EXACT_MATCH", group_count: 2, group_ids: [], matched_profile_key: "builtin:test",
+        matched_profile_id: null, matched_revision_id: null, mapping_draft: {}, validation_result: { valid: true },
+        match_evidence: {}, diagnostics: [], handling_class: "SUPPORTED", handling_reason: { recovery_action: "DIRECT_IMPORT" },
+      }] : [],
+    });
+    const analysisTask = () => ({
+      ...activeTask, job_id: analysisId, job_type: "adaptive_import_analysis",
+      status: ready ? "committed" : "queued", phase: ready ? "committed" : "queued",
+      label: "分析导入文件", source_label: "2 files · 0.1 MiB", progress: ready ? 100 : 0,
+      processed_items: ready ? 2 : 0, total_items: 2, result: { import_id: importId, state: ready ? "READY" : "ANALYZING" },
+      completed_at: ready ? "2026-10-18T01:00:00Z" : null, cancellable: !ready,
+    });
+    await page.route("**/api/**", async route => {
+      const path = new URL(route.request().url()).pathname, method = route.request().method();
+      if (path.endsWith("/cancel") || method === "DELETE") cancelled++;
+      if (path === "/api/preferences") return json(route, { theme_mode: theme, locale_mode: locale });
+      if (path === "/api/adaptive-import/sessions" && method === "POST") {
+        uploaded++;
+        return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(session()) });
+      }
+      if (path === `/api/adaptive-import/sessions/${importId}`) {
+        sessionReads++;
+        if (failRead) return route.fulfill({ status: 502, contentType: "application/json", body: '{"detail":"Synthetic status outage"}' });
+        return json(route, session());
+      }
+      if (path === `/api/tasks/${analysisId}`) return json(route, analysisTask());
+      if (path === `/api/imports/${importId}/commit`) { committed = true; return json(route, completion); }
+      if (path === `/api/imports/${importId}/status`) return json(route, completion);
+      if (path === "/api/imports/" + importId + "/content-cleanup") return json(route, { status: "NOT_REQUESTED" });
+      return mockOwnerApi(route, [], uploaded ? [analysisTask()] : []);
+    });
+    await page.goto("/");
+    if (width < 768) await page.getByTestId("mobile-sidebar-button").click();
+    await page.getByRole("button", { name: /Import data|导入数据/ }).click();
+    await page.getByTestId("import-file-input").setInputFiles([
+      { name: "synthetic-a.json", mimeType: "application/json", buffer: Buffer.from("{}") },
+      { name: "synthetic-b.json", mimeType: "application/json", buffer: Buffer.from("{}") },
+    ]);
+    await page.getByTestId("preview-import-button").click();
+    const status = page.getByTestId("import-analysis-status");
+    await expect(status).toContainText(zh ? "已加入后台分析队列" : "Queued for background analysis");
+    await expect(status).toContainText(zh ? "可以关闭此窗口继续阅读" : "close this window, keep reading");
+    await expect(page.getByTestId("commit-import-button")).toHaveCount(0);
+    await page.getByTestId("import-dialog-close").click();
+    await expect(status).toHaveCount(0);
+    // Another route and refresh must not create, repeat or cancel a task.
+    await page.goto("/search");
+    await page.reload();
+    const launcher = page.getByTestId("sidebar-tasks-button").filter({ visible: true });
+    if (width < 768 && !(await launcher.isVisible())) await page.getByTestId("mobile-sidebar-button").click();
+    await launcher.click();
+    const tasks = page.getByTestId("task-center-panel");
+    await expect(tasks.getByTestId("task-adaptive_import_analysis-queued")).toBeVisible();
+    await tasks.getByRole("button", { name: zh ? "查看导入分析" : "View import analysis", exact: true }).click();
+    await expect(tasks).toHaveCount(0);
+    await expect(status).toBeVisible();
+    expect(uploaded).toBe(1);
+    expect(cancelled).toBe(0);
+    await expect.poll(() => status.evaluate(element => Boolean(element.closest('[role="dialog"]')?.contains(document.activeElement)))).toBe(true);
+    if (width === 375 && theme === "light") {
+      failRead = true;
+      await expect(status.getByRole("alert")).toBeVisible();
+      await expect(status).toContainText(zh ? "已保存在服务器" : "saved on the server");
+      const readsBefore = sessionReads;
+      failRead = false;
+      await status.getByRole("button", { name: zh ? "重试" : "Retry", exact: true }).click();
+      await expect.poll(() => sessionReads).toBeGreaterThan(readsBefore);
+      expect(uploaded).toBe(1);
+    }
+    await status.screenshot({ path: info.outputPath(`queued-import-${width}-${locale}-${theme}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    ready = true;
+    await expect(page.getByTestId("commit-import-button")).toBeEnabled();
+    await page.getByTestId("commit-import-button").click();
+    await expect(page.getByTestId("import-completion-summary")).toBeVisible();
+    await page.getByTestId("import-dialog-close").click();
+    if (width < 768 && !(await launcher.isVisible())) await page.getByTestId("mobile-sidebar-button").click();
+    await launcher.click();
+    await expect(tasks.getByTestId("task-adaptive_import_analysis-committed")).toBeVisible();
+    await tasks.getByRole("button", { name: zh ? "查看分析结果并继续导入" : "Review analysis & continue importing", exact: true }).click();
+    await expect(page.getByTestId("import-completion-summary")).toBeVisible();
+    expect(uploaded).toBe(1);
+    expect(cancelled).toBe(0);
+  });
+}
+
 async function clickBackdrop(page: Page): Promise<void> {
   const backdrop = page.getByTestId("task-center-backdrop");
   const panel = page.getByTestId("task-center-panel");

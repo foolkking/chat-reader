@@ -354,6 +354,8 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 | `CORS_ORIGINS` | API | 直接跨域请求 origin |
 | `PUBLIC_WEB_BASE_URL` | API | Share 等公开 URL base |
 | `MAX_IMPORT_FILE_SIZE_MB` | API | 导入大小上限 |
+| `UPLOAD_HEAVY_THRESHOLD_MB`, `UPLOAD_MAX_ACTIVE_ANALYSIS`, `UPLOAD_QUEUE_MAX_SIZE`, `UPLOAD_MEMORY_RESERVE_MB`, `UPLOAD_ANALYSIS_MEMORY_FACTOR`, `UPLOAD_QUEUE_WAIT_SECONDS` | API | 重型分析串行准入、输入工作集估算、内存保留与队列 |
+| `MULTIPART_SPOOL_MAX_SIZE_KB` | API | multipart 单文件内存 spool 阈值；超过后使用任务临时目录，默认 64 KiB |
 | `IMPORT/EXPORT/OFFLINE/ASSET_STORAGE_DIR` | API/worker | artifact and attachment roots |
 | `ATTACHMENT_SCANNER`, `ALLOW_UNSCANNED_ATTACHMENTS` | API/worker | `disabled|clamav|remote` provider 与未扫描对象使用策略 |
 | `CLAMAV_HOST/PORT/TIMEOUT`, `REMOTE_SCANNER_URL/TOKEN/TIMEOUT` | API/worker | 可选本地或远程扫描节点；disabled 时不使用 |

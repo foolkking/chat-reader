@@ -44,10 +44,12 @@ function runtime(extra = {}, desktop = false, observeWorkspace) {
     "../conversations/rendered-block-registry": { getRenderedBlocks: () => [], subscribeRenderedBlocks: () => noop },
     "../conversations/reader-locator-target": { annotationNavigationTarget: value => ({ annotationId: value.id }) },
     "../conversations/text-anchor": { resolveTextAnchorRange: () => null },
+    "../exporting/direct-export-download": { DirectExportDownload: "DirectExportDownload" },
     "./notebook-view": { NotebookView: "Notebook" },
     "../../components/settings-focused-dialog": { SettingsFocusedDialog: "Settings" },
     "../../lib/offline-conflicts": { ensureNotebookConflict: async () => "synthetic-conflict" },
     "../../lib/annotation-sync": { OFFLINE_SYNC_CHANGED_EVENT: "sync" }, ...extra,
+    "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: noop }) },
   };
   function load(file) {
     if (modules.has(file)) return modules.get(file);

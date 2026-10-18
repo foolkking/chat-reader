@@ -63,12 +63,17 @@ def groups(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int, q: str =
         "total": total, "limit": limit, "offset": offset}
 
 
-def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=None, conversation_id=None, selected_only=False) -> dict:
+def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=None, conversation_id=None,
+                  selected_only=False, protection_token=None) -> dict:
     from app.services.content_cleanup import _SourceAnalysis, update_decisions
+    from app.services.cleanup_protection import authorize, reviewed
     scan = db.query(ContentCleanupScan).filter_by(id=scan_id).populate_existing().with_for_update().one()
     if scan.status != "READY":
         raise ValueError("Wait for the scan to finish before changing decisions.")
-    query = filter_occurrences(db.query(Occurrence.id).filter(Occurrence.scan_id == scan_id, Occurrence.decision.in_(("KEEP", "DELETE"))),
+    protection_digest = authorize(db, scan_id, protection_token, rule_id=rule_id,
+        conversation_id=conversation_id, selected_only=selected_only) if protection_token else None
+    query = filter_occurrences(db.query(Occurrence.id).filter(Occurrence.scan_id == scan_id,
+        Occurrence.decision.in_(("KEEP", "DELETE", "PROTECTED"))),
         rule_id=rule_id, conversation_id=conversation_id, selected_only=selected_only)
     matched, skipped, cursor = 0, 0, None
     while True:
@@ -80,19 +85,28 @@ def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=Non
         # classification without letting one old row reject the whole batch.
         eligible = []
         sources: dict[uuid.UUID, _SourceAnalysis] = {}
-        for row, version in db.query(Occurrence, MessageVersion).join(
+        for row, version_id in db.query(Occurrence, MessageVersion.id).join(
             MessageVersion, MessageVersion.id == Occurrence.message_version_id
-        ).filter(Occurrence.id.in_(ids)):
-            if version.id not in sources:
-                sources[version.id] = _SourceAnalysis(version.display_text)
-            if sources[version.id].protects(row.start_offset, row.end_offset):
+        ).filter(Occurrence.id.in_(ids)).yield_per(1):
+            if version_id not in sources:
+                source_text = db.query(MessageVersion.display_text).filter(
+                    MessageVersion.id == version_id,
+                ).scalar()
+                if source_text is None:
+                    row.decision = "CONFLICT"
+                    row.decision_updated_at = utc_now()
+                    skipped += 1
+                    continue
+                sources[version_id] = _SourceAnalysis(source_text)
+            if (decision == "DELETE" and (row.decision == "PROTECTED" or sources[version_id].protects(row.start_offset, row.end_offset))
+                    and not protection_digest and not reviewed(row, sources[version_id])):
                 row.decision = "PROTECTED"
                 row.decision_updated_at = None
                 skipped += 1
             else:
                 eligible.append(row.id)
         if eligible:
-            update_decisions(db, scan_id, {value: decision for value in eligible})
+            update_decisions(db, scan_id, {value: decision for value in eligible}, _protection_digest=protection_digest)
         db.flush()
         matched += len(eligible)
         cursor = ids[-1]
@@ -108,7 +122,7 @@ def preview_token(db: Session, scan_id: uuid.UUID) -> str:
     ).order_by(MessageVersion.id).yield_per(1):
         digest.update(f"{version_id}:{source_fingerprint(source)}\n".encode())
     for row in db.query(Occurrence.id, Occurrence.message_version_id, Message.current_version_id, Message.content_hash, MessageVersion.content_hash, Occurrence.source_content_hash, Occurrence.start_offset,
-        Occurrence.end_offset, Occurrence.decision_updated_at, Occurrence.reviewed_ranges, Message.is_deleted, Conversation.status, Conversation.deleted_at).join(
+        Occurrence.end_offset, Occurrence.decision_updated_at, Occurrence.reviewed_ranges, Occurrence.protection_review, Message.is_deleted, Conversation.status, Conversation.deleted_at).join(
         Message, Message.id == Occurrence.message_id).join(MessageVersion, MessageVersion.id == Occurrence.message_version_id).join(Conversation, Conversation.id == Occurrence.conversation_id).filter(
         Occurrence.scan_id == scan_id, Occurrence.decision == "DELETE").order_by(Occurrence.id).yield_per(250):
         digest.update(("|".join(str(value) for value in row) + "\n").encode())
@@ -131,23 +145,33 @@ def preview_changes(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int)
             fragment_count += 1
     summary = {"conversations": selected.with_entities(func.count(func.distinct(Occurrence.conversation_id))).scalar(),
         "messages": selected.with_entities(func.count(func.distinct(Occurrence.message_id))).scalar(),
-        "fragments": fragment_count}
+        "fragments": fragment_count,
+        "protected_confirmed": selected.filter(Occurrence.protection_review.is_not(None)).count()}
     message_ids = [row[0] for row in selected.with_entities(Occurrence.message_id).group_by(Occurrence.message_id).order_by(Occurrence.message_id).offset(offset).limit(limit)]
     items = []
     for message_id in message_ids:
         rows = selected.filter(Occurrence.message_id == message_id).order_by(Occurrence.start_offset).all()
         message = db.get(Message, message_id)
-        version = db.get(MessageVersion, rows[0].message_version_id)
         conversation = db.get(Conversation, rows[0].conversation_id)
-        before = version.display_text
-        conflict = message.is_deleted or message.current_version_id != version.id or conversation.status != "active" or conversation.deleted_at is not None
+        version_id = rows[0].message_version_id
+        before = db.query(MessageVersion.display_text).filter(
+            MessageVersion.id == version_id,
+        ).scalar()
+        if before is None:
+            items.append({
+                "conversation_id": str(conversation.id), "conversation_title": conversation.display_title,
+                "message_id": str(message_id), "role": message.role, "before": "", "after": "",
+                "conflict": True, "fragments": len(rows), "removed_ranges": [],
+            })
+            continue
+        conflict = message.is_deleted or message.current_version_id != version_id or conversation.status != "active" or conversation.deleted_at is not None
         try:
             spans = sorted(span for row in rows for span in occurrence_ranges(row))
         except ValueError:
             spans, conflict = [], True
         conflict = conflict or any(spans[index][1] > spans[index + 1][0] for index in range(len(spans) - 1))
         validation = _MessageValidation(message.role, before)
-        conflict = conflict or any(row.message_version_id != version.id or not _occurrence_still_matches(db, message.role, before, row, validation) for row in rows)
+        conflict = conflict or any(row.message_version_id != version_id or not _occurrence_still_matches(db, message.role, before, row, validation) for row in rows)
         after = before
         if not conflict:
             parts, cursor = [], 0

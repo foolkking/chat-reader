@@ -2,7 +2,7 @@
 
 import { X } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { releaseExportScope } from "../../lib/export-usage";
 import { ImportTaskMonitor } from "./import-task-monitor";
 import { useDialogFocus } from "../../components/use-dialog-focus";
@@ -12,6 +12,11 @@ export function TaskCenterDialog({ open, onClose }: { open: boolean; onClose: ()
   const rootRef = useRef<HTMLDivElement | null>(null);
   const t = useTranslations();
   const close = useCallback(() => { releaseExportScope("tasks"); onClose(); }, [onClose]);
+  useEffect(() => {
+    if (!open) return;
+    window.addEventListener("chat-reader:close-task-center", close);
+    return () => window.removeEventListener("chat-reader:close-task-center", close);
+  }, [close, open]);
   useDialogFocus({ open, rootRef, onClose: close, restoreFocus: () => document.querySelector<HTMLElement>('[data-testid="sidebar-tasks-button"]') });
   if (!open || typeof document === "undefined") return null;
   return createPortal(

@@ -173,7 +173,7 @@ def inspect_package(path: str, verify_hashes: str = "core", detail: str = "summa
                 actual = source.byte_size(rel)
                 if actual != meta["byte_size"]:
                     size_mismatches.append({"path": rel, "expected": meta["byte_size"], "observed": actual})
-            should_hash = verify_hashes == "all" or (verify_hashes == "core" and rel == manifest.entrypoint)
+            should_hash = verify_hashes == "all" or (verify_hashes == "core" and rel in (manifest.entrypoint, "annotations.md"))
             if should_hash and isinstance(meta.get("sha256"), str):
                 actual_hash = source.sha256(rel)
                 files_checked_hash.append(rel)
@@ -185,6 +185,32 @@ def inspect_package(path: str, verify_hashes: str = "core", detail: str = "summa
             findings.append(Finding("warning", "declared_file_size_mismatch", "manifest-declared file size does not match source", location=m["path"], expected=m["expected"], observed=m["observed"]))
         for m in hash_mismatches:
             findings.append(Finding("error", "declared_file_hash_mismatch", "manifest-declared SHA-256 does not match source", location=m["path"], expected=m["expected"], observed=m["observed"]))
+        extension = manifest.raw.get("extensions", {})
+        projection = extension.get("chat_reader_annotation_export") if isinstance(extension, dict) else None
+        annotation_document = {"status": "not_declared"}
+        if isinstance(projection, dict):
+            annotation_document = {**projection}
+            if projection.get("status") == "included":
+                path = projection.get("path")
+                metadata = manifest.files.get(path, {}) if isinstance(path, str) else {}
+                if path != "annotations.md" or not source.exists(path):
+                    annotation_document["status"] = "missing"
+                    findings.append(Finding("error", "annotation_document_missing",
+                        "declared readable annotation projection is missing", location=str(path)))
+                elif (not isinstance(metadata.get("byte_size"), int) or not isinstance(metadata.get("sha256"), str)
+                        or any(item["path"] == path for item in size_mismatches + hash_mismatches)):
+                    annotation_document["status"] = "integrity_error"
+                    findings.append(Finding("error", "annotation_document_integrity",
+                        "readable annotation projection failed integrity checks", location=path))
+                else:
+                    annotation_document["status"] = "verified" if path in files_checked_hash else "present_unverified"
+                if snap is not None and projection.get("count") != snap.records_by_type.get("annotation", 0):
+                    annotation_document["status"] = "integrity_error"
+                    findings.append(Finding("error", "annotation_document_count",
+                        "annotation projection count differs from structured annotations"))
+            elif projection.get("status") == "omitted_by_request" and projection.get("path"):
+                findings.append(Finding("error", "annotation_document_omission",
+                    "omitted annotation projection must not declare a file path"))
 
         canonical: dict[str, Any] = {"supported": bool(snap and snap.supported)}
         source_refs: dict[str, Any] = {"count": 0, "dangling_message_refs": [], "source_types": {}}
@@ -383,6 +409,7 @@ def inspect_package(path: str, verify_hashes: str = "core", detail: str = "summa
             "canonical_messages": canonical,
             "source_refs": source_refs,
             "attachments": attachments,
+            "annotation_document": annotation_document,
             "continuation": continuation,
             "integrity": {
                 "verify_hashes": verify_hashes,

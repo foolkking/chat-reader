@@ -39,7 +39,9 @@ const inputs = ["token", "shareQuery", "storageReady", "storageVisit", "savedPos
   "setMobileNavigation", "setEdgeLoading", "setEdgeError", "navigationTokenRef", "targetHighlightTimerRef",
   "restoreAttemptedRef", "latestStablePositionRef", "loadedWindowRef", "windowGenerationRef", "initialWindowAppliedRef",
   "loadingPreviousRef", "loadingNextRef", "edgeTransitionRef", "userScrollIntentRef", "scrollDirectionRef",
-  "scrollIntentSequenceRef", "previousTurnAnchorRef", "nextTurnAnchorRef", "positionStorageDisabledRef", "onManualIntent"];
+  "scrollIntentSequenceRef", "previousTurnAnchorRef", "nextTurnAnchorRef", "positionStorageDisabledRef",
+  "tocReturnPointRef", "setTocReturnPoint", "setTocReturnError", "setTocReturnBusy",
+  "tocReturnAttemptRef", "onManualIntent"];
 const compiled = compile(`function renderShare(input) {
   const { ${inputs.join(", ")} } = input;
   ${selected.map(node => node.getText(ast)).join("\n")}
@@ -88,12 +90,14 @@ function fixture({ items = [B], positions = new Map() } = {}) {
     windowGenerationRef: 0, initialWindowAppliedRef: false, loadingPreviousRef: false, loadingNextRef: false,
     edgeTransitionRef: null, userScrollIntentRef: false, scrollDirectionRef: null, scrollIntentSequenceRef: 0,
     previousTurnAnchorRef: null, nextTurnAnchorRef: null, positionStorageDisabledRef: null,
+    tocReturnPointRef: null, tocReturnAttemptRef: null,
   })) state[name] = { current: value };
   state.loadedWindowRef = { current: windowExports.emptyLoadedWindow() };
   const setter = name => value => { state[name] = value; calls.writes.push([name, value]); };
   for (const name of ["StorageKey", "SavedPosition", "StorageReady", "StorageVisit", "LoadedWindow", "PositionReady",
     "ActiveMessageId", "NavigationTargetMessageId", "ActiveBlockId", "TargetHighlightId", "MobileNavigation",
-    "EdgeLoading", "EdgeError", "PositionStorageUnavailable"]) state[`set${name}`] = setter(name[0].toLowerCase() + name.slice(1));
+    "EdgeLoading", "EdgeError", "PositionStorageUnavailable", "TocReturnPoint", "TocReturnError", "TocReturnBusy"])
+    state[`set${name}`] = setter(name[0].toLowerCase() + name.slice(1));
   state.onManualIntent = () => calls.manual++;
   const memo = (value, deps) => {
     const index = memoCursor++, previous = memos[index];

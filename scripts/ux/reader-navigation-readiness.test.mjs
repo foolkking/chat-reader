@@ -53,6 +53,7 @@ const refDefaults = {
   preferenceStableAnchorRef: null, lastSavedSignatureRef: "", latestStablePositionRef: null,
   pointerDraggingRef: false, pointerDragMovedRef: false, pointerScrollTopRef: 0, activeMessageIdRef: null, activeBlockIdRef: null,
   locatePulseTimerRef: null, lastNavigationTargetRef: null, previousTurnAnchorRef: null, nextTurnAnchorRef: null,
+  tocReturnPointRef: null,
   edgeTransitionRef: null, loadingPreviousRef: false, loadingNextRef: false, previousSentinelVisibleRef: false,
   nextSentinelVisibleRef: false, firstContentReportedRef: false, firstContentStartedAtRef: 0,
 };
@@ -60,7 +61,8 @@ const inputNames = [...Object.keys(refDefaults), "loadedWindowRef", "scrollConta
   "loadPreviousActionRef", "loadNextActionRef", "recentOwner", "recentOwnerRef", "conversationId", "dataSource", "conversationQuery",
   "windowQuery", "positionQuery", "targetMessageId", "savedPosition", "loadedWindow", "initialPaintReady", "mergedIntoConversationId",
   "queryClient", "setInitialPaintReady", "setLoadedWindow", "setPendingTargetMessageId", "setNavigationStatus", "setNavigationFailureReason",
-  "setActiveMessageId", "setActiveBlockId", "setLocatePulse", "setReadingSaveError", "pruneMessageState"];
+  "setActiveMessageId", "setActiveBlockId", "setLocatePulse", "setReadingSaveError",
+  "setTocReturnPoint", "setTocReturnError", "pruneMessageState"];
 const compiled = compile(`function InspectReadiness(input) {
   const { ${inputNames.join(", ")} } = input;
   const conversation = conversationQuery.data, messages = loadedWindow.items, isOffline = dataSource.mode === "offline";
@@ -177,6 +179,8 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     setNavigationFailureReason: value => change("navigationFailureReason", value),
     setActiveMessageId: value => { state.activeMessageIdRef.current = value; change("activeMessageId", value); },
     setActiveBlockId: value => { state.activeBlockIdRef.current = value; change("activeBlockId", value); },
+    setTocReturnPoint: value => change("tocReturnPoint", value),
+    setTocReturnError: value => change("tocReturnError", value),
     setLocatePulse: () => {}, setReadingSaveError: value => change("readingSaveError", value), pruneMessageState: () => {},
   });
   state.loadedWindowRef.current = state.loadedWindow;

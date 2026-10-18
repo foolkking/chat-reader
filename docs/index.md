@@ -1,5 +1,21 @@
 # 文档导航
 
+本地实施覆盖（2026-10-17，未发布）：
+[表格工具、TOC 返回、噪声保护确认、批注导出与 Context 1.1](system/USER_FLOWS.md)。
+当前合同见 [Content Cleanup](system/CONTENT_CLEANUP_CONTRACT.md)、
+[Context Package](system/CONTEXT_PACKAGE_CONTRACT.md) 和 [API 参考](api-reference.md)；
+本轮没有启动 CI、推送或部署。
+
+多文件 adaptive import 的首轮解析现已上传后进入现有单 worker 后台任务；
+关闭页面不取消任务，进度／失败重试／结果通过任务中心恢复。该调整复用
+`BackgroundJob`，无新 migration，仍仅本地。
+
+无可靠消息边界的普通 Markdown 现在以完整单条 assistant 消息导入；
+owner Reader 页面和左侧导入入口支持拖放，并按全部对话／项目／带项目上下文的 Reader
+确定导入位置，可在审核时改选。详见
+[Adaptive Import 合同](system/ADAPTIVE_IMPORT_CONTRACT.md#plain-markdown-and-drop-based-destination)
+和[本地专项记录](execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md)。
+
 当前生产为 **`3e68d1f`／0051**，2026-10-17 00:53:53 UTC 已接受。
 [OOM 修复发布](execution/OOM_STABILITY_2026-10-17.md#accepted-release)对应
 CI **38933466143** 尝试 2：五个任务全通过，原始制品 **12082341034**、
@@ -25,6 +41,20 @@ CI **38933466143** 尝试 2：五个任务全通过，原始制品 **12082341034
 关联回归 **237 通过／1 环境跳过**，独立 PostgreSQL **10/10**；
 归一化结果对照运行时 Unicode 数据库验证，旧候选不得扩大已确认范围。
 完整字符来源映射仍有资源成本，详见实测边界。此批尚未发布。
+
+[多文件导入服务稳定性修复](execution/IMPORT_STABILITY_2026-10-18.md)：
+自适应导入的首轮分析现由后台任务执行；普通预览和替换分析仍以同步 FastAPI
+handler 在线程池处理。多文件累计大小
+进入有界准入；重型分析按固定余量＋输入总量 × 32 估算，并检查 Linux host/
+cgroup v1/v2 内存，探针缺失或余量不足时快速 fail-closed 429。噪声逐条消费正文
+并在当前消息内复用紧凑规范化映射。噪声专项 **130＋正文保留 2**、准入／内存探针
+**35**、全量 API **1,383 通过／177 跳过**、独立 PostgreSQL 取消竞态 **4/4**、
+React/Query **13/13**、浏览器任务中心矩阵 **12/12**。multipart 解析在路由前
+把单文件内存 spool 默认限制为 64 KiB，较大的部分落到任务临时目录，避免
+多文件批次绕过路由准入。只读证据确认
+**2026-10-18 10:31:45 北京时间**主机 OOM 杀死 API
+并重启，**没有证实噪声是唯一原因**。修复仍仅本地，Linux/PID1、2 GiB
+长时资源验收未完成，也未启动 CI 或部署。
 
 上一轮 UX CI **38902167421** 尝试 2 的五个任务／13 个 Web gate 全通过：
 API **1,288／3 跳过**、设置 **463＋独立恢复 1**、负向 PWA **19/19**，

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import shutil
 import uuid
 from collections import defaultdict
@@ -12,6 +11,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models.background_job import BackgroundJob
 from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfilePreference, ImportProfileRevision, ImportStructureFamily
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, may_use_revision, personal_name, personal_profile_payload, visible_profile
 from app.models.import_record import ImportRecord
@@ -28,7 +28,7 @@ from app.services.adaptive_import.profiles import (
     normalize_builtin,
 )
 from app.services.import_pipeline.draft_store import attach_import_draft
-from app.services.storage.local_storage import save_import_file
+from app.services.storage.local_storage import save_import_file, save_import_file_stream
 
 MAX_ADAPTIVE_FILES = 500
 RECOVERABLE_SESSION_STATES = {"NEEDS_GROUPING", "RESOLVING", "READY", "BLOCKED"}
@@ -51,6 +51,7 @@ def begin_session(
     file_count: int,
     *,
     repair_profile_id: uuid.UUID | None = None,
+    target_project_id: uuid.UUID | None = None,
     owner_user_id: uuid.UUID | None = None,
 ) -> ImportRecord:
     if file_count < 1:
@@ -70,7 +71,10 @@ def begin_session(
         file_count=file_count,
         total_bytes=0,
         session_state="COLLECTING",
-        analysis_summary={"repair_profile_id": str(repair_profile_id)} if repair_profile_id else {},
+        analysis_summary={
+            **({"repair_profile_id": str(repair_profile_id)} if repair_profile_id else {}),
+            "target_project_id": str(target_project_id) if target_project_id else None,
+        },
     )
     db.add(record)
     db.flush()
@@ -106,6 +110,81 @@ def add_session_source(db: Session, record: ImportRecord, filename: str, content
     db.flush()
 
 
+def add_session_source_stream(
+    db: Session,
+    record: ImportRecord,
+    filename: str,
+    source,
+    *,
+    max_file_bytes: int,
+) -> None:
+    settings = get_settings()
+    extension = _extension(filename)
+    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"}:
+        raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
+    stored, digest = save_import_file_stream(
+        record.id,
+        filename,
+        source,
+        max_bytes=min(max_file_bytes, settings.max_import_file_size_mb * 1024 * 1024),
+    )
+    if not stored.byte_size:
+        _remove_source_path(_session_root(record.id) / stored.safe_filename)
+        raise AdaptiveImportError("FILE_EMPTY", f"{filename} is empty.", layer="file")
+    if record.total_bytes + stored.byte_size > settings.max_adaptive_import_total_mb * 1024 * 1024:
+        _remove_source_path(_session_root(record.id) / stored.safe_filename)
+        raise AdaptiveImportError(
+            "SESSION_TOO_LARGE",
+            f"This import session exceeds the {settings.max_adaptive_import_total_mb} MB total limit.",
+            layer="file",
+        )
+    db.add(SourceArtifact(
+        id=uuid.uuid4(), import_id=record.id, source_type="adaptive_source", source_profile=SourceProfile.unknown.value,
+        filename=filename, safe_filename=stored.safe_filename, sha256=digest, byte_size=stored.byte_size,
+        mime_guess="application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
+        file_extension=extension, raw_storage_uri=stored.raw_storage_uri, parsed_summary={},
+    ))
+    record.total_bytes += stored.byte_size
+    db.flush()
+
+
+def queue_session_analysis(db: Session, record: ImportRecord) -> BackgroundJob:
+    """Queue first-pass structure analysis after source files are safely staged."""
+    record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
+    record.session_state = "ANALYZING"
+    record.status = "analyzing"
+    record.phase = "queued"
+    record.progress = 0
+    record.queued_at = datetime.now(timezone.utc)
+    record.started_at = None
+    record.heartbeat_at = None
+    record.completed_at = None
+    job = BackgroundJob(
+        id=uuid.uuid4(),
+        owner_user_id=record.owner_user_id,
+        job_type="adaptive_import_analysis",
+        status="queued",
+        phase="queued",
+        progress=0,
+        processed_items=0,
+        total_items=record.file_count,
+        payload={
+            "import_id": str(record.id),
+            "title": "分析导入文件",
+            "source_label": f"{record.file_count} 个文件 · {record.total_bytes / (1024 * 1024):.1f} MiB",
+        },
+        result={},
+    )
+    db.add(job)
+    db.flush()
+    record.analysis_summary = {
+        **(record.analysis_summary or {}),
+        "analysis_task_id": str(job.id),
+    }
+    db.flush()
+    return job
+
+
 def finalize_session(db: Session, record: ImportRecord) -> ImportRecord:
     record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
     _build_initial_groups(db, record)
@@ -115,7 +194,24 @@ def finalize_session(db: Session, record: ImportRecord) -> ImportRecord:
     return record
 
 
-def analyze_session(db: Session, record: ImportRecord) -> None:
+def analyze_initial_session(
+    db: Session,
+    record: ImportRecord,
+    *,
+    progress_callback=None,
+) -> None:
+    """Build source groups and analyze a staged session in the background."""
+    record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
+    _build_initial_groups(db, record)
+    analyze_session(db, record, progress_callback=progress_callback)
+
+
+def analyze_session(
+    db: Session,
+    record: ImportRecord,
+    *,
+    progress_callback=None,
+) -> None:
     # Admission belongs to this owned session, not to the account library.
     # Preserve server-selected versions across source replacement/reanalysis;
     # successful canonical commit is still required for a permanent grant.
@@ -139,11 +235,17 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
         record.phase = "grouping"
         record.progress = 20
         record.analysis_summary = _summary(record)
+        if progress_callback is not None:
+            progress_callback(len(record.input_groups), len(record.input_groups))
         return
 
-    buckets: dict[tuple[str, str], list[tuple[ImportInputGroup, AnalysisResult]]] = defaultdict(list)
+    # Keep only one representative analysis per structure family. Retaining
+    # every AnalysisResult here makes a large multi-file upload hold duplicate
+    # mapping metadata until the whole request finishes.
+    buckets: dict[tuple[str, str], tuple[AnalysisResult, list[ImportInputGroup]]] = {}
     invalid: list[tuple[ImportInputGroup, AdaptiveImportError]] = []
-    for group in record.input_groups:
+    total_groups = len(record.input_groups)
+    for group_index, group in enumerate(record.input_groups, start=1):
         try:
             analysis = analyze_documents(_group_documents(record, group))
             group.profile_resolution = {
@@ -155,11 +257,14 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
                 }
             }
             group.diagnostics = analysis.diagnostics
-            buckets[(analysis.mode, analysis.signature_digest)].append((group, analysis))
+            bucket = buckets.setdefault((analysis.mode, analysis.signature_digest), (analysis, []))
+            bucket[1].append(group)
         except AdaptiveImportError as exc:
             group.diagnostics = [exc.diagnostic(group_id=str(group.id))]
             group.profile_resolution = {"status": "INVALID"}
             invalid.append((group, exc))
+        if progress_callback is not None:
+            progress_callback(group_index, total_groups)
 
     repair_profile: ImportProfile | None = None
     repair_profile_id = (record.analysis_summary or {}).get("repair_profile_id")
@@ -179,8 +284,8 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
             )
 
     for (mode, digest), entries in buckets.items():
-        representative = entries[0][1]
-        documents = _group_documents(record, entries[0][0])
+        representative, family_groups = entries
+        documents = _group_documents(record, family_groups[0])
         match = match_profile(
             db,
             representative,
@@ -188,6 +293,7 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
             owner_user_id=record.owner_user_id,
             admitted_revision_ids=tuple(uuid.UUID(value) for value in admitted),
         )
+        del documents
         if repair_profile is not None:
             current_revision = next((item for profile, item in sorted(available_revisions(db, record.owner_user_id, include_disabled=True), key=lambda pair: pair[1].revision, reverse=True) if profile.id == repair_profile.id), None)
             if current_revision is None:
@@ -221,7 +327,7 @@ def analyze_session(db: Session, record: ImportRecord) -> None:
         )
         db.add(family)
         db.flush()
-        for group, _ in entries:
+        for group in family_groups:
             group.family_id = family.id
             group.profile_resolution = {**group.profile_resolution, "status": match.status, "profile_name": match.profile_name}
 
@@ -457,6 +563,15 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "import_id": str(record.id),
         "state": record.session_state,
         "status": record.status,
+        "phase": record.phase,
+        "progress": record.progress,
+        "error_message": record.error_message,
+        "analysis_task_id": (record.analysis_summary or {}).get("analysis_task_id"),
+        "target_project_id": (
+            (record.analysis_summary or {}).get("commit_options", {}).get("project_id")
+            if "project_id" in (record.analysis_summary or {}).get("commit_options", {})
+            else (record.analysis_summary or {}).get("target_project_id")
+        ),
         "file_count": record.file_count,
         "total_bytes": record.total_bytes,
         "group_count": len(groups),
@@ -545,6 +660,8 @@ def update_profile(db: Session, profile: ImportProfile, payload: dict[str, Any],
 def cancel_session(record: ImportRecord) -> None:
     if record.status == "committed" or record.committed_at is not None:
         raise AdaptiveImportError("SESSION_ALREADY_COMMITTED", "A committed import session cannot be canceled.", layer="session")
+    if record.status in {"queued", "processing"}:
+        raise AdaptiveImportError("SESSION_STATE_INVALID", "Canonical import has already started; its source files cannot be removed.", layer="session")
     record.session_state = "CANCELED"
     record.status = "canceled"
     record.phase = "canceled"
@@ -729,25 +846,44 @@ def _update_session_state(db: Session, record: ImportRecord) -> None:
 
 
 def _prepare_plan(db: Session, record: ImportRecord) -> None:
-    all_drafts = []
-    for family in record.structure_families:
-        if family.matched_profile_key:
-            for group in family.groups:
-                all_drafts.extend(normalize_builtin(family.matched_profile_key, _group_documents(record, group)))
-        else:
-            revision = db.get(ImportProfileRevision, family.matched_revision_id) if family.matched_revision_id else None
-            mapping = revision.mapping_spec if revision else family.mapping_draft
-            for group in family.groups:
-                all_drafts.extend(normalize_group(_group_documents(record, group), mapping, family.display_name))
-    result = validate_drafts(all_drafts)
-    if not result["valid"]:
-        raise AdaptiveImportError("IMPORT_PLAN_INVALID", "The canonical import plan failed validation.", layer="validation")
-    attach_import_draft(record, all_drafts)
+    counters = {"conversation_count": 0, "message_count": 0}
+
+    def iter_drafts():
+        for family in record.structure_families:
+            if family.matched_profile_key:
+                draft_groups = (
+                    normalize_builtin(family.matched_profile_key, _group_documents(record, group))
+                    for group in family.groups
+                )
+            else:
+                revision = db.get(ImportProfileRevision, family.matched_revision_id) if family.matched_revision_id else None
+                mapping = revision.mapping_spec if revision else family.mapping_draft
+                draft_groups = (
+                    normalize_group(_group_documents(record, group), mapping, family.display_name)
+                    for group in family.groups
+                )
+
+            for drafts in draft_groups:
+                # A group contains one file or one JSON/Markdown pair (a file
+                # can itself contain several conversations). Validate and
+                # write it before loading the next group, rather than retaining
+                # the complete import plan in Python memory.
+                result = validate_drafts(drafts)
+                if not result["valid"]:
+                    raise AdaptiveImportError("IMPORT_PLAN_INVALID", "The canonical import plan failed validation.", layer="validation")
+                for draft in drafts:
+                    counters["conversation_count"] += 1
+                    counters["message_count"] += len(draft.messages)
+                    yield draft
+                    del draft
+                del drafts
+
+    attach_import_draft(record, iter_drafts())
     record.session_state = "READY"
     record.status = "previewed"
     record.phase = "ready"
     record.progress = 70
-    record.total_messages = result["message_count"]
+    record.total_messages = counters["message_count"]
     record.alignment_status = "normalized"
 
 
@@ -778,9 +914,12 @@ def _mode_for_artifacts(artifacts: list[SourceArtifact]) -> str | None:
     markdown_count = sum((item.file_extension or "").casefold() in {".md", ".markdown"} for item in artifacts)
     if json_count > 1 or markdown_count > 1 or json_count + markdown_count != len(artifacts):
         return None
-    if json_count and markdown_count: return "JSON_MARKDOWN"
-    if json_count: return "JSON"
-    if markdown_count: return "MARKDOWN"
+    if json_count and markdown_count:
+        return "JSON_MARKDOWN"
+    if json_count:
+        return "JSON"
+    if markdown_count:
+        return "MARKDOWN"
     return None
 
 
@@ -788,6 +927,9 @@ def _summary(record: ImportRecord) -> dict[str, Any]:
     statuses = _count_statuses(family.resolution_status for family in record.structure_families)
     return {
         **({"repair_profile_id": record.analysis_summary["repair_profile_id"]} if (record.analysis_summary or {}).get("repair_profile_id") else {}),
+        **({"analysis_task_id": record.analysis_summary["analysis_task_id"]} if (record.analysis_summary or {}).get("analysis_task_id") else {}),
+        **({"target_project_id": record.analysis_summary["target_project_id"]} if "target_project_id" in (record.analysis_summary or {}) else {}),
+        **({"commit_options": record.analysis_summary["commit_options"]} if (record.analysis_summary or {}).get("commit_options") else {}),
         "admitted_format_revisions": (record.analysis_summary or {}).get("admitted_format_revisions", []),
         "group_count": len(record.input_groups), "family_count": len(record.structure_families),
         "resolution_counts": statuses, "ready": record.session_state == "READY",
@@ -886,7 +1028,8 @@ def remove_source_paths(paths: list[Path]) -> None:
 
 def _count_statuses(values) -> dict[str, int]:
     result: dict[str, int] = {}
-    for value in values: result[value] = result.get(value, 0) + 1
+    for value in values:
+        result[value] = result.get(value, 0) + 1
     return result
 
 
@@ -906,8 +1049,10 @@ def _unknown_name(mode: str) -> str:
 
 def _extension(filename: str) -> str:
     lower = filename.casefold()
-    if lower.endswith(".canonical.jsonl.gz"): return ".gz"
-    if lower.endswith(".canonical.jsonl"): return ".jsonl"
+    if lower.endswith(".canonical.jsonl.gz"):
+        return ".gz"
+    if lower.endswith(".canonical.jsonl"):
+        return ".jsonl"
     return Path(lower).suffix
 
 

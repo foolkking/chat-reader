@@ -43,6 +43,7 @@ def list_active_tasks(
         .filter(
             ownership_scope.predicate(ImportRecord),
             ImportRecord.status.in_(TERMINAL_IMPORT_STATUSES),
+            ImportRecord.phase != "analysis_failed",
             ImportRecord.completed_at.is_not(None),
             ImportRecord.completed_at >= cutoff,
         )
@@ -136,6 +137,8 @@ def retry_task(
     if record is not None:
         if record.status != "failed":
             return _import_task(record, db)
+        if record.phase == "analysis_failed":
+            raise HTTPException(409, detail="Retry the analysis task, not an import commit.")
         retry_import_manually(record, db)
         db.commit()
         return _import_task(record, db)
@@ -156,6 +159,15 @@ def cancel_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     try:
         request_background_job_cancellation(job)
+        if job.job_type == "adaptive_import_analysis":
+            import_id = uuid.UUID(str((job.payload or {}).get("import_id")))
+            record = db.get(ImportRecord, import_id)
+            if record is not None and record.status != "committed":
+                if job.status == "cancelled":
+                    from app.services.adaptive_import.service import cancel_session
+
+                    cancel_session(record)
+                    record.completed_at = job.completed_at
         db.commit()
     except Exception as exc:
         db.rollback()
@@ -171,6 +183,8 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
     payload = job.payload or {}
     result = dict(job.result or {})
+    if job.job_type == "adaptive_import_analysis" and payload.get("import_id") and not result.get("import_id"):
+        result["import_id"] = payload["import_id"]
     if job.job_type == "content_noise_scan" and isinstance(result.get("cleanup_apply"), dict):
         result["cleanup_apply"] = {key: value for key, value in result["cleanup_apply"].items() if key != "response"}
     from sqlalchemy.orm import object_session
@@ -247,6 +261,7 @@ def _job_label(job_type: str) -> str:
     if job_type == "conversation_batch_delete":
         return "\u5220\u9664\u5bf9\u8bdd"
     return {
+        "adaptive_import_analysis": "分析导入文件",
         "conversation_merge": "合并对话",
         "conversation_export": "导出归档",
         "conversation_batch_export": "批量导出对话",

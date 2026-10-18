@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { waitForAdaptiveAnalysis } from "./import-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL settings fixture");
@@ -21,9 +22,9 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     try {
       const initial = await context.request.post(`${baseURL}/api/adaptive-import/sessions`, { headers, multipart: { files: { name: "synthetic-learning.json", mimeType: "application/json", buffer: bytes() } } });
       expect(initial.status()).toBe(201);
-      const session = await initial.json();
+      const session = await waitForAdaptiveAnalysis(context.request, await initial.json(), { baseURL, headers });
       const family = session.families[0];
-      family.mapping_draft.messages.content = "$.body";
+      (family.mapping_draft.messages as Record<string, unknown>).content = "$.body";
       const learned = await context.request.post(`${baseURL}/api/adaptive-import/sessions/${session.import_id}/families/${family.id}/mapping`, { headers, data: { profile_name: "Synthetic health format", mapping_spec: family.mapping_draft } });
       expect(learned.status()).toBe(200);
       const profileId = (await learned.json()).families[0].matched_profile_id;

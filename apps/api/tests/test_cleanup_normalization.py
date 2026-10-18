@@ -14,6 +14,8 @@ def check(text, case_sensitive):
         expected = expected.casefold()
     expected = re.sub(r"\s+", " ", expected)
     actual, mapping = normalization.normalized_shadow(text, case_sensitive=case_sensitive)
+    compact_actual, compact_mapping = normalization.normalized_shadow(text, case_sensitive=case_sensitive, compact=True)
+    assert compact_actual == actual and list(compact_mapping) == mapping, repr(text)
     assert actual == expected, repr(text)
     assert len(actual) == len(mapping)
     assert all(0 <= start < end <= len(text) for start, end in mapping)

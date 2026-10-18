@@ -20,7 +20,7 @@ test("saved import-session restore has an independent finite state and retry gen
   assert.match(source, /phase: "idle" \| "loading" \| "error"/);
   assert.match(source, /const \[sessionRestore, setSessionRestore\]/);
   assert.match(source, /const \[sessionRestoreRetry, setSessionRestoreRetry\] = useState\(0\)/);
-  assert.match(source, /\[activeSessionKey, session, sessionRestoreRetry\]/);
+  assert.match(source, /\[activeSessionKey, current, initialProjectId, resumeImportId, session, sessionRestoreRetry\]/);
   assert.match(source, /sessionRestore\.phase === "loading"/);
 });
 
@@ -33,9 +33,10 @@ test("transient restore failure retains the local pointer and publishes a retrya
   assert.match(source, /onRetry=\{\(\) => \{ setSessionRestore\(\{ phase: "loading", error: null \}\); setSessionRestoreRetry/);
 });
 
-test("only confirmed terminal state or explicit new-file selection clears the pointer", () => {
+test("only completed/cancelled state or explicit new-file selection clears the pointer; failed analysis stays recoverable", () => {
   const restoreEffect = between("useEffect(() => {\n    let active = true;", "  const finishCommittedImport");
-  assert.match(restoreEffect, /if \(\["COMPLETED", "CANCELED", "FAILED"\]\.includes\(restored\.state\)\)/);
+  assert.match(restoreEffect, /if \(\["COMPLETED", "CANCELED"\]\.includes\(restored\.state\)\)/);
+  assert.doesNotMatch(restoreEffect, /"FAILED"/);
   assert.match(restoreEffect, /window\.sessionStorage\.removeItem\(activeSessionKey\)/);
   const chooseFiles = between("  function chooseFiles", "  function handleDrop");
   assert.match(chooseFiles, /window\.sessionStorage\.removeItem\(activeSessionKey\)/);

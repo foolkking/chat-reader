@@ -6,9 +6,10 @@ import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud } from "lucide-react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent } from "react";
-import { ApiRequestError, cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, previewImport, retryTask } from "../../lib/api";
+import { ApiRequestError, cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, getProjects, previewImport, retryTask, updateAdaptiveImportDestination } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
 import { readAccountCapabilities } from "../../lib/auth-client";
+import { authenticationGeneration } from "../../lib/offline-access";
 import { SupportLimitAction } from "../../components/support-limit-action";
 import { ImportPreviewCard } from "./import-preview-card";
 import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
@@ -28,25 +29,44 @@ function sessionStorageKey(repairProfileId?: string | null): string {
 
 export function ImportPanel({
   repairProfileId,
+  resumeImportId,
   initialMode = "adaptive",
+  initialFiles = [],
+  targetProjectId: initialProjectId = null,
   onImportCommitted,
   onWorkspaceChange,
   onMappingStateChange,
 }: {
   repairProfileId?: string | null;
+  resumeImportId?: string | null;
   initialMode?: ImportMode;
+  initialFiles?: File[];
+  targetProjectId?: string | null;
   onImportCommitted?: () => void;
   onWorkspaceChange?: (open: boolean) => void;
   onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
 } = {}) {
   const tr = useImportCopy();
   const queryClient = useQueryClient();
+  const mounted = useRef(true);
+  const generation = useRef(authenticationGeneration());
+  const current = useCallback(() => mounted.current && generation.current === authenticationGeneration(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const capabilities = useQuery({ queryKey: ["account-capabilities"], queryFn: ({ signal }) => readAccountCapabilities(signal), staleTime: 0, refetchOnWindowFocus: true });
+  const projects = useQuery({
+    queryKey: ["projects", "custom", "asc"],
+    queryFn: ({ signal }) => getProjects({ sort: "custom", direction: "asc" }, signal),
+    staleTime: 60_000,
+  });
   const router = useRouter();
   const [mode, setMode] = useState<ImportMode>(initialMode);
   const [files, setFiles] = useState<File[]>([]);
   const [archivePreview, setArchivePreview] = useState<ImportPreviewResponse | null>(null);
   const [session, setSession] = useState<AdaptiveImportSession | null>(null);
+  const [targetProjectId, setTargetProjectId] = useState<string | null>(initialProjectId);
   const [sessionRestore, setSessionRestore] = useState<ImportSessionRestoreState>({ phase: "idle", error: null });
   const [sessionRestoreRetry, setSessionRestoreRetry] = useState(0);
   const [pendingImportId, setPendingImportId] = useState<string | null>(null);
@@ -59,38 +79,84 @@ export function ImportPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [duplicatePolicy, setDuplicatePolicy] = useState<ImportDuplicatePolicy>("clone");
   const completedImportRef = useRef<string | null>(null);
+  const resumeSessionRef = useRef(resumeImportId);
   const previewButtonRef = useRef<HTMLButtonElement>(null);
+  const targetSessionRef = useRef<string | null>(null);
   const activeSessionKey = sessionStorageKey(repairProfileId);
   const largestFileMiB = Math.ceil(files.reduce((largest, file) => Math.max(largest, file.size), 0) / (1024 * 1024));
   const fileOverLimit = capabilities.data && largestFileMiB > capabilities.data.maximum_import_size_mb;
 
   useEffect(() => onWorkspaceChange?.(Boolean(session)), [onWorkspaceChange, session]);
   useEffect(() => {
+    if (!initialFiles.length) return;
+    const droppedArchive = initialFiles.length === 1 && /\.cr$/i.test(initialFiles[0]?.name ?? "");
+    setMode(droppedArchive ? "archive" : initialMode);
+    setFiles(initialFiles);
+  }, [initialFiles, initialMode]);
+  useEffect(() => {
+    if (!session?.import_id || targetSessionRef.current === session.import_id) return;
+    targetSessionRef.current = session.import_id;
+    setTargetProjectId(session.target_project_id !== undefined ? session.target_project_id : initialProjectId);
+  }, [initialProjectId, session?.import_id, session?.target_project_id]);
+  useEffect(() => {
     let active = true;
-    const importId = window.sessionStorage.getItem(activeSessionKey);
+    const importId = resumeSessionRef.current ?? window.sessionStorage.getItem(activeSessionKey);
     if (!importId || session) return;
+    const controller = new AbortController();
     setSessionRestore({ phase: "loading", error: null });
-    void getAdaptiveImportSession(importId)
-      .then((restored) => {
-        if (!active) return;
-        if (["COMPLETED", "CANCELED", "FAILED"].includes(restored.state)) {
+    void getAdaptiveImportSession(importId, controller.signal)
+      .then(async (restored) => {
+        if (!active || !current()) return;
+        if (restored.state === "COMPLETED") {
+          const result = await getImportStatus(restored.import_id);
+          if (!active || !current()) return;
+          if (result.status !== "committed") throw new Error("IMPORT_RESULT_UNCONFIRMED");
+          setCommitResult(result);
+        }
+        if (["COMPLETED", "CANCELED"].includes(restored.state)) {
+          resumeSessionRef.current = null;
           window.sessionStorage.removeItem(activeSessionKey);
           setSessionRestore({ phase: "idle", error: null });
           return;
         }
+        window.sessionStorage.setItem(activeSessionKey, restored.import_id);
+        resumeSessionRef.current = null;
+        targetSessionRef.current = restored.import_id;
+        setTargetProjectId(restored.target_project_id !== undefined ? restored.target_project_id : initialProjectId);
         setSession(restored);
         setSessionRestore({ phase: "idle", error: null });
       })
       .catch((error: unknown) => {
-        if (!active) return;
+        if (!active || !current() || controller.signal.aborted) return;
         setSessionRestore({ phase: "error", error });
       });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [activeSessionKey, session, sessionRestoreRetry]);
+  }, [activeSessionKey, current, initialProjectId, resumeImportId, session, sessionRestoreRetry]);
+
+  const analysisSessionQuery = useQuery({
+    queryKey: ["adaptive-import-analysis", session?.import_id, generation.current],
+    queryFn: async ({ signal }) => {
+      const value = await getAdaptiveImportSession(session!.import_id, signal);
+      return { value, generation: generation.current };
+    },
+    enabled: current() && Boolean(session && ["COLLECTING", "ANALYZING", "CANCELING"].includes(session.state)),
+    refetchInterval: query => !query.state.data || ["COLLECTING", "ANALYZING", "CANCELING"].includes(query.state.data.value.state) ? 1500 : false,
+    retry: 2,
+  });
+  useEffect(() => {
+    const result = analysisSessionQuery.data;
+    if (!result || !current() || result.generation !== authenticationGeneration() || result.value.import_id !== session?.import_id) return;
+    setSession(result.value);
+    if (!["COLLECTING", "ANALYZING", "CANCELING"].includes(result.value.state)) {
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
+    }
+  }, [analysisSessionQuery.data, current, queryClient, session?.import_id]);
 
   const finishCommittedImport = useCallback((result: CommitImportResponse) => {
+    if (!current()) return;
     if (completedImportRef.current === result.import_id) return;
     completedImportRef.current = result.import_id;
     setTerminalImportError(null);
@@ -105,13 +171,14 @@ export function ImportPanel({
     void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     void queryClient.invalidateQueries({ queryKey: ["conversations"] });
     void queryClient.invalidateQueries({ queryKey: ["projects"] });
-  }, [activeSessionKey, queryClient]);
+  }, [activeSessionKey, current, queryClient]);
   const finishTerminalImport = useCallback((result: CommitImportResponse) => {
+    if (!current()) return;
     setPendingImportId(null);
     setCommitResult(null);
     setTerminalImportId(result.import_id);
     setTerminalImportError(result.status === "cancelled" ? "IMPORT_COMMIT_CANCELLED" : "IMPORT_COMMIT_FAILED");
-  }, []);
+  }, [current]);
 
   const importStatusQuery = useQuery({
     queryKey: ["import-status", pendingImportId],
@@ -127,27 +194,35 @@ export function ImportPanel({
   }, [finishCommittedImport, finishTerminalImport, importStatusQuery.data]);
 
   const adaptiveMutation = useMutation({
-    mutationFn: (selectedFiles: File[]) => createAdaptiveImportSession(selectedFiles, repairProfileId),
+    mutationFn: (selectedFiles: File[]) => createAdaptiveImportSession(selectedFiles, repairProfileId, targetProjectId),
     onSuccess: (result) => {
+      if (!current()) return;
       window.sessionStorage.setItem(activeSessionKey, result.import_id);
+      targetSessionRef.current = result.import_id;
       setSession(result);
+      setTargetProjectId(result.target_project_id !== undefined ? result.target_project_id : initialProjectId);
+      setFiles([]);
       setArchivePreview(null);
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     },
   });
   const cancelMutation = useMutation({
     mutationFn: cancelAdaptiveImportSession,
     onSuccess: () => {
+      if (!current()) return;
       window.sessionStorage.removeItem(activeSessionKey);
       reset("adaptive");
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     },
   });
   const archiveMutation = useMutation({
     mutationFn: previewImport,
-    onSuccess: (result) => { setArchivePreview(result); setSession(null); },
+    onSuccess: (result) => { if (current()) { setArchivePreview(result); setSession(null); } },
   });
   const commitMutation = useMutation({
-    mutationFn: ({ importId, policy }: { importId: string; policy: ImportDuplicatePolicy }) => commitImport(importId, { duplicatePolicy: policy }),
+    mutationFn: ({ importId, policy }: { importId: string; policy: ImportDuplicatePolicy }) => commitImport(importId, { duplicatePolicy: policy, projectId: targetProjectId }),
     onSuccess: (result) => {
+      if (!current()) return;
       setTerminalImportError(null);
       setCommitResult(result);
       if (result.status === "committed") finishCommittedImport(result);
@@ -158,13 +233,35 @@ export function ImportPanel({
   const retryImportMutation = useMutation({
     mutationFn: (importId: string) => retryTask(importId),
     onSuccess: (task) => {
+      if (!current()) return;
       setTerminalImportError(null);
       setTerminalImportId(null);
       setCommitResult(null);
       setPendingImportId(task.job_id);
       if (session) {
-        void getAdaptiveImportSession(task.job_id).then(setSession).catch(() => undefined);
+        void getAdaptiveImportSession(task.job_id).then(next => { if (current()) setSession(next); }).catch(() => undefined);
       }
+    },
+  });
+  const retryAnalysisMutation = useMutation({
+    mutationFn: (taskId: string) => retryTask(taskId),
+    onSuccess: task => {
+      if (!current()) return;
+      setSession(previous => previous?.analysis_task_id === task.job_id
+        ? { ...previous, state: "ANALYZING", phase: "queued", progress: 0, error_message: null }
+        : previous);
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
+      void queryClient.invalidateQueries({ queryKey: ["adaptive-import-analysis", session?.import_id] });
+    },
+  });
+  const destinationMutation = useMutation({
+    mutationFn: ({ importId, projectId }: { importId: string; projectId: string | null }) => updateAdaptiveImportDestination(importId, projectId),
+    onSuccess: (updated) => {
+      if (!current()) return;
+      setSession(updated);
+      setTargetProjectId(updated.target_project_id ?? null);
+      targetSessionRef.current = updated.import_id;
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     },
   });
   const busy = sessionRestore.phase === "loading" || adaptiveMutation.isPending || archiveMutation.isPending || commitMutation.isPending || retryImportMutation.isPending || Boolean(pendingImportId);
@@ -176,8 +273,11 @@ export function ImportPanel({
     if (totalLimit != null && files.reduce((bytes, file) => bytes + file.size, 0) > totalLimit * 1024 * 1024) return tr("本批文件合计不能超过 {0} MiB，请分批导入。", totalLimit);
     return validateFiles(files, mode, tr);
   }, [files, mode, capabilities.data, tr]);
+  const targetProject = projects.data?.find((project) => project.id === targetProjectId);
+  const destinationUnavailable = Boolean(targetProjectId && projects.isSuccess && !targetProject);
 
   function reset(nextMode = mode) {
+    resumeSessionRef.current = null;
     setMode(nextMode);
     setFiles([]);
     setArchivePreview(null);
@@ -212,21 +312,66 @@ export function ImportPanel({
   }
 
   if (session) {
+    const analysisPending = ["COLLECTING", "ANALYZING", "CANCELING"].includes(session.state);
+    const analysisFailed = session.state === "FAILED" && session.phase === "analysis_failed";
+    if (analysisPending || analysisFailed || session.state === "CANCELED") {
+      return (
+        <section className="space-y-4" aria-labelledby="import-analysis-title" data-testid="import-analysis-status">
+          <ImportDestinationPicker
+            projects={projects.data ?? []}
+            projectId={targetProjectId}
+            onChange={(projectId) => destinationMutation.mutate({ importId: session.import_id, projectId })}
+            disabled={destinationMutation.isPending || session.state === "CANCELING" || session.state === "CANCELED"}
+            saving={destinationMutation.isPending}
+            unavailable={destinationUnavailable}
+            error={destinationMutation.error}
+          />
+          <h3 id="import-analysis-title" className="text-lg font-semibold text-primary">
+            {tr(analysisFailed ? "导入分析未完成" : session.state === "CANCELED" ? "导入分析已取消" : session.state === "CANCELING" ? "正在停止导入分析" : session.phase === "queued" ? "已加入后台分析队列" : "正在后台分析文件")}
+          </h3>
+          <p className="text-sm leading-6 text-secondary">{session.state === "CANCELED"
+            ? tr("本次临时来源已移除，尚未导入对话。你可以重新选择文件。")
+            : tr("这批 {0} 个文件已保存在服务器。你可以关闭此窗口继续阅读，在任务中心查看进度和结果。", session.file_count)}</p>
+          {analysisPending ? <div role="progressbar" aria-label={tr("导入分析")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, session.progress ?? 0))} className="h-1 overflow-hidden rounded-full bg-subtle">
+            <div className="h-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, session.progress ?? 0))}%` }} />
+          </div> : null}
+          {analysisFailed ? <p role="alert" className="text-sm text-[var(--danger)]">{tr("首轮分析失败，尚未导入对话。源文件仍保留，可在任务中心重试或重新选择文件。")}</p> : null}
+          {analysisSessionQuery.error ? <ErrorLine message={analysisSessionQuery.error} onRetry={() => { void analysisSessionQuery.refetch(); }} retrying={analysisSessionQuery.isFetching} /> : null}
+          {cancelMutation.error || retryAnalysisMutation.error ? <ErrorLine message={cancelMutation.error ?? retryAnalysisMutation.error} /> : null}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-primary min-h-11 px-4 text-sm" onClick={() => { onImportCommitted?.(); window.dispatchEvent(new Event("chat-reader:open-task-center")); }}>{tr("查看后台任务")}</button>
+            {analysisFailed && session.analysis_task_id ? <button type="button" disabled={retryAnalysisMutation.isPending} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => retryAnalysisMutation.mutate(session.analysis_task_id!)}>{tr(retryAnalysisMutation.isPending ? "正在提交重试…" : "重试分析")}</button> : null}
+            {session.state !== "CANCELING" ? <button type="button" disabled={cancelMutation.isPending || retryAnalysisMutation.isPending} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => cancelMutation.mutate(session.import_id)}>{tr(analysisFailed || session.state === "CANCELED" ? "重新选择文件" : "取消本次分析")}</button> : null}
+          </div>
+        </section>
+      );
+    }
     return (
-      <AdaptiveImportWorkspace
-        onMappingStateChange={onMappingStateChange}
-        session={session}
-        onSession={setSession}
-        onBack={() => cancelMutation.mutate(session.import_id)}
-        onImport={() => commitMutation.mutate({ importId: session.import_id, policy: duplicatePolicy })}
-        importing={commitMutation.isPending || Boolean(pendingImportId)}
-        error={retryImportMutation.error ?? cancelMutation.error ?? commitMutation.error ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
-        onRetryImport={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined}
-        retryingImport={retryImportMutation.isPending}
-        statusError={importStatusQuery.error}
-        onRetryStatus={() => { void importStatusQuery.refetch(); }}
-        statusRetrying={importStatusQuery.isFetching}
-      />
+      <section className="space-y-4">
+        <ImportDestinationPicker
+          projects={projects.data ?? []}
+          projectId={targetProjectId}
+          onChange={(projectId) => destinationMutation.mutate({ importId: session.import_id, projectId })}
+          disabled={destinationMutation.isPending || commitMutation.isPending || Boolean(pendingImportId)}
+          saving={destinationMutation.isPending}
+          unavailable={destinationUnavailable}
+          error={destinationMutation.error}
+        />
+        <AdaptiveImportWorkspace
+          onMappingStateChange={onMappingStateChange}
+          session={session}
+          onSession={setSession}
+          onBack={() => cancelMutation.mutate(session.import_id)}
+          onImport={() => commitMutation.mutate({ importId: session.import_id, policy: duplicatePolicy })}
+          importing={commitMutation.isPending || Boolean(pendingImportId)}
+          error={retryImportMutation.error ?? cancelMutation.error ?? commitMutation.error ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
+          onRetryImport={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined}
+          retryingImport={retryImportMutation.isPending}
+          statusError={importStatusQuery.error}
+          onRetryStatus={() => { void importStatusQuery.refetch(); }}
+          statusRetrying={importStatusQuery.isFetching}
+        />
+      </section>
     );
   }
 
@@ -244,6 +389,13 @@ export function ImportPanel({
       {sessionRestore.phase === "loading" ? <p role="status" className="text-sm text-secondary">{tr("正在恢复已保存的导入会话…")}</p> : null}
       {sessionRestore.phase === "error" ? <ErrorLine message={sessionRestore.error} onRetry={() => { setSessionRestore({ phase: "loading", error: null }); setSessionRestoreRetry((attempt) => attempt + 1); }} /> : null}
       {repairProfileId ? <p className="text-sm leading-6 text-secondary">{tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。")}</p> : null}
+      <ImportDestinationPicker
+        projects={projects.data ?? []}
+        projectId={targetProjectId}
+        onChange={setTargetProjectId}
+        disabled={busy || mode === "archive"}
+        unavailable={destinationUnavailable}
+      />
       <div
         onDragEnter={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
         onDragOver={(event) => event.preventDefault()}
@@ -282,6 +434,49 @@ export function ImportPanel({
       {archivePreview?.duplicate_conversation_id ? <div className="border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary"><p>{tr("系统中已有相同归档。默认会创建副本，不覆盖原记录。")}</p><Link href={`/conversations/${archivePreview.duplicate_conversation_id}`} className="mt-2 inline-block font-medium text-accent underline">{tr("打开已有对话")}</Link></div> : null}
       {commitResult?.status === "committed" && !pendingImportId ? <ImportCompletionSummary result={commitResult} onClose={() => onImportCommitted?.()} onOpenFirst={(conversationId) => { onImportCommitted?.(); router.push(`/conversations/${conversationId}`); }} /> : null}
     </section>
+  );
+}
+
+function ImportDestinationPicker({
+  projects,
+  projectId,
+  onChange,
+  disabled,
+  saving = false,
+  unavailable,
+  error,
+}: {
+  projects: Array<{ id: string; name: string; is_default: boolean; is_archived: boolean }>;
+  projectId: string | null;
+  onChange: (projectId: string | null) => void;
+  disabled: boolean;
+  saving?: boolean;
+  unavailable: boolean;
+  error?: unknown;
+}) {
+  const tr = useImportCopy();
+  const activeProjects = projects.filter((project) => !project.is_default && !project.is_archived);
+  return (
+    <div className="border-y border-ui py-2 text-xs text-secondary" data-testid="import-destination">
+      <label htmlFor="import-destination-select" className="mb-1 block font-medium text-primary">{tr("导入位置")}</label>
+      <select
+        id="import-destination-select"
+        data-testid="import-destination-select"
+        value={projectId ?? ""}
+        disabled={disabled}
+        onChange={(event) => onChange(event.currentTarget.value || null)}
+        className="min-h-10 w-full rounded-md border border-ui bg-surface px-3 text-sm text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-60"
+      >
+        <option value="">{tr("未归类")}</option>
+        {projectId && !projects.some((project) => project.id === projectId)
+          ? <option value={projectId}>{unavailable ? tr("项目不可用") : tr("当前项目")}</option>
+          : null}
+        {activeProjects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+      </select>
+      {saving ? <p role="status" className="mt-1">{tr("正在保存导入位置…")}</p> : null}
+      {unavailable ? <p role="alert" className="mt-1 text-[var(--danger)]">{tr("原项目已不可用，请从有效项目页面重新打开导入。")}</p> : null}
+      {error ? <ErrorLine message={error} action="mutation" /> : null}
+    </div>
   );
 }
 

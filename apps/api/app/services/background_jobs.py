@@ -30,7 +30,7 @@ from app.services.exporting.archive_jobs import PERSONAL_JOB_TYPES, archive_job_
 from app.services.exporting.system_archive_jobs import SYSTEM_JOB_TYPES, process_system_archive_job, sync_system_archive_record
 from app.services.exporting.attachment_download import create_attachment_download, validate_attachment_download
 from app.schemas.export import ExportOptions
-from app.services.offline_packages import OfflinePackageError, build_catalog, build_offline_package, changed_conversations, select_conversations
+from app.services.offline_packages import OfflinePackageError, build_offline_package, changed_conversations, select_conversations
 from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
@@ -46,7 +46,7 @@ from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_o
 logger = logging.getLogger(__name__)
 
 ACTIVE_JOB_STATUSES = ("queued", "processing", "cancelling")
-CANCELLABLE_JOB_TYPES = {"content_noise_scan", "context_return", "context_validation", "conversation_merge", "conversation_batch_delete", "conversation_batch_export", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
+CANCELLABLE_JOB_TYPES = {"adaptive_import_analysis", "content_noise_scan", "context_return", "context_validation", "conversation_merge", "conversation_batch_delete", "conversation_batch_export", *PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES}
 ProgressCallback = Callable[[str, int, int, int], None]
 
 
@@ -697,6 +697,7 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
             job.heartbeat_at = now
             job.completed_at = now
             job.error_message = None
+            _sync_adaptive_import_record_after_job(db, job, status="cancelled", now=now)
             structured_event(logger, logging.INFO, "background_job_cancelled", job_id=str(job.id), job_type=job.job_type)
             continue
         if job.attempt_count >= MAX_AUTOMATIC_ATTEMPTS:
@@ -708,6 +709,7 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
                 f"Worker stopped before completing {MAX_AUTOMATIC_ATTEMPTS} times; "
                 "automatic retries stopped."
             )
+            _sync_adaptive_import_record_after_job(db, job, status="failed", now=now)
             structured_event(
                 logger,
                 logging.WARNING,
@@ -819,6 +821,7 @@ def process_background_job(
                     job.error_message = None
                     if job.job_type in SYSTEM_JOB_TYPES:
                         sync_system_archive_record(db, job, status="CANCELLED")
+                    _sync_adaptive_import_record_after_job(db, job, status="cancelled", now=now)
                     db.commit()
                 return
             if job.status != "processing":
@@ -1136,6 +1139,61 @@ def process_background_job(
                     "occurrence_count": int(result.get("occurrences", 0)),
                 }
                 processed_items = int(result.get("processed", 0))
+            elif job.job_type == "adaptive_import_analysis":
+                from app.models.import_record import ImportRecord
+                from app.services.adaptive_import.service import analyze_initial_session
+                from app.services.uploads import bounded_analysis_admission_sync
+
+                import_id = uuid.UUID(str(payload["import_id"]))
+                import_record = db.get(ImportRecord, import_id)
+                if (
+                    import_record is None
+                    or import_record.owner_user_id != job.owner_user_id
+                    or import_record.source_profile != "adaptive_json_markdown"
+                    or str((import_record.analysis_summary or {}).get("analysis_task_id")) != str(job.id)
+                ):
+                    raise ValueError("The staged import session is no longer available.")
+                if import_record.session_state == "CANCELED":
+                    raise BackgroundJobCancelled("Import analysis was cancelled.")
+
+                source_sizes = [max(0, int(item.byte_size or 0)) for item in import_record.artifacts]
+                import_record.status = "analyzing"
+                import_record.phase = "analyzing"
+                import_record.session_state = "ANALYZING"
+                import_record.started_at = datetime.now(timezone.utc)
+                import_record.heartbeat_at = datetime.now(timezone.utc)
+                db.flush()
+                report("analyzing", 5, 0, max(import_record.file_count, 1))
+
+                def report_analysis_progress(processed: int, total: int) -> None:
+                    progress = 10 + int(80 * processed / max(total, 1))
+                    import_record.progress = min(progress, 95)
+                    import_record.phase = "analyzing"
+                    import_record.heartbeat_at = datetime.now(timezone.utc)
+                    report("analyzing", progress, processed, total)
+
+                with bounded_analysis_admission_sync(source_sizes, force_memory_check=True):
+                    analyze_initial_session(
+                        db,
+                        import_record,
+                        progress_callback=report_analysis_progress,
+                    )
+                import_record.heartbeat_at = datetime.now(timezone.utc)
+                import_record.completed_at = datetime.now(timezone.utc)
+                if import_record.session_state == "FAILED":
+                    import_record.status = "failed"
+                    import_record.phase = "analysis_failed"
+                job_result = {
+                    "import_id": str(import_record.id),
+                    "state": import_record.session_state,
+                    "file_count": import_record.file_count,
+                    "group_count": len(import_record.input_groups),
+                    "family_count": len(import_record.structure_families),
+                    "conversation_count": int((import_record.draft_summary or {}).get("conversation_count") or 0),
+                    "message_count": int((import_record.draft_summary or {}).get("message_count") or 0),
+                }
+                processed_items = len(import_record.input_groups)
+                report("publishing", 99, processed_items, max(processed_items, 1), job_result)
             elif job.job_type == "conversation_derived_rebuild":
                 conversation_id = uuid.UUID(payload["conversation_id"])
                 result = rebuild_conversation_derived_data(
@@ -1300,7 +1358,7 @@ def process_background_job(
                 cleanup_paths = list(getattr(package, "_cleanup_paths", []))
                 if cleanup_paths:
                     post_commit_cleanup.append(("offline", cleanup_paths, Path(get_settings().offline_storage_dir)))
-            if is_sqlite and job.job_type != "content_noise_scan":
+            if is_sqlite and job.job_type not in {"content_noise_scan", "adaptive_import_analysis"}:
                 for key, value in committed_values.items():
                     setattr(job, key, value)
             else:
@@ -1343,6 +1401,7 @@ def process_background_job(
                 job.error_message = None
                 if job.job_type in SYSTEM_JOB_TYPES:
                     sync_system_archive_record(db, job, status="CANCELLED")
+                _sync_adaptive_import_record_after_job(db, job, status="cancelled", now=now)
                 db.commit()
     except Exception as exc:
         structured_event(
@@ -1375,6 +1434,9 @@ def process_background_job(
                 job.completed_at = now
                 if job.job_type in SYSTEM_JOB_TYPES:
                     sync_system_archive_record(db, job, status="CANCELLED" if cancelled else "FAILED")
+                _sync_adaptive_import_record_after_job(
+                    db, job, status="cancelled" if cancelled else "failed", now=now,
+                )
                 db.commit()
 
 
@@ -1385,6 +1447,18 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
                     and bool((job.payload or {}).get("account_cleanup_keys")))
     if job.status != "failed" and not cleanup_only:
         return job
+    analysis_record = None
+    if job.job_type == "adaptive_import_analysis" and (db := object_session(job)) is not None:
+        from app.models.import_record import ImportRecord
+
+        analysis_record = db.get(ImportRecord, uuid.UUID(str((job.payload or {}).get("import_id"))))
+        if (
+            analysis_record is None
+            or analysis_record.owner_user_id != job.owner_user_id
+            or analysis_record.session_state not in {"FAILED", "ANALYZING"}
+            or str((analysis_record.analysis_summary or {}).get("analysis_task_id")) != str(job.id)
+        ):
+            raise MessageEditError("This import analysis can no longer be retried. Reopen the import session.", 409)
     now = datetime.now(timezone.utc)
     job.status = "queued"
     job.phase = "queued"
@@ -1398,6 +1472,15 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
     job.heartbeat_at = None
     job.completed_at = None
     job.attempt_count = 0
+    if analysis_record is not None:
+        analysis_record.status = "analyzing"
+        analysis_record.phase = "queued"
+        analysis_record.session_state = "ANALYZING"
+        analysis_record.progress = 0
+        analysis_record.started_at = None
+        analysis_record.heartbeat_at = None
+        analysis_record.completed_at = None
+        analysis_record.error_message = None
     if job.job_type in SYSTEM_JOB_TYPES and (db := object_session(job)) is not None:
         sync_system_archive_record(db, job, status="QUEUED")
     if job.job_type == "user_account_delete" and (db := object_session(job)) is not None:
@@ -1431,3 +1514,40 @@ def request_background_job_cancellation(job: BackgroundJob) -> BackgroundJob:
 
 def _safe_error(exc: Exception) -> str:
     return (str(exc).strip() or exc.__class__.__name__)[:2000]
+
+
+def _sync_adaptive_import_record_after_job(
+    db: Session,
+    job: BackgroundJob,
+    *,
+    status: str,
+    now: datetime,
+) -> None:
+    if job.job_type != "adaptive_import_analysis":
+        return
+    from app.models.import_record import ImportRecord
+
+    raw_import_id = (job.payload or {}).get("import_id")
+    try:
+        import_id = uuid.UUID(str(raw_import_id))
+    except (TypeError, ValueError):
+        return
+    record = db.get(ImportRecord, import_id)
+    if (
+        record is None
+        or record.status == "committed"
+        or record.owner_user_id != job.owner_user_id
+        or str((record.analysis_summary or {}).get("analysis_task_id")) != str(job.id)
+    ):
+        return
+    record.completed_at = now
+    record.heartbeat_at = now
+    if status == "cancelled":
+        from app.services.adaptive_import.service import cancel_session
+
+        cancel_session(record)
+    else:
+        record.status = "failed"
+        record.phase = "analysis_failed"
+        record.session_state = "FAILED"
+        record.error_message = job.error_message

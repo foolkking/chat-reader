@@ -7,6 +7,41 @@ const runImportFlow = process.env.E2E_IMPORT_FLOW === "1";
 
 test.skip(!runImportFlow, "E2E_IMPORT_FLOW=1 is required");
 
+test("file drops capture the current unclassified or project destination", async ({ page }) => {
+  const projectResponse = await page.request.post("/api/projects", {
+    data: { name: `Drop import ${crypto.randomUUID().slice(0, 8)}` },
+  });
+  expect(projectResponse.status()).toBe(201);
+  const projectId = (await projectResponse.json() as { id: string }).id;
+
+  const dispatchFileDrop = async (selector: string, filename: string) => {
+    await page.locator(selector).evaluate((element, name) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["# Imported note\n\nPlain Markdown body."], name, { type: "text/markdown" }));
+      element.dispatchEvent(new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: transfer,
+      }));
+    }, filename);
+  };
+
+  try {
+    await page.goto("/");
+    await dispatchFileDrop("main", "unclassified-drop.md");
+    await expect(page.getByTestId("import-destination-select")).toHaveValue("");
+    await expect(page.getByText("unclassified-drop.md")).toBeVisible();
+    await page.getByTestId("import-dialog-close").click();
+
+    await page.goto(`/projects/${projectId}`);
+    await dispatchFileDrop('[data-testid="sidebar-import-button"]', "project-drop.md");
+    await expect(page.getByTestId("import-destination-select")).toHaveValue(projectId);
+    await expect(page.getByText("project-drop.md")).toBeVisible();
+  } finally {
+    await page.request.delete(`/api/projects/${projectId}`);
+  }
+});
+
 test("renders paired Markdown in preview and exposes the committed Reader", async ({ page }) => {
   const json = JSON.stringify({
     metadata: { title: "Markdown import E2E", powered_by: "ChatGPT Exporter (https://www.chatgptexporter.com)" },

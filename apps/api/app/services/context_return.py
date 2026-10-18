@@ -70,12 +70,22 @@ def extract_returned_continuation(returned_path, canonical_path, conversation_id
     """
     try:
         inspection = inspect_package(str(returned_path), verify_hashes='all')
-        if inspection.get('status') in {'invalid', 'ambiguous', 'unsupported'} or any(
+        inspection_invalid = inspection.get('status') in {'invalid', 'ambiguous', 'unsupported'} or any(
             entry.get('severity') == 'error' for entry in inspection.get('anomalies', [])
-        ):
-            raise ContinuationError('CONTEXT_RETURN_INVALID')
+        )
         with PackageSource(returned_path) as returned, PackageSource(canonical_path) as canonical:
-            manifest, snapshot, source_messages, missing = _checked_source(returned)
+            try:
+                manifest, snapshot, source_messages, missing = _checked_source(returned)
+            except ContinuationError as exc:
+                # Keep the established, actionable attachment error even when a
+                # broader inspection error (for example a missing manifest file
+                # declaration) is also present. Other malformed-Raw failures
+                # retain the public CONTEXT_RETURN_INVALID contract.
+                if inspection_invalid and exc.code != 'CONTEXT_ATTACHMENT_MISMATCH':
+                    raise ContinuationError('CONTEXT_RETURN_INVALID') from None
+                raise
+            if inspection_invalid:
+                raise ContinuationError('CONTEXT_RETURN_INVALID')
             _, _, target_messages, _ = _checked_source(canonical)
             source_id = manifest.conversation.get('id')
             header_id = (snapshot.header or {}).get('conversation', {}).get('id')

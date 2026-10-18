@@ -13,6 +13,7 @@ from app.services.user_deletion import execute_user_account_delete, queue_user_a
 from app.services.auth import ROOT_ADMIN_USER_ID
 from test_admin_system import _normal_user_session
 from test_auth import auth_client, owner_login  # noqa: F401
+from test_adaptive_import_api import _complete_analysis
 
 
 @pytest.fixture
@@ -46,7 +47,7 @@ def analyze(client, *, changed=False, repair_id=None):
     result = client.post("/api/adaptive-import/sessions", data={"repair_profile_id": repair_id} if repair_id else {},
         files=[("files", ("private-source-filename.json", source(changed=changed), "application/json"))])
     assert result.status_code == 201, result.text
-    return result.json()
+    return _complete_analysis(client, result.json())
 
 
 def learn(client, *, changed=False, repair_id=None, name="Private learning label", transform=None):

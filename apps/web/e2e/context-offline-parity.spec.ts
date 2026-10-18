@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { settingsAppearance } from "./settings-test-helper";
+import { waitForAdaptiveAnalysis } from "./import-test-helper";
 
 test.use({ trace: "off", viewport: { width: 1440, height: 1000 }, extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
 test.skip(process.env.E2E_CONTEXT_EXPORT !== "1", "Requires isolated API and live worker");
@@ -35,7 +36,7 @@ for (const legacy of [false, true]) test(`${legacy ? "legacy optional-member com
     files: { name: "synthetic.chat-transcript.md", mimeType: "text/markdown", buffer: Buffer.from(transcript) },
   } });
   expect(imported.status()).toBe(201);
-  const sessionData = await imported.json();
+  const sessionData = await waitForAdaptiveAnalysis(page.request, await imported.json());
   expect(sessionData.state).toBe("READY");
   const committed = await page.request.post(`/api/imports/${sessionData.import_id}/commit`);
   expect([200, 202]).toContain(committed.status());

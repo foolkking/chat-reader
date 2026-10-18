@@ -1,0 +1,15 @@
+{
+  "title": "Synthetic Conversation",
+  "exported_at": "2026-10-17T12:00:00.000Z",
+  "record": {
+    "message_seq": 18,
+    "message_role": "assistant",
+    "annotation_type": "comment",
+    "anchor_status": "needs_review",
+    "color": "yellow",
+    "created_at": "2026-10-17T11:00:00.000Z",
+    "updated_at": "2026-10-17T11:30:00.000Z",
+    "quoted_text": "A `quoted` line\nwith ``` fences.",
+    "comment_markdown": "Synthetic **comment**."
+  }
+}

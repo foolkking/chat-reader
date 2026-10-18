@@ -105,19 +105,24 @@ test("unusable refinements show plain source and recovery instead of a guessed w
 
 test("protected, stale, conflicting and applied candidates cannot inherit checked or saving state", () => {
   for (const [changes, en, zh] of [
-    [{ decision: "PROTECTED" }, "Protected; will not be changed", "受保护，不会处理"],
-    [{ evidence_codes: ["PROTECTED_RANGE"] }, "Protected; will not be changed", "受保护，不会处理"],
+    [{ decision: "PROTECTED" }, "Protected; confirmation required", "受保护，待确认"],
+    [{ evidence_codes: ["PROTECTED_RANGE"] }, "Protected; confirmation required", "受保护，待确认"],
     [{ stale: true }, "Rescan required; source retained", "需重新扫描，原文已保留"],
     [{ decision: "CONFLICT" }, "Rescan required; source retained", "需重新扫描，原文已保留"],
     [{ decision: "APPLIED" }, "Completed; will not be applied again", "已完成，不会重复处理"],
     [{ decision: "APPLIED", stale: true }, "Completed; will not be applied again", "已完成，不会重复处理"],
   ]) {
+    const protectedCandidate = changes.decision === "PROTECTED" || changes.evidence_codes?.includes("PROTECTED_RANGE");
     for (const locale of [false, true]) {
       const html = render(changes, { selected: true, selectionSaving: true, zh: locale });
       assert.equal(description(html), locale ? zh : en);
-      assert.match(checkbox(html), /\bdisabled=""/);
+      if (protectedCandidate) {
+        assert.doesNotMatch(checkbox(html), /\bdisabled=""/);
+      } else {
+        assert.match(checkbox(html), /\bdisabled=""/);
+      }
       assert.doesNotMatch(checkbox(html), /\bchecked=/);
-      assert.match(checkbox(html), /aria-busy="false"/);
+      assert.doesNotMatch(checkbox(html), /aria-busy="true"/);
       assert.doesNotMatch(summary(html).markup, /line-through|data-cleanup-candidate-removal/);
       assert.doesNotMatch(html.match(/<article[^>]*>/)[0], /accent-soft/);
       if (changes.decision === "APPLIED") assert.doesNotMatch(html, /rescan to continue|请重新扫描/);

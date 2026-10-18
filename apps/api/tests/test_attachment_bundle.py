@@ -69,10 +69,10 @@ def bundle_state(state, tmp_path, monkeypatch):
     get_settings.cache_clear()
 
 
-def queue(info, format="canjson_bundle"):
+def queue(info, format="canjson_bundle", include_annotations=True):
     with info["factory"]() as db:
         job = queue_conversation_export(db, conversation_id=info["sources"][0], idempotency_key=str(uuid.uuid4()),
-            export_format=format, include_annotations=True, include_notebook=True, include_description=True,
+            export_format=format, include_annotations=include_annotations, include_notebook=True, include_description=True,
             ownership_scope=OwnershipScope(info["owners"][0]))
         db.commit()
         return job.id
@@ -108,6 +108,10 @@ def test_real_worker_bytes_checksums_and_filename(bundle_state, format):
                     data = archive.read(path)
                     assert len(data) == meta["byte_size"]
                     assert hashlib.sha256(data).hexdigest() == meta["sha256"]
+                assert "annotations.md" in archive.namelist()
+                assert manifest["included_content"]["annotation_document"] is True
+                assert manifest["extensions"]["chat_reader_annotation_export"]["count"] == 1
+                assert "BEFORE-COMMENT" in archive.read("annotations.md").decode("utf-8")
                 attachment = next(r for r in records if r["record_type"] == "attachment")
                 assert archive.read(attachment["object"]["path"]) == b"A" * 128
                 assert attachment["object"]["sha256"] == hashlib.sha256(b"A" * 128).hexdigest()
@@ -120,7 +124,21 @@ def test_real_worker_bytes_checksums_and_filename(bundle_state, format):
                 assert "cr-asset://" not in body
             assert archive.testzip() is None
         assert db.query(ConversationEvent).count() == 1
-    assert not list(info["root"].rglob("*.tmp.*"))
+        assert not list(info["root"].rglob("*.tmp.*"))
+
+
+def test_canjson_bundle_can_omit_readable_annotation_projection(bundle_state):
+    info = bundle_state
+    identity = queue(info, include_annotations=False)
+    run(info["factory"], identity)
+    with info["factory"]() as db:
+        artifact = db.scalar(select(ExportArtifact))
+        with zipfile.ZipFile(artifact.storage_uri) as archive:
+            manifest = json.loads(archive.read("manifest.json"))
+            assert "annotations.md" not in archive.namelist()
+            extension = manifest["extensions"]["chat_reader_annotation_export"]
+            assert extension == {"version": 1, "status": "omitted_by_request"}
+            assert manifest["included_content"]["annotation_document"] is False
 
 
 @pytest.mark.parametrize("case", ["same_size_corruption", "growth", "write", "rename", "after_rename", "commit", "mkdir"])

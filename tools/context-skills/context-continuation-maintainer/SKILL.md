@@ -35,6 +35,15 @@ a separate distribution until explicitly replaced.
 11. Validate the newly assembled package before publication.
 12. Leave Raw Conversation and Raw Attachments unchanged.
 Never directly hand-edit finalized `continuation/current.md`, `continuation/index.json`, source fingerprints, continuation revisions, or manifest continuation metadata when the deterministic materializer is available.
+
+Context Package 1.1 may include the root-level readable `annotations.md`
+projection. Preserve it, its manifest declaration, and any unknown safe package
+members when producing a maintained package. It is user commentary, not Raw
+Conversation evidence, and it is not a writable input: never derive or modify
+structured annotations from it. Current/Index remain the only continuation
+members eligible for the existing return workflow; their bytes, coverage,
+fingerprints, and revision declarations must remain unchanged unless the
+maintenance operation explicitly changes continuation state.
 Never modify `conversation.canjsonl`, Canonical Raw Message content, Raw IDs, or asset-object bytes.
 
 ## 2. Authority and Semantic Invariants

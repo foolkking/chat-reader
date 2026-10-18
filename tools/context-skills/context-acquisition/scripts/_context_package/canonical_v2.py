@@ -87,7 +87,23 @@ class CanonicalV2Adapter:
         ordinal = 0
         message_by_id: dict[str, CanonicalMessageDescriptor] = {}
         refs_by_message: dict[str, int] = {}
-        known = {"manifest", "message", "source_ref", "attachment", "attachment_ref", "end"}
+        # These are all record types emitted by the v2 exporter.  Keeping the
+        # complete set here matters for 1.1 packages: an annotation document
+        # is only a projection, while its structured annotation records remain
+        # part of the canonical stream and must not make an otherwise valid
+        # package look degraded.
+        known = {
+            "manifest",
+            "message",
+            "message_version",
+            "source_ref",
+            "annotation",
+            "attachment",
+            "attachment_ref",
+            "notebook",
+            "project_context",
+            "end",
+        }
 
         for line_no, obj, err in _iter_json_lines(self.source, self.entrypoint):
             snap.total_records += 1

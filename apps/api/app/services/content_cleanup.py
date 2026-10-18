@@ -5,6 +5,7 @@ import hashlib
 import re
 import uuid
 from bisect import bisect_left
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -111,6 +112,28 @@ class DetectedOccurrence:
     decision: str
     match_mode: str = "RAW_EXACT"
     evidence_codes: tuple[str, ...] = ()
+
+
+class _DetectionContext:
+    """One message/operation only; at most the two case-sensitivity profiles."""
+    def __init__(self, text: str, protected: list[tuple[int, int]] | None = None):
+        self.text = text
+        self._protected = protected
+        self._starts: list[int] | None = None
+        self._shadows: dict[bool, tuple[str, Sequence[tuple[int, int]]]] = {}
+
+    def shadow(self, *, case_sensitive: bool) -> tuple[str, Sequence[tuple[int, int]]]:
+        if case_sensitive not in self._shadows:
+            self._shadows[case_sensitive] = _shadow(self.text, case_sensitive=case_sensitive)
+        return self._shadows[case_sensitive]
+
+    def protects(self, start: int, end: int) -> bool:
+        if self._protected is None:
+            self._protected = protected_ranges(self.text)
+        if self._starts is None:
+            self._starts = [left for left, _right in self._protected]
+        index = bisect_left(self._starts, end) - 1
+        return index >= 0 and self._protected[index][1] > start
 
 
 def ensure_builtin_rules(db: Session) -> list[ContentCleanupRuleRevision]:
@@ -331,6 +354,9 @@ def create_scan(
         ))
     for revision in revisions:
         db.add(ContentCleanupScanRule(scan_id=scan.id, rule_revision_id=revision.id))
+    selection_binding = ({"selection_version_id": str(selected_version.id),
+                          "selection_source_hash": source_fingerprint(selected_version.display_text)}
+                         if has_selection else {})
     job = BackgroundJob(
         owner_user_id=ownership_scope.owner_user_id,
         job_type="content_noise_scan",
@@ -339,7 +365,7 @@ def create_scan(
         progress=0,
         processed_items=0,
         total_items=scan.total_messages,
-        payload={"scan_id": str(scan.id), "cursor_message_id": None},
+        payload={"scan_id": str(scan.id), "cursor_message_id": None, **selection_binding},
         result={"scan_id": str(scan.id), "conversation_ids": [str(item.id) for item in conversations]},
     )
     db.add(job)
@@ -388,8 +414,11 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
         query = query.filter(Message.id > cursor)
     if scan.selection_message_id is not None:
         query = query.filter(Message.id == scan.selection_message_id)
-    rows = query.order_by(Message.id.asc()).limit(chunk_size).all()
-    if not rows:
+    message_ids = [
+        row[0]
+        for row in query.with_entities(Message.id).order_by(Message.id.asc()).limit(chunk_size).all()
+    ]
+    if not message_ids:
         occurrence_count = db.query(ContentCleanupOccurrence).filter(ContentCleanupOccurrence.scan_id == scan_id).count()
         scan.status = "READY"
         scan.progress = 100
@@ -401,8 +430,24 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
         )
         return {"done": True, "processed": scan.processed_messages, "total": scan.total_messages, "occurrences": occurrence_count}
 
-    for message, version, _conversation in rows:
+    processed_in_chunk = 0
+    last_message_id = None
+    for message_id in message_ids:
+        # Keep only bounded identifiers for the batch. Loading full display_text
+        # for every row at once makes peak memory proportional to the sum of
+        # message bodies rather than the largest single body.
+        # Reuse every original scope predicate: a split/merge may have moved
+        # the message outside the selected conversations since the ID page.
+        row = query.filter(Message.id == message_id).one_or_none()
+        if row is None:
+            # The message may have been deleted or moved after the identifier
+            # page was read. Advancing over it is safe: it is no longer in scope.
+            last_message_id = message_id
+            processed_in_chunk += 1
+            continue
+        message, version, _conversation = row
         source_hash = source_fingerprint(version.display_text)
+        detection = _DetectionContext(version.display_text)
         db.query(ContentCleanupScanTarget).filter(
             ContentCleanupScanTarget.scan_id == scan_id,
             ContentCleanupScanTarget.conversation_id == message.conversation_id,
@@ -415,7 +460,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                 continue
             if revision.role_filter and revision.role_filter != message.role:
                 continue
-            for detected in detect_occurrences(message.role, version.display_text, rule, revision):
+            for detected in detect_occurrences(message.role, version.display_text, rule, revision, context=detection):
                 if scan.selection_message_id is not None:
                     assert scan.selection_start_offset is not None and scan.selection_end_offset is not None
                     selected_start, selected_end = scan.selection_start_offset, scan.selection_end_offset
@@ -439,10 +484,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
             if not detected_rows and partial_rows:
                 detected_rows.extend(partial_rows)
             elif not detected_rows and manual_revision is not None:
-                protected = any(
-                    selected_start < protected_end and selected_end > protected_start
-                    for protected_start, protected_end in protected_ranges(version.display_text)
-                )
+                protected = detection.protects(selected_start, selected_end)
                 deletes_entire_message = not (version.display_text[:selected_start] + version.display_text[selected_end:]).strip()
                 evidence_codes = ["MANUAL_SELECTION"]
                 if protected:
@@ -471,11 +513,23 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
             if all(_prefer_detected_occurrence(detected, deduped[index][1]) for index in overlapping):
                 deduped = [item for index, item in enumerate(deduped) if index not in overlapping]
                 deduped.append((revision, detected))
+        line_cursor, current_line = 0, 1
+
+        def source_position(offset: int) -> tuple[int, int]:
+            nonlocal line_cursor, current_line
+            newline = version.display_text.rfind("\n", line_cursor, offset)
+            if newline >= 0:
+                current_line += version.display_text.count("\n", line_cursor, offset)
+                line_cursor = newline + 1
+            return current_line, offset - line_cursor + 1
+
         for revision, detected in sorted(deduped, key=lambda item: (item[1].start, item[1].end)):
             # Apply exceptions after detector precedence; otherwise a generic
             # overlapping detector would immediately recreate the ignored hit.
             if is_ignored(ignored, revision.id, message.role, version.display_text, detected.start, detected.end):
                 continue
+            line_start, column_start = source_position(detected.start)
+            line_end, column_end = source_position(detected.end)
             db.add(ContentCleanupOccurrence(
                 scan_id=scan.id,
                 rule_revision_id=revision.id,
@@ -485,10 +539,10 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                 source_content_hash=source_hash,
                 start_offset=detected.start,
                 end_offset=detected.end,
-                line_start=version.display_text.count("\n", 0, detected.start) + 1,
-                column_start=detected.start - version.display_text.rfind("\n", 0, detected.start),
-                line_end=version.display_text.count("\n", 0, detected.end) + 1,
-                column_end=detected.end - version.display_text.rfind("\n", 0, detected.end),
+                line_start=line_start,
+                column_start=column_start,
+                line_end=line_end,
+                column_end=column_end,
                 kind=detected.kind,
                 reason_code=detected.reason_code,
                 decision=detected.decision,
@@ -496,8 +550,13 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                 evidence_codes=list(detected.evidence_codes),
             ))
             revision.rule.last_used_at = utc_now()
-    scan.cursor_message_id = rows[-1][0].id
-    scan.processed_messages += len(rows)
+        last_message_id = message.id
+        processed_in_chunk += 1
+        # Do not retain a prior full source string or its ORM row while the next
+        # message is loaded. Occurrence rows contain only bounded match metadata.
+        del row, message, version, _conversation, detection, detected_rows, partial_rows, deduped
+    scan.cursor_message_id = last_message_id
+    scan.processed_messages += processed_in_chunk
     scan.progress = min(99, int(scan.processed_messages * 100 / max(scan.total_messages, 1)))
     scan.status = "SCANNING"
     return {"done": False, "processed": scan.processed_messages, "total": scan.total_messages, "occurrences": 0}
@@ -508,7 +567,13 @@ def detect_occurrences(
     text: str,
     rule: ContentCleanupRule,
     revision: ContentCleanupRuleRevision,
+    *,
+    context: _DetectionContext | None = None,
 ) -> list[DetectedOccurrence]:
+    if context is None:
+        context = _DetectionContext(text)
+    elif context.text is not text:
+        raise ValueError("Cleanup detection belongs to a different source.")
     values: list[DetectedOccurrence] = []
     detector_id = rule.detector_id
     if detector_id == "openai-private-citation-v1":
@@ -558,11 +623,10 @@ def detect_occurrences(
             if start >= 0:
                 values.append(_detected(start, start + len(cleaned.removed_text), "thinking_summary", "THINKING_SUMMARY", "STRUCTURAL", ("PREFIX_BOUNDARY", "ANSWER_BOUNDARY")))
     elif revision.match_value:
-        values.extend(_literal_occurrences(text, revision))
-    protected = protected_ranges(text)
+        values.extend(_literal_occurrences(text, revision, context=context))
     result: list[DetectedOccurrence] = []
     for item in values:
-        is_protected = any(item.start < protected_end and item.end > protected_start for protected_start, protected_end in protected)
+        is_protected = context.protects(item.start, item.end)
         evidence_codes = (*item.evidence_codes, "PROTECTED_RANGE") if is_protected else item.evidence_codes
         if not is_protected and rule.detector_id and _is_explanatory_example(text, item.start, item.end):
             continue
@@ -770,11 +834,16 @@ def _merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return merged
 
 
-def _shadow(text: str, *, case_sensitive: bool) -> tuple[str, list[tuple[int, int]]]:
-    return normalized_shadow(text, case_sensitive=case_sensitive)
+def _shadow(text: str, *, case_sensitive: bool) -> tuple[str, Sequence[tuple[int, int]]]:
+    return normalized_shadow(text, case_sensitive=case_sensitive, compact=True)
 
 
-def _literal_occurrences(text: str, revision: ContentCleanupRuleRevision) -> list[DetectedOccurrence]:
+def _literal_occurrences(
+    text: str,
+    revision: ContentCleanupRuleRevision,
+    *,
+    context: _DetectionContext | None = None,
+) -> list[DetectedOccurrence]:
     value = revision.match_value
     if not value:
         return []
@@ -783,7 +852,10 @@ def _literal_occurrences(text: str, revision: ContentCleanupRuleRevision) -> lis
         flags = 0 if revision.case_sensitive else re.IGNORECASE
         pattern = re.compile(re.escape(value), flags)
         return [_detected(match.start(), match.end(), "custom", "USER_LITERAL", "RAW_EXACT", ("LITERAL_EXACT",)) for match in pattern.finditer(text) if _boundary_allows(text, match.start(), match.end(), getattr(revision, "boundary_mode", "ANYWHERE"))]
-    shadow, mapping = _shadow(text, case_sensitive=revision.case_sensitive)
+    shadow, mapping = (
+        context.shadow(case_sensitive=revision.case_sensitive) if context is not None
+        else _shadow(text, case_sensitive=revision.case_sensitive)
+    )
     needle, _ = _shadow(value, case_sensitive=revision.case_sensitive)
     if not needle:
         return []
@@ -930,17 +1002,16 @@ def preview_occurrences(
     from app.services.cleanup_review import filter_occurrences
     from app.services.cleanup_ranges import range_edit_token
     from app.services.cleanup_rule_access import canonical_rule_id, personal_name
+    from app.services.cleanup_protection import reviewed_fingerprint
     scan = db.get(ContentCleanupScan, scan_id)
     query = (
         db.query(
             ContentCleanupOccurrence,
-            MessageVersion,
             Message,
             Conversation,
             ContentCleanupRule,
             ContentCleanupRuleRevision,
         )
-        .join(MessageVersion, MessageVersion.id == ContentCleanupOccurrence.message_version_id)
         .join(Message, Message.id == ContentCleanupOccurrence.message_id)
         .join(Conversation, Conversation.id == ContentCleanupOccurrence.conversation_id)
         .join(ContentCleanupRuleRevision, ContentCleanupRuleRevision.id == ContentCleanupOccurrence.rule_revision_id)
@@ -957,11 +1028,22 @@ def preview_occurrences(
         .all()
     )
     result: list[dict[str, object]] = []
-    fingerprints: dict[uuid.UUID, str] = {}
-    for occurrence, version, message, conversation, rule, revision in rows:
-        text = version.display_text
-        if version.id not in fingerprints:
-            fingerprints[version.id] = source_fingerprint(text)
+    source_version_id = None
+    text = None
+    fingerprint = ""
+    for occurrence, message, conversation, rule, revision in rows:
+        if source_version_id != occurrence.message_version_id:
+            # Page only metadata above. Fetch one source, without plain_text or
+            # blocks, and reuse it for adjacent matches in the same version.
+            # Release the previous source before fetching the next one.
+            text = None
+            text = db.query(MessageVersion.display_text).filter(
+                MessageVersion.id == occurrence.message_version_id,
+            ).scalar()
+            source_version_id = occurrence.message_version_id
+            fingerprint = source_fingerprint(text) if text is not None else ""
+        if text is None:
+            continue  # A historical version may have disappeared after paging.
         start = max(0, occurrence.start_offset - context)
         end = min(len(text), occurrence.end_offset + context)
         result.append({
@@ -988,16 +1070,30 @@ def preview_occurrences(
             "match_text": text[occurrence.start_offset:occurrence.end_offset],
             "context_before": text[start:occurrence.start_offset],
             "context_after": text[occurrence.end_offset:end],
-            "stale": message.current_version_id != version.id or occurrence.source_content_hash != fingerprints[version.id],
+            "stale": message.current_version_id != source_version_id or occurrence.source_content_hash != fingerprint,
             "match_value": revision.match_value,
+            "rule_revision_id": str(revision.id),
+            "rule_revision": revision.revision,
+            "rule_settings": {
+                "match_value": revision.match_value, "case_sensitive": revision.case_sensitive,
+                "role_filter": revision.role_filter, "scope": rule.scope,
+                "matcher_mode": revision.matcher_mode, "boundary_mode": revision.boundary_mode,
+                "normalization_profile": revision.normalization_profile, "matcher_version": revision.matcher_version,
+            },
+            "protection_confirmed": reviewed_fingerprint(occurrence, fingerprint),
+            "protection_types": ["markdown_code_link_or_math"] if "PROTECTED_RANGE" in (occurrence.evidence_codes or []) else [],
         })
     return result
 
 
-def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID, str]) -> None:
+def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID, str], *,
+                     protection_token: str | None = None, _protection_digest: str | None = None) -> None:
+    from app.services.cleanup_protection import authorize, confirm, reviewed
     scan = db.query(ContentCleanupScan).filter_by(id=scan_id).populate_existing().with_for_update().one_or_none()
     if scan is None or scan.status != "READY":
         raise ValueError("Wait for this scan to be ready before changing decisions.")
+    if protection_token:
+        _protection_digest = authorize(db, scan_id, protection_token, occurrence_ids=list(decisions))
     rows = db.query(ContentCleanupOccurrence).filter(ContentCleanupOccurrence.scan_id == scan_id, ContentCleanupOccurrence.id.in_(list(decisions))).all()
     if len(rows) != len(decisions):
         raise ValueError("One or more cleanup candidates do not belong to this scan.")
@@ -1008,26 +1104,36 @@ def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID,
             raise ValueError("Noise decision must be DELETE or KEEP.")
         if row.decision in {"CONFLICT", "APPLIED"}:
             continue
-        version = db.get(MessageVersion, row.message_version_id)
-        if version is None:
+        source = sources.get(row.message_version_id)
+        if source is None:
+            source_text = db.query(MessageVersion.display_text).filter(
+                MessageVersion.id == row.message_version_id,
+            ).scalar()
+            if source_text is None:
+                row.decision = "CONFLICT"
+                continue
+            source = _SourceAnalysis(source_text)
+            sources[row.message_version_id] = source
+        if row.source_content_hash != source.fingerprint:
             row.decision = "CONFLICT"
             continue
-        if version.id not in sources:
-            sources[version.id] = _SourceAnalysis(version.display_text)
-        source = sources[version.id]
-        if row.source_content_hash != source.fingerprint:
+        message = db.get(Message, row.message_id)
+        conversation = db.get(Conversation, row.conversation_id)
+        if (message is None or message.is_deleted or message.current_version_id != row.message_version_id
+                or conversation is None or conversation.status != "active" or conversation.deleted_at):
             row.decision = "CONFLICT"
             continue
         protected = source.protects(row.start_offset, row.end_offset)
         if row.decision == "PROTECTED" or protected:
             if decision == "DELETE":
-                raise ValueError("Protected source cannot be deleted by a cleanup rule. Edit the Markdown source instead.")
-            row.decision = "PROTECTED"
-            continue
-        message = db.get(Message, row.message_id)
-        if message is None or message.is_deleted or message.current_version_id != row.message_version_id:
-            row.decision = "CONFLICT"
-            continue
+                if _protection_digest:
+                    confirm(row, source, set_digest=_protection_digest)
+                if not reviewed(row, source):
+                    raise ValueError("Protected source requires a current protection preview and explicit confirmation.")
+            else:
+                row.decision = "PROTECTED"
+                row.decision_updated_at = utc_now()
+                continue
         row.decision = decision
         row.decision_updated_at = utc_now()
 
@@ -1231,7 +1337,16 @@ class _MessageValidation:
     def __init__(self, role: str, text: str):
         self.role, self.text = role, text
         self.source = _SourceAnalysis(text)
+        self.detection = _DetectionContext(text, self.source.protected)
         self.matches: dict[uuid.UUID, set[tuple[int, int]] | None] = {}
+        self.persisted_versions: dict[uuid.UUID, bool] = {}
+
+    def has_persisted_version(self, db: Session, version_id: uuid.UUID) -> bool:
+        if version_id not in self.persisted_versions:
+            self.persisted_versions[version_id] = db.query(MessageVersion.id).filter(
+                MessageVersion.id == version_id,
+            ).first() is not None
+        return self.persisted_versions[version_id]
 
     def matching_ranges(self, db: Session, revision_id: uuid.UUID) -> set[tuple[int, int]] | None:
         if revision_id not in self.matches:
@@ -1242,7 +1357,9 @@ class _MessageValidation:
             elif rule.detector_id == MANUAL_SELECTION_DETECTOR:
                 self.matches[revision_id] = None
             else:
-                self.matches[revision_id] = {(item.start, item.end) for item in detect_occurrences(self.role, self.text, rule, revision) if item.decision != "PROTECTED"}
+                self.matches[revision_id] = {(item.start, item.end) for item in detect_occurrences(
+                    self.role, self.text, rule, revision, context=self.detection,
+                )}
         return self.matches[revision_id]
 
 
@@ -1252,11 +1369,13 @@ def _occurrence_still_matches(db: Session, role: str, text: str, occurrence: Con
     validation = validation or _MessageValidation(role, text)
     if validation.role != role or validation.text != text:
         raise ValueError("Cleanup validation belongs to a different source.")
-    source = db.get(MessageVersion, occurrence.message_version_id)
-    if source is None or occurrence.source_content_hash != validation.source.fingerprint:
+    if (not validation.has_persisted_version(db, occurrence.message_version_id)
+            or occurrence.source_content_hash != validation.source.fingerprint):
         return False
     if validation.source.protects(occurrence.start_offset, occurrence.end_offset):
-        return False
+        from app.services.cleanup_protection import reviewed
+        if not reviewed(occurrence, validation.source):
+            return False
     ranges = validation.matching_ranges(db, occurrence.rule_revision_id)
     if ranges is None:
         return 0 <= occurrence.start_offset < occurrence.end_offset <= len(text)

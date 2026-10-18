@@ -35,12 +35,17 @@ def test_context_worker_delivers_actual_checksums_and_source(bundle_state):
         with zipfile.ZipFile(artifact.storage_uri) as archive:
             manifest = json.loads(archive.read("manifest.json"))
             records = [json.loads(line) for line in archive.read("conversation.canjsonl").splitlines()]
+            assert manifest["format_version"] == "1.1"
+            assert "annotations.md" in archive.namelist()
+            assert manifest["included_content"]["annotation_document"] is True
+            assert manifest["extensions"]["chat_reader_annotation_export"]["count"] == 1
             assert manifest["conversation"]["message_count"] == records[-1]["message_count"] == 2
             for name, expected in manifest["files"].items():
                 data = archive.read(name)
                 assert len(data) == expected["byte_size"]
                 assert hashlib.sha256(data).hexdigest() == expected["sha256"]
             assert next(row for row in records if row["record_type"] == "annotation")["comment_markdown"] == "BEFORE-COMMENT"
+            assert "BEFORE-COMMENT" in archive.read("annotations.md").decode("utf-8")
             assert next(row for row in records if row["record_type"] == "notebook")["content_markdown"] == "BEFORE-NOTE"
     assert not list(info["root"].rglob("*.tmp.*"))
 

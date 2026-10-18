@@ -1,5 +1,92 @@
 # Adaptive Import Contract
 
+## Durable initial analysis task (2026-10-18, local only)
+
+Creating a multi-file adaptive import no longer parses/analyzes the batch
+inside the upload request. The synchronous upload handler performs admission
+checks and streams each multipart file to temporary source storage in bounded
+chunks, then commits an `adaptive_import_analysis` job on the existing
+single-worker BackgroundJob lane. The response contains the import session in
+`ANALYZING`/queued state and its task ID; it does not wait for format detection,
+grouping or family analysis. The Task Center is the durable progress and result
+surface, and the import dialog can close without cancelling work.
+
+The Web clears its in-memory `File` objects after the server acknowledges the
+staged source and keeps a same-tab session pointer for recovery. Reopening from
+Task Center reads the owned task/session; it does not upload a second copy.
+Failures retain staged sources and can retry the same task identity. Explicit
+cancellation of a queued task safely removes its temporary sources. Once a
+worker has begun processing, cancellation is only requested; the worker
+acknowledges at safe progress/transaction boundaries before cleanup. The
+canonical import commit is rejected until initial analysis has reached a
+reviewable terminal state.
+
+The new task type uses the generic BackgroundJob model and worker; it adds no
+migration. Other adaptive routes such as stored-source replacement,
+reanalysis, grouping and mapping validation remain synchronous FastAPI
+handlers executed in the thread pool with bounded admission. This change
+specifically removes the initial multi-file analysis from the request path; it
+does not assert that every parse path is queued or that a single oversized
+source has constant memory cost.
+
+## Import responsiveness and bounded retention (2026-10-18, local only)
+
+Ordinary import preview and stored-source replacement/reanalysis are synchronous
+FastAPI routes: parsing and analysis run in the thread pool, not directly on the
+ASGI event loop used by authentication/session requests. Stored-source
+reanalysis, grouping, mapping validation/preview, health checks and profile
+selection use the same bounded analysis admission. Initial adaptive session
+creation is the exception and follows the durable task contract above.
+
+Both maximum individual size and aggregate source bytes determine heavy
+admission, including replacement/reanalysis of a previously saved batch. Queue
+capacity remains serialized. Memory admission requires the configured fixed
+reserve plus `UPLOAD_ANALYSIS_MEMORY_FACTOR` (default 32) times aggregate input
+bytes; the factor is an estimate, not a hard bound. Linux headroom accounts for
+the lower of host availability and visible cgroup v1/v2 availability. Heavy
+analysis fails closed when memory cannot be measured and returns retryable HTTP
+429 immediately when the estimate cannot be met. Neither successful parsing nor
+a 429 is evidence of production OOM acceptance. Moving work to a thread pool
+does not remove CPU/GIL or per-file memory costs.
+
+Family analysis retains a representative analysis and group metadata rather than
+every full parsed result. Draft planning streams one group at a time into JSONL;
+a group may still contain several conversations. Canonical commit reads and
+converts one draft conversation at a time without changing partial-conversation
+failure policy. A malformed/expired/truncated stream rolls back the outer
+transaction rather than leaving earlier streamed conversations committed.
+SQLite regression setup explicitly begins that transaction before savepoints;
+PostgreSQL already uses a real outer transaction.
+
+No user import files or production configuration were changed. See
+[implementation, synthetic regressions and incident evidence](../execution/IMPORT_STABILITY_2026-10-18.md).
+
+## Plain Markdown and drop-based destination (2026-10-18, local only)
+
+Markdown that does not contain reliable repeated message boundaries is treated
+as one conversation with the complete source file preserved as a single
+assistant message. Ordinary file/session validation still rejects empty,
+invalid-UTF-8, instruction-package/rescue inputs and malformed structures that
+the analyzer identifies as unsafe; this fallback never invents message splits.
+The generated conversation title uses the first Markdown H1 when available,
+otherwise the existing filename fallback.
+
+Dropping files on an owner Reader page opens the existing import dialog with
+those files preselected. The page route supplies the destination snapshot:
+the all-conversations surface defaults to unclassified, a project page uses
+that project, and a Reader opened with project context retains that project.
+Dropping directly on the sidebar Import button follows the same destination
+rule. The import dialog shows an active-project/unclassified selector; the
+selection is sent with initial upload and, for an existing adaptive session,
+saved through its destination endpoint before commit. Ownership and archived
+project checks are enforced on the server. A selected destination is immutable
+once canonical commit has started. Existing `.cr` routing remains the archive
+restore flow.
+
+This feature is local-only and adds no migration. Its API, component and
+Playwright verification status is recorded in
+[import destination and plain Markdown evidence](../execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md).
+
 ## Adaptive handling classes (2026-08-25)
 
 The analysis response exposes an explicit `handling_class` for every
@@ -95,7 +182,7 @@ SourceFile[]
 
 `StructureFamily` 只属于当前 session。系统按无正文的结构签名聚类，让同一 Family 只 Mapping 一次，再对 Family 的全部 InputGroup 执行 normalization 和 validation。
 
-一次 session 最多 500 个来源文件、总计 512 MiB；每个导入文件受 500 MiB 上限约束。API 在读取正文前检查文件数量和 spooled 文件大小，按 1 MiB chunk 有界读取；超过 10 MiB 的分析进入单并发 admission gate，并在系统可用内存低于保留水位时返回可重试的 429。反向代理对 Adaptive、Import Preview 和附件上传的精确路径开放 520 MiB multipart 容量；批次总量仍为 512 MiB。
+一次 session 最多 500 个来源文件、总计 512 MiB；每个导入文件受 500 MiB 上限约束。Starlette 在路由执行前会先解析 multipart，API 将单个文件仍留在内存中的 spool 阈值限制为 `MULTIPART_SPOOL_MAX_SIZE_KB`（默认 64 KiB），超过后落到任务临时目录，避免多文件批次绕过路由准入形成内存峰值。路由随后检查文件数量和 spooled 文件大小，按 1 MiB chunk 有界读取；单文件或本次来源累计超过配置阈值（默认 10 MiB）的分析进入单并发 admission gate，并在系统可用内存低于保留水位时返回可重试的 429。反向代理对 Adaptive、Import Preview 和附件上传的精确路径开放 520 MiB multipart 容量；批次总量仍为 512 MiB。
 
 ## Profile 与 Revision
 

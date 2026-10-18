@@ -114,7 +114,7 @@ def test_many_candidates_across_pages_preserve_refinements_and_apply_together(cl
         assert item["decision"] == "DELETE"
         assert item["reviewed_ranges"] == refinements.get(item["id"])
     proposed = client.get(prefix + "/preview").json()
-    assert proposed["summary"] == {"conversations": 2, "messages": 2, "fragments": 61}
+    assert proposed["summary"] == {"conversations": 2, "messages": 2, "fragments": 61, "protected_confirmed": 0}
     for message in proposed["items"]:
         spans = sorted(
             (span["start_offset"], span["end_offset"])

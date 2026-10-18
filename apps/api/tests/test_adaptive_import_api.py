@@ -5,14 +5,17 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.database import get_db
+from app.main import app
 from app.models.import_profile import ImportProfile, ImportProfileRevision
 from app.models.import_record import ImportRecord
 from app.core.config import get_settings
 from app.services.adaptive_import.analysis import analyze_documents, default_mapping
 from app.services.adaptive_import.contracts import AdaptiveImportError, SourceDocument
 from app.services.adaptive_import.normalization import normalize_group
+from app.services.adaptive_import.profiles import normalize_builtin
 from test_import_preview_api import client  # noqa: F401
 
 
@@ -32,6 +35,31 @@ def _create(client: TestClient, files: list[tuple[str, bytes, str]]) -> dict:
         files=[("files", item) for item in files],
     )
     assert response.status_code == 201, response.text
+    return _complete_analysis(client, response.json())
+
+
+def _complete_analysis(client: TestClient, queued: dict) -> dict:
+    """Drive the actual queued worker before assertions about analysis output."""
+    from app.services.background_jobs import claim_next_job, process_background_job
+
+    assert queued["state"] == "ANALYZING", queued
+    task_id = uuid.UUID(queued["analysis_task_id"])
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    try:
+        factory = sessionmaker(bind=db.get_bind(), expire_on_commit=False)
+        claimed = claim_next_job(db, job_type="adaptive_import_analysis")
+        assert claimed == task_id
+        db.commit()
+    finally:
+        db.close()
+        generator.close()
+    process_background_job(task_id, session_factory=factory)
+    task = client.get(f"/api/tasks/{task_id}")
+    assert task.status_code == 200
+    assert task.json()["status"] == "committed", task.json()
+    response = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}")
+    assert response.status_code == 200, response.text
     return response.json()
 
 
@@ -278,7 +306,7 @@ def test_equivalent_settings_remap_reuses_the_existing_revision(client: TestClie
     )
 
     assert repair.status_code == 201, repair.text
-    session = repair.json()
+    session = _complete_analysis(client, repair.json())
     assert session["families"][0]["resolution_status"] == "DRIFTED"
     assert session["families"][0]["matched_profile_id"] == profile_id
     repaired = _save_mapping(client, session, "Repairable fixture")
@@ -476,49 +504,24 @@ def test_rescue_instruction_session_exposes_not_mappable_recovery(client: TestCl
         ),
     ],
 )
-def test_non_conversation_markdown_examples_route_to_rescue_without_mapping(
+def test_unstructured_markdown_is_preserved_as_one_assistant_message(
     client: TestClient,
     filename: str,
     content: bytes,
 ) -> None:
+    document = SourceDocument("plain", filename, ".md", content)
+    analysis = analyze_documents([document])
+    assert analysis.handling_class == "SUPPORTED"
+    assert analysis.signature["builtin"] == "single-assistant-markdown-v1"
+    draft = normalize_builtin("builtin:single-assistant-markdown-v1", [document])[0]
+    assert draft.title == ("Deployment notes" if filename == "ordinary-document.md" else "Reference manual")
+    assert len(draft.messages) == 1
+    assert draft.messages[0].role == "assistant"
+    assert draft.messages[0].display_text == content.decode("utf-8")
+
     session = _create(client, [(filename, content, "text/markdown")])
-    family = session["families"][0]
-
-    assert session["state"] == "RESOLVING"
-    assert family["resolution_status"] == "INVALID"
-    assert family["handling_class"] == "NOT_MAPPABLE"
-    assert family["handling_reason"] == {
-        "code": "NO_MESSAGE_BOUNDARY",
-        "title": "没有可靠的消息边界",
-        "detail": "当前内容不足以安全分割为 Conversation 消息。",
-        "recovery_action": "OPEN_RESCUE",
-    }
-    assert family["mapping_draft"] == {}
-
-    preview = client.post(
-        f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping/preview",
-        json={
-            "profile_name": "Must not be created",
-            "mapping_spec": {"message_locator": {"strategy": "markdown_role_headings"}},
-            "sample_group_id": family["group_ids"][0],
-        },
-    )
-    assert preview.status_code == 422
-    assert preview.json()["detail"]["code"] == "FAMILY_NOT_MAPPABLE"
-
-    saved = client.post(
-        f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping",
-        json={
-            "profile_name": "Must not be created",
-            "mapping_spec": {"message_locator": {"strategy": "markdown_role_headings"}},
-        },
-    )
-    assert saved.status_code == 422
-    assert saved.json()["detail"]["code"] == "FAMILY_NOT_MAPPABLE"
-
-    unchanged = client.get(f"/api/adaptive-import/sessions/{session['import_id']}").json()["families"][0]
-    assert unchanged["handling_class"] == "NOT_MAPPABLE"
-    assert unchanged["mapping_draft"] == {}
+    assert session["state"] == "READY"
+    assert session["families"][0]["matched_profile_key"] == "builtin:single-assistant-markdown-v1"
 
 
 def test_empty_markdown_is_rejected_before_an_import_session_is_created(client: TestClient) -> None:
@@ -529,6 +532,78 @@ def test_empty_markdown_is_rejected_before_an_import_session_is_created(client: 
 
     assert response.status_code == 422
     assert response.json()["detail"]["code"] == "FILE_EMPTY"
+
+
+def test_unstructured_markdown_session_is_ready_for_direct_import(client: TestClient) -> None:
+    content = b"# Notes\n\nA single assistant response with **Markdown** formatting.\n"
+    session = _create(client, [("notes.md", content, "text/markdown")])
+    assert session["state"] == "READY"
+    family = session["families"][0]
+    assert family["matched_profile_key"] == "builtin:single-assistant-markdown-v1"
+    assert family["validation_result"]["valid"] is True
+
+
+def test_adaptive_import_destination_is_persisted_and_honored(client: TestClient) -> None:
+    project = client.post("/api/projects", json={"name": "Import destination fixture"})
+    assert project.status_code == 201
+    project_id = project.json()["id"]
+    response = client.post(
+        "/api/adaptive-import/sessions",
+        data={"target_project_id": project_id},
+        files=[("files", ("plain.md", b"One unstructured assistant message.", "text/markdown"))],
+    )
+    assert response.status_code == 201, response.text
+    session = _complete_analysis(client, response.json())
+    assert session["target_project_id"] == project_id
+    committed = client.post(
+        f"/api/imports/{session['import_id']}/commit",
+        json={"project_id": project_id},
+    )
+    assert committed.status_code == 200, committed.text
+    conversation_id = committed.json()["conversation_ids"][0]
+    rows = client.get(f"/api/projects/{project_id}/conversations")
+    assert rows.status_code == 200, rows.text
+    assert conversation_id in {item["id"] for item in rows.json()}
+
+
+def test_adaptive_import_destination_can_be_changed_before_commit(client: TestClient) -> None:
+    first = client.post("/api/projects", json={"name": "Initial import destination"})
+    second = client.post("/api/projects", json={"name": "Updated import destination"})
+    assert first.status_code == second.status_code == 201
+    session = _create(client, [("plain.md", b"One unstructured assistant message.", "text/markdown")])
+    updated = client.put(
+        f"/api/adaptive-import/sessions/{session['import_id']}/destination",
+        json={"target_project_id": second.json()["id"]},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["target_project_id"] == second.json()["id"]
+
+    committed = client.post(f"/api/imports/{session['import_id']}/commit", json={})
+    assert committed.status_code == 200, committed.text
+    conversation_id = committed.json()["conversation_ids"][0]
+    rows = client.get(f"/api/projects/{second.json()['id']}/conversations")
+    assert rows.status_code == 200, rows.text
+    assert conversation_id in {item["id"] for item in rows.json()}
+
+
+def test_adaptive_import_rejects_unavailable_destination(client: TestClient) -> None:
+    response = client.post(
+        "/api/adaptive-import/sessions",
+        data={"target_project_id": str(uuid.uuid4())},
+        files=[("files", ("plain.md", b"One message.", "text/markdown"))],
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "IMPORT_PROJECT_NOT_FOUND"
+
+
+def test_adaptive_import_destination_update_rejects_unavailable_project(client: TestClient) -> None:
+    session = _create(client, [("plain.md", b"One unstructured assistant message.", "text/markdown")])
+    response = client.put(
+        f"/api/adaptive-import/sessions/{session['import_id']}/destination",
+        json={"target_project_id": str(uuid.uuid4())},
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "IMPORT_PROJECT_NOT_FOUND"
 
 
 def test_markdown_heading_roles_accept_trailing_colons_and_ignore_fenced_boundaries() -> None:

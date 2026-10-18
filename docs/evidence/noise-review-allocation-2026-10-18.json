@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "platform": "Windows",
+  "python": "3.11.7",
+  "measurement": "Synthetic SQLite function-only tracemalloc/wall time; not RSS, PostgreSQL, cgroup or OOM acceptance.",
+  "source_characters": 59070,
+  "page_matches": 100,
+  "control": "Reduced old-style joined full-version page, not an exact old-endpoint benchmark.",
+  "joined_source_page": {
+    "milliseconds": 172.444,
+    "peak_traced_bytes": 60074310,
+    "matches": 100,
+    "match_digest": "eadd40ea2d2ea1d5d5e0d27a40766b520ecbf432b61eba1b52fe72de6f527341"
+  },
+  "metadata_page_current_source": {
+    "milliseconds": 301.367,
+    "peak_traced_bytes": 1057933,
+    "matches": 100,
+    "match_digest": "eadd40ea2d2ea1d5d5e0d27a40766b520ecbf432b61eba1b52fe72de6f527341"
+  },
+  "source_sha256": {
+    "content_cleanup.py": "761f18de950e178d96398d18c21c4752eca742a3c668b0328331259c433b091f",
+    "cleanup_protection.py": "2eee2b4d4f1a7264a685131010bbd78e1cb1c7a756ce61b13a9d39967f7ba465",
+    "cleanup_review.py": "28124eeef2334df44f94ebebbd1b36a232496333018eedd1483d45ef9b4c586b"
+  },
+  "data": "Synthetic only; fresh isolated SQLite, no production or user files."
+}

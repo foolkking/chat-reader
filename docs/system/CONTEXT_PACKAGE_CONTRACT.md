@@ -1,5 +1,73 @@
 # Context Package contract
 
+## Current worktree contract — 2026-10-17 (local only)
+
+This section is the current source-of-truth overlay for the unshipped Context
+export changes. It supersedes the older release notes below for the local
+working tree. No CI, push, or deployment was started for this overlay.
+
+Context packages use `format = chat-reader-context-package` and
+`format_version = "1.1"`. The canonical stream remains CanJSON v2 and
+`conversation.canjsonl` keeps its existing purpose. Dedicated Context ZIPs
+always contain a root-level `annotations.md`, including an explicit zero-count
+document. The file is a readable projection, not an import or write-back
+format, and is never placed under `continuation/`.
+
+The package layout is:
+
+```text
+manifest.json
+conversation.canjsonl
+annotations.md
+continuation/current.md
+continuation/index.json
+assets/...
+```
+
+`continuation/current.md` and `continuation/index.json` retain their original
+paths, bytes, coverage, trust, fingerprint and revision semantics. Omitting
+continuation members does not omit `annotations.md`. `included_content.annotations`
+continues to mean structured annotation records in the canonical stream;
+`included_content.annotation_document` separately declares the Markdown
+projection. `files.annotations.md` records the actual UTF-8 byte size and
+SHA-256. `extensions.chat_reader_annotation_export` records version 1,
+`status=included`, the path, media type, count and source. The count is the
+number of structured annotations included in the same snapshot and scope.
+Continuation extensions are merged rather than overwritten.
+
+Dedicated full exports include all current-account, non-deleted annotations,
+including orphaned or otherwise unlocatable annotations. Partial exports only
+include annotations whose message identity is proven inside the selected
+message range; an unbound annotation is not guessed into a partial range.
+The Markdown projection preserves saved quote/comment content and marks
+`valid`, `remapped`, `needs_review` and `orphaned` states. It uses a dynamic
+fence when a quote or comment contains backticks. It is generated from the
+same repeatable-read snapshot as the structured annotation records.
+
+Online `GET /api/conversations/{id}/exports/annotations` downloads all saved,
+non-deleted annotations for the conversation and ignores page filters,
+selection and current-message state. Offline annotation pages explain that
+this standalone download requires the server; offline Context export still
+projects the offline snapshot when the user explicitly includes annotations.
+Uncommitted drafts are never exported.
+
+CanJSON attachment bundles and offline Context/CanJSON bundles follow the same
+split: when annotations are selected, they include `annotations.md` and set
+the extension to `included`; when not selected, they keep the structured
+selection false, omit the file and use `omitted_by_request` without a path or
+hash. Plain streaming Markdown/CanJSON remains unchanged. Readers accept 1.0
+packages without the document, accept 1.1 unknown safe extension fields, and
+report a declared-but-missing or hash-mismatched document as an integrity
+problem rather than as zero annotations. Return/update continues to process
+only Current/Index and ignores user edits to `annotations.md`.
+
+The editable Context acquisition and continuation-maintainer Skill runtimes
+under `tools/context-skills/` understand and preserve this projection. Fixed
+default ZIPs remain unchanged; reviewed builds are a separate local artifact
+and must not be described as an upgraded default distribution.
+
+## Historical release notes
+
 Current deployed implementation, 2026-10-05; migration head `20261003_0046`.
 Source `3f1d539` passed full CI and production acceptance. See the
 [completion audit](../execution/CONTEXT_GOAL_COMPLETION_2026-10-04.md) for the

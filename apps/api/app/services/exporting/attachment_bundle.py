@@ -78,7 +78,12 @@ def create_attachment_bundle(
         artifact_id = uuid.uuid4()
         track_archive_object(db, LocalAssetStore(root), destination.relative_to(root).as_posix())
         published = publish_zip_artifact(temporary, destination, category="export", artifact_id=artifact_id,
-            required_entries=(("conversation.md",) if bundle_format == MARKDOWN_BUNDLE_FORMAT else ("manifest.json", "conversation.canjsonl")))
+            required_entries=(
+                ("conversation.md",)
+                if bundle_format == MARKDOWN_BUNDLE_FORMAT
+                else ("manifest.json", "conversation.canjsonl",
+                      *(("annotations.md",) if export_options.include_annotations else ()))
+            ))
         artifact = ExportArtifact(id=artifact_id, job_id=job_id, conversation_id=conversation_id,
             format=bundle_format, filename=destination.name, storage_uri=str(destination),
             sha256=published.sha256, byte_size=published.byte_size,
@@ -200,6 +205,14 @@ def _write_bundle(db, conversation, temporary, bundle_format, export_options, pr
                 progress_callback("assets", 50 + int(45 * available_objects / budget.total), available_objects, budget.total)
 
         if bundle_format == CANJSON_BUNDLE_FORMAT:
+            from app.services.exporting.annotation_document import annotation_query, iter_document, manifest_extension, DOCUMENT_PATH
+            from app.services.exporting.export_service import _subject_key_for_conversation
+            query = annotation_query(db, conversation.id, _subject_key_for_conversation(conversation))
+            annotation_count = query.order_by(None).count() if export_options.include_annotations else 0
+            if export_options.include_annotations:
+                checksums[DOCUMENT_PATH] = _write_stream(archive, DOCUMENT_PATH,
+                    iter_document(query, title=conversation.display_title or conversation.title,
+                        exported_at=datetime.now(timezone.utc)), budget=budget)
             reference_count = _current_reference_count(db, conversation.id)
             physical_objects = len({row.asset_object_id for row in attachment_rows if row.asset_object_id})
             completeness = _asset_completeness(
@@ -210,7 +223,7 @@ def _write_bundle(db, conversation, temporary, bundle_format, export_options, pr
             )
             manifest = {
                 "format": "chat-reader-context-package",
-                "format_version": "1.0",
+                "format_version": "1.1",
                 "entrypoint": "conversation.canjsonl",
                 "conversation": {
                     "id": str(conversation.id),
@@ -238,10 +251,13 @@ def _write_bundle(db, conversation, temporary, bundle_format, export_options, pr
                 "included_content": {
                     "conversation_description": export_options.include_description,
                     "annotations": export_options.include_annotations,
+                    "annotation_document": export_options.include_annotations,
                     "notebook": export_options.include_notebook,
                     "source_refs": export_options.include_source_refs,
                 },
                 "files": checksums,
+                "extensions": {"chat_reader_annotation_export": manifest_extension(annotation_count,
+                    included=export_options.include_annotations)},
             }
             _write_json(archive, "manifest.json", manifest, budget=budget)
     return {asset.id for _, asset, _, _ in exportable_assets}, result.message_count

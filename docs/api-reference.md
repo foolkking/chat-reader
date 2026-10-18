@@ -1,5 +1,50 @@
 # API 参考
 
+## Current worktree additions — 2026-10-17 (local only)
+
+The following contracts are implemented in the current worktree and are not
+deployed or part of the current production API:
+
+- `POST /api/adaptive-import/sessions` streams bounded uploaded files into a
+  temporary session, creates a durable `adaptive_import_analysis` task and
+  returns the session with `analysis_task_id` in queued/ANALYZING state. It
+  does not wait for initial format analysis. `GET
+  /api/adaptive-import/sessions/{import_id}` exposes current state, phase and
+  progress; task-center `/api/tasks/active` and `/api/tasks/{job_id}` expose
+  task status/result. `POST /api/tasks/{job_id}/retry` retries a failed initial
+  analysis using the same task identity. `POST /api/tasks/{job_id}/cancel`
+  requests cancellation; queued work can clean up immediately, while processing
+  work waits for worker acknowledgement. The commit route rejects a session
+  before the initial analysis is reviewable. This job type reuses existing
+  BackgroundJob persistence and needs no migration.
+- `POST /api/content-cleanup/scans/{scan_id}/protection-preview` creates a
+  ten-minute, scan/rule/source/range-bound protected-match confirmation
+  preview. Existing decision, range, preview and apply endpoints accept the
+  optional signed confirmation token; without it, protected deletion remains
+  rejected.
+- `GET /api/content-cleanup/scans/{scan_id}/comparison?limit=&offset=`
+  returns an owner-scoped, paginated comparison between that rescan and the
+  previous scan bound in its server-created rescan admission record.
+  It distinguishes added, removed and source-changed candidates using stable
+  identities rather than list position or fuzzy text matching.
+- `GET /api/conversations/{id}/exports/annotations` downloads a readable
+  Markdown projection of all saved, non-deleted annotations for the current
+  conversation. It ignores UI filters and selection, uses the prepared-export
+  snapshot/file path, and never accepts the Markdown document as a write-back
+  format.
+
+Context ZIP manifests use `format_version: "1.1"` and add root
+`annotations.md`. `included_content.annotations` remains structured CanJSON
+records; `included_content.annotation_document` describes the projection.
+`files` contains actual UTF-8 byte size and SHA-256, and the annotation
+extension records version, status, path and included count. Current/Index
+continuation members are unchanged. See [Context Package](system/CONTEXT_PACKAGE_CONTRACT.md).
+
+Migration `20261017_0052` adds nullable `protection_review`; it is a single
+local head and has not been applied to production. Fixed default Skill ZIPs
+remain unchanged; only editable runtimes/reviewed local builds understand the
+new annotation projection.
+
 Local noise range editing (2026-10-15, migration 0051 **not applied**):
 
 - GET `/api/content-cleanup/scans/{scan_id}/occurrences/{occurrence_id}`
@@ -437,7 +482,19 @@ Unknown and drifted Families use one unified Mapping endpoint; validation is
 performed on every group in the Family. `.cr` remains an independent archive
 preview/restore path. See [Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md).
 
-Importer v5 treats exporter JSON and its optional Markdown as one upload batch. JSON provides canonical message identity/role/time/order and allows a matching Prompt-only or Response-only Markdown export to be recognized; a standalone single-role Markdown file is still rejected. Empty messages may occur anywhere and are reported as ignored. Every non-empty message must have one reliable monotonic counterpart or Preview returns a non-committable conflict with per-source alignment diagnostics. Historical JSON plain fallbacks may pair with rich Markdown only under a unique matching role/timestamp identity.
+`POST /api/adaptive-import/sessions` accepts an optional multipart
+`target_project_id`; it is checked for ownership and archive status before the
+session is queued. Plain Markdown with no reliable repeated message boundary
+uses the safe built-in single-message mapping and imports the complete file as
+one `assistant` message. It does not override empty, invalid-encoding,
+instruction-package or malformed-fence rejection.
+
+`PUT /api/adaptive-import/sessions/{id}/destination` changes the destination
+of an adaptive session before canonical commit. The body is
+`{ "target_project_id": "<uuid>" | null }`; `null` means unclassified.
+The response is the normal session payload, and the server locks the change
+once import processing/commit has started. Existing JSON/Markdown pairing,
+alignment and `.cr` preview/restore semantics remain unchanged.
 
 ## Attachment Renderer supporting APIs (2026-08-09)
 
@@ -516,7 +573,7 @@ Adaptive JSON / Markdown：
 
 | Method | Path | 说明 |
 | --- | --- | --- |
-| POST | `/api/adaptive-import/sessions` | 有界上传 JSON/Markdown，分析 grouping、Family 与 Profile match；最多 500 文件、每文件 500 MiB、session 总计 512 MiB；大文件分析受单并发及内存水位保护 |
+| POST | `/api/adaptive-import/sessions` | 有界上传 JSON/Markdown，分析 grouping、Family 与 Profile match；最多 500 文件、每文件 500 MiB、session 总计 512 MiB；重型分析按固定内存余量 + 输入总量 × `UPLOAD_ANALYSIS_MEMORY_FACTOR`（默认 32）准入，内存不足返回可重试 429 |
 | GET/DELETE | `/api/adaptive-import/sessions/{id}` | 恢复 session，或明确取消并清理其临时来源 |
 | PUT | `/api/adaptive-import/sessions/{id}/groups` | 在任意未提交可恢复状态确认或调整 InputGroup；每个来源必须且只能出现一次 |
 | POST | `/api/adaptive-import/sessions/{id}/reanalyze` | 使用当前 Analyzer 恢复并重建未提交 session 的 Family/Profile resolution |

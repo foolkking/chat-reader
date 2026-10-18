@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "observation_utc": "2026-10-18T02:47:22Z",
+  "method": "Read-only SSH: bounded kernel journal, application container state, host memory fields. No diagnostic Python process, restart, configuration change, CI or deployment.",
+  "kernel_event": {
+    "utc": "2026-10-18T02:31:45Z",
+    "asia_shanghai": "2026-10-18T10:31:45+08:00",
+    "constraint": "CONSTRAINT_NONE",
+    "kind": "global_oom",
+    "victim_service": "api",
+    "victim_process": "uvicorn",
+    "anonymous_rss_kib": 260456,
+    "file_rss_kib": 620,
+    "total_virtual_kib": 755872
+  },
+  "host_observation": {
+    "total_memory_kib": 1915900,
+    "available_memory_kib": 184104,
+    "swap_total_kib": 3146744,
+    "swap_free_kib": 2744976
+  },
+  "application_state": {
+    "api": {
+      "restart_count": 1,
+      "started_utc": "2026-10-18T02:31:53.875271596Z",
+      "memory_limit_bytes": 0,
+      "oom_killed_current_state": false
+    },
+    "worker": {
+      "restart_count": 0,
+      "started_utc": "2026-10-17T00:52:37.878120378Z",
+      "memory_limit_bytes": 671088640,
+      "memory_swap_bytes": 1342177280
+    },
+    "web": {
+      "restart_count": 0,
+      "started_utc": "2026-10-17T00:52:40.897481132Z",
+      "memory_limit_bytes": 0
+    }
+  },
+  "conclusions": [
+    "The kernel killed the API during a host-level OOM; the API restarted afterward.",
+    "The current post-restart OOMKilled=false field does not negate the kernel event.",
+    "The worker did not restart in the observed interval.",
+    "This evidence identifies the victim, not the sole memory contributor. It does not prove noise scanning caused the OOM.",
+    "No production repair or acceptance was performed."
+  ],
+  "redaction": "No host address, container or process IDs, conversation data, business IDs, tokens, cookies or environment values."
+}

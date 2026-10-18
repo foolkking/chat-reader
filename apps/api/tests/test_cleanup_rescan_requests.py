@@ -90,6 +90,30 @@ def test_retry_keeps_original_snapshot_new_request_rechecks_and_keeps_choices(cl
         assert db.get(Message, messages[0]).current_version_id == message_version
 
 
+def test_related_scan_comparison_is_paged_and_never_copies_choices(client):
+    old, _ = create_review(client, [f"Before {MARKER} after."])
+    assert client.patch(f"{ROOT}/{old}/decisions/filter", json={
+        "decision": "DELETE", "all_matching": True,
+    }).status_code == 200
+    pending = client.post(f"{ROOT}/{old}/rescan", headers={"Idempotency-Key": str(uuid.uuid4())})
+    assert pending.status_code == 202, pending.text
+    new = pending.json()["id"]
+    assert client.get(f"{ROOT}/{new}/comparison").status_code == 409
+    complete_scan(new)
+    assert client.get(f"{ROOT}/{old}").json()["delete_count"] == 1
+    assert client.get(f"{ROOT}/{new}").json()["delete_count"] == 0
+    response = client.get(f"{ROOT}/{new}/comparison", params={"limit": 1, "offset": 0})
+    assert response.status_code == 200, response.text
+    comparison = response.json()
+    assert comparison["previous_scan_id"] == str(old)
+    assert comparison["scan_id"] == new
+    assert comparison["total"] >= 1 and comparison["limit"] == 1 and comparison["offset"] == 0
+    assert comparison["items"][0]["before"] == comparison["items"][0]["after"] == 1
+    assert comparison["items"][0]["unchanged"] == 1
+    assert comparison["items"][0]["added"] == comparison["items"][0]["removed"] == 0
+    assert client.get(f"{ROOT}/{old}/comparison").status_code == 409
+
+
 def test_import_parent_and_active_scope_survive_rescan(client):
     old, messages = create_review(client, [f"Before {MARKER} after.", f"Archived {MARKER} after."])
     parent = str(uuid.uuid4())

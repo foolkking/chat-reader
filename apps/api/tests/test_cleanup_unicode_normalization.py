@@ -106,7 +106,7 @@ def test_normalized_rule_review_refinement_and_apply_preserve_unnormalized_sourc
     assert saved.status_code == 200, saved.text
     assert saved.json()["delete_count"] == 1
     preview = client.get(path + "/preview").json()
-    assert preview["summary"] == {"conversations": 1, "messages": 1, "fragments": 2}
+    assert preview["summary"] == {"conversations": 1, "messages": 1, "fragments": 2, "protected_confirmed": 0}
     proposed = preview["items"][0]
     assert not proposed["conflict"] and proposed["before"] == source
     assert proposed["removed_ranges"] == ranges

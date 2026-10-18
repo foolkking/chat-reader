@@ -15,6 +15,7 @@ from app.core.observability import structured_event
 from app.models.import_record import ImportRecord
 from app.models.conversation import Conversation
 from app.models.source_artifact import SourceArtifact
+from app.models.project import Project
 from app.schemas.import_schema import (
     ConversationPreview,
     ImportPreviewFile,
@@ -49,7 +50,7 @@ from app.services.exporting.cr_archive import CrArchiveError, inspect_cr_archive
 from app.services.assets.lifecycle import delete_asset_files, release_import_assets
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 from app.services.feature_policies import effective_import_size_mb, effective_import_total_mb, get_feature_policy
-from app.services.uploads import UploadLimitError, bounded_upload_analysis, read_upload_bounded
+from app.services.uploads import UploadLimitError, bounded_upload_analysis_sync, read_upload_bounded_sync
 
 router = APIRouter(prefix="/api/imports", tags=["imports"])
 logger = logging.getLogger(__name__)
@@ -73,7 +74,7 @@ UploadedPreviewFile = tuple[str, bytes, SourceDetectionResult]
 
 
 @router.post("/preview", response_model=ImportPreviewResponse)
-async def preview_import(
+def preview_import(
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
@@ -112,9 +113,9 @@ async def preview_import(
     duplicate_conversation_id: uuid.UUID | None = None
     preview_saved = False
 
-    analysis_guard = bounded_upload_analysis(files)
+    analysis_guard = bounded_upload_analysis_sync(files)
     try:
-        await analysis_guard.__aenter__()
+        analysis_guard.__enter__()
     except UploadLimitError as exc:
         raise HTTPException(
             status_code=exc.status_code,
@@ -125,7 +126,7 @@ async def preview_import(
     try:
         for upload in files:
             try:
-                content = await read_upload_bounded(upload, max_bytes)
+                content = read_upload_bounded_sync(upload, max_bytes)
             except UploadLimitError as exc:
                 raise HTTPException(
                     status_code=exc.status_code,
@@ -308,7 +309,7 @@ async def preview_import(
     finally:
         if not preview_saved:
             _cleanup_import_directory(import_id)
-        await analysis_guard.__aexit__(None, None, None)
+        analysis_guard.__exit__(None, None, None)
 
     can_commit = conversation_preview is not None and conversation_preview.alignment_status not in {"conflict_detected", "failed"}
     return ImportPreviewResponse(
@@ -433,11 +434,56 @@ def commit_import(
     if import_record.status == "committed":
         response.status_code = status.HTTP_200_OK
         return _commit_response(import_record, db)
+    if (
+        import_record.source_profile == "adaptive_json_markdown"
+        and import_record.status not in {"queued", "processing"}
+        and (
+            not import_record.draft_storage_uri
+            or import_record.session_state not in {"READY", "FAILED"}
+            or import_record.phase == "analysis_failed"
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "SESSION_STATE_INVALID", "message": "Finish the background analysis and resolve this import session before importing."},
+        )
     if import_record.alignment_status in {"conflict_detected", "failed"}:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Import preview contains unresolved JSON/Markdown alignment conflicts.",
         )
+
+    effective_project_id = options.project_id
+    if import_record.source_profile == "adaptive_json_markdown" and "project_id" not in options.model_fields_set:
+        raw_target_project_id = (import_record.analysis_summary or {}).get("target_project_id")
+        if raw_target_project_id:
+            try:
+                effective_project_id = uuid.UUID(str(raw_target_project_id))
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"code": "IMPORT_PROJECT_INVALID", "message": "The saved import destination is invalid. Choose an import destination again."},
+                ) from exc
+    if import_record.status not in {"queued", "processing"} and effective_project_id is not None:
+        target_project = get_owned(db, Project, effective_project_id, ownership_scope)
+        if target_project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"code": "IMPORT_PROJECT_NOT_FOUND", "message": "The selected import project is unavailable."},
+            )
+        if target_project.is_archived:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"code": "IMPORT_PROJECT_ARCHIVED", "message": "Restore the selected project before importing into it."},
+            )
+        if target_project.is_default:
+            effective_project_id = None
+    if import_record.source_profile == "adaptive_json_markdown" and import_record.status not in {"queued", "processing"}:
+        summary = dict(import_record.analysis_summary or {})
+        commit_options = dict(summary.get("commit_options") or {})
+        commit_options["project_id"] = str(effective_project_id) if effective_project_id else None
+        summary["commit_options"] = commit_options
+        import_record.analysis_summary = summary
 
     archive_artifact = (
         db.query(SourceArtifact)
@@ -447,7 +493,7 @@ def commit_import(
         )
         .first()
     )
-    if archive_artifact is not None:
+    if archive_artifact is not None and import_record.status not in {"queued", "processing"}:
         summary = dict(archive_artifact.parsed_summary or {})
         duplicate_id = summary.get("duplicate_conversation_id")
         duplicate_policy = "clone" if options.duplicate_policy == "copy" else options.duplicate_policy
@@ -461,7 +507,7 @@ def commit_import(
         summary["commit_options"] = {
             "duplicate_policy": duplicate_policy,
             "duplicate_conversation_id": duplicate_id,
-            "project_id": str(options.project_id) if options.project_id else None,
+            "project_id": str(effective_project_id) if effective_project_id else None,
             "create_archive_project": options.create_archive_project,
         }
         archive_artifact.parsed_summary = summary
@@ -488,6 +534,7 @@ def commit_import(
             structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
         db.commit()
     except CommitImportError as exc:
+        db.rollback()
         message = str(exc)
         status_code = status.HTTP_404_NOT_FOUND if "not found" in message.lower() else status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=status_code, detail=message) from exc

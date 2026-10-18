@@ -1,5 +1,80 @@
 # Content Cleanup Contract
 
+## Current worktree overlay — 2026-10-17 (local only)
+
+The current working tree adds a protected-match review flow without changing
+the rule language or making deletion automatic. The single local Alembic head
+after the existing cleanup migrations is `20261017_0052`; it adds nullable
+`content_cleanup_occurrence.protection_review`. Existing rows remain `NULL`,
+no old selection is backfilled as consent, and message/import data is not
+rewritten. This migration is not applied to production.
+
+Candidate responses expose the pinned detector/rule revision, actual matcher
+settings, evidence and protection reasons. Built-in explanations are
+human-readable; personal literal rules continue to use the existing exact,
+normalized and bounded-approximate modes rather than arbitrary regex.
+
+`POST /api/content-cleanup/scans/{scan_id}/protection-preview` creates a
+short-lived (default ten-minute) signed confirmation preview for an explicit
+rule/group and filter scope. It returns authoritative total/protected counts,
+protected-type summaries, a paged sample and a token bound to the scan,
+candidate identity, rule revision, message version/source fingerprint and
+original ranges. An unreviewed protected candidate requires this token before
+DELETE; a still-valid recorded review can be reused within the same scan.
+Old clients cannot create consent. Range edits, preview and apply include the same
+binding, so an old token cannot authorize a changed source, widened scope,
+rescan or changed candidate set. Confirmation records risk metadata only and
+does not copy full message text.
+
+Bulk review provides ordinary-select, keep-all and explicit
+“include protected” actions. A protected group is confirmed once for the
+current scan and explicit filter scope; the confirmation only saves pending
+decisions and does not mutate source. The UI combines checkbox, state text,
+row tint and exact deletion-fragment marks. Cross-page totals come from the
+server, and states distinguish kept, pending, protected-awaiting-confirmation,
+confirmed-protected, saving, failed, stale/conflict and applied.
+
+Changing a personal rule follows view → edit draft → bounded trial → save →
+rescan. A rescan keeps the original logical conversation/selection scope,
+creates a new scan, defaults ordinary candidates to KEEP and protected ones to
+unselected PROTECTED, and leaves the old
+scan and choices intact. `/comparison` associates only an authorized rescan
+pair and compares stable candidate identities/rule revisions; changed source
+is reported separately rather than guessed as a rule delta. Selection and
+protection confirmation never migrate to the new scan.
+
+The scanner now consumes full message bodies one at a time after bounded ID
+batches; it does not retain a batch-sized list of complete bodies. Candidate
+metadata and existing cursor/offset/commit semantics remain unchanged. This
+reduces avoidable scan memory but is not a production OOM proof. All changes
+in this overlay are local and were not sent to CI, pushed or deployed.
+
+### Per-message normalization reuse — 2026-10-18 (local only)
+
+Within one message scan or preview/apply validation, normalized literals share
+at most two source shadows (case-sensitive and case-insensitive). The source
+protection index is built lazily on the first hit and reused. A context cannot
+be used for another source object and is released before the next message;
+there is no process-global or cross-conversation text cache. Raw exact matching
+does not build a normalized shadow.
+
+Source-coordinate pairs in the cleanup shadow use compact unsigned arrays
+instead of one Python tuple/int pair per output character. Unicode NFKC,
+casefold, whitespace collapse, original source envelopes and protected-range
+decisions remain unchanged. This bounds retention by the current message,
+not by message size independently. Two case profiles can still cost more than
+one; allocation measurements are not an RSS or OOM guarantee.
+See [stability measurements and limitations](../execution/IMPORT_STABILITY_2026-10-18.md).
+
+Candidate-page reads also project scan/rule/message metadata without hydrating
+the full `MessageVersion` entity (`plain_text` plus rendered `blocks`). They
+fetch only `display_text`, once for each adjacent source version in the
+bounded page; protection-set preview and filtered decisions use ID-only
+cursors and fetch each version text once per operation. Apply/preview still
+revalidates immutable source identity and exact offsets. This bounds duplicate
+body/blocks materialization; it does not bound a single source or the rendered
+response independently of its input size.
+
 Content cleanup is a review workflow, not an automatic deletion facility. Its primary entry is the Markdown Source Editor: the owner selects persisted source text, chooses **Clean noise**, and reviews the exact selection in a central dialog. The same deterministic rule registry and scan engine serve this source-selection workflow and low-priority post-import scans.
 
 ## Rules
@@ -10,9 +85,9 @@ Rules have immutable revisions. Built-in rules reference versioned detector iden
 
 Detection is layered rather than a single global regular expression. Built-in syntax noise first uses exact structural grammar. Known short syntax tokens may then use NFKC normalization or at most one edit only when an exact citation-reference grammar anchors the candidate. User literals use their selected exact, normalized or bounded-approximate mode. Approximate scanning does not compare arbitrary full message windows and has bounded anchors, length and edit distance.
 
-Each occurrence records detector version, match mode and evidence codes in addition to its location. Candidates default to `KEEP`; protected Markdown ranges remain `PROTECTED` and cannot be selected for batch deletion. Explicit decisions persist immediately and record their save time. Rules never modify source while scanning. Normal fields, tables and syntax examples do not become noise merely by containing marker keywords. Unknown and approximate markers remain suggestions requiring confirmation.
+Each occurrence records detector version, match mode and evidence codes in addition to its location. Ordinary candidates default to `KEEP`; protected Markdown ranges default to unselected `PROTECTED`. In the local 0052 flow above, protected candidates may be selected only after explicit version-bound risk confirmation; production 0051 clients still keep them protected. Explicit decisions persist immediately and record their save time. Rules never modify source while scanning. Normal fields, tables and syntax examples do not become noise merely by containing marker keywords. Unknown and approximate markers remain suggestions requiring confirmation.
 
-The review workspace groups by rule and conversation, uses a group-list/detail flow on small screens, and supports selected-only filtering. Filtered bulk decisions cover all matching pages, excluding protected and conflicted rows. Full before/after text is paged by message; the apply confirmation names conversation, message and fragment counts. A version/selection-bound preview token rejects changes made after preview. Legacy apply callers remain compatible, but cannot delete candidates without a recorded explicit decision.
+The review workspace groups by rule and conversation, uses a group-list/detail flow on small screens, and supports selected-only filtering. Ordinary filtered bulk selection covers all matching pages, excluding protected and conflicted rows. The separate include-protected action requires the local confirmation flow above; conflicts remain excluded. Full before/after text is paged by message; the apply confirmation names conversation, message and fragment counts. A version/selection-bound preview token rejects changes made after preview. Legacy apply callers remain compatible, but cannot delete candidates without a recorded explicit decision and required protection review.
 
 ## Editable candidate ranges (local source, 2026-10-15)
 

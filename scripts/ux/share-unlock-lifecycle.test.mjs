@@ -34,7 +34,8 @@ const inputs = ["token", "shareQuery", "zh", "windowGenerationRef", "navigationT
   "scrollDirectionRef", "scrollIntentSequenceRef", "previousTurnAnchorRef", "nextTurnAnchorRef",
   "restoreAttemptedRef", "latestStablePositionRef", "targetHighlightTimerRef", "setLoadedWindow",
   "setEdgeLoading", "setEdgeError", "setPositionReady", "setActiveMessageId", "setNavigationTargetMessageId",
-  "setActiveBlockId", "setTargetHighlightId", "setMobileNavigation"];
+  "setActiveBlockId", "setTargetHighlightId", "setMobileNavigation", "tocReturnPointRef",
+  "setTocReturnPoint", "setTocReturnError", "setTocReturnBusy", "tocReturnAttemptRef"];
 const compiled = ts.transpileModule(`function renderUnlock(input) {
   const { ${inputs.join(", ")} } = input;
   ${selected.map(node => node.getText(ast)).join("\n")}

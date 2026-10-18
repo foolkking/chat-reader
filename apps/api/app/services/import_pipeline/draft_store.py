@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import uuid
+from collections.abc import Iterable
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,7 +22,10 @@ class ImportDraftError(ValueError):
     pass
 
 
-def write_import_draft(import_id: uuid.UUID, conversations: list[CanonicalDraftConversation]) -> tuple[str, str, dict, datetime]:
+def write_import_draft(
+    import_id: uuid.UUID,
+    conversations: Iterable[CanonicalDraftConversation],
+) -> tuple[str, str, dict, datetime]:
     root = Path(get_settings().import_storage_dir).resolve()
     directory = (root / str(import_id)).resolve()
     if not directory.is_relative_to(root):
@@ -31,24 +35,27 @@ def write_import_draft(import_id: uuid.UUID, conversations: list[CanonicalDraftC
     temporary = directory / f".{destination.name}.{uuid.uuid4().hex}.tmp"
     digest = hashlib.sha256()
     message_count = 0
+    conversation_count = 0
     try:
         with temporary.open("xb") as handle:
             for conversation in conversations:
                 encoded = (json.dumps(asdict(conversation), ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
                 handle.write(encoded)
                 digest.update(encoded)
+                conversation_count += 1
                 message_count += len(conversation.messages)
+                del encoded, conversation
             handle.flush()
             os.fsync(handle.fileno())
         temporary.replace(destination)
     finally:
         temporary.unlink(missing_ok=True)
     expires_at = datetime.now(timezone.utc) + timedelta(hours=get_settings().import_draft_ttl_hours)
-    summary = {"conversation_count": len(conversations), "message_count": message_count}
+    summary = {"conversation_count": conversation_count, "message_count": message_count}
     return str(destination.relative_to(root)), digest.hexdigest(), summary, expires_at
 
 
-def attach_import_draft(record: ImportRecord, conversations: list[CanonicalDraftConversation]) -> None:
+def attach_import_draft(record: ImportRecord, conversations: Iterable[CanonicalDraftConversation]) -> None:
     storage_uri, sha256, summary, expires_at = write_import_draft(record.id, conversations)
     record.draft_storage_uri = storage_uri
     record.draft_sha256 = sha256
@@ -101,6 +108,7 @@ def iter_import_draft(record: ImportRecord):
             actual_conversations += 1
             actual_messages += len(messages)
             yield conversation
+            del conversation, messages, payload, raw_messages
 
     if expected_conversations and actual_conversations != expected_conversations:
         raise ImportDraftError("Import draft conversation count does not match preview.")

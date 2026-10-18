@@ -1220,7 +1220,7 @@ export async function createCleanupRule(input: { name: string; match_value: stri
   return fetchJson<CleanupRuleRead>("/api/content-cleanup/rules", jsonRequest("POST", input));
 }
 
-export async function updateCleanupRule(ruleId: string, input: { current_revision_id?: string; name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }, signal?: AbortSignal): Promise<CleanupRuleRead> {
+export async function updateCleanupRule(ruleId: string, input: { base_edit_token?: string; current_revision_id?: string; name?: string; status?: "ACTIVE" | "DISABLED"; match_value?: string; case_sensitive?: boolean; role_filter?: string | null; matcher_mode?: "EXACT" | "NORMALIZED" | "APPROXIMATE"; boundary_mode?: "ANYWHERE" | "WHOLE_LINE" | "BLOCK_END" }, signal?: AbortSignal): Promise<CleanupRuleRead> {
   return fetchJson<CleanupRuleRead>(`/api/content-cleanup/rules/${ruleId}`, { ...jsonRequest("PATCH", input), signal: cleanupReadSignal(signal) });
 }
 
@@ -1295,8 +1295,8 @@ export async function getCleanupOccurrences(scanId: string, input: { limit?: num
   return fetchJson<CleanupOccurrenceRead[]>(`/api/content-cleanup/scans/${scanId}/occurrences${query}`);
 }
 
-export async function updateCleanupDecisions(scanId: string, decisions: Array<{ occurrence_id: string; decision: "DELETE" | "KEEP" }>, signal?: AbortSignal): Promise<CleanupScanRead> {
-  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}/decisions`, { ...jsonRequest("PATCH", { decisions }), signal: cleanupReadSignal(signal) });
+export async function updateCleanupDecisions(scanId: string, decisions: Array<{ occurrence_id: string; decision: "DELETE" | "KEEP" }>, signal?: AbortSignal, protectionToken?: string): Promise<CleanupScanRead> {
+  return fetchJson<CleanupScanRead>(`/api/content-cleanup/scans/${scanId}/decisions`, { ...jsonRequest("PATCH", { decisions, protection_token: protectionToken }), signal: cleanupReadSignal(signal) });
 }
 
 export async function getCleanupOccurrence(scanId: string, occurrenceId: string, signal?: AbortSignal): Promise<CleanupOccurrenceRead> {
@@ -1335,8 +1335,20 @@ export async function getCleanupReviewGroups(scanId: string, offset = 0, signal?
   return fetchJson(`/api/content-cleanup/scans/${scanId}/groups?${params}`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function updateCleanupFilter(scanId: string, filter: import("./types").CleanupReviewFilter, decision: "DELETE" | "KEEP", signal?: AbortSignal): Promise<{ matched: number; scan: CleanupScanRead }> {
-  return fetchJson(`/api/content-cleanup/scans/${scanId}/decisions/filter`, { ...jsonRequest("PATCH", { ...filter, decision, all_matching: true }), signal: cleanupReadSignal(signal) });
+export async function updateCleanupFilter(scanId: string, filter: import("./types").CleanupReviewFilter, decision: "DELETE" | "KEEP", signal?: AbortSignal, protectionToken?: string): Promise<{ matched: number; scan: CleanupScanRead }> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/decisions/filter`, { ...jsonRequest("PATCH", { ...filter, decision, all_matching: true, protection_token: protectionToken }), signal: cleanupReadSignal(signal) });
+}
+
+export async function getCleanupProtectionPreview(scanId: string, input: import("./types").CleanupReviewFilter & { occurrence_ids?: string[]; offset?: number }, signal?: AbortSignal): Promise<import("./types").CleanupProtectionPreview> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/protection-preview`, { ...jsonRequest("POST", input), signal: cleanupReadSignal(signal) });
+}
+
+export async function getCleanupComparison(scanId: string, offset = 0, signal?: AbortSignal): Promise<{
+  previous_scan_id: string; scan_id: string; total: number; limit: number; offset: number; excluded_targets: number;
+  items: { rule_id: string; rule_name: string; before: number; after: number; added: number; removed: number;
+    source_changed_before: number; source_changed_after: number; before_revisions: number[]; after_revisions: number[] }[];
+}> {
+  return fetchJson(`/api/content-cleanup/scans/${scanId}/comparison?limit=20&offset=${offset}`, { signal: cleanupReadSignal(signal) });
 }
 
 export async function getCleanupPreview(scanId: string, offset = 0, signal?: AbortSignal): Promise<import("./types").CleanupPreview> {
@@ -1363,15 +1375,31 @@ export async function getCleanupDismissal(scanId: string, signal?: AbortSignal):
   return fetchJson(`/api/content-cleanup/scans/${scanId}/dismissal`, { signal: cleanupReadSignal(signal) });
 }
 
-export async function createAdaptiveImportSession(files: File[], repairProfileId?: string | null): Promise<AdaptiveImportSession> {
+export async function createAdaptiveImportSession(
+  files: File[],
+  repairProfileId?: string | null,
+  targetProjectId?: string | null,
+): Promise<AdaptiveImportSession> {
   const formData = new FormData();
   for (const file of files) formData.append("files", file);
   if (repairProfileId) formData.append("repair_profile_id", repairProfileId);
+  if (targetProjectId) formData.append("target_project_id", targetProjectId);
   return fetchJson<AdaptiveImportSession>("/api/adaptive-import/sessions", { method: "POST", body: formData });
 }
 
-export async function getAdaptiveImportSession(importId: string): Promise<AdaptiveImportSession> {
-  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}`);
+export async function getAdaptiveImportSession(importId: string, signal?: AbortSignal): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}`, { signal });
+}
+
+export async function updateAdaptiveImportDestination(
+  importId: string,
+  targetProjectId: string | null,
+): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/destination`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target_project_id: targetProjectId }),
+  });
 }
 
 export async function cancelAdaptiveImportSession(importId: string): Promise<void> {
@@ -1723,6 +1751,9 @@ function localizedImportError(code: string): string | null {
     FILE_EMPTY: "所选文件为空，请选择包含对话内容的文件。",
     FILE_TOO_LARGE: "所选文件超过当前单文件大小限制。",
     UPLOAD_STAGING_BUSY: "服务器正在处理另一个大文件，请稍后重试。",
+    UPLOAD_MEMORY_PRESSURE: "服务器当前可用内存不足以安全分析所选文件。请减小单个文件或拆分批次后重试。",
+    UPLOAD_QUEUE_FULL: "服务器的导入分析队列已满，请稍后重试。",
+    UPLOAD_QUEUE_TIMEOUT: "服务器仍在分析其他大文件，本次尚未开始。请稍后重试。",
     SESSION_TOO_LARGE: "替换后的文件会超过本次导入总容量限制。",
     SESSION_STATE_INVALID: "当前导入状态已经变化，请返回概览后重试。",
   };

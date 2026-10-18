@@ -35,8 +35,10 @@ from app.api.routes.support_requests import router as support_requests_router
 from app.core.auth_middleware import AuthenticationMiddleware
 from app.core.observability import RequestObservabilityMiddleware
 from app.services.app_info import API_VERSION
+from app.services.uploads import configure_multipart_parser
 
 settings = get_settings()
+configure_multipart_parser(settings)
 
 app = FastAPI(
     title="chat-reader API",

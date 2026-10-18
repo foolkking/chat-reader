@@ -1,10 +1,21 @@
 # 本地开发
 
+## 当前本地导入队列（2026-10-18，未发布）
+
+首次多文件 adaptive analysis 通过通用 `BackgroundJob` 和现有单 worker
+运行；会话创建请求只做有界流式暂存并返回任务 ID。关闭导入窗口不会停止
+任务，进度和结果在任务中心。复用该 job 类型不新增 migration。当前本地
+Alembic head 为 `20261017_0052`（生产仍为 `20261017_0051`）；执行
+`alembic heads` 应只输出一个 head。有关失败重试、取消边界和源文件保留，
+见 [Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)。
+这项本地工作尚未运行 CI 或部署。
+
 ## 当前工作树账户基线（2026-09-01）
 
 当前工作树包含多账户 owner 边界：部署时只设置一个 `ADMIN`，后续账号为
-`USER`。私有记录按已认证用户 UUID 隔离，源码与生产 migration head 为
-`20260902_0032`。
+`USER`。私有记录按已认证用户 UUID 隔离。当前生产为
+`20261017_0051`；本地工作树新增 cleanup review migration 后为
+`20261017_0052`，详细状态见 `PROJECT_STATE.md`。
 首次账号请使用 `apps/api/scripts/owner_auth.py`，以运维输入的真实邮箱和交互式
 强密码创建；凭据不得写入仓库。
 
@@ -36,8 +47,8 @@ python -m alembic heads
 Set-Location ../..
 ```
 
-`alembic heads` 应只有一个结果。当前源码 head 是
-`20260902_0032`；生产执行前必须完成备份和 migration
+`alembic heads` 应只有一个结果。当前本地源码 head 是
+`20261017_0052`；生产仍为 `20261017_0051`。生产执行前必须完成备份和 migration
 preflight。
 
 当前 Content Cleanup 支持从规则库主动启动一次低优先级的
@@ -60,6 +71,8 @@ preflight。
 | `UPLOAD_MAX_ACTIVE_ANALYSIS` | 重型上传分析并发数 | 1 |
 | `UPLOAD_QUEUE_MAX_SIZE` | 重型上传等待队列容量 | 8 |
 | `UPLOAD_MEMORY_RESERVE_MB` | 允许重型分析前保留的可用内存 | 512 |
+| `MULTIPART_SPOOL_MAX_SIZE_KB` | multipart 单文件保留在 API 内存中的阈值；超过后落到任务临时目录 | 64 |
+| `UPLOAD_ANALYSIS_MEMORY_FACTOR` | 重型分析准入估算的每输入字节工作集倍数 | 32 |
 | `UPLOAD_QUEUE_WAIT_SECONDS` | 重型上传等待超时 | 120 秒 |
 | `IMPORT_STORAGE_DIR` | source artifact 目录 | `storage/imports` |
 | `EXPORT_STORAGE_DIR` | export artifact 目录 | `storage/exports` |

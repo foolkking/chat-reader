@@ -66,6 +66,7 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
     "../../lib/api": api, "../../lib/offline-access": api,
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }),
       useTranslations: () => key => ({ tasks: "Tasks", noActiveTasks: "No active tasks" })[key] ?? key },
+    "../../components/import-dialog-provider": { useImportDialog: () => ({ openImportDialog: noop }) },
     "../../lib/activity-time": { fullActivityTime: () => "Synthetic time" },
     "../../lib/offline-download-errors": { offlineDownloadFailureMessage: noop, offlineGenerationFailureCode: noop },
     "../../lib/batch-export-errors": { batchExportError: noop },

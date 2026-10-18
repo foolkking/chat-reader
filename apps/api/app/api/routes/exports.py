@@ -7,12 +7,33 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.export import ExportOptions
 from app.services.exporting.export_service import ExportError
-from app.services.exporting.prepared_export import prepare_direct_export
+from app.services.exporting.prepared_export import prepare_direct_export, prepare_annotation_export
 from app.services.export_download import PreparedExportResponse
 from app.models.conversation import Conversation
 from app.services.ownership import get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/conversations", tags=["exports"])
+
+
+@router.get("/{conversation_id}/exports/annotations")
+def export_annotations(conversation_id: uuid.UUID, request: Request, db: Session = Depends(get_db)):
+    result = None
+    try:
+        _require_owner(db, conversation_id, request)
+        db.rollback()
+        result = prepare_annotation_export(db, conversation_id)
+        # Snapshot consistency is not continuing authorization.
+        db.rollback()
+        _require_owner(db, conversation_id, request)
+        db.rollback()
+        return PreparedExportResponse(result)
+    except BaseException as exc:
+        if result is not None:
+            result.content.close()
+        db.rollback()
+        if isinstance(exc, ExportError):
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise
 
 
 @router.get("/{conversation_id}/exports/markdown")

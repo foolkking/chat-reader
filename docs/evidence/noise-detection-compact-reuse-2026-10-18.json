@@ -1,0 +1,120 @@
+{
+  "version": 2,
+  "platform": "Windows",
+  "python": "3.11.7",
+  "measurement": "Synthetic function-only wall time and tracemalloc; not RSS/OOM/load acceptance.",
+  "source_sha256": {
+    "content_cleanup.py": "761f18de950e178d96398d18c21c4752eca742a3c668b0328331259c433b091f",
+    "cleanup_normalization.py": "e15345e2779632edcfc3730f55068cfdf76a0506a1b3d87dffccd8d93e1f92f5"
+  },
+  "rows": [
+    {
+      "input": "ascii",
+      "characters": 67513,
+      "rules": 1,
+      "profiles": 1,
+      "isolated": {
+        "milliseconds": 488.536,
+        "peak_traced_bytes": 1738106,
+        "matches": 1501,
+        "range_digest": "6fed1945e1e8eb13cccb80668eea0074b07a75fa805c158c80ff826de1044c84"
+      },
+      "reused": {
+        "milliseconds": 491.794,
+        "peak_traced_bytes": 1738082,
+        "matches": 1501,
+        "range_digest": "6fed1945e1e8eb13cccb80668eea0074b07a75fa805c158c80ff826de1044c84"
+      }
+    },
+    {
+      "input": "ascii",
+      "characters": 67513,
+      "rules": 5,
+      "profiles": 1,
+      "isolated": {
+        "milliseconds": 1358.555,
+        "peak_traced_bytes": 2039873,
+        "matches": 1501,
+        "range_digest": "6fed1945e1e8eb13cccb80668eea0074b07a75fa805c158c80ff826de1044c84"
+      },
+      "reused": {
+        "milliseconds": 497.136,
+        "peak_traced_bytes": 1737922,
+        "matches": 1501,
+        "range_digest": "6fed1945e1e8eb13cccb80668eea0074b07a75fa805c158c80ff826de1044c84"
+      }
+    },
+    {
+      "input": "ascii",
+      "characters": 67513,
+      "rules": 20,
+      "profiles": 1,
+      "isolated": {
+        "milliseconds": 4609.212,
+        "peak_traced_bytes": 2039783,
+        "matches": 1501,
+        "range_digest": "6fed1945e1e8eb13cccb80668eea0074b07a75fa805c158c80ff826de1044c84"
+      },
+      "reused": {
+        "milliseconds": 492.174,
+        "peak_traced_bytes": 1737650,
+        "matches": 1501,
+        "range_digest": "6fed1945e1e8eb13cccb80668eea0074b07a75fa805c158c80ff826de1044c84"
+      }
+    },
+    {
+      "input": "unicode",
+      "characters": 39013,
+      "rules": 1,
+      "profiles": 1,
+      "isolated": {
+        "milliseconds": 1231.106,
+        "peak_traced_bytes": 6651584,
+        "matches": 1501,
+        "range_digest": "91d9b9339f292f722889e4d8382302ce4955c8428c49af27df771cbaf8143308"
+      },
+      "reused": {
+        "milliseconds": 1216.125,
+        "peak_traced_bytes": 6651584,
+        "matches": 1501,
+        "range_digest": "91d9b9339f292f722889e4d8382302ce4955c8428c49af27df771cbaf8143308"
+      }
+    },
+    {
+      "input": "unicode",
+      "characters": 39013,
+      "rules": 5,
+      "profiles": 1,
+      "isolated": {
+        "milliseconds": 5025.953,
+        "peak_traced_bytes": 6953077,
+        "matches": 1501,
+        "range_digest": "91d9b9339f292f722889e4d8382302ce4955c8428c49af27df771cbaf8143308"
+      },
+      "reused": {
+        "milliseconds": 1228.99,
+        "peak_traced_bytes": 6651584,
+        "matches": 1501,
+        "range_digest": "91d9b9339f292f722889e4d8382302ce4955c8428c49af27df771cbaf8143308"
+      }
+    },
+    {
+      "input": "unicode",
+      "characters": 39013,
+      "rules": 20,
+      "profiles": 1,
+      "isolated": {
+        "milliseconds": 19305.997,
+        "peak_traced_bytes": 6953077,
+        "matches": 1501,
+        "range_digest": "91d9b9339f292f722889e4d8382302ce4955c8428c49af27df771cbaf8143308"
+      },
+      "reused": {
+        "milliseconds": 1223.748,
+        "peak_traced_bytes": 6651584,
+        "matches": 1501,
+        "range_digest": "91d9b9339f292f722889e4d8382302ce4955c8428c49af27df771cbaf8143308"
+      }
+    }
+  ]
+}

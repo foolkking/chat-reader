@@ -21,6 +21,11 @@ def test_actual_context_export_is_readable_by_acquisition(client):
         path = Path(artifact.storage_uri)
         with zipfile.ZipFile(path) as z:
             manifest = json.loads(z.read('manifest.json'))
+            assert manifest["format_version"] == "1.1"
+            assert manifest["included_content"]["annotation_document"] is True
+            assert manifest["extensions"]["chat_reader_annotation_export"]["status"] == "included"
+            assert manifest["extensions"]["chat_reader_annotation_export"]["path"] == "annotations.md"
+            assert "annotations.md" in z.namelist()
             assert manifest['conversation']['id'] == sample['conversation_id']
             for member, info in manifest['files'].items():
                 data = z.read(member)
@@ -36,6 +41,9 @@ def test_actual_context_export_is_readable_by_acquisition(client):
             assert len(messages) == manifest['conversation']['message_count']
             assert all(m.descriptor.body_available for m in messages)
             assert any('Original user question' in (m.body_text or '') for m in messages)
+        from app.services.context_protocol.inspection import inspect_package
+        report = inspect_package(str(path), verify_hashes="all")
+        assert report["annotation_document"]["status"] == "verified"
     finally:
         db.rollback()
         generator.close()

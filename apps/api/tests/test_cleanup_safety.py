@@ -159,7 +159,7 @@ def test_filtered_selection_covers_all_pages_and_preview_guards_changes(client):
     second_page = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences?offset=100&selected_only=true&{filtered}").json()
     assert len(second_page) == 25 and all(item["decision"] == "DELETE" for item in second_page)
     preview = client.get(f"/api/content-cleanup/scans/{scan_id}/preview").json()
-    assert preview["summary"] == {"conversations": 1, "messages": 1, "fragments": 125}
+    assert preview["summary"] == {"conversations": 1, "messages": 1, "fragments": 125, "protected_confirmed": 0}
     assert preview["items"][0]["before"] == text
     assert preview["items"][0]["after"] == text.replace(MARKER, "")
     assert preview["items"][0]["conflict"] is False

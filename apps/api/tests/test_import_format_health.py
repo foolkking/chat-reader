@@ -11,6 +11,7 @@ from app.services.adaptive_import.service import _source_path
 from test_admin_system import _normal_user_session
 from test_auth import auth_client  # noqa: F401
 from test_import_profile_sharing import client, use  # noqa: F401
+from test_adaptive_import_api import _complete_analysis
 
 
 def batch(client, bodies, *, repair=None):
@@ -20,7 +21,7 @@ def batch(client, bodies, *, repair=None):
             {"speaker": "assistant", "body": "Synthetic answer", "alternate": "Synthetic alternate answer"}
         ]}).encode(), "application/json")) for i, body in enumerate(bodies)])
     assert response.status_code == 201, response.text
-    return response.json()
+    return _complete_analysis(client, response.json())
 
 
 def learn(client, session, *, alternate=False):

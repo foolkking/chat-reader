@@ -80,7 +80,38 @@ def analyze_documents(documents: list[SourceDocument]) -> AnalysisResult:
         native = _analyze_native_markdown(markdown_docs[0].content)
         if native is not None:
             return native
-        return analyze_markdown(markdown_docs[0].content)
+        try:
+            return analyze_markdown(markdown_docs[0].content)
+        except AdaptiveImportError as exc:
+            if exc.code != "NO_MESSAGE_STRUCTURE":
+                raise
+            # Plain Markdown is still useful source material. When it has no
+            # reliable message boundaries, preserve the whole file as one
+            # assistant message instead of guessing at separators.
+            text = markdown_docs[0].content.decode("utf-8-sig")
+            if not text.strip():
+                raise
+            signature = {
+                "version": ANALYZER_VERSION,
+                "mode": "MARKDOWN",
+                "builtin": "single-assistant-markdown-v1",
+            }
+            return AnalysisResult(
+                mode="MARKDOWN",
+                signature=signature,
+                signature_digest=signature_digest(signature),
+                mapping_candidates={
+                    "boundaries": [],
+                    "suggested": {
+                        "native": True,
+                        "single_message": True,
+                        "role": "assistant",
+                        "title": "FIRST_H1_OR_FILENAME",
+                    },
+                },
+                semantic={"single_message": True, "default_role": "assistant"},
+                handling_class="SUPPORTED",
+            )
     raise AdaptiveImportError("SOURCE_UNSUPPORTED", "Only JSON and Markdown files can be analyzed.", layer="file")
 
 
@@ -292,6 +323,16 @@ def default_mapping(analysis: AnalysisResult) -> dict[str, Any]:
         }
     if analysis.mode == "MARKDOWN":
         suggested = analysis.mapping_candidates["suggested"]
+        if analysis.signature.get("builtin") == "single-assistant-markdown-v1":
+            return {
+                "source_mode": "MARKDOWN",
+                "conversation": {"title": suggested["title"]},
+                "messages": {"single_message": True, "role": "assistant"},
+                "role_mapping": {},
+                "unknown_role": "ASK",
+                "noise_rules": [],
+                "transforms": {},
+            }
         return {
             "source_mode": "MARKDOWN",
             "conversation": {"title": suggested["title"]},

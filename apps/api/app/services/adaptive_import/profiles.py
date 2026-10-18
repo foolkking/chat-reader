@@ -33,6 +33,7 @@ class BuiltinProfile:
 
 
 BUILTINS = (
+    BuiltinProfile("builtin:single-assistant-markdown-v1", "Single Markdown message", "MARKDOWN", "Markdown without reliable message boundaries, preserved as one assistant message."),
     BuiltinProfile("builtin:chatgpt-markdown-transcript-v1", "ChatGPT Markdown Transcript Profile v1", "MARKDOWN", "Normalizer transcript interchange."),
     BuiltinProfile("builtin:chat-reader-exporter", "Chat Reader Native JSON / Markdown", "JSON_MARKDOWN", "Chat Reader exporter JSON with optional Markdown body."),
     BuiltinProfile("builtin:chat-reader-markdown-v2", "Chat Reader Native Markdown Export v2", "MARKDOWN", "Chat Reader canonical Markdown export, version 2."),
@@ -92,6 +93,8 @@ def match_profile(
 
 
 def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> BuiltinProfile | None:
+    if analysis.signature.get("builtin") == "single-assistant-markdown-v1":
+        return _builtin("builtin:single-assistant-markdown-v1")
     if analysis.signature.get("builtin") == "chatgpt-markdown-transcript-v1":
         return _builtin("builtin:chatgpt-markdown-transcript-v1")
     if analysis.signature.get("builtin") == "chat-reader-markdown-v2":
@@ -125,6 +128,17 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
 def normalize_builtin(key: str, documents: list[SourceDocument]):
     json_doc = next((item for item in documents if item.extension in {".json", ".jsonl", ".gz"}), None)
     markdown_doc = next((item for item in documents if item.extension in {".md", ".markdown"}), None)
+    if key == "builtin:single-assistant-markdown-v1" and markdown_doc:
+        try:
+            text = markdown_doc.content.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise ValueError("Markdown must be UTF-8.") from exc
+        if not text.strip():
+            raise ValueError("Markdown file is empty.")
+        from app.services.adaptive_import.normalization import _markdown_title
+        title = _markdown_title(text) or markdown_doc.filename.rsplit(".", 1)[0]
+        message = _draft_message("assistant", text, 0, None, None, source_markdown_index=0)
+        return [_draft_conversation(title, [message], "Single Markdown message", source_type="adaptive_markdown")]
     if key == "builtin:chatgpt-markdown-transcript-v1" and markdown_doc:
         from app.services.import_pipeline.transcript_markdown import parse_transcript
         from app.services.import_pipeline.exporter_json_parser import extract_conversation_id

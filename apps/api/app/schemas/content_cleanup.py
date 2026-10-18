@@ -141,6 +141,11 @@ class CleanupOccurrenceRead(BaseModel):
     evidence_codes: list[str] | None
     reviewed_ranges: list[CleanupRemovalRange] | None = None
     edit_token: str | None = None
+    rule_revision_id: UUID | None = None
+    rule_revision: int | None = None
+    rule_settings: dict | None = None
+    protection_confirmed: bool = False
+    protection_types: list[str] = Field(default_factory=list)
 
 
 class CleanupDecisionInput(BaseModel):
@@ -150,6 +155,7 @@ class CleanupDecisionInput(BaseModel):
 
 class CleanupDecisionBatch(BaseModel):
     decisions: list[CleanupDecisionInput] = Field(min_length=1, max_length=10000)
+    protection_token: str | None = Field(default=None, min_length=65, max_length=100)
 
 
 class CleanupFilteredDecision(BaseModel):
@@ -158,6 +164,17 @@ class CleanupFilteredDecision(BaseModel):
     rule_id: UUID | None = None
     conversation_id: UUID | None = None
     selected_only: bool = False
+    protection_token: str | None = Field(default=None, min_length=65, max_length=100)
+
+
+class CleanupProtectionPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    occurrence_ids: list[UUID] | None = Field(default=None, min_length=1, max_length=10000)
+    rule_id: UUID | None = None
+    conversation_id: UUID | None = None
+    selected_only: bool = False
+    limit: int = Field(default=20, ge=1, le=50)
+    offset: int = Field(default=0, ge=0)
 
 
 class CleanupApplyInput(BaseModel):

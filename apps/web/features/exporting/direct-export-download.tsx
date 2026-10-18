@@ -5,12 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import { assertOfflineAccess, authenticationGeneration, captureOfflineAccess, notifyAuthenticationFailure, OFFLINE_ACCESS_LOCKED_EVENT } from "../../lib/offline-access";
 
-export function DirectExportDownload({ href, format }: { href: string; format: "canjson" | "markdown" }) {
+export function DirectExportDownload({ href, format, label, compact = false }: { href: string; format: "canjson" | "markdown"; label?: string; compact?: boolean }) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
-  return <DownloadButton key={`${href}:${zh}`} href={href} format={format} zh={zh} />;
+  return <DownloadButton key={`${href}:${zh}`} href={href} format={format} zh={zh} label={label} compact={compact} />;
 }
 
-function DownloadButton({ href, format, zh }: { href: string; format: "canjson" | "markdown"; zh: boolean }) {
+function DownloadButton({ href, format, zh, label, compact }: { href: string; format: "canjson" | "markdown"; zh: boolean; label?: string; compact?: boolean }) {
   const active = useRef<AbortController | null>(null);
   const mounted = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -73,9 +73,9 @@ function DownloadButton({ href, format, zh }: { href: string; format: "canjson" 
 
   return <div className="grid min-w-0 gap-2" data-testid="direct-export-download">
     <div className="flex gap-2">
-      <button type="button" disabled={busy} aria-busy={busy} onClick={() => void download()} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60">
+      <button type="button" disabled={busy} aria-busy={busy} onClick={() => void download()} className={compact ? "btn-secondary inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs disabled:opacity-60" : "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"}>
         <Download className="h-4 w-4 shrink-0" aria-hidden />
-        {busy ? (zh ? "正在准备下载…" : "Preparing download…") : error ? (zh ? "重试下载" : "Retry download") : (zh ? "下载文件" : "Download file")}
+        {busy ? (zh ? "正在准备下载…" : "Preparing download…") : error ? (zh ? "重试下载" : "Retry download") : label ?? (zh ? "下载文件" : "Download file")}
       </button>
       {busy ? <button type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => active.current?.abort()}>{zh ? "取消" : "Cancel"}</button> : null}
     </div>

@@ -6,8 +6,10 @@ from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
 from app.models.background_job import BackgroundJob
-from app.models.content_cleanup import ContentCleanupScan, ContentCleanupScanTarget
+from app.models.content_cleanup import ContentCleanupScan, ContentCleanupScanTarget, ContentCleanupOccurrence
 from app.models.conversation import Conversation
+from app.models.message import Message
+from app.models.message_version import MessageVersion
 from app.services.ownership import OwnershipScope
 
 
@@ -62,7 +64,7 @@ def owned_original(db: Session, scope: OwnershipScope, scan_id: uuid.UUID) -> Co
 
 
 def queue_rescan(db: Session, scope: OwnershipScope, scan_id: uuid.UUID, request_id: uuid.UUID | None = None):
-    from app.services.content_cleanup import create_scan
+    from app.services.content_cleanup import create_scan, source_fingerprint
     if request_id is not None:
         _lock_request(db, scope, _request_key(request_id, scan_id))
         existing = find_request(db, scope, request_id, scan_id)
@@ -75,9 +77,29 @@ def queue_rescan(db: Session, scope: OwnershipScope, scan_id: uuid.UUID, request
         ContentCleanupScanTarget.scan_id == scan_id, scope.predicate(Conversation), Conversation.status == "active", Conversation.deleted_at.is_(None))]
     original_job = db.query(BackgroundJob).filter(BackgroundJob.id == original.background_job_id, scope.predicate(BackgroundJob)).first()
     parent = original_job.payload.get("parent_task_id") if original_job and original.source == "IMPORT" else None
-    scan, job = create_scan(db, source="IMPORT" if parent else "BATCH", scope_type="IMPORT_RESULT" if parent else "SELECTED_CONVERSATIONS",
-        conversation_ids=ids, ownership_scope=scope, force_new=True)
-    job.payload = {**job.payload, "rescan_of": str(scan_id)}
+    selection = {}
+    if original.selection_message_id:
+        message = db.get(Message, original.selection_message_id)
+        version = db.get(MessageVersion, message.current_version_id) if message else None
+        saved = original_job.payload if original_job else {}
+        version_id, source_hash = saved.get("selection_version_id"), saved.get("selection_source_hash")
+        if not version_id:
+            # Legacy selection scans are recoverable only with verifiable
+            # persisted provenance. Never broaden an unverifiable selection.
+            row = db.query(ContentCleanupOccurrence).filter_by(scan_id=scan_id,
+                message_id=original.selection_message_id).first()
+            version_id = str(row.message_version_id) if row else None
+            source_hash = row.source_content_hash if row else None
+        if (not message or message.is_deleted or not version or message.conversation_id not in ids
+                or str(version.id) != version_id or source_fingerprint(version.display_text) != source_hash):
+            raise ValueError("The original selection changed. Select and confirm its range again.")
+        selection = {"selection_message_id": original.selection_message_id,
+            "selection_start_offset": original.selection_start_offset,
+            "selection_end_offset": original.selection_end_offset}
+    excluded = db.query(ContentCleanupScanTarget).filter_by(scan_id=scan_id).count() - len(ids)
+    scan, job = create_scan(db, source=original.source, scope_type=original.scope_type,
+        conversation_ids=ids, ownership_scope=scope, force_new=True, **selection)
+    job.payload = {**job.payload, "rescan_of": str(scan_id), "rescan_excluded_count": max(0, excluded)}
     if parent:
         job.payload = {**job.payload, "parent_task_id": parent}
         job.result = {**job.result, "parent_task_id": parent}

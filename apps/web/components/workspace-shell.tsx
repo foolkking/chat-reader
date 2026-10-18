@@ -1,20 +1,98 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { releaseExportRoute } from "../lib/export-usage";
 import { ProjectSidebar } from "../features/projects/project-sidebar";
+import { useImportDialog } from "./import-dialog-provider";
+import { useTranslations } from "./preferences-provider";
 
 type WorkspaceShellContextValue = {
   embedded: boolean;
   openMobileSidebar: () => void;
+  setReaderProjectContext: (conversationId: string, projectId: string | null | undefined) => void;
 };
 
-const WorkspaceShellContext = createContext<WorkspaceShellContextValue>({ embedded: false, openMobileSidebar: () => undefined });
+const WorkspaceShellContext = createContext<WorkspaceShellContextValue>({
+  embedded: false,
+  openMobileSidebar: () => undefined,
+  setReaderProjectContext: () => undefined,
+});
 
 export function WorkspaceShellBoundary({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() ?? "/";
   const searchParams = useSearchParams();
+  const { openImportDialog } = useImportDialog();
+  const t = useTranslations();
+  const [fileDropActive, setFileDropActive] = useState(false);
+  const [dropOverImportButton, setDropOverImportButton] = useState(false);
+  const [readerProjectContext, setReaderProjectContext] = useState<{ conversationId: string; projectId: string | null } | null>(null);
+  const fileDragDepth = useRef(0);
+  const routeProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
+  const projectId = routeProjectId ?? searchParams?.get("projectId") ?? searchParams?.get("project_id") ?? undefined;
+  const routeConversationId = pathname.match(/^\/conversations\/([^/]+)/)?.[1];
+  const importProjectId = projectId ?? (
+    routeConversationId && readerProjectContext?.conversationId === routeConversationId
+      ? readerProjectContext.projectId ?? undefined
+      : undefined
+  );
+  const isChinese = t("settings") === "设置";
+  const hasDroppedFiles = (event: DragEvent<HTMLElement>) =>
+    Array.from(event.dataTransfer.types).includes("Files");
+  const isInsideDialog = (event: DragEvent<HTMLElement>) =>
+    event.target instanceof Element && Boolean(event.target.closest('[role="dialog"]'));
+  const setDropTarget = (event: DragEvent<HTMLElement>) => {
+    setDropOverImportButton(
+      event.target instanceof Element && Boolean(event.target.closest('[data-testid="sidebar-import-button"]')),
+    );
+  };
+  const handleFileDragEnter = (event: DragEvent<HTMLElement>) => {
+    if (!hasDroppedFiles(event) || isInsideDialog(event)) return;
+    event.preventDefault();
+    fileDragDepth.current += 1;
+    setFileDropActive(true);
+    setDropTarget(event);
+  };
+  const handleFileDragOver = (event: DragEvent<HTMLElement>) => {
+    if (!hasDroppedFiles(event) || isInsideDialog(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    setDropTarget(event);
+  };
+  const handleFileDragLeave = (event: DragEvent<HTMLElement>) => {
+    if (!hasDroppedFiles(event) || isInsideDialog(event)) return;
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+    fileDragDepth.current = 0;
+    setFileDropActive(false);
+    setDropOverImportButton(false);
+  };
+  const handleFileDrop = (event: DragEvent<HTMLElement>) => {
+    if (!hasDroppedFiles(event) || isInsideDialog(event)) {
+      fileDragDepth.current = 0;
+      setFileDropActive(false);
+      setDropOverImportButton(false);
+      return;
+    }
+    event.preventDefault();
+    fileDragDepth.current = 0;
+    setFileDropActive(false);
+    setDropOverImportButton(false);
+    const files = Array.from(event.dataTransfer.files);
+    if (!files.length) return;
+    const archive = files.length === 1 && /\.cr$/i.test(files[0]?.name ?? "");
+    openImportDialog({
+      projectId: importProjectId ?? null,
+      initialFiles: files,
+      initialMode: archive ? "archive" : "adaptive",
+    });
+  };
+  const setReaderProjectContextForRoute = useCallback((conversationId: string, nextProjectId: string | null | undefined) => {
+    if (routeConversationId !== conversationId) return;
+    setReaderProjectContext(nextProjectId === undefined ? null : { conversationId, projectId: nextProjectId });
+  }, [routeConversationId]);
+  useEffect(() => {
+    if (!routeConversationId) setReaderProjectContext(null);
+  }, [routeConversationId]);
   const previousPath = useRef(pathname);
   useEffect(() => {
     if (previousPath.current !== pathname) releaseExportRoute(previousPath.current);
@@ -27,15 +105,45 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
     || pathname === "/search"
     || pathname.startsWith("/conversations/")
     || pathname.startsWith("/projects/");
-  const value = useMemo(() => ({ embedded: ownerSurface, openMobileSidebar: () => setMobileOpenSignal((current) => current + 1) }), [ownerSurface]);
+  const value = useMemo(() => ({
+    embedded: ownerSurface,
+    openMobileSidebar: () => setMobileOpenSignal((current) => current + 1),
+    setReaderProjectContext: setReaderProjectContextForRoute,
+  }), [ownerSurface, setReaderProjectContextForRoute]);
   if (!ownerSurface) return <WorkspaceShellContext.Provider value={value}>{children}</WorkspaceShellContext.Provider>;
-  const routeProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
-  const projectId = routeProjectId ?? searchParams?.get("projectId") ?? searchParams?.get("project_id") ?? undefined;
   return (
     <WorkspaceShellContext.Provider value={value}>
-      <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
-        <ProjectSidebar currentProjectId={projectId} currentProjectDropTargetId={routeProjectId} mobileOpenSignal={mobileOpenSignal} showMobileTrigger={false} />
+      <main
+        className="relative flex h-screen w-screen overflow-hidden bg-page text-primary"
+        onDragEnter={handleFileDragEnter}
+        onDragOver={handleFileDragOver}
+        onDragLeave={handleFileDragLeave}
+        onDrop={handleFileDrop}
+      >
+        <ProjectSidebar
+          currentProjectId={projectId}
+          currentProjectDropTargetId={routeProjectId}
+          mobileOpenSignal={mobileOpenSignal}
+          showMobileTrigger={false}
+          onImportClick={() => openImportDialog({ projectId: importProjectId ?? null })}
+        />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+        {fileDropActive ? (
+          <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[80] grid place-items-center bg-[var(--overlay)]/30 p-4">
+            <div className={`max-w-md border border-dashed bg-raised px-6 py-5 text-center shadow-2xl ${dropOverImportButton ? "border-[var(--accent)]" : "border-ui"}`}>
+              <p className="text-sm font-semibold text-primary">
+                {dropOverImportButton
+                  ? (isChinese ? "释放文件，打开导入" : "Drop files to open import")
+                  : (isChinese ? "释放文件即可导入" : "Drop files to import")}
+              </p>
+              <p className="mt-1 text-xs text-secondary">
+                {importProjectId
+                  ? (isChinese ? "导入位置：当前项目" : "Import destination: current project")
+                  : (isChinese ? "导入位置：未归类" : "Import destination: unclassified")}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </main>
     </WorkspaceShellContext.Provider>
   );

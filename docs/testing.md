@@ -1,5 +1,43 @@
 # Testing
 
+## Import/noise stability continuation — 2026-10-18 (local only)
+
+[Stability evidence](execution/IMPORT_STABILITY_2026-10-18.md) distinguishes
+read-only production OOM evidence from synthetic repair validation. Initial
+import regressions passed 50, then 61; the final upload/admission plus actual
+ASGI responsiveness suite passes **21** after adding the first-use semaphore
+lock and all seven stored-source pressure paths. A controlled eight-thread
+red test constructed eight independent gates per kind before repair; the
+fixed test constructs one, with independent staging/analysis gates preserved.
+
+Noise normalization reuse, Unicode/raw source offsets, protection confirmation,
+reviewed deletion ranges and preview/apply validation pass **130**. An additional
+**2** ORM-load/weak-reference cases prove only the current source row remains
+live while loading the next in 20-message scans, at chunk sizes 1/20.
+Candidate page projection has an independent query/allocation regression; a
+100-candidate synthetic page now fetches one display-text projection, not
+100 full MessageVersion entities. A 120-hit CRLF/LF fixture verifies the
+constant-memory line/column cursor matches the old code-point offsets.
+Late-corrupt streamed drafts are tested against real canonical persistence and
+must leave no earlier conversation behind; the SQLite outer-transaction
+regression and final larger checkpoints are recorded in the linked evidence.
+These are not Linux/cgroup/RSS or 60-minute/2 GiB soak results. No production
+stress, proactive CI, push or deployment was performed.
+
+Memory-admission hardening adds a targeted **37 passed** checkpoint for host vs.
+nested cgroup-v1/v2 available-memory selection, input-scaled estimated headroom,
+immediate retryable rejection and fail-closed behavior when the memory probe is
+unknown. It also verifies that the configured multipart spool threshold causes
+an over-threshold file to spill before the endpoint runs, closing the
+pre-admission multi-file memory path. This is functional guard coverage, not a
+measured bound on Python JSON object expansion or a resource-load acceptance.
+
+The synthetic `analyze_json` allocation probe is source-hash-bound in
+`evidence/import-analysis-memory-2026-10-18.json`: transcript-like input was
+4.47× and dense small-object input 25.01× the input size in peak traced
+allocations. The configured admission factor is 32 as a conservative margin
+over these examples; it is not a hard bound or a production/RSS measurement.
+
 ## Local Unicode normalization — 2026-10-17
 
 The [Unicode follow-up](execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md)

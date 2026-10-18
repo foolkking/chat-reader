@@ -9,6 +9,7 @@ import { tags } from "@lezer/highlight";
 import { AlertCircle, CheckCircle2, ChevronDown, LoaderCircle, MoreHorizontal, Save, SaveAll, X } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 import type { AttachmentRead } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import {
@@ -29,6 +30,11 @@ import {
   type AttachmentDraftState,
 } from "./source-attachment-drop";
 import { selectSourcePreviewAnchor, sourceAlignedPreviewScrollTop } from "./source-preview-scroll";
+import {
+  applyMarkdownTableAction,
+  inspectMarkdownTable,
+  type MarkdownTableAction,
+} from "./markdown-table-tools";
 
 const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), { ssr: false });
 
@@ -152,6 +158,7 @@ export function EditMessageForm({
   } | null>(null);
   const [removedConfirmMode, setRemovedConfirmMode] = useState<"create_version" | "replace_current" | null>(null);
   const [removedActions, setRemovedActions] = useState<Record<string, "keep_in_conversation" | "detach_from_conversation">>({});
+  const [tableTool, setTableTool] = useState<{ from: number; to: number; revision: number } | null>(null);
   const [previewSnapshot, setPreviewSnapshot] = useState(() => ({ revision: 0, text: initialText }));
   useEffect(() => {
     const revision = ++previewRevisionRef.current;
@@ -548,6 +555,12 @@ export function EditMessageForm({
       return;
     }
     const selection = savedToolbarSelectionRef.current ?? view.state.selection.main;
+    if (command === "table") {
+      setTableTool({ from: selection.from, to: selection.to, revision: editorRevisionRef.current });
+      hideContextToolbar(false);
+      closeCommandPanel(false);
+      return;
+    }
     const change = commandChange(command, view.state.doc.toString(), selection.from, selection.to);
     if (!change) return;
     view.dispatch({ changes: change.changes, selection: change.selection, scrollIntoView: true });
@@ -898,6 +911,31 @@ export function EditMessageForm({
           requestToolbarPosition();
         }}
       />
+      {tableTool ? (
+        <TableToolDialog
+          zh={zh}
+          source={text}
+          range={tableTool}
+          stale={editorRevisionRef.current !== tableTool.revision}
+          onRefresh={() => { const view = editorViewRef.current; if (view) setTableTool({ from: view.state.selection.main.from, to: view.state.selection.main.to, revision: editorRevisionRef.current }); }}
+          onClose={() => setTableTool(null)}
+          onApply={(action) => {
+            const view = editorViewRef.current;
+            if (!view || editorRevisionRef.current !== tableTool.revision || view.state.doc.toString() !== text) {
+              setError(zh ? "编辑内容已变化，请重新打开表格工具。" : "The editor changed. Reopen the table tool before applying.");
+              return;
+            }
+            const result = applyMarkdownTableAction(text, tableTool.from, tableTool.to, action);
+            if (!result) {
+              setError(zh ? "无法可靠识别表格范围，请选择完整的表格后重试。" : "The table range could not be identified reliably. Select the complete table and try again.");
+              return;
+            }
+            view.dispatch({ changes: { from: result.from, to: result.to, insert: result.insert }, selection: result.selection, scrollIntoView: true });
+            setTableTool(null);
+            view.focus();
+          }}
+        />
+      ) : null}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <div ref={editorHostRef} className="min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror">
           <CodeMirror
@@ -1069,6 +1107,125 @@ export function EditMessageForm({
   );
 }
 
+type TableToolDialogProps = {
+  zh: boolean;
+  source: string;
+  range: { from: number; to: number; revision: number };
+  stale: boolean;
+  onRefresh: () => void;
+  onClose: () => void;
+  onApply: (action: MarkdownTableAction) => void;
+};
+
+function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, onApply }: TableToolDialogProps) {
+  const [mode, setMode] = useState<"normalize" | "create" | "row" | "column">(() => inspectMarkdownTable(source, range.from, range.to) ? "normalize" : "create");
+  const [columns, setColumns] = useState(3);
+  const [rows, setRows] = useState(3);
+  const [count, setCount] = useState(1);
+  const [position, setPosition] = useState<"before" | "after">("after");
+  const model = useMemo(() => inspectMarkdownTable(source, range.from, range.to), [source, range.from, range.to]);
+  const action = useMemo<MarkdownTableAction>(() => {
+    if (mode === "create") return { type: "create", columns, rows };
+    if (mode === "row") return { type: "add-row", position, count };
+    if (mode === "column") return { type: "add-column", position, count };
+    return { type: "normalize" };
+  }, [columns, count, mode, position, rows]);
+  const parameterError = mode === "create"
+    ? (!Number.isInteger(columns) || columns < 1 || columns > 50
+      ? (zh ? "列数需为 1–50 的整数。" : "Columns must be an integer from 1 to 50.")
+      : !Number.isInteger(rows) || rows < 1 || rows > 100
+        ? (zh ? "数据行数需为 1–100 的整数（不含表头）。" : "Data rows must be an integer from 1 to 100 (excluding the header).")
+        : null)
+    : mode === "row" || mode === "column"
+      ? (!Number.isInteger(count) || count < 1 || count > (mode === "row" ? 100 : 50)
+        ? (zh ? `数量需为 1–${mode === "row" ? 100 : 50} 的整数。` : `Count must be an integer from 1 to ${mode === "row" ? 100 : 50}.`)
+        : null)
+      : null;
+  const preview = useMemo(
+    () => applyMarkdownTableAction(source, range.from, range.to, action),
+    [action, range.from, range.to, source],
+  );
+  const canEditExisting = model !== null;
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const renderedRef = useRef<HTMLDivElement | null>(null);
+  const [renderedTable, setRenderedTable] = useState<string | null>(null);
+  useDialogFocus({ open: true, rootRef: dialogRef, onClose });
+  const previewLines = preview?.insert.replace(/^(?:\r?\n)+/, "").split(/\r?\n/) ?? [];
+  const renderedPreview = previewLines.slice(0, 32).join(model?.newline ?? "\n");
+  useEffect(() => {
+    // Verify the shared renderer actually produced a table, not merely a string
+    // resembling one. Never apply an unrenderable transformation.
+    setRenderedTable(renderedRef.current?.querySelector("table") ? renderedPreview : null);
+  }, [renderedPreview]);
+  const ready = Boolean(preview && renderedTable === renderedPreview && !stale);
+
+  const lineLabel = model
+    ? `${(source.slice(0, model.lineStart).match(/\n/g)?.length ?? 0) + 1}–${(source.slice(0, model.lineEnd).match(/\n/g)?.length ?? 0) + 1}`
+    : (zh ? "尚未识别表格范围" : "No table range detected");
+  const modeLabel = mode === "normalize"
+    ? (zh ? "规范当前表格" : "Normalize table")
+    : mode === "create"
+      ? (zh ? "创建空表" : "Create blank table")
+      : mode === "row"
+        ? (zh ? "增加行" : "Add rows")
+        : (zh ? "增加列" : "Add columns");
+
+  return (
+    <div className="fixed inset-0 z-[240] flex items-end justify-center bg-[var(--overlay)] p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="source-editor-table-tool-title" data-testid="source-editor-table-tool">
+      <button type="button" className="absolute inset-0" onClick={onClose} aria-label={zh ? "关闭表格工具" : "Close table tool"} />
+      <section ref={dialogRef} tabIndex={-1} className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-ui bg-raised shadow-2xl sm:max-w-3xl sm:rounded-xl">
+        <header className="flex items-start justify-between gap-4 border-b border-ui px-4 py-3 sm:px-5">
+          <div>
+            <h2 id="source-editor-table-tool-title" className="text-base font-semibold text-primary">{zh ? "表格工具" : "Table tool"}</h2>
+            <p className="mt-1 text-xs text-secondary">{zh ? `操作范围：第 ${lineLabel} 行。先预览，再写入编辑器草稿。` : `Range: lines ${lineLabel}. Preview before changing the editor draft.`}</p>
+            {model ? <p className="mt-1 text-xs text-secondary">{model.headers.length} {zh ? "列" : "columns"} · {model.rows.length} {zh ? "条数据行" : "data rows"}</p> : null}
+            {stale ? <p role="alert" className="text-xs text-[var(--danger)]">{zh ? "内容已变化，请重新生成预览。" : "Content changed. Regenerate the preview."}<button type="button" className="min-h-11 underline" onClick={onRefresh}>{zh ? "使用当前选区重新预览" : "Preview the current selection"}</button></p> : null}
+          </div>
+          <button type="button" onClick={onClose} className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button>
+        </header>
+        <div className="grid min-h-0 gap-4 overflow-y-auto p-4 sm:grid-cols-[minmax(12rem,0.8fr)_minmax(0,1.2fr)] sm:p-5">
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2" role="group" aria-label={zh ? "表格操作" : "Table actions"}>
+              {([
+                ["normalize", zh ? "规范当前表格" : "Normalize"],
+                ["create", zh ? "创建空表" : "Create blank"],
+                ["row", zh ? "增加行" : "Add rows"],
+                ["column", zh ? "增加列" : "Add columns"],
+              ] as const).map(([value, label]) => {
+                const disabled = value !== "create" && !canEditExisting;
+                return <button key={value} type="button" aria-pressed={mode === value} disabled={disabled} onClick={() => setMode(value)} className={`min-h-11 rounded-lg border px-3 text-left text-sm font-medium transition ${mode === value ? "border-[var(--accent)] bg-[var(--accent-soft)] text-primary" : "border-ui bg-surface text-secondary hover:bg-subtle"} disabled:cursor-not-allowed disabled:opacity-50`}>{label}</button>;
+              })}
+            </div>
+            <div className="rounded-lg border border-ui bg-surface p-3 text-sm">
+              <p className="font-medium text-primary">{modeLabel}</p>
+              {mode === "normalize" ? (
+                <div className="mt-2 space-y-1 text-xs text-secondary">
+                  {model?.diagnostics.length ? model.diagnostics.map((item) => <p key={item}>• {item}</p>) : <p>{canEditExisting ? (zh ? "当前表格已经接近规范格式，仍会用稳定的 GFM 形式重写。" : "The table is already close to valid Markdown; it will be rewritten to stable GFM.") : (zh ? "请选中完整表格，或把光标放在表格中。" : "Select a complete table or place the cursor inside one.")}</p>}
+                </div>
+              ) : null}
+              {mode === "create" ? <div className="mt-3 grid grid-cols-2 gap-3"><label className="text-xs text-secondary">{zh ? "列数" : "Columns"}<input type="number" min={1} max={50} step={1} value={columns} aria-invalid={Boolean(parameterError && (columns < 1 || columns > 50 || !Number.isInteger(columns)))} onChange={(event) => setColumns(event.target.value === "" ? 0 : Number(event.target.value))} className="mt-1 min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label><label className="text-xs text-secondary">{zh ? "数据行数" : "Data rows"}<input type="number" min={1} max={100} step={1} value={rows} aria-invalid={Boolean(parameterError && (rows < 1 || rows > 100 || !Number.isInteger(rows)))} onChange={(event) => setRows(event.target.value === "" ? 0 : Number(event.target.value))} className="mt-1 min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label><p className="col-span-2 text-xs text-secondary">{zh ? "数据行数不含表头，单元格保持为空。" : "Data rows exclude the header; cells remain blank."}</p></div> : null}
+              {mode === "row" || mode === "column" ? <div className="mt-3 grid grid-cols-2 gap-3"><label className="text-xs text-secondary">{zh ? "数量" : "Count"}<input type="number" min={1} max={mode === "row" ? 100 : 50} step={1} value={count} aria-invalid={Boolean(parameterError)} onChange={(event) => setCount(event.target.value === "" ? 0 : Number(event.target.value))} className="mt-1 min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label><label className="text-xs text-secondary">{zh ? "位置" : "Position"}<select value={position} onChange={(event) => setPosition(event.target.value as "before" | "after")} className="mt-1 min-h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary"><option value="after">{zh ? "之后" : "After"}</option><option value="before">{zh ? "之前" : "Before"}</option></select></label></div> : null}
+              {parameterError ? <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{parameterError}</p> : null}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="mb-2 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold text-primary">{zh ? "实际渲染预览" : "Rendered preview"}</h3><span className="text-xs text-secondary">{preview ? (zh ? "可应用" : "Ready to apply") : (zh ? "无法应用" : "Unavailable")}</span></div>
+            <div ref={renderedRef} className="max-h-[48dvh] min-h-40 overflow-auto rounded-lg border border-ui bg-page p-4 text-sm">
+              {preview ? <MarkdownRenderer text={renderedPreview} isAssistant={false} scopeId="source-editor-table-tool-preview" /> : <p className="text-sm text-secondary">{zh ? "范围不可靠或参数超限。请选择完整表格（最多 1 MiB、5000 行、200 列、50000 单元格），或输入允许的创建数量；原文不会截断。" : "Unreliable range or invalid limits. Select a complete table (up to 1 MiB, 5,000 lines, 200 columns, 50,000 cells), or enter valid creation dimensions. Source is never truncated."}</p>}
+            </div>
+            {previewLines.length > 32 ? <p className="mt-2 text-xs text-secondary">{zh ? "仅预览前 30 条数据行；应用覆盖确认的完整范围。" : "Preview shows the first 30 data rows only; applying uses the entire confirmed range."}</p> : null}
+            {preview ? <details className="mt-2"><summary className="min-h-11 text-xs">{zh ? "查看生成的 Markdown（同一预览范围）" : "Generated Markdown (same preview range)"}</summary><pre className="max-h-40 overflow-auto whitespace-pre-wrap text-xs">{renderedPreview}</pre></details> : null}
+          </div>
+        </div>
+        <footer className="flex flex-wrap justify-end gap-2 border-t border-ui px-4 py-3 sm:px-5">
+          <button type="button" onClick={onClose} className="min-h-10 rounded-lg px-4 text-sm font-medium text-secondary hover:bg-subtle">{zh ? "取消" : "Cancel"}</button>
+          <button type="button" disabled={!ready} onClick={() => { if (ready) onApply(action); }} className="min-h-11 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-50">{mode === "normalize" ? (zh ? "应用表格规范化" : "Apply normalization") : mode === "create" ? (zh ? "插入空表" : "Insert blank table") : mode === "row" ? (zh ? `增加 ${count} 行` : `Add ${count} row${count === 1 ? "" : "s"}`) : (zh ? `增加 ${count} 列` : `Add ${count} column${count === 1 ? "" : "s"}`)}</button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 export type SourceTextSelection = {
   startOffset: number;
   endOffset: number;
@@ -1140,7 +1297,6 @@ function commandChange(command: EditorCommand, source: string, from: number, to:
       selection: { anchor: source.length + delta + definition.length },
     };
   }
-  if (command === "table") return { changes: { from, insert: "| Column | Column |\n| --- | --- |\n| Value | Value |" }, selection: { anchor: from + 2 } };
   if (command === "rule") return { changes: { from, insert: "\n\n---\n\n" }, selection: { anchor: from + 7 } };
   if (command === "code-block") {
     const value = `\`\`\`\n${selected}\n\`\`\``;

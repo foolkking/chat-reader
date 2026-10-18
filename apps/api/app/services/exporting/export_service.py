@@ -298,27 +298,11 @@ def _canjson_v2_chunks(
                     record_count += 1
 
         if options.include_annotations:
-            for annotation in _iter_annotation_payloads(
-                stream_db,
-                conversation_id,
-                options.message_ids,
-                require_message=True,
-            ):
-                yield _jsonl({
-                    "record_type": "annotation",
-                    "id": annotation["id"],
-                    "message_id": annotation["message_id"],
-                    "version_id": annotation["message_version_id"],
-                    "start_block_index": annotation["start_block_index"],
-                    "start_offset": annotation["start_offset"],
-                    "end_block_index": annotation["end_block_index"],
-                    "end_offset": annotation["end_offset"],
-                    "quoted_text": annotation["quote"],
-                    "annotation_type": annotation["annotation_type"],
-                    "color": annotation["color"],
-                    "comment_markdown": annotation["comment_markdown"],
-                    "anchor_status": annotation["anchor_status"],
-                })
+            from app.services.exporting.annotation_document import annotation_query, annotation_record
+            query = annotation_query(stream_db, conversation_id, _subject_key_for_conversation(conversation),
+                options.message_ids or None)
+            for row in query.yield_per(1):
+                yield _jsonl(annotation_record(*row))
                 record_count += 1
         if options.include_notebook:
             notebook = _notebook_row(stream_db, conversation)

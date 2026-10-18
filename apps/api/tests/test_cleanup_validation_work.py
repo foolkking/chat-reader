@@ -60,12 +60,12 @@ def test_validation_keeps_multiple_sources_and_revisions_independent(client, mon
     assert client.patch(url + "/decisions/filter", json={"decision": "DELETE", "all_matching": True}).status_code == 200
     calls = []
     detector = cleanup.detect_occurrences
-    def measured(role, source, rule, revision):
+    def measured(role, source, rule, revision, **kwargs):
         calls.append((source, revision.id))
-        return detector(role, source, rule, revision)
+        return detector(role, source, rule, revision, **kwargs)
     monkeypatch.setattr(cleanup, "detect_occurrences", measured)
     preview = client.get(url + "/preview").json()
-    assert preview["summary"] == {"conversations": 2, "messages": 2, "fragments": 4}
+    assert preview["summary"] == {"conversations": 2, "messages": 2, "fragments": 4, "protected_confirmed": 0}
     assert len(calls) == len(set(calls)) == 4
     expected = [source.replace(f"First {MARKER}", "First ").replace(f"and {MARKER}", "and ").replace("cite turn22search1", "") for source in sources]
     assert {item["after"] for item in preview["items"]} == set(expected)

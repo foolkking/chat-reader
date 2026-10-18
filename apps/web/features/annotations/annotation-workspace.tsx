@@ -2,6 +2,7 @@
 
 import { ArrowLeft, ArrowRight, BookmarkPlus, Check, CheckSquare2, Highlighter, Maximize2, MessageSquareText, Minimize2, Pin, PinOff, RotateCcw, Search, Square, Trash2, Underline, Strikethrough, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { PointerEvent as ReactPointerEvent, SetStateAction } from "react";
 import type { AnnotationRepository } from "../../lib/annotation-repository";
 import type { AnnotationColor, AnnotationCreateInput, AnnotationRead, AnnotationType, MessageListItem, NavigateTarget, NavigationResult } from "../../lib/types";
@@ -17,6 +18,7 @@ import { ensureNotebookConflict } from "../../lib/offline-conflicts";
 import { OFFLINE_SYNC_CHANGED_EVENT } from "../../lib/annotation-sync";
 import { useAnnotationWorkspaceReads, type AnnotationReadKind, type AnnotationReadStatus } from "./use-annotation-workspace-reads";
 import { AnnotationCommentEditor, type CommentDraft } from "./annotation-comment-editor";
+import { DirectExportDownload } from "../exporting/direct-export-download";
 
 type SelectionDraft = {
   messageId: string;
@@ -79,9 +81,14 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   onOpenChange: (value: boolean) => void;
   onNavigate: (target: NavigateTarget) => NavigationResult | Promise<NavigationResult>;
 }) {
+  const queryClient = useQueryClient();
   const dialog = useInteractionDialog();
   const { resolvedLocale, annotationDefaultPosition, setAnnotationDefaultPosition } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
+  const refreshExportDependencies = () => {
+    if (repository.mode === "remote")
+      void queryClient.invalidateQueries({ queryKey: ["conversation", "remote", conversationId] });
+  };
   const { annotations, notebook, conflicts: notebookConflicts, reads, reload, publishNotebook: setNotebook,
     notebookReady, canUseNotebook, isCurrent, scopeKey, currentAnnotations, updateAnnotations } = useAnnotationWorkspaceReads(conversationId, repository, open);
   const [, refreshComments] = useScopedState(scopeKey, 0);
@@ -178,6 +185,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     try {
       const saved = await repository.update(current, { comment_markdown: draft.text });
       if (!isCurrent()) return;
+      refreshExportDependencies();
       updateAnnotations(items => items.map(item => item.id === saved.id ? saved : item));
       const latestDraft = commentDraftsRef.current[annotation.id];
       setCommentResult(annotation.id, latestDraft && latestDraft.text !== draft.text
@@ -507,6 +515,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     try {
       const created = await repository.create(conversationId, request.input);
       if (!isCurrent()) return;
+      refreshExportDependencies();
       updateAnnotations(items => [...items.filter(item => item.id !== created.id), created]);
       finishCreation(request, created);
       await reload();
@@ -559,6 +568,13 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   }, [annotationQuery, annotations, colorFilter, focusedMessageId, statusFilter, typeFilter, view]);
 
   const selectedAnnotations = useMemo(() => annotations.filter(item => selectedAnnotationIds.has(item.id)), [annotations, selectedAnnotationIds]);
+  const annotationExport = view !== "notebook" ? <div data-comment-actions className="shrink-0 border-b border-ui px-3 py-2">
+    {repository.mode === "remote" ? <DirectExportDownload key={`${scopeKey}:${conversationId}`} href={`/api/conversations/${conversationId}/exports/annotations`} format="markdown" label={zh ? "导出全部批注" : "Export all annotations"} compact /> : null}
+    <p className="mt-1 text-xs text-secondary">{repository.mode === "offline"
+      ? (zh ? "单独导出批注需要在线访问服务器已保存内容。" : "Standalone export requires online access to saved server content.")
+      : (zh ? "导出全部未删除的服务器已保存批注，不受筛选或勾选影响；不含未保存草稿。" : "Exports all non-deleted, saved server annotations, regardless of filters or selection. Unsaved drafts are excluded.")}</p>
+  </div> : null;
+
   const visibleIds = new Set(visibleAnnotations.map(item => item.id));
   const hiddenSelectedCount = selectedAnnotations.filter(item => !visibleIds.has(item.id)).length;
   const styleCount = selectedAnnotations.filter(item => item.annotation_type !== "bookmark").length;
@@ -617,6 +633,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
           if (!current) throw new Error("annotation-unavailable");
           await repository.delete(current);
           if (!isCurrent()) return;
+          refreshExportDependencies();
           operation.removed.push(current.id);
           operation.confirmed++;
           updateAnnotations(items => items.filter(item => item.id !== current.id));
@@ -710,6 +727,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
         if (!current) throw new Error("annotation-unavailable");
         const saved = await repository.update(current, { annotation_type: annotationType, color });
         if (!isCurrent()) return;
+        refreshExportDependencies();
         updateAnnotations(values => values.map(item => item.id === saved.id ? saved : item));
         confirmed++;
         setStyleFeedback({ status: "saving", confirmed, total: targets.length });
@@ -936,6 +954,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     /> : null}
     {open && !expanded ? <section className={`fixed z-[110] flex min-h-0 flex-col overflow-hidden border border-ui bg-raised shadow-2xl ${panelPinned && desktop ? "inset-y-0 left-0 w-[min(22rem,32vw)] rounded-none" : "inset-x-2 bottom-2 top-16 rounded-md md:inset-auto"}`} style={desktop && !panelPinned ? { left: panel.x, top: panel.y, width: panel.width, height: panel.height } : undefined} aria-label="批注" data-annotation-mode={panelPinned && desktop ? "docked" : "floating"}>
       <header className="flex h-12 shrink-0 touch-none items-center gap-2 border-b border-ui px-3" onPointerDown={(event) => { if (panelPinned || (event.target as HTMLElement).closest("button")) return; beginPanelDrag("move", event); }}><MessageSquareText className="h-4 w-4 text-accent" /><h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{zh ? "批注" : "Annotations"}</h2>{desktop && !panelPinned ? <button type="button" onClick={resetPanelPosition} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "重置批注窗口位置" : "Reset annotation window position"} title={zh ? "重置位置" : "Reset position"}><RotateCcw className="h-4 w-4" /></button> : null}{desktop ? <button type="button" onClick={() => { const next = !panelPinned; setPanelPinned(next); void setAnnotationDefaultPosition(next ? "docked" : "floating"); }} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={panelPinned ? (zh ? "恢复为浮窗" : "Return to floating") : (zh ? "固定到左侧栏" : "Dock to the left")} title={panelPinned ? (zh ? "恢复为浮窗" : "Return to floating") : (zh ? "固定到左侧栏" : "Dock to the left")}>{panelPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}</button> : null}<button type="button" onClick={() => setExpanded(true)} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "展开批注阅读" : "Expand annotation reading"} title={zh ? "展开阅读" : "Expand reading"}><Maximize2 className="h-4 w-4" /></button><button type="button" onClick={() => void closeWorkspace()} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header>
+      {annotationExport}
       <div className="grid shrink-0 grid-cols-3 border-b border-ui bg-subtle p-1">{(["current", "all", "notebook"] as const).map((item) => <button key={item} type="button" onClick={() => setView(item)} className={`min-h-9 rounded px-2 text-xs font-medium ${view === item ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{item === "current" ? (zh ? "当前消息" : "Current") : item === "all" ? (zh ? "全部批注" : "All") : (zh ? "精选笔记" : "Notes")}</button>)}</div>
       {navigationFeedback.status !== "idle" ? <div className={`flex shrink-0 items-center gap-2 border-b border-ui px-3 py-2 text-xs ${navigationFeedback.status === "failed" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : navigationFeedback.status === "stale" ? "bg-amber-50 text-amber-800" : "bg-subtle text-accent"}`} role="status"><span className="min-w-0 flex-1">{navigationFeedback.status === "loading" ? "正在按对话与章节位置加载批注原文…" : navigationFeedback.status === "stale" ? "原文已更改，已定位到最近的段落或消息。" : "无法定位批注原文，当前正文保持不变。"}</span>{navigationFeedback.status === "failed" && navigationFeedback.target ? <button type="button" onClick={() => void navigateFromAnnotation(navigationFeedback.target as NavigateTarget)} className="shrink-0 font-semibold underline">重试</button> : null}</div> : null}
       {view !== "notebook" ? <div className="mx-3 mt-3 grid shrink-0 grid-cols-2 gap-2"><label className="col-span-2 flex min-h-9 min-w-0 items-center gap-2 rounded-md border border-ui bg-page px-2"><Search className="h-4 w-4 text-secondary" /><input value={annotationQuery} onChange={(event) => setAnnotationQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索批注" : "Search annotations"} /></label><select aria-label={zh ? "批注类型" : "Annotation type"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部类型" : "All types"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}<option value="bookmark">{localizedAnnotationType("bookmark", zh)}</option></select><select aria-label={zh ? "批注颜色" : "Annotation color"} value={colorFilter} onChange={(event) => setColorFilter(event.target.value as AnnotationColor | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部颜色" : "All colors"}</option>{COLORS.map((color) => <option key={color.value} value={color.value}>{localizedColor(color.value, zh)}</option>)}</select><select aria-label={zh ? "锚点状态" : "Anchor status"} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as AnnotationRead["anchor_status"] | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部状态" : "All status"}</option><option value="valid">{zh ? "正常" : "Valid"}</option><option value="remapped">{zh ? "已重定位" : "Remapped"}</option><option value="needs_review">{zh ? "需要检查" : "Needs review"}</option><option value="orphaned">{zh ? "原文缺失" : "Orphaned"}</option></select>{desktop ? <button type="button" onClick={() => { setSelectionMode((current) => !current); setSelectedAnnotationIds(new Set()); }} className={`min-h-9 rounded-md border px-3 text-xs font-medium ${selectionMode ? "border-[var(--accent)] bg-[var(--accent-soft)] text-accent" : "border-ui text-secondary hover:bg-subtle"}`}>{selectionMode ? (zh ? "完成" : "Done") : (zh ? "管理" : "Manage")}</button> : null}</div> : null}
@@ -958,6 +977,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     </section> : null}
     {open && expanded ? <section className="fixed inset-0 z-[150] flex min-h-0 flex-col bg-raised" aria-label={zh ? "批注阅读" : "Annotation reading"} data-annotation-mode="expanded">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><MessageSquareText className="h-5 w-5 text-accent" /><h2 className="min-w-0 flex-1 truncate text-base font-semibold">{zh ? "批注阅读" : "Annotation reading"}</h2><button type="button" onClick={() => setExpanded(false)} className="inline-flex h-9 items-center gap-1 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle" aria-label={zh ? "退出展开阅读" : "Exit expanded reading"}><Minimize2 className="h-4 w-4" />{zh ? "退出" : "Exit"}</button><button type="button" onClick={() => void closeWorkspace()} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header>
+      {annotationExport}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ui px-4 py-3"><div className="flex items-center gap-1 rounded-md bg-subtle p-1"><button type="button" onClick={() => { setReviewMode("continuous"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "continuous" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "连续阅读" : "Continuous"}</button><button type="button" onClick={() => { setReviewMode("single"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "single" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "逐条回顾" : "Review one by one"}</button></div><div className="flex min-w-0 flex-1 items-center gap-2"><span className="text-xs text-secondary">{view === "notebook" ? (notebook?.title || (zh ? "精选笔记" : "Notes")) : `${visibleAnnotations.length} ${zh ? "条批注" : "annotations"}`}</span></div>{view !== "notebook" ? <div className="flex items-center gap-2"><select aria-label={zh ? "批注类型" : "Annotation type"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部类型" : "All types"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}<option value="bookmark">{localizedAnnotationType("bookmark", zh)}</option></select><button type="button" onClick={() => setView("notebook")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "精选笔记" : "Notes"}</button></div> : <button type="button" onClick={() => setView("all")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "全部批注" : "All annotations"}</button>}</div>
       <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto w-full max-w-4xl p-4 md:p-8">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={desktop} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} reviewMode={reviewMode} reviewIndex={reviewIndex} onReviewIndexChange={setReviewIndex} /> : null}</>}</div></div>
     </section> : null}

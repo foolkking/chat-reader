@@ -508,7 +508,8 @@ export function ProjectSidebar({
       toggleProject={(projectId) => setExpandedProjects((current) => toggleSet(current, projectId))}
       onImportClick={() => {
         setShowMobileDrawer(false);
-        (onImportClick ?? openImportDialog)();
+        if (onImportClick) onImportClick();
+        else openImportDialog({ projectId: currentProjectId ?? null });
       }}
       onTasksClick={() => { setShowMobileDrawer(false); setShowTaskCenter(true); }}
       onNewConversation={() => {

@@ -1,5 +1,25 @@
 # 后端与 API
 
+## Adaptive Import initial-analysis task (2026-10-18, local only)
+
+`POST /api/adaptive-import/sessions` performs bounded multipart staging and
+commits an `adaptive_import_analysis` BackgroundJob, then returns the session
+and task ID in queued/ANALYZING state. It does not run initial parsing,
+format-family detection or grouping in the request. The existing single worker
+owns that analysis and publishes progress/result into the generic task record;
+Task Center reads it through `/api/tasks/active` and `/api/tasks/{job_id}`.
+Owned session reads expose analysis phase/progress, and task retry reuses the
+same job identity. Cancellation while queued cleans staged inputs; cancellation
+after execution starts is acknowledged at worker-safe boundaries. The canonical
+commit endpoint rejects a session until its initial analysis is reviewable.
+
+This uses the existing `BackgroundJob` schema and adds no migration. Other
+adaptive replacement, reanalysis and mapping routes remain bounded synchronous
+FastAPI handlers executed in the thread pool. Current local migration head is
+`20261017_0052`; production remains at `20261017_0051`. This worktree has not
+been committed, pushed, sent to CI or deployed. See the
+[adaptive import contract](ADAPTIVE_IMPORT_CONTRACT.md#durable-initial-analysis-task-2026-10-18-local-only).
+
 Task query consistency (local release verification, 2026-10-16): the bounded
 active, pending-cleanup and recent-terminal windows can overlap when a worker
 commits between READ COMMITTED queries. `/api/tasks/active` returns one latest
@@ -162,9 +182,21 @@ pair is parsed. The Adaptive Import session retains its separate 512 MiB
 aggregate bound, so a batch is still bounded even when one file is large.
 
 Requests containing a file over `UPLOAD_HEAVY_THRESHOLD_MB` enter the bounded
-analysis admission queue. The queue has one active analysis slot by default,
-checks the configured memory reserve, and returns a structured retryable 429
-when capacity or memory is unavailable. Attachment staging uses the same
+analysis admission queue. The queue has one active analysis slot by default.
+Admission requires the configured fixed memory reserve plus
+`UPLOAD_ANALYSIS_MEMORY_FACTOR` (default 32) times the aggregate input bytes.
+The default exceeds a synthetic dense-JSON `analyze_json` allocation ratio of
+25.01×, but remains a working-set estimate, not a hard parser memory limit.
+Because multipart parsing runs before the endpoint, `MULTIPART_SPOOL_MAX_SIZE_KB`
+(default 64 KiB) limits how much each uploaded file may remain in the
+in-memory spool; larger parts spill to the task temporary directory. This is
+separate from parser analysis admission and does not change the persisted
+per-file or batch size limits.
+On Linux, available headroom is the lower of host `MemAvailable` and visible
+cgroup-v1/v2 headroom, including tighter parent limits; an unavailable memory
+probe fails closed for heavy analysis. Insufficient memory returns a structured
+retryable 429 immediately rather than holding a request thread while waiting
+for headroom. Attachment staging uses the same
 per-file limit and an independent nonblocking heavy-upload slot; its bounded
 disk copy does not require the import parser's memory reserve. Production Nginx
 streams the three exact large-upload paths directly to the loopback-bound API,

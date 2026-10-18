@@ -29,7 +29,7 @@ import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame"
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
 import { useDialogFocus } from "../../components/use-dialog-focus";
-import { X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { acquireReaderBlockLease, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "../conversations/block-virtualization";
 import { resolveActiveReadingTarget } from "../conversations/reader-active-position";
 import { ReaderMarkdownCopyBoundary } from "../conversations/reader-markdown-copy";
@@ -51,6 +51,11 @@ export function ShareReadonlyReader({ token }: { token: string }) {
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [navigationTargetMessageId, setNavigationTargetMessageId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
+  const [tocReturnPoint, setTocReturnPoint] = useState<ScrollAnchorSnapshot | null>(null);
+  const tocReturnPointRef = useRef<ScrollAnchorSnapshot | null>(null);
+  const [tocReturnError, setTocReturnError] = useState<string | null>(null);
+  const [tocReturnBusy, setTocReturnBusy] = useState(false);
+  const tocReturnAttemptRef = useRef<ScrollAnchorSnapshot | null>(null);
   const [targetHighlightId, setTargetHighlightId] = useState<string | null>(null);
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [savedPosition, setSavedPosition] = useState<PersistedSharePosition | null>(null);
@@ -268,6 +273,11 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     setActiveMessageId(null);
     setNavigationTargetMessageId(null);
     setActiveBlockId(null);
+    tocReturnPointRef.current = null;
+    setTocReturnPoint(null);
+    setTocReturnError(null);
+    setTocReturnBusy(false);
+    tocReturnAttemptRef.current = null;
     setTargetHighlightId(null);
     setMobileNavigation({ pending: false, error: null });
     return () => {
@@ -339,6 +349,15 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     const messageDomId = `message-${messageId}`;
     const blockDomId = resolvedBlockIndex === undefined ? null : `block-${messageId}-${resolvedBlockIndex}`;
     if (!navigationVisit.active) return { ok: false, targetId: blockDomId ?? messageDomId, reason: "cancelled" };
+    if (!options?.restorePosition
+      && (target.source === "dialogue-index" || target.source === "section-toc")
+      && !tocReturnPointRef.current) {
+      const origin = captureScrollAnchor(null, ACTIVE_READING_OFFSET);
+      if (origin) {
+        tocReturnPointRef.current = origin;
+        setTocReturnPoint(origin);
+      }
+    }
     let resolvedLocator: ResolvedLocatorResponse | undefined;
     const navigationToken = navigationTokenRef.current + 1;
     navigationTokenRef.current = navigationToken;
@@ -456,6 +475,75 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       blockLease?.release();
     }
   }, [applyLoadedWindow, navigationVisit, token]);
+
+  const returnToTocOrigin = useCallback(async () => {
+    const anchor = tocReturnPointRef.current;
+    if (!anchor?.messageId || !navigationVisit.active || tocReturnAttemptRef.current === anchor) return;
+    tocReturnAttemptRef.current = anchor;
+    setTocReturnBusy(true);
+    setTocReturnError(null);
+    try {
+      const result = await navigateToTarget({
+        messageId: anchor.messageId,
+        messageVersionId: anchor.messageVersionId ?? undefined,
+        blockIndex: anchor.blockIndex ?? undefined,
+        source: "message-action",
+      });
+      if (!result.ok || !navigationVisit.active) {
+        if (result.reason !== "cancelled") {
+          setTocReturnError(zh
+            ? "未能恢复目录跳转前的位置；检查点仍保留，可重试或定位原消息。"
+            : "Could not restore the position before navigation; the checkpoint is retained. Retry or locate the original message.");
+        }
+        return;
+      }
+      const navigationToken = navigationTokenRef.current;
+      const restored = await restoreScrollAnchor({
+        root: null,
+        anchor,
+        tokenIsCurrent: () => navigationVisit.active && navigationTokenRef.current === navigationToken
+          && !userScrollIntentRef.current,
+        timeoutMs: 3500,
+      });
+      if (restored && navigationVisit.active && tocReturnPointRef.current === anchor) {
+        tocReturnPointRef.current = null;
+        setTocReturnPoint(null);
+        setTocReturnError(null);
+      } else if (navigationVisit.active && !userScrollIntentRef.current) {
+        setTocReturnError(zh
+          ? "精确阅读位置不可用；检查点仍保留，可重试或定位原消息。"
+          : "The exact reading position is unavailable; the checkpoint is retained. Retry or locate the original message.");
+      } else if (navigationVisit.active) {
+        setTocReturnError(zh
+          ? "已停止自动定位；检查点仍保留。"
+          : "Automatic positioning stopped; the checkpoint is retained.");
+      }
+    } finally {
+      if (tocReturnAttemptRef.current === anchor) {
+        tocReturnAttemptRef.current = null;
+        setTocReturnBusy(false);
+      }
+    }
+  }, [navigateToTarget, navigationVisit, zh]);
+
+  const locateTocOriginMessage = useCallback(async () => {
+    const anchor = tocReturnPointRef.current;
+    if (!anchor?.messageId || !navigationVisit.active || tocReturnAttemptRef.current) return;
+    setTocReturnError(null);
+    const result = await navigateToTarget({
+      messageId: anchor.messageId,
+      source: "message-action",
+    });
+    if (result.ok && tocReturnPointRef.current === anchor) {
+      tocReturnPointRef.current = null;
+      setTocReturnPoint(null);
+      setTocReturnError(null);
+    } else if (result.reason !== "cancelled") {
+      setTocReturnError(zh
+        ? "无法定位原消息；检查点仍保留，可重试。"
+        : "The original message could not be located; the checkpoint is retained so you can retry.");
+    }
+  }, [navigateToTarget, navigationVisit, zh]);
 
   const navigateFromNavigationSheet = useCallback(async (target: NavigateTarget | string) => {
     const scope = navigationSheetScope;
@@ -750,10 +838,23 @@ export function ShareReadonlyReader({ token }: { token: string }) {
               {payload.share.title || payload.conversation.display_title || payload.conversation.title}
             </h1>
             <div className="flex shrink-0 gap-2">
+              {tocReturnPoint ? <button type="button" onClick={() => void returnToTocOrigin()}
+                disabled={tocReturnBusy}
+                aria-busy={tocReturnBusy}
+                aria-label={zh ? "返回目录跳转前的阅读位置" : "Return to the reading position before navigation"}
+                title={zh ? "返回阅读位置" : "Return to reading position"}
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-2.5 text-xs font-medium text-primary hover:bg-subtle disabled:cursor-wait disabled:opacity-60">
+                <ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">{zh ? "返回阅读" : "Return"}</span>
+              </button> : null}
               <button type="button" aria-label={zh ? "展开对话索引" : "Open dialogue index"} onClick={() => { handleNavigationTabChange("dialogue"); handleNavigationOpenChange(true); }} className="min-h-10 rounded-lg border border-ui bg-surface px-3 text-sm font-medium xl:hidden">{t("readerNavigation")}</button>
             </div>
           </div>
         </div>
+        {tocReturnError ? <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-4 py-2 text-sm text-[var(--danger)]" role="alert" data-testid="share-reader-return-error">
+          <span className="min-w-0 flex-1">{tocReturnError}</span>
+          <button type="button" onClick={() => void returnToTocOrigin()} disabled={tocReturnBusy} className="min-h-10 rounded-md border border-[var(--danger)]/30 px-2 py-1 text-xs font-medium hover:bg-surface">{zh ? "重试返回" : "Retry return"}</button>
+          <button type="button" onClick={() => void locateTocOriginMessage()} disabled={tocReturnBusy} className="min-h-10 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle">{zh ? "定位原消息" : "Locate message"}</button>
+        </div> : null}
       </header>
       <ResponsiveReaderFrame index={<ConversationIndex
             conversationId={payload.conversation.id}

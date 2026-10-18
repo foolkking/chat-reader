@@ -15,6 +15,7 @@ from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.models.project import Project
 from app.models.render_block import RenderBlock
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
@@ -34,7 +35,7 @@ from app.services.import_pipeline.canonical_draft import (
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
 from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
-from app.services.import_pipeline.draft_store import ImportDraftError, read_import_draft
+from app.services.import_pipeline.draft_store import ImportDraftError, iter_import_draft
 from app.services.import_pipeline.official_json_parser import OfficialConversationResult, parse_official_json
 from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
 from app.services.import_pipeline.official_primary_path import resolve_primary_path
@@ -194,52 +195,85 @@ def commit_import_preview(
 
     _report(progress_callback, "parsing", 3, 0, 0)
     if import_record.draft_storage_uri:
-        try:
-            persistable = [_from_exporter_draft(draft) for draft in read_import_draft(import_record)]
-        except ImportDraftError as exc:
-            raise CommitImportError(str(exc)) from exc
-    else:
-        persistable = _build_persistable_conversations(import_id, artifacts)
-    if not persistable:
-        raise CommitImportError("No supported canonical conversation could be built from this import.")
+        expected_conversations = int((import_record.draft_summary or {}).get("conversation_count") or 0)
+        total_expected_messages = int((import_record.draft_summary or {}).get("message_count") or 0)
+        if expected_conversations <= 0:
+            raise CommitImportError("No supported canonical conversation could be built from this import.")
 
-    total_expected_messages = sum(len(draft.messages) for draft in persistable)
+        def persistable_iterator():
+            for draft in iter_import_draft(import_record):
+                converted = _from_exporter_draft(draft)
+                del draft
+                yield converted
+                del converted
+
+        persistable = persistable_iterator()
+    else:
+        legacy_persistable = _build_persistable_conversations(import_id, artifacts)
+        if not legacy_persistable:
+            raise CommitImportError("No supported canonical conversation could be built from this import.")
+        expected_conversations = len(legacy_persistable)
+        total_expected_messages = sum(len(draft.messages) for draft in legacy_persistable)
+        persistable = iter(legacy_persistable)
+
     _report(progress_callback, "persisting", 10, 0, total_expected_messages)
 
     conversation_ids: list[uuid.UUID] = []
     total_messages = 0
     all_warnings: list[str] = []
-    from app.services.ownership import OwnershipScope
+    from app.services.ownership import OwnershipScope, get_owned
     import_scope = OwnershipScope(import_record.owner_user_id, include_legacy_unowned=import_record.owner_user_id is None)
-    default_project = ensure_default_project(db, import_scope)
-
-    for conversation_draft in persistable:
+    # PostgreSQL starts a real transaction on the reads above. Python's legacy
+    # SQLite transaction mode may not: its first SAVEPOINT could otherwise
+    # commit a streamed conversation before a later draft error is discovered.
+    # Keep the same outer-transaction guarantee in isolated SQLite regressions.
+    connection = db.connection()
+    if connection.dialect.name == "sqlite" and not connection.connection.driver_connection.in_transaction:
+        connection.exec_driver_sql("BEGIN")
+    raw_project_id = ((import_record.analysis_summary or {}).get("commit_options") or {}).get("project_id")
+    if raw_project_id:
         try:
-            with db.begin_nested():
-                conversation = _persist_conversation(
-                    import_record,
-                    artifacts,
-                    conversation_draft,
-                    db,
-                    progress_callback=progress_callback,
-                    processed_before=total_messages,
-                    total_messages=total_expected_messages,
-                )
-                add_conversation_to_project(db, default_project.id, conversation.id, added_by="system", ownership_scope=import_scope)
-                _report(progress_callback, "headings", 78, total_messages, total_expected_messages)
-                rebuild_headings_for_conversation(db, conversation.id)
-                _report(progress_callback, "search", 88, total_messages, total_expected_messages)
-                rebuild_search_documents_for_conversation(db, conversation.id)
-                conversation.status = "active"
-                db.flush()
-            conversation_ids.append(conversation.id)
-            total_messages += conversation.message_count
-            all_warnings.extend(conversation_draft.warnings)
-        except Exception as exc:
-            failure = f"Conversation {conversation_draft.title!r} failed canonical commit ({type(exc).__name__}: {str(exc)[:300]})."
-            all_warnings.append(failure)
-            if len(persistable) == 1:
-                raise CommitImportError(failure) from exc
+            target_project_id = uuid.UUID(str(raw_project_id))
+        except ValueError as exc:
+            raise CommitImportError("The selected import project is invalid.") from exc
+        target_project = get_owned(db, Project, target_project_id, import_scope)
+        if target_project is None or target_project.is_archived:
+            raise CommitImportError("The selected import project is no longer available. Choose another destination and retry.")
+    else:
+        target_project = ensure_default_project(db, import_scope)
+
+    try:
+        for conversation_draft in persistable:
+            try:
+                with db.begin_nested():
+                    conversation = _persist_conversation(
+                        import_record,
+                        artifacts,
+                        conversation_draft,
+                        db,
+                        progress_callback=progress_callback,
+                        processed_before=total_messages,
+                        total_messages=total_expected_messages,
+                    )
+                    add_conversation_to_project(db, target_project.id, conversation.id, added_by="system", ownership_scope=import_scope)
+                    _report(progress_callback, "headings", 78, total_messages, total_expected_messages)
+                    rebuild_headings_for_conversation(db, conversation.id)
+                    _report(progress_callback, "search", 88, total_messages, total_expected_messages)
+                    rebuild_search_documents_for_conversation(db, conversation.id)
+                    conversation.status = "active"
+                    db.flush()
+                conversation_ids.append(conversation.id)
+                total_messages += conversation.message_count
+                all_warnings.extend(conversation_draft.warnings)
+            except Exception as exc:
+                failure = f"Conversation {conversation_draft.title!r} failed canonical commit ({type(exc).__name__}: {str(exc)[:300]})."
+                all_warnings.append(failure)
+                if expected_conversations == 1:
+                    raise CommitImportError(failure) from exc
+            del conversation_draft
+    except ImportDraftError as exc:
+        db.rollback()
+        raise CommitImportError(str(exc)) from exc
 
     if not conversation_ids:
         raise CommitImportError("No conversation could be committed from this import.")

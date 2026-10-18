@@ -1,6 +1,7 @@
 /** Runtime fence for protected local work, including requests already in flight. */
 export const OFFLINE_ACCESS_LOCKED_EVENT = "chat-reader:offline-access-locked";
 export const AUTH_UNAUTHORIZED_EVENT = "chat-reader:auth-unauthorized";
+export const AUTH_GENERATION_CHANGED_EVENT = "chat-reader:auth-generation-changed";
 
 export class OfflineAccessError extends Error {
   constructor() { super("Offline access is locked. Sign in again to continue."); this.name = "OfflineAccessError"; }
@@ -12,10 +13,15 @@ let identity: string | null = null;
 let validator: (() => boolean) | null = null;
 let expiryTimer: ReturnType<typeof setTimeout> | undefined;
 
+function advanceGeneration(): void {
+  generation += 1;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(AUTH_GENERATION_CHANGED_EVENT));
+}
+
 export function configureOfflineAccess(authenticationRequired: boolean): void {
   if (required !== authenticationRequired) {
     required = authenticationRequired;
-    generation += 1;
+    advanceGeneration();
     identity = null;
     validator = null;
     clearTimeout(expiryTimer);
@@ -23,7 +29,8 @@ export function configureOfflineAccess(authenticationRequired: boolean): void {
 }
 
 export function authorizeOfflineAccess(userId: string, expiresAt: number, valid: () => boolean): void {
-  if (identity !== userId || validator === null) generation += 1;
+  const changed = identity !== userId || validator === null;
+  if (changed) advanceGeneration();
   identity = userId;
   validator = valid;
   clearTimeout(expiryTimer);
@@ -39,7 +46,7 @@ export function authorizeOfflineAccess(userId: string, expiresAt: number, valid:
 
 export function lockOfflineAccess(notify = true): void {
   const wasAuthorized = identity !== null || validator !== null;
-  generation += 1;
+  advanceGeneration();
   identity = null;
   validator = null;
   clearTimeout(expiryTimer);

@@ -1,8 +1,84 @@
 # Project State
 
-Last updated: 2026-10-17. This is the current snapshot, not a release history.
+Last updated: 2026-10-18. This is the current snapshot, not a release history.
 
 ## Release and active work
+
+**Current local implementation overlay (2026-10-18):** the worktree now contains
+the planned source-editor table tool (bounded preview/normalization/create/
+row-column operations), one-checkpoint TOC return for Owner/Offline/Share
+readers, rule-visible noise review with protected-match confirmation and
+rescan comparison, and saved-annotation Markdown export. Context producers use
+package format 1.1 with root `annotations.md`; Current/Index remain unchanged.
+Migration `20261017_0052` is new and local only. The online annotation endpoint,
+all four Context/CanJSON production paths, editable Skill runtimes, manifest
+inspection and reviewed Skill build path were updated. Fixed default Skill ZIPs
+were deliberately not replaced. The complete local `scripts/ux` regression now
+passes **1,426/1,426** after adapting the source-extracted Reader/Share
+fixtures to the TOC return checkpoint state and updating the protected-candidate
+expectation to the confirmation flow. This overlay has not been committed,
+pushed, sent to CI or deployed.
+
+**Multi-file import stability continuation (2026-10-18, local only):** initial
+adaptive import analysis now follows the product's durable background-task
+flow: the HTTP request performs bounded streaming upload/staging, creates an
+`adaptive_import_analysis` `BackgroundJob`, and returns immediately with a task
+ID. The existing single worker performs analysis; Task Center remains the
+progress/result surface after the import dialog closes or the page is revisited.
+Upload staging uses bounded chunks, aggregate source bytes are checked before
+admission, and failures preserve staged inputs for retry. Queued cancellation
+removes only temporary sources; processing cancellation waits for worker
+acknowledgement, and canonical import cannot begin before analysis reaches a
+terminal reviewable state. This reuses generic `BackgroundJob` storage; no
+migration is introduced for the job type.
+
+The other adaptive preview/replacement/reanalysis routes still run synchronous
+FastAPI handlers in the thread pool with bounded analysis admission; moving
+initial analysis to the durable lane does not claim every parser path is a
+background job. Heavy analysis requires fixed memory reserve plus aggregate
+input bytes times `UPLOAD_ANALYSIS_MEMORY_FACTOR` (default 32); Linux checks
+both host and visible cgroup v1/v2 headroom and uses the tighter limit.
+Missing/insufficient evidence fails fast with retryable resource-pressure
+feedback. The multiplier is an estimate, not a parser memory ceiling. Draft
+planning and canonical commit stream their inputs and roll back malformed late
+drafts. Noise shares at most two compact source shadows within one message (no
+global cache). These mitigations do not prove noise scanning was the incident's
+sole cause or constitute production OOM/Linux/2 GiB acceptance.
+Initial related API checkpoints were **50**, then **61 passed**; upload/
+concurrent-response cases **21 passed**; matching/range/protection regression
+**130 passed**; bounded source retention **2 passed**. New queued-analysis API,
+PostgreSQL cancellation, UI, browser and full-suite final results are recorded
+in [import stability evidence](docs/execution/IMPORT_STABILITY_2026-10-18.md)
+including full API **1,383 passed / 177 skipped**, independent PostgreSQL
+cancellation **4/4**, React/Query lifecycle **13/13**, and browser matrix
+**12/12**. Web lint/typecheck/build and focused Ruff pass. The Windows full API
+test runner peaked near 3.84 GB working set and exited normally; this is not a
+service or Linux low-memory acceptance. No CI, push or deployment was started.
+See [import stability evidence](docs/execution/IMPORT_STABILITY_2026-10-18.md).
+
+**Plain Markdown and contextual file-drop enhancement (2026-10-18, local only):**
+Markdown without reliable message boundaries is preserved as one assistant
+message. Dragging files onto an Owner Reader surface or the sidebar Import
+button preselects them and binds the destination captured at that route: all
+conversations → unclassified; project page or Reader with project context →
+that project. The dialog allows changing destination and persists that choice
+for adaptive sessions; server-side ownership/archive validation remains
+authoritative. Focused API regression is **37 passed** after fixing default
+mapping and ensuring destination metadata survives worker analysis. Web
+lint, typecheck and production build pass; a Playwright drag/drop case is
+authored but browser execution is pending a current-schema disposable
+environment. No migration, CI, push or deployment. See
+[feature evidence](docs/execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md).
+
+**New production incident (2026-10-18, read-only evidence):** at
+**10:31:45 Asia/Shanghai / 02:31:45 UTC** the kernel recorded another host-level
+`global_oom` and killed API `uvicorn`; API restarted eight seconds later
+(observed restart count 1), worker/Web remained at zero restarts. The ~1.83 GiB
+host had ~180 MiB available at the later observation. This proves the victim
+and restart, not noise scanning as the sole cause. No production mutation or
+new diagnostic process was used. [Sanitized evidence](docs/evidence/import-service-oom-2026-10-18.json).
+The earlier 2026-10-17 release acceptance remains historical, not a claim of
+zero restarts through the present observation.
 
 Verification overlay (2026-10-16): the [service-free continuation](docs/execution/ux-audit-service-free-regression-2026-10-16.md)
 ran all **63** current `scripts/ux/*.test.mjs` files: **1,412 passed / 0 failed /
@@ -78,6 +154,7 @@ All these optimizations remain local, not production.
 | --- | --- |
 | Release accepted | Exact source `3e68d1f78c7293ef7cb2d45f25a4814da3a70908`, CI **38933466143** attempt 2, original artifact **12082341034**; all five jobs, 50 OCI blobs, embedded repair source and exact-source support independently verified. [OOM repair acceptance](docs/execution/OOM_STABILITY_2026-10-17.md#accepted-release); prior UX acceptance remains historical |
 | Production | Source `3e68d1f78c7293ef7cb2d45f25a4814da3a70908`; accepted 2026-10-17 00:53:53 UTC, CI images only; API/Web healthy, worker fresh, all three applications zero restarts/OOM/startup error-keyword lines at acceptance |
+| Later production incident | 2026-10-18 02:31:45 UTC host-level OOM killed API; subsequent API restart count 1. The local import/noise fixes above have not been deployed; noise-specific causation remains unproven |
 | Production database | Single current/head `20261015_0051`, upgraded from 0050 with only nullable JSON `reviewed_ranges`; all existing values remain NULL. No source rewrite, owner-auth reconciliation or backfill. PostgreSQL identity/start/restarts unchanged |
 | Last accepted data evidence | All 84 stopped-writer table fingerprints compare every old column across isolation and migration; three unrelated stores unchanged and the original asset tree exactly reconstructible from active plus isolated originals. Four clean storage roots match across migration; 313 attachment hashes and 67 live stable-table counts pass. No live full-hash sweep repeated |
 | Latest CI | `3e68d1f`: all five jobs of **38933466143** attempt 2 pass. Attempt 1 failed at image metadata retrieval with the Public ECR data limit; quality gates were not bypassed. No new CI or deployment is authorized for subsequent local optimization without a new user request |

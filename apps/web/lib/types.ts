@@ -162,6 +162,12 @@ export type CleanupRemovalRange = { start_offset: number; end_offset: number };
 
 export type CleanupOccurrenceRead = {
   id: string;
+  rule_revision_id?: string | null;
+  rule_revision?: number | null;
+  rule_settings?: { match_value: string | null; case_sensitive: boolean; role_filter: string | null; scope: string;
+    matcher_mode: string; boundary_mode: string; normalization_profile: string; matcher_version: string } | null;
+  protection_confirmed?: boolean;
+  protection_types?: string[];
   conversation_id: string;
   conversation_title: string;
   message_id: string;
@@ -194,7 +200,9 @@ export type CleanupCandidatePage = CleanupReviewPage<CleanupOccurrenceRead> & {
 };
 export type CleanupReviewGroup = { rule_id: string; rule_name: string; detector_id: string | null; conversation_id: string; conversation_title: string; count: number; selected: number; protected: number; conflicts: number };
 export type CleanupPreviewItem = { conversation_id: string; conversation_title: string; message_id: string; role: string; before: string; after: string; conflict: boolean; fragments: number; removed_ranges?: Array<{ start_offset: number; end_offset: number }> };
-export type CleanupPreview = { summary: { conversations: number; messages: number; fragments: number }; items: CleanupPreviewItem[]; offset: number; limit: number; preview_token: string };
+export type CleanupPreview = { summary: { conversations: number; messages: number; fragments: number; protected_confirmed?: number }; items: CleanupPreviewItem[]; offset: number; limit: number; preview_token: string };
+export type CleanupProtectionPreview = { total: number; protected: number; limit: number; offset: number; preview_token: string;
+  items: { id: string; conversation_title: string; match_text: string; match_truncated: boolean; protected: boolean; protection_types: string[] }[] };
 
 export type ConversationUpdateInput = {
   title?: string | null;
@@ -563,8 +571,13 @@ export type AdaptiveImportFamily = {
 
 export type AdaptiveImportSession = {
   import_id: string;
-  state: "COLLECTING" | "ANALYZING" | "NEEDS_GROUPING" | "RESOLVING" | "READY" | "IMPORTING" | "COMPLETED" | "BLOCKED" | "FAILED" | "CANCELED";
+  target_project_id?: string | null;
+  state: "COLLECTING" | "ANALYZING" | "CANCELING" | "NEEDS_GROUPING" | "RESOLVING" | "READY" | "IMPORTING" | "COMPLETED" | "BLOCKED" | "FAILED" | "CANCELED";
   status: string;
+  phase?: string;
+  progress?: number;
+  error_message?: string | null;
+  analysis_task_id?: string | null;
   file_count: number;
   total_bytes: number;
   group_count: number;

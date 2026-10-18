@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     upload_max_active_analysis: int = Field(default=1, alias="UPLOAD_MAX_ACTIVE_ANALYSIS", ge=1, le=16)
     upload_queue_max_size: int = Field(default=8, alias="UPLOAD_QUEUE_MAX_SIZE", ge=1, le=100)
     upload_memory_reserve_mb: int = Field(default=512, alias="UPLOAD_MEMORY_RESERVE_MB", ge=64)
+    # Starlette creates one spooled file per multipart part before a route
+    # receives control. Keep the in-memory portion small so a large batch of
+    # individually-small files cannot bypass the analysis admission gate.
+    multipart_spool_max_size_kb: int = Field(default=64, alias="MULTIPART_SPOOL_MAX_SIZE_KB", ge=64, le=1024)
+    # JSON decoding and normalization can expand source bytes substantially.
+    # Admission reserves this estimated working set in addition to the fixed
+    # headroom; it is a safety heuristic, not a hard parser memory limit.
+    upload_analysis_memory_factor: int = Field(default=32, alias="UPLOAD_ANALYSIS_MEMORY_FACTOR", ge=1, le=64)
     upload_queue_wait_seconds: int = Field(default=120, alias="UPLOAD_QUEUE_WAIT_SECONDS", ge=1, le=600)
     import_storage_dir: str = Field(
         default="storage/imports",

@@ -4,7 +4,7 @@ import { releaseExportScope } from "../../lib/export-usage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   ApiRequestError,
   deleteMessage,
@@ -13,7 +13,7 @@ import {
   restoreDeletedMessage,
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
-import { authenticationGeneration } from "../../lib/offline-access";
+import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
 import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
 import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
@@ -206,6 +206,18 @@ export function ConversationReader({
   }, []);
 
   useEffect(() => {
+    const clearTocOrigin = () => {
+      tocReturnPointRef.current = null;
+      setTocReturnPoint(null);
+      setTocReturnError(null);
+      tocReturnIdentityRef.current = { conversationId, dataSource, accessGeneration: authenticationGeneration() };
+    };
+    clearTocOrigin();
+    window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, clearTocOrigin);
+    return () => window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, clearTocOrigin);
+  }, [conversationId, dataSource]);
+
+  useEffect(() => {
     if (!filesPreferenceReadyRef.current) return;
     window.localStorage.setItem("chat-reader:conversation-files-open", String(showFiles));
   }, [showFiles]);
@@ -308,6 +320,10 @@ export function ConversationReader({
   const resolvedLocatorKeysRef = useRef<Set<string>>(new Set());
   const targetNavigationKeyRef = useRef<string | null>(null);
   const lastNavigationTargetRef = useRef<NavigateTarget | null>(null);
+  const tocReturnPointRef = useRef<ScrollAnchorSnapshot | null>(null);
+  const tocReturnIdentityRef = useRef({ conversationId, dataSource, accessGeneration: authenticationGeneration() });
+  const [tocReturnPoint, setTocReturnPoint] = useState<ScrollAnchorSnapshot | null>(null);
+  const [tocReturnError, setTocReturnError] = useState<string | null>(null);
   const previousTurnAnchorRef = useRef<string | null>(null);
   const nextTurnAnchorRef = useRef<string | null>(null);
   const focusAnchorRef = useRef<ReturnType<typeof captureScrollAnchor>>(null);
@@ -508,6 +524,15 @@ export function ConversationReader({
     queryFn: () => dataSource.getConversation(conversationId),
     ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
   });
+  useEffect(() => {
+    if (!workspace.embedded) return;
+    if (conversationQuery.data?.id === conversationId) {
+      workspace.setReaderProjectContext(conversationId, conversationQuery.data.project_id);
+    } else {
+      workspace.setReaderProjectContext(conversationId, undefined);
+    }
+    return () => workspace.setReaderProjectContext(conversationId, undefined);
+  }, [conversationId, conversationQuery.data?.id, conversationQuery.data?.project_id, workspace]);
   const conversationReadUnavailable = !isOffline && conversationQuery.isError
     && conversationQuery.error instanceof ApiRequestError && [401, 403, 404].includes(conversationQuery.error.status);
   const retainReaderOnReadError = !isOffline && conversationQuery.data?.id === conversationId
@@ -1016,6 +1041,20 @@ export function ConversationReader({
       if (!ownsReaderReadRecovery(recentOwner)) {
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
       }
+      let tocOriginCapturedByThisNavigation: ScrollAnchorSnapshot | null = null;
+      let originalWindowIdentity = "";
+      if (!options?.restorePosition
+        && (target.source === "dialogue-index" || target.source === "section-toc")
+        && !tocReturnPointRef.current) {
+        const originalPosition = captureScrollAnchor(scrollContainerRef.current, ACTIVE_READING_OFFSET);
+        if (originalPosition) {
+          tocOriginCapturedByThisNavigation = originalPosition;
+          originalWindowIdentity = loadedWindowRef.current.items.map((message) => message.id).join("\u0000");
+          tocReturnPointRef.current = originalPosition;
+          setTocReturnPoint(originalPosition);
+          setTocReturnError(null);
+        }
+      }
       const navigationStartedAt = window.performance.now();
       let resolutionReported = false;
       let mountStartedAt: number | null = null;
@@ -1329,6 +1368,21 @@ export function ConversationReader({
           );
         }
         blockLease?.release();
+        // Avoid leaving a pointless return action when a same-position TOC
+        // choice failed before it moved or replaced the reading window.
+        if (tocOriginCapturedByThisNavigation
+          && navigationTokenRef.current === token
+          && tocReturnPointRef.current === tocOriginCapturedByThisNavigation
+          && originalWindowIdentity === loadedWindowRef.current.items.map((message) => message.id).join("\u0000")) {
+          const currentPosition = captureScrollAnchor(scrollContainerRef.current, ACTIVE_READING_OFFSET);
+          if (currentPosition
+            && currentPosition.targetId === tocOriginCapturedByThisNavigation.targetId
+            && Math.abs(currentPosition.offset - tocOriginCapturedByThisNavigation.offset) <= 2) {
+            tocReturnPointRef.current = null;
+            setTocReturnPoint(null);
+            setTocReturnError(null);
+          }
+        }
         if (navigationTokenRef.current === token) {
           navigationInProgressRef.current = false;
         }
@@ -2547,6 +2601,70 @@ export function ConversationReader({
     <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} networkMode={readerQueryNetworkMode} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />
   );
 
+  const returnToTocOrigin = async () => {
+    const anchor = tocReturnPointRef.current;
+    if (!anchor?.messageId || navigationStatus === "loading") return;
+    if (tocReturnIdentityRef.current.accessGeneration !== authenticationGeneration()) {
+      tocReturnPointRef.current = null;
+      setTocReturnPoint(null);
+      setTocReturnError(null);
+      return;
+    }
+    setTocReturnError(null);
+    const result = await navigateToTarget({
+      messageId: anchor.messageId,
+      messageVersionId: anchor.messageVersionId ?? undefined,
+      blockIndex: anchor.blockIndex ?? undefined,
+      source: "message-action",
+    });
+    if (!result.ok) {
+      if (result.reason !== "cancelled") setTocReturnError(resolvedLocale === "zh-CN" ? "未能恢复原阅读位置；检查点仍保留，可重试或定位到原消息。" : "Could not restore the original position. The checkpoint is retained; retry or locate the original message.");
+      return;
+    }
+    if (userScrollIntentRef.current) {
+      setTocReturnError(resolvedLocale === "zh-CN" ? "已停止自动定位；原位置仍保留。" : "Automatic positioning stopped. The checkpoint is retained.");
+      return;
+    }
+    const token = navigationTokenRef.current;
+    const restored = await restoreScrollAnchor({
+      root: scrollContainerRef.current,
+      anchor,
+      tokenIsCurrent: () => navigationTokenRef.current === token
+        && ownsReaderReadRecovery(recentOwner) && !userScrollIntentRef.current,
+      timeoutMs: 3500,
+    });
+    if (restored && tocReturnPointRef.current === anchor && tocReturnIdentityRef.current.conversationId === conversationId) {
+      tocReturnPointRef.current = null;
+      setTocReturnPoint(null);
+      setTocReturnError(null);
+    } else if (!userScrollIntentRef.current) {
+      setTocReturnError(resolvedLocale === "zh-CN" ? "精确阅读位置不可用；检查点仍保留，可重试或定位到原消息。" : "The exact reading position is unavailable. The checkpoint is retained; retry or locate the original message.");
+    }
+  };
+  const locateTocOriginMessage = async () => {
+    const anchor = tocReturnPointRef.current;
+    if (!anchor?.messageId || navigationStatus === "loading") return;
+    setTocReturnError(null);
+    const result = await navigateToTarget({ messageId: anchor.messageId, source: "message-action", allowMessageFallback: true });
+    if (result.ok && tocReturnPointRef.current === anchor) {
+      tocReturnPointRef.current = null;
+      setTocReturnPoint(null);
+      setTocReturnError(null);
+    } else if (result.reason !== "cancelled") {
+      setTocReturnError(resolvedLocale === "zh-CN" ? "无法定位原消息；检查点仍保留，可重试。" : "The original message could not be located. The checkpoint is retained; retry.");
+    }
+  };
+  const returnToReadingLabel = resolvedLocale === "zh-CN" ? "返回阅读位置" : "Return to reading position";
+  const returnToReadingButton = (compact = false) => tocReturnPoint ? (
+    <button type="button" onClick={() => void returnToTocOrigin()} disabled={navigationStatus === "loading"}
+      aria-busy={navigationStatus === "loading"}
+      data-testid="reader-return-to-toc-origin"
+      className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-2.5 text-xs font-medium text-primary hover:bg-subtle disabled:opacity-50 ${compact ? "w-11 px-0" : ""}`}
+      aria-label={returnToReadingLabel} title={returnToReadingLabel}>
+      <ArrowLeft className="h-4 w-4" />{compact ? <span className="sr-only">{returnToReadingLabel}</span> : <span>{resolvedLocale === "zh-CN" ? "返回阅读" : "Return"}</span>}
+    </button>
+  ) : null;
+
   const navigationTargetIsAttachment = Boolean(lastNavigationTargetRef.current?.attachmentId);
   const navigationFailureMessage = navigationFailureCopyV2(navigationFailureReason, resolvedLocale, navigationTargetIsAttachment);
 
@@ -2559,7 +2677,7 @@ export function ConversationReader({
         showMobileTrigger={false}
       /> : null}
       <section ref={readerMainSectionRef} data-reader-main-section="true" className="relative flex min-w-0 flex-1 flex-col">
-        <header ref={reserveMobileReaderHeaderSpace} data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`}>
+        <header ref={reserveMobileReaderHeaderSpace} data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible || tocReturnPoint ? "translate-y-0" : "-translate-y-full"}`}>
           {mergedIntoConversationId ? <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-[3vw] py-2 text-sm text-amber-900" role="status"><span className="min-w-0 flex-1">{resolvedLocale === "zh-CN" ? "此对话已合并，当前内容可能正在更新。" : "This conversation was merged and may be updating."}</span><button type="button" className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-white" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{resolvedLocale === "zh-CN" ? "打开目标对话" : "Open target"}</button></div> : null}
           {loadingProgress < 100 ? (
             <div className="absolute inset-x-0 bottom-0 h-0.5 bg-subtle">
@@ -2575,8 +2693,9 @@ export function ConversationReader({
                   <span>{loadedLabel}</span>
                 </div>
             </div> : <div className="flex-1" />}
-            {focusMode ? <button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
+            {focusMode ? <div className="flex items-center gap-2">{returnToReadingButton()}<button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
               <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
+              {returnToReadingButton()}
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
                 {desktopPrimaryActions.map((action) => {
                   const Icon = action.icon;
@@ -2592,7 +2711,7 @@ export function ConversationReader({
               />
             </div>}
           </div>
-          {focusMode ? <div className="flex min-h-14 items-center justify-end px-[3vw] py-2 md:hidden"><button type="button" onClick={toggleFocusMode} className="inline-flex h-10 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
+          {focusMode ? <div className="flex min-h-14 items-center justify-end gap-2 px-[3vw] py-2 md:hidden">{returnToReadingButton(true)}<button type="button" onClick={toggleFocusMode} className="inline-flex h-10 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
             <MobileSidebarTrigger
               onOpen={() => isOffline ? onOpenLibrary?.() : workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
             />
@@ -2612,9 +2731,17 @@ export function ConversationReader({
                 <ListTree className="h-5 w-5" />
               </button>
             ) : null}
+            {!mobileActionsExpanded ? returnToReadingButton(true) : null}
             {canManageCanonical && !mobileActionsExpanded ? <button type="button" onClick={() => openSourceEditor()} aria-pressed={Boolean(sourceEditorTarget)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui ${sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}><Pencil className="h-5 w-5" /></button> : null}
             <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
+          {!focusMode && tocReturnError ? (
+            <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert" data-testid="reader-return-to-toc-origin-error">
+              <span className="min-w-0 flex-1">{tocReturnError}</span>
+              <button type="button" onClick={() => void returnToTocOrigin()} className="shrink-0 rounded-md border border-[var(--danger)]/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={navigationStatus === "loading"}>{resolvedLocale === "zh-CN" ? "重试返回" : "Retry return"}</button>
+              <button type="button" onClick={() => void locateTocOriginMessage()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle" disabled={navigationStatus === "loading"}>{resolvedLocale === "zh-CN" ? "定位原消息" : "Locate message"}</button>
+            </div>
+          ) : null}
           {!focusMode && navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">{t("locating")}</div> : null}
           {!focusMode && navigationStatus === "stale" ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-amber-50 px-[3vw] py-2 text-sm text-amber-800" role="status">

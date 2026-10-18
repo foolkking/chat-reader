@@ -16,6 +16,7 @@ import { CleanupDismissAction } from "../conversations/cleanup-dismiss-action";
 import { CleanupScanCancelAction, cleanupScanLabel } from "../conversations/cleanup-scan-progress";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { SettingsFocusedDialog } from "../../components/settings-focused-dialog";
+import { useImportDialog } from "../../components/import-dialog-provider";
 import { fullActivityTime } from "../../lib/activity-time";
 import { authenticationGeneration } from "../../lib/offline-access";
 
@@ -373,6 +374,7 @@ function hasItemFailures(task: BackgroundTaskRead): boolean {
 function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy = false }: { busy?: boolean; task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
+  const { openImportDialog } = useImportDialog();
   const [userOpen, setUserOpen] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [offlineOpen, setOfflineOpen] = useState(false);
@@ -436,6 +438,10 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
           <Ban className="h-3.5 w-3.5" />{(task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? (zh ? "取消归档任务" : "Cancel archive task") : task.job_type === "conversation_batch_delete" ? (zh ? "停止后续删除" : "Stop remaining deletions") : task.job_type === "conversation_merge" ? (zh ? "取消合并" : "Cancel merge") : task.job_type === "offline_package" ? (zh ? "取消服务器生成" : "Cancel server generation") : (zh ? "取消任务" : "Cancel task")}
         </button>
       ) : null}
+      {task.job_type === "adaptive_import_analysis" && typeof task.result.import_id === "string" && task.status !== "cancelled" ? <button type="button" className="mt-2 min-h-11 font-medium text-accent underline underline-offset-2" onClick={() => {
+        window.dispatchEvent(new Event("chat-reader:close-task-center"));
+        openImportDialog({ resumeImportId: String(task.result.import_id) });
+      }}>{zh ? (committed ? "查看分析结果并继续导入" : "查看导入分析") : (committed ? "Review analysis & continue importing" : "View import analysis")}</button> : null}
       {accountDelete && !accountDeleted && !committed && typeof task.result.target_user_id === "string" ? <button ref={userTrigger} className="min-h-11 font-medium text-accent underline" onClick={() => setUserOpen(true)}>{zh ? "查看账户与删除状态" : "Review account deletion"}</button> : null}
       {userOpen ? <SettingsFocusedDialog category="admin-users" initialAdminUserId={String(task.result.target_user_id)} onClose={() => setUserOpen(false)} restoreFocus={() => userTrigger.current} /> : null}
       {task.job_type === "offline_package" ? <button ref={offlineTrigger} type="button" className="min-h-11 font-medium text-accent underline underline-offset-2" onClick={() => setOfflineOpen(true)}>{failed ? (zh ? "处理离线下载" : "Resolve offline download") : (zh ? "查看离线下载" : "View offline download")}</button> : null}
@@ -487,6 +493,10 @@ function taskFailureMessage(task: BackgroundTaskRead, zh: boolean): string {
     return zh ? "批量删除未完成，请刷新归档列表后核对再重试。" : "Batch deletion did not finish. Refresh the archive list, review it, and retry.";
   }
   if (task.job_type === "content_noise_scan") return zh ? "噪声扫描未完成，未应用清理。请重新扫描。" : "The noise scan did not finish; no cleanup was applied. Scan again.";
+  if (task.job_type === "adaptive_import_analysis") {
+    if (/memory headroom|UPLOAD_MEMORY_PRESSURE/i.test(raw)) return zh ? "当前可用内存不足，分析已安全停止，源文件仍保留。请稍后重试或减少文件批次。" : "Not enough memory is available. Analysis stopped safely and source files are retained. Retry later or use a smaller batch.";
+    return zh ? "文件分析未完成，尚未导入对话。源文件仍保留，可重试或打开导入分析。" : "File analysis did not finish; conversations have not been imported. Source files are retained. Retry or open the import analysis.";
+  }
   if (task.job_type === "conversation_auto_clean") return zh ? "对话清理未完成，请重新打开对话核对后重试。" : "Conversation cleanup did not finish. Reopen the conversation, review it, and retry.";
   if (task.job_type === "import") return zh ? "导入未完成，请检查源文件和任务状态后重试。" : "The import did not finish. Check the source files and task status, then retry.";
   if (task.job_type === "context_return") return zh ? "接续文件更新未完成，请打开接续面板核对后重试。" : "The continuation update did not finish. Open Context continuation, review it, and retry.";
@@ -588,6 +598,7 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
 function taskTypeLabel(task: BackgroundTaskRead, zh: boolean): string {
   if (task.job_type === "content_noise_scan" && task.result.cleanup_apply?.status === "COMPLETED") return zh ? "清理噪声" : "Cleanup";
   const additional: Record<string, [string, string]> = {
+    adaptive_import_analysis: ["分析导入文件", "Analyze import files"],
     user_account_delete: ["删除用户账户", "Delete user account"],
     context_validation: ["旧接续校验（已停用）", "Legacy continuation validation (retired)"],
     context_object_cleanup: ["清理接续文件", "Clean up continuation files"],

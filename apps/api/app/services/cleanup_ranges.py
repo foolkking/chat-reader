@@ -44,7 +44,7 @@ def range_edit_token(row: ContentCleanupOccurrence) -> str:
     state = [str(row.id), str(row.message_version_id), row.source_content_hash,
              row.start_offset, row.end_offset, row.decision,
              row.decision_updated_at.isoformat() if row.decision_updated_at else None,
-             row.reviewed_ranges]
+             row.reviewed_ranges, row.protection_review]
     return hashlib.sha256(json.dumps(state, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
@@ -76,7 +76,9 @@ def save_ranges(db: Session, scan_id: uuid.UUID, occurrence_id: uuid.UUID, *,
         raise ValueError("The original candidate range is invalid. Rescan the source.")
     validation = _MessageValidation(message.role, version.display_text)
     if validation.source.protects(row.start_offset, row.end_offset):
-        raise ValueError("Protected source cannot be adjusted by cleanup. Edit the Markdown source instead.")
+        from app.services.cleanup_protection import reviewed
+        if not reviewed(row, validation.source):
+            raise ValueError("Confirm the protected match before adjusting deletion ranges.")
     detected = validation.matching_ranges(db, row.rule_revision_id)
     if detected is not None and (row.start_offset, row.end_offset) not in detected:
         raise ValueError("The original candidate no longer matches. Rescan the source.")

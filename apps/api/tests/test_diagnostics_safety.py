@@ -36,6 +36,54 @@ def test_memory_probe_io_failure_is_unknown(monkeypatch):
     assert memory.available_memory_bytes() is None
 
 
+def test_linux_memory_probe_uses_tightest_nested_cgroup_v2_limit(monkeypatch):
+    monkeypatch.setattr(memory, "sys", SimpleNamespace(platform="linux"))
+    files = {
+        "/proc/meminfo": "MemAvailable: 1000000 kB\n",
+        "/proc/self/cgroup": "0::/tenant/app\n",
+        "/proc/self/mountinfo": "29 23 0:26 / /sys/fs/cgroup rw - cgroup2 cgroup rw\n",
+        "/sys/fs/cgroup/tenant/app/memory.max": str(2 * 1024**3),
+        "/sys/fs/cgroup/tenant/app/memory.current": str(1024**3),
+        "/sys/fs/cgroup/tenant/memory.max": str(1024**3),
+        "/sys/fs/cgroup/tenant/memory.current": str(900 * 1024**2),
+        "/sys/fs/cgroup/memory.max": "max",
+        "/sys/fs/cgroup/memory.current": str(950 * 1024**2),
+    }
+
+    def read(path, **_kwargs):
+        try:
+            return io.StringIO(files[str(path)])
+        except KeyError as exc:
+            raise FileNotFoundError(str(path)) from exc
+
+    monkeypatch.setattr(memory, "open", read, raising=False)
+    assert memory.available_memory_bytes() == 124 * 1024**2
+
+
+def test_linux_memory_probe_uses_cgroup_v1_memory_controller(monkeypatch):
+    monkeypatch.setattr(memory, "sys", SimpleNamespace(platform="linux"))
+    files = {
+        "/proc/meminfo": "MemAvailable: 1000000 kB\n",
+        "/proc/self/cgroup": "5:cpu,cpuacct:/docker/job\n6:memory:/docker/job\n",
+        "/proc/self/mountinfo": "30 23 0:27 / /sys/fs/cgroup/memory rw - cgroup cgroup rw,memory\n",
+        "/sys/fs/cgroup/memory/docker/job/memory.limit_in_bytes": str(1024**3),
+        "/sys/fs/cgroup/memory/docker/job/memory.usage_in_bytes": str(700 * 1024**2),
+        "/sys/fs/cgroup/memory/docker/memory.limit_in_bytes": str(900 * 1024**2),
+        "/sys/fs/cgroup/memory/docker/memory.usage_in_bytes": str(800 * 1024**2),
+        "/sys/fs/cgroup/memory/memory.limit_in_bytes": str(4 * 1024**3),
+        "/sys/fs/cgroup/memory/memory.usage_in_bytes": str(2 * 1024**3),
+    }
+
+    def read(path, **_kwargs):
+        try:
+            return io.StringIO(files[str(path)])
+        except KeyError as exc:
+            raise FileNotFoundError(str(path)) from exc
+
+    monkeypatch.setattr(memory, "open", read, raising=False)
+    assert memory.available_memory_bytes() == 100 * 1024**2
+
+
 @pytest.mark.parametrize("argv,serving", [
     (b"/usr/local/bin/python\0/usr/local/bin/uvicorn\0app.main:app\0", True),
     (b"python\0-m\0uvicorn\0", True),

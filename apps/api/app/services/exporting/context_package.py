@@ -32,10 +32,13 @@ from app.services.exporting.archive_transaction import archive_read_snapshot, tr
 from app.services.exporting.attachment_bundle import _WriteBudget, _write_stream, _asset_chunks
 from app.services.ownership import OwnershipScope
 from app.models.user import User
+from app.services.exporting.annotation_document import (
+    annotation_query, annotation_record, document_header, document_entry, manifest_extension, DOCUMENT_PATH,
+)
 
 
 CONTEXT_PACKAGE_FORMAT = "chat-reader-context-package"
-CONTEXT_PACKAGE_VERSION = "1.0"
+CONTEXT_PACKAGE_VERSION = "1.1"
 CONTEXT_PACKAGE_MIME = "application/zip"
 ProgressCallback = Callable[[str, int, int, int], None]
 
@@ -133,6 +136,8 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
     cleanup_paths.append(temporary)
     jsonl_path = staging_path(export_dir / "conversation.canjsonl")
     cleanup_paths.append(jsonl_path)
+    annotation_path = staging_path(export_dir / DOCUMENT_PATH)
+    cleanup_paths.append(annotation_path)
 
     attachment_query = db.query(Attachment).filter(
         Attachment.conversation_id == conversation.id,
@@ -155,7 +160,9 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
     annotations = db.query(ConversationAnnotation).filter(
         ConversationAnnotation.conversation_id == conversation.id,
         ConversationAnnotation.subject_key == subject_key,
-        ConversationAnnotation.is_deleted.is_(False), ConversationAnnotation.message_id.in_(selected_ids))
+        ConversationAnnotation.is_deleted.is_(False))
+    if scope_kind != "full_conversation":
+        annotations = annotations.filter(ConversationAnnotation.message_id.in_(selected_ids))
     anchor_versions = db.query(MessageVersion).filter(
         MessageVersion.id.in_(annotations.with_entities(ConversationAnnotation.message_version_id).statement),
         MessageVersion.id.not_in(selected_versions), MessageVersion.message_id.in_(selected_ids))
@@ -294,24 +301,19 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
         for version in anchor_versions.order_by(MessageVersion.message_id, MessageVersion.version_number).yield_per(100):
             records.append({"record_type": "message_version", "message_id": str(version.message_id), **_version_payload(version)})
     annotation_ids = set()
-    for annotation in annotations.order_by(ConversationAnnotation.created_at, ConversationAnnotation.id).yield_per(100):
-        annotation_ids.add(str(annotation.id))
-        records.append({
-            "record_type": "annotation",
-            "id": str(annotation.id),
-            "message_id": str(annotation.message_id) if annotation.message_id else None,
-            "message_seq": message_seq.get(annotation.message_id),
-            "version_id": str(annotation.message_version_id) if annotation.message_version_id else None,
-            "start_block_index": annotation.start_block_index,
-            "start_offset": annotation.start_offset,
-            "end_block_index": annotation.end_block_index,
-            "end_offset": annotation.end_offset,
-            "quoted_text": annotation.quote,
-            "annotation_type": annotation.annotation_type,
-            "color": annotation.color,
-            "comment_markdown": annotation.comment_markdown,
-            "anchor_status": annotation.anchor_status,
-        })
+    document_query = annotation_query(db, conversation.id, subject_key,
+        selected_ids if scope_kind != "full_conversation" else None)
+    annotation_count = document_query.order_by(None).count()
+    with annotation_path.open("wb") as document:
+        document.write(document_header(conversation.display_title or conversation.title, exported_at, annotation_count))
+        for ordinal, row in enumerate(document_query.yield_per(1), 1):
+            record = annotation_record(*row)
+            annotation_ids.add(record["id"])
+            records.append(record)
+            chunk = document_entry(record, ordinal)
+            if document.tell() + len(chunk) > get_settings().bundle_max_expanded_bytes:
+                raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
+            document.write(chunk)
     notebook = (
         db.query(ConversationNotebook)
         .filter(
@@ -345,6 +347,7 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
     records.append({"record_type": "end", "record_count": len(records) + 1, "message_count": message_count})
     records.close()
     jsonl_sha, jsonl_size = _hash_file(jsonl_path)
+    annotation_sha, annotation_size = _hash_file(annotation_path)
     manifest = {
         "format": CONTEXT_PACKAGE_FORMAT,
         "format_version": CONTEXT_PACKAGE_VERSION,
@@ -372,6 +375,7 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
         "included_content": {
             "conversation_description": True,
             "annotations": True,
+            "annotation_document": True,
             "notebook": True,
             "attachment_metadata": True,
             "attachment_binary_objects": bool(asset_entries),
@@ -379,6 +383,7 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
         },
         "files": {
             "conversation.canjsonl": {"sha256": jsonl_sha, "byte_size": jsonl_size},
+            DOCUMENT_PATH: {"sha256": annotation_sha, "byte_size": annotation_size},
             **{path: {"sha256": asset.sha256, "byte_size": asset.byte_size}
                for path, (asset, _) in asset_entries.items()},
         },
@@ -422,20 +427,21 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
             ),
         },
     }
+    manifest["extensions"] = {"chat_reader_annotation_export": manifest_extension(annotation_count)}
     continuation_members = {}
     if not include_continuation:
-        manifest["extensions"] = {"chat_reader_continuation_export": {"version": 1, "status": "omitted_by_request"}}
+        manifest["extensions"]["chat_reader_continuation_export"] = {"version": 1, "status": "omitted_by_request"}
     if include_continuation:
         from app.services.exporting.context_continuation import carry_continuation
         continuation_members, continuation_metadata, continuation_status = carry_continuation(
             db, conversation.id, jsonl_path, subject_key=subject_key, full_scope=scope_kind == "full_conversation",
         )
-        manifest["extensions"] = {"chat_reader_continuation_export": {"version": 1, "status": continuation_status}}
+        manifest["extensions"]["chat_reader_continuation_export"] = {"version": 1, "status": continuation_status}
         if continuation_metadata is not None:
             manifest["continuation"] = continuation_metadata
             for name, data in continuation_members.items():
                 manifest["files"][name] = {"sha256": hashlib.sha256(data).hexdigest(), "byte_size": len(data)}
-    if len(asset_entries) > get_settings().bundle_max_objects or 2 + len(asset_entries) + len(continuation_members) > get_settings().bundle_max_entries:
+    if len(asset_entries) > get_settings().bundle_max_objects or 3 + len(asset_entries) + len(continuation_members) > get_settings().bundle_max_entries:
         raise ContextPackageError("CONTEXT_EXPORT_LIMIT")
     def zip_progress(phase, _progress, processed, count):
         # The shared writer's generic progress starts at 10%; Context has already
@@ -449,6 +455,7 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
             _write_stream(archive, "manifest.json", (json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8"),), budget=budget)
             _write_stream(archive, "conversation.canjsonl", _asset_chunks(jsonl_path, jsonl_size), budget=budget)
+            _write_stream(archive, DOCUMENT_PATH, _asset_chunks(annotation_path, annotation_size), budget=budget)
             for member_name, member_bytes in continuation_members.items():
                 _write_stream(archive, member_name, (member_bytes,), budget=budget)
             for index, (object_path, (asset, source_path)) in enumerate(asset_entries.items(), start=1):
@@ -481,7 +488,7 @@ def _create_context_package(db: Session, *, conversation_id, job_id, scope_kind,
             destination,
             category="export",
             artifact_id=artifact_id,
-            required_entries=("manifest.json", "conversation.canjsonl"),
+            required_entries=("manifest.json", "conversation.canjsonl", DOCUMENT_PATH),
         )
         # ZIP validation may take time: fence source access again after I/O.
         check_source(lock=record_artifact)

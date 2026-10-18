@@ -3,6 +3,7 @@ import { getOfflineAttachmentBytes, offlineDb, type OfflineAttachmentRecord, typ
 import { strToU8, zipSync } from "fflate";
 import type { AnnotationRead, MessageListItem, NotebookRead } from "./types";
 import { readOfflineContinuation } from "./offline-continuation";
+import { annotationDocumentHeader, annotationDocumentEntry, type AnnotationDocumentRecord } from "./annotation-document";
 
 export type OfflineExportFormat = "context" | "canjson" | "markdown";
 
@@ -24,6 +25,7 @@ export type OfflineExportResult = {
 };
 
 const MAX_LOCAL_BUNDLE_BYTES = 256 * 1024 * 1024;
+const MAX_OFFLINE_ANNOTATION_DOCUMENT_BYTES = 16 * 1024 * 1024;
 
 export async function exportOfflineConversation(conversationId: string, options: OfflineExportOptions): Promise<OfflineExportResult> {
   const access = captureOfflineAccess();
@@ -42,8 +44,24 @@ export async function exportOfflineConversation(conversationId: string, options:
   const { conversation, messages, annotations, notebook, attachments } = snapshot;
   const unavailableAnnotationAnchorCount = options.format !== "markdown" ? unavailableAnnotationAnchors(messages, annotations).size : 0;
   const exportedAt = new Date().toISOString();
+  const annotationDocumentParts: Uint8Array[] = [];
+  let annotationDocumentBytes = 0;
+  let annotationOrdinal = 0;
+  if (options.format !== "markdown" && options.includeAnnotations) {
+    const count = annotations.filter(item => !item.is_deleted).length;
+    const header = strToU8(annotationDocumentHeader(conversation.display_title || conversation.title,
+      exportedAt, count, "export_scope", "offline_snapshot"));
+    annotationDocumentParts.push(header);
+    annotationDocumentBytes = header.byteLength;
+  }
   const source = options.format !== "markdown"
-    ? buildCanJson(conversation, messages, annotations, notebook, attachments, options, exportedAt)
+    ? buildCanJson(conversation, messages, annotations, notebook, attachments, options, exportedAt, record => {
+      const part = strToU8(annotationDocumentEntry(record, ++annotationOrdinal));
+      annotationDocumentBytes += part.byteLength;
+      if (annotationDocumentBytes > MAX_OFFLINE_ANNOTATION_DOCUMENT_BYTES)
+        throw new Error("The offline annotation document exceeds 16 MiB. Export it while online instead.");
+      annotationDocumentParts.push(part);
+    })
     : buildMarkdown(conversation, messages, annotations, notebook, options, exportedAt);
   const safeTitle = safeFilename(conversation.display_title || conversation.title);
   if (!options.includeAttachments && options.format !== "context") {
@@ -85,6 +103,18 @@ export async function exportOfflineConversation(conversationId: string, options:
     const conversationBytes = strToU8(rewritten);
     files["conversation.canjsonl"] = conversationBytes;
     fileChecksums["conversation.canjsonl"] = { sha256: await sha256(conversationBytes), byte_size: conversationBytes.byteLength };
+    if (options.includeAnnotations) {
+      if (totalBytes + conversationBytes.byteLength + annotationDocumentBytes > MAX_LOCAL_BUNDLE_BYTES)
+        throw new Error("Offline export exceeds the 256 MiB browser safety limit. Export while online instead.");
+      const document = new Uint8Array(annotationDocumentBytes);
+      let offset = 0;
+      for (let index = 0; index < annotationDocumentParts.length; index++) {
+        document.set(annotationDocumentParts[index], offset); offset += annotationDocumentParts[index].byteLength;
+        annotationDocumentParts[index] = new Uint8Array();
+      }
+      files["annotations.md"] = document;
+      fileChecksums["annotations.md"] = { sha256: await sha256(document), byte_size: document.byteLength };
+    }
     let continuation: Record<string, unknown> | undefined;
     let continuationStatus = "none";
     if (options.includeContinuation !== false && conversation.continuation) {
@@ -110,7 +140,7 @@ export async function exportOfflineConversation(conversationId: string, options:
     const completeness = !attachments.length ? "none" : !options.includeAttachments || missingAttachmentCount > 0 ? "partial" : "complete";
     files["manifest.json"] = strToU8(`${JSON.stringify({
       format: "chat-reader-context-package",
-      format_version: "1.0",
+      format_version: "1.1",
       entrypoint: "conversation.canjsonl",
       conversation: {
         id: conversation.id,
@@ -140,13 +170,17 @@ export async function exportOfflineConversation(conversationId: string, options:
       included_content: {
         conversation_description: options.includeDescription,
         annotations: options.includeAnnotations,
+        annotation_document: options.includeAnnotations,
         notebook: options.includeNotebook,
         source_refs: messages.some((message) => (message.source_refs?.length ?? 0) > 0),
         project_context: options.includeDescription && Boolean(conversation.project_context),
       },
       files: fileChecksums,
       ...(continuation ? { continuation } : {}),
-      extensions: { chat_reader_continuation_export: { version: 1, status: continuationStatus } },
+      extensions: { chat_reader_continuation_export: { version: 1, status: continuationStatus },
+        chat_reader_annotation_export: { version: 1, status: options.includeAnnotations ? "included" : "omitted_by_request",
+          ...(options.includeAnnotations ? { path: "annotations.md", media_type: "text/markdown",
+            count: annotationOrdinal, source: "conversation.canjsonl", scope: "export_scope" } : {}) } },
     }, null, 2)}\n`);
   } else {
     files["conversation.md"] = strToU8(rewriteMarkdownAttachments(source, attachments, objectPaths));
@@ -181,10 +215,17 @@ function buildCanJson(
   attachments: OfflineAttachmentRecord[],
   options: OfflineExportOptions,
   exportedAt: string,
+  onAnnotationRecord?: (record: AnnotationDocumentRecord) => void,
 ): string {
   const exportedMessages = new Map(messages.map(message => [message.id, message]));
-  const includedAnnotations = options.includeAnnotations ? annotations.filter(annotation =>
-    !annotation.is_deleted && annotation.message_id && exportedMessages.has(annotation.message_id)) : [];
+  const includedAnnotations = options.includeAnnotations ? annotations.filter(annotation => !annotation.is_deleted).sort((left, right) => {
+    const seq = (item: AnnotationRead) => item.message_id ? messages.findIndex(message => message.id === item.message_id) : -1;
+    const a = seq(left), b = seq(right);
+    return (a < 0 ? Infinity : a) - (b < 0 ? Infinity : b)
+      || (left.start_block_index ?? Infinity) - (right.start_block_index ?? Infinity)
+      || (left.start_offset ?? Infinity) - (right.start_offset ?? Infinity)
+      || left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id);
+  }) : [];
   const anchorIds = new Set(includedAnnotations.map(annotation => annotation.message_version_id));
   const annotationVersions = messages.flatMap(message => (message.annotation_versions ?? [])
     .filter(version => anchorIds.has(version.id) && version.id !== message.current_version?.id)
@@ -253,15 +294,19 @@ function buildCanJson(
   }
   if (options.includeAnnotations) {
     includedAnnotations.forEach((annotation) => {
-      const anchorAvailable = !unavailableAnchors.has(annotation.id);
-      records.push({
+      const message = annotation.message_id ? exportedMessages.get(annotation.message_id) : undefined;
+      const anchorAvailable = Boolean(message) && !unavailableAnchors.has(annotation.id);
+      const record = {
       record_type: "annotation",
       id: annotation.id,
-      message_id: annotation.message_id,
+      message_id: message ? annotation.message_id : null,
+      message_seq: message ? messages.indexOf(message) + 1 : null,
+      message_role: message?.role ?? null,
       version_id: anchorAvailable ? annotation.message_version_id : null,
       // Legacy packages lack anchor bodies. Keep the annotation and original
       // locator explicitly, without inventing a link to the current version.
       ...(!anchorAvailable ? { unavailable_anchor_version_id: annotation.message_version_id } : {}),
+      ...(!anchorAvailable ? { unavailable_anchor: { message_id: annotation.message_id, version_id: annotation.message_version_id } } : {}),
       start_block_index: annotation.start_block_index,
       start_offset: annotation.start_offset,
       end_block_index: annotation.end_block_index,
@@ -270,8 +315,13 @@ function buildCanJson(
       annotation_type: annotation.annotation_type,
       color: annotation.color,
       comment_markdown: annotation.comment_markdown,
-      anchor_status: anchorAvailable ? annotation.anchor_status : "orphaned",
-    }); });
+      anchor_status: annotation.anchor_status,
+      created_at: new Date(annotation.created_at).toISOString(),
+      updated_at: new Date(annotation.updated_at).toISOString(),
+    };
+      records.push(record);
+      onAnnotationRecord?.(record);
+    });
   }
   if (options.includeNotebook && notebook) {
     const annotationIds = new Set(includedAnnotations.map(annotation => annotation.id));

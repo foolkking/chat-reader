@@ -149,7 +149,7 @@ def test_normalized_short_rule_trial_to_bulk_refinement_and_canonical_apply(clie
     current = client.get(prefix + f"/occurrences/{first['id']}").json()
     assert current["reviewed_ranges"] == refined
     preview = client.get(prefix + "/preview").json()
-    assert preview["summary"] == {"conversations": 1, "messages": 1, "fragments": 52}
+    assert preview["summary"] == {"conversations": 1, "messages": 1, "fragments": 52, "protected_confirmed": 0}
     proposed = preview["items"][0]
     assert not proposed["conflict"]
     assert all(span in proposed["removed_ranges"] for span in refined)
