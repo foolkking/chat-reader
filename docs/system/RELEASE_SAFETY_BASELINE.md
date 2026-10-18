@@ -1,5 +1,21 @@
 # Release Safety Baseline
 
+2026-10-18 disposable CI PostgreSQL availability repair: quality jobs start
+their fixture after checkout with `scripts/ci/postgres-service.sh start`.
+It tries the previously verified ECR Public index, then Docker Hub's official
+`library/postgres` with **the identical SHA-256 index**, never a floating tag or
+substitute database. Each source has three attempts; pulls have a 60-second
+deadline plus 10-second kill grace, and startup has a 10-minute workflow bound.
+The container is Linux/amd64, loopback-only, ephemeral, and must pass the
+existing `pg_isready` probe before migrations/tests. Ports remain 5432 for
+API/Web and guarded 65438 for settings. Failed readiness removes only the
+newly created container; final cleanup validates this run/attempt/job's label
+and removes its exact container ID. No production/named volume is used or
+removed. Existing Python/Node base pins, all quality gates, budgets, image
+dependencies and artifact checks are unchanged. Both registries can still be
+unavailable: that fails the job rather than bypassing PostgreSQL tests.
+See [repair and verification limits](../execution/CI_QUALITY_REPAIR_2026-10-18.md).
+
 2026-10-10 CI distribution repair: disposable PostgreSQL and CI Python/Node base
 inputs use digest-pinned ECR Public Docker Official Images. Their indexes,
 Linux/amd64 manifests and configs were independently checked against Docker Hub

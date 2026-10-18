@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+## Authorized CI repair — 2026-10-18
+
+`execution/CI_QUALITY_REPAIR_2026-10-18.md` records run 39130940184's passing API,
+ECR settings-container failure and six stale preference-fixture browser failures.
+It owns the 12-case high-revision browser matrix and 34 source/synthetic-shell
+checks. `system/RELEASE_SAFETY_BASELINE.md` documents bounded same-digest official
+PostgreSQL fallback and fixture-owned cleanup; `testing.md` preserves verification
+limits. Project State and index distinguish the now-authorized/pushed release
+candidate from earlier local-only checkpoints and unchanged production.
+
 ## Current local implementation — 2026-10-17
 
 The current worktree implementation for the table tool, TOC return checkpoint,

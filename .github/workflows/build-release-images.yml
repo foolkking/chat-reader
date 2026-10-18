@@ -22,22 +22,12 @@ env:
 jobs:
   api-quality:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
-        env:
-          POSTGRES_DB: chat_reader
-          POSTGRES_USER: chat_reader
-          POSTGRES_PASSWORD: chat_reader_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U chat_reader -d chat_reader"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
     steps:
       - uses: actions/checkout@v4
+      - name: Start pinned disposable PostgreSQL with official-source fallback
+        id: postgres
+        timeout-minutes: 10
+        run: bash scripts/ci/postgres-service.sh start
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -76,26 +66,19 @@ jobs:
         run: |
           cd apps/api
           python scripts/verify_migration_state.py --require-current
+      - name: Stop owned disposable PostgreSQL
+        if: ${{ always() && steps.postgres.outcome == 'success' }}
+        run: bash scripts/ci/postgres-service.sh stop
 
   web-quality:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
-        env:
-          POSTGRES_DB: chat_reader
-          POSTGRES_USER: chat_reader
-          POSTGRES_PASSWORD: chat_reader_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U chat_reader -d chat_reader"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
 
     steps:
       - uses: actions/checkout@v4
+      - name: Start pinned disposable PostgreSQL with official-source fallback
+        id: postgres
+        timeout-minutes: 10
+        run: bash scripts/ci/postgres-service.sh start
 
       - uses: pnpm/action-setup@v4
         with:
@@ -164,7 +147,7 @@ jobs:
         run: node --test scripts/security/braces-depth.test.mjs scripts/security/source-map-offsets.test.mjs
 
       - name: Official release image source contract
-        run: node --test scripts/ci/release-image-sources.test.mjs
+        run: node --test scripts/ci/release-image-sources.test.mjs scripts/ci/postgres-service.test.mjs
 
       - name: Offline shell reconciliation regressions
         run: node --test scripts/pwa/offline-shell.test.mjs
@@ -428,27 +411,19 @@ jobs:
             apps/web/test-results
           if-no-files-found: warn
           retention-days: 14
+      - name: Stop owned disposable PostgreSQL
+        if: ${{ always() && steps.postgres.outcome == 'success' }}
+        run: bash scripts/ci/postgres-service.sh stop
 
   settings-quality:
     runs-on: ubuntu-latest
     # The serial 439-case matrix took 41.8m in 37795767145; setup plus the
     # passing fresh-instance restore exceeded 45m. Keep per-case bounds intact.
     timeout-minutes: 60
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
-        env:
-          POSTGRES_DB: chat_reader
-          POSTGRES_USER: chat_reader
-          POSTGRES_PASSWORD: chat_reader_ci
-        ports:
-          # Keep the disposable fixture on a port allowed by the guarded seeders.
-          - 65438:5432
-        options: >-
-          --health-cmd "pg_isready -U chat_reader -d chat_reader"
-          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgresql+psycopg://chat_reader:chat_reader_ci@127.0.0.1:65438/chat_reader
+      # Keep the disposable fixture on a port allowed by the guarded seeders.
+      CI_POSTGRES_PORT: "65438"
       AUTH_ENABLED: "true"
       AUTH_SESSION_SECRET: synthetic-settings-ci-session-secret-0123456789
       AUTH_COOKIE_SECURE: "false"
@@ -465,6 +440,10 @@ jobs:
       NEXT_PUBLIC_PWA_NEGATIVE_TESTS: "0"
     steps:
       - uses: actions/checkout@v4
+      - name: Start pinned disposable PostgreSQL with official-source fallback
+        id: postgres
+        timeout-minutes: 10
+        run: bash scripts/ci/postgres-service.sh start
       - uses: pnpm/action-setup@v4
         with:
           version: 9.15.4
@@ -556,6 +535,9 @@ jobs:
             ${{ runner.temp }}/archive-api.log
             ${{ runner.temp }}/archive-worker.log
           retention-days: 14
+      - name: Stop owned disposable PostgreSQL
+        if: ${{ always() && steps.postgres.outcome == 'success' }}
+        run: bash scripts/ci/postgres-service.sh stop
 
   build-images:
     needs: [api-quality, web-quality, settings-quality]

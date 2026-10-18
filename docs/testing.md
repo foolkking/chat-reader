@@ -1,5 +1,26 @@
 # Testing
 
+## Authorized CI repair — 2026-10-18
+
+[Run 39130940184 repair](execution/CI_QUALITY_REPAIR_2026-10-18.md) separates the
+passing API job, pre-test ECR container failure, and six default-PWA fixture
+failures. The background-import matrix now reads the initial fixture
+preferences without writing them and returns a complete snapshot with newer
+language/theme field revisions. It retains every lifecycle assertion and adds
+explicit DOM language/theme assertions. All **12/12** combinations pass locally
+with SSR language/theme revisions 73/78, using installed Chrome and synthetic
+API responses; this is not a full-PWA or real-backend import acceptance.
+
+The three CI quality jobs use `scripts/ci/postgres-service.sh start|stop`
+instead of pre-checkout service pulls. **34/34** Node source/synthetic-shell
+cases pass, including ECR exhaustion, same-digest official fallback, both-source
+failure, readiness failure/timeout, identity guards and cleanup. No real Docker
+or registry operation is performed by those tests. Web lint, nonincremental
+typecheck, Bash syntax, pinned Actionlint 1.7.12 (without optional shellcheck/
+pyflakes), and parsed old/new workflow preservation pass. Complete exact-source
+CI and actual PostgreSQL fixture startup remain for the authorized retry;
+deployment has not occurred.
+
 ## Import/noise stability continuation — 2026-10-18 (local only)
 
 [Stability evidence](execution/IMPORT_STABILITY_2026-10-18.md) distinguishes

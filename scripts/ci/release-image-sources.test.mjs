@@ -6,6 +6,7 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 const workflow = read(".github/workflows/build-release-images.yml");
 const apiDockerfile = read("apps/api/Dockerfile");
 const webDockerfile = read("apps/web/Dockerfile");
+const postgresService = read("scripts/ci/postgres-service.sh");
 
 // These immutable indexes were compared with Docker Hub and their amd64 configs.
 // Update pins only with new same-source evidence; see CI_REGISTRY_SOURCE_2026-10-10.md.
@@ -23,12 +24,27 @@ function job(name) {
 }
 
 for (const name of ["api-quality", "web-quality", "settings-quality"]) {
-  test(`${name} pulls the verified immutable official PostgreSQL index`, () => {
-    const imageLines = [...job(name).matchAll(/^        image: (.+)$/gm)].map((match) => match[1]);
-    assert.deepEqual(imageLines, [sources.postgres]);
-    assert.match(job(name), /--health-cmd "pg_isready -U chat_reader -d chat_reader"/);
+  test(`${name} starts the pinned PostgreSQL fixture with bounded official-source fallback`, () => {
+    const body = job(name);
+    assert.doesNotMatch(body, /^    services:/m);
+    assert.match(body, /id: postgres\n        timeout-minutes: 10\n        run: bash scripts\/ci\/postgres-service\.sh start/);
+    assert.match(body, /if: \$\{\{ always\(\) && steps\.postgres\.outcome == 'success' \}\}\n        run: bash scripts\/ci\/postgres-service\.sh stop/);
+    assert.ok(body.indexOf("actions/checkout@v4") < body.indexOf("postgres-service.sh start"));
+    assert.ok(body.indexOf("postgres-service.sh start") < body.indexOf("python -m alembic upgrade head"));
   });
 }
+
+test("PostgreSQL fallback keeps the previously verified digest, health probe and ports", () => {
+  const digest = sources.postgres.split("@")[1];
+  assert.ok(postgresService.includes(`digest="${digest}"`));
+  assert.ok(postgresService.includes('"public.ecr.aws/docker/library/postgres:16-alpine@$digest"'));
+  assert.ok(postgresService.includes('"docker.io/library/postgres:16-alpine@$digest"'));
+  assert.match(postgresService, /--health-cmd "pg_isready -U chat_reader -d chat_reader"/);
+  assert.match(postgresService, /docker pull --platform linux\/amd64 "\$source"/);
+  assert.match(postgresService, /--publish "127\.0\.0\.1:\$\{port\}:5432"/);
+  assert.match(job("settings-quality"), /CI_POSTGRES_PORT: "65438"/);
+  assert.doesNotMatch(postgresService, /docker (?:system|volume|network) prune|compose down/);
+});
 
 test("API base argument preserves the existing Python default", () => {
   assert.match(apiDockerfile, /^ARG PYTHON_BASE_IMAGE=python:3\.11-slim\nFROM \$\{PYTHON_BASE_IMAGE\} AS runtime\n/);
@@ -58,7 +74,7 @@ test("both image builds explicitly select the accepted Linux amd64 platform", ()
 });
 
 test("the registry source contract runs as an additive CI check", () => {
-  assert.match(job("web-quality"), /run: node --test scripts\/ci\/release-image-sources\.test\.mjs(?:\n|$)/);
+  assert.match(job("web-quality"), /run: node --test scripts\/ci\/release-image-sources\.test\.mjs scripts\/ci\/postgres-service\.test\.mjs(?:\n|$)/);
 });
 
 test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable", () => {

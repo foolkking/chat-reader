@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
+import type { UserPreferenceRead } from "../lib/types";
 
 test.use({ serviceWorkers: "block" });
 
@@ -647,9 +648,25 @@ test("conversation previews wait, flip inside the viewport, and cancel pending p
   expect(projectPreviewBox!.y + projectPreviewBox!.height).toBeLessThanOrEqual(280);
 });
 
-for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) for (const theme of ["light", "dark"]) {
+for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"] as const) for (const theme of ["light", "dark"] as const) {
   test(`${width}px ${locale} ${theme}: background import analysis survives closing and exposes its result`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
+    // SSR reads the real fixture before browser routing can intercept it. Model
+    // a newer server snapshot, rather than an unversioned response that the
+    // monotonic preference sync must discard after earlier browser gates.
+    const preferenceResponse = await page.request.get("/api/preferences");
+    expect(preferenceResponse.status()).toBe(200);
+    const initialPreferences = await preferenceResponse.json() as UserPreferenceRead;
+    const preferences: UserPreferenceRead = {
+      ...initialPreferences,
+      theme_mode: theme,
+      locale_mode: locale,
+      field_revisions: {
+        ...initialPreferences.field_revisions,
+        theme_mode: (initialPreferences.field_revisions?.theme_mode ?? 1) + 1,
+        locale_mode: (initialPreferences.field_revisions?.locale_mode ?? 1) + 1,
+      },
+    };
     const importId = "77777777-7777-4777-8777-777777777777";
     const analysisId = "88888888-8888-4888-8888-888888888888";
     const zh = locale === "zh-CN";
@@ -681,7 +698,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) f
     await page.route("**/api/**", async route => {
       const path = new URL(route.request().url()).pathname, method = route.request().method();
       if (path.endsWith("/cancel") || method === "DELETE") cancelled++;
-      if (path === "/api/preferences") return json(route, { theme_mode: theme, locale_mode: locale });
+      if (path === "/api/preferences") return json(route, preferences);
       if (path === "/api/adaptive-import/sessions" && method === "POST") {
         uploaded++;
         return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(session()) });
@@ -698,6 +715,8 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) f
       return mockOwnerApi(route, [], uploaded ? [analysisTask()] : []);
     });
     await page.goto("/");
+    await expect(page.locator("html")).toHaveAttribute("lang", locale);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     if (width < 768) await page.getByTestId("mobile-sidebar-button").click();
     await page.getByRole("button", { name: /Import data|导入数据/ }).click();
     await page.getByTestId("import-file-input").setInputFiles([

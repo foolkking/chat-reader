@@ -4,6 +4,25 @@ Last updated: 2026-10-18. This is the current snapshot, not a release history.
 
 ## Release and active work
 
+**Authorized release continuation (2026-10-18):** the accumulated implementation
+was committed/pushed as `34136d0`, followed by test-selector repair `70911e1`.
+Run **39130940184** on `70911e1` passes API quality, but settings never reaches
+tests because the pinned PostgreSQL ECR pull is rate-limited. Web's default PWA
+gate passes 145, skips 738 conditionally and fails six Chinese background-import
+matrix cases: their unversioned preference fixture is older than SSR's language
+revision 73. The current repair models a newer complete preference snapshot and
+asserts the actual language/theme; all **12/12** local browser combinations pass
+with the same high-revision bootstrap. Disposable CI PostgreSQL now has bounded
+same-digest ECR/official Docker Hub fallback, health readiness and job-owned
+cleanup; **34/34** source/synthetic-shell cases, lint, nonincremental types,
+Actionlint and workflow-preservation comparison pass. Real registry/container
+execution and the complete new-source CI remain pending. Production remains
+`3e68d1f`/0051; no deployment or migration was performed. After dispatching CI,
+stop and wait for the user's result; do not poll or deploy.
+See [repair evidence](docs/execution/CI_QUALITY_REPAIR_2026-10-18.md).
+The “local only / no push / no CI” paragraphs below retain their original
+pre-release checkpoints, not the current release status.
+
 **Current local implementation overlay (2026-10-18):** the worktree now contains
 the planned source-editor table tool (bounded preview/normalization/create/
 row-column operations), one-checkpoint TOC return for Owner/Offline/Share
@@ -157,7 +176,7 @@ All these optimizations remain local, not production.
 | Later production incident | 2026-10-18 02:31:45 UTC host-level OOM killed API; subsequent API restart count 1. The local import/noise fixes above have not been deployed; noise-specific causation remains unproven |
 | Production database | Single current/head `20261015_0051`, upgraded from 0050 with only nullable JSON `reviewed_ranges`; all existing values remain NULL. No source rewrite, owner-auth reconciliation or backfill. PostgreSQL identity/start/restarts unchanged |
 | Last accepted data evidence | All 84 stopped-writer table fingerprints compare every old column across isolation and migration; three unrelated stores unchanged and the original asset tree exactly reconstructible from active plus isolated originals. Four clean storage roots match across migration; 313 attachment hashes and 67 live stable-table counts pass. No live full-hash sweep repeated |
-| Latest CI | `3e68d1f`: all five jobs of **38933466143** attempt 2 pass. Attempt 1 failed at image metadata retrieval with the Public ECR data limit; quality gates were not bypassed. No new CI or deployment is authorized for subsequent local optimization without a new user request |
+| Latest accepted image CI | `3e68d1f`: all five jobs of **38933466143** attempt 2 pass. Attempt 1 failed at image metadata retrieval with the Public ECR data limit; quality gates were not bypassed. The 2026-10-18 user-authorized candidate and pending retry are recorded at the top; no newer deployment is accepted |
 | Previous UX CI | `aea13fe`: PostgreSQL 16 API **1,288 passed / 3 skipped**, single head/current 0051; all **13 Web gates** pass, including exact noise ranges at 375/1440px, attachment **25**, PDF **13**, auth **18**, negative PWA **19**, default PWA **139 / 737 conditional skips**; settings **463 / zero skips** plus one fresh-instance restore. These are that earlier release's counts, not new OOM-release counts |
 | Earlier candidate CI | Canonical-URL revision repair a12ce9e passed CI 37812290017; its artifact was never deployed separately. Its changes are included in accepted 84988a2 |
 | Local UX closeout | The resumed ordinary-user UX implementation and permitted service-free verification are complete at the pre-release checkpoint. Noise supports cross-page multiple candidates and exact editable removal ranges; rich-text uses bounded display-only compatibility, not arbitrary HTML/widgets. The administrator Skill and system archive recovery changes remain in the same release batch. The user explicitly authorized commit, CI and deployment on 2026-10-16; runtime and release acceptance now proceed through the gates below |
