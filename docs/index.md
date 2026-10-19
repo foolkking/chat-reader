@@ -15,11 +15,14 @@
 [Context Package 1.1](system/CONTEXT_PACKAGE_CONTRACT.md)、[API](api-reference.md)。
 包括表格工具、TOC 返回、噪声规则/保护审阅、批注文档、多文件后台分析和按项目拖放导入。
 固定默认 Skill ZIP 未升级；Linux Docker PID 1、60 分钟低内存压力及完整生产交互仍未验收。
-用户现已授权[本地 OOM 续查与修复](execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)，
-未推送、未运行 CI、未部署，不改变上述生产版本。
+用户已于 2026-10-19 进一步授权 OOM 修复提交、CI 与部署；
+[本轮发布准备](execution/OOM_RELEASE_2026-10-19.md)记录本地回归失败与独立复查、
+发布脚本退出码修复及验收边界。CI 启动后等待用户反馈，不提前部署。
+[本地 OOM 续查与修复](execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)
+仍不属于上述已接受的生产版本。
 后续[附件/批注索引与 gzip 续查](execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
 补充修复批量元数据/索引正文保留、压缩展开准入与 CanJSON 内置格式后台失败；
-同样仅在本地，无新 migration。
+已在本地提交，无新 migration，尚未部署。
 以下“仅本地/未发布”是原日期的历史检查点，
 不能覆盖当前已接受版本，也不能把当时未执行的测试改记通过。
 

@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-10-19T17:34:00+08:00",
+  "scope": "Local OOM release preparation; synthetic test data only",
+  "production_source": "f3b331a53a593f4cdb84a37f9eb25f13379f3eb5",
+  "production_changed": false,
+  "local_repair_commit": "92dd27021caf7a4a5f4a1436ddb42ab4996c1566",
+  "new_migration": false,
+  "source_migration_heads": [
+    "20261017_0052"
+  ],
+  "development_database_current": "20260823_0028",
+  "development_database_modified": false,
+  "full_api": {
+    "tests": 1626,
+    "passed": 1392,
+    "failed": 49,
+    "skipped": 185,
+    "seconds": 2683.61,
+    "accepted": false,
+    "failure_boundary": "Synthetic import commit returned 400, or response omitted conversation_ids after failed commit",
+    "original_error_detail_retained": false
+  },
+  "resource_sample": {
+    "at": "2026-10-19T17:12:58.7870214+08:00",
+    "pytest_working_set_mib": 2790.6,
+    "host_available_mib": 411.4,
+    "continuous_or_peak_measurement": false,
+    "proven_cause_of_all_failures": false
+  },
+  "failed_case_rerun": {
+    "tests": 49,
+    "passed": 49,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 99.87,
+    "fresh_process": true,
+    "read_only_error_observer": true,
+    "admission_override_added": false,
+    "full_suite_pass": false
+  },
+  "web": {
+    "typecheck": "passed",
+    "lint": "passed",
+    "build": "not run locally in this release cycle",
+    "pwa": "not run locally in this release cycle"
+  },
+  "script_failure_propagation": {
+    "mocked_command_cases": [
+      {
+        "case": "psql",
+        "passed": true,
+        "commands": [
+          "psql"
+        ]
+      },
+      {
+        "case": "pg_isready",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready"
+        ]
+      },
+      {
+        "case": "alembic",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready",
+          "alembic"
+        ]
+      },
+      {
+        "case": "pytest",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready",
+          "alembic",
+          "pytest"
+        ]
+      },
+      {
+        "case": "typecheck",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready",
+          "alembic",
+          "pytest",
+          "typecheck"
+        ]
+      },
+      {
+        "case": "lint",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready",
+          "alembic",
+          "pytest",
+          "typecheck",
+          "lint"
+        ]
+      },
+      {
+        "case": "local-pass",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready",
+          "alembic",
+          "pytest",
+          "typecheck",
+          "lint"
+        ]
+      },
+      {
+        "case": "release-migration",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready",
+          "alembic",
+          "pytest",
+          "typecheck",
+          "lint",
+          "release-migration"
+        ]
+      },
+      {
+        "case": "release-pass",
+        "passed": true,
+        "commands": [
+          "psql",
+          "pg_isready",
+          "alembic",
+          "pytest",
+          "typecheck",
+          "lint",
+          "release-migration"
+        ]
+      }
+    ],
+    "actual_business_or_database_commands_executed_by_harness": false,
+    "checks": [
+      "stop after native nonzero exit",
+      "no later gate after failure",
+      "restore location after API or migration failure"
+    ]
+  },
+  "source_files": [
+    {
+      "path": "scripts/check-local.ps1",
+      "sha256": "00bd59d1de62ef800a208130951d7cc9be44a8fe9aa53d21ae986c03a36ecc4e"
+    },
+    {
+      "path": "scripts/release-check.ps1",
+      "sha256": "4604b311b875ae58f9ecfc0d4564a290502cfb74e3516cbec8593a7751f69352"
+    }
+  ],
+  "limitations": [
+    "Full local API run failed and remains failed evidence",
+    "Original response detail unavailable; do not infer that every failure was memory pressure",
+    "No Linux PID 1 or 2 GiB/60-minute soak acceptance",
+    "No local release-image build; no production access or deployment"
+  ],
+  "release_request": {
+    "authorized": true,
+    "ci": "Dispatch exact-source Build release images, then await user result",
+    "deployment": "Only after successful quality/image jobs and independent artifact verification"
+  }
+}

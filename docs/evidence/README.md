@@ -1,5 +1,12 @@
 # 事实证据索引
 
+## OOM 发布准备 — 2026-10-19（尚未部署）
+
+[发布准备](oom-release-preflight-2026-10-19.json)分别记录完整 API 失败结果、
+49 项独立复查、单次本机内存采样、Web/源码 head 与脚本控制流测试。
+不是完整本地 release check 或生产验收通过；
+说明见[发布记录](../execution/OOM_RELEASE_2026-10-19.md)。
+
 ## 本地 OOM 续查 — 2026-10-19（未发布）
 
 [索引分配续查](search-retention-2026-10-19.json)与

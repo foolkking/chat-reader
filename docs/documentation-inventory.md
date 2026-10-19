@@ -1,5 +1,17 @@
 # Markdown 文档台账
 
+## Authorized OOM release preparation — 2026-10-19
+
+`execution/OOM_RELEASE_2026-10-19.md` and
+`evidence/oom-release-preflight-2026-10-19.json` own the new user-authorized
+release cycle, failed local full-suite result, independent failed-case rerun,
+resource-observation limits and native-exit propagation checks. Project State,
+index, testing, deployment and deployment/environment facts distinguish this
+authorization from unchanged accepted production. The earlier local-only audit
+records retain their original timestamps and meanings. CI must finish and its
+exact artifacts must be verified before deployment; dispatch pauses for the
+user's result.
+
 ## Local search/gzip OOM continuation — 2026-10-19
 
 `execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md` and the separate

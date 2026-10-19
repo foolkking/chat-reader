@@ -27,8 +27,11 @@ Shared RAM remains about 1.83 GiB, with roughly 252 MiB available at independent
 audit. Release one-offs used a 192 MiB cap, 384 MiB memory+swap, 0.5 CPU and
 256 MiB additional host headroom; serving settings and other applications were
 not changed. This is not business-load/60-minute low-memory or Docker PID 1
-acceptance. Fixed default Skill ZIPs remain unchanged. No proactive follow-up
-push, CI, deployment or optimization is active.
+acceptance. Fixed default Skill ZIPs remain unchanged. The subsequent
+2026-10-19 user request explicitly authorizes the local OOM fixes' release;
+see [release preparation](../execution/OOM_RELEASE_2026-10-19.md).
+This authorization is not new production acceptance. Dispatch CI, then await
+the user's result before any deployment; preserve the accepted version above.
 
 ## Previous OOM repair — 2026-10-17
 

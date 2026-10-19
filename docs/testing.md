@@ -1,6 +1,28 @@
 # Testing
 
+## OOM release preparation — 2026-10-19
+
+The [release preparation](execution/OOM_RELEASE_2026-10-19.md) separates the
+failed local single-process run (**1392 passed / 49 failed / 185 skipped**)
+from a fresh-process, read-only-observed rerun of those 49 cases
+(**49 passed / zero failures/errors/skips**). No production admission threshold
+was lowered. Available host memory was sampled at 411.4 MiB while pytest's
+working set was 2790.6 MiB, but the original assertions did not retain response
+details: resource pressure is not asserted as the proven cause of every failure.
+Local Web typecheck/lint and the source's single 0052 head pass. The existing
+development database remains at 0028; it was not upgraded or used as a substitute
+for CI's disposable PostgreSQL validation.
+
+PowerShell checks now reject a nonzero native exit immediately, restore their
+working directory on API/migration failures, and do not run subsequent gates
+after failure. Nine isolated mocked-command failure/success paths pass.
+These are script control-flow tests, not a new passing full release check.
+The user authorized CI/deployment; pause after CI dispatch for their result.
+
 ## Local search/gzip OOM continuation — 2026-10-19, not released
+
+This section preserves the pre-release audit checkpoint, not the subsequent
+release authorization above.
 
 The [continuation record](execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
 and separate [index allocation](evidence/search-retention-2026-10-19.json) /

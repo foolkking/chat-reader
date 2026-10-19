@@ -31,12 +31,17 @@ remain unchanged; only editable/reviewed versions recognize the new annotation
 projection. The user authorized a local OOM follow-up on 2026-10-19; the
 [local import/export repair](docs/execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)
 is not part of the accepted production source. No new push, CI or deployment
-is authorized or active.
+was authorized at that audit checkpoint. The user subsequently authorized
+commit, CI and deployment on 2026-10-19. The
+[OOM release preparation](docs/execution/OOM_RELEASE_2026-10-19.md)
+records the new release cycle; production remains unchanged until exact-source
+CI and deployment acceptance. Stop after dispatching CI and await the user's
+result before deploying.
 The [next local continuation](docs/execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
 also bounds attachment/annotation index retention and checks growing gzip
 expansion before JSON decoding. It fixes newest-ready extract selection,
 resource-failure classification and native CanJSON's missing-selector task
-failure. These working-tree changes add no migration and are not deployed.
+failure. These changes are committed locally, add no migration and are not deployed.
 This continuation's fifteen related API modules pass 170/170 in serial batches
 and in an additional combined diagnostic rerun; separate disposable PostgreSQL
 17 coverage passes 6/6. The first combined attempt's two unreplicated commit

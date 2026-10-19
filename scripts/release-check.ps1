@@ -33,7 +33,13 @@ foreach ($file in @(
 
 Write-Host "Checking migration head"
 Push-Location apps/api
-alembic current
-Pop-Location
+try {
+  alembic current
+  if ($LASTEXITCODE -ne 0) {
+    throw "Release migration check failed (exit code $LASTEXITCODE)."
+  }
+} finally {
+  Pop-Location
+}
 
 Write-Host "Release check completed"
