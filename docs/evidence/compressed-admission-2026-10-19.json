@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-19",
+  "environment": "Windows Python 3.11.7; synthetic zero/16 GiB memory probes",
+  "boundary": "No OOM was induced. Allocation is not RSS, throughput or production capacity.",
+  "fixture": {
+    "compressed_bytes": 20811,
+    "expanded_bytes": 2097813,
+    "compression_ratio": 100.803,
+    "heavy_threshold_mb": 1,
+    "reserve_mb": 64,
+    "input_multiplier": 32
+  },
+  "baseline_source_sha256": "83132d3c5678e19f1dfa2bfed3e7f6640ae3a807e5056bb2658860c49f4b5fd8",
+  "measurements_zero_headroom": {
+    "before": {
+      "outcome": "parsed",
+      "peak_python_allocation_bytes": 8397617,
+      "elapsed_ms_under_tracemalloc": 81.275,
+      "largest_gzip_read_request_bytes": 33554433,
+      "largest_json_input_parsed_bytes": 2097446,
+      "memory_probes": 0
+    },
+    "after": {
+      "outcome": "UPLOAD_MEMORY_PRESSURE",
+      "peak_python_allocation_bytes": 1364277,
+      "elapsed_ms_under_tracemalloc": 7.552,
+      "largest_gzip_read_request_bytes": 65536,
+      "largest_json_input_parsed_bytes": 367,
+      "memory_probes": 1
+    }
+  },
+  "sufficient_headroom": {
+    "before": {
+      "outcome": "parsed",
+      "peak_python_allocation_bytes": 8396080,
+      "elapsed_ms_under_tracemalloc": 82.042,
+      "largest_gzip_read_request_bytes": 33554433,
+      "largest_json_input_parsed_bytes": 2097446,
+      "memory_probes": 0
+    },
+    "after": {
+      "outcome": "parsed",
+      "peak_python_allocation_bytes": 8396296,
+      "elapsed_ms_under_tracemalloc": 89.265,
+      "largest_gzip_read_request_bytes": 65536,
+      "largest_json_input_parsed_bytes": 2097446,
+      "memory_probes": 2
+    },
+    "canonical_output_equivalent": true
+  },
+  "working_tree_sha256": {
+    "apps/api/app/services/import_pipeline/canjson_parser.py": "fbcca90ccd8fbd5e34f4a02126c7b6038af010ced71e907091c0feec424a6795",
+    "apps/api/app/services/uploads.py": "85de27bad17bad566207cdabc691157c425baa8283c1d313fb032dcafbb609f2",
+    "apps/api/app/services/adaptive_import/service.py": "bf8260851bd839acd7a3277a1871706e966df169b427344f04d891c868ef7809",
+    "apps/api/app/services/import_pipeline/source_detector.py": "79cd51858e4427132a96493a78fac58329917805ecdb651a23eb5eb94ecc0f0a",
+    "apps/api/app/services/adaptive_import/analysis.py": "3cb7ef775f1783a34731223345044ac9c3bc930975b09bfb7c1e24787e474851",
+    "apps/api/app/api/routes/imports.py": "c05593921f0407e1c1c4051076ad32f0658fe230bc562151d61383662d408d43",
+    "apps/api/tests/test_canjson_memory_bounds.py": "03e16c2a0d19c3049188115d1749d4ea2c09edc4ded79b3ee35c7159cc832cd4"
+  },
+  "verification": {
+    "serial_fresh_process_regressions": {
+      "final-import-batch": {
+        "tests": 97,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 72.49
+      },
+      "final-search-batch": {
+        "tests": 54,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 73.559
+      },
+      "final-feature-batch": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 40.771
+      }
+    },
+    "unique_serial_passed": 170,
+    "postgresql17_disposable": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 32.209
+    },
+    "postgres_instance_stopped_port_closed": true,
+    "first_combined_attempt": {
+      "passed": 160,
+      "failed": 2,
+      "stopped_early": true,
+      "failure": "Two tiny import commits returned 400; response detail was not captured. Cause unproven."
+    },
+    "separate_failed_case_recheck": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 7.297
+    },
+    "combined_diagnostic_recheck": {
+      "tests": 170,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 229.764
+    },
+    "diagnostic_boundary": "Synthetic TestClient observer only; memory probes/admission/response behavior were not overridden by the observer.",
+    "full_api_rerun": false,
+    "web_browser_rerun": false,
+    "linux_low_memory_soak": false,
+    "migration": "No new migration; single source head 20261017_0052.",
+    "publication": "Local working tree only. No commit/push/CI/deployment.",
+    "python_compilation_files": 21,
+    "alembic_single_head": "20261017_0052",
+    "diff_whitespace_passed": true
+  }
+}

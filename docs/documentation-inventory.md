@@ -1,5 +1,41 @@
 # Markdown 文档台账
 
+## Local search/gzip OOM continuation — 2026-10-19
+
+`execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md` and the separate
+`evidence/search-retention-2026-10-19.json` /
+`evidence/compressed-admission-2026-10-19.json` own this continuation's local
+snapshots, allocation/probe comparisons, real task failure/retry, native CanJSON
+selector fix and PostgreSQL/rollback limits. Project State/index distinguish
+these from unchanged production; Adaptive Import, Backend/API, API reference,
+testing and the capacity contract describe the same local boundary. No new
+migration, push, CI or deployment; the previous full API batch is historical,
+not relabelled as this continuation's complete rerun.
+
+## Authorized local OOM follow-up — 2026-10-19
+
+`execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md` and
+`evidence/server-body-retention-2026-10-19.json` own the local baseline/repair
+comparison, import commit admission, streaming draft/export retention, bounded
+search/legacy-archive batches and verification limits. Project State and index
+distinguish this new authorized working-tree repair from unchanged production
+`f3b331a/0052`; Adaptive Import, Backend/API, API reference and the capacity
+contract describe those local boundaries. No migration, push, CI or deployment.
+
+## Accepted feature/import release — 2026-10-19
+
+`execution/FEATURE_RELEASE_2026-10-19.md` and
+`evidence/feature-release-2026-10-19.json` own exact-source CI 39135555660,
+artifact 12141071331, the stopped-writer 0051→0052 migration, data comparison,
+authenticated/independent runtime acceptance, preserved guard failures and
+remaining low-memory/PID1/browser limits. Project State, index, deployment and
+deployment/environment facts now point to f3b331a/0052 and the mandatory
+consent-revoking direct rollback to 3e68d1f/0051. User flows and the API,
+Adaptive Import, Cleanup and Context contracts describe released behavior,
+not unshipped work. Fixed default Skill ZIPs are unchanged. Prior local records
+retain their original test boundaries; no broader docs restructure or extra
+push/CI/deployment is included in this documentation-only closeout.
+
 ## Authorized CI repair — 2026-10-18
 
 `execution/CI_QUALITY_REPAIR_2026-10-18.md` records run 39130940184's passing API,
@@ -10,38 +46,26 @@ PostgreSQL fallback and fixture-owned cleanup; `testing.md` preserves verificati
 limits. Project State and index distinguish the now-authorized/pushed release
 candidate from earlier local-only checkpoints and unchanged production.
 
-## Current local implementation — 2026-10-17
+## Table, TOC, cleanup and annotation implementation checkpoint — 2026-10-17
 
-The current worktree implementation for the table tool, TOC return checkpoint,
-protected cleanup review and annotation projection is described by:
-
-- `system/USER_FLOWS.md` — user-visible behavior and recovery paths.
-- `system/CONTENT_CLEANUP_CONTRACT.md` — rule versions, protection preview,
-  rescan/comparison, scan memory boundary and migration `20261017_0052`.
-- `system/CONTEXT_PACKAGE_CONTRACT.md` — Context 1.1, root `annotations.md`,
-  manifest files/hashes, online download and Skill compatibility.
-- `api-reference.md` — local-only endpoint and compatibility summary.
-- `PROJECT_STATE.md` — current source, verification boundary and no-release
-  status.
-- `execution/CHAT_READER_TABLE_TOC_CLEANUP_ANNOTATIONS_2026-10-17.md` —
-  dated implementation and verification evidence.
-
-The default fixed Skill ZIPs are intentionally not replaced. The two editable
-Skill runtimes and any reviewed local build are separate artifacts. This entry
-does not claim CI, browser/PWA, Linux worker, low-memory soak, push or
-deployment acceptance.
+`execution/CHAT_READER_TABLE_TOC_CLEANUP_ANNOTATIONS_2026-10-17.md` preserves
+the original implementation and local-test evidence. These capabilities and
+Context 1.1 were later included in the accepted `f3b331a` release; current
+contracts and verification limits are indexed in the
+[release record](execution/FEATURE_RELEASE_2026-10-19.md). Fixed default Skill
+ZIPs remain unchanged.
 
 ## Plain Markdown and contextual file-drop enhancement — 2026-10-18
 
-`execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md` owns the local
+`execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md` preserves focused
 verification for one-assistant plain Markdown import, route-aware file drops,
-destination persistence and the current-schema browser limitation. The current
-contract is in `system/ADAPTIVE_IMPORT_CONTRACT.md`; no migration, CI, push or
-deployment was performed.
+destination persistence and its then-pending browser test. The feature shipped
+in `f3b331a`; current contract and release limits are in
+`system/ADAPTIVE_IMPORT_CONTRACT.md` and the accepted release record.
 
 ## Multi-file import stability — 2026-10-18
 
-`execution/IMPORT_STABILITY_2026-10-18.md` owns the local stability evidence for
+`execution/IMPORT_STABILITY_2026-10-18.md` preserves the local stability evidence for
 bounded multi-file upload admission, durable queued initial adaptive analysis,
 Task Center recovery/cancellation and synchronous downstream FastAPI routes, and
 retryable resource-pressure responses, thread-safe admission initialization,
@@ -69,20 +93,22 @@ threshold through `MULTIPART_SPOOL_MAX_SIZE_KB` (default 64 KiB), so a
 multi-file batch cannot accumulate one megabyte of in-memory spool per file
 before route-level admission runs.
 This batch does not claim Linux/PID1, long-run low-memory, CI, or deployment
-acceptance, nor noise-specific production OOM causation.
+acceptance, nor noise-specific production OOM causation. The changes shipped in
+`f3b331a`; the release record owns current deployment status and remaining
+low-memory/PID1 acceptance limits.
 
 ## Local Unicode normalization — 2026-10-17
 
 `execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md` owns cross-character NFKC
 red/green reproduction, raw-envelope/old-consent semantics, runtime Unicode
 differentials, compact-origin performance iteration and remaining limits.
-`evidence/noise-unicode-normalization-2026-10-17.json` binds local source,
+`evidence/noise-unicode-normalization-2026-10-17.json` binds the historical local source,
 aggregate scalar/work counts, synthetic timing/allocation, final related
 **237 / 1 capability skip** and fresh PostgreSQL **10/10**. It stores no raw
 source/rule text or business identities. Project State, index, testing and
-`system/CONTENT_CLEANUP_CONTRACT.md` now resolve the earlier open NFKC item;
-the earlier literal evidence remains unchanged history. Production is still
-3e68d1f/0051; this continuation makes no CI/push/deployment claim.
+`system/CONTENT_CLEANUP_CONTRACT.md` resolve the earlier open NFKC item; the
+earlier literal evidence remains unchanged history. Current production status
+is recorded in the accepted 2026-10-19 release.
 
 ## Local literal matching — 2026-10-17
 
@@ -94,8 +120,8 @@ trial-to-refined-apply evidence (**194 / 1 capability skip**, separate PostgreSQ
 retains aggregate measurements, source binding and three still-failing Unicode
 equivalence probes without source/rule text at that checkpoint. The Unicode
 follow-up above owns their later repair; these historical results are not
-rewritten as if already passing. Current summaries distinguish both local
-batches from accepted production 3e68d1f/0051.
+rewritten as if already passing. Current production status is in the accepted
+release record.
 
 ## Local worker shutdown — 2026-10-17
 
@@ -107,8 +133,8 @@ SQLite race reproductions before the fix). Current related tests pass
 **127 / 4 POSIX-only skipped**, plus **4/4** disposable PostgreSQL 17 ordering
 cases with confirmed row-lock waits. Initial PostgreSQL missing-owner fixture
 errors and Windows/POSIX/PID 1 limits remain explicit. Project State, testing,
-index and `system/OBSERVABILITY_CONTRACT.md` distinguish this unshipped work
-from production 3e68d1f. No production/CI/push occurs in this continuation.
+index and `system/OBSERVABILITY_CONTRACT.md` distinguish this historical
+checkpoint from released behavior and its still-unverified Docker PID 1 limits.
 The observability contract also corrects its stale 100,000-entry description:
 the deployed diagnostic call explicitly supplies 2,000 entries / 150 ms per root.
 
@@ -124,7 +150,8 @@ the older 0050 downgrade rule separate. They preserve the initial false-negative
 helper rollback, the live-writer backup's non-atomicity boundary and existing
 stopped-writer recovery point; no host-global settings, other applications,
 business storage or PostgreSQL were changed. No retention cleanup occurred.
-Future optimization is local only; no proactive CI, push or deployment.
+At that 2026-10-17 checkpoint, further optimization was local only. The later
+accepted release and current stop boundary are recorded above.
 
 ## Accepted UX release and low-memory deployment — 2026-10-16
 

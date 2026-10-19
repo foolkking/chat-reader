@@ -1,6 +1,11 @@
 # Adaptive Import Contract
 
-## Durable initial analysis task (2026-10-18, local only)
+Released in source `f3b331a` on 2026-10-19 Asia/Shanghai. See the
+[accepted release and low-memory limits](../execution/FEATURE_RELEASE_2026-10-19.md).
+The initial-analysis task type itself needs no migration; release schema 0052
+belongs to protected cleanup review.
+
+## Durable initial analysis task
 
 Creating a multi-file adaptive import no longer parses/analyzes the batch
 inside the upload request. The synchronous upload handler performs admission
@@ -29,7 +34,7 @@ specifically removes the initial multi-file analysis from the request path; it
 does not assert that every parse path is queued or that a single oversized
 source has constant memory cost.
 
-## Import responsiveness and bounded retention (2026-10-18, local only)
+## Import responsiveness and bounded retention
 
 Ordinary import preview and stored-source replacement/reanalysis are synchronous
 FastAPI routes: parsing and analysis run in the thread pool, not directly on the
@@ -61,7 +66,48 @@ PostgreSQL already uses a real outer transaction.
 No user import files or production configuration were changed. See
 [implementation, synthetic regressions and incident evidence](../execution/IMPORT_STABILITY_2026-10-18.md).
 
-## Plain Markdown and drop-based destination (2026-10-18, local only)
+### Local working-tree follow-up — 2026-10-19, not released
+
+Draft writing now incrementally serializes existing dataclass/list containers,
+instead of cloning the entire conversation with `asdict` and creating complete
+JSON text/bytes copies. The JSONL bytes, hash and draft schema are unchanged.
+Commit measures the next conversation record with reads no larger than 1 MiB,
+checks its existing size limit before materializing it, and independently
+rechecks current memory headroom through the shared admission gate. Even small
+commit records require a measurable fixed reserve plus the configured input
+multiplier. The slot is held while that conversation is converted/persisted and
+released before the next one; independent conversations are not summed.
+Both nested generators close explicitly on persistence failure, so retained
+exception tracebacks do not keep the slot occupied until garbage collection.
+
+Insufficient/unknown headroom fails the existing import task with an explicit
+retry/split message and leaves its durable inputs available. An admission
+failure later in the stream rolls back earlier conversations in the outer
+transaction. This is not an automatic busy-loop retry or an OS memory
+reservation. Search rebuild reads full bodies in batches of eight and flushes
+pending index rows after 500 records or roughly 2 Mi text characters, whichever
+comes first; one oversized row can exceed that soft batch target.
+See [local evidence and remaining limits](../execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md).
+
+### Local compressed-input continuation — 2026-10-19, not released
+
+CanJSON JSONL reads are bounded to 64 KiB per read, preserving the existing
+line-size/compression-ratio limits and bytes. For gzip, cumulative expansion
+beyond the larger of compressed size and heavy threshold triggers the same
+fixed-reserve/input-factor headroom estimate, then repeats after roughly each
+additional MiB. The check runs before extending/decoding an unadmitted large
+record; gzip source detection uses the same path for its manifest. It does not
+reacquire a parser slot already owned by the outer request/worker.
+
+Insufficient/unknown headroom remains a resource failure, not mapping drift.
+Synchronous preview/mapping handlers return the existing retryable 429; initial
+analysis fails its existing task transaction, retains staged sources and can
+retry the same job ID after capacity returns. Native CanJSON's absent generic
+selectors no longer cause `KeyError`; its matched built-in normalizer remains
+authoritative. No source, protocol or migration rewrite is involved.
+See [the continuation and exact test boundaries](../execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md).
+
+## Plain Markdown and drop-based destination
 
 Markdown that does not contain reliable repeated message boundaries is treated
 as one conversation with the complete source file preserved as a single
@@ -83,9 +129,11 @@ project checks are enforced on the server. A selected destination is immutable
 once canonical commit has started. Existing `.cr` routing remains the archive
 restore flow.
 
-This feature is local-only and adds no migration. Its API, component and
-Playwright verification status is recorded in
-[import destination and plain Markdown evidence](../execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md).
+This feature adds no migration and shipped in source `f3b331a`. The dated
+[implementation record](../execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md)
+retains its focused tests and the then-pending mounted-browser test; release
+and production acceptance limits are in the
+[accepted release record](../execution/FEATURE_RELEASE_2026-10-19.md).
 
 ## Adaptive handling classes (2026-08-25)
 

@@ -1,28 +1,41 @@
 # 部署与运行环境
 
-Current production is **`3e68d1f`**, Alembic **`20261015_0051`**, accepted
-2026-10-17 at 00:53:53 UTC. Exact-source CI **38933466143** attempt 2 passes
-all five jobs; original artifact **12082341034**, 50 OCI blobs, embedded repair
-source and source-matched support independently pass. Only application images
-changed: no migration, PostgreSQL restart, configuration/checkout change,
-storage mutation or pruning. API/Web/HTTPS healthy, worker fresh, all three
-applications zero restarts/OOM/startup error-keyword lines at acceptance;
-public diagnostics is 404. No full diagnostics or production-browser test ran.
-See [OOM repair acceptance](../execution/OOM_STABILITY_2026-10-17.md#accepted-release).
+Current production is **f3b331a / 20261017_0052**, accepted
+**2026-10-18 16:21:58 UTC / 2026-10-19 00:21:58 +08:00**. Exact-source CI
+**39135555660** attempt 1 passes all five jobs; original artifact **12141071331**,
+50 OCI blobs, 330 API source files and exact-source support were independently
+verified. API/Web/HTTPS/authenticated read-only smoke pass; worker is fresh.
+New applications have zero restarts/OOM/startup error-keyword lines at acceptance.
+See [release, failed guards and remaining limits](../execution/FEATURE_RELEASE_2026-10-19.md).
 
-Current/direct rollback is **3e68d1f/aea13fe**, both on 0051, exact old images
-loaded. Do **not** downgrade for this pair. Historical rollback to 84988a2 or
-older still requires the tested consent-revoking 0051→0050 downgrade. The
-release-state warning now distinguishes both boundaries; previous text remains
-in the release directory. Use the current release's lightweight health probe
-even if reverting applications; never full diagnostics inside the serving API.
+A verified stopped-writer five-component backup **chat-reader-20261018T160748Z**
+precedes 0051→0052. Migration adds only nullable JSON `protection_review`, with
+old rows left NULL. All old columns in 84 tables, four storage roots, 313
+attachment hashes and 67 stable counts match. PostgreSQL identity/start/restarts,
+production environment, Compose/Nginx and operational checkout are unchanged.
+No owner-auth reconciliation, source backfill, file isolation or pruning ran.
+The three previous backups and independent orphan preservation remain.
 
-Fresh backup **`chat-reader-20261017T003936Z`** passes all five-component
-integrity checks but was captured before writer stop and is not a cross-component
-atomic snapshot. Existing `20261012T143850Z` and stopped-writer
-`20261016T152523Z` backups and independent orphan preservation remain.
-No backups/images/data were pruned. Subsequent optimization is local only,
-without proactive CI, push or deployment until the user asks again.
+Current/direct rollback is **f3b331a/3e68d1f**; exact old images are loaded.
+It crosses **0052→0051**: stop writes, take a fresh verified backup and execute
+the new image's consent-revoking downgrade before old code starts. Never merely
+switch images or manually drop the column. `rollback-0052-warning.txt` is
+installed beside the preserved older warning. Use only lightweight readiness;
+never full diagnostics in the serving API or a check-only overlay with `up`.
+
+Shared RAM remains about 1.83 GiB, with roughly 252 MiB available at independent
+audit. Release one-offs used a 192 MiB cap, 384 MiB memory+swap, 0.5 CPU and
+256 MiB additional host headroom; serving settings and other applications were
+not changed. This is not business-load/60-minute low-memory or Docker PID 1
+acceptance. Fixed default Skill ZIPs remain unchanged. No proactive follow-up
+push, CI, deployment or optimization is active.
+
+## Previous OOM repair — 2026-10-17
+
+The former **3e68d1f/0051** acceptance and its same-schema 3e68d1f/aea13fe
+rollback were valid at that time. They do not override the new 0052 boundary.
+Their diagnostics isolation, backup and verification history remains in the
+[OOM release record](../execution/OOM_STABILITY_2026-10-17.md#accepted-release).
 
 ## Previous accepted UX release — 2026-10-16
 

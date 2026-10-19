@@ -1,20 +1,19 @@
 # 本地开发
 
-## 当前本地导入队列（2026-10-18，未发布）
+## 当前生产导入队列
 
 首次多文件 adaptive analysis 通过通用 `BackgroundJob` 和现有单 worker
 运行；会话创建请求只做有界流式暂存并返回任务 ID。关闭导入窗口不会停止
-任务，进度和结果在任务中心。复用该 job 类型不新增 migration。当前本地
-Alembic head 为 `20261017_0052`（生产仍为 `20261017_0051`）；执行
-`alembic heads` 应只输出一个 head。有关失败重试、取消边界和源文件保留，
-见 [Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)。
-这项本地工作尚未运行 CI 或部署。
+任务，进度和结果在任务中心。复用该 job 类型不新增 migration。当前生产和
+源码 Alembic head/current 均为 `20261017_0052`；执行 `alembic heads`
+应只输出一个 head。有关失败重试、取消边界和资源验收限制，见
+[Adaptive Import Contract](system/ADAPTIVE_IMPORT_CONTRACT.md)及
+[发布记录](execution/FEATURE_RELEASE_2026-10-19.md)。
 
-## 当前工作树账户基线（2026-09-01）
+## 账户与 owner 边界基线（2026-09-01 引入）
 
 当前工作树包含多账户 owner 边界：部署时只设置一个 `ADMIN`，后续账号为
-`USER`。私有记录按已认证用户 UUID 隔离。当前生产为
-`20261017_0051`；本地工作树新增 cleanup review migration 后为
+`USER`。私有记录按已认证用户 UUID 隔离。当前生产 schema 为
 `20261017_0052`，详细状态见 `PROJECT_STATE.md`。
 首次账号请使用 `apps/api/scripts/owner_auth.py`，以运维输入的真实邮箱和交互式
 强密码创建；凭据不得写入仓库。
@@ -47,9 +46,9 @@ python -m alembic heads
 Set-Location ../..
 ```
 
-`alembic heads` 应只有一个结果。当前本地源码 head 是
-`20261017_0052`；生产仍为 `20261017_0051`。生产执行前必须完成备份和 migration
-preflight。
+`alembic heads` 应只有一个结果。当前生产 schema 为 `20261017_0052`。
+后续生产 migration 执行前必须完成备份和 migration preflight；回退至 0051
+必须先执行撤销保护删除授权的 downgrade，详见发布记录。
 
 当前 Content Cleanup 支持从规则库主动启动一次低优先级的
 `BATCH / ALL_ACTIVE` 后台审查。目标包括项目内和未分类的活动对话，归档

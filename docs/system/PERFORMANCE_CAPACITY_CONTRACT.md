@@ -100,3 +100,24 @@ bytes/semantics, request-ID privacy, and cleanup protection.
 
 Detailed Release D results are recorded in
 [`PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md`](../evidence/PERFORMANCE_CHARACTERIZATION_REPORT_2026-08-14.md).
+
+## Local body-retention regression — 2026-10-19
+
+The [local import/export follow-up](../execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)
+compares current source with exact baseline `f3b331a` on a small synthetic
+129-message/three-version SQLite fixture. Weak references measure live body
+entities and `tracemalloc` measures Python allocation; native PostgreSQL tests
+separately exercise cursors/COPY and snapshot consistency.
+This is a localized allocation/correctness regression, not a new capacity class,
+RSS benchmark, Linux stack test or 2 GiB/60-minute acceptance. Smaller batches
+can increase query/elapsed costs; the micro timings are not throughput promises.
+No production workload, configuration or deployment was changed.
+
+The [next continuation](../execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
+separately measures attachment metadata and annotation-index retention against
+its pre-continuation local snapshots. Gzip uses a bounded synthetic expansion
+and zero/ample memory probes; rejection before decoding is not an induced OOM
+or a Linux capacity result. Output equivalence and actual PostgreSQL
+join/delete/rollback tests accompany the allocation results. No new capacity
+class or throughput promise is inferred, and the 2 GiB/60-minute gate remains
+unexecuted.

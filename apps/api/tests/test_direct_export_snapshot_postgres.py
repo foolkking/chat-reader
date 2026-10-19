@@ -38,7 +38,7 @@ def add_message(db, conversation_id, index, body):
 
 
 @pytest.mark.parametrize("format,compression", [
-    ("markdown_v2", "none"), ("canjson_v2", "none"),
+    ("markdown", "none"), ("markdown_v2", "none"), ("canjson_v2", "none"),
     ("canjson_v2", "gzip"), ("canonical_json", "none"),
 ])
 def test_concurrent_edit_delete_insert_and_notes_keep_one_snapshot(isolated_schema, monkeypatch, format, compression):
@@ -61,7 +61,9 @@ def test_concurrent_edit_delete_insert_and_notes_keep_one_snapshot(isolated_sche
         reordered_id = messages[0].id
 
     changed = False
-    iterator_name = "_iter_message_payloads" if format == "canonical_json" else "_current_message_batches"
+    iterator_name = {
+        "canonical_json": "_iter_message_payloads", "markdown": "_iter_legacy_message_rows",
+    }.get(format, "_current_message_batches")
     original = getattr(export_service, iterator_name)
 
     def with_concurrent_commit(*args, **kwargs):

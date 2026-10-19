@@ -1,13 +1,14 @@
 # Content Cleanup Contract
 
-## Current worktree overlay — 2026-10-17 (local only)
+## Current protected-review contract — released 2026-10-19
 
-The current working tree adds a protected-match review flow without changing
-the rule language or making deletion automatic. The single local Alembic head
+Source `f3b331a` adds a protected-match review flow without changing
+the rule language or making deletion automatic. Production's single Alembic head
 after the existing cleanup migrations is `20261017_0052`; it adds nullable
-`content_cleanup_occurrence.protection_review`. Existing rows remain `NULL`,
+`content_cleanup_occurrences.protection_review`. Existing rows remain `NULL`,
 no old selection is backfilled as consent, and message/import data is not
-rewritten. This migration is not applied to production.
+rewritten. Migration/data/runtime acceptance and the consent-revoking rollback
+boundary are in the [release record](../execution/FEATURE_RELEASE_2026-10-19.md).
 
 Candidate responses expose the pinned detector/rule revision, actual matcher
 settings, evidence and protection reasons. Built-in explanations are
@@ -85,7 +86,7 @@ Rules have immutable revisions. Built-in rules reference versioned detector iden
 
 Detection is layered rather than a single global regular expression. Built-in syntax noise first uses exact structural grammar. Known short syntax tokens may then use NFKC normalization or at most one edit only when an exact citation-reference grammar anchors the candidate. User literals use their selected exact, normalized or bounded-approximate mode. Approximate scanning does not compare arbitrary full message windows and has bounded anchors, length and edit distance.
 
-Each occurrence records detector version, match mode and evidence codes in addition to its location. Ordinary candidates default to `KEEP`; protected Markdown ranges default to unselected `PROTECTED`. In the local 0052 flow above, protected candidates may be selected only after explicit version-bound risk confirmation; production 0051 clients still keep them protected. Explicit decisions persist immediately and record their save time. Rules never modify source while scanning. Normal fields, tables and syntax examples do not become noise merely by containing marker keywords. Unknown and approximate markers remain suggestions requiring confirmation.
+Each occurrence records detector version, match mode and evidence codes in addition to its location. Ordinary candidates default to `KEEP`; protected Markdown ranges default to unselected `PROTECTED`. In the released 0052 flow above, protected candidates may be selected only after explicit version-bound risk confirmation; older clients without confirmation still keep them protected. Explicit decisions persist immediately and record their save time. Rules never modify source while scanning. Normal fields, tables and syntax examples do not become noise merely by containing marker keywords. Unknown and approximate markers remain suggestions requiring confirmation.
 
 The review workspace groups by rule and conversation, uses a group-list/detail flow on small screens, and supports selected-only filtering. Ordinary filtered bulk selection covers all matching pages, excluding protected and conflicted rows. The separate include-protected action requires the local confirmation flow above; conflicts remain excluded. Full before/after text is paged by message; the apply confirmation names conversation, message and fragment counts. A version/selection-bound preview token rejects changes made after preview. Legacy apply callers remain compatible, but cannot delete candidates without a recorded explicit decision and required protection review.
 

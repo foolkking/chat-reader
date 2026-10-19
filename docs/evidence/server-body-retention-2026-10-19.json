@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-19",
+  "baseline": "f3b331a53a593f4cdb84a37f9eb25f13379f3eb5",
+  "environment": "Windows Python 3.11.7 / SQLite; small synthetic allocation experiment, not Linux RSS/capacity",
+  "fixture": {
+    "messages": 129,
+    "versions_per_message": 3,
+    "text_repetitions": 1024
+  },
+  "working_tree_files": {
+    "apps/api/app/services/exporting/cr_archive.py": "2776616068b1abf40207588901edeb952b2d3300c158dfc0e1d9c92cb9db1634",
+    "apps/api/app/services/exporting/export_service.py": "a0086cd9f666bf1dbc1e5777796d9c2175a1300e4c39deffc4e9f37a324491d8",
+    "apps/api/app/services/exporting/prepared_export.py": "26f8bb029ed8b69423d77fc8fc2f6d80da87da49901e8c0472a37d7f5fbc9a18",
+    "apps/api/app/services/offline_packages.py": "3a5c643bb856868d8059d2a121a6073077e28625b42580bcf44809a85e70f091",
+    "apps/api/app/services/import_pipeline/draft_store.py": "99ef1888c67d8c1a7abbd8b8a2a859509a7dea08d00059c644186c5bc4f9bcd8",
+    "apps/api/app/services/search/search_indexer.py": "771f2ce7804a75dd9b0bdc34782a62c16b513111f09356a89e24e96b60a312ab",
+    "apps/api/app/services/canonical/persistence.py": "b11754a1a23eca67c3c13a38ce69d924af6a58634c66d41986c8c6ee6d2e9eac"
+  },
+  "measurements": {
+    "before": {
+      "cr": {
+        "elapsed_ms_under_tracemalloc": 472.695,
+        "peak_python_allocation_bytes": 17154620,
+        "loaded_versions": 387,
+        "peak_retained_versions": 387
+      },
+      "markdown": {
+        "elapsed_ms_under_tracemalloc": 260.175,
+        "peak_python_allocation_bytes": 9358449,
+        "loaded_versions": 129,
+        "peak_retained_versions": 129
+      },
+      "offline": {
+        "elapsed_ms_under_tracemalloc": 220.145,
+        "peak_python_allocation_bytes": 5581868,
+        "loaded_versions": 129,
+        "peak_retained_versions": 129
+      },
+      "search": {
+        "elapsed_ms_under_tracemalloc": 124.257,
+        "peak_python_allocation_bytes": 6663758,
+        "loaded_versions": 0,
+        "peak_retained_versions": 0,
+        "indexed": 130,
+        "largest_batch_records": 130,
+        "largest_batch_text_chars": 4232943
+      },
+      "draft_writer": {
+        "elapsed_ms_under_tracemalloc": 56.431,
+        "peak_python_allocation_bytes": 13117712,
+        "loaded_versions": 0,
+        "peak_retained_versions": 0
+      }
+    },
+    "after": {
+      "cr": {
+        "elapsed_ms_under_tracemalloc": 424.454,
+        "peak_python_allocation_bytes": 1920816,
+        "loaded_versions": 387,
+        "peak_retained_versions": 2
+      },
+      "markdown": {
+        "elapsed_ms_under_tracemalloc": 293.464,
+        "peak_python_allocation_bytes": 1565889,
+        "loaded_versions": 129,
+        "peak_retained_versions": 2
+      },
+      "offline": {
+        "elapsed_ms_under_tracemalloc": 425.096,
+        "peak_python_allocation_bytes": 1771018,
+        "loaded_versions": 129,
+        "peak_retained_versions": 8
+      },
+      "search": {
+        "elapsed_ms_under_tracemalloc": 157.495,
+        "peak_python_allocation_bytes": 2604603,
+        "loaded_versions": 0,
+        "peak_retained_versions": 0,
+        "indexed": 130,
+        "largest_batch_records": 65,
+        "largest_batch_text_chars": 2100098
+      },
+      "draft_writer": {
+        "elapsed_ms_under_tracemalloc": 79.93,
+        "peak_python_allocation_bytes": 93878,
+        "loaded_versions": 0,
+        "peak_retained_versions": 0
+      }
+    }
+  },
+  "output_equivalent": {
+    "cr": true,
+    "markdown": true,
+    "offline": true,
+    "draft": true
+  },
+  "regression_test_files": {
+    "apps/api/tests/test_export_memory_bounds.py": "ad5b7fbe2288fd8846e51f1e5eb0f677fca4619f6c4b654103f9fca7f69c7448",
+    "apps/api/tests/test_import_draft_streaming.py": "bbd13653c5ec7cfc3b649509b66e8e218beb8a3a6dec2d7d3ed823f161cbb77d",
+    "apps/api/tests/test_direct_export_snapshot_postgres.py": "8b7691a8ceba0d5f30e4470e666204c90407ded15a53f877937670045d50ab83",
+    "apps/api/tests/test_cr_archive_postgres.py": "4688003667c359cc569e8254a33113c8723831da3787c7f0f8e22e3f87d5ac6d"
+  },
+  "status": "local_working_tree_only_not_deployed",
+  "method": "Same synthetic SQLite source; exact HEAD service modules vs working tree; downloads spooled, weak-reference live-body counts and tracemalloc allocation. Not process RSS.",
+  "validation": {
+    "focused_bounds_and_draft_passed": 30,
+    "earlier_staged_functional_passed": 27,
+    "disposable_postgresql_17_snapshot_passed": 9,
+    "disposable_postgresql_17_cursor_copy_passed": 1,
+    "disposable_postgresql_stopped": true,
+    "full_local_api": {
+      "mode": "all_modules_in_serial_fresh_process_batches",
+      "module_count": 219,
+      "batch_count": 16,
+      "tests": 1595,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 179,
+      "passed": 1416,
+      "all_complete": true,
+      "note": "Repeated/focused runs are not added to the total; this is not a passing one-process or CI run."
+    },
+    "offline_search_cursor_test": {
+      "read_batch": 8,
+      "tested_live_entity_cap": 16,
+      "records": 34
+    },
+    "initial_postgresql_fixture_failure": "Missing synthetic job owner; fixture fixed, unchanged constraint, rerun passed.",
+    "initial_body_bound_assertion_failure": "A strict single-window assumption expected 8 SearchDocument entities; the cursor overlapped two windows (16). Production read batch stays 8; regression checks the two-window bound and all output records.",
+    "initial_one_process_api_attempt": "Interrupted after failures; observed pytest RSS about 1282.5 MiB and parallel tiny-test admission failures. No complete failure inventory; not all failures attributed to RAM. Context recheck separately passed 39.",
+    "tiny_draft_fixture_probe": "Fixed synthetic 16 GiB headroom for protocol tests only; explicit 0/None negative cases retained; production admission unchanged.",
+    "corrected_command_attempts": "Earlier root-cwd Alembic and malformed PowerShell basetemp commands did not pass; corrected commands succeeded.",
+    "alembic_heads": [
+      "20261017_0052"
+    ],
+    "service_files_compile_passed": 7
+  },
+  "limitations": [
+    "No new commit/CI/push/deployment or production mutation",
+    "Docker Linux test environment unavailable at attempted check; no Linux stack or 2 GiB/60-minute soak",
+    "No production OOM causation proven; Python allocation/live-entity measurements are not RSS",
+    "Per-record/metadata, historical no-draft fallback and cross-process costs remain; admission is an estimate, not a hard reservation",
+    "Smaller batches can increase query/elapsed cost; micro timings are not throughput claims",
+    "No full one-process local API pass or new Web/PWA/browser gate claimed"
+  ]
+}

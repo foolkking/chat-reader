@@ -241,6 +241,18 @@ def _required_analysis_memory_bytes(sizes: Iterable[int], settings: Settings) ->
     return reserve_bytes + input_bytes * factor
 
 
+def require_analysis_memory_headroom(input_bytes: int) -> None:
+    """Recheck a growing decoded input without taking a second parser slot.
+
+    Compressed inputs can expand after the outer upload/worker admission.
+    This is only a headroom estimate, not a reservation or a replacement for
+    the caller's existing concurrency gate.
+    """
+    required = _required_analysis_memory_bytes([input_bytes], get_settings())
+    if not _memory_is_available(required):
+        raise _memory_pressure_error()
+
+
 def _memory_is_available(required_bytes: int) -> bool:
     available = available_memory_bytes()
     # Heavy parsing fails closed if this host/container cannot report

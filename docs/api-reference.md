@@ -1,9 +1,14 @@
 # API 参考
 
-## Current worktree additions — 2026-10-17 (local only)
+## Current released additions — 2026-10-19
 
-The following contracts are implemented in the current worktree and are not
-deployed or part of the current production API:
+The following contracts ship in accepted source `f3b331a`. Migration/data,
+exact-source CI and runtime boundaries are in the
+[release record](execution/FEATURE_RELEASE_2026-10-19.md):
+
+Older dated sections below preserve their original checkpoint wording; labels
+such as “local only” or “not deployed” describe that checkpoint, not the
+current accepted production release.
 
 - `POST /api/adaptive-import/sessions` streams bounded uploaded files into a
   temporary session, creates a durable `adaptive_import_analysis` task and
@@ -40,12 +45,13 @@ records; `included_content.annotation_document` describes the projection.
 extension records version, status, path and included count. Current/Index
 continuation members are unchanged. See [Context Package](system/CONTEXT_PACKAGE_CONTRACT.md).
 
-Migration `20261017_0052` adds nullable `protection_review`; it is a single
-local head and has not been applied to production. Fixed default Skill ZIPs
+Migration `20261017_0052` adds nullable `protection_review`; it is the single
+production head/current, with existing rows left NULL. Fixed default Skill ZIPs
 remain unchanged; only editable runtimes/reviewed local builds understand the
 new annotation projection.
 
-Local noise range editing (2026-10-15, migration 0051 **not applied**):
+Earlier range-editing source checkpoint (2026-10-15; its then-unapplied 0051
+migration is included in current production 0052):
 
 - GET `/api/content-cleanup/scans/{scan_id}/occurrences/{occurrence_id}`
   reads one owner-scoped `CleanupOccurrenceRead`. Occurrence responses add
@@ -65,7 +71,8 @@ Local noise range editing (2026-10-15, migration 0051 **not applied**):
   candidate counts. Refresh preview after any choice/range change.
 
 See [range contract](system/CONTENT_CLEANUP_CONTRACT.md#editable-candidate-ranges-local-source-2026-10-15).
-New API source requires schema 0051; production API/schema remain unchanged.
+At that checkpoint the change required schema 0051 and had not yet shipped;
+the migration is now included in production schema 0052.
 
 Conversation metadata contract (unchanged backend, verified 2026-10-09): PATCH
 `/api/conversations/{conversation_id}` returns canonical `ConversationDetail`.
@@ -247,6 +254,16 @@ permission and missing-resource behavior is unchanged. See the
 [direct-download contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md) and
 [release status](execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md).
 
+Local working tree, 2026-10-19 (not deployed): legacy Markdown uses incremental
+generation before the same spool, preserving its MIME/name/content semantics.
+Legacy conversation `.cr` reads now enforce `CANJSON_MAX_LINE_BYTES` on JSON
+documents/JSONL records and the existing `BUNDLE_MAX_COMPRESSED_BYTES`,
+`BUNDLE_MAX_EXPANDED_BYTES`, `BUNDLE_MAX_OBJECT_BYTES` limits before parsing or
+asset staging. Ordinary v1/v2/v3 archives remain readable within those limits;
+oversized archives/records fail explicitly rather than being fully allocated.
+This does not change personal/system `.cr` format versions or Context members.
+See [local OOM follow-up](execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md).
+
 ## Export lifecycle extension (deployed 2026-10-06)
 
 Migration `20261006_0048` adds owner-scoped `/api/exports/{id}` GET status,
@@ -334,7 +351,7 @@ creation and content PATCH return 422. Metadata operations and legacy content
 reads remain compatible. Replacement retains base-revision conflict protection.
 The settings UI offers ZIP download/replacement without content/history viewing.
 
-## Skill Bundle backend（工作树，2026-10-02；未部署）
+## Skill Bundle backend（2026-10-02 implementation checkpoint）
 
 - `POST /api/skills` accepts `.zip` Bundles or legacy `.md`; response adds
   `bundle_revision` and revision-pinned `bundle_url`. Existing text routes remain.
@@ -527,9 +544,9 @@ Stable failure codes are `BATCH_EXPORT_SOURCE_UNAVAILABLE`,
 | --- | --- | --- |
 | `POST` | `/api/tasks/{job_id}/cancel` | Cancel a conversation merge or ordered deletion. A running job returns `cancelling`; a queued/already-cancelled job returns `cancelled`; completed or unsupported tasks return `409`. |
 | `POST` | `/api/conversations/batch-delete` | Queue ordered permanent deletion of one or more conversations; returns `202 BackgroundTaskRead`. The task commits one conversation at a time, reports `deleted_ids` progress, and supports stopping only the not-yet-started items via `/api/tasks/{job_id}/cancel`. |
-| `GET` | `/api/conversations/batch-delete/requests/{request_key}` | Read the authenticated owner's retained deletion admission; returns `{found, task}` without submitting or restarting deletion. Local source-only addition, not deployed. |
+| `GET` | `/api/conversations/batch-delete/requests/{request_key}` | Read the authenticated owner's retained deletion admission; returns `{found, task}` without submitting or restarting deletion. Included in accepted source `f3b331a`. |
 
-Ordered deletion 的本地更新（2026-10-14，未运行验证、未部署）保留可选
+Ordered deletion 的兼容更新保留可选
 `Idempotency-Key`；非空 key 最长 200 字符。相同账户/key 绑定按首次出现去重后的
 conversation ID **顺序**，所有保留状态均返回同一个最早任务，包括 failed/cancelled，
 不会自动重新 admission。改变目标或顺序返回 `409 DELETE_REQUEST_CONFLICT`。
@@ -588,6 +605,13 @@ Adaptive JSON / Markdown：
 
 产品导入只有 Adaptive JSON / Markdown 与 `.cr` archive 两类入口。CanJSON v1/v2 与原生 Chat Reader 格式是 Built-in Profile；单 Markdown 是正式 source mode。Import Profile 不保存正文，匹配结果会解释 hard requirements、semantic guards、compatibility 与 drift。READY 后仍使用现有 `/api/imports/{id}/commit` durable commit contract。
 
+本地续查（2026-10-19，未发布）：gzip 来源识别/CanJSON 解析在累计展开超过
+压缩大小与重型阈值的较大值后，按展开量复查内存余量；不是只看上传大小。
+资源不足/未知时，预览及同步分析返回已有 `UPLOAD_MEMORY_PRESSURE` 429，
+附 `Retry-After: 15`，不误报格式漂移。初始后台分析明确失败并保留来源，
+可通过原 task retry 重新执行；不新增路由、字段或自动重试循环。
+详见[压缩输入合同](system/ADAPTIVE_IMPORT_CONTRACT.md#local-compressed-input-continuation--2026-10-19-not-released)。
+
 ## Conversations
 
 | Method | Path | 说明 |
@@ -597,7 +621,7 @@ Adaptive JSON / Markdown：
 | PATCH | `/api/conversations/{id}` | 重命名或修改 active/archived 状态 |
 | DELETE | `/api/conversations/{id}` | 不可恢复硬删除；同事务删除关系，仅在无真实引用时删除 AssetObject |
 | POST | `/api/conversations/merge` | 按请求顺序排队非破坏式合并，返回 `202 BackgroundTaskRead` |
-| GET | `/api/conversations/merge/requests/{request_key}` | 本人原合并请求的只读回执；返回 `{found, task}`，不排队或重试（本地新增，未部署） |
+| GET | `/api/conversations/merge/requests/{request_key}` | 本人原合并请求的只读回执；返回 `{found, task}`，不排队或重试（已包含于 accepted source `f3b331a`） |
 | POST | `/api/conversations/{id}/split` | 从连续消息范围创建新会话 |
 | POST | `/api/conversations/{id}/split-workspace/preview` | 校验并预览 range/boundary/discrete 拆分计划，不写数据 |
 | POST | `/api/conversations/{id}/split-workspace` | 按已校验计划创建一个或两个新会话，来源不变 |
@@ -673,7 +697,7 @@ reads a fresh snapshot. No partial-success artifact is published on corruption.
 `expires_at`，与归档历史使用相同服务；文件移除或过期不改变任务已完成的事实，
 但不再显示为可用于新的恢复。读取仍受当前账户归属限制，不返回物理存储路径。
 
-Conversation merge 的本地更新（2026-10-09，未部署）保留可选的
+Conversation merge 兼容性检查点（2026-10-09；当时尚未部署）保留可选的
 `Idempotency-Key` 请求头；非空 key 最长 200 字符。相同账户/key 绑定解析后的
 原 conversation ID **顺序**、title 与 project ID。相同请求返回最早保留的任务，
 包括 queued、processing、cancelling、committed、failed、cancelled；失败或取消
@@ -687,8 +711,9 @@ PostgreSQL 使用账户/key 事务 advisory lock 串行化 admission；本地并
 是否仍存在；读取不受 Task Center active-result 窗口限制，但仅在原任务记录仍存在
 时可恢复。失败读取不能当作不存在，恢复也不自动 POST；现有任务 retry/cancel
 和源内容保留语义不变，无 migration。实现与验收边界见
-[合并审查](execution/ux-audit-merge-admission-2026-10-09.md)和
-[保留合同](system/RETENTION_CONTRACT.md)。
+[合并审查](execution/ux-audit-merge-admission-2026-10-09.md)、
+[保留合同](system/RETENTION_CONTRACT.md)和
+[当前发布记录](execution/FEATURE_RELEASE_2026-10-19.md)。
 
 ## Search And TOC
 

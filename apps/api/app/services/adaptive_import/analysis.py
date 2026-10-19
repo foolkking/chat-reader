@@ -310,9 +310,11 @@ def default_mapping(analysis: AnalysisResult) -> dict[str, Any]:
             "source_mode": "JSON",
             "conversation": {"title": selected.get("title")},
             "messages": {
-                "locator": selected["locator"],
-                "role": selected["role"],
-                "content": selected["content"],
+                # Native CanJSON recognition has no generic selectors. Its
+                # pinned built-in normalizer, not this mapping, reads records.
+                "locator": selected.get("locator"),
+                "role": selected.get("role"),
+                "content": selected.get("content"),
                 "external_id": selected.get("external_id"),
                 "timestamp": selected.get("timestamp"),
             },

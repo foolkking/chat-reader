@@ -42,9 +42,9 @@ from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_o
 ProgressCallback = Callable[[str, int, int, int], None]
 ConversationProgressCallback = Callable[[str, int, int], None]
 
-# A larger read batch keeps large offline exports from issuing one query per
-# handful of messages while still bounding ORM memory for very long threads.
-_MESSAGE_BATCH_SIZE = 100
+# Bodies, blocks and anchored history coexist while a batch is serialized.
+# Use a small batch and release its frame before fetching the next one.
+_MESSAGE_BATCH_SIZE = 8
 _CONVERSATION_PHASE_RANGES = {
     "packaging_messages": (0, 52),
     "packaging_headings": (52, 59),
@@ -425,12 +425,11 @@ def _write_conversation_payload(
     asset_mode: str = "none",
     progress_callback: ConversationProgressCallback | None = None,
 ) -> None:
-    message_rows = (
+    message_query = (
         db.query(Message)
         .filter(Message.conversation_id == conversation.id, Message.is_deleted.is_(False))
-        .order_by(Message.order_key.asc())
-        .all()
     )
+    message_count = message_query.count()
     notebook = (
         db.query(ConversationNotebook)
         .filter(
@@ -457,7 +456,7 @@ def _write_conversation_payload(
         # The package aggregate is a completeness contract for the embedded
         # array, so derive it from the exact rows serialized below rather than
         # a conversation aggregate that may still be awaiting reconciliation.
-        "message_count": len(message_rows),
+        "message_count": message_count,
         "turn_count": conversation.turn_count,
         "created_at": conversation.created_at,
         "updated_at": conversation.updated_at,
@@ -482,95 +481,25 @@ def _write_conversation_payload(
     output.write(b"[")
     first_message = True
     if progress_callback:
-        progress_callback("packaging_messages", 0, len(message_rows))
-    for batch_start in range(0, len(message_rows), _MESSAGE_BATCH_SIZE):
-        batch = message_rows[batch_start : batch_start + _MESSAGE_BATCH_SIZE]
-        source_refs = _source_refs_by_message(db, [message.id for message in batch])
-        version_ids = [message.current_version_id for message in batch if message.current_version_id]
-        versions = (
-            db.query(MessageVersion).filter(MessageVersion.id.in_(version_ids)).all()
-            if version_ids
-            else []
+        progress_callback("packaging_messages", 0, message_count)
+    last_order_key: str | None = None
+    processed = 0
+    while True:
+        query = message_query
+        if last_order_key is not None:
+            query = query.filter(Message.order_key > last_order_key)
+        batch = query.order_by(Message.order_key.asc()).limit(_MESSAGE_BATCH_SIZE).all()
+        if not batch:
+            break
+        first_message = _write_message_batch(
+            output, db, batch, conversation.id, subject_key, first_message=first_message,
         )
-        versions_by_id = {version.id: version for version in versions}
-        # An orphaned annotation may still point to an earlier body. Include only
-        # the requesting owner's live anchors, bounded by this message batch.
-        anchor_versions = db.query(MessageVersion).join(
-            ConversationAnnotation,
-            (ConversationAnnotation.message_version_id == MessageVersion.id)
-            & (ConversationAnnotation.message_id == MessageVersion.message_id),
-        ).filter(
-            MessageVersion.message_id.in_([message.id for message in batch]),
-            MessageVersion.id.notin_(version_ids),
-            ConversationAnnotation.conversation_id == conversation.id,
-            ConversationAnnotation.subject_key == subject_key,
-            ConversationAnnotation.is_deleted.is_(False),
-        ).distinct().order_by(MessageVersion.message_id, MessageVersion.version_number).all()
-        anchors_by_message: dict[uuid.UUID, list[MessageVersion]] = defaultdict(list)
-        for anchor in anchor_versions:
-            anchors_by_message[anchor.message_id].append(anchor)
-        block_rows = (
-            db.query(RenderBlock)
-            .filter(RenderBlock.message_version_id.in_(version_ids))
-            .order_by(RenderBlock.message_version_id.asc(), RenderBlock.block_index.asc())
-            .all()
-            if version_ids
-            else []
-        )
-        occurrence_rows = (
-            db.query(MessageVersionAttachment)
-            .filter(MessageVersionAttachment.message_version_id.in_(version_ids))
-            .order_by(
-                MessageVersionAttachment.message_version_id.asc(),
-                MessageVersionAttachment.block_index.asc().nullslast(),
-                MessageVersionAttachment.display_order.asc(),
-                MessageVersionAttachment.occurrence_key.asc(),
-            )
-            .all()
-            if version_ids
-            else []
-        )
-        occurrences_by_block: dict[tuple[uuid.UUID, int], list[MessageVersionAttachment]] = defaultdict(list)
-        for link in occurrence_rows:
-            if link.block_index is not None:
-                occurrences_by_block[(link.message_version_id, link.block_index)].append(link)
-        blocks_by_version: dict[uuid.UUID, list[RenderBlock]] = defaultdict(list)
-        for block in block_rows:
-            blocks_by_version[block.message_version_id].append(block)
-
-        for message in batch:
-            if not first_message:
-                output.write(b",")
-            first_message = False
-            version = versions_by_id.get(message.current_version_id)
-            _write_json_value(
-                output,
-                {
-                    "id": message.id,
-                    "conversation_id": message.conversation_id,
-                    "role": message.role,
-                    "author_label": message.author_label,
-                    "order_key": message.order_key,
-                    "turn_index": message.turn_index,
-                    "created_at": message.created_at,
-                    "block_count": message.block_count,
-                    "char_count": message.char_count,
-                    "is_heavy": message.is_heavy,
-                    "current_version": _version_payload(version),
-                    "annotation_versions": [_version_payload(anchor) for anchor in anchors_by_message.get(message.id, [])],
-                    "source_refs": source_refs.get(message.id, []),
-                    "render_blocks": [
-                        _block_payload(
-                            block,
-                            occurrences_by_block.get((block.message_version_id, block.block_index), []),
-                        )
-                        for block in blocks_by_version.get(message.current_version_id, [])
-                    ],
-                },
-            )
+        last_order_key = batch[-1].order_key
+        processed += len(batch)
+        del batch
         if progress_callback:
-            progress_callback("packaging_messages", min(batch_start + len(batch), len(message_rows)), len(message_rows))
-    if not message_rows and progress_callback:
+            progress_callback("packaging_messages", processed, message_count)
+    if not message_count and progress_callback:
         progress_callback("packaging_messages", 1, 1)
     output.write(b"]")
 
@@ -597,13 +526,14 @@ def _write_conversation_payload(
             _search_payload(item)
             for item in db.query(SearchDocument)
             .filter(SearchDocument.conversation_id == conversation.id)
-            .yield_per(100)
+            .yield_per(_MESSAGE_BATCH_SIZE)
         ),
     )
     if progress_callback:
         progress_callback("packaging_search", 1, 1)
         progress_callback("packaging_annotations", 0, 1)
-    _write_json_field(output, "annotations", list_annotations_payload(db, conversation.id, subject_key), first=False)
+    _write_json_key(output, "annotations", first=False)
+    _write_json_array(output, _iter_annotations_payload(db, conversation.id, subject_key))
     if progress_callback:
         progress_callback("packaging_annotations", 1, 1)
         progress_callback("packaging_metadata", 0, 1)
@@ -617,13 +547,98 @@ def _write_conversation_payload(
     if progress_callback:
         progress_callback("packaging_metadata", 1, 1)
         progress_callback("packaging_attachments", 0, 1)
-    _write_json_field(output, "attachments", _offline_attachment_payloads(db, conversation.id, asset_mode), first=False)
+    _write_json_key(output, "attachments", first=False)
+    _write_json_array(output, _offline_attachment_payloads(db, conversation.id, asset_mode))
     if progress_callback:
         progress_callback("packaging_attachments", 1, 1)
     output.write(b"}")
 
 
-def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_mode: str) -> list[dict[str, Any]]:
+def _write_message_batch(
+    output: BinaryIO,
+    db: Session,
+    batch: list[Message],
+    conversation_id: uuid.UUID,
+    subject_key: str,
+    *,
+    first_message: bool,
+) -> bool:
+    source_refs = _source_refs_by_message(db, [message.id for message in batch])
+    version_ids = [message.current_version_id for message in batch if message.current_version_id]
+    versions = db.query(MessageVersion).filter(MessageVersion.id.in_(version_ids)).all() if version_ids else []
+    versions_by_id = {version.id: version for version in versions}
+    # Preserve only the requesting owner's historical annotation anchors.
+    anchor_versions = db.query(MessageVersion).join(
+        ConversationAnnotation,
+        (ConversationAnnotation.message_version_id == MessageVersion.id)
+        & (ConversationAnnotation.message_id == MessageVersion.message_id),
+    ).filter(
+        MessageVersion.message_id.in_([message.id for message in batch]),
+        MessageVersion.id.notin_(version_ids),
+        ConversationAnnotation.conversation_id == conversation_id,
+        ConversationAnnotation.subject_key == subject_key,
+        ConversationAnnotation.is_deleted.is_(False),
+    ).distinct().order_by(MessageVersion.message_id, MessageVersion.version_number).all()
+    anchors_by_message: dict[uuid.UUID, list[MessageVersion]] = defaultdict(list)
+    for anchor in anchor_versions:
+        anchors_by_message[anchor.message_id].append(anchor)
+    block_rows = (
+        db.query(RenderBlock)
+        .filter(RenderBlock.message_version_id.in_(version_ids))
+        .order_by(RenderBlock.message_version_id.asc(), RenderBlock.block_index.asc())
+        .all()
+        if version_ids else []
+    )
+    occurrence_rows = (
+        db.query(MessageVersionAttachment)
+        .filter(MessageVersionAttachment.message_version_id.in_(version_ids))
+        .order_by(
+            MessageVersionAttachment.message_version_id.asc(),
+            MessageVersionAttachment.block_index.asc().nullslast(),
+            MessageVersionAttachment.display_order.asc(),
+            MessageVersionAttachment.occurrence_key.asc(),
+        )
+        .all()
+        if version_ids else []
+    )
+    occurrences_by_block: dict[tuple[uuid.UUID, int], list[MessageVersionAttachment]] = defaultdict(list)
+    for link in occurrence_rows:
+        if link.block_index is not None:
+            occurrences_by_block[(link.message_version_id, link.block_index)].append(link)
+    blocks_by_version: dict[uuid.UUID, list[RenderBlock]] = defaultdict(list)
+    for block in block_rows:
+        blocks_by_version[block.message_version_id].append(block)
+
+    for message in batch:
+        if not first_message:
+            output.write(b",")
+        first_message = False
+        _write_json_value(
+            output,
+            {
+                "id": message.id,
+                "conversation_id": message.conversation_id,
+                "role": message.role,
+                "author_label": message.author_label,
+                "order_key": message.order_key,
+                "turn_index": message.turn_index,
+                "created_at": message.created_at,
+                "block_count": message.block_count,
+                "char_count": message.char_count,
+                "is_heavy": message.is_heavy,
+                "current_version": _version_payload(versions_by_id.get(message.current_version_id)),
+                "annotation_versions": [_version_payload(anchor) for anchor in anchors_by_message.get(message.id, [])],
+                "source_refs": source_refs.get(message.id, []),
+                "render_blocks": [
+                    _block_payload(block, occurrences_by_block.get((block.message_version_id, block.block_index), []))
+                    for block in blocks_by_version.get(message.current_version_id, [])
+                ],
+            },
+        )
+    return first_message
+
+
+def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_mode: str) -> Iterable[dict[str, Any]]:
     attachments = (
         db.query(Attachment, AssetObject)
         .outerjoin(AssetObject, AssetObject.id == Attachment.asset_object_id)
@@ -632,12 +647,11 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
             Attachment.deleted_at.is_(None),
         )
         .order_by(Attachment.created_at, Attachment.id)
-        .all()
+        .yield_per(100)
     )
-    payloads = []
     for attachment, asset in attachments:
         links = (
-            db.query(MessageVersionAttachment, Message, RenderBlock)
+            db.query(MessageVersionAttachment, Message, RenderBlock.id)
             .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
             .outerjoin(
                 RenderBlock,
@@ -655,7 +669,7 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
         )
         included = downloadable and (asset_mode == "all" or (asset_mode == "small" and asset.byte_size <= 10 * 1024 * 1024))
         first_link, first_message, _ = links[0] if links else (None, None, None)
-        payloads.append({
+        yield {
             "id": str(attachment.id),
             "conversation_id": str(conversation_id),
             "message_id": str(first_message.id) if first_message else None,
@@ -674,7 +688,7 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
             "occurrences": [{
                 "message_id": str(message.id),
                 "message_version_id": str(link.message_version_id),
-                "render_block_id": str(block.id) if block else None,
+                "render_block_id": str(block_id) if block_id else None,
                 "occurrence_key": link.occurrence_key,
                 "placement": link.placement,
                 "relation_type": link.relation_type,
@@ -683,11 +697,10 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
                 "display_mode": link.display_mode,
                 "alt_text": link.alt_text,
                 "caption": link.caption,
-            } for link, message, block in links],
+            } for link, message, block_id in links],
             "content_path": f"assets/objects/{asset.id}" if included and asset else None,
             "downloadable": downloadable,
-        })
-    return payloads
+        }
 
 
 def _offline_asset_objects(
@@ -742,11 +755,16 @@ def _write_json_value(output: BinaryIO, value: Any) -> None:
 
 
 def list_annotations_payload(db: Session, conversation_id: uuid.UUID, subject_key: str) -> list[dict[str, Any]]:
-    return [annotation_read(item).model_dump(mode="json") for item in db.query(ConversationAnnotation).filter(
+    return list(_iter_annotations_payload(db, conversation_id, subject_key))
+
+
+def _iter_annotations_payload(db: Session, conversation_id: uuid.UUID, subject_key: str) -> Iterable[dict[str, Any]]:
+    for item in db.query(ConversationAnnotation).filter(
         ConversationAnnotation.conversation_id == conversation_id,
         ConversationAnnotation.subject_key == subject_key,
         ConversationAnnotation.is_deleted.is_(False),
-    ).order_by(ConversationAnnotation.created_at.asc()).all()]
+    ).order_by(ConversationAnnotation.created_at.asc()).yield_per(8):
+        yield annotation_read(item).model_dump(mode="json")
 
 
 def _conversation_project(conversation: Conversation) -> tuple[uuid.UUID | None, str | None]:

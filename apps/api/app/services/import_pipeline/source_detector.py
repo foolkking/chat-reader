@@ -1,7 +1,7 @@
-import gzip
 import hashlib
 import json
 import mimetypes
+from contextlib import closing
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -9,6 +9,7 @@ from typing import Any
 from app.schemas.import_schema import SourceDetectionResult, SourceProfile
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonMessage
 from app.services.import_pipeline.exporter_markdown_parser import has_exporter_markdown_structure
+from app.services.import_pipeline.canjson_parser import CanJsonParseError, _iter_jsonl_lines
 
 
 def detect_source_profile(
@@ -132,14 +133,16 @@ def _looks_like_official_conversation(value: Any) -> bool:
 def _first_jsonl_record(content: bytes, extension: str, warnings: list[str]) -> Any | None:
     try:
         if extension.endswith(".gz"):
-            with gzip.GzipFile(fileobj=BytesIO(content)) as stream:
-                first_line = stream.readline(32 * 1024 * 1024 + 1)
+            # Detection runs before canonical parsing, so it must not decode a
+            # large gzip manifest outside the expanded-input memory checks.
+            with closing(_iter_jsonl_lines(content, compressed=True)) as lines:
+                _, first_line = next(lines, (0, b""))
         else:
             first_line = BytesIO(content).readline(32 * 1024 * 1024 + 1)
         if not first_line or len(first_line) > 32 * 1024 * 1024:
             return None
         return json.loads(first_line.decode("utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+    except (EOFError, OSError, UnicodeDecodeError, json.JSONDecodeError, CanJsonParseError):
         if extension in {".jsonl.gz", ".canonical.jsonl.gz"}:
             warnings.append("Compressed CanJSON could not be decoded.")
         return None

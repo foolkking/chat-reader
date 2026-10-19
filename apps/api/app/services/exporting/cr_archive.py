@@ -3,12 +3,14 @@ import json
 import uuid
 import zipfile
 from collections.abc import Callable, Iterable
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy import or_, select
+from sqlalchemy.orm import Session, defer
+from sqlalchemy.sql import Select
 
 from app.core.config import get_settings
 from app.models.conversation import Conversation
@@ -52,6 +54,7 @@ ATTACHMENT_JSONL_ENTRIES = ("attachments.jsonl", "attachment_refs.jsonl")
 MAX_ARCHIVE_ENTRIES = 32
 MAX_COMPRESSION_RATIO = 200
 ProgressCallback = Callable[[str, int, int, int], None]
+_BODY_BATCH_BYTES = 2 * 1024 * 1024
 
 
 class CrArchiveError(ValueError):
@@ -102,24 +105,24 @@ def create_cr_archive(
     destination = export_dir / filename
     temporary = staging_path(destination)
 
-    message_rows = db.query(Message).filter(Message.conversation_id == conversation.id).order_by(Message.order_key).all()
-    message_ids = [message.id for message in message_rows]
+    # Keep IDs in SQL and stream bodies. Loading all historical versions here
+    # defeats the streamed ZIP writer and can retain several copies of a thread.
+    message_ids = select(Message.id).where(Message.conversation_id == conversation.id)
+    version_ids = select(MessageVersion.id).where(MessageVersion.message_id.in_(message_ids))
+    message_rows = db.query(Message).filter(Message.conversation_id == conversation.id).order_by(Message.order_key)
     version_rows = (
         db.query(MessageVersion)
+        .options(defer(MessageVersion.blocks))
         .filter(MessageVersion.message_id.in_(message_ids))
         .order_by(MessageVersion.message_id, MessageVersion.version_number)
-        .all()
-        if message_ids
-        else []
     )
-    version_ids = [version.id for version in version_rows]
     counts = {
-        "messages": len(message_rows),
-        "versions": len(version_rows),
-        "blocks": db.query(RenderBlock).filter(RenderBlock.message_version_id.in_(version_ids)).count() if version_ids else 0,
+        "messages": message_rows.count(),
+        "versions": version_rows.count(),
+        "blocks": db.query(RenderBlock).filter(RenderBlock.message_version_id.in_(version_ids)).count(),
         "headings": db.query(Heading).filter(Heading.conversation_id == conversation.id).count(),
         "search_documents": db.query(SearchDocument).filter(SearchDocument.conversation_id == conversation.id).count(),
-        "source_refs": db.query(SourceMessageRef).filter(SourceMessageRef.message_id.in_(message_ids)).count() if message_ids else 0,
+        "source_refs": db.query(SourceMessageRef).filter(SourceMessageRef.message_id.in_(message_ids)).count(),
         "events": db.query(ConversationEvent).filter(ConversationEvent.conversation_id == conversation.id).count(),
     }
     # Attachment is conversation-owned business state. It must not be inferred
@@ -140,7 +143,7 @@ def create_cr_archive(
     processed = 0
     checksums: dict[str, dict[str, Any]] = {}
 
-    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+    with _staged_archive(temporary) as archive:
         conversation_payload = _conversation_payload(db, conversation)
         if include_description:
             conversation_payload["description_markdown"] = conversation.description_markdown
@@ -148,8 +151,8 @@ def create_cr_archive(
         _report(progress_callback, "exporting", 5, processed, total_records)
 
         entries: list[tuple[str, Iterable[dict[str, Any]]]] = [
-            ("messages.jsonl", (_message_payload(row) for row in message_rows)),
-            ("versions.jsonl", (_version_payload(row) for row in version_rows)),
+            ("messages.jsonl", (_message_payload(row) for row in message_rows.yield_per(200))),
+            ("versions.jsonl", (_version_payload(row) for row in version_rows.yield_per(1))),
             (
                 "blocks.jsonl",
                 (_block_payload(row) for row in _yield_blocks(db, version_ids)),
@@ -160,11 +163,11 @@ def create_cr_archive(
             ),
             (
                 "search_documents.jsonl",
-                (_search_payload(row) for row in db.query(SearchDocument).filter(SearchDocument.conversation_id == conversation.id).yield_per(500)),
+                (_search_payload(row) for row in db.query(SearchDocument).filter(SearchDocument.conversation_id == conversation.id).yield_per(8)),
             ),
             (
                 "source_refs.jsonl",
-                (_source_ref_payload(row) for row in db.query(SourceMessageRef).filter(SourceMessageRef.message_id.in_(message_ids)).yield_per(500)) if message_ids else (),
+                (_source_ref_payload(row) for row in db.query(SourceMessageRef).filter(SourceMessageRef.message_id.in_(message_ids)).yield_per(100)),
             ),
             (
                 "events.jsonl",
@@ -207,7 +210,7 @@ def create_cr_archive(
                 ConversationAnnotation.conversation_id == conversation.id,
                 ConversationAnnotation.subject_key == subject_key,
                 ConversationAnnotation.is_deleted.is_(False),
-            ).order_by(ConversationAnnotation.created_at.asc()).all()
+            ).order_by(ConversationAnnotation.created_at.asc()).yield_per(8)
             checksums["annotations.jsonl"], written = _write_jsonl(
                 archive, "annotations.jsonl", (_annotation_payload(row) for row in annotation_rows)
             )
@@ -343,12 +346,12 @@ def import_cr_archive(
         processed = 0
 
         message_rows = []
-        current_versions: dict[uuid.UUID, uuid.UUID | None] = {}
-        for row in _read_jsonl(archive, "messages.jsonl"):
+        batch_bytes = 0
+        for row, raw_size in _read_sized_jsonl(archive, "messages.jsonl"):
             source_id = uuid.UUID(row["id"])
             target_message_id = _mapped_id(target_id, "message", source_id)
             current_source = row.get("current_version_id")
-            current_versions[target_message_id] = _mapped_id(target_id, "version", uuid.UUID(current_source)) if current_source else None
+            current_version_id = _mapped_id(target_id, "version", uuid.UUID(current_source)) if current_source else None
             message_rows.append(
                 {
                     "id": target_message_id,
@@ -358,7 +361,7 @@ def import_cr_archive(
                     "order_key": row["order_key"],
                     "turn_index": row.get("turn_index"),
                     "created_at": _parse_dt(row.get("created_at")),
-                    "current_version_id": current_versions[target_message_id],
+                    "current_version_id": current_version_id,
                     "is_deleted": bool(row.get("is_deleted")),
                     "deleted_at": _parse_dt(row.get("deleted_at")),
                     "deleted_by": row.get("deleted_by"),
@@ -373,10 +376,12 @@ def import_cr_archive(
                     "is_heavy": bool(row.get("is_heavy")),
                 }
             )
-            if len(message_rows) >= 500:
+            batch_bytes += raw_size
+            if len(message_rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
                 insert_rows(db, Message, message_rows)
                 processed += len(message_rows)
                 message_rows.clear()
+                batch_bytes = 0
                 _report(progress_callback, "persisting", 10 + round(15 * processed / total), processed, total)
         if message_rows:
             insert_rows(db, Message, message_rows)
@@ -415,7 +420,8 @@ def import_cr_archive(
 
 def _import_versions(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID, processed: int, total: int, callback: ProgressCallback | None) -> int:
     rows: list[dict[str, Any]] = []
-    for row in _read_jsonl(archive, "versions.jsonl"):
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "versions.jsonl"):
         source_id = uuid.UUID(row["id"])
         based_on = row.get("based_on_version_id")
         rows.append(
@@ -438,10 +444,12 @@ def _import_versions(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID
                 "search_document_version": row.get("search_document_version") or "legacy-v1",
             }
         )
-        if len(rows) >= 500:
+        batch_bytes += raw_size
+        if len(rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
             insert_rows(db, MessageVersion, rows)
             processed += len(rows)
             rows.clear()
+            batch_bytes = 0
             _report(callback, "persisting", min(45, 25 + round(20 * processed / total)), processed, total)
     if rows:
         insert_rows(db, MessageVersion, rows)
@@ -459,7 +467,8 @@ def _import_blocks(
     attachment_id_map: dict[uuid.UUID, uuid.UUID] | None = None,
 ) -> int:
     rows: list[dict[str, Any]] = []
-    for row in _read_jsonl(archive, "blocks.jsonl"):
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "blocks.jsonl"):
         rows.append(
             {
                 "id": _mapped_id(target_id, "block", uuid.UUID(row["id"])),
@@ -476,10 +485,12 @@ def _import_blocks(
                 "render_priority": int(row.get("render_priority") or 0),
             }
         )
-        if len(rows) >= 500:
+        batch_bytes += raw_size
+        if len(rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
             insert_rows(db, RenderBlock, rows)
             processed += len(rows)
             rows.clear()
+            batch_bytes = 0
             _report(callback, "persisting", min(75, 45 + round(30 * processed / total)), processed, total)
     if rows:
         insert_rows(db, RenderBlock, rows)
@@ -496,12 +507,16 @@ def _import_attachments(
 ) -> dict[uuid.UUID, uuid.UUID]:
     if manifest.get("version") != ARCHIVE_VERSION or "attachments.jsonl" not in archive.namelist():
         return {}
-    rows = list(_read_jsonl(archive, "attachments.jsonl"))
-    object_rows = {uuid.UUID(str(row["id"])): row for row in rows if row.get("record_type") == "asset_object"}
-    attachment_rows = [row for row in rows if row.get("record_type") == "attachment"]
     store = get_asset_store()
     object_map: dict[uuid.UUID, uuid.UUID] = {}
-    for source_id, row in object_rows.items():
+    # Two bounded passes avoid retaining all attachment metadata while objects
+    # are staged and scanned. Only the ID remapping survives between records.
+    for row in _read_jsonl(archive, "attachments.jsonl"):
+        if row.get("record_type") != "asset_object":
+            continue
+        source_id = uuid.UUID(str(row["id"]))
+        if source_id in object_map:
+            raise CrArchiveError("Archive contains duplicate asset object IDs.")
         path = str(row.get("path") or f"assets/objects/{source_id}")
         if path not in archive.namelist():
             raise CrArchiveError(f"Archive asset object {path} is missing.")
@@ -545,7 +560,10 @@ def _import_attachments(
         object_map[source_id] = asset.id
 
     attachment_map: dict[uuid.UUID, uuid.UUID] = {}
-    for row in attachment_rows:
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "attachments.jsonl"):
+        if row.get("record_type") != "attachment":
+            continue
         source_id = uuid.UUID(str(row["id"]))
         object_id = object_map.get(uuid.UUID(str(row["asset_object_id"])))
         if object_id is None:
@@ -568,6 +586,10 @@ def _import_attachments(
             resolution_status="resolved",
         ))
         attachment_map[source_id] = attachment_id
+        batch_bytes += raw_size
+        if len(attachment_map) % 250 == 0 or batch_bytes >= _BODY_BATCH_BYTES:
+            db.flush()
+            batch_bytes = 0
     db.flush()
     return attachment_map
 
@@ -581,26 +603,32 @@ def _import_attachment_refs(
     if not attachment_id_map or "attachment_refs.jsonl" not in archive.namelist():
         return
     rows = []
-    for row in _read_jsonl(archive, "attachment_refs.jsonl"):
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "attachment_refs.jsonl"):
         source_attachment_id = uuid.UUID(str(row["attachment_id"]))
         mapped_attachment_id = attachment_id_map.get(source_attachment_id)
         if mapped_attachment_id is None:
             raise CrArchiveError("Archive attachment reference points to an unknown attachment.")
-        rows.append(MessageVersionAttachment(
-            id=uuid.uuid4(),
-            message_version_id=_mapped_id(target_id, "version", uuid.UUID(str(row["message_version_id"]))),
-            attachment_id=mapped_attachment_id,
-            occurrence_key=str(row.get("occurrence_key") or uuid.uuid4().hex),
-            placement=str(row.get("placement") or "inline"),
-            relation_type=row.get("relation_type") or "file",
-            display_order=int(row.get("display_order") or 0),
-            block_index=row.get("block_index"),
-            display_mode=row.get("display_mode") or "card",
-            alt_text=row.get("alt_text"),
-            caption=row.get("caption"),
-        ))
+        rows.append({
+            "id": uuid.uuid4(),
+            "message_version_id": _mapped_id(target_id, "version", uuid.UUID(str(row["message_version_id"]))),
+            "attachment_id": mapped_attachment_id,
+            "occurrence_key": str(row.get("occurrence_key") or uuid.uuid4().hex),
+            "placement": str(row.get("placement") or "inline"),
+            "relation_type": row.get("relation_type") or "file",
+            "display_order": int(row.get("display_order") or 0),
+            "block_index": row.get("block_index"),
+            "display_mode": row.get("display_mode") or "card",
+            "alt_text": row.get("alt_text"),
+            "caption": row.get("caption"),
+        })
+        batch_bytes += raw_size
+        if len(rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
+            insert_rows(db, MessageVersionAttachment, rows)
+            rows.clear()
+            batch_bytes = 0
     if rows:
-        db.add_all(rows)
+        insert_rows(db, MessageVersionAttachment, rows)
 
 
 def _rewrite_attachment_data(data: dict[str, Any], attachment_id_map: dict[uuid.UUID, uuid.UUID]) -> dict[str, Any]:
@@ -616,7 +644,8 @@ def _rewrite_attachment_data(data: dict[str, Any], attachment_id_map: dict[uuid.
 
 def _import_headings(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) -> None:
     rows = []
-    for row in _read_jsonl(archive, "headings.jsonl"):
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "headings.jsonl"):
         render_block = row.get("render_block_id")
         rows.append(
             {
@@ -634,16 +663,19 @@ def _import_headings(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID
                 "metadata_": row.get("metadata") or {},
             }
         )
-        if len(rows) >= 500:
+        batch_bytes += raw_size
+        if len(rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
             insert_rows(db, Heading, rows)
             rows.clear()
+            batch_bytes = 0
     if rows:
         insert_rows(db, Heading, rows)
 
 
 def _import_search_documents(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) -> None:
     rows = []
-    for row in _read_jsonl(archive, "search_documents.jsonl"):
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "search_documents.jsonl"):
         message_id = row.get("message_id")
         version_id = row.get("message_version_id")
         rows.append(
@@ -665,16 +697,19 @@ def _import_search_documents(db: Session, archive: zipfile.ZipFile, target_id: u
                 "metadata_": row.get("metadata") or {},
             }
         )
-        if len(rows) >= 500:
+        batch_bytes += raw_size
+        if len(rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
             insert_rows(db, SearchDocument, rows)
             rows.clear()
+            batch_bytes = 0
     if rows:
         insert_rows(db, SearchDocument, rows)
 
 
 def _import_source_refs(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) -> None:
     rows = []
-    for row in _read_jsonl(archive, "source_refs.jsonl"):
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "source_refs.jsonl"):
         rows.append(
             {
                 "id": uuid.uuid4(),
@@ -693,16 +728,19 @@ def _import_source_refs(db: Session, archive: zipfile.ZipFile, target_id: uuid.U
                 "raw_metadata": row.get("raw_metadata") or {},
             }
         )
-        if len(rows) >= 500:
+        batch_bytes += raw_size
+        if len(rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
             insert_rows(db, SourceMessageRef, rows)
             rows.clear()
+            batch_bytes = 0
     if rows:
         insert_rows(db, SourceMessageRef, rows)
 
 
 def _import_events(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) -> None:
     rows = []
-    for row in _read_jsonl(archive, "events.jsonl"):
+    batch_bytes = 0
+    for row, raw_size in _read_sized_jsonl(archive, "events.jsonl"):
         target_message = row.get("target_message_id")
         target_version = row.get("target_version_id")
         rows.append(
@@ -717,6 +755,11 @@ def _import_events(db: Session, archive: zipfile.ZipFile, target_id: uuid.UUID) 
                 "created_by": row.get("created_by") or "archive",
             }
         )
+        batch_bytes += raw_size
+        if len(rows) >= 500 or batch_bytes >= _BODY_BATCH_BYTES:
+            insert_rows(db, ConversationEvent, rows)
+            rows.clear()
+            batch_bytes = 0
     if rows:
         insert_rows(db, ConversationEvent, rows)
 
@@ -800,7 +843,8 @@ def _import_optional_reader_metadata(
     names = set(archive.namelist())
     annotation_map: dict[uuid.UUID, uuid.UUID] = {}
     if "annotations.jsonl" in names:
-        for row in _read_jsonl(archive, "annotations.jsonl"):
+        batch_bytes = 0
+        for row, raw_size in _read_sized_jsonl(archive, "annotations.jsonl"):
             source_id = uuid.UUID(row["id"])
             annotation_id = _mapped_id(target_id, "annotation", source_id)
             annotation_map[source_id] = annotation_id
@@ -830,6 +874,11 @@ def _import_optional_reader_metadata(
                     updated_at=_parse_dt(row.get("updated_at")) or datetime.now(timezone.utc),
                 )
             )
+            batch_bytes += raw_size
+            if len(annotation_map) % 250 == 0 or batch_bytes >= _BODY_BATCH_BYTES:
+                db.flush()
+                batch_bytes = 0
+        db.flush()
     if "notebook.json" in names:
         row = _read_json_entry(archive, "notebook.json")
         blocks = []
@@ -986,10 +1035,10 @@ def _event_payload(row: ConversationEvent) -> dict[str, Any]:
     }
 
 
-def _yield_blocks(db: Session, version_ids: list[uuid.UUID]):
-    if not version_ids:
+def _yield_blocks(db: Session, version_ids: list[uuid.UUID] | Select):
+    if isinstance(version_ids, list) and not version_ids:
         return ()
-    return db.query(RenderBlock).filter(RenderBlock.message_version_id.in_(version_ids)).order_by(RenderBlock.message_version_id, RenderBlock.block_index).yield_per(500)
+    return db.query(RenderBlock).filter(RenderBlock.message_version_id.in_(version_ids)).order_by(RenderBlock.message_version_id, RenderBlock.block_index).yield_per(8)
 
 
 def _restore_placement(
@@ -1053,6 +1102,9 @@ def _artifact_path(artifact: SourceArtifact) -> Path:
 
 
 def _open_validated_zip(path: Path) -> zipfile.ZipFile:
+    settings = get_settings()
+    if path.stat().st_size > settings.bundle_max_compressed_bytes:
+        raise CrArchiveError("Archive exceeds the compressed size limit.")
     try:
         archive = zipfile.ZipFile(path, "r")
     except zipfile.BadZipFile as exc:
@@ -1061,6 +1113,9 @@ def _open_validated_zip(path: Path) -> zipfile.ZipFile:
     if len(infos) > max(MAX_ARCHIVE_ENTRIES, get_settings().bundle_max_entries * 2):
         archive.close()
         raise CrArchiveError("Archive contains too many entries.")
+    if sum(info.file_size for info in infos) > settings.bundle_max_expanded_bytes:
+        archive.close()
+        raise CrArchiveError("Archive exceeds the expanded size limit.")
     for info in infos:
         posix = PurePosixPath(info.filename)
         if posix.is_absolute() or ".." in posix.parts or info.is_dir():
@@ -1069,6 +1124,9 @@ def _open_validated_zip(path: Path) -> zipfile.ZipFile:
         if info.compress_size > 0 and info.file_size / info.compress_size > MAX_COMPRESSION_RATIO:
             archive.close()
             raise CrArchiveError("Archive compression ratio is unsafe.")
+        if info.filename.startswith("assets/objects/") and info.file_size > settings.bundle_max_object_bytes:
+            archive.close()
+            raise CrArchiveError("Archive asset exceeds the object size limit.")
     return archive
 
 
@@ -1117,6 +1175,8 @@ def _sha256_file(path: Path) -> str:
 
 def _write_json(archive: zipfile.ZipFile, name: str, payload: dict[str, Any]) -> dict[str, Any]:
     data = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=_json_value).encode("utf-8")
+    if len(data) > get_settings().canjson_max_line_bytes:
+        raise CrArchiveError(f"Archive entry exceeds the JSON size limit: {name}.")
     archive.writestr(name, data)
     return {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data), "records": 1}
 
@@ -1128,6 +1188,8 @@ def _write_jsonl(archive: zipfile.ZipFile, name: str, rows: Iterable[dict[str, A
     with archive.open(name, "w") as destination:
         for row in rows:
             data = (json.dumps(row, ensure_ascii=False, separators=(",", ":"), default=_json_value) + "\n").encode("utf-8")
+            if len(data) > get_settings().canjson_max_line_bytes:
+                raise CrArchiveError(f"Archive contains an oversized JSONL record: {name}.")
             destination.write(data)
             digest.update(data)
             byte_count += len(data)
@@ -1136,9 +1198,14 @@ def _write_jsonl(archive: zipfile.ZipFile, name: str, rows: Iterable[dict[str, A
 
 
 def _read_json_entry(archive: zipfile.ZipFile, name: str) -> dict[str, Any]:
+    limit = get_settings().canjson_max_line_bytes
     try:
-        value = json.loads(archive.read(name).decode("utf-8"))
-    except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        with archive.open(name) as source:
+            raw = source.read(limit + 1)
+        if len(raw) > limit:
+            raise CrArchiveError(f"Archive entry exceeds the JSON size limit: {name}.")
+        value = json.loads(raw.decode("utf-8"))
+    except (KeyError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
         raise CrArchiveError(f"Invalid archive entry: {name}.") from exc
     if not isinstance(value, dict):
         raise CrArchiveError(f"Archive entry must be an object: {name}.")
@@ -1146,17 +1213,37 @@ def _read_json_entry(archive: zipfile.ZipFile, name: str) -> dict[str, Any]:
 
 
 def _read_jsonl(archive: zipfile.ZipFile, name: str):
+    for row, _ in _read_sized_jsonl(archive, name):
+        yield row
+
+
+def _read_sized_jsonl(archive: zipfile.ZipFile, name: str):
+    limit = get_settings().canjson_max_line_bytes
     with archive.open(name, "r") as source:
-        for line_number, raw in enumerate(source, start=1):
+        line_number = 0
+        while raw := source.readline(limit + 1):
+            line_number += 1
+            if len(raw) > limit:
+                raise CrArchiveError(f"Archive contains an oversized JSONL record: {name}.")
             if not raw.strip():
                 continue
             try:
                 value = json.loads(raw.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
                 raise CrArchiveError(f"Invalid {name} record at line {line_number}.") from exc
             if not isinstance(value, dict):
                 raise CrArchiveError(f"Invalid {name} record at line {line_number}.")
-            yield value
+            yield value, len(raw)
+
+
+@contextmanager
+def _staged_archive(path: Path):
+    try:
+        with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
+            yield archive
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
 
 
 def _mapped_id(conversation_id: uuid.UUID, kind: str, source_id: uuid.UUID) -> uuid.UUID:

@@ -1,8 +1,8 @@
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy import select, text
+from sqlalchemy.orm import Session, aliased
 
 from app.models.conversation import Conversation
 from app.models.heading import Heading
@@ -15,6 +15,9 @@ from app.services.database.bulk_insert import insert_rows
 from app.services.assets.asset_store import get_asset_store
 from app.services.toc.toc_builder import rebuild_headings_for_all, rebuild_headings_for_conversation
 from app.services.search.annotation_indexer import sync_annotations_for_conversation
+
+_MAX_DOCUMENT_TEXT_CHARS = 2 * 1024 * 1024
+_BODY_READ_BATCH_SIZE = 8
 
 
 @dataclass(frozen=True)
@@ -48,6 +51,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
         if part
     )
     document_rows: list[dict] = []
+    document_text_chars = 0
     if conversation_text.strip():
         document_rows.append(
             {
@@ -62,6 +66,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 "metadata_": {},
             }
         )
+        document_text_chars += 2 * len(conversation_text)
         indexed_count += 1
 
     for row in _message_version_rows(db, conversation.id):
@@ -91,10 +96,12 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 "metadata_": {"char_count": row.char_count, "block_count": row.block_count},
             }
         )
+        document_text_chars += len(row.plain_text) + len(search_text)
         indexed_count += 1
-        if len(document_rows) >= 500:
+        if len(document_rows) >= 500 or document_text_chars >= _MAX_DOCUMENT_TEXT_CHARS:
             insert_rows(db, SearchDocument, document_rows)
             document_rows.clear()
+            document_text_chars = 0
 
     for heading in db.query(Heading).filter(Heading.conversation_id == conversation.id).yield_per(500):
         search_text = f"{heading.text} {conversation.display_title}".strip()
@@ -119,10 +126,12 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 },
             }
         )
+        document_text_chars += len(heading.text) + len(search_text)
         indexed_count += 1
-        if len(document_rows) >= 500:
+        if len(document_rows) >= 500 or document_text_chars >= _MAX_DOCUMENT_TEXT_CHARS:
             insert_rows(db, SearchDocument, document_rows)
             document_rows.clear()
+            document_text_chars = 0
 
     code_rows = (
         db.query(
@@ -145,7 +154,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
             RenderBlock.block_type == "code",
         )
         .order_by(Message.order_key.asc(), RenderBlock.block_index.asc())
-        .yield_per(500)
+        .yield_per(_BODY_READ_BATCH_SIZE)
     )
     for row in code_rows:
         block_data = row.data if isinstance(row.data, dict) else {}
@@ -172,50 +181,23 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 "metadata_": {"block_index": row.block_index, "render_block_id": str(row.render_block_id), "language": language},
             }
         )
+        document_text_chars += len(code_text) * 2 + len(language) + 1
         indexed_count += 1
-        if len(document_rows) >= 500:
+        if len(document_rows) >= 500 or document_text_chars >= _MAX_DOCUMENT_TEXT_CHARS:
             insert_rows(db, SearchDocument, document_rows)
             document_rows.clear()
+            document_text_chars = 0
 
-    attachment_rows = (
-        db.query(MessageVersionAttachment, Attachment, AssetObject, Message)
-        .join(Attachment, Attachment.id == MessageVersionAttachment.attachment_id)
-        .join(AssetObject, AssetObject.id == Attachment.asset_object_id)
-        .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
-        .filter(
-            Message.conversation_id == conversation.id,
-            Message.is_deleted.is_(False),
-            Attachment.deleted_at.is_(None),
-        )
-        .order_by(Message.order_key.asc(), MessageVersionAttachment.display_order.asc())
-        .all()
-    )
-    derivative_by_source = {
-        row.source_asset_object_id: row
-        for row in db.query(AssetDerivative).filter(
-            AssetDerivative.source_asset_object_id.in_({asset.id for _, _, asset, _ in attachment_rows}),
-            AssetDerivative.derivative_type == "text_extract",
-            AssetDerivative.status == "ready",
-        ).order_by(AssetDerivative.created_at.desc()).all()
-    } if attachment_rows else {}
-    derivative_assets = {
-        item.id: item
-        for item in db.query(AssetObject).filter(
-            AssetObject.id.in_({row.derivative_asset_object_id for row in derivative_by_source.values()})
-        ).all()
-    } if derivative_by_source else {}
-    for link, attachment, asset, message in attachment_rows:
+    for row in _attachment_rows(db, conversation.id):
         extracted = ""
-        derivative = derivative_by_source.get(asset.id)
-        derivative_asset = derivative_assets.get(derivative.derivative_asset_object_id) if derivative else None
-        if derivative_asset is not None and derivative_asset.status == "available":
+        if row.extract_status == "available":
             try:
-                with get_asset_store().resolve_key(derivative_asset.storage_key).open("rb") as source:
+                with get_asset_store().resolve_key(row.extract_storage_key).open("rb") as source:
                     extracted = source.read(256 * 1024).decode("utf-8", errors="replace")
             except (OSError, ValueError):
                 extracted = ""
         search_text = " ".join(
-            value for value in [attachment.display_name, attachment.original_filename, extracted] if value
+            value for value in [row.display_name, row.original_filename, extracted] if value
         ).strip()
         if not search_text:
             continue
@@ -223,29 +205,31 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
             {
                 "id": uuid.uuid4(),
                 "conversation_id": conversation.id,
-                "message_id": message.id,
-                "message_version_id": link.message_version_id,
+                "message_id": row.message_id,
+                "message_version_id": row.message_version_id,
                 "document_type": "attachment",
-                "role": message.role,
-                "title": attachment.display_name,
-                "plain_text": extracted or attachment.display_name,
+                "role": row.role,
+                "title": row.display_name,
+                "plain_text": extracted or row.display_name,
                 "search_text": search_text,
                 "source_type": conversation.source_type,
                 "source_profile": conversation.source_profile,
-                "order_key": message.order_key,
-                "turn_index": message.turn_index,
-                "created_at": message.created_at,
+                "order_key": row.order_key,
+                "turn_index": row.turn_index,
+                "created_at": row.created_at,
                 "metadata_": {
-                    "attachment_id": str(attachment.id),
-                    "mime_type": asset.detected_mime_type,
+                    "attachment_id": str(row.attachment_id),
+                    "mime_type": row.mime_type,
                     "derivative_type": "text_extract" if extracted else None,
                 },
             }
         )
+        document_text_chars += len(extracted or row.display_name) + len(search_text)
         indexed_count += 1
-        if len(document_rows) >= 500:
+        if len(document_rows) >= 500 or document_text_chars >= _MAX_DOCUMENT_TEXT_CHARS:
             insert_rows(db, SearchDocument, document_rows)
             document_rows.clear()
+            document_text_chars = 0
 
     if document_rows:
         insert_rows(db, SearchDocument, document_rows)
@@ -299,7 +283,55 @@ def _message_version_rows(db: Session, conversation_id: uuid.UUID):
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
         .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
         .order_by(Message.order_key.asc())
-        .yield_per(500)
+        .yield_per(_BODY_READ_BATCH_SIZE)
+    )
+
+
+def _attachment_rows(db: Session, conversation_id: uuid.UUID):
+    # Attachment metadata and occurrence captions can be as large as source
+    # text. They are not indexed: project only required fields and do not hold
+    # all occurrences/derivative histories in Python dictionaries.
+    extract = aliased(AssetObject)
+    latest_extract_id = (
+        select(AssetDerivative.derivative_asset_object_id)
+        .where(
+            AssetDerivative.source_asset_object_id == AssetObject.id,
+            AssetDerivative.derivative_type == "text_extract",
+            AssetDerivative.status == "ready",
+        )
+        .order_by(AssetDerivative.created_at.desc(), AssetDerivative.id.desc())
+        .limit(1)
+        .correlate(AssetObject)
+        .scalar_subquery()
+    )
+    return (
+        db.query(
+            Message.id.label("message_id"),
+            Message.role,
+            Message.order_key,
+            Message.turn_index,
+            Message.created_at,
+            MessageVersionAttachment.message_version_id,
+            Attachment.id.label("attachment_id"),
+            Attachment.display_name,
+            Attachment.original_filename,
+            AssetObject.detected_mime_type.label("mime_type"),
+            extract.storage_key.label("extract_storage_key"),
+            extract.status.label("extract_status"),
+        )
+        .select_from(MessageVersionAttachment)
+        .join(Attachment, Attachment.id == MessageVersionAttachment.attachment_id)
+        .join(AssetObject, AssetObject.id == Attachment.asset_object_id)
+        .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
+        .outerjoin(extract, extract.id == latest_extract_id)
+        .filter(
+            Message.conversation_id == conversation_id,
+            Message.is_deleted.is_(False),
+            Attachment.deleted_at.is_(None),
+        )
+        .order_by(Message.order_key.asc(), MessageVersionAttachment.display_order.asc(),
+            MessageVersionAttachment.id.asc())
+        .yield_per(_BODY_READ_BATCH_SIZE)
     )
 
 

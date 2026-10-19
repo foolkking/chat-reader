@@ -1,5 +1,73 @@
 # Testing
 
+## Local search/gzip OOM continuation — 2026-10-19, not released
+
+The [continuation record](execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
+and separate [index allocation](evidence/search-retention-2026-10-19.json) /
+[compressed-input probe](evidence/compressed-admission-2026-10-19.json)
+own this batch's measurements and correctness boundaries. Fifteen related API
+modules pass **170/170** in three serial fresh-process batches (97 import,
+54 search/draft/export-memory, 19 offline/edit/export). Six additional native
+PostgreSQL 17 cases pass against an explicitly disposable database; the task
+instance is stopped and its port closed.
+
+The first combined run stopped at **160 passed / 2 failed**, with two small
+import commits returning 400. Both cases pass in a separate two-test rerun and
+in the complete 19-test related batch. A further combined rerun of the same
+15 modules, with a read-only synthetic response observer and no admission
+overrides added by that observer, passes **170/170**. The original failure is
+not reproduced, is not counted as a pass, and is not attributed to memory
+pressure without its response evidence.
+These focused results do not rerun the earlier 219-module API checkpoint below.
+
+New regressions are `tests/test_canjson_memory_bounds.py`,
+`tests/test_search_memory_bounds.py` and
+`tests/test_search_memory_bounds_postgres.py`. They cover bounded body/ID
+reads, projected joins and newest-ready extracts, rollback and caller-held ORM
+state, bounded gzip reads and expansion admission, resource-vs-mapping error
+classification, and an actual initial-analysis task that fails safely then
+retries the same ID to READY. No Web files or migration changed. Web/PWA,
+Linux PID 1, cgroup/RSS and 2 GiB/60-minute acceptance remain unexecuted.
+All 21 changed/new Python files compile, Alembic remains single head 0052,
+and diff whitespace checks pass. No push, CI or deployment.
+
+## Authorized local OOM follow-up — 2026-10-19, not released
+
+This is the previous local source checkpoint, not a full rerun after the
+search/gzip continuation above.
+The [local repair record](execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)
+and [allocation evidence](evidence/server-body-retention-2026-10-19.json) separate
+small-fixture Python allocations/live bodies from server RSS/capacity.
+Focused draft/body-bound regressions passed 30; fresh native PostgreSQL 17
+snapshot and cursor/COPY regressions passed 9 + 1. All 219 API modules ran in
+16 serial fresh-process batches: 1,416 passed / 179 conditional skips, no failures.
+The interrupted one-process attempt is not a pass; its limits and fixture
+headroom isolation are recorded in the closeout report.
+Alembic remains single head 0052; no migration,
+CI, push, deployment or production stress test.
+
+The new regressions live in `tests/test_export_memory_bounds.py` and
+`tests/test_import_draft_streaming.py`. PostgreSQL execution additionally uses
+`tests/test_direct_export_snapshot_postgres.py`,
+`tests/test_offline_snapshot_postgres.py` and `tests/test_cr_archive_postgres.py`
+against an explicitly disposable database, not the development/production one.
+Docker Linux is unavailable locally; Linux PID 1 and 2 GiB/60-minute acceptance
+remain unexecuted, not passing or substituted by the Windows tests.
+
+## Accepted exact-source release — 2026-10-19
+
+CI **39135555660**, source **f3b331a**, attempt 1 passes all five jobs:
+API **1562 passed / 3 real-fixture skips**, single PostgreSQL head/current
+**20261017_0052**, all 13 Web/two settings gates. Default PWA is
+**151 passed / 738 conditional skips**; adaptive recovery has **9 passed /
+1 conditional skip**; settings is **463/0**, fresh-instance restore **1/0**.
+Other gate counts and original artifact checks are in the
+[release record](execution/FEATURE_RELEASE_2026-10-19.md).
+Actual Linux signal/external POSIX worker tests passed in CI. Production
+stopped-writer migration/data, lightweight health, HTTPS and authenticated
+read-only acceptance pass. This does **not** complete Docker PID 1 shutdown,
+60-minute/2 GiB soak, full production browser or production import stress tests.
+
 ## Authorized CI repair — 2026-10-18
 
 [Run 39130940184 repair](execution/CI_QUALITY_REPAIR_2026-10-18.md) separates the
@@ -17,11 +85,15 @@ cases pass, including ECR exhaustion, same-digest official fallback, both-source
 failure, readiness failure/timeout, identity guards and cleanup. No real Docker
 or registry operation is performed by those tests. Web lint, nonincremental
 typecheck, Bash syntax, pinned Actionlint 1.7.12 (without optional shellcheck/
-pyflakes), and parsed old/new workflow preservation pass. Complete exact-source
-CI and actual PostgreSQL fixture startup remain for the authorized retry;
-deployment has not occurred.
+pyflakes), and parsed old/new workflow preservation pass. Those were the local
+repair checkpoint; the exact-source CI and accepted deployment above now
+supersede its then-pending release boundary, not its local-test limits.
 
-## Import/noise stability continuation — 2026-10-18 (local only)
+## Import/noise stability implementation record — 2026-10-18
+
+The following section preserves the original local test evidence and its
+limitations. Exact-source CI and production acceptance are recorded separately
+in the [accepted release report](execution/FEATURE_RELEASE_2026-10-19.md).
 
 [Stability evidence](execution/IMPORT_STABILITY_2026-10-18.md) distinguishes
 read-only production OOM evidence from synthetic repair validation. Initial
@@ -128,8 +200,10 @@ Docker Desktop's Linux engine is unavailable and was not started; Linux PID 1,
 full API/PostgreSQL, memory/load and Web gates are not claimed for this batch.
 Cold CLI import does not load ORM/services; six Python syntax checks, links
 and diff checks pass. One existing Starlette/httpx deprecation warning remains.
-No CI, push, deployment or production change was made for this batch;
-production remains 3e68d1f/0051.
+No CI, push, deployment or production change was made for this batch; at that
+checkpoint production remained 3e68d1f/0051. The later accepted release and
+current production state are in the
+[release report](execution/FEATURE_RELEASE_2026-10-19.md).
 
 ## OOM stability repair and release — 2026-10-17
 

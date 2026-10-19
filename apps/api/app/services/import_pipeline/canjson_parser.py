@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from app.core.config import get_settings
+from app.services.uploads import require_analysis_memory_headroom
 from app.services.import_pipeline.canonical_draft import (
     BLOCK_BUILDER_VERSION,
     MARKDOWN_PARSER_VERSION,
@@ -308,18 +309,36 @@ def _iter_jsonl_lines(content: bytes, *, compressed: bool) -> Iterator[tuple[int
     reader = gzip.GzipFile(fileobj=stream) if compressed else stream
     total_uncompressed = 0
     line_number = 0
+    # A small gzip must not inherit its compressed byte count as the complete
+    # parser working-set estimate. Recheck before growing/decoding a large
+    # record, then at most once per additional MiB of expanded source.
+    next_memory_check = max(len(content), settings.upload_heavy_threshold_mb * 1024 * 1024)
     try:
         while True:
-            line = reader.readline(settings.canjson_max_line_bytes + 1)
-            if not line:
+            pending = bytearray()
+            while True:
+                chunk = reader.readline(min(64 * 1024, settings.canjson_max_line_bytes + 1 - len(pending)))
+                if not chunk:
+                    break
+                if len(pending) + len(chunk) > settings.canjson_max_line_bytes:
+                    raise CanJsonParseError(f"CanJSON line {line_number + 1} exceeds the configured JSONL line limit.")
+                total_uncompressed += len(chunk)
+                if compressed:
+                    if total_uncompressed > max(len(content), 1) * settings.canjson_max_compression_ratio:
+                        raise CanJsonParseError("CanJSON gzip compression ratio exceeds the configured limit.")
+                    if total_uncompressed > next_memory_check:
+                        require_analysis_memory_headroom(total_uncompressed)
+                        next_memory_check = total_uncompressed + 1024 * 1024
+                pending.extend(chunk)
+                if chunk.endswith(b"\n"):
+                    break
+            if not pending:
                 break
             line_number += 1
-            if len(line) > settings.canjson_max_line_bytes:
-                raise CanJsonParseError(f"CanJSON line {line_number} exceeds the configured 32 MiB limit.")
-            total_uncompressed += len(line)
-            if compressed and total_uncompressed > max(len(content), 1) * settings.canjson_max_compression_ratio:
-                raise CanJsonParseError("CanJSON gzip compression ratio exceeds the configured limit.")
+            line = bytes(pending)
+            del pending, chunk
             yield line_number, line
+            del line
     finally:
         if compressed:
             reader.close()

@@ -1,6 +1,6 @@
 # 后端与 API
 
-## Adaptive Import initial-analysis task (2026-10-18, local only)
+## Adaptive Import initial-analysis task (deployed 2026-10-19)
 
 `POST /api/adaptive-import/sessions` performs bounded multipart staging and
 commits an `adaptive_import_analysis` BackgroundJob, then returns the session
@@ -15,10 +15,10 @@ commit endpoint rejects a session until its initial analysis is reviewable.
 
 This uses the existing `BackgroundJob` schema and adds no migration. Other
 adaptive replacement, reanalysis and mapping routes remain bounded synchronous
-FastAPI handlers executed in the thread pool. Current local migration head is
-`20261017_0052`; production remains at `20261017_0051`. This worktree has not
-been committed, pushed, sent to CI or deployed. See the
-[adaptive import contract](ADAPTIVE_IMPORT_CONTRACT.md#durable-initial-analysis-task-2026-10-18-local-only).
+FastAPI handlers executed in the thread pool. Production source `f3b331a` and
+schema `20261017_0052` are live-verified; the release report records exact CI,
+limits and runtime evidence. See the
+[adaptive import contract](ADAPTIVE_IMPORT_CONTRACT.md#durable-initial-analysis-task).
 
 Task query consistency (local release verification, 2026-10-16): the bounded
 active, pending-cleanup and recent-terminal windows can overlap when a worker
@@ -139,9 +139,10 @@ global restore locking, a second empty-instance check and atomic receipts guard
 retries/concurrency. The old synchronous route remains compatible. V5 configuration schema 1 now covers
 format/rule grants and publication, account preferences, existing Skills and
 feature/access policy. Export runs full preflight and restore-capacity checks
-before publication. Earlier v4/v5 reading is preserved. Not deployed.
+before publication. Earlier v4/v5 reading is preserved. The “not deployed”
+statement describes this 2026-10-02 checkpoint, not the current release state.
 
-## Current account and ownership contract (working tree, 2026-09-01)
+## Account and ownership contract (introduced 2026-09-01)
 
 `AuthenticationMiddleware` protects private API routes and derives an
 `OwnershipScope` from the server session. CRUD, imports, jobs, projects,
@@ -151,9 +152,10 @@ routes manage registration mode, invitations, user status and reset grants;
 system archive routes are `ADMIN`-only when authentication is enabled. Share
 routes keep independent token authorization.
 
-Migration `20260927_0033` is the repository and production head. Older
-statements below that say there is no auth middleware or application rate
-limit are superseded historical text.
+Migration `20260927_0033` was the repository and production head at that
+checkpoint. Later schema state is maintained in `PROJECT_STATE.md` and the
+accepted release record. Older statements below that say there is no auth
+middleware or application rate limit are superseded historical text.
 
 ## JSON + Markdown pairing v5 (current)
 
@@ -202,6 +204,34 @@ disk copy does not require the import parser's memory reserve. Production Nginx
 streams the three exact large-upload paths directly to the loopback-bound API,
 avoiding Next.js's 10 MiB request clone. Adaptive sessions keep their 512 MiB
 aggregate limit.
+
+**Local working-tree follow-up (2026-10-19; not deployed):** canonical draft
+commit now measures/admission-checks one conversation before allocating its
+JSON record, including small records; draft writing is incremental with
+unchanged bytes. Search rebuild bounds body fetches and pending text rather
+than relying solely on a 500-record batch. Direct legacy Markdown now streams
+into the existing prepared-download spool; Markdown/CanJSON body batches and
+Offline message/search body batches are eight. Offline uses keyset message reads and streams
+annotation/attachment arrays without changing package/Dexie versions.
+Legacy conversation `.cr` export streams historical versions with SQL ID
+subqueries; import uses byte-aware batches and bounded record/document reads,
+and applies the existing compressed/expanded/object/JSON size settings.
+Oversized JSON records fail explicitly; failed ZIP writes clean private staging.
+These bounds do not eliminate single-record, metadata or cross-process resource
+costs. Current production is still the accepted source above; see the
+[local repair and verification limits](../execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md).
+
+The [local continuation](../execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
+projects only required attachment-index fields, streams eight rows and joins
+the newest ready extract without loading metadata/captions or per-occurrence
+application queries. Annotation bodies use eight-row windows; stale search
+cleanup uses 200-ID keyset pages with identity synchronization and rollback,
+not a second read of every quote/comment body. The per-conversation seen-ID
+set and single-record costs remain.
+Gzip detection/parsing reads at most 64 KiB and rechecks expanding input
+headroom before large JSON decoding. Resource errors propagate as retryable
+429/task failure rather than format drift. Native CanJSON no longer fails on
+missing generic selectors. No new route, migration or release is implied.
 
 Selecting or deleting a message version commits the canonical message and
 returns `derived_status` (`ready` or `queued`) plus an optional

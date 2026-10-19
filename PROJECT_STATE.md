@@ -1,93 +1,52 @@
 # Project State
 
-Last updated: 2026-10-18. This is the current snapshot, not a release history.
+Last updated: 2026-10-19. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Authorized release continuation (2026-10-18):** the accumulated implementation
-was committed/pushed as `34136d0`, followed by test-selector repair `70911e1`.
-Run **39130940184** on `70911e1` passes API quality, but settings never reaches
-tests because the pinned PostgreSQL ECR pull is rate-limited. Web's default PWA
-gate passes 145, skips 738 conditionally and fails six Chinese background-import
-matrix cases: their unversioned preference fixture is older than SSR's language
-revision 73. The current repair models a newer complete preference snapshot and
-asserts the actual language/theme; all **12/12** local browser combinations pass
-with the same high-revision bootstrap. Disposable CI PostgreSQL now has bounded
-same-digest ECR/official Docker Hub fallback, health readiness and job-owned
-cleanup; **34/34** source/synthetic-shell cases, lint, nonincremental types,
-Actionlint and workflow-preservation comparison pass. Real registry/container
-execution and the complete new-source CI remain pending. Production remains
-`3e68d1f`/0051; no deployment or migration was performed. After dispatching CI,
-stop and wait for the user's result; do not poll or deploy.
-See [repair evidence](docs/execution/CI_QUALITY_REPAIR_2026-10-18.md).
-The “local only / no push / no CI” paragraphs below retain their original
-pre-release checkpoints, not the current release status.
+**Accepted release (2026-10-19 Asia/Shanghai):** production now runs exact source
+`f3b331a53a593f4cdb84a37f9eb25f13379f3eb5`, accepted at **2026-10-18 16:21:58 UTC**
+(2026-10-19 00:21:58 +08:00). CI **39135555660** attempt 1 passes all five jobs:
+API **1,562 passed / 3 real-fixture skips**, 13 Web and two settings gates pass.
+Original artifact **12141071331**, 50 OCI blobs, 330 embedded API files and
+exact-source support were independently verified. Only CI images were used.
+The stopped-writer **0051→0052** migration adds nullable `protection_review`,
+all existing values NULL; all old columns in **84 tables**, four storage roots,
+**313 attachment hashes** and **67 stable counts** match. PostgreSQL,
+production configuration and operational checkout are unchanged.
 
-**Current local implementation overlay (2026-10-18):** the worktree now contains
-the planned source-editor table tool (bounded preview/normalization/create/
-row-column operations), one-checkpoint TOC return for Owner/Offline/Share
-readers, rule-visible noise review with protected-match confirmation and
-rescan comparison, and saved-annotation Markdown export. Context producers use
-package format 1.1 with root `annotations.md`; Current/Index remain unchanged.
-Migration `20261017_0052` is new and local only. The online annotation endpoint,
-all four Context/CanJSON production paths, editable Skill runtimes, manifest
-inspection and reviewed Skill build path were updated. Fixed default Skill ZIPs
-were deliberately not replaced. The complete local `scripts/ux` regression now
-passes **1,426/1,426** after adapting the source-extracted Reader/Share
-fixtures to the TOC return checkpoint state and updating the protected-candidate
-expectation to the confirmation flow. This overlay has not been committed,
-pushed, sent to CI or deployed.
+API/Web/HTTPS and authenticated read-only checks pass; worker is fresh.
+All three new applications have zero restarts/OOM/startup error-keyword lines
+at acceptance, with no new kernel OOM since release preflight. Current/direct
+rollback is **f3b331a/3e68d1f**: crossing 0052→0051 requires the consent-revoking
+downgrade before old code starts, not merely an image switch.
+Fresh verified stopped-writer backup: **chat-reader-20261018T160748Z**.
+No backup/image/data pruning occurred. See the
+[accepted release, preserved failed attempts and remaining limits](docs/execution/FEATURE_RELEASE_2026-10-19.md).
 
-**Multi-file import stability continuation (2026-10-18, local only):** initial
-adaptive import analysis now follows the product's durable background-task
-flow: the HTTP request performs bounded streaming upload/staging, creates an
-`adaptive_import_analysis` `BackgroundJob`, and returns immediately with a task
-ID. The existing single worker performs analysis; Task Center remains the
-progress/result surface after the import dialog closes or the page is revisited.
-Upload staging uses bounded chunks, aggregate source bytes are checked before
-admission, and failures preserve staged inputs for retry. Queued cancellation
-removes only temporary sources; processing cancellation waits for worker
-acknowledgement, and canonical import cannot begin before analysis reaches a
-terminal reviewable state. This reuses generic `BackgroundJob` storage; no
-migration is introduced for the job type.
-
-The other adaptive preview/replacement/reanalysis routes still run synchronous
-FastAPI handlers in the thread pool with bounded analysis admission; moving
-initial analysis to the durable lane does not claim every parser path is a
-background job. Heavy analysis requires fixed memory reserve plus aggregate
-input bytes times `UPLOAD_ANALYSIS_MEMORY_FACTOR` (default 32); Linux checks
-both host and visible cgroup v1/v2 headroom and uses the tighter limit.
-Missing/insufficient evidence fails fast with retryable resource-pressure
-feedback. The multiplier is an estimate, not a parser memory ceiling. Draft
-planning and canonical commit stream their inputs and roll back malformed late
-drafts. Noise shares at most two compact source shadows within one message (no
-global cache). These mitigations do not prove noise scanning was the incident's
-sole cause or constitute production OOM/Linux/2 GiB acceptance.
-Initial related API checkpoints were **50**, then **61 passed**; upload/
-concurrent-response cases **21 passed**; matching/range/protection regression
-**130 passed**; bounded source retention **2 passed**. New queued-analysis API,
-PostgreSQL cancellation, UI, browser and full-suite final results are recorded
-in [import stability evidence](docs/execution/IMPORT_STABILITY_2026-10-18.md)
-including full API **1,383 passed / 177 skipped**, independent PostgreSQL
-cancellation **4/4**, React/Query lifecycle **13/13**, and browser matrix
-**12/12**. Web lint/typecheck/build and focused Ruff pass. The Windows full API
-test runner peaked near 3.84 GB working set and exited normally; this is not a
-service or Linux low-memory acceptance. No CI, push or deployment was started.
-See [import stability evidence](docs/execution/IMPORT_STABILITY_2026-10-18.md).
-
-**Plain Markdown and contextual file-drop enhancement (2026-10-18, local only):**
-Markdown without reliable message boundaries is preserved as one assistant
-message. Dragging files onto an Owner Reader surface or the sidebar Import
-button preselects them and binds the destination captured at that route: all
-conversations → unclassified; project page or Reader with project context →
-that project. The dialog allows changing destination and persists that choice
-for adaptive sessions; server-side ownership/archive validation remains
-authoritative. Focused API regression is **37 passed** after fixing default
-mapping and ensuring destination metadata survives worker analysis. Web
-lint, typecheck and production build pass; a Playwright drag/drop case is
-authored but browser execution is pending a current-schema disposable
-environment. No migration, CI, push or deployment. See
-[feature evidence](docs/execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md).
+Shared host RAM remains about 1.83 GiB, with about 252 MiB available at the
+independent audit. This is **not** 60-minute/2 GiB workload or Docker PID 1
+acceptance, nor proof that all OOM paths are fixed. Fixed default Skill ZIPs
+remain unchanged; only editable/reviewed versions recognize the new annotation
+projection. The user authorized a local OOM follow-up on 2026-10-19; the
+[local import/export repair](docs/execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)
+is not part of the accepted production source. No new push, CI or deployment
+is authorized or active.
+The [next local continuation](docs/execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
+also bounds attachment/annotation index retention and checks growing gzip
+expansion before JSON decoding. It fixes newest-ready extract selection,
+resource-failure classification and native CanJSON's missing-selector task
+failure. These working-tree changes add no migration and are not deployed.
+This continuation's fifteen related API modules pass 170/170 in serial batches
+and in an additional combined diagnostic rerun; separate disposable PostgreSQL
+17 coverage passes 6/6. The first combined attempt's two unreplicated commit
+failures remain documented, not attributed to memory without evidence.
+The 2026-10-17/18 implementation, import, and file-drop records and later
+dated implementation rows are historical checkpoints. Their source and deployment status is superseded by the
+accepted release; their individual test limits remain historical and are not
+upgraded by deployment. See the
+[release record](docs/execution/FEATURE_RELEASE_2026-10-19.md) for the single
+current production, schema, CI, and verification summary.
 
 **New production incident (2026-10-18, read-only evidence):** at
 **10:31:45 Asia/Shanghai / 02:31:45 UTC** the kernel recorded another host-level
@@ -138,45 +97,22 @@ error-keyword lines. PostgreSQL, environment, Compose, Nginx and operational
 checkout are unchanged. Direct rollback is `aea13fe`, on the same 0051 schema;
 do not downgrade for this rollback. See [acceptance and limits](docs/execution/OOM_STABILITY_2026-10-17.md#accepted-release).
 
-**Local-only continuation (2026-10-17):** the user requested continued
-optimization without proactive CI, push or deployment. The current
-[worker shutdown follow-up](docs/execution/WORKER_SHUTDOWN_2026-10-17.md) adds
-cooperative SIGTERM/SIGINT startup/admission/drain boundaries; it is not in
-production. Cancellation-safe claim compensation now preserves concurrent
-`cancelling`/`cancelled` states. Related local API regression **127 passed /
-4 POSIX-only skipped**, plus **4/4** disposable PostgreSQL 17 cancellation/
-compensation ordering cases; cold CLI import, syntax, links and diff checks
-pass. Full API/PostgreSQL gates and Linux PID 1/Docker remain outside this
-batch. No further production operation belongs to this local continuation.
-
-**Noise matching continuation (2026-10-17, local only):** the
-[literal-matching follow-up](docs/execution/NOISE_LITERAL_MATCHING_2026-10-17.md)
-restores normalized-exact review candidates discarded by the short fuzzy
-guard and removes per-hit boundary substring copies. The rule trial/bulk/
-refinement/preview/apply API path is exercised with 51 actionable candidates
-and one protected candidate. Final related API regression **194 passed /
-1 symlink-capability skipped** across 20 modules; separate disposable
-PostgreSQL 17 range/source guards **7/7** at that checkpoint. The subsequent
-[Unicode repair](docs/execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md)
-fixes cross-character NFKC misses with mapped original-source envelopes, not
-canonical text rewriting. Runtime Unicode 14.0.0 differential checks enumerate
-18,859 selected scalars / 113,154 comparisons plus 2,000 mixed samples;
-the selection predicate and separate Hangul composition cases are documented.
-Current related regression **237 passed / 1 capability skipped** across 22
-modules; fresh PostgreSQL 17 Unicode/range/source suites **10/10**. Refined
-deletion, protected text and pre-repair consent guards pass. Ordinary normalized
-text keeps a fast path; full provenance costs more for compatibility/combining
-input. Function-only allocation/timing is documented, not OOM/load acceptance.
-All these optimizations remain local, not production.
+**2026-10-17 worker/noise follow-up checkpoints:** the
+[worker shutdown](docs/execution/WORKER_SHUTDOWN_2026-10-17.md),
+[literal matching](docs/execution/NOISE_LITERAL_MATCHING_2026-10-17.md), and
+[Unicode normalization](docs/execution/NOISE_UNICODE_NORMALIZATION_2026-10-17.md)
+records retain the original focused-test and environment boundaries. Their
+released status is recorded in the accepted release above; those historical
+function-level results are not Docker PID 1 or low-memory stress acceptance.
 
 | Item | Verified state |
 | --- | --- |
-| Release accepted | Exact source `3e68d1f78c7293ef7cb2d45f25a4814da3a70908`, CI **38933466143** attempt 2, original artifact **12082341034**; all five jobs, 50 OCI blobs, embedded repair source and exact-source support independently verified. [OOM repair acceptance](docs/execution/OOM_STABILITY_2026-10-17.md#accepted-release); prior UX acceptance remains historical |
-| Production | Source `3e68d1f78c7293ef7cb2d45f25a4814da3a70908`; accepted 2026-10-17 00:53:53 UTC, CI images only; API/Web healthy, worker fresh, all three applications zero restarts/OOM/startup error-keyword lines at acceptance |
-| Later production incident | 2026-10-18 02:31:45 UTC host-level OOM killed API; subsequent API restart count 1. The local import/noise fixes above have not been deployed; noise-specific causation remains unproven |
-| Production database | Single current/head `20261015_0051`, upgraded from 0050 with only nullable JSON `reviewed_ranges`; all existing values remain NULL. No source rewrite, owner-auth reconciliation or backfill. PostgreSQL identity/start/restarts unchanged |
-| Last accepted data evidence | All 84 stopped-writer table fingerprints compare every old column across isolation and migration; three unrelated stores unchanged and the original asset tree exactly reconstructible from active plus isolated originals. Four clean storage roots match across migration; 313 attachment hashes and 67 live stable-table counts pass. No live full-hash sweep repeated |
-| Latest accepted image CI | `3e68d1f`: all five jobs of **38933466143** attempt 2 pass. Attempt 1 failed at image metadata retrieval with the Public ECR data limit; quality gates were not bypassed. The 2026-10-18 user-authorized candidate and pending retry are recorded at the top; no newer deployment is accepted |
+| Release accepted | Exact source `f3b331a53a593f4cdb84a37f9eb25f13379f3eb5`, CI **39135555660** attempt 1, original artifact **12141071331**; five jobs, 50 OCI blobs, 330 embedded API files and exact-source support independently verified. [Accepted release](docs/execution/FEATURE_RELEASE_2026-10-19.md) |
+| Production | Source `f3b331a53a593f4cdb84a37f9eb25f13379f3eb5`; accepted 2026-10-18 16:21:58 UTC / 2026-10-19 00:21:58 +08:00. CI images only; API/Web/HTTPS/authenticated read-only smoke pass, worker fresh; zero application restarts/OOM/startup error-keyword lines at acceptance |
+| Later production incident | 2026-10-18 02:31:45 UTC host-level OOM killed the then-3e68d1f API, which restarted. That incident precedes the accepted import/noise repair; noise-specific causation remains unproven. No new kernel OOM from release preflight through independent audit; not long-running OOM acceptance |
+| Production database | Single head/current `20261017_0052`, upgraded from 0051 with only nullable JSON `protection_review`; existing rows left SQL NULL by migration. No source rewrite, owner-auth reconciliation or backfill. PostgreSQL identity/start/restarts unchanged |
+| Last accepted data evidence | All old columns in 84 stopped-writer tables, four protected storage roots, 313 attachment SHA-256 checks and 67 stable counts pass across 0051→0052. No file isolation/deletion or live full-hash sweep in this release |
+| Latest accepted image CI | `f3b331a`: all five jobs of **39135555660** attempt 1 pass; API **1562 passed / 3 real-fixture skips**, 13 Web/two settings gates. Prior failure 39130940184 and its preference/registry repair remain historical, not skipped gates |
 | Previous UX CI | `aea13fe`: PostgreSQL 16 API **1,288 passed / 3 skipped**, single head/current 0051; all **13 Web gates** pass, including exact noise ranges at 375/1440px, attachment **25**, PDF **13**, auth **18**, negative PWA **19**, default PWA **139 / 737 conditional skips**; settings **463 / zero skips** plus one fresh-instance restore. These are that earlier release's counts, not new OOM-release counts |
 | Earlier candidate CI | Canonical-URL revision repair a12ce9e passed CI 37812290017; its artifact was never deployed separately. Its changes are included in accepted 84988a2 |
 | Local UX closeout | The resumed ordinary-user UX implementation and permitted service-free verification are complete at the pre-release checkpoint. Noise supports cross-page multiple candidates and exact editable removal ranges; rich-text uses bounded display-only compatibility, not arbitrary HTML/widgets. The administrator Skill and system archive recovery changes remain in the same release batch. The user explicitly authorized commit, CI and deployment on 2026-10-16; runtime and release acceptance now proceed through the gates below |
@@ -275,7 +211,7 @@ All these optimizations remain local, not production.
 | Previous source-only repair | [Public Share recovery language](docs/execution/ux-audit-share-recovery-locale-2026-10-14.md) follows the configured Share locale for loading, error and retry states, falling back to the visitor locale before Share metadata loads. Per user direction, no local checks, CI or deployment were run |
 | Current diagnosis | [Context package upload recovery](docs/execution/ux-audit-context-upload-recovery-2026-10-13.md) confirms successful large-package acceptance/commit alongside transient Web-to-API Docker DNS `EAI_AGAIN` during status reads. Local Nginx `/api/` loopback routing, Web retry/stale-data repair and one transient-502 browser regression are verified; no CI or deployment was started |
 | Release authorization | The explicitly requested 2026-10-16 UX release cycle is complete: exact CI/artifact, original backup, non-deleting isolation, additive migration, data/runtime acceptance and pointer/retention finalization pass. Further CI/deployment requires a new explicit request |
-| Recovery points | Current/direct rollback `3e68d1f`/`aea13fe`, both 0051; exact rollback images loaded, no downgrade for this pair. Older 84988a2 requires the consent-revoking 0051→0050 downgrade. Fresh five-component backup `20261017T003936Z` passes integrity checks but was captured before stopping writers, not an atomic cross-component snapshot. Existing `20261012T143850Z` and stopped-writer `20261016T152523Z` points plus independent orphan preservation remain; no backup/image/data pruning in this release |
+| Recovery points | Current/direct rollback `f3b331a`/`3e68d1f`; exact old images loaded. Crossing 0052→0051 requires the tested consent-revoking downgrade before old code starts, after a fresh verified backup. New stopped-writer five-component backup `20261018T160748Z` passes. The three prior points and independent orphan preservation remain; no backup/image/data pruning |
 | Release owner | [UX release](docs/execution/UX_RELEASE_2026-10-16.md#accepted-low-memory-deployment) owns this accepted cycle; [accumulated optimization](docs/execution/OPTIMIZATION_RELEASE_2026-10-08.md) and [attachment release](docs/execution/ATTACHMENT_DEPLOYMENT_2026-10-12.md) are historical |
 
 ### Earlier authorization and checkpoints (historical)
@@ -465,7 +401,7 @@ retained, not rerun for the test-only delta. Fractional-boundary and persistent
 page-local outage checks remain; PDF browser acceptance is still missing.
 The preceding unchanged-API SQLite batch passed **103 / 0 failed /
 0 skipped**; it was not rerun for this UI/test-only repair. At that earlier checkpoint source had one
-Alembic head `20261008_0050`; the current source/production head is 0051. Older checkpoint counts overlap and are not added.
+Alembic head `20261008_0050`; at that checkpoint, the source/production head was 0051. Older checkpoint counts overlap and are not added.
 Discovery finds **149 tests in ten files**, retaining the previous 144 and adding
 the CSP and rich-attachment cases; **zero browser cases executed locally**.
 Seventh CI's full API/PostgreSQL, settings, 100-case mutation and 21-case attachment

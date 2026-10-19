@@ -14,7 +14,7 @@ from app.services.exporting.export_service import (
     _write_export_event,
     export_conversation_canjson_v2,
     export_conversation_canonical_json,
-    export_conversation_markdown,
+    export_conversation_markdown_streaming,
     export_conversation_markdown_v2,
     _get_conversation, _safe_filename, _subject_key_for_conversation,
 )
@@ -66,7 +66,7 @@ def prepare_annotation_export(db: Session, conversation_id: UUID) -> StreamingEx
 
 def prepare_direct_export(db: Session, conversation_id: UUID, options: ExportOptions) -> StreamingExportResult:
     exporters = {
-        "markdown": export_conversation_markdown,
+        "markdown": export_conversation_markdown_streaming,
         "markdown_v2": export_conversation_markdown_v2,
         "canonical_json": export_conversation_canonical_json,
         "canjson_v2": export_conversation_canjson_v2,

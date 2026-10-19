@@ -14,6 +14,8 @@ from app.models.import_record import utc_now
 from app.core.observability import structured_event
 
 ANNOTATION_NAMESPACE = uuid.UUID("7e6f2f90-7e5b-4cb3-bf82-4f7fd2b1a6b8")
+_BODY_READ_BATCH_SIZE = 8
+_ID_BATCH_SIZE = 200
 logger = logging.getLogger(__name__)
 
 
@@ -105,21 +107,15 @@ def sync_annotations_for_conversation(db: Session, conversation_id: uuid.UUID) -
     result = AnnotationIndexResult()
     annotations = db.query(ConversationAnnotation).filter(
         ConversationAnnotation.conversation_id == conversation_id,
-    ).yield_per(200)
+    ).yield_per(_BODY_READ_BATCH_SIZE)
     seen: set[uuid.UUID] = set()
     for annotation in annotations:
         result = AnnotationIndexResult(**{**result.__dict__, "scanned": result.scanned + 1})
         seen.add(annotation_document_id(annotation.id))
         action = sync_annotation_document(db, annotation)
         result = AnnotationIndexResult(**{**result.__dict__, action: getattr(result, action) + 1})
-    stale = db.query(SearchDocument).filter(
-        SearchDocument.conversation_id == conversation_id,
-        SearchDocument.document_type == "annotation",
-    ).all()
-    for document in stale:
-        if document.id not in seen:
-            db.delete(document)
-            result = AnnotationIndexResult(**{**result.__dict__, "deleted": result.deleted + 1})
+    deleted = _prune_stale_documents(db, conversation_id, seen)
+    result = AnnotationIndexResult(**{**result.__dict__, "deleted": result.deleted + deleted})
     db.flush()
     return result
 
@@ -127,11 +123,10 @@ def sync_annotations_for_conversation(db: Session, conversation_id: uuid.UUID) -
 def backfill_annotation_documents(db: Session) -> AnnotationIndexResult:
     """Scan every annotation with per-row savepoints; callers decide commit/exit policy."""
     result = AnnotationIndexResult()
-    conversation_ids = [row[0] for row in db.query(Conversation.id).all()]
-    for conversation_id in conversation_ids:
+    for (conversation_id,) in db.query(Conversation.id).yield_per(_ID_BATCH_SIZE):
         annotations = db.query(ConversationAnnotation).filter(
             ConversationAnnotation.conversation_id == conversation_id,
-        ).yield_per(200)
+        ).yield_per(_BODY_READ_BATCH_SIZE)
         seen: set[uuid.UUID] = set()
         for annotation in annotations:
             result = AnnotationIndexResult(**{**result.__dict__, "scanned": result.scanned + 1})
@@ -143,13 +138,36 @@ def backfill_annotation_documents(db: Session) -> AnnotationIndexResult:
             except Exception as exc:
                 structured_event(logger, logging.WARNING, "annotation_search_index_failed", annotation_id=str(annotation.id), error_class=type(exc).__name__)
                 result = AnnotationIndexResult(**{**result.__dict__, "errors": result.errors + 1})
-        stale = db.query(SearchDocument).filter(
-            SearchDocument.conversation_id == conversation_id,
-            SearchDocument.document_type == "annotation",
-        ).all()
-        for document in stale:
-            if document.id not in seen:
-                db.delete(document)
-                result = AnnotationIndexResult(**{**result.__dict__, "deleted": result.deleted + 1})
+        deleted = _prune_stale_documents(db, conversation_id, seen)
+        result = AnnotationIndexResult(**{**result.__dict__, "deleted": result.deleted + deleted})
     db.flush()
     return result
+
+
+def _prune_stale_documents(db: Session, conversation_id: uuid.UUID, seen: set[uuid.UUID]) -> int:
+    """Delete stale IDs without reloading every quote/comment/search body.
+
+    Keyset pages also avoid modifying a table while its read cursor is open.
+    Synchronize caller-held documents just as ORM delete did, and leave commit
+    and rollback ownership with the existing caller.
+    """
+    query = db.query(SearchDocument.id).filter(
+        SearchDocument.conversation_id == conversation_id,
+        SearchDocument.document_type == "annotation",
+    )
+    after = None
+    deleted = 0
+    while True:
+        page = query.filter(SearchDocument.id > after) if after is not None else query
+        rows = page.order_by(SearchDocument.id.asc()).limit(_ID_BATCH_SIZE).all()
+        if not rows:
+            break
+        after = rows[-1][0]
+        stale_ids = [row[0] for row in rows if row[0] not in seen]
+        if stale_ids:
+            deleted += db.query(SearchDocument).filter(
+                SearchDocument.id.in_(stale_ids),
+                SearchDocument.conversation_id == conversation_id,
+                SearchDocument.document_type == "annotation",
+            ).delete(synchronize_session="fetch")
+    return deleted

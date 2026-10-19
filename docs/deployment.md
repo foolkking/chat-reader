@@ -1,5 +1,38 @@
 # 生产部署
 
+## 当前接受的功能与导入稳定性发布 — 2026-10-19
+
+生产为 **f3b331a53a593f4cdb84a37f9eb25f13379f3eb5 / 20261017_0052**，
+接受于 **2026-10-18 16:21:58 UTC / 2026-10-19 00:21:58 +08:00**。
+CI **39135555660** 尝试 1 的五项全部通过；原始镜像制品 **12141071331**、
+50 个 OCI blob、330 个 API 源文件和精确源码部署支持文件通过独立核对。
+API **1562 passed / 3 real-fixture skips**，13 个 Web 与两个设置门禁通过。
+镜像仅在 CI 构建，未在 King/工作站构建。
+
+停止应用写入后的五组成备份 **chat-reader-20261018T160748Z** 已验证。
+0051→0052 仅新增 nullable JSON `protection_review`，旧行全部 NULL；
+84 张表的所有旧字段、四类存储、313 附件哈希及 67 稳定计数不变。
+API/Web 健康、worker 心跳新鲜，HTTPS/登录/退出与只读接口验收通过。
+PostgreSQL 身份/启动/重启数、生产环境、Compose、Nginx 与运维 checkout 未变。
+没有运行管理员重配、源文回填、全量 live diagnostics、业务压力测试或清理。
+
+第一次维护被 512 MiB 可用内存门槛拦住并恢复旧应用；第二次将一次性进程
+上限收紧至 **192 MiB + 256 MiB 额外主机余量**，实测停止写入后 510 MiB
+可用，使用 448 MiB 总门槛。该约束不改变 serving 配置或业务准入。
+最终登记另修正了一处任务脚本诊断路径误判，未重启或重复迁移。
+这些失败记录保留；本次有计划停机，不是零停机滚动发布。
+不要把只读、受限 one-off Compose 文件用于 `up`，也不要按其 orphan 提示
+删除未包含的正式服务。不要重放本轮已完成的私有任务辅助脚本。
+
+当前/直接回退 **f3b331a/3e68d1f**，旧镜像已加载。**跨 0052→0051 必须**
+停止写入、做新备份并用新镜像执行撤销保护删除授权的 downgrade 后，才启动旧代码。
+不能照搬上一版同为 0051 时的“只切镜像、不降级”操作。
+`release-state/rollback-0052-warning.txt` 已安装；没有自动降级或恢复数据库。
+四个恢复点暂时保留，未裁剪备份或镜像。长期低内存负载、Docker PID 1 和
+完整生产交互仍未验收，固定默认 Skill ZIP 未替换。详见
+[发布记录](execution/FEATURE_RELEASE_2026-10-19.md)与
+[脱敏证据](evidence/feature-release-2026-10-19.json)。
+
 ## OOM 诊断与健康检查边界 — 2026-10-17
 
 旧完整诊断直接在 serving API 容器额外启动 Python/ORM、运行聚合查询并遍历文件；
@@ -27,9 +60,9 @@ kernel `global_oom` 并导致旧 API 非计划退出 137，Compose 随后自动�
   这修复的是已证实的诊断峰值 OOM 路径，不是对共享主机所有业务负载、
   uploads、其他应用或宿主机故障的零停机保证。
 
-## Current accepted OOM repair — 2026-10-17
+## Previous accepted OOM repair — 2026-10-17
 
-Production is **`3e68d1f78c7293ef7cb2d45f25a4814da3a70908` / `20261015_0051`**,
+That release was **`3e68d1f78c7293ef7cb2d45f25a4814da3a70908` / `20261015_0051`**,
 accepted **2026-10-17 00:53:53 UTC**. Exact-source CI **38933466143** attempt 2
 passes all five jobs. Original artifact **12082341034**, 50 OCI blobs, embedded
 repair source and source-matched deployment support were independently checked.

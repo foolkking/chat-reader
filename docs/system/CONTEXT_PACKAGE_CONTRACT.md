@@ -1,10 +1,11 @@
 # Context Package contract
 
-## Current worktree contract — 2026-10-17 (local only)
+## Current contract — released 2026-10-19
 
-This section is the current source-of-truth overlay for the unshipped Context
-export changes. It supersedes the older release notes below for the local
-working tree. No CI, push, or deployment was started for this overlay.
+This section describes Context export in accepted source `f3b331a` and
+supersedes the historical release notes below. All production paths and manifest
+changes shipped together; see [release and verification limits](../execution/FEATURE_RELEASE_2026-10-19.md).
+The fixed default Skill distribution was not upgraded.
 
 Context packages use `format = chat-reader-context-package` and
 `format_version = "1.1"`. The canonical stream remains CanJSON v2 and
@@ -68,7 +69,7 @@ and must not be described as an upgraded default distribution.
 
 ## Historical release notes
 
-Current deployed implementation, 2026-10-05; migration head `20261003_0046`.
+Historical deployed implementation as of 2026-10-05; migration head `20261003_0046`.
 Source `3f1d539` passed full CI and production acceptance. See the
 [completion audit](../execution/CONTEXT_GOAL_COMPLETION_2026-10-04.md) for the
 final approved scope and requirement evidence, and the

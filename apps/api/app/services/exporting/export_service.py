@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.engine import Connection, Engine
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from app.models.conversation import Conversation
 from app.models.attachment import Attachment, AssetObject, MessageVersionAttachment
@@ -436,7 +436,7 @@ def _current_message_batches(
     db: Session,
     conversation_id: uuid.UUID,
     message_ids: list[uuid.UUID],
-    batch_size: int = 100,
+    batch_size: int = 8,
 ) -> Iterator[list[dict]]:
     last_order_key: str | None = None
     ordinal = 0
@@ -666,74 +666,134 @@ def _gzip_chunks(chunks: Iterator[bytes]) -> Iterator[bytes]:
 
 
 def export_conversation_markdown(db: Session, conversation_id: uuid.UUID, options: ExportOptions, *, record_event: bool = True) -> ExportResult:
-    conversation = _get_conversation(db, conversation_id)
-    rows = _message_rows(db, conversation, options.message_ids)
-    toc = _toc_rows(db, conversation, options.message_ids) if options.include_toc else []
-    exported_at = _utc_now().isoformat()
-    lines: list[str] = [f"# {conversation.display_title}", ""]
+    """Compatibility helper for callers explicitly requesting a string."""
+    result = export_conversation_markdown_streaming(db, conversation_id, options, record_event=record_event)
+    return ExportResult(
+        content=b"".join(result.content).decode("utf-8"),
+        media_type=result.media_type,
+        filename=result.filename,
+        message_count=result.message_count,
+    )
 
+
+def export_conversation_markdown_streaming(
+    db: Session,
+    conversation_id: uuid.UUID,
+    options: ExportOptions,
+    *,
+    record_event: bool = True,
+) -> StreamingExportResult:
+    conversation = _get_conversation(db, conversation_id)
+    _validate_message_ids(db, conversation.id, options.message_ids)
+    count = _legacy_message_query(db, conversation.id, options.message_ids).count()
+    if record_event:
+        _write_export_event(db, conversation.id, options, count)
+    return StreamingExportResult(
+        content=_legacy_markdown_chunks(db.get_bind(), conversation.id, options, _utc_now().isoformat(), count),
+        media_type="text/markdown; charset=utf-8",
+        filename=f"{_safe_filename(conversation.display_title)}.md",
+        message_count=count,
+    )
+
+
+def _legacy_markdown_chunks(
+    bind: Engine | Connection,
+    conversation_id: uuid.UUID,
+    options: ExportOptions,
+    exported_at: str,
+    count: int,
+) -> Iterator[bytes]:
+    with Session(bind=bind) as stream_db:
+        conversation = _get_conversation(stream_db, conversation_id)
+        # Equivalent to "\n".join(lines).strip() + "\n", without retaining
+        # earlier messages or the whole rendered document before spilling.
+        pending_whitespace: list[str] = []
+        first = True
+        for line in _legacy_markdown_lines(stream_db, conversation, options, exported_at, count):
+            if not first:
+                pending_whitespace.append("\n")
+            first = False
+            content = line.rstrip()
+            if content:
+                for whitespace in pending_whitespace:
+                    yield whitespace.encode("utf-8")
+                pending_whitespace.clear()
+                yield content.encode("utf-8")
+            pending_whitespace.append(line[len(content):])
+        yield b"\n"
+
+
+def _legacy_markdown_lines(
+    db: Session,
+    conversation: Conversation,
+    options: ExportOptions,
+    exported_at: str,
+    count: int,
+) -> Iterator[str]:
+    yield f"# {conversation.display_title}"
+    yield ""
     if options.include_metadata:
-        lines.extend(
-            [
-                f"- Source profile: {conversation.source_profile}",
-                f"- Exported at: {exported_at}",
-                f"- Message count: {len(rows)}",
-                "",
-            ]
-        )
+        yield f"- Source profile: {conversation.source_profile}"
+        yield f"- Exported at: {exported_at}"
+        yield f"- Message count: {count}"
+        yield ""
 
     if options.include_description and conversation.description_markdown:
-        lines.extend(["## Description", "", conversation.description_markdown.strip(), ""])
+        yield from ("## Description", "", conversation.description_markdown.strip(), "")
 
-    if toc:
-        lines.extend(["## Table of Contents", ""])
-        for heading in toc:
+    if options.include_toc:
+        query = db.query(Heading).filter(Heading.conversation_id == conversation.id)
+        if options.message_ids:
+            query = query.filter(Heading.message_id.in_(options.message_ids))
+        started = False
+        for heading in query.order_by(Heading.heading_index.asc()).yield_per(100):
+            if not started:
+                yield from ("## Table of Contents", "")
+                started = True
             indent = "  " * max(0, heading.level - 1)
-            lines.append(f"{indent}- {heading.text}")
-        lines.append("")
+            yield f"{indent}- {heading.text}"
+        if started:
+            yield ""
 
-    lines.append("---")
-    lines.append("")
-    for message, version in rows:
-        lines.append(f"## {message.role.title()} · {message.order_key}")
-        lines.append("")
+    yield from ("---", "")
+    for message, version in _iter_legacy_message_rows(db, conversation.id, options.message_ids):
+        yield f"## {message.role.title()} · {message.order_key}"
+        yield ""
         block_text = _markdown_blocks(db, version)
-        lines.append(block_text or version.display_text)
-        lines.append("")
+        yield block_text or version.display_text
+        yield ""
 
     if options.include_annotations:
-        annotations = _annotation_rows(db, conversation, options.message_ids)
-        if annotations:
-            lines.extend(["## Annotations", ""])
-            for annotation in annotations:
-                quote = annotation.quote or "Whole message"
-                lines.append(f"### {annotation.annotation_type.replace('_', ' ').title()}")
-                lines.append("")
-                lines.append(f"> {quote.replace(chr(10), ' ')}")
-                if annotation.comment_markdown:
-                    lines.extend(["", annotation.comment_markdown])
-                lines.append("")
+        query = db.query(ConversationAnnotation).filter(
+            ConversationAnnotation.conversation_id == conversation.id,
+            ConversationAnnotation.subject_key == _subject_key_for_conversation(conversation),
+            ConversationAnnotation.is_deleted.is_(False),
+        )
+        if options.message_ids:
+            query = query.filter(ConversationAnnotation.message_id.in_(options.message_ids))
+        started = False
+        for annotation in query.order_by(ConversationAnnotation.created_at.asc()).yield_per(8):
+            if not started:
+                yield from ("## Annotations", "")
+                started = True
+            quote = annotation.quote or "Whole message"
+            yield f"### {annotation.annotation_type.replace('_', ' ').title()}"
+            yield ""
+            yield f"> {quote.replace(chr(10), ' ')}"
+            if annotation.comment_markdown:
+                yield from ("", annotation.comment_markdown)
+            yield ""
     if options.include_notebook:
         notebook = _notebook_row(db, conversation)
         if notebook and notebook.blocks:
-            lines.extend(["## Curated Notes", ""])
+            yield from ("## Curated Notes", "")
             for block in notebook.blocks:
                 if isinstance(block, dict) and block.get("type") == "markdown":
-                    lines.extend([str(block.get("markdown") or ""), ""])
+                    yield from (str(block.get("markdown") or ""), "")
                 elif isinstance(block, dict) and block.get("type") == "annotation_reference":
                     annotation = db.get(ConversationAnnotation, uuid.UUID(str(block.get("annotation_id"))))
                     if annotation and annotation.quote:
-                        lines.extend([f"> {annotation.quote}", ""])
-
-    if record_event:
-        _write_export_event(db, conversation.id, options, len(rows))
-    content = "\n".join(lines).strip() + "\n"
-    return ExportResult(
-        content=content,
-        media_type="text/markdown; charset=utf-8",
-        filename=f"{_safe_filename(conversation.display_title)}.md",
-        message_count=len(rows),
-    )
+                        yield from (f"> {annotation.quote}", "")
 
 
 def export_conversation_canonical_json(db: Session, conversation_id: uuid.UUID, options: ExportOptions, *, record_event: bool = True) -> StreamingExportResult:
@@ -1096,40 +1156,26 @@ def _get_conversation(db: Session, conversation_id: uuid.UUID) -> Conversation:
     return conversation
 
 
-def _message_rows(
+def _legacy_message_query(
     db: Session,
-    conversation: Conversation,
+    conversation_id: uuid.UUID,
     message_ids: list[uuid.UUID],
-) -> list[tuple[Message, MessageVersion]]:
+):
     query = (
         db.query(Message, MessageVersion)
+        .options(defer(MessageVersion.blocks))
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
-        .filter(Message.conversation_id == conversation.id, Message.is_deleted.is_(False))
+        .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
     )
     if message_ids:
-        valid_ids = {row[0] for row in db.query(Message.id).filter(Message.conversation_id == conversation.id).all()}
-        if any(message_id not in valid_ids for message_id in message_ids):
-            raise ExportError("message_ids must belong to the conversation.")
         query = query.filter(Message.id.in_(message_ids))
-    return query.order_by(Message.order_key.asc()).all()
+    return query.order_by(Message.order_key.asc())
 
 
-def _toc_rows(db: Session, conversation: Conversation, message_ids: list[uuid.UUID]) -> list[Heading]:
-    query = db.query(Heading).filter(Heading.conversation_id == conversation.id)
-    if message_ids:
-        query = query.filter(Heading.message_id.in_(message_ids))
-    return query.order_by(Heading.heading_index.asc()).all()
-
-
-def _annotation_rows(db: Session, conversation: Conversation, message_ids: list[uuid.UUID]) -> list[ConversationAnnotation]:
-    query = db.query(ConversationAnnotation).filter(
-        ConversationAnnotation.conversation_id == conversation.id,
-        ConversationAnnotation.subject_key == _subject_key_for_conversation(conversation),
-        ConversationAnnotation.is_deleted.is_(False),
-    )
-    if message_ids:
-        query = query.filter(ConversationAnnotation.message_id.in_(message_ids))
-    return query.order_by(ConversationAnnotation.created_at.asc()).all()
+def _iter_legacy_message_rows(
+    db: Session, conversation_id: uuid.UUID, message_ids: list[uuid.UUID],
+) -> Iterator[tuple[Message, MessageVersion]]:
+    yield from _legacy_message_query(db, conversation_id, message_ids).yield_per(1)
 
 
 def _notebook_row(db: Session, conversation: Conversation) -> ConversationNotebook | None:

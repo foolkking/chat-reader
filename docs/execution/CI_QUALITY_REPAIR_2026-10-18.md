@@ -1,5 +1,11 @@
 # CI quality repair — 2026-10-18
 
+**Later outcome (2026-10-19 Asia/Shanghai):** exact source `f3b331a` passes all
+five jobs of CI **39135555660** attempt 1. User-confirmed success authorized
+deployment, now accepted on schema **0052**. See the
+[release record](FEATURE_RELEASE_2026-10-19.md). The failure and local-checkpoint
+limits below remain historical evidence, not the current production status.
+
 ## Actual failed run
 
 The user reported the outcome; inspection used local Git credentials and the

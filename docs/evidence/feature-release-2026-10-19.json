@@ -1,0 +1,240 @@
+{
+  "accepted_at_local": "2026-10-19T00:21:58+08:00",
+  "accepted_at_utc": "2026-10-18T16:21:58Z",
+  "artifact_id": 12141071331,
+  "authenticated_read_only_smoke": {
+    "bundled_skill_downloads_verified": 3,
+    "business_writes": false,
+    "checks": {
+      "attachment_capabilities": 200,
+      "auth_capabilities": 200,
+      "build": 200,
+      "cleanup_rules": 200,
+      "home_document": 200,
+      "library_document": 200,
+      "login": 200,
+      "pending_cleanup_reviews": 200,
+      "personal_archive_capabilities": 200,
+      "preferences": 200,
+      "search_document": 200,
+      "session": 200,
+      "system_archive_capabilities": 200,
+      "tasks": 200
+    },
+    "interactive_browser_acceptance": false,
+    "logout": 204,
+    "private_after_logout": 401,
+    "status": "PASS"
+  },
+  "backup_name": "chat-reader-20261018T160748Z",
+  "backup_writer_state": "web-api-worker-stopped",
+  "boundaries": {
+    "backup_or_image_pruning": false,
+    "docker_PID1_shutdown_acceptance": false,
+    "fixed_default_skill_ZIPs_replaced": false,
+    "full_diagnostics_in_serving_api": false,
+    "interactive_production_browser_acceptance": false,
+    "linux_2GiB_60_minute_soak": false,
+    "local_or_server_image_build": false,
+    "production_import_or_cleanup_apply_load_test": false,
+    "subsequent_CI_push_or_deployment": false
+  },
+  "ci_run_id": 39135555660,
+  "configuration_unchanged": true,
+  "database": {
+    "after": "20261017_0052",
+    "attachment_sha256_verified": 313,
+    "before": "20261015_0051",
+    "new_column_all_null": true,
+    "old_column_tables": 84,
+    "only_schema_change": "nullable JSON protection_review",
+    "stable_tables": 67,
+    "status": "PASS",
+    "storage_roots": 4
+  },
+  "image_archive_sha256": "a910d460ec428319b21367ef25abade6009533646abd470359a1d2e314947036",
+  "images": {
+    "api": "sha256:1450d10ce7a4334e5efd95b44c0420eb76a81e605ecb379da995c948afeb2e4c",
+    "web": "sha256:d700ab7cca261e022e9869dfb6168ff0b9446fdf2debd5778ae220d13cbddf89"
+  },
+  "independent_audit_at_utc": "2026-10-18T16:22:00Z",
+  "new_kernel_oom_keyword_lines_since_first_preflight": 0,
+  "operational_checkout_unchanged": true,
+  "original_zip_sha256": "b927cdc9f1f076e97dddb83d306f9c4022d5a52cca5ea9168146e6cb853cc1c6",
+  "post_release_free_space_KiB": 5925956,
+  "post_release_host_memory": {
+    "MemAvailable_KiB": 257752,
+    "MemTotal_KiB": 1915900,
+    "SwapFree_KiB": 2764716,
+    "SwapTotal_KiB": 3146744
+  },
+  "postgres_unchanged": true,
+  "preserved_failed_attempts": [
+    {
+      "phase": "before_migration",
+      "reason": "original 512 MiB available-memory guard refused; old applications restarted; no schema/source changes"
+    },
+    {
+      "phase": "final_acceptance_registration",
+      "reason": "task probe incorrectly expected 404 at nonexistent /api/diagnostics; correct /api/internal/diagnostics is 404; no second migration/restart"
+    }
+  ],
+  "producer_attempt": 1,
+  "public_diagnostics": {
+    "path": "/api/internal/diagnostics",
+    "status": 404
+  },
+  "quality": {
+    "api_passed": 1562,
+    "api_skipped": 3,
+    "gate_counts": {
+      "adaptive-import-recovery": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 9,
+        "skipped": 1,
+        "timedOut": 0
+      },
+      "context-files": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 35,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "csp-enforcement": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 4,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "default-pwa": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 151,
+        "skipped": 738,
+        "timedOut": 0
+      },
+      "focused-online-security": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 45,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "markdown-image-viewer": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 25,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "pdfjs-maintained-line": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 13,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "pwa-negative": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 19,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "settings-stages-1-4": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 463,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "share-focus": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 2,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "single-owner-auth": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 18,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "source-editor-cleanup": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 3,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "source-editor-mutation": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 100,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "system-archive-new-instance": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 1,
+        "skipped": 0,
+        "timedOut": 0
+      },
+      "upload-token-atomicity": {
+        "failed": 0,
+        "interrupted": 0,
+        "passed": 18,
+        "skipped": 0,
+        "timedOut": 0
+      }
+    }
+  },
+  "release_date_local": "2026-10-19",
+  "release_one_off_budget": {
+    "cpus": 0.5,
+    "extra_host_reserve_bytes": 268435456,
+    "limits_checked_from_compose_config": true,
+    "memory_bytes": 201326592,
+    "memory_plus_swap_bytes": 402653184,
+    "minimum_host_available_bytes": 469762048,
+    "peak_process_RSS_measured": false,
+    "stopped_writer_available_KiB": 522240
+  },
+  "rollback_requires_consent_revoking_0052_to_0051_downgrade": true,
+  "rollback_source": "3e68d1f78c7293ef7cb2d45f25a4814da3a70908",
+  "runtime": {
+    "api": {
+      "health": "healthy",
+      "image": "sha256:1450d10ce7a4334e5efd95b44c0420eb76a81e605ecb379da995c948afeb2e4c",
+      "memory_limit": 0,
+      "oom_killed": false,
+      "restarts": 0
+    },
+    "import-worker": {
+      "health": "running",
+      "image": "sha256:1450d10ce7a4334e5efd95b44c0420eb76a81e605ecb379da995c948afeb2e4c",
+      "memory_limit": 671088640,
+      "oom_killed": false,
+      "restarts": 0
+    },
+    "web": {
+      "health": "healthy",
+      "image": "sha256:d700ab7cca261e022e9869dfb6168ff0b9446fdf2debd5778ae220d13cbddf89",
+      "memory_limit": 0,
+      "oom_killed": false,
+      "restarts": 0
+    }
+  },
+  "source_sha": "f3b331a53a593f4cdb84a37f9eb25f13379f3eb5",
+  "status": "PASS",
+  "timezone": "Asia/Shanghai",
+  "verified_embedded_api_source_files": 330,
+  "verified_oci_blobs": 50,
+  "worker_heartbeat": "alive_idle"
+}

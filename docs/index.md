@@ -1,41 +1,33 @@
 # 文档导航
 
-当前发布进度（2026-10-18）：用户已授权提交、CI 与后续部署；
-候选 `70911e1` 的 CI **39130940184** 仅 API 通过，设置容器被 ECR 限流，
-Web 的六处失败是新测试使用了旧版本偏好夹具。修复、12 项浏览器回归及
-34 项 CI 工具检查见[本轮 CI 修复](execution/CI_QUALITY_REPAIR_2026-10-18.md)。
-下一次触发后等待用户反馈，不轮询、不提前部署。下方“仅本地／未 CI”是各批
-最初验证时的历史边界；当前生产仍为 **3e68d1f／0051**。
+当前生产（2026-10-19 Asia/Shanghai）：**f3b331a / 0052**，接受于
+**2026-10-18 16:21:58 UTC / 2026-10-19 00:21:58 +08:00**。
+[本轮发布记录](execution/FEATURE_RELEASE_2026-10-19.md)与
+[脱敏证据](evidence/feature-release-2026-10-19.json)记录 CI **39135555660**
+五项成功、原始制品 **12141071331**、受限维护、数据比对、登录及运行验收。
+84 张表全部旧字段、四类存储和 313 附件哈希不变；PostgreSQL/配置/运维 checkout 未变。
+当前/直接回退 **f3b331a/3e68d1f** 跨越 **0052→0051**，须先撤销保护删除授权并降级，
+不得只切镜像。没有新的全量诊断、压力测试、备份/镜像裁剪或默认 Skill 替换。
 
-本地实施覆盖（2026-10-17，未发布）：
-[表格工具、TOC 返回、噪声保护确认、批注导出与 Context 1.1](system/USER_FLOWS.md)。
-当前合同见 [Content Cleanup](system/CONTENT_CLEANUP_CONTRACT.md)、
-[Context Package](system/CONTEXT_PACKAGE_CONTRACT.md) 和 [API 参考](api-reference.md)；
-本轮没有启动 CI、推送或部署。
-
-多文件 adaptive import 的首轮解析现已上传后进入现有单 worker 后台任务；
-关闭页面不取消任务，进度／失败重试／结果通过任务中心恢复。该调整复用
-`BackgroundJob`，无新 migration，仍仅本地。
-
-无可靠消息边界的普通 Markdown 现在以完整单条 assistant 消息导入；
-owner Reader 页面和左侧导入入口支持拖放，并按全部对话／项目／带项目上下文的 Reader
-确定导入位置，可在审核时改选。详见
-[Adaptive Import 合同](system/ADAPTIVE_IMPORT_CONTRACT.md#plain-markdown-and-drop-based-destination)
-和[本地专项记录](execution/IMPORT_DESTINATION_MARKDOWN_2026-10-18.md)。
-
-当前生产为 **`3e68d1f`／0051**，2026-10-17 00:53:53 UTC 已接受。
-[OOM 修复发布](execution/OOM_STABILITY_2026-10-17.md#accepted-release)对应
-CI **38933466143** 尝试 2：五个任务全通过，原始制品 **12082341034**、
-50 个 OCI blob、内嵌修复源码与部署支持文件独立核验。仅替换应用镜像，
-无 migration；PostgreSQL／配置／运维 checkout 未变。当前／直接回退
-**3e68d1f／aea13fe** 均为 0051，**此回退不得降级数据库**。
-后续持续优化仅本地执行；未经用户再次要求，不主动 CI、推送或部署。
+已发布能力：[用户流程](system/USER_FLOWS.md)、
+[Adaptive Import](system/ADAPTIVE_IMPORT_CONTRACT.md)、
+[Content Cleanup](system/CONTENT_CLEANUP_CONTRACT.md)、
+[Context Package 1.1](system/CONTEXT_PACKAGE_CONTRACT.md)、[API](api-reference.md)。
+包括表格工具、TOC 返回、噪声规则/保护审阅、批注文档、多文件后台分析和按项目拖放导入。
+固定默认 Skill ZIP 未升级；Linux Docker PID 1、60 分钟低内存压力及完整生产交互仍未验收。
+用户现已授权[本地 OOM 续查与修复](execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)，
+未推送、未运行 CI、未部署，不改变上述生产版本。
+后续[附件/批注索引与 gzip 续查](execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
+补充修复批量元数据/索引正文保留、压缩展开准入与 CanJSON 内置格式后台失败；
+同样仅在本地，无新 migration。
+以下“仅本地/未发布”是原日期的历史检查点，
+不能覆盖当前已接受版本，也不能把当时未执行的测试改记通过。
 
 [本地 worker 停止优化](execution/WORKER_SHUTDOWN_2026-10-17.md)：
 启动导入前登记停止信号，空闲轮询可及时退出；已开始任务保持心跳并完成，
 尚未处理的领取条件式放回队列、不消耗尝试次数，也不覆盖并发取消。
 关联本地回归 **127 通过／4 跳过**，另有 PostgreSQL 17 取消顺序 **4/4**。
-此批不在生产中，
+该源码已随 f3b331a 发布；下列本地数字保留原验证边界，
 不承诺阻塞任务能在 Docker grace period 内结束，也未验证 Linux PID 1。
 
 [本地噪声字面匹配优化](execution/NOISE_LITERAL_MATCHING_2026-10-17.md)：
@@ -47,7 +39,7 @@ CI **38933466143** 尝试 2：五个任务全通过，原始制品 **12082341034
 已解决组合字符／Hangul 等价形式漏检，按原文映射而非改写正文。
 关联回归 **237 通过／1 环境跳过**，独立 PostgreSQL **10/10**；
 归一化结果对照运行时 Unicode 数据库验证，旧候选不得扩大已确认范围。
-完整字符来源映射仍有资源成本，详见实测边界。此批尚未发布。
+完整字符来源映射仍有资源成本，详见实测边界。该源码已随 f3b331a 发布；函数性能数据仍不是低内存平台验收。
 
 [多文件导入服务稳定性修复](execution/IMPORT_STABILITY_2026-10-18.md)：
 自适应导入的首轮分析现由后台任务执行；普通预览和替换分析仍以同步 FastAPI
@@ -60,8 +52,8 @@ React/Query **13/13**、浏览器任务中心矩阵 **12/12**。multipart 解析
 把单文件内存 spool 默认限制为 64 KiB，较大的部分落到任务临时目录，避免
 多文件批次绕过路由准入。只读证据确认
 **2026-10-18 10:31:45 北京时间**主机 OOM 杀死 API
-并重启，**没有证实噪声是唯一原因**。修复仍仅本地，Linux/PID1、2 GiB
-长时资源验收未完成，也未启动 CI 或部署。
+并重启，**没有证实噪声是唯一原因**。导入稳定性修复已随 f3b331a 部署；
+Linux/PID1、2 GiB 长时资源验收仍未完成，详见[发布记录](execution/FEATURE_RELEASE_2026-10-19.md)。
 
 上一轮 UX CI **38902167421** 尝试 2 的五个任务／13 个 Web gate 全通过：
 API **1,288／3 跳过**、设置 **463＋独立恢复 1**、负向 PWA **19/19**，
@@ -88,7 +80,7 @@ PostgreSQL、CI 和发布验收仍按本次发布门禁执行。下方“未执�
 [噪声候选范围编辑](execution/ux-audit-noise-range-editing-2026-10-15.md)：
 按分组跨分页批量选择；单个候选可调整为多处删除范围，实时查看保留内容，保存后仍须
 预览确认。勾选增加状态文字／底色／保存反馈，并排除不可处理项。新增源码迁移 0051
-在该本地检查点尚未执行；后续精确源码 CI 及本次生产 0051 发布已完成，历史边界不改写为当时已部署。
+在该本地检查点尚未执行；后续先在 0051 发布，再升级至当前 0052。历史边界不改写为当时已部署。
 [候选精确标记复核](execution/ux-audit-noise-candidate-range-markers-2026-10-15.md)
 于 2026-10-16 本地验证：只为实际待删部分加删除线，保留文字正常显示；13 项
 helper／React 服务端标记测试通过，不代表浏览器或实际交互验收。

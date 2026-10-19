@@ -1,0 +1,287 @@
+{
+  "date": "2026-10-19",
+  "environment": "Windows Python 3.11.7 / SQLite; small synthetic Python allocation probe",
+  "boundary": "No Linux RSS, cgroup, production, concurrent-load or 60-minute/2 GiB acceptance.",
+  "baseline": "pre-continuation working-tree module snapshots (includes earlier local body fixes)",
+  "baseline_sha256": {
+    "search": "771f2ce7804a75dd9b0bdc34782a62c16b513111f09356a89e24e96b60a312ab",
+    "annotation": "24238e49f135621121d655f2d3533ae9d0e5fea203f377c76c1ab67031f19d33"
+  },
+  "fixture": {
+    "attachment_occurrences": 385,
+    "unused_metadata_and_caption_chars_each": 16384,
+    "stale_search_documents": 417,
+    "stale_plain_search_quote_chars_each": 16384,
+    "annotations": 129,
+    "annotation_quote_and_comment_chars_each": 8192
+  },
+  "working_tree_sha256": {
+    "apps/api/app/services/search/search_indexer.py": "3009f1db56a02b778b13bfc624b442118cb5994a6863c1f0a9ca14f7e7d2a91a",
+    "apps/api/app/services/search/annotation_indexer.py": "c91b72d62fc9f89b381522462375f04618aec159acf8f3f9f382e3f587173611",
+    "apps/api/tests/test_search_memory_bounds.py": "80a18d8ed0020bba6cb5b16f4be2fba394ac265d4165bc69f08163fb98bde62b",
+    "apps/api/tests/test_search_memory_bounds_postgres.py": "c32a450feda1c31bdb121cecf15a74d4f71ff85e341a78663d57fea3891d5307"
+  },
+  "measurements": {
+    "before": {
+      "attachment_index": {
+        "elapsed_ms_under_tracemalloc": 406.905,
+        "peak_python_allocation_bytes": 21418384,
+        "entities": {
+          "Attachment": {
+            "loaded": 385,
+            "peak": 385
+          },
+          "AssetObject": {
+            "loaded": 385,
+            "peak": 385
+          },
+          "MessageVersionAttachment": {
+            "loaded": 385,
+            "peak": 385
+          },
+          "ConversationAnnotation": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "SearchDocument": {
+            "loaded": 0,
+            "peak": 0
+          }
+        },
+        "statements": 11,
+        "indexed": 387
+      },
+      "stale_annotation_pruning": {
+        "elapsed_ms_under_tracemalloc": 184.991,
+        "peak_python_allocation_bytes": 28028778,
+        "entities": {
+          "Attachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "AssetObject": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "MessageVersionAttachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "ConversationAnnotation": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "SearchDocument": {
+            "loaded": 417,
+            "peak": 417
+          }
+        },
+        "statements": 3,
+        "scanned": 0,
+        "created": 0,
+        "updated": 0,
+        "skipped": 0,
+        "deleted": 417,
+        "errors": 0
+      },
+      "annotation_sync": {
+        "elapsed_ms_under_tracemalloc": 667.385,
+        "peak_python_allocation_bytes": 6934758,
+        "entities": {
+          "Attachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "AssetObject": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "MessageVersionAttachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "ConversationAnnotation": {
+            "loaded": 129,
+            "peak": 129
+          },
+          "SearchDocument": {
+            "loaded": 129,
+            "peak": 129
+          }
+        },
+        "statements": 389,
+        "scanned": 129,
+        "created": 129,
+        "updated": 0,
+        "skipped": 0,
+        "deleted": 0,
+        "errors": 0
+      }
+    },
+    "after": {
+      "attachment_index": {
+        "elapsed_ms_under_tracemalloc": 500.406,
+        "peak_python_allocation_bytes": 2256092,
+        "entities": {
+          "Attachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "AssetObject": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "MessageVersionAttachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "ConversationAnnotation": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "SearchDocument": {
+            "loaded": 0,
+            "peak": 0
+          }
+        },
+        "statements": 10,
+        "indexed": 387
+      },
+      "stale_annotation_pruning": {
+        "elapsed_ms_under_tracemalloc": 69.407,
+        "peak_python_allocation_bytes": 288783,
+        "entities": {
+          "Attachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "AssetObject": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "MessageVersionAttachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "ConversationAnnotation": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "SearchDocument": {
+            "loaded": 0,
+            "peak": 0
+          }
+        },
+        "statements": 8,
+        "scanned": 0,
+        "created": 0,
+        "updated": 0,
+        "skipped": 0,
+        "deleted": 417,
+        "errors": 0
+      },
+      "annotation_sync": {
+        "elapsed_ms_under_tracemalloc": 646.938,
+        "peak_python_allocation_bytes": 430501,
+        "entities": {
+          "Attachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "AssetObject": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "MessageVersionAttachment": {
+            "loaded": 0,
+            "peak": 0
+          },
+          "ConversationAnnotation": {
+            "loaded": 129,
+            "peak": 16
+          },
+          "SearchDocument": {
+            "loaded": 0,
+            "peak": 0
+          }
+        },
+        "statements": 390,
+        "scanned": 129,
+        "created": 129,
+        "updated": 0,
+        "skipped": 0,
+        "deleted": 0,
+        "errors": 0
+      }
+    }
+  },
+  "output_equivalent": {
+    "attachment_index": true,
+    "stale_annotation_pruning": true,
+    "annotation_sync": true
+  },
+  "intentional_change": "Newest ready text extract wins instead of accidentally choosing the oldest; tested separately.",
+  "verification": {
+    "serial_fresh_process_regressions": {
+      "final-import-batch": {
+        "tests": 97,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 72.49
+      },
+      "final-search-batch": {
+        "tests": 54,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 73.559
+      },
+      "final-feature-batch": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 40.771
+      }
+    },
+    "unique_serial_passed": 170,
+    "postgresql17_disposable": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 32.209
+    },
+    "postgres_instance_stopped_port_closed": true,
+    "first_combined_attempt": {
+      "passed": 160,
+      "failed": 2,
+      "stopped_early": true,
+      "failure": "Two tiny import commits returned 400; response detail was not captured. Cause unproven."
+    },
+    "separate_failed_case_recheck": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 7.297
+    },
+    "combined_diagnostic_recheck": {
+      "tests": 170,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 229.764
+    },
+    "diagnostic_boundary": "Synthetic TestClient observer only; memory probes/admission/response behavior were not overridden by the observer.",
+    "full_api_rerun": false,
+    "web_browser_rerun": false,
+    "linux_low_memory_soak": false,
+    "migration": "No new migration; single source head 20261017_0052.",
+    "publication": "Local working tree only. No commit/push/CI/deployment.",
+    "python_compilation_files": 21,
+    "alembic_single_head": "20261017_0052",
+    "diff_whitespace_passed": true
+  }
+}

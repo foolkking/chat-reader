@@ -29,6 +29,7 @@ from app.services.adaptive_import.profiles import (
 )
 from app.services.import_pipeline.draft_store import attach_import_draft
 from app.services.storage.local_storage import save_import_file, save_import_file_stream
+from app.services.uploads import UploadLimitError
 
 MAX_ADAPTIVE_FILES = 500
 RECOVERABLE_SESSION_STATES = {"NEEDS_GROUPING", "RESOLVING", "READY", "BLOCKED"}
@@ -748,6 +749,8 @@ def _resolve_known_families(db: Session, record: ImportRecord) -> None:
                 by_group = {item["group_id"]: item for item in validation["groups"]}
                 for group in family.groups:
                     group.diagnostics = by_group[str(group.id)]["issues"]
+        except UploadLimitError:
+            raise
         except (AdaptiveImportError, ValueError) as exc:
             family.resolution_status = "DRIFTED"
             family.validation_result = {"valid": False, "message": str(exc)}
@@ -801,6 +804,8 @@ def evaluate_family(record: ImportRecord, family: ImportStructureFamily, mapping
                 preview = {"title": sample.title, "message_count": len(sample.messages), "messages": [
                     {"role": message.role, "content": message.display_text[:2000], "timestamp": message.created_at}
                     for message in sample.messages[:12]]}
+        except UploadLimitError:
+            raise
         except (AdaptiveImportError, OSError, ValueError) as exc:
             diagnostic = exc.diagnostic(group_id=str(group.id)) if isinstance(exc, AdaptiveImportError) else {
                 "code": "SOURCE_UNAVAILABLE" if isinstance(exc, OSError) else "NORMALIZATION_FAILED",

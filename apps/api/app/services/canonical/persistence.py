@@ -1,4 +1,5 @@
 import uuid
+from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -201,11 +202,12 @@ def commit_import_preview(
             raise CommitImportError("No supported canonical conversation could be built from this import.")
 
         def persistable_iterator():
-            for draft in iter_import_draft(import_record):
-                converted = _from_exporter_draft(draft)
-                del draft
-                yield converted
-                del converted
+            with closing(iter_import_draft(import_record)) as drafts:
+                for draft in drafts:
+                    converted = _from_exporter_draft(draft)
+                    del draft
+                    yield converted
+                    del converted
 
         persistable = persistable_iterator()
     else:
@@ -274,6 +276,12 @@ def commit_import_preview(
     except ImportDraftError as exc:
         db.rollback()
         raise CommitImportError(str(exc)) from exc
+    finally:
+        # An exception traceback may keep this frame (and its generator) alive.
+        # Release the current draft's admission slot before propagating failure.
+        close = getattr(persistable, "close", None)
+        if close is not None:
+            close()
 
     if not conversation_ids:
         raise CommitImportError("No conversation could be committed from this import.")

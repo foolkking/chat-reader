@@ -300,6 +300,13 @@ def preview_import(
     except HTTPException:
         db.rollback()
         raise
+    except UploadLimitError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=exc.status_code,
+            detail={"code": exc.code, "message": str(exc)},
+            headers={"Retry-After": "15"} if exc.status_code == 429 else None,
+        ) from exc
     except SQLAlchemyError as exc:
         db.rollback()
         raise HTTPException(
