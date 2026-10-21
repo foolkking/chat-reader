@@ -2,6 +2,7 @@
 
 import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { DismissableLayer } from "@radix-ui/react-dismissable-layer";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronLeft, ChevronRight, Download, Grid2X2, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
@@ -240,6 +241,10 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
 
   if (!item || typeof document === "undefined") return null;
   return createPortal(
+    // Register above Vaul's retained drawer. Escape stays with useDialogFocus:
+    // a capture-phase onDismiss would bypass child/IME keyboard ownership.
+    // Disable lower pointer layers before a close can queue an outside click.
+    <DismissableLayer asChild disableOutsidePointerEvents>
     <div
       ref={dialogRef}
       tabIndex={-1}
@@ -277,7 +282,8 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
         </div>
         {viewerKind === "image" && session.items.length > 1 && effectiveMode !== "image-overview" ? <div className="flex min-h-16 gap-2 overflow-x-auto border-t border-ui bg-subtle p-2" role="list" aria-label={zh ? "图片缩略图列表" : "Image thumbnails"}>{session.items.map((candidate, candidateIndex) => <ViewerThumbnail key={candidate.itemKey} item={candidate} access={access} active={candidate.itemKey === activeKey} label={zh ? `第 ${candidateIndex + 1} 张` : `Image ${candidateIndex + 1}`} onClick={() => { setActiveKey(candidate.itemKey); setMode("image-focus"); }} />)}</div> : null}
       </section>
-    </div>,
+    </div>
+    </DismissableLayer>,
     document.body,
   );
 }

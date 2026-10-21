@@ -189,6 +189,12 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
 
+      - name: Mounted Viewer and retained mobile sheet regression
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/attachment-modal-browser.mjs
+
       - name: Context and Skill upload proxy transport
         run: |
           sudo apt-get update
@@ -407,6 +413,8 @@ jobs:
             ${{ runner.temp }}/pnpm-cache.txt
             ${{ runner.temp }}/api.log
             ${{ runner.temp }}/worker.log
+            ${{ runner.temp }}/attachment-modal-final/result.json
+            ${{ runner.temp }}/attachment-modal-final/*.png
             apps/web/playwright-report
             apps/web/test-results
           if-no-files-found: warn

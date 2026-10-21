@@ -2382,7 +2382,7 @@ export function ConversationReader({
 
   useEffect(() => {
     const closeTopSurface = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
       if (utilityPanel !== null) { if (utilityPanel === "export") releaseExportScope(`export:${conversationId}`); setUtilityPanel(null); event.preventDefault(); return; }
       if (showFiles) { setShowFiles(false); event.preventDefault(); return; }
       if (mobileActionsExpanded || desktopActionsExpanded) { setMobileActionsExpanded(false); setDesktopActionsExpanded(false); event.preventDefault(); }

@@ -1,0 +1,54 @@
+{
+  "record_version": 1,
+  "recorded_at": "2026-10-21",
+  "failed_ci": {
+    "run_id": "39561847297",
+    "commit": "73760981311896752771caa8d074dccfdbb0100e",
+    "failed_job": "web-quality",
+    "failed_gate": "Release H Markdown and image Viewer checks",
+    "failure_scope": "375px attachment file-panel Escape return in zh-CN and en-US; Viewer close also dismissed the retained mobile Sheet",
+    "unrelated_results": {
+      "api_quality": "passed",
+      "settings_quality": "passed",
+      "web_gates_before_attachment_browser": "passed"
+    }
+  },
+  "repair": {
+    "summary": "Register the foreground attachment Viewer in the same Radix DismissableLayer stack used by Vaul, without capture-phase dismissal; protect the retained pointer layer, and make Reader's global Escape owner respect defaultPrevented and IME events.",
+    "database_or_api_change": false,
+    "migration": false,
+    "offline_package_change": false
+  },
+  "local_verification": {
+    "service_free_ux_node": {
+      "passed": 1519,
+      "failed": 0,
+      "skipped": 0
+    },
+    "mounted_chromium_mobile": {
+      "passed": 12,
+      "failed": 0,
+      "locales": [
+        "zh-CN",
+        "en-US"
+      ],
+      "scenarios": [
+        "viewer Escape retains drawer, filter, selection, focus and DOM identity",
+        "subsequent Escape closes the drawer and restores its opener",
+        "composing, legacy 229 and child-prevented Escape stay with the active modal",
+        "click and touch close retain the same file panel and return focus"
+      ],
+      "evidence": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-ci-debug-20261021\\attachment-modal-final\\result.json",
+      "acceptance_boundary": "Real mounted Chromium/React/Vaul/Reader/Viewer with synthetic query data; not API/auth, offline-package or real attachment-service acceptance."
+    },
+    "lint": "passed",
+    "nonincremental_typecheck": "passed",
+    "web_production_build": "passed with NEXT_BUILD_CPUS=1 and NEXT_STANDALONE=0",
+    "release_image_and_postgres_workflow_tests": {
+      "passed": 34,
+      "failed": 0
+    },
+    "api_backed_playwright": "not run locally; the isolated development database schema was unavailable"
+  },
+  "release_boundary": "The failed run is not deployable. Rerun the complete release workflow on the repair commit and wait for the user's result before any deployment."
+}

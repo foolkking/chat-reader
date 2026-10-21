@@ -1,5 +1,20 @@
 # Testing
 
+## Attachment Viewer / mobile Sheet Escape regression — 2026-10-21
+
+CI run `39561847297` localized the first release failure to the 375px English
+and Chinese file-panel Escape-return cases. The mounted isolated Chromium gate
+`node scripts/ux/attachment-modal-browser.mjs` uses the actual Reader Escape
+effect, Viewer, Vaul Sheet and synthetic attachment/capabilities adapters; it
+passes 12 mouse/touch/keyboard scenarios across both locales. It asserts retained
+panel DOM identity, selection, search and focus, the subsequent Sheet Escape,
+IME (composing and legacy 229) and child-prevented Escape. This is a UI lifecycle
+regression, not API/auth, offline, or real attachment-service acceptance. The
+API-backed attachment-reading Playwright spec also checks IME/child Escape; it
+still requires the isolated PostgreSQL fixture and complete CI execution.
+Release continuation and limits are in
+[`TABLE_TOOL_RELEASE_2026-10-21.md`](execution/TABLE_TOOL_RELEASE_2026-10-21.md).
+
 ## Table closeout / operator-shell continuation — 2026-10-21
 
 The [closeout review](execution/ux-audit-table-closeout-2026-10-21.md) rechecks

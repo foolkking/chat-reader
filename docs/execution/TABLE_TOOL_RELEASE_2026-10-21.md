@@ -41,6 +41,33 @@ lint、非增量 typecheck 和单 worker Web build。20 源码/测试及 29 制�
 不能预先记为通过。76 场景的既有 Chrome 证据不记成本次重跑。
 本轮回执见相邻 `TABLE_TOOL_RELEASE_2026-10-21-evidence/`。
 
+## CI 失败修复续记
+
+首轮 CI `39561847297` 在 `web-quality` 的 Release H 附件浏览器门禁失败；
+API、设置浏览器及该 job 前置的 lint/typecheck/build、1513 项无服务 UX
+测试均通过。失败严格集中于 **375px 中英文**的 Viewer Escape 关闭流程：
+查看器退出时，保留的移动文件抽屉也被 Reader 的全局 Escape 处理器关闭，
+所以原“预览”按钮无法恢复焦点。桌面场景通过。这不是扫描/OOM 故障。
+
+修复复用了 Vaul 已安装的 Radix DismissableLayer 版本并提升 Viewer 的
+弹层层级，同时启用其 modal pointer ownership，避免 Viewer 关闭指针事件
+被延迟交给底层抽屉。Escape 仍由共享 Viewer focus hook 按常规 bubble
+路径处理；Reader 全局处理器现在尊重 defaultPrevented、IME composing
+和 legacy keyCode 229。没有替换弹层体系或修改后端/数据格式。
+
+本机复验：完整 service-free UX **1519/1519**；lint、非增量 typecheck、
+单 worker Web production build、34 个 release-image/PostgreSQL 工作流
+合同测试均通过。真实挂载 Chromium + React + Vaul + Reader/View 的合成
+375px 测试 **12/12**（中文/英文、Escape 只关 Viewer 并保留面板/筛选/
+选择/焦点、连续 Escape 关闭 Sheet、IME/子控件按键归属、鼠标和触摸关闭）。
+合成门禁不覆盖 API/auth、离线包或真实附件存储；本机全 API E2E 因开发
+数据库缺少 schema 未能运行，不据此宣称通过。修复前的独立隔离浏览器
+基线稳定复现面板被一并关闭；中间一次合成 harness 错误也已单独修复，
+最终截图和 JSON 仅作为最后成功证据。
+
+下一提交需在精确源码上重跑完整 CI 并等待用户结果；不得沿用首轮 CI 绿灯
+或仅凭本地合成测试部署。CI 通过前不部署。
+
 发布入库前发现 189 个待提交文本制品中 104 个会被 Git 换行规范化，
 使原 SHA-256/字节大小声明失效；`.gitattributes` 对本批带日期的原始制品禁用
 文本换行转换，保留历史测量字节。不是改写测试结果或重算旧证据。

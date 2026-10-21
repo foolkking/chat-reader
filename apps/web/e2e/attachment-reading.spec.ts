@@ -158,7 +158,18 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await page.keyboard.press("Shift+Tab");
     expect(await viewer.evaluate(node => node.contains(document.activeElement))).toBe(true);
     await page.keyboard.press("Tab");
-    await expect(viewer.getByRole("button", { name: zh ? "关闭附件查看器" : "Close attachment viewer", exact: true })).toBeFocused();
+    const closeControl = viewer.getByRole("button", { name: zh ? "关闭附件查看器" : "Close attachment viewer", exact: true });
+    await expect(closeControl).toBeFocused();
+    for (const composition of [{ isComposing: true }, { keyCode: 229 }]) {
+      await closeControl.dispatchEvent("keydown", { key: "Escape", bubbles: true, cancelable: true, ...composition });
+      await expect(viewer).toBeVisible();
+    }
+    await closeControl.evaluate(node => node.addEventListener("keydown", event => {
+      if (event instanceof KeyboardEvent && event.key === "Escape") event.preventDefault();
+    }, { once: true }));
+    await page.keyboard.press("Escape");
+    await expect(viewer).toBeVisible();
+    await expect(files).toHaveCount(1);
     await viewer.getByRole("button", { name: zh ? "重试" : "Retry", exact: true }).click();
     await expect(viewer.getByTestId("json-viewer")).toBeVisible();
     await viewer.getByRole("button", { name: "Raw", exact: true }).click();

@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+## Release H attachment mobile-layer regression — 2026-10-21
+
+The failed release run `39561847297` isolated a 375px Viewer/Sheet Escape
+ownership regression. `scripts/ux/attachment-modal-browser.mjs` mounts the real
+Reader handler, Viewer and Vaul Sheet with synthetic adapters; `testing.md`
+records its local 12-scenario Chromium result and the API-backed CI boundary.
+`ATTACHMENT_RENDERER_CONTRACT.md` owns the layer and keyboard-ownership contract;
+the release execution record owns CI/release status. No API data contract,
+migration or offline format changed.
+
 ## Table/operator release preparation — 2026-10-21
 
 `execution/TABLE_TOOL_RELEASE_2026-10-21.md` records the user's renewed release

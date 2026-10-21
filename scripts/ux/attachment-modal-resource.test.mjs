@@ -99,6 +99,64 @@ test("a closed mobile sheet still mounts no modal content", () => {
 });
 
 const viewerSource = ts.createSourceFile("viewer.tsx", read("features/attachments/attachment-viewer.tsx"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+test("Viewer registers above the retained Vaul layer without taking child Escape in capture", () => {
+  let layer;
+  const visit = node => {
+    if (ts.isJsxElement(node) && node.openingElement.tagName.getText(viewerSource) === "DismissableLayer") layer = node;
+    ts.forEachChild(node, visit);
+  };
+  visit(viewerSource); assert.ok(layer);
+  assert.deepEqual(layer.openingElement.attributes.properties.map(prop => prop.name?.getText(viewerSource)),
+    ["asChild", "disableOutsidePointerEvents"]);
+  assert.ok(layer.children.some(node => ts.isJsxElement(node)
+    && node.openingElement.attributes.properties.some(prop => prop.name?.getText(viewerSource) === "data-testid"
+      && prop.initializer?.getText(viewerSource) === '"attachment-viewer-shell"')));
+  const dialogRequire = createRequire(createRequire(appRequire.resolve("vaul")).resolve("@radix-ui/react-dialog"));
+  assert.equal(appRequire.resolve("@radix-ui/react-dismissable-layer"), dialogRequire.resolve("@radix-ui/react-dismissable-layer"),
+    "Viewer and drawer must share the same installed layer stack");
+});
+
+// Execute the actual window-level Reader handler, not a reimplemented guard.
+const readerSource = ts.createSourceFile("reader.tsx", read("features/conversations/conversation-reader.tsx"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+let readerEscapeEffect;
+const visitReader = node => {
+  if (ts.isCallExpression(node) && node.expression.getText(readerSource) === "useEffect"
+    && node.arguments[0]?.getText(readerSource).includes("const closeTopSurface =")) readerEscapeEffect = node;
+  ts.forEachChild(node, visitReader);
+};
+visitReader(readerSource); assert.ok(readerEscapeEffect);
+function readerEscape(event, utilityPanel = "files") {
+  const calls = [];
+  let listener, cleanup;
+  const window = {
+    addEventListener: (name, next) => { assert.equal(name, "keydown"); listener = next; },
+    removeEventListener: (name, next) => { assert.equal(name, "keydown"); assert.equal(next, listener); listener = null; },
+  };
+  new Function("useEffect", "window", "utilityPanel", "setUtilityPanel", "conversationId",
+    "releaseExportScope", "showFiles", "setShowFiles", "mobileActionsExpanded", "desktopActionsExpanded",
+    "setMobileActionsExpanded", "setDesktopActionsExpanded", "showExport", "showSearch", "showShare",
+    compile(readerEscapeEffect.getText(readerSource)))(
+    effect => { cleanup = effect(); }, window, utilityPanel, value => calls.push(["panel", value]),
+    "synthetic", scope => calls.push(["release", scope]), false, noop, false, false, noop, noop, false, false, false,
+  );
+  assert.ok(listener);
+  listener({ key: "Escape", preventDefault: () => calls.push(["preventDefault"]), ...event });
+  cleanup(); assert.equal(listener, null);
+  return calls;
+}
+for (const [name, event] of [
+  ["already handled", { defaultPrevented: true }],
+  ["composing", { isComposing: true }],
+  ["legacy IME", { keyCode: 229 }],
+  ["non-Escape", { key: "Enter" }],
+]) {
+  test(`Reader leaves ${name} keyboard input to its current owner`, () => assert.deepEqual(readerEscape(event), []));
+}
+test("Reader still closes its own surface on ordinary unhandled Escape", () => {
+  assert.deepEqual(readerEscape({}), [["panel", null], ["preventDefault"]]);
+  assert.deepEqual(readerEscape({}, "export"), [["release", "export:synthetic"], ["panel", null], ["preventDefault"]]);
+});
+
 test("the separately portalled Viewer explicitly accepts pointers under a modal body", () => {
   let root;
   const visit = node => {

@@ -7,6 +7,19 @@ their dated verification remains historical. Release status belongs to
 [Project State](../../PROJECT_STATE.md) and the
 [attachment audit](../execution/ux-audit-attachment-reading-2026-10-09.md).
 
+### Foreground Viewer layer ownership — 2026-10-21
+
+The shared Viewer registers as the top Radix DismissableLayer above a retained
+Vaul mobile file sheet, using the same installed layer-stack instance and
+outside-pointer ownership. It does not dismiss from the Radix capture handler:
+the existing shared focus hook remains the Viewer Escape owner, preserving
+child-handled and IME composition events. Reader's global Escape handler ignores
+already-prevented, composing and legacy-229 events so it cannot close the sheet
+after a foreground modal declined the key. The service-free mounted 375px browser
+gate covers English/Chinese, Escape/click/touch close and focus/filter/selection
+retention; this is not API/auth or offline-package acceptance. See the
+[2026-10-21 release continuation](../execution/TABLE_TOOL_RELEASE_2026-10-21.md).
+
 - One shared owner/Share/offline Viewer and the existing permission/URL routing
   remain. Empty, missing, uploading and unsupported states are resolved before
   mounting a renderer; child recovery never grants a download the session denies.

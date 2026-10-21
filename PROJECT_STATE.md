@@ -9,7 +9,15 @@ deployment of the completed local table work and bounded backup/preflight
 repair. This supersedes the earlier no-push/no-CI/no-deployment boundary for
 this release only. Run the complete `Build release images` workflow against
 the exact submitted source, then stop and wait for the user's CI result
-before deployment. No production action has started; schema remains 0052.
+before deployment. First run `39561847297` failed only the narrow 375px
+English/Chinese attachment Viewer Escape-return cases; API, settings and all
+earlier Web quality gates passed. The foreground Viewer closed the retained
+file sheet through competing Radix/Vaul/Reader Escape ownership. A local fix
+and regression gate now cover the shared layer stack, ordinary/IME/child-owned
+Escape, mouse/touch close and panel-state retention. Full API-backed browser
+acceptance still requires CI. Re-run the complete workflow against the next
+commit and await the user's result; do not deploy on the failed run.
+No production action has started; schema remains 0052.
 See the [release preparation](docs/execution/TABLE_TOOL_RELEASE_2026-10-21.md).
 
 **Current local scope (2026-10-21): table phase closed.** At the user's request,
