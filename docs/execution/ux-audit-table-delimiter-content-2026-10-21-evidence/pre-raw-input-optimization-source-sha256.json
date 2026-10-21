@@ -1,0 +1,6 @@
+{
+  "apps/web/features/editing/markdown-table-dialog.tsx": "9c9f9a5e7c301831dddeaa949baf51a83280d775cbaf2d570f32fd2f48ad1580",
+  "apps/web/features/editing/markdown-table-tools.ts": "cb9a0b425e9dcb9425114c9e9dbe91c538387516deb3698b44cda7b93eace02f",
+  "scripts/ux/source-editor-table-browser.mjs": "df3edb944b14808dec3475a4cc1c43e0838e1b05cf4db857014890232e18db22",
+  "scripts/ux/source-editor-table-tools.test.mjs": "d14c3748c4e15e15a74e6cc06d7fdadc4afd3140f6539e1eea1e9aadd9c7f13d"
+}

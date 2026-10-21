@@ -1,0 +1,87 @@
+Diagnostic excerpt, not a full log or a fully source-bound earlier acceptance run.
+
+not ok 27 - plain table preview preserves the shared GFM cell output and falls back for autolinks and inline syntax
+  ---
+  duration_ms: 37.7237
+  location: 'file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:456:1'
+  failureType: 'testCodeFailure'
+  error: ' kept  / ﻿kept﻿ / 中 文 /  kept '
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0:
+      tag: 'th'
+      attributes: ' class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'A'
+    1:
+      tag: 'th'
+      attributes: ' style="text-align:left" class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'B'
+    2:
+      tag: 'th'
+      attributes: ' style="text-align:center" class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'C'
+    3:
+      tag: 'th'
+      attributes: ' style="text-align:right" class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'D'
+    4:
+      tag: 'td'
+      attributes: ' class="border border-ui p-0 align-top"'
+      content: ' kept '
+    5:
+      tag: 'td'
+      attributes: ' style="text-align:left" class="border border-ui p-0 align-top"'
+      content: '﻿kept﻿'
+    6:
+      tag: 'td'
+      attributes: ' style="text-align:center" class="border border-ui p-0 align-top"'
+      content: '中 文'
+    7:
+      tag: 'td'
+      attributes: ' style="text-align:right" class="border border-ui p-0 align-top"'
+      content: ' kept '
+  actual:
+    0:
+      tag: 'th'
+      attributes: ' class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'A'
+    1:
+      tag: 'th'
+      attributes: ' style="text-align:left" class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'B'
+    2:
+      tag: 'th'
+      attributes: ' style="text-align:center" class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'C'
+    3:
+      tag: 'th'
+      attributes: ' style="text-align:right" class="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold"'
+      content: 'D'
+    4:
+      tag: 'td'
+      attributes: ' class="border border-ui p-0 align-top"'
+      content: 'kept'
+    5:
+      tag: 'td'
+      attributes: ' style="text-align:left" class="border border-ui p-0 align-top"'
+      content: 'kept'
+    6:
+      tag: 'td'
+      attributes: ' style="text-align:center" class="border border-ui p-0 align-top"'
+      content: '中 文'
+    7:
+      tag: 'td'
+      attributes: ' style="text-align:right" class="border border-ui p-0 align-top"'
+      content: 'kept'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/chatgpt-rich-text.test.mjs:474:12)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+

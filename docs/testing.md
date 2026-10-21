@@ -1,6 +1,353 @@
 # Testing
 
-## OOM release preparation — 2026-10-19
+## Table closeout / operator-shell continuation — 2026-10-21
+
+The [closeout review](execution/ux-audit-table-closeout-2026-10-21.md) rechecks
+20 table source/test hashes and 29 existing evidence artifacts, not another
+browser run. Keep the 122 focused / 1,513 service-free / 76 Chrome acceptance
+below; extreme-table performance is deferred, not passed.
+The [bounded backup/preflight repair](execution/OPS_BACKUP_READERS_2026-10-21.md)
+runs `test_backup_shell_safety.py`, `test_runtime_health_scripts.py`,
+`test_backup_retention_report.py` and `test_recovery_preflight.py`:
+**67 passed / 1 skipped** (Linux flock contention cannot run on Windows).
+The 27 new cases execute actual Git/MSYS POSIX shells with synthetic Docker;
+tar/gzip/SHA-256 use real synthetic files. Docker mounts/cgroups, PostgreSQL
+dump/restore and production are not exercised. Three backup shells pass
+`bash -n`; this is a local-only gate, not CI or a deployment.
+
+## Withdrawn raw Markdown input trial — 2026-10-21
+
+The [trial/correction record](execution/ux-audit-table-raw-input-2026-10-21.md)
+preserves green 123/1,514 content tests separately from a later actual-event
+probe: React received `textInput` without `inputType`, the new path ran zero
+times and fallback ran five times. The experiment and its dedicated test were
+removed, restoring all 20 delimiter-fix source/test hashes. Those trial checks
+are not proof of a working optimization, nor current acceptance counts.
+
+## Latest local delimiter-content regression — 2026-10-21
+
+The [delimiter-content review](execution/ux-audit-table-delimiter-content-2026-10-21.md)
+adds real GFM-rendered fixtures for dash-shaped header/data cells, selection and
+cursor discovery, simple and incremental drafts, plus actual desktop/375px
+workspace Apply/Undo. **122 focused**, **69 files / 1,513 service-free cases**,
+**76 Chrome scenarios**, lint, nonincremental typecheck and one-worker
+non-standalone build pass. The focused tests are included in the broad count.
+All evidence is synthetic/local; no CI, push, deployment, full Reader/Share/
+Offline or production-resource acceptance.
+
+## Latest local Table input/content continuation — 2026-10-21
+
+The [input/layout continuation](execution/ux-audit-table-input-layout-2026-10-21.md)
+retains Unicode-normalization failures, an intermediate trimming-watchdog
+regression and a CRLF workspace-fixture correction separately from final
+acceptance. Conservative source-draft reuse and canonical-row indexing remain;
+the unproven direct-table renderer and DOM/frame write queue do not. Every
+displayed table still passes through the shared GFM/math/sanitization chain.
+All six gates pass against 20 unchanged source/test hashes: **117 focused**,
+**69 files / 1,508 service-free cases**, **72 Chrome scenarios**, Web lint,
+nonincremental typecheck and one-worker non-standalone build. The focused cases
+are included in the broader count, not additional distinct cases. New desktop
+scenarios cover rich-syntax typing, repeated Unicode raw/grid edits after CRLF
+paste, exact boundary whitespace through Apply/Undo and horizontal edge focus;
+existing 320/375px touch and native Chrome composition scenarios remain.
+
+The final five-input synthetic profile still observes large-table long tasks:
+10×4,000 grid/tail next-frame medians are 61.6/62.5ms, and 200×248 are
+47.7/51.8ms. These are unthrottled local observations, not INP, physical paint,
+a latency pass threshold or evidence that server OOM is resolved. Final receipts,
+partial log excerpts and before/after hashes are linked from
+`evidence/table-tool-input-layout-2026-10-21.json`; no API/PWA, authenticated-server,
+cross-browser or real-device acceptance is implied. No new migration or release.
+
+## Preceding local Table row-boundary continuation — 2026-10-21
+
+The [row-navigation review](execution/ux-audit-table-page-navigation-2026-10-21.md)
+preserves two separate mounted failures: missing boundary commands, then focus
+falling to BODY in the first implementation. The fix adds First/Last within the
+existing bounded pager and retains focus on an enabled adjacent control. Three
+added scenarios cover exact tail edits, one-page/model-shrink behavior and actual
+320/375px touch workspace Apply/Undo with no API writes. Four pager controls stay
+44×44 and hit-testable; row-page changes do not change Markdown.
+All six gates pass against 20 unchanged source/test hashes: **111 focused**,
+**69 files / 1,502 service-free cases**, **67 Chrome scenarios**, lint,
+nonincremental typecheck and one-worker non-standalone build.
+
+The opt-in profile now includes tail cells and phase-scoped task records, plus
+separate raw-textarea value/next-frame and rendered-header/next-frame observations.
+The final synthetic large-narrow run still has 51ms grid and 54ms tail tasks.
+Old unsegmented task counts also covered later source editing/GC, not only grid
+input. No hardware-dependent performance gate, physical-device/INP, server
+RSS/OOM, full PWA or authenticated-server acceptance is implied.
+
+## Preceding local Table parsing-safety continuation — 2026-10-21
+
+The [pending-parse review](execution/ux-audit-table-pending-parse-2026-10-21.md)
+records a mounted Chrome failure after 18 passes: raw Markdown parsing was
+suspended, the old table stayed visible, and Apply incorrectly remained enabled.
+Two added scenarios independently hold the actual draft parser rather than the
+rich renderer. They verify pending protection, latest-input application and
+invalid-input recovery without replacing parser results. The hold is injected
+only by the temporary test loader; production source has no test scheduling seam.
+After the fix, all six local gates pass: **111 focused**, **69 files / 1,502
+service-free cases**, **64 Chrome scenarios**, lint, nonincremental typecheck
+and single-worker non-standalone build. The run and archived evidence bind 20
+unchanged source/test hashes. Existing workspace Apply/Undo, keyboard, Chinese
+and 375px touch coverage remains, but the two new parsing-hold scenarios run at
+desktop width; they are not mislabeled as native-mobile acceptance.
+
+The [adaptive continuation](execution/TABLE_TOOL_ADAPTIVE_PREVIEW_2026-10-20.md)
+archives the preceding source-parsing/row-serialization/page-budget work and its
+own 62-scenario checkpoint. Its sequential profiles do not isolate individual
+causes. That checkpoint's source-bound profile still records 52ms/51ms main-thread long
+tasks; it has no performance pass threshold, server RSS/OOM or real-device claim.
+No migration, push, CI, deployment or authenticated/full-PWA acceptance occurred.
+
+## Local editable Table tool — 2026-10-20
+
+The [initial continuation](execution/TABLE_TOOL_EDITING_2026-10-20.md) preserves
+the focused **42/42** parser/SSR and initial **13/13** component scenarios.
+The [real workspace continuation](execution/TABLE_TOOL_WORKSPACE_2026-10-20.md)
+adds actual SourceEditorWorkspace/EditMessageForm/CodeMirror; **20/20** Chrome
+scenarios pass after reproducing/fixing toolbar Undo/Redo, nested-modal shortcut
+focus theft and the stale Insert-table label. It also checks explicit client
+save payloads, no saving from table Enter/submit, stale source and real 375px touch.
+This is not authenticated server, Reader/Offline/Share/PWA or assistive-technology
+acceptance. That post-repair serial service-free run passes **67 files / 1,450 cases / zero
+failed or skipped**, plus full Web lint, nonincremental typecheck and a
+single-worker Web build; current rerun receipts are in the workspace record.
+The earlier 1,449-case checkpoint predates the mixed-newline regression.
+
+The [large-table continuation](execution/TABLE_TOOL_PERFORMANCE_2026-10-20.md)
+passed **22/22** scenarios, adding cell-syntax repair/interleaved edits and
+oversized-cell rejection. It reruns the same 42 focused and 1,450 broader cases,
+lint, typecheck and build after the performance changes. Earlier 13/20-scenario
+records retain their own source bindings. Optional `TABLE_TOOL_PROFILE=1`
+observes five inputs for each of four bounded synthetic sizes after functionality;
+its `performance.json` contains timings/long tasks/explicit-GC JS heap, with no
+hardware-dependent pass threshold, server-memory claim or long-run guarantee.
+
+The [content-integrity checkpoint](execution/TABLE_TOOL_CONTENT_INTEGRITY_2026-10-20.md)
+passes **61 focused checks**, **27/27 Chrome scenarios**, all **68 UX files /
+1,469 cases / zero failures or skips**, full lint, nonincremental typecheck and
+single-worker build. Math-bar/code/reference failures are recorded separately
+from two harness errors. The assistant-ui adapter now forwards source into the
+actual MarkdownRenderer core, making source-preview assertions meaningful; it
+is still an adapter, not upstream assistant-ui or full Reader acceptance.
+New context-limit copy is checked at 1440px and 375px. The read-only context
+collector's source/UTF-8/definition bounds are tested without remote requests.
+
+The separate [long-cell continuation](execution/TABLE_TOOL_LONG_CELL_2026-10-20.md)
+adds three browser cases using a 40,000-character synthetic cell, checks the
+400-cell wide-table mount bound, and passes **30/30** workspace/browser scenarios.
+It checks display-only shortening, full Markdown/editor values, exact source
+preservation on untouched Apply and changes that checkpoint's focused total to **62**.
+Its final service-free suite is **68 files / 1,470 cases / zero failures or skips**,
+plus Web lint, nonincremental typecheck and single-worker build.
+Repository-wide gates are independently rerun and bound in
+`evidence/table-tool-long-cell-2026-10-20.json`; no server or real-device resource
+conclusion is implied.
+
+The [parser-reuse continuation](execution/TABLE_TOOL_PARSER_REUSE_2026-10-20.md)
+reproduces unchanged-source re-entry on a callback-only render (one unnecessary
+parser component entry) and removes it without freezing live cell callbacks.
+Its **35/35** Chrome scenarios add a transparent counting wrapper around the
+installed `react-markdown` and test-only promise holds for deferred-render races.
+Latest/invalid drafts, an active input, Escape focus, stale action blocking and
+explicit source refresh are deterministic checks, not CPU-speed-dependent sleeps.
+That rerun passes all **62** focused and **1,470** service-free checks, full
+lint, nonincremental typecheck and single-worker build. Optional profiling now
+reports grid-to-Markdown paint and preview-settled observations separately,
+plus parser-entry counts; do not equate the former with a fully updated rich
+preview. These small synthetic samples are not a cross-device performance gate.
+
+The latest [bracket-index continuation](execution/TABLE_TOOL_BRACKET_INDEX_2026-10-20.md)
+replaces quadratic nested-image lookahead with a lazy linear suffix index. Its
+**67/67** focused checks include seeded small-input legacy equivalence, 6,000
+balanced nested images and a test-only Node Worker with a 10-second anti-hang
+watchdog for 240,000-code-unit malformed input. The watchdog is not a latency SLA.
+The same continuation removes exponential fence-regex backtracking on ordinary
+deeply quoted prose, with 500 mixed LF/CRLF legacy comparisons and an isolated
+6,000-level quote-prefix watchdog that failed before the repair.
+The **37/37** Chrome gate preserves malformed Markdown, blocks invalid Apply,
+recovers to valid content and rejects oversized grid pastes without changing the
+accepted draft; deep quoted prose still permits table editing and exact Undo.
+All **68 files / 1,475 service-free cases**, lint, nonincremental
+typecheck and single-worker build pass on the final source. Node profile samples
+remain diagnostic; no product worker, dependency, protocol or migration is added.
+The six-gate rerun initially had 36 browser scenarios; the added deep-quote
+workspace scenario was then verified in a separate 37-scenario browser rerun.
+The subsequent micro-UX pass rechecked the same 67 focused and 37 Chrome
+scenarios plus lint, nonincremental typecheck and single-worker build after
+reusing the UTF-8 encoder and adding the settled-preview shape error state.
+
+The [keyboard/focus continuation](execution/TABLE_TOOL_NAVIGATION_2026-10-20.md)
+extends the existing Chrome scenarios with forward/backward cross-page navigation,
+focus after all four edge additions, and Shift+up/down selection in an input.
+An intermediate last-row Enter regression and a separate failing selection baseline
+remain recorded as failures, not passing attempts. The final rerun passes the same
+**67 focused / 1,475 service-free / 37 Chrome** cases, plus lint, nonincremental
+typecheck and one-worker build. These are strengthened existing cases, not extra
+scenario counts.
+Separately, five synthetic GFM fence/container-context mismatches were discovered
+at that checkpoint. Their original failures remain separate from passing suites.
+
+The latest [code-context continuation](execution/TABLE_TOOL_CODE_CONTEXT_2026-10-20.md)
+repairs those five mismatches against identical actual GFM renderer output and
+passes **71 focused / 68 files and 1,479 service-free / 41 Chrome** cases,
+plus full Web lint, nonincremental typecheck and one-worker build.
+The existing 500-case fence check now compares code-block output from installed
+GFM rather than perpetuating the old scanner's known wrong semantics; the earlier
+legacy-equivalence result stays historical. New tests cover source-bound tree
+reuse, stale/incomplete context, header-only fallback, LF/CRLF and indented code.
+The real workspace adds protected examples, outside-container recovery, nested-list
+indentation and explicit code-table editing; transparent parser-call observation
+checks reuse without substituting a fake parser. No comprehensive code-context,
+real-device, full-app, server-memory or OOM acceptance is inferred.
+
+The [edge-reachability continuation](execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md)
+retains failing wide-row/long-column baselines and expands Chrome to **45** cases.
+New tests use actual coordinates, `elementFromPoint` and direct mouse/touch
+actions, deliberately avoiding locator auto-scroll that could conceal offscreen
+controls. Horizontal/vertical start, middle and end, 1440px/375px, 44px targets,
+nonoverlap with the cell viewport, whole-draft additions and new-cell focus are
+checked. Short landscape permits normal vertical scrolling of the dialog body,
+not simultaneous visibility of an arbitrarily tall working area. Final local
+gates rerun **71 focused / 68 files and 1,479 service-free**, lint,
+nonincremental typecheck and one-worker build. Real-device/assistive-technology,
+authenticated server, full Reader/Share/Offline/PWA and OOM boundaries remain.
+
+The [literal-context checkpoint](execution/TABLE_TOOL_LITERAL_CONTEXT_2026-10-20.md)
+adds three table and one reference checks for parser-recognized HTML/comment/
+processing-instruction blocks, real tables outside them and offset-preserving
+CRLF parsing. Its pre-edit **72 pass / 1 fail** and intermediate **72/1** and
+expanded **72/3** attempts remain failures. Its then-authored gates passed **75 focused /
+68 files and 1,483 service-free / 49 Chrome**, lint, nonincremental typecheck and
+one-worker build. Browser checks use the actual full-source preview, not only an
+isolated table; explicit selection still edits a sample without changing
+`skipHtml` or its wrapper. Desktop/375px recovery copy is inspected.
+Later actual-workspace probes exposed textarea-after-blank-line tables,
+definition leakage and an introduced refusal of a real quoted table. Those
+diagnostics stay separate: the smaller green gate did not establish HTML parity.
+
+The [GFM-context continuation](execution/TABLE_TOOL_GFM_CONTEXT_2026-10-20.md)
+uses an actual mounted ReactMarkdown/remark probe for frozen sources containing
+`<`, with no output DOM or direct component-as-parser invocation. Source-bound
+literal/definition ranges override the incompatible editor HTML grammar; absent,
+stale, incomplete or oversized proof fails closed. Ordinary Markdown still
+reuses the editor tree. Existing display-math/rich-layout projections are mapped
+back to original source coordinates. The input limit is 1 MiB UTF-8, traversal
+100,000 nodes and retained ranges 8,192; these are not parser-time/heap guarantees.
+The newly authored browser baseline failed after 32 passes on an incorrectly
+enabled textarea Apply. After repair, six local gates pass **83 focused /
+69 files and 1,491 service-free / 56 Chrome**, lint, nonincremental typecheck and
+one-worker build, with 18 affected source/test hashes unchanged during the run.
+New cases exercise actual full-source previews, textarea/quoted boundaries,
+reference captions, source preservation, Apply/Undo, proof reuse across grid/raw
+edits, stale refresh, composed offsets and oversized-context explicit selection.
+No server/real-device/full Reader/Offline/Share/PWA/OOM acceptance is inferred.
+
+The [compact empty-state continuation](execution/TABLE_TOOL_EMPTY_STATE_2026-10-20.md)
+retains 83 focused and 69 files/1,491 service-free cases, expands Chrome to **57**
+and reruns the six Web gates. Its baseline passed the prior 56 scenarios before
+finding the inert empty Markdown field. Existing protection checks now require
+the field to be absent while Apply remains disabled; invalid identified-table
+drafts still stay editable. New assertions cover the linked disabled reason,
+Back to source, focus return and <300px dialog height at verified 1440/375px.
+An intermediate green run had its intended mobile viewport reset by the shared
+workspace helper; that screenshot is desktop evidence only. The final run sets
+the viewport afterwards and asserts/records actual width instead of trusting
+the test name or requested dimensions.
+
+The [recovery-action follow-up](evidence/table-tool-recovery-actions-2026-10-20.json)
+keeps the same 57 scenarios and six gates, but now requires unavailable Apply
+to be absent and the explanation to describe the dialog. Its failing baseline
+passed the preceding 56 scenarios before finding the dead action. Only
+unavailable-table assertions changed; invalid/stale identified drafts still
+require a present, disabled Apply, editable Markdown and unchanged source.
+The preceding empty-state receipts remain historical, not relabelled.
+
+The [input review](execution/ux-audit-table-input-2026-10-20.md) reproduces a
+composing Escape closing the modal after the preceding 57 passing scenarios;
+the shared-hook baseline is 17 passed / 3 failed. After fixing the common
+keyboard owner, the focused run is **103/103**, including **20** common-focus
+cases; all **69 files / 1,494 service-free cases**, **59 Chrome scenarios**, full
+lint, nonincremental typecheck and single-worker build pass. Twenty affected
+source/test hashes are unchanged during these gates. In addition to the DOM
+event test, Chrome CDP starts composition in the cell and Markdown field and
+observes trusted `isComposing` Escape; both retain focus/draft, then normal
+Escape semantics are checked. Pre/post screenshots, traces and gate logs live
+beside the audit. No physical candidate-window, Safari/Firefox, complete Share
+browser or accessibility certification is claimed. Ad-hoc selector/asset-path
+test-construction mistakes are recorded separately, not counted as product bugs.
+
+The [HTML-cell review](execution/ux-audit-table-html-cells-2026-10-20.md) retains
+the next baseline: 35 unit cases passed / 2 failed, then the 59 existing Chrome
+scenarios passed before a literal HTML-code cell was refused. The complete and
+incremental scanners now share structural-tag checks without rejecting code,
+escaped tags or attribute prose. Final six gates pass **106 focused** (including
+20 common-focus), **69 files / 1,497 service-free cases**, **61 Chrome scenarios**,
+lint, nonincremental typecheck and single-worker build; 20 affected source/test
+hashes stay unchanged. Real desktop Apply/Undo and 375px Chinese touch correction
+are checked, as is one isolated large whitespace/angle fixture. An intermediate
+104-pass/1-failure run had a mistaken link-caption versus reference-ID fixture;
+its output and correction are preserved separately. Single-line CDP input
+diagnostics are not native clipboard/TSV acceptance. HTML rendering remains inert,
+and no broad code-grammar, resource or complete 43-point design certification
+is claimed.
+
+The [literal-backtick review](execution/ux-audit-table-code-span-2026-10-20.md)
+retains an expanded **70-pass/4-failure** pre-fix baseline. The row scanner and
+pipe serializer now distinguish unmatched literal runs from real code spans.
+Final six local gates pass **111 focused** (42 table, 34 shared-renderer,
+10 reference, five context and 20 common-focus checks), all **69 files / 1,502
+service-free cases**, **62 Chrome scenarios**, lint, nonincremental typecheck
+and single-worker build; 20 affected source/test hashes remain unchanged.
+Independent seeded matching checks include escaped opening-run suffixes; an
+isolated Node Worker preserves a full cell with 1,000 distinct unmatched runs.
+Its 10-second watchdog is an anti-hang boundary, not a product latency SLA.
+Actual installed GFM renders all 900 synthetic backtick/backslash/escaped-pipe
+combinations identically before/after normalization, with idempotent output.
+Raw unescaped pipes after literal ticks remain column delimiters; malformed rows
+retain excess cells through the existing maximum-width padding, not an assertion
+of identical truncated rendering. Desktop grid/raw editing, Apply/Undo and 375px
+Chinese touch pass. The opt-in five-workload profile still sees large-table long
+tasks. These receipts do not accept arbitrary Markdown, authenticated server,
+cross-browser, clipboard, full PWA or server-memory/OOM behavior.
+
+After setting task-specific process `TEMP` and `TMP` under the required `wkkk`
+root:
+
+```powershell
+node --test scripts/ux/source-editor-table-context.test.mjs scripts/ux/source-editor-table-tools.test.mjs scripts/ux/source-editor-table-references.test.mjs scripts/ux/chatgpt-rich-text.test.mjs scripts/ux/share-tablet-navigation-dialog.test.mjs
+node scripts/ux/source-editor-table-browser.mjs
+```
+
+The browser script compiles the actual workspace/form/CodeMirror, table dialog,
+focus hook, renderer/parser, React Query and local CSS into a temporary loopback
+harness using installed dependencies. API reads/writes, Next's client loader,
+cleanup and unrelated assistant-ui/Shiki/Mermaid/preferences are explicit
+synthetic adapters, not authenticated HTTP or Next routing acceptance.
+The draft-parser and Markdown-renderer Promise holds are explicit transparent
+test scheduling probes. They execute the actual implementation on release and
+are not present in production files.
+Installed Chrome is required. Generated assets/screenshots/results stay in the
+task temp directory; result status is reset before each run and only becomes
+passed after all scenarios and zero page/console errors. No API, login, user data,
+CI, push or deployment.
+
+## Accepted OOM release — 2026-10-19
+
+Exact-source **50f6de4**, CI **39231559224** attempt 1, passes all five existing
+jobs. Deployed image digests, API/Web/PostgreSQL health, worker heartbeat,
+HTTPS/login-page smoke and current/direct-rollback markers passed independent
+audit at **2026-10-19 12:27:23 UTC**. Applications still had zero restarts/OOM
+at the post-cleanup **12:50 UTC** recheck. This is not authenticated browser,
+Linux PID 1, full data comparison or 2 GiB/60-minute load acceptance.
+See [actual release checks and preserved failures](execution/OOM_RELEASE_2026-10-19.md)
+and [sanitized evidence](evidence/oom-release-2026-10-19.json).
+The local failures below remain failures, not totals rewritten by later CI.
+
+## OOM release preparation — 2026-10-19, historical checkpoint
 
 The [release preparation](execution/OOM_RELEASE_2026-10-19.md) separates the
 failed local single-process run (**1392 passed / 49 failed / 185 skipped**)

@@ -1,0 +1,84 @@
+147:   const deferredMarkdown = useDeferredValue(markdown);
+148:   const parsedDeferredMarkdown = useMemo(
+149:     () => sourceMarkdownNeedsParse && deferredMarkdown === markdown
+150:       ? inspectMarkdownTableDraft(deferredMarkdown)
+151:       : null,
+152:     [deferredMarkdown, markdown, sourceMarkdownNeedsParse],
+153:   );
+154:   const previewPending = sourceMarkdownNeedsParse || renderedPreviewMarkdown !== previewMarkdown;
+155:   useLayoutEffect(() => {
+156:     if (!sourceMarkdownNeedsParse || deferredMarkdown !== markdown || !original) return;
+157:     setSourceMarkdownNeedsParse(false);
+158:     if (!parsedDeferredMarkdown) {
+159:       setDraftValid(false);
+160:       setRawInvalid(true);
+161:       return;
+162:     }
+163:     // Editing Markdown must not silently remove a quote/list container or
+164:     // convert the surrounding document's CRLF convention.
+165:     setDraft({
+166:       ...parsedDeferredMarkdown,
+167:       newline: original.newline,
+168:       prefix: original.prefix,
+169:       continuationPrefix: original.continuationPrefix,
+170:     });
+171:     setDraftValid(true);
+172:     setRawInvalid(false);
+173:   }, [deferredMarkdown, markdown, original, parsedDeferredMarkdown, sourceMarkdownNeedsParse]);
+174:   useLayoutEffect(() => {
+175:     const table = previewRef.current?.querySelector("table");
+176:     const valid = table && table.rows.length === visibleRows.length + 1
+177:       && Array.from(table.rows).every(row => row.cells.length === draft?.headers.length);
+178:     setCheckedPreview(renderedPreviewMarkdown);
+179:     setVerifiedPreview(valid ? renderedPreviewMarkdown : null);
+180:   }, [draft?.headers.length, renderedPreviewMarkdown, visibleRows.length]);
+181:   const previewShapeInvalid = Boolean(
+182:     draft && draftValid && !rawInvalid && !previewPending
+183:       && renderedPreviewMarkdown === previewMarkdown
+184:       && checkedPreview === previewMarkdown
+185:       && verifiedPreview === null,
+186:   );
+187:   const ready = Boolean(original && draft && draftValid && !rawInvalid && !stale
+188:     && renderedPreviewMarkdown === previewMarkdown && verifiedPreview === previewMarkdown);
+189:   const canAddRow = Boolean(draft && draftValid && !rawInvalid && !previewPending && draft.rows.length + 3 <= MARKDOWN_TABLE_LIMITS.lines
+190:     && draft.headers.length * (draft.rows.length + 3) <= MARKDOWN_TABLE_LIMITS.cells);
+191:   const canAddColumn = Boolean(draft && draftValid && !rawInvalid && !previewPending && draft.headers.length < MARKDOWN_TABLE_LIMITS.columns
+192:     && (draft.headers.length + 1) * (draft.rows.length + 2) <= MARKDOWN_TABLE_LIMITS.cells);
+193:   useLayoutEffect(() => {
+194:     if (!cellFocusTarget || previewPending) return;
+195:     const active = document.activeElement;
+196:     // A deferred page preview can settle after the user has deliberately moved
+197:     // to Markdown or another control. Never steal that newer focus decision.
+198:     if (active instanceof HTMLElement && active !== document.body && !gridRef.current?.contains(active)) {
+199:       setCellFocusTarget(null);
+200:       return;
+201:     }
+202:     const targetPage = cellFocusTarget.row === 0 ? currentPage : Math.floor((cellFocusTarget.row - 1) / pageSize);
+203:     if (targetPage !== currentPage) return;
+204:     const target = previewRef.current?.querySelector<HTMLButtonElement>(
+284:       const index = position === "before" ? 0 : draft.headers.length;
+285:       const insert = (cells: TableDraft["headers"]) => [...cells.slice(0, index), emptyCell(), ...cells.slice(index)];
+286:       if (updateDraft({
+287:         ...draft,
+288:         headers: insert(draft.headers),
+289:         rows: draft.rows.map(insert),
+290:         alignments: [...draft.alignments.slice(0, index), "left", ...draft.alignments.slice(index)],
+291:       })) setCellFocusTarget({ row: 0, column: index });
+292:     }
+293:   }
+294: 
+295:   function changeMarkdown(value: string) {
+296:     setMarkdown(value);
+297:     setMarkdownCanonical(false);
+298:     setSourceMarkdownNeedsParse(true);
+299:     setActionError(false);
+300:   }
+301: 
+302:   function applyDraft() {
+303:     if (!ready || !draft) return;
+304:     const output = serialize(draft);
+305:     if (output.length > MARKDOWN_TABLE_LIMITS.bytes || textEncoder.encode(output).byteLength > MARKDOWN_TABLE_LIMITS.bytes) {
+306:       setActionError(true);
+307:       return;
+308:     }
+309:     onApply({ type: "replace", markdown: output }, sourceContext);

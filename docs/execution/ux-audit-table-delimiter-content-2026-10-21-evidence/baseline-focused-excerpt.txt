@@ -1,0 +1,20 @@
+Full log SHA-256: 45b674d4a08c7851644dda6fd79686af4b31eec388091741877feac6e9174dd6
+Five added regressions fail before the product fix:
+
+not ok 106 - delimiter-looking headers and body rows retain identical actual GFM content
+not ok 107 - automatic marker-row discovery retains surrounding pipe prose and cursor identity
+not ok 108 - plain incremental edits preserve delimiter-shaped header and data values
+not ok 109 - a later delimiter selects its true header but cannot silently reinterpret a complete selection
+not ok 110 - a delimiter-looking opening header can be repaired when its separator is missing
+
+  ...
+1..122
+# tests 122
+# suites 0
+# pass 117
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3396.3039
+

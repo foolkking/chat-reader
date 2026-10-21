@@ -1,0 +1,328 @@
+{
+  "date": "2026-10-20",
+  "startedAt": "2026-10-20T15:29:23.500Z",
+  "status": "observed",
+  "observedAt": "2026-10-20T15:30:01.330Z",
+  "browser": "155.0.8059.82",
+  "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+  "observations": [
+    {
+      "name": "small",
+      "columns": 6,
+      "rows": 20,
+      "cellsIncludingDelimiter": 132,
+      "longCellLength": 0,
+      "utf8Bytes": 1009,
+      "openMs": 93.42729999999938,
+      "mountedCells": 126,
+      "richMarkdownParsesForGridInputs": 5,
+      "paintedInputMs": [
+        8.400000035762787,
+        9,
+        7.399999976158142,
+        7.100000023841858,
+        11.800000011920929
+      ],
+      "settledPreviewMs": [
+        41.5,
+        35.59999996423721,
+        31.899999976158142,
+        29.100000023841858,
+        38.60000002384186
+      ],
+      "longTasksMs": [],
+      "retainedJsHeapBefore": 16595716,
+      "retainedJsHeapAfter": 17015616
+    },
+    {
+      "name": "typical",
+      "columns": 12,
+      "rows": 80,
+      "cellsIncludingDelimiter": 984,
+      "longCellLength": 0,
+      "utf8Bytes": 8017,
+      "openMs": 133.65740000000005,
+      "mountedCells": 372,
+      "richMarkdownParsesForGridInputs": 5,
+      "paintedInputMs": [
+        18.399999976158142,
+        18.30000001192093,
+        18,
+        17.799999952316284,
+        17.599999964237213
+      ],
+      "settledPreviewMs": [
+        71.69999998807907,
+        52.59999996423721,
+        50.5,
+        50.69999998807907,
+        55.09999996423721
+      ],
+      "longTasksMs": [],
+      "retainedJsHeapBefore": 17478284,
+      "retainedJsHeapAfter": 18346664
+    },
+    {
+      "name": "large-narrow",
+      "columns": 10,
+      "rows": 4000,
+      "cellsIncludingDelimiter": 40020,
+      "longCellLength": 0,
+      "utf8Bytes": 397013,
+      "openMs": 262.4474999999984,
+      "mountedCells": 120,
+      "richMarkdownParsesForGridInputs": 5,
+      "sourceMarkdownInputMs": [
+        61.10000002384186,
+        58.59999996423721,
+        59.5,
+        49.30000001192093,
+        50.10000002384186
+      ],
+      "paintedInputMs": [
+        60.80000001192093,
+        58.89999997615814,
+        61.19999998807907,
+        62,
+        68.89999997615814
+      ],
+      "settledPreviewMs": [
+        97.90000003576279,
+        85.80000001192093,
+        90.09999996423721,
+        93.30000001192093,
+        94.10000002384186
+      ],
+      "longTasksMs": [
+        51
+      ],
+      "retainedJsHeapBefore": 19724280,
+      "retainedJsHeapAfter": 23808616
+    },
+    {
+      "name": "cell-limit-wide",
+      "columns": 200,
+      "rows": 248,
+      "cellsIncludingDelimiter": 50000,
+      "longCellLength": 0,
+      "utf8Bytes": 499309,
+      "openMs": 248.07160000000295,
+      "mountedCells": 400,
+      "richMarkdownParsesForGridInputs": 5,
+      "sourceMarkdownInputMs": [
+        79.20000004768372,
+        84.10000002384186,
+        83.69999998807907,
+        82,
+        76.59999996423721
+      ],
+      "paintedInputMs": [
+        58.90000003576279,
+        51.30000001192093,
+        51.19999998807907,
+        51.60000002384186,
+        49.19999998807907
+      ],
+      "settledPreviewMs": [
+        117.40000003576279,
+        95.90000003576279,
+        93,
+        90.39999997615814,
+        87.39999997615814
+      ],
+      "longTasksMs": [],
+      "retainedJsHeapBefore": 20739100,
+      "retainedJsHeapAfter": 26268688
+    },
+    {
+      "name": "single-long-cell",
+      "columns": 6,
+      "rows": 20,
+      "cellsIncludingDelimiter": 132,
+      "longCellLength": 40000,
+      "utf8Bytes": 41005,
+      "openMs": 118.66050000000541,
+      "mountedCells": 126,
+      "richMarkdownParsesForGridInputs": 0,
+      "paintedInputMs": [
+        12.5,
+        25,
+        12.600000023841858,
+        12.800000011920929,
+        13.300000011920929
+      ],
+      "settledPreviewMs": [
+        12.5,
+        25,
+        12.600000023841858,
+        12.800000011920929,
+        13.300000011920929
+      ],
+      "longTasksMs": [],
+      "retainedJsHeapBefore": 18291236,
+      "retainedJsHeapAfter": 18640080
+    }
+  ],
+  "cpuHotspots": [
+    {
+      "functionName": "(program)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 190
+    },
+    {
+      "functionName": "(idle)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 81
+    },
+    {
+      "functionName": "addImplementation",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 83176,
+      "columnNumber": 26,
+      "samples": 10
+    },
+    {
+      "functionName": "(garbage collector)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 6
+    },
+    {
+      "functionName": "resolveTable",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 83866,
+      "columnNumber": 21,
+      "samples": 5
+    },
+    {
+      "functionName": "set value",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 5
+    },
+    {
+      "functionName": "subtokenize",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 1996,
+      "columnNumber": 20,
+      "samples": 4
+    },
+    {
+      "functionName": "updateTextarea",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 21928,
+      "columnNumber": 23,
+      "samples": 4
+    },
+    {
+      "functionName": "RegExp: ^[\\t ]*\\/?\\[[\\t ]*\\r?\\n([\\s\\S]*?)^[\\t ]*\\]\\/?[\\t ]*$",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 4
+    },
+    {
+      "functionName": "compile",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 9982,
+      "columnNumber": 18,
+      "samples": 3
+    },
+    {
+      "functionName": "updateProperties",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 34286,
+      "columnNumber": 25,
+      "samples": 3
+    },
+    {
+      "functionName": "camelcase",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 49776,
+      "columnNumber": 18,
+      "samples": 3
+    },
+    {
+      "functionName": "query",
+      "scriptId": "23",
+      "url": "",
+      "lineNumber": 5597,
+      "columnNumber": 20,
+      "samples": 2
+    },
+    {
+      "functionName": "now",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 2
+    },
+    {
+      "functionName": "flushCell",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 83999,
+      "columnNumber": 18,
+      "samples": 2
+    },
+    {
+      "functionName": "setAttribute",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 2
+    },
+    {
+      "functionName": "factory",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 62510,
+      "columnNumber": 18,
+      "samples": 2
+    },
+    {
+      "functionName": "readQuotedString",
+      "scriptId": "23",
+      "url": "",
+      "lineNumber": 1759,
+      "columnNumber": 27,
+      "samples": 1
+    },
+    {
+      "functionName": "updateReducerImpl",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 25266,
+      "columnNumber": 26,
+      "samples": 1
+    },
+    {
+      "functionName": "commitBeforeMutationEffects",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:51493/bundle.js",
+      "lineNumber": 29551,
+      "columnNumber": 36,
+      "samples": 1
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+Diagnostic excerpt, not a full log or a fully source-bound earlier acceptance run.
+
+not ok 35 - normalization and plain incremental edits preserve non-ASCII cell boundary whitespace
+  ---
+  duration_ms: 6.6457
+  location: 'file:///E:/1project/chat-reader/scripts/ux/source-editor-table-tools.test.mjs:774:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + '| kept | kept | 中 | kept |\n' +
+    - '|  kept  | ﻿kept﻿ |  中  |  kept  |\n' +
+        '| --- | --- | --- | --- |\n' +
+    +   '| kept | kept | 中 | kept |'
+    -   '|  kept  | ﻿kept﻿ |  中  |  kept  |'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: |-
+    |  kept  | ﻿kept﻿ |  中  |  kept  |
+    | --- | --- | --- | --- |
+    |  kept  | ﻿kept﻿ |  中  |  kept  |
+  actual: |-
+    | kept | kept | 中 | kept |
+    | --- | --- | --- | --- |
+    | kept | kept | 中 | kept |
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/source-editor-table-tools.test.mjs:780:12)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+

@@ -1,0 +1,179 @@
+[
+  {
+    "name": "focused",
+    "arguments": [
+      "node",
+      "--test",
+      "scripts/ux/source-editor-table-context.test.mjs",
+      "scripts/ux/source-editor-table-tools.test.mjs",
+      "scripts/ux/source-editor-table-references.test.mjs",
+      "scripts/ux/chatgpt-rich-text.test.mjs",
+      "scripts/ux/share-tablet-navigation-dialog.test.mjs"
+    ],
+    "started_at": "2026-10-20T11:53:43.7550163Z",
+    "ended_at": "2026-10-20T11:53:46.9569881Z",
+    "exit_code": 0,
+    "log": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-focused.txt",
+      "sha256": "927ac218cd8cd3bab079e64542d84cb8a988478e44272414a7b9bcf098502d8c",
+      "byte_size": 23480
+    }
+  },
+  {
+    "name": "ux",
+    "arguments": [
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "<REPO>/scripts/ux/adaptive-import-session-action-lifecycle.test.mjs",
+      "<REPO>/scripts/ux/annotation-document-parity.test.mjs",
+      "<REPO>/scripts/ux/annotation-workspace-reads.test.mjs",
+      "<REPO>/scripts/ux/archived-project-recovery.test.mjs",
+      "<REPO>/scripts/ux/attachment-modal-resource.test.mjs",
+      "<REPO>/scripts/ux/attachment-reading.test.mjs",
+      "<REPO>/scripts/ux/attachment-table-preview.test.mjs",
+      "<REPO>/scripts/ux/chatgpt-rich-text.test.mjs",
+      "<REPO>/scripts/ux/cleanup-candidate-markers.test.mjs",
+      "<REPO>/scripts/ux/cleanup-range-selection.test.mjs",
+      "<REPO>/scripts/ux/cleanup-selection-acknowledgment.test.mjs",
+      "<REPO>/scripts/ux/continuation-drop-guard.test.mjs",
+      "<REPO>/scripts/ux/conversation-files-capability-read.test.mjs",
+      "<REPO>/scripts/ux/conversation-index-read-recovery.test.mjs",
+      "<REPO>/scripts/ux/conversation-list-recovery.test.mjs",
+      "<REPO>/scripts/ux/conversation-metadata-recovery.test.mjs",
+      "<REPO>/scripts/ux/conversation-placement-recovery.test.mjs",
+      "<REPO>/scripts/ux/conversation-search-selection.test.mjs",
+      "<REPO>/scripts/ux/conversation-toc-stale-read-recovery.test.mjs",
+      "<REPO>/scripts/ux/import-background-analysis.test.mjs",
+      "<REPO>/scripts/ux/import-session-restore-recovery.test.mjs",
+      "<REPO>/scripts/ux/inline-attachment-locale.test.mjs",
+      "<REPO>/scripts/ux/interaction-confirmation-lifecycle.test.mjs",
+      "<REPO>/scripts/ux/manual-markdown-fidelity.test.mjs",
+      "<REPO>/scripts/ux/merge-admission.test.mjs",
+      "<REPO>/scripts/ux/merge-reentry.test.mjs",
+      "<REPO>/scripts/ux/message-version-recovery.test.mjs",
+      "<REPO>/scripts/ux/mobile-reader-header-space.test.mjs",
+      "<REPO>/scripts/ux/offline-attachment-query-policy.test.mjs",
+      "<REPO>/scripts/ux/offline-conflict-merge-draft-refresh.test.mjs",
+      "<REPO>/scripts/ux/offline-continuation-read-states.test.mjs",
+      "<REPO>/scripts/ux/offline-export-attachment-count-read.test.mjs",
+      "<REPO>/scripts/ux/offline-library-download-status-read.test.mjs",
+      "<REPO>/scripts/ux/offline-library-local-read-state.test.mjs",
+      "<REPO>/scripts/ux/offline-reader-query-policy.test.mjs",
+      "<REPO>/scripts/ux/offline-resource-check.test.mjs",
+      "<REPO>/scripts/ux/offline-search-readiness.test.mjs",
+      "<REPO>/scripts/ux/offline-search-retry.test.mjs",
+      "<REPO>/scripts/ux/pdf-viewer-policy.test.mjs",
+      "<REPO>/scripts/ux/personal-archive-scope.test.mjs",
+      "<REPO>/scripts/ux/project-archive-recovery.test.mjs",
+      "<REPO>/scripts/ux/project-fixture-cleanup.test.mjs",
+      "<REPO>/scripts/ux/project-recovery.test.mjs",
+      "<REPO>/scripts/ux/reader-autosave-feedback.test.mjs",
+      "<REPO>/scripts/ux/reader-detail-recovery.test.mjs",
+      "<REPO>/scripts/ux/reader-initial-window-recovery.test.mjs",
+      "<REPO>/scripts/ux/reader-navigation-readiness.test.mjs",
+      "<REPO>/scripts/ux/reader-navigation-retirement.test.mjs",
+      "<REPO>/scripts/ux/reader-navigation-sheet-lifecycle.test.mjs",
+      "<REPO>/scripts/ux/reader-recent-recovery.test.mjs",
+      "<REPO>/scripts/ux/resumed-source-gates.test.mjs",
+      "<REPO>/scripts/ux/share-edge-loading-lifecycle.test.mjs",
+      "<REPO>/scripts/ux/share-navigation-retirement.test.mjs",
+      "<REPO>/scripts/ux/share-navigation-sheet-lifecycle.test.mjs",
+      "<REPO>/scripts/ux/share-position-storage-recovery.test.mjs",
+      "<REPO>/scripts/ux/share-read-recovery.test.mjs",
+      "<REPO>/scripts/ux/share-tablet-navigation-dialog.test.mjs",
+      "<REPO>/scripts/ux/share-unlock-lifecycle.test.mjs",
+      "<REPO>/scripts/ux/sidebar-read-recovery.test.mjs",
+      "<REPO>/scripts/ux/sidebar-search-selection.test.mjs",
+      "<REPO>/scripts/ux/source-editor-attachment-picker-dialog.test.mjs",
+      "<REPO>/scripts/ux/source-editor-attachment-picker-read-recovery.test.mjs",
+      "<REPO>/scripts/ux/source-editor-discard-switch.test.mjs",
+      "<REPO>/scripts/ux/source-editor-table-context.test.mjs",
+      "<REPO>/scripts/ux/source-editor-table-references.test.mjs",
+      "<REPO>/scripts/ux/source-editor-table-tools.test.mjs",
+      "<REPO>/scripts/ux/sync-center-hidden-inspection.test.mjs",
+      "<REPO>/scripts/ux/sync-center-tab-read-scope.test.mjs",
+      "<REPO>/scripts/ux/task-status-recovery.test.mjs"
+    ],
+    "started_at": "2026-10-20T11:53:46.9906723Z",
+    "ended_at": "2026-10-20T11:54:46.2922315Z",
+    "exit_code": 0,
+    "log": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-ux.txt",
+      "sha256": "bb7ada283d0207488e8c8d554429cd0578340d48949714d0fac9241bea4412dd",
+      "byte_size": 317164
+    }
+  },
+  {
+    "name": "browser",
+    "arguments": [
+      "node",
+      "scripts/ux/source-editor-table-browser.mjs"
+    ],
+    "started_at": "2026-10-20T11:54:46.3029390Z",
+    "ended_at": "2026-10-20T11:55:17.5072283Z",
+    "exit_code": 0,
+    "log": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-browser.txt",
+      "sha256": "1eded4c6ebc29b54398ecab3f764e566b4c30252c2595c02416037ef4182048a",
+      "byte_size": 5585
+    }
+  },
+  {
+    "name": "lint",
+    "arguments": [
+      "corepack",
+      "pnpm",
+      "run",
+      "lint"
+    ],
+    "started_at": "2026-10-20T11:55:17.5180142Z",
+    "ended_at": "2026-10-20T11:55:30.5361786Z",
+    "exit_code": 0,
+    "log": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-lint.txt",
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "byte_size": 173
+    }
+  },
+  {
+    "name": "typecheck",
+    "arguments": [
+      "corepack",
+      "pnpm",
+      "--filter",
+      "web",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "--incremental",
+      "false"
+    ],
+    "started_at": "2026-10-20T11:55:30.5423916Z",
+    "ended_at": "2026-10-20T11:55:53.0143829Z",
+    "exit_code": 0,
+    "log": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-typecheck.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "byte_size": 0
+    }
+  },
+  {
+    "name": "build",
+    "arguments": [
+      "corepack",
+      "pnpm",
+      "--filter",
+      "web",
+      "build"
+    ],
+    "started_at": "2026-10-20T11:55:53.0168965Z",
+    "ended_at": "2026-10-20T11:56:43.4748888Z",
+    "exit_code": 0,
+    "log": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-build.txt",
+      "sha256": "9b8c3e658e7b779d2ba76c974d316b7d965d625eb1fc9d527cf0bd97289843ee",
+      "byte_size": 1231
+    }
+  }
+]

@@ -1,0 +1,565 @@
+TAP version 13
+# Subtest: raw rich wrappers retain answer text, emphasis, badge and divider semantics
+ok 1 - raw rich wrappers retain answer text, emphasis, badge and divider semantics
+  ---
+  duration_ms: 26.9932
+  ...
+# Subtest: multiply escaped rich exports restore headings, emphasis, code and ordered lists
+ok 2 - multiply escaped rich exports restore headings, emphasis, code and ordered lists
+  ---
+  duration_ms: 7.3864
+  ...
+# Subtest: one-, two- and three-slash exported formatting is bounded to an established profile
+ok 3 - one-, two- and three-slash exported formatting is bounded to an established profile
+  ---
+  duration_ms: 14.8598
+  ...
+# Subtest: normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+ok 4 - normal Markdown, deliberately escaped prose and whitespace entities are byte-identical
+  ---
+  duration_ms: 0.3103
+  ...
+# Subtest: malformed, unclosed and excessively deep profiles do not authorize recovery
+ok 5 - malformed, unclosed and excessively deep profiles do not authorize recovery
+  ---
+  duration_ms: 0.4991
+  ...
+# Subtest: raw and escaped layout examples in fenced/inline/indented code never establish a profile
+ok 6 - raw and escaped layout examples in fenced/inline/indented code never establish a profile
+  ---
+  duration_ms: 0.4347
+  ...
+# Subtest: code within a real profile retains literal tags, escapes and longer fences exactly
+ok 7 - code within a real profile retains literal tags, escapes and longer fences exactly
+  ---
+  duration_ms: 0.5304
+  ...
+# Subtest: escaped inline-code recovery restores delimiters only, never its body
+ok 8 - escaped inline-code recovery restores delimiters only, never its body
+  ---
+  duration_ms: 0.4012
+  ...
+# Subtest: raw profiles do not turn deliberately escaped headings and emphasis into formatting
+ok 9 - raw profiles do not turn deliberately escaped headings and emphasis into formatting
+  ---
+  duration_ms: 0.3213
+  ...
+# Subtest: rich and math compatibility compose without changing currency, formulas or code
+ok 10 - rich and math compatibility compose without changing currency, formulas or code
+  ---
+  duration_ms: 25.6967
+  ...
+# Subtest: documented widget presentation attributes remain a bounded readable profile
+ok 11 - documented widget presentation attributes remain a bounded readable profile
+  ---
+  duration_ms: 1.0745
+  ...
+# Subtest: unknown attributes, scripts, links, images and JSX expressions are never executed
+ok 12 - unknown attributes, scripts, links, images and JSX expressions are never executed
+  ---
+  duration_ms: 6.9446
+  ...
+# Subtest: tokens beyond the supported escape depth remain literal
+ok 13 - tokens beyond the supported escape depth remain literal
+  ---
+  duration_ms: 0.2098
+  ...
+# Subtest: input/token budgets fail closed without truncating content
+ok 14 - input/token budgets fail closed without truncating content
+  ---
+  duration_ms: 14.3211
+  ...
+# Subtest: repeated projection and CRLF/Unicode content preserve ordered readable content
+ok 15 - repeated projection and CRLF/Unicode content preserve ordered readable content
+  ---
+  duration_ms: 1.2879
+  ...
+# Subtest: cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+ok 16 - cross-block metadata is immutable and preserves IDs, indices, code, assets and raw copy strings
+  ---
+  duration_ms: 1.8776
+  ...
+# Subtest: each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+ok 17 - each block independently recovers inherited profile formatting and orphaned known wrapper fragments
+  ---
+  duration_ms: 4.1556
+  ...
+# Subtest: projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+ok 18 - projection source positions map text back to canonical UTF-16 offsets and CRLF lines
+  ---
+  duration_ms: 0.6895
+  ...
+# Subtest: source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+ok 19 - source-position remark plugin remaps actual parsed Markdown nodes after math plugins
+  ---
+  duration_ms: 3.5489
+  ...
+# Subtest: table normalization retains absolute-value versus norm MathML in the real Reader and table preview
+ok 20 - table normalization retains absolute-value versus norm MathML in the real Reader and table preview
+  ---
+  duration_ms: 108.1684
+  ...
+# Subtest: table code pipe normalization preserves the literal backslashes through actual GFM rendering
+ok 21 - table code pipe normalization preserves the literal backslashes through actual GFM rendering
+  ---
+  duration_ms: 41.3903
+  ...
+# Subtest: normalization preserves actual Reader and editable-preview GFM for escaped pipes beside code delimiters
+ok 22 - normalization preserves actual Reader and editable-preview GFM for escaped pipes beside code delimiters
+  ---
+  duration_ms: 60.2902
+  ...
+# Subtest: math-looking image alt and reference identity survive table normalization without TeX rewrites
+ok 23 - math-looking image alt and reference identity survive table normalization without TeX rewrites
+  ---
+  duration_ms: 26.0898
+  ...
+# Subtest: editable table preview uses the actual shared GFM/math chain and stable cell coordinates
+ok 24 - editable table preview uses the actual shared GFM/math chain and stable cell coordinates
+  ---
+  duration_ms: 5.8012
+  ...
+# Subtest: editable preview never navigates links or loads user images while clicking a cell
+ok 25 - editable preview never navigates links or loads user images while clicking a cell
+  ---
+  duration_ms: 4.4684
+  ...
+# Subtest: GFM alignment survives both the Reader and editable table presentations
+ok 26 - GFM alignment survives both the Reader and editable table presentations
+  ---
+  duration_ms: 3.9109
+  ...
+# Subtest: actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+ok 27 - actual shared renderer exercises primitive and interactive branches without changing canonical provider input
+  ---
+  duration_ms: 10.6251
+  ...
+# Subtest: actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+ok 28 - actual source-preview renderer exposes original offsets and keeps canonical source unchanged
+  ---
+  duration_ms: 3.4404
+  ...
+# Subtest: actual block renderer reads inherited profile while preserving heading/code boundaries
+ok 29 - actual block renderer reads inherited profile while preserving heading/code boundaries
+  ---
+  duration_ms: 6.6517
+  ...
+# Subtest: actual message wiring propagates the profile across regular block paths with canonical anchors
+ok 30 - actual message wiring propagates the profile across regular block paths with canonical anchors
+  ---
+  duration_ms: 7.9835
+  ...
+# Subtest: actual message wiring propagates the profile across element block paths with canonical anchors
+ok 31 - actual message wiring propagates the profile across element block paths with canonical anchors
+  ---
+  duration_ms: 7.7183
+  ...
+# Subtest: actual message wiring propagates the profile across window block paths with canonical anchors
+ok 32 - actual message wiring propagates the profile across window block paths with canonical anchors
+  ---
+  duration_ms: 7.4864
+  ...
+# Subtest: actual shared safe-link/image components stay inert for projected untrusted content
+ok 33 - actual shared safe-link/image components stay inert for projected untrusted content
+  ---
+  duration_ms: 3.826
+  ...
+# Subtest: leading thinking disclosure inherits the same full-message rich-text profile
+ok 34 - leading thinking disclosure inherits the same full-message rich-text profile
+  ---
+  duration_ms: 8.5788
+  ...
+# Subtest: the actual tablet section has a translated modal name, fallback focus target and matching ref
+ok 35 - the actual tablet section has a translated modal name, fallback focus target and matching ref
+  ---
+  duration_ms: 13.0683
+  ...
+# Subtest: closed: the tablet hook installs no keyboard owner or focus move
+ok 36 - closed: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 1.846
+  ...
+# Subtest: mobile: the tablet hook installs no keyboard owner or focus move
+ok 37 - mobile: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.6785
+  ...
+# Subtest: desktop: the tablet hook installs no keyboard owner or focus move
+ok 38 - desktop: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.4691
+  ...
+# Subtest: metadata failure: the tablet hook installs no keyboard owner or focus move
+ok 39 - metadata failure: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.4506
+  ...
+# Subtest: storage pending: the tablet hook installs no keyboard owner or focus move
+ok 40 - storage pending: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.4166
+  ...
+# Subtest: old storage visit: the tablet hook installs no keyboard owner or focus move
+ok 41 - old storage visit: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.6557
+  ...
+# Subtest: missing payload: the tablet hook installs no keyboard owner or focus move
+ok 42 - missing payload: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.7254
+  ...
+# Subtest: opening the actual gated tablet hook focuses inside and wraps only Tab boundaries
+ok 43 - opening the actual gated tablet hook focuses inside and wraps only Tab boundaries
+  ---
+  duration_ms: 1.3984
+  ...
+# Subtest: Escape forwards false to the latest existing close handler without a second listener or focus reset
+ok 44 - Escape forwards false to the latest existing close handler without a second listener or focus reset
+  ---
+  duration_ms: 1.1042
+  ...
+# Subtest: a newer modal keeps Escape and Tab ownership
+ok 45 - a newer modal keeps Escape and Tab ownership
+  ---
+  duration_ms: 0.8151
+  ...
+# Subtest: composing: modal Escape and Tab leave input ownership and focus untouched
+ok 46 - composing: modal Escape and Tab leave input ownership and focus untouched
+  ---
+  duration_ms: 0.6458
+  ...
+# Subtest: legacy IME: modal Escape and Tab leave input ownership and focus untouched
+ok 47 - legacy IME: modal Escape and Tab leave input ownership and focus untouched
+  ---
+  duration_ms: 0.4788
+  ...
+# Subtest: already handled: modal Escape and Tab leave input ownership and focus untouched
+ok 48 - already handled: modal Escape and Tab leave input ownership and focus untouched
+  ---
+  duration_ms: 2.2578
+  ...
+# Subtest: close: cleanup removes the listener and restores the opener without scrolling
+ok 49 - close: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.9529
+  ...
+# Subtest: mobile: cleanup removes the listener and restores the opener without scrolling
+ok 50 - mobile: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.602
+  ...
+# Subtest: desktop: cleanup removes the listener and restores the opener without scrolling
+ok 51 - desktop: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.4918
+  ...
+# Subtest: metadata hidden: cleanup removes the listener and restores the opener without scrolling
+ok 52 - metadata hidden: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.5544
+  ...
+# Subtest: unmount: cleanup removes the listener and restores the opener without scrolling
+ok 53 - unmount: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.635
+  ...
+# Subtest: delayed cleanup cannot restore behind a newly opened modal
+ok 54 - delayed cleanup cannot restore behind a newly opened modal
+  ---
+  duration_ms: 0.88
+  ...
+# Subtest: context math projection is byte-identical to the existing renderer and restores later source offsets
+ok 55 - context math projection is byte-identical to the existing renderer and restores later source offsets
+  ---
+  duration_ms: 23.652
+  ...
+# Subtest: source ranges compose display math and rich-layout projections without LF or CRLF drift
+ok 56 - source ranges compose display math and rich-layout projections without LF or CRLF drift
+  ---
+  duration_ms: 32.0204
+  ...
+# Subtest: renderer-proven HTML ranges distinguish textarea literals from a real table after a quote blank line
+ok 57 - renderer-proven HTML ranges distinguish textarea literals from a real table after a quote blank line
+  ---
+  duration_ms: 29.5119
+  ...
+# Subtest: source probe bounds UTF-8 input instead of truncating an HTML context
+ok 58 - source probe bounds UTF-8 input instead of truncating an HTML context
+  ---
+  duration_ms: 2.7701
+  ...
+# Subtest: source probe rejects exhausted AST/range budgets and unavailable literal coordinates
+ok 59 - source probe rejects exhausted AST/range budgets and unavailable literal coordinates
+  ---
+  duration_ms: 15.4397
+  ...
+# Subtest: collects literal reference identities in document order, without outside prose or titles
+ok 60 - collects literal reference identities in document order, without outside prose or titles
+  ---
+  duration_ms: 9.0375
+  ...
+# Subtest: does not promote fenced or indented code examples to actual definitions
+ok 61 - does not promote fenced or indented code examples to actual definitions
+  ---
+  duration_ms: 1.2493
+  ...
+# Subtest: actual GFM textarea literals cannot supply references, including quoted HTML blank boundaries
+ok 62 - actual GFM textarea literals cannot supply references, including quoted HTML blank boundaries
+  ---
+  duration_ms: 36.9551
+  ...
+# Subtest: CRLF HTML boundaries retain real definition offsets and exclude literal HTML definitions
+ok 63 - CRLF HTML boundaries retain real definition offsets and exclude literal HTML definitions
+  ---
+  duration_ms: 14.3625
+  ...
+# Subtest: extracts nested and multiline definition destinations without leaking container prefixes
+ok 64 - extracts nested and multiline definition destinations without leaking container prefixes
+  ---
+  duration_ms: 5.524
+  ...
+# Subtest: preserves URI source spelling, escapes and Unicode instead of resolving or fetching
+ok 65 - preserves URI source spelling, escapes and Unicode instead of resolving or fetching
+  ---
+  duration_ms: 1.91
+  ...
+# Subtest: distinguishes no reference context from source size limits, including UTF-8
+ok 66 - distinguishes no reference context from source size limits, including UTF-8
+  ---
+  duration_ms: 2.406
+  ...
+# Subtest: bounds definition count without returning a truncated definition
+ok 67 - bounds definition count without returning a truncated definition
+  ---
+  duration_ms: 21.1787
+  ...
+# Subtest: bounds UTF-8 projection bytes and rejects an oversized definition intact
+ok 68 - bounds UTF-8 projection bytes and rejects an oversized definition intact
+  ---
+  duration_ms: 5.0824
+  ...
+# Subtest: does not misrepresent footnote bodies or multiline labels as complete link context
+ok 69 - does not misrepresent footnote bodies or multiline labels as complete link context
+  ---
+  duration_ms: 1.7679
+  ...
+# Subtest: indexed code-span matching agrees with an independent forward scan, including escaped run suffixes
+ok 70 - indexed code-span matching agrees with an independent forward scan, including escaped run suffixes
+  ---
+  duration_ms: 29.2159
+  ...
+# Subtest: many distinct unpaired backtick runs stay bounded and preserve the entire cell
+ok 71 - many distinct unpaired backtick runs stay bounded and preserve the entire cell
+  ---
+  duration_ms: 202.1113
+  ...
+# Subtest: indexed bracket classification retains independent code/escape and reference semantics
+ok 72 - indexed bracket classification retains independent code/escape and reference semantics
+  ---
+  duration_ms: 64.757
+  ...
+# Subtest: deep balanced image markup is not rejected by an arbitrary nesting cutoff
+ok 73 - deep balanced image markup is not rejected by an arbitrary nesting cutoff
+  ---
+  duration_ms: 80.3132
+  ...
+# Subtest: large unclosed image nesting finishes in an isolated worker without freezing the test process
+ok 74 - large unclosed image nesting finishes in an isolated worker without freezing the test process
+  ---
+  duration_ms: 218.4143
+  ...
+# Subtest: single-cell validation preserves accepted inline syntax without scanning a whole table
+ok 75 - single-cell validation preserves accepted inline syntax without scanning a whole table
+  ---
+  duration_ms: 1.783
+  ...
+# Subtest: HTML table examples in code, escaped text and attribute prose stay editable Markdown cells
+ok 76 - HTML table examples in code, escaped text and attribute prose stay editable Markdown cells
+  ---
+  duration_ms: 46.6239
+  ...
+# Subtest: actual HTML table structure is declined consistently in whole tables and grid cells
+ok 77 - actual HTML table structure is declined consistently in whole tables and grid cells
+  ---
+  duration_ms: 0.9729
+  ...
+# Subtest: normalization preserves GFM rendering for escaped pipes around code-span backslashes
+ok 78 - normalization preserves GFM rendering for escaped pipes around code-span backslashes
+  ---
+  duration_ms: 22.6088
+  ...
+# Subtest: unmatched backticks remain literal without swallowing columns or hiding table structure
+ok 79 - unmatched backticks remain literal without swallowing columns or hiding table structure
+  ---
+  duration_ms: 1.0342
+  ...
+# Subtest: HTML-looking whitespace and repeated angles remain bounded literal cell text
+ok 80 - HTML-looking whitespace and repeated angles remain bounded literal cell text
+  ---
+  duration_ms: 184.6499
+  ...
+# Subtest: normalizes ragged tables without changing content outside the explicit table range
+ok 81 - normalizes ragged tables without changing content outside the explicit table range
+  ---
+  duration_ms: 0.9736
+  ...
+# Subtest: recognizes a table from a cursor and refuses code-fenced examples
+ok 82 - recognizes a table from a cursor and refuses code-fenced examples
+  ---
+  duration_ms: 1.1082
+  ...
+# Subtest: quoted and list fenced examples require an explicit table selection
+ok 83 - quoted and list fenced examples require an explicit table selection
+  ---
+  duration_ms: 1.1058
+  ...
+# Subtest: code protection follows quote/list container boundaries rather than fence-looking text
+ok 84 - code protection follows quote/list container boundaries rather than fence-looking text
+  ---
+  duration_ms: 3.0565
+  ...
+# Subtest: raw HTML literal blocks are not automatically treated as rendered tables
+ok 85 - raw HTML literal blocks are not automatically treated as rendered tables
+  ---
+  duration_ms: 32.8306
+  ...
+# Subtest: HTML boundaries do not block real tables after blank lines, inline tags or exited containers
+ok 86 - HTML boundaries do not block real tables after blank lines, inline tags or exited containers
+  ---
+  duration_ms: 55.7509
+  ...
+# Subtest: renderer proof preserves CRLF source coordinates without trusting a raw editor HTML tree
+ok 87 - renderer proof preserves CRLF source coordinates without trusting a raw editor HTML tree
+  ---
+  duration_ms: 3.3223
+  ...
+# Subtest: textarea across blank lines remains literal, while closing tags and container exits restore real tables
+ok 88 - textarea across blank lines remains literal, while closing tags and container exits restore real tables
+  ---
+  duration_ms: 8.9091
+  ...
+# Subtest: HTML authorization rejects stale, incomplete and absent renderer proof
+ok 89 - HTML authorization rejects stale, incomplete and absent renderer proof
+  ---
+  duration_ms: 1.4049
+  ...
+# Subtest: code protection matches installed GFM on bounded quote/list and LF/CRLF contexts
+ok 90 - code protection matches installed GFM on bounded quote/list and LF/CRLF contexts
+  ---
+  duration_ms: 686.7556
+  ...
+# Subtest: a complete source-bound editor tree is reused for discovery and application
+ok 91 - a complete source-bound editor tree is reused for discovery and application
+  ---
+  duration_ms: 0.603
+  ...
+# Subtest: standalone context parsing stops at the table header instead of parsing the body and suffix
+ok 92 - standalone context parsing stops at the table header instead of parsing the body and suffix
+  ---
+  duration_ms: 0.7939
+  ...
+# Subtest: stale or incomplete editor context cannot authorize a code sample
+ok 93 - stale or incomplete editor context cannot authorize a code sample
+  ---
+  duration_ms: 0.55
+  ...
+# Subtest: code-fence scan does not backtrack on deeply quoted ordinary prose
+ok 94 - code-fence scan does not backtrack on deeply quoted ordinary prose
+  ---
+  duration_ms: 262.6811
+  ...
+# Subtest: keeps escaped pipes editable as cell content and replaces the whole table from a cursor
+ok 95 - keeps escaped pipes editable as cell content and replaces the whole table from a cursor
+  ---
+  duration_ms: 0.8913
+  ...
+# Subtest: creates blank tables and inserts rows and columns as one replacement
+ok 96 - creates blank tables and inserts rows and columns as one replacement
+  ---
+  duration_ms: 0.7039
+  ...
+# Subtest: rejects oversized or non-table fragments without truncating
+ok 97 - rejects oversized or non-table fragments without truncating
+  ---
+  duration_ms: 0.7016
+  ...
+# Subtest: replacement canonicalizes ragged drafts and preserves the original container and newline
+ok 98 - replacement canonicalizes ragged drafts and preserves the original container and newline
+  ---
+  duration_ms: 0.3774
+  ...
+# Subtest: draft whitespace is accepted but surrounding prose and invalid offsets are never ignored
+ok 99 - draft whitespace is accepted but surrounding prose and invalid offsets are never ignored
+  ---
+  duration_ms: 0.286
+  ...
+# Subtest: cursor discovery does not absorb adjacent prose containing pipe symbols
+ok 100 - cursor discovery does not absorb adjacent prose containing pipe symbols
+  ---
+  duration_ms: 0.5339
+  ...
+# Subtest: mixed newline styles keep exact table boundaries and the current row
+ok 101 - mixed newline styles keep exact table boundaries and the current row
+  ---
+  duration_ms: 1.1172
+  ...
+# Subtest: normalization is idempotent for escaped pipes, code, links, alignment and Unicode
+ok 102 - normalization is idempotent for escaped pipes, code, links, alignment and Unicode
+  ---
+  duration_ms: 0.9102
+  ...
+# Subtest: normalizes unambiguous inline math pipes without manufacturing extra columns
+ok 103 - normalizes unambiguous inline math pipes without manufacturing extra columns
+  ---
+  duration_ms: 1.7464
+  ...
+# Subtest: preserves existing TeX norm operators instead of treating them as GFM escapes
+ok 104 - preserves existing TeX norm operators instead of treating them as GFM escapes
+  ---
+  duration_ms: 0.5575
+  ...
+# Subtest: currency, code and link destinations do not acquire math pipe rewrites
+ok 105 - currency, code and link destinations do not acquire math pipe rewrites
+  ---
+  duration_ms: 0.829
+  ...
+# Subtest: math-looking alt text and reference identifiers remain literal while ambiguous shortcuts are declined
+ok 106 - math-looking alt text and reference identifiers remain literal while ambiguous shortcuts are declined
+  ---
+  duration_ms: 1.3367
+  ...
+# Subtest: does not guess at incomplete math or pipes in TeX text and array arguments
+ok 107 - does not guess at incomplete math or pipes in TeX text and array arguments
+  ---
+  duration_ms: 0.3622
+  ...
+# Subtest: code pipe repair retains every literal backslash, including even runs
+ok 108 - code pipe repair retains every literal backslash, including even runs
+  ---
+  duration_ms: 1.5451
+  ...
+# Subtest: declines TeX character-code and text-box arguments instead of changing literal characters
+ok 109 - declines TeX character-code and text-box arguments instead of changing literal characters
+  ---
+  duration_ms: 0.5342
+  ...
+# Subtest: math pipe encoding cannot grow an accepted candidate beyond the UTF-8 tool limit
+ok 110 - math pipe encoding cannot grow an accepted candidate beyond the UTF-8 tool limit
+  ---
+  duration_ms: 9.6264
+  ...
+# Subtest: a table replacement is a single undoable CodeMirror edit
+ok 111 - a table replacement is a single undoable CodeMirror edit
+  ---
+  duration_ms: 27.2334
+  ...
+1..111
+# tests 111
+# suites 0
+# pass 111
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3236.3308

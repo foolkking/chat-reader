@@ -1,59 +1,241 @@
 # Project State
 
-Last updated: 2026-10-19. This is the current snapshot, not a release history.
+Last updated: 2026-10-21. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Accepted release (2026-10-19 Asia/Shanghai):** production now runs exact source
-`f3b331a53a593f4cdb84a37f9eb25f13379f3eb5`, accepted at **2026-10-18 16:21:58 UTC**
-(2026-10-19 00:21:58 +08:00). CI **39135555660** attempt 1 passes all five jobs:
-API **1,562 passed / 3 real-fixture skips**, 13 Web and two settings gates pass.
-Original artifact **12141071331**, 50 OCI blobs, 330 embedded API files and
-exact-source support were independently verified. Only CI images were used.
-The stopped-writer **0051→0052** migration adds nullable `protection_review`,
-all existing values NULL; all old columns in **84 tables**, four storage roots,
-**313 attachment hashes** and **67 stable counts** match. PostgreSQL,
-production configuration and operational checkout are unchanged.
+**Release authorization (2026-10-21):** the user now requests commit and
+deployment of the completed local table work and bounded backup/preflight
+repair. This supersedes the earlier no-push/no-CI/no-deployment boundary for
+this release only. Run the complete `Build release images` workflow against
+the exact submitted source, then stop and wait for the user's CI result
+before deployment. No production action has started; schema remains 0052.
+See the [release preparation](docs/execution/TABLE_TOOL_RELEASE_2026-10-21.md).
 
-API/Web/HTTPS and authenticated read-only checks pass; worker is fresh.
-All three new applications have zero restarts/OOM/startup error-keyword lines
-at acceptance, with no new kernel OOM since release preflight. Current/direct
-rollback is **f3b331a/3e68d1f**: crossing 0052→0051 requires the consent-revoking
-downgrade before old code starts, not merely an image switch.
-Fresh verified stopped-writer backup: **chat-reader-20261018T160748Z**.
-No backup/image/data pruning occurred. See the
-[accepted release, preserved failed attempts and remaining limits](docs/execution/FEATURE_RELEASE_2026-10-19.md).
+**Current local scope (2026-10-21): table phase closed.** At the user's request,
+stop open-ended table work; remaining extreme-table long tasks are a
+conditional backlog, not a reason to keep changing the editor. Bidirectional
+editing, simplified entry, edge `+`, paging and Apply/Undo are locally verified.
+The final **122 focused / 1,513 service-free / 76 Chrome** checkpoint still
+matches all 20 source/test hashes and 29 evidence artifacts. No table product
+code changed during closeout. See the [value/closeout review](docs/execution/ux-audit-table-closeout-2026-10-21.md).
 
-Shared host RAM remains about 1.83 GiB, with about 252 MiB available at the
-independent audit. This is **not** 60-minute/2 GiB workload or Docker PID 1
+**Bounded next step (2026-10-21):** locally repaired backup/preflight's implicit
+Compose-build path. A shared shell reader pins the existing API container/image,
+checks all four data mounts and reads them only in a no-pull, networkless,
+read-only 64 MiB helper; stopped-writer backups remain supported. Real shells
+with synthetic Docker pass **67 tests / 1 Windows-only flock skip** across four
+operator/recovery files. This is not actual Docker, PostgreSQL restore, Linux
+resource or production acceptance. See the [repair and limits](docs/execution/OPS_BACKUP_READERS_2026-10-21.md).
+No new migration, CI, push or deployment; existing local work/evidence is retained.
+The table optimization goal is closed, not converted into another unlimited audit.
+
+### Historical table checkpoints — superseded by the closeout above
+
+**Withdrawn local trial (2026-10-21):** a React `onBeforeInput` optimization
+passed content tests but did not execute on actual Chrome typing: a counting-
+only probe observed `textInput` without `inputType`, zero hint-path calls and
+five fallback calls. The new callbacks, trust hints, state and dedicated trial
+test were removed; all 20 source/test hashes restore the delimiter-fix
+checkpoint below. No input-latency improvement is claimed. See
+[the trial/correction record](docs/execution/ux-audit-table-raw-input-2026-10-21.md).
+The original conservative draft reuse remains, and large-table long tasks are
+still open. The unlimited local goal remains active; no migration or release.
+
+**Latest local continuation (2026-10-21):** fixed a parser inconsistency where
+GFM-valid header/body cells such as `---` and `:---:` made the Table tool
+unavailable even while the shared renderer displayed the table. Full, fast and
+incremental draft parsing now preserve those cells; automatic discovery uses
+the first eligible separator after a header, while ambiguous complete selections
+still fail closed. Actual GFM before/after HTML, desktop Apply/Undo, edge-added
+rows, surrounding pipe prose and 375px touch are covered. **122 focused, 76
+Chrome, 69 files / 1,513 service-free checks**, lint, nonincremental typecheck
+and single-worker build pass locally. See
+[the delimiter-content review](docs/execution/ux-audit-table-delimiter-content-2026-10-21.md)
+and its adjacent evidence. No migration, CI, push or deployment; the unlimited
+local goal remains active.
+
+**Active local work (2026-10-21):** the source editor Table tool now uses one
+editable rendered table above editable Markdown, with bidirectional updates,
+four edge `+` controls and bounded row/cell paging. Invalid or stale drafts
+cannot overwrite source; application is one undoable CodeMirror transaction.
+The latest [input/layout continuation](docs/execution/ux-audit-table-input-layout-2026-10-21.md)
+preserves Unicode cell-boundary content, repeated grid/raw edits and horizontal
+boundary focus. It retains bounded canonical-row/plain-draft reuse but withdraws
+direct-table rendering and DOM/frame-write experiments with no stable input
+latency gain. All previews still use the shared GFM/math chain. Six source-bound
+local gates pass: **117 focused**, **69 files / 1,508 service-free cases**,
+**72 Chrome scenarios**, lint, nonincremental typecheck and one-worker build;
+20 source/test hashes stay unchanged. Large-table long tasks remain, with no
+server OOM or real-device acceptance. The unlimited-budget goal stays active.
+The preceding [row-boundary review](docs/execution/ux-audit-table-page-navigation-2026-10-21.md)
+adds direct first/last-page controls without removing bounded rendering. Keyboard
+focus stays on an enabled pager control at either boundary; 320/375px touch can
+edit the last row and undo once without saving. At that checkpoint, all six source-bound local gates
+pass: **111 focused**, **69 files / 1,502 service-free cases**, **67 Chrome
+scenarios**, lint, nonincremental typecheck and one-worker build; 20 source/test
+hashes stay unchanged. Phase-scoped profiling still finds main-thread long tasks.
+The preceding [pending-parse review](docs/execution/ux-audit-table-pending-parse-2026-10-21.md)
+reproduces and repairs Apply staying enabled while raw Markdown parsing was still
+pending behind an old verified preview. Both parsing and rich-preview catch-up
+now block Apply, new cell entry and edge actions; only the latest parsed input
+can become the applied table. That source-bound local rerun passes **111 focused**,
+all **69 files / 1,502 service-free cases**, **64 Chrome scenarios**, lint,
+nonincremental typecheck and one-worker build; 20 source/test hashes stay unchanged.
+The [adaptive-input continuation](docs/execution/TABLE_TOOL_ADAPTIVE_PREVIEW_2026-10-20.md)
+also archives deferred source parsing, canonical row/UTF-8 delta updates and the
+120-cell large-input preview budget, with its wide-table exception and remaining
+main-thread long tasks. Neither record accepts server OOM or cross-device latency.
+The preceding [literal-backtick review](docs/execution/ux-audit-table-code-span-2026-10-20.md)
+repairs false rejection of already-rendered tables containing unmatched inline
+backticks. Only runs with an equal-length closer establish code context; literal
+ticks cannot hide column boundaries or actual HTML structures. The existing cell
+scanner and pipe serializer share a lazy per-row/cell linear match index, not a
+global cache. Actual GFM output stays equal across 900 synthetic escaped-pipe/
+backtick/backslash combinations. Final local gates pass **111/111** focused
+checks (including **20** common-focus checks), **62/62** Chrome workspace
+scenarios, all **69 service-free UX files / 1,502 cases**, Web lint,
+nonincremental typecheck and single-worker build. Desktop Apply/Undo, raw/grid
+edits and 375px touch remain exercised; 20 source/test hashes stay unchanged
+during the gates. Large-table long tasks still occur in the opt-in profile.
+The preceding [HTML-cell review](docs/execution/ux-audit-table-html-cells-2026-10-20.md)
+repairs false rejection of literal HTML examples and attribute prose in Markdown
+cells. Structural-tag checks now live in the existing cell scanner, shared by
+whole-table and incremental validation; actual HTML table structures remain
+unsupported. Code/escapes/reference data stay literal, and no HTML-rendering
+policy is relaxed. Desktop Apply/Undo and 375px touch correction are exercised.
+The preceding [input review](docs/execution/ux-audit-table-input-2026-10-20.md)
+repairs a shared modal-keyboard bug: an Escape intended to cancel IME composition
+closed the Table tool and discarded its unapplied draft. The shared focus hook
+now leaves composing, legacy-229 and already-handled events to their owner.
+Native Chrome CDP composition verifies trusted Escape in both cell and Markdown
+inputs, followed by ordinary Escape behavior; physical candidate windows and
+other browsers remain unverified. The preceding
+[recovery-action evidence](docs/evidence/table-tool-recovery-actions-2026-10-20.json)
+removes the dead Apply action when no table is available; the concise recovery
+reason describes the dialog, and Back to source restores editor focus.
+Invalid or stale drafts of an identified table retain their editable Markdown
+and disabled Apply safeguards. The preceding
+[empty-state continuation](docs/execution/TABLE_TOOL_EMPTY_STATE_2026-10-20.md)
+records the earlier removal of the inert blank Markdown editor.
+The preceding [GFM-context continuation](docs/execution/TABLE_TOOL_GFM_CONTEXT_2026-10-20.md)
+repairs three observed editor/renderer disagreements: textarea contents after a
+blank line are literal, their definitions cannot leak into an outside table,
+and a real table after a quoted HTML blank boundary stays editable. Sources
+containing `<` get one bounded read-only probe through the existing renderer,
+not a second HTML scanner; it emits no preview DOM and is reused during edits.
+Its source-position map composes the existing math/rich-layout projections.
+Complete explicit selections still edit examples without removing wrappers.
+Oversized/incomplete context fails closed with selection recovery; ordinary
+Markdown retains the frozen editor-tree reuse path. Reference extraction uses
+same-width masking and the original label/URL spelling, never rewritten source.
+The preceding [edge-reachability continuation](docs/execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md)
+keeps all four `+` targets around the visible preview, outside its scrollable
+cells and scrollbars. Wide/long tables no longer hide these controls at their
+full-content midpoint; additions still target the whole draft and focus the new
+cell. It uses CSS layout, not scroll/resize listeners or a second table.
+The preceding [code-context continuation](docs/execution/TABLE_TOOL_CODE_CONTEXT_2026-10-20.md)
+repairs all five previously observed fence/container mismatches. Automatic
+discovery now uses CodeMirror's Markdown code-block context instead of a second
+fence scanner, normally reusing the exact editor snapshot. An explicit complete
+selection still permits editing examples. Nested-list tables render a neutral
+editable preview while Markdown and Apply preserve their original indentation.
+The preceding [keyboard/focus continuation](docs/execution/TABLE_TOOL_NAVIGATION_2026-10-20.md)
+keeps vertical navigation across row pages, focuses newly added edge cells and
+preserves native Shift+arrow text selection inside a cell. Enter at the final
+row keeps editing instead of closing the input. Deferred focus never overrides
+a newer move to Markdown or another control.
+The preceding [bracket/fence continuation](docs/execution/TABLE_TOOL_BRACKET_INDEX_2026-10-20.md)
+removes quadratic suffix rescans for unclosed nested image syntax, retaining
+code/escape/reference semantics with one lazy per-operation linear index.
+Its former line-by-line fence scan removed exponential regex backtracking;
+the newer context repair supersedes that scan without restoring the regex.
+Oversized cell input is rejected before syntax allocation under the existing
+1 MiB tool budget; accepted content is never truncated. Earlier checkpoints
+retain their own counts and source bindings rather than inheriting the latest
+gate results.
+
+Earlier dated checkpoints retain their original source bindings:
+[workspace/Undo integration](docs/execution/TABLE_TOOL_WORKSPACE_2026-10-20.md),
+[math/code/reference fidelity](docs/execution/TABLE_TOOL_CONTENT_INTEGRITY_2026-10-20.md),
+[long-cell display bounds](docs/execution/TABLE_TOOL_LONG_CELL_2026-10-20.md)
+and [parser reuse/pending-preview protection](docs/execution/TABLE_TOOL_PARSER_REUSE_2026-10-20.md).
+Raw Markdown values stay synchronous while source parsing and rich previews may
+be deferred. Display-only cell shortening and the normal 400-cell/adaptive
+120-cell page budgets preserve full Markdown and Apply data; a complete header
+plus one data row still allows 400 mounted cells for a 200-column table.
+General large-table main-thread long tasks remain; no cross-device latency or
+server-memory/OOM acceptance is claimed.
+The five-case GFM comparison now agrees on identical renderer output. Its
+earlier failure is preserved, and 500 bounded contexts are checked against
+actual GFM code rendering rather than the old scanner's incorrect semantics.
+Standalone transformations without a usable editor snapshot parse only the
+prefix through the table header; work can still grow with a very large prefix.
+No global AST cache or full code-context/real-device performance acceptance is
+claimed.
+The preceding [literal-context checkpoint](docs/execution/TABLE_TOOL_LITERAL_CONTEXT_2026-10-20.md)
+passed 75 focused/49 Chrome cases but was insufficient: it missed the textarea
+cases and introduced a false refusal of a legitimate quoted table. Those
+failures remain recorded separately; the latest probe repairs the observed
+cases without relabeling the earlier green scope as complete HTML acceptance.
+The probe caps input at 1 MiB UTF-8, traversal at 100,000 nodes and retained
+ranges at 8,192. These are fail-closed work/result bounds, not a parser-time SLA.
+The prior 200-column row-control probe and a subsequent long-table column-control
+failure are retained separately from final passes. New Chrome coordinate/hit-test
+checks cover horizontal/vertical start, middle and end, 1440px desktop and 375px
+touch. The short landscape dialog may still scroll its working area normally;
+controls never require searching the table's full-content midpoint.
+This work remains local, with no new migration, push, CI or deployment; it is
+not a production, full Reader/Offline/Share or server-resource acceptance.
+At these historical checkpoints the optimization goal had no token budget.
+
+### Last accepted release — historical audit, not rechecked during closeout
+
+**Accepted release (2026-10-19):** production runs exact source
+`50f6de4b2e72ad33bd4d351ada6f95c0b3583898`, independently audited at
+**2026-10-19 12:27:23 UTC / 20:27:23 +08:00**. Exact-source CI **39231559224**
+attempt 1 passes all five jobs; the deployed API/Web digests match its manifest.
+API/Web/PostgreSQL health, worker `alive_idle`, HTTPS and login-page smoke pass.
+All three applications have zero restarts/OOM at acceptance and the later
+12:50 UTC recheck. No new kernel OOM since API startup was found at audit.
+Five reviewed Web errors named invalid Server Action ID `x`; a synthetic
+negative check returned 404. They are not described as zero error-keyword lines.
+
+Schema remains **20261017_0052**: the migration command completed with no
+pending schema upgrade and unchanged administrator deployment configuration.
+PostgreSQL was not restarted; production `.env`, operational checkout and user
+import data were not changed. Current/direct rollback is **50f6de4/f3b331a**,
+both at 0052. Older rollback across 0052→0051 still requires the consent-revoking
+downgrade before old code starts.
+
+Fresh verified five-component backup: **chat-reader-20261019T115316Z**.
+Following successful release acceptance, existing retention removed three
+older verified backups and kept this recovery point plus
+**chat-reader-20261018T160748Z**. Unchanged components may share hardlinks;
+these are not independent physical copies. Only current/direct-rollback
+application images remain. After transfer-archive cleanup, root filesystem
+available space is about **9.0 GiB**. See the
+[release and cleanup record](docs/execution/OOM_RELEASE_2026-10-19.md) and
+[sanitized acceptance evidence](docs/evidence/oom-release-2026-10-19.json).
+
+The [import/export repair](docs/execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)
+and [search/gzip continuation](docs/execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
+are now included in production. Their earlier local failures, focused test
+counts and environment limits remain historical; deployment does not relabel
+those attempts as passes. The previous feature release's schema/data checks
+remain in its [historical record](docs/execution/FEATURE_RELEASE_2026-10-19.md),
+not a claim of a new full data comparison in this deployment.
+
+Shared RAM remains about **1.83 GiB**, with about **340.5 MiB** available at audit.
+This is **not** 60-minute/2 GiB workload, Docker PID 1 or authenticated browser
 acceptance, nor proof that all OOM paths are fixed. Fixed default Skill ZIPs
-remain unchanged; only editable/reviewed versions recognize the new annotation
-projection. The user authorized a local OOM follow-up on 2026-10-19; the
-[local import/export repair](docs/execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md)
-is not part of the accepted production source. No new push, CI or deployment
-was authorized at that audit checkpoint. The user subsequently authorized
-commit, CI and deployment on 2026-10-19. The
-[OOM release preparation](docs/execution/OOM_RELEASE_2026-10-19.md)
-records the new release cycle; production remains unchanged until exact-source
-CI and deployment acceptance. Stop after dispatching CI and await the user's
-result before deploying.
-The [next local continuation](docs/execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
-also bounds attachment/annotation index retention and checks growing gzip
-expansion before JSON decoding. It fixes newest-ready extract selection,
-resource-failure classification and native CanJSON's missing-selector task
-failure. These changes are committed locally, add no migration and are not deployed.
-This continuation's fifteen related API modules pass 170/170 in serial batches
-and in an additional combined diagnostic rerun; separate disposable PostgreSQL
-17 coverage passes 6/6. The first combined attempt's two unreplicated commit
-failures remain documented, not attributed to memory without evidence.
-The 2026-10-17/18 implementation, import, and file-drop records and later
-dated implementation rows are historical checkpoints. Their source and deployment status is superseded by the
-accepted release; their individual test limits remain historical and are not
-upgraded by deployment. See the
-[release record](docs/execution/FEATURE_RELEASE_2026-10-19.md) for the single
-current production, schema, CI, and verification summary.
+remain unchanged. A preflight one-off unexpectedly built an unused `latest`
+image because the helper did not pin an existing image/fail closed on builds;
+that image was removed. Hardening preflight/backup against implicit builds is
+an unresolved **P1 in production**; the local-only repair above has not been
+released or Docker-accepted. Do not use unsupported Compose flags as a workaround.
 
-**New production incident (2026-10-18, read-only evidence):** at
+**Historical production incident (2026-10-18, read-only evidence):** at
 **10:31:45 Asia/Shanghai / 02:31:45 UTC** the kernel recorded another host-level
 `global_oom` and killed API `uvicorn`; API restarted eight seconds later
 (observed restart count 1), worker/Web remained at zero restarts. The ~1.83 GiB
@@ -112,12 +294,12 @@ function-level results are not Docker PID 1 or low-memory stress acceptance.
 
 | Item | Verified state |
 | --- | --- |
-| Release accepted | Exact source `f3b331a53a593f4cdb84a37f9eb25f13379f3eb5`, CI **39135555660** attempt 1, original artifact **12141071331**; five jobs, 50 OCI blobs, 330 embedded API files and exact-source support independently verified. [Accepted release](docs/execution/FEATURE_RELEASE_2026-10-19.md) |
-| Production | Source `f3b331a53a593f4cdb84a37f9eb25f13379f3eb5`; accepted 2026-10-18 16:21:58 UTC / 2026-10-19 00:21:58 +08:00. CI images only; API/Web/HTTPS/authenticated read-only smoke pass, worker fresh; zero application restarts/OOM/startup error-keyword lines at acceptance |
+| Release accepted | Exact source `50f6de4b2e72ad33bd4d351ada6f95c0b3583898`, CI **39231559224** attempt 1; five jobs and deployed image digests independently verified. [Accepted release](docs/execution/OOM_RELEASE_2026-10-19.md) |
+| Production | Source `50f6de4`; audited 2026-10-19 12:27:23 UTC / 20:27:23 +08:00. API/Web/HTTPS/login-page smoke pass, worker fresh; zero application restarts/OOM at audit and 12:50 UTC recheck. Authenticated browser acceptance not rerun |
 | Later production incident | 2026-10-18 02:31:45 UTC host-level OOM killed the then-3e68d1f API, which restarted. That incident precedes the accepted import/noise repair; noise-specific causation remains unproven. No new kernel OOM from release preflight through independent audit; not long-running OOM acceptance |
-| Production database | Single head/current `20261017_0052`, upgraded from 0051 with only nullable JSON `protection_review`; existing rows left SQL NULL by migration. No source rewrite, owner-auth reconciliation or backfill. PostgreSQL identity/start/restarts unchanged |
-| Last accepted data evidence | All old columns in 84 stopped-writer tables, four protected storage roots, 313 attachment SHA-256 checks and 67 stable counts pass across 0051→0052. No file isolation/deletion or live full-hash sweep in this release |
-| Latest accepted image CI | `f3b331a`: all five jobs of **39135555660** attempt 1 pass; API **1562 passed / 3 real-fixture skips**, 13 Web/two settings gates. Prior failure 39130940184 and its preference/registry repair remain historical, not skipped gates |
+| Production database | Single head/current `20261017_0052`; this release's migration command had no pending schema upgrade and reported unchanged administrator deployment configuration. PostgreSQL not restarted. The prior release added nullable `protection_review` |
+| Last accepted data evidence | The previous feature release checked all old columns in 84 tables, four storage roots, 313 attachment hashes and 67 stable counts across 0051→0052. Not rerun here. This release removed only verified old backup sets, unused application images and its transfer archive |
+| Latest accepted image CI | `50f6de4`: all five jobs of **39231559224** attempt 1 pass. Prior feature CI **39135555660** and its API **1562 / 3 skips** remain historical counts, not this run's test totals |
 | Previous UX CI | `aea13fe`: PostgreSQL 16 API **1,288 passed / 3 skipped**, single head/current 0051; all **13 Web gates** pass, including exact noise ranges at 375/1440px, attachment **25**, PDF **13**, auth **18**, negative PWA **19**, default PWA **139 / 737 conditional skips**; settings **463 / zero skips** plus one fresh-instance restore. These are that earlier release's counts, not new OOM-release counts |
 | Earlier candidate CI | Canonical-URL revision repair a12ce9e passed CI 37812290017; its artifact was never deployed separately. Its changes are included in accepted 84988a2 |
 | Local UX closeout | The resumed ordinary-user UX implementation and permitted service-free verification are complete at the pre-release checkpoint. Noise supports cross-page multiple candidates and exact editable removal ranges; rich-text uses bounded display-only compatibility, not arbitrary HTML/widgets. The administrator Skill and system archive recovery changes remain in the same release batch. The user explicitly authorized commit, CI and deployment on 2026-10-16; runtime and release acceptance now proceed through the gates below |
@@ -483,6 +665,7 @@ Raw imports and Continuation files are not a second canonical data source.
 | Device boundary | Expired authorization locks local protected data; only the same verified account can resume it; signout/cleanup account for pending edits and drafts |
 | Context | Current/Index read, edit and drop beside annotations; direct saves retain the other member and latest three snapshots; **no semantic validation, candidates or adoption** |
 | Context return/export | Conversation-scoped `.context.zip`; returns do not modify Raw/assets; full export may include user-managed saved files without endorsing claims; restricted/Share exports exclude private Continuation |
+| Source editor tables | Local-only, phase closed: editable rendered table and Markdown, four edge `+`, bounded paging, invalid/stale/pending guards and one undoable CodeMirror transaction. Final checkpoint: **122 focused / 1,513 service-free / 76 Chrome**, with 20 source hashes rechecked at closeout. Extreme-table long tasks remain; no authenticated Reader/Offline/Share, physical-device or server-OOM acceptance. See the [closeout and reopen criteria](docs/execution/ux-audit-table-closeout-2026-10-21.md) |
 | Skills | ZIP/Markdown upload and replacement; unchanged instructions and user-supplied Acquisition/Maintainer/Normalizer defaults; **no Skill viewer/editor/history UI** |
 | External tooling | No application model calls or execution of uploaded scripts; reviewed external Bundles are separate from defaults; independent external-model behavior is unverified |
 | Settings/archives | Personal settings before Root tools; `.cr` restore in Data & backup; additive personal restore previews/deduplicates; system v5 preserves ownership; old formats remain readable |
@@ -565,7 +748,15 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Next: continue the full ordinary-user audit after the local rich-text checkpoint
+Current next-action boundary: table polishing is finished at the user's direction.
+The bounded backup/preflight repair is locally verified but not released; any
+later release still needs actual Docker/stopped-writer backup verification.
+Do not restart the historical unlimited audit or the remaining resource/browser
+gates automatically. Keep all existing local changes and evidence.
+
+### Earlier ordinary-user audit backlog — historical, not an active work order
+
+The earlier next action was to continue the ordinary-user audit after the local rich-text checkpoint
 and subsequent source-only sidebar/offline-search/Reader/attachment-query and
 offline-continuation read-state repairs, plus sync-center hidden-inspection, scoped-read feedback,
 tab-read-scope, partial-read recovery, visible-inspection coalescing, conflict
@@ -613,4 +804,5 @@ dispatch CI or deploy further changes without a new explicit release request.
 Historical failed runs retain their original meanings in the release record.
 Do not retry the denied local service start. Keep local callback/element evidence
 distinct from actual browser execution and device CPU/RSS measurements. The
-overall optimization goal remains active.
+overall optimization goal was active at that historical checkpoint; the current
+table closeout above supersedes that instruction.

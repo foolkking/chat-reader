@@ -1,0 +1,3 @@
+Partial log only; full command, times and exit status are in final-gate-receipts.json.
+
+

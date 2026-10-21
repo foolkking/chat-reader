@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-21",
+  "status": "withdrawn_not_retained",
+  "focus": "Withdrawn React onBeforeInput experiment; earlier content gates do not prove execution",
+  "baseline": {
+    "source": "pre-raw-input-optimization-performance.json",
+    "cellLimitWideSourceMarkdownInputMs": [
+      68.3,
+      80.8,
+      72.3,
+      71.7,
+      74.4
+    ],
+    "largeNarrowSourceMarkdownInputMs": [
+      57.5,
+      48.9,
+      51.7,
+      37.8,
+      43.8
+    ]
+  },
+  "after": {
+    "cellLimitWideSourceMarkdownInputMs": [
+      64.39999997615814,
+      69.69999998807907,
+      70.90000003576279,
+      66.69999998807907,
+      78.69999998807907
+    ],
+    "largeNarrowSourceMarkdownInputMs": [
+      46.30000001192093,
+      43.69999998807907,
+      45.30000001192093,
+      48.89999997615814,
+      38.80000001192093
+    ],
+    "performanceArtifact": "raw-input-post-optimization-performance.json"
+  },
+  "functionality": {
+    "focusedTests": 123,
+    "serviceFreeTests": 1514,
+    "serviceFreeFailed": 0,
+    "lint": 0,
+    "build": 0,
+    "typecheck": 0,
+    "serviceFreePassed": 1514,
+    "browserScenarios": 76
+  },
+  "interpretation": "Counting-only actual Chrome probe found four native insertText events and one deletion, but React nativeEvent.type=textInput with inputType absent; the new hint path executed zero times and fallback five times. Trial code, state, trust parameters and its dedicated pure test were removed. No optimization benefit is established.",
+  "ciStarted": false,
+  "deployed": false,
+  "outcome": {
+    "hintPathCalls": 0,
+    "fallbackCalls": 5,
+    "authorityEvidence": "raw-input-authority-probe.json",
+    "retained": false,
+    "restoredSourceCheckpoint": "source-hash-chain.json -> afterFix",
+    "retainedFocusedTests": 122,
+    "retainedServiceFreeTests": 1513,
+    "retainedBrowserScenarios": 76
+  }
+}

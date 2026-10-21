@@ -1,0 +1,68 @@
+.F.....................F..                                               [100%]
+================================== FAILURES ===================================
+_____ test_existing_source_is_pinned_readonly_and_never_built[backup.sh] ______
+
+harness = <synthetic operator harness; environment omitted>
+script = 'backup.sh'
+
+    @pytest.mark.parametrize("script", SCRIPTS)
+    def test_existing_source_is_pinned_readonly_and_never_built(harness, script):
+        result, calls = run_script(script, harness)
+        assert result.returncode == 0, result.stderr
+        assert " ps -a -q api" in calls  # stopped-writer backups remain supported
+        runs = [line for line in calls.splitlines() if line.startswith("run ")]
+        assert len(runs) == (4 if script == SCRIPTS[0] else 8)
+        for line in runs:
+            for flag in ("--pull=never", "--network none", "--read-only",
+                         "--cap-drop ALL", "--security-opt no-new-privileges",
+                         "--memory 64m", "--memory-swap 64m", "--pids-limit 32",
+                         f"--volumes-from {CONTAINER}:ro", f"--entrypoint sh {IMAGE}"):
+                assert flag in line
+        assert_no_service_mutations(calls)
+        if script == "backup.sh":
+            directory, = harness[2].glob("chat-reader-*")
+            assert len(list(directory.iterdir())) == 8
+            for line in (directory / "SHA256SUMS").read_text().splitlines():
+                digest, name = line.split()
+>               assert hashlib.sha256((directory / name).read_bytes()).hexdigest() == digest
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_backup_shell_safety.py:157: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+E:\anaconda\Lib\pathlib.py:1050: in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = WindowsPath('C:/Users/86182/Desktop/wkkk/chat-reader-table-closeout-ops-20261021/fixed/test_existing_source_is_pinned1/synthetic task/backups/chat-reader-20261021T064311Z/*postgres.dump')
+mode = 'rb', buffering = -1, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       OSError: [Errno 22] Invalid argument: 'C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-closeout-ops-20261021\\fixed\\test_existing_source_is_pinned1\\synthetic task\\backups\\chat-reader-20261021T064311Z\\*postgres.dump'
+
+E:\anaconda\Lib\pathlib.py:1044: OSError
+_____________ test_backup_invalid_headroom_fails_before_docker[] ______________
+
+harness = <synthetic operator harness; environment omitted>, value = ''
+
+    @pytest.mark.parametrize("value", ["", "not-an-integer", "-1"])
+    def test_backup_invalid_headroom_fails_before_docker(harness, value):
+        result, calls = run_script("backup.sh", harness, BACKUP_HEADROOM_KB=value)
+>       assert result.returncode != 0
+E       assert 0 != 0
+E        +  where 0 = CompletedProcess(args=['C:\\Program Files\\Git\\bin\\sh.exe', '-c', 'PATH="$TEST_BIN:$PATH"; export PATH; exec sh "$@"...t-ops-20261021/fixed/test_backup_invalid_headroom_f0/synthetic task/backups/chat-reader-20261021T064321Z\n', stderr='').returncode
+
+tests\test_backup_shell_safety.py:206: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_backup_shell_safety.py::test_existing_source_is_pinned_readonly_and_never_built[backup.sh]
+FAILED tests/test_backup_shell_safety.py::test_backup_invalid_headroom_fails_before_docker[]
+2 failed, 24 passed in 13.41s

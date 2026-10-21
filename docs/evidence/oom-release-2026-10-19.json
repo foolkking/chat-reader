@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "revision": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "workflow_run_id": "39231559224",
+  "workflow_run_attempt": 1,
+  "ci_jobs": {
+    "web-quality": "success",
+    "settings-quality": "success",
+    "api-quality": "success",
+    "build-images": "success",
+    "inspect-release-artifact": "success"
+  },
+  "audited_at_utc": "2026-10-19T12:27:23.516878Z",
+  "runtime_image_digests": {
+    "api": "sha256:0db17dc9db6e1e51f663122dacb75f9186762aa9c38c88dffc287470a4f01b14",
+    "import-worker": "sha256:0db17dc9db6e1e51f663122dacb75f9186762aa9c38c88dffc287470a4f01b14",
+    "web": "sha256:fcfa797b76bca0de9ee685b83f965084aa2feae4016e3867bafa67ccc0122d01"
+  },
+  "alembic_current": "20261017_0052",
+  "pending_schema_upgrade": false,
+  "administrator_deployment_configuration": "unchanged",
+  "postgres_restarted": false,
+  "application_restarts": {
+    "api": 0,
+    "import-worker": 0,
+    "web": 0
+  },
+  "application_oom_killed": false,
+  "container_health": {
+    "api": "healthy",
+    "web": "healthy",
+    "postgres": "healthy",
+    "import-worker": "running"
+  },
+  "worker": {
+    "state": "alive_idle",
+    "heartbeat_age_seconds": 20
+  },
+  "http_status": {
+    "local_api_health": 200,
+    "local_web_health": 200,
+    "public_https_health": 200,
+    "login_page": 200,
+    "http_to_https": 301,
+    "unauthenticated_capabilities": 401,
+    "public_diagnostics": 404,
+    "synthetic_invalid_server_action": 404
+  },
+  "bounded_log_sample": {
+    "api_error_keyword_lines": 0,
+    "worker_error_keyword_lines": 0,
+    "web_error_keyword_lines": 5,
+    "web_reviewed_invalid_action_id_x": 5,
+    "unreviewed_error_keyword_lines": 0
+  },
+  "new_kernel_oom_since_api_start_at_audit": false,
+  "memory_sample_kib": {
+    "total": 1915900,
+    "available": 348688,
+    "swap_total": 3146744,
+    "swap_free": 2719608
+  },
+  "rollback_revision": "f3b331a53a593f4cdb84a37f9eb25f13379f3eb5",
+  "backup": {
+    "latest": "chat-reader-20261019T115316Z",
+    "verified_components": 5,
+    "stopped_writer_atomic_snapshot_claimed": false,
+    "deduplicated_components": 4,
+    "avoided_duplicate_bytes": 804585754,
+    "independent_physical_copies": false
+  },
+  "cleanup": {
+    "backup_sets_verified": 5,
+    "backup_sets_removed": 3,
+    "backup_sets_retained": [
+      "chat-reader-20261018T160748Z",
+      "chat-reader-20261019T115316Z"
+    ],
+    "backup_entries_held": 1,
+    "unlinked_logical_bytes_not_net_physical_reclaim": 2910357448,
+    "application_image_revisions_retained": [
+      "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+      "f3b331a53a593f4cdb84a37f9eb25f13379f3eb5"
+    ],
+    "loaded_transfer_archive_removed": true,
+    "user_import_data_removed": false,
+    "volumes_removed": false
+  },
+  "post_cleanup_recheck": {
+    "at_utc": "2026-10-19T12:50:52Z",
+    "root_available_kib": 9410340,
+    "application_restarts": 0,
+    "application_oom_killed": false,
+    "application_state": "running"
+  },
+  "preserved_failures": [
+    "preflight implicitly built an unused latest API image; verified unused and removed",
+    "compose run --no-build unsupported; failed before execution",
+    "old checkout full diagnostic refused in serving API; exact-source lightweight probe used",
+    "source shell support CRLF normalized to LF in verified operational copies",
+    "initial audit rejected five Web error lines; reviewed and retained in final evidence"
+  ],
+  "unresolved_p1": "Pin existing immutable images and fail closed against implicit builds in preflight and backup helpers.",
+  "not_executed": [
+    "authenticated_browser_acceptance",
+    "linux_docker_pid1_acceptance",
+    "two_gib_sixty_minute_business_load_soak",
+    "full_production_data_comparison"
+  ]
+}

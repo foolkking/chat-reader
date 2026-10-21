@@ -1,6 +1,70 @@
 # 生产部署
 
-## OOM 续查发布准备 — 2026-10-19，尚未部署
+## 表格与运维加固发布准备 — 2026-10-21
+
+用户已授权本轮提交与部署：发布当前已完成的表格双向编辑/边缘行列操作及下方
+备份读取器修复，不追加功能或迁移。只使用本地保存的 GitHub 令牌和 API/CLI，
+不登录、不通过 GitHub 网页操作。完整 `Build release images` 工作流启动后先停止，
+等待用户报告 CI 结果；不得在质量/镜像任务未全部通过时部署。
+
+部署前仍须核验精确 commit、原始制品与镜像摘要，并携带同版本
+`backup.sh`、`preflight_release_space.sh`、`backup_volume_reader.sh`。
+新 reader 尚需真实 Docker/停止写入备份验证；不得为绕过失败恢复隐式构建，
+不得在 serving API 中启动完整诊断。沿用低内存备份和回退边界，不修改生产
+环境/用户导入数据、不重启 PostgreSQL。当前这里只是发布准备，不是部署成功。
+详见[本轮记录](execution/TABLE_TOOL_RELEASE_2026-10-21.md)。
+
+## 本地运维脚本加固 — 2026-10-21，尚未部署
+
+`backup.sh` 与 `preflight_release_space.sh` 现共享同目录
+`backup_volume_reader.sh`。仅复用当前 Compose 项目现存 API 容器（包括已停止的
+写入者）及其已验证的本地 immutable image，确认四个业务卷挂载后，以
+`docker run --pull=never`、只读卷/根目录、无网络和 64 MiB memory/swap 上限读取。
+不再调用可能隐式 build 的 `compose run ... api`，不注入应用环境或启动应用。
+来源缺失、多容器、镜像不可验证或挂载不完整时直接失败，不尝试 build/pull/up。
+空机首次备份需先准备经审核的既有应用容器，不能自动构建替代。
+
+发布这两个 helper 时必须同时携带同版本 `backup_volume_reader.sh`，
+不能只复制顶层脚本；三者固定 LF。五组件目录、manifest、校验和、去重与恢复合同
+不变。27 项新增真实 shell/合成 Docker 回归通过，连同现有运维/恢复回归共
+67 通过、1 Windows flock 跳过；真实 Docker、停止写入的完整备份/恢复及低内存
+验证仍待后续明确授权，未在本轮操作生产。详见
+[修复与证据](execution/OPS_BACKUP_READERS_2026-10-21.md)。
+
+## 当前 OOM 续查发布 — 2026-10-19，已部署并验收
+
+生产当前为 **50f6de4b2e72ad33bd4d351ada6f95c0b3583898 / 20261017_0052**。
+CI **39231559224** attempt 1 五项通过，运行镜像摘要与原始 manifest 一致。
+独立验收时间为 **2026-10-19 12:27:23 UTC / 20:27:23 +08:00**：
+API/Web/PostgreSQL 健康，worker `alive_idle`，HTTPS/登录页 200、
+HTTP→HTTPS 301，未认证 capabilities 401、公开 diagnostics 404。
+API/Web/worker 零重启、未被 OOM 杀死，12:50 UTC 再查仍如此。
+
+迁移命令成功，**没有待执行的 schema 升级**，管理员部署配置报告未变化。
+PostgreSQL 未重启；未覆盖生产 `.env`、Compose/Nginx、运维 checkout 或导入资料。
+当前/直接回退指针为 **50f6de4/f3b331a**，都用 0052，直接回退无需降级。
+若之后回退跨越 0052→0051，仍须先执行撤销保护授权的安全 downgrade。
+
+新五组件备份 **chat-reader-20261019T115316Z** 已验证；不声称本次在线采集是
+停止写入的跨组件原子快照。通过现有 retention helper 删除三份旧备份，
+保留 **20261018T160748Z** 与 **20261019T115316Z**。未变组件共享硬链接，
+两份恢复点不等于两份独立物理副本。应用镜像只保留当前及直接回退版本；
+已加载并验收的本轮镜像传输归档被删除，manifest、支持文件和验收证据保留。
+最终根文件系统可用 **9,410,340 KiB，约 9.0 GiB**。
+
+**当时发现的 P1（生产尚未采用上方本地修复）：** preflight/backup 的 Compose one-off 使用默认 image，
+缺少已有镜像时可隐式 build。本次前置检查意外构建的未使用 `latest` 已删除；
+实际应用替换使用精确 CI 镜像。服务器 Compose 不支持 `run --no-build`，
+不能把添加该参数当作修复；后续应钉住已有 immutable image 并验证 fail-closed。
+旧运维 checkout 的健康脚本也不是当前轻量版本：本次使用 release 下的精确
+`support/deploy/verify_runtime_health.sh`，以 `sh` 调用 LF 规范化副本。
+禁止在 serving API 内启动完整诊断。
+
+本次未运行认证浏览器全量验收、Docker PID 1 或 60 分钟低内存压力测试，
+不据短时健康断言所有 OOM 路径已解决。完整失败记录与证据见
+[OOM 发布记录](execution/OOM_RELEASE_2026-10-19.md)。
+
+## OOM 续查发布准备 — 2026-10-19，历史检查点
 
 用户已授权提交、CI 与部署。本轮沿用完整 `Build release images` 工作流，
 启动后等待用户报告 CI 结果；只有精确源码的全部质量/镜像任务通过并核验原始制品，
@@ -12,9 +76,9 @@
 `release-check.ps1` 现对非零原生命令退出码立即失败，避免继续检查后误报成功。
 详见[发布准备与验证边界](execution/OOM_RELEASE_2026-10-19.md)。
 
-## 当前接受的功能与导入稳定性发布 — 2026-10-19
+## 前一次接受的功能与导入稳定性发布 — 2026-10-19
 
-生产为 **f3b331a53a593f4cdb84a37f9eb25f13379f3eb5 / 20261017_0052**，
+当时生产为 **f3b331a53a593f4cdb84a37f9eb25f13379f3eb5 / 20261017_0052**，
 接受于 **2026-10-18 16:21:58 UTC / 2026-10-19 00:21:58 +08:00**。
 CI **39135555660** 尝试 1 的五项全部通过；原始镜像制品 **12141071331**、
 50 个 OCI blob、330 个 API 源文件和精确源码部署支持文件通过独立核对。
@@ -1663,7 +1727,8 @@ no additional 30-day retention and no off-site copy configured. Image upload/loa
 retries do not trigger another data backup; every actual stop-write/migrate cycle
 still requires a fresh consistent backup.
 
-Deploy `backup.sh` together with `backup_housekeeping.py`. The latter supports
+Deploy `backup.sh` together with `backup_volume_reader.sh` and
+`backup_housekeeping.py`; the reader must match the calling scripts. The latter supports
 host Python **3.6+**, avoiding the former report's modern typing requirement.
 `backup.sh` defaults `BACKUP_DEDUPLICATE=1`: it verifies the previous snapshots and
 reuses only byte-identical component archives by hardlink, then re-verifies the

@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-21",
+  "timezone": "Asia/Shanghai",
+  "status": "local_shell_verified_not_released",
+  "runtime": "Windows; Git for Windows sh/bash; synthetic Docker only",
+  "source_sha256": {
+    ".gitattributes": "eb712e3fe3c5a98d570292b444b631ad14bdef57654884cec7a7141d22760402",
+    "deploy/backup_volume_reader.sh": "fc1d18beea98032baf82c8d21be6b541a47ff5fea8938f258ea22d475c15df74",
+    "deploy/backup.sh": "54e69d9f16be61de37671d46fe94387a9107a8234101fc4d4aeb142d10d65634",
+    "deploy/preflight_release_space.sh": "52b64862b6a576745d30cf7c2bbb15753fdbbcf1408be8e718491d7aaf7294f0",
+    "apps/api/tests/test_backup_shell_safety.py": "09d950591447f350b9bce918833327809cc585632792a120c18920e1d7ca4733"
+  },
+  "command": "python -m pytest tests/test_backup_shell_safety.py tests/test_runtime_health_scripts.py tests/test_backup_retention_report.py tests/test_recovery_preflight.py --basetemp <task-specific-directory> -o cache_dir=<task-specific-cache> -q",
+  "result": {
+    "passed": 67,
+    "skipped": 1,
+    "failed": 0,
+    "new_shell_cases": 27,
+    "exit_code": 0,
+    "skip_reason": "Linux flock contention test skipped on Windows"
+  },
+  "syntax": {
+    "command": "bash -n, independently for each of the three backup shells",
+    "exit_code": 0
+  },
+  "table_closeout": {
+    "source_hashes_checked": 20,
+    "artifact_hashes_and_sizes_checked": 29,
+    "mismatches": 0,
+    "new_table_product_changes": false,
+    "reran_table_gates": false
+  },
+  "limits": [
+    "No real Docker daemon/mount/cgroup verification.",
+    "No actual PostgreSQL backup/restore or production access.",
+    "No new migration, push, CI, deployment or destructive workspace cleanup.",
+    "Existing table large-input long tasks remain deferred."
+  ],
+  "artifacts": {
+    "baseline-backup-calls.txt": {
+      "sha256": "9eabc2444f679b2111edd6c7d40df1b4bdfee15510a219366b3a2fd40021c6aa",
+      "byte_size": 298
+    },
+    "baseline-preflight-calls.txt": {
+      "sha256": "9eabc2444f679b2111edd6c7d40df1b4bdfee15510a219366b3a2fd40021c6aa",
+      "byte_size": 298
+    },
+    "final-backup-calls.txt": {
+      "sha256": "cad4ecf3d9869076ed07729f16723521676de6cd31fd16981e49a1a889d00d10",
+      "byte_size": 3774
+    },
+    "final-preflight-calls.txt": {
+      "sha256": "f3d8697001176ba925dd3b0f33c94c05554b14b6f7eeee8d7b267c3d73c9eb18",
+      "byte_size": 2047
+    },
+    "fixture-corrections.txt": {
+      "sha256": "90dcde35776249365871f6f4f14d5a7c85bc8096ffe7a622ad2ea5716989509d",
+      "byte_size": 4113
+    },
+    "pytest-final.txt": {
+      "sha256": "129cbddae84e230b625d74f0b40ef37c94037181e3bcc17ea0ceb725e3672147",
+      "byte_size": 113
+    }
+  },
+  "doc_links": {
+    "scope": "10 affected Markdown documents; local file targets only, no web or anchor verification",
+    "checked": 694,
+    "missing": 0
+  },
+  "whitespace": {
+    "command": "git -c core.safecrlf=false diff --check",
+    "exit_code": 0
+  }
+}

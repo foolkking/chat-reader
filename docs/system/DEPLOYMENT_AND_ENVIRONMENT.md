@@ -1,37 +1,45 @@
 # 部署与运行环境
 
-Current production is **f3b331a / 20261017_0052**, accepted
-**2026-10-18 16:21:58 UTC / 2026-10-19 00:21:58 +08:00**. Exact-source CI
-**39135555660** attempt 1 passes all five jobs; original artifact **12141071331**,
-50 OCI blobs, 330 API source files and exact-source support were independently
-verified. API/Web/HTTPS/authenticated read-only smoke pass; worker is fresh.
-New applications have zero restarts/OOM/startup error-keyword lines at acceptance.
-See [release, failed guards and remaining limits](../execution/FEATURE_RELEASE_2026-10-19.md).
+Current production is **50f6de4 / 20261017_0052**, independently audited at
+**2026-10-19 12:27:23 UTC / 20:27:23 +08:00**. Exact-source CI **39231559224**
+attempt 1 passes all five jobs; running API/Web digests match its manifest.
+API/Web/PostgreSQL health, worker `alive_idle`, HTTPS and login-page smoke pass.
+Applications have zero restarts/OOM at audit and the 12:50 UTC recheck.
+Five Web log errors naming invalid Server Action ID `x` were reviewed and a
+synthetic negative check returned 404; this is not a zero-error-keyword claim. See the
+[release and cleanup record](../execution/OOM_RELEASE_2026-10-19.md).
 
-A verified stopped-writer five-component backup **chat-reader-20261018T160748Z**
-precedes 0051→0052. Migration adds only nullable JSON `protection_review`, with
-old rows left NULL. All old columns in 84 tables, four storage roots, 313
-attachment hashes and 67 stable counts match. PostgreSQL identity/start/restarts,
-production environment, Compose/Nginx and operational checkout are unchanged.
-No owner-auth reconciliation, source backfill, file isolation or pruning ran.
-The three previous backups and independent orphan preservation remain.
+The migration command completed with no pending schema upgrade and unchanged
+administrator deployment configuration. PostgreSQL was not restarted;
+production `.env`, Compose/Nginx, operational checkout and user imports were
+not changed. Verified five-component backup **chat-reader-20261019T115316Z**
+precedes replacement; it is not claimed as a stopped-writer atomic snapshot.
+Retention removed three old verified backups and keeps the 2026-10-18 and
+2026-10-19 recovery points. Shared hardlinks do not constitute independent
+physical copies. Current/direct rollback is **50f6de4/f3b331a**, both at 0052;
+exact old images remain. Any rollback across **0052→0051** still needs a fresh
+backup and consent-revoking downgrade before old code starts.
 
-Current/direct rollback is **f3b331a/3e68d1f**; exact old images are loaded.
-It crosses **0052→0051**: stop writes, take a fresh verified backup and execute
-the new image's consent-revoking downgrade before old code starts. Never merely
-switch images or manually drop the column. `rollback-0052-warning.txt` is
-installed beside the preserved older warning. Use only lightweight readiness;
-never full diagnostics in the serving API or a check-only overlay with `up`.
+Use the exact release's lightweight `support/deploy/verify_runtime_health.sh`
+via `sh`; old operational-checkout scripts may drift. Never run full diagnostics
+in the serving API or apply check-only overlays with `up`. Production's
+preflight/backup helpers permitted an implicit Compose build when their default
+image was absent, producing one unused `latest` image, subsequently removed.
+The **2026-10-21 local-only** repair replaces these one-offs with
+`backup_volume_reader.sh`: pin the existing (possibly stopped) API container's
+locally verified immutable image and all four mounts, then use a 64 MiB,
+no-pull/networkless/read-only Docker reader. Missing sources fail closed.
+Ship the shared reader with both callers. The shell regression is locally
+verified, not actual Docker/Linux/stopped-writer backup or production acceptance;
+this remains **P1 for release verification**. `compose run --no-build` is not
+used. See [repair and boundaries](../execution/OPS_BACKUP_READERS_2026-10-21.md).
 
-Shared RAM remains about 1.83 GiB, with roughly 252 MiB available at independent
-audit. Release one-offs used a 192 MiB cap, 384 MiB memory+swap, 0.5 CPU and
-256 MiB additional host headroom; serving settings and other applications were
-not changed. This is not business-load/60-minute low-memory or Docker PID 1
-acceptance. Fixed default Skill ZIPs remain unchanged. The subsequent
-2026-10-19 user request explicitly authorizes the local OOM fixes' release;
-see [release preparation](../execution/OOM_RELEASE_2026-10-19.md).
-This authorization is not new production acceptance. Dispatch CI, then await
-the user's result before any deployment; preserve the accepted version above.
+Shared RAM remains about **1.83 GiB**, with roughly **340.5 MiB** available at
+audit. This is not 60-minute/2 GiB business-load, Docker PID 1 or authenticated
+browser acceptance. Fixed default Skill ZIPs remain unchanged. Source-specific
+historical data checks are retained in the
+[previous feature release](../execution/FEATURE_RELEASE_2026-10-19.md), not
+claimed as rerun during this deployment.
 
 ## Previous OOM repair — 2026-10-17
 

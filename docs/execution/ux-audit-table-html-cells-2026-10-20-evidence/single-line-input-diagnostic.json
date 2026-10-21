@@ -1,0 +1,97 @@
+{
+  "bundle_sha256": "bdbb2b2b39f3eb61ffce29c1b17e853334587bbd522bd55f3dbb60b8a59e945d",
+  "results": [
+    {
+      "method": "Chrome CDP Input.insertText; not native clipboard paste",
+      "supplied": "first\nsecond",
+      "value": "first second",
+      "markdown": "| A | B |\n| --- | --- |\n| first second | 2 |",
+      "trace": [
+        {
+          "type": "beforeinput",
+          "inputType": "insertText",
+          "data": "first\nsecond",
+          "isTrusted": true,
+          "target": "INPUT"
+        },
+        {
+          "type": "input",
+          "inputType": "insertText",
+          "data": "first second",
+          "isTrusted": true,
+          "target": "INPUT"
+        }
+      ],
+      "writes": 0
+    },
+    {
+      "method": "Chrome CDP Input.insertText; not native clipboard paste",
+      "supplied": "first\r\nsecond",
+      "value": "first second",
+      "markdown": "| A | B |\n| --- | --- |\n| first second | 2 |",
+      "trace": [
+        {
+          "type": "beforeinput",
+          "inputType": "insertText",
+          "data": "first\r\nsecond",
+          "isTrusted": true,
+          "target": "INPUT"
+        },
+        {
+          "type": "input",
+          "inputType": "insertText",
+          "data": "first second",
+          "isTrusted": true,
+          "target": "INPUT"
+        }
+      ],
+      "writes": 0
+    },
+    {
+      "method": "Chrome CDP Input.insertText; not native clipboard paste",
+      "supplied": "left\tright",
+      "value": "left\tright",
+      "markdown": "| A | B |\n| --- | --- |\n| left\tright | 2 |",
+      "trace": [
+        {
+          "type": "beforeinput",
+          "inputType": "insertText",
+          "data": "left\tright",
+          "isTrusted": true,
+          "target": "INPUT"
+        },
+        {
+          "type": "input",
+          "inputType": "insertText",
+          "data": "left\tright",
+          "isTrusted": true,
+          "target": "INPUT"
+        }
+      ],
+      "writes": 0
+    },
+    {
+      "method": "Chrome CDP Input.insertText; not native clipboard paste",
+      "supplied": "正文 | `代码`",
+      "value": "正文 | `代码`",
+      "markdown": "| A | B |\n| --- | --- |\n| 正文 \\| `代码` | 2 |",
+      "trace": [
+        {
+          "type": "beforeinput",
+          "inputType": "insertText",
+          "data": "正文 | `代码`",
+          "isTrusted": true,
+          "target": "INPUT"
+        },
+        {
+          "type": "input",
+          "inputType": "insertText",
+          "data": "正文 | `代码`",
+          "isTrusted": true,
+          "target": "INPUT"
+        }
+      ],
+      "writes": 0
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "method": "Chrome DOM-dispatched isComposing key, not a physical IME candidate session",
+  "dialog_count": 1,
+  "input_count": 1,
+  "writes": 0
+}

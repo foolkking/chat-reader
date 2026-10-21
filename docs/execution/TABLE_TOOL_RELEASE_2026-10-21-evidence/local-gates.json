@@ -1,0 +1,140 @@
+{
+  "date": "2026-10-21",
+  "status": "local_release_checks_passed_ci_pending",
+  "parent_revision": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "source_sha256": {
+    "apps/web/components/use-dialog-focus.ts": "7ce66e3245572f5663bfa5a5bc030f1f94a9c49eba744c862a130ca774acb998",
+    "apps/web/features/conversations/markdown-renderer.tsx": "b97140389ac218d0bb9886450020e23135a38d4d1d4877f53f23a8ae7dca8ecc",
+    "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+    "apps/web/features/editing/markdown-table-dialog.tsx": "9c9f9a5e7c301831dddeaa949baf51a83280d775cbaf2d570f32fd2f48ad1580",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+    "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+    "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+    "apps/web/features/editing/markdown-table-tools.ts": "cb9a0b425e9dcb9425114c9e9dbe91c538387516deb3698b44cda7b93eace02f",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+    "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+    "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "f5053f8c1524967ab8acfaa5be2aea1d5de108ae5e42e0df2994f5ea246b672c",
+    "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+    "scripts/ux/share-tablet-navigation-dialog.test.mjs": "21591aa1bb144892314d184b5c918cafa49e4a988497913f99f5454a32676910",
+    "scripts/ux/source-editor-table-browser.mjs": "df3edb944b14808dec3475a4cc1c43e0838e1b05cf4db857014890232e18db22",
+    "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+    "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+    "scripts/ux/source-editor-table-tools.test.mjs": "d14c3748c4e15e15a74e6cc06d7fdadc4afd3140f6539e1eea1e9aadd9c7f13d",
+    ".gitattributes": "ede46983f94962e93ecffd49a677be110cf8e6969bf47b1505a6d34d0594d0c6",
+    "deploy/backup.sh": "54e69d9f16be61de37671d46fe94387a9107a8234101fc4d4aeb142d10d65634",
+    "deploy/preflight_release_space.sh": "52b64862b6a576745d30cf7c2bbb15753fdbbcf1408be8e718491d7aaf7294f0",
+    "deploy/backup_volume_reader.sh": "fc1d18beea98032baf82c8d21be6b541a47ff5fea8938f258ea22d475c15df74",
+    "apps/api/tests/test_backup_shell_safety.py": "09d950591447f350b9bce918833327809cc585632792a120c18920e1d7ca4733"
+  },
+  "gates": [
+    {
+      "name": "service-free-ux",
+      "start_utc": "2026-10-21T07:06:16.7836889Z",
+      "end_utc": "2026-10-21T07:06:32.6818046Z",
+      "exit_code": 0,
+      "log": "service-free-ux.txt"
+    },
+    {
+      "name": "operator-api",
+      "start_utc": "2026-10-21T07:06:32.7117046Z",
+      "end_utc": "2026-10-21T07:06:59.5571675Z",
+      "exit_code": 0,
+      "log": "operator-api.txt"
+    },
+    {
+      "name": "web-lint",
+      "start_utc": "2026-10-21T07:06:59.565397Z",
+      "end_utc": "2026-10-21T07:07:11.9771656Z",
+      "exit_code": 0,
+      "log": "web-lint.txt"
+    },
+    {
+      "name": "web-typecheck",
+      "start_utc": "2026-10-21T07:07:11.9861957Z",
+      "end_utc": "2026-10-21T07:07:33.5538585Z",
+      "exit_code": 0,
+      "log": "web-typecheck.txt"
+    },
+    {
+      "name": "web-build",
+      "start_utc": "2026-10-21T07:07:33.5569285Z",
+      "end_utc": "2026-10-21T07:08:13.3635335Z",
+      "exit_code": 0,
+      "log": "web-build.txt"
+    },
+    {
+      "name": "migration-head",
+      "start_utc": "2026-10-21T07:08:13.3724185Z",
+      "end_utc": "2026-10-21T07:08:15.1737331Z",
+      "exit_code": 0,
+      "log": "migration-head.txt"
+    }
+  ],
+  "results": {
+    "service_free_files": 69,
+    "service_free_passed": 1513,
+    "operator_passed": 67,
+    "operator_skipped": 1,
+    "operator_skip": "Linux flock contention on Windows",
+    "migration_head": "20261017_0052",
+    "new_migration": false
+  },
+  "logs": {
+    "service-free-ux": {
+      "full_log_sha256": "a398794e6fac45c9be79ff88b739dafdca4dfb8953582f7b83d265c3dc3fcb09",
+      "full_log_byte_size": 321465,
+      "excerpt": "service-free-ux-excerpt.txt",
+      "excerpt_sha256": "6a1001fd37d89f05c9e3b892e13ace35419f085d8ec2956dfafb97434068efd4",
+      "excerpt_byte_size": 352
+    },
+    "operator-api": {
+      "full_log_sha256": "c890449ea4254d27b3bd825931e7e935435a73a808e50bfc77bb9b172a774565",
+      "full_log_byte_size": 113,
+      "excerpt": "operator-api-excerpt.txt",
+      "excerpt_sha256": "c890449ea4254d27b3bd825931e7e935435a73a808e50bfc77bb9b172a774565",
+      "excerpt_byte_size": 113
+    },
+    "web-lint": {
+      "full_log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "full_log_byte_size": 173,
+      "excerpt": "web-lint-excerpt.txt",
+      "excerpt_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "excerpt_byte_size": 173
+    },
+    "web-typecheck": {
+      "full_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "full_log_byte_size": 0,
+      "excerpt": "web-typecheck-excerpt.txt",
+      "excerpt_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "excerpt_byte_size": 0
+    },
+    "web-build": {
+      "full_log_sha256": "1f9d02d72f24fa40c6e29b2cc2022c43823bea24b2cc7d54e9ac186a6a6507ff",
+      "full_log_byte_size": 1232,
+      "excerpt": "web-build-excerpt.txt",
+      "excerpt_sha256": "eb406ea238caf890ffe481eeb36741b2ec969e1cb575c2ad2a8b1d68853abb6a",
+      "excerpt_byte_size": 1178
+    },
+    "migration-head": {
+      "full_log_sha256": "c52640c0970d9d55dde6410a1958722277e7933ec36822bcbc46eefd8258265b",
+      "full_log_byte_size": 22,
+      "excerpt": "migration-head-excerpt.txt",
+      "excerpt_sha256": "c52640c0970d9d55dde6410a1958722277e7933ec36822bcbc46eefd8258265b",
+      "excerpt_byte_size": 22
+    }
+  },
+  "browser": {
+    "rerun": false,
+    "existing_passed": 76,
+    "source_binding_verified": true,
+    "report": "../ux-audit-table-delimiter-content-2026-10-21.md"
+  },
+  "limits": [
+    "CI/API/PostgreSQL/PWA/image gates not yet accepted.",
+    "No production action; pause after CI dispatch pending user result.",
+    "No true-Docker/cgroup/restore or long-duration memory acceptance."
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "date": "2026-10-20",
+  "stage": "after_fix",
+  "source_sha256": "75d8118be85b0ddc9492216274b37a162ab48b6fcbaf89ff674ec19ee30f10a0",
+  "observations": [
+    {
+      "id": "unmatched-backtick-middle",
+      "cell": "`left ` inner \\| right`",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": true,
+      "parserCellCount": 2,
+      "normalizationAccepted": true,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left </code> inner | right`</td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left </code> inner | right`</td><td>tail</td></tr></tbody></table>",
+      "normalizationByteEqual": true
+    },
+    {
+      "id": "leading-escaped-backtick",
+      "cell": "\\`left \\| right``",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": true,
+      "parserCellCount": 2,
+      "normalizationAccepted": true,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>`left | right``</td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>`left | right``</td><td>tail</td></tr></tbody></table>",
+      "normalizationByteEqual": true
+    },
+    {
+      "id": "escaped-backtick-inside",
+      "cell": "`left \\` inner \\| right`",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": true,
+      "parserCellCount": 2,
+      "normalizationAccepted": true,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left \\</code> inner | right`</td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left \\</code> inner | right`</td><td>tail</td></tr></tbody></table>",
+      "normalizationByteEqual": true
+    },
+    {
+      "id": "unmatched-backtick-hides-raw-pipe",
+      "cell": "`left | right",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": true,
+      "parserCellCount": 3,
+      "normalizationAccepted": true,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>`left</td><td>right</td></tr></tbody></table>",
+      "normalizedHtml": "<table><thead><tr><th>A</th><th>B</th><th></th></tr></thead><tbody><tr><td>`left</td><td>right</td><td>tail</td></tr></tbody></table>",
+      "normalizationByteEqual": false
+    },
+    {
+      "id": "balanced-control",
+      "cell": "``left ` inner \\| right``",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": true,
+      "parserCellCount": 2,
+      "normalizationAccepted": true,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left ` inner | right</code></td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left ` inner | right</code></td><td>tail</td></tr></tbody></table>",
+      "normalizationByteEqual": true
+    }
+  ]
+}

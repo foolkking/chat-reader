@@ -1,0 +1,22 @@
+{
+  "apps/web/components/use-dialog-focus.ts": "7ce66e3245572f5663bfa5a5bc030f1f94a9c49eba744c862a130ca774acb998",
+  "scripts/ux/share-tablet-navigation-dialog.test.mjs": "21591aa1bb144892314d184b5c918cafa49e4a988497913f99f5454a32676910",
+  "apps/web/features/editing/markdown-table-dialog.tsx": "1feac645c87c084adadfcede7f826e0c079e50811173cedcd19522990ffdada9",
+  "apps/web/features/editing/markdown-table-tools.ts": "50e5af76cbbed4c5e15029d1fc863611264cdece1e7aebb0fc00c722107968ca",
+  "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+  "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+  "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+  "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+  "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+  "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+  "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+  "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+  "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+  "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+  "scripts/ux/source-editor-table-browser.mjs": "d2a20f8a294f3284825aa99e3c271c43d0cd87e2e496f605e3a7b3db06bed425",
+  "scripts/ux/source-editor-table-tools.test.mjs": "238b82438bd9e4050fb5412596e6bd896d3e31642307fad95a36a2608de0de88",
+  "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+  "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+  "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+  "scripts/ux/chatgpt-rich-text.test.mjs": "5cd1865ba2e15aba7c989570b950d82e0a2e011898802840297424d7fddb6548"
+}

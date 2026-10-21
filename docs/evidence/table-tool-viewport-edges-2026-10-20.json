@@ -1,0 +1,2895 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T07:24:02.000Z",
+  "status": "verified local viewport-edge control repair; unbudgeted optimization goal remains active",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "task_temp": "<WKKK>/chat-reader-table-viewport-edges-final-20261020",
+    "build_cpus": 1
+  },
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "3d7308995474829a58fca04e549604a685622b702d59ec4534f4534f46f38151",
+    "apps/web/features/editing/markdown-table-tools.ts": "7366292ed4253c9aac00d0ea8b8e522d7513f66c0d98549c3d1505e5df00e0fc",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "2430e2b626afdcf34697aa7edcd722d2c106c3a08ad6a17bed3fa3aca0a194b5",
+    "apps/web/features/editing/edit-message-form.tsx": "2e3c981cde2a9dcf48bed5a1cc21e6aa553d2fdd31cd6cd5c304452c7be13040",
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+    "scripts/ux/source-editor-table-browser.mjs": "52f504fcd530cabc612fe47fe786258651f95237924a34f29b2cfb3310938278",
+    "scripts/ux/source-editor-table-tools.test.mjs": "185a05a79a691bf5cd9080cb67bb6ab1f7658a22e789d98f0b76e7c72901bec0",
+    "scripts/ux/source-editor-table-references.test.mjs": "5afb4ecc75ab8e5257b62aa6dc873cb496cab90b9d91254152f4696c6029fc5d",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "5cd1865ba2e15aba7c989570b950d82e0a2e011898802840297424d7fddb6548",
+    "PROJECT_STATE.md": "044451c922038c3d1b84c17530c2aa6ec04473970d4f0e32b0a18c557c3153ac",
+    "docs/index.md": "2752efd606252b0d7fdcb4cb0e7048790d802d33a945137da8733f962cc1e9e8",
+    "docs/system/USER_FLOWS.md": "97c87c5e2e175def94d3af78fbe037f5171e2c51110971b0e95b361219206bfa",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "20f781c69df81771fb19a1de009509118565b78f54bfbee9e907c10cf0699e6b",
+    "docs/testing.md": "301f9fea79aa6911716bd6087d04e0af07fb1afd22ce3d5e6ac725bbe4d9a82d",
+    "docs/documentation-inventory.md": "45d0b985056527267c5e4ef7e9aef351488f710c2bd7fc17c2f5ce9cf00d6810",
+    "docs/execution/README.md": "da4926870676265aa39fc4f0b2d89a42b434f6d782a27f4b659863de1fe7e609",
+    "docs/evidence/README.md": "9cd92b0bb2e5d03531f681df24ffea350d206e3f758c0a9ff1eaa2c63003cbb4",
+    "docs/execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md": "e437220d8628b01a0841ebd135c2e02a1b78dce59a73f391cc77286b2330a24a"
+  },
+  "implementation": {
+    "layout": "four 44px controls outside the cell scroller, in the shared grid focus scope; CSS normal flow/local positioning",
+    "content": "one actual shared-chain rendered table and one editable Markdown; whole-draft first/last row/column additions and new-cell focus unchanged",
+    "no_added": "scroll/resize listeners, timers, observers, size state, parser, cache, API, dependencies, migration or data contract",
+    "short_landscape": "normal dialog-body vertical scrolling may be needed; no arbitrary full-workspace simultaneous-visibility claim"
+  },
+  "failed_attempts": [
+    {
+      "kind": "wide row controls before repair",
+      "classification": "product defect; horizontally offscreen at initial table scroll",
+      "status": "failed",
+      "passed_scenarios": 11,
+      "failed_scenario": "wide-table row edges stay pointer-reachable at every horizontal scroll position",
+      "log": "<WKKK>/chat-reader-table-wide-edges-baseline-20261020/browser.txt",
+      "log_sha256": "d88ae85f3676005321cea96202e9a449d8253d57fd321ef556be286d2fe1d998",
+      "browser_result_sha256": "a67aff0b331dbc4b77b8bd5190de3ce6c85d42812d5ecf92f324a977e16e3844",
+      "bundle_sha256": "201cd5a6eac365ecf68741b6b3cd55c9fc671f43447536c08a7d00b5fa344bf0",
+      "observations": {
+        "date": "2026-10-20",
+        "startedAt": "2026-10-20T07:10:46.264Z",
+        "status": "observed",
+        "boundary": "actual Chrome DOM and hit tests; no locator auto-scroll",
+        "observations": [
+          {
+            "label": "desktop-200-columns-scroll-0",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 357,
+              "right": 1083,
+              "top": 296.5,
+              "bottom": 437.5,
+              "width": 724,
+              "scrollWidth": 19449,
+              "scrollLeft": 0,
+              "height": 139,
+              "scrollHeight": 139,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 10082.5,
+                "y": 319.5,
+                "left": 10060.5,
+                "right": 10104.5,
+                "top": 297.5,
+                "bottom": 341.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": false,
+                "insideScreen": true,
+                "pointerHitsButton": false,
+                "outsideCellViewport": false
+              },
+              {
+                "position": "after",
+                "x": 10082.5,
+                "y": 414.5,
+                "left": 10060.5,
+                "right": 10104.5,
+                "top": 392.5,
+                "bottom": 436.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": false,
+                "insideScreen": true,
+                "pointerHitsButton": false,
+                "outsideCellViewport": false
+              }
+            ]
+          }
+        ]
+      },
+      "source_binding_boundary": "retained generated bundle and observed DOM; not a reconstructed complete historical source snapshot"
+    },
+    {
+      "kind": "long column controls after row-only repair",
+      "classification": "product defect; vertically offscreen at initial table scroll",
+      "status": "failed",
+      "passed_scenarios": 12,
+      "failed_scenario": "all four edges remain pointer-reachable while a long wide preview scrolls on both axes",
+      "log": "<WKKK>/chat-reader-table-column-edges-baseline-20261020/browser.txt",
+      "log_sha256": "71ddec40133a2ba3e66d45ce349953398c33152d07b05a29450e6f9128b57f82",
+      "browser_result_sha256": "7e4a62ba3357e696a8627399ef4089628db3b67f311bcc177c95e6199d2c00be",
+      "bundle_sha256": "51efe65a772088eb3afa8416c98521f13c217b9773320c83d7103507f5271181",
+      "observations": {
+        "date": "2026-10-20",
+        "startedAt": "2026-10-20T07:15:50.258Z",
+        "status": "observed",
+        "boundary": "actual Chrome DOM and hit tests; no locator auto-scroll",
+        "observations": [
+          {
+            "label": "desktop-200-columns-scroll-0",
+            "requiredPositions": [
+              "before",
+              "after"
+            ],
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 0,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-200-columns-scroll-0.5",
+            "requiredPositions": [
+              "before",
+              "after"
+            ],
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 9383,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-200-columns-scroll-1",
+            "requiredPositions": [
+              "before",
+              "after"
+            ],
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 18765,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-before-pointer-append",
+            "requiredPositions": [
+              "before",
+              "after"
+            ],
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 18765,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-before-pointer-prepend",
+            "requiredPositions": [
+              "before",
+              "after"
+            ],
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 9383,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-vertical-scroll-0",
+            "requiredPositions": [
+              "before",
+              "after"
+            ],
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 155,
+              "bottom": 533,
+              "width": 724,
+              "scrollWidth": 1253,
+              "scrollLeft": 0,
+              "height": 378,
+              "scrollHeight": 1396,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 133,
+                "left": 698,
+                "right": 742,
+                "top": 111,
+                "bottom": 155,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 555,
+                "left": 698,
+                "right": 742,
+                "top": 533,
+                "bottom": 577,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-column-edges-scroll-0",
+            "axis": "column",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 155,
+              "bottom": 533,
+              "scrollLeft": 0,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 380,
+                "y": 853,
+                "left": 358,
+                "right": 402,
+                "top": 831,
+                "bottom": 875,
+                "width": 44,
+                "height": 44,
+                "insideVerticalViewport": false,
+                "insideScreen": true,
+                "pointerHitsButton": false,
+                "outsideCellViewport": false
+              },
+              {
+                "position": "after",
+                "x": 1589,
+                "y": 853,
+                "left": 1567,
+                "right": 1611,
+                "top": 831,
+                "bottom": 875,
+                "width": 44,
+                "height": 44,
+                "insideVerticalViewport": false,
+                "insideScreen": false,
+                "pointerHitsButton": false,
+                "outsideCellViewport": true
+              }
+            ]
+          }
+        ]
+      },
+      "source_binding_boundary": "retained generated bundle and observed DOM; not a reconstructed complete historical source snapshot"
+    },
+    {
+      "kind": "short landscape both-controls check",
+      "classification": "overstrict harness assumption; normal dialog-body clipping/scrolling permitted; test changed explicitly, no hidden target auto-scroll",
+      "status": "failed",
+      "passed_scenarios": 13,
+      "failed_scenario": "375px touch row edges stay reachable across a 200-column table and focus the appended row",
+      "log": "<WKKK>/chat-reader-table-wide-edges-20261020/browser.txt",
+      "log_sha256": "7c90737b828fb59e7ad479adb874f70d7d61d753e1d7042ae26557718773c177",
+      "browser_result_sha256": "5e729d25c0a840e91b6e2132f671b8b585a51fb1d68f4a52fd0516fd6541c261",
+      "bundle_sha256": "f8946e3869c22e44e9f4bb352b5c8435c8cdfac4ce44e4445f7537249be2b0dd",
+      "observations": {
+        "date": "2026-10-20",
+        "startedAt": "2026-10-20T07:11:48.747Z",
+        "status": "observed",
+        "boundary": "actual Chrome DOM and hit tests; no locator auto-scroll",
+        "observations": [
+          {
+            "label": "desktop-200-columns-scroll-0",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 0,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-200-columns-scroll-0.5",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 9383,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-200-columns-scroll-1",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 18765,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-before-pointer-append",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 18765,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-before-keyboard-prepend",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 321.5,
+              "bottom": 412.5,
+              "width": 724,
+              "scrollWidth": 19489,
+              "scrollLeft": 9383,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 299.5,
+                "left": 698,
+                "right": 742,
+                "top": 277.5,
+                "bottom": 321.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 434.5,
+                "left": 698,
+                "right": 742,
+                "top": 412.5,
+                "bottom": 456.5,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-vertical-scroll-0",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 155,
+              "bottom": 533,
+              "width": 724,
+              "scrollWidth": 1253,
+              "scrollLeft": 0,
+              "height": 378,
+              "scrollHeight": 1396,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 133,
+                "left": 698,
+                "right": 742,
+                "top": 111,
+                "bottom": 155,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 555,
+                "left": 698,
+                "right": 742,
+                "top": 533,
+                "bottom": 577,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-vertical-scroll-0.5",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 155,
+              "bottom": 533,
+              "width": 724,
+              "scrollWidth": 1253,
+              "scrollLeft": 265,
+              "height": 378,
+              "scrollHeight": 1396,
+              "scrollTop": 509
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 133,
+                "left": 698,
+                "right": 742,
+                "top": 111,
+                "bottom": 155,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 555,
+                "left": 698,
+                "right": 742,
+                "top": 533,
+                "bottom": 577,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "desktop-vertical-scroll-1",
+            "viewport": {
+              "width": 1440,
+              "height": 900
+            },
+            "preview": {
+              "left": 358,
+              "right": 1082,
+              "top": 155,
+              "bottom": 533,
+              "width": 724,
+              "scrollWidth": 1253,
+              "scrollLeft": 529,
+              "height": 378,
+              "scrollHeight": 1396,
+              "scrollTop": 1018
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 720,
+                "y": 133,
+                "left": 698,
+                "right": 742,
+                "top": 111,
+                "bottom": 155,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 720,
+                "y": 555,
+                "left": 698,
+                "right": 742,
+                "top": 533,
+                "bottom": 577,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "touch-200-columns-scroll-0",
+            "viewport": {
+              "width": 375,
+              "height": 812
+            },
+            "preview": {
+              "left": 18,
+              "right": 357,
+              "top": 388,
+              "bottom": 479,
+              "width": 339,
+              "scrollWidth": 19489,
+              "scrollLeft": 0,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 187.5,
+                "y": 366,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 344,
+                "bottom": 388,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 187.5,
+                "y": 501,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 479,
+                "bottom": 523,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "touch-200-columns-scroll-0.5",
+            "viewport": {
+              "width": 375,
+              "height": 812
+            },
+            "preview": {
+              "left": 18,
+              "right": 357,
+              "top": 388,
+              "bottom": 479,
+              "width": 339,
+              "scrollWidth": 19489,
+              "scrollLeft": 9575,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 187.5,
+                "y": 366,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 344,
+                "bottom": 388,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 187.5,
+                "y": 501,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 479,
+                "bottom": 523,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "touch-200-columns-scroll-1",
+            "viewport": {
+              "width": 375,
+              "height": 812
+            },
+            "preview": {
+              "left": 18,
+              "right": 357,
+              "top": 388,
+              "bottom": 479,
+              "width": 339,
+              "scrollWidth": 19489,
+              "scrollLeft": 19150,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 187.5,
+                "y": 366,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 344,
+                "bottom": 388,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 187.5,
+                "y": 501,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 479,
+                "bottom": 523,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "touch-before-append",
+            "viewport": {
+              "width": 375,
+              "height": 812
+            },
+            "preview": {
+              "left": 18,
+              "right": 357,
+              "top": 388,
+              "bottom": 479,
+              "width": 339,
+              "scrollWidth": 19489,
+              "scrollLeft": 19150,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 187.5,
+                "y": 366,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 344,
+                "bottom": 388,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 187.5,
+                "y": 501,
+                "left": 165.5,
+                "right": 209.5,
+                "top": 479,
+                "bottom": 523,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              }
+            ]
+          },
+          {
+            "label": "touch-landscape-scroll-end",
+            "viewport": {
+              "width": 667,
+              "height": 375
+            },
+            "preview": {
+              "left": 46,
+              "right": 621,
+              "top": 182,
+              "bottom": 273,
+              "width": 575,
+              "scrollWidth": 19489,
+              "scrollLeft": 18914,
+              "height": 91,
+              "scrollHeight": 91,
+              "scrollTop": 0
+            },
+            "edges": [
+              {
+                "position": "before",
+                "x": 333.5,
+                "y": 160,
+                "left": 311.5,
+                "right": 355.5,
+                "top": 138,
+                "bottom": 182,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": true,
+                "outsideCellViewport": true
+              },
+              {
+                "position": "after",
+                "x": 333.5,
+                "y": 295,
+                "left": 311.5,
+                "right": 355.5,
+                "top": 273,
+                "bottom": 317,
+                "width": 44,
+                "height": 44,
+                "insideHorizontalViewport": true,
+                "insideScreen": true,
+                "pointerHitsButton": false,
+                "outsideCellViewport": true
+              }
+            ]
+          }
+        ]
+      },
+      "source_binding_boundary": "retained generated bundle and observed DOM; not a reconstructed complete historical source snapshot"
+    }
+  ],
+  "intermediate_passes": [
+    {
+      "kind": "row-only repair; long-column reachability not yet checked",
+      "scenarios": 44,
+      "result_sha256": "035cef79bc6e03d2942f2dddaae6ae5a2915c826b6e5e08a04d62e92259ab323",
+      "log_sha256": "a283ea74a5ea75c5baa5f0cc4e88f4977f6c832367cd54e29fe14ec004da98a8"
+    }
+  ],
+  "verification": {
+    "focused": {
+      "tests": 71,
+      "pass": 71,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "service_free_ux": {
+      "tests": 1479,
+      "pass": 1479,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "files": 68,
+      "test_file_list_sha256": "d5bdc56f074bc454c053b794a68ef8aa935f3f2b35bf1ae11e081adf7a2455a4"
+    },
+    "browser": {
+      "date": "2026-10-20",
+      "startedAt": "2026-10-20T07:19:29.947Z",
+      "status": "passed",
+      "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+      "passed": [
+        "one real rendered table; no obsolete modes; math and cell source",
+        "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+        "cell typing retains focus and immediately updates escaped Markdown",
+        "cell text selection keeps native caret behavior until a cell boundary",
+        "raw Markdown repairs ragged rows and applies only the original table",
+        "incomplete Markdown is preserved; stale grid cannot overwrite it",
+        "four edges add rows/columns; Enter never submits; IME does not navigate",
+        "external source changes do not reset a draft; refresh is explicit",
+        "quote containers and CRLF survive cell edits and final application",
+        "row paging is bounded and appending reveals the actual final row",
+        "200-column preview mounts at most 400 cells and refuses another column",
+        "wide-table row edges stay pointer-reachable at every horizontal scroll position",
+        "all four edges remain pointer-reachable while a long wide preview scrolls on both axes",
+        "375px touch row edges stay reachable across a 200-column table and focus the appended row",
+        "375px touch can append a column without finding the full table's vertical midpoint",
+        "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+        "Escape closes once and restores the logical opener",
+        "pending source previews cannot edit old cells or Apply, and catch up to the latest draft",
+        "pending grid previews retain active typing and Escape returns focus to Markdown",
+        "invalid Markdown entered during a pending preview cannot be overwritten by the older valid draft",
+        "explicit source refresh drops a suspended old table preview",
+        "renderer updates cell callbacks without reparsing unchanged Markdown",
+        "actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source",
+        "actual workspace: deeply quoted prose does not block table discovery or change surrounding source",
+        "actual workspace: quote/list-looking closers cannot expose code examples to automatic editing",
+        "actual workspace: leaving quoted/list code restores outside tables without reparsing source",
+        "actual workspace: nested-list table preview is editable without losing its indentation",
+        "actual workspace: an explicit code-table selection can edit the example without removing its fence",
+        "actual workspace: nested table editing owns shortcuts instead of opening tools behind it",
+        "actual workspace: the command names the Table tool rather than promising empty-table insertion",
+        "actual workspace: table Enter cannot save; Escape preserves the underlying source preview",
+        "actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft",
+        "actual workspace: Apply changes only the draft and Save sends one canonical client payload",
+        "actual workspace: 375px touch can open, edit and apply the nested table",
+        "actual workspace: cell syntax validation survives alternating grid and Markdown edits",
+        "actual workspace: oversized cell input is rejected without truncating the accepted draft",
+        "actual workspace: large unclosed image nesting stays editable and recovers without changing source",
+        "actual workspace: long cells use a bounded display preview without changing Markdown or Apply",
+        "actual workspace: math bars remain one cell and absolute values do not become norms",
+        "actual workspace: code backslashes and separate currency columns survive normalization",
+        "actual workspace: applying an untouched long cell preserves the exact original source",
+        "actual workspace: oversized math is omitted from rich parsing but remains exact in Markdown",
+        "actual workspace: ambiguous TeX remains editable but cannot apply until repaired",
+        "actual workspace: image alt and reference IDs stay literal without remote requests",
+        "actual workspace: bounded reference context warns without changing definitions outside the table"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "browser": "155.0.8059.82"
+    },
+    "required_edge_snapshots": 50,
+    "required_edge_checks_all_passed": true,
+    "coordinate_action_boundary": "direct mouse/touch coordinates; elementFromPoint; no locator auto-scroll for reachability checks",
+    "gates": [
+      {
+        "name": "focused",
+        "arguments": [
+          "node",
+          "--test",
+          "scripts/ux/source-editor-table-tools.test.mjs",
+          "scripts/ux/source-editor-table-references.test.mjs",
+          "scripts/ux/chatgpt-rich-text.test.mjs"
+        ],
+        "started_at": "2026-10-20T07:18:32.4486118Z",
+        "ended_at": "2026-10-20T07:18:34.8900469Z",
+        "exit_code": 0,
+        "log": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/focused.txt",
+        "log_sha256": "f6fefba3323e86d4e95e2908b80a4140e67e2890c705e314281689218f683687"
+      },
+      {
+        "name": "ux",
+        "arguments": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "E:\\1project\\chat-reader\\scripts\\ux\\adaptive-import-session-action-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\annotation-document-parity.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\annotation-workspace-reads.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\archived-project-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\attachment-modal-resource.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\attachment-reading.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\attachment-table-preview.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\chatgpt-rich-text.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\cleanup-candidate-markers.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\cleanup-range-selection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\cleanup-selection-acknowledgment.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\continuation-drop-guard.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-files-capability-read.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-index-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-list-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-metadata-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-placement-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-search-selection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-toc-stale-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\import-background-analysis.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\import-session-restore-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\inline-attachment-locale.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\interaction-confirmation-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\manual-markdown-fidelity.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\merge-admission.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\merge-reentry.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\message-version-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\mobile-reader-header-space.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-attachment-query-policy.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-conflict-merge-draft-refresh.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-continuation-read-states.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-export-attachment-count-read.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-library-download-status-read.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-library-local-read-state.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-reader-query-policy.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-resource-check.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-search-readiness.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-search-retry.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\pdf-viewer-policy.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\personal-archive-scope.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\project-archive-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\project-fixture-cleanup.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\project-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-autosave-feedback.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-detail-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-initial-window-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-navigation-readiness.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-navigation-retirement.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-navigation-sheet-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-recent-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\resumed-source-gates.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-edge-loading-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-navigation-retirement.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-navigation-sheet-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-position-storage-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-tablet-navigation-dialog.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-unlock-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sidebar-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sidebar-search-selection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-attachment-picker-dialog.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-attachment-picker-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-discard-switch.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-table-references.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-table-tools.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sync-center-hidden-inspection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sync-center-tab-read-scope.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\task-status-recovery.test.mjs"
+        ],
+        "started_at": "2026-10-20T07:18:34.9459096Z",
+        "ended_at": "2026-10-20T07:19:29.8853087Z",
+        "exit_code": 0,
+        "log": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/ux.txt",
+        "log_sha256": "24a020fa741d6dd28aff87ff887fbb81335497500fe284e1d7fb41da2990314f"
+      },
+      {
+        "name": "browser",
+        "arguments": [
+          "node",
+          "scripts/ux/source-editor-table-browser.mjs"
+        ],
+        "started_at": "2026-10-20T07:19:29.8894370Z",
+        "ended_at": "2026-10-20T07:19:50.3930996Z",
+        "exit_code": 0,
+        "log": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/browser.txt",
+        "log_sha256": "2cc41e7ba49edd4d946c79a612e599258396b959d696f4f357ba1e808ef2e9dd"
+      },
+      {
+        "name": "lint",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "run",
+          "lint"
+        ],
+        "started_at": "2026-10-20T07:19:50.3968945Z",
+        "ended_at": "2026-10-20T07:20:02.9102595Z",
+        "exit_code": 0,
+        "log": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/lint.txt",
+        "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+      },
+      {
+        "name": "typecheck",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "exec",
+          "tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "started_at": "2026-10-20T07:20:02.9129916Z",
+        "ended_at": "2026-10-20T07:20:23.7180799Z",
+        "exit_code": 0,
+        "log": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/typecheck.txt",
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "build",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "build"
+        ],
+        "started_at": "2026-10-20T07:20:23.7204021Z",
+        "ended_at": "2026-10-20T07:21:18.5717433Z",
+        "exit_code": 0,
+        "log": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/build.txt",
+        "log_sha256": "2617448192afa63edb51b0dc771887962285257956f315002be5adc8eb6e44c3"
+      }
+    ],
+    "gate_receipts_sha256": "4d46eeeb6afba1f82a5aa75c3d6850471cf33b01809e33e3f5d1849cc1ec6cb3",
+    "bundle_sha256": "e35f3cf6f5bd70e8bb7cd2ebd4b099c67a6e46e1d64de9a2bd9eabbc3a15b8ac",
+    "browser_result_sha256": "df812121b50a1814cedf26756c13ac1fb41cdd215cd8581ad3598186774d1a4a"
+  },
+  "geometry_and_hit_tests": {
+    "date": "2026-10-20",
+    "startedAt": "2026-10-20T07:19:29.947Z",
+    "status": "observed",
+    "boundary": "actual Chrome DOM and hit tests; no locator auto-scroll",
+    "observations": [
+      {
+        "label": "desktop-200-columns-scroll-0",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 321.5,
+          "bottom": 412.5,
+          "width": 636,
+          "scrollWidth": 19401,
+          "scrollLeft": 0,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 299.5,
+            "left": 698,
+            "right": 742,
+            "top": 277.5,
+            "bottom": 321.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 434.5,
+            "left": 698,
+            "right": 742,
+            "top": 412.5,
+            "bottom": 456.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-200-columns-scroll-0.5",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 321.5,
+          "bottom": 412.5,
+          "width": 636,
+          "scrollWidth": 19401,
+          "scrollLeft": 9383,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 299.5,
+            "left": 698,
+            "right": 742,
+            "top": 277.5,
+            "bottom": 321.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 434.5,
+            "left": 698,
+            "right": 742,
+            "top": 412.5,
+            "bottom": 456.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-200-columns-scroll-1",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 321.5,
+          "bottom": 412.5,
+          "width": 636,
+          "scrollWidth": 19401,
+          "scrollLeft": 18765,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 299.5,
+            "left": 698,
+            "right": 742,
+            "top": 277.5,
+            "bottom": 321.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 434.5,
+            "left": 698,
+            "right": 742,
+            "top": 412.5,
+            "bottom": 456.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-before-pointer-append",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 321.5,
+          "bottom": 412.5,
+          "width": 636,
+          "scrollWidth": 19401,
+          "scrollLeft": 18765,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 299.5,
+            "left": 698,
+            "right": 742,
+            "top": 277.5,
+            "bottom": 321.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 434.5,
+            "left": 698,
+            "right": 742,
+            "top": 412.5,
+            "bottom": 456.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-before-pointer-prepend",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 321.5,
+          "bottom": 412.5,
+          "width": 636,
+          "scrollWidth": 19401,
+          "scrollLeft": 9383,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 299.5,
+            "left": 698,
+            "right": 742,
+            "top": 277.5,
+            "bottom": 321.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 434.5,
+            "left": 698,
+            "right": 742,
+            "top": 412.5,
+            "bottom": 456.5,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-vertical-scroll-0",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 155,
+          "bottom": 533,
+          "width": 636,
+          "scrollWidth": 1165,
+          "scrollLeft": 0,
+          "height": 378,
+          "scrollHeight": 1396,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 133,
+            "left": 698,
+            "right": 742,
+            "top": 111,
+            "bottom": 155,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 555,
+            "left": 698,
+            "right": 742,
+            "top": 533,
+            "bottom": 577,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-column-edges-scroll-0",
+        "axis": "column",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 155,
+          "bottom": 533,
+          "scrollLeft": 0,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 380,
+            "y": 344,
+            "left": 358,
+            "right": 402,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 1060,
+            "y": 344,
+            "left": 1038,
+            "right": 1082,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-vertical-scroll-0.5",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 155,
+          "bottom": 533,
+          "width": 636,
+          "scrollWidth": 1165,
+          "scrollLeft": 265,
+          "height": 378,
+          "scrollHeight": 1396,
+          "scrollTop": 509
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 133,
+            "left": 698,
+            "right": 742,
+            "top": 111,
+            "bottom": 155,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 555,
+            "left": 698,
+            "right": 742,
+            "top": 533,
+            "bottom": 577,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-column-edges-scroll-0.5",
+        "axis": "column",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 155,
+          "bottom": 533,
+          "scrollLeft": 265,
+          "scrollTop": 509
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 380,
+            "y": 344,
+            "left": 358,
+            "right": 402,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 1060,
+            "y": 344,
+            "left": 1038,
+            "right": 1082,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-vertical-scroll-1",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 155,
+          "bottom": 533,
+          "width": 636,
+          "scrollWidth": 1165,
+          "scrollLeft": 529,
+          "height": 378,
+          "scrollHeight": 1396,
+          "scrollTop": 1018
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 720,
+            "y": 133,
+            "left": 698,
+            "right": 742,
+            "top": 111,
+            "bottom": 155,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 720,
+            "y": 555,
+            "left": 698,
+            "right": 742,
+            "top": 533,
+            "bottom": 577,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-column-edges-scroll-1",
+        "axis": "column",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 155,
+          "bottom": 533,
+          "scrollLeft": 529,
+          "scrollTop": 1018
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 380,
+            "y": 344,
+            "left": 358,
+            "right": 402,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 1060,
+            "y": 344,
+            "left": 1038,
+            "right": 1082,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-before-column-append",
+        "axis": "column",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 155,
+          "bottom": 533,
+          "scrollLeft": 529,
+          "scrollTop": 1018
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 380,
+            "y": 344,
+            "left": 358,
+            "right": 402,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 1060,
+            "y": 344,
+            "left": 1038,
+            "right": 1082,
+            "top": 322,
+            "bottom": 366,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "desktop-before-column-prepend",
+        "axis": "column",
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "preview": {
+          "left": 402,
+          "right": 1038,
+          "top": 203,
+          "bottom": 581,
+          "scrollLeft": 313,
+          "scrollTop": 487
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 380,
+            "y": 392,
+            "left": 358,
+            "right": 402,
+            "top": 370,
+            "bottom": 414,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 1060,
+            "y": 392,
+            "left": 1038,
+            "right": 1082,
+            "top": 370,
+            "bottom": 414,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-200-columns-scroll-0",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 388,
+          "bottom": 479,
+          "width": 251,
+          "scrollWidth": 19401,
+          "scrollLeft": 0,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 187.5,
+            "y": 366,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 344,
+            "bottom": 388,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 187.5,
+            "y": 501,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 479,
+            "bottom": 523,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-200-columns-scroll-0.5",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 388,
+          "bottom": 479,
+          "width": 251,
+          "scrollWidth": 19401,
+          "scrollLeft": 9575,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 187.5,
+            "y": 366,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 344,
+            "bottom": 388,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 187.5,
+            "y": 501,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 479,
+            "bottom": 523,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-200-columns-scroll-1",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 388,
+          "bottom": 479,
+          "width": 251,
+          "scrollWidth": 19401,
+          "scrollLeft": 19150,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 187.5,
+            "y": 366,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 344,
+            "bottom": 388,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 187.5,
+            "y": 501,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 479,
+            "bottom": 523,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-before-append",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 388,
+          "bottom": 479,
+          "width": 251,
+          "scrollWidth": 19401,
+          "scrollLeft": 19150,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 187.5,
+            "y": 366,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 344,
+            "bottom": 388,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 187.5,
+            "y": 501,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 479,
+            "bottom": 523,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-landscape-scroll-end-top",
+        "requiredPositions": [
+          "before"
+        ],
+        "viewport": {
+          "width": 667,
+          "height": 375
+        },
+        "preview": {
+          "left": 90,
+          "right": 577,
+          "top": 182,
+          "bottom": 273,
+          "width": 487,
+          "scrollWidth": 19401,
+          "scrollLeft": 18914,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 333.5,
+            "y": 160,
+            "left": 311.5,
+            "right": 355.5,
+            "top": 138,
+            "bottom": 182,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 333.5,
+            "y": 295,
+            "left": 311.5,
+            "right": 355.5,
+            "top": 273,
+            "bottom": 317,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": false,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-landscape-scroll-end-bottom",
+        "requiredPositions": [
+          "after"
+        ],
+        "viewport": {
+          "width": 667,
+          "height": 375
+        },
+        "preview": {
+          "left": 90,
+          "right": 577,
+          "top": 154,
+          "bottom": 245,
+          "width": 487,
+          "scrollWidth": 19401,
+          "scrollLeft": 18914,
+          "height": 91,
+          "scrollHeight": 91,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 333.5,
+            "y": 132,
+            "left": 311.5,
+            "right": 355.5,
+            "top": 110,
+            "bottom": 154,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 333.5,
+            "y": 267,
+            "left": 311.5,
+            "right": 355.5,
+            "top": 245,
+            "bottom": 289,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-tall-row-edges-0",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 183.96875,
+          "bottom": 525,
+          "width": 251,
+          "scrollWidth": 1165,
+          "scrollLeft": 0,
+          "height": 341,
+          "scrollHeight": 1396,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 187.5,
+            "y": 161.96875,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 139.96875,
+            "bottom": 183.96875,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 187.5,
+            "y": 547,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 525,
+            "bottom": 569,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-tall-column-edges-0",
+        "axis": "column",
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 183.96875,
+          "bottom": 525,
+          "scrollLeft": 0,
+          "scrollTop": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 40,
+            "y": 354.484375,
+            "left": 18,
+            "right": 62,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 335,
+            "y": 354.484375,
+            "left": 313,
+            "right": 357,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-tall-row-edges-0.5",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 183.96875,
+          "bottom": 525,
+          "width": 251,
+          "scrollWidth": 1165,
+          "scrollLeft": 457,
+          "height": 341,
+          "scrollHeight": 1396,
+          "scrollTop": 528
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 187.5,
+            "y": 161.96875,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 139.96875,
+            "bottom": 183.96875,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 187.5,
+            "y": 547,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 525,
+            "bottom": 569,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-tall-column-edges-0.5",
+        "axis": "column",
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 183.96875,
+          "bottom": 525,
+          "scrollLeft": 457,
+          "scrollTop": 528
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 40,
+            "y": 354.484375,
+            "left": 18,
+            "right": 62,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 335,
+            "y": 354.484375,
+            "left": 313,
+            "right": 357,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-tall-row-edges-1",
+        "requiredPositions": [
+          "before",
+          "after"
+        ],
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 183.96875,
+          "bottom": 525,
+          "width": 251,
+          "scrollWidth": 1165,
+          "scrollLeft": 914,
+          "height": 341,
+          "scrollHeight": 1396,
+          "scrollTop": 1055
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 187.5,
+            "y": 161.96875,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 139.96875,
+            "bottom": 183.96875,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 187.5,
+            "y": 547,
+            "left": 165.5,
+            "right": 209.5,
+            "top": 525,
+            "bottom": 569,
+            "width": 44,
+            "height": 44,
+            "insideHorizontalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-tall-column-edges-1",
+        "axis": "column",
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 183.96875,
+          "bottom": 525,
+          "scrollLeft": 914,
+          "scrollTop": 1055
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 40,
+            "y": 354.484375,
+            "left": 18,
+            "right": 62,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 335,
+            "y": 354.484375,
+            "left": 313,
+            "right": 357,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      },
+      {
+        "label": "touch-before-column-append",
+        "axis": "column",
+        "viewport": {
+          "width": 375,
+          "height": 812
+        },
+        "preview": {
+          "left": 62,
+          "right": 313,
+          "top": 183.96875,
+          "bottom": 525,
+          "scrollLeft": 914,
+          "scrollTop": 1055
+        },
+        "edges": [
+          {
+            "position": "before",
+            "x": 40,
+            "y": 354.484375,
+            "left": 18,
+            "right": 62,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          },
+          {
+            "position": "after",
+            "x": 335,
+            "y": 354.484375,
+            "left": 313,
+            "right": 357,
+            "top": 332.484375,
+            "bottom": 376.484375,
+            "width": 44,
+            "height": 44,
+            "insideVerticalViewport": true,
+            "insideScreen": true,
+            "pointerHitsButton": true,
+            "outsideCellViewport": true
+          }
+        ]
+      }
+    ]
+  },
+  "screenshots": [
+    {
+      "path": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/table-browser/wide-edges-desktop-light.png",
+      "sha256": "b109e5834c22f2f69171b39306c669ac230c6f9d3954465e913d1b7d744c0433"
+    },
+    {
+      "path": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/table-browser/wide-edges-mobile-dark.png",
+      "sha256": "4bb7cda100e219441e4b7c9f2f883302587e28bde4340916842c2e9c8f26b670"
+    },
+    {
+      "path": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/table-browser/wide-edges-mobile-landscape-dark.png",
+      "sha256": "62ec9a6009bb918c469d24a11097e37eb0767293e2b2f4ee08fdb012e368b21c"
+    },
+    {
+      "path": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/table-browser/scrolling-edges-desktop-light.png",
+      "sha256": "ead95bd508db5c09dc8eb34af0f49315f812b5aa5dfba5446f115a94b4117729"
+    },
+    {
+      "path": "<WKKK>/chat-reader-table-viewport-edges-final-20261020/table-browser/scrolling-edges-mobile-dark.png",
+      "sha256": "f9d00612dcfea456a44dd65f8b538a6f22155d26e372c1767c8727a71f5f2b39"
+    }
+  ],
+  "visual_review": {
+    "reviewed": true,
+    "boundary": "local screenshots, desktop light / 375px touch dark / short landscape dark; existing tokens and type preserved",
+    "findings": "four edges outside cells and scrollbars; no new explanatory toolbar/modes, page overflow or button/footer overlap in the checked visible views",
+    "not_claimed": "full 43-item design score, newly verified color contrast, assistive technology, physical mobile keyboard or actual touch hardware"
+  },
+  "compatibility": "71 focused and all earlier browser scenarios retained; source context, page budgets, stale/pending protections, exact Undo and client save boundary unchanged",
+  "not_accepted": [
+    "ordinary large-table main-thread long tasks or arbitrary huge-prefix fallback cost",
+    "authenticated server or full Reader/Share/Offline/PWA acceptance",
+    "real-device latency, screen reader, full-interface accessibility score",
+    "server RSS/OOM, 2 GiB soak, Linux PID 1 or production resource acceptance"
+  ],
+  "changes_excluded": [
+    "API",
+    "migration",
+    "dependencies",
+    "export/offline protocol",
+    "production data/configuration",
+    "push",
+    "CI",
+    "deployment"
+  ],
+  "additional_doc_checks": {
+    "source_bindings_verified": 20,
+    "local_markdown_links_checked": 620,
+    "markdown_files": [
+      "PROJECT_STATE.md",
+      "docs/index.md",
+      "docs/system/USER_FLOWS.md",
+      "docs/system/AI_RICH_MARKDOWN_CONTRACT.md",
+      "docs/testing.md",
+      "docs/documentation-inventory.md",
+      "docs/execution/README.md",
+      "docs/evidence/README.md",
+      "docs/execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md"
+    ],
+    "scope": "current checkpoint source-bound docs only; not a repository-wide link acceptance",
+    "earlier_auxiliary_checks": [
+      {
+        "status": "failed",
+        "scope": "all repository Markdown",
+        "stopped_at": "apps/web/public/skills/chat-transcript-normalizer-skill.md -> references/target-profile-v1.md",
+        "reason": "packaged Skill body, not ordinary repository-relative docs"
+      },
+      {
+        "status": "failed",
+        "scope": "all docs including unchanged historical snapshots",
+        "stopped_at": "docs/archive/PROJECT_STATE-history-2026-09-01.md -> docs/system/CONTINUOUS_IMPROVEMENT_BACKLOG.md",
+        "reason": "unchanged archived snapshot retains original-root relative paths"
+      }
+    ],
+    "boundary": "neither failed auxiliary attempt is counted as passed; legacy distribution/archive files remain unchanged; final scoped link check is narrower and explicitly named",
+    "gate_count": 6,
+    "browser": 45
+  }
+}

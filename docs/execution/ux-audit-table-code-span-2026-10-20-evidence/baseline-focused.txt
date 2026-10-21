@@ -1,0 +1,205 @@
+TAP version 13
+# Subtest: indexed bracket classification retains independent code/escape and reference semantics
+ok 1 - indexed bracket classification retains independent code/escape and reference semantics # SKIP test name does not match pattern
+  ---
+  duration_ms: 1.8848
+  ...
+# Subtest: deep balanced image markup is not rejected by an arbitrary nesting cutoff
+ok 2 - deep balanced image markup is not rejected by an arbitrary nesting cutoff # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1449
+  ...
+# Subtest: large unclosed image nesting finishes in an isolated worker without freezing the test process
+ok 3 - large unclosed image nesting finishes in an isolated worker without freezing the test process # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0957
+  ...
+# Subtest: single-cell validation preserves accepted inline syntax without scanning a whole table
+ok 4 - single-cell validation preserves accepted inline syntax without scanning a whole table # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1704
+  ...
+# Subtest: HTML table examples in code, escaped text and attribute prose stay editable Markdown cells
+ok 5 - HTML table examples in code, escaped text and attribute prose stay editable Markdown cells # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1251
+  ...
+# Subtest: actual HTML table structure is declined consistently in whole tables and grid cells
+ok 6 - actual HTML table structure is declined consistently in whole tables and grid cells # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0839
+  ...
+# Subtest: normalization preserves GFM rendering for escaped pipes around code-span backslashes
+ok 7 - normalization preserves GFM rendering for escaped pipes around code-span backslashes
+  ---
+  duration_ms: 41.2867
+  ...
+# Subtest: HTML-looking whitespace and repeated angles remain bounded literal cell text
+ok 8 - HTML-looking whitespace and repeated angles remain bounded literal cell text # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1972
+  ...
+# Subtest: normalizes ragged tables without changing content outside the explicit table range
+ok 9 - normalizes ragged tables without changing content outside the explicit table range # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1063
+  ...
+# Subtest: recognizes a table from a cursor and refuses code-fenced examples
+ok 10 - recognizes a table from a cursor and refuses code-fenced examples # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1904
+  ...
+# Subtest: quoted and list fenced examples require an explicit table selection
+ok 11 - quoted and list fenced examples require an explicit table selection # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1408
+  ...
+# Subtest: code protection follows quote/list container boundaries rather than fence-looking text
+ok 12 - code protection follows quote/list container boundaries rather than fence-looking text # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1094
+  ...
+# Subtest: raw HTML literal blocks are not automatically treated as rendered tables
+ok 13 - raw HTML literal blocks are not automatically treated as rendered tables # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1554
+  ...
+# Subtest: HTML boundaries do not block real tables after blank lines, inline tags or exited containers
+ok 14 - HTML boundaries do not block real tables after blank lines, inline tags or exited containers # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.161
+  ...
+# Subtest: renderer proof preserves CRLF source coordinates without trusting a raw editor HTML tree
+ok 15 - renderer proof preserves CRLF source coordinates without trusting a raw editor HTML tree # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1132
+  ...
+# Subtest: textarea across blank lines remains literal, while closing tags and container exits restore real tables
+ok 16 - textarea across blank lines remains literal, while closing tags and container exits restore real tables # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0921
+  ...
+# Subtest: HTML authorization rejects stale, incomplete and absent renderer proof
+ok 17 - HTML authorization rejects stale, incomplete and absent renderer proof # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1776
+  ...
+# Subtest: code protection matches installed GFM on bounded quote/list and LF/CRLF contexts
+ok 18 - code protection matches installed GFM on bounded quote/list and LF/CRLF contexts # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.2311
+  ...
+# Subtest: a complete source-bound editor tree is reused for discovery and application
+ok 19 - a complete source-bound editor tree is reused for discovery and application # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1652
+  ...
+# Subtest: standalone context parsing stops at the table header instead of parsing the body and suffix
+ok 20 - standalone context parsing stops at the table header instead of parsing the body and suffix # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1458
+  ...
+# Subtest: stale or incomplete editor context cannot authorize a code sample
+ok 21 - stale or incomplete editor context cannot authorize a code sample # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0916
+  ...
+# Subtest: code-fence scan does not backtrack on deeply quoted ordinary prose
+ok 22 - code-fence scan does not backtrack on deeply quoted ordinary prose # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0815
+  ...
+# Subtest: keeps escaped pipes editable as cell content and replaces the whole table from a cursor
+ok 23 - keeps escaped pipes editable as cell content and replaces the whole table from a cursor # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0655
+  ...
+# Subtest: creates blank tables and inserts rows and columns as one replacement
+ok 24 - creates blank tables and inserts rows and columns as one replacement # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0687
+  ...
+# Subtest: rejects oversized or non-table fragments without truncating
+ok 25 - rejects oversized or non-table fragments without truncating # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0911
+  ...
+# Subtest: replacement canonicalizes ragged drafts and preserves the original container and newline
+ok 26 - replacement canonicalizes ragged drafts and preserves the original container and newline # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0641
+  ...
+# Subtest: draft whitespace is accepted but surrounding prose and invalid offsets are never ignored
+ok 27 - draft whitespace is accepted but surrounding prose and invalid offsets are never ignored # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0708
+  ...
+# Subtest: cursor discovery does not absorb adjacent prose containing pipe symbols
+ok 28 - cursor discovery does not absorb adjacent prose containing pipe symbols # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0651
+  ...
+# Subtest: mixed newline styles keep exact table boundaries and the current row
+ok 29 - mixed newline styles keep exact table boundaries and the current row # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0646
+  ...
+# Subtest: normalization is idempotent for escaped pipes, code, links, alignment and Unicode
+ok 30 - normalization is idempotent for escaped pipes, code, links, alignment and Unicode # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.066
+  ...
+# Subtest: normalizes unambiguous inline math pipes without manufacturing extra columns
+ok 31 - normalizes unambiguous inline math pipes without manufacturing extra columns # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0656
+  ...
+# Subtest: preserves existing TeX norm operators instead of treating them as GFM escapes
+ok 32 - preserves existing TeX norm operators instead of treating them as GFM escapes # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1318
+  ...
+# Subtest: currency, code and link destinations do not acquire math pipe rewrites
+ok 33 - currency, code and link destinations do not acquire math pipe rewrites # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0796
+  ...
+# Subtest: math-looking alt text and reference identifiers remain literal while ambiguous shortcuts are declined
+ok 34 - math-looking alt text and reference identifiers remain literal while ambiguous shortcuts are declined # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1261
+  ...
+# Subtest: does not guess at incomplete math or pipes in TeX text and array arguments
+ok 35 - does not guess at incomplete math or pipes in TeX text and array arguments # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0754
+  ...
+# Subtest: code pipe repair retains every literal backslash, including even runs
+ok 36 - code pipe repair retains every literal backslash, including even runs # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1025
+  ...
+# Subtest: declines TeX character-code and text-box arguments instead of changing literal characters
+ok 37 - declines TeX character-code and text-box arguments instead of changing literal characters # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0919
+  ...
+# Subtest: math pipe encoding cannot grow an accepted candidate beyond the UTF-8 tool limit
+ok 38 - math pipe encoding cannot grow an accepted candidate beyond the UTF-8 tool limit # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0821
+  ...
+# Subtest: a table replacement is a single undoable CodeMirror edit
+ok 39 - a table replacement is a single undoable CodeMirror edit # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0962
+  ...
+1..39
+# tests 39
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 38
+# todo 0
+# duration_ms 1058.1256

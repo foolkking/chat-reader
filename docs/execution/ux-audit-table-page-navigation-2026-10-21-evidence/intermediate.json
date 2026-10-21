@@ -1,0 +1,6 @@
+{
+  "observed_at": "2026-10-21T01:11:06.8142471+08:00",
+  "dialog_sha256": "06cef5cac2749fb2516a80675fc325a0c4b563905af2903fd1f1ecdb03189d9d",
+  "harness_sha256": "775e521f4f675e879bf3983c676b5b93e866de2335037e1dd52ca6dca5dbff6e",
+  "failure": "First boundary-control implementation reached last rows but disabled its focused button and left activeElement=BODY"
+}

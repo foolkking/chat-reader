@@ -2,9 +2,10 @@
 
 ## Current released additions — 2026-10-19
 
-The following contracts ship in accepted source `f3b331a`. Migration/data,
-exact-source CI and runtime boundaries are in the
-[release record](execution/FEATURE_RELEASE_2026-10-19.md):
+The following contracts first shipped in `f3b331a` and remain in current
+accepted source `50f6de4`. Exact-source CI and current runtime boundaries are in
+the [release record](execution/OOM_RELEASE_2026-10-19.md); prior schema/data
+checks remain in the [feature release](execution/FEATURE_RELEASE_2026-10-19.md).
 
 Older dated sections below preserve their original checkpoint wording; labels
 such as “local only” or “not deployed” describe that checkpoint, not the
@@ -254,7 +255,7 @@ permission and missing-resource behavior is unchanged. See the
 [direct-download contract](system/ARTIFACT_LIFECYCLE_CONTRACT.md) and
 [release status](execution/DIRECT_EXPORT_SNAPSHOT_2026-10-06.md).
 
-Local working tree, 2026-10-19 (not deployed): legacy Markdown uses incremental
+Released in 50f6de4, 2026-10-19: legacy Markdown uses incremental
 generation before the same spool, preserving its MIME/name/content semantics.
 Legacy conversation `.cr` reads now enforce `CANJSON_MAX_LINE_BYTES` on JSON
 documents/JSONL records and the existing `BUNDLE_MAX_COMPRESSED_BYTES`,
@@ -605,12 +606,12 @@ Adaptive JSON / Markdown：
 
 产品导入只有 Adaptive JSON / Markdown 与 `.cr` archive 两类入口。CanJSON v1/v2 与原生 Chat Reader 格式是 Built-in Profile；单 Markdown 是正式 source mode。Import Profile 不保存正文，匹配结果会解释 hard requirements、semantic guards、compatibility 与 drift。READY 后仍使用现有 `/api/imports/{id}/commit` durable commit contract。
 
-本地续查（2026-10-19，未发布）：gzip 来源识别/CanJSON 解析在累计展开超过
+已随 50f6de4 发布（2026-10-19）：gzip 来源识别/CanJSON 解析在累计展开超过
 压缩大小与重型阈值的较大值后，按展开量复查内存余量；不是只看上传大小。
 资源不足/未知时，预览及同步分析返回已有 `UPLOAD_MEMORY_PRESSURE` 429，
 附 `Retry-After: 15`，不误报格式漂移。初始后台分析明确失败并保留来源，
 可通过原 task retry 重新执行；不新增路由、字段或自动重试循环。
-详见[压缩输入合同](system/ADAPTIVE_IMPORT_CONTRACT.md#local-compressed-input-continuation--2026-10-19-not-released)。
+详见[压缩输入合同](system/ADAPTIVE_IMPORT_CONTRACT.md#compressed-input-expansion-admission--released-2026-10-19)。
 
 ## Conversations
 

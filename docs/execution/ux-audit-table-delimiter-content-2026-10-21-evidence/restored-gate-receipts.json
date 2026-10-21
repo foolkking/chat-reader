@@ -1,0 +1,62 @@
+[
+  {
+    "name": "focused",
+    "command": "node --test [five affected files]",
+    "startedAt": "2026-10-21T06:27:18.2331715Z",
+    "finishedAt": "2026-10-21T06:27:21.7944483Z",
+    "exitCode": 0,
+    "log": "focused.txt",
+    "fullLogSha256": "63ba11c837932f8bbb6919eedba524ee98f957f50da26c1f02f543a617973039",
+    "fullLogByteSize": 27182
+  },
+  {
+    "name": "service-free",
+    "command": "node --test --test-concurrency=1 scripts/ux/*.test.mjs (69 files)",
+    "startedAt": "2026-10-21T06:27:21.8275478Z",
+    "finishedAt": "2026-10-21T06:28:19.2557670Z",
+    "exitCode": 0,
+    "log": "service-free.txt",
+    "fullLogSha256": "d8dc6ade7e3fac722c834452317e98124f6810ff3db5a44962e8e2b93192e0f8",
+    "fullLogByteSize": 320891
+  },
+  {
+    "name": "browser",
+    "command": "node scripts/ux/source-editor-table-browser.mjs",
+    "startedAt": "2026-10-21T06:28:19.2591019Z",
+    "finishedAt": "2026-10-21T06:28:57.5870789Z",
+    "exitCode": 0,
+    "log": "browser.txt",
+    "fullLogSha256": "38a2d2e59104cf1931e84458ba4af479661c08c4c06d02e633f666d222224d36",
+    "fullLogByteSize": 6967
+  },
+  {
+    "name": "lint",
+    "command": "corepack pnpm run lint",
+    "startedAt": "2026-10-21T06:28:57.5893191Z",
+    "finishedAt": "2026-10-21T06:29:13.2342458Z",
+    "exitCode": 0,
+    "log": "lint.txt",
+    "fullLogSha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "fullLogByteSize": 173
+  },
+  {
+    "name": "typecheck",
+    "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "startedAt": "2026-10-21T06:29:13.2367033Z",
+    "finishedAt": "2026-10-21T06:29:34.8931030Z",
+    "exitCode": 0,
+    "log": "typecheck.txt",
+    "fullLogSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fullLogByteSize": 0
+  },
+  {
+    "name": "build",
+    "command": "corepack pnpm --filter web build (CPUS=1, STANDALONE=0, TELEMETRY_DISABLED=1)",
+    "startedAt": "2026-10-21T06:29:34.8948576Z",
+    "finishedAt": "2026-10-21T06:30:28.8535458Z",
+    "exitCode": 0,
+    "log": "build.txt",
+    "fullLogSha256": "7dc31113a3a1b04ab7851ad60cf9402e8afe47e4d7b844c006f8be3b80176f4c",
+    "fullLogByteSize": 1231
+  }
+]

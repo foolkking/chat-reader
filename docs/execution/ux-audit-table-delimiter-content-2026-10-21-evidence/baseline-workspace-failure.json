@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-21",
+  "status": "failed-as-expected",
+  "scenario": "actual workspace: real delimiter-valued headers and rows open, apply and undo without loss",
+  "completedBeforeFailure": 55,
+  "rendererProducedTable": true,
+  "tableToolEnteredUnavailableRecovery": true,
+  "baselineSourceSnapshot": "baseline-regression-source-sha256.json",
+  "screenshot": "baseline-delimiter-content-desktop-light.png",
+  "reason": "The existing live preview rendered the synthetic input as a GFM table, while the actual table tool had no editable Markdown draft."
+}

@@ -1,0 +1,14 @@
+Command: corepack pnpm run lint
+Exit: 0
+Full log SHA-256: f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274
+Excerpt only, not full log:
+
+
+> chat-reader@0.0.0 lint E:\1project\chat-reader
+> corepack pnpm --filter web lint
+
+
+> web@0.0.0 lint E:\1project\chat-reader\apps\web
+> eslint . --max-warnings=0
+
+

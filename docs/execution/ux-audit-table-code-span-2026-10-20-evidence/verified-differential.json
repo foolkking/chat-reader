@@ -1,0 +1,7 @@
+{
+  "checked": 900,
+  "accepted": 900,
+  "failures": [],
+  "failureCount": 0,
+  "scope": "actual installed GFM static rendering, synthetic escaped-pipe/backtick/backslash combinations; not browser, arbitrary Markdown, timing or resource acceptance"
+}

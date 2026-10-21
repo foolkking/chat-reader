@@ -1,0 +1,73 @@
+PASS one real rendered table; no obsolete modes; math and cell source
+PASS desktop edges reveal on hover/focus; Tab remains inside the dialog
+PASS cell typing retains focus and immediately updates escaped Markdown
+PASS cell text selection keeps native caret behavior until a cell boundary
+PASS raw Markdown repairs ragged rows and applies only the original table
+PASS incomplete Markdown is preserved; stale grid cannot overwrite it
+PASS four edges add rows/columns; Enter never submits; IME does not navigate
+PASS external source changes do not reset a draft; refresh is explicit
+PASS quote containers and CRLF survive cell edits and final application
+PASS CRLF tables after an HTML blank boundary keep live reference captions and exact source
+PASS row paging is bounded and appending reveals the actual final row
+PASS 200-column preview mounts at most 400 cells and refuses another column
+PASS large tables reach first and last row pages directly and preserve exact tail edits
+PASS row boundary navigation disappears for a single page and clamps a smaller Markdown draft
+PASS wide-table row edges stay pointer-reachable at every horizontal scroll position
+PASS all four edges remain pointer-reachable while a long wide preview scrolls on both axes
+PASS 375px touch row edges stay reachable across a 200-column table and focus the appended row
+PASS 375px touch can append a column without finding the full table's vertical midpoint
+PASS 375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets
+PASS Escape closes once and restores the logical opener
+PASS pending raw parsing cannot apply the old verified table and keeps only the latest Markdown
+PASS invalid raw text supersedes a suspended parser without restoring its obsolete table
+PASS pending source previews cannot edit old cells or Apply, and catch up to the latest draft
+PASS pending grid previews retain active typing and Escape returns focus to Markdown
+PASS invalid Markdown entered during a pending preview cannot be overwritten by the older valid draft
+PASS explicit source refresh drops a suspended old table preview
+PASS renderer updates cell callbacks without reparsing unchanged Markdown
+PASS actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source
+PASS actual workspace: deeply quoted prose does not block table discovery or change surrounding source
+PASS actual workspace: quote/list-looking closers cannot expose code examples to automatic editing
+PASS actual workspace: leaving quoted/list code restores outside tables without reparsing source
+PASS actual workspace: nested-list table preview is editable without losing its indentation
+PASS actual workspace: an explicit code-table selection can edit the example without removing its fence
+PASS actual workspace: raw HTML blocks cannot masquerade as automatically repairable tables
+PASS actual workspace: real tables outside HTML remain editable and render after Apply and Undo
+PASS actual workspace: explicit HTML sample editing preserves the wrapper rather than changing its rendering policy
+PASS actual workspace: textarea raw text across blank lines cannot become an automatic table
+PASS actual workspace: a blank quote payload ends ordinary HTML before a real table
+PASS actual workspace: textarea examples never lend definitions to an outside table
+PASS actual workspace: HTML source proof is reused across bidirectional table edits
+PASS actual workspace: a stale HTML proof cannot survive refreshing to textarea content
+PASS actual workspace: display-math and rich-layout offsets cannot displace a quoted table proof
+PASS actual workspace: oversized HTML context fails closed without truncation and permits explicit selection
+PASS actual workspace: nested table editing owns shortcuts instead of opening tools behind it
+PASS actual workspace: the command names the Table tool rather than promising empty-table insertion
+PASS actual workspace: table Enter cannot save; Escape preserves the underlying source preview
+PASS actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft
+PASS actual workspace: Apply changes only the draft and Save sends one canonical client payload
+PASS actual workspace: 375px touch can open, edit and apply the nested table
+PASS actual workspace: cell syntax validation survives alternating grid and Markdown edits
+PASS actual workspace: oversized cell input is rejected without truncating the accepted draft
+PASS actual workspace: large unclosed image nesting stays editable and recovers without changing source
+PASS actual workspace: long cells use a bounded display preview without changing Markdown or Apply
+PASS actual workspace: math bars remain one cell and absolute values do not become norms
+PASS actual workspace: code backslashes and separate currency columns survive normalization
+PASS actual workspace: applying an untouched long cell preserves the exact original source
+PASS actual workspace: oversized math is omitted from rich parsing but remains exact in Markdown
+PASS actual workspace: ambiguous TeX remains editable but cannot apply until repaired
+PASS actual workspace: image alt and reference IDs stay literal without remote requests
+PASS actual workspace: bounded reference context warns without changing definitions outside the table
+PASS unavailable tables show recovery without a fake editor or dead Apply action
+PASS actual workspace: composing Escape preserves the cell draft and enclosing table
+PASS actual workspace: native Chrome composing Escape keeps cell and Markdown input ownership
+PASS actual workspace: literal HTML table examples remain editable without enabling raw HTML
+PASS actual workspace: literal unpaired backticks retain live table editing, Apply and Undo
+PASS actual workspace: 375px touch can correct unsupported HTML cell markup without losing its draft
+PASS actual workspace: 320px and 375px touch row boundaries preserve tail editing and one Undo
+PROFILE {"name":"small","columns":6,"rows":20,"cellsIncludingDelimiter":132,"longCellLength":0,"utf8Bytes":1009,"openMs":105.56550000000425,"mountedCells":126,"richMarkdownParsesForGridInputs":5,"paintedInputMs":[9.800000011920929,7.5,12,8.799999952316284,8.399999976158142],"settledPreviewMs":[47.30000001192093,41.700000047683716,38.69999998807907,35.5,34.69999998807907],"longTasksMs":[],"longTasksByPhaseMs":{"grid":[],"source":[],"tail":[],"navigation":[],"gc":[],"unclassified":[]},"phaseMarks":[{"name":"grid","at":28248},{"name":"gc","at":28938.599999964237}],"retainedJsHeapBefore":16662904,"retainedJsHeapAfter":17096032}
+PROFILE {"name":"typical","columns":12,"rows":80,"cellsIncludingDelimiter":984,"longCellLength":0,"utf8Bytes":8017,"openMs":142.5060999999987,"mountedCells":252,"richMarkdownParsesForGridInputs":5,"paintedInputMs":[19.099999964237213,18.19999998807907,17.80000001192093,17.69999998807907,17.600000023841858],"settledPreviewMs":[60,51.30000001192093,50.5,52,47.700000047683716],"longTasksMs":[],"longTasksByPhaseMs":{"grid":[],"source":[],"tail":[],"navigation":[],"gc":[],"unclassified":[]},"phaseMarks":[{"name":"grid","at":29229},{"name":"navigation","at":29768.399999976158},{"name":"tail","at":29899.899999976158},{"name":"gc","at":30635.399999976158}],"tailPaintedInputMs":[32.60000002384186,12.899999976158142,14.300000011920929,13.300000011920929,13],"tailSettledPreviewMs":[38.5,45.09999996423721,41.19999998807907,35.5,43.89999997615814],"retainedJsHeapBefore":17559728,"retainedJsHeapAfter":17925912}
+PROFILE {"name":"large-narrow","columns":10,"rows":4000,"cellsIncludingDelimiter":40020,"longCellLength":0,"utf8Bytes":397013,"openMs":257.9351999999999,"mountedCells":80,"richMarkdownParsesForGridInputs":5,"sourceMarkdownInputMs":[55,49.09999996423721,58.799999952316284,54.40000003576279,50.39999997615814],"sourceTextareaValueMs":[18.69999998807907,31.099999964237213,29.399999976158142,12.900000035762787,30.899999976158142],"paintedInputMs":[61.39999997615814,59.799999952316284,62.69999998807907,61.90000003576279,65.40000003576279],"settledPreviewMs":[101.59999996423721,87.5,91,82.5,96.60000002384186],"longTasksMs":[51,54],"longTasksByPhaseMs":{"grid":[51],"source":[],"tail":[54],"navigation":[],"gc":[],"unclassified":[]},"phaseMarks":[{"name":"grid","at":31170.099999964237},{"name":"source","at":32069},{"name":"navigation","at":33341.80000001192},{"name":"tail","at":33451.89999997616},{"name":"gc","at":34045.89999997616}],"tailPaintedInputMs":[68.09999996423721,63.09999996423721,61.19999998807907,62.80000001192093,61.39999997615814],"tailSettledPreviewMs":[90,82,82.39999997615814,84.30000001192093,89.5],"retainedJsHeapBefore":19835304,"retainedJsHeapAfter":22662524}
+PROFILE {"name":"cell-limit-wide","columns":200,"rows":248,"cellsIncludingDelimiter":50000,"longCellLength":0,"utf8Bytes":499309,"openMs":247.54839999999967,"mountedCells":400,"richMarkdownParsesForGridInputs":5,"sourceMarkdownInputMs":[75,86.80000001192093,82.5,97.39999997615814,83.60000002384186],"sourceTextareaValueMs":[23.600000023841858,23.900000035762787,16.099999964237213,19.599999964237213,23.69999998807907],"paintedInputMs":[47.19999998807907,45.69999998807907,47.30000001192093,47.200000047683716,46.89999997615814],"settledPreviewMs":[114.69999998807907,85.19999998807907,84.70000004768372,83.40000003576279,81.39999997615814],"longTasksMs":[],"longTasksByPhaseMs":{"grid":[],"source":[],"tail":[],"navigation":[],"gc":[],"unclassified":[]},"phaseMarks":[{"name":"grid","at":34629.69999998808},{"name":"source","at":35254.09999996424},{"name":"navigation","at":36766.69999998808},{"name":"tail","at":36931.80000001192},{"name":"gc","at":37574.39999997616}],"tailPaintedInputMs":[57.39999997615814,52.10000002384186,55.60000002384186,56,54.299999952316284],"tailSettledPreviewMs":[104.39999997615814,89,93.69999998807907,94.40000003576279,91.29999995231628],"retainedJsHeapBefore":20869592,"retainedJsHeapAfter":24977384}
+PROFILE {"name":"single-long-cell","columns":6,"rows":20,"cellsIncludingDelimiter":132,"longCellLength":40000,"utf8Bytes":41005,"openMs":115.38769999999931,"mountedCells":126,"richMarkdownParsesForGridInputs":0,"paintedInputMs":[9.399999976158142,22.599999964237213,7.700000047683716,8.699999988079071,8.300000011920929],"settledPreviewMs":[9.399999976158142,22.599999964237213,7.700000047683716,8.699999988079071,8.300000011920929],"longTasksMs":[],"longTasksByPhaseMs":{"grid":[],"source":[],"tail":[],"navigation":[],"gc":[],"unclassified":[]},"phaseMarks":[{"name":"grid","at":37878.19999998808},{"name":"gc","at":38141.39999997616}],"retainedJsHeapBefore":18152384,"retainedJsHeapAfter":18503504}
+PASS 67 browser scenarios; evidence: C:\Users\86182\Desktop\wkkk\chat-reader-table-page-navigation-final-20261021\table-browser

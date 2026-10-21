@@ -1,0 +1,9 @@
+{
+  "observed_at": "2026-10-21T01:00:25.2631773+08:00",
+  "artifact_hashes_verified": 33,
+  "current_source_hashes_verified": 20,
+  "local_doc_links_verified": 17,
+  "diff_check_exit": 0,
+  "unchanged_head": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "no_release_command_run": true
+}

@@ -1,0 +1,509 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T06:05:58.281084+00:00",
+  "status": "verified local bracket-index and fence-scan checkpoint; unbudgeted goal active; no push/CI/deployment",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "task_temp": "<WKKK>/chat-reader-table-fence-scan-20261020-final",
+    "browser_followup_temp": "<WKKK>/chat-reader-table-fence-scan-20261020-browser",
+    "build_cpus": 1
+  },
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-tools.ts": "53638306629c1277cd6e8a8e9293ed0bc5bffc3c0cf3b66add7298f5bbe26d9f",
+    "apps/web/features/editing/markdown-table-dialog.tsx": "ab60834c08b1e3fb37c230bf68f9493984b530a31baa79b0fd822ff125f9054a",
+    "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "2430e2b626afdcf34697aa7edcd722d2c106c3a08ad6a17bed3fa3aca0a194b5",
+    "scripts/ux/source-editor-table-tools.test.mjs": "368540bebe49d164a3aa4aa7d305625915310b777f31104920621e2d997dce06",
+    "scripts/ux/source-editor-table-browser.mjs": "d4a8391b1848a41acfe06aaf0e9cb627c454f60ce773d4aa3f1b0ddd207960b4",
+    "scripts/ux/source-editor-table-references.test.mjs": "5afb4ecc75ab8e5257b62aa6dc873cb496cab90b9d91254152f4696c6029fc5d",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "b0a7eaa321989154590f0d39c1f258db42da682a56f33bd7dd9d033c8490da4d",
+    "PROJECT_STATE.md": "d083eae169431c73a1e1c6d91b1999a7a74e092bac0a3b5f9ef0fd3a78d071d1",
+    "docs/index.md": "b118f29bef18ec8fe45dd55c9b097726490325bdbe490dbd60fb46a27410e468",
+    "docs/system/USER_FLOWS.md": "e6e4c93e378ce818fc8dc49d1fbd6c24ed8295b533449566557333731b310fa0",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "cac72e34718556cb7558bb1d414ee42923be041ab56a8fa9a0c1a8f219c68616",
+    "docs/testing.md": "cda8e5b76c11fef0b6444f890c287855fa449321714461df10a772ff086d5c53",
+    "docs/documentation-inventory.md": "fbca5c50df5a1b3c10c4f2bd51a32ef302436f06ddd021101a1f961aaf75539e",
+    "docs/execution/README.md": "bf22eff2df578a7c013019295f2f3137163132d7610406500ec89926e226f7c0",
+    "docs/evidence/README.md": "e1cc3ec4b4f86e7e13f7e67f79f7e9aa054a8ee6c9210a89adf8b627d99f06b3",
+    "docs/execution/TABLE_TOOL_BRACKET_INDEX_2026-10-20.md": "e788f45aae16dd7122d0fdedf630aa141eca9dafbc8a3dd58efd23889d5f6135"
+  },
+  "regression": {
+    "problem": "quadratic unclosed image lookahead plus exponentially backtracking quoted/list fence regex in table discovery",
+    "implementation": [
+      "lazy Int32 suffix index for bracket classification; two linear passes; independent code/escape/reference contexts",
+      "line-by-line fence marker scan after consuming the existing quote/list prefix; no combined ambiguous-prefix regex backtracking"
+    ],
+    "index_allocation": "4 * (UTF-16 code units + 1) bytes when bracket classification first requires suffix lookup, per operation only",
+    "semantic_equivalence": "explicit cases plus 800 seeded bounded token strings, every unescaped opening under five parent contexts against former lookahead; 500 mixed LF/CRLF fence samples against former fence semantics",
+    "valid_nesting_repeats": 6000,
+    "malformed_input_code_units": 240000,
+    "deep_quoted_prefix_levels": 6000,
+    "test_watchdog_seconds": 10,
+    "watchdog_boundary": "test-only Node Worker anti-hang isolation, not a product parser worker or latency SLA",
+    "oversize_guard": "existing 1 MiB budget; reject certain-oversize grid input before indexing/escaping without changing accepted draft",
+    "workspace_assertions": [
+      "large invalid raw Markdown remains exact and editable",
+      "invalid Apply blocked and original CodeMirror source preserved",
+      "repair recovers and applies valid draft only",
+      "deep quoted prose remains discoverable without changing surrounding source",
+      "both ordinary and nested oversized grid pastes preserve accepted cell and Markdown"
+    ]
+  },
+  "verification": {
+    "focused": {
+      "tests": 67,
+      "pass": 67,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "service_free_ux": {
+      "tests": 1475,
+      "pass": 1475,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "files": 68
+    },
+    "browser": {
+      "date": "2026-10-20",
+      "startedAt": "2026-10-20T05:50:36.455Z",
+      "status": "passed",
+      "scenarios": 37,
+      "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+      "passed": [
+        "one real rendered table; no obsolete modes; math and cell source",
+        "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+        "cell typing retains focus and immediately updates escaped Markdown",
+        "cell text selection keeps native caret behavior until a cell boundary",
+        "raw Markdown repairs ragged rows and applies only the original table",
+        "incomplete Markdown is preserved; stale grid cannot overwrite it",
+        "four edges add rows/columns; Enter never submits; IME does not navigate",
+        "external source changes do not reset a draft; refresh is explicit",
+        "quote containers and CRLF survive cell edits and final application",
+        "row paging is bounded and appending reveals the actual final row",
+        "200-column preview mounts at most 400 cells and refuses another column",
+        "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+        "Escape closes once and restores the logical opener",
+        "pending source previews cannot edit old cells or Apply, and catch up to the latest draft",
+        "pending grid previews retain active typing and Escape returns focus to Markdown",
+        "invalid Markdown entered during a pending preview cannot be overwritten by the older valid draft",
+        "explicit source refresh drops a suspended old table preview",
+        "renderer updates cell callbacks without reparsing unchanged Markdown",
+        "actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source",
+        "actual workspace: deeply quoted prose does not block table discovery or change surrounding source",
+        "actual workspace: nested table editing owns shortcuts instead of opening tools behind it",
+        "actual workspace: the command names the Table tool rather than promising empty-table insertion",
+        "actual workspace: table Enter cannot save; Escape preserves the underlying source preview",
+        "actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft",
+        "actual workspace: Apply changes only the draft and Save sends one canonical client payload",
+        "actual workspace: 375px touch can open, edit and apply the nested table",
+        "actual workspace: cell syntax validation survives alternating grid and Markdown edits",
+        "actual workspace: oversized cell input is rejected without truncating the accepted draft",
+        "actual workspace: large unclosed image nesting stays editable and recovers without changing source",
+        "actual workspace: long cells use a bounded display preview without changing Markdown or Apply",
+        "actual workspace: math bars remain one cell and absolute values do not become norms",
+        "actual workspace: code backslashes and separate currency columns survive normalization",
+        "actual workspace: applying an untouched long cell preserves the exact original source",
+        "actual workspace: oversized math is omitted from rich parsing but remains exact in Markdown",
+        "actual workspace: ambiguous TeX remains editable but cannot apply until repaired",
+        "actual workspace: image alt and reference IDs stay literal without remote requests",
+        "actual workspace: bounded reference context warns without changing definitions outside the table"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "browser": "155.0.8059.82",
+      "followup_log": "<BROWSER_FOLLOWUP_TEMP>/browser.txt"
+    },
+    "gates": [
+      {
+        "name": "focused",
+        "started_at": "2026-10-20T05:47:44.1464103Z",
+        "ended_at": "2026-10-20T05:47:45.8063303Z",
+        "exit_code": 0,
+        "arguments": [
+          "node",
+          "--test",
+          "scripts/ux/source-editor-table-tools.test.mjs",
+          "scripts/ux/source-editor-table-references.test.mjs",
+          "scripts/ux/chatgpt-rich-text.test.mjs"
+        ],
+        "exact_arguments_sha256": "add092d6e827cbd1f3aeda0f5b798a2a1bc30d2db4bd4404645c5e62ae6ffea0",
+        "log": "<TASK_TEMP>/focused.txt",
+        "log_sha256": "6a39874a1e79ddf77aea161a5712196d93b721223368a456d38580972d883501"
+      },
+      {
+        "name": "ux",
+        "started_at": "2026-10-20T05:47:45.8757121Z",
+        "ended_at": "2026-10-20T05:48:38.8958604Z",
+        "exit_code": 0,
+        "arguments": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "<68 sorted scripts/ux/*.test.mjs files>"
+        ],
+        "exact_arguments_sha256": "1fa2db8a4a873161d6963e9278f7df474c4f0b8180f532587ca054d5c23c2462",
+        "log": "<TASK_TEMP>/ux.txt",
+        "log_sha256": "d689e17fb30bcef8fc301c9ce9cd6fcd1dedfc31b12ad9e77d9a192624f5d652"
+      },
+      {
+        "name": "browser",
+        "started_at": "2026-10-20T05:48:38.9054575Z",
+        "ended_at": "2026-10-20T05:48:54.6607013Z",
+        "exit_code": 0,
+        "arguments": [
+          "node",
+          "scripts/ux/source-editor-table-browser.mjs"
+        ],
+        "exact_arguments_sha256": "9d28a10f1091d7e90dab89e972c44026cc2c331bad207e10a55f9f00087d5a8c",
+        "log": "<TASK_TEMP>/browser.txt",
+        "log_sha256": "171eb6d0f22ddb0f4ccf35f55026c8fe4991e8fbdce7b306a7f28d576d8dde42"
+      },
+      {
+        "name": "lint",
+        "started_at": "2026-10-20T05:48:54.6714639Z",
+        "ended_at": "2026-10-20T05:49:07.2059179Z",
+        "exit_code": 0,
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "run",
+          "lint"
+        ],
+        "exact_arguments_sha256": "133301bc910dee887c2aaa95830d55628f87381d4cf51480fd30d5a72393b347",
+        "log": "<TASK_TEMP>/lint.txt",
+        "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+      },
+      {
+        "name": "typecheck",
+        "started_at": "2026-10-20T05:49:07.2106666Z",
+        "ended_at": "2026-10-20T05:49:28.3836022Z",
+        "exit_code": 0,
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "exec",
+          "tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "exact_arguments_sha256": "99b09d0aa2b6795601ce91d2486991a8012b8b7c35aacc87f4a8b7def0660fe3",
+        "log": "<TASK_TEMP>/typecheck.txt",
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "build",
+        "started_at": "2026-10-20T05:49:28.3868927Z",
+        "ended_at": "2026-10-20T05:50:12.8702451Z",
+        "exit_code": 0,
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "build"
+        ],
+        "exact_arguments_sha256": "8bc8dfb984357b00bf7f4a5ee1f19f8d4bfdc2b6d9b15ebdb708ff7698fdfdc5",
+        "log": "<TASK_TEMP>/build.txt",
+        "log_sha256": "4d262ee7fbf22f21ff86912d99fba68912d3b68326eb030428b12a443b1e8e04"
+      }
+    ]
+  },
+  "profile": {
+    "boundary": "unthrottled local Node synthetic pure-function observations only; no browser/cross-device/RSS/OOM acceptance; no claim all large-table long tasks removed",
+    "nested_bracket": {
+      "baseline_source": "<TRANSFORM_TEMP>/transform-baseline.json",
+      "baseline_sha256": "e217e55d48a126e8b9ad6f6b73b55d8c73efd4d7e820ab7333310985e9541ea2",
+      "repaired": {
+        "date": "2026-10-20T05:30:12.287Z",
+        "source_sha256": "95a9964e1ed510f507afcbf46bd9394acdbc1e26de0caed96f143f1e4e29571f",
+        "node": "v20.13.1",
+        "boundary": "local pure-function observations; synthetic source; no browser/field/server-memory performance acceptance",
+        "observations": [
+          {
+            "name": "plain-table",
+            "columns": 10,
+            "rows": 4000,
+            "utf8Bytes": 397013,
+            "serializeMs": [
+              7.0504999999999995,
+              4.183899999999994,
+              4.794600000000003,
+              2.8670000000000186,
+              2.885400000000004,
+              2.7536999999999807,
+              3.193899999999985,
+              3.3735999999999535,
+              3.371600000000001,
+              3.1667999999999665,
+              3.762999999999977,
+              2.7326000000000477,
+              2.7420999999999935,
+              2.919200000000046,
+              3.118499999999983,
+              3.043700000000001,
+              3.0401999999999703,
+              3.078399999999988,
+              4.501800000000003,
+              2.783299999999997
+            ],
+            "parseMs": [
+              43.622499999999945,
+              15.952400000000011,
+              18.027000000000044,
+              19.034900000000107,
+              18.371899999999982
+            ]
+          },
+          {
+            "name": "plain-table",
+            "columns": 200,
+            "rows": 248,
+            "utf8Bytes": 499309,
+            "serializeMs": [
+              2.8687999999999647,
+              2.542500000000018,
+              2.125,
+              2.0978999999999814,
+              2.252200000000016,
+              2.09069999999997,
+              2.0930000000000746,
+              2.137299999999982,
+              2.1113000000000284,
+              4.213399999999979,
+              2.2245000000000346,
+              2.1444000000000187,
+              2.064999999999941,
+              2.161399999999958,
+              2.09680000000003,
+              2.1260999999999513,
+              2.0991000000000213,
+              2.080100000000016,
+              2.0884999999999536,
+              2.107399999999984
+            ],
+            "parseMs": [
+              15.078599999999938,
+              16.419399999999996,
+              16.783900000000017,
+              16.799600000000055,
+              16.537399999999934
+            ]
+          },
+          {
+            "name": "unclosed-nested-images",
+            "repeats": 500,
+            "codeUnits": 1000,
+            "validateMs": [
+              0.8976000000000113,
+              0.41059999999993124,
+              0.39850000000001273
+            ]
+          },
+          {
+            "name": "unclosed-nested-images",
+            "repeats": 1000,
+            "codeUnits": 2000,
+            "validateMs": [
+              0.7867999999999711,
+              0.7567000000000235,
+              0.9380999999999631
+            ]
+          },
+          {
+            "name": "unclosed-nested-images",
+            "repeats": 2000,
+            "codeUnits": 4000,
+            "validateMs": [
+              1.5942999999999756,
+              0.7968999999999369,
+              0.8095000000000709
+            ]
+          },
+          {
+            "name": "unclosed-nested-images",
+            "repeats": 4000,
+            "codeUnits": 8000,
+            "validateMs": [
+              1.5364000000000715,
+              1.7982999999999265,
+              1.6265000000000782
+            ]
+          },
+          {
+            "name": "unclosed-nested-images",
+            "repeats": 120000,
+            "codeUnits": 240000,
+            "validateMs": [
+              24.32720000000006,
+              18.218899999999962,
+              18.078499999999963
+            ]
+          }
+        ]
+      },
+      "repaired_raw_sha256": "0ff7d6d071e78ad69c404c2678f6a209cef7aaeeae43119d0ecd24d6cd332782",
+      "profile_script_sha256": "0405d57c6fe96eb0c59787ddda5f1608b63937729d14c6112810bfc4fa7c8892",
+      "largest_malformed_input_code_units": 240000,
+      "large_baseline_not_run": true
+    },
+    "quoted_fence": {
+      "baseline": {
+        "date": "2026-10-20T05:41:37.891Z",
+        "source_sha256": "9900988c321412e403009288cf404b8710e9926875962494ecbe6b32d1b8bba0",
+        "node": "v20.13.1",
+        "observations": [
+          {
+            "depth": 8,
+            "codeUnits": 60,
+            "elapsedMs": 1.6829000000000178,
+            "valid": true
+          },
+          {
+            "depth": 12,
+            "codeUnits": 68,
+            "elapsedMs": 2.847699999999975,
+            "valid": true
+          },
+          {
+            "depth": 16,
+            "codeUnits": 76,
+            "elapsedMs": 21.978800000000035,
+            "valid": true
+          },
+          {
+            "depth": 20,
+            "codeUnits": 84,
+            "elapsedMs": 319.9887,
+            "valid": true
+          },
+          {
+            "depth": 24,
+            "watchdog": "exceeded 2000 ms"
+          }
+        ]
+      },
+      "baseline_sha256": "a8aca5abade1b9b6e46e04b5ceed18524d89de501cd195bf0f180fb0aa6f8964",
+      "repaired": {
+        "date": "2026-10-20T05:46:04.046Z",
+        "source_sha256": "95a9964e1ed510f507afcbf46bd9394acdbc1e26de0caed96f143f1e4e29571f",
+        "node": "v20.13.1",
+        "observations": [
+          {
+            "depth": 8,
+            "codeUnits": 60,
+            "elapsedMs": 1.4966999999999757,
+            "valid": true
+          },
+          {
+            "depth": 12,
+            "codeUnits": 68,
+            "elapsedMs": 1.4869999999999663,
+            "valid": true
+          },
+          {
+            "depth": 16,
+            "codeUnits": 76,
+            "elapsedMs": 1.48660000000001,
+            "valid": true
+          },
+          {
+            "depth": 20,
+            "codeUnits": 84,
+            "elapsedMs": 2.3880999999999517,
+            "valid": true
+          },
+          {
+            "depth": 24,
+            "codeUnits": 92,
+            "elapsedMs": 1.4919999999999618,
+            "valid": true
+          },
+          {
+            "depth": 6000,
+            "codeUnits": 12044,
+            "elapsedMs": 1.529299999999921,
+            "valid": true
+          }
+        ]
+      },
+      "repaired_sha256": "2d3be69ae65e5fcd0e2d1f86e183874fb83eeefe671184254d99b1fe306ba434",
+      "profile_scripts": [
+        "<FENCE_TEMP>/profile-fence.cjs",
+        "<FENCE_TEMP>/profile-fence-repaired.cjs"
+      ],
+      "method": "isolated Node Worker samples with 2-second fence profiling watchdog; 6,000 quote-prefix sample after repair",
+      "decision": "replace combined quote/list fence regex with line scan; preserve former marker semantics by bounded randomized comparison"
+    },
+    "ordinary_table_decision": "plain 397KB/499KB serialization was only about 2-4ms in local samples; no serialization cache added"
+  },
+  "not_accepted": [
+    "production or authenticated server writes",
+    "full Reader/Share/Offline/PWA flows",
+    "real-device latency or assistive technology",
+    "server RSS/OOM or Linux low-memory soak",
+    "all ordinary large-table main-thread long tasks"
+  ],
+  "changes_excluded": [
+    "API",
+    "PostgreSQL migration",
+    "dependency changes",
+    "export/offline protocols",
+    "push",
+    "CI",
+    "deployment"
+  ],
+  "followup_micro_ux": {
+    "status": "verified on final source after bracket/fence checkpoint",
+    "changes": [
+      "module-local TextEncoder reuse for repeated UTF-8 budget checks",
+      "settled-preview shape mismatch gets explicit role=alert and Apply aria-describedby"
+    ],
+    "focused": {
+      "tests": 67,
+      "pass": 67,
+      "fail": 0,
+      "skipped": 0,
+      "log": "<TASK_TEMP>/focused.txt",
+      "log_sha256": "496e5101c7ad9190f581fe3452be7cc5fb6e1a03e9d5830cd18cfc5444c15769"
+    },
+    "browser": {
+      "scenarios": 37,
+      "page_errors": 0,
+      "console_errors": 0,
+      "log": "<TASK_TEMP>/browser.txt",
+      "log_sha256": "df446b305a41b388ef086f5e331e5593b4b51542c2b65a78f75b1d7314773b8d"
+    },
+    "web_gates": [
+      {
+        "name": "lint",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/lint.txt",
+        "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+      },
+      {
+        "name": "typecheck",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/typecheck.txt",
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "build",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/build.txt",
+        "log_sha256": "5ab62b1533fe116bc834e5cfb58e6c5d351f36304c51fc746c8ed72c068a307a"
+      }
+    ],
+    "boundary": "No new browser scenario specifically forces a renderer-shape mismatch; the existing real workspace suite, lint, typecheck and build verify integration. No production/server/OOM claim."
+  }
+}

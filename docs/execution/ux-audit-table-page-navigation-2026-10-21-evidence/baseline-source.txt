@@ -1,0 +1,29 @@
+103:   // Markdown reconciliation and editable controls responsive.
+104:   const tableCellCount = draft ? draft.headers.length * (draft.rows.length + 2) : 0;
+105:   const previewCellBudget = tableCellCount > TABLE_PREVIEW_LARGE_INPUT_THRESHOLD
+106:     ? TABLE_PREVIEW_LARGE_INPUT_CELLS
+107:     : TABLE_PREVIEW_MAX_CELLS;
+108:   const pageSize = draft ? Math.max(1, Math.min(30, Math.floor(previewCellBudget / draft.headers.length) - 1)) : 30;
+109:   const pages = Math.max(1, Math.ceil((draft?.rows.length ?? 0) / pageSize));
+110:   const currentPage = Math.min(page, pages - 1);
+111:   const rowOffset = currentPage * pageSize;
+112:   const visibleRows = useMemo(
+113:     () => draft?.rows.slice(rowOffset, rowOffset + pageSize) ?? EMPTY_TABLE_ROWS,
+114:     [draft?.rows, pageSize, rowOffset],
+115:   );
+116:   const largePreviewCellCount = useMemo(
+117:     () => {
+118:       if (!draft) return 0;
+119:       let count = draft.headers.reduce((total, cell) => total + (previewCellTooLarge(cell.value) ? 1 : 0), 0);
+348:           <h2 id="source-editor-table-tool-title" className="text-base font-semibold text-primary">{zh ? "表格工具" : "Table tool"}</h2>
+349:           <button type="button" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button>
+350:         </header>
+351:         <div className="min-h-0 overflow-y-auto px-4 py-3 sm:px-5">
+352:           {needsAnalysis ? <MarkdownTableSourceProbe source={source} onResult={acceptAnalysis} /> : null}
+353:           {draft ? (
+354:             <>
+355:               {pages > 1 ? <div className="mb-1 flex items-center justify-end gap-1 text-xs text-secondary">
+356:                 <span>{rowOffset + 1}–{rowOffset + visibleRows.length} / {draft.rows.length}</span>
+357:                 <button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)} className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-subtle disabled:opacity-40" aria-label={zh ? "上一页表格行" : "Previous table rows"}><ChevronLeft className="h-4 w-4" /></button>
+358:                 <button type="button" disabled={currentPage >= pages - 1} onClick={() => setPage(currentPage + 1)} className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-subtle disabled:opacity-40" aria-label={zh ? "下一页表格行" : "Next table rows"}><ChevronRight className="h-4 w-4" /></button>
+359:               </div> : null}

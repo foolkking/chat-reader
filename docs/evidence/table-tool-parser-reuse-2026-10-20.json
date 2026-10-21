@@ -1,0 +1,482 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T05:12:32.217758+00:00",
+  "status": "verified local parser-reuse/pending-preview checkpoint; goal active; no CI/push/deployment",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "process_temp": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-final"
+  },
+  "source_sha256": {
+    "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+    "apps/web/features/editing/markdown-table-dialog.tsx": "7884980620b18135b046b4be4221f870cd8366ae1bd166c0f73c33267683adb1",
+    "apps/web/features/editing/markdown-table-tools.ts": "dd966a3dcc5ab1058563eb1a1f4924553f616bf08bfa7cd9f4ac363b3dc02def",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "2430e2b626afdcf34697aa7edcd722d2c106c3a08ad6a17bed3fa3aca0a194b5",
+    "scripts/ux/source-editor-table-browser.mjs": "64ccebc982b6b22a70429fb413fe33867563d700e5bcb2538cb99827763fd4cb",
+    "scripts/ux/source-editor-table-tools.test.mjs": "8f25df66d0ddefd0f7977083035373a303efb7eadf834aacf0c6ed70a5430d8a",
+    "scripts/ux/source-editor-table-references.test.mjs": "5afb4ecc75ab8e5257b62aa6dc873cb496cab90b9d91254152f4696c6029fc5d",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "b0a7eaa321989154590f0d39c1f258db42da682a56f33bd7dd9d033c8490da4d",
+    "PROJECT_STATE.md": "84b2c07944e0921ea0af1852e810d442ff0fd33c6e4b11005826cd2dfb3caa2e",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "3a344e38a6cc254f35a9124b03a6bb6ddcbff786f057d8e527877041bbafa117",
+    "docs/system/USER_FLOWS.md": "74934f999419c96bdbc7c02fc266c82274aacc71b5ed628159c1c00a947e0f9a",
+    "docs/testing.md": "6a2da182ac23a6435ccae78eb613b81c59d625e9b20fda9fcf95d2849d76d2ec",
+    "docs/index.md": "1818f4cb42142867408f1e8df5768bc85b96f8b0effe4bda549fb59e93cc28d4",
+    "docs/documentation-inventory.md": "826ac31164833e3d16585876701a22fde31750ee238350ccb5f626d5dd1f7181",
+    "docs/execution/README.md": "bcb9756510355b8e04e5427d893e81a87e28d6a59c3be52ecb448006b583131e",
+    "docs/evidence/README.md": "d3100e017b2928d5baf94567878afbbb242d99955961bdb41e286fabbc95b7f7",
+    "docs/execution/TABLE_TOOL_PARSER_REUSE_2026-10-20.md": "e47b77745a80f368a9a4e247e17cd334fd3590397895885a4da15e0474b117bf"
+  },
+  "regression": {
+    "baseline": {
+      "result": {
+        "date": "2026-10-20",
+        "startedAt": "2026-10-20T04:56:04.533Z",
+        "status": "failed",
+        "passed": [
+          "one real rendered table; no obsolete modes; math and cell source",
+          "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+          "cell typing retains focus and immediately updates escaped Markdown",
+          "cell text selection keeps native caret behavior until a cell boundary",
+          "raw Markdown repairs ragged rows and applies only the original table",
+          "incomplete Markdown is preserved; stale grid cannot overwrite it",
+          "four edges add rows/columns; Enter never submits; IME does not navigate",
+          "external source changes do not reset a draft; refresh is explicit",
+          "quote containers and CRLF survive cell edits and final application",
+          "row paging is bounded and appending reveals the actual final row",
+          "200-column preview mounts at most 400 cells and refuses another column",
+          "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+          "Escape closes once and restores the logical opener"
+        ],
+        "failedScenario": "renderer updates cell callbacks without reparsing unchanged Markdown"
+      },
+      "observed_callback_only_parser_count": {
+        "before": 40,
+        "after": 41,
+        "expected_after": 40
+      },
+      "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-baseline\\browser.txt",
+      "log_sha256": "4d2bcb60ddeaf7aca504cca31adf2131e5cba9c16c607388ca94ac18328d6307",
+      "fixture_bundle_sha256": "13a603b31c08343f55a7cc644803e2a654b2f4bc999c5c5fab4133169a505b9d"
+    },
+    "repaired_assertions": [
+      "callback-only rerender updates live cell context with zero parser-component entries",
+      "changed source re-enters actual parser and changes real rendered content",
+      "pending source edits block stale cells, edge actions and Apply; latest valid draft wins",
+      "active grid input keeps typing/Enter focus; Escape moves to Markdown during catch-up",
+      "invalid current Markdown is retained when an older preview resolves",
+      "explicit refresh drops a suspended obsolete preview"
+    ]
+  },
+  "verification": {
+    "focused": {
+      "tests": 62,
+      "pass": 62,
+      "fail": 0,
+      "skipped": 0
+    },
+    "service_free_ux": {
+      "files": 68,
+      "tests": 1470,
+      "pass": 1470,
+      "fail": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "date": "2026-10-20",
+      "startedAt": "2026-10-20T05:08:35.122Z",
+      "status": "passed",
+      "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+      "passed": [
+        "one real rendered table; no obsolete modes; math and cell source",
+        "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+        "cell typing retains focus and immediately updates escaped Markdown",
+        "cell text selection keeps native caret behavior until a cell boundary",
+        "raw Markdown repairs ragged rows and applies only the original table",
+        "incomplete Markdown is preserved; stale grid cannot overwrite it",
+        "four edges add rows/columns; Enter never submits; IME does not navigate",
+        "external source changes do not reset a draft; refresh is explicit",
+        "quote containers and CRLF survive cell edits and final application",
+        "row paging is bounded and appending reveals the actual final row",
+        "200-column preview mounts at most 400 cells and refuses another column",
+        "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+        "Escape closes once and restores the logical opener",
+        "pending source previews cannot edit old cells or Apply, and catch up to the latest draft",
+        "pending grid previews retain active typing and Escape returns focus to Markdown",
+        "invalid Markdown entered during a pending preview cannot be overwritten by the older valid draft",
+        "explicit source refresh drops a suspended old table preview",
+        "renderer updates cell callbacks without reparsing unchanged Markdown",
+        "actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source",
+        "actual workspace: nested table editing owns shortcuts instead of opening tools behind it",
+        "actual workspace: the command names the Table tool rather than promising empty-table insertion",
+        "actual workspace: table Enter cannot save; Escape preserves the underlying source preview",
+        "actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft",
+        "actual workspace: Apply changes only the draft and Save sends one canonical client payload",
+        "actual workspace: 375px touch can open, edit and apply the nested table",
+        "actual workspace: cell syntax validation survives alternating grid and Markdown edits",
+        "actual workspace: oversized cell input is rejected without truncating the accepted draft",
+        "actual workspace: long cells use a bounded display preview without changing Markdown or Apply",
+        "actual workspace: math bars remain one cell and absolute values do not become norms",
+        "actual workspace: code backslashes and separate currency columns survive normalization",
+        "actual workspace: applying an untouched long cell preserves the exact original source",
+        "actual workspace: oversized math is omitted from rich parsing but remains exact in Markdown",
+        "actual workspace: ambiguous TeX remains editable but cannot apply until repaired",
+        "actual workspace: image alt and reference IDs stay literal without remote requests",
+        "actual workspace: bounded reference context warns without changing definitions outside the table"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "browser": "155.0.8059.82"
+    },
+    "gates": [
+      {
+        "started_at": "2026-10-20T05:02:48.0779663Z",
+        "ended_at": "2026-10-20T05:02:49.6425422Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-final\\focused.txt",
+        "exit_code": 0,
+        "name": "focused",
+        "arguments": [
+          "node",
+          "--test",
+          "scripts/ux/source-editor-table-tools.test.mjs",
+          "scripts/ux/source-editor-table-references.test.mjs",
+          "scripts/ux/chatgpt-rich-text.test.mjs"
+        ]
+      },
+      {
+        "started_at": "2026-10-20T05:02:49.7007972Z",
+        "ended_at": "2026-10-20T05:03:44.8066099Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-final\\ux.txt",
+        "exit_code": 0,
+        "name": "ux",
+        "arguments": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "E:\\1project\\chat-reader\\scripts\\ux\\adaptive-import-session-action-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\annotation-document-parity.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\annotation-workspace-reads.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\archived-project-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\attachment-modal-resource.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\attachment-reading.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\attachment-table-preview.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\chatgpt-rich-text.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\cleanup-candidate-markers.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\cleanup-range-selection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\cleanup-selection-acknowledgment.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\continuation-drop-guard.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-files-capability-read.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-index-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-list-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-metadata-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-placement-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-search-selection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\conversation-toc-stale-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\import-background-analysis.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\import-session-restore-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\inline-attachment-locale.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\interaction-confirmation-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\manual-markdown-fidelity.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\merge-admission.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\merge-reentry.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\message-version-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\mobile-reader-header-space.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-attachment-query-policy.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-conflict-merge-draft-refresh.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-continuation-read-states.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-export-attachment-count-read.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-library-download-status-read.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-library-local-read-state.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-reader-query-policy.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-resource-check.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-search-readiness.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\offline-search-retry.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\pdf-viewer-policy.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\personal-archive-scope.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\project-archive-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\project-fixture-cleanup.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\project-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-autosave-feedback.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-detail-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-initial-window-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-navigation-readiness.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-navigation-retirement.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-navigation-sheet-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\reader-recent-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\resumed-source-gates.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-edge-loading-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-navigation-retirement.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-navigation-sheet-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-position-storage-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-tablet-navigation-dialog.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\share-unlock-lifecycle.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sidebar-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sidebar-search-selection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-attachment-picker-dialog.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-attachment-picker-read-recovery.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-discard-switch.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-table-references.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\source-editor-table-tools.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sync-center-hidden-inspection.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\sync-center-tab-read-scope.test.mjs",
+          "E:\\1project\\chat-reader\\scripts\\ux\\task-status-recovery.test.mjs"
+        ]
+      },
+      {
+        "started_at": "2026-10-20T05:04:08.8845173Z",
+        "ended_at": "2026-10-20T05:04:21.1457228Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-final\\lint.txt",
+        "exit_code": 0,
+        "name": "lint",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "run",
+          "lint"
+        ]
+      },
+      {
+        "started_at": "2026-10-20T05:04:21.1495976Z",
+        "ended_at": "2026-10-20T05:04:42.1665795Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-final\\typecheck.txt",
+        "exit_code": 0,
+        "name": "typecheck",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "exec",
+          "tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ]
+      },
+      {
+        "started_at": "2026-10-20T05:04:42.1693793Z",
+        "ended_at": "2026-10-20T05:05:30.8757577Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-final\\build.txt",
+        "exit_code": 0,
+        "name": "build",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "build"
+        ]
+      },
+      {
+        "ended_at": "2026-10-20T05:08:58.0837926Z",
+        "started_at": "2026-10-20T05:08:34.8713935Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-parser-reuse-20261020-final\\browser-final.txt",
+        "name": "browser",
+        "arguments": [
+          "node",
+          "scripts/ux/source-editor-table-browser.mjs"
+        ],
+        "exit_code": 0
+      }
+    ],
+    "git_diff_check": "passed; CRLF conversion notices only"
+  },
+  "synthetic_profile": {
+    "date": "2026-10-20",
+    "startedAt": "2026-10-20T05:08:35.122Z",
+    "status": "observed",
+    "observedAt": "2026-10-20T05:08:57.867Z",
+    "browser": "155.0.8059.82",
+    "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+    "observations": [
+      {
+        "name": "small",
+        "columns": 6,
+        "rows": 20,
+        "cellsIncludingDelimiter": 132,
+        "longCellLength": 0,
+        "utf8Bytes": 1009,
+        "openMs": 94.10530000000108,
+        "mountedCells": 126,
+        "richMarkdownParsesForGridInputs": 5,
+        "paintedInputMs": [
+          8.100000023841858,
+          11.599999994039536,
+          9.5,
+          7.4000000059604645,
+          7.299999982118607
+        ],
+        "settledPreviewMs": [
+          33.10000002384186,
+          38.400000005960464,
+          36,
+          33.599999994039536,
+          28.799999982118607
+        ],
+        "longTasksMs": [],
+        "retainedJsHeapBefore": 13324376,
+        "retainedJsHeapAfter": 13649444
+      },
+      {
+        "name": "typical",
+        "columns": 12,
+        "rows": 80,
+        "cellsIncludingDelimiter": 984,
+        "longCellLength": 0,
+        "utf8Bytes": 8017,
+        "openMs": 135.14270000000033,
+        "mountedCells": 372,
+        "richMarkdownParsesForGridInputs": 5,
+        "paintedInputMs": [
+          18.400000005960464,
+          17.200000017881393,
+          17.80000001192093,
+          18,
+          18.400000005960464
+        ],
+        "settledPreviewMs": [
+          60.10000002384186,
+          51.099999994039536,
+          50.900000005960464,
+          56,
+          48.80000001192093
+        ],
+        "longTasksMs": [],
+        "retainedJsHeapBefore": 14060500,
+        "retainedJsHeapAfter": 14876588
+      },
+      {
+        "name": "large-narrow",
+        "columns": 10,
+        "rows": 4000,
+        "cellsIncludingDelimiter": 40020,
+        "longCellLength": 0,
+        "utf8Bytes": 397013,
+        "openMs": 253.3989999999976,
+        "mountedCells": 310,
+        "richMarkdownParsesForGridInputs": 5,
+        "sourceMarkdownInputMs": [
+          71.5,
+          73.09999999403954,
+          67.40000000596046,
+          68.7000000178814,
+          61.099999994039536
+        ],
+        "paintedInputMs": [
+          73.59999999403954,
+          70.19999998807907,
+          79.19999998807907,
+          76.19999998807907,
+          75.7999999821186
+        ],
+        "settledPreviewMs": [
+          125.09999999403954,
+          107.59999999403954,
+          118.40000000596046,
+          114.69999998807907,
+          106.5
+        ],
+        "longTasksMs": [
+          56,
+          52,
+          62,
+          59,
+          59
+        ],
+        "retainedJsHeapBefore": 16390704,
+        "retainedJsHeapAfter": 19066296
+      },
+      {
+        "name": "cell-limit-wide",
+        "columns": 200,
+        "rows": 248,
+        "cellsIncludingDelimiter": 50000,
+        "longCellLength": 0,
+        "utf8Bytes": 499309,
+        "openMs": 256.51100000000224,
+        "mountedCells": 400,
+        "richMarkdownParsesForGridInputs": 5,
+        "sourceMarkdownInputMs": [
+          69.30000001192093,
+          79.7000000178814,
+          72.59999999403954,
+          73.09999999403954,
+          72.40000000596046
+        ],
+        "paintedInputMs": [
+          50,
+          48.39999997615814,
+          51,
+          50.70000001788139,
+          50.69999998807907
+        ],
+        "settledPreviewMs": [
+          120.30000001192093,
+          87,
+          88.7999999821186,
+          91,
+          90.2999999821186
+        ],
+        "longTasksMs": [],
+        "retainedJsHeapBefore": 17445076,
+        "retainedJsHeapAfter": 20524952
+      },
+      {
+        "name": "single-long-cell",
+        "columns": 6,
+        "rows": 20,
+        "cellsIncludingDelimiter": 132,
+        "longCellLength": 40000,
+        "utf8Bytes": 41005,
+        "openMs": 107.59479999999894,
+        "mountedCells": 126,
+        "richMarkdownParsesForGridInputs": 0,
+        "paintedInputMs": [
+          8.899999976158142,
+          22.900000005960464,
+          12.099999994039536,
+          8.799999982118607,
+          8.800000011920929
+        ],
+        "settledPreviewMs": [
+          8.899999976158142,
+          22.900000005960464,
+          12.099999994039536,
+          8.799999982118607,
+          8.800000011920929
+        ],
+        "longTasksMs": [],
+        "retainedJsHeapBefore": 14703300,
+        "retainedJsHeapAfter": 15005696
+      }
+    ]
+  },
+  "screenshots": {
+    "docs/evidence/table-tool-parser-reuse-2026-10-20/preview-pending-desktop-light.png": {
+      "sha256": "550932de87136a09cbe668e3bd646c08fe78b7a19d0fcc9cb1a30bf1925ab47d",
+      "byte_size": 25720,
+      "data": "synthetic table harness only",
+      "width": 1440,
+      "height": 900
+    },
+    "docs/evidence/table-tool-parser-reuse-2026-10-20/preview-pending-mobile-light.png": {
+      "sha256": "80f79c4314053a6c2b760b3b24e9af686057b3b7e1216cca7a156d87e39c16a1",
+      "byte_size": 16329,
+      "data": "synthetic table harness only",
+      "width": 375,
+      "height": 812
+    }
+  },
+  "limitations": [
+    "service-free local harness with explicit API/Next-loader/assistant-ui source-forwarding and unrelated UI adapters",
+    "test-only counter and controlled promise hold wrap the installed parser; production has no probe hooks",
+    "five unthrottled input samples per workload; no controlled old/new comparison or hardware-dependent pass threshold",
+    "paintedInputMs measures following Markdown paint; settledPreviewMs separately waits for aria-busy=false; neither is field INP",
+    "narrow large-table main-thread long tasks remain; JS heap is not RSS or server/OOM acceptance",
+    "no authenticated server, full Reader/Share/Offline/PWA, assistive technology, real-device or 60-minute/low-memory workload acceptance",
+    "no API/schema/dependency/renderer-semantic-policy changes"
+  ]
+}

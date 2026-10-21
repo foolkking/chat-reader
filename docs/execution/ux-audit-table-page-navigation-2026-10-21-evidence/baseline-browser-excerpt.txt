@@ -1,0 +1,44 @@
+Excerpt only: initial PASS lines and first failure. Full automatic textarea/ARIA dump is not persisted in repository evidence.
+
+PASS one real rendered table; no obsolete modes; math and cell source
+PASS desktop edges reveal on hover/focus; Tab remains inside the dialog
+PASS cell typing retains focus and immediately updates escaped Markdown
+PASS cell text selection keeps native caret behavior until a cell boundary
+PASS raw Markdown repairs ragged rows and applies only the original table
+PASS incomplete Markdown is preserved; stale grid cannot overwrite it
+PASS four edges add rows/columns; Enter never submits; IME does not navigate
+PASS external source changes do not reset a draft; refresh is explicit
+PASS quote containers and CRLF survive cell edits and final application
+PASS CRLF tables after an HTML blank boundary keep live reference captions and exact source
+PASS row paging is bounded and appending reveals the actual final row
+PASS 200-column preview mounts at most 400 cells and refuses another column
+node:internal/modules/run_main:129
+    triggerUncaughtException(
+    ^
+
+ExpectError: expect(locator).toBeVisible() failed
+
+Locator: getByTestId('source-editor-table-tool').getByRole('button', { name: 'Last table rows', exact: true })
+Expected: visible
+Timeout: 5000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "to.be.visible" with timeout 5000ms
+  - waiting for getByTestId('source-editor-table-tool').getByRole('button', { name: 'Last table rows', exact: true })
+
+    at captureRawStack (E:\1project\chat-reader\node_modules\.pnpm\playwright-core@1.62.0\node_modules\playwright-core\lib\coreBundle.js:9681:17)
+    at callMatcherAsStep (E:\1project\chat-reader\node_modules\.pnpm\playwright@1.62.0\node_modules\playwright\lib\matchers\expect.js:13310:57)
+    at Object.toBeVisible (E:\1project\chat-reader\node_modules\.pnpm\playwright@1.62.0\node_modules\playwright\lib\matchers\expect.js:13300:23)
+    at E:\1project\chat-reader\scripts\ux\source-editor-table-browser.mjs:559:24
+    at async run (E:\1project\chat-reader\scripts\ux\source-editor-table-browser.mjs:273:7)
+    at async file:///E:/1project/chat-reader/scripts/ux/source-editor-table-browser.mjs:539:3 {
+  matcherResult: {
+    message: 'expect(locator).toBeVisible() failed\n' +
+      '\n' +
+      "Locator: getByTestId('source-editor-table-tool').getByRole('button', { name: 'Last table rows', exact: true })\n" +
+      'Expected: visible\n' +
+      'Timeout: 5000ms\n' +
+      'Error: element(s) not found\n' +
+      '\n' +
+      'Call log:\n' +

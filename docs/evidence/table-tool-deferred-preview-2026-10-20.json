@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "status": "local deferred-preview iteration; persistent goal active; no CI/push/deployment",
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "99173ed47943f12d8a37cfc51295bb8bad8105c815d01f12cb5544dd36ae2779",
+    "scripts/ux/source-editor-table-browser.mjs": "3e6c954c8b21e2e07519713b11b439e771225e322569cbf278cc2a15c05773ca",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "3ac2e94b70bc25db9aa00543aef21f13554daa8fce782d1c450d28454509c1e8",
+    "docs/execution/TABLE_TOOL_DEFERRED_PREVIEW_2026-10-20.md": "e5dde00419c1300bbaedb23be8966a17098cab2d83317022293f414778f8857c",
+    "PROJECT_STATE.md": "a25ca670b27285de888b6681aab9747702a3b174ef32b83a6ac1444f36b322a9",
+    "docs/execution/README.md": "c2344a15bd9fc9aedbd7e88752ce3bc4d55016f169ca8769a98f11ac3e972cf9",
+    "docs/documentation-inventory.md": "575a819cfc59868edfb488d133b194a5f3533f90e8df10700c3d470e02791f70",
+    "docs/evidence/README.md": "4a8468d221acb2644a0ac0ae58589f4810aa1078dd62ff73f4ef75d55ef86719"
+  },
+  "behavior": {
+    "markdown_and_grid_input": "urgent",
+    "rich_preview": "React useDeferredValue",
+    "preview_pending": "aria-busy plus status",
+    "apply": "disabled until rendered source equals current source and table shape verifies"
+  },
+  "verification": {
+    "browser_scenarios": 30,
+    "browser_status": "passed",
+    "focused_tests": {
+      "passed": 62,
+      "failed": 0
+    },
+    "typecheck": "passed",
+    "lint": "passed",
+    "git_diff_check": "passed"
+  },
+  "synthetic_profile": {
+    "browser": "155.0.8059.82",
+    "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+    "wide_200col": {
+      "utf8_bytes": 499309,
+      "mounted_cells": 400,
+      "source_input_ms": [
+        78.5,
+        71,
+        68.69999998807907,
+        71.30000001192093,
+        69.80000001192093
+      ],
+      "painted_input_ms": [
+        66,
+        56.69999998807907,
+        57.5,
+        55.099999994039536,
+        59.29999998211861
+      ],
+      "long_tasks_ms": [
+        56
+      ]
+    },
+    "narrow_10col_4000row": {
+      "utf8_bytes": 397013,
+      "mounted_cells": 310,
+      "source_input_ms": [
+        71.59999999403954,
+        61,
+        69.69999998807907,
+        72.7000000178814,
+        67.80000001192093
+      ],
+      "painted_input_ms": [
+        84,
+        74.09999999403954,
+        73.59999999403954,
+        78,
+        78.40000000596046
+      ],
+      "long_tasks_ms": [
+        69,
+        59,
+        58,
+        63,
+        63
+      ]
+    },
+    "interpretation": "five samples only; no stable cross-run performance improvement proven; long tasks remain"
+  },
+  "raw_local_log_directory": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-deferred-20261020"
+}

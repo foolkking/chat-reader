@@ -15,8 +15,9 @@ commit endpoint rejects a session until its initial analysis is reviewable.
 
 This uses the existing `BackgroundJob` schema and adds no migration. Other
 adaptive replacement, reanalysis and mapping routes remain bounded synchronous
-FastAPI handlers executed in the thread pool. Production source `f3b331a` and
-schema `20261017_0052` are live-verified; the release report records exact CI,
+FastAPI handlers executed in the thread pool. This task first shipped in
+`f3b331a`; current production is `50f6de4/20261017_0052`. The
+[release report](../execution/OOM_RELEASE_2026-10-19.md) records exact CI,
 limits and runtime evidence. See the
 [adaptive import contract](ADAPTIVE_IMPORT_CONTRACT.md#durable-initial-analysis-task).
 
@@ -205,7 +206,7 @@ streams the three exact large-upload paths directly to the loopback-bound API,
 avoiding Next.js's 10 MiB request clone. Adaptive sessions keep their 512 MiB
 aggregate limit.
 
-**Local working-tree follow-up (2026-10-19; not deployed):** canonical draft
+**Body-retention bounds (released in 50f6de4, 2026-10-19):** canonical draft
 commit now measures/admission-checks one conversation before allocating its
 JSON record, including small records; draft writing is incremental with
 unchanged bytes. Search rebuild bounds body fetches and pending text rather
@@ -218,8 +219,8 @@ subqueries; import uses byte-aware batches and bounded record/document reads,
 and applies the existing compressed/expanded/object/JSON size settings.
 Oversized JSON records fail explicitly; failed ZIP writes clean private staging.
 These bounds do not eliminate single-record, metadata or cross-process resource
-costs. Current production is still the accepted source above; see the
-[local repair and verification limits](../execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md).
+costs. See the
+[original local repair and verification limits](../execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md).
 
 The [local continuation](../execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
 projects only required attachment-index fields, streams eight rows and joins
@@ -231,7 +232,8 @@ set and single-record costs remain.
 Gzip detection/parsing reads at most 64 KiB and rechecks expanding input
 headroom before large JSON decoding. Resource errors propagate as retryable
 429/task failure rather than format drift. Native CanJSON no longer fails on
-missing generic selectors. No new route, migration or release is implied.
+missing generic selectors. This continuation also ships in 50f6de4 with no new
+route or migration; its local allocation results are not production load acceptance.
 
 Selecting or deleting a message version commits the canonical message and
 returns `derived_status` (`ready` or `queued`) plus an optional

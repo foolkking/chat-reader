@@ -1,0 +1,45 @@
+[
+  {
+    "name": "focused",
+    "command": "node --test scripts/ux/source-editor-table-context.test.mjs scripts/ux/source-editor-table-tools.test.mjs scripts/ux/source-editor-table-references.test.mjs scripts/ux/chatgpt-rich-text.test.mjs scripts/ux/share-tablet-navigation-dialog.test.mjs",
+    "started_at": "2026-10-21T01:38:21.9918813Z",
+    "finished_at": "2026-10-21T01:38:25.5081661Z",
+    "exit_code": 0
+  },
+  {
+    "name": "lint",
+    "command": "corepack pnpm run lint",
+    "started_at": "2026-10-21T01:38:25.5219394Z",
+    "finished_at": "2026-10-21T01:38:38.7425174Z",
+    "exit_code": 0
+  },
+  {
+    "name": "typecheck",
+    "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "started_at": "2026-10-21T01:38:38.745745Z",
+    "finished_at": "2026-10-21T01:39:00.7659945Z",
+    "exit_code": 0
+  },
+  {
+    "name": "service-free",
+    "command": "$files = Get-ChildItem -LiteralPath scripts/ux -Filter '*.test.mjs' -File | Sort-Object Name | ForEach-Object { $_.FullName }; node --test --test-concurrency=1 @files",
+    "started_at": "2026-10-21T01:39:00.776763Z",
+    "finished_at": "2026-10-21T01:39:58.9584242Z",
+    "exit_code": 0,
+    "invocation_note": "Records the actual PowerShell file enumeration (69 files), replacing the initial shorthand glob. Timing and exit code are unchanged."
+  },
+  {
+    "name": "build",
+    "command": "corepack pnpm --filter web build",
+    "started_at": "2026-10-21T01:39:58.9607538Z",
+    "finished_at": "2026-10-21T01:40:51.9338331Z",
+    "exit_code": 0
+  },
+  {
+    "name": "browser",
+    "command": "node scripts/ux/source-editor-table-browser.mjs",
+    "started_at": "2026-10-21T01:40:51.935689Z",
+    "finished_at": "2026-10-21T01:41:38.30742Z",
+    "exit_code": 0
+  }
+]

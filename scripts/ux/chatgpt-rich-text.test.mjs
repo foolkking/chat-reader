@@ -292,6 +292,194 @@ const renderer = compileComponent("../../apps/web/features/conversations/markdow
   "../rich-markdown/remark-ai-math-compatibility": math,
   "../rich-markdown/chatgpt-rich-text-compatibility": compatibility,
 });
+const tableTools = compileComponent("../../apps/web/features/editing/markdown-table-tools.ts", {
+  "@codemirror/lang-markdown": appRequire("@codemirror/lang-markdown"),
+});
+test("table normalization retains absolute-value versus norm MathML in the real Reader and table preview", () => {
+  const mathml = html => html.match(/<math\b[\s\S]*?<\/math>/)?.[0].replace(/<annotation\b[\s\S]*?<\/annotation>/g, "");
+  for (const value of [
+    String.raw`\(|x|\)`, String.raw`\(\left|p_k-p_{k-1}\right|\)`,
+    String.raw`$|x|$`, String.raw`$$|x|$$`,
+    String.raw`\(\|x\|\)`, String.raw`$\|x\|$`,
+    String.raw`\(\mathchoice{|x|}{|y|}{|z|}{|w|}\)`,
+    String.raw`[formula \(|x|\)](https://example.invalid)`,
+  ]) {
+    const source = `| Formula | Note |\n| --- | --- |\n| ${value} | retained |`;
+    const result = tableTools.applyMarkdownTableAction(source, 0, 0, { type: "normalize" });
+    assert.ok(result, value);
+    const expectedMath = mathml(render(value));
+    assert.ok(expectedMath, value);
+    for (const html of [
+      renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, { text: result.insert, isAssistant: false })),
+      renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+        text: result.insert, renderCell: (_row, _column, content) => content,
+      })),
+    ]) {
+      assert.equal((html.match(/<th\b/g) ?? []).length, 2, value);
+      assert.equal((html.match(/<td\b/g) ?? []).length, 2, value);
+      assert.equal((html.match(/class="katex"/g) ?? []).length, 1, value);
+      assert.equal(mathml(html), expectedMath, value);
+      assert.doesNotMatch(html, /data-math-error|katex-error/);
+    }
+  }
+});
+test("table code pipe normalization preserves the literal backslashes through actual GFM rendering", () => {
+  for (let slashes = 0; slashes <= 8; slashes++) {
+    const source = "| A | B |\n| --- | --- |\n| `x" + "\\".repeat(slashes) + "|y` | retained |";
+    const result = tableTools.applyMarkdownTableAction(source, 0, 0, { type: "normalize" });
+    assert.ok(result);
+    const expected = "x" + "\\".repeat(slashes - slashes % 2) + "|y";
+    for (const html of [
+      renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, { text: result.insert, isAssistant: false })),
+      renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+        text: result.insert, renderCell: (_row, _column, content) => content,
+      })),
+    ]) {
+      assert.equal((html.match(/<td\b/g) ?? []).length, 2);
+      assert.equal(html.match(/<code(?:\s[^>]*)?>([^<]*)<\/code>/)?.[1], expected, slashes);
+      assert.doesNotMatch(html, /class="katex"/);
+    }
+  }
+});
+test("normalization preserves actual Reader and editable-preview GFM for escaped pipes beside code delimiters", () => {
+  const slash = String.fromCharCode(92);
+  const tableHtml = html => html.match(/<table\b[\s\S]*?<\/table>/)?.[0];
+  const cases = [
+    "`code " + slash + "| pipe`",
+    "``code " + slash + "` still " + slash + "| pipe``",
+    "``code" + slash + "`` outside " + slash + "| pipe",
+    "`left ` inner " + slash + "| right`",
+    slash + "`left " + slash + "| right``",
+    "`left " + slash + "` inner " + slash + "| right`",
+  ];
+
+  for (const value of cases) {
+    const source = `| A | B |\n| --- | --- |\n| ${value} | tail |`;
+    const result = tableTools.applyMarkdownTableAction(source, 0, 0, { type: "normalize" });
+    assert.ok(result, value);
+
+    const readerBefore = tableHtml(renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+      text: source, isAssistant: false,
+    })));
+    const readerAfter = tableHtml(renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+      text: result.insert, isAssistant: false,
+    })));
+    const previewBefore = tableHtml(renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+      text: source, renderCell: (_row, _column, content) => content,
+    })));
+    const previewAfter = tableHtml(renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+      text: result.insert, renderCell: (_row, _column, content) => content,
+    })));
+
+    assert.ok(readerBefore, value);
+    assert.ok(previewBefore, value);
+    assert.equal(readerAfter, readerBefore, value);
+    assert.equal(previewAfter, previewBefore, value);
+  }
+});
+test("math-looking image alt and reference identity survive table normalization without TeX rewrites", () => {
+  const image = "| A | B |\n| --- | --- |\n| " + String.raw`![\(|x|\)](https://example.invalid/image.png)` + " | retained |";
+  const imageResult = tableTools.applyMarkdownTableAction(image, 0, 0, { type: "normalize" });
+  assert.ok(imageResult);
+  const imageHtml = renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+    text: imageResult.insert, renderCell: (_row, _column, content) => content,
+  }));
+  assert.match(imageHtml, /\(\|x\|\)/);
+  assert.doesNotMatch(imageHtml, /\\vert|class="katex"|<img\b/);
+  const source = "| A | B |\n| --- | --- |\n| " + String.raw`[label][\(\|x\|\)]` + " | retained |\n\n"
+    + String.raw`[\(\|x\|\)]: https://example.invalid/target`;
+  const result = tableTools.applyMarkdownTableAction(source, 0, 0, { type: "normalize" });
+  assert.ok(result);
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+    text: result.insert + source.slice(result.to), isAssistant: false,
+  }));
+  assert.match(html, /href="https:\/\/example\.invalid\/target"/);
+  assert.match(html, />label<\/a>/);
+  assert.doesNotMatch(result.insert, /\\vert/);
+  const collapsed = "| A | B |\n| --- | --- |\n| " + String.raw`[a\|b][]` + " | retained |\n\n"
+    + String.raw`[a\|b]: https://example.invalid/collapsed "Original title"`;
+  const collapsedResult = tableTools.applyMarkdownTableAction(collapsed, 0, 0, { type: "normalize" });
+  assert.ok(collapsedResult);
+  const collapsedHtml = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+    text: collapsedResult.insert + collapsed.slice(collapsedResult.to), isAssistant: false,
+  }));
+  assert.match(collapsedHtml, /href="https:\/\/example\.invalid\/collapsed"/);
+  assert.match(collapsedHtml, /title="Original title"/);
+  assert.match(collapsedHtml, />a\|b<\/a>/);
+  for (const imageReference of [String.raw`![img\|id]`, String.raw`![img\|id][]`]) {
+    const source = "| A | B |\n| --- | --- |\n| " + imageReference + " | retained |\n\n"
+      + String.raw`[img\|id]: https://example.invalid/image.png`;
+    const result = tableTools.applyMarkdownTableAction(source, 0, 0, { type: "normalize" });
+    assert.ok(result);
+    const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+      text: result.insert + source.slice(result.to), isAssistant: false,
+    }));
+    assert.match(html, /href="https:\/\/example\.invalid\/image\.png"/);
+    assert.match(html, /img\|id/);
+    assert.doesNotMatch(html, /<img\b/);
+  }
+});
+test("editable table preview uses the actual shared GFM/math chain and stable cell coordinates", () => {
+  const visited = [];
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+    text: "| A | B |\n| --- | --- |\n| \\(x^2\\) | **bold** |",
+    renderCell: (row, column, content) => {
+      visited.push([row, column]);
+      return React.createElement("button", { type: "button" }, content);
+    },
+  }));
+  assert.deepEqual(visited, [[0, 0], [0, 1], [1, 0], [1, 1]]);
+  assert.equal((html.match(/<table\b/g) ?? []).length, 1);
+  assert.match(html, /class="katex"/);
+  assert.match(html, /<math/);
+  assert.match(html, /<strong>bold<\/strong>/);
+});
+test("editable preview never navigates links or loads user images while clicking a cell", () => {
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+    text: "| A | B |\n| --- | --- |\n| [safe](https://example.invalid) | ![remote](https://example.invalid/x.png) |\n| [unsafe](javascript:alert(1)) | <script>alert(1)</script> |",
+    renderCell: (_row, _column, content) => React.createElement("button", { type: "button" }, content),
+  }));
+  assert.doesNotMatch(html, /<a\b|<img\b|<script\b|href=|onerror=/i);
+  assert.match(html, /safe/);
+});
+test("GFM alignment survives both the Reader and editable table presentations", () => {
+  const text = "| A | B |\n| :---: | ---: |\n| center | right |";
+  const readerHtml = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, { text, isAssistant: false }));
+  const editorHtml = renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+    text, renderCell: (_row, _column, content) => content,
+  }));
+  for (const html of [readerHtml, editorHtml]) {
+    assert.equal((html.match(/style="text-align:center"/g) ?? []).length, 2);
+    assert.equal((html.match(/style="text-align:right"/g) ?? []).length, 2);
+  }
+});
+test("table preview retains GFM cell content for Unicode spacing, autolinks and inline syntax", () => {
+  const cells = html => [...html.matchAll(/<(th|td)\b([^>]*)>([\s\S]*?)<\/\1>/g)]
+    .map(([, tag, attributes, content]) => ({ tag, attributes, content }));
+  for (const values of [
+    ["text", "🙂 中文", "3.14", "x-y + 2"],
+    ["\u00a0kept\u00a0", "\ufeffkept\ufeff", "中\u2003文", "\u202fkept\u202f"],
+    ["NUL:\u0000:end", "x\u000by", "x\u000cy", "plain"],
+    ["www.example.test", "https://example.test/path", "reader@example.test", "**bold**"],
+    ["&#124;", "`code`", "[link](https://example.test)", "\\(x^2\\)"],
+  ]) {
+    const source = "| A | B | C | D |\n| --- | :--- | :---: | ---: |\n| " + values.join(" | ") + " |";
+    const renderPreview = text => renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+      text, renderCell: (_row, _column, content) => content,
+    }));
+    const actual = renderPreview(source);
+    // Supplying reference context must not change unrelated cell content.
+    const reference = renderPreview(source + "\n\n[unused-plain-preview]: https://example.test/unused");
+    assert.deepEqual(cells(actual), cells(reference), values.join(" / "));
+    if (values[0].startsWith("\u00a0")) {
+      for (const value of values) assert.ok(actual.includes(value));
+    }
+    if (values[0].startsWith("NUL:")) {
+      assert.ok(actual.includes("NUL:\uFFFD:end"));
+      assert.ok(!actual.includes("\0"));
+    }
+  }
+});
 const blockRenderer = compileComponent("../../apps/web/features/conversations/block-renderer.tsx", {
   "./markdown-renderer": renderer,
   "../attachments/attachment-block": { AttachmentBlock: () => null, embeddedAttachment: () => null },

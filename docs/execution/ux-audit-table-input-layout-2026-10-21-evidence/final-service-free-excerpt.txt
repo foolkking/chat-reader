@@ -1,0 +1,20 @@
+Partial log only; full command, times and exit status are in final-gate-receipts.json.
+
+ok 1507 - confirmed package failed remains visible through a later GET error
+  ---
+  duration_ms: 0.769
+  ...
+# Subtest: confirmed package cancelled remains visible through a later GET error
+ok 1508 - confirmed package cancelled remains visible through a later GET error
+  ---
+  duration_ms: 0.6289
+  ...
+1..1508
+# tests 1508
+# suites 0
+# pass 1508
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 58098.9307

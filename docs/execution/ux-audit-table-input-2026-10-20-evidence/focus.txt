@@ -1,0 +1,170 @@
+TAP version 13
+# Subtest: the actual tablet section has a translated modal name, fallback focus target and matching ref
+ok 1 - the actual tablet section has a translated modal name, fallback focus target and matching ref
+  ---
+  duration_ms: 11.5028
+  ...
+# Subtest: closed: the tablet hook installs no keyboard owner or focus move
+ok 2 - closed: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.8325
+  ...
+# Subtest: mobile: the tablet hook installs no keyboard owner or focus move
+ok 3 - mobile: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.3731
+  ...
+# Subtest: desktop: the tablet hook installs no keyboard owner or focus move
+ok 4 - desktop: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.2535
+  ...
+# Subtest: metadata failure: the tablet hook installs no keyboard owner or focus move
+ok 5 - metadata failure: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.2675
+  ...
+# Subtest: storage pending: the tablet hook installs no keyboard owner or focus move
+ok 6 - storage pending: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.2333
+  ...
+# Subtest: old storage visit: the tablet hook installs no keyboard owner or focus move
+ok 7 - old storage visit: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.2263
+  ...
+# Subtest: missing payload: the tablet hook installs no keyboard owner or focus move
+ok 8 - missing payload: the tablet hook installs no keyboard owner or focus move
+  ---
+  duration_ms: 0.3904
+  ...
+# Subtest: opening the actual gated tablet hook focuses inside and wraps only Tab boundaries
+ok 9 - opening the actual gated tablet hook focuses inside and wraps only Tab boundaries
+  ---
+  duration_ms: 0.9362
+  ...
+# Subtest: Escape forwards false to the latest existing close handler without a second listener or focus reset
+ok 10 - Escape forwards false to the latest existing close handler without a second listener or focus reset
+  ---
+  duration_ms: 0.7375
+  ...
+# Subtest: a newer modal keeps Escape and Tab ownership
+ok 11 - a newer modal keeps Escape and Tab ownership
+  ---
+  duration_ms: 0.5355
+  ...
+# Subtest: composing: modal Escape and Tab leave input ownership and focus untouched
+not ok 12 - composing: modal Escape and Tab leave input ownership and focus untouched
+  ---
+  duration_ms: 2.8713
+  location: 'file:///E:/1project/chat-reader/scripts/ux/share-tablet-navigation-dialog.test.mjs:223:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/share-tablet-navigation-dialog.test.mjs:229:16)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: legacy IME: modal Escape and Tab leave input ownership and focus untouched
+not ok 13 - legacy IME: modal Escape and Tab leave input ownership and focus untouched
+  ---
+  duration_ms: 0.9393
+  location: 'file:///E:/1project/chat-reader/scripts/ux/share-tablet-navigation-dialog.test.mjs:223:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/share-tablet-navigation-dialog.test.mjs:229:16)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: already handled: modal Escape and Tab leave input ownership and focus untouched
+not ok 14 - already handled: modal Escape and Tab leave input ownership and focus untouched
+  ---
+  duration_ms: 0.8486
+  location: 'file:///E:/1project/chat-reader/scripts/ux/share-tablet-navigation-dialog.test.mjs:223:3'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/share-tablet-navigation-dialog.test.mjs:229:16)
+    Test.runInAsyncScope (node:async_hooks:206:9)
+    Test.run (node:internal/test_runner/test:656:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:389:18)
+    Test.postRun (node:internal/test_runner/test:742:19)
+    Test.run (node:internal/test_runner/test:698:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:389:7)
+  ...
+# Subtest: close: cleanup removes the listener and restores the opener without scrolling
+ok 15 - close: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.7028
+  ...
+# Subtest: mobile: cleanup removes the listener and restores the opener without scrolling
+ok 16 - mobile: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 1.5303
+  ...
+# Subtest: desktop: cleanup removes the listener and restores the opener without scrolling
+ok 17 - desktop: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.4306
+  ...
+# Subtest: metadata hidden: cleanup removes the listener and restores the opener without scrolling
+ok 18 - metadata hidden: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.2742
+  ...
+# Subtest: unmount: cleanup removes the listener and restores the opener without scrolling
+ok 19 - unmount: cleanup removes the listener and restores the opener without scrolling
+  ---
+  duration_ms: 0.2196
+  ...
+# Subtest: delayed cleanup cannot restore behind a newly opened modal
+ok 20 - delayed cleanup cannot restore behind a newly opened modal
+  ---
+  duration_ms: 0.4092
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 17
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 459.7275

@@ -1,0 +1,16 @@
+  duration_ms: 1.6048
+  ...
+# Subtest: confirmed package cancelled remains visible through a later GET error
+ok 1513 - confirmed package cancelled remains visible through a later GET error
+  ---
+  duration_ms: 2.1157
+  ...
+1..1513
+# tests 1513
+# suites 0
+# pass 1513
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15749.1344

@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-20",
+  "startedAt": "2026-10-20T16:51:11.080Z",
+  "status": "failed",
+  "passed": [
+    "one real rendered table; no obsolete modes; math and cell source",
+    "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+    "cell typing retains focus and immediately updates escaped Markdown",
+    "cell text selection keeps native caret behavior until a cell boundary",
+    "raw Markdown repairs ragged rows and applies only the original table",
+    "incomplete Markdown is preserved; stale grid cannot overwrite it",
+    "four edges add rows/columns; Enter never submits; IME does not navigate",
+    "external source changes do not reset a draft; refresh is explicit",
+    "quote containers and CRLF survive cell edits and final application",
+    "CRLF tables after an HTML blank boundary keep live reference captions and exact source",
+    "row paging is bounded and appending reveals the actual final row",
+    "200-column preview mounts at most 400 cells and refuses another column",
+    "wide-table row edges stay pointer-reachable at every horizontal scroll position",
+    "all four edges remain pointer-reachable while a long wide preview scrolls on both axes",
+    "375px touch row edges stay reachable across a 200-column table and focus the appended row",
+    "375px touch can append a column without finding the full table's vertical midpoint",
+    "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+    "Escape closes once and restores the logical opener"
+  ],
+  "failedScenario": "pending raw parsing cannot apply the old verified table and keeps only the latest Markdown"
+}

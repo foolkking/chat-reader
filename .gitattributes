@@ -11,3 +11,14 @@ tools/context-skills/tests/continuation-conformance-fixtures-v1/** -text
 # Supplied Markdown references use intentional two-space hard line breaks.
 tools/context-skills/**/references/*.md whitespace=-blank-at-eol
 patches/*.patch -text whitespace=-blank-at-eol
+# Backup shells source their shared reader on Linux and Git/MSYS alike.
+deploy/backup.sh text eol=lf
+deploy/preflight_release_space.sh text eol=lf
+deploy/backup_volume_reader.sh text eol=lf
+# Dated verification artifacts are byte evidence; never normalize their newlines.
+docs/evidence/oom-release-2026-10-19.json -text whitespace=cr-at-eol,-blank-at-eof
+docs/evidence/table-tool-*2026-10-2[01]* -text whitespace=cr-at-eol,-blank-at-eof
+docs/evidence/table-tool-*2026-10-2[01]/** -text whitespace=cr-at-eol,-blank-at-eof
+docs/execution/*2026-10-2[01]-evidence/** -text whitespace=cr-at-eol,-blank-at-eof
+# Captured stdout includes terminal padding and assertion whitespace verbatim.
+docs/execution/*2026-10-2[01]-evidence/*.txt whitespace=cr-at-eol,-blank-at-eof,-blank-at-eol

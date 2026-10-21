@@ -1,0 +1,20 @@
+Partial log only; full command, times and exit status are in final-gate-receipts.json.
+
+ok 116 - math pipe encoding cannot grow an accepted candidate beyond the UTF-8 tool limit
+  ---
+  duration_ms: 10.2786
+  ...
+# Subtest: a table replacement is a single undoable CodeMirror edit
+ok 117 - a table replacement is a single undoable CodeMirror edit
+  ---
+  duration_ms: 29.2388
+  ...
+1..117
+# tests 117
+# suites 0
+# pass 117
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3441.0671

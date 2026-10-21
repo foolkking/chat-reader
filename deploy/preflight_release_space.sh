@@ -13,6 +13,8 @@ BACKUP_DIR="${BACKUP_DIR:-./backups}"
 BACKUP_HEADROOM_KB="${BACKUP_HEADROOM_KB:-262144}"
 RELEASE_IMAGE_HEADROOM_KB="${RELEASE_IMAGE_HEADROOM_KB:-524288}"
 RELEASE_TRANSFER_HEADROOM_KB="${RELEASE_TRANSFER_HEADROOM_KB:-131072}"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+. "$SCRIPT_DIR/backup_volume_reader.sh"
 
 compose() {
   docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
@@ -52,6 +54,7 @@ if [ ! -d "$BACKUP_DIR" ]; then
   exit 1
 fi
 
+backup_source_init
 gzip -t "$RELEASE_ARCHIVE"
 tar -tzf "$RELEASE_ARCHIVE" >/dev/null
 
@@ -66,8 +69,7 @@ require_non_negative_integer database_bytes "$database_bytes"
 database_kb="$(ceil_kb "$database_bytes")"
 backup_required_kb="$((database_kb + BACKUP_HEADROOM_KB))"
 for component in imports exports offline assets; do
-  component_kb="$(compose run --rm --no-deps -T api \
-    sh -c "du -sk '/data/$component' | cut -f1")"
+  component_kb="$(backup_component_size_kb "$component")"
   require_non_negative_integer "${component}_kb" "$component_kb"
   backup_required_kb="$((backup_required_kb + component_kb))"
 done

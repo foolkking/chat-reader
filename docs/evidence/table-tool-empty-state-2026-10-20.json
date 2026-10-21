@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T08:46:37.542Z",
+  "status": "verified local compact unavailable-table recovery; unbudgeted optimization goal active",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "timezone": "Asia/Shanghai"
+  },
+  "release_boundary": {
+    "goal": "active; no token budget",
+    "push": false,
+    "ci": false,
+    "deployment": false,
+    "new_dependency": false,
+    "api_or_migration_change": false,
+    "services": "ephemeral loopback browser harness only; no FastAPI/worker/production service started",
+    "source_data": "synthetic fixtures only; imported user data and production configuration untouched"
+  },
+  "source_binding": "18 affected source/test hashes identical before and after all six gates; only dialog and browser-gate changes relative to preceding GFM checkpoint",
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "078d02eaf1e89b69deb6e8c4d7245c8e6d90fdb23d8b641f1ad2e6a7a50c156f",
+    "apps/web/features/editing/markdown-table-tools.ts": "50e5af76cbbed4c5e15029d1fc863611264cdece1e7aebb0fc00c722107968ca",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+    "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+    "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+    "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+    "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+    "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+    "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+    "scripts/ux/source-editor-table-browser.mjs": "2c42ccdccffce33ae04edafff2a865a730ad044cf26e4e68efb90872b27a2f5c",
+    "scripts/ux/source-editor-table-tools.test.mjs": "238b82438bd9e4050fb5412596e6bd896d3e31642307fad95a36a2608de0de88",
+    "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+    "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+    "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "5cd1865ba2e15aba7c989570b950d82e0a2e011898802840297424d7fddb6548"
+  },
+  "documentation_sha256": {
+    "PROJECT_STATE.md": "a47f99eed06a20ffaaf65a6edc686b3352ace8e143882db6453eaf0bd91b7338",
+    "docs/index.md": "585a5855ff487e2e8f98de5629c8774430680f0d5538a5da8e5fe5872b670e54",
+    "docs/system/USER_FLOWS.md": "0fbaf605b5216dba5f686bf54ca6e1f9315542f5261dec904d0b5e15423d4ce1",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "ac0d3bb18bb90ca97f09df8074cf26edf91a0f584cdf7757440c22ae7a1c87fb",
+    "docs/testing.md": "2c822a417e246f28114405c9925eab8daf1e6c52a007f9c404a1b9ad28c0d38d",
+    "docs/documentation-inventory.md": "0772d140cc0be42061cfbab5c6e50792f4d1edd43492ea5a5e53ac36dc9f8a6f",
+    "docs/execution/README.md": "53a63bb8585361fbe8541fdfc1b87cf0e43ef170fc6115ce2cd12402521f75c5",
+    "docs/evidence/README.md": "44c096a22df86ae9b413275785aec1680778ea4ea47a8f0206ee8080fb9a79c6",
+    "docs/execution/TABLE_TOOL_EMPTY_STATE_2026-10-20.md": "f0398aa65de6fc87b421ca6e5297bf6bd0ff7092eaf35e2add73c3eec25aca5a"
+  },
+  "implementation": {
+    "unavailable": "no fake disabled Markdown label/textarea; one concise recovery reason; Apply stays disabled and aria-describedby-linked",
+    "recovery": "Back to source closes and restores CodeMirror focus; checking can still be cancelled",
+    "invalid_draft": "identified-table invalid Markdown remains editable, with retained last valid preview",
+    "unchanged": "parser, context proof, source limits, one-transaction Apply, edge additions, preview guards, dependencies, API, migration and exports"
+  },
+  "failed_baseline": {
+    "status": "failed",
+    "passed_before_failure": 56,
+    "failed_scenario": "unavailable tables use a compact recovery state without a fake Markdown field",
+    "classification": "product UX defect: inert blank Markdown field remained; source safety/GFM guards did not fail",
+    "wrapper": "exit 0 deliberately accepted expected browser test exit 1; not a passing browser attempt",
+    "source_hash_receipt": {
+      "path": "<WKKK>/chat-reader-table-empty-state-baseline-20261020/source-sha256.json",
+      "sha256": "7fe1e04ac31724b4e632042eedf7a71a0a93eef3ccd9a4a5e517df8cdd155944",
+      "byte_size": 374
+    },
+    "result": {
+      "path": "<WKKK>/chat-reader-table-empty-state-baseline-20261020/table-browser/result.json",
+      "sha256": "63eb437f23535061d1dab069b4114f1a73830b5d6ec3553897212d1a77681945",
+      "byte_size": 5269
+    },
+    "log": {
+      "path": "<WKKK>/chat-reader-table-empty-state-baseline-20261020/browser.txt",
+      "sha256": "0fe8b1eaa6bf7e979b3d10cfa702f23a6f95bbf2555371bae79b40024de779ab",
+      "byte_size": 7049
+    },
+    "bundle": {
+      "path": "<WKKK>/chat-reader-table-empty-state-baseline-20261020/table-browser/bundle.js",
+      "sha256": "c521781b7e6518d452e1dd6b0a6eeaebe031cc126b492544e0c9963843e1e46e",
+      "byte_size": 4008873
+    },
+    "prior_mobile_before": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/textarea-root-mobile-light.png",
+      "sha256": "a7a8d6bd73ea91ef1daceebf83cd41d699e5e398aecf13db0d1049fd4325880d",
+      "byte_size": 15866,
+      "pixel_width": 375,
+      "pixel_height": 812
+    }
+  },
+  "intermediate_assumption_error": {
+    "classification": "test assumption/coverage error, not a new product defect or accepted mobile pass",
+    "detail": "workspace helper reset the intended 375px viewport after it was set; misnamed mobile screenshot is actually 1440x900",
+    "gates": [
+      {
+        "name": "focused",
+        "arguments": [
+          "node",
+          "--test",
+          "scripts/ux/source-editor-table-context.test.mjs",
+          "scripts/ux/source-editor-table-tools.test.mjs",
+          "scripts/ux/source-editor-table-references.test.mjs",
+          "scripts/ux/chatgpt-rich-text.test.mjs"
+        ],
+        "started_at": "2026-10-20T08:38:19.4059308Z",
+        "ended_at": "2026-10-20T08:38:22.2186891Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/focused.txt",
+          "sha256": "716b02ce3d11da6d89f9f58fa1725080ebaab25c2d6f130e5d9168e3d517af3c",
+          "byte_size": 18611
+        }
+      },
+      {
+        "name": "ux",
+        "arguments": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "<REPO>\\scripts\\ux\\adaptive-import-session-action-lifecycle.test.mjs",
+          "<REPO>\\scripts\\ux\\annotation-document-parity.test.mjs",
+          "<REPO>\\scripts\\ux\\annotation-workspace-reads.test.mjs",
+          "<REPO>\\scripts\\ux\\archived-project-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\attachment-modal-resource.test.mjs",
+          "<REPO>\\scripts\\ux\\attachment-reading.test.mjs",
+          "<REPO>\\scripts\\ux\\attachment-table-preview.test.mjs",
+          "<REPO>\\scripts\\ux\\chatgpt-rich-text.test.mjs",
+          "<REPO>\\scripts\\ux\\cleanup-candidate-markers.test.mjs",
+          "<REPO>\\scripts\\ux\\cleanup-range-selection.test.mjs",
+          "<REPO>\\scripts\\ux\\cleanup-selection-acknowledgment.test.mjs",
+          "<REPO>\\scripts\\ux\\continuation-drop-guard.test.mjs",
+          "<REPO>\\scripts\\ux\\conversation-files-capability-read.test.mjs",
+          "<REPO>\\scripts\\ux\\conversation-index-read-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\conversation-list-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\conversation-metadata-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\conversation-placement-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\conversation-search-selection.test.mjs",
+          "<REPO>\\scripts\\ux\\conversation-toc-stale-read-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\import-background-analysis.test.mjs",
+          "<REPO>\\scripts\\ux\\import-session-restore-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\inline-attachment-locale.test.mjs",
+          "<REPO>\\scripts\\ux\\interaction-confirmation-lifecycle.test.mjs",
+          "<REPO>\\scripts\\ux\\manual-markdown-fidelity.test.mjs",
+          "<REPO>\\scripts\\ux\\merge-admission.test.mjs",
+          "<REPO>\\scripts\\ux\\merge-reentry.test.mjs",
+          "<REPO>\\scripts\\ux\\message-version-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\mobile-reader-header-space.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-attachment-query-policy.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-conflict-merge-draft-refresh.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-continuation-read-states.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-export-attachment-count-read.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-library-download-status-read.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-library-local-read-state.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-reader-query-policy.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-resource-check.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-search-readiness.test.mjs",
+          "<REPO>\\scripts\\ux\\offline-search-retry.test.mjs",
+          "<REPO>\\scripts\\ux\\pdf-viewer-policy.test.mjs",
+          "<REPO>\\scripts\\ux\\personal-archive-scope.test.mjs",
+          "<REPO>\\scripts\\ux\\project-archive-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\project-fixture-cleanup.test.mjs",
+          "<REPO>\\scripts\\ux\\project-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\reader-autosave-feedback.test.mjs",
+          "<REPO>\\scripts\\ux\\reader-detail-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\reader-initial-window-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\reader-navigation-readiness.test.mjs",
+          "<REPO>\\scripts\\ux\\reader-navigation-retirement.test.mjs",
+          "<REPO>\\scripts\\ux\\reader-navigation-sheet-lifecycle.test.mjs",
+          "<REPO>\\scripts\\ux\\reader-recent-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\resumed-source-gates.test.mjs",
+          "<REPO>\\scripts\\ux\\share-edge-loading-lifecycle.test.mjs",
+          "<REPO>\\scripts\\ux\\share-navigation-retirement.test.mjs",
+          "<REPO>\\scripts\\ux\\share-navigation-sheet-lifecycle.test.mjs",
+          "<REPO>\\scripts\\ux\\share-position-storage-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\share-read-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\share-tablet-navigation-dialog.test.mjs",
+          "<REPO>\\scripts\\ux\\share-unlock-lifecycle.test.mjs",
+          "<REPO>\\scripts\\ux\\sidebar-read-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\sidebar-search-selection.test.mjs",
+          "<REPO>\\scripts\\ux\\source-editor-attachment-picker-dialog.test.mjs",
+          "<REPO>\\scripts\\ux\\source-editor-attachment-picker-read-recovery.test.mjs",
+          "<REPO>\\scripts\\ux\\source-editor-discard-switch.test.mjs",
+          "<REPO>\\scripts\\ux\\source-editor-table-context.test.mjs",
+          "<REPO>\\scripts\\ux\\source-editor-table-references.test.mjs",
+          "<REPO>\\scripts\\ux\\source-editor-table-tools.test.mjs",
+          "<REPO>\\scripts\\ux\\sync-center-hidden-inspection.test.mjs",
+          "<REPO>\\scripts\\ux\\sync-center-tab-read-scope.test.mjs",
+          "<REPO>\\scripts\\ux\\task-status-recovery.test.mjs"
+        ],
+        "started_at": "2026-10-20T08:38:22.2647247Z",
+        "ended_at": "2026-10-20T08:39:18.4761874Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/ux.txt",
+          "sha256": "5567c471ba4a39a9fe460a1f152c9a40b2ec12c441e4884fa1cc4ba0765cf362",
+          "byte_size": 315814
+        }
+      },
+      {
+        "name": "browser",
+        "arguments": [
+          "node",
+          "scripts/ux/source-editor-table-browser.mjs"
+        ],
+        "started_at": "2026-10-20T08:39:18.4858409Z",
+        "ended_at": "2026-10-20T08:39:46.0821142Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/browser.txt",
+          "sha256": "4c49746b8882b69d73be620c880f3ff3edd21b7242ee3f3957f82681b725348e",
+          "byte_size": 5212
+        }
+      },
+      {
+        "name": "lint",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "run",
+          "lint"
+        ],
+        "started_at": "2026-10-20T08:39:46.0911506Z",
+        "ended_at": "2026-10-20T08:39:58.7073399Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/lint.txt",
+          "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+          "byte_size": 173
+        }
+      },
+      {
+        "name": "typecheck",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "exec",
+          "tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "started_at": "2026-10-20T08:39:58.7108443Z",
+        "ended_at": "2026-10-20T08:40:19.9980256Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/typecheck.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "byte_size": 0
+        }
+      },
+      {
+        "name": "build",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "build"
+        ],
+        "started_at": "2026-10-20T08:40:20.0006757Z",
+        "ended_at": "2026-10-20T08:41:04.7897604Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/build.txt",
+          "sha256": "9e9111665b678fb7c12b06a10bb0a8a7c9f727782c7216e3c28dd968b986d19d",
+          "byte_size": 1232
+        }
+      }
+    ],
+    "browser_result": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/table-browser/result.json",
+      "sha256": "90fc4a43dbc1203855bbe0d7e8b35d5a38767af627c8a31a0cbf56173614a116",
+      "byte_size": 5550
+    },
+    "misnamed_screenshot": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-20261020/table-browser/unavailable-mobile-zh.png",
+      "sha256": "bcea08720b9dee7ab40348c251d653d215c57939ec3a45f08ae29b86befede6c",
+      "byte_size": 34952,
+      "pixel_width": 1440,
+      "pixel_height": 900
+    },
+    "final_correction": "set viewport after helper, assert actual innerWidth, retain explicit geometry observations"
+  },
+  "final_summary": {
+    "focused": {
+      "tests": 83,
+      "pass": 83,
+      "fail": 0,
+      "skipped": 0
+    },
+    "service_free": {
+      "files": 69,
+      "tests": 1491,
+      "pass": 1491,
+      "fail": 0,
+      "skipped": 0
+    },
+    "chrome": {
+      "scenarios": 57,
+      "pass": 57,
+      "page_errors": 0,
+      "console_errors": 0
+    },
+    "lint": "passed",
+    "nonincremental_typecheck": "passed",
+    "build": "passed; NEXT_BUILD_CPUS=1"
+  },
+  "gates": [
+    {
+      "name": "focused",
+      "arguments": [
+        "node",
+        "--test",
+        "scripts/ux/source-editor-table-context.test.mjs",
+        "scripts/ux/source-editor-table-tools.test.mjs",
+        "scripts/ux/source-editor-table-references.test.mjs",
+        "scripts/ux/chatgpt-rich-text.test.mjs"
+      ],
+      "started_at": "2026-10-20T08:42:06.3286586Z",
+      "ended_at": "2026-10-20T08:42:09.2886289Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/focused.txt",
+        "sha256": "4a413b97fc3c2ab32342a19d5745b3537a667f540e392a513c286c474dd85c1f",
+        "byte_size": 18617
+      }
+    },
+    {
+      "name": "ux",
+      "arguments": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "<REPO>\\scripts\\ux\\adaptive-import-session-action-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\annotation-document-parity.test.mjs",
+        "<REPO>\\scripts\\ux\\annotation-workspace-reads.test.mjs",
+        "<REPO>\\scripts\\ux\\archived-project-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\attachment-modal-resource.test.mjs",
+        "<REPO>\\scripts\\ux\\attachment-reading.test.mjs",
+        "<REPO>\\scripts\\ux\\attachment-table-preview.test.mjs",
+        "<REPO>\\scripts\\ux\\chatgpt-rich-text.test.mjs",
+        "<REPO>\\scripts\\ux\\cleanup-candidate-markers.test.mjs",
+        "<REPO>\\scripts\\ux\\cleanup-range-selection.test.mjs",
+        "<REPO>\\scripts\\ux\\cleanup-selection-acknowledgment.test.mjs",
+        "<REPO>\\scripts\\ux\\continuation-drop-guard.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-files-capability-read.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-index-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-list-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-metadata-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-placement-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-search-selection.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-toc-stale-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\import-background-analysis.test.mjs",
+        "<REPO>\\scripts\\ux\\import-session-restore-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\inline-attachment-locale.test.mjs",
+        "<REPO>\\scripts\\ux\\interaction-confirmation-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\manual-markdown-fidelity.test.mjs",
+        "<REPO>\\scripts\\ux\\merge-admission.test.mjs",
+        "<REPO>\\scripts\\ux\\merge-reentry.test.mjs",
+        "<REPO>\\scripts\\ux\\message-version-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\mobile-reader-header-space.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-attachment-query-policy.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-conflict-merge-draft-refresh.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-continuation-read-states.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-export-attachment-count-read.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-library-download-status-read.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-library-local-read-state.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-reader-query-policy.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-resource-check.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-search-readiness.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-search-retry.test.mjs",
+        "<REPO>\\scripts\\ux\\pdf-viewer-policy.test.mjs",
+        "<REPO>\\scripts\\ux\\personal-archive-scope.test.mjs",
+        "<REPO>\\scripts\\ux\\project-archive-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\project-fixture-cleanup.test.mjs",
+        "<REPO>\\scripts\\ux\\project-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-autosave-feedback.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-detail-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-initial-window-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-navigation-readiness.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-navigation-retirement.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-navigation-sheet-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-recent-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\resumed-source-gates.test.mjs",
+        "<REPO>\\scripts\\ux\\share-edge-loading-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\share-navigation-retirement.test.mjs",
+        "<REPO>\\scripts\\ux\\share-navigation-sheet-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\share-position-storage-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\share-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\share-tablet-navigation-dialog.test.mjs",
+        "<REPO>\\scripts\\ux\\share-unlock-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\sidebar-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\sidebar-search-selection.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-attachment-picker-dialog.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-attachment-picker-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-discard-switch.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-table-context.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-table-references.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-table-tools.test.mjs",
+        "<REPO>\\scripts\\ux\\sync-center-hidden-inspection.test.mjs",
+        "<REPO>\\scripts\\ux\\sync-center-tab-read-scope.test.mjs",
+        "<REPO>\\scripts\\ux\\task-status-recovery.test.mjs"
+      ],
+      "started_at": "2026-10-20T08:42:09.3218456Z",
+      "ended_at": "2026-10-20T08:43:05.6400708Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/ux.txt",
+        "sha256": "211d741195f4a1b80a15e15383aeaa76c3408cebea2cb651d21a9e4caca46de3",
+        "byte_size": 315827
+      }
+    },
+    {
+      "name": "browser",
+      "arguments": [
+        "node",
+        "scripts/ux/source-editor-table-browser.mjs"
+      ],
+      "started_at": "2026-10-20T08:43:05.6506592Z",
+      "ended_at": "2026-10-20T08:43:32.9909585Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/browser.txt",
+        "sha256": "7062b5792d0f4c02c5b9d7cc1fabf9d046e7d724e3a34aef620be3d4c5470fd8",
+        "byte_size": 5215
+      }
+    },
+    {
+      "name": "lint",
+      "arguments": [
+        "corepack",
+        "pnpm",
+        "run",
+        "lint"
+      ],
+      "started_at": "2026-10-20T08:43:33.0004572Z",
+      "ended_at": "2026-10-20T08:43:45.9536614Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/lint.txt",
+        "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+        "byte_size": 173
+      }
+    },
+    {
+      "name": "typecheck",
+      "arguments": [
+        "corepack",
+        "pnpm",
+        "--filter",
+        "web",
+        "exec",
+        "tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "started_at": "2026-10-20T08:43:45.9575653Z",
+      "ended_at": "2026-10-20T08:44:06.9510956Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/typecheck.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_size": 0
+      }
+    },
+    {
+      "name": "build",
+      "arguments": [
+        "corepack",
+        "pnpm",
+        "--filter",
+        "web",
+        "build"
+      ],
+      "started_at": "2026-10-20T08:44:06.9555157Z",
+      "ended_at": "2026-10-20T08:44:47.0841540Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/build.txt",
+        "sha256": "bf4098304d76a53db26120a285cce1e82cb410ad6c30126499b380aee92f2e8b",
+        "byte_size": 1231
+      }
+    }
+  ],
+  "actual_empty_state_geometry": {
+    "date": "2026-10-20",
+    "startedAt": "2026-10-20T08:43:05.707Z",
+    "status": "passed",
+    "observations": [
+      {
+        "locale": "en-US",
+        "actual_viewport_width": 1440,
+        "dialog_width": 768,
+        "dialog_height": 200,
+        "source_unchanged": true,
+        "writes": 0,
+        "focus_returned": true
+      },
+      {
+        "locale": "zh-CN",
+        "actual_viewport_width": 375,
+        "dialog_width": 375,
+        "dialog_height": 220,
+        "source_unchanged": true,
+        "writes": 0,
+        "focus_returned": true
+      }
+    ]
+  },
+  "artifacts": {
+    "result": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/table-browser/result.json",
+      "sha256": "37744726bf2992fbc3db7e85db0061a5baae152dc3020ed2d26d6f72172fc9af",
+      "byte_size": 5550
+    },
+    "geometry": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/table-browser/empty-state-observations.json",
+      "sha256": "3aa1c181041e6d993f2a384b6501a8da7c94e2a68eb7892c65e85dd0d022bd41",
+      "byte_size": 534
+    },
+    "bundle": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/table-browser/bundle.js",
+      "sha256": "60458aa7b43ffb58b648674f30b3997a5f73a6df3526a8a4b53f131294fd89c1",
+      "byte_size": 4009037
+    },
+    "css": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/table-browser/style.css",
+      "sha256": "ef608335288d136ff30cd8240c0ecca6bf89a1350c1b1efc9004284a43999f52",
+      "byte_size": 95319
+    },
+    "mobile_screenshot": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/table-browser/unavailable-mobile-zh.png",
+      "sha256": "4941da053071c586ae1d709617406008fb67644b61eba82723c1f5a23866af94",
+      "byte_size": 17596,
+      "pixel_width": 375,
+      "pixel_height": 812
+    },
+    "desktop_screenshot": {
+      "path": "<WKKK>/chat-reader-table-empty-state-final-r2-20261020/table-browser/unavailable-desktop-en.png",
+      "sha256": "bd49a4f7e29926e6004330ab1564aeaf7b643437d284221ef7478371398765ea",
+      "byte_size": 32636,
+      "pixel_width": 1440,
+      "pixel_height": 812
+    }
+  },
+  "prior_gfm_checkpoint": {
+    "evidence": {
+      "path": "<REPO>/docs/evidence/table-tool-gfm-context-2026-10-20.json",
+      "sha256": "4c27c61b8fea896f98ca650a3221a89f84c7ac995709392eac67c97174faf75c",
+      "byte_size": 26910
+    },
+    "boundary": "its 56-case source/receipts remain historical; its three repaired GFM cases are retained in the new 57-case gate"
+  },
+  "visual_review": "actual 1440px English and 375px Chinese screenshots inspected; compact state, no field, no horizontal overflow, reason and return action visible",
+  "remaining_limits": [
+    "no full 43-point design/accessibility certification, real-device or IME-keyboard geometry acceptance",
+    "synthetic API/Next-loader/unrelated-UI adapters, not authenticated server saves or full-app acceptance",
+    "large-table main-thread work and long source-prefix costs remain",
+    "no full Reader/Share/Offline/PWA, Linux PID1 or OOM/2GiB sustained acceptance"
+  ]
+}

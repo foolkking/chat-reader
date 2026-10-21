@@ -1,0 +1,110 @@
+{
+  "date": "2026-10-20",
+  "recorded_at": "2026-10-21T00:55:58.7742998+08:00",
+  "status": "historical_local_checkpoint",
+  "report": "../execution/TABLE_TOOL_ADAPTIVE_PREVIEW_2026-10-20.md",
+  "evidence_directory": "../execution/TABLE_TOOL_ADAPTIVE_PREVIEW_2026-10-20-evidence",
+  "implementation": [
+    "deferred raw Markdown parsing",
+    "canonical valid row serialization and UTF-8 delta",
+    "adaptive preview budget above 3200 source cells"
+  ],
+  "gates": {
+    "focused_pass": 111,
+    "service_free_files": 69,
+    "service_free_pass": 1502,
+    "chrome_pass": 62,
+    "lint_exit": 0,
+    "nonincremental_typecheck_exit": 0,
+    "one_cpu_build_exit": 0
+  },
+  "source_sha256": {
+    "apps/web/components/use-dialog-focus.ts": "7ce66e3245572f5663bfa5a5bc030f1f94a9c49eba744c862a130ca774acb998",
+    "scripts/ux/share-tablet-navigation-dialog.test.mjs": "21591aa1bb144892314d184b5c918cafa49e4a988497913f99f5454a32676910",
+    "apps/web/features/editing/markdown-table-dialog.tsx": "4ec1150c27873c73501b3d67032dd0d02554c14aefda803fabb60602aa1f4ed2",
+    "apps/web/features/editing/markdown-table-tools.ts": "c64cbcea76235ff5506d4068343c182c44e092bfdab05a75e8fa2535e6ea7b69",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+    "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+    "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+    "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+    "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+    "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+    "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+    "scripts/ux/source-editor-table-browser.mjs": "7ebbd0074ccfb77fc578b937deb80fde50d890b64572d5b66acf30c5f6d0f65b",
+    "scripts/ux/source-editor-table-tools.test.mjs": "1f0eda28d33ae8844d658fd3eb0e746957400f479b527817edc93b63f4997197",
+    "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+    "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+    "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "ba7c052c964fb116c767af0b5c086dcd1ad98355349d6960d4ead09787ea03c8"
+  },
+  "sources_unchanged_during_gates": true,
+  "source_count": 20,
+  "artifacts": {
+    "after-adaptive-performance.json": {
+      "sha256": "f9dd3c98c13720c1224ac89acae7ad37275d3946a17a38493267861ea5678606",
+      "byte_size": 7906
+    },
+    "after-adaptive-result.json": {
+      "sha256": "2baf55f5d4bd22e124fc6deb59d4fe10f58deec5d2c33ac997d3dade4f1d9750",
+      "byte_size": 6023
+    },
+    "before-adaptive-performance.json": {
+      "sha256": "76846fc4d85e38b2d2bba46951363db8cab136457e7356fce9205c4f69754c80",
+      "byte_size": 7983
+    },
+    "before-adaptive-result.json": {
+      "sha256": "bea36f9413475b3ba2ed8c78793cb8da32f30bf74ca6221ddca68147ccbb2970",
+      "byte_size": 6023
+    },
+    "browser.txt": {
+      "sha256": "4cf144b3f43caa9400a0eadbb3a0f1bbc7e329cb3fb42d9ee257d356138a806f",
+      "byte_size": 5621
+    },
+    "build.txt": {
+      "sha256": "78ae565f861028132842fb6bef2254ca2d6b01819d5c768e4e2fd59c79a5f30c",
+      "byte_size": 1218
+    },
+    "deferred-only-performance.json": {
+      "sha256": "dce186c4545ed7f3d155cbb52325df3a4d492c4d0cc1f9c8b62ebe77e689e5a8",
+      "byte_size": 7969
+    },
+    "deferred-only-result.json": {
+      "sha256": "80aca62f10a938638150d4290470c6907152035f66eab7d8527ffcab5ec158e9",
+      "byte_size": 6023
+    },
+    "focused.txt": {
+      "sha256": "85da026cd8f3abf7b1142323cd165526280354281f7290d535e330c574e9d8dd",
+      "byte_size": 24693
+    },
+    "gate-receipts.json": {
+      "sha256": "7e125b7b08501274421cbf2e8ecff735fc991c117a93bc435ed207696268e796",
+      "byte_size": 8482
+    },
+    "lint.txt": {
+      "sha256": "b1f0cf9a255939d96d4ccf466958f2c44d3d759bffb68b0c7b21d687a94c567d",
+      "byte_size": 141
+    },
+    "source-sha256-after.json": {
+      "sha256": "63d3d39c8d31df70ac570296013f103982f3bc09227f5b6d55ff36101c996355",
+      "byte_size": 2527
+    },
+    "source-sha256-before.json": {
+      "sha256": "63d3d39c8d31df70ac570296013f103982f3bc09227f5b6d55ff36101c996355",
+      "byte_size": 2527
+    },
+    "typecheck.txt": {
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "byte_size": 2
+    },
+    "ux.txt": {
+      "sha256": "f1ded12fa96b3c9308a57202640b4fe593d58946fe278c5d7b31ddfeca808bd3",
+      "byte_size": 318380
+    }
+  },
+  "profile_boundary": "Sequential unthrottled Windows headless Chrome observations, five inputs per workload. Trials lack individual source hashes; do not attribute timing differences to a single change. sourceMarkdownInputMs measures the new rendered header, not the raw textarea first paint. Remaining long tasks are not fixed or accepted as server OOM work.",
+  "superseded_safety_check": "../execution/ux-audit-table-pending-parse-2026-10-21.md",
+  "release_boundary": "local only; no push, CI, deployment, migration, authenticated server or full Reader/Share/Offline acceptance"
+}

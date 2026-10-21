@@ -1,0 +1,22 @@
+{
+  "apps/web/components/use-dialog-focus.ts": "7ce66e3245572f5663bfa5a5bc030f1f94a9c49eba744c862a130ca774acb998",
+  "apps/web/features/conversations/markdown-renderer.tsx": "b97140389ac218d0bb9886450020e23135a38d4d1d4877f53f23a8ae7dca8ecc",
+  "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+  "apps/web/features/editing/markdown-table-dialog.tsx": "9c9f9a5e7c301831dddeaa949baf51a83280d775cbaf2d570f32fd2f48ad1580",
+  "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+  "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+  "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+  "apps/web/features/editing/markdown-table-tools.ts": "7915d52891e99ddbd438aa237f8deda68665c997ffc6800190227f2504b83013",
+  "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+  "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+  "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+  "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+  "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+  "scripts/ux/chatgpt-rich-text.test.mjs": "f5053f8c1524967ab8acfaa5be2aea1d5de108ae5e42e0df2994f5ea246b672c",
+  "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+  "scripts/ux/share-tablet-navigation-dialog.test.mjs": "21591aa1bb144892314d184b5c918cafa49e4a988497913f99f5454a32676910",
+  "scripts/ux/source-editor-table-browser.mjs": "df3edb944b14808dec3475a4cc1c43e0838e1b05cf4db857014890232e18db22",
+  "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+  "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+  "scripts/ux/source-editor-table-tools.test.mjs": "d14c3748c4e15e15a74e6cc06d7fdadc4afd3140f6539e1eea1e9aadd9c7f13d"
+}

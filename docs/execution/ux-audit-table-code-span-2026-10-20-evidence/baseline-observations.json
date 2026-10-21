@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-20",
+  "stage": "before_fix",
+  "head": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "source": "apps/web/features/editing/markdown-table-tools.ts",
+  "source_sha256": "132ea4442a74d9ac4bdf132130bf111c6ec4b9cbd55b0530385dfe60ba2946f1",
+  "conditions": [
+    "synthetic cell data only",
+    "actual installed react-markdown and remark-gfm static rendering",
+    "actual TypeScript table converter transpiled without replacement",
+    "not an authenticated browser/API test",
+    "no timing or memory SLA"
+  ],
+  "observations": [
+    {
+      "id": "unmatched-backtick-middle",
+      "cell": "`left ` inner \\| right`",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": false,
+      "parserCellCount": null,
+      "normalizationAccepted": false,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left </code> inner | right`</td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": null,
+      "normalizationByteEqual": false
+    },
+    {
+      "id": "leading-escaped-backtick",
+      "cell": "\\`left \\| right``",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": false,
+      "parserCellCount": null,
+      "normalizationAccepted": false,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>`left | right``</td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": null,
+      "normalizationByteEqual": false
+    },
+    {
+      "id": "escaped-backtick-inside",
+      "cell": "`left \\` inner \\| right`",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": false,
+      "parserCellCount": null,
+      "normalizationAccepted": false,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left \\</code> inner | right`</td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": null,
+      "normalizationByteEqual": false
+    },
+    {
+      "id": "unmatched-backtick-hides-raw-pipe",
+      "cell": "`left | right",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": false,
+      "parserCellCount": null,
+      "normalizationAccepted": false,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>`left</td><td>right</td></tr></tbody></table>",
+      "normalizedHtml": null,
+      "normalizationByteEqual": false
+    },
+    {
+      "id": "balanced-control",
+      "cell": "``left ` inner \\| right``",
+      "tableCount": 1,
+      "headers": 2,
+      "cells": 2,
+      "parserAccepted": true,
+      "parserCellCount": 2,
+      "normalizationAccepted": true,
+      "actualHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left ` inner | right</code></td><td>tail</td></tr></tbody></table>",
+      "normalizedHtml": "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td><code>left ` inner | right</code></td><td>tail</td></tr></tbody></table>",
+      "normalizationByteEqual": true
+    }
+  ]
+}

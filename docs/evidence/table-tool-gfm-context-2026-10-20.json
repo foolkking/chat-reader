@@ -1,0 +1,565 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T08:34:48.338Z",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "timezone": "Asia/Shanghai"
+  },
+  "release_boundary": {
+    "goal": "active; no token budget",
+    "push": false,
+    "ci": false,
+    "deployment": false,
+    "new_dependency": false,
+    "api_or_migration_change": false,
+    "services": "ephemeral loopback browser harness only; no FastAPI/worker/production service started",
+    "source_data": "synthetic fixtures only; imported user data and production configuration untouched"
+  },
+  "status": "verified local GFM-context repair; unbudgeted continuous optimization goal remains active",
+  "task_temp": "<WKKK>/chat-reader-table-gfm-proof-final-20261020",
+  "source_binding": "18 affected source/test hashes captured before and after all six gates, unchanged; not a claim of a committed whole-worktree snapshot",
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "297bf1811aed8281ef50caae33c0227ba0daec3065e6dc20ca2320a3a6896ce8",
+    "apps/web/features/editing/markdown-table-tools.ts": "50e5af76cbbed4c5e15029d1fc863611264cdece1e7aebb0fc00c722107968ca",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+    "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+    "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+    "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+    "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+    "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+    "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+    "scripts/ux/source-editor-table-browser.mjs": "f2463660d6afeb0330c567ef0a4225465f549a1dc6aeb5a373b51664a98a9831",
+    "scripts/ux/source-editor-table-tools.test.mjs": "238b82438bd9e4050fb5412596e6bd896d3e31642307fad95a36a2608de0de88",
+    "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+    "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+    "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "5cd1865ba2e15aba7c989570b950d82e0a2e011898802840297424d7fddb6548"
+  },
+  "documentation_sha256": {
+    "PROJECT_STATE.md": "ef23b74a1233c741acc39493361c0497a5deaea5ae470aa7dfd67bc448772a68",
+    "docs/index.md": "12cedfceb2f32adbf355959dfa22a078969ec55647bf1fc015ef9db7ef2db7a9",
+    "docs/system/USER_FLOWS.md": "f511a30de1d429bdd4d135d1e54d39ebe13bb7d89e319a923564d1a8f75f2b89",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "791c637ae58032fece94de35302947bce0a47b94ebadccd0e12c07008ed6b16e",
+    "docs/testing.md": "7436e2f425db97a92b7919ca91a41b7a5a68786b2ecb17871f8138c093a8c982",
+    "docs/documentation-inventory.md": "fc2c51def1281a4ece77f9ab54ccae95d024944224aae0d69f5c6a2624ed17f0",
+    "docs/execution/README.md": "716748f627623dc6e137ab2d79f52234a5200b827f3ba051fcc7f5539e8040c9",
+    "docs/evidence/README.md": "3fc97338274744467cca9eb55e29242f441696eb6fe5e834004532c1713a896f",
+    "docs/execution/TABLE_TOOL_LITERAL_CONTEXT_2026-10-20.md": "b803eeabe006194df329af780316d40fd4f740058d1299af5f33ff86016c08bd",
+    "docs/execution/TABLE_TOOL_GFM_CONTEXT_2026-10-20.md": "f02f8be6497e084dbed72f5acb59b53f74319dfb8f9ac5b1efb6087441397804"
+  },
+  "implementation": {
+    "trigger": "conservative source.includes('<'); not an HTML scanner",
+    "authority": "mounted existing ReactMarkdown/shared remark pipeline; source-bound literal and actual-definition ranges",
+    "output": "AST emptied before HAST/KaTeX/DOM; no remote resource or parent-state callback during render",
+    "coordinates": "existing display-math/rich-layout projections mapped back to exact original source; 800 differential math inputs",
+    "reuse": "one frozen source proof during grid/raw edits; final Apply rechecks current source revision and exact range",
+    "limits": {
+      "source_utf8_bytes": 1048576,
+      "visited_nodes": 100000,
+      "retained_ranges": 8192
+    },
+    "exhaustion": "fail closed with explicit complete-selection recovery; no source truncation",
+    "references": "same-width literal masking, actual GFM definition membership, raw label/URL extraction; existing 256/32KiB bounds",
+    "ordinary_markdown": "existing exact-source editor tree and header-prefix fallback retained",
+    "no_parser_time_or_heap_sla": true
+  },
+  "failed_baseline": {
+    "classification": "product regression fixture fails before repair; wrapper exit 0 deliberately accepted expected browser exit 1",
+    "status": "failed",
+    "passed_before_failure": 32,
+    "failed_scenario": "actual workspace: textarea raw text across blank lines cannot become an automatic table",
+    "source_receipt": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-baseline-20261020/source-sha256.json",
+      "sha256": "2fc4772a0d2df0b8a5850c27c01afd45fafbd5db9a3c66c584844d32d53fdd6b",
+      "byte_size": 572
+    },
+    "result": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-baseline-20261020/table-browser/result.json",
+      "sha256": "5cd0b6d3c896d2803b166ff0aa528b5fd5fe04d25b048998ef90442856a32c27",
+      "byte_size": 3003
+    },
+    "log": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-baseline-20261020/browser.txt",
+      "sha256": "c8a100edee917b695d039997e9e731bc752d3679ed9b9c7e73ca067a245a0393",
+      "byte_size": 5833
+    },
+    "bundle": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-baseline-20261020/table-browser/bundle.js",
+      "sha256": "4610e2072e2b3e630126236b9fa86818fa676baeb9f23664081482b5ad03bedf",
+      "byte_size": 3997896
+    }
+  },
+  "earlier_checkpoint": "docs/evidence/table-tool-literal-context-2026-10-20.json",
+  "intermediate": {
+    "focused": 83,
+    "chrome": 52,
+    "status": "passed then-authored scope before four additional interaction cases",
+    "focused_log": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-r1-20261020/focused.txt",
+      "sha256": "f1acfc824b313a09d86d229caf214537849f07a796950ff9e814201e97836dc3",
+      "byte_size": 18615
+    },
+    "browser_result": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-r1-20261020/table-browser/result.json",
+      "sha256": "9fe672147c0abedfa5777d0ef09179fa3996a0969f792efe009dd908fc6ff4f3",
+      "byte_size": 5079
+    },
+    "not_claimed_as_final_source_binding": true
+  },
+  "gates": [
+    {
+      "name": "focused",
+      "arguments": [
+        "node",
+        "--test",
+        "scripts/ux/source-editor-table-context.test.mjs",
+        "scripts/ux/source-editor-table-tools.test.mjs",
+        "scripts/ux/source-editor-table-references.test.mjs",
+        "scripts/ux/chatgpt-rich-text.test.mjs"
+      ],
+      "started_at": "2026-10-20T08:23:43.9526882Z",
+      "ended_at": "2026-10-20T08:23:46.7375758Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/focused.txt",
+        "sha256": "d16377643e42d680b0f78da222dafd8454ee2bad38228902234dbc95f87571f9",
+        "byte_size": 18614
+      }
+    },
+    {
+      "name": "ux",
+      "arguments": [
+        "node",
+        "--test",
+        "--test-concurrency=1",
+        "<REPO>\\scripts\\ux\\adaptive-import-session-action-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\annotation-document-parity.test.mjs",
+        "<REPO>\\scripts\\ux\\annotation-workspace-reads.test.mjs",
+        "<REPO>\\scripts\\ux\\archived-project-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\attachment-modal-resource.test.mjs",
+        "<REPO>\\scripts\\ux\\attachment-reading.test.mjs",
+        "<REPO>\\scripts\\ux\\attachment-table-preview.test.mjs",
+        "<REPO>\\scripts\\ux\\chatgpt-rich-text.test.mjs",
+        "<REPO>\\scripts\\ux\\cleanup-candidate-markers.test.mjs",
+        "<REPO>\\scripts\\ux\\cleanup-range-selection.test.mjs",
+        "<REPO>\\scripts\\ux\\cleanup-selection-acknowledgment.test.mjs",
+        "<REPO>\\scripts\\ux\\continuation-drop-guard.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-files-capability-read.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-index-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-list-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-metadata-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-placement-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-search-selection.test.mjs",
+        "<REPO>\\scripts\\ux\\conversation-toc-stale-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\import-background-analysis.test.mjs",
+        "<REPO>\\scripts\\ux\\import-session-restore-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\inline-attachment-locale.test.mjs",
+        "<REPO>\\scripts\\ux\\interaction-confirmation-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\manual-markdown-fidelity.test.mjs",
+        "<REPO>\\scripts\\ux\\merge-admission.test.mjs",
+        "<REPO>\\scripts\\ux\\merge-reentry.test.mjs",
+        "<REPO>\\scripts\\ux\\message-version-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\mobile-reader-header-space.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-attachment-query-policy.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-conflict-merge-draft-refresh.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-continuation-read-states.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-export-attachment-count-read.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-library-download-status-read.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-library-local-read-state.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-reader-query-policy.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-resource-check.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-search-readiness.test.mjs",
+        "<REPO>\\scripts\\ux\\offline-search-retry.test.mjs",
+        "<REPO>\\scripts\\ux\\pdf-viewer-policy.test.mjs",
+        "<REPO>\\scripts\\ux\\personal-archive-scope.test.mjs",
+        "<REPO>\\scripts\\ux\\project-archive-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\project-fixture-cleanup.test.mjs",
+        "<REPO>\\scripts\\ux\\project-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-autosave-feedback.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-detail-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-initial-window-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-navigation-readiness.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-navigation-retirement.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-navigation-sheet-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\reader-recent-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\resumed-source-gates.test.mjs",
+        "<REPO>\\scripts\\ux\\share-edge-loading-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\share-navigation-retirement.test.mjs",
+        "<REPO>\\scripts\\ux\\share-navigation-sheet-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\share-position-storage-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\share-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\share-tablet-navigation-dialog.test.mjs",
+        "<REPO>\\scripts\\ux\\share-unlock-lifecycle.test.mjs",
+        "<REPO>\\scripts\\ux\\sidebar-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\sidebar-search-selection.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-attachment-picker-dialog.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-attachment-picker-read-recovery.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-discard-switch.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-table-context.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-table-references.test.mjs",
+        "<REPO>\\scripts\\ux\\source-editor-table-tools.test.mjs",
+        "<REPO>\\scripts\\ux\\sync-center-hidden-inspection.test.mjs",
+        "<REPO>\\scripts\\ux\\sync-center-tab-read-scope.test.mjs",
+        "<REPO>\\scripts\\ux\\task-status-recovery.test.mjs"
+      ],
+      "started_at": "2026-10-20T08:23:46.7783224Z",
+      "ended_at": "2026-10-20T08:24:43.4960332Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/ux.txt",
+        "sha256": "9728a65b446eb7d4a3a2f4b869344f11a0dbb15bd9ae1fb3cb8d239dc234fad4",
+        "byte_size": 315795
+      }
+    },
+    {
+      "name": "browser",
+      "arguments": [
+        "node",
+        "scripts/ux/source-editor-table-browser.mjs"
+      ],
+      "started_at": "2026-10-20T08:24:43.5051886Z",
+      "ended_at": "2026-10-20T08:25:10.8234180Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/browser.txt",
+        "sha256": "a9cbae31a628e6e2c8e7d6a53b6858d2027d58618714a46694216d09fe8bf500",
+        "byte_size": 5126
+      }
+    },
+    {
+      "name": "lint",
+      "arguments": [
+        "corepack",
+        "pnpm",
+        "run",
+        "lint"
+      ],
+      "started_at": "2026-10-20T08:25:10.8340842Z",
+      "ended_at": "2026-10-20T08:25:22.9396925Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/lint.txt",
+        "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+        "byte_size": 173
+      }
+    },
+    {
+      "name": "typecheck",
+      "arguments": [
+        "corepack",
+        "pnpm",
+        "--filter",
+        "web",
+        "exec",
+        "tsc",
+        "--noEmit",
+        "--incremental",
+        "false"
+      ],
+      "started_at": "2026-10-20T08:25:22.9435888Z",
+      "ended_at": "2026-10-20T08:25:44.1997954Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/typecheck.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "byte_size": 0
+      }
+    },
+    {
+      "name": "build",
+      "arguments": [
+        "corepack",
+        "pnpm",
+        "--filter",
+        "web",
+        "build"
+      ],
+      "started_at": "2026-10-20T08:25:44.2024903Z",
+      "ended_at": "2026-10-20T08:26:34.3085014Z",
+      "exit_code": 0,
+      "log": {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/build.txt",
+        "sha256": "92dd79f9451797a43096db2c280a572cfac89df0e21cce783215bf04137ccd2f",
+        "byte_size": 1231
+      }
+    }
+  ],
+  "final_summary": {
+    "focused": {
+      "tests": 83,
+      "pass": 83,
+      "fail": 0,
+      "skipped": 0,
+      "composition": {
+        "table": 35,
+        "references": 10,
+        "context": 5,
+        "rich_markdown": 33
+      }
+    },
+    "service_free": {
+      "files": 69,
+      "tests": 1491,
+      "pass": 1491,
+      "fail": 0,
+      "skipped": 0
+    },
+    "browser": {
+      "scenarios": 56,
+      "status": "passed",
+      "page_errors": 0,
+      "console_errors": 0
+    },
+    "lint": "passed",
+    "nonincremental_typecheck": "passed",
+    "build": "passed; NEXT_BUILD_CPUS=1"
+  },
+  "browser_artifacts": {
+    "result": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/result.json",
+      "sha256": "7bc8dc4e0a2b1c4bef3be494ce0361ae89f979da0ecf2a59692873acb4e33337",
+      "byte_size": 5465
+    },
+    "bundle": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/bundle.js",
+      "sha256": "0022a6ba9c2adb62db0911774742fe448c86d3025846f3766c9a852068231743",
+      "byte_size": 4008788
+    },
+    "css": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/style.css",
+      "sha256": "ef608335288d136ff30cd8240c0ecca6bf89a1350c1b1efc9004284a43999f52",
+      "byte_size": 95319
+    },
+    "edge_observations": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/wide-edge-observations.json",
+      "sha256": "c6e603b0b60a6fd3afd0fce11470c526bfd85cb99460fbdf8ecae29e3e6a044b",
+      "byte_size": 32118
+    },
+    "screenshots": [
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/desktop-light.png",
+        "sha256": "7e80536fe63c37d434b0bbbbc3e6924e8b2a1e369b956516776eb314dd2dd049",
+        "byte_size": 20720
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/html-context-blocked-desktop-light.png",
+        "sha256": "1c88473a7ed76f288cfef1ebe70e35483180abfcb99b72dd5a0f8afea9744072",
+        "byte_size": 36769
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/html-context-blocked-mobile-light.png",
+        "sha256": "c730cf26189f6e25b77ff547fe2ee05d48e7b2849b27f15421e2e6068c020074",
+        "byte_size": 16764
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/math-desktop-light.png",
+        "sha256": "3a02bedc56a3efe6500bf96a9f85a03f1060b26173f1e3996ac8126f4828b88e",
+        "byte_size": 41837
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/mobile-dark.png",
+        "sha256": "ad0d911034a3b589b090739ddc91681ff5306806a98ade1283a59d395bca16f7",
+        "byte_size": 13622
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/nested-list-desktop-light.png",
+        "sha256": "d3651de3177fd8a0b403e77ab5367cc1443bfdaa8e3813fe693095a73b913581",
+        "byte_size": 33332
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/preview-pending-desktop-light.png",
+        "sha256": "f13a79de4af8a0f3f56d3ad3a288bc04339f4de1eb1c64f0ac4f9a218a7dc12b",
+        "byte_size": 25394
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/preview-pending-mobile-light.png",
+        "sha256": "e7e5d655920a7c7bf704f06a2ffd50c14298852765ce8cb67dbb5b82b287383a",
+        "byte_size": 16017
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/reference-context-desktop-light.png",
+        "sha256": "b29f3e989f78821e7822364122235576bc0b9134228d8837f8207ba6cf62409d",
+        "byte_size": 121927
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/reference-context-mobile-light.png",
+        "sha256": "1d75b24a22627f4dfb43707d4a8e7cb94f0f35625769b95d2c54bc18b486e5f6",
+        "byte_size": 20478
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/scrolling-edges-desktop-light.png",
+        "sha256": "ead95bd508db5c09dc8eb34af0f49315f812b5aa5dfba5446f115a94b4117729",
+        "byte_size": 30602
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/scrolling-edges-mobile-dark.png",
+        "sha256": "f9d00612dcfea456a44dd65f8b538a6f22155d26e372c1767c8727a71f5f2b39",
+        "byte_size": 14386
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/tablet-dark.png",
+        "sha256": "ef4466355c43d896ad6804c3483d4a7678e953322d509ebd25e004dc9998befa",
+        "byte_size": 15414
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/textarea-protected-desktop-light.png",
+        "sha256": "7d2c6afa29db2016e37319a5de849b5efeeb6a5cbe27fb98259147d13841004c",
+        "byte_size": 38080
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/textarea-reference-desktop-light.png",
+        "sha256": "2baee5c03cbac2ea2590492cfc6be04b4d8cf95ba5dcfac32142c154ce755f6b",
+        "byte_size": 44629
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/wide-edges-desktop-light.png",
+        "sha256": "b109e5834c22f2f69171b39306c669ac230c6f9d3954465e913d1b7d744c0433",
+        "byte_size": 40697
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/wide-edges-mobile-dark.png",
+        "sha256": "4bb7cda100e219441e4b7c9f2f883302587e28bde4340916842c2e9c8f26b670",
+        "byte_size": 12505
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/wide-edges-mobile-landscape-dark.png",
+        "sha256": "62ec9a6009bb918c469d24a11097e37eb0767293e2b2f4ee08fdb012e368b21c",
+        "byte_size": 10299
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/workspace-desktop-light.png",
+        "sha256": "8f3ba642e413d732f01683f432a447ae53452468a1302f9f7225995cff8fd90b",
+        "byte_size": 24230
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/table-browser/workspace-mobile-light.png",
+        "sha256": "d943cfb0b0d65d7dca3fa75f37deb088026e28faec6bb6270363a009299a49fa",
+        "byte_size": 19480
+      }
+    ]
+  },
+  "post_repair_visual_recheck": {
+    "date": "2026-10-20T08:31:36.902Z",
+    "status": "passed",
+    "boundary": "read-only four-case visual recheck of exact final 56-scenario bundle; synthetic actual workspace; no additional API/full-app acceptance",
+    "browser": "155.0.8059.82",
+    "bundle_sha256": "0022a6ba9c2adb62db0911774742fe448c86d3025846f3766c9a852068231743",
+    "probe_script_sha256": "515aa8db5e7127ea5eb360668f25a263bd358dfe53e4a85b9a1814b87f7a46b6",
+    "observations": [
+      {
+        "name": "root textarea across blank line",
+        "source_preview_tables": 0,
+        "tool_preview_tables": 0,
+        "apply_enabled": false,
+        "source_caption": null,
+        "tool_caption": null,
+        "source_unchanged": true,
+        "writes": 0,
+        "context_probe_entries": 1
+      },
+      {
+        "name": "quoted textarea across blank line",
+        "source_preview_tables": 0,
+        "tool_preview_tables": 0,
+        "apply_enabled": false,
+        "source_caption": null,
+        "tool_caption": null,
+        "source_unchanged": true,
+        "writes": 0,
+        "context_probe_entries": 1
+      },
+      {
+        "name": "reference inside textarea cannot lend a definition",
+        "source_preview_tables": 1,
+        "tool_preview_tables": 1,
+        "apply_enabled": true,
+        "source_caption": "[label][hidden]",
+        "tool_caption": "[label][hidden]",
+        "source_unchanged": true,
+        "writes": 0,
+        "context_probe_entries": 1
+      },
+      {
+        "name": "real quoted table after an HTML blank boundary",
+        "source_preview_tables": 1,
+        "tool_preview_tables": 1,
+        "apply_enabled": true,
+        "source_caption": "1",
+        "tool_caption": "1",
+        "source_unchanged": true,
+        "writes": 0,
+        "context_probe_entries": 1
+      }
+    ],
+    "pageErrors": [],
+    "consoleErrors": [],
+    "remoteRequests": [],
+    "result": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/result.json",
+      "sha256": "a09333c6f27260fb4ae30c0b111fe1f326c35640abbcb8ba97820fa8e4ac5133",
+      "byte_size": 1775
+    },
+    "script": {
+      "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe.mjs",
+      "sha256": "515aa8db5e7127ea5eb360668f25a263bd358dfe53e4a85b9a1814b87f7a46b6",
+      "byte_size": 6267
+    },
+    "screenshots": [
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/quoted-html-table-desktop-light.png",
+        "sha256": "c905b53dec7486e5d10ae291878f7f2ff321954d045c5ab6af79222fd389a81c",
+        "byte_size": 36555
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/quoted-html-table-mobile-light.png",
+        "sha256": "1c82a6874c3660244d3e337fa0c8b603e5c485668c03ca7669f5a25d65ea4136",
+        "byte_size": 15247
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/textarea-quoted-desktop-light.png",
+        "sha256": "7d2c6afa29db2016e37319a5de849b5efeeb6a5cbe27fb98259147d13841004c",
+        "byte_size": 38080
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/textarea-quoted-mobile-light.png",
+        "sha256": "229e154a2c0f75bdb24d743c4f6d78a48e881ac33bc5d5473d6486ae5b433dde",
+        "byte_size": 15882
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/textarea-reference-desktop-light.png",
+        "sha256": "92cd5d34319a5b4bc82adcbb82546da039ae06141425232bc4a7ebc8d985e200",
+        "byte_size": 41510
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/textarea-reference-mobile-light.png",
+        "sha256": "521d7ecf61bf5c12d4c14a10b27fa108b6d1eaa60207f909711d99c137334248",
+        "byte_size": 16455
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/textarea-root-desktop-light.png",
+        "sha256": "99375b5ca96ac763b00e463851b1fd285aa279459387dea34a8212191cb99755",
+        "byte_size": 37333
+      },
+      {
+        "path": "<WKKK>/chat-reader-table-gfm-proof-final-20261020/post-repair-probe/textarea-root-mobile-light.png",
+        "sha256": "a7a8d6bd73ea91ef1daceebf83cd41d699e5e398aecf13db0d1049fd4325880d",
+        "byte_size": 15866
+      }
+    ],
+    "inspection": "1440px and 375px synthetic screenshots; read-only independent recheck, not four extra complete gate scenarios or real touch-device acceptance"
+  },
+  "remaining_limits": [
+    "not full CommonMark/HTML conformance, full-app or real-device/assistive-technology certification",
+    "large-table main-thread long tasks and long ordinary-prefix parsing cost remain",
+    "initial AST parsing bounded by source size, not proven constant time/heap",
+    "blocked dialog still shows an empty disabled Markdown area; compact empty-state recovery remains a next UX improvement",
+    "no authenticated server/Reader/Share/Offline/PWA, Linux PID1 or OOM/2GiB long-running acceptance"
+  ]
+}

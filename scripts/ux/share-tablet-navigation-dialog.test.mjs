@@ -117,9 +117,9 @@ function fixture(overrides = {}) {
     for (const [index] of changed) effects.get(index)?.cleanup?.();
     for (const [index, next] of changed) effects.set(index, { ...next, cleanup: next.effect() });
   };
-  const key = (value, shiftKey = false) => {
+  const key = (value, shiftKey = false, extra = {}) => {
     const event = { key: value, shiftKey, prevented: false, stopped: false,
-      preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } };
+      preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; }, ...extra };
     for (const listener of [...listeners]) listener(event);
     return event;
   };
@@ -214,6 +214,26 @@ test("a newer modal keeps Escape and Tab ownership", () => {
     assert.deepEqual(f.calls.close, []);
   } finally { f.dispose(); }
 });
+
+for (const [name, flags] of [
+  ["composing", { isComposing: true }],
+  ["legacy IME", { keyCode: 229 }],
+  ["already handled", { defaultPrevented: true }],
+]) {
+  test(`${name}: modal Escape and Tab leave input ownership and focus untouched`, () => {
+    const f = fixture();
+    try {
+      f.last.focus();
+      for (const value of ["Escape", "Tab"]) {
+        const event = f.key(value, false, flags);
+        assert.equal(event.prevented, false);
+        assert.equal(event.stopped, false);
+        assert.equal(f.document.activeElement, f.last);
+        assert.deepEqual(f.calls.close, []);
+      }
+    } finally { f.dispose(); }
+  });
+}
 
 for (const transition of ["close", "mobile", "desktop", "metadata hidden", "unmount"]) {
   test(`${transition}: cleanup removes the listener and restores the opener without scrolling`, () => {

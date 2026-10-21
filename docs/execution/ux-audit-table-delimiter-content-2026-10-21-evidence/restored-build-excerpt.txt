@@ -1,0 +1,35 @@
+Command: corepack pnpm --filter web build (CPUS=1, STANDALONE=0, TELEMETRY_DISABLED=1)
+Exit: 0
+Full log SHA-256: 7dc31113a3a1b04ab7851ad60cf9402e8afe47e4d7b844c006f8be3b80176f4c
+Excerpt only, not full log:
+
+✓ Generating static pages using 1 worker (14/14) in 3.5s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /account-upgrade
+├ ƒ /admin/users/[userId]/conversations/[conversationId]
+├ ƒ /archived
+├ ƒ /conversations/[conversationId]
+├ ƒ /library
+├ ƒ /login
+├ ƒ /offline
+├ ƒ /projects/[projectId]
+├ ƒ /recent
+├ ƒ /register
+├ ƒ /reset-password
+├ ƒ /search
+├ ƒ /share/[token]
+└ ƒ /verify-email
+
+Route (pages)
+─ ƒ /api/imports/[importId]/commit
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+
+

@@ -1,0 +1,9 @@
+{
+  "observed_at": "2026-10-21T00:49:56.6922535+08:00",
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "4ec1150c27873c73501b3d67032dd0d02554c14aefda803fabb60602aa1f4ed2",
+    "apps/web/features/editing/markdown-table-tools.ts": "c64cbcea76235ff5506d4068343c182c44e092bfdab05a75e8fa2535e6ea7b69",
+    "scripts/ux/source-editor-table-browser.mjs": "7ebbd0074ccfb77fc578b937deb80fde50d890b64572d5b66acf30c5f6d0f65b"
+  },
+  "evidence": "Source inspection only; deterministic mounted reproduction not yet run."
+}

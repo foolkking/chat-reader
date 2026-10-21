@@ -1,0 +1,334 @@
+{
+  "date": "2026-10-20",
+  "startedAt": "2026-10-20T12:44:09.623Z",
+  "status": "observed",
+  "observedAt": "2026-10-20T12:44:48.265Z",
+  "browser": "155.0.8059.82",
+  "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+  "observations": [
+    {
+      "name": "small",
+      "columns": 6,
+      "rows": 20,
+      "cellsIncludingDelimiter": 132,
+      "longCellLength": 0,
+      "utf8Bytes": 1009,
+      "openMs": 101.20110000000204,
+      "mountedCells": 126,
+      "richMarkdownParsesForGridInputs": 5,
+      "paintedInputMs": [
+        14.100000023841858,
+        13.600000023841858,
+        10,
+        8.599999964237213,
+        7.599999964237213
+      ],
+      "settledPreviewMs": [
+        41.30000001192093,
+        39.69999998807907,
+        36.60000002384186,
+        34.799999952316284,
+        33.89999997615814
+      ],
+      "longTasksMs": [],
+      "retainedJsHeapBefore": 16552828,
+      "retainedJsHeapAfter": 16980776
+    },
+    {
+      "name": "typical",
+      "columns": 12,
+      "rows": 80,
+      "cellsIncludingDelimiter": 984,
+      "longCellLength": 0,
+      "utf8Bytes": 8017,
+      "openMs": 143.2107999999971,
+      "mountedCells": 372,
+      "richMarkdownParsesForGridInputs": 5,
+      "paintedInputMs": [
+        18.30000001192093,
+        18.30000001192093,
+        17.80000001192093,
+        18.100000023841858,
+        17.5
+      ],
+      "settledPreviewMs": [
+        60.09999996423721,
+        52.60000002384186,
+        51.90000003576279,
+        50.5,
+        50.19999998807907
+      ],
+      "longTasksMs": [],
+      "retainedJsHeapBefore": 17445264,
+      "retainedJsHeapAfter": 18305188
+    },
+    {
+      "name": "large-narrow",
+      "columns": 10,
+      "rows": 4000,
+      "cellsIncludingDelimiter": 40020,
+      "longCellLength": 0,
+      "utf8Bytes": 397013,
+      "openMs": 289.6516999999985,
+      "mountedCells": 310,
+      "richMarkdownParsesForGridInputs": 5,
+      "sourceMarkdownInputMs": [
+        75.5,
+        77.10000002384186,
+        75.09999996423721,
+        73.60000002384186,
+        69.89999997615814
+      ],
+      "paintedInputMs": [
+        73.30000001192093,
+        69.09999996423721,
+        72.10000002384186,
+        74.30000001192093,
+        78.30000001192093
+      ],
+      "settledPreviewMs": [
+        131.70000004768372,
+        105,
+        112.19999998807907,
+        115,
+        115.30000001192093
+      ],
+      "longTasksMs": [
+        56,
+        52,
+        55,
+        56,
+        60
+      ],
+      "retainedJsHeapBefore": 19750072,
+      "retainedJsHeapAfter": 22375684
+    },
+    {
+      "name": "cell-limit-wide",
+      "columns": 200,
+      "rows": 248,
+      "cellsIncludingDelimiter": 50000,
+      "longCellLength": 0,
+      "utf8Bytes": 499309,
+      "openMs": 248.84369999999763,
+      "mountedCells": 400,
+      "richMarkdownParsesForGridInputs": 5,
+      "sourceMarkdownInputMs": [
+        74.60000002384186,
+        84.90000003576279,
+        80.90000003576279,
+        79.5,
+        73.79999995231628
+      ],
+      "paintedInputMs": [
+        63.10000002384186,
+        54.30000001192093,
+        55.5,
+        52.69999998807907,
+        56.19999998807907
+      ],
+      "settledPreviewMs": [
+        119.90000003576279,
+        96.90000003576279,
+        98.69999998807907,
+        88.89999997615814,
+        93.59999996423721
+      ],
+      "longTasksMs": [
+        51
+      ],
+      "retainedJsHeapBefore": 20709112,
+      "retainedJsHeapAfter": 23960132
+    },
+    {
+      "name": "single-long-cell",
+      "columns": 6,
+      "rows": 20,
+      "cellsIncludingDelimiter": 132,
+      "longCellLength": 40000,
+      "utf8Bytes": 41005,
+      "openMs": 106.62829999999667,
+      "mountedCells": 126,
+      "richMarkdownParsesForGridInputs": 0,
+      "paintedInputMs": [
+        8.799999952316284,
+        8.5,
+        7.399999976158142,
+        8.400000035762787,
+        8.300000011920929
+      ],
+      "settledPreviewMs": [
+        8.899999976158142,
+        8.5,
+        7.399999976158142,
+        8.400000035762787,
+        8.300000011920929
+      ],
+      "longTasksMs": [],
+      "retainedJsHeapBefore": 18261896,
+      "retainedJsHeapAfter": 18570488
+    }
+  ],
+  "cpuHotspots": [
+    {
+      "functionName": "(program)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 184
+    },
+    {
+      "functionName": "(idle)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 18
+    },
+    {
+      "functionName": "addImplementation",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 83176,
+      "columnNumber": 26,
+      "samples": 11
+    },
+    {
+      "functionName": "set value",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 7
+    },
+    {
+      "functionName": "(garbage collector)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 7
+    },
+    {
+      "functionName": "subtokenize",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 1765,
+      "columnNumber": 20,
+      "samples": 4
+    },
+    {
+      "functionName": "resolveTable",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 83866,
+      "columnNumber": 21,
+      "samples": 4
+    },
+    {
+      "functionName": "escapePipes",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 106100,
+      "columnNumber": 20,
+      "samples": 3
+    },
+    {
+      "functionName": "encode",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 3
+    },
+    {
+      "functionName": "compile",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 9751,
+      "columnNumber": 18,
+      "samples": 3
+    },
+    {
+      "functionName": "querySelectorAll",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 2
+    },
+    {
+      "functionName": "EditablePreviewTableCell",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 104937,
+      "columnNumber": 33,
+      "samples": 2
+    },
+    {
+      "functionName": "exit",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 8973,
+      "columnNumber": 15,
+      "samples": 2
+    },
+    {
+      "functionName": "flushCell",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 83999,
+      "columnNumber": 18,
+      "samples": 2
+    },
+    {
+      "functionName": "setCursor",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 1707,
+      "columnNumber": 11,
+      "samples": 2
+    },
+    {
+      "functionName": "fromMarkdown",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 9624,
+      "columnNumber": 21,
+      "samples": 2
+    },
+    {
+      "functionName": "RegExp: ^[\\t ]*\\\\\\[[\\t ]*\\r?\\n([\\s\\S]*?)^[\\t ]*\\\\\\][\\t ]*$",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 2
+    },
+    {
+      "functionName": "factory",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 62484,
+      "columnNumber": 18,
+      "samples": 2
+    },
+    {
+      "functionName": "removeAttribute",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "samples": 2
+    },
+    {
+      "functionName": "cells",
+      "scriptId": "4",
+      "url": "http://127.0.0.1:61881/bundle.js",
+      "lineNumber": 106000,
+      "columnNumber": 18,
+      "samples": 2
+    }
+  ]
+}

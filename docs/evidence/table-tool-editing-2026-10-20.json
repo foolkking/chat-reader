@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "status": "local verified checkpoint; active unbounded goal; no push/CI/deployment",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "temporary_files": "process TEMP/TMP in task-specific wkkk folder; no global environment change"
+  },
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "ec2907aeba0b5f1c3265ecf1bc89840bbac7eb5c8ea8f12ff1e59902672fbb89",
+    "apps/web/features/editing/markdown-table-tools.ts": "165038368c3d59e826364bc586e0175a16bb4fa410ec510fc3d4e24d29f4ea24",
+    "apps/web/features/editing/edit-message-form.tsx": "40bac86b6cf60d1a299c8ef2b6cf5c9bbfaad34769ba0c73483411a980b2a815",
+    "apps/web/features/conversations/markdown-renderer.tsx": "2917be66c6c8f51a1077c14a9a09d9d6af81cfe58631b03998e9764ccf3231bf",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+    "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+    "apps/web/app/globals.css": "b941eafbc52499f87e6e288d4ddd57f28340130539e0940b8f4d6474b04adca0",
+    "scripts/ux/source-editor-table-tools.test.mjs": "de2ff54a552edf8c70da520e33e9945fa94ea124c194b6cbe4b73822696597d9",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "2d493aa3e92231c3ba12c546d42e52d62a6669c36ed003a9a479c955c07605d7",
+    "scripts/ux/source-editor-table-browser.mjs": "29a6a20865d5b0a8ce7230bdab810efc2b29c116d869e8d982e4e2dc90064487",
+    "pnpm-lock.yaml": "5d4ce7e2a6bc8afa3509fce234513cfa827341ab4fba14cd80b604e419e9ad76"
+  },
+  "focused": {
+    "command": "node --test scripts/ux/source-editor-table-tools.test.mjs scripts/ux/chatgpt-rich-text.test.mjs",
+    "passed": 42,
+    "failed": 0,
+    "skipped": 0,
+    "table_parser_and_codemirror_undo": 12,
+    "shared_parser_and_ssr": 30
+  },
+  "browser": {
+    "date": "2026-10-20",
+    "boundary": "isolated local Chromium component harness; no API/CodeMirror workspace integration",
+    "passed": [
+      "one real rendered table; no obsolete modes; math and cell source",
+      "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+      "cell typing retains focus and immediately updates escaped Markdown",
+      "cell text selection keeps native caret behavior until a cell boundary",
+      "raw Markdown repairs ragged rows and applies only the original table",
+      "incomplete Markdown is preserved; stale grid cannot overwrite it",
+      "four edges add rows/columns; Enter never submits; IME does not navigate",
+      "external source changes do not reset a draft; refresh is explicit",
+      "quote containers and CRLF survive cell edits and final application",
+      "row paging is bounded and appending reveals the actual final row",
+      "200-column preview mounts at most 1200 cells and refuses another column",
+      "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+      "Escape closes once and restores the logical opener"
+    ],
+    "pageErrors": [],
+    "consoleErrors": [],
+    "browser": "155.0.8059.82"
+  },
+  "full_ux": {
+    "command": "node --test --test-concurrency=1 <all scripts/ux/*.test.mjs>",
+    "files": 67,
+    "passed": 1450,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 53950.434
+  },
+  "gate_receipt": {
+    "started_at": "2026-10-20T00:46:02.0516751Z",
+    "tests": [
+      {
+        "files": 67,
+        "exit_code": 0,
+        "name": "service-free UX"
+      },
+      {
+        "name": "web lint",
+        "exit_code": 0
+      },
+      {
+        "name": "nonincremental Web typecheck",
+        "exit_code": 0
+      },
+      {
+        "name": "single-worker Web build",
+        "exit_code": 0
+      }
+    ],
+    "ended_at": "2026-10-20T00:48:19.4521543Z"
+  },
+  "gate_commands": [
+    "corepack pnpm run lint",
+    "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "NEXT_BUILD_CPUS=1 NODE_OPTIONS=--max-old-space-size=2048 corepack pnpm --filter web build"
+  ],
+  "preserved_failures": [
+    "Browser harness dependency lookup initially incomplete; fixed transitive search paths.",
+    "Browser harness initially resolved duplicate React; pinned singleton aliases.",
+    "Mixed-newline table regression before repair: 11 passed / 1 failed; after repair: 12 passed.",
+    "First mobile visual critique found oversized edge marks; smaller marks retain 44px targets and passed a real touch rerun."
+  ],
+  "screenshots": [
+    {
+      "path": "docs/evidence/table-tool-editing-2026-10-20/desktop-light.png",
+      "sha256": "108d42f56b64f887940b195bcd517354aa25ac4a68bb95584edee3dd274e3f7e",
+      "bytes": 20725
+    },
+    {
+      "path": "docs/evidence/table-tool-editing-2026-10-20/mobile-dark.png",
+      "sha256": "6ca94e6bd405c3ef92aeb01c8de0722ebf1f8abd66b67ae239cceffb1692c443",
+      "bytes": 13823
+    },
+    {
+      "path": "docs/evidence/table-tool-editing-2026-10-20/tablet-dark.png",
+      "sha256": "961e918fde5e96e4bc0f68bcc5920b68344f37ad4ed97a55c5ede6b482dc3561",
+      "bytes": 15408
+    }
+  ],
+  "not_verified": [
+    "Authenticated complete Source Editor/CodeMirror workspace browser integration",
+    "Full Reader/Share/Offline/PWA browser and IndexedDB integration",
+    "Safari/Firefox, real OS soft keyboard, formal WCAG/assistive technology",
+    "API/PostgreSQL migration or concurrency suites (no API/migration change)",
+    "Server RSS/cgroup/OOM, Docker PID1, 2GiB/60-minute workload",
+    "CI, push, deployment or production resource acceptance"
+  ]
+}

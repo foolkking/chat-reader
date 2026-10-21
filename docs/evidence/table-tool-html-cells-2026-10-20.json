@@ -1,0 +1,367 @@
+{
+  "date": "2026-10-20",
+  "status": "local_verified_not_released",
+  "report": "../execution/ux-audit-table-html-cells-2026-10-20.md",
+  "change": "Replace fragment-wide HTML substring refusal with structural-tag checking in the existing cell parser, shared by complete and incremental validation; keep literal examples and attribute prose, reject actual table markup",
+  "no_new_dependency_interface_migration_or_rendering_policy": true,
+  "baseline": {
+    "source_hashes": {
+      "apps/web/features/editing/markdown-table-tools.ts": "50e5af76cbbed4c5e15029d1fc863611264cdece1e7aebb0fc00c722107968ca",
+      "apps/web/features/editing/markdown-table-dialog.tsx": "1feac645c87c084adadfcede7f826e0c079e50811173cedcd19522990ffdada9",
+      "scripts/ux/source-editor-table-tools.test.mjs": "d38dae409641d6c04e46b867a7c693110dfefa0e921f19fdab46d5a9eaebbe74",
+      "scripts/ux/source-editor-table-browser.mjs": "a9c5849966d0648cc896eab8d8a49c2812dc50b92175ef0aece4953aea7a71a9"
+    },
+    "unit": {
+      "passed": 35,
+      "failed": 2,
+      "output": {
+        "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/baseline-unit.txt",
+        "sha256": "863bc95ded83674b074696f30980d742e37ca3bce425ad310422c52492407a86",
+        "byte_size": 9880
+      }
+    },
+    "browser_scenarios_before_failure": 59,
+    "observations": {
+      "source_preview_tables": 1,
+      "tool_tables": 0,
+      "source_unchanged": true,
+      "writes": 0
+    },
+    "receipts": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/baseline-receipts.json",
+      "sha256": "987972a0e87976482177858a5fbfe675e4b2096e470cf48941847426252e73a3",
+      "byte_size": 312
+    },
+    "browser": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/baseline-browser-result.json",
+      "sha256": "bae6bc7fc0306454660020195ea5b0fa1eebb9c02052e18468ec90f7daedf475",
+      "byte_size": 5545
+    }
+  },
+  "final": {
+    "source_sha256": {
+      "apps/web/components/use-dialog-focus.ts": "7ce66e3245572f5663bfa5a5bc030f1f94a9c49eba744c862a130ca774acb998",
+      "scripts/ux/share-tablet-navigation-dialog.test.mjs": "21591aa1bb144892314d184b5c918cafa49e4a988497913f99f5454a32676910",
+      "apps/web/features/editing/markdown-table-dialog.tsx": "d861d4eb1e6dab4a98c49e86d24caaf9bb9f8194ac8f5351c7e7ad678b76465e",
+      "apps/web/features/editing/markdown-table-tools.ts": "132ea4442a74d9ac4bdf132130bf111c6ec4b9cbd55b0530385dfe60ba2946f1",
+      "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+      "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+      "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+      "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+      "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+      "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+      "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+      "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+      "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+      "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+      "scripts/ux/source-editor-table-browser.mjs": "87ba4069e6f4fd5cca28e14473ca86d06f58bdafc45dac937b8d28c722096896",
+      "scripts/ux/source-editor-table-tools.test.mjs": "e482a33bdc6fafd4932fb20692888a94910b15fc04b1e99fd8d0ca68e755d88d",
+      "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+      "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+      "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+      "scripts/ux/chatgpt-rich-text.test.mjs": "5cd1865ba2e15aba7c989570b950d82e0a2e011898802840297424d7fddb6548"
+    },
+    "source_hashes_unchanged_during_gates": true,
+    "focused_cases": 106,
+    "shared_focus_cases": 20,
+    "table_tool_cases": 38,
+    "reference_cases": 10,
+    "context_cases": 5,
+    "shared_renderer_cases": 33,
+    "service_free_files": 69,
+    "service_free_cases": 1497,
+    "chrome_scenarios": 61,
+    "receipts": [
+      {
+        "name": "focused",
+        "arguments": [
+          "node",
+          "--test",
+          "scripts/ux/source-editor-table-context.test.mjs",
+          "scripts/ux/source-editor-table-tools.test.mjs",
+          "scripts/ux/source-editor-table-references.test.mjs",
+          "scripts/ux/chatgpt-rich-text.test.mjs",
+          "scripts/ux/share-tablet-navigation-dialog.test.mjs"
+        ],
+        "started_at": "2026-10-20T11:53:43.7550163Z",
+        "ended_at": "2026-10-20T11:53:46.9569881Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-focused.txt",
+          "sha256": "927ac218cd8cd3bab079e64542d84cb8a988478e44272414a7b9bcf098502d8c",
+          "byte_size": 23480
+        }
+      },
+      {
+        "name": "ux",
+        "arguments": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "<REPO>/scripts/ux/adaptive-import-session-action-lifecycle.test.mjs",
+          "<REPO>/scripts/ux/annotation-document-parity.test.mjs",
+          "<REPO>/scripts/ux/annotation-workspace-reads.test.mjs",
+          "<REPO>/scripts/ux/archived-project-recovery.test.mjs",
+          "<REPO>/scripts/ux/attachment-modal-resource.test.mjs",
+          "<REPO>/scripts/ux/attachment-reading.test.mjs",
+          "<REPO>/scripts/ux/attachment-table-preview.test.mjs",
+          "<REPO>/scripts/ux/chatgpt-rich-text.test.mjs",
+          "<REPO>/scripts/ux/cleanup-candidate-markers.test.mjs",
+          "<REPO>/scripts/ux/cleanup-range-selection.test.mjs",
+          "<REPO>/scripts/ux/cleanup-selection-acknowledgment.test.mjs",
+          "<REPO>/scripts/ux/continuation-drop-guard.test.mjs",
+          "<REPO>/scripts/ux/conversation-files-capability-read.test.mjs",
+          "<REPO>/scripts/ux/conversation-index-read-recovery.test.mjs",
+          "<REPO>/scripts/ux/conversation-list-recovery.test.mjs",
+          "<REPO>/scripts/ux/conversation-metadata-recovery.test.mjs",
+          "<REPO>/scripts/ux/conversation-placement-recovery.test.mjs",
+          "<REPO>/scripts/ux/conversation-search-selection.test.mjs",
+          "<REPO>/scripts/ux/conversation-toc-stale-read-recovery.test.mjs",
+          "<REPO>/scripts/ux/import-background-analysis.test.mjs",
+          "<REPO>/scripts/ux/import-session-restore-recovery.test.mjs",
+          "<REPO>/scripts/ux/inline-attachment-locale.test.mjs",
+          "<REPO>/scripts/ux/interaction-confirmation-lifecycle.test.mjs",
+          "<REPO>/scripts/ux/manual-markdown-fidelity.test.mjs",
+          "<REPO>/scripts/ux/merge-admission.test.mjs",
+          "<REPO>/scripts/ux/merge-reentry.test.mjs",
+          "<REPO>/scripts/ux/message-version-recovery.test.mjs",
+          "<REPO>/scripts/ux/mobile-reader-header-space.test.mjs",
+          "<REPO>/scripts/ux/offline-attachment-query-policy.test.mjs",
+          "<REPO>/scripts/ux/offline-conflict-merge-draft-refresh.test.mjs",
+          "<REPO>/scripts/ux/offline-continuation-read-states.test.mjs",
+          "<REPO>/scripts/ux/offline-export-attachment-count-read.test.mjs",
+          "<REPO>/scripts/ux/offline-library-download-status-read.test.mjs",
+          "<REPO>/scripts/ux/offline-library-local-read-state.test.mjs",
+          "<REPO>/scripts/ux/offline-reader-query-policy.test.mjs",
+          "<REPO>/scripts/ux/offline-resource-check.test.mjs",
+          "<REPO>/scripts/ux/offline-search-readiness.test.mjs",
+          "<REPO>/scripts/ux/offline-search-retry.test.mjs",
+          "<REPO>/scripts/ux/pdf-viewer-policy.test.mjs",
+          "<REPO>/scripts/ux/personal-archive-scope.test.mjs",
+          "<REPO>/scripts/ux/project-archive-recovery.test.mjs",
+          "<REPO>/scripts/ux/project-fixture-cleanup.test.mjs",
+          "<REPO>/scripts/ux/project-recovery.test.mjs",
+          "<REPO>/scripts/ux/reader-autosave-feedback.test.mjs",
+          "<REPO>/scripts/ux/reader-detail-recovery.test.mjs",
+          "<REPO>/scripts/ux/reader-initial-window-recovery.test.mjs",
+          "<REPO>/scripts/ux/reader-navigation-readiness.test.mjs",
+          "<REPO>/scripts/ux/reader-navigation-retirement.test.mjs",
+          "<REPO>/scripts/ux/reader-navigation-sheet-lifecycle.test.mjs",
+          "<REPO>/scripts/ux/reader-recent-recovery.test.mjs",
+          "<REPO>/scripts/ux/resumed-source-gates.test.mjs",
+          "<REPO>/scripts/ux/share-edge-loading-lifecycle.test.mjs",
+          "<REPO>/scripts/ux/share-navigation-retirement.test.mjs",
+          "<REPO>/scripts/ux/share-navigation-sheet-lifecycle.test.mjs",
+          "<REPO>/scripts/ux/share-position-storage-recovery.test.mjs",
+          "<REPO>/scripts/ux/share-read-recovery.test.mjs",
+          "<REPO>/scripts/ux/share-tablet-navigation-dialog.test.mjs",
+          "<REPO>/scripts/ux/share-unlock-lifecycle.test.mjs",
+          "<REPO>/scripts/ux/sidebar-read-recovery.test.mjs",
+          "<REPO>/scripts/ux/sidebar-search-selection.test.mjs",
+          "<REPO>/scripts/ux/source-editor-attachment-picker-dialog.test.mjs",
+          "<REPO>/scripts/ux/source-editor-attachment-picker-read-recovery.test.mjs",
+          "<REPO>/scripts/ux/source-editor-discard-switch.test.mjs",
+          "<REPO>/scripts/ux/source-editor-table-context.test.mjs",
+          "<REPO>/scripts/ux/source-editor-table-references.test.mjs",
+          "<REPO>/scripts/ux/source-editor-table-tools.test.mjs",
+          "<REPO>/scripts/ux/sync-center-hidden-inspection.test.mjs",
+          "<REPO>/scripts/ux/sync-center-tab-read-scope.test.mjs",
+          "<REPO>/scripts/ux/task-status-recovery.test.mjs"
+        ],
+        "started_at": "2026-10-20T11:53:46.9906723Z",
+        "ended_at": "2026-10-20T11:54:46.2922315Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-ux.txt",
+          "sha256": "bb7ada283d0207488e8c8d554429cd0578340d48949714d0fac9241bea4412dd",
+          "byte_size": 317164
+        }
+      },
+      {
+        "name": "browser",
+        "arguments": [
+          "node",
+          "scripts/ux/source-editor-table-browser.mjs"
+        ],
+        "started_at": "2026-10-20T11:54:46.302939Z",
+        "ended_at": "2026-10-20T11:55:17.5072283Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-browser.txt",
+          "sha256": "1eded4c6ebc29b54398ecab3f764e566b4c30252c2595c02416037ef4182048a",
+          "byte_size": 5585
+        }
+      },
+      {
+        "name": "lint",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "run",
+          "lint"
+        ],
+        "started_at": "2026-10-20T11:55:17.5180142Z",
+        "ended_at": "2026-10-20T11:55:30.5361786Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-lint.txt",
+          "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+          "byte_size": 173
+        }
+      },
+      {
+        "name": "typecheck",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "exec",
+          "tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "started_at": "2026-10-20T11:55:30.5423916Z",
+        "ended_at": "2026-10-20T11:55:53.0143829Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-typecheck.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "byte_size": 0
+        }
+      },
+      {
+        "name": "build",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "build"
+        ],
+        "started_at": "2026-10-20T11:55:53.0168965Z",
+        "ended_at": "2026-10-20T11:56:43.4748888Z",
+        "exit_code": 0,
+        "log": {
+          "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-build.txt",
+          "sha256": "9b8c3e658e7b779d2ba76c974d316b7d965d625eb1fc9d527cf0bd97289843ee",
+          "byte_size": 1231
+        }
+      }
+    ],
+    "mobile": {
+      "locale": "zh-CN",
+      "actual_viewport_width": 375,
+      "error_width": 341,
+      "accepted_literal_after_correction": true,
+      "source_unchanged_before_apply": true,
+      "writes": 0
+    },
+    "bundle": {
+      "path": "<WKKK>/chat-reader-table-html-cell-final-20261020/table-browser/bundle.js",
+      "sha256": "b62353c329aeb26f90155f64e3cc639ec6ba347ae3d1823bd416782f0284cdac",
+      "byte_size": 4009891
+    },
+    "stylesheet": {
+      "path": "<WKKK>/chat-reader-table-html-cell-final-20261020/table-browser/style.css",
+      "sha256": "ef608335288d136ff30cd8240c0ecca6bf89a1350c1b1efc9004284a43999f52",
+      "byte_size": 95319
+    }
+  },
+  "artifacts": [
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-source-sha256.json",
+      "sha256": "8572fa9f681704f8c3e3c405b254e186bb8333398d37f509cb2e95c8368da2e6",
+      "byte_size": 2525
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-browser-result.json",
+      "sha256": "d33aef55ae04b8d7d9ce967064897f258b751be49ba3e597282233f292c8303b",
+      "byte_size": 5929
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-html-cell-observations.json",
+      "sha256": "5bf4c5727f8bc6a0cfcd8453a17971d282d56e01db0bec9f4c56ecb6c1e7ac63",
+      "byte_size": 95
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-mobile-observations.json",
+      "sha256": "2c284c64d89ff5789aa457dfb10ebafd8d8add3a74f0a872f92bcbf4a6a54475",
+      "byte_size": 178
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-html-cell.png",
+      "sha256": "adfe8811244621ed19b10f7981baa74a2b11b084c9b8cc79d558c25abdad29f8",
+      "byte_size": 42939
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-unsupported-mobile.png",
+      "sha256": "522a732d6119f5f4dbe0679cf3c11d424c55ef86e2b6f6967b3a4b520b012922",
+      "byte_size": 23515
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/intermediate-reference-fixture-failure.txt",
+      "sha256": "d202cab741ef4f5d6aa4e0a63893ed35fddc72c202babff761211c0e58e8bccf",
+      "byte_size": 24120
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-focused.txt",
+      "sha256": "927ac218cd8cd3bab079e64542d84cb8a988478e44272414a7b9bcf098502d8c",
+      "byte_size": 23480
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-ux.txt",
+      "sha256": "bb7ada283d0207488e8c8d554429cd0578340d48949714d0fac9241bea4412dd",
+      "byte_size": 317164
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-browser.txt",
+      "sha256": "1eded4c6ebc29b54398ecab3f764e566b4c30252c2595c02416037ef4182048a",
+      "byte_size": 5585
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-lint.txt",
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+      "byte_size": 173
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-typecheck.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "byte_size": 0
+    },
+    {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/verified-build.txt",
+      "sha256": "9b8c3e658e7b779d2ba76c974d316b7d965d625eb1fc9d527cf0bd97289843ee",
+      "byte_size": 1231
+    }
+  ],
+  "intermediate_failure": {
+    "output": {
+      "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/intermediate-reference-fixture-failure.txt",
+      "sha256": "d202cab741ef4f5d6aa4e0a63893ed35fddc72c202babff761211c0e58e8bccf",
+      "byte_size": 24120
+    },
+    "passed": 104,
+    "failed": 1,
+    "classification": "Test assumption: [<td>][literal] puts HTML in the link caption, not its reference identifier; corrected to [caption][<td>]. No product edit for that correction"
+  },
+  "visual_review": "Actual 1440px English literal-code preview and 375px Chinese touch invalid/recovery screenshot inspected; concise error visible, no horizontal page overflow or action overlap",
+  "diagnostic_not_a_defect": {
+    "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/single-line-input-diagnostic.json",
+    "sha256": "9b49bf4ac28a8c3bcf4f0c3fd972b5640a1d386b7b121278aa2ea7ed6f49a852",
+    "byte_size": 2626
+  },
+  "remaining_limits": [
+    "No physical candidate-window or real clipboard/TSV acceptance; CDP insertText diagnostics do not prove paste behavior",
+    "Current inline parser remains conservative for ambiguous syntax; no arbitrary HTML execution or merged-cell support",
+    "Anti-hang Worker covers a fixed synthetic whitespace/angle input, not a latency/heap SLA or all Markdown inputs",
+    "Synthetic API/Next-loader/unrelated-UI adapters, not authenticated backend saves or full Reader/Share/Offline/PWA acceptance",
+    "No server/OOM/2GiB/PID1 acceptance, migration, push, CI or deployment; goal stays active without a token budget"
+  ],
+  "closeout_checks": {
+    "path": "<REPO>/docs/execution/ux-audit-table-html-cells-2026-10-20-evidence/closeout-checks.json",
+    "sha256": "5624a4490656fdeac1f92cee71ec2d0befb3f16fe547851c020aad2362cd400e",
+    "byte_size": 262
+  }
+}

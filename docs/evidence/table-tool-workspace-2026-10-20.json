@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "status": "verified local client checkpoint; unbounded goal active; no CI/push/deployment",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "source_sha256": {
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/editing/edit-message-form.tsx": "ad099726afe37cb8d0a326fbadd81529f735c343b2a49ea06415cd4cd34f4124",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/editing/markdown-table-dialog.tsx": "ec2907aeba0b5f1c3265ecf1bc89840bbac7eb5c8ea8f12ff1e59902672fbb89",
+    "apps/web/features/editing/markdown-table-tools.ts": "165038368c3d59e826364bc586e0175a16bb4fa410ec510fc3d4e24d29f4ea24",
+    "apps/web/features/conversations/markdown-renderer.tsx": "2917be66c6c8f51a1077c14a9a09d9d6af81cfe58631b03998e9764ccf3231bf",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/components/floating-workspace-panel.tsx": "0c28375dc7c5a5d3bea3579a2608bceda63eef25d4eb1f601a4539731722dcf2",
+    "scripts/ux/source-editor-table-browser.mjs": "c2e7bcc67e49f912d37ae43b131bc99af7687d8c713156acf3189c3dcf2a285e",
+    "scripts/ux/source-editor-table-tools.test.mjs": "de2ff54a552edf8c70da520e33e9945fa94ea124c194b6cbe4b73822696597d9",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "2d493aa3e92231c3ba12c546d42e52d62a6669c36ed003a9a479c955c07605d7",
+    "apps/web/package.json": "4e85d92633212879dac2cd29058dd824dbf1c041c1664f0008edd4c066bb8ca5",
+    "pnpm-lock.yaml": "5d4ce7e2a6bc8afa3509fce234513cfa827341ab4fba14cd80b604e419e9ad76"
+  },
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "temporary_files": "task-specific process TEMP/TMP under required wkkk root"
+  },
+  "browser": {
+    "date": "2026-10-20",
+    "startedAt": "2026-10-20T01:01:56.528Z",
+    "status": "passed",
+    "boundary": "local Chrome real dialog/workspace/form/CodeMirror; synthetic API/Next loader and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+    "passed": [
+      "one real rendered table; no obsolete modes; math and cell source",
+      "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+      "cell typing retains focus and immediately updates escaped Markdown",
+      "cell text selection keeps native caret behavior until a cell boundary",
+      "raw Markdown repairs ragged rows and applies only the original table",
+      "incomplete Markdown is preserved; stale grid cannot overwrite it",
+      "four edges add rows/columns; Enter never submits; IME does not navigate",
+      "external source changes do not reset a draft; refresh is explicit",
+      "quote containers and CRLF survive cell edits and final application",
+      "row paging is bounded and appending reveals the actual final row",
+      "200-column preview mounts at most 1200 cells and refuses another column",
+      "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+      "Escape closes once and restores the logical opener",
+      "actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source",
+      "actual workspace: nested table editing owns shortcuts instead of opening tools behind it",
+      "actual workspace: the command names the Table tool rather than promising empty-table insertion",
+      "actual workspace: table Enter cannot save; Escape preserves the underlying source preview",
+      "actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft",
+      "actual workspace: Apply changes only the draft and Save sends one canonical client payload",
+      "actual workspace: 375px touch can open, edit and apply the nested table"
+    ],
+    "pageErrors": [],
+    "consoleErrors": [],
+    "browser": "155.0.8059.82"
+  },
+  "browser_adapters": [
+    "Synthetic API read/write responses, no HTTP or authentication",
+    "Next client loader uses real React lazy/Suspense with eagerly bundled code, not Next route acceptance",
+    "Unrelated cleanup and assistant-ui/Shiki/Mermaid/preferences imports"
+  ],
+  "real_browser_components": [
+    "SourceEditorWorkspace",
+    "FloatingWorkspacePanel",
+    "EditMessageForm",
+    "SourceCommandPanel and SourceContextToolbar",
+    "@uiw/react-codemirror and CodeMirror state/view/commands",
+    "TableToolDialog and shared GFM/math/sanitization renderer",
+    "React Query"
+  ],
+  "failure_history": [
+    {
+      "checkpoint": "before Undo repair",
+      "exit_code": 1,
+      "passed_scenarios": 13,
+      "failure": "Actual toolbar Undo did not restore original source; outer DOM keydown missed CodeMirror handler"
+    },
+    {
+      "checkpoint": "after Undo, before shortcut repair",
+      "exit_code": 1,
+      "passed_scenarios": 14,
+      "failure": "Ctrl+Alt+C opened underlying tools and blurred the table cell input"
+    },
+    {
+      "checkpoint": "after shortcut, before label repair",
+      "exit_code": 1,
+      "passed_scenarios": 15,
+      "failure": "Table command still named Insert table"
+    },
+    {
+      "checkpoint": "after all three repairs",
+      "exit_code": 0,
+      "passed_scenarios": 20,
+      "page_errors": 0,
+      "console_errors": 0
+    }
+  ],
+  "full_ux": {
+    "command": "node --test --test-concurrency=1 <all scripts/ux/*.test.mjs>",
+    "files": 67,
+    "passed": 1450,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 53107.9339
+  },
+  "gate_receipt": {
+    "started_at": "2026-10-20T01:03:55.619376Z",
+    "tests": [
+      {
+        "exit_code": 0,
+        "files": 67,
+        "name": "service-free UX"
+      },
+      {
+        "exit_code": 0,
+        "name": "Web lint"
+      },
+      {
+        "exit_code": 0,
+        "name": "nonincremental Web typecheck"
+      },
+      {
+        "exit_code": 0,
+        "name": "single-worker Web build"
+      }
+    ],
+    "ended_at": "2026-10-20T01:06:12.7219994Z"
+  },
+  "gate_commands": [
+    "corepack pnpm run lint",
+    "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "NEXT_BUILD_CPUS=1 NODE_OPTIONS=--max-old-space-size=2048 corepack pnpm --filter web build"
+  ],
+  "screenshots": [
+    {
+      "path": "docs/evidence/table-tool-workspace-2026-10-20/workspace-mobile-light.png",
+      "sha256": "0d3dc4abad103a0b6a6afd475064652eb21e3ad4ee5af6fdf1d5bc9bf0bd54eb",
+      "bytes": 20395
+    },
+    {
+      "path": "docs/evidence/table-tool-workspace-2026-10-20/workspace-desktop-light.png",
+      "sha256": "8f3ba642e413d732f01683f432a447ae53452468a1302f9f7225995cff8fd90b",
+      "bytes": 24230
+    }
+  ],
+  "not_verified": [
+    "Authenticated Reader/HTTP API/database save and permission/conflict/concurrency",
+    "Next routing/chunking and production font injection",
+    "Share/Offline/PWA/IndexedDB integration, uploads and cleanup flows",
+    "Safari/Firefox, OS soft keyboard, formal WCAG and assistive technology",
+    "Server RSS/cgroup/OOM, Linux PID1 or 2GiB/60-minute load",
+    "CI, push, deployment or production mutations"
+  ],
+  "browser_bundle_sha256": "9c15d6c75356bbde3c8e2b5b5c31cc65d3467e5f8625218f1b212fb651275695"
+}

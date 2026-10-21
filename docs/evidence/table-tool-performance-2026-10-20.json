@@ -1,0 +1,458 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "status": "verified local client checkpoint; unbounded goal active; no CI/push/deployment",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "source_sha256": {
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/editing/edit-message-form.tsx": "ad099726afe37cb8d0a326fbadd81529f735c343b2a49ea06415cd4cd34f4124",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/editing/markdown-table-dialog.tsx": "bfa3c46a6340060f3fdfa8afe4cfe1bc35385d0f68efb8484feef82ffd69038c",
+    "apps/web/features/editing/markdown-table-tools.ts": "8df788045ca9ce16669877d615b48a70533860ca16dc2406d9febb6b62898639",
+    "apps/web/features/conversations/markdown-renderer.tsx": "0b627980a6cc3ea0118d8579d9bac5e044f7d66d5ab88cbeb704b6a86a80691e",
+    "apps/web/components/use-dialog-focus.ts": "c0f515177be01fb064e90dc3ff0b31def1148d614564f960ad304f3357484efc",
+    "apps/web/components/floating-workspace-panel.tsx": "0c28375dc7c5a5d3bea3579a2608bceda63eef25d4eb1f601a4539731722dcf2",
+    "scripts/ux/source-editor-table-browser.mjs": "c8323e09a4c4a19a8f3a33e738e2d6171bcbb69c563fa8f04c429e06b2b3a9a7",
+    "scripts/ux/source-editor-table-tools.test.mjs": "de2ff54a552edf8c70da520e33e9945fa94ea124c194b6cbe4b73822696597d9",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "2d493aa3e92231c3ba12c546d42e52d62a6669c36ed003a9a479c955c07605d7",
+    "apps/web/package.json": "4e85d92633212879dac2cd29058dd824dbf1c041c1664f0008edd4c066bb8ca5",
+    "pnpm-lock.yaml": "5d4ce7e2a6bc8afa3509fce234513cfa827341ab4fba14cd80b604e419e9ad76"
+  },
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "temporary_files": "task-specific process TEMP/TMP under required wkkk root"
+  },
+  "browser": {
+    "date": "2026-10-20",
+    "startedAt": "2026-10-20T01:25:03.413Z",
+    "status": "passed",
+    "boundary": "local Chrome real dialog/workspace/form/CodeMirror; synthetic API/Next loader and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+    "passed": [
+      "one real rendered table; no obsolete modes; math and cell source",
+      "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+      "cell typing retains focus and immediately updates escaped Markdown",
+      "cell text selection keeps native caret behavior until a cell boundary",
+      "raw Markdown repairs ragged rows and applies only the original table",
+      "incomplete Markdown is preserved; stale grid cannot overwrite it",
+      "four edges add rows/columns; Enter never submits; IME does not navigate",
+      "external source changes do not reset a draft; refresh is explicit",
+      "quote containers and CRLF survive cell edits and final application",
+      "row paging is bounded and appending reveals the actual final row",
+      "200-column preview mounts at most 1200 cells and refuses another column",
+      "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+      "Escape closes once and restores the logical opener",
+      "actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source",
+      "actual workspace: nested table editing owns shortcuts instead of opening tools behind it",
+      "actual workspace: the command names the Table tool rather than promising empty-table insertion",
+      "actual workspace: table Enter cannot save; Escape preserves the underlying source preview",
+      "actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft",
+      "actual workspace: Apply changes only the draft and Save sends one canonical client payload",
+      "actual workspace: 375px touch can open, edit and apply the nested table",
+      "actual workspace: cell syntax validation survives alternating grid and Markdown edits",
+      "actual workspace: oversized cell input is rejected without truncating the accepted draft"
+    ],
+    "pageErrors": [],
+    "consoleErrors": [],
+    "browser": "155.0.8059.82"
+  },
+  "performance": {
+    "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+    "before": {
+      "observedAt": "2026-10-20T01:14:34.85Z",
+      "browser": "155.0.8059.82",
+      "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+      "observations": [
+        {
+          "name": "small",
+          "columns": 6,
+          "rows": 20,
+          "cellsIncludingDelimiter": 132,
+          "utf8Bytes": 1009,
+          "openMs": 101.15560000000005,
+          "mountedCells": 126,
+          "paintedInputMs": [
+            25.19999998807907,
+            16,
+            12.700000017881393,
+            13.199999988079071,
+            15.200000017881393
+          ],
+          "longTasksMs": [],
+          "retainedJsHeapBefore": 12218452,
+          "retainedJsHeapAfter": 12341456
+        },
+        {
+          "name": "typical",
+          "columns": 12,
+          "rows": 80,
+          "cellsIncludingDelimiter": 984,
+          "utf8Bytes": 8017,
+          "openMs": 153.52430000000095,
+          "mountedCells": 372,
+          "paintedInputMs": [
+            48,
+            36.5,
+            37.400000005960464,
+            33.400000005960464,
+            32.400000005960464
+          ],
+          "longTasksMs": [],
+          "retainedJsHeapBefore": 13645064,
+          "retainedJsHeapAfter": 13752972
+        },
+        {
+          "name": "large-narrow",
+          "columns": 10,
+          "rows": 4000,
+          "cellsIncludingDelimiter": 40020,
+          "utf8Bytes": 397013,
+          "openMs": 356.6154999999999,
+          "mountedCells": 310,
+          "paintedInputMs": [
+            154.69999998807907,
+            131.89999997615814,
+            135.40000000596046,
+            132.30000001192093,
+            132.5
+          ],
+          "longTasksMs": [
+            139,
+            118,
+            121,
+            118,
+            118
+          ],
+          "retainedJsHeapBefore": 19654904,
+          "retainedJsHeapAfter": 20120380
+        },
+        {
+          "name": "cell-limit-wide",
+          "columns": 200,
+          "rows": 248,
+          "cellsIncludingDelimiter": 50000,
+          "utf8Bytes": 499309,
+          "openMs": 474.46520000000055,
+          "mountedCells": 1200,
+          "paintedInputMs": [
+            251.30000001192093,
+            228.09999999403954,
+            216.19999998807907,
+            215.89999997615814,
+            210.80000001192093
+          ],
+          "longTasksMs": [
+            239,
+            216,
+            204,
+            203,
+            199
+          ],
+          "retainedJsHeapBefore": 24921408,
+          "retainedJsHeapAfter": 25072280
+        }
+      ]
+    },
+    "after": {
+      "date": "2026-10-20",
+      "startedAt": "2026-10-20T01:25:03.413Z",
+      "status": "observed",
+      "observedAt": "2026-10-20T01:25:18.44Z",
+      "browser": "155.0.8059.82",
+      "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+      "observations": [
+        {
+          "name": "small",
+          "columns": 6,
+          "rows": 20,
+          "cellsIncludingDelimiter": 132,
+          "utf8Bytes": 1009,
+          "openMs": 106.35649999999987,
+          "mountedCells": 126,
+          "paintedInputMs": [
+            14.800000011920929,
+            11.799999982118607,
+            13.599999994039536,
+            9.800000011920929,
+            10.5
+          ],
+          "longTasksMs": [],
+          "retainedJsHeapBefore": 12038872,
+          "retainedJsHeapAfter": 12395068
+        },
+        {
+          "name": "typical",
+          "columns": 12,
+          "rows": 80,
+          "cellsIncludingDelimiter": 984,
+          "utf8Bytes": 8017,
+          "openMs": 164.21689999999944,
+          "mountedCells": 372,
+          "paintedInputMs": [
+            35.70000001788139,
+            26,
+            33.400000005960464,
+            20.700000017881393,
+            20.5
+          ],
+          "longTasksMs": [],
+          "retainedJsHeapBefore": 12818316,
+          "retainedJsHeapAfter": 13621156
+        },
+        {
+          "name": "large-narrow",
+          "columns": 10,
+          "rows": 4000,
+          "cellsIncludingDelimiter": 40020,
+          "utf8Bytes": 397013,
+          "openMs": 276.08519999999953,
+          "mountedCells": 310,
+          "paintedInputMs": [
+            102.5,
+            92.90000000596046,
+            95.89999997615814,
+            89.69999998807907,
+            87.40000000596046
+          ],
+          "longTasksMs": [
+            88,
+            77,
+            80,
+            75,
+            73
+          ],
+          "retainedJsHeapBefore": 15134332,
+          "retainedJsHeapAfter": 15810296
+        },
+        {
+          "name": "cell-limit-wide",
+          "columns": 200,
+          "rows": 248,
+          "cellsIncludingDelimiter": 50000,
+          "utf8Bytes": 499309,
+          "openMs": 419.20800000000054,
+          "mountedCells": 1200,
+          "paintedInputMs": [
+            141,
+            126.2000000178814,
+            121.69999998807907,
+            112.30000001192093,
+            126.69999998807907
+          ],
+          "longTasksMs": [
+            129,
+            114,
+            109,
+            99,
+            115
+          ],
+          "retainedJsHeapBefore": 17937780,
+          "retainedJsHeapAfter": 20249064
+        }
+      ]
+    },
+    "comparisons": [
+      {
+        "name": "small",
+        "before_median_ms": 15.200000017881393,
+        "after_median_ms": 11.799999982118607,
+        "observed_reduction_percent": 22.4
+      },
+      {
+        "name": "typical",
+        "before_median_ms": 36.5,
+        "after_median_ms": 26,
+        "observed_reduction_percent": 28.8
+      },
+      {
+        "name": "large-narrow",
+        "before_median_ms": 132.5,
+        "after_median_ms": 92.90000000596046,
+        "observed_reduction_percent": 29.9
+      },
+      {
+        "name": "cell-limit-wide",
+        "before_median_ms": 216.19999998807907,
+        "after_median_ms": 126.2000000178814,
+        "observed_reduction_percent": 41.6
+      }
+    ],
+    "baseline_bundle_sha256": "ce69180733e468203f90467db1e7a676f28c6352c7a9b2c0fadfab56dc8c8989",
+    "current_bundle_sha256": "61aea9cb39c79b374d34604ae4a6b347278ba938f53f09bd6a1513d24064698d",
+    "baseline_source_checkpoint": "table-tool-workspace-2026-10-20.json product source hashes; optional profiler added to browser harness before baseline",
+    "limitations": [
+      "Five input samples per workload on one unthrottled Windows headless Chrome installation",
+      "Long tasks remain for near-limit tables; not a 60fps, p95 or INP acceptance",
+      "Explicit-GC retained JS heap is not RSS, peak allocation, server memory or a long-run leak proof",
+      "Bounded synthetic plain cells only; no CPU throttling or server workloads"
+    ],
+    "earlier_after_same_product": {
+      "observedAt": "2026-10-20T01:18:27.11Z",
+      "browser": "155.0.8059.82",
+      "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+      "observations": [
+        {
+          "name": "small",
+          "columns": 6,
+          "rows": 20,
+          "cellsIncludingDelimiter": 132,
+          "utf8Bytes": 1009,
+          "openMs": 104.69709999999941,
+          "mountedCells": 126,
+          "paintedInputMs": [
+            14.199999988079071,
+            14.399999976158142,
+            8.099999994039536,
+            15.599999994039536,
+            8.5
+          ],
+          "longTasksMs": [],
+          "retainedJsHeapBefore": 12045956,
+          "retainedJsHeapAfter": 12390908
+        },
+        {
+          "name": "typical",
+          "columns": 12,
+          "rows": 80,
+          "cellsIncludingDelimiter": 984,
+          "utf8Bytes": 8017,
+          "openMs": 141.03080000000045,
+          "mountedCells": 372,
+          "paintedInputMs": [
+            29.5,
+            23.599999994039536,
+            30.899999976158142,
+            19.600000023841858,
+            19.400000005960464
+          ],
+          "longTasksMs": [],
+          "retainedJsHeapBefore": 12812068,
+          "retainedJsHeapAfter": 13613116
+        },
+        {
+          "name": "large-narrow",
+          "columns": 10,
+          "rows": 4000,
+          "cellsIncludingDelimiter": 40020,
+          "utf8Bytes": 397013,
+          "openMs": 264.67089999999916,
+          "mountedCells": 310,
+          "paintedInputMs": [
+            96.30000001192093,
+            89.69999998807907,
+            89.19999998807907,
+            90.7000000178814,
+            95.59999999403954
+          ],
+          "longTasksMs": [
+            81,
+            75,
+            75,
+            76,
+            81
+          ],
+          "retainedJsHeapBefore": 15145764,
+          "retainedJsHeapAfter": 15815552
+        },
+        {
+          "name": "cell-limit-wide",
+          "columns": 200,
+          "rows": 248,
+          "cellsIncludingDelimiter": 50000,
+          "utf8Bytes": 499309,
+          "openMs": 419.2951000000012,
+          "mountedCells": 1200,
+          "paintedInputMs": [
+            139.09999999403954,
+            127.90000000596046,
+            120.90000000596046,
+            113,
+            121.80000001192093
+          ],
+          "longTasksMs": [
+            127,
+            116,
+            109,
+            100,
+            110
+          ],
+          "retainedJsHeapBefore": 17940104,
+          "retainedJsHeapAfter": 20250800
+        }
+      ]
+    }
+  },
+  "focused": {
+    "passed": 42,
+    "failed": 0,
+    "skipped": 0
+  },
+  "full_ux": {
+    "files": 67,
+    "passed": 1450,
+    "failed": 0,
+    "skipped": 0,
+    "duration_ms": 54364.8948
+  },
+  "gate_receipt": {
+    "started_at": "2026-10-20T01:19:17.3952492Z",
+    "status": "passed",
+    "tests": [
+      {
+        "exit_code": 0,
+        "files": 67,
+        "name": "service-free UX"
+      },
+      {
+        "exit_code": 0,
+        "name": "Web lint"
+      },
+      {
+        "exit_code": 0,
+        "name": "nonincremental Web typecheck"
+      },
+      {
+        "exit_code": 0,
+        "name": "single-worker Web build"
+      }
+    ],
+    "ended_at": "2026-10-20T01:21:37.9236466Z"
+  },
+  "screenshots": [
+    {
+      "path": "docs/evidence/table-tool-performance-2026-10-20/desktop-light.png",
+      "sha256": "108d42f56b64f887940b195bcd517354aa25ac4a68bb95584edee3dd274e3f7e",
+      "reviewed": true
+    },
+    {
+      "path": "docs/evidence/table-tool-performance-2026-10-20/workspace-mobile-light.png",
+      "sha256": "0d3dc4abad103a0b6a6afd475064652eb21e3ad4ee5af6fdf1d5bc9bf0bd54eb",
+      "reviewed": true
+    }
+  ],
+  "safety_preserved": [
+    "Full canonical draft checks while editing",
+    "Current CodeMirror revision/source and complete replacement validation at Apply",
+    "Existing UTF-8/line/column/cell limits without truncation",
+    "Existing shared GFM/math/sanitization chain and 1200 mounted-cell cap",
+    "Single-transaction Undo/Redo, no save until explicit source save"
+  ],
+  "not_verified": [
+    "Authenticated HTTP save and database behavior",
+    "Full Reader/Share/Offline/PWA",
+    "Other browsers, OS soft keyboard, full WCAG/assistive technology",
+    "Server RSS/cgroup/OOM, Linux PID1, 60-minute low-memory soak"
+  ],
+  "migration": "none",
+  "release": "local only; no push, CI or deployment",
+  "goal": "active; no token budget",
+  "profile_freshness_verification": {
+    "functional_only_rerun_scenarios": 22,
+    "functional_only_profile_status": "not_requested",
+    "optional_profile_rerun_scenarios": 22,
+    "completed_profile_status": "observed",
+    "product_code_changed_between_reruns": false,
+    "gate_receipt_precedes_result_metadata_only_harness_guard": true
+  }
+}

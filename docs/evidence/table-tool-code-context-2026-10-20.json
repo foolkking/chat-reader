@@ -1,0 +1,445 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T07:02:22.556Z",
+  "status": "verified local code-context and container-preview repair; unbudgeted goal active; wide-edge pointer defect remains",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "task_temp": "<WKKK>/chat-reader-table-code-context-final-20261020",
+    "build_cpus": 1
+  },
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "00c5de681ea422623d481375dbae1a610cfada76ec74d0ad13303fca492e1bfb",
+    "apps/web/features/editing/markdown-table-tools.ts": "7366292ed4253c9aac00d0ea8b8e522d7513f66c0d98549c3d1505e5df00e0fc",
+    "apps/web/features/editing/markdown-table-reference-preview.ts": "2430e2b626afdcf34697aa7edcd722d2c106c3a08ad6a17bed3fa3aca0a194b5",
+    "apps/web/features/editing/edit-message-form.tsx": "2e3c981cde2a9dcf48bed5a1cc21e6aa553d2fdd31cd6cd5c304452c7be13040",
+    "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+    "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+    "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+    "scripts/ux/source-editor-table-browser.mjs": "98b62202db6c495b4e46d84ee7a1eda9b26e84dc60a9653c1160575b016d713a",
+    "scripts/ux/source-editor-table-tools.test.mjs": "185a05a79a691bf5cd9080cb67bb6ab1f7658a22e789d98f0b76e7c72901bec0",
+    "scripts/ux/source-editor-table-references.test.mjs": "5afb4ecc75ab8e5257b62aa6dc873cb496cab90b9d91254152f4696c6029fc5d",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "5cd1865ba2e15aba7c989570b950d82e0a2e011898802840297424d7fddb6548",
+    "PROJECT_STATE.md": "7f8336a4f3d1eb90dcf86b55fdbd69ca2d63478e131f51b3057740b851fa6621",
+    "docs/index.md": "93cb69b347197c0346029e67a2990181b5b8ea71241d84ae655ec78269d674bd",
+    "docs/system/USER_FLOWS.md": "528af69368f1b525a142e5f56260360d5fecb7f94650d564451a2fc30faf0ac5",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "28ea9bc3578efb39e9b4604e83122c6f00e5dbcbf39a9e4deca39a6c0326a0e3",
+    "docs/testing.md": "b8ed218584e6dc46152c9f6490c5df16dd769f2072fecabad424104274dfa154",
+    "docs/documentation-inventory.md": "0fc113ea84ae4559511c5d0319f16a0260882aa34da02b5d31c9cb48c851c1cd",
+    "docs/execution/README.md": "155f820427c826b28a9251374640c557ba4f1754f0e2c2117bc607ddae539689",
+    "docs/evidence/README.md": "ebc01c1e587f3bc00291308ec707277ac1ff63fac236271f423ae1c6b5175b07",
+    "docs/execution/TABLE_TOOL_CODE_CONTEXT_2026-10-20.md": "a1944cd84b3bbf54d84fc41f3e857edafebd7114518136fcdc50c50a84bbe06b"
+  },
+  "implementation": {
+    "context": "existing CodeMirror Markdown grammar; no handwritten fence state machine or new dependency",
+    "editor_snapshot": "exact-source tree with coverage and tree-length checks; reused for discovery and application",
+    "fallback": "standalone operation parses source prefix only through header; no body/suffix parse or global AST cache; long prefixes still cost work",
+    "code_examples": "automatic discovery excludes fenced and indented code; explicit complete selection may edit examples",
+    "preview": "render only table body; preserve original quote/list prefixes and newline in editable Markdown and Apply",
+    "scheduling": "ensureSyntaxTree 50ms work hint is not a hard latency guarantee"
+  },
+  "failed_attempts": [
+    {
+      "kind": "pre-repair container semantic regression",
+      "tests": 27,
+      "pass": 26,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "log": "<WKKK>/chat-reader-table-code-context-baseline-20261020/focused.txt",
+      "log_sha256": "21330f7ecb38c1b780c85aab44c96eefa7772789e89446a84349dc56d7d58fd8"
+    },
+    {
+      "kind": "intermediate incomplete-tree coverage regression",
+      "tests": 70,
+      "pass": 69,
+      "fail": 1,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "log": "<WKKK>/chat-reader-table-code-context-20261020/focused.txt",
+      "log_sha256": "43eb8f6ff22eb0d5144066cd221cddb101bea53e31243801314af93b4b1e6639",
+      "boundary": "retained failed intermediate log; not a final-source pass or a fully source-bound historical snapshot"
+    }
+  ],
+  "verification": {
+    "focused": {
+      "tests": 71,
+      "pass": 71,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "service_free_ux": {
+      "tests": 1479,
+      "pass": 1479,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0,
+      "files": 68,
+      "test_file_list_sha256": "e859dafdd2a2ed53b40f0f1176cde59d2c07705a6c78bf2256db5914541f2d1f"
+    },
+    "browser": {
+      "date": "2026-10-20",
+      "startedAt": "2026-10-20T06:52:23.897Z",
+      "status": "passed",
+      "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+      "passed": [
+        "one real rendered table; no obsolete modes; math and cell source",
+        "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+        "cell typing retains focus and immediately updates escaped Markdown",
+        "cell text selection keeps native caret behavior until a cell boundary",
+        "raw Markdown repairs ragged rows and applies only the original table",
+        "incomplete Markdown is preserved; stale grid cannot overwrite it",
+        "four edges add rows/columns; Enter never submits; IME does not navigate",
+        "external source changes do not reset a draft; refresh is explicit",
+        "quote containers and CRLF survive cell edits and final application",
+        "row paging is bounded and appending reveals the actual final row",
+        "200-column preview mounts at most 400 cells and refuses another column",
+        "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+        "Escape closes once and restores the logical opener",
+        "pending source previews cannot edit old cells or Apply, and catch up to the latest draft",
+        "pending grid previews retain active typing and Escape returns focus to Markdown",
+        "invalid Markdown entered during a pending preview cannot be overwritten by the older valid draft",
+        "explicit source refresh drops a suspended old table preview",
+        "renderer updates cell callbacks without reparsing unchanged Markdown",
+        "actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source",
+        "actual workspace: deeply quoted prose does not block table discovery or change surrounding source",
+        "actual workspace: quote/list-looking closers cannot expose code examples to automatic editing",
+        "actual workspace: leaving quoted/list code restores outside tables without reparsing source",
+        "actual workspace: nested-list table preview is editable without losing its indentation",
+        "actual workspace: an explicit code-table selection can edit the example without removing its fence",
+        "actual workspace: nested table editing owns shortcuts instead of opening tools behind it",
+        "actual workspace: the command names the Table tool rather than promising empty-table insertion",
+        "actual workspace: table Enter cannot save; Escape preserves the underlying source preview",
+        "actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft",
+        "actual workspace: Apply changes only the draft and Save sends one canonical client payload",
+        "actual workspace: 375px touch can open, edit and apply the nested table",
+        "actual workspace: cell syntax validation survives alternating grid and Markdown edits",
+        "actual workspace: oversized cell input is rejected without truncating the accepted draft",
+        "actual workspace: large unclosed image nesting stays editable and recovers without changing source",
+        "actual workspace: long cells use a bounded display preview without changing Markdown or Apply",
+        "actual workspace: math bars remain one cell and absolute values do not become norms",
+        "actual workspace: code backslashes and separate currency columns survive normalization",
+        "actual workspace: applying an untouched long cell preserves the exact original source",
+        "actual workspace: oversized math is omitted from rich parsing but remains exact in Markdown",
+        "actual workspace: ambiguous TeX remains editable but cannot apply until repaired",
+        "actual workspace: image alt and reference IDs stay literal without remote requests",
+        "actual workspace: bounded reference context warns without changing definitions outside the table"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "browser": "155.0.8059.82",
+      "scenarios": 41
+    },
+    "gates": [
+      {
+        "name": "focused",
+        "arguments": [
+          "node",
+          "--test",
+          "scripts/ux/source-editor-table-tools.test.mjs",
+          "scripts/ux/source-editor-table-references.test.mjs",
+          "scripts/ux/chatgpt-rich-text.test.mjs"
+        ],
+        "started_at": "2026-10-20T06:51:26.5745428Z",
+        "ended_at": "2026-10-20T06:51:29.2389521Z",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/focused.txt",
+        "log_sha256": "f5e9ea793e36ba7accde131dbfb653aa509744b2836bdbadfad8594ff4cffa0f"
+      },
+      {
+        "name": "ux",
+        "arguments": [
+          "node",
+          "--test",
+          "--test-concurrency=1",
+          "<68 scripts/ux/*.test.mjs files in Name order>"
+        ],
+        "started_at": "2026-10-20T06:51:29.2910382Z",
+        "ended_at": "2026-10-20T06:52:23.8338932Z",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/ux.txt",
+        "log_sha256": "2373b150643091625f9af008f4b0ab59e1e582ef2d289c227012325f2243c129"
+      },
+      {
+        "name": "browser",
+        "arguments": [
+          "node",
+          "scripts/ux/source-editor-table-browser.mjs"
+        ],
+        "started_at": "2026-10-20T06:52:23.8425538Z",
+        "ended_at": "2026-10-20T06:52:41.8739277Z",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/browser.txt",
+        "log_sha256": "f78bc5d22c90bd61637a918520e27587bb0654ae63d84fa90b241b4f5c555feb"
+      },
+      {
+        "name": "lint",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "run",
+          "lint"
+        ],
+        "started_at": "2026-10-20T06:52:41.8851697Z",
+        "ended_at": "2026-10-20T06:52:54.4638533Z",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/lint.txt",
+        "log_sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+      },
+      {
+        "name": "typecheck",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "exec",
+          "tsc",
+          "--noEmit",
+          "--incremental",
+          "false"
+        ],
+        "started_at": "2026-10-20T06:52:54.4678225Z",
+        "ended_at": "2026-10-20T06:53:15.8981657Z",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/typecheck.txt",
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "name": "build",
+        "arguments": [
+          "corepack",
+          "pnpm",
+          "--filter",
+          "web",
+          "build"
+        ],
+        "started_at": "2026-10-20T06:53:15.9017689Z",
+        "ended_at": "2026-10-20T06:54:06.9130899Z",
+        "exit_code": 0,
+        "log": "<TASK_TEMP>/build.txt",
+        "log_sha256": "36a537550b6c82b871bdaa3f61426501a9b7c385527b35d4600e5fd63daaee03"
+      }
+    ],
+    "screenshots": [
+      {
+        "file": "<TASK_TEMP>/table-browser/desktop-light.png",
+        "sha256": "108d42f56b64f887940b195bcd517354aa25ac4a68bb95584edee3dd274e3f7e"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/math-desktop-light.png",
+        "sha256": "da05af5e9662e81ae05861761da6fa137cdce87c22ba50b30a0bb6d4c5cb843f"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/mobile-dark.png",
+        "sha256": "6ca94e6bd405c3ef92aeb01c8de0722ebf1f8abd66b67ae239cceffb1692c443"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/nested-list-desktop-light.png",
+        "sha256": "bf567abf3f4cbbe655b6501d83252d2e5081933aa2eb083d1fb1afc479b8a0fe"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/preview-pending-desktop-light.png",
+        "sha256": "550932de87136a09cbe668e3bd646c08fe78b7a19d0fcc9cb1a30bf1925ab47d"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/preview-pending-mobile-light.png",
+        "sha256": "80f79c4314053a6c2b760b3b24e9af686057b3b7e1216cca7a156d87e39c16a1"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/reference-context-desktop-light.png",
+        "sha256": "ebff011c3422589982efd502b5d26c0c9b85655f24de9d8bbc1eaf0300ff81d6"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/reference-context-mobile-light.png",
+        "sha256": "58a53ca182575b9429c11e3679f0eb44bef7a62916b78b13798898997c2f3063"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/tablet-dark.png",
+        "sha256": "961e918fde5e96e4bc0f68bcc5920b68344f37ad4ed97a55c5ede6b482dc3561"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/workspace-desktop-light.png",
+        "sha256": "8f3ba642e413d732f01683f432a447ae53452468a1302f9f7225995cff8fd90b"
+      },
+      {
+        "file": "<TASK_TEMP>/table-browser/workspace-mobile-light.png",
+        "sha256": "0d3dc4abad103a0b6a6afd475064652eb21e3ad4ee5af6fdf1d5bc9bf0bd54eb"
+      }
+    ],
+    "visual_review": "nested-list desktop preview inspected; existing tokens/layout and original Markdown indentation retained; no full-interface score or assistive-technology acceptance",
+    "oracle": "same 500 seeded bounded contexts now use actual installed GFM code output, not the former known-wrong scanner; prior legacy-equivalence evidence remains historical",
+    "snapshot_observation": "real workspace browser assertions observe zero standalone parser.parse calls in tested frozen-tree paths; not a claim of zero editor/background parsing"
+  },
+  "repaired_five_case_probe": {
+    "date": "2026-10-20T06:52:40.091Z",
+    "status": "all five prior diagnostic mismatches repaired against identical actual GFM SSR output",
+    "tools_source_sha256": "7366292ed4253c9aac00d0ea8b8e522d7513f66c0d98549c3d1505e5df00e0fc",
+    "baseline_tools_source_sha256": "53638306629c1277cd6e8a8e9293ed0bc5bffc3c0cf3b66add7298f5bbe26d9f",
+    "versions": {
+      "react-markdown": "10.1.0",
+      "remark-gfm": "4.0.1"
+    },
+    "result": [
+      {
+        "name": "unclosed quote fence, then outside table",
+        "source": "> ```md\n> sample\n\n| A | B |\n| --- | --- |\n| 1 | 2 |",
+        "source_sha256": "d77cc7c23390a597836cafeca57b800158096e4a243b642f8d19115e0dd54337",
+        "rendered_html_sha256": "4ab314b8f43b32664d9cbb93c210ac6c635944a5626f403bf1798f4a759a9e3d",
+        "table_rendered": true,
+        "tool_recognizes": true,
+        "previous_tool_recognizes": false,
+        "agrees_with_gfm": true
+      },
+      {
+        "name": "quote-looking closer inside top-level code",
+        "source": "```md\n> ```\n| A | B |\n| --- | --- |\n| 1 | 2 |\n```",
+        "source_sha256": "17f106db598f52bd8bca18b9da2d449c6a7cdb09b7a8e28b1feb98ff0946f424",
+        "rendered_html_sha256": "2cd3eb219c2404a9568236b6041d74fbe12053992101efc3191f2d8fd8afa867",
+        "table_rendered": false,
+        "tool_recognizes": false,
+        "previous_tool_recognizes": true,
+        "agrees_with_gfm": true
+      },
+      {
+        "name": "list-looking closer inside top-level code",
+        "source": "```md\n- ```\n| A | B |\n| --- | --- |\n| 1 | 2 |\n```",
+        "source_sha256": "0ea0ae7dfc0c3369bb35b447cd705aec8257bab9effc584324b3a43a36beaacd",
+        "rendered_html_sha256": "3fa5c7cf95522d8f48530e810784bef0ad1243a0b25a960d2877386339a91b6f",
+        "table_rendered": false,
+        "tool_recognizes": false,
+        "previous_tool_recognizes": true,
+        "agrees_with_gfm": true
+      },
+      {
+        "name": "deeper quote-looking closer inside quote code",
+        "source": "> ```md\n> > ```\n> | A | B |\n> | --- | --- |\n> | 1 | 2 |\n> ```",
+        "source_sha256": "32b7545c2d5d94191c2aea1630bfca07e24796e5fb76d56c5ad293f456f6da76",
+        "rendered_html_sha256": "cb1064d95da9a70ca05ede9c485006491acb821223cb88390943888fb906cbd5",
+        "table_rendered": false,
+        "tool_recognizes": false,
+        "previous_tool_recognizes": true,
+        "agrees_with_gfm": true
+      },
+      {
+        "name": "dedented table after list code",
+        "source": "- ```md\n  sample\n\n| A | B |\n| --- | --- |\n| 1 | 2 |",
+        "source_sha256": "27a178ada12e74bc74244b7cceadb43b0191f2c4698e6aa38e91f25e92ac8d3c",
+        "rendered_html_sha256": "30201b605cd10e3b6349850bce5da7ea46ba40e6f02c8e45014f8f5efef2d5d5",
+        "table_rendered": true,
+        "tool_recognizes": true,
+        "previous_tool_recognizes": false,
+        "agrees_with_gfm": true
+      }
+    ]
+  },
+  "diagnostic_nested_header_profile": {
+    "status": "completed diagnostic, not latency acceptance",
+    "source_sha256": "7366292ed4253c9aac00d0ea8b8e522d7513f66c0d98549c3d1505e5df00e0fc",
+    "rows": [
+      {
+        "depth": 32,
+        "source_code_units": 826,
+        "elapsed_ms": 6.383399999999995,
+        "valid": true,
+        "error": null
+      },
+      {
+        "depth": 600,
+        "source_code_units": 15026,
+        "elapsed_ms": 20.49509999999998,
+        "valid": true,
+        "error": null
+      },
+      {
+        "depth": 6000,
+        "source_code_units": 150026,
+        "elapsed_ms": 53.64070000000004,
+        "valid": true,
+        "error": null
+      }
+    ]
+  },
+  "unresolved_wide_edge_probe": {
+    "date": "2026-10-20T07:00:09.913Z",
+    "status": "observed pointer reachability issue; not repaired in code-context checkpoint",
+    "boundary": "exact final local gate bundle, actual Chrome DOM; synthetic 200-column table, no API or server application",
+    "bundle_sha256": "5bf49eb968232f0130830e0527e78119ffce7c44d3ff97f9a5aa8b5701e46df8",
+    "browser_script_sha256": "98b62202db6c495b4e46d84ee7a1eda9b26e84dc60a9653c1160575b016d713a",
+    "observations": [
+      {
+        "width": 1440,
+        "preview": {
+          "left": 357,
+          "right": 1083,
+          "client_width": 724,
+          "scroll_width": 19449,
+          "scroll_left": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "left": 10060.5,
+            "right": 10104.5,
+            "inside_visible_horizontal_area": false
+          },
+          {
+            "position": "after",
+            "left": 10060.5,
+            "right": 10104.5,
+            "inside_visible_horizontal_area": false
+          }
+        ]
+      },
+      {
+        "width": 375,
+        "preview": {
+          "left": 17,
+          "right": 358,
+          "client_width": 339,
+          "scroll_width": 19449,
+          "scroll_left": 0
+        },
+        "edges": [
+          {
+            "position": "before",
+            "left": 9720.5,
+            "right": 9764.5,
+            "inside_visible_horizontal_area": false
+          },
+          {
+            "position": "after",
+            "left": 9720.5,
+            "right": 9764.5,
+            "inside_visible_horizontal_area": false
+          }
+        ]
+      }
+    ]
+  },
+  "not_accepted": [
+    "200-column top/bottom row-add controls remain outside initial horizontal viewport at 1440px and 375px",
+    "comprehensive arbitrary Markdown code-context compatibility",
+    "all ordinary large-table main-thread long tasks and arbitrary huge-prefix fallback cost",
+    "authenticated server writes or complete Reader/Share/Offline/PWA flows",
+    "real-device latency, screen reader or full-interface accessibility score",
+    "server RSS/OOM, Linux low-memory soak or production resource acceptance"
+  ],
+  "changes_excluded": [
+    "API",
+    "migration",
+    "new dependencies",
+    "export/offline protocol",
+    "push",
+    "CI",
+    "deployment"
+  ]
+}

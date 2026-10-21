@@ -1,0 +1,8 @@
+{
+  "date": "2026-10-20",
+  "local_document_links_checked": 686,
+  "affected_source_hashes_checked": 20,
+  "diff_whitespace_exit": 0,
+  "status": "passed",
+  "boundary": "local links and whitespace, not every historical link or a rendered documentation audit"
+}

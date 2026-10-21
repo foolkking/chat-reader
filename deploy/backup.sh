@@ -10,11 +10,14 @@ BACKUP_HEADROOM_KB="${BACKUP_HEADROOM_KB:-262144}"
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
 PYTHON="${PYTHON:-python3}"
 BACKUP_DEDUPLICATE="${BACKUP_DEDUPLICATE:-1}"
+. "$SCRIPT_DIR/backup_volume_reader.sh"
 
 compose() {
   docker compose --env-file "$COMPOSE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
+backup_require_integer BACKUP_HEADROOM_KB "$BACKUP_HEADROOM_KB"
+backup_source_init
 mkdir -p "$BACKUP_DIR"
 BACKUP_DIR="$(CDPATH= cd -- "$BACKUP_DIR" && pwd -P)"
 operation_lock="$BACKUP_DIR/.backup-operation.lock"
@@ -30,10 +33,10 @@ trap 'exit 143' TERM
 
 database_bytes="$(compose exec -T postgres \
   sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select pg_database_size(current_database())"')"
+backup_require_integer database_bytes "$database_bytes"
 required_kb="$((database_bytes / 1024 + BACKUP_HEADROOM_KB))"
 for component in imports exports offline assets; do
-  component_kb="$(compose run --rm --no-deps -T api \
-    sh -c "du -sk '/data/$component' | cut -f1")"
+  component_kb="$(backup_component_size_kb "$component")"
   required_kb="$((required_kb + component_kb))"
 done
 available_kb="$(df -Pk "$BACKUP_DIR" | awk 'NR == 2 {print $4}')"
@@ -55,8 +58,7 @@ compose exec -T postgres pg_restore --list < "$dump_path" > "$work_dir/postgres.
 test -s "$work_dir/postgres.toc"
 
 for component in imports exports offline assets; do
-  compose run --rm --no-deps -T api \
-    tar -C "/data/$component" -czf - . > "$work_dir/$component.tar.gz"
+  backup_volume_read "$component" archive > "$work_dir/$component.tar.gz"
   tar -tzf "$work_dir/$component.tar.gz" >/dev/null
 done
 

@@ -1,0 +1,9 @@
+{
+  "rendered_columns": 2,
+  "grid_editable_with_unpaired_tick": true,
+  "grid_pipe_serialized": true,
+  "raw_edit_retains_columns": true,
+  "source_unchanged_until_apply": true,
+  "one_undo_restores_source": true,
+  "writes": 0
+}

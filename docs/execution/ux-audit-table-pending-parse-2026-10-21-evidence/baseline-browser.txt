@@ -1,0 +1,71 @@
+PASS one real rendered table; no obsolete modes; math and cell source
+PASS desktop edges reveal on hover/focus; Tab remains inside the dialog
+PASS cell typing retains focus and immediately updates escaped Markdown
+PASS cell text selection keeps native caret behavior until a cell boundary
+PASS raw Markdown repairs ragged rows and applies only the original table
+PASS incomplete Markdown is preserved; stale grid cannot overwrite it
+PASS four edges add rows/columns; Enter never submits; IME does not navigate
+PASS external source changes do not reset a draft; refresh is explicit
+PASS quote containers and CRLF survive cell edits and final application
+PASS CRLF tables after an HTML blank boundary keep live reference captions and exact source
+PASS row paging is bounded and appending reveals the actual final row
+PASS 200-column preview mounts at most 400 cells and refuses another column
+PASS wide-table row edges stay pointer-reachable at every horizontal scroll position
+PASS all four edges remain pointer-reachable while a long wide preview scrolls on both axes
+PASS 375px touch row edges stay reachable across a 200-column table and focus the appended row
+PASS 375px touch can append a column without finding the full table's vertical midpoint
+PASS 375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets
+PASS Escape closes once and restores the logical opener
+node:internal/modules/run_main:129
+    triggerUncaughtException(
+    ^
+
+ExpectError: expect(locator).toBeDisabled() failed
+
+Locator:  getByTestId('source-editor-table-tool').getByRole('button', { name: /^(Apply|应用)$/ })
+Expected: disabled
+Received: enabled
+Timeout:  5000ms
+
+Call log:
+  - Expect "to.be.disabled" with timeout 5000ms
+  - waiting for getByTestId('source-editor-table-tool').getByRole('button', { name: /^(Apply|应用)$/ })
+    14 × locator resolved to <button type="button" aria-describedby="source-editor-table-preview-pending" class="min-h-11 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:cursor-not-allowed disabled:opacity-50">Apply</button>
+       - unexpected value "enabled"
+
+    at captureRawStack (<repo>\node_modules\.pnpm\playwright-core@1.62.0\node_modules\playwright-core\lib\coreBundle.js:9681:17)
+    at callMatcherAsStep (<repo>\node_modules\.pnpm\playwright@1.62.0\node_modules\playwright\lib\matchers\expect.js:13310:57)
+    at Object.toBeDisabled (<repo>\node_modules\.pnpm\playwright@1.62.0\node_modules\playwright\lib\matchers\expect.js:13300:23)
+    at <repo>\scripts\ux\source-editor-table-browser.mjs:721:29
+    at async run (<repo>\scripts\ux\source-editor-table-browser.mjs:273:7)
+    at async file:///E:/1project/chat-reader/scripts/ux/source-editor-table-browser.mjs:709:3 {
+  matcherResult: {
+    message: 'expect(locator).toBeDisabled() failed\n' +
+      '\n' +
+      "Locator:  getByTestId('source-editor-table-tool').getByRole('button', { name: /^(Apply|应用)$/ })\n" +
+      'Expected: disabled\n' +
+      'Received: enabled\n' +
+      'Timeout:  5000ms\n' +
+      '\n' +
+      'Call log:\n' +
+      '  - Expect "to.be.disabled" with timeout 5000ms\n' +
+      "  - waiting for getByTestId('source-editor-table-tool').getByRole('button', { name: /^(Apply|应用)$/ })\n" +
+      '    14 × locator resolved to <button type="button" aria-describedby="source-editor-table-preview-pending" class="min-h-11 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:cursor-not-allowed disabled:opacity-50">Apply</button>\n' +
+      '       - unexpected value "enabled"\n',
+    pass: false,
+    actual: 'enabled',
+    name: 'toBeDisabled',
+    expected: 'disabled',
+    log: [
+      '  - Expect "to.be.disabled" with timeout 5000ms',
+      "  - waiting for getByTestId('source-editor-table-tool').getByRole('button', { name: /^(Apply|应用)$/ })",
+      '    14 × locator resolved to <button type="button" aria-describedby="source-editor-table-preview-pending" class="min-h-11 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:cursor-not-allowed disabled:opacity-50">Apply</button>',
+      '       - unexpected value "enabled"'
+    ],
+    timeout: 5000,
+    ariaSnapshot: '- button "Apply"'
+  }
+}
+
+Node.js v20.13.1
+

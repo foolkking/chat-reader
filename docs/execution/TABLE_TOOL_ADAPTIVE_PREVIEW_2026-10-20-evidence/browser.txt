@@ -1,0 +1,64 @@
+PASS one real rendered table; no obsolete modes; math and cell source
+PASS desktop edges reveal on hover/focus; Tab remains inside the dialog
+PASS cell typing retains focus and immediately updates escaped Markdown
+PASS cell text selection keeps native caret behavior until a cell boundary
+PASS raw Markdown repairs ragged rows and applies only the original table
+PASS incomplete Markdown is preserved; stale grid cannot overwrite it
+PASS four edges add rows/columns; Enter never submits; IME does not navigate
+PASS external source changes do not reset a draft; refresh is explicit
+PASS quote containers and CRLF survive cell edits and final application
+PASS CRLF tables after an HTML blank boundary keep live reference captions and exact source
+PASS row paging is bounded and appending reveals the actual final row
+PASS 200-column preview mounts at most 400 cells and refuses another column
+PASS wide-table row edges stay pointer-reachable at every horizontal scroll position
+PASS all four edges remain pointer-reachable while a long wide preview scrolls on both axes
+PASS 375px touch row edges stay reachable across a 200-column table and focus the appended row
+PASS 375px touch can append a column without finding the full table's vertical midpoint
+PASS 375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets
+PASS Escape closes once and restores the logical opener
+PASS pending source previews cannot edit old cells or Apply, and catch up to the latest draft
+PASS pending grid previews retain active typing and Escape returns focus to Markdown
+PASS invalid Markdown entered during a pending preview cannot be overwritten by the older valid draft
+PASS explicit source refresh drops a suspended old table preview
+PASS renderer updates cell callbacks without reparsing unchanged Markdown
+PASS actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source
+PASS actual workspace: deeply quoted prose does not block table discovery or change surrounding source
+PASS actual workspace: quote/list-looking closers cannot expose code examples to automatic editing
+PASS actual workspace: leaving quoted/list code restores outside tables without reparsing source
+PASS actual workspace: nested-list table preview is editable without losing its indentation
+PASS actual workspace: an explicit code-table selection can edit the example without removing its fence
+PASS actual workspace: raw HTML blocks cannot masquerade as automatically repairable tables
+PASS actual workspace: real tables outside HTML remain editable and render after Apply and Undo
+PASS actual workspace: explicit HTML sample editing preserves the wrapper rather than changing its rendering policy
+PASS actual workspace: textarea raw text across blank lines cannot become an automatic table
+PASS actual workspace: a blank quote payload ends ordinary HTML before a real table
+PASS actual workspace: textarea examples never lend definitions to an outside table
+PASS actual workspace: HTML source proof is reused across bidirectional table edits
+PASS actual workspace: a stale HTML proof cannot survive refreshing to textarea content
+PASS actual workspace: display-math and rich-layout offsets cannot displace a quoted table proof
+PASS actual workspace: oversized HTML context fails closed without truncation and permits explicit selection
+PASS actual workspace: nested table editing owns shortcuts instead of opening tools behind it
+PASS actual workspace: the command names the Table tool rather than promising empty-table insertion
+PASS actual workspace: table Enter cannot save; Escape preserves the underlying source preview
+PASS actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft
+PASS actual workspace: Apply changes only the draft and Save sends one canonical client payload
+PASS actual workspace: 375px touch can open, edit and apply the nested table
+PASS actual workspace: cell syntax validation survives alternating grid and Markdown edits
+PASS actual workspace: oversized cell input is rejected without truncating the accepted draft
+PASS actual workspace: large unclosed image nesting stays editable and recovers without changing source
+PASS actual workspace: long cells use a bounded display preview without changing Markdown or Apply
+PASS actual workspace: math bars remain one cell and absolute values do not become norms
+PASS actual workspace: code backslashes and separate currency columns survive normalization
+PASS actual workspace: applying an untouched long cell preserves the exact original source
+PASS actual workspace: oversized math is omitted from rich parsing but remains exact in Markdown
+PASS actual workspace: ambiguous TeX remains editable but cannot apply until repaired
+PASS actual workspace: image alt and reference IDs stay literal without remote requests
+PASS actual workspace: bounded reference context warns without changing definitions outside the table
+PASS unavailable tables show recovery without a fake editor or dead Apply action
+PASS actual workspace: composing Escape preserves the cell draft and enclosing table
+PASS actual workspace: native Chrome composing Escape keeps cell and Markdown input ownership
+PASS actual workspace: literal HTML table examples remain editable without enabling raw HTML
+PASS actual workspace: literal unpaired backticks retain live table editing, Apply and Undo
+PASS actual workspace: 375px touch can correct unsupported HTML cell markup without losing its draft
+PASS 62 browser scenarios; evidence: <task-temp>\table-browser
+

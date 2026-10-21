@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-21",
+  "status": "local_verified_not_released",
+  "report": "../execution/ux-audit-table-pending-parse-2026-10-21.md",
+  "evidence_directory": "../execution/ux-audit-table-pending-parse-2026-10-21-evidence",
+  "change": "Block Apply until raw Markdown parsing and rendered preview both catch up; reject old grid edits during source parsing; use full serialization while recovering invalid drafts",
+  "baseline": {
+    "status": "failed",
+    "passed_before_failure": 18,
+    "failed_scenario": "pending raw parsing cannot apply the old verified table and keeps only the latest Markdown",
+    "dialog_sha256": "4ec1150c27873c73501b3d67032dd0d02554c14aefda803fabb60602aa1f4ed2",
+    "actual_probe_harness_sha256": "dbe24f040ca219d0b816c48fd7cfd3983a3acff15af4dceb41666544cfcd0457",
+    "observed": "Actual Chrome rendered Updating table preview while Apply was enabled during a deterministic draft parser suspension; assertion failed, not silently skipped",
+    "coverage_boundary": "Remaining browser scenarios did not run after the first failure. The earlier baseline.json records the pre-probe source inspection, not a passing test receipt."
+  },
+  "final": {
+    "source_sha256": {
+      "apps/web/components/use-dialog-focus.ts": "7ce66e3245572f5663bfa5a5bc030f1f94a9c49eba744c862a130ca774acb998",
+      "apps/web/features/conversations/markdown-renderer.tsx": "a1e3e2491779a4b1d9c44a552b0ede631b7b074873d8aed58cdce81a7aecce96",
+      "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+      "apps/web/features/editing/markdown-table-dialog.tsx": "1b7ce03e048c6cf3ba50f6fcc163e9442303285a56f4b80423d6737e78675b78",
+      "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+      "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+      "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+      "apps/web/features/editing/markdown-table-tools.ts": "c64cbcea76235ff5506d4068343c182c44e092bfdab05a75e8fa2535e6ea7b69",
+      "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+      "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+      "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+      "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+      "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+      "scripts/ux/chatgpt-rich-text.test.mjs": "ba7c052c964fb116c767af0b5c086dcd1ad98355349d6960d4ead09787ea03c8",
+      "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+      "scripts/ux/share-tablet-navigation-dialog.test.mjs": "21591aa1bb144892314d184b5c918cafa49e4a988497913f99f5454a32676910",
+      "scripts/ux/source-editor-table-browser.mjs": "dbe24f040ca219d0b816c48fd7cfd3983a3acff15af4dceb41666544cfcd0457",
+      "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+      "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+      "scripts/ux/source-editor-table-tools.test.mjs": "1f0eda28d33ae8844d658fd3eb0e746957400f479b527817edc93b63f4997197"
+    },
+    "source_count": 20,
+    "sources_unchanged_during_gates": true,
+    "focused_pass": 111,
+    "service_free_files": 69,
+    "service_free_pass": 1502,
+    "chrome_pass": 64,
+    "browser": "155.0.8059.82",
+    "lint_exit": 0,
+    "nonincremental_typecheck_exit": 0,
+    "one_cpu_build_exit": 0,
+    "source_bound_profile": "performance.json",
+    "profile_warning": "Large-narrow workload still has 52ms and 51ms main-thread long tasks. Five synthetic unthrottled inputs, no performance threshold, cross-device or server RSS/OOM acceptance."
+  },
+  "artifacts": {
+    "baseline-browser-result.json": {
+      "sha256": "c70369a58f0912fd0664ce8d7dc9774bd1fcfa7b4cf6418322d7a5b2eb45e8c3",
+      "byte_size": 1659
+    },
+    "baseline-browser.txt": {
+      "sha256": "965a4e13b699e7053c7c63597178f026b7f946b3dc99704a6f31c74ffa1d81a1",
+      "byte_size": 4580
+    },
+    "baseline-source.txt": {
+      "sha256": "33c138ae11343099113db7879847a88624dabf39284d363b615d7be344ba66b8",
+      "byte_size": 4580
+    },
+    "baseline.json": {
+      "sha256": "d1471c48340e9bf77547b72c7ba74685a2ce1f81f8ca2d881c0cef523f5e3438",
+      "byte_size": 550
+    },
+    "draft-parse-pending-desktop-light.png": {
+      "sha256": "bfccaa802216dd4c64d9bd263254f484468de9f51f3f81ac21888f9a98e308de",
+      "byte_size": 25157
+    },
+    "final-browser.txt": {
+      "sha256": "d36a95a58ea5c83f15fbf2ed81f775f4709d64205855c453801f9d182dc1f547",
+      "byte_size": 8490
+    },
+    "final-build.txt": {
+      "sha256": "12a13d9c5d2342d668c1b3308b70f7677d3ab066823f70838b25cc9da1e14cf5",
+      "byte_size": 1216
+    },
+    "final-focused.txt": {
+      "sha256": "f6e802fc4740065650565b0ca50a4f7b512b925cf53d1f7fff03b3fc06ea35c8",
+      "byte_size": 24694
+    },
+    "final-gate-receipts.json": {
+      "sha256": "d864c5186b588dda22c8a9cf864c96aac3ab82f885b4bb3fc3c66846000f6855",
+      "byte_size": 7978
+    },
+    "final-lint.txt": {
+      "sha256": "b1f0cf9a255939d96d4ccf466958f2c44d3d759bffb68b0c7b21d687a94c567d",
+      "byte_size": 141
+    },
+    "final-source-sha256-after.json": {
+      "sha256": "e983a21b81f40902cf18bdbc36f79565b622cd32af949390fc02d94dae1f6cd3",
+      "byte_size": 2527
+    },
+    "final-source-sha256-before.json": {
+      "sha256": "e983a21b81f40902cf18bdbc36f79565b622cd32af949390fc02d94dae1f6cd3",
+      "byte_size": 2527
+    },
+    "final-typecheck.txt": {
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "byte_size": 2
+    },
+    "final-ux-files.txt": {
+      "sha256": "d4f6945036b90e1712bc5cdeddfc9085e229830d972398da07498971d180b14c",
+      "byte_size": 3848
+    },
+    "final-ux.txt": {
+      "sha256": "d832c42e0b42e66aa3d88ab3954c2d6151959476321332d8165b7eaa3ce4712c",
+      "byte_size": 318414
+    },
+    "performance.json": {
+      "sha256": "e0ddfc20d0ee8b0eec5916ea7c833a6ae9acb129bb63e524591abde90f03f67d",
+      "byte_size": 4315
+    },
+    "preview-pending-mobile-light.png": {
+      "sha256": "e7e5d655920a7c7bf704f06a2ffd50c14298852765ce8cb67dbb5b82b287383a",
+      "byte_size": 16017
+    },
+    "result.json": {
+      "sha256": "19086841b85ff4adaa276c03b8f493a502613f48bfda3a7356c5ebfb425c1963",
+      "byte_size": 6212
+    },
+    "archive-verification.json": {
+      "sha256": "ce9c915b2a7894a15908e384764c7c75f1e07b08f863a052e34876f60acea50b",
+      "byte_size": 296
+    }
+  },
+  "test_seam": "The local TypeScript loader injects a marker-controlled Promise suspension before the actual inspectMarkdownTableDraft body. It neither replaces parsing results nor changes production files. Existing rich-renderer suspension remains separate.",
+  "release_boundary": "Local edits/tests only. No new API, dependency, migration, push, CI, deployment, production mutation, authentication acceptance, full Reader/Share/Offline acceptance or assistive-technology conformance."
+}

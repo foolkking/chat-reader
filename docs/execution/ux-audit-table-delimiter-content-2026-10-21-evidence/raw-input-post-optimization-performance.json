@@ -1,0 +1,350 @@
+{
+  "date": "2026-10-21",
+  "startedAt": "2026-10-21T06:16:16.698Z",
+  "status": "observed",
+  "observedAt": "2026-10-21T06:17:07.071Z",
+  "browser": "155.0.8059.82",
+  "profileSchemaVersion": 2,
+  "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC covers all workload phases and is not RSS or server memory; five samples per exercised input/position, no performance pass threshold",
+  "metricScope": "longTasksMs spans the entire observation, not only grid typing. longTasksByPhaseMs assigns by entry.startTime, not observer callback delivery; source includes insert and restoring Backspace. sourceTextareaValueMs waits for the exact DOM value plus the next animation frame; sourceMarkdownInputMs waits for the rendered header plus the next frame. Neither is an INP or physical display measurement.",
+  "observations": [
+    {
+      "name": "small",
+      "columns": 6,
+      "rows": 20,
+      "cellsIncludingDelimiter": 132,
+      "longCellLength": 0,
+      "utf8Bytes": 1009,
+      "openMs": 104.7300000000032,
+      "mountedCells": 126,
+      "richMarkdownParsesForGridInputs": 5,
+      "paintedInputMs": [
+        13,
+        9.800000011920929,
+        7.399999976158142,
+        7.399999976158142,
+        7.300000011920929
+      ],
+      "settledPreviewMs": [
+        39.799999952316284,
+        36.5,
+        34,
+        29.599999964237213,
+        40.80000001192093
+      ],
+      "longTasksMs": [],
+      "longTasksByPhaseMs": {
+        "grid": [],
+        "source": [],
+        "tail": [],
+        "navigation": [],
+        "gc": [],
+        "unclassified": []
+      },
+      "phaseMarks": [
+        {
+          "name": "grid",
+          "at": 33488.30000001192
+        },
+        {
+          "name": "gc",
+          "at": 34188.80000001192
+        }
+      ],
+      "retainedJsHeapBefore": 17070144,
+      "retainedJsHeapAfter": 17415028
+    },
+    {
+      "name": "typical",
+      "columns": 12,
+      "rows": 80,
+      "cellsIncludingDelimiter": 984,
+      "longCellLength": 0,
+      "utf8Bytes": 8017,
+      "openMs": 140.86270000000513,
+      "mountedCells": 252,
+      "richMarkdownParsesForGridInputs": 5,
+      "paintedInputMs": [
+        19,
+        18.400000035762787,
+        18.19999998807907,
+        18.30000001192093,
+        21.899999976158142
+      ],
+      "settledPreviewMs": [
+        64.89999997615814,
+        57.10000002384186,
+        54,
+        54.90000003576279,
+        54.799999952316284
+      ],
+      "longTasksMs": [],
+      "longTasksByPhaseMs": {
+        "grid": [],
+        "source": [],
+        "tail": [],
+        "navigation": [],
+        "gc": [],
+        "unclassified": []
+      },
+      "phaseMarks": [
+        {
+          "name": "grid",
+          "at": 34505.10000002384
+        },
+        {
+          "name": "navigation",
+          "at": 35187.10000002384
+        },
+        {
+          "name": "tail",
+          "at": 35322.10000002384
+        },
+        {
+          "name": "gc",
+          "at": 35953.10000002384
+        }
+      ],
+      "tailPaintedInputMs": [
+        19.899999976158142,
+        33,
+        16.700000047683716,
+        13.5,
+        13.699999988079071
+      ],
+      "tailSettledPreviewMs": [
+        46.59999996423721,
+        36.90000003576279,
+        43.40000003576279,
+        41.90000003576279,
+        38.19999998807907
+      ],
+      "retainedJsHeapBefore": 18157824,
+      "retainedJsHeapAfter": 18276452
+    },
+    {
+      "name": "large-narrow",
+      "columns": 10,
+      "rows": 4000,
+      "cellsIncludingDelimiter": 40020,
+      "longCellLength": 0,
+      "utf8Bytes": 397013,
+      "openMs": 253.9583000000057,
+      "mountedCells": 80,
+      "richMarkdownParsesForGridInputs": 5,
+      "sourceMarkdownInputMs": [
+        46.30000001192093,
+        43.69999998807907,
+        45.30000001192093,
+        48.89999997615814,
+        38.80000001192093
+      ],
+      "sourceTextareaValueMs": [
+        24.600000023841858,
+        18.80000001192093,
+        19.100000023841858,
+        22.099999964237213,
+        20.30000001192093
+      ],
+      "paintedInputMs": [
+        62.10000002384186,
+        60.60000002384186,
+        64.10000002384186,
+        63.30000001192093,
+        78.5
+      ],
+      "settledPreviewMs": [
+        104.90000003576279,
+        92.10000002384186,
+        95.70000004768372,
+        84.60000002384186,
+        109.19999998807907
+      ],
+      "longTasksMs": [
+        50,
+        61
+      ],
+      "longTasksByPhaseMs": {
+        "grid": [
+          50,
+          61
+        ],
+        "source": [],
+        "tail": [],
+        "navigation": [],
+        "gc": [],
+        "unclassified": []
+      },
+      "phaseMarks": [
+        {
+          "name": "grid",
+          "at": 36504.69999998808
+        },
+        {
+          "name": "source",
+          "at": 37430
+        },
+        {
+          "name": "navigation",
+          "at": 38617
+        },
+        {
+          "name": "tail",
+          "at": 38720.69999998808
+        },
+        {
+          "name": "gc",
+          "at": 39464.5
+        }
+      ],
+      "tailPaintedInputMs": [
+        63.40000003576279,
+        60,
+        59.10000002384186,
+        60,
+        58.59999996423721
+      ],
+      "tailSettledPreviewMs": [
+        88.30000001192093,
+        75.80000001192093,
+        73.40000003576279,
+        80.90000003576279,
+        76.59999996423721
+      ],
+      "retainedJsHeapBefore": 20215788,
+      "retainedJsHeapAfter": 20764360
+    },
+    {
+      "name": "cell-limit-wide",
+      "columns": 200,
+      "rows": 248,
+      "cellsIncludingDelimiter": 50000,
+      "longCellLength": 0,
+      "utf8Bytes": 499309,
+      "openMs": 253.37230000000272,
+      "mountedCells": 400,
+      "richMarkdownParsesForGridInputs": 5,
+      "sourceMarkdownInputMs": [
+        64.39999997615814,
+        69.69999998807907,
+        70.90000003576279,
+        66.69999998807907,
+        78.69999998807907
+      ],
+      "sourceTextareaValueMs": [
+        23.399999976158142,
+        22.5,
+        22.600000023841858,
+        22.099999964237213,
+        28.600000023841858
+      ],
+      "paintedInputMs": [
+        49,
+        46.30000001192093,
+        47.40000003576279,
+        48.59999996423721,
+        47.5
+      ],
+      "settledPreviewMs": [
+        117.5,
+        84.5,
+        84.69999998807907,
+        85.19999998807907,
+        80.80000001192093
+      ],
+      "longTasksMs": [],
+      "longTasksByPhaseMs": {
+        "grid": [],
+        "source": [],
+        "tail": [],
+        "navigation": [],
+        "gc": [],
+        "unclassified": []
+      },
+      "phaseMarks": [
+        {
+          "name": "grid",
+          "at": 40036.60000002384
+        },
+        {
+          "name": "source",
+          "at": 40654.39999997616
+        },
+        {
+          "name": "navigation",
+          "at": 42082.80000001192
+        },
+        {
+          "name": "tail",
+          "at": 42207.19999998808
+        },
+        {
+          "name": "gc",
+          "at": 42945.5
+        }
+      ],
+      "tailPaintedInputMs": [
+        59.69999998807907,
+        52.30000001192093,
+        52.5,
+        52.39999997615814,
+        53.09999996423721
+      ],
+      "tailSettledPreviewMs": [
+        105.80000001192093,
+        90.80000001192093,
+        90.80000001192093,
+        92.59999996423721,
+        91.5
+      ],
+      "retainedJsHeapBefore": 21522832,
+      "retainedJsHeapAfter": 22707008
+    },
+    {
+      "name": "single-long-cell",
+      "columns": 6,
+      "rows": 20,
+      "cellsIncludingDelimiter": 132,
+      "longCellLength": 40000,
+      "utf8Bytes": 41005,
+      "openMs": 108.27700000000186,
+      "mountedCells": 126,
+      "richMarkdownParsesForGridInputs": 0,
+      "paintedInputMs": [
+        9.100000023841858,
+        24.399999976158142,
+        11.799999952316284,
+        12.899999976158142,
+        13
+      ],
+      "settledPreviewMs": [
+        9.100000023841858,
+        24.399999976158142,
+        11.799999952316284,
+        12.899999976158142,
+        13
+      ],
+      "longTasksMs": [],
+      "longTasksByPhaseMs": {
+        "grid": [],
+        "source": [],
+        "tail": [],
+        "navigation": [],
+        "gc": [],
+        "unclassified": []
+      },
+      "phaseMarks": [
+        {
+          "name": "grid",
+          "at": 43256
+        },
+        {
+          "name": "gc",
+          "at": 43507.5
+        }
+      ],
+      "retainedJsHeapBefore": 18655812,
+      "retainedJsHeapAfter": 18769448
+    }
+  ]
+}

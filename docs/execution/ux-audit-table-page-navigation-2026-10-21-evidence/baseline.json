@@ -1,0 +1,21 @@
+{
+  "observed_at": "2026-10-21T01:04:11.7305825+08:00",
+  "source_sha256": "1b7ce03e048c6cf3ba50f6fcc163e9442303285a56f4b80423d6737e78675b78",
+  "evidence": "Actual source and arithmetic; new mounted reproduction not yet run",
+  "cases": [
+    {
+      "columns": 10,
+      "rows": 4000,
+      "page_size": 11,
+      "pages": 364.0,
+      "next_clicks_to_last": 363.0
+    },
+    {
+      "columns": 200,
+      "rows": 248,
+      "page_size": 1,
+      "pages": 248.0,
+      "next_clicks_to_last": 247.0
+    }
+  ]
+}

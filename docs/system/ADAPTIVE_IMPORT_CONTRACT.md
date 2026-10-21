@@ -1,7 +1,8 @@
 # Adaptive Import Contract
 
-Released in source `f3b331a` on 2026-10-19 Asia/Shanghai. See the
-[accepted release and low-memory limits](../execution/FEATURE_RELEASE_2026-10-19.md).
+Initial task shipped in source `f3b331a`; the body-retention and compressed-input
+bounds below ship in current source `50f6de4`. See the
+[accepted release and low-memory limits](../execution/OOM_RELEASE_2026-10-19.md).
 The initial-analysis task type itself needs no migration; release schema 0052
 belongs to protected cleanup review.
 
@@ -66,7 +67,7 @@ PostgreSQL already uses a real outer transaction.
 No user import files or production configuration were changed. See
 [implementation, synthetic regressions and incident evidence](../execution/IMPORT_STABILITY_2026-10-18.md).
 
-### Local working-tree follow-up — 2026-10-19, not released
+### Draft serialization and admission bounds — released 2026-10-19
 
 Draft writing now incrementally serializes existing dataclass/list containers,
 instead of cloning the entire conversation with `asdict` and creating complete
@@ -89,7 +90,7 @@ pending index rows after 500 records or roughly 2 Mi text characters, whichever
 comes first; one oversized row can exceed that soft batch target.
 See [local evidence and remaining limits](../execution/OOM_IMPORT_EXPORT_FOLLOWUP_2026-10-19.md).
 
-### Local compressed-input continuation — 2026-10-19, not released
+### Compressed-input expansion admission — released 2026-10-19
 
 CanJSON JSONL reads are bounded to 64 KiB per read, preserving the existing
 line-size/compression-ratio limits and bytes. For gzip, cumulative expansion

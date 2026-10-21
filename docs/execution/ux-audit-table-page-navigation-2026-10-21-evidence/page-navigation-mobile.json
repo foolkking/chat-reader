@@ -1,0 +1,98 @@
+[
+  {
+    "viewport": 320,
+    "controls": [
+      {
+        "label": "首批表格行",
+        "left": 115,
+        "right": 159,
+        "top": 154.96875,
+        "bottom": 198.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      {
+        "label": "上一页表格行",
+        "left": 163,
+        "right": 207,
+        "top": 154.96875,
+        "bottom": 198.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      {
+        "label": "下一页表格行",
+        "left": 211,
+        "right": 255,
+        "top": 154.96875,
+        "bottom": 198.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      {
+        "label": "末批表格行",
+        "left": 259,
+        "right": 303,
+        "top": 154.96875,
+        "bottom": 198.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      }
+    ],
+    "appliedTailOnly": true,
+    "oneUndo": true,
+    "writes": 0
+  },
+  {
+    "viewport": 375,
+    "controls": [
+      {
+        "label": "首批表格行",
+        "left": 170,
+        "right": 214,
+        "top": 138.96875,
+        "bottom": 182.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      {
+        "label": "上一页表格行",
+        "left": 218,
+        "right": 262,
+        "top": 138.96875,
+        "bottom": 182.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      {
+        "label": "下一页表格行",
+        "left": 266,
+        "right": 310,
+        "top": 138.96875,
+        "bottom": 182.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      },
+      {
+        "label": "末批表格行",
+        "left": 314,
+        "right": 358,
+        "top": 138.96875,
+        "bottom": 182.96875,
+        "width": 44,
+        "height": 44,
+        "hit": true
+      }
+    ],
+    "appliedTailOnly": true,
+    "oneUndo": true,
+    "writes": 0
+  }
+]

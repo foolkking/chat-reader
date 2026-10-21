@@ -1,0 +1,27 @@
+{
+  "method": "Chrome CDP imeSetComposition then Playwright native Escape; no physical candidate window",
+  "bundle_sha256": "152f01f881aefd22286dfc23a252f4f76dbaa39f9703b3015cb2cd48dd3c262b",
+  "dialog_count": 0,
+  "input_count": 0,
+  "trace": [
+    {
+      "type": "compositionstart",
+      "isTrusted": true,
+      "target": "INPUT"
+    },
+    {
+      "type": "compositionupdate",
+      "isTrusted": true,
+      "target": "INPUT"
+    },
+    {
+      "type": "keydown",
+      "key": "Escape",
+      "keyCode": 27,
+      "isComposing": true,
+      "isTrusted": true,
+      "target": "INPUT"
+    }
+  ],
+  "writes": 0
+}

@@ -1,0 +1,290 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "generated_at": "2026-10-20T04:30:06.2763251Z",
+  "status": "verified local long-cell and wide-preview checkpoint; unbounded goal active; no CI/push/deployment",
+  "base_commit": "50f6de4b2e72ad33bd4d351ada6f95c0b3583898",
+  "source_sha256": {
+    "apps/web/features/editing/markdown-table-dialog.tsx": "0c007230fc60662395bd72b386c9fafc8e4e26c206a9229b7867c3a2a60808ff",
+    "apps/web/features/editing/markdown-table-tools.ts": "dd966a3dcc5ab1058563eb1a1f4924553f616bf08bfa7cd9f4ac363b3dc02def",
+    "apps/web/features/conversations/markdown-renderer.tsx": "0b627980a6cc3ea0118d8579d9bac5e044f7d66d5ab88cbeb704b6a86a80691e",
+    "scripts/ux/source-editor-table-browser.mjs": "f7e0b6b4e5784f3e6ef41939ccddffc23999c8362c185d12e3ffcf3f0f78d464",
+    "scripts/ux/source-editor-table-tools.test.mjs": "8f25df66d0ddefd0f7977083035373a303efb7eadf834aacf0c6ed70a5430d8a",
+    "docs/system/USER_FLOWS.md": "6e6a804f78f28b12bcfead9e9cad4e0a32f594e1b8de9c009bf176f61cdef322",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "7993522633e140e653b23345afce40b08d1f9922a2a63b68bb192c9c48e5899c",
+    "docs/execution/TABLE_TOOL_LONG_CELL_2026-10-20.md": "9dceafb5f618d428d0523d0983cd72fa559b77d8c4b39efa57619e855a24c53f",
+    "docs/evidence/README.md": "bfd414a2196d572c78e9af783d8ac84f8356a06a67529b9588a7fe101acf5421",
+    "docs/execution/README.md": "419dad91994d846aea2105846ac964843a8bd37c10f2e9245fdd2a68fa7cd765",
+    "docs/documentation-inventory.md": "e88f52a7aa469fe6204a8f7e7a4d2c3e74e08d29e6e1a0f6167951edb59ec658",
+    "docs/testing.md": "2e32519286010fa4cb0323dbb1a43aa7d6d86e460b36062ed0c731d0ac809e95",
+    "docs/index.md": "f91a60e2720018464456cc43bcd5914e8287f5dea1bf35faefb473868eee19ba",
+    "PROJECT_STATE.md": "7d5f65b5935d0c0ed1685c0502cc380309246fb91063cb0fc010c694283e776e"
+  },
+  "environment": {
+    "os": "Windows",
+    "node": "v20.13.1",
+    "browser": "155.0.8059.82",
+    "temporary_files": "task-specific process TEMP/TMP under required wkkk root"
+  },
+  "change": {
+    "visible_cell_limit_utf16_code_units": 32768,
+    "wide_preview_max_mounted_cells": 400,
+    "large_cell_sample_length": 40000,
+    "single_cell_validation": "Accepted grid edits validate only the changed cell; an already-invalid draft falls back to whole-draft validation.",
+    "behavior": "Long current-page cell values are replaced only in the renderer-input draft; Markdown, editable input, canonical serialization, and Apply remain unchanged."
+  },
+  "focused": {
+    "tests": 62,
+    "passed": 62,
+    "failed": 0,
+    "skipped": 0,
+    "status": "passed",
+    "command": "node --test scripts/ux/source-editor-table-tools.test.mjs scripts/ux/source-editor-table-references.test.mjs scripts/ux/chatgpt-rich-text.test.mjs",
+    "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-focused.txt"
+  },
+  "browser": {
+    "date": "2026-10-20",
+    "startedAt": "2026-10-20T04:26:44.672Z",
+    "status": "passed",
+    "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+    "passed": [
+      "one real rendered table; no obsolete modes; math and cell source",
+      "desktop edges reveal on hover/focus; Tab remains inside the dialog",
+      "cell typing retains focus and immediately updates escaped Markdown",
+      "cell text selection keeps native caret behavior until a cell boundary",
+      "raw Markdown repairs ragged rows and applies only the original table",
+      "incomplete Markdown is preserved; stale grid cannot overwrite it",
+      "four edges add rows/columns; Enter never submits; IME does not navigate",
+      "external source changes do not reset a draft; refresh is explicit",
+      "quote containers and CRLF survive cell edits and final application",
+      "row paging is bounded and appending reveals the actual final row",
+      "200-column preview mounts at most 400 cells and refuses another column",
+      "375px touch/dark and 768px tablet layouts contain overflow and preserve touch targets",
+      "Escape closes once and restores the logical opener",
+      "actual workspace: a table applies to CodeMirror, then one toolbar Undo restores the exact source",
+      "actual workspace: nested table editing owns shortcuts instead of opening tools behind it",
+      "actual workspace: the command names the Table tool rather than promising empty-table insertion",
+      "actual workspace: table Enter cannot save; Escape preserves the underlying source preview",
+      "actual workspace: late CodeMirror changes invalidate rather than overwrite a table draft",
+      "actual workspace: Apply changes only the draft and Save sends one canonical client payload",
+      "actual workspace: 375px touch can open, edit and apply the nested table",
+      "actual workspace: cell syntax validation survives alternating grid and Markdown edits",
+      "actual workspace: oversized cell input is rejected without truncating the accepted draft",
+      "actual workspace: long cells use a bounded display preview without changing Markdown or Apply",
+      "actual workspace: math bars remain one cell and absolute values do not become norms",
+      "actual workspace: code backslashes and separate currency columns survive normalization",
+      "actual workspace: applying an untouched long cell preserves the exact original source",
+      "actual workspace: oversized math is omitted from rich parsing but remains exact in Markdown",
+      "actual workspace: ambiguous TeX remains editable but cannot apply until repaired",
+      "actual workspace: image alt and reference IDs stay literal without remote requests",
+      "actual workspace: bounded reference context warns without changing definitions outside the table"
+    ],
+    "pageErrors": [],
+    "consoleErrors": [],
+    "browser": "155.0.8059.82"
+  },
+  "service_free_ux": {
+    "files": 68,
+    "tests": 1470,
+    "passed": 1470,
+    "failed": 0,
+    "skipped": 0,
+    "status": "passed",
+    "command": "node --test --test-concurrency=1 <all sorted scripts/ux/*.test.mjs paths>",
+    "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-ux.txt"
+  },
+  "performance": {
+    "date": "2026-10-20",
+    "startedAt": "2026-10-20T04:26:44.672Z",
+    "status": "observed",
+    "observedAt": "2026-10-20T04:27:03.7Z",
+    "browser": "155.0.8059.82",
+    "boundary": "local headless Chrome, unthrottled, synthetic plain cells, actual workspace; JS heap after explicit GC is not RSS or server memory; five input samples per workload, no performance pass threshold",
+    "observations": [
+      {
+        "name": "small",
+        "columns": 6,
+        "rows": 20,
+        "cellsIncludingDelimiter": 132,
+        "longCellLength": 0,
+        "utf8Bytes": 1009,
+        "openMs": 106.03470000000016,
+        "mountedCells": 126,
+        "paintedInputMs": [
+          13.599999994039536,
+          10.900000005960464,
+          8.900000005960464,
+          15.5,
+          9.300000011920929
+        ],
+        "longTasksMs": [],
+        "retainedJsHeapBefore": 13119712,
+        "retainedJsHeapAfter": 13425424
+      },
+      {
+        "name": "typical",
+        "columns": 12,
+        "rows": 80,
+        "cellsIncludingDelimiter": 984,
+        "longCellLength": 0,
+        "utf8Bytes": 8017,
+        "openMs": 143.89379999999983,
+        "mountedCells": 372,
+        "paintedInputMs": [
+          28.299999982118607,
+          23.5,
+          22.30000001192093,
+          24.299999982118607,
+          19.799999982118607
+        ],
+        "longTasksMs": [],
+        "retainedJsHeapBefore": 13835780,
+        "retainedJsHeapAfter": 14676512
+      },
+      {
+        "name": "large-narrow",
+        "columns": 10,
+        "rows": 4000,
+        "cellsIncludingDelimiter": 40020,
+        "longCellLength": 0,
+        "utf8Bytes": 397013,
+        "openMs": 266.64890000000014,
+        "mountedCells": 310,
+        "sourceMarkdownInputMs": [
+          36.400000005960464,
+          36.79999998211861,
+          31.900000005960464,
+          30.400000005960464,
+          29.100000023841858
+        ],
+        "paintedInputMs": [
+          83.30000001192093,
+          77.09999999403954,
+          78.59999999403954,
+          81.90000000596046,
+          87.90000000596046
+        ],
+        "longTasksMs": [
+          69,
+          62,
+          63,
+          67,
+          73
+        ],
+        "retainedJsHeapBefore": 16172528,
+        "retainedJsHeapAfter": 20646808
+      },
+      {
+        "name": "cell-limit-wide",
+        "columns": 200,
+        "rows": 248,
+        "cellsIncludingDelimiter": 50000,
+        "longCellLength": 0,
+        "utf8Bytes": 499309,
+        "openMs": 253.57290000000285,
+        "mountedCells": 400,
+        "sourceMarkdownInputMs": [
+          37.80000001192093,
+          34,
+          34.29999998211861,
+          39.79999998211861,
+          35.5
+        ],
+        "paintedInputMs": [
+          71.59999999403954,
+          61,
+          60.400000005960464,
+          58.400000005960464,
+          55.89999997615814
+        ],
+        "longTasksMs": [
+          61,
+          51,
+          50
+        ],
+        "retainedJsHeapBefore": 17197840,
+        "retainedJsHeapAfter": 22417976
+      },
+      {
+        "name": "single-long-cell",
+        "columns": 6,
+        "rows": 20,
+        "cellsIncludingDelimiter": 132,
+        "longCellLength": 40000,
+        "utf8Bytes": 41005,
+        "openMs": 115.83220000000074,
+        "mountedCells": 126,
+        "paintedInputMs": [
+          19,
+          15.300000011920929,
+          20.5,
+          18.799999982118607,
+          12.799999982118607
+        ],
+        "longTasksMs": [],
+        "retainedJsHeapBefore": 14530692,
+        "retainedJsHeapAfter": 14856024
+      }
+    ]
+  },
+  "gates": {
+    "status": "passed",
+    "tests": [
+      {
+        "started_at": "2026-10-20T04:25:47.2073957Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-focused.txt",
+        "exit_code": 0,
+        "name": "focused",
+        "ended_at": "2026-10-20T04:25:48.7672926Z"
+      },
+      {
+        "started_at": "2026-10-20T04:25:48.7845768Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-ux.txt",
+        "exit_code": 0,
+        "name": "ux",
+        "ended_at": "2026-10-20T04:26:44.5890596Z"
+      },
+      {
+        "started_at": "2026-10-20T04:26:44.5990556Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-browser-profile.txt",
+        "exit_code": 0,
+        "name": "browser-profile",
+        "ended_at": "2026-10-20T04:27:03.9091894Z"
+      },
+      {
+        "started_at": "2026-10-20T04:27:03.9181076Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-lint.txt",
+        "exit_code": 0,
+        "name": "lint",
+        "ended_at": "2026-10-20T04:27:16.543804Z"
+      },
+      {
+        "started_at": "2026-10-20T04:27:16.5515898Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-typecheck.txt",
+        "exit_code": 0,
+        "name": "typecheck",
+        "ended_at": "2026-10-20T04:27:38.7016261Z"
+      },
+      {
+        "started_at": "2026-10-20T04:27:38.7038719Z",
+        "log": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-20261020-long-cell\\final2-build.txt",
+        "exit_code": 0,
+        "name": "build",
+        "ended_at": "2026-10-20T04:28:27.5829755Z"
+      }
+    ],
+    "note": "Local repository gates only; not CI."
+  },
+  "commands": {
+    "browser": "TABLE_TOOL_PROFILE=1 node scripts/ux/source-editor-table-browser.mjs",
+    "lint": "corepack pnpm run lint",
+    "typecheck": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+    "build": "NEXT_BUILD_CPUS=1 corepack pnpm --filter web build"
+  },
+  "limitations": [
+    "Synthetic text only; no real conversations or production data.",
+    "No real-device, cross-browser, authenticated server, Reader/Offline/Share, RSS, OOM, or long-duration resource acceptance.",
+    "Existing large-table long tasks remain observations; the 400-cell cap reduces but does not eliminate them.",
+    "No CI, push, deployment, migration, dependency, or server-contract change."
+  ]
+}

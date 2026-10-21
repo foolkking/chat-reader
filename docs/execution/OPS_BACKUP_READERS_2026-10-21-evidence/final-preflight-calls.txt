@@ -1,0 +1,10 @@
+compose --env-file synthetic.env -f synthetic-compose.yml ps -a -q api
+inspect --type container --format {{.Image}} bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+image inspect --format {{.Id}} sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+inspect --type container --format {{range .Mounts}}{{println .Destination}}{{end}} bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+compose --env-file synthetic.env -f synthetic-compose.yml exec -T postgres sh -c psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select pg_database_size(current_database())"
+run --rm --pull=never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --memory 64m --memory-swap 64m --pids-limit 32 --volumes-from bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:ro --entrypoint sh sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -c exec du -sk "$1" sh /data/imports
+run --rm --pull=never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --memory 64m --memory-swap 64m --pids-limit 32 --volumes-from bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:ro --entrypoint sh sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -c exec du -sk "$1" sh /data/exports
+run --rm --pull=never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --memory 64m --memory-swap 64m --pids-limit 32 --volumes-from bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:ro --entrypoint sh sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -c exec du -sk "$1" sh /data/offline
+run --rm --pull=never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --memory 64m --memory-swap 64m --pids-limit 32 --volumes-from bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:ro --entrypoint sh sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa -c exec du -sk "$1" sh /data/assets
+info --format {{.DockerRootDir}}

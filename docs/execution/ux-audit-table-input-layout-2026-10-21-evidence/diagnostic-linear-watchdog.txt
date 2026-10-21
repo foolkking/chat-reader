@@ -1,0 +1,15 @@
+Diagnostic excerpt, not a full log or a fully source-bound earlier acceptance run.
+
+not ok 81 - HTML-looking whitespace and repeated angles remain bounded literal cell text
+  ---
+  duration_ms: 10022.0466
+  location: 'file:///E:/1project/chat-reader/scripts/ux/source-editor-table-tools.test.mjs:292:1'
+  failureType: 'testCodeFailure'
+  error: 'HTML-looking cell exceeded the anti-hang watchdog'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    Timeout.<anonymous> (file:///E:/1project/chat-reader/scripts/ux/source-editor-table-tools.test.mjs:309:45)
+    listOnTimeout (node:internal/timers:573:17)
+    process.processTimers (node:internal/timers:514:7)
+  ...
+

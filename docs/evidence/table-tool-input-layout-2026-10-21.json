@@ -1,0 +1,159 @@
+{
+  "date": "2026-10-21",
+  "timezone": "Asia/Shanghai",
+  "status": "local_verified_not_released",
+  "report": "../execution/ux-audit-table-input-layout-2026-10-21.md",
+  "evidence_directory": "../execution/ux-audit-table-input-layout-2026-10-21-evidence",
+  "change": "Preserve Unicode cell content; retain bounded canonical-row/plain-draft reuse and controlled input; repair horizontal boundary focus. Withdraw direct-table rendering and frame-write experiments with no stable input-latency gain.",
+  "final": {
+    "source_sha256": {
+      "apps/web/components/use-dialog-focus.ts": "7ce66e3245572f5663bfa5a5bc030f1f94a9c49eba744c862a130ca774acb998",
+      "apps/web/features/conversations/markdown-renderer.tsx": "b97140389ac218d0bb9886450020e23135a38d4d1d4877f53f23a8ae7dca8ecc",
+      "apps/web/features/editing/edit-message-form.tsx": "8078eb722a2c242073c04878ff67d7d399b788231641a46e71209867f98fa5f9",
+      "apps/web/features/editing/markdown-table-dialog.tsx": "9c9f9a5e7c301831dddeaa949baf51a83280d775cbaf2d570f32fd2f48ad1580",
+      "apps/web/features/editing/markdown-table-reference-preview.ts": "286a8a36b461054ad6ec1893852e163a5321c3aeeb85271f1c35784dd2e48d27",
+      "apps/web/features/editing/markdown-table-source-analysis.ts": "6568bd5a006c6a097e1e528d6fbe00051eddd13e008a069cff6afc86c0439ab5",
+      "apps/web/features/editing/markdown-table-source-probe.tsx": "a3efae89d2b102ff4ded5c77b3973c023ed4cc7817af474bfa45d8c4540b2213",
+      "apps/web/features/editing/markdown-table-tools.ts": "7915d52891e99ddbd438aa237f8deda68665c997ffc6800190227f2504b83013",
+      "apps/web/features/editing/source-context-toolbar.tsx": "b3576e1f4f7a85455655070c561a2383cea6e1e17d1238298c67074712aa5504",
+      "apps/web/features/editing/source-editor-workspace.tsx": "7d4e0f2e9200cba3c452dccb4e3b8a3e2a4270e7f2b6000f9ec79f59d511d092",
+      "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+      "apps/web/features/rich-markdown/remark-ai-math-compatibility.ts": "4604765d8dab5aaff2f529c1566bfb19a34c892f00c45d089e21827dd53dae6c",
+      "apps/web/features/rich-markdown/rich-markdown-config.ts": "e9d2bc9fcc5e8a8eed00a0c2d53422356d9072d1e983ff1e5e0ad5ec7febc587",
+      "scripts/ux/chatgpt-rich-text.test.mjs": "f5053f8c1524967ab8acfaa5be2aea1d5de108ae5e42e0df2994f5ea246b672c",
+      "scripts/ux/markdown-table-source-fixture.mjs": "813d181571c71ffe064d2d50658647bd640bd536bcd652c86727a3e45cfcd239",
+      "scripts/ux/share-tablet-navigation-dialog.test.mjs": "21591aa1bb144892314d184b5c918cafa49e4a988497913f99f5454a32676910",
+      "scripts/ux/source-editor-table-browser.mjs": "e3d51d5824b60adfb1177fb0e4465b777525b0e7ac82df9a2912dae62a0f4169",
+      "scripts/ux/source-editor-table-context.test.mjs": "7d62b8740948bc60dce9886fc8c3a18d96b887716dbcb4cf9bd7f511d0e0b292",
+      "scripts/ux/source-editor-table-references.test.mjs": "17dcd0a70627c549b2ccf000ff21df44bc478a08ae0f43fbde1bdaefbe955a0f",
+      "scripts/ux/source-editor-table-tools.test.mjs": "ec012ff39cda3d408876fc5e302182c53e234f8a63036e199147c9147d6ca738"
+    },
+    "source_count": 20,
+    "sources_unchanged_during_gates": true,
+    "focused_pass": 117,
+    "service_free_files": 69,
+    "service_free_pass": 1508,
+    "chrome_pass": 72,
+    "browser": "155.0.8059.82",
+    "lint_exit": 0,
+    "nonincremental_typecheck_exit": 0,
+    "one_cpu_build_exit": 0,
+    "build_environment": {
+      "NEXT_BUILD_CPUS": "1",
+      "NEXT_STANDALONE": "0",
+      "NEXT_TELEMETRY_DISABLED": "1"
+    },
+    "preview_authority": "All table previews use the existing GFM/math/sanitization chain; exact current DOM shape is checked before Apply.",
+    "new_browser_scope": "Desktop rich-syntax typing, repeated Unicode grid/raw edits after CRLF paste, exact Unicode boundary values through Apply/Undo and horizontal boundary focus; existing 320/375px touch/IME scenarios retained.",
+    "test_count_boundary": "The 117 focused cases are also included in the 1,508-case service-free run, not additional distinct cases."
+  },
+  "failures_retained": [
+    "Unicode whitespace removed by normalization and the subsequently withdrawn plain preview.",
+    "An intermediate suffix-regex trim exceeded the existing 10-second isolated whitespace watchdog; fixed with linear scans, not a larger timeout.",
+    "A new actual-workspace fixture failed before opening the table because CodeMirror normalized its initial CRLF text to LF; the test now pastes CRLF into the real LF document. Separate dialog/pure tests retain CRLF-preservation coverage."
+  ],
+  "limitations": [
+    "Large-table next-frame input and main-thread long tasks remain; no stable latency improvement is claimed.",
+    "Early diagnostic excerpts are not fully source-bound acceptance runs.",
+    "Chrome headless uses explicit API/Next/assistant-ui/unrelated-view adapters; no authenticated server, full Reader/Share/Offline/PWA, real IME candidate-window, physical-device, cross-browser or server RSS/OOM acceptance.",
+    "No new migration, commit, push, CI or deployment; unlimited-budget optimization goal remains active."
+  ],
+  "artifacts": {
+    "baseline-source-sha256.json": {
+      "sha256": "8462fdd95f61ea8a4e1a36d7f2f00cc1ce7e9cc532f97ae30084e5ed09a0d2f5",
+      "byte_size": 2525
+    },
+    "diagnostic-crlf-fixture.txt": {
+      "sha256": "2640c1581a44d7e2dd6743586cab78fbb871c60257713271292917994a89e253",
+      "byte_size": 384
+    },
+    "diagnostic-linear-watchdog.txt": {
+      "sha256": "3388c706ff4e277c3310aca5e1591d00c37741a63a51700aef2d0f0a59f51ab0",
+      "byte_size": 669
+    },
+    "diagnostic-parser-unicode.txt": {
+      "sha256": "adec9f50f289ce15c2bba2fc36fc72ffd8d0a3340095c0736227307a79b8c2eb",
+      "byte_size": 1537
+    },
+    "diagnostic-preview-unicode.txt": {
+      "sha256": "714d7d2c77be8f6c3fa338ddac8be10d3cedd433c78759b2f995b05577d345cb",
+      "byte_size": 3457
+    },
+    "final-browser-excerpt.txt": {
+      "sha256": "9f8e416212a0ac7419e5d7fac4c6bd072eb790b47bb812d99d7a81043436e1c1",
+      "byte_size": 6104
+    },
+    "final-browser-result.json": {
+      "sha256": "09f7f754fa0192737a5efc9a7e80845fe2edbbad8602b3de1d30a5dade2ffcbf",
+      "byte_size": 6954
+    },
+    "final-build-excerpt.txt": {
+      "sha256": "fc68a856f8256221bb5e63bca0415999c5b1fd542694b1a70a7b761247b63436",
+      "byte_size": 433
+    },
+    "final-dialog-desktop-light.png": {
+      "sha256": "7e80536fe63c37d434b0bbbbc3e6924e8b2a1e369b956516776eb314dd2dd049",
+      "byte_size": 20720
+    },
+    "final-dialog-mobile-dark.png": {
+      "sha256": "ad0d911034a3b589b090739ddc91681ff5306806a98ade1283a59d395bca16f7",
+      "byte_size": 13622
+    },
+    "final-focused-excerpt.txt": {
+      "sha256": "24c6947aa708b8fe0e275b544e005f5bab063bf4bd21f812a0c3d9a717c7fb73",
+      "byte_size": 491
+    },
+    "final-gate-receipts.json": {
+      "sha256": "4b8a2db7c4cc1b4f171c1e1748029f47656e8f4151472dbcf684f48017b425c2",
+      "byte_size": 1806
+    },
+    "final-lint-excerpt.txt": {
+      "sha256": "73456a4ca78e3e96e29a3b90705bdd2bdf4d6c7b86fe54f050858af982d12009",
+      "byte_size": 252
+    },
+    "final-performance.json": {
+      "sha256": "8c6827e8cdace382d0b321f95bb1647eabfb6e00c89ee31e5aa9a5e09d7d044f",
+      "byte_size": 8654
+    },
+    "final-service-free-excerpt.txt": {
+      "sha256": "3b5a4e6f1797f8a1df56dd2d27f59bb21b63d15e763e0f5c643853765814a505",
+      "byte_size": 506
+    },
+    "final-source-after.json": {
+      "sha256": "403988f9b3546865ab3b8134decc44169bea69979589ec396b2ebffc5f22577c",
+      "byte_size": 2525
+    },
+    "final-source-before.json": {
+      "sha256": "403988f9b3546865ab3b8134decc44169bea69979589ec396b2ebffc5f22577c",
+      "byte_size": 2525
+    },
+    "final-typecheck-excerpt.txt": {
+      "sha256": "81bfeb341bbd3f2bce3116be3c9422d992b0565fc5e8ce057c5889eca81a7fc0",
+      "byte_size": 89
+    },
+    "final-workspace-desktop-light.png": {
+      "sha256": "8f3ba642e413d732f01683f432a447ae53452468a1302f9f7225995cff8fd90b",
+      "byte_size": 24230
+    },
+    "final-workspace-mobile-light.png": {
+      "sha256": "d943cfb0b0d65d7dca3fa75f37deb088026e28faec6bb6270363a009299a49fa",
+      "byte_size": 19480
+    },
+    "performance-comparison.json": {
+      "sha256": "b1ece724791aaa2c6f7ec05c0536dbcc4f1f1296f67fbae09087861cd58feeb9",
+      "byte_size": 6357
+    },
+    "prior-source-bound-performance.json": {
+      "sha256": "39ff5573769458a10d083abab14511ca3782a05fe44ae83338aa7215ae4e05da",
+      "byte_size": 8520
+    },
+    "withdrawn-plain-preview-performance.json": {
+      "sha256": "9472405aa20a1c9312c55bea9ce43a2a6e0f5cb78416b5fcda23bbe43b8b08a7",
+      "byte_size": 8584
+    },
+    "withdrawn-plain-preview-source-before.json": {
+      "sha256": "2f8b0ea57a086b6300a9ed233bffc7c8171460a3d3f53e13e5e3199c82841566",
+      "byte_size": 2525
+    }
+  }
+}

@@ -6,7 +6,7 @@ import {
   type CodeHeaderProps,
   type SyntaxHighlighterProps,
 } from "@assistant-ui/react-markdown";
-import { memo, useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type ReactNode } from "react";
+import { createContext, memo, useContext, useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { Components } from "react-markdown";
@@ -262,11 +262,11 @@ const markdownComponents: Components & {
   tbody({ children }) {
     return <tbody className="divide-y divide-[var(--border)]">{children}</tbody>;
   },
-  td({ children }) {
-    return <td className="border-r border-ui px-3 py-2.5 align-top last:border-r-0">{children}</td>;
+  td({ children, style }) {
+    return <td style={style} className="border-r border-ui px-3 py-2.5 align-top last:border-r-0">{children}</td>;
   },
-  th({ children }) {
-    return <th className="sticky top-0 border-r border-ui bg-[var(--table-header)] px-3 py-2.5 text-left font-semibold last:border-r-0">{children}</th>;
+  th({ children, style }) {
+    return <th style={style} className="sticky top-0 border-r border-ui bg-[var(--table-header)] px-3 py-2.5 text-left font-semibold last:border-r-0">{children}</th>;
   },
   thead({ children }) {
     return <thead className="border-b border-ui">{children}</thead>;
@@ -292,6 +292,100 @@ const inlineMarkdownComponents: Components = {
     return <>{children}</>;
   },
 };
+
+type TableCellPreviewRenderer = (row: number, column: number, content: ReactNode) => ReactNode;
+const TableCellPreviewContext = createContext<{ render: TableCellPreviewRenderer; version?: string } | null>(null);
+
+// Stable component identities keep the active cell/input mounted while typing.
+function EditablePreviewTableCell({ children, node, header, style }: {
+  children?: ReactNode;
+  node?: { properties?: Record<string, unknown> };
+  header: boolean;
+  style?: CSSProperties;
+}) {
+  const render = useContext(TableCellPreviewContext);
+  const row = Number(node?.properties?.["data-table-preview-row"]);
+  const column = Number(node?.properties?.["data-table-preview-column"]);
+  const content = render && Number.isInteger(row) && Number.isInteger(column) ? render.render(row, column, children) : children;
+  return header
+    ? <th style={style} className="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold">{content}</th>
+    : <td style={style} className="border border-ui p-0 align-top">{content}</td>;
+}
+
+const editableTablePreviewComponents: Components = {
+  ...markdownComponents,
+  table({ children }) {
+    return <table className="w-max min-w-full border-collapse text-sm">{children}</table>;
+  },
+  th(props) { return <EditablePreviewTableCell {...props} header />; },
+  td(props) { return <EditablePreviewTableCell {...props} header={false} />; },
+  // Clicking a cell edits its source; it must not also navigate a link.
+  a({ children }) { return <span className="text-[var(--link)] underline">{children}</span>; },
+  img({ alt }) { return <span className="text-secondary">{alt || "Image"}</span>; },
+};
+
+type TablePreviewNode = {
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: TablePreviewNode[];
+};
+
+function rehypeTablePreviewCoordinates() {
+  return (tree: TablePreviewNode) => {
+    const walk = (node: TablePreviewNode) => {
+      if (node.tagName === "table") {
+        let rowIndex = 0;
+        for (const section of node.children ?? []) {
+          for (const row of section.tagName === "tr" ? [section] : section.children ?? []) {
+            if (row.tagName !== "tr") continue;
+            let column = 0;
+            for (const cell of row.children ?? []) {
+              if (cell.tagName !== "th" && cell.tagName !== "td") continue;
+              cell.properties = { ...cell.properties, "data-table-preview-row": rowIndex, "data-table-preview-column": column++ };
+            }
+            rowIndex++;
+          }
+        }
+      } else {
+        node.children?.forEach(walk);
+      }
+    };
+    walk(tree);
+  };
+}
+
+/** Table-tool presentation only: the existing GFM/math/sanitization core is unchanged. */
+export const MarkdownTablePreview = memo(function MarkdownTablePreview({ text, renderCell, interactionVersion }: {
+  text: string;
+  renderCell: TableCellPreviewRenderer;
+  interactionVersion?: string;
+}) {
+  const scopeId = useId();
+  const renderText = useMemo(() => normalizeDisplayMathForRenderer(text), [text]);
+  const previewContext = useMemo(() => ({ render: renderCell, version: interactionVersion }), [interactionVersion, renderCell]);
+  // Keep the Markdown subtree stable when only the cell callback changes (for
+  // example an urgent edit while a deferred preview is catching up). Context
+  // consumers still receive live values without rerunning the unchanged parser.
+  // This retains only this mounted preview's current element, not a source cache.
+  const renderedTable = useMemo(() => {
+    return (
+      <ReactMarkdown
+        components={editableTablePreviewComponents}
+        remarkPlugins={richMarkdownRemarkPlugins()}
+        rehypePlugins={[...scopedRichMarkdownRehypePlugins(scopeId), rehypeTablePreviewCoordinates]}
+        remarkRehypeOptions={richMarkdownRehypeOptions(scopeId)}
+        skipHtml
+      >{renderText}</ReactMarkdown>
+    );
+  }, [renderText, scopeId]);
+  return (
+    <TableCellPreviewContext.Provider value={previewContext}>
+      <div className="aui-chat-markdown reader-prose text-primary" data-rich-markdown-version={RICH_MARKDOWN_RENDERER_VERSION}>
+        {renderedTable}
+      </div>
+    </TableCellPreviewContext.Provider>
+  );
+});
 
 export const MarkdownRenderer = memo(function MarkdownRenderer({
   text,

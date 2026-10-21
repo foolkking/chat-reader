@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-21",
+  "source": "actual workspace with counting-only source wrappers",
+  "capture": [
+    {
+      "nativeOnly": true,
+      "type": "beforeinput",
+      "inputType": "insertText"
+    },
+    {
+      "type": "beforeinput",
+      "nativeType": "textInput",
+      "inputType": null
+    },
+    {
+      "nativeOnly": true,
+      "type": "beforeinput",
+      "inputType": "insertText"
+    },
+    {
+      "type": "beforeinput",
+      "nativeType": "textInput",
+      "inputType": null
+    },
+    {
+      "nativeOnly": true,
+      "type": "beforeinput",
+      "inputType": "insertText"
+    },
+    {
+      "type": "beforeinput",
+      "nativeType": "textInput",
+      "inputType": null
+    },
+    {
+      "nativeOnly": true,
+      "type": "beforeinput",
+      "inputType": "insertText"
+    },
+    {
+      "type": "beforeinput",
+      "nativeType": "textInput",
+      "inputType": null
+    },
+    {
+      "nativeOnly": true,
+      "type": "beforeinput",
+      "inputType": "deleteContentBackward"
+    }
+  ],
+  "hintCalls": 0,
+  "normalCalls": 5
+}

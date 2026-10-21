@@ -1,0 +1,35 @@
+Command: node --test --test-concurrency=1 scripts/ux/*.test.mjs (69 files)
+Exit: 0
+Full log SHA-256: d8dc6ade7e3fac722c834452317e98124f6810ff3db5a44962e8e2b93192e0f8
+Excerpt only, not full log:
+
+# Subtest: zh-CN: failed package progress read says unknown, not still running
+ok 1510 - zh-CN: failed package progress read says unknown, not still running
+  ---
+  duration_ms: 2.3721
+  ...
+# Subtest: confirmed package committed remains visible through a later GET error
+ok 1511 - confirmed package committed remains visible through a later GET error
+  ---
+  duration_ms: 1.0695
+  ...
+# Subtest: confirmed package failed remains visible through a later GET error
+ok 1512 - confirmed package failed remains visible through a later GET error
+  ---
+  duration_ms: 0.7632
+  ...
+# Subtest: confirmed package cancelled remains visible through a later GET error
+ok 1513 - confirmed package cancelled remains visible through a later GET error
+  ---
+  duration_ms: 0.691
+  ...
+1..1513
+# tests 1513
+# suites 0
+# pass 1513
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 57368.8184
+

@@ -168,7 +168,7 @@ export function SourceCommandPanel({
       item("code-block", zh ? "代码块" : "Code block", <Code2 />),
       item("math-block", zh ? "公式块" : "Math block", <Sigma />),
       item("rule", zh ? "分隔线" : "Horizontal rule", <Minus />),
-      item("table", zh ? "插入表格" : "Insert table", <Table2 />),
+      item("table", zh ? "表格工具" : "Table tool", <Table2 />),
     ],
     [
       item("bullets", zh ? "无序列表" : "Bulleted list", <List />),

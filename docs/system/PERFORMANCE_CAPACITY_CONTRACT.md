@@ -111,7 +111,10 @@ separately exercise cursors/COPY and snapshot consistency.
 This is a localized allocation/correctness regression, not a new capacity class,
 RSS benchmark, Linux stack test or 2 GiB/60-minute acceptance. Smaller batches
 can increase query/elapsed costs; the micro timings are not throughput promises.
-No production workload, configuration or deployment was changed.
+No production workload, configuration or deployment was changed during those
+local measurements. The repair later shipped in
+[50f6de4](../execution/OOM_RELEASE_2026-10-19.md); deployment does not turn the
+micro measurements into production capacity or long-load acceptance.
 
 The [next continuation](../execution/OOM_SEARCH_GZIP_FOLLOWUP_2026-10-19.md)
 separately measures attachment metadata and annotation-index retention against

@@ -62,6 +62,9 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
     const first = root ? initialFocusable(root) : null;
     (preferred?.isConnected ? preferred : first ?? root)?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
+      // Candidate cancellation/selection belongs to the IME, and child controls
+      // can already own Escape/Tab. Never turn either into a modal command.
+      if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
       const dialog = rootRef.current?.closest('[role="dialog"][aria-modal="true"]');
       const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
         .filter((item) => item.getClientRects().length > 0)

@@ -1,0 +1,57 @@
+{
+  "method": "Chrome CDP composition with trusted Escape; no physical IME candidate window",
+  "observations": [
+    {
+      "field": "cell",
+      "dialog_count": 1,
+      "focused": true,
+      "writes": 0,
+      "trace": [
+        {
+          "type": "compositionstart",
+          "isTrusted": true,
+          "target": "INPUT"
+        },
+        {
+          "type": "compositionupdate",
+          "isTrusted": true,
+          "target": "INPUT"
+        },
+        {
+          "type": "keydown",
+          "key": "Escape",
+          "keyCode": 27,
+          "isComposing": true,
+          "isTrusted": true,
+          "target": "INPUT"
+        }
+      ]
+    },
+    {
+      "field": "markdown",
+      "dialog_count": 1,
+      "focused": true,
+      "writes": 0,
+      "trace": [
+        {
+          "type": "compositionstart",
+          "isTrusted": true,
+          "target": "TEXTAREA"
+        },
+        {
+          "type": "compositionupdate",
+          "isTrusted": true,
+          "target": "TEXTAREA"
+        },
+        {
+          "type": "keydown",
+          "key": "Escape",
+          "keyCode": 27,
+          "isComposing": true,
+          "isTrusted": true,
+          "target": "TEXTAREA"
+        }
+      ]
+    }
+  ]
+}

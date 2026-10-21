@@ -1,6 +1,255 @@
 # Markdown 文档台账
 
-## Authorized OOM release preparation — 2026-10-19
+## Table/operator release preparation — 2026-10-21
+
+`execution/TABLE_TOOL_RELEASE_2026-10-21.md` records the user's renewed release
+authorization, exact-source CI boundary and mandatory pause for their result.
+Current state, navigation and deployment distinguish this preparation from
+both the completed local phase and the last historical production audit.
+
+## Table closeout and bounded operator repair — 2026-10-21
+
+`execution/ux-audit-table-closeout-2026-10-21.md` closes open-ended table work
+at the user's direction, preserves known large-table limits and verifies the
+existing 20 source/29 artifact bindings without new editor changes.
+`execution/OPS_BACKUP_READERS_2026-10-21.md` and adjacent evidence record the
+local-only no-build backup/preflight repair, shell regressions and Docker/Linux
+verification debt. Current state, navigation, deployment and testing distinguish
+this unreleased work from the 2026-10-19 production audit; no new migration.
+
+## Withdrawn large-table Markdown input trial — 2026-10-21
+
+`execution/ux-audit-table-raw-input-2026-10-21.md` and its adjacent artifacts
+record the matched profile, green content tests and subsequent counting probe.
+Actual React `textInput` has no `inputType`; zero hint calls invalidate the
+earlier claim that the path executed. Callbacks, trust API/state and the trial-
+only test are removed; all 20 source/test hashes restore the delimiter-fix
+checkpoint. Current documentation no longer presents the 123/1,514 trial checks
+as acceptance of a new performance feature. Large-table long tasks remain open.
+
+## GFM delimiter-like table cell parsing — 2026-10-21
+
+`execution/ux-audit-table-delimiter-content-2026-10-21.md` and adjacent
+29 artifacts, indexed by `evidence/table-tool-delimiter-content-2026-10-21.json`,
+preserve the actual-renderer and mounted-workspace failure baselines,
+the full/fast/incremental parser repair, 30 GFM-equivalence cases, desktop
+Apply/Undo and 375px touch. Final checks: 122 focused / 76 Chrome / 69 files,
+1,513 service-free cases, lint, nonincremental typecheck and single-worker build.
+Only the intended parser source changed from the expanded-regression baseline;
+after the failed raw-input trial was removed, a final six-gate rerun binds 20
+unchanged source/test hashes.
+Current state, testing, evidence and navigation indexes are synchronized; no CI,
+push or deployment.
+
+## Table input/content fidelity — 2026-10-21
+
+`execution/ux-audit-table-input-layout-2026-10-21.md`, its 24 adjacent artifacts
+and `evidence/table-tool-input-layout-2026-10-21.json` distinguish unbound
+diagnostic failures/withdrawn trials from six final gates bound to 20 unchanged
+source/test hashes: 117 focused / 72 Chrome / 1,508 service-free cases. Current
+state, Markdown/flow contracts, testing and indexes reflect Unicode-content and
+focus repairs, controlled input, conservative source reuse and the retained
+shared renderer. Long tasks remain; no new migration, push, CI or deployment.
+
+## Table row-boundary navigation — 2026-10-21
+
+`execution/ux-audit-table-page-navigation-2026-10-21.md`, 30 adjacent artifacts and
+`evidence/table-tool-page-navigation-2026-10-21.json` distinguish the missing-
+command baseline, intermediate BODY-focus failure and final boundary controls.
+All six local gates bind 20 unchanged source/test hashes: 111 focused / 67 Chrome /
+1,502 service-free cases. Desktop and actual 320/375px touch exercise tail edits
+and one Undo. Current state, flow/Markdown contracts, testing and indexes agree.
+The preceding adaptive record corrects only its mislabeled long-task column;
+original observations remain unchanged. New profile phases do not establish an
+OOM/latency SLA, and nothing has been pushed, run in CI or deployed.
+
+## Table parsing safety and adaptive-input evidence — 2026-10-21
+
+`execution/ux-audit-table-pending-parse-2026-10-21.md`, its adjacent artifacts and
+`evidence/table-tool-pending-parse-2026-10-21.json` own the actual Chrome failure
+with enabled Apply during suspended source parsing, the pending-state repair,
+latest-input/invalid-input recovery and all six rerun gates. The run binds 20
+unchanged source/test hashes: 111 focused / 64 Chrome / 1,502 service-free cases.
+`execution/TABLE_TOOL_ADAPTIVE_PREVIEW_2026-10-20.md`, adjacent artifacts and its
+separate evidence manifest preserve the previous 62-scenario source checkpoint
+and sequential profiles without pretending each trial had a source-hash binding.
+Current state, Markdown/flow contracts, testing and indexes now distinguish raw
+input from deferred parsing, normal/adaptive preview budgets and the 200-column
+exception. Remaining long tasks are explicit; no new release or server acceptance.
+
+## Editable Table tool local continuation — 2026-10-20
+
+`execution/ux-audit-table-code-span-2026-10-20.md`, its adjacent evidence and
+`evidence/table-tool-code-spans-2026-10-20.json` bind literal-backtick false
+refusal, 70-pass/4-failure baseline, local linear matching, 900 actual GFM
+comparisons, desktop Apply/Undo and 375px touch. All six gates bind 20 unchanged
+source/test hashes: 111 focused / 62 Chrome / 1,502 service-free cases.
+Current state, flow, Markdown/testing and indexes reflect literal-versus-code
+semantics. Separate profiling still observes large-table long tasks; no
+cross-device or server-memory/production acceptance is inferred.
+
+`execution/ux-audit-table-html-cells-2026-10-20.md`, its adjacent evidence and
+`evidence/table-tool-html-cells-2026-10-20.json` bind literal-tag/attribute false
+refusal, unified structural validation and desktop/375px correction. They retain
+the failing baselines and intermediate reference-fixture error, separately from
+106 focused / 61 Chrome / 1,497 service-free cases and six source-bound gates.
+Current state/flow/Markdown/testing/navigation entries keep real HTML and
+unverified native-clipboard/resource boundaries explicit.
+
+`execution/ux-audit-table-input-2026-10-20.md`, its adjacent evidence directory
+and `evidence/table-tool-input-composition-2026-10-20.json` own the composing
+Escape draft-loss baseline, shared-focus repair and trusted CDP cell/Markdown
+observations. All six final gates bind 20 unchanged source/test hashes:
+103 focused / 59 Chrome / 1,494 service-free cases. Current state, flows,
+Markdown/testing and navigation entries distinguish these from real candidate
+windows, cross-browser/Share browser and production acceptance.
+
+`evidence/table-tool-recovery-actions-2026-10-20.json` binds the later removal
+of unavailable Apply, dialog-level recovery description and retained
+invalid/stale-draft safeguards. It preserves the 56-pass failing baseline and
+new six-gate/57-scenario receipts; preceding empty-state evidence stays unchanged.
+
+`execution/TABLE_TOOL_EMPTY_STATE_2026-10-20.md` and
+`evidence/table-tool-empty-state-2026-10-20.json` own conditional removal of the
+inert unavailable-table field, Back to source/focus recovery and linked disabled
+Apply explanation. They retain the 56-pass failing baseline and the intermediate
+viewport-reset test-assumption error, separately from final actual 1440/375px
+geometry, 57 Chrome/83 focused/1,491 service-free checks and six local gates.
+Current state/flow/Markdown/testing entries are synchronized; GFM's preceding
+56-case scoped source/evidence hashes remain historical, not overwritten.
+
+`execution/TABLE_TOOL_GFM_CONTEXT_2026-10-20.md` and
+`evidence/table-tool-gfm-context-2026-10-20.json` own the source-bound actual GFM
+probe, textarea/quoted-HTML/reference repairs, composed source coordinates,
+fail-closed limits and single-frozen-snapshot reuse. They bind the failing
+32-pass browser baseline, 83 focused/56 Chrome/1,491 service-free final gates,
+18 unchanged affected source/test hashes and the post-repair visual probe.
+Current state, flows, Markdown and testing docs distinguish those checks from
+complete HTML conformance, real-device/server or OOM acceptance.
+
+`execution/TABLE_TOOL_LITERAL_CONTEXT_2026-10-20.md` and
+`evidence/table-tool-literal-context-2026-10-20.json` bind parser-recognized raw
+HTML/comment/processing block protection, explicit sample editing, real outside
+tables, same-offset CRLF parsing/reference extraction, failed intermediate
+attempts and its then-green 75 focused, 49 Chrome and 1,483 service-free Web gates.
+They separately retain the subsequently reproduced textarea discrepancies and
+the introduced false refusal of a legitimate quoted table. The later GFM
+continuation repairs them, without relabeling the older scope as complete
+acceptance or binding later test hashes to that older run.
+
+`execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md` and
+`evidence/table-tool-viewport-edges-2026-10-20.json` own the wide-row and long-column
+offscreen controls, their separate failing coordinate baselines, CSS viewport-edge
+repair, desktop/touch hit tests and full-draft/focus preservation. They bind
+45 Chrome, 71 focused, 1,479 service-free cases and final Web gates, keeping the
+intermediate short-landscape test-assumption failure separate. Current state,
+flows, Markdown and testing docs reflect the repair; older 41-case records and
+their then-unresolved probe are not rewritten.
+
+`execution/TABLE_TOOL_CODE_CONTEXT_2026-10-20.md` and
+`evidence/table-tool-code-context-2026-10-20.json` own the five prior GFM
+fence/container mismatches and their repair, exact-source CodeMirror tree reuse,
+prefix-only fallback, neutral nested-list preview and original indentation.
+They retain the failing pre-edit and intermediate coverage-check attempts and
+bind the final 71 focused, 41 browser and 1,479 service-free cases plus Web gates.
+Current flow/Markdown/state docs supersede the old hand-written fence scan;
+earlier dated records are not rewritten as passing attempts.
+
+`execution/TABLE_TOOL_NAVIGATION_2026-10-20.md` and
+`evidence/table-tool-navigation-2026-10-20.json` bind cross-page vertical movement,
+edge-addition focus, native Shift+arrow selection, their intermediate failed
+attempts and the final six local gates. Counts remain 67 focused, 37 browser and
+1,475 service-free because existing scenarios were strengthened. They also retain
+five then-new, then-unresolved GFM fence/container-context mismatches; those
+diagnostics are not mislabeled as passing legacy-equivalence or browser results.
+
+`execution/TABLE_TOOL_BRACKET_INDEX_2026-10-20.md` and
+`evidence/table-tool-bracket-index-2026-10-20.json` bind the quadratic nested-image
+baseline, lazy linear suffix index, legacy-context equivalence and large malformed
+input recovery, plus a separately reproduced deep-quote fence-scan timeout and
+line-scanning repair. Current state/flow/Markdown/testing docs distinguish
+67 focused, 37 browser and 1,475 service-free local passes from real-device/server acceptance.
+The later micro-UX pass also records reusable UTF-8 encoding checks and an
+explicit settled-preview shape error, with the same focused/browser counts and
+Web gates.
+No speculative serialization cache or product parser worker was introduced;
+existing size limits reject oversized grid input without truncating accepted data.
+
+`execution/TABLE_TOOL_PARSER_REUSE_2026-10-20.md` and
+`evidence/table-tool-parser-reuse-2026-10-20.json` own the callback-only duplicate
+parser-entry failure/repair, live context and pending-preview safety checks,
+35 Chrome scenarios and that checkpoint's Web/1,470-case local gates. Counting and promise
+holds wrap the real parser only in the synthetic browser harness; current
+flows/Markdown contract explain input priority, exact Apply gating and the lack
+of global/historical caches. No migration or publication.
+
+`execution/TABLE_TOOL_LONG_CELL_2026-10-20.md` and
+`evidence/table-tool-long-cell-2026-10-20.json` record the display-only renderer
+budget for oversized cells, exact source preservation on untouched Apply,
+400-cell wide-page cap, incremental cell validation and before/after browser
+observations. Its later same-day React deferred-preview experiment keeps Markdown
+editing urgent and gates Apply until the rendered draft catches up; 30 browser
+scenarios, 62 focused checks and Web typecheck pass, but five-sample measurements
+do not show stable improvement and long tasks remain. It does not replace prior
+counts or claim real-device/server-memory acceptance.
+
+`execution/TABLE_TOOL_DEFERRED_PREVIEW_2026-10-20.md` and
+`evidence/table-tool-deferred-preview-2026-10-20.json` bind the subsequent
+React-deferred rich-preview iteration, busy/Apply state, 30 browser scenarios,
+62 focused tests, lint/typecheck/diff checks and five-sample observations. The
+measurement is inconclusive for stable performance gains; long tasks remain.
+
+`execution/TABLE_TOOL_CONTENT_INTEGRITY_2026-10-20.md` and
+`evidence/table-tool-content-integrity-2026-10-20.json` bind the next integrity
+checkpoint: math/code/reference failures, the repaired source-forwarding test
+adapter, bounded read-only link definitions, 61 focused checks, 27 Chrome
+scenarios and all 68 UX files / 1,469 cases plus Web gates. Current state,
+flows, rich-Markdown and testing documents distinguish conservative TeX/reference
+repair limits from source mutation, and client evidence from server/OOM
+acceptance. No dependency, migration, protocol or publication change.
+
+`execution/TABLE_TOOL_PERFORMANCE_2026-10-20.md` and
+`evidence/table-tool-performance-2026-10-20.json` own the subsequent input-latency
+baseline, repeated-work reductions, four bounded synthetic workloads and latest
+22-scenario checkpoint. Current state/flows/Markdown/testing distinguish client
+JS heap and five-key observations from server OOM or cross-device acceptance.
+Earlier snapshots below retain their original source hashes and counts.
+
+`execution/TABLE_TOOL_WORKSPACE_2026-10-20.md` and
+`evidence/table-tool-workspace-2026-10-20.json` extend the initial record with
+actual workspace/form/CodeMirror evidence, three reproduced UI failures and
+20 Chrome scenarios. Current navigation, flow/testing/Markdown contracts and
+Project State distinguish real client integration with explicit API/loader
+adapters from authenticated server/Reader/Offline/Share/resource acceptance.
+The original 13-scenario evidence remains a dated earlier checkpoint.
+
+`execution/TABLE_TOOL_EDITING_2026-10-20.md` and
+`evidence/table-tool-editing-2026-10-20.json` own the current local table
+interaction, synthetic screenshots, original failing mixed-newline regression,
+test receipts and verification limits. Project State and `system/USER_FLOWS.md`
+describe one actual editable rendered table above editable Markdown, edge
+controls and bounded paging, not the retired multi-mode/duplicate-grid UI.
+`system/AI_RICH_MARKDOWN_CONTRACT.md` documents the shared semantic/security
+configuration and retained GFM alignment; `testing.md` documents the explicit
+loopback browser gate and its adapters. No API, migration, canonical/export,
+offline-package or Dexie contract changes; accepted production is unchanged.
+The no-budget optimization goal remains active with no CI, push or deployment.
+
+## Accepted OOM deployment and backup closeout — 2026-10-19
+
+`execution/OOM_RELEASE_2026-10-19.md` and
+`evidence/oom-release-2026-10-19.json` own exact-source CI **39231559224**
+attempt 1, production **50f6de4/0052**, runtime acceptance, current/direct
+rollback **50f6de4/f3b331a**, verified backup retention and post-cleanup
+9.0 GiB available space. Project State, index, deployment/environment,
+testing, API/import/backend/capacity contracts and evidence/execution indexes
+now distinguish this release from the preserved pre-release local checkpoints.
+The implicit-build helper P1, reviewed invalid-action Web errors, online-backup
+atomicity limit and unexecuted long-load/PID1/browser gates remain explicit.
+Rules and generated agent memory are unchanged. Documentation-only closeout
+does not trigger another push, CI or deployment; local review files remain.
+
+## Authorized OOM release preparation — 2026-10-19, historical checkpoint
 
 `execution/OOM_RELEASE_2026-10-19.md` and
 `evidence/oom-release-preflight-2026-10-19.json` own the new user-authorized

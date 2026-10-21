@@ -1,0 +1,10 @@
+Command: node scripts/ux/source-editor-table-browser.mjs
+Exit: 0
+Full log SHA-256: 38a2d2e59104cf1931e84458ba4af479661c08c4c06d02e633f666d222224d36
+Excerpt only, not full log:
+
+PASS actual workspace: real delimiter-valued headers and rows open, apply and undo without loss
+PASS actual workspace: grid and raw delimiter-valued edits survive edge additions and final Apply
+PASS actual workspace: delimiter-valued rows never absorb surrounding pipe prose
+PASS actual workspace: 375px touch can edit delimiter-valued rows and Undo once
+PASS 76 browser scenarios; evidence: C:\Users\86182\Desktop\wkkk\chat-reader-table-delimiter-restored-final-20261021\table-browser

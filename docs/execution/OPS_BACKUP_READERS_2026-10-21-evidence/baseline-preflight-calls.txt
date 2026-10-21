@@ -1,0 +1,2 @@
+compose --env-file synthetic.env -f synthetic-compose.yml exec -T postgres sh -c psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "select pg_database_size(current_database())"
+compose --env-file synthetic.env -f synthetic-compose.yml run --rm --no-deps -T api sh -c du -sk '/data/imports' | cut -f1

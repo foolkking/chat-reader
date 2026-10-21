@@ -274,7 +274,11 @@ export function SourceEditorWorkspace({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!event.altKey || !event.ctrlKey || event.key.toLowerCase() !== "c") return;
-      if (!(event.target as HTMLElement | null)?.closest("[data-source-editor-shell='true']")) return;
+      const eventTarget = event.target;
+      // A nested editor or confirmation owns focus; never open tools behind it.
+      if (event.defaultPrevented || !(eventTarget instanceof Element)
+        || eventTarget.closest('[role="dialog"][aria-modal="true"]')
+        || !eventTarget.closest("[data-source-editor-shell='true']")) return;
       event.preventDefault();
       if (editorToolsOpen) {
         window.dispatchEvent(new CustomEvent("chat-reader:source-command-panel-focus"));
