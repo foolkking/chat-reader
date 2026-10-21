@@ -100,3 +100,32 @@ inherits 117 bound files (only workflow changes) and adds both Dockerfiles and
 the new test, for **120**. It preserves 22 preceding ledgers and their selected
 evidence plus unrelated buildinfo. Full exact-source CI is the next step within
 the same authorization; no release image or deployment is yet accepted.
+
+## Data-limit fallback continuation — 2026-10-21
+
+Exact-source run `39593070512` passed `api-quality`, `web-quality` and
+`settings-quality`. The image producer failed before executing a Dockerfile
+instruction: ECR Public returned HTTP **429 `Data limit exceeded`** while
+resolving the pinned Python base index. Its API quality job independently
+shows the same ECR PostgreSQL pull exhausting retries, then the identical
+previously verified digest downloading from `docker.io/library/postgres` and
+becoming healthy. This is an upstream distribution quota, not a source/build
+failure, resource/OOM event or artifact inspection rejection.
+
+The repair adds a CI-only base resolver for the existing image producer:
+validate both fixed ECR digest references and the job identity first; pull
+Python and Node from ECR with three bounded attempts, then from Docker Hub with
+three bounded attempts; verify each local image is `linux/amd64`; only after
+both succeed append the selected exact references to `GITHUB_ENV`. If either
+registry, inspect or platform check fails, the resolver fails before any
+application build and publishes no partial selection. Existing Dockerfiles,
+defaults, digest pins, API/Web build commands, labels, inspection, provenance
+and deployable-artifact gates are unchanged. No application build is retried
+as a registry fallback, and no dependency is added.
+
+Synthetic Git Bash execution of the actual resolver covers ECR success,
+transient retries, Python/Node/fallback paths, both-source failure, timeout,
+invalid inputs, environment-file atomicity and platform validation. It does
+not contact Docker or prove registry availability. The complete exact-source
+CI rerun on the repair commit remains mandatory before artifact acceptance or
+deployment.

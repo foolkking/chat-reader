@@ -26,6 +26,20 @@ gate, budget, artifact identity/inspection rule and production boundary remains
 unchanged. Source tests are additive; successful metadata or static validation
 does not establish a passing CI or accepted release.
 
+2026-10-21 image-base availability correction: CI run `39593070512` passed all
+three quality jobs but the API image stopped before build execution because the
+ECR Public Python manifest request returned `429 Data limit exceeded`. The
+same run's PostgreSQL fixture logs show ECR pull exhaustion followed by a
+successful pull/readiness check from Docker Hub at the identical verified
+official image digest. Build-images now uses a bounded ECR-first, Docker-Hub-
+fallback resolver for both Python and Node bases: three attempts per registry,
+each pull limited to 60 seconds plus 10-second kill grace, Linux/amd64 verified,
+and no build begins or environment pin changes unless both images resolve.
+Fallback references retain exactly the previously verified immutable index
+digests; no floating tag, application-build retry, migration or production
+change is introduced. The complete exact-source CI still owns actual Docker
+pull/build and deployable artifact acceptance.
+
 2026-10-08 release prerequisite: the first accumulated-optimization CI detected
 new high advisories GHSA-cjq9-62q9-8jv4 (Next image optimization) and
 GHSA-wq5f-xc86-pv6w (sharp/librsvg). Next is patched to **16.3.8** and the sharp

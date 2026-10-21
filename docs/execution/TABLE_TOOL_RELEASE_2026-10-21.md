@@ -68,6 +68,22 @@ API、设置浏览器及该 job 前置的 lint/typecheck/build、1513 项无服�
 下一提交需在精确源码上重跑完整 CI 并等待用户结果；不得沿用首轮 CI 绿灯
 或仅凭本地合成测试部署。CI 通过前不部署。
 
+## 镜像基础源限额失败 — 2026-10-21
+
+Escape 修复提交 `39632abe017bf422272be6691a775d967a9605af` 的完整 CI
+run `39593070512` 中，API/Web/Settings 三个质量 job 均通过，`build-images`
+在 API Dockerfile 执行前因 ECR Public Python manifest 返回
+`429 Too Many Requests / Data limit exceeded` 失败，Web 镜像、镜像检查、
+制品打包和独立 artifact acceptance 因依赖关系跳过。API job 日志还证实
+PostgreSQL ECR pull 遇到同类限额后成功回退至原先已验证的 Docker Hub
+相同 SHA-256 digest；不是 OOM、源码编译错误或测试失败。
+
+新增 CI-only 有界基础镜像解析：Python 与 Node 各从 ECR/Docker Hub 拉取
+相同已验证 digest，每个来源最多三次、每次 60 秒并有 10 秒 kill grace；
+确认 Linux/amd64 后，只有两者都就绪才写入后续 build step 环境。失败时
+不开始任何应用镜像构建、不发布部分 pin、不改浮动 tag。下一提交仍需
+重跑完整 workflow；等用户回报结果前不部署。
+
 发布入库前发现 189 个待提交文本制品中 104 个会被 Git 换行规范化，
 使原 SHA-256/字节大小声明失效；`.gitattributes` 对本批带日期的原始制品禁用
 文本换行转换，保留历史测量字节。不是改写测试结果或重算旧证据。

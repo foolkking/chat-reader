@@ -147,7 +147,7 @@ jobs:
         run: node --test scripts/security/braces-depth.test.mjs scripts/security/source-map-offsets.test.mjs
 
       - name: Official release image source contract
-        run: node --test scripts/ci/release-image-sources.test.mjs scripts/ci/postgres-service.test.mjs
+        run: node --test scripts/ci/release-image-sources.test.mjs scripts/ci/postgres-service.test.mjs scripts/ci/image-base-sources.test.mjs
 
       - name: Offline shell reconciliation regressions
         run: node --test scripts/pwa/offline-shell.test.mjs
@@ -565,6 +565,10 @@ jobs:
       - uses: docker/setup-buildx-action@v3
         with:
           driver: docker
+
+      - name: Prepare pinned image bases with official-source fallback
+        timeout-minutes: 15
+        run: bash scripts/ci/image-base-sources.sh
 
       - name: Record image build metadata
         run: echo "IMAGE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"

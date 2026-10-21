@@ -1,0 +1,52 @@
+{
+  "record_version": 1,
+  "recorded_at": "2026-10-21",
+  "failed_run": {
+    "run_id": "39593070512",
+    "commit": "39632abe017bf422272be6691a775d967a9605af",
+    "quality_jobs": {
+      "api-quality": "passed",
+      "web-quality": "passed",
+      "settings-quality": "passed"
+    },
+    "failed_job": "build-images",
+    "failed_step": "Build API and worker image",
+    "failure": "ECR Public returned HTTP 429 Too Many Requests: Data limit exceeded while resolving the pinned Docker Official Python base manifest. Dockerfile instructions did not begin.",
+    "dependent_skips": [
+      "Build Web image",
+      "Inspect release images",
+      "Package images and provenance",
+      "Upload deployable release artifact",
+      "inspect-release-artifact"
+    ],
+    "independent_fallback_evidence": "The same run's API quality PostgreSQL fixture retried ECR, pulled the identical already-verified Docker Hub digest and passed readiness."
+  },
+  "repair_design": {
+    "sources": [
+      "pinned ECR Public Docker Official Image index",
+      "the same digest-pinned Docker Hub Official Image index"
+    ],
+    "limits": {
+      "attempts_per_source_per_image": 3,
+      "pull_timeout_seconds": 60,
+      "kill_grace_seconds": 10,
+      "platform": "linux/amd64",
+      "workflow_step_timeout_minutes": 15
+    },
+    "atomicity": "Both Python and Node image pulls and platform inspections must succeed before either selected source is appended to GITHUB_ENV.",
+    "build_behavior": "Application builds are not retried or skipped; failure to resolve either verified base stops before the API build.",
+    "application_changes": false,
+    "migration": false,
+    "dependency_change": false,
+    "production_change": false
+  },
+  "local_validation": {
+    "shell_syntax": "passed",
+    "all_ci_tooling_node_suites": "60/60 passed, including all release-image/PostgreSQL/base-source contracts",
+    "synthetic_actual_shell_resolver_suite": "23/23 passed",
+    "docker_registry_or_build": "not run locally",
+    "full_exact_source_ci": "required on repair commit",
+    "deployment": "not started"
+  },
+  "deployment_boundary": "Neither this CI run nor the preceding run produced an accepted deployable release artifact. Wait for the user to report a successful complete rerun."
+}

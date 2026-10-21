@@ -9,14 +9,18 @@ deployment of the completed local table work and bounded backup/preflight
 repair. This supersedes the earlier no-push/no-CI/no-deployment boundary for
 this release only. Run the complete `Build release images` workflow against
 the exact submitted source, then stop and wait for the user's CI result
-before deployment. First run `39561847297` failed only the narrow 375px
-English/Chinese attachment Viewer Escape-return cases; API, settings and all
-earlier Web quality gates passed. The foreground Viewer closed the retained
-file sheet through competing Radix/Vaul/Reader Escape ownership. A local fix
-and regression gate now cover the shared layer stack, ordinary/IME/child-owned
-Escape, mouse/touch close and panel-state retention. Full API-backed browser
-acceptance still requires CI. Re-run the complete workflow against the next
-commit and await the user's result; do not deploy on the failed run.
+before deployment. Run `39561847297` first failed the 375px English/Chinese
+attachment Viewer Escape-return cases; that UI defect is repaired. Its exact
+repair commit `39632abe017bf422272be6691a775d967a9605af` then passed API, Web
+and settings quality, but image build run `39593070512` failed before the API
+build could start: ECR Public returned `429 Data limit exceeded` for the
+pinned Python base image. Logs also confirm the disposable PostgreSQL jobs
+encountered the same ECR throttle and succeeded through the already-verified
+Docker Hub digest fallback. A bounded, digest-preserving ECR→Docker Hub fallback
+for both Python and Node image bases is now under repair; the full workflow
+must rerun on the repair commit and the user must report its result. Do not
+deploy from either failed run. The complete API-backed browser checks passed
+in run `39593070512`; no production action has started.
 No production action has started; schema remains 0052.
 See the [release preparation](docs/execution/TABLE_TOOL_RELEASE_2026-10-21.md).
 

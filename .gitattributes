@@ -15,6 +15,7 @@ patches/*.patch -text whitespace=-blank-at-eol
 deploy/backup.sh text eol=lf
 deploy/preflight_release_space.sh text eol=lf
 deploy/backup_volume_reader.sh text eol=lf
+scripts/ci/image-base-sources.sh text eol=lf
 # Dated verification artifacts are byte evidence; never normalize their newlines.
 docs/evidence/oom-release-2026-10-19.json -text whitespace=cr-at-eol,-blank-at-eof
 docs/evidence/table-tool-*2026-10-2[01]* -text whitespace=cr-at-eol,-blank-at-eof

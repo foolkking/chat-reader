@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+## Release image registry data-limit continuation — 2026-10-21
+
+Run `39593070512` passed the three quality jobs but ECR Public throttled the
+Python image-base manifest with HTTP 429 before Dockerfile execution. The
+CI-only `scripts/ci/image-base-sources.sh` now performs bounded ECR→Docker Hub
+fallback at the same immutable digest and verifies `linux/amd64` before either
+build. Its actual-shell synthetic suite and adjacent release evidence are linked
+from `docs/execution/CI_REGISTRY_SOURCE_2026-10-10.md` and
+`TABLE_TOOL_RELEASE_2026-10-21.md`; full exact-source CI remains mandatory.
+
 ## Release H attachment mobile-layer regression — 2026-10-21
 
 The failed release run `39561847297` isolated a 375px Viewer/Sheet Escape

@@ -74,7 +74,16 @@ test("both image builds explicitly select the accepted Linux amd64 platform", ()
 });
 
 test("the registry source contract runs as an additive CI check", () => {
-  assert.match(job("web-quality"), /run: node --test scripts\/ci\/release-image-sources\.test\.mjs scripts\/ci\/postgres-service\.test\.mjs(?:\n|$)/);
+  assert.match(job("web-quality"), /run: node --test scripts\/ci\/release-image-sources\.test\.mjs scripts\/ci\/postgres-service\.test\.mjs scripts\/ci\/image-base-sources\.test\.mjs(?:\n|$)/);
+});
+
+test("both pinned bases are prepared before building without retrying application builds", () => {
+  const build = job("build-images");
+  const preparation = build.indexOf("run: bash scripts/ci/image-base-sources.sh");
+  assert.match(build, /- name: Prepare pinned image bases with official-source fallback\n        timeout-minutes: 15\n        run: bash scripts\/ci\/image-base-sources\.sh/);
+  assert.ok(preparation < build.indexOf("- name: Build API and worker image"));
+  assert.ok(preparation < build.indexOf("- name: Build Web image"));
+  assert.equal([...build.matchAll(/^          docker build \\/gm)].length, 2);
 });
 
 test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable", () => {
