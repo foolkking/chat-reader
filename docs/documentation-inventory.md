@@ -1,5 +1,16 @@
 # Markdown 文档台账
 
+## Original-relative image scale — 2026-10-23
+
+`system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size` owns original
+preservation, same-attachment/mutable-URL behavior, source-bound metadata,
+conversion bounds and portable/offline limitations. API/testing/deployment
+describe owner routes, executable gates and the user's 50-minute wait per CI run.
+`PROJECT_STATE.md` and `index.md` link current scope; the dated
+`execution/IMAGE_DISPLAY_SCALE_2026-10-23.md` records evidence and release status,
+not an independent runtime truth. No migration, dependency or package version
+change. Only synthetic content and nonsecret release receipts may be retained.
+
 ## Single-message Markdown copy — 2026-10-22
 
 `system/MESSAGE_MARKDOWN_COPY_CONTRACT.md` owns canonical whole-message source,

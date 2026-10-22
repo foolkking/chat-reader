@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 from app.core.database import get_db
-from app.services.assets import public_images
+from app.services.assets import public_images, image_display
 from app.services.assets.attachment_service import AttachmentAccessError, get_owner_attachment
 from app.services.ownership import ownership_scope_from_request
 from app.api.routes.attachments import _content_response
@@ -22,6 +22,49 @@ _preview_slot = BoundedSemaphore(1)
 class PublishImagesRequest(BaseModel):
     base_version_id: uuid.UUID
     attachment_ids: list[uuid.UUID] = Field(default_factory=list, max_length=public_images.MAX_COPY_IMAGES)
+
+
+class ImageDisplayRequest(BaseModel):
+    source_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    scale_percent: int = Field(strict=True, ge=1, le=100)
+    expected_scale_percent: int = Field(strict=True, ge=1, le=100)
+
+
+@router.get("/api/attachments/{attachment_id}/image-display")
+def read_image_display(attachment_id: uuid.UUID, request: Request, response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return image_display.display_state(db, attachment_id, ownership_scope_from_request(request))
+    except (AttachmentAccessError, FileNotFoundError) as exc:
+        raise HTTPException(getattr(exc, "status_code", 404), detail=str(exc)) from exc
+
+
+@router.put("/api/attachments/{attachment_id}/image-display")
+def update_image_display(attachment_id: uuid.UUID, payload: ImageDisplayRequest, request: Request,
+                         response: Response, db: Session = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    # Serialize expensive pixel work with SVG previews, not anonymous reads.
+    acquired = False
+    try:
+        scope = ownership_scope_from_request(request)
+        get_owner_attachment(db, attachment_id, scope)
+        acquired = _preview_slot.acquire(blocking=False)
+        if not acquired:
+            raise HTTPException(429, detail="Another image conversion is in progress.", headers={"Retry-After": "3"})
+        result = image_display.save_display(db, attachment_id, scope, payload.source_sha256,
+                                            payload.scale_percent, payload.expected_scale_percent)
+        db.commit()
+        return result
+    except (AttachmentAccessError, FileNotFoundError) as exc:
+        db.rollback()
+        raise HTTPException(getattr(exc, "status_code", 404), detail=str(exc)) from exc
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(503, detail="Image storage changed concurrently. Reload and retry.",
+                            headers={"Retry-After": "1"}) from exc
+    finally:
+        if acquired:
+            _preview_slot.release()
 
 
 @router.get("/api/messages/{message_id}/markdown-copy")

@@ -87,6 +87,38 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await expect.poll(() => page.evaluate(() => (window as unknown as { __messageCopyValues: string[] }).__messageCopyValues.length)).toBe(2);
     await expect(manual).toHaveCount(0);
 
+    // The same published URL follows saved scale, while the original remains
+    // private and unchanged. Exercise real inline controls, not a CSS adapter.
+    const original = await page.request.get(`/api/attachments/${svg.id}/content`);
+    const originalBytes = await original.body();
+    await article.getByRole("button", { name: /Image size ·|图片大小 ·/ }).click();
+    const scale = article.getByRole("spinbutton", { name: /Image scale percentage|图片缩放百分比/ });
+    await expect(scale).toHaveValue("100");
+    await scale.fill("50");
+    await article.getByRole("button", { name: /Apply size|应用比例/ }).click();
+    await expect(article.getByRole("status").filter({ hasText: /Image size saved|比例已保存/ })).toBeVisible();
+    expect((await page.request.get(`/api/attachments/${svg.id}/image-display`)).status()).toBe(200);
+    const imageSize = async () => {
+      await external.goto(url!);
+      return external.locator("img").evaluate(node => (node as HTMLImageElement).naturalWidth);
+    };
+    await expect.poll(imageSize).toBe(10);
+    const inlineImage = article.locator(`[data-attachment-id="${svg.id}"] .attachment-gallery-image`);
+    await expect.poll(() => inlineImage.evaluate(node => node.getBoundingClientRect().width)).toBe(10);
+    await scale.fill("25");
+    await article.getByRole("button", { name: /Apply size|应用比例/ }).click();
+    await expect.poll(imageSize).toBe(5);
+    await page.reload();
+    await expect(article).toBeVisible();
+    await expect.poll(() => inlineImage.evaluate(node => node.getBoundingClientRect().width)).toBe(5);
+    await article.getByRole("button", { name: /Image size · 25%|图片大小 · 25%/ }).click();
+    await expect(scale).toHaveValue("25");
+    await article.getByRole("button", { name: /Restore 100%|恢复 100%/ }).click();
+    await expect.poll(imageSize).toBe(20);
+    expect(await (await page.request.get(`/api/attachments/${svg.id}/content`)).body()).toEqual(originalBytes);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: test.info().outputPath(`image-size-${width}.png`), fullPage: true });
+
     const share = await page.request.post(`/api/conversations/${conversationId}/shares`, { headers, data: {} });
     expect(share.ok()).toBe(true);
     const shared = await share.json() as { id: string; token: string };
@@ -94,6 +126,7 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await external.goto(`${baseURL}/share/${shared.token}`);
     await expect(external.locator("article[data-message-id]")).toHaveCount(2);
     await expect(external.getByTestId("message-markdown-copy")).toHaveCount(0);
+    await expect(external.getByRole("button", { name: /Image size ·|图片大小 ·/ })).toHaveCount(0);
 
     // A current reference correctly prevents direct deletion; remove it through
     // the supported edit contract before removing the conversation file.

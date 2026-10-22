@@ -535,6 +535,14 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .attachment-gallery-trigger:hover .attachment-gallery-overlay,
 .attachment-gallery-trigger:focus-visible .attachment-gallery-overlay { opacity: 1; transform: translateY(0); }
 .attachment-gallery-caption { margin-top: 0.25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: 0.75rem; }
+.attachment-gallery-row:has([data-image-sized="true"]) { flex-wrap: wrap; align-items: flex-start; }
+.attachment-gallery-item:has([data-image-display-controls]) { height: auto; }
+.attachment-gallery-item:has([data-image-display-controls]) > .attachment-gallery-trigger { height: var(--attachment-gallery-row-height, auto); }
+.attachment-gallery-item[data-image-sized="true"] { width: min(max(var(--image-display-width), 20rem), 100%); height: auto; }
+.attachment-gallery-item[data-image-sized="true"] > .attachment-gallery-trigger { width: fit-content; max-width: 100%; height: auto; min-height: 0; margin-inline: auto; }
+.image-display-input { border-color: var(--markdown-muted); }
+.btn-primary.image-display-apply { background: var(--link); color: var(--surface); }
+.btn-primary.image-display-apply:hover:not(:disabled) { background: var(--link-hover); }
 .attachment-gallery-more {
   display: flex;
   width: min(var(--attachment-gallery-item-width, 12rem), 100%);

@@ -10,6 +10,7 @@ import { usePreferences } from "../../components/preferences-provider";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import { normalizeVisibleCaption } from "./attachment-caption-policy";
 import { useAttachmentAccess } from "./attachment-access";
+import { ImageDisplayControls, useImageDisplay } from "./image-display-controls";
 import {
   attachmentAssetIdentity,
   buildAttachmentRenderPlan,
@@ -140,6 +141,7 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
   onRuntime: (state: AttachmentRuntimeRenderState) => void;
   zh: boolean;
 }) {
+  const { display } = useImageDisplay(attachment);
   const displayMode = normalizeImageDisplayMode(props.displayMode);
   const maxWidth = imageDisplayMaxWidth(displayMode);
   const visibleCaption = normalizeVisibleCaption(props.caption, attachment.display_name);
@@ -147,7 +149,8 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
     <figure
       {...attachmentLocatorAttributes(attachment, props)}
       className="attachment-gallery-item"
-      style={props.galleryItemStyle}
+      style={{ ...props.galleryItemStyle, ...(display ? { "--image-display-width": `${display.width}px` } as CSSProperties : {}) }}
+      data-image-sized={display ? "true" : undefined}
       data-testid="attachment-block"
       data-attachment-mode="media"
       data-display-mode={displayMode}
@@ -159,7 +162,7 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
           loading="lazy"
           decoding="async"
           className="attachment-gallery-image"
-          style={{ maxWidth }}
+          style={display ? { width: display.width, maxWidth: "100%", maxHeight: "none" } : { maxWidth }}
           onLoad={(event) => {
             const image = event.currentTarget;
             props.onImageRatio?.(image.naturalWidth / Math.max(1, image.naturalHeight), image.naturalWidth);
@@ -173,6 +176,7 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
         </span>
       </button>
       {visibleCaption ? <figcaption className="attachment-gallery-caption">{visibleCaption}</figcaption> : null}
+      <ImageDisplayControls attachment={attachment} zh={zh} />
     </figure>
   );
 }

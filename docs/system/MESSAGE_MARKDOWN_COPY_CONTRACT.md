@@ -1,6 +1,6 @@
 # Single-message Markdown copy
 
-Current source: 2026-10-22. Release status is owned by
+Current source: 2026-10-23. Release status is owned by
 [PROJECT_STATE](../../PROJECT_STATE.md), not this implementation contract.
 
 ## User action and source
@@ -102,6 +102,59 @@ PostgreSQL plus asset-storage backup preserves them. Migration downgrade
 revokes every capability by dropping only its table/index; source messages,
 attachments and files are untouched. Database downgrade is an operator-approved
 operation, not automatic image rollback.
+
+## Owner-selected image size
+
+An owner can expand **Image size** below an inline attachment image, read its
+original dimensions, enter a whole **1–100%**, Apply, or Restore 100%.
+The percentage is relative to the original, never the last resized result.
+Dimensions are rounded to the nearest pixel, with a one-pixel minimum. Raster
+EXIF orientation is applied before determining width/height. The original file,
+private content/download URL and original viewer remain unchanged.
+
+The source-hash-bound `Attachment.metadata.image_display_v1` stores
+`source_sha256`, `scale_percent`, `original_width`, `original_height`, `width`
+and `height`. The existing derivative table stores `image_display_png` with an
+attachment-scoped generator version; there is **no migration** (head stays
+`20261022_0053`). Source replacement invalidates the selection. Saving checks
+both source hash and expected current percentage under an attachment row lock;
+a stale save returns 409 with a read-before-retry instruction.
+
+All inline references to **the same attachment** use the saved size, with a
+container-width cap. This is not a different setting for each occurrence.
+Existing public-image URLs keep their identity and resolve the latest selected
+PNG (original raster bytes at 100%). The URL's intrinsic pixels therefore work
+in ordinary Markdown clients without nonstandard image-size syntax. The
+response remains no-store with live source/scan/deletion checks. A missing
+selected derivative fails closed rather than silently serving the original;
+the owner can explicitly save again to repair it. Anonymous reads never resize.
+Saving a size **does not publish** an image. Only the existing explicit
+Markdown-copy publication does.
+
+For SVG, original dimensions follow the existing bounded sanitizer's
+numeric/px/viewBox/default-size interpretation. Resizing uses its validated,
+attachment-scoped safe PNG, never server-side SVG execution. At 100%, a large
+SVG can have original dimensions but is still derived from the safe preview
+(at most 1600px per edge), not a guarantee of original vector detail.
+
+Resize admission shares the single per-process preview/conversion slot
+(429/Retry-After). Source bytes are at most 16 MiB and decoded input at most
+8,000,000 pixels; the output is at most 4096px per edge, 4,000,000 pixels and
+16 MiB. SVG keeps its stricter existing source and preview limits. Animated
+images are rejected for resizing rather than flattened; their unchanged
+original may still be used at 100%. Pixel-only PNG output discards metadata.
+Oversized, unsupported or unsafe content leaves the last valid selection
+unchanged. No new dependency, network fetch, worker or decoder is introduced.
+These are admission bounds, not a claim of measured production peak memory.
+
+Share/Offline/read-only views never offer the editing control. They can render
+saved metadata with existing private/offline image access; offline copies are
+snapshots and do not live-follow later saves. Existing `.cr` attachment metadata
+can retain a selection, but derived objects/public capabilities are not a new
+portable format: after restoring elsewhere, saving again may be required before
+publishing. Existing v1/v2/v3 package readers and Dexie data are unchanged.
+External clients can override display width, cache or download images; no URL
+can force those clients or update their saved local copies.
 
 See [API](../api-reference.md), [deployment](../deployment.md),
 [testing](../testing.md), and the

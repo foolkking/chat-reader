@@ -121,6 +121,8 @@ def publish_images(db: Session, message_id: uuid.UUID, scope: OwnershipScope, ba
             if preview is None or not scan_status_allows_use(preview.scan_status):
                 raise AttachmentAccessError("A safe PNG preview is required.", 409)
             get_asset_store().resolve_key(preview.storage_key)
+        from app.services.assets.image_display import display_asset
+        display_asset(db, row)
         eligible.append((row, content.asset_object))
     # Validate the entire selection before creating any capability.
     urls = {}
@@ -234,7 +236,11 @@ def public_image_content(db: Session, token: str):
         raise AttachmentAccessError("Image not found.")
     content = _usable(row)
     asset = content.asset_object
-    if asset.detected_mime_type == SVG_TYPE:
+    from app.services.assets.image_display import display_asset
+    selected = display_asset(db, row)
+    if selected is not None:
+        asset = selected
+    elif asset.detected_mime_type == SVG_TYPE:
         asset = _preview(db, asset.id, row.id)
         if asset is None or not scan_status_allows_use(asset.scan_status):
             raise AttachmentAccessError("Image not found.")

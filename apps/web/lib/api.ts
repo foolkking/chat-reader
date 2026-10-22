@@ -396,6 +396,22 @@ export async function replaceSkillBundle(skillId: string, baseRevision: number, 
   return fetchJson(`${system ? "/api/admin/system-skills" : "/api/skills"}/${skillId}/revisions`, { method: "POST", body, signal: AbortSignal.timeout(60_000) });
 }
 
+export type ImageDisplayRead = {
+  source_sha256: string; scale_percent: number;
+  original_width: number; original_height: number; width: number; height: number;
+  configured?: boolean;
+};
+
+export function getImageDisplay(id: string, signal?: AbortSignal) {
+  return fetchJson<ImageDisplayRead>(`/api/attachments/${encodeURIComponent(id)}/image-display`, { signal, cache: "no-store" });
+}
+
+export function setImageDisplay(id: string, before: ImageDisplayRead, percent: number, signal?: AbortSignal) {
+  return fetchJson<ImageDisplayRead>(`/api/attachments/${encodeURIComponent(id)}/image-display`, {
+    ...jsonRequest("PUT", { source_sha256: before.source_sha256, expected_scale_percent: before.scale_percent, scale_percent: percent }), signal,
+  });
+}
+
 function skillRequestSignal(signal?: AbortSignal): AbortSignal {
   return signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000);
 }

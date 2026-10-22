@@ -1,8 +1,21 @@
 # Project State
 
-Last updated: 2026-10-22. This is the current snapshot, not a release history.
+Last updated: 2026-10-23. This is the current snapshot, not a release history.
 
 ## Release and active work
+
+**Active work (2026-10-23): original-relative image scale.** Owner inline images
+have a 1–100% control, original/target dimensions and Restore 100%. Original bytes
+are retained; the same attachment and previously published URL follow the saved
+selection. External caches/forced widths are not controllable. Source-bound
+metadata and existing derivatives are reused; no migration/dependency or offline
+format change, head remains `20261022_0053`. See the
+[current contract](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size)
+and [implementation/release record](docs/execution/IMAGE_DISPLAY_SCALE_2026-10-23.md).
+Commit/deployment is authorized after validation. **For each CI run, wait
+50 minutes after starting it before checking its result**, then require all five
+jobs and independent exact-artifact acceptance before production. This feature
+is not deployed at this checkpoint; the accepted runtime below is still current.
 
 **Current work (2026-10-22): single-message Markdown copy.** The owner Reader's
 top copy action is immediately before bookmark. It prepares complete canonical

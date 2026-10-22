@@ -1,5 +1,19 @@
 # API 参考
 
+## 图片展示比例 — 2026-10-23 source
+
+两个接口均为 owner-only、no-store，不创建公开能力。
+
+| Method/path | Contract |
+| --- | --- |
+| `GET /api/attachments/{attachment_id}/image-display` | Original/source-bound dimensions and selected percentage; no mutation. Returns `source_sha256`, `scale_percent`, `original_width`, `original_height`, `width`, `height`, `configured` (false before explicit save). |
+| `PUT /api/attachments/{attachment_id}/image-display` | JSON `{source_sha256, scale_percent, expected_scale_percent}`; percentages strict whole integers 1–100. Returns the same shape with `configured: true`. 409 stale source/selection or missing safe SVG preview; 413 bounds; 422 invalid/animated input; 429 conversion slot busy; retryable 503 storage conflict. |
+
+The existing public-image URL follows the selected intrinsic size without
+changing token; original content/download stay unchanged. See the
+[current contract](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size)
+for bounds, same-attachment semantics and external-client limitations.
+
 ## 单条消息 Markdown 复制 — 2026-10-22 source
 
 详见[当前合同](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md)。读取计划不公开图片；

@@ -1,5 +1,14 @@
 # 文档导航
 
+## 图片展示比例 — 2026-10-23
+
+正文图片可设置相对原图的 1–100% 并恢复 100%；保留原文件和原始尺寸，
+同一附件及既有公开链接跟随最新保存值。外部缓存/强制宽度不受链接控制。
+[当前合同](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size)
+维护语义/资源/兼容边界，[实施记录](execution/IMAGE_DISPLAY_SCALE_2026-10-23.md)
+维护实测与本轮发布状态。无新 migration，head 仍为 `20261022_0053`。
+用户要求每次 CI 启动后等 50 分钟再看结果，全部门禁和精确制品通过后部署。
+
 ## 单条消息 Markdown 复制 — 2026-10-22
 
 当前源码新增消息顶部收藏左侧整条复制：canonical Markdown、图片长期公开外链、

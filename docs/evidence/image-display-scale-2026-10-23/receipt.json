@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-23",
+  "status": "local_passed_not_deployed",
+  "boundary": "synthetic Next/API/disposable PostgreSQL; clipboard adapter; no installed external client or production UI acceptance",
+  "tests": {
+    "focused_api": 48,
+    "attachment_compatibility": 54,
+    "service_free_ux": 1535,
+    "selected_browser": {
+      "passed": 26,
+      "existing_opt_in_skipped": 1
+    },
+    "viewer_modal": 12,
+    "table_browser": 81,
+    "lint": "passed",
+    "nonincremental_typecheck": "passed",
+    "production_build": "passed",
+    "alembic_head": "20261022_0053"
+  },
+  "normalized_lf_source_sha256": {
+    "apps/api/app/services/assets/image_display.py": "698bd4461ca25764b92cb2c00df5919eaeb88f0a70bd81b946e64f99ecdfa66c",
+    "apps/api/app/services/assets/public_images.py": "5b81ed54e37b8ff36a127816c3ac59ca2d75521b4b34015993ca50a0c1621d1c",
+    "apps/api/app/api/routes/markdown_copy.py": "fd91baa55336ae6a676e7a003a19a1d0cd8976bc24dfade24ad99610d9af46d3",
+    "apps/api/tests/test_image_display.py": "92662ff9128ee02dbcd265013c8b149c6581146f4bd1cd054981f612a2f25c5b",
+    "apps/web/features/attachments/image-display-controls.tsx": "643a2904c76780c00ed8f8534d0245d170fdd7a0387be064192ab8d58c350dbd",
+    "apps/web/features/attachments/attachment-block.tsx": "064031f51fc5bbfa55562305620aec435a88374f885362918c026cd742c57ec8",
+    "apps/web/lib/api.ts": "8ff665c61c90dc05822e21cc4653befb4837f7eaaad1943e3bcf46bb85500fae",
+    "apps/web/app/globals.css": "2dd567a3384ad673f9fdf73fc06fba5f53d2b8d8beec6e9e8ed5d44f1139de57",
+    "apps/web/e2e/message-markdown-copy.spec.ts": "5fa7d0e697857d31c1a8c4921818b70d22ad69c4a05b3eb93e729907f65f2e53"
+  },
+  "artifacts": {
+    "image-size-1440.png": "7e74c01966efe5c86562c106cb553fc0e170f068a546e1fe7cbc6f937103b480",
+    "image-size-375.png": "9678dcd217b1b659da800b5732e4114b51868dafff3f124c4cd186953f871746"
+  }
+}

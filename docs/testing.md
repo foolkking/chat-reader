@@ -1,5 +1,26 @@
 # Testing
 
+## Original-relative image scale — 2026-10-23
+
+- `cd apps/api; python -m pytest tests/test_image_display.py
+  tests/test_message_markdown_copy.py -q --basetemp="$env:TEMP/pytest-scale"`:
+  original preservation, stable URL 50/25/100%, no publication on size save,
+  source/expected-percentage conflicts, EXIF orientation, metadata stripping,
+  animation/bounds rejection, owner/auth checks, concurrency admission, and
+  missing-derivative fail-closed/repair.
+- Existing `E2E_MESSAGE_MARKDOWN_COPY=1` real Next/API/disposable-PostgreSQL
+  tests now exercise inline controls at 1440/375px, unchanged public URL,
+  persisted width after reload, Restore 100%, original bytes, no page overflow,
+  and Share editing-control absence. Clipboard is still an explicit adapter.
+- Run attachment bundle/integrity/range/upload/storage and offline regressions,
+  Reader/Share copy, service-free UX tests, Viewer modal and table browser gates,
+  lint, nonincremental typecheck and bounded production build.
+
+Use only the task TEMP/TMP directory and synthetic data. Counts, screenshots,
+known skips and exact release state belong to the
+[dated record](execution/IMAGE_DISPLAY_SCALE_2026-10-23.md). These checks are not
+installed Obsidian, full WCAG, production authenticated UI or peak-memory acceptance.
+
 ## Single-message Markdown copy — 2026-10-22
 
 The [current contract](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md) owns limits;

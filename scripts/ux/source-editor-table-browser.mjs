@@ -84,6 +84,7 @@ export const editMessage=async(id,payload)=>{
 export const createAttachmentUploadSession=outsideScope,deleteAttachmentUploadItem=outsideScope,
   deleteConversationAttachment=outsideScope,finalizeConversationAttachments=outsideScope,
   getConversation=outsideScope,getConversationReaderTurn=outsideScope,uploadAttachmentItem=outsideScope;
+export const getImageDisplay=outsideScope,setImageDisplay=outsideScope,uploadMessageCopyPreview=outsideScope;
 export const ContentCleanupDialog=({open})=>open?outsideScope():null;`);
 // Count actual parser component entries without substituting its implementation.
 // Callback-only rerenders should update editable cells, not parse the same source.
