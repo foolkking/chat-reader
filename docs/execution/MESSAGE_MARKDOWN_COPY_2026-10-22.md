@@ -129,7 +129,10 @@ proxy-cache 与后端目标断言；8 个旧流式上传和 5 个大文件限额
 Markdown 编辑按钮；已改为精确 accessible name `Edit Markdown source`，不改变
 产品行为。API 全量为 **1,676 passed / 3 skipped / 1 failed**：备份恢复集成在
 PostgreSQL 16 上错误回退到系统 `pg_restore`，该客户端输出 PostgreSQL 17 的
-`SET transaction_timeout`，PostgreSQL 16 不识别。已让测试严格选择与服务端
-major 匹配的工具，并在该使用固定 PostgreSQL 16 服务的 CI job 显式安装
-`postgresql-client-16`；不跳过恢复验证或放松断言。两项修复需由后续精确源码
-完整工作流重新验证。其他失败 job 与制品任务因依赖失败而跳过。
+`SET transaction_timeout`，PostgreSQL 16 不识别。尝试安装精确版本客户端后，
+新 run `39767101292` 证明 GitHub `ubuntu-latest` 已切换到 Ubuntu 26.04，
+其 apt 源找不到 `postgresql-client-16`，API job 在测试前停止。当前改为在
+缺少匹配主机客户端时，通过 `docker exec` 调用此 job 已固定 digest 的
+PostgreSQL 16 容器内置 `pg_dump`/`pg_restore`；本地仍优先使用同 major 客户端。
+没有跳过恢复验证或放松断言。精确 E2E 定位器修复已并入；这一容器工具路径仍需
+后续完整 CI 实际验证。其他失败 job 与制品任务因依赖失败而跳过。

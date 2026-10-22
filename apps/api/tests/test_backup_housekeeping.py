@@ -28,16 +28,26 @@ def snapshots(tmp_path):
     with admin.connect() as db:
         major = int(db.scalar(text("SHOW server_version_num"))) // 10000
         # A newer pg_dump can emit settings unsupported by an older server.
-        # This integration fixture requires the exact server-major client.
+        # Prefer the exact server-major client; in GitHub Actions use the
+        # already-pinned disposable PostgreSQL container's own client binaries.
         matching = Path(f"/usr/lib/postgresql/{major}/bin")
         pg_dump = matching / "pg_dump"
         pg_restore = matching / "pg_restore"
-        assert pg_dump.is_file() and pg_restore.is_file(), (
-            f"PostgreSQL {major} integration requires matching pg_dump/pg_restore "
-            f"at {matching}"
-        )
-        pg_dump = str(pg_dump)
-        pg_restore = str(pg_restore)
+        if pg_dump.is_file() and pg_restore.is_file():
+            pg_dump = [str(pg_dump)]
+            pg_restore = [str(pg_restore)]
+        else:
+            run_id = os.environ.get("GITHUB_RUN_ID")
+            attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
+            job = os.environ.get("GITHUB_JOB")
+            assert run_id and attempt and job, (
+                f"PostgreSQL {major} integration requires matching tools at {matching}"
+            )
+            container = f"chat-reader-ci-postgres-{run_id}-{attempt}-{job}"
+            password = url.password or ""
+            client = ["docker", "exec", "-i", "-e", f"PGPASSWORD={password}", container]
+            pg_dump = [*client, "pg_dump"]
+            pg_restore = [*client, "pg_restore"]
         for name in (source, target):
             db.execute(text(f'CREATE DATABASE "{name}"'))
     engine = create_engine(url.set(database=source))
@@ -47,8 +57,8 @@ def snapshots(tmp_path):
     engine.dispose()
     flags = ["-h", url.host, "-p", str(url.port or 5432), "-U", url.username]
     env = {**os.environ, "PGPASSWORD": url.password or ""}
-    dump = subprocess.check_output([pg_dump, *flags, "-d", source, "-Fc"], env=env)
-    toc = subprocess.check_output([pg_restore, "--list"], input=dump)
+    dump = subprocess.check_output([*pg_dump, *flags, "-d", source, "-Fc"], env=env)
+    toc = subprocess.check_output([*pg_restore, "--list"], input=dump)
     tar_bytes = io.BytesIO()
     with tarfile.open(fileobj=tar_bytes, mode="w:gz") as archive:
         item = tarfile.TarInfo("synthetic.txt")
@@ -68,7 +78,7 @@ def snapshots(tmp_path):
         (directory / "MANIFEST").write_text("schema_version=1\ncreated_at=" + stamp + "\ncomponents=postgres,imports,exports,offline,assets\n" + sums)
         return directory
     try:
-        yield root, make, [pg_restore, "--list"], (pg_restore, flags, target, env, url)
+        yield root, make, [*pg_restore, "--list"], (pg_restore, flags, target, env, url)
     finally:
         with admin.connect() as db:
             for name in (source, target):
@@ -93,7 +103,7 @@ def test_two_logical_snapshots_restore_after_dedup_and_old_removal(snapshots):
     assert {name: (newest / name).read_bytes() for name in housekeeping.MEMBERS} == before
     assert housekeeping.retain(root, pg, apply=True)["removed"] == 0
     exe, flags, target, env, url = restore
-    subprocess.run([exe, *flags, "--exit-on-error", "--no-owner", "-d", target], input=(newest / "postgres.dump").read_bytes(), env=env, check=True, capture_output=True)
+    subprocess.run([*exe, *flags, "--exit-on-error", "--no-owner", "-d", target], input=(newest / "postgres.dump").read_bytes(), env=env, check=True, capture_output=True)
     restored = create_engine(url.set(database=target))
     with restored.connect() as db:
         assert db.scalar(text("select body from synthetic_state where id=1")) == "Synthetic recovery bytes"
