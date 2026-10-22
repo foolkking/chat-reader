@@ -57,6 +57,7 @@ export function useMessageMarkdownCopy(messageId: string, versionId: string | un
       const { urls } = await publishMessageCopyImages(messageId, versionId, source.imageIds, controller.signal);
       if (!isCurrent()) return;
       const markdown = source.render(urls, window.location.origin);
+      setAutomaticCopy({ scope, markdown, success: null });
       setResult({ scope, phase: "ready", markdown, images: source.imageIds.length, omitted: source.omittedFiles });
       // This write is fenced immediately before access to the device clipboard.
       try {
@@ -71,20 +72,24 @@ export function useMessageMarkdownCopy(messageId: string, versionId: string | un
       if (active.current === controller) active.current = null;
     }
   }
-  const [automaticCopy, setAutomaticCopy] = useState<{ scope: string; markdown: string; success: boolean } | null>(null);
+  const [automaticCopy, setAutomaticCopy] = useState<{ scope: string; markdown: string; success: boolean | null } | null>(null);
   const automatic = automaticCopy?.scope === scope && automaticCopy.markdown === shown?.markdown ? automaticCopy : null;
-  const copied = clipboard.state === "copied" || Boolean(automatic?.success);
-  const manual = shown?.phase === "ready" && !copied && (automatic?.success === false || clipboard.state === "failed");
+  const copied = shown?.phase === "ready" && (automatic ? automatic.success === true : clipboard.state === "copied");
+  const manual = shown?.phase === "ready" && !copied && (automatic ? automatic.success === false : clipboard.state === "failed");
   const manualRef = clipboard.manualRef;
   useEffect(() => {
     if (manual) { manualRef.current?.focus({ preventScroll: true }); manualRef.current?.select(); }
   }, [manual, manualRef]);
   return {
     shown, copied, manual, manualRef, enabled: enabled && Boolean(versionId),
-    busy: shown?.phase === "preparing",
+    busy: shown?.phase === "preparing" || shown?.phase === "ready" && (automatic ? automatic.success === null : clipboard.state === "copying"),
     run: () => {
       if (generation !== authenticationGeneration()) return;
-      return shown?.phase === "ready" ? clipboard.copy() : prepare();
+      if (shown?.phase !== "ready") return prepare();
+      // A new attempt owns feedback: an earlier successful automatic copy
+      // must not mask a denied retry or a newly prepared identical source.
+      setAutomaticCopy(null);
+      return clipboard.copy();
     },
     dismiss: () => { active.current?.abort(); active.current = null; setResult(null); },
   };

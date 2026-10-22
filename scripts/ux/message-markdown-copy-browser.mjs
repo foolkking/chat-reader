@@ -198,6 +198,24 @@ try {
     await expect(page.getByRole("status")).toContainText("Markdown 已复制");
     await expect(manual).toHaveCount(0);
   });
+  await run("a denied repeat copy replaces earlier success with selectable fallback", async () => {
+    await page.setViewportSize({ width: 1440, height: 900 }); await reset(); await click();
+    await expect.poll(() => page.evaluate(() => window.copiedValues.length)).toBe(1);
+    await page.evaluate(() => window.denyClipboard = true); await click();
+    await expect(page.getByRole("status")).toContainText("Clipboard unavailable");
+    const manual = page.getByRole("textbox", { name: "Full Markdown for manual copy" });
+    await expect(manual).toBeVisible();
+    assert.ok((await manual.inputValue()).endsWith("**Tail retained**"));
+    assert.equal(await page.evaluate(() => window.copiedValues.length), 1);
+    await page.evaluate(() => window.denyClipboard = false); await click();
+    await expect.poll(() => page.evaluate(() => window.copiedValues.length)).toBe(2);
+    await expect(manual).toHaveCount(0);
+    await page.getByRole("button", { name: "Dismiss copy notice" }).click();
+    await page.evaluate(() => window.denyClipboard = true); await click();
+    await expect(page.getByRole("status")).toContainText("Clipboard unavailable");
+    await expect(manual).toBeVisible();
+    assert.equal(await page.evaluate(() => window.copiedValues.length), 2);
+  });
   await run("version retirement during pending source read prevents publication and clipboard writes", async () => {
     await page.setViewportSize({ width: 1440, height: 900 }); await reset();
     let release, entered;

@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "startedAt": "2026-10-22T08:34:16.620Z",
+  "passed": [
+    "desktop copies complete canonical source through real API; image links serve inert bytes",
+    "375px Chinese touch-style actions close before feedback without horizontal overflow",
+    "clipboard rejection keeps full selectable Markdown and a direct retry",
+    "a denied repeat copy replaces earlier success with selectable fallback",
+    "version retirement during pending source read prevents publication and clipboard writes",
+    "Share and offline representations never offer publication",
+    "authentication retirement clears prepared text and prevents stale retries",
+    "authentication retirement during pending source read prevents publication",
+    "unsafe SVG fails without publishing a partial selection",
+    "SVG safety rejects executable, external, entity and excessive-decoder content",
+    "keyboard copy target is 44px and has a visible focus indicator"
+  ],
+  "browser": "155.0.8059.82",
+  "boundary": "Synthetic SQLite FastAPI, actual MessageItem/copy hook/ReactMarkdown parser/canvas/client. Body/preferences/history adapters; clipboard API is deterministic test adapter, not OS clipboard or installed Obsidian.",
+  "pageErrors": [],
+  "consoleErrors": []
+}

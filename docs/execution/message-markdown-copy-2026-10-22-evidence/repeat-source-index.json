@@ -1,0 +1,24 @@
+{
+  "previous_commit": "8dc1b7aceadfd5d0535ee54dd00270f84279b72b",
+  "superseded_ci_run": 39747148835,
+  "reason": "A denied repeat or fresh identical-source copy must not inherit earlier copied feedback.",
+  "browser_scenarios": 11,
+  "boundary": "Final repeated-copy hook/browser regression; earlier API/PG and Next source unchanged except the added real Next repeat assertion, which remains for exact-source CI.",
+  "overrides_prior_source_index": [
+    {
+      "path": "apps/web/features/conversations/use-message-markdown-copy.tsx",
+      "git_index_bytes": 10184,
+      "sha256": "91d975e20750fda7df5a7a6ff0668d10287563660c37ad88080feb11722d3649"
+    },
+    {
+      "path": "apps/web/e2e/message-markdown-copy.spec.ts",
+      "git_index_bytes": 7234,
+      "sha256": "599ffa0638126dfb4d36880a44fa59fe357de861c3d5e0befbe2bd3007cc80bf"
+    },
+    {
+      "path": "scripts/ux/message-markdown-copy-browser.mjs",
+      "git_index_bytes": 20022,
+      "sha256": "7100b80c8c39270368808b12ed736b61657aa39ed94a3aaa9ebbe327521f69ca"
+    }
+  ]
+}

@@ -23,7 +23,11 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
   await page.addInitScript(() => {
     Object.defineProperty(window, "__messageCopyValues", { value: [] });
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
-      writeText: async (value: string) => (window as unknown as { __messageCopyValues: string[] }).__messageCopyValues.push(value),
+      writeText: async (value: string) => {
+        const state = window as unknown as { __messageCopyValues: string[]; __denyMessageCopy?: boolean };
+        if (state.__denyMessageCopy) throw new Error("Synthetic clipboard rejection");
+        state.__messageCopyValues.push(value);
+      },
     } });
   });
   const headers = { Origin: baseURL! };
@@ -48,9 +52,12 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await page.goto(`/conversations/${conversationId}`);
     const article = page.locator(`article[data-message-id="${message.id}"]`);
     await expect(article).toBeVisible();
-    if (width < 640) await article.getByTestId("mobile-message-actions-trigger").click();
-    else await article.hover();
-    await article.getByTestId("message-markdown-copy").filter({ visible: true }).click();
+    const activate = async () => {
+      if (width < 640) await article.getByTestId("mobile-message-actions-trigger").click();
+      else await article.hover();
+      await article.getByTestId("message-markdown-copy").filter({ visible: true }).click();
+    };
+    await activate();
     await expect.poll(() => page.evaluate(() => (window as unknown as { __messageCopyValues: string[] }).__messageCopyValues.length)).toBe(1);
     const copied = await page.evaluate(() => (window as unknown as { __messageCopyValues: string[] }).__messageCopyValues[0]);
     expect(copied).toMatch(/^# Complete source/);
@@ -68,6 +75,17 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await external.setContent(`<img alt="Synthetic public preview" src="${url}">`);
     await expect.poll(() => external.locator("img").evaluate(node => (node as HTMLImageElement).naturalWidth)).toBe(20);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+    // A denied repeat must replace old success, never keep a false copied state.
+    await page.evaluate(() => { (window as unknown as { __denyMessageCopy: boolean }).__denyMessageCopy = true; });
+    await activate();
+    const manual = page.getByRole("textbox", { name: /Full Markdown for manual copy|可手动复制的完整 Markdown/ });
+    await expect(manual).toBeVisible();
+    expect(await manual.inputValue()).toBe(copied);
+    await page.evaluate(() => { (window as unknown as { __denyMessageCopy: boolean }).__denyMessageCopy = false; });
+    await activate();
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __messageCopyValues: string[] }).__messageCopyValues.length)).toBe(2);
+    await expect(manual).toHaveCount(0);
 
     const share = await page.request.post(`/api/conversations/${conversationId}/shares`, { headers, data: {} });
     expect(share.ok()).toBe(true);

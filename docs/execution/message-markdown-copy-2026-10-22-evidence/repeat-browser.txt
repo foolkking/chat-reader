@@ -1,0 +1,12 @@
+PASS desktop copies complete canonical source through real API; image links serve inert bytes
+PASS 375px Chinese touch-style actions close before feedback without horizontal overflow
+PASS clipboard rejection keeps full selectable Markdown and a direct retry
+PASS a denied repeat copy replaces earlier success with selectable fallback
+PASS version retirement during pending source read prevents publication and clipboard writes
+PASS Share and offline representations never offer publication
+PASS authentication retirement clears prepared text and prevents stale retries
+PASS authentication retirement during pending source read prevents publication
+PASS unsafe SVG fails without publishing a partial selection
+PASS SVG safety rejects executable, external, entity and excessive-decoder content
+PASS keyboard copy target is 44px and has a visible focus indicator
+PASS 11 browser scenarios; C:\Users\86182\Desktop\wkkk\chat-reader-message-markdown-copy-20261022\copy-browser-1792658051613

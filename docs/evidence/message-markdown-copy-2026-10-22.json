@@ -73,6 +73,36 @@
       "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/gateway-repair.json",
       "bytes": 677,
       "sha256": "49b435e37ddfbeb7d76aef579c5880f2237cf0789971391aafd14582d544837d"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/repeat-browser.txt",
+      "bytes": 997,
+      "sha256": "36a3a216594e59b5b94c759d91c6310f02208b3aadf58912b05dc4f01cd678e2"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/repeat-browser-result.json",
+      "bytes": 1268,
+      "sha256": "f1932b8f53f288ba216b7a286456d22533fd8614c14f8992a91c28f088fd09b8"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/repeat-build.txt",
+      "bytes": 1232,
+      "sha256": "754f630e1a9d6ecb265844df7616203325f62b87c38277bbc408a91348a83ea2"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/repeat-lint.txt",
+      "bytes": 173,
+      "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/repeat-typecheck.txt",
+      "bytes": 175,
+      "sha256": "231f3ed2a8636999437e24fd3abfb381918c1c7547d66db9b40fc5e154ab9209"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/repeat-source-index.json",
+      "bytes": 1042,
+      "sha256": "97a693614c21968f3041cb060c928c786e463cfe35d5f36fe8d516d3f06ae691"
     }
   ]
 }
