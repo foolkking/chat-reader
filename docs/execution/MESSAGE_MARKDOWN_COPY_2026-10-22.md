@@ -120,3 +120,16 @@ proxy-cache 与后端目标断言；8 个旧流式上传和 5 个大文件限额
 关闭提示后同源码重新准备失败），lint/typecheck/生产 build 再次退出 0。
 真实 Next/PG 专项也新增桌面/手机的“再次拒绝不能维持成功”断言，待新精确源码
 完整 CI 执行；此前 8 项本地记录仍明确属于原冻结阶段，不冒充此新增断言的结果。
+
+### 精确源码 CI 失败与修复
+
+提交 `cd008530912beb9d34764a9a08f42418c86d75d7` 的完整工作流
+`39749761925` 未通过，因此没有可部署制品。Web 全量门禁中新增复制按钮后，
+既有 Rich Markdown E2E 用 `/Edit Markdown source|Markdown/` 同时匹配复制按钮和
+Markdown 编辑按钮；已改为精确 accessible name `Edit Markdown source`，不改变
+产品行为。API 全量为 **1,676 passed / 3 skipped / 1 failed**：备份恢复集成在
+PostgreSQL 16 上错误回退到系统 `pg_restore`，该客户端输出 PostgreSQL 17 的
+`SET transaction_timeout`，PostgreSQL 16 不识别。已让测试严格选择与服务端
+major 匹配的工具，并在该使用固定 PostgreSQL 16 服务的 CI job 显式安装
+`postgresql-client-16`；不跳过恢复验证或放松断言。两项修复需由后续精确源码
+完整工作流重新验证。其他失败 job 与制品任务因依赖失败而跳过。

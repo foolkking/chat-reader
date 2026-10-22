@@ -4,7 +4,6 @@ import importlib.util
 import io
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tarfile
 import uuid
@@ -28,12 +27,17 @@ def snapshots(tmp_path):
     admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT")
     with admin.connect() as db:
         major = int(db.scalar(text("SHOW server_version_num"))) // 10000
-        # Ubuntu runners may have more than one client version. Use the server's
-        # tools so a newer dump header does not add unsupported SET statements.
+        # A newer pg_dump can emit settings unsupported by an older server.
+        # This integration fixture requires the exact server-major client.
         matching = Path(f"/usr/lib/postgresql/{major}/bin")
-        pg_dump = str(matching / "pg_dump") if (matching / "pg_dump").is_file() else shutil.which("pg_dump")
-        pg_restore = str(matching / "pg_restore") if (matching / "pg_restore").is_file() else shutil.which("pg_restore")
-        assert pg_dump and pg_restore, "PostgreSQL integration must provide real dump/restore tools"
+        pg_dump = matching / "pg_dump"
+        pg_restore = matching / "pg_restore"
+        assert pg_dump.is_file() and pg_restore.is_file(), (
+            f"PostgreSQL {major} integration requires matching pg_dump/pg_restore "
+            f"at {matching}"
+        )
+        pg_dump = str(pg_dump)
+        pg_restore = str(pg_restore)
         for name in (source, target):
             db.execute(text(f'CREATE DATABASE "{name}"'))
     engine = create_engine(url.set(database=source))
