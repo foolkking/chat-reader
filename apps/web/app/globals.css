@@ -778,6 +778,30 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   max-width: 100%;
 }
 
+.aui-chat-markdown .markdown-table-content {
+  /* A long prose cell must not force the entire message to max-content width.
+     Short cells retain their natural width; genuinely wide tables still scroll. */
+  max-width: none;
+}
+
+.markdown-table-cell-content {
+  min-width: 3rem;
+  max-width: 28rem;
+  /* Keep unbreakable math local rather than painting over adjacent cells. */
+  overflow-x: auto;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.markdown-table-cell-content > .katex,
+.markdown-table-cell-content > code {
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  .markdown-table-cell-content { max-width: 18rem; }
+}
+
 .aui-chat-markdown tbody tr:nth-child(even) { background: var(--table-stripe); }
 .aui-chat-markdown tbody tr:hover { background: var(--table-hover); }
 

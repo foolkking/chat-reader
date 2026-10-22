@@ -1,0 +1,173 @@
+{
+  "boundary": "Existing declared CSS tokens only; not a computed DOM, non-text UI, disabled-control or whole-app WCAG audit",
+  "observations": [
+    {
+      "mode": "light",
+      "foreground": "text",
+      "background": "surface",
+      "ratio": 16.114,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "text",
+      "background": "surface-raised",
+      "ratio": 16.114,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "text",
+      "background": "table-header",
+      "ratio": 14.349,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "text",
+      "background": "accent-soft",
+      "ratio": 15.451,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "text-secondary",
+      "background": "surface",
+      "ratio": 5.349,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "text-secondary",
+      "background": "surface-raised",
+      "ratio": 5.349,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "text-secondary",
+      "background": "table-header",
+      "ratio": 4.764,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "text-secondary",
+      "background": "accent-soft",
+      "ratio": 5.129,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "danger",
+      "background": "surface",
+      "ratio": 6.574,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "danger",
+      "background": "surface-raised",
+      "ratio": 6.574,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "danger",
+      "background": "table-header",
+      "ratio": 5.854,
+      "passesNormalText": true
+    },
+    {
+      "mode": "light",
+      "foreground": "danger",
+      "background": "accent-soft",
+      "ratio": 6.304,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text",
+      "background": "surface",
+      "ratio": 13.756,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text",
+      "background": "surface-raised",
+      "ratio": 12.314,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text",
+      "background": "table-header",
+      "ratio": 12.016,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text",
+      "background": "accent-soft",
+      "ratio": 8.956,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text-secondary",
+      "background": "surface",
+      "ratio": 6.875,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text-secondary",
+      "background": "surface-raised",
+      "ratio": 6.154,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text-secondary",
+      "background": "table-header",
+      "ratio": 6.006,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "text-secondary",
+      "background": "accent-soft",
+      "ratio": 4.476,
+      "passesNormalText": false
+    },
+    {
+      "mode": "dark",
+      "foreground": "danger",
+      "background": "surface",
+      "ratio": 7.077,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "danger",
+      "background": "surface-raised",
+      "ratio": 6.335,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "danger",
+      "background": "table-header",
+      "ratio": 6.182,
+      "passesNormalText": true
+    },
+    {
+      "mode": "dark",
+      "foreground": "danger",
+      "background": "accent-soft",
+      "ratio": 4.608,
+      "passesNormalText": true
+    }
+  ]
+}

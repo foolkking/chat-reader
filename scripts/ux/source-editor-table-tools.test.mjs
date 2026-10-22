@@ -24,7 +24,7 @@ const loaded = new Module(fileURLToPath(sourcePath));
 loaded.filename = fileURLToPath(sourcePath);
 loaded.paths = Module._nodeModulePaths(fileURLToPath(new URL("../../apps/web", import.meta.url)));
 loaded._compile(compiled + "\nexports.bracketReader = createTableBracketKindReader; exports.codeSpanReader = createTableCodeSpanReader;", loaded.filename);
-const { applyMarkdownTableAction, inspectMarkdownTable, inspectMarkdownTableDraft, isMarkdownTableCellValueValid, updateSimpleMarkdownTableDraft } = loaded.exports;
+const { applyMarkdownTableAction, changeMarkdownTableStructure, inspectMarkdownTable, inspectMarkdownTableDraft, isMarkdownTableCellValueValid, renderMarkdownTable, updateSimpleMarkdownTableDraft } = loaded.exports;
 
 // A small-input reference for the previous lookahead semantics. Never run this
 // quadratic reference on the large malformed-input regression below.
@@ -1041,4 +1041,36 @@ test("a table replacement is a single undoable CodeMirror edit", () => {
   assert.match(state.doc.toString(), /changed/);
   assert.ok(undo({ state, dispatch: transaction => { state = transaction.state; } }));
   assert.equal(state.doc.toString(), initial);
+});
+
+test("structural table edits delete the selected column across every row and preserve remaining alignment", () => {
+  const source = "| Name | Description | Value |\r\n| :--- | :---: | ---: |\r\n| alpha | long prose | 2 |\r\n| beta | another row | 3 |";
+  const parsed = inspectMarkdownTable(source, source.indexOf("| alpha"), source.indexOf("| alpha"));
+  assert.ok(parsed);
+  const deleted = changeMarkdownTableStructure(parsed, { type: "delete-column", index: 1 });
+  assert.ok(deleted);
+  const result = applyMarkdownTableAction(source, source.indexOf("| alpha"), source.indexOf("| alpha"), {
+    type: "replace", markdown: renderMarkdownTable(deleted.headers, deleted.rows, deleted.alignments, deleted.newline, deleted.prefix, deleted.continuationPrefix),
+  });
+  assert.ok(result);
+  assert.equal(result.insert, "| Name | Value |\r\n| :--- | ---: |\r\n| alpha | 2 |\r\n| beta | 3 |");
+  assert.deepEqual(deleted.alignments, ["left", "right"]);
+  assert.equal(changeMarkdownTableStructure(parsed, { type: "delete-column", index: 0 })?.headers[0].value, "Description");
+  assert.equal(changeMarkdownTableStructure(parsed, { type: "delete-column", index: 2 })?.headers[1].value, "Description");
+  assert.equal(changeMarkdownTableStructure({ ...parsed, headers: [parsed.headers[0]], rows: parsed.rows.map(row => [row[0]]), alignments: [null] }, {
+    type: "delete-column", index: 0,
+  }), null);
+});
+
+test("structural row edits delete the selected full-draft row while preserving empty data tables and bounds", () => {
+  const parsed = inspectMarkdownTable("| A | B |\n| --- | --- |\n| one | 1 |\n| two | 2 |", 0, 0);
+  assert.ok(parsed);
+  const deleted = changeMarkdownTableStructure(parsed, { type: "delete-row", index: 0 });
+  assert.deepEqual(deleted?.rows.map(row => row.map(cell => cell.value)), [["two", "2"]]);
+  const lastRow = deleted && changeMarkdownTableStructure(deleted, { type: "delete-row", index: 0 });
+  assert.deepEqual(lastRow?.rows, []);
+  assert.equal(lastRow && renderMarkdownTable(lastRow.headers, lastRow.rows, lastRow.alignments), "| A | B |\n| --- | --- |");
+  assert.equal(changeMarkdownTableStructure(parsed, { type: "delete-row", index: 9 }), null);
+  assert.equal(changeMarkdownTableStructure(parsed, { type: "insert-row", index: 2, count: 1 })?.rows.length, 3);
+  assert.equal(changeMarkdownTableStructure(parsed, { type: "insert-column", index: 1, count: 2 })?.rows[1].length, 4);
 });

@@ -1,0 +1,26 @@
+[
+  {
+    "viewport": 1440,
+    "pageWidth": 1440,
+    "scrollerWidth": 686,
+    "tableWidth": 686,
+    "maxContentWidth": 448,
+    "sourceStart": 8
+  },
+  {
+    "viewport": 768,
+    "pageWidth": 768,
+    "scrollerWidth": 686,
+    "tableWidth": 686,
+    "maxContentWidth": 448,
+    "sourceStart": 8
+  },
+  {
+    "viewport": 375,
+    "pageWidth": 375,
+    "scrollerWidth": 341,
+    "tableWidth": 427,
+    "maxContentWidth": 288,
+    "sourceStart": 8
+  }
+]

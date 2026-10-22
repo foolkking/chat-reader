@@ -110,7 +110,7 @@ import {markdownLanguage} from "@codemirror/lang-markdown";
 import {TableToolDialog} from ${JSON.stringify(dialogPath)};
 import {applyMarkdownTableAction} from ${JSON.stringify(toolsPath)};
 import {SourceEditorWorkspace} from ${JSON.stringify(workspacePath)};
-import {MarkdownTablePreview} from ${JSON.stringify(rendererPath)};
+import {MarkdownRenderer,MarkdownTablePreview} from ${JSON.stringify(rendererPath)};
 const originalContextParse=markdownLanguage.parser.parse;
 markdownLanguage.parser.parse=function(...args) {
   window.tableContextParseInputs??=[];
@@ -168,17 +168,23 @@ function WorkspaceHarness({source}) {
 function Root() {
   const [workspace,setWorkspace]=useState(null);
   const [previewProbe,setPreviewProbe]=useState(false);
+  const [bodyProbe,setBodyProbe]=useState(null);
   useEffect(()=>{
-    window.startPreviewProbe=()=>{setWorkspace(null);setPreviewProbe(true);};
+    window.startBodyProbe=text=>{setWorkspace(null);setPreviewProbe(false);setBodyProbe(text);};
+    window.stopBodyProbe=()=>setBodyProbe(null);
+    window.startPreviewProbe=()=>{setWorkspace(null);setBodyProbe(null);setPreviewProbe(true);};
     window.startWorkspace=(source,zh=false)=>{
       window.gateLocale=zh?"zh-CN":"en-US";window.workspaceWrites=[];window.workspaceDirty=false;
       window.tableContextParseInputs=[];
       window.tableSourceProbeCount=0;
       setPreviewProbe(false);
+      setBodyProbe(null);
       setWorkspace({source,key:performance.now()});
     };
   },[]);
-  return previewProbe?<PreviewProbe/>:workspace?<WorkspaceHarness key={workspace.key} source={workspace.source}/>:<Harness/>;
+  return bodyProbe!==null?<section data-testid="body-table-probe" className="reader-prose" style={{width:"min(100%,720px)",padding:16,boxSizing:"border-box"}}>
+    <MarkdownRenderer text={bodyProbe} isAssistant={false} preserveSourceOffsets/>
+  </section>:previewProbe?<PreviewProbe/>:workspace?<WorkspaceHarness key={workspace.key} source={workspace.source}/>:<Harness/>;
 }
 function PreviewProbe() {
   const [tick,setTick]=useState(0);
@@ -229,7 +235,7 @@ const styles = await postcss([tailwind({
   content: [
     dialogPath, workspacePath, join(web, "features/editing/edit-message-form.tsx"),
     join(web, "features/editing/source-context-toolbar.tsx"), join(web, "components/floating-workspace-panel.tsx"),
-    join(web, "features/conversations/markdown-renderer.tsx"), join(web, "components/use-dialog-focus.ts"),
+    join(web, "features/conversations/markdown-renderer.tsx"), join(web, "features/conversations/markdown-table.tsx"), join(web, "components/use-dialog-focus.ts"),
   ],
   theme: { extend: {} }, plugins: [],
 })]).process(readFileSync(join(web, "app/globals.css"), "utf8"), { from: join(web, "app/globals.css") });
@@ -281,6 +287,145 @@ try {
     }
   };
   const small = "before\n| A | B |\n| --- | --- |\n| \\(x^2\\) | **bold** |\nafter";
+  await run("real body renderer: long cells wrap within shared bounds without widening the page", async () => {
+    const text = "before\n\n| Item | Description | Value |\n| --- | --- | ---: |\n| alpha | " + "Readable long explanation. ".repeat(30) + " | 123.45 |\n| beta | " + "unbroken".repeat(80) + " | \\\\(x^2\\\\) |\n\nafter";
+    await page.evaluate(text => window.startBodyProbe(text), text);
+    const body = page.getByTestId("body-table-probe");
+    await expect(body.locator("table")).toHaveCount(1);
+    await expect(body.locator("button,input,textarea")).toHaveCount(0);
+    const observations = [];
+    for (const width of [1440, 768, 375]) {
+      await page.setViewportSize({width,height:900});
+      observations.push(await body.evaluate(root => ({
+        viewport: innerWidth,
+        pageWidth: document.documentElement.scrollWidth,
+        scrollerWidth: root.querySelector(".markdown-table").clientWidth,
+        tableWidth: root.querySelector("table").scrollWidth,
+        maxContentWidth: Math.max(...Array.from(root.querySelectorAll(".markdown-table-cell-content"), cell => cell.getBoundingClientRect().width)),
+        sourceStart: Number(root.querySelector(".markdown-table").dataset.markdownSourceStart),
+      })));
+      assert.ok(observations.at(-1).pageWidth <= width, JSON.stringify(observations.at(-1)));
+      assert.ok(observations.at(-1).maxContentWidth <= (width < 640 ? 288 : 448) + 1, JSON.stringify(observations.at(-1)));
+      await page.screenshot({path:join(out,`body-tables-${width}.png`),fullPage:true});
+    }
+    writeFileSync(join(out,"body-table-observations.json"),JSON.stringify(observations,null,2));
+    await expect(body.locator(".markdown-table")).toHaveAttribute("data-markdown-source-start",String(text.indexOf("|")));
+    await page.evaluate(()=>window.stopBodyProbe());
+    await page.setViewportSize({width:1440,height:900});
+    await page.locator("#open").waitFor();
+  });
+  await run("table column menu deletes a specific whole column and supports local undo", async () => {
+    const source = "| A | B | C |\n| :--- | :---: | ---: |\n| a | b | c |\n| d | e | f |";
+    await reset(source);
+    await dialog.getByRole("button",{name:"Column 2 header",exact:true}).click();
+    await dialog.getByRole("button",{name:"Column 2 actions",exact:true}).click();
+    const menu = dialog.getByRole("menu",{name:"Column 2",exact:true});
+    await expect(menu).toBeVisible();
+    await expect(dialog.locator("[data-table-structure-selected]")).toHaveCount(3);
+    await page.screenshot({path:join(out,"desktop-column-menu.png"),fullPage:true});
+    await menu.getByRole("menuitem",{name:"Delete column",exact:true}).click();
+    await expect(markdown).toHaveValue("| A | C |\n| :--- | ---: |\n| a | c |\n| d | f |");
+    await expect(apply()).toBeEnabled();
+    await dialog.getByRole("button",{name:"Undo row/column change",exact:true}).click();
+    await expect(markdown).toHaveValue(source);
+    await expect(apply()).toBeEnabled();
+    await dialog.getByRole("button",{name:"Column 1 actions",exact:true}).click();
+    await dialog.getByRole("menuitem",{name:"Insert column right",exact:true}).click();
+    await expect(markdown).toHaveValue("| A |  | B | C |\n| :--- | :--- | :---: | ---: |\n| a |  | b | c |\n| d |  | e | f |");
+  });
+  await run("table row menu uses global page offsets and can delete the final data row", async () => {
+    const source = "| A | B |\n| --- | --- |\n" + Array.from({length:65},(_,i)=>"| row"+(i+1)+" | "+(i+1)+" |").join("\n");
+    await reset(source);
+    await dialog.getByRole("button",{name:"Last table rows",exact:true}).click();
+    await expect(apply()).toBeEnabled();
+    await dialog.getByRole("button",{name:"Row 65, column 1",exact:true}).click();
+    await dialog.getByRole("button",{name:"Row 65 actions",exact:true}).click();
+    await dialog.getByRole("menuitem",{name:"Delete row",exact:true}).click();
+    await expect(markdown).not.toHaveValue(/row65/);
+    await expect(markdown).toHaveValue(/row64/);
+    await expect(apply()).toBeEnabled();
+    await dialog.getByRole("button",{name:"Undo row/column change",exact:true}).click();
+    await expect(markdown).toHaveValue(source);
+    await reset("| H |\n| --- |\n| only |");
+    await dialog.getByRole("button",{name:"Row 1, column 1",exact:true}).click();
+    await dialog.getByRole("button",{name:"Row 1 actions",exact:true}).click();
+    await dialog.getByRole("menuitem",{name:"Delete row",exact:true}).click();
+    await expect(markdown).toHaveValue("| H |\n| --- |");
+    await expect(apply()).toBeEnabled();
+    await dialog.getByRole("button",{name:"Column 1 actions",exact:true}).click();
+    await expect(dialog.getByRole("menuitem",{name:"Delete column",exact:true})).toBeDisabled();
+    await dialog.getByRole("menuitem",{name:"Insert column left",exact:true}).press("Escape");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("menu")).toHaveCount(0);
+    await expect(dialog.getByRole("button",{name:"Column 1 actions",exact:true})).toBeFocused();
+  });
+  await run("table menu cannot mutate stale source and local undo never drops newer raw edits", async () => {
+    await reset("| A | B |\n| --- | --- |\n| a | b |");
+    await dialog.getByRole("button",{name:"Column 2 header",exact:true}).click();
+    await dialog.getByRole("button",{name:"Column 2 actions",exact:true}).click();
+    await dialog.getByRole("menuitem",{name:"Delete column",exact:true}).click();
+    await expect(apply()).toBeEnabled();
+    await markdown.fill("| A |\n| --- |\n| newer |");
+    await expect(apply()).toBeEnabled();
+    await expect(dialog.getByRole("button",{name:"Undo row/column change",exact:true})).toBeDisabled();
+    await dialog.getByRole("button",{name:"Column 1 actions",exact:true}).click();
+    await page.evaluate(()=>window.tableGate.externalChange("| changed |\n| --- |\n| body |"));
+    await expect(dialog.getByRole("menuitem",{name:"Insert column left",exact:true})).toBeDisabled();
+    await expect(apply()).toBeDisabled();
+  });
+  await run("375px touch opens specific row/column menus without hover and keeps destructive edits reversible", async () => {
+    const context = await browser.newContext({viewport:{width:375,height:812},hasTouch:true,isMobile:true});
+    try {
+      const touchPage = await context.newPage();
+      await touchPage.goto(`http://127.0.0.1:${server.address().port}`);
+      await touchPage.waitForFunction(()=>Boolean(window.tableGate));
+      await touchPage.evaluate(()=>window.tableGate.reset("| A | B | C |\n| --- | --- | --- |\n| one | two | three |",true));
+      await touchPage.locator("#open").tap();
+      const touchDialog=touchPage.getByTestId("source-editor-table-tool");
+      await expect(touchDialog.getByRole("button",{name:"应用",exact:true})).toBeEnabled();
+      const compactMetrics=await touchDialog.evaluate(root=>{
+        const grid=root.querySelector("[data-testid='source-editor-table-grid']").getBoundingClientRect();
+        const preview=root.querySelector("[data-testid='source-editor-table-preview']").getBoundingClientRect();
+        return {
+          dialogWidth:root.getBoundingClientRect().width,
+          pageWidth:document.documentElement.scrollWidth,
+          viewport:innerWidth,
+          gridGutterWidth:grid.width-preview.width,
+          gridGutterHeight:grid.height-preview.height,
+          textareaHeight:root.querySelector("textarea").getBoundingClientRect().height,
+          tableButtons:root.querySelector("table").querySelectorAll("button").length,
+          tableCells:root.querySelector("table").querySelectorAll("th,td").length,
+        };
+      });
+      assert.ok(compactMetrics.pageWidth<=375);
+      // Compact content/header, not overlapping 44px edge hit areas. The
+      // separate geometry gate checks controls never cover cells/scrollbars.
+      assert.equal(compactMetrics.gridGutterWidth,90);
+      assert.equal(compactMetrics.gridGutterHeight,90);
+      assert.ok(compactMetrics.textareaHeight<=113);
+      assert.equal(compactMetrics.tableButtons,compactMetrics.tableCells);
+      writeFileSync(join(out,"compact-ui-observations.json"),JSON.stringify(compactMetrics,null,2));
+      await touchPage.screenshot({path:join(out,"mobile-clean-table.png"),fullPage:true});
+      await touchDialog.getByRole("button",{name:"第 2 列表头",exact:true}).tap();
+      const handle=touchDialog.getByRole("button",{name:"第 2 列操作",exact:true});
+      const box=await handle.boundingBox();
+      assert.ok(box.width>=44&&box.height>=44);
+      await handle.tap();
+      const menu=touchDialog.getByRole("menu",{name:"第 2 列",exact:true});
+      const menuBox=await menu.boundingBox();
+      assert.ok(menuBox.x>=0&&menuBox.x+menuBox.width<=375&&menuBox.y>=0&&menuBox.y+menuBox.height<=812);
+      await touchPage.screenshot({path:join(out,"mobile-column-menu.png"),fullPage:true});
+      await menu.getByRole("menuitem",{name:"删除此列",exact:true}).tap();
+      await expect(touchDialog.getByTestId("source-editor-table-markdown")).toHaveValue("| A | C |\n| --- | --- |\n| one | three |");
+      await touchDialog.getByRole("button",{name:"撤销行列操作",exact:true}).tap();
+      await expect(touchDialog.getByTestId("source-editor-table-markdown")).toHaveValue(/two/);
+      await expect(touchDialog.getByRole("button",{name:"应用",exact:true})).toBeEnabled();
+      await touchDialog.getByRole("button",{name:"第 1 行第 1 列",exact:true}).tap();
+      await touchDialog.getByRole("button",{name:"第 1 行操作",exact:true}).tap();
+      await touchDialog.getByRole("menuitem",{name:"下方插行",exact:true}).tap();
+      await expect(touchDialog.getByTestId("source-editor-table-markdown")).toHaveValue(/\|  \|  \|  \|$/);
+    } finally {await context.close();}
+  });
   // A test-only renderer hold makes deferred/stale behavior deterministic rather
   // than depending on CPU speed. Actual Markdown parsing resumes on release.
   const holdPreview = marker => page.evaluate(marker => {
@@ -396,7 +541,9 @@ try {
     await expect(dialog.getByTestId("source-editor-table-add-column-after")).toHaveCSS("opacity", "1");
     await apply().focus();
     await page.keyboard.press("Tab");
-    await expect(dialog.getByRole("button", { name: "Close", exact: true })).toBeFocused();
+    // Compact header menus now precede Close; the first enabled action owns
+    // the focus-loop boundary (the header's data-row menu is disabled here).
+    await expect(dialog.getByRole("button", { name: "Column 1 actions", exact: true })).toBeFocused();
     await page.keyboard.press("Shift+Tab");
     await expect(apply()).toBeFocused();
   });

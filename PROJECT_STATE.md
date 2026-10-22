@@ -1,8 +1,43 @@
 # Project State
 
-Last updated: 2026-10-21. This is the current snapshot, not a release history.
+Last updated: 2026-10-22. This is the current snapshot, not a release history.
 
 ## Release and active work
+
+**Release authorization (2026-10-22):** the user requests commit and deployment
+of the shared-body table/compact structure work below. This supersedes its
+local-only release boundary for this batch, not its validation limits. Verify
+the existing source/artifact receipts, exclude the pre-existing generated
+`tsconfig.tsbuildinfo`, commit/push and start the complete `Build release images`
+workflow. **Stop after CI starts and wait for the user's result before
+deployment.** Use existing local credentials and GitHub API/CLI only, without
+login or GitHub web UI. No production operation has started in this batch;
+no new migration. See the [release record](docs/execution/TABLE_BODY_RELEASE_2026-10-22.md).
+
+**Current local scope (2026-10-22): shared body tables and compact structure
+editing.** Normal message tables and the Table tool now share presentation
+primitives, in addition to their existing semantic parser. Long body cells have
+bounded wrapping/local overflow. The tool can insert/delete the focused row or
+column across the whole draft, with bounded structural Undo. Following the
+user's density feedback, row/column menus and Undo live in the header; there are
+no per-cell action handles or separate Undo bar, and a small table starts with a
+96px Markdown input. The safe 44px edge-control gutters remain after a tighter
+trial failed the existing no-overlap gate.
+
+Local gates pass: **1,522 service-free tests (including 105 focused tests),
+81 Chrome scenarios, two source-contract Playwright checks, lint,
+nonincremental typecheck and one-worker production build**. The browser gate
+mounts real body MarkdownRenderer and tool/workspace/CodeMirror code with
+explicit external adapters; it is not authenticated Reader/Share/Offline
+end-to-end or server-memory acceptance. No new dependency, migration or data
+format. Exact-source body-to-editor entry and expanded viewing remain proposals,
+not implemented features. The implementation checkpoint was local only;
+the new release authorization above now governs push/CI/deployment. See the
+[implementation and evidence](docs/execution/TABLE_BODY_SHARED_PRESENTATION_2026-10-22.md).
+The following 2026-10-21 release notes are historical checkpoints, not the
+release status of these new changes.
+
+### Previous release and table checkpoints — 2026-10-21
 
 **Release authorization (2026-10-21):** the user now requests commit and
 deployment of the completed local table work and bounded backup/preflight

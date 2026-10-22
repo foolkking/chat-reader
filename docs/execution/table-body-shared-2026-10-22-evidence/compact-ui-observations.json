@@ -1,0 +1,10 @@
+{
+  "dialogWidth": 375,
+  "pageWidth": 375,
+  "viewport": 375,
+  "gridGutterWidth": 90,
+  "gridGutterHeight": 90,
+  "textareaHeight": 96,
+  "tableButtons": 6,
+  "tableCells": 6
+}

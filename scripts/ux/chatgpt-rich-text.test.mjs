@@ -283,6 +283,7 @@ function compileComponent(relative, stubs) {
   }, exports);
   return exports;
 }
+const tablePresentation = compileComponent("../../apps/web/features/conversations/markdown-table.tsx", {});
 const renderer = compileComponent("../../apps/web/features/conversations/markdown-renderer.tsx", {
   "@assistant-ui/react": uiAdapter,
   "@assistant-ui/react-markdown": uiAdapter,
@@ -291,6 +292,7 @@ const renderer = compileComponent("../../apps/web/features/conversations/markdow
   "../rich-markdown/rich-markdown-config": config,
   "../rich-markdown/remark-ai-math-compatibility": math,
   "../rich-markdown/chatgpt-rich-text-compatibility": compatibility,
+  "./markdown-table": tablePresentation,
 });
 const tableTools = compileComponent("../../apps/web/features/editing/markdown-table-tools.ts", {
   "@codemirror/lang-markdown": appRequire("@codemirror/lang-markdown"),
@@ -433,6 +435,21 @@ test("editable table preview uses the actual shared GFM/math chain and stable ce
   assert.match(html, /class="katex"/);
   assert.match(html, /<math/);
   assert.match(html, /<strong>bold<\/strong>/);
+});
+test("Reader body and editable preview share the same bounded table presentation primitives", () => {
+  const source = "| Metric | Long description |\n| --- | --- |\n| 3 | A long paragraph stays readable within a bounded column. |";
+  const reader = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, { text: source, isAssistant: false }));
+  const preview = renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+    text: source, renderCell: (_row, _column, content) => content,
+  }));
+  for (const html of [reader, preview]) {
+    assert.match(html, /class="markdown-table-content w-max min-w-full border-collapse text-\[0\.875em\]"/);
+    assert.equal((html.match(/class="markdown-table-cell-content /g) ?? []).length, 4);
+    assert.match(html, /border-ui/);
+    assert.match(html, /Long description/);
+  }
+  assert.match(reader, /class="markdown-table max-w-full overflow-x-auto rounded-lg border border-ui bg-surface"/);
+  assert.doesNotMatch(preview, /class="markdown-table max-w-full overflow-x-auto/);
 });
 test("editable preview never navigates links or loads user images while clicking a cell", () => {
   const html = renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {

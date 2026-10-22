@@ -1,6 +1,6 @@
 # AI Rich Markdown Renderer Contract
 
-Last synchronized: 2026-10-21
+Last synchronized: 2026-10-22
 
 ## Purpose and canonical source
 
@@ -33,13 +33,47 @@ Normal Reader links/images retain their existing policy. Both normal and editabl
 table cells retain the parser's GFM left/center/right alignment style; no parser
 version, canonical data or export contract changes.
 
+Normal tables and editable previews also share `MarkdownTableScroll`,
+`MarkdownTableContent` and `MarkdownTableCell` presentation primitives from
+`markdown-table.tsx`. Normal message tables own the outer horizontal scroller;
+the Table tool reuses the content/cells inside its existing bounded two-axis
+scroller, without adding a second table or another outer scroll layer.
+Normal table source-position attributes remain on the outer wrapper. Header
+semantics, alignment and existing row stripe/hover tokens are retained.
+Cell content is bounded to 28rem (18rem below 640px); prose can wrap, while
+unbreakable formulas/code overflow inside their cell rather than adjacent cells.
+This display-only bound does not truncate Markdown, add editing controls to
+read-only consumers or change the parser/cache version.
+
+The Table tool's header contains focused-row/focused-column menus and structural
+Undo. Focusing a cell establishes the target; opening a menu highlights its
+whole visible row/column and names the target. Menus expose insert before/after
+and delete, apply to the full draft rather than the preview page, keep at least
+one column and preserve the fixed GFM header. Zero data rows are allowed.
+No per-cell menu handles or reserved handle padding are mounted. Menu portals
+remain inside the dialog focus scope; Escape returns to the trigger without
+closing the tool. At narrow widths the visible label drops its index, not its
+accessible name or 44px hit target.
+
+Structural Undo retains at most eight immutable draft snapshots and a 2 MiB
+serialized-UTF-8 budget; it is not an unbounded typing history or a measurement
+of actual JS heap size. Subsequent cell/Markdown edits invalidate that history
+so Undo cannot silently discard newer text. A concise footer live region reports
+changes without creating a separate toolbar. Small tables start with a 96px
+resizable Markdown input (three to six initial rows), not a permanently 160px
+pane. Apply still modifies only the original CodeMirror range in one transaction;
+server save/version semantics are unchanged.
+
 The four Table tool edge controls live outside the cell scroller, within the
 same focus scope. CSS reserves their full 44px hit regions around the visible
 preview, so wide/long content cannot displace them to a hidden content midpoint
 or cover cells/scrollbars. Additions still modify the whole draft, not the visible
-page. The [edge-reachability continuation](../execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md)
+page. A 24px-gutter density trial failed real hit tests and was withdrawn; it is
+not the current layout. The [shared-body implementation](../execution/TABLE_BODY_SHARED_PRESENTATION_2026-10-22.md)
+records 81 current isolated Chrome scenarios, including actual body rendering.
+The earlier [edge-reachability continuation](../execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md)
 checks real coordinates/hit tests, mouse/touch and post-add focus in 45 local
-Chrome scenarios. This is presentation-only; no extra table, parser, scroll/
+Chrome scenarios. This is presentation-only; no extra table, parser, edge scroll/
 resize listener, persistent state or data-contract change is introduced.
 
 The source-only table transformation recognizes definite inline math ownership

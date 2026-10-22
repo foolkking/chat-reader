@@ -1,0 +1,60 @@
+{
+  "local_date": "2026-10-22",
+  "timezone": "Asia/Shanghai",
+  "head": "5992d0e53e418f2f06f935474adcedd7aaad8ddd",
+  "status": "passed_local_gates_only",
+  "fixture": "synthetic",
+  "temporary_root": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-table-body-edit-20261022",
+  "focused": {
+    "included_in_broad_count": true,
+    "passed": 105,
+    "failed": 0
+  },
+  "service_free": {
+    "files": 69,
+    "file_arguments": "PowerShell enumerated FullName array, --test-concurrency=1",
+    "skipped": 0,
+    "passed": 1522,
+    "failed": 0
+  },
+  "browser": {
+    "startedAt": "2026-10-21T16:57:33.285Z",
+    "profile_requested": false,
+    "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+    "passed": 81,
+    "failed": 0
+  },
+  "source_contract": {
+    "spec": "ai-rich-markdown-contract.spec.ts",
+    "boundary": "source assertions only, task-local config with no server",
+    "passed": 2,
+    "failed": 0
+  },
+  "lint": {
+    "exit_code": 0
+  },
+  "typecheck": {
+    "incremental": false,
+    "exit_code": 0
+  },
+  "production_build": {
+    "standalone": false,
+    "exit_code": 0,
+    "dist": ".next",
+    "workers": 1
+  },
+  "not_run": [
+    "authenticated Reader/Share/Offline E2E",
+    "Safari/Firefox and real devices",
+    "assistive technology",
+    "server RSS/OOM or production acceptance",
+    "CI/push/deployment"
+  ],
+  "withdrawn_trial": {
+    "existing_no_overlap_gate_retained": true,
+    "reason": "44px edge hit targets covered editable cells or scrollbars",
+    "gutter_px": 24,
+    "final_gutter_px": 44,
+    "failed_scenario": "desktop-200-columns-scroll-0"
+  }
+}

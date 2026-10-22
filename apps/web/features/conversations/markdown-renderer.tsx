@@ -19,6 +19,7 @@ import {
   scopedRichMarkdownRehypePlugins,
 } from "../rich-markdown/rich-markdown-config";
 import { normalizeDisplayMathForRenderer } from "../rich-markdown/remark-ai-math-compatibility";
+import { MarkdownTableCell, MarkdownTableContent, MarkdownTableScroll } from "./markdown-table";
 import {
   detectChatGptRichText,
   projectChatGptRichText,
@@ -254,19 +255,19 @@ const markdownComponents: Components & {
   },
   table({ children, node }) {
     return (
-      <div {...markdownSourcePositionAttributes(node)} className="markdown-table max-w-full overflow-x-auto rounded-lg border border-ui bg-surface">
-        <table className="w-max min-w-full border-collapse text-[0.875em]">{children}</table>
-      </div>
+      <MarkdownTableScroll {...markdownSourcePositionAttributes(node)}>
+        <MarkdownTableContent>{children}</MarkdownTableContent>
+      </MarkdownTableScroll>
     );
   },
   tbody({ children }) {
     return <tbody className="divide-y divide-[var(--border)]">{children}</tbody>;
   },
   td({ children, style }) {
-    return <td style={style} className="border-r border-ui px-3 py-2.5 align-top last:border-r-0">{children}</td>;
+    return <MarkdownTableCell style={style}>{children}</MarkdownTableCell>;
   },
   th({ children, style }) {
-    return <th style={style} className="sticky top-0 border-r border-ui bg-[var(--table-header)] px-3 py-2.5 text-left font-semibold last:border-r-0">{children}</th>;
+    return <MarkdownTableCell header style={style}>{children}</MarkdownTableCell>;
   },
   thead({ children }) {
     return <thead className="border-b border-ui">{children}</thead>;
@@ -307,15 +308,14 @@ function EditablePreviewTableCell({ children, node, header, style }: {
   const row = Number(node?.properties?.["data-table-preview-row"]);
   const column = Number(node?.properties?.["data-table-preview-column"]);
   const content = render && Number.isInteger(row) && Number.isInteger(column) ? render.render(row, column, children) : children;
-  return header
-    ? <th style={style} className="border border-ui bg-[var(--table-header)] p-0 text-left align-top font-semibold">{content}</th>
-    : <td style={style} className="border border-ui p-0 align-top">{content}</td>;
+  return <MarkdownTableCell header={header} editing style={style}>{content}</MarkdownTableCell>;
 }
 
 const editableTablePreviewComponents: Components = {
   ...markdownComponents,
   table({ children }) {
-    return <table className="w-max min-w-full border-collapse text-sm">{children}</table>;
+    // The tool already owns its bounded, two-axis scroller and edge controls.
+    return <MarkdownTableContent>{children}</MarkdownTableContent>;
   },
   th(props) { return <EditablePreviewTableCell {...props} header />; },
   td(props) { return <EditablePreviewTableCell {...props} header={false} />; },

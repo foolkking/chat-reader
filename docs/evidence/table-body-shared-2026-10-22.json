@@ -1,0 +1,73 @@
+{
+  "created_local_date": "2026-10-22",
+  "timezone": "Asia/Shanghai",
+  "task": "Shared Markdown table body presentation and compact row/column editing",
+  "scope": "Synthetic fixtures only. Test receipts, source hashes, body/compact DOM measurements, final isolated Chrome result and screenshots. Not authenticated app/service or production evidence.",
+  "files": [
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/body-table-observations.json",
+      "bytes": 454,
+      "sha256": "384b63a725b3f7031541a24e2b90d1ca8d010aceb7fd00fa67b90b291c2f2768"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/body-tables-1440.png",
+      "bytes": 60214,
+      "sha256": "144966b83b5fa7329657c408cf0ebf6cfba57ad53aaa04fb0ed8f5b0fbeafd2a"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/body-tables-375.png",
+      "bytes": 16869,
+      "sha256": "760257f5798eeefe890277025193db4cf56c33c0b207881fb03c9e0ae02dd9df"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/body-tables-768.png",
+      "bytes": 56767,
+      "sha256": "0393c387b4ab87c29e2716a35babde3e1633aeb5aa21c5776413e168b4f37400"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/browser-result.json",
+      "bytes": 7761,
+      "sha256": "069d1a3f6b3aabea8c96a73434cbfe82f8fdecb4bba1336720009780e6d63d28"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/compact-ui-observations.json",
+      "bytes": 178,
+      "sha256": "bf0815a185f88613ea7a847d09bd0133137730916e2d6dd3a8a64b9b541d9b59"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/desktop-column-menu.png",
+      "bytes": 28021,
+      "sha256": "07abdcd01761b0e4be716146f78a08a48965390f077be421738b40fa9a2d1668"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/final-gates.json",
+      "bytes": 1824,
+      "sha256": "6c5ca35a789e8a1a9cc9c10d26a275f28300e20d961291e63d087114f16cf118"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/gate-receipts.txt",
+      "bytes": 2144,
+      "sha256": "1a551d615adb2662159ed321b8c7f7a3e1c962c2026e9a2fbcc48d5a3e25158b"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/mobile-clean-table.png",
+      "bytes": 14546,
+      "sha256": "1c249fbfc270aaf755e833252fd84227529376f973ebd7fa6ba5429a591a67e9"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/mobile-column-menu.png",
+      "bytes": 18497,
+      "sha256": "ee7cfe960287bc99eafde42f766fdfeab546f0efe37ac04007bd145af77a447f"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/source-sha256.json",
+      "bytes": 1392,
+      "sha256": "1095b019895cd4f6254881197d9b8e3ffb8be27a7ea462827959e5cd92abd82e"
+    },
+    {
+      "path": "docs/execution/table-body-shared-2026-10-22-evidence/text-token-contrast.json",
+      "bytes": 3893,
+      "sha256": "a2ea01ed35f5bf2d624d2bd22b29366154e3fa41bcf666c930edbfd00d5784a6"
+    }
+  ]
+}

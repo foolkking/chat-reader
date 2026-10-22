@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronDown, ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, Undo2, X } from "lucide-react";
 import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { MarkdownTablePreview } from "../conversations/markdown-renderer";
 import { collectMarkdownTableReferenceContext } from "./markdown-table-reference-preview";
@@ -9,18 +10,19 @@ import { needsMarkdownTableSourceAnalysis, type MarkdownTableSourceAnalysis } fr
 import { MarkdownTableSourceProbe } from "./markdown-table-source-probe";
 import {
   inspectMarkdownTable,
+  changeMarkdownTableStructure,
   inspectMarkdownTableDraft,
   isMarkdownTableCellValueValid,
   MARKDOWN_TABLE_LIMITS,
   renderMarkdownTable,
   renderMarkdownTableRow,
   type MarkdownTableAction,
-  type MarkdownTableModel,
+  type MarkdownTableDraft as TableDraft,
+  type MarkdownTableStructureAction,
   type MarkdownTableSourceContext,
   updateSimpleMarkdownTableDraft,
 } from "./markdown-table-tools";
 
-type TableDraft = Pick<MarkdownTableModel, "headers" | "rows" | "alignments" | "newline" | "prefix" | "continuationPrefix">;
 type SerializedMarkdown = {
   text: string;
   byteLength: number;
@@ -33,7 +35,6 @@ const TABLE_PREVIEW_MAX_CELLS = 400;
 const TABLE_PREVIEW_LARGE_INPUT_CELLS = 120;
 const TABLE_PREVIEW_LARGE_INPUT_THRESHOLD = 3_200;
 const textEncoder = new TextEncoder();
-const emptyCell = () => ({ value: "", raw: "" });
 const serialize = (draft: TableDraft) => renderMarkdownTable(draft.headers, draft.rows, draft.alignments, draft.newline, draft.prefix, draft.continuationPrefix);
 const TABLE_TOOL_PREVIEW_CELL_CODE_UNITS = 32 * 1024;
 const previewCellTooLarge = (value: string) => value.length > TABLE_TOOL_PREVIEW_CELL_CODE_UNITS;
@@ -51,6 +52,10 @@ const cellTitle = (value: string, label: string, zh: boolean) => {
 const EDGE_BUTTON = "inline-flex h-11 w-11 items-center justify-center rounded-md text-sm text-secondary opacity-0 hover:bg-[var(--accent-soft)] hover:text-primary hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] group-focus-within/table:opacity-100 [@media(hover:none)]:opacity-100 disabled:cursor-not-allowed disabled:text-secondary disabled:opacity-30";
 const EDGE_MARK = <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-ui bg-surface">+</span>;
 const PAGE_BUTTON = "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-subtle active:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:cursor-default disabled:opacity-40";
+type StructureTarget = { axis: "row" | "column"; index: number; trigger: HTMLButtonElement; x: number; y: number };
+type StructureUndo = { draft: TableDraft; page: number; byteLength: number };
+const STRUCTURE_HISTORY_BYTES = 2 * 1024 * 1024;
+const STRUCTURE_HISTORY_ENTRIES = 8;
 
 export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, onApply, restoreFocus }: {
   zh: boolean;
@@ -94,6 +99,10 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
   const [checkedPreview, setCheckedPreview] = useState<string | null>(null);
   const [cellFocusTarget, setCellFocusTarget] = useState<{ row: number; column: number } | null>(null);
   const [editingCell, setEditingCell] = useState<{ row: number; column: number } | null>(null);
+  const [activeCell, setActiveCell] = useState({ row: 0, column: 0 });
+  const [structureTarget, setStructureTarget] = useState<StructureTarget | null>(null);
+  const [structureHistory, setStructureHistory] = useState<StructureUndo[]>([]);
+  const [structureNotice, setStructureNotice] = useState("");
   useDialogFocus({ open: true, rootRef: dialogRef, onClose, restoreFocus });
   // Only the frozen opening snapshot can initialize this state. The read-only
   // context probe commits before editing becomes available; it never follows
@@ -110,6 +119,10 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
     canonicalLineStartsRef.current = null;
     setPage(0);
     setEditingCell(null);
+    setActiveCell({ row: 0, column: 0 });
+    setStructureTarget(null);
+    setStructureHistory([]);
+    setStructureNotice("");
   }, [initialMarkdown, original]);
 
   // Bound both rows and cells: very wide tables need additional pages to keep
@@ -224,10 +237,14 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
   );
   const ready = Boolean(original && draft && draftValid && !rawInvalid && !stale && !previewPending
     && renderedPreviewMarkdown === previewMarkdown && verifiedPreview === previewMarkdown);
-  const canAddRow = Boolean(draft && draftValid && !rawInvalid && !previewPending && draft.rows.length + 3 <= MARKDOWN_TABLE_LIMITS.lines
+  const canAddRow = Boolean(ready && draft && draft.rows.length + 3 <= MARKDOWN_TABLE_LIMITS.lines
     && draft.headers.length * (draft.rows.length + 3) <= MARKDOWN_TABLE_LIMITS.cells);
-  const canAddColumn = Boolean(draft && draftValid && !rawInvalid && !previewPending && draft.headers.length < MARKDOWN_TABLE_LIMITS.columns
+  const canAddColumn = Boolean(ready && draft && draft.headers.length < MARKDOWN_TABLE_LIMITS.columns
     && (draft.headers.length + 1) * (draft.rows.length + 2) <= MARKDOWN_TABLE_LIMITS.cells);
+  const structureReadyRef = useRef(ready);
+  structureReadyRef.current = ready;
+  const activeColumn = Math.min(activeCell.column, (draft?.headers.length ?? 1) - 1);
+  const activeRow = Math.min(activeCell.row, draft?.rows.length ?? 0);
   useLayoutEffect(() => {
     if (!restorePagerFocus.current) return;
     restorePagerFocus.current = false;
@@ -345,11 +362,17 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
     const serializedText = markdownCanonicalRef.current && draftValidRef.current
       ? replaceCanonicalRow(row, next)
       : undefined;
-    return updateDraft(
+    const changed = updateDraft(
       next,
       draftValidRef.current ? isMarkdownTableCellValueValid(value) : undefined,
       serializedText ?? undefined,
     );
+    if (changed) {
+      // Structural undo must not discard later cell/Markdown edits.
+      setStructureHistory([]);
+      setStructureNotice("");
+    }
+    return changed;
   }, [replaceCanonicalRow, updateDraft]);
 
   const handleEditingChange = useCallback((row: number, column: number, editing: boolean, restoreCellFocus = false) => {
@@ -388,32 +411,81 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
   function changePage(nextPage: number) {
     restorePagerFocus.current = Boolean(pagerRef.current?.contains(document.activeElement));
     setCellFocusTarget(null);
+    setStructureTarget(null);
+    setActiveCell({ row: Math.min(nextPage * pageSize + 1, draft?.rows.length ?? 0), column: activeColumn });
     setPage(Math.max(0, Math.min(nextPage, pages - 1)));
   }
 
-  function addEdge(axis: "row" | "column", position: "before" | "after") {
-    if (!draft || (axis === "row" ? !canAddRow : !canAddColumn)) return;
-    if (axis === "row") {
-      const row = Array.from({ length: draft.headers.length }, emptyCell);
-      const rows = position === "before" ? [row, ...draft.rows] : [...draft.rows, row];
-      if (updateDraft({ ...draft, rows })) {
-        const targetRow = position === "before" ? 1 : rows.length;
-        setPage(position === "before" ? 0 : Math.floor((targetRow - 1) / pageSize));
-        setCellFocusTarget({ row: targetRow, column: 0 });
-      }
-    } else {
-      const index = position === "before" ? 0 : draft.headers.length;
-      const insert = (cells: TableDraft["headers"]) => [...cells.slice(0, index), emptyCell(), ...cells.slice(index)];
-      if (updateDraft({
-        ...draft,
-        headers: insert(draft.headers),
-        rows: draft.rows.map(insert),
-        alignments: [...draft.alignments.slice(0, index), "left", ...draft.alignments.slice(index)],
-      })) setCellFocusTarget({ row: 0, column: index });
-    }
+  function changeStructure(action: MarkdownTableStructureAction) {
+    const current = draftRef.current;
+    if (!current || !structureReadyRef.current) return;
+    const next = changeMarkdownTableStructure(current, action);
+    if (!next) return;
+    const snapshot = { draft: current, page: currentPage, byteLength: markdownByteLengthRef.current };
+    if (!updateDraft(next)) return;
+    setStructureHistory(history => {
+      const retained = [...history, snapshot].slice(-STRUCTURE_HISTORY_ENTRIES);
+      let bytes = retained.reduce((sum, item) => sum + item.byteLength, 0);
+      while (bytes > STRUCTURE_HISTORY_BYTES && retained.length > 1) bytes -= retained.shift()!.byteLength;
+      return retained;
+    });
+    const column = action.type.endsWith("column");
+    const removed = action.type.startsWith("delete");
+    setStructureNotice(zh
+      ? `已${removed ? "删除" : "增加"}第 ${action.index + 1} ${column ? "列" : "行"}`
+      : `${removed ? "Deleted" : "Inserted"} ${column ? "column" : "row"} ${action.index + 1}`);
+    setEditingCell(null);
+    const targetRow = column ? 0 : Math.min(action.index + 1, next.rows.length);
+    setPage(targetRow ? Math.floor((targetRow - 1) / pageSize) : currentPage);
+    setCellFocusTarget({ row: targetRow, column: column ? Math.min(action.index, next.headers.length - 1) : 0 });
+    setActiveCell({ row: targetRow, column: column ? Math.min(action.index, next.headers.length - 1) : 0 });
   }
 
+  function addEdge(axis: "row" | "column", position: "before" | "after") {
+    if (!draft || !ready || (axis === "row" ? !canAddRow : !canAddColumn)) return;
+    changeStructure({
+      type: axis === "row" ? "insert-row" : "insert-column",
+      index: position === "before" ? 0 : axis === "row" ? draft.rows.length : draft.headers.length,
+      count: 1,
+    });
+  }
+
+  function undoStructure() {
+    const previous = structureHistory.at(-1);
+    if (!previous || !ready) return;
+    // The last Undo disables itself. Return focus to a real cell instead of BODY.
+    gridRef.current?.querySelector<HTMLButtonElement>("[data-table-cell]")?.focus({ preventScroll: true });
+    if (!updateDraft(previous.draft)) return;
+    setStructureHistory(history => history.slice(0, -1));
+    setStructureNotice(zh ? "已撤销行列操作" : "Row/column change undone");
+    setPage(previous.page);
+    setEditingCell(null);
+    setStructureTarget(null);
+    setCellFocusTarget({ row: 0, column: 0 });
+    setActiveCell({ row: 0, column: 0 });
+  }
+
+  const openStructureMenu = useCallback((axis: "row" | "column", index: number, trigger: HTMLButtonElement) => {
+    if (!structureReadyRef.current) return;
+    const bounds = trigger.getBoundingClientRect();
+    const height = 184;
+    setStructureTarget({
+      axis, index, trigger,
+      x: Math.max(8, Math.min(bounds.left, window.innerWidth - 216)),
+      y: Math.max(8, bounds.bottom + height < window.innerHeight ? bounds.bottom : bounds.top - height),
+    });
+    setEditingCell(null);
+  }, []);
+
+  const closeStructureMenu = useCallback((restore = true) => {
+    if (restore) structureTarget?.trigger.focus({ preventScroll: true });
+    setStructureTarget(null);
+  }, [structureTarget]);
+
   function changeMarkdown(value: string) {
+    setStructureHistory([]);
+    setStructureNotice("");
+    setStructureTarget(null);
     const previousMarkdown = markdownRef.current;
     const fastDraft = !sourceMarkdownNeedsParseRef.current && !rawInvalidRef.current && draftRef.current
       ? updateSimpleMarkdownTableDraft(previousMarkdown, draftRef.current, value)
@@ -463,7 +535,11 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
     const displayContent = cell && previewCellTooLarge(cell.value)
       ? <span className="text-secondary" title={zh ? "内容仍保留在下方 Markdown" : "Content remains in the Markdown editor below"}>…</span>
       : content;
-    return <EditableTableCell
+    const selected = structureTarget && (structureTarget.axis === "column"
+      ? column === structureTarget.index : actualRow === structureTarget.index + 1);
+    return <div className={`relative ${selected ? "bg-[var(--accent-soft)] ring-1 ring-inset ring-[var(--accent)]" : ""}`} data-table-structure-selected={selected ? "" : undefined}
+      onFocusCapture={() => setActiveCell(current => current.row === actualRow && current.column === column ? current : { row: actualRow, column })}>
+      <EditableTableCell
       value={cell?.value ?? ""}
       row={actualRow}
       column={column}
@@ -476,18 +552,40 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
       onEditingChange={handleEditingChange}
       onVerticalNavigate={handleVerticalNavigate}
       onHorizontalNavigate={handleHorizontalNavigate}
-    >{displayContent}</EditableTableCell>;
-  }, [changeCell, editingCell, handleEditingChange, handleHorizontalNavigate, handleVerticalNavigate, zh]);
+    >{displayContent}</EditableTableCell>
+    </div>;
+  }, [changeCell, editingCell, handleEditingChange, handleHorizontalNavigate, handleVerticalNavigate, structureTarget, zh]);
 
   return (
     <div className="fixed inset-0 z-[240] flex items-end justify-center bg-[var(--overlay)] sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="source-editor-table-tool-title" aria-describedby={!original ? "source-editor-table-unavailable" : undefined} data-testid="source-editor-table-tool">
       <button type="button" tabIndex={-1} data-dialog-backdrop className="absolute inset-0" onClick={onClose} aria-label={zh ? "关闭表格工具" : "Close table tool"} />
       <section ref={dialogRef} tabIndex={-1} className="relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-ui bg-raised shadow-2xl sm:max-w-3xl sm:rounded-xl">
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-ui px-4 py-2 sm:px-5">
-          <h2 id="source-editor-table-tool-title" className="text-base font-semibold text-primary">{zh ? "表格工具" : "Table tool"}</h2>
-          <button type="button" onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button>
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-ui px-3 py-1 sm:px-5">
+          <h2 id="source-editor-table-tool-title" className="shrink-0 text-base font-semibold text-primary">{zh ? "表格工具" : "Table tool"}</h2>
+          <div className="flex items-center gap-0.5">
+          {draft ? <>
+            <button type="button" disabled={!ready || !activeRow} aria-haspopup="menu"
+              aria-expanded={structureTarget?.axis === "row"}
+              aria-label={zh ? `第 ${activeRow} 行操作` : `Row ${activeRow} actions`}
+              onClick={event => openStructureMenu("row", activeRow - 1, event.currentTarget)}
+              className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs text-secondary hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-40">
+              {zh ? "行" : "Row"}<span className="hidden tabular-nums sm:inline">{activeRow ? ` ${activeRow}` : ""}</span><ChevronDown className="h-3 w-3" />
+            </button>
+            <button type="button" disabled={!ready} aria-haspopup="menu"
+              aria-expanded={structureTarget?.axis === "column"}
+              aria-label={zh ? `第 ${activeColumn + 1} 列操作` : `Column ${activeColumn + 1} actions`}
+              onClick={event => openStructureMenu("column", activeColumn, event.currentTarget)}
+              className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs text-secondary hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-40">
+              {zh ? "列" : "Col"}<span className="hidden tabular-nums sm:inline">{activeColumn + 1}</span><ChevronDown className="h-3 w-3" />
+            </button>
+            <button type="button" disabled={!ready || !structureHistory.length} onClick={undoStructure}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-40"
+              aria-label={zh ? "撤销行列操作" : "Undo row/column change"} title={zh ? "撤销行列操作" : "Undo row/column change"}><Undo2 className="h-4 w-4" /></button>
+          </> : null}
+          <button type="button" data-dialog-initial-focus onClick={onClose} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button>
+          </div>
         </header>
-        <div className="min-h-0 overflow-y-auto px-4 py-3 sm:px-5">
+        <div className="min-h-0 overflow-y-auto px-4 py-3 sm:px-5" onScrollCapture={() => { if (structureTarget) closeStructureMenu(false); }}>
           {needsAnalysis ? <MarkdownTableSourceProbe source={source} onResult={acceptAnalysis} /> : null}
           {draft ? (
             <>
@@ -509,9 +607,9 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
                 </div>
                 <div className="relative px-11">
                   <div aria-busy={previewPending} className="max-h-[42dvh] overflow-auto" data-testid="source-editor-table-preview">
-                    <div ref={previewRef} className="w-max min-w-full"><MarkdownTablePreview
+                    <div ref={previewRef} className="min-w-full"><MarkdownTablePreview
                       text={renderedPreviewMarkdown}
-                      interactionVersion={`${previewPending}:${rawInvalid}:${rowOffset}:${currentPage}:${editingCell?.row ?? ""}:${editingCell?.column ?? ""}`}
+                      interactionVersion={`${ready}:${previewPending}:${rawInvalid}:${rowOffset}:${currentPage}:${editingCell?.row ?? ""}:${editingCell?.column ?? ""}:${structureTarget?.axis ?? ""}:${structureTarget?.index ?? ""}`}
                       renderCell={renderCell}
                     /></div>
                   </div>
@@ -536,12 +634,13 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
             <span className="mb-2 block text-sm font-medium text-primary">Markdown</span>
             <textarea
               value={markdown}
+              rows={Math.min(6, Math.max(3, (draft?.rows.length ?? 0) + 2))}
               onChange={event => changeMarkdown(event.target.value)}
               onFocus={() => setCellFocusTarget(null)}
               spellCheck={false}
               aria-invalid={rawInvalid || !draftValid}
               aria-describedby={rawInvalid ? "source-editor-table-input-error" : !draftValid ? "source-editor-table-draft-error" : undefined}
-              className="min-h-40 w-full resize-y rounded-lg border border-ui bg-surface px-3 py-2 font-mono text-base leading-6 text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 sm:text-sm sm:leading-5"
+              className="min-h-24 w-full resize-y rounded-lg border border-ui bg-surface px-3 py-2 font-mono text-base leading-6 text-primary outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 sm:text-sm sm:leading-5"
               data-testid="source-editor-table-markdown"
             />
           </label> : null}
@@ -551,12 +650,77 @@ export function TableToolDialog({ zh, source, range, stale, onRefresh, onClose, 
           {stale ? <p role="alert" className="mt-2 text-xs text-[var(--danger)]">{zh ? "编辑器正文已变化。" : "The source editor changed."}<button type="button" onClick={onRefresh} className="ml-2 min-h-11 underline">{zh ? "重新预览" : "Refresh preview"}</button></p> : null}
         </div>
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-ui px-4 py-3 sm:px-5">
+          <span className="mr-auto text-xs text-secondary" aria-live="polite" aria-atomic="true">{structureNotice}</span>
           <button type="button" onClick={onClose} className="min-h-11 rounded-lg px-4 text-sm font-medium text-secondary hover:bg-subtle">{!original && !checkingSource ? (zh ? "返回源码" : "Back to source") : (zh ? "取消" : "Cancel")}</button>
           {original ? <button type="button" disabled={!ready} aria-describedby={[previewPending ? "source-editor-table-preview-pending" : "", previewShapeInvalid ? "source-editor-table-preview-invalid" : ""].filter(Boolean).join(" ") || undefined} onClick={applyDraft} className="min-h-11 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:cursor-not-allowed disabled:opacity-50">{zh ? "应用" : "Apply"}</button> : null}
         </footer>
+        {structureTarget && dialogRef.current ? createPortal(<TableStructureMenu
+          target={structureTarget} zh={zh} ready={ready}
+          canInsert={structureTarget.axis === "column" ? canAddColumn : canAddRow}
+          canDelete={structureTarget.axis === "row" || (draft?.headers.length ?? 0) > 1}
+          onClose={closeStructureMenu}
+          onAction={action => { closeStructureMenu(); changeStructure(action); }}
+        />, dialogRef.current) : null}
       </section>
     </div>
   );
+}
+
+function TableStructureMenu({ target, zh, ready, canInsert, canDelete, onClose, onAction }: {
+  target: StructureTarget;
+  zh: boolean;
+  ready: boolean;
+  canInsert: boolean;
+  canDelete: boolean;
+  onClose: (restore?: boolean) => void;
+  onAction: (action: MarkdownTableStructureAction) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => { rootRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true }); }, []);
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node) && !target.trigger.contains(event.target as Node)) onClose(false);
+    };
+    const resize = () => onClose();
+    document.addEventListener("pointerdown", outside);
+    window.addEventListener("resize", resize);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      window.removeEventListener("resize", resize);
+    };
+  }, [onClose, target.trigger]);
+  const column = target.axis === "column";
+  const label = zh ? `第 ${target.index + 1} ${column ? "列" : "行"}` : `${column ? "Column" : "Row"} ${target.index + 1}`;
+  const item = "flex min-h-11 w-full items-center rounded-md px-3 text-left text-sm hover:bg-subtle focus-visible:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus)] disabled:opacity-40";
+  return <div ref={rootRef} role="menu" aria-label={label} data-testid="source-editor-table-structure-menu"
+    style={{ left: target.x, top: target.y }} className="fixed z-10 w-52 rounded-lg border border-ui bg-raised p-1 text-primary shadow-xl"
+    onKeyDown={event => {
+      if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onClose(); return; }
+      if (event.key === "Tab") { onClose(); return; }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const items = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+      const current = items.indexOf(document.activeElement as HTMLButtonElement);
+      const index = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1
+        : (current + (event.key === "ArrowUp" ? -1 : 1) + items.length) % items.length;
+      items[index]?.focus({ preventScroll: true });
+    }}>
+    <div className="px-3 py-1 text-xs text-secondary">{label}</div>
+    <button type="button" role="menuitem" disabled={!ready || !canInsert} className={item}
+      onClick={() => onAction({ type: column ? "insert-column" : "insert-row", index: target.index, count: 1 })}>
+      {zh ? (column ? "左侧插列" : "上方插行") : (column ? "Insert column left" : "Insert row above")}
+    </button>
+    <button type="button" role="menuitem" disabled={!ready || !canInsert} className={item}
+      onClick={() => onAction({ type: column ? "insert-column" : "insert-row", index: target.index + 1, count: 1 })}>
+      {zh ? (column ? "右侧插列" : "下方插行") : (column ? "Insert column right" : "Insert row below")}
+    </button>
+    <button type="button" role="menuitem" disabled={!ready || !canDelete} className={`${item} text-[var(--danger)]`}
+      title={!canDelete ? (zh ? "至少保留一列" : "Keep at least one column") : undefined}
+      onClick={() => onAction({ type: column ? "delete-column" : "delete-row", index: target.index })}>
+      {zh ? (column ? "删除此列" : "删除此行") : (column ? "Delete column" : "Delete row")}
+    </button>
+  </div>;
 }
 
 const EditableTableCell = memo(function EditableTableCell({ value, row, column, disabled, editing, previewPending, label, title, onChange, onEditingChange, onVerticalNavigate, onHorizontalNavigate, children }: {
@@ -634,7 +798,7 @@ const EditableTableCell = memo(function EditableTableCell({ value, row, column, 
   }
 
   return (
-    <div className="relative min-h-11 min-w-24">
+    <div className="relative min-h-11 min-w-16">
       <button ref={buttonRef} type="button" disabled={disabled || previewPending} tabIndex={editing && !disabled ? -1 : 0} aria-hidden={editing && !disabled ? true : undefined} data-table-cell data-row-index={row} data-column-index={column} aria-label={label} title={title}
         style={{ textAlign: "inherit" }}
         onClick={() => { setLocalValue(value); onEditingChange(row, column, true); }} onKeyDown={keyDown}

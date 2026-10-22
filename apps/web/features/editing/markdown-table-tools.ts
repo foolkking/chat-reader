@@ -11,12 +11,53 @@ export type MarkdownTableModel = {
   alignments: MarkdownTableAlignment[]; hadDelimiter: boolean; diagnostics: string[];
   currentRow: number; currentColumn: number;
 };
-export type MarkdownTableAction =
+export type MarkdownTableStructureAction =
+  | { type: "insert-row" | "insert-column"; index: number; count: number }
+  | { type: "delete-row" | "delete-column"; index: number };
+export type MarkdownTableDraft = Pick<MarkdownTableModel, "headers" | "rows" | "alignments" | "newline" | "prefix" | "continuationPrefix">;
+export type MarkdownTableAction = MarkdownTableStructureAction
   | { type: "create"; columns: number; rows: number }
   | { type: "normalize" }
   | { type: "replace"; markdown: string }
   | { type: "add-row"; position: "before" | "after"; count: number }
   | { type: "add-column"; position: "before" | "after"; count: number };
+
+/** Whole-table structure changes, independent of preview paging and UI state.
+ * Row indices refer only to data rows; the GFM header cannot be deleted. */
+export function changeMarkdownTableStructure<T extends MarkdownTableDraft>(table: T, action: MarkdownTableStructureAction): T | null {
+  const column = action.type.endsWith("column");
+  const size = column ? table.headers.length : table.rows.length;
+  const insert = action.type.startsWith("insert");
+  if (!Number.isInteger(action.index) || action.index < 0 || action.index > size
+    || (!insert && action.index === size)) return null;
+  const count = "count" in action ? action.count : 1;
+  if (!integerIn(count, 1, column ? 50 : 100) || (!insert && column && size === 1)) return null;
+  const spliceCells = (cells: MarkdownTableCell[]) => [
+    ...cells.slice(0, action.index),
+    ...(insert ? Array.from({ length: count }, empty) : []),
+    ...cells.slice(action.index + (insert ? 0 : 1)),
+  ];
+  const next = column ? {
+    ...table,
+    headers: spliceCells(table.headers),
+    rows: table.rows.map(spliceCells),
+    alignments: [
+      ...table.alignments.slice(0, action.index),
+      ...(insert ? Array.from({ length: count }, () => "left" as const) : []),
+      ...table.alignments.slice(action.index + (insert ? 0 : 1)),
+    ],
+  } : {
+    ...table,
+    rows: [
+      ...table.rows.slice(0, action.index),
+      ...(insert ? Array.from({ length: count }, () => Array.from({ length: table.headers.length }, empty)) : []),
+      ...table.rows.slice(action.index + (insert ? 0 : 1)),
+    ],
+  };
+  if (next.headers.length > MAX_COLUMNS || next.rows.length + 2 > MAX_LINES
+    || next.headers.length * (next.rows.length + 2) > MAX_CELLS) return null;
+  return next;
+}
 /** Frozen editor context, reused only for the exact source it was parsed from. */
 export type MarkdownTableSourceContext = {
   source: string;
@@ -239,20 +280,26 @@ export function applyMarkdownTableAction(source: string, from: number, to: numbe
   }
   const model = inspectMarkdownTable(source, from, to, context);
   if (!model) return null;
-  let { headers, rows, alignments } = model;
+  let next = model;
   if (action.type === "add-row") {
     if (!integerIn(action.count, 1, 100)) return null;
-    const index = model.currentRow === -2 ? rows.length : model.currentRow < 0 ? 0
+    const index = model.currentRow === -2 ? model.rows.length : model.currentRow < 0 ? 0
       : model.currentRow + (action.position === "after" ? 1 : 0);
-    const additions = Array.from({ length: action.count }, () => Array.from({ length: headers.length }, empty));
-    rows = [...rows.slice(0, index), ...additions, ...rows.slice(index)];
+    const changed = changeMarkdownTableStructure(model, { type: "insert-row", index, count: action.count });
+    if (!changed) return null;
+    next = changed;
   } else if (action.type === "add-column") {
     if (!integerIn(action.count, 1, 50)) return null;
-    const index = model.currentColumn < 0 ? headers.length : model.currentColumn + (action.position === "after" ? 1 : 0);
-    const add = (row: MarkdownTableCell[]) => [...row.slice(0, index), ...Array.from({ length: action.count }, empty), ...row.slice(index)];
-    headers = add(headers); rows = rows.map(add);
-    alignments = [...alignments.slice(0, index), ...Array.from({ length: action.count }, () => "left" as const), ...alignments.slice(index)];
+    const index = model.currentColumn < 0 ? model.headers.length : model.currentColumn + (action.position === "after" ? 1 : 0);
+    const changed = changeMarkdownTableStructure(model, { type: "insert-column", index, count: action.count });
+    if (!changed) return null;
+    next = changed;
+  } else if (action.type !== "normalize") {
+    const changed = changeMarkdownTableStructure(model, action);
+    if (!changed) return null;
+    next = changed;
   }
+  const { headers, rows, alignments } = next;
   if (headers.length > MAX_COLUMNS || (rows.length + 2) > MAX_LINES || headers.length * (rows.length + 2) > MAX_CELLS) return null;
   const insert = renderMarkdownTable(headers, rows, alignments, model.newline, model.prefix, model.continuationPrefix);
   if (textEncoder.encode(insert).byteLength > MAX_BYTES) return null;

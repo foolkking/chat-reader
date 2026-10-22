@@ -31,8 +31,11 @@ test("KaTeX is locally bundled and rich content owns overflow", async () => {
   const layout = fs.readFileSync(path.join(root, "app/layout.tsx"), "utf8");
   const styles = fs.readFileSync(path.join(root, "app/globals.css"), "utf8");
   const renderer = fs.readFileSync(path.join(root, "features/conversations/markdown-renderer.tsx"), "utf8");
+  const table = fs.readFileSync(path.join(root, "features/conversations/markdown-table.tsx"), "utf8");
   expect(layout).toContain('import "katex/dist/katex.min.css"');
   expect(styles).toContain(".aui-chat-markdown .katex-display");
   expect(styles).toMatch(/\.aui-chat-markdown \.katex-display[\s\S]*overflow-x: auto/);
-  expect(renderer).toContain('markdown-table max-w-full overflow-x-auto');
+  expect(renderer).toContain("<MarkdownTableScroll");
+  expect(renderer).toContain("<MarkdownTableContent");
+  expect(table).toContain("markdown-table max-w-full overflow-x-auto");
 });

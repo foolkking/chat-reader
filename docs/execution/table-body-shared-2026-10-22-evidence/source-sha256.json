@@ -1,0 +1,38 @@
+[
+  {
+    "path": "apps/web/app/globals.css",
+    "sha256": "a5eee8d695cec2dc8ed65237a28feb25ed89060cd7adf20ba9b73b7e4fd11c17"
+  },
+  {
+    "path": "apps/web/features/conversations/markdown-renderer.tsx",
+    "sha256": "0737a6585a64cef41bf408fdce58a3c800ce45079a549578bbe0c6e89406f734"
+  },
+  {
+    "path": "apps/web/features/conversations/markdown-table.tsx",
+    "sha256": "2ed123d7d2b48281889bfcb1c6ce89d3edf9b3ec9384e1f782968d94e2e62aee"
+  },
+  {
+    "path": "apps/web/features/editing/markdown-table-dialog.tsx",
+    "sha256": "0fc6a4524cda3fe9b0b2f3296abedb0610f5b379e1befbd9c10da891f68abddf"
+  },
+  {
+    "path": "apps/web/features/editing/markdown-table-tools.ts",
+    "sha256": "d95ec02756a24f556829b179bba6db2bd956ade7016b97a3c81699cb13887d1b"
+  },
+  {
+    "path": "apps/web/e2e/ai-rich-markdown-contract.spec.ts",
+    "sha256": "0c43f871a8624037c501f23918c2ffda209d152164ea61cb358cc7682a911315"
+  },
+  {
+    "path": "scripts/ux/chatgpt-rich-text.test.mjs",
+    "sha256": "f3821620a68ea6d94fefbdeba01855f9210a4fbdba5f04996d02786dc092de1c"
+  },
+  {
+    "path": "scripts/ux/source-editor-table-browser.mjs",
+    "sha256": "9022d23631926196d4366dd55fb5c00667a183016b246628829e4a6faa835043"
+  },
+  {
+    "path": "scripts/ux/source-editor-table-tools.test.mjs",
+    "sha256": "46568fc994b44e7a3ad70cd2ddf951fce6eed6351a495e117be71c8d4ac46329"
+  }
+]

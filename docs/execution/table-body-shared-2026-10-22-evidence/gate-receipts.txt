@@ -1,0 +1,90 @@
+=== all UX tests ===
+  duration_ms: 0.6983
+  ...
+1..1522
+# tests 1522
+# suites 0
+# pass 1522
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 59998.3332
+=== focused tests (subset) ===
+  duration_ms: 0.4232
+  ...
+1..105
+# tests 105
+# suites 0
+# pass 105
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3744.2218
+=== lint ===
+
+> chat-reader@0.0.0 lint E:\1project\chat-reader
+> corepack pnpm --filter web lint
+
+
+> web@0.0.0 lint E:\1project\chat-reader\apps\web
+> eslint . --max-warnings=0
+
+=== nonincremental typecheck ===
+=== source contract ===
+
+Running 2 tests using 1 worker
+
+  ok 1 e2e\ai-rich-markdown-contract.spec.ts:7:5 › AI Rich Markdown core is shared and parser-level (25ms)
+  ok 2 e2e\ai-rich-markdown-contract.spec.ts:30:5 › KaTeX is locally bundled and rich content owns overflow (12ms)
+
+  2 passed (964ms)
+=== one-worker build ===
+
+> web@0.0.0 build E:\1project\chat-reader\apps\web
+> next build --webpack
+
+▲ Next.js 16.3.8 (webpack)
+✓ Running next.config.mjs took 45ms
+- Experiments (use with caution):
+  · cpus: 1
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 28.4s
+  Running TypeScript ...
+  Finished TypeScript in 13.6s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/14) ...
+  Generating static pages using 1 worker (3/14) 
+  Generating static pages using 1 worker (6/14) 
+  Generating static pages using 1 worker (10/14) 
+✓ Generating static pages using 1 worker (14/14) in 2.4s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /account-upgrade
+├ ƒ /admin/users/[userId]/conversations/[conversationId]
+├ ƒ /archived
+├ ƒ /conversations/[conversationId]
+├ ƒ /library
+├ ƒ /login
+├ ƒ /offline
+├ ƒ /projects/[projectId]
+├ ƒ /recent
+├ ƒ /register
+├ ƒ /reset-password
+├ ƒ /search
+├ ƒ /share/[token]
+└ ƒ /verify-email
+
+Route (pages)
+─ ƒ /api/imports/[importId]/commit
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

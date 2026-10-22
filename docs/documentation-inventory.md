@@ -1,5 +1,30 @@
 # Markdown 文档台账
 
+## Shared-body table release authorization — 2026-10-22
+
+`execution/TABLE_BODY_RELEASE_2026-10-22.md` owns this newly authorized
+commit/CI/deployment cycle. `PROJECT_STATE.md`, `index.md` and `deployment.md`
+point to it and distinguish the mandatory post-dispatch wait from the earlier
+local-only boundary. The new dated raw-evidence entries in `.gitattributes`
+preserve recorded hashes/byte sizes across Git checkout; ordinary source
+whitespace checks and all release gates remain unchanged.
+
+## Shared body tables / compact structural editing — 2026-10-22
+
+`execution/ux-audit-body-tables-2026-10-22.md` records the user's newly identified
+gap between normal-body rendering and editable Table tool presentation. It binds
+the code-only findings and four primary-source projects inspected with the
+built-in browser. It remains the pre-approval research, with a continuation link
+to `execution/TABLE_BODY_SHARED_PRESENTATION_2026-10-22.md`. The latter records
+actual shared presentation, whole-draft row/column commands, bounded Undo and
+the user's subsequent compact-header revision. `system/AI_RICH_MARKDOWN_CONTRACT.md`
+owns the current presentation/editing boundary; `testing.md` owns the local
+1,522/81/two-check gate and its explicit external adapters. The implementation's
+evidence directory contains synthetic screenshots, authoritative DOM observations,
+gate summaries and current source hashes; `evidence/table-body-shared-2026-10-22.json`
+binds those artifacts. Exact-source body entry/expanded viewing remain deferred.
+No dependency, migration, CI or deployment change.
+
 ## Release image registry data-limit continuation — 2026-10-21
 
 Run `39593070512` passed the three quality jobs but ECR Public throttled the
