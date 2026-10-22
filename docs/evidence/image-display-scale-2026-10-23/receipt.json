@@ -1,9 +1,9 @@
 {
   "date": "2026-10-23",
   "status": "local_passed_not_deployed",
-  "boundary": "synthetic Next/API/disposable PostgreSQL; clipboard adapter; no installed external client or production UI acceptance",
+  "boundary": "synthetic Next/API/disposable PostgreSQL; clipboard adapter and explicit HTTP413 injection; no installed external client or production authenticated UI acceptance",
   "tests": {
-    "focused_api": 48,
+    "focused_api": 50,
     "attachment_compatibility": 54,
     "service_free_ux": 1535,
     "selected_browser": {
@@ -15,21 +15,38 @@
     "lint": "passed",
     "nonincremental_typecheck": "passed",
     "production_build": "passed",
-    "alembic_head": "20261022_0053"
+    "alembic_head": "20261022_0053",
+    "dependency_security_regressions": 9,
+    "official_audit_policy": {
+      "advisories": 3,
+      "blocked": 1,
+      "approved_exceptions": 1,
+      "unapproved": 0,
+      "policy_errors": 0
+    }
   },
   "normalized_lf_source_sha256": {
-    "apps/api/app/services/assets/image_display.py": "698bd4461ca25764b92cb2c00df5919eaeb88f0a70bd81b946e64f99ecdfa66c",
+    "apps/api/app/services/assets/image_display.py": "5bdab5486d034fecef223c9775ff8ad541cb76427d14f4a637f9b5c65f1c68ce",
     "apps/api/app/services/assets/public_images.py": "5b81ed54e37b8ff36a127816c3ac59ca2d75521b4b34015993ca50a0c1621d1c",
     "apps/api/app/api/routes/markdown_copy.py": "fd91baa55336ae6a676e7a003a19a1d0cd8976bc24dfade24ad99610d9af46d3",
-    "apps/api/tests/test_image_display.py": "92662ff9128ee02dbcd265013c8b149c6581146f4bd1cd054981f612a2f25c5b",
-    "apps/web/features/attachments/image-display-controls.tsx": "643a2904c76780c00ed8f8534d0245d170fdd7a0387be064192ab8d58c350dbd",
+    "apps/api/tests/test_image_display.py": "573c8497ac6d794ac1d723916d57e196265ef2931634afc57acf6a5d4016accd",
+    "apps/web/features/attachments/image-display-controls.tsx": "41390d10851202ff6da919a2967dd6b31250b4279069dd00ac8da65ecf0f15da",
     "apps/web/features/attachments/attachment-block.tsx": "064031f51fc5bbfa55562305620aec435a88374f885362918c026cd742c57ec8",
     "apps/web/lib/api.ts": "8ff665c61c90dc05822e21cc4653befb4837f7eaaad1943e3bcf46bb85500fae",
     "apps/web/app/globals.css": "2dd567a3384ad673f9fdf73fc06fba5f53d2b8d8beec6e9e8ed5d44f1139de57",
-    "apps/web/e2e/message-markdown-copy.spec.ts": "5fa7d0e697857d31c1a8c4921818b70d22ad69c4a05b3eb93e729907f65f2e53"
+    "apps/web/e2e/message-markdown-copy.spec.ts": "f797289f45e4f73e1633d7152ad07006b17273c3cca1a537bb80c1f697131b63",
+    "package.json": "faf38bd166f009462a103ca24fdcf6bba2d84394648ade55a58e24f04b277a61",
+    "apps/web/package.json": "9df482f308acf869e96e752982ea7f8279c6e884dc006b5d8404a1c5c9af2098",
+    "pnpm-lock.yaml": "7aa48c8d7b145c847631ef537189a9c3541c388b8498bd791388fc572f6e7392"
   },
   "artifacts": {
-    "image-size-1440.png": "7e74c01966efe5c86562c106cb553fc0e170f068a546e1fe7cbc6f937103b480",
-    "image-size-375.png": "9678dcd217b1b659da800b5732e4114b51868dafff3f124c4cd186953f871746"
+    "image-size-1440.png": "4c5d2e7a6fd9061866e7f655d3b28097e5d6445cbf8b37fcb8e08a1c07237e14",
+    "image-size-375.png": "facd0c40bedd7d9ad8f3d16e8985f2fc615d7df97114bf89a351de27b784d9c7"
+  },
+  "dependency_versions": {
+    "next": "16.4.1",
+    "dompurify": "3.4.17",
+    "sharp": "0.35.5",
+    "new_audit_exception": false
   }
 }

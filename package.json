@@ -12,7 +12,7 @@
       "postcss@<8.5.26": "8.5.26",
       "source-map-js@<1.2.2": "1.2.2",
       "browserslist@<4.28.8": "4.28.8",
-      "dompurify@<3.4.16": "3.4.16",
+      "dompurify@<3.4.17": "3.4.17",
       "sharp@<0.35.5": "0.35.5"
     },
     "patchedDependencies": {

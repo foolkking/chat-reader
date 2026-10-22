@@ -128,6 +128,8 @@ in ordinary Markdown clients without nonstandard image-size syntax. The
 response remains no-store with live source/scan/deletion checks. A missing
 selected derivative fails closed rather than silently serving the original;
 the owner can explicitly save again to repair it. Anonymous reads never resize.
+Apply remains available for an unchanged valid percentage after a successful
+read, including initial 100%; an uncertain write must still be checked first.
 Saving a size **does not publish** an image. Only the existing explicit
 Markdown-copy publication does.
 
@@ -146,6 +148,10 @@ original may still be used at 100%. Pixel-only PNG output discards metadata.
 Oversized, unsupported or unsafe content leaves the last valid selection
 unchanged. No new dependency, network fetch, worker or decoder is introduced.
 These are admission bounds, not a claim of measured production peak memory.
+The raster encoded-byte limit is checked against both stored size and actual
+file size **before Pillow header/EXIF inspection**, including GET and 100% saves.
+Size-reading rejection leaves the original available through its existing access
+paths; the UI directs owners there instead of suggesting a blind save retry.
 
 Share/Offline/read-only views never offer the editing control. They can render
 saved metadata with existing private/offline image access; offline copies are

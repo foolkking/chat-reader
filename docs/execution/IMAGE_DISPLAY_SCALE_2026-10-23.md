@@ -37,7 +37,7 @@ owns all resource, URL and compatibility limits.
 
 ## Local validation
 
-- Focused API: **48 passed**, including EXIF, metadata stripping and failure
+- Focused API: **50 passed**, including EXIF, metadata stripping and failure
   preservation. Attachment bundle/integrity/range/renderer/storage/upload plus
   offline asset compatibility: **54 passed**.
 - Service-free UX: **1,535 passed, zero skipped**.
@@ -72,3 +72,32 @@ Complete exact-source five-job CI, independent archive/source verification,
 fresh preflight, stopped-writer five-component backup, no-build deployment and
 runtime acceptance are still required. Do not infer release success from local
 tests or previous release receipts.
+
+### First CI and bounded follow-up
+
+Feature commit `d134d02969ebc13e3101a74c4f62e231f0dc9c7e` was pushed and run
+`39829506577` dispatched at **2026-10-22 18:13:50 UTC**. Its earliest result-read
+gate was **19:03:50 UTC**; the actual read at **19:04:48 UTC** respected it.
+API/settings jobs passed; Web stopped at official npm dependency audit, so
+build/independent artifact jobs were skipped. No deployable images were accepted
+and no production operation occurred.
+
+During that wait, resource review found raster size-reading reached Pillow before
+the encoded-byte check. The follow-up checks both stored and actual file length
+before header/EXIF inspection, including GET and 100% saves. Two new tests prove
+Pillow is never invoked for either over-limit source and the last saved selection
+is retained. The desktop/mobile browser test injects one explicit HTTP 413 and
+checks original-access instructions, disabled saves and successful read recovery;
+normal sizing continues against real Next/API/PostgreSQL.
+The Apply action also accepts the unchanged percentage after a successful read:
+this makes initial 100% explicit and exposes same-size derivative repair instead
+of forcing an artificial 50→49→50 change. Unknown writes still require a read
+before another save. Both viewport tests cover unchanged 100% and 50% application.
+
+The blocked advisories require Next **16.4.1**; a fresh official audit also requires
+DOMPurify **3.4.17**. Only those existing dependency families and their lock
+entries change. No audit exception or severity threshold changes. Local official
+policy reports **zero unapproved findings / zero policy errors**, retaining the
+existing tested braces patch and reporting the lower-severity KaTeX/PostCSS
+findings. The dependency patch regressions pass **9 tests**. A new full CI and
+fresh 50-minute wait are required after the final local reruns.

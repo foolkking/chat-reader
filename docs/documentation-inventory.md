@@ -8,8 +8,12 @@ conversion bounds and portable/offline limitations. API/testing/deployment
 describe owner routes, executable gates and the user's 50-minute wait per CI run.
 `PROJECT_STATE.md` and `index.md` link current scope; the dated
 `execution/IMAGE_DISPLAY_SCALE_2026-10-23.md` records evidence and release status,
-not an independent runtime truth. No migration, dependency or package version
-change. Only synthetic content and nonsecret release receipts may be retained.
+not an independent runtime truth. No migration or offline package-version change.
+The first exact CI failed new upstream dependency advisories; existing Next and
+DOMPurify upgrade to 16.4.1/3.4.17, tracked in `system/RELEASE_SAFETY_BASELINE.md`
+and reflected by `system/PDFJS_MIGRATION_CONTRACT.md`'s source platform snapshot.
+No direct dependency/exception/gate is added. Only synthetic content and nonsecret
+release receipts may be retained.
 
 ## Single-message Markdown copy — 2026-10-22
 

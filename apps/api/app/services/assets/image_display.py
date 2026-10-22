@@ -70,6 +70,10 @@ def dimensions(content) -> tuple[int, int]:
             raise AttachmentAccessError("SVG dimensions are unsupported.", 422) from exc
     if mime not in RASTER_TYPES:
         raise AttachmentAccessError("Only supported images can be resized.", 422)
+    # Header inspection can itself read large EXIF/ICC/text segments. Enforce
+    # the encoded-byte limit before Pillow, including the read-only size route.
+    if content.asset_object.byte_size > MAX_BYTES or content.path.stat().st_size > MAX_BYTES:
+        raise AttachmentAccessError("Image exceeds the 16 MiB size-inspection limit.", 413)
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)

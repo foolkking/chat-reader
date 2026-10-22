@@ -6,7 +6,9 @@
 job 成功且独立精确制品验收通过后部署；重试 CI 重新计时。当前实测与发布
 状态见[实施记录](execution/IMAGE_DISPLAY_SCALE_2026-10-23.md)，旧记录不是本轮验收。
 
-无 migration、依赖或新配置，单一 head 保持 `20261022_0053`。保留现有
+无 migration 或新配置，单一 head 保持 `20261022_0053`。首轮被新的依赖安全
+公告拦截后，现有 Next/DOMPurify 升级至 `16.4.1`/`3.4.17`，不新增例外或弱化门禁。
+保留现有
 public-images Nginx 隐私/no-store location，不覆盖服务器配置。展示比例在
 PostgreSQL 附件 metadata，派生 PNG 在 assets；必须有停止应用写入后的五组件
 备份与已验证回退镜像。只用本轮精确 CI 制品 `--no-build` 替换应用，不重启

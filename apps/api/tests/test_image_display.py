@@ -231,6 +231,7 @@ def test_exif_orientation_is_applied_once_from_original(client, monkeypatch, tmp
 @pytest.mark.parametrize("boundary", ["source_pixels", "result_pixels", "result_edge", "bytes"])
 def test_resize_limits_preserve_last_saved_setting(client, monkeypatch, tmp_path, boundary):
     import app.services.assets.image_display as service
+    byte_limit = service.MAX_BYTES
     case = seed(monkeypatch, tmp_path)
     assert save(client, case, 50).status_code == 200
     if boundary == "source_pixels":
@@ -247,4 +248,30 @@ def test_resize_limits_preserve_last_saved_setting(client, monkeypatch, tmp_path
     # to different bytes. Other failures leave the previous 50% selection intact.
     expected = 100 if boundary == "result_edge" else 50
     assert save(client, case, 90, expected=expected).status_code == 413
+    monkeypatch.setattr(service, "MAX_BYTES", byte_limit)
     assert client.get(endpoint(case)).json()["scale_percent"] == expected
+
+
+@pytest.mark.parametrize("boundary", ["recorded", "actual"])
+def test_header_inspection_checks_bytes_before_pillow(client, monkeypatch, tmp_path, boundary):
+    import app.services.assets.image_display as service
+    from app.services.assets.asset_store import get_asset_store
+    case = seed(monkeypatch, tmp_path)
+    assert save(client, case, 50).status_code == 200
+    with database() as db:
+        asset = db.get(AssetObject, uuid.UUID(case["raster_asset"]))
+        if boundary == "recorded":
+            asset.byte_size = service.MAX_BYTES + 1
+            db.commit()
+        else:
+            # Synthetic task storage only. A sparse extension also proves the
+            # actual file bound is independent of potentially stale metadata.
+            with get_asset_store().resolve_key(asset.storage_key).open("r+b") as stream:
+                stream.truncate(service.MAX_BYTES + 1)
+    def forbidden_decode(*args, **kwargs):
+        raise AssertionError("Pillow must not inspect an over-limit file")
+    monkeypatch.setattr(service.Image, "open", forbidden_decode)
+    assert client.get(endpoint(case)).status_code == 413
+    assert save(client, case, 100, expected=50).status_code == 413
+    with database() as db:
+        assert db.get(Attachment, uuid.UUID(case["raster"])).metadata_["image_display_v1"]["scale_percent"] == 50

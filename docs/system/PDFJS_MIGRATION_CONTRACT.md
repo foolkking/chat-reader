@@ -18,7 +18,7 @@ See the current [attachment contract](ATTACHMENT_RENDERER_CONTRACT.md) and
 [audit/evidence](../execution/ux-audit-attachment-reading-2026-10-09.md).
 This is not a second engine migration or a new worker/dependency. The earlier
 Release G acceptance below does not establish acceptance of the new follow-up.
-Current Next is 16.3.8, Dexie is v2 and offline packages retain v1/v2/v3 reads;
+Current Next is 16.4.1, Dexie is v2 and offline packages retain v1/v2/v3 reads;
 the older platform snapshot below describes Release G only.
 
 Last updated: 2026-08-16
@@ -37,7 +37,7 @@ pdfjs-dist 3.11.174
 ```
 
 Release G used Next `16.3.1`; the current security-maintenance baseline is Next
-`16.3.6`. React/ReactDOM `19.2.8`, Webpack, the unified Attachment Viewer,
+`16.4.1`. React/ReactDOM `19.2.8`, Webpack, the unified Attachment Viewer,
 authenticated attachment routes, Share scope, offline package v2 and Dexie v1
 remain unchanged. Turbopack, CSP enforcement, PDF editing, OCR,
 annotation-editor features and database work are not part of this migration.

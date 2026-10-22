@@ -45,7 +45,6 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
   const { display, queryKey } = useImageDisplay(attachment);
   useEffect(() => () => { active.current?.abort(); }, []);
   const valid = /^\d+$/.test(draft) && Number(draft) >= 1 && Number(draft) <= 100;
-  const changed = current && Number(draft) !== current.scale_percent;
   const isCurrent = (controller: AbortController) => !controller.signal.aborted && generation === authenticationGeneration();
   async function read() {
     active.current?.abort();
@@ -57,7 +56,15 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
       if (value.source_sha256 !== attachment.asset_object?.sha256) throw new Error("Source changed");
       setCurrent(value); setDraft(String(value.scale_percent));
       client.setQueryData(queryKey, value);
-    } catch { if (isCurrent(controller)) setError(zh ? "无法读取图片尺寸，请重新读取。" : "Could not read image dimensions. Reload to retry."); }
+    } catch (failure) {
+      if (isCurrent(controller)) {
+        const unsupported = typeof failure === "object" && failure !== null && "status" in failure
+          && (failure.status === 413 || failure.status === 422);
+        setError(unsupported
+          ? (zh ? "图片过大或不支持安全缩放，仍可查看或下载原图。" : "Image is too large or unsupported for safe sizing. View or download the original instead.")
+          : (zh ? "无法读取图片尺寸，请重新读取。" : "Could not read image dimensions. Reload to retry."));
+      }
+    }
     finally { if (isCurrent(controller)) setBusy(false); }
   }
   async function save(percent: number) {
@@ -91,7 +98,7 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
     {open ? <div className="border-y border-ui py-3">
       <p>{current ? `${zh ? "原始" : "Original"} ${current.original_width} × ${current.original_height}px`
         : busy ? (zh ? "正在读取原始尺寸…" : "Reading original dimensions…") : (zh ? "原始尺寸尚未读取" : "Original dimensions unavailable")}</p>
-      <form className="mt-2 flex flex-wrap items-end gap-2" onSubmit={event => { event.preventDefault(); if (valid && changed && !error) void save(Number(draft)); }}>
+      <form className="mt-2 flex flex-wrap items-end gap-2" onSubmit={event => { event.preventDefault(); if (valid && current && !error) void save(Number(draft)); }}>
         <label className="flex flex-col gap-1">
           <span>{zh ? "相对原图比例（1–100%）" : "Original size (1–100%)"}</span>
           <input type="number" min="1" max="100" step="1" value={draft}
@@ -99,7 +106,7 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
             className="image-display-input h-11 w-28 rounded-md border bg-surface px-3 text-base text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
             onChange={event => { setDraft(event.target.value); setSaved(false); }} />
         </label>
-        <button type="submit" className="btn-primary image-display-apply min-h-11 shrink-0 px-3" disabled={busy || !valid || !changed || Boolean(error)}>
+        <button type="submit" className="btn-primary image-display-apply min-h-11 shrink-0 px-3" disabled={busy || !current || !valid || Boolean(error)}>
           {busy ? (zh ? "处理中…" : "Working…") : (zh ? "应用比例" : "Apply size")}
         </button>
         <button type="button" className="btn-secondary min-h-11 shrink-0 px-3" disabled={busy || !current || current.scale_percent === 100 || Boolean(error)} onClick={() => void save(100)}>

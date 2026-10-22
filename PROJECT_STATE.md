@@ -8,14 +8,21 @@ Last updated: 2026-10-23. This is the current snapshot, not a release history.
 have a 1–100% control, original/target dimensions and Restore 100%. Original bytes
 are retained; the same attachment and previously published URL follow the saved
 selection. External caches/forced widths are not controllable. Source-bound
-metadata and existing derivatives are reused; no migration/dependency or offline
-format change, head remains `20261022_0053`. See the
+metadata and existing derivatives are reused; no migration or offline format
+change, head remains `20261022_0053`. The release also upgrades existing Next to
+16.4.1 and DOMPurify to 3.4.17 after the first CI's security-audit failure; no
+new direct dependency or audit exception. Read-only size inspection now checks
+stored/actual encoded bytes before Pillow, with original-access recovery. See the
 [current contract](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size)
 and [implementation/release record](docs/execution/IMAGE_DISPLAY_SCALE_2026-10-23.md).
 Commit/deployment is authorized after validation. **For each CI run, wait
 50 minutes after starting it before checking its result**, then require all five
 jobs and independent exact-artifact acceptance before production. This feature
 is not deployed at this checkpoint; the accepted runtime below is still current.
+First run `39829506577` was checked only after its 50-minute deadline: API and
+settings passed, Web failed official-registry dependency audit and images were
+skipped. The repaired source requires a fresh complete run and another 50-minute
+wait, not reuse of that failed run.
 
 **Current work (2026-10-22): single-message Markdown copy.** The owner Reader's
 top copy action is immediately before bookmark. It prepares complete canonical

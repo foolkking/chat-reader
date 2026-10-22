@@ -91,12 +91,34 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     // private and unchanged. Exercise real inline controls, not a CSS adapter.
     const original = await page.request.get(`/api/attachments/${svg.id}/content`);
     const originalBytes = await original.body();
+    // Explicit failure injection only: an admission denial must not suggest
+    // blindly resaving or replace the retained original.
+    const displayRoute = `**/api/attachments/${svg.id}/image-display`;
+    await page.route(displayRoute, route => route.fulfill({
+      status: 413, contentType: "application/json", body: '{"detail":"Synthetic size admission limit"}',
+    }));
     await article.getByRole("button", { name: /Image size ·|图片大小 ·/ }).click();
+    await expect(article.getByRole("alert")).toHaveText(/View or download the original|仍可查看或下载原图/);
     const scale = article.getByRole("spinbutton", { name: /Image scale percentage|图片缩放百分比/ });
+    await expect(scale).toBeDisabled();
+    await page.unroute(displayRoute);
+    await article.getByRole("button", { name: /Reload size|重新读取/ }).click();
     await expect(scale).toHaveValue("100");
-    await scale.fill("50");
-    await article.getByRole("button", { name: /Apply size|应用比例/ }).click();
+    // Explicitly applying the unchanged 100% configures intrinsic size; the
+    // same action remains available for a missing-derivative repair.
+    const applySize = article.getByRole("button", { name: /Apply size|应用比例/ });
+    await expect(applySize).toBeEnabled();
+    await applySize.click();
     await expect(article.getByRole("status").filter({ hasText: /Image size saved|比例已保存/ })).toBeVisible();
+    await scale.fill("50");
+    await applySize.click();
+    await expect(article.getByRole("status").filter({ hasText: /Image size saved|比例已保存/ })).toBeVisible();
+    await expect(applySize).toBeEnabled();
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith(`/api/attachments/${svg.id}/image-display`)
+        && response.request().method() === "PUT" && response.status() === 200),
+      applySize.click(),
+    ]);
     expect((await page.request.get(`/api/attachments/${svg.id}/image-display`)).status()).toBe(200);
     const imageSize = async () => {
       await external.goto(url!);

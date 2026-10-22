@@ -1,5 +1,17 @@
 # Release Safety Baseline
 
+2026-10-23 release prerequisite: image-scale CI `39829506577` was blocked by
+new Next advisories `GHSA-2464-fhr4-w9xw` (critical) and
+`GHSA-p3m5-59mp-jv5r` (high). A fresh official npm audit additionally identifies
+`GHSA-673q-mjm6-r5xr` and three DOMPurify advisories affecting the locked graph.
+Next moves to the advisory-defined fixed **16.4.1**, and the existing DOMPurify
+override moves to fixed **3.4.17**. Sharp remains 0.35.5. No exception, severity
+change, audit bypass or new direct dependency is introduced. Existing narrowly
+patched braces policy remains; lower-severity findings are reported, not hidden.
+Full exact-source CI and runtime acceptance are still required; see the
+[image-scale release record](../execution/IMAGE_DISPLAY_SCALE_2026-10-23.md).
+The dated version statements below retain their historical scope.
+
 2026-10-18 disposable CI PostgreSQL availability repair: quality jobs start
 their fixture after checkout with `scripts/ci/postgres-service.sh start`.
 It tries the previously verified ECR Public index, then Docker Hub's official
