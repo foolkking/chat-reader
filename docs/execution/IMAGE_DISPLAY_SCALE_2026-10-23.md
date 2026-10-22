@@ -101,3 +101,41 @@ policy reports **zero unapproved findings / zero policy errors**, retaining the
 existing tested braces patch and reporting the lower-severity KaTeX/PostCSS
 findings. The dependency patch regressions pass **9 tests**. A new full CI and
 fresh 50-minute wait are required after the final local reruns.
+
+### Small-image View target
+
+An additional browser assertion reproduced a real accessibility regression:
+at 50% of the synthetic 20px original, the View button was only **10px wide**
+at both 1440px and 375px. Its wrapper now has a 44px minimum width/height;
+the bitmap remains 10px (and the public URL remains 10px), so this does not
+enlarge the selected image. The new DOM assertion stays in the complete
+Markdown/image browser gate. This repair requires another exact-source CI;
+no result from the previous source may substitute for it.
+
+### Second CI: search history race
+
+Source `30f5a26aba2c2b49a6633cbad2e79765da85a9a1` ran as `39839236789`.
+Dispatch was **2026-10-22 19:20:39 UTC**, result-read gate **20:10:39 UTC**,
+actual read **20:10:39 UTC** (after the precise receipt deadline). API/settings passed;
+Web passed dependency audit but failed the search-history assertion in the
+Source Editor/mutation gate: **99 passed / 1 failed**. No image was accepted
+or deployed from this run.
+
+Ten ordinary local repeats passed, but a counting-only history probe with
+Chrome's 6× CPU slowdown reproduced the original failure **4 of 5** times:
+the URL returned to the previous query while the input retained `NEW`.
+Back can overtake the pending query render, so `initialQuery` never changes
+and its effect cannot reset the draft. A same-query filter-history traversal
+with an unsubmitted draft also failed deterministically before repair.
+
+The existing SearchBox now restores its draft from the current URL on
+`popstate`, clears keyboard selection and removes its listener on teardown.
+The original immediate-Back assertion is retained; the browser gate additionally
+checks same-query Back/Forward restoration. No sleep, retry, assertion removal,
+new router abstraction, dependency or visual-token change is introduced.
+The repaired source passes lint, nonincremental typecheck and production build.
+Starting the rebuilt local Web was rejected by the execution tool policy, so
+post-repair search browser acceptance is explicitly deferred to the next full
+CI, not inferred from the earlier ten ordinary passes. The image-only
+44px repair had already passed the complete selected browser suite
+(26 passed / 1 existing opt-in skip) before this search-only change.

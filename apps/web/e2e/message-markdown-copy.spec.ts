@@ -127,6 +127,10 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await expect.poll(imageSize).toBe(10);
     const inlineImage = article.locator(`[data-attachment-id="${svg.id}"] .attachment-gallery-image`);
     await expect.poll(() => inlineImage.evaluate(node => node.getBoundingClientRect().width)).toBe(10);
+    const imageTrigger = article.locator(`[data-attachment-id="${svg.id}"] .attachment-gallery-trigger`);
+    const touchBox = await imageTrigger.boundingBox();
+    expect(touchBox!.width).toBeGreaterThanOrEqual(44);
+    expect(touchBox!.height).toBeGreaterThanOrEqual(44);
     await scale.fill("25");
     await article.getByRole("button", { name: /Apply size|应用比例/ }).click();
     await expect.poll(imageSize).toBe(5);

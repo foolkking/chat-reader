@@ -14,6 +14,9 @@ DOMPurify upgrade to 16.4.1/3.4.17, tracked in `system/RELEASE_SAFETY_BASELINE.m
 and reflected by `system/PDFJS_MIGRATION_CONTRACT.md`'s source platform snapshot.
 No direct dependency/exception/gate is added. Only synthetic content and nonsecret
 release receipts may be retained.
+The second CI's unchanged-query/early-Back draft recovery and the small-image
+View hit-target repair are documented in that same execution record; neither
+changes routing contracts, schema or offline formats.
 
 ## Single-message Markdown copy — 2026-10-22
 

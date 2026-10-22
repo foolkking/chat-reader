@@ -1,6 +1,6 @@
 {
   "date": "2026-10-23",
-  "status": "local_passed_not_deployed",
+  "status": "image_gates_passed_search_repair_pending_ci_not_deployed",
   "boundary": "synthetic Next/API/disposable PostgreSQL; clipboard adapter and explicit HTTP413 injection; no installed external client or production authenticated UI acceptance",
   "tests": {
     "focused_api": 50,
@@ -33,20 +33,33 @@
     "apps/web/features/attachments/image-display-controls.tsx": "41390d10851202ff6da919a2967dd6b31250b4279069dd00ac8da65ecf0f15da",
     "apps/web/features/attachments/attachment-block.tsx": "064031f51fc5bbfa55562305620aec435a88374f885362918c026cd742c57ec8",
     "apps/web/lib/api.ts": "8ff665c61c90dc05822e21cc4653befb4837f7eaaad1943e3bcf46bb85500fae",
-    "apps/web/app/globals.css": "2dd567a3384ad673f9fdf73fc06fba5f53d2b8d8beec6e9e8ed5d44f1139de57",
-    "apps/web/e2e/message-markdown-copy.spec.ts": "f797289f45e4f73e1633d7152ad07006b17273c3cca1a537bb80c1f697131b63",
+    "apps/web/app/globals.css": "cce932f307f9f29c667756073a6247a98edc686cf703de69ec83a71c502c4e52",
+    "apps/web/e2e/message-markdown-copy.spec.ts": "584353dca6074f1c8137e25776b2bce7711ab48a9da10f5c808fe05c9a431e83",
     "package.json": "faf38bd166f009462a103ca24fdcf6bba2d84394648ade55a58e24f04b277a61",
     "apps/web/package.json": "9df482f308acf869e96e752982ea7f8279c6e884dc006b5d8404a1c5c9af2098",
-    "pnpm-lock.yaml": "7aa48c8d7b145c847631ef537189a9c3541c388b8498bd791388fc572f6e7392"
+    "pnpm-lock.yaml": "7aa48c8d7b145c847631ef537189a9c3541c388b8498bd791388fc572f6e7392",
+    "apps/web/features/search/search-box.tsx": "6748a219901d619745ebaa65e65f06a37e62c2fd3dff68bfc39e9bdf193878fa",
+    "apps/web/e2e/ux-whole-site.spec.ts": "32f0ba7bf5fe7f37609e5a64f43fc844a663a26fa54b4abc6070995b7331f81f"
   },
   "artifacts": {
-    "image-size-1440.png": "4c5d2e7a6fd9061866e7f655d3b28097e5d6445cbf8b37fcb8e08a1c07237e14",
-    "image-size-375.png": "facd0c40bedd7d9ad8f3d16e8985f2fc615d7df97114bf89a351de27b784d9c7"
+    "image-size-1440.png": "94957bfc2f7f3e8d8e157be9ade29f849ddb3d708390dcda3e8e8847fa6e19d8",
+    "image-size-375.png": "a997dab27cb70679302af3bcb4042cb6b4f872b6477058df4fa303390c52ca54"
   },
   "dependency_versions": {
     "next": "16.4.1",
     "dompurify": "3.4.17",
     "sharp": "0.35.5",
     "new_audit_exception": false
+  },
+  "search_history_followup": {
+    "ordinary_original_repeats_passed": 10,
+    "cpu_6x_original_failures": 4,
+    "cpu_6x_original_runs": 5,
+    "same_query_draft_before": "failed",
+    "lint": "passed",
+    "nonincremental_typecheck": "passed",
+    "production_build": "passed",
+    "browser_after": "pending full CI; rebuilt local Web start rejected by tool policy",
+    "boundary": "image-only browser gate passed before this search-only change; CPU probe is diagnostic, not a performance SLA"
   }
 }

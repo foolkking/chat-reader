@@ -122,6 +122,8 @@ a stale save returns 409 with a read-before-retry instruction.
 
 All inline references to **the same attachment** use the saved size, with a
 container-width cap. This is not a different setting for each occurrence.
+The image retains its selected visual pixel size even below 44px; only its
+existing View trigger keeps a 44px minimum hit area for touch/keyboard access.
 Existing public-image URLs keep their identity and resolve the latest selected
 PNG (original raster bytes at 100%). The URL's intrinsic pixels therefore work
 in ordinary Markdown clients without nonstandard image-size syntax. The

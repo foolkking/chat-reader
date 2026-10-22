@@ -23,6 +23,11 @@ First run `39829506577` was checked only after its 50-minute deadline: API and
 settings passed, Web failed official-registry dependency audit and images were
 skipped. The repaired source requires a fresh complete run and another 50-minute
 wait, not reuse of that failed run.
+Second run `39839236789` was also read only after its precise 50-minute gate.
+Web passed dependency audit but exposed a search input/history race; the local
+repair restores the input on actual Back/Forward, including unchanged-query
+traversals. A 44px View hit target preserves the selected bitmap's actual size.
+Both repairs need a new complete exact-source run before deployment.
 
 **Current work (2026-10-22): single-message Markdown copy.** The owner Reader's
 top copy action is immediately before bookmark. It prepares complete canonical

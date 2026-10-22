@@ -12,8 +12,18 @@ export function SearchBox({ initialQuery = "", onSearch, hasResults = false, onM
   useEffect(() => { setQuery(initialQuery); setKeyboardSelection(false); }, [initialQuery]);
   useEffect(() => {
     const focus = () => inputRef.current?.focus();
+    const restoreQuery = () => {
+      // Back can overtake a pending query render, leaving initialQuery unchanged.
+      // Restore the input draft from the traversed URL even in that case.
+      setQuery(new URLSearchParams(window.location.search).get("q") ?? "");
+      setKeyboardSelection(false);
+    };
     window.addEventListener("chat-reader:focus-global-search", focus);
-    return () => window.removeEventListener("chat-reader:focus-global-search", focus);
+    window.addEventListener("popstate", restoreQuery);
+    return () => {
+      window.removeEventListener("chat-reader:focus-global-search", focus);
+      window.removeEventListener("popstate", restoreQuery);
+    };
   }, []);
   const zh = resolvedLocale === "zh-CN";
   return <form className="flex gap-2 rounded-xl border border-ui bg-surface p-2" onSubmit={(event) => { event.preventDefault(); setKeyboardSelection(false); onSearch(query.trim()); }}>

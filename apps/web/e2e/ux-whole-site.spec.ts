@@ -118,6 +118,15 @@ test("search scope, submit, history, stale results, keyboard ordering and failur
     await expect(page).toHaveURL(/\/search\?/);
     await page.screenshot({ path: info.outputPath("search-mobile-after.png") });
     const input = page.getByRole("textbox", { name: "Search", exact: true });
+    // A traversal can keep the same committed q while a different input draft
+    // exists (also possible when Back overtakes a pending query render).
+    await input.fill(key + "UNSUBMITTED");
+    await page.goBack();
+    await expect(page).not.toHaveURL(/status_scope/);
+    await expect(input).toHaveValue(key);
+    await page.goForward();
+    await expect(page).toHaveURL(/status_scope=all/);
+    await expect(input).toHaveValue(key);
     await input.fill(key + "NEW"); await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(key + "NEW"));
     await page.goBack(); await expect(input).toHaveValue(key);
