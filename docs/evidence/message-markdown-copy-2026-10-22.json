@@ -63,6 +63,16 @@
       "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/ux-summary.txt",
       "bytes": 147,
       "sha256": "d88e5e64cc2dc3b8ff33bc7be037c1673450a4da7bdbd0e177efdf11e85179ed"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/gateway-repair.txt",
+      "bytes": 202,
+      "sha256": "6e7cfc5898027b2b5536484fbb6dbf9a10ac2728b56ef44b80d2c4698d56c62e"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/gateway-repair.json",
+      "bytes": 677,
+      "sha256": "49b435e37ddfbeb7d76aef579c5880f2237cf0789971391aafd14582d544837d"
     }
   ]
 }

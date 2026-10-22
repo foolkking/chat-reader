@@ -267,13 +267,26 @@ def test_import_preview_has_a_route_scoped_pair_upload_limit() -> None:
     assert "proxy_request_buffering off;" in api_location
     assert "proxy_pass http://127.0.0.1:8000;" in api_location
     assert nginx.count("proxy_request_buffering off;") == 8
-    assert nginx.count("proxy_pass http://127.0.0.1:8000;") == 8
+    # Eight original API/upload locations plus the explicit public-image read.
+    assert nginx.count("proxy_pass http://127.0.0.1:8000;") == 9
     for route in ("/api/me/archive/previews", "/api/system/archive/previews"):
         location = nginx.split(f"location = {route}", 1)[1].split("}", 1)[0]
         assert "client_max_body_size 520m;" in location
         assert "proxy_request_buffering off;" in location
         assert "proxy_pass http://127.0.0.1:8000;" in location
     assert "client_max_body_size 520m;" in nginx
+
+
+def test_public_image_gateway_conceals_capability_uris_and_does_not_cache() -> None:
+    root = Path(__file__).parents[3]
+    nginx = (root / "deploy" / "nginx-chat-reader.conf").read_text(encoding="utf-8")
+    location = nginx.split("location ^~ /api/public-images/ {", 1)[1].split("}", 1)[0]
+    assert "access_log off;" in location
+    assert "error_log /dev/null;" in location
+    assert "proxy_cache off;" in location
+    assert 'add_header Cache-Control "no-store" always;' in location
+    assert "proxy_pass http://127.0.0.1:8000;" in location
+    assert "client_max_body_size 520m;" not in location
 
 
 @pytest.mark.parametrize("available", [None, 0, 256 * 1024**2 - 1])

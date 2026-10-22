@@ -1,0 +1,22 @@
+{
+  "prior_commit": "6627b13e1d25274a29467fd5f69de56f5752c453",
+  "failed_ci_run": 39744956800,
+  "reason": "Ninth explicit public-image proxy location; stale old total of eight. Existing upload checks retained; privacy/cache assertions added.",
+  "local_gate": {
+    "passed": 80,
+    "skipped": 1,
+    "failed": 0,
+    "seconds": 305.71
+  },
+  "earlier_local_full_api": {
+    "passed": 1486,
+    "skipped": 188,
+    "failed": 1,
+    "sole_failure": "old gateway count, now repaired"
+  },
+  "source_index": {
+    "path": "apps/api/tests/test_diagnostics.py",
+    "git_index_bytes": 15438,
+    "sha256": "164d9359593c1a923a5f65233894994fc503b678715a48717aea0ebba1ad4e9e"
+  }
+}

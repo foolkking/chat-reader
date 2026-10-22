@@ -60,7 +60,7 @@
 Playwright 使用独立临时 PG 数据库/API/store 与真实 Next 构建；其 API 是显式
 AUTH-disabled 测试兼容模式，仅 Clipboard API 是确定性适配器。账户隔离/匿名
 边界另由 auth-enabled API 测试覆盖；不冒充生产登录浏览器或原生系统剪贴板。
-完整本机 API 长跑已启动，尚未结束，不计为通过；最终精确提交由完整 CI 复验。
+完整本机 API 长跑在下方 CI 续记中结算，不计为通过；最终精确提交由完整 CI 复验。
 
 失败与修正保留在任务临时目录而不篡改旧结果：首次 pytest 的参数名过长触发
 Windows 环境长度限制，改为短测试 ID；真实 PG 夹具补齐迁移要求的 owner，
@@ -94,3 +94,17 @@ SSH 只读核验基线运行镜像为 `91e015e`，不是服务器根 checkout HE
 发布前保留此直接回退镜像与当前数据库/业务卷备份；不覆盖 `.env.production`、
 不构建生产镜像、不删卷/导入资料、不自动数据库 downgrade。旧镜像可在新增表
 仍保留时回退。CI/run/制品/部署结果仅在实际完成后补记。
+
+### 第一次完整 CI 与网关回归同步
+
+功能提交 `6627b13` 已正常推送。完整 run `39744956800` 的 API 前置门禁发现
+`test_import_preview_has_a_route_scoped_pair_upload_limit` 仍把代理 location 总数
+写死为 8，新隐私读入口使其成为 9（其余 79 项通过）。没有部署制品；已取消本次
+余下工作，避免继续为失败源码消耗构建资源。
+
+只同步该精确总数，并新增公共图片 location 的 access/error log、no-store、
+proxy-cache 与后端目标断言；8 个旧流式上传和 5 个大文件限额断言不变，不跳过/
+放松原门禁。本机同组回归 **80 passed / 1 skipped**（Windows 平台跳过项），
+305.71s。本机较早启动的 API 全量最终为 **1,486 passed / 188 skipped /
+1 failed**，55m02s，唯一失败也是此旧计数断言；它不是全量通过记录。
+随后从修正后的新提交重新运行完整工作流，以该精确源码全量结果为最终门禁。
