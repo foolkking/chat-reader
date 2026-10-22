@@ -134,5 +134,38 @@ PostgreSQL 16 上错误回退到系统 `pg_restore`，该客户端输出 Postgre
 其 apt 源找不到 `postgresql-client-16`，API job 在测试前停止。当前改为在
 缺少匹配主机客户端时，通过 `docker exec` 调用此 job 已固定 digest 的
 PostgreSQL 16 容器内置 `pg_dump`/`pg_restore`；本地仍优先使用同 major 客户端。
-没有跳过恢复验证或放松断言。精确 E2E 定位器修复已并入；这一容器工具路径仍需
-后续完整 CI 实际验证。其他失败 job 与制品任务因依赖失败而跳过。
+没有跳过恢复验证或放松断言。该工具路径由下节最终完整 CI 验证。其他失败 job
+与制品任务因依赖失败而跳过。
+
+### 最终 CI、生产部署与验收
+
+上述工具路径修复提交 `8ca8e906ddf90fb7029efea24d6504316213c43f` 的完整
+`Build release images` 工作流 **`39767746528` attempt 1** 五个 job 全部成功：
+`api-quality`、`web-quality`、`settings-quality`、`build-images`、
+`inspect-release-artifact`。API 为 **1,677 passed / 3 skipped**；
+镜像与发布包来自该精确 commit。发布包 SHA-256：
+`d07895113d0757aa41f3fa429d4985ce55d7c4d81fce5711d641ca18ca00c984`。
+独立制品校验确认 35 个 blobs、21334 个 layer entries、342 个源文件，
+不含禁止路径；远端复核的压缩包 SHA-256 相同。
+
+生产先只读核实原运行版本 `91e015e`，然后在停写期间通过附件只读审计、
+PG/导入/导出/offline/assets 五组件备份与校验、资源门槛及 canonical 五表行数
+对照。迁移 `20261017_0052 → 20261022_0053` 已执行并验证单一 head；未改
+canonical 数据，未 downgrade。Nginx 只增加精确 public-image TLS location，
+关闭原始 URI access/error log 与 proxy cache，语法验证后 reload；原有 TLS、
+upstream、上传配置保留。API/Web/worker 以 `--no-build` 使用上述制品。
+
+前三次受保护尝试均未接受：第一次暴露生产 Python 3.6 对 `capture_output` 的
+不兼容并自动恢复旧应用；第二次因 0053 已成功迁移而拒绝将它误认为旧 schema；
+第三次发现第一次尝试留下的完全匹配、但未被 Nginx 引用的任务 snippet，并安全
+中止。每次失败都恢复旧 API/Web/worker，保留兼容的 0053，不回滚数据库。修正后
+**attempt 4 于 2026-10-22 15:06 UTC 接受**。
+
+独立线上验收确认 API、Web、worker 镜像 revision 均为完整 SHA
+`8ca8e906ddf90fb7029efea24d6504316213c43f`，API/Web 健康、worker heartbeat
+存活，PostgreSQL 身份/运行状态未变，环境文件与 Compose 哈希未变；
+0053/current、canonical 行数、Nginx 隐私位置、HTTPS health/login、
+未认证 capability 与 message-copy 拒绝、匿名随机无效图片 404/no-store、
+内网 diagnostics 404、HTTP→HTTPS、启动日志和 OOM 检查均通过。
+current/rollback release marker 已核验为新版本/`91e015e`。未做生产认证浏览器
+或真实系统剪贴板验收；也不声称已下载的外部副本可撤回。

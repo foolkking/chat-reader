@@ -9,8 +9,9 @@ limits, removal semantics and archive exclusions. `PROJECT_STATE.md` and
 authorization. API/testing/deployment entries own commands and rollout boundaries;
 authentication and attachment contracts link the narrow public-read exception.
 `execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md` records dated test/CI/deployment
-facts, never future success. Frozen synthetic evidence is linked there; no real
-conversation content, IDs, URL tokens or credentials belong in these documents.
+facts, including the accepted exact-source run and production runtime checks.
+Frozen synthetic evidence is linked there; no real conversation content, IDs,
+URL tokens or credentials belong in these documents.
 
 ## Shared-body table release authorization — 2026-10-22
 

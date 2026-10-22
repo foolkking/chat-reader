@@ -14,12 +14,17 @@ Source Alembic has one new head **`20261022_0053`** (parent `20261017_0052`).
 See the [current contract](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md) and
 [implementation/release record](docs/execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md).
 
-**Latest authorization:** the user now requests direct commit and deployment
-after completion. Run the full exact-source quality/image/artifact gates before
-deployment; this supersedes the earlier local-only boundary and prior
-table-release wait-for-user checkpoint for this new batch. No gate is waived.
-Read-only SSH confirmed the baseline running API/worker/Web is **`91e015e`**;
-root checkout HEAD is not the deployed image identity. New code is not yet live.
+**Release status (2026-10-22): deployed and accepted.** Exact source
+`8ca8e906ddf90fb7029efea24d6504316213c43f` passed all five jobs in workflow
+run `39767746528`; the independently verified image archive SHA-256 is
+`d07895113d0757aa41f3fa429d4985ce55d7c4d81fce5711d641ca18ca00c984`.
+Production runtime acceptance confirmed API/Web/worker at that revision,
+schema `20261022_0053`, unchanged PostgreSQL/config and canonical row counts,
+healthy services, HTTPS/public-route denial checks, clean startup logs and no
+deployment OOM. The five-component backup was verified before migration;
+rollback image remains `91e015e`. See the [release record](docs/execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md).
+The first three guarded attempts aborted and restored the prior app; attempt 4
+passed. No migration downgrade was performed.
 
 ### Previous table-release preparation checkpoint (historical)
 
