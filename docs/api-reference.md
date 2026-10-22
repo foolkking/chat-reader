@@ -1,5 +1,20 @@
 # API 参考
 
+## 单条消息 Markdown 复制 — 2026-10-22 source
+
+详见[当前合同](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md)。读取计划不公开图片；
+只有显式发布 POST 创建稳定能力，其他接口的原有权限不变。
+
+| Method/path | Contract |
+| --- | --- |
+| `GET /api/messages/{message_id}/markdown-copy` | Owner-only, no-store. Full current `markdown`, `version_id`, referenced attachment `id/mime_type/source_sha256/content_url/available`; no pagination/DOM truncation and no capability creation. |
+| `PUT /api/attachments/{attachment_id}/markdown-copy-preview?source_sha256=…` | Owner-only raw PNG body. SVG source binding plus bounded Pillow validation/pixel re-encoding; 204 without publishing. 413/422 invalid bounds, 409 changed source, 429 process busy, 408 body timeout, retryable 503 concurrent storage conflict. |
+| `POST /api/messages/{message_id}/markdown-copy` | Owner-only JSON `{base_version_id, attachment_ids}` (max 100). Whole selection validated before capability creation; 409 stale version/missing safe SVG preview. No-store response `{urls: {attachment_id: "/api/public-images/…"}}`. |
+| `GET/HEAD /api/public-images/{token}` | Exact 43-character capability only, anonymous raster/PNG read; live deletion/source/scan checks, no-store, HEAD/Range. Missing/unavailable/blocked all 404. No anonymous mutation. |
+
+4 MiB source and preview-upload bounds apply. Portable archive/offline formats
+do not serialize capabilities; deleting the conversation file revokes the URL.
+
 ## Current released additions — 2026-10-19
 
 The following contracts first shipped in `f3b331a` and remain in current

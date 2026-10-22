@@ -1,5 +1,43 @@
 # Testing
 
+## Single-message Markdown copy — 2026-10-22
+
+The [current contract](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md) owns limits;
+[dated results](execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md) own exact counts,
+source receipts and release status. Use synthetic fixtures only.
+
+- `cd apps/api; python -m pytest tests/test_message_markdown_copy.py -q
+  --basetemp="$env:TEMP/pytest-copy"`: full source/no publication, image reads,
+  live revocation, exact anonymous boundary, stale-version/mixed-batch atomicity,
+  bounded PNG validation, attachment-scoped previews and retry/repair.
+- On an explicitly disposable PostgreSQL only, set
+  `SETTINGS_POSTGRES_INTEGRATION=1` and run
+  `python -m pytest tests/test_message_markdown_copy_postgres.py -q
+  --basetemp="$env:TEMP/pytest-copy-postgres"`. It creates/drops only uniquely named
+  fixture databases: real 0052→0053→0052→0053 source preservation, concurrent
+  stable capabilities/FK deletion and concurrent preview reuse. Never select
+  production with this fixture.
+- `node --test scripts/ux/message-markdown-copy.test.mjs`: installed parser and
+  positional source fidelity, complete tail, code/math/HTML non-publication,
+  reference/nested labels, file omission, MIME/path/budget failures.
+- `node scripts/ux/message-markdown-copy-browser.mjs`: real MessageItem, copy
+  hook/parser/canvas/API client and synthetic SQLite API/store; body display,
+  preferences/history and Clipboard API are explicit adapters. Desktop/375px,
+  fallback, focus, version/auth retirement, unsafe SVG and anonymous image
+  decoding are local integration evidence, not full Reader acceptance.
+- `E2E_MESSAGE_MARKDOWN_COPY=1` enables
+  `apps/web/e2e/message-markdown-copy.spec.ts` against isolated Next/API/PostgreSQL.
+  It uses real uploads, canonical edit, Reader/mobile actions, anonymous PNG
+  decode, Share action absence, in-use deletion protection and file-removal
+  revocation; only Clipboard API is a deterministic adapter. Full CI includes
+  it in the existing Markdown/image Viewer gate, without relaxing other gates.
+
+Run lint/typecheck/build, broad API and UX regressions plus the existing Reader
+selection-copy/Share and cached-offline checks. Set process-local TEMP/TMP under
+the task's `C:\Users\86182\Desktop\wkkk` directory before commands; all pytest,
+browser configs/outputs and one-off services must use that directory. No
+installed Obsidian/native OS clipboard or production-account UI PASS is implied.
+
 ## Shared body tables / compact structure controls — 2026-10-22
 
 The [implementation record](execution/TABLE_BODY_SHARED_PRESENTATION_2026-10-22.md)

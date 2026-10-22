@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from urllib.parse import urlsplit
+import re
 
 from fastapi import Request
 from sqlalchemy.exc import SQLAlchemyError
@@ -40,7 +41,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Share capabilities are a deliberate public-by-link surface. The
         # share service still enforces token scope and optional password
         # unlock before returning any content.
-        if path in PUBLIC_PATHS or path.startswith("/api/shared/") or path == "/api/internal/diagnostics" or request.method == "OPTIONS":
+        public_image_read = request.method in {"GET", "HEAD"} and re.fullmatch(r"/api/public-images/[A-Za-z0-9_-]{43}", path)
+        if path in PUBLIC_PATHS or path.startswith("/api/shared/") or public_image_read or path == "/api/internal/diagnostics" or request.method == "OPTIONS":
             response = await call_next(request)
             if path.startswith("/api/auth/") or path.startswith("/api/shared/"):
                 response.headers["Cache-Control"] = "no-store"

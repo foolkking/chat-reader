@@ -6,6 +6,7 @@ from app.api.routes.imports import router as imports_router
 from app.api.routes.conversations import router as conversations_router
 from app.api.routes.exports import router as exports_router
 from app.api.routes.messages import router as messages_router
+from app.api.routes.markdown_copy import router as markdown_copy_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.preferences import router as preferences_router
 from app.api.routes.reading import router as reading_router
@@ -61,6 +62,7 @@ app.include_router(imports_router)
 app.include_router(conversations_router)
 app.include_router(exports_router)
 app.include_router(messages_router)
+app.include_router(markdown_copy_router)
 app.include_router(projects_router)
 app.include_router(preferences_router)
 app.include_router(reading_router)

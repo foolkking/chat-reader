@@ -18,6 +18,7 @@
 | [USER_FLOWS.md](USER_FLOWS.md) | 主要端到端用户流程 |
 | [FRONTEND_ARCHITECTURE.md](FRONTEND_ARCHITECTURE.md) | 前端模块、状态和浏览器持久化 |
 | [ATTACHMENT_RENDERER_CONTRACT.md](ATTACHMENT_RENDERER_CONTRACT.md) | 附件正文、Gallery、统一 Viewer、权限与大文件合同 |
+| [MESSAGE_MARKDOWN_COPY_CONTRACT.md](MESSAGE_MARKDOWN_COPY_CONTRACT.md) | 单条消息全源码复制、显式图片公开能力、安全 SVG PNG 与撤销边界 |
 | [SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md](SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md) | Source Editor 临时上传引用、保存原子性与 API 持久化防线 |
 | [BACKEND_AND_API.md](BACKEND_AND_API.md) | 后端模块和关键数据流 |
 | [DATA_AND_STORAGE.md](DATA_AND_STORAGE.md) | PostgreSQL、文件、Dexie 和 Cache API |

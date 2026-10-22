@@ -1,0 +1,40 @@
+{
+  "created_local_date": "2026-10-22",
+  "timezone": "Asia/Shanghai",
+  "status": "local-focused-passed",
+  "ux": {
+    "files": 70,
+    "passed": 1535,
+    "skipped": 0
+  },
+  "api_copy": {
+    "passed": 22
+  },
+  "postgres": {
+    "passed": 4,
+    "single_head": "20261022_0053"
+  },
+  "component_browser": {
+    "passed": 10,
+    "body_adapter": true,
+    "clipboard_adapter": true
+  },
+  "next_api_postgres_playwright": {
+    "passed": 8,
+    "auth_disabled_test_mode": true,
+    "clipboard_adapter": true
+  },
+  "lint": 0,
+  "typecheck": 0,
+  "production_build": 0,
+  "full_api_local": "pending-long-run-not-a-pass",
+  "ci": "not-dispatched",
+  "production": "baseline-91e015e-only-new-code-not-deployed",
+  "not_verified": [
+    "installed Obsidian",
+    "native OS clipboard",
+    "production account UI",
+    "cross-browser",
+    "long-running memory/CPU acceptance"
+  ]
+}

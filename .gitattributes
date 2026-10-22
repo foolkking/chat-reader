@@ -27,3 +27,7 @@ docs/execution/*2026-10-2[01]-evidence/*.txt whitespace=cr-at-eol,-blank-at-eof,
 docs/evidence/table-body-shared-2026-10-22.json -text whitespace=cr-at-eol,-blank-at-eof
 docs/execution/table-body-shared-2026-10-22-evidence/** -text whitespace=cr-at-eol,-blank-at-eof
 docs/execution/table-body-shared-2026-10-22-evidence/*.txt whitespace=cr-at-eol,-blank-at-eof,-blank-at-eol
+# Message-copy receipts are immutable synthetic evidence, not source text.
+docs/evidence/message-markdown-copy-2026-10-22.json -text whitespace=cr-at-eol,-blank-at-eof
+docs/execution/message-markdown-copy-2026-10-22-evidence/** -text whitespace=cr-at-eol,-blank-at-eof
+docs/execution/message-markdown-copy-2026-10-22-evidence/*.txt whitespace=cr-at-eol,-blank-at-eof,-blank-at-eol

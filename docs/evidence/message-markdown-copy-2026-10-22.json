@@ -1,0 +1,68 @@
+{
+  "created_local_date": "2026-10-22",
+  "timezone": "Asia/Shanghai",
+  "task": "Single-message Markdown copy with explicit public image capabilities",
+  "scope": "Synthetic local evidence only. Source-index bytes, focused API/PG, Node, mounted component and real Next/API/PG tests. Not CI/deployment or installed Obsidian evidence.",
+  "files": [
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/api-postgres.txt",
+      "bytes": 110,
+      "sha256": "abcdd8d3f14afe7d509d7dcae350d1f8f1d2e81d59dba799214e8d4ebca35905"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/browser-result.json",
+      "bytes": 1190,
+      "sha256": "e175e144a3e7e9784d5debed2135d7f820519fda4dc332443061501d634d03db"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/browser.txt",
+      "bytes": 909,
+      "sha256": "8c38b10bf1f4e885eb37a8146ca6023566513514f47bbfb494dc1d45632c350a"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/build.txt",
+      "bytes": 1185,
+      "sha256": "23f9f2380e6e18d7d4637c90d1a6315416cc77f45abda6885e9af1eec9262cea"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/desktop.png",
+      "bytes": 17266,
+      "sha256": "df0a5db51cbd4afc3b5bf66c9f7da9f3027a37f6dab396c3e4f786eae62195fe"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/lint.txt",
+      "bytes": 165,
+      "sha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/local-summary.json",
+      "bytes": 882,
+      "sha256": "08f72756fbcff23420c0a7db4ff52e9e09b413fd636e7fc77572e3a4b741cab9"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/mobile.png",
+      "bytes": 12174,
+      "sha256": "063a236f8f74d74e7421549c104ca1576e8adc71a613cc2d19d31e057a2f815f"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/playwright.txt",
+      "bytes": 1413,
+      "sha256": "fb71dc35cd87f358891bc2f8cd8d1e11b9447e926e99fa02f9a45dda2b442c86"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/source-index-sha256.json",
+      "bytes": 4082,
+      "sha256": "f3c6e96e93bc2b687cd3b7ecc9c2c518a0262a2567d9e114e409a98805ec6602"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/typecheck.txt",
+      "bytes": 167,
+      "sha256": "aa20d92019c6f343df25737f2fb387600f706e5c4ed22ec26aad2dae4d52af71"
+    },
+    {
+      "path": "docs/execution/message-markdown-copy-2026-10-22-evidence/ux-summary.txt",
+      "bytes": 147,
+      "sha256": "d88e5e64cc2dc3b8ff33bc7be037c1673450a4da7bdbd0e177efdf11e85179ed"
+    }
+  ]
+}

@@ -1,5 +1,17 @@
 # Markdown 文档台账
 
+## Single-message Markdown copy — 2026-10-22
+
+`system/MESSAGE_MARKDOWN_COPY_CONTRACT.md` owns canonical whole-message source,
+explicit stable image capabilities, per-attachment SVG-to-PNG safety, resource
+limits, removal semantics and archive exclusions. `PROJECT_STATE.md` and
+`index.md` link the current source/0053 head and latest direct-release
+authorization. API/testing/deployment entries own commands and rollout boundaries;
+authentication and attachment contracts link the narrow public-read exception.
+`execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md` records dated test/CI/deployment
+facts, never future success. Frozen synthetic evidence is linked there; no real
+conversation content, IDs, URL tokens or credentials belong in these documents.
+
 ## Shared-body table release authorization — 2026-10-22
 
 `execution/TABLE_BODY_RELEASE_2026-10-22.md` owns this newly authorized

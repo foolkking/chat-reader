@@ -264,6 +264,31 @@ export async function updateConversation(
   );
 }
 
+export type MessageMarkdownCopyPlan = {
+  version_id: string;
+  markdown: string;
+  attachments: {
+    id: string; mime_type: string | null; source_sha256: string | null;
+    content_url: string; available: boolean;
+  }[];
+};
+
+export function getMessageMarkdownCopyPlan(messageId: string, signal?: AbortSignal) {
+  return fetchJson<MessageMarkdownCopyPlan>(`/api/messages/${encodeURIComponent(messageId)}/markdown-copy`, { signal });
+}
+
+export function publishMessageCopyImages(messageId: string, versionId: string, attachmentIds: string[], signal?: AbortSignal) {
+  return fetchJson<{ urls: Record<string, string> }>(`/api/messages/${encodeURIComponent(messageId)}/markdown-copy`, {
+    ...jsonRequest("POST", { base_version_id: versionId, attachment_ids: attachmentIds }), signal,
+  });
+}
+
+export function uploadMessageCopyPreview(attachmentId: string, sourceHash: string, png: Blob, signal?: AbortSignal) {
+  return fetchJson<void>(`/api/attachments/${encodeURIComponent(attachmentId)}/markdown-copy-preview?source_sha256=${encodeURIComponent(sourceHash)}`, {
+    method: "PUT", body: png, headers: { "Content-Type": "image/png" }, signal,
+  });
+}
+
 export async function getConversationAnnotations(conversationId: string, includeDeleted = false): Promise<AnnotationRead[]> {
   return fetchJson<AnnotationRead[]>(`/api/conversations/${conversationId}/annotations${includeDeleted ? "?include_deleted=true" : ""}`);
 }

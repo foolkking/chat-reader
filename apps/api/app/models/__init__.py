@@ -1,5 +1,6 @@
 from app.models.context_continuation import (ContextMemberObject, ContextBinding, ContinuationRevision, ContinuationState, ContinuationCandidate, ContinuationValidation, ContextExportReceipt)
 from app.models.background_job import BackgroundJob
+from app.models.attachment_public_link import AttachmentPublicLink
 from app.models.support_request import SupportRequest, SupportMessage, UserLimitOverride
 from app.models.archive_restore import ArchiveRestoreAccount, ArchiveRestoreReceipt
 from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthRateLimit, AuthSession
@@ -65,6 +66,7 @@ __all__ = [
     "SkillBundleRevision",
     "SkillBundleMember",
     "BackgroundJob",
+    "AttachmentPublicLink",
     "AuthLoginThrottle",
     "AuthPrincipal",
     "AuthRateLimit",

@@ -1,5 +1,14 @@
 # Attachment Renderer Contract
 
+## Explicit copy publication — 2026-10-22 source
+
+The owner message action can explicitly publish referenced images for portable
+Markdown. This does not make existing private attachment content public or alter
+Share/Offline Viewer access. Public SVG is always a validated inert PNG;
+detached/deleted/blocked files fail closed. The
+[copy contract](MESSAGE_MARKDOWN_COPY_CONTRACT.md) owns lifetime, limits,
+attachment-scoped previews and capability persistence.
+
 ## Current reading implementation — 2026-10-10
 
 This section supersedes conflicting baseline capability/limit descriptions below;

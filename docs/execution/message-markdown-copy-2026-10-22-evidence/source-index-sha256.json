@@ -1,0 +1,110 @@
+{
+  "boundary": "SHA-256 of staged canonical Git bytes, not Windows working-copy line endings",
+  "files": [
+    {
+      "path": ".github/workflows/build-release-images.yml",
+      "git_index_bytes": 30319,
+      "sha256": "d3daaabd5ef2c60e87955059cf83e7f6003e2cfad0f77c745cdd007c4549a4aa"
+    },
+    {
+      "path": "apps/api/alembic/versions/20261022_0053_attachment_public_links.py",
+      "git_index_bytes": 1214,
+      "sha256": "f4283527814f570e8304bedb980dfb11b4a5aa8b0abc42d63ebe1f3dcae8d15c"
+    },
+    {
+      "path": "apps/api/app/api/routes/markdown_copy.py",
+      "git_index_bytes": 4956,
+      "sha256": "04db3dda86b3dcb5999cc90bc06066b758e424f0ad649c458d2e5040df471412"
+    },
+    {
+      "path": "apps/api/app/api/routes/messages.py",
+      "git_index_bytes": 33715,
+      "sha256": "d821669ee7b7c4b0d346ba865b455ed24b2221cfdf29d9c77132a80ee8e18e4f"
+    },
+    {
+      "path": "apps/api/app/core/auth_middleware.py",
+      "git_index_bytes": 5428,
+      "sha256": "1d3665dff9bbb5089e825cf270ef3e1f98d8fcfae330394a220644056767dc5b"
+    },
+    {
+      "path": "apps/api/app/main.py",
+      "git_index_bytes": 4161,
+      "sha256": "fbe5415358b48a31573e96c0e5d0bdfaf848a2c93dc06d3324bfd662c6854dea"
+    },
+    {
+      "path": "apps/api/app/models/__init__.py",
+      "git_index_bytes": 4584,
+      "sha256": "80c1d5246a7658c9a37200b9d71371cea9972ae2c1a8755e7e8e5b8ea86ee6e7"
+    },
+    {
+      "path": "apps/api/app/models/attachment_public_link.py",
+      "git_index_bytes": 1232,
+      "sha256": "900f3038cbb8fd37a70f95fb8d2b8b4789f038d884d7a1bbb11aa2cfb0023bd5"
+    },
+    {
+      "path": "apps/api/app/services/assets/public_images.py",
+      "git_index_bytes": 12498,
+      "sha256": "042ba2e110da4f07bf4492025f6ff6838087bad6d8a30d553ce1cb58994d7a0f"
+    },
+    {
+      "path": "apps/api/app/services/assets/upload_service.py",
+      "git_index_bytes": 11462,
+      "sha256": "b6bb004bc5e4a587dc7a1774be94982eed1c3b3b30120fad322a150cdff8c55d"
+    },
+    {
+      "path": "apps/api/tests/test_message_markdown_copy.py",
+      "git_index_bytes": 16166,
+      "sha256": "ed0fbf44efb51d9690291ee9d7b30bd42aa05dca21ab22cb9c9928d1d77a263c"
+    },
+    {
+      "path": "apps/api/tests/test_message_markdown_copy_postgres.py",
+      "git_index_bytes": 5095,
+      "sha256": "31fc290869d613d546ad670b84ef60e6cb2086461526ea5e42f3a15534d5c091"
+    },
+    {
+      "path": "apps/web/e2e/message-markdown-copy.spec.ts",
+      "git_index_bytes": 6243,
+      "sha256": "ef2eb729220f58a7f08171b9fa247aee1f65d84d06b811d9cfb9ef7ace6c0237"
+    },
+    {
+      "path": "apps/web/features/conversations/message-item.tsx",
+      "git_index_bytes": 17149,
+      "sha256": "fca66da6fb2efa8bda64d375d42568957bf8500bb2be38f90094e0f794e928ee"
+    },
+    {
+      "path": "apps/web/features/conversations/message-markdown-copy-prepare.tsx",
+      "git_index_bytes": 7667,
+      "sha256": "9e687aca835c2ee169d2b2fb88de4e588777e1a088eb026b5accb177b459ad9f"
+    },
+    {
+      "path": "apps/web/features/conversations/message-markdown-copy-source.ts",
+      "git_index_bytes": 5761,
+      "sha256": "adee78fa0032379010811fbdf56982961e66a25a76ee39ade97c93e35aab6c40"
+    },
+    {
+      "path": "apps/web/features/conversations/use-message-markdown-copy.tsx",
+      "git_index_bytes": 9767,
+      "sha256": "0fb75c7d88ab69b920d59247b492c7d535f24fc422aae5a44d78c322df058e82"
+    },
+    {
+      "path": "apps/web/lib/api.ts",
+      "git_index_bytes": 82603,
+      "sha256": "1b338d7dabfff6b2ccc45787fb16e6ba250a78bc0cfbfcdb2f4240cf05f249f9"
+    },
+    {
+      "path": "deploy/nginx-chat-reader.conf",
+      "git_index_bytes": 7348,
+      "sha256": "55514d5ccb04c1492e81b94a28eb6e10defad37a57d06797e51bcaa7f4206ff4"
+    },
+    {
+      "path": "scripts/ux/message-markdown-copy-browser.mjs",
+      "git_index_bytes": 18747,
+      "sha256": "ce6d1fbcae0f1c4c7a0baadcc937a485137a76a8101cae1ea9ca0b5668aa9a48"
+    },
+    {
+      "path": "scripts/ux/message-markdown-copy.test.mjs",
+      "git_index_bytes": 5673,
+      "sha256": "0371d96f2d070ddaee124f38c66219dc0d20d15f25750dd14fe369289838fc0b"
+    }
+  ]
+}

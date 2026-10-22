@@ -250,6 +250,7 @@ def finalize_upload_items(
 
 
 def remove_unreferenced_attachment(db: Session, attachment: Attachment) -> str | None:
+    from app.models.attachment_public_link import AttachmentPublicLink
     current_reference = (
         db.query(MessageVersionAttachment.id)
         .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
@@ -264,5 +265,6 @@ def remove_unreferenced_attachment(db: Session, attachment: Attachment) -> str |
     if current_reference is not None:
         raise AttachmentUploadError("Attachment is still used by a current message version.", 409)
     attachment.status = "detached"
+    db.query(AttachmentPublicLink).filter_by(attachment_id=attachment.id).delete(synchronize_session=False)
     db.flush()
     return None

@@ -4,6 +4,25 @@ Last updated: 2026-10-22. This is the current snapshot, not a release history.
 
 ## Release and active work
 
+**Current work (2026-10-22): single-message Markdown copy.** The owner Reader's
+top copy action is immediately before bookmark. It prepares complete canonical
+source, publishes only explicitly copied images as stable public URLs, converts
+bounded SVG to inert PNG, and omits other attachment nodes. Share/Offline/admin
+read-only views cannot publish. Auth/version retirement and clipboard fallback
+are covered; portable archives, Dexie and offline versions are unchanged.
+Source Alembic has one new head **`20261022_0053`** (parent `20261017_0052`).
+See the [current contract](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md) and
+[implementation/release record](docs/execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md).
+
+**Latest authorization:** the user now requests direct commit and deployment
+after completion. Run the full exact-source quality/image/artifact gates before
+deployment; this supersedes the earlier local-only boundary and prior
+table-release wait-for-user checkpoint for this new batch. No gate is waived.
+Read-only SSH confirmed the baseline running API/worker/Web is **`91e015e`**;
+root checkout HEAD is not the deployed image identity. New code is not yet live.
+
+### Previous table-release preparation checkpoint (historical)
+
 **Release authorization (2026-10-22):** the user requests commit and deployment
 of the shared-body table/compact structure work below. This supersedes its
 local-only release boundary for this batch, not its validation limits. Verify

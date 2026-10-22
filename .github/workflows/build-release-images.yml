@@ -305,10 +305,12 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: markdown-image-viewer
           E2E_RICH_MARKDOWN_ATTACHMENT: "1"
+          E2E_MESSAGE_MARKDOWN_COPY: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/ai-rich-markdown-attachment.spec.ts
           e2e/attachment-reading.spec.ts
+          e2e/message-markdown-copy.spec.ts
 
       - name: PDF.js maintained-line browser checks
         timeout-minutes: 20

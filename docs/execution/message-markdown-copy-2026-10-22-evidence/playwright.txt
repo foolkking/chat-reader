@@ -1,0 +1,17 @@
+[WebServer] (node:17228) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:26748) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 1 worker
+
+  ok 1 e2e\ai-rich-markdown-contract.spec.ts:7:5 › AI Rich Markdown core is shared and parser-level (25ms)
+  ok 2 e2e\ai-rich-markdown-contract.spec.ts:30:5 › KaTeX is locally bundled and rich content owns overflow (9ms)
+  ok 3 e2e\library-offline.spec.ts:7:5 › checks optional offline continuation bytes and legacy absence (13ms)
+  ok 4 e2e\library-offline.spec.ts:87:5 › reads cached continuation without edit or upload controls (8.9s)
+  ok 5 e2e\message-markdown-copy.spec.ts:20:38 › 1440px copies whole message Markdown with public PNG preview and deletion revocation (3.7s)
+  ok 6 e2e\message-markdown-copy.spec.ts:20:38 › 375px copies whole message Markdown with public PNG preview and deletion revocation (3.4s)
+  ok 7 e2e\reader-markdown-copy.spec.ts:21:5 › Owner Reader copies partial formatting and complete cross-block/message Markdown (2.2s)
+  ok 8 e2e\reader-markdown-copy.spec.ts:100:5 › Public Share uses the same semantic Markdown copy boundary (1.7s)
+
+  8 passed (24.6s)

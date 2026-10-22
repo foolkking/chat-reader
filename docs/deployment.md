@@ -1,5 +1,23 @@
 # 生产部署
 
+## 单条消息复制发布 — 2026-10-22
+
+本轮用户已要求完成后直接提交部署；先通过完整精确源码 CI、独立制品验收及
+备份/preflight，不沿用下方历史“CI 后等待”检查点。状态见
+[本轮记录](execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md)。
+
+- 新单一 head `20261022_0053`，父 `20261017_0052`。使用同一已验收 API
+  镜像执行 upgrade，再无构建替换 API/worker/Web；不需要新依赖或环境变量。
+- 必须保留完整 PostgreSQL 与 imports/exports/offline/assets 恢复点。公共能力
+  在数据库、SVG PNG 在 assets；便携 `.cr`/离线包不带这些公开能力。
+- 新 Nginx `^~ /api/public-images/` location 关闭 raw URI access/error log 和 proxy cache。
+  对线上现有 TLS server 只合入该 location，保留域名、证书及原有配置；先 `nginx -t`
+  再 reload，不能整份示例覆盖生产，也不能让外部网关/APM 持久化 URL token。
+- 不自动 downgrade。回退旧镜像可保留新增表；显式 downgrade 会撤销所有图片
+  外链但不改原消息/文件，须单独审批。新代码/0053/上述网关边界必须一并验收。
+- 本地 PNG/匿名浏览器验证不等于安装版 Obsidian 或真实账户生产 UI 验收。
+  部署报告区分 API/运行状态与尚未验证的客户端流程，不记录正文、token 或凭据。
+
 ## 正文共享表格与紧凑编辑发布准备 — 2026-10-22
 
 用户已授权本轮提交、CI 和后续部署，详见

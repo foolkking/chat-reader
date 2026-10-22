@@ -10,6 +10,7 @@ import { useMessageVersionHistory } from "../editing/use-message-version-history
 import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import { AttachmentAccessProvider, type AttachmentAccess } from "../attachments/attachment-access";
 import { ApiRequestError, toggleMessageTask } from "../../lib/api";
+import { MessageMarkdownCopyButton, MessageMarkdownCopyFeedback, useMessageMarkdownCopy } from "./use-message-markdown-copy";
 
 function MessageItemComponent({
   message,
@@ -65,6 +66,7 @@ function MessageItemComponent({
     message, enabled: !readOnly && Boolean(onChanged), zh,
     onChanged: replaceMessagePreservingAnchor,
   });
+  const markdownCopy = useMessageMarkdownCopy(message.id, message.current_version?.id, !readOnly && attachmentAccess.kind === "owner", zh);
 
   useEffect(() => {
     if (!mobileActionsOpen) return;
@@ -158,6 +160,9 @@ function MessageItemComponent({
 
   const actions = (mobile: boolean) => (
     <div className={mobile ? "flex w-full flex-wrap items-center gap-2" : "flex items-center gap-1"}>
+      {!readOnly && attachmentAccess.kind === "owner" ? <MessageMarkdownCopyButton controller={markdownCopy} zh={zh} onActivate={mobile ? () => {
+        setMobileActionsOpen(false); mobileActionsTriggerRef.current?.focus({ preventScroll: true });
+      } : undefined} /> : null}
       {onBookmark ? (
         <button type="button" onClick={() => void onBookmark(message)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "\u6536\u85cf\u6d88\u606f" : "Bookmark message"} title={zh ? "\u6536\u85cf\u6d88\u606f" : "Bookmark message"}>
           <BookmarkPlus className="h-4 w-4" />
@@ -232,6 +237,7 @@ function MessageItemComponent({
             </>
           ) : null}
         </div>
+        <MessageMarkdownCopyFeedback controller={markdownCopy} zh={zh} />
         <div className={isUser
           ? wideUserMessage
             ? "reader-message-body message-user message-user-rich w-full min-w-0 text-primary"

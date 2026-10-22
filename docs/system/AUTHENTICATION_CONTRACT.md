@@ -1,5 +1,15 @@
 # Authentication and account contract
 
+## Explicit image-copy capabilities — 2026-10-22 source
+
+Only exact GET/HEAD `/api/public-images/{43-character-url-safe-token}` adds a
+public-by-link exception. Creating capabilities, full-message source plans and
+SVG-preview uploads remain owner-scoped behind existing authentication and
+write-origin protections. It neither unlocks private attachment routes nor
+changes Share/session semantics. Capabilities deliberately outlive login and
+Share credentials; file removal/blocking revokes availability. See the
+[copy contract](MESSAGE_MARKDOWN_COPY_CONTRACT.md).
+
 ## Registration policy recovery (local, 2026-10-07)
 
 Root `GET /api/admin/access` and registration PUT add an opaque policy `revision`.

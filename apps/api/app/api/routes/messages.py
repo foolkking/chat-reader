@@ -738,6 +738,8 @@ def _apply_removed_attachment_actions(db: Session, message: Message, actions) ->
         raise MessageEditError("An attachment cannot be detached while a current message version still uses it.", 409)
     for attachment in attachments:
         attachment.status = "detached"
+    from app.models.attachment_public_link import AttachmentPublicLink
+    db.query(AttachmentPublicLink).filter(AttachmentPublicLink.attachment_id.in_(detach_ids)).delete(synchronize_session=False)
 
 
 def _version_read(version: MessageVersion) -> MessageVersionRead:
