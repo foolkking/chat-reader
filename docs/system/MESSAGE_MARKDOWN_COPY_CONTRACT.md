@@ -166,4 +166,4 @@ can force those clients or update their saved local copies.
 
 See [API](../api-reference.md), [deployment](../deployment.md),
 [testing](../testing.md), and the
-[dated implementation/release record](../execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md).
+[dated size implementation/release record](../execution/IMAGE_DISPLAY_SCALE_2026-10-23.md).

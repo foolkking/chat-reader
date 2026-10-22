@@ -1,6 +1,6 @@
 {
   "date": "2026-10-23",
-  "status": "image_gates_passed_search_repair_pending_ci_not_deployed",
+  "status": "deployed_and_accepted",
   "boundary": "synthetic Next/API/disposable PostgreSQL; clipboard adapter and explicit HTTP413 injection; no installed external client or production authenticated UI acceptance",
   "tests": {
     "focused_api": 50,
@@ -59,7 +59,9 @@
     "lint": "passed",
     "nonincremental_typecheck": "passed",
     "production_build": "passed",
-    "browser_after": "pending full CI; rebuilt local Web start rejected by tool policy",
-    "boundary": "image-only browser gate passed before this search-only change; CPU probe is diagnostic, not a performance SLA"
-  }
+    "browser_after": "passed exact-source full CI: search/mutation gate 100 passed, including unchanged-query Back/Forward and original immediate-Back assertions",
+    "boundary": "Post-repair local browser was not run after tool policy rejection; exact-source CI browser acceptance passed. CPU slowdown is diagnostic, not a performance SLA."
+  },
+  "runtime_source_commit": "cfaa6edb43ebf3fe302cb2feb06c64689c0bb670",
+  "release_receipt": "../image-display-scale-release-2026-10-23.json"
 }

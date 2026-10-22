@@ -4,7 +4,7 @@ Last updated: 2026-10-23. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Active work (2026-10-23): original-relative image scale.** Owner inline images
+**Deployed and accepted (2026-10-23): original-relative image scale.** Owner inline images
 have a 1–100% control, original/target dimensions and Restore 100%. Original bytes
 are retained; the same attachment and previously published URL follow the saved
 selection. External caches/forced widths are not controllable. Source-bound
@@ -15,19 +15,18 @@ new direct dependency or audit exception. Read-only size inspection now checks
 stored/actual encoded bytes before Pillow, with original-access recovery. See the
 [current contract](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size)
 and [implementation/release record](docs/execution/IMAGE_DISPLAY_SCALE_2026-10-23.md).
-Commit/deployment is authorized after validation. **For each CI run, wait
-50 minutes after starting it before checking its result**, then require all five
-jobs and independent exact-artifact acceptance before production. This feature
-is not deployed at this checkpoint; the accepted runtime below is still current.
-First run `39829506577` was checked only after its 50-minute deadline: API and
-settings passed, Web failed official-registry dependency audit and images were
-skipped. The repaired source requires a fresh complete run and another 50-minute
-wait, not reuse of that failed run.
-Second run `39839236789` was also read only after its precise 50-minute gate.
-Web passed dependency audit but exposed a search input/history race; the local
-repair restores the input on actual Back/Forward, including unchanged-query
-traversals. A 44px View hit target preserves the selected bitmap's actual size.
-Both repairs need a new complete exact-source run before deployment.
+Exact runtime source `cfaa6edb43ebf3fe302cb2feb06c64689c0bb670` passed all five
+jobs in run `39848602312`, checked only after its required 50-minute wait.
+Independent artifact acceptance verified 35 blobs, 343 source files and archive
+SHA-256 `b036b4ca2f1a4bb2ca8b12e3879945574a58a186d7ffff34f7cac919fd445fe5`.
+Production accepted at **2026-10-23 05:30:52 +08:00**: API/Web/worker match the
+source, health/HTTPS and denial checks pass, PostgreSQL/config/Nginx and canonical
+row counts are unchanged, with no deployment OOM. Stopped-writer five-component
+backup `chat-reader-20261022T212316Z` is verified; direct rollback is `8ca8e90`.
+The release includes unchanged-query/early-Back input recovery and a 44px View
+hit area that does not enlarge the selected bitmap. First/second failed runs and
+their separate 50-minute waits remain in the execution record. No authenticated
+production UI, installed external-client or sustained-load acceptance is claimed.
 
 **Current work (2026-10-22): single-message Markdown copy.** The owner Reader's
 top copy action is immediately before bookmark. It prepares complete canonical
@@ -39,7 +38,7 @@ Source Alembic has one new head **`20261022_0053`** (parent `20261017_0052`).
 See the [current contract](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md) and
 [implementation/release record](docs/execution/MESSAGE_MARKDOWN_COPY_2026-10-22.md).
 
-**Release status (2026-10-22): deployed and accepted.** Exact source
+**Previous release (2026-10-22, historical): deployed and accepted.** Exact source
 `8ca8e906ddf90fb7029efea24d6504316213c43f` passed all five jobs in workflow
 run `39767746528`; the independently verified image archive SHA-256 is
 `d07895113d0757aa41f3fa429d4985ce55d7c4d81fce5711d641ca18ca00c984`.

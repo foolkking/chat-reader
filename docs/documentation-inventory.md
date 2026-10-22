@@ -17,6 +17,12 @@ release receipts may be retained.
 The second CI's unchanged-query/early-Back draft recovery and the small-image
 View hit-target repair are documented in that same execution record; neither
 changes routing contracts, schema or offline formats.
+Final accepted runtime is `cfaa6ed` from five-green run `39848602312`.
+`evidence/image-display-scale-release-2026-10-23.json` owns the sanitized
+CI/artifact/backup/runtime receipt; the synthetic screenshot receipt retains
+its local-versus-CI verification boundaries. Current state/index/deployment and
+the execution record agree on 0053, unchanged production configuration and
+direct image rollback `8ca8e90`.
 
 ## Single-message Markdown copy — 2026-10-22
 

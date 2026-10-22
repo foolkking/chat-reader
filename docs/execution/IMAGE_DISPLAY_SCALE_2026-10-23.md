@@ -1,5 +1,55 @@
 # Original-relative image scale — 2026-10-23
 
+## Accepted release
+
+Runtime source **`cfaa6edb43ebf3fe302cb2feb06c64689c0bb670`** is deployed and
+accepted at **2026-10-22 21:30:52 UTC / 2026-10-23 05:30:52 +08:00**.
+Full run **`39848602312` attempt 1** passed all five jobs. Dispatch was
+**20:24:39.062798 UTC**, result-read deadline **21:14:39.062798 UTC** and first
+read **21:14:39.525626 UTC**. At that read quality jobs passed and images were
+still building; the final success read at **21:18:03 UTC** did not restart CI.
+
+CI confirms **1,705 API passed / 3 fixture skips**, **1,535 service-free UX**,
+all **13 Web gates**, **463 settings cases** and **1 fresh-instance restore**.
+The repaired search/mutation gate passes **100**; Markdown/image gate **27**
+includes both 1440/375px size/copy cases with the 44px hit-target assertions.
+Official audit retains zero unapproved findings/policy errors with the existing
+tested braces exception; lower-severity findings are not relabeled zero.
+
+Artifact **`12459755554`** matches official ZIP digest, source/run/producer and
+the independently verified archive SHA-256
+**`b036b4ca2f1a4bb2ca8b12e3879945574a58a186d7ffff34f7cac919fd445fe5`**.
+Verification checks **35 OCI blobs / 343 exact-source files / 21,333 layer
+entries**, no forbidden content, embedded revision, feature markers and actual
+Next 16.4.1 / DOMPurify 3.4.17. The local helper first expected only three ZIP
+members; inspection confirmed the workflow explicitly includes a fourth
+diagnostics Nginx fragment. The exact four-member allowlist and that fragment's
+Git-blob equality were checked against the already digest-verified ZIP. Only the
+image trio was extracted; no gateway fragment was applied. This was a local
+verification-helper correction, not a changed CI artifact or waived gate.
+
+Guarded deployment attempt 1 passed. It verified rollback `8ca8e90`, stopped
+only application writers, checked **565,840 KiB** maintenance headroom and a
+clean read-only attachment SHA audit, then verified the stopped-writer
+five-component backup **`chat-reader-20261022T212316Z`**. CI images were loaded
+and recreated with `--no-build`; PostgreSQL was not restarted. Alembic remains
+single/current **0053** (no pending schema change). Seven canonical table counts,
+production environment/Compose, PostgreSQL identity/start/restarts and existing
+Nginx privacy configuration are unchanged. No imported content or volume was
+removed; no backup/image retention pruning ran.
+
+API/Web health, fresh worker, exact runtime images, HTTPS/login 200, private
+size/copy route 401 and missing-public-image 404/no-store pass. Startup error
+keyword counts and new kernel OOM events are zero; host OOM counter is unchanged.
+Current/direct rollback are **cfaa6ed/8ca8e90**, both 0053; do not downgrade.
+Planned maintenance was **05:22:59–05:30:53 +08:00**, not zero downtime.
+Authenticated production UI, installed external clients and sustained peak
+memory/load were not tested. Final docs-only commits do not change runtime source.
+Follow-up at **05:36:48 +08:00** still confirms the same containers, zero
+application restarts/OOM, unchanged configuration/PostgreSQL/pointers and 200
+local health responses. This short follow-up is not sustained-load acceptance.
+See the [sanitized release receipt](../evidence/image-display-scale-release-2026-10-23.json).
+
 ## Approved behavior and design
 
 Owner reading/editing on Web; retain the original and set a whole 1–100% relative
@@ -64,7 +114,7 @@ a full dark-mode/zoom/assistive-technology certification. Final synthetic
 desktop/mobile screenshots and normalized source/evidence receipts are in
 `docs/evidence/image-display-scale-2026-10-23/`.
 
-## Release checkpoint
+## Initial release preparation checkpoint (historical)
 
 User authorizes submission and deployment, but requires **50 minutes per CI run
 before checking its result**. Implementation is local at this checkpoint.
