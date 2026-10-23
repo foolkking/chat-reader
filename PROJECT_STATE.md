@@ -4,17 +4,24 @@ Last updated: 2026-10-23. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Current local work (2026-10-23): compact image scale and bounded file drop.**
+**Deployed and accepted (2026-10-23): compact image scale and bounded file drop.**
 The owner image-scale UI is now a lower-right floating 1–100% selector; original
 bytes, original-relative sizing and existing public-link semantics are unchanged.
 Workspace file drag now shows a dimmed/blurred surface with explicit central and
 sidebar Import targets. Ordinary page drops no longer import, while the Markdown
 source editor retains attachment-at-cursor uploads and Context continuation keeps
 its local update target. No migration, API, offline package or Dexie change. Web
-lint, typecheck and production build pass locally; this work is not yet committed,
-pushed, run through CI or deployed.
+lint, typecheck and production build passed before the user stopped additional
+local validation. Source `0f116fe012bc1ed39eced7d9289caf94975f336e` passed all five
+jobs in CI `39897308692`, first read after the required 50-minute wait. Independent
+artifact acceptance passed; production accepted at **2026-10-23 13:00:36 +08:00**.
+API/Web are healthy, worker is fresh, PostgreSQL/config/Nginx remain unchanged,
+and no deployment OOM occurred. Verified stopped-writer five-component backup is
+`chat-reader-20261023T045237Z`; direct rollback is `cfaa6ed`, both at 0053.
+No authenticated production UI or sustained-load acceptance is claimed.
+See the [release record](docs/execution/IMAGE_SCALE_DROP_RELEASE_2026-10-23.md).
 
-**Deployed and accepted (2026-10-23): original-relative image scale.** Owner inline images
+**Previous accepted release (2026-10-23): original-relative image scale.** Owner inline images
 have a 1–100% control, original/target dimensions and Restore 100%. Original bytes
 are retained; the same attachment and previously published URL follow the saved
 selection. External caches/forced widths are not controllable. Source-bound

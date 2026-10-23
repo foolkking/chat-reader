@@ -23,7 +23,10 @@
 
 Use only the task TEMP/TMP directory and synthetic data. Counts, screenshots,
 known skips and exact release state belong to the
-[dated record](execution/IMAGE_DISPLAY_SCALE_2026-10-23.md). These checks are not
+[original dated record](execution/IMAGE_DISPLAY_SCALE_2026-10-23.md) and
+[compact-selector/drop release](execution/IMAGE_SCALE_DROP_RELEASE_2026-10-23.md).
+The latter passed all five exact-source CI jobs in `39897308692`; the user
+stopped further local validation before submission. These checks are not
 installed Obsidian, full WCAG, production authenticated UI or peak-memory acceptance.
 
 ## Single-message Markdown copy — 2026-10-22

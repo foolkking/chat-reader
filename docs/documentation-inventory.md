@@ -2,14 +2,19 @@
 
 ## Original-relative image scale — 2026-10-23
 
-The current local interaction refinement keeps the same persistence, API and
+The deployed interaction refinement keeps the same persistence, API and
 public-link contract while moving the owner control into a lower-right floating
 1–100% selector. `system/ADAPTIVE_IMPORT_CONTRACT.md` now also owns the bounded
 workspace file-drop rule: ordinary content only reveals a dimmed/blurred overlay;
 the central target or sidebar Import button may open Import, while source-editor
 and Context continuation targets retain their local semantics. `PROJECT_STATE.md`,
-`index.md` and `testing.md` distinguish this uncommitted local batch from the
-accepted `cfaa6ed` release. No migration, offline package or Dexie change.
+`index.md` and `testing.md` distinguish source `0f116fe` / five-green CI
+`39897308692` from the preceding `cfaa6ed` release. The dated
+`execution/IMAGE_SCALE_DROP_RELEASE_2026-10-23.md` and sanitized
+`evidence/image-scale-drop-release-2026-10-23.json` record the 13:00:36 +08:00
+acceptance, exact artifact, verified backup and direct rollback `cfaa6ed`.
+Deployment/current-state entries agree on unchanged 0053/config/PostgreSQL.
+No migration, offline package or Dexie change.
 
 `system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size` owns original
 preservation, same-attachment/mutable-URL behavior, source-bound metadata,
@@ -26,12 +31,12 @@ release receipts may be retained.
 The second CI's unchanged-query/early-Back draft recovery and the small-image
 View hit-target repair are documented in that same execution record; neither
 changes routing contracts, schema or offline formats.
-Final accepted runtime is `cfaa6ed` from five-green run `39848602312`.
+The preceding accepted runtime was `cfaa6ed` from five-green run `39848602312`.
 `evidence/image-display-scale-release-2026-10-23.json` owns the sanitized
 CI/artifact/backup/runtime receipt; the synthetic screenshot receipt retains
 its local-versus-CI verification boundaries. Current state/index/deployment and
-the execution record agree on 0053, unchanged production configuration and
-direct image rollback `8ca8e90`.
+the execution record retain that release's 0053, unchanged production configuration
+and then-direct image rollback `8ca8e90`; the newer receipt above owns current state.
 
 ## Single-message Markdown copy — 2026-10-22
 

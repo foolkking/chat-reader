@@ -1,6 +1,27 @@
 # 部署与运行环境
 
-Current production is **50f6de4 / 20261017_0052**, independently audited at
+## Current production — 2026-10-23
+
+Runtime source is **0f116fe / 20261022_0053**, accepted at
+**2026-10-23 05:00:36 UTC / 13:00:36 +08:00** after exact-source CI
+**39897308692** passed all five jobs and independent artifact/source checks.
+API/Web are healthy, worker heartbeat fresh; exact images, HTTPS/denial checks,
+unchanged PostgreSQL/config/Nginx, zero application restarts/startup errors and
+unchanged OOM counter passed. The stopped-writer five-component backup is
+**chat-reader-20261023T045237Z**; current/direct rollback is **0f116fe/cfaa6ed**,
+both at 0053. No schema downgrade, production build, volume/data deletion,
+configuration change or retention pruning occurred.
+
+Use the exact release's low-memory support scripts, including the pinned
+networkless `backup_volume_reader.sh`. That reader has now been exercised in
+real stopped-writer backups; the earlier local-only status below is historical.
+No authenticated production UI, installed external-client or sustained-load
+acceptance is claimed. See the
+[current release record](../execution/IMAGE_SCALE_DROP_RELEASE_2026-10-23.md).
+
+## Previous audited production — 2026-10-19 (historical)
+
+The audited production was **50f6de4 / 20261017_0052**, independently audited at
 **2026-10-19 12:27:23 UTC / 20:27:23 +08:00**. Exact-source CI **39231559224**
 attempt 1 passes all five jobs; running API/Web digests match its manifest.
 API/Web/PostgreSQL health, worker `alive_idle`, HTTPS and login-page smoke pass.

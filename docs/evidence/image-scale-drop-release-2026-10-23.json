@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-23",
+  "status": "deployed_and_accepted",
+  "runtime_source_commit": "0f116fe012bc1ed39eced7d9289caf94975f336e",
+  "direct_rollback_commit": "cfaa6edb43ebf3fe302cb2feb06c64689c0bb670",
+  "ci": {
+    "run_id": "39897308692",
+    "producer_attempt": "1",
+    "dispatch_completed_utc": "2026-10-23T03:52:24.6460641+00:00",
+    "not_before": "2026-10-23T04:42:24.6460641+00:00",
+    "first_result_read_utc": "2026-10-23T04:42:24.911302+00:00",
+    "final_success_read_utc": "2026-10-23T04:45:40.157233+00:00",
+    "jobs": [
+      {
+        "name": "settings-quality",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "name": "api-quality",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "name": "web-quality",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "name": "build-images",
+        "conclusion": "success",
+        "failed_steps": []
+      },
+      {
+        "name": "inspect-release-artifact",
+        "conclusion": "success",
+        "failed_steps": []
+      }
+    ]
+  },
+  "artifact_download": {
+    "artifact_id": 12478883741,
+    "zip_sha256": "edcadcdfd96fd24bb8fe19665c01e95e5830edd53d5bb633f85c9a60646a287d",
+    "bytes": 182434334,
+    "expected_digest": "sha256:edcadcdfd96fd24bb8fe19665c01e95e5830edd53d5bb633f85c9a60646a287d",
+    "source_run": 39897308692,
+    "commit": "0f116fe012bc1ed39eced7d9289caf94975f336e"
+  },
+  "independent_verification": {
+    "status": "passed",
+    "commit": "0f116fe012bc1ed39eced7d9289caf94975f336e",
+    "blob_count": 35,
+    "expanded_payload_bytes": 183280874,
+    "source_files_verified": 343,
+    "layer_entries_inspected": 21333,
+    "forbidden_paths_present": false,
+    "embedded_api_revision": "0f116fe012bc1ed39eced7d9289caf94975f336e",
+    "web_markers": {
+      "web_build_revision": true,
+      "table_shared_presentation": true,
+      "compact_structure_undo": true,
+      "whole_message_copy": true,
+      "public_image_disclosure": true,
+      "image_display_controls": true,
+      "image_display_restore": true,
+      "bounded_file_drop": true,
+      "next_security_version": true,
+      "dompurify_security_version": true
+    },
+    "archive_sha256": "0206a63ac24f169979dc107bf3c3bb125a053bc947471daf5fb89b1392a9c0e7",
+    "images": {
+      "api": "sha256:7004b43eee473db6833befc02c91b831aec8f1b7524a88fa3d942297649b94f1",
+      "web": "sha256:55fa1946852d0d38e411c8bcee5b4e3bf4dea0c7b9ddd3a6bf41625d8f2a6ce6"
+    },
+    "image_config_ids": {
+      "api": "sha256:555d63603401d0909d4c6284447d976fa964a54d87e78ade4a1b256589a7045d",
+      "web": "sha256:8519c58e47638474cd84adfc118bfb0a2080021ddfe61d18ed870469f10a46c4"
+    }
+  },
+  "runtime_acceptance": {
+    "accepted_at": "2026-10-23T05:00:36.094697Z",
+    "approved_nginx_privacy_location": true,
+    "authenticated_browser_acceptance": "not_run",
+    "canonical_migration_unchanged": true,
+    "commit": "0f116fe012bc1ed39eced7d9289caf94975f336e",
+    "complex_preview_enabled": false,
+    "host_oom_kill_after": 487,
+    "host_oom_kill_before": 487,
+    "http": {
+      "anonymous_copy_plan": 401,
+      "anonymous_image_display": 401,
+      "http_https_redirect": 301,
+      "https_health": 200,
+      "https_login": 200,
+      "local_api_health": 200,
+      "local_web_health": 200,
+      "missing_image_capability": 404,
+      "public_diagnostics": 404,
+      "unauthenticated_capabilities": 401
+    },
+    "new_kernel_oom_lines": 0,
+    "nginx_unchanged": true,
+    "postgres_unchanged": true,
+    "production_env_compose_unchanged": true,
+    "scanner_disabled": true,
+    "schema": "20261022_0053",
+    "services": {
+      "api": {
+        "health": "healthy",
+        "id": "0c1c3067c2030183fa2891aad1d7bdc4dbbea39017352abd93255fa78e2f9e6f",
+        "image": "sha256:555d63603401d0909d4c6284447d976fa964a54d87e78ade4a1b256589a7045d",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "0f116fe012bc1ed39eced7d9289caf94975f336e",
+        "started_at": "2026-10-23T04:58:19.698797045Z",
+        "status": "running"
+      },
+      "import-worker": {
+        "health": null,
+        "id": "efbf5944b45de8342fb44dd08406a135f33c6e2f068368be50f62e88aed6e2c1",
+        "image": "sha256:555d63603401d0909d4c6284447d976fa964a54d87e78ade4a1b256589a7045d",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "0f116fe012bc1ed39eced7d9289caf94975f336e",
+        "started_at": "2026-10-23T04:58:21.451103355Z",
+        "status": "running"
+      },
+      "postgres": {
+        "health": "healthy",
+        "id": "04e7676283197c63fbc27d49e028e8631de6562ed2bf2f5ff3bf2abbcfe84b33",
+        "image": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "",
+        "started_at": "2026-09-30T03:05:33.567319401Z",
+        "status": "running"
+      },
+      "web": {
+        "health": "healthy",
+        "id": "06867ec9ee55596b3a546ba3b63c7fde7662f8630a8ef9571e40c10da35947b7",
+        "image": "sha256:8519c58e47638474cd84adfc118bfb0a2080021ddfe61d18ed870469f10a46c4",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "0f116fe012bc1ed39eced7d9289caf94975f336e",
+        "started_at": "2026-10-23T04:59:21.587512329Z",
+        "status": "running"
+      }
+    },
+    "startup_logs": {
+      "api": {
+        "error_keyword_lines": 0
+      },
+      "import-worker": {
+        "error_keyword_lines": 0
+      },
+      "web": {
+        "error_keyword_lines": 0
+      }
+    },
+    "status": "passed",
+    "backup": "chat-reader-20261023T045237Z",
+    "maintenance_started_at": "2026-10-23T04:52:17Z",
+    "maintenance_ended_at": "2026-10-23T05:00:36Z",
+    "direct_rollback_commit": "cfaa6edb43ebf3fe302cb2feb06c64689c0bb670",
+    "attachment_integrity": {
+      "applicable": true,
+      "clean": true,
+      "complete": true,
+      "issue_count": 0,
+      "read_only": true
+    },
+    "migration_acceptance": {
+      "after": "20261022_0053",
+      "before": "20261022_0053",
+      "canonical_row_counts_unchanged": true,
+      "status": "passed"
+    },
+    "maintenance_available_kib": 565468,
+    "attempt1_failure": "UTC timestamp fractional precision rejected before maintenance; services unchanged",
+    "deployed_attempt": 2
+  },
+  "limitations": [
+    "User stopped additional local validation before submission.",
+    "No authenticated production UI, external Markdown-client, full accessibility, or sustained-load acceptance.",
+    "Three byte-identical backup components were reused by hardlink; logical snapshots are not independent physical copies.",
+    "No backup, image, volume or transfer-retention pruning performed."
+  ],
+  "deployment_helper_sha256": "6996eb696913f57cb57b32ff917255c323486e65a455334250e9abf11a98dee9"
+}
