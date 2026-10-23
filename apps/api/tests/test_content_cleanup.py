@@ -88,7 +88,8 @@ def test_unknown_private_marker_is_surfaced_for_user_review() -> None:
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_MARKER"
-    assert matches[0].decision == "KEEP"
+    assert matches[0].decision == "PROTECTED"
+    assert "UNCERTAIN_CONTEXT" in matches[0].evidence_codes
     assert text[matches[0].start:matches[0].end] == "\ue200url\ue202opaque-resource-42\ue201"
 
 
@@ -104,7 +105,7 @@ def test_damaged_private_citation_is_surfaced_without_auto_delete() -> None:
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_CITATION_FRAGMENT"
-    assert matches[0].decision == "KEEP"
+    assert matches[0].decision == "PROTECTED"
 
 
 def test_generic_private_marker_is_reviewable_in_any_message_role() -> None:
@@ -117,7 +118,7 @@ def test_generic_private_marker_is_reviewable_in_any_message_role() -> None:
     )
     assert len(matches) == 1
     assert matches[0].reason_code == "PRIVATE_MARKER"
-    assert matches[0].decision == "KEEP"
+    assert matches[0].decision == "PROTECTED"
 
 
 def test_private_citation_variants_and_real_url_marker() -> None:
@@ -151,7 +152,7 @@ def test_visible_citation_tolerates_only_bounded_syntax_damage() -> None:
     )
     assert len(damaged) == 1
     assert damaged[0].reason_code == "VISIBLE_CITATION_FUZZY_TOKEN"
-    assert damaged[0].decision == "KEEP"
+    assert damaged[0].decision == "PROTECTED"
 
     ordinary = detect_occurrences(
         "assistant",
@@ -169,7 +170,7 @@ def test_normalized_and_approximate_rules_have_distinct_evidence() -> None:
     approximate = _revision("citation marker", True)
     approximate.matcher_mode = "APPROXIMATE"
     matches = detect_occurrences("assistant", "citation markeX", _rule(), approximate)
-    assert matches and matches[0].decision == "KEEP"
+    assert matches and matches[0].decision == "PROTECTED"
 
 
 def test_approximate_rules_have_a_bounded_candidate_budget() -> None:
@@ -177,7 +178,7 @@ def test_approximate_rules_have_a_bounded_candidate_budget() -> None:
     approximate.matcher_mode = "APPROXIMATE"
     matches = detect_occurrences("assistant", "a" * 50_000, _rule(), approximate)
     assert len(matches) <= MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE
-    assert all(item.decision == "KEEP" for item in matches)
+    assert all(item.decision == "PROTECTED" for item in matches)
 
 
 def test_literal_detector_is_case_sensitive_by_default_and_can_ignore_code() -> None:
@@ -370,7 +371,7 @@ def test_full_conversation_scan_finds_markers_across_all_messages(client) -> Non
     occurrences = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences?limit=500").json()
     assert len(occurrences) == 4
     assert {item["reason_code"] for item in occurrences} == {"PRIVATE_CITATION", "PRIVATE_MARKER"}
-    assert any(item["role"] == "user" and item["decision"] == "KEEP" for item in occurrences)
+    assert any(item["role"] == "user" and item["decision"] == "PROTECTED" for item in occurrences)
 
 
 def test_rule_library_scan_covers_project_and_unclassified_active_conversations(client) -> None:

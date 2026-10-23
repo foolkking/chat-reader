@@ -32,6 +32,20 @@ def reviewed_fingerprint(row, fingerprint: str) -> bool:
                 and saved.get("confirmed_at") and fingerprint == row.source_content_hash)
 
 
+def protection_types(row, source=None) -> list[str]:
+    codes = row.evidence_codes or []
+    types = []
+    if "PROTECTED_RANGE" in codes or (source is not None and source.protects(row.start_offset, row.end_offset)):
+        types.append("markdown_code_link_or_math")
+    if "UNCERTAIN_CONTEXT" in codes or row.match_mode == "BOUNDED_FUZZY" or row.reason_code == "PRIVATE_MARKER":
+        types.append("uncertain_or_example")
+    return types
+
+
+def requires_review(row, source) -> bool:
+    return row.decision == "PROTECTED" or bool(protection_types(row, source))
+
+
 def confirm(row, source, *, set_digest):
     if source.fingerprint != row.source_content_hash:
         raise ValueError("Source changed. Preview the protected matches again.")
@@ -40,7 +54,7 @@ def confirm(row, source, *, set_digest):
         "protected_ranges": [[max(row.start_offset, left), min(row.end_offset, right)]
                              for left, right in source.protected
                              if left < row.end_offset and right > row.start_offset],
-        "protection_types": ["markdown_code_link_or_math"],
+        "protection_types": protection_types(row, source),
     }
 
 
@@ -93,7 +107,7 @@ def preview_set(db, scan_id, *, occurrence_ids=None, rule_id=None, conversation_
                 or conversation.status != "active" or conversation.deleted_at
                 or source.fingerprint != row.source_content_hash):
             raise ValueError("A source changed or left this range. Refresh before confirming.")
-        protected_item = source.protects(row.start_offset, row.end_offset) or row.decision == "PROTECTED"
+        protected_item = requires_review(row, source)
         state = [binding(row), source.fingerprint, str(message.current_version_id), row.decision,
                  str(row.decision_updated_at), row.reviewed_ranges, row.protection_review]
         digest.update(json.dumps(state, sort_keys=True, separators=(",", ":"), default=str).encode())
@@ -103,7 +117,7 @@ def preview_set(db, scan_id, *, occurrence_ids=None, rule_id=None, conversation_
                 "conversation_id": str(row.conversation_id), "conversation_title": conversation.display_title,
                 "match_text": source_text[row.start_offset:min(row.end_offset, row.start_offset + 2000)],
                 "match_truncated": row.end_offset - row.start_offset > 2000,
-                "protected": protected_item, "protection_types": ["markdown_code_link_or_math"] if protected_item else []})
+                "protected": protected_item, "protection_types": protection_types(row, source)})
         count += 1
     if occurrence_ids is not None and count != len(set(occurrence_ids)):
         raise ValueError("One or more candidates are no longer available.")

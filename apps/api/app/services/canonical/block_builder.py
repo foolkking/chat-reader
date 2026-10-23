@@ -2,6 +2,7 @@ import re
 import shlex
 from dataclasses import dataclass
 
+from app.services.import_pipeline.thinking_cleaner import find_opening_thinking_summary
 
 @dataclass(frozen=True)
 class RenderBlockDraft:
@@ -28,14 +29,6 @@ ASSET_LINE_RE = re.compile(
     r'^\s*(?P<image>!)?\[(?P<label>[^\]]*)\]\(cr-asset://(?P<attachment_id>[A-Za-z0-9._:-]+)(?:\s+["\'][^"\']*["\'])?\)\s*$'
 )
 TASK_LINE_RE = re.compile(r"^(?P<prefix>\s*[-+*]\s+)\[(?P<checked>[ xX])\](?P<label>(?:\s+.*)?)$")
-THINKING_RE = re.compile(
-    r"^\s*(?:>\s*)?(?:已思考|思考了|思考)\s*"
-    r"(?:(?:\d+\s*(?:h|hr|hour|小时)\s*)?"
-    r"(?:\d+\s*(?:m|min|分钟|分)\s*)?"
-    r"\d+\s*(?:s|sec|秒))\s*$|"
-    r"^\s*(?:>\s*)?(?:思考|思考过程|Thinking|Reasoning)\s*[:：]\s*$",
-    re.IGNORECASE,
-)
 
 
 def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
@@ -51,6 +44,7 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
     fence_character = ""
     fence_length = 0
     task_items = extract_markdown_tasks(display_text)
+    thinking = find_opening_thinking_summary(display_text)
 
     def flush_paragraph() -> None:
         if not paragraph_lines:
@@ -81,7 +75,7 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
                     plain_text=text,
                     data=data,
                     char_count=len(text),
-                    collapsed_by_default=_looks_like_thinking_block(text),
+                    collapsed_by_default=bool(thinking and paragraph_end <= thinking.end_offset),
                 )
             )
 
@@ -239,11 +233,6 @@ def _stable_task_digest(value: str) -> str:
         digest ^= byte
         digest = (digest * 16777619) & 0xFFFFFFFF
     return f"{digest:08x}"
-
-
-def _looks_like_thinking_block(text: str) -> bool:
-    first_line = next((line for line in text.splitlines() if line.strip()), "")
-    return bool(THINKING_RE.match(first_line.strip()))
 
 
 def _is_closing_fence(line: str, character: str, minimum_length: int) -> bool:

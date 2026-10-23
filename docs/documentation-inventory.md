@@ -1,5 +1,31 @@
 # Markdown 文档台账
 
+## Noise-rule / thinking-summary corrections — 2026-10-23 (local only)
+
+`system/CONTENT_CLEANUP_CONTRACT.md` owns source preservation, conservative shared
+folding, preference-aware summary-rule defaults, uncertainty confirmation,
+matching safety and literal edit/trial behavior. `api-reference.md` documents
+effective rule status and additive trial/protection fields; `testing.md` owns
+the executable gates and their environment limits. `PROJECT_STATE.md` and
+`index.md` link that current source contract without claiming acceptance.
+The user subsequently authorized submission/deployment together with the pending
+image slider. `execution/NOISE_SUMMARY_RELEASE_2026-10-23.md` owns the release
+progress and exact-source/wait/artifact/backup boundaries; `deployment.md` links
+that record. No migration, offline package/Dexie change or historical restoration.
+The existing cleanup CI gate now explicitly runs the new summary browser suite.
+
+## Magnetic image-scale slider — 2026-10-23 (local only)
+
+`system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size` now owns the
+continuous slider, velocity-sensitive 25/50/75/100% attraction, exact keyboard/
+slow adjustment and one-save-per-release/cancel behavior. `PROJECT_STATE.md`
+and `index.md` distinguish this uncommitted batch from production `0f116fe`.
+`testing.md` links the pure snap tests and actual-control browser fixture, whose
+API/persistence and surrounding Reader/image are explicit adapters. No API,
+schema, offline, dependency or deployment boundary change; the user prohibits
+commit/push/CI/deploy for the original batch; the newer authorization above
+supersedes that hold. Existing release receipts remain historical.
+
 ## Original-relative image scale — 2026-10-23
 
 The deployed interaction refinement keeps the same persistence, API and

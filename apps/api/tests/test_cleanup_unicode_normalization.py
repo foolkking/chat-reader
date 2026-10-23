@@ -63,7 +63,7 @@ def test_fuzzy_candidates_use_the_complete_reordered_raw_envelope(raw, literal):
     assert [(item.start, item.end) for item in fuzzy] == [
         (0, len(raw)), (source.rindex(raw), source.rindex(raw) + len(raw)),
     ]
-    assert [item.decision for item in fuzzy] == ["KEEP", "PROTECTED"]
+    assert [item.decision for item in fuzzy] == ["PROTECTED", "PROTECTED"]
 
 
 @pytest.mark.parametrize("raw,literal",

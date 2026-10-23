@@ -38,7 +38,7 @@ def _commit_source(client: TestClient) -> str:
         },
     )
     commit = client.post(f"/api/imports/{preview.json()['import_id']}/commit")
-    assert commit.status_code == 200
+    assert commit.status_code == 200, commit.text
     return commit.json()["conversation_ids"][0]
 
 
@@ -235,7 +235,7 @@ def test_cr_archive_retains_detached_attachment_referenced_by_history(client: Te
         assert any(row["attachment_id"] == attachment_id for row in refs)
 
 
-def test_auto_clean_job_creates_new_version_and_preserves_history(client: TestClient) -> None:
+def test_legacy_auto_clean_job_preserves_source_and_history(client: TestClient) -> None:
     conversation_id = _commit_source(client)
     window = client.get(f"/api/conversations/{conversation_id}/message-window").json()
     assistant = window["items"][1]
@@ -256,13 +256,14 @@ def test_auto_clean_job_creates_new_version_and_preserves_history(client: TestCl
     _run_job(queued.json()["job_id"])
     task = client.get(f"/api/tasks/{queued.json()['job_id']}").json()
     assert task["status"] == "committed"
-    assert task["result"]["cleaned_messages"] == 1
+    assert task["result"]["cleaned_messages"] == 0
 
     refreshed = client.get(f"/api/conversations/{conversation_id}/message-window").json()["items"][1]
-    assert refreshed["current_version"]["display_text"].startswith("# Final")
+    assert refreshed["current_version"]["display_text"] == "搜索 TypeScript 文档\n- https://example.com/docs\n思考了 7s\n\n# Final\n\nKept answer"
+    assert refreshed["current_version"]["id"] == edited.json()["current_version_id"]
     versions = client.get(f"/api/messages/{assistant['id']}/versions").json()
-    assert len(versions["items"]) == 3
-    assert versions["items"][0]["edit_type"] == "auto_clean"
+    assert len(versions["items"]) == 2
+    assert versions["items"][0]["edit_type"] != "auto_clean"
 
 
 def test_derived_rebuild_job_upgrades_legacy_versions_without_migration_rewrite(client: TestClient) -> None:

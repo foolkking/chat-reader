@@ -1003,6 +1003,17 @@ it is never a global owner or artifact bypass.
 
 ## Content cleanup review
 
+Local source update (2026-10-23; no migration): a missing personal preference
+means `thinking-summary-v1` is `DISABLED` in rule responses and excluded from new
+scan snapshots. Explicit saved enablement and existing snapshots are retained.
+Trial responses add `suppressed_by_exception` and `covered_by_other_rule` counts
+and booleans on each sample; `matches` remains the raw match count. Uncertain
+or example candidates use the existing protected confirmation flow and expose
+`uncertain_or_example` in `protection_types`, separately from Markdown protection.
+These additions do not change the rule language, decision/preview tokens,
+offline formats or historical source. See the
+[current contract](system/CONTENT_CLEANUP_CONTRACT.md).
+
 All `/api/content-cleanup/*` routes remain inside the owner authentication
 boundary. `GET/POST/PATCH/DELETE /rules` manage built-in and literal rule
 revisions. Literal create/update accepts `matcher_mode` (`EXACT`, `NORMALIZED`,
@@ -1021,7 +1032,8 @@ and `DELETE /scans/{id}` both remove the scan and occurrence records.
 Occurrence responses derive bounded context at read time; persisted scan rows
 contain positions and identities, not copied message bodies. Occurrences also
 return detector-versioned `match_mode` and evidence codes. All candidates
-default to `KEEP` and require explicit review; confidence and similarity are
+default to `KEEP` for ordinary hits or unselected `PROTECTED` for protected,
+uncertain or example hits and require explicit review; confidence and similarity are
 not part of the cleanup API.
 ## 2026-09-27 instance merge capacity policy
 

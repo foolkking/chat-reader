@@ -29,8 +29,8 @@ const BUILTIN_DETECTOR_DESCRIPTIONS: Record<string, { zh: string; en: string }> 
     en: "Matches the complete ChatGPT Exporter footer at the end of a message, not ordinary text in the body.",
   },
   "thinking-summary-v1": {
-    zh: "匹配导入时识别出的思考摘要结构；候选仍需用户审阅后才能删除。",
-    en: "Matches the imported thinking-summary structure; candidates still require user review before deletion.",
+    zh: "默认关闭；启用后只匹配正文开头由时长行明确结束的摘要，候选仍需审阅后才能删除。",
+    en: "Off by default. When enabled, matches only an opening summary ending with a duration marker; removal still requires review.",
   },
 };
 
@@ -43,7 +43,8 @@ export function CleanupCandidate({ item, zh, reason, selected, disabled, busy, s
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
   const stateId = `${detailsId}-state`;
-  const protectedItem = item.decision === "PROTECTED" || item.evidence_codes?.includes("PROTECTED_RANGE");
+  const protectedItem = item.decision === "PROTECTED" || Boolean(item.protection_types?.length)
+    || item.evidence_codes?.some(code => code === "PROTECTED_RANGE" || code === "UNCERTAIN_CONTEXT");
   const actionable = (!protectedItem || item.protection_confirmed) && !item.stale && ["KEEP", "DELETE"].includes(item.decision);
   const canSelect = !item.stale && ["KEEP", "DELETE", "PROTECTED"].includes(item.decision);
   const marked = selected && actionable;
@@ -91,7 +92,7 @@ export function CleanupCandidate({ item, zh, reason, selected, disabled, busy, s
       {showConversation ? <p className="break-words text-xs font-medium leading-5 text-primary">{item.conversation_title}</p> : null}
       <p className="break-words text-xs leading-5 text-secondary">{reason} · {role} · {zh ? "行" : "Line"} {item.line_start}</p>
       <p className="break-words text-xs leading-5 text-secondary">{item.rule_name} · {zh ? "规则版本" : "Rule version"} {item.rule_revision ?? "—"} · {item.match_mode}</p>
-      {protectedItem ? <p className="text-xs leading-5 text-[var(--color-semantic-warning)]">{item.protection_confirmed ? (zh ? "此扫描的匹配范围已确认；修改原文或重扫后需重新核对。" : "This scan's match was reviewed. Source edits or rescanning require a new review.") : (zh ? "涉及链接、代码或公式。勾选后先确认；也可按规则组批量确认。" : "Includes links, code or math. Select to review, or confirm a rule group together.")}</p> : null}
+      {protectedItem ? <p className="text-xs leading-5 text-[var(--color-semantic-warning)]">{item.protection_confirmed ? (zh ? "此扫描的匹配范围已确认；修改原文或重扫后需重新核对。" : "This scan's match was reviewed. Source edits or rescanning require a new review.") : (zh ? "涉及受保护结构、示例或不确定匹配。勾选后先确认；也可按规则组批量确认。" : "Protected structure, example or uncertain match. Select to review, or confirm a rule group together.")}</p> : null}
       {item.decision !== "APPLIED" && (item.stale || item.decision === "CONFLICT") ? <p className="text-xs leading-5 text-[var(--danger)]">{zh ? "版本变化或无法安全处理；原文已保留，请重新扫描。" : "Version changed or removal is unsafe. Source retained; rescan to continue."}</p> : null}
       {item.decision === "APPLIED" ? <p className="text-xs leading-5 text-secondary">{zh ? "已完成，不会重复处理。" : "Completed; will not be applied again."}</p> : null}
       <button type="button" className="flex min-h-11 items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary"
@@ -111,7 +112,7 @@ export function CleanupCandidate({ item, zh, reason, selected, disabled, busy, s
         {marked ? <div className="rounded-md bg-subtle p-3 text-xs leading-5 text-secondary"><p className="mb-1 font-medium">{zh ? "删除后上下文" : "Context after removal"}</p><p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{kept === null ? (zh ? "范围无法预览，请调整或重新扫描。" : "Ranges cannot be previewed; adjust or rescan.") : `${item.context_before}${kept}${item.context_after}`}</p></div> : null}
         {canLearn ? <div className="flex flex-wrap gap-2">
           {item.detector_id !== "manual-selection-v1" && item.match_text.length <= 4096 ? <button type="button" disabled={busy} onClick={() => onIntent("ignore")} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "以后忽略这种情况" : "Ignore this case in future"}</button> : null}
-          {item.match_text.length <= 500 ? <button type="button" disabled={busy} onClick={() => onIntent("learn")} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "查看／修改匹配规则" : "View / edit matching rule"}</button> : null}
+          {(item.rule_id && item.detector_id == null) || item.match_text.length <= 500 ? <button type="button" disabled={busy} onClick={() => onIntent("learn")} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "查看／修改匹配规则" : "View / edit matching rule"}</button> : null}
         </div> : null}
         {onLocate ? <button type="button" onClick={onLocate} className="min-h-11 text-xs font-medium text-accent underline">{zh ? "在正文中查看" : "Locate in reader"}</button> : null}
       </div> : null}

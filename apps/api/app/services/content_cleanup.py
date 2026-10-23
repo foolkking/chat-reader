@@ -88,18 +88,19 @@ PRIVATE_CITATION_FRAGMENT = re.compile(
     r"[\ue000-\uf8ff\u200b\s]*",
 )
 VISIBLE_CITATION = re.compile(
-    r"(?i)\bcite\b[\s\u200b]*(?:[☆★]\s*)?turn\d+(?:search|news|view)\d+"
-    r"(?:[☆★\s\u200b]*turn\d+(?:search|news|view)\d+)*[☆★]?"
+    r"(?i)(?<![\w])cite(?![\w])[\s\u200b]*(?:[☆★]\s*)?"
+    r"turn\d+(?:search|news|view)\d+(?![\w])"
+    r"(?:[☆★\s\u200b]*turn\d+(?:search|news|view)\d+(?![\w]))*[☆★]?"
 )
 REFERENCE_SEQUENCE = re.compile(
-    r"turn\d+(?:search|news|view)\d+"
-    r"(?:[\s\u200b\ue000-\uf8ff*]*turn\d+(?:search|news|view)\d+)*",
+    r"(?<![\w])turn\d+(?:search|news|view)\d+(?![\w])"
+    r"(?:[\s\u200b\ue000-\uf8ff*]*turn\d+(?:search|news|view)\d+(?![\w]))*",
     re.IGNORECASE,
 )
 EXPORTER_FOOTER = re.compile(
-    r"(?s)(?:\n[ \t]*){0,2}(?:---[ \t]*\n)?[ \t]*Powered by "
+    r"(?s)(?:\A|(?:\r?\n)[ \t]*(?:\r?\n[ \t]*){0,1})(?:---[ \t]*\r?\n)?[ \t]*Powered by "
     r"(?:\[ChatGPT Exporter\]\(https://www\.chatgptexporter\.com\)|ChatGPT Exporter"
-    r" \(https://www\.chatgptexporter\.com\))[ \t]*\Z"
+    r" \(https://www\.chatgptexporter\.com\))\s*\Z"
 )
 
 
@@ -500,19 +501,7 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                     "MANUAL",
                     tuple(evidence_codes),
                 )))
-        deduped: list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = []
-        for revision, detected in detected_rows:
-            overlapping = [
-                index
-                for index, (_previous_revision, previous) in enumerate(deduped)
-                if detected.start < previous.end and previous.start < detected.end
-            ]
-            if not overlapping:
-                deduped.append((revision, detected))
-                continue
-            if all(_prefer_detected_occurrence(detected, deduped[index][1]) for index in overlapping):
-                deduped = [item for index, item in enumerate(deduped) if index not in overlapping]
-                deduped.append((revision, detected))
+        deduped = deduplicate_occurrences(detected_rows)
         line_cursor, current_line = 0, 1
 
         def source_position(offset: int) -> tuple[int, int]:
@@ -608,6 +597,7 @@ def detect_occurrences(
                 ("PUA_ENVELOPE", "UNCLASSIFIED_MARKER"),
             )
             for match in PRIVATE_MARKER_ENVELOPE.finditer(text)
+            if PRIVATE_CITATION.fullmatch(match.group(0)) is None
         )
     elif detector_id == "visible-turn-citation-v1":
         values.extend(_detected(match.start(), match.end(), "citation", "VISIBLE_CITATION", "STRUCTURAL", ("REFERENCE_SEQUENCE",)) for match in VISIBLE_CITATION.finditer(text))
@@ -618,18 +608,20 @@ def detect_occurrences(
             values.append(_detected(match.start(), match.end(), "footer", "EXPORTER_FOOTER", "STRUCTURAL", ("BLOCK_END",)))
     elif detector_id == "thinking-summary-v1":
         cleaned = clean_thinking_summary(role, text)
-        if cleaned.removed and cleaned.removed_text:
-            start = text.find(cleaned.removed_text)
-            if start >= 0:
-                values.append(_detected(start, start + len(cleaned.removed_text), "thinking_summary", "THINKING_SUMMARY", "STRUCTURAL", ("PREFIX_BOUNDARY", "ANSWER_BOUNDARY")))
+        if cleaned.removed and cleaned.start_offset is not None and cleaned.end_offset is not None:
+            values.append(_detected(cleaned.start_offset, cleaned.end_offset, "thinking_summary", "THINKING_SUMMARY", "STRUCTURAL", ("PREFIX_BOUNDARY", "ANSWER_BOUNDARY")))
     elif revision.match_value:
         values.extend(_literal_occurrences(text, revision, context=context))
     result: list[DetectedOccurrence] = []
     for item in values:
         is_protected = context.protects(item.start, item.end)
-        evidence_codes = (*item.evidence_codes, "PROTECTED_RANGE") if is_protected else item.evidence_codes
-        if not is_protected and rule.detector_id and _is_explanatory_example(text, item.start, item.end):
-            continue
+        uncertain = item.match_mode == "BOUNDED_FUZZY" or detector_id == "openai-private-marker-v1"
+        explanatory = _is_explanatory_example(text, item.start, item.end)
+        if uncertain or explanatory:
+            is_protected = True
+        evidence_codes = (*item.evidence_codes, "PROTECTED_RANGE") if context.protects(item.start, item.end) else item.evidence_codes
+        if (uncertain or explanatory) and "UNCERTAIN_CONTEXT" not in evidence_codes:
+            evidence_codes = (*evidence_codes, "UNCERTAIN_CONTEXT")
         result.append(DetectedOccurrence(item.start, item.end, item.kind, item.reason_code, "PROTECTED" if is_protected else "KEEP", item.match_mode, evidence_codes))
     return result
 
@@ -652,7 +644,7 @@ def protected_ranges(text: str) -> list[tuple[int, int]]:
                 end = lines[index].end()
                 index += 1
                 closing_pattern = rf"^[ ]{{0,3}}{re.escape(marker[0])}{{{len(marker)},}}[ \t]*$"
-                closing = re.match(closing_pattern, candidate.rstrip("\n"))
+                closing = re.match(closing_pattern, candidate.rstrip("\r\n"))
                 if closing:
                     end = lines[index - 1].start() + closing.end()
                     break
@@ -672,13 +664,16 @@ def protected_ranges(text: str) -> list[tuple[int, int]]:
     run_index = 0
     while run_index < len(inline_runs):
         opening = inline_runs[run_index]
-        if any(start <= opening.start() < end for start, end in ranges):
+        if _is_escaped_delimiter(text, opening.start()) or any(start <= opening.start() < end for start, end in ranges):
             run_index += 1
             continue
         closing_index = run_index + 1
         while closing_index < len(inline_runs):
             closing = inline_runs[closing_index]
-            if len(closing.group(0)) == len(opening.group(0)):
+            if any(start <= closing.start() < end for start, end in ranges):
+                run_index += 1
+                break
+            if len(closing.group(0)) == len(opening.group(0)) and not _is_escaped_delimiter(text, closing.start()):
                 ranges.append((opening.start(), closing.end()))
                 run_index = closing_index + 1
                 break
@@ -688,7 +683,7 @@ def protected_ranges(text: str) -> list[tuple[int, int]]:
     for pattern in (
         re.compile(r"(?s)\$\$.*?\$\$|(?<!\$)\$[^$\n]+\$(?!\$)"),
         re.compile(r"(?s)\\\[.*?\\\]|\\\(.*?\\\)"),
-        re.compile(r"(?m)^\s*\[[^\]]+\]:\s*(?:<[^>]+>|\S+)(?:\s+.*)?$"),
+        re.compile(r"(?m)^\s*\[[^\]]+\]:[ \t]*(?:<[^>\r\n]+>|\S+)(?:[ \t]+[^\r\n]*)?$"),
         re.compile(r"<(?:https?://|mailto:)[^>\n]+>"),
         re.compile(r"cr-asset://[0-9a-f-]{36}", re.IGNORECASE),
         re.compile(r"!?\[[^\]\n]*\]\((?:cr-asset://|attachment://)[^)\n]*\)", re.IGNORECASE),
@@ -715,6 +710,15 @@ def protected_ranges(text: str) -> list[tuple[int, int]]:
         ranges.append((opening.start(), end))
         destination_cursor = end
     return _merge_ranges(ranges)
+
+
+def _is_escaped_delimiter(text: str, index: int) -> bool:
+    backslashes = 0
+    cursor = index - 1
+    while cursor >= 0 and text[cursor] == "\\":
+        backslashes += 1
+        cursor -= 1
+    return backslashes % 2 == 1
 
 
 def _is_explanatory_example(text: str, start: int, end: int) -> bool:
@@ -765,6 +769,22 @@ def _prefer_detected_occurrence(candidate: DetectedOccurrence, current: Detected
     return candidate_rank > current_rank
 
 
+def deduplicate_occurrences(rows: list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]]) -> list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]]:
+    """Scanner and trials share source-span ownership and precedence."""
+    result: list[tuple[ContentCleanupRuleRevision, DetectedOccurrence]] = []
+    for revision, candidate in rows:
+        overlapping = [
+            index for index, (_revision, previous) in enumerate(result)
+            if candidate.start < previous.end and previous.start < candidate.end
+        ]
+        if not overlapping:
+            result.append((revision, candidate))
+        elif all(_prefer_detected_occurrence(candidate, result[index][1]) for index in overlapping):
+            result = [item for index, item in enumerate(result) if index not in overlapping]
+            result.append((revision, candidate))
+    return result
+
+
 def _syntax_token(value: str) -> str:
     normalized = unicodedata.normalize("NFKC", value).casefold()
     return "".join(char for char in normalized if char.isalnum())
@@ -783,9 +803,12 @@ def _tolerant_visible_citations(
         best: tuple[int, int, str, str] | None = None
         lower_bound = max(0, references.start() - 20)
         for start in range(lower_bound, references.start()):
-            if start > 0 and text[start - 1].isalnum():
+            if start > 0 and (text[start - 1].isalnum() or text[start - 1] == "_"):
                 continue
-            token = _syntax_token(text[start:references.start()])
+            raw_token = text[start:references.start()]
+            if "_" in raw_token:
+                continue  # Identifier underscores are not exporter damage.
+            token = _syntax_token(raw_token)
             if not token or len(token) > 9:
                 continue
             for target in targets:
@@ -801,6 +824,10 @@ def _tolerant_visible_citations(
         distance, negative_start, target, match_mode = best
         start = -negative_start
         end = references.end()
+        if start > 0 and (text[start - 1].isalnum() or text[start - 1] == "_"):
+            continue
+        if end < len(text) and (text[end].isalnum() or text[end] == "_"):
+            continue
         if _covered(start, end, existing) or _covered(start, end, result):
             continue
         if distance == 0:
@@ -861,17 +888,19 @@ def _literal_occurrences(
         return []
     result: list[DetectedOccurrence] = []
     if mode == "NORMALIZED":
+        seen: set[tuple[int, int]] = set()
         for start in _find_all(shadow, needle):
             end = start + len(needle)
             original_start, original_end = source_span(mapping, start, end)
-            if _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
+            if (original_start, original_end) not in seen and _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
+                seen.add((original_start, original_end))
                 result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_NORMALIZED", "NORMALIZED_EXACT", ("NFKC", "WHITESPACE_NORMALIZED")))
         return result
     exact_ranges: set[tuple[int, int]] = set()
     for start in _find_all(shadow, needle):
         end = start + len(needle)
         original_start, original_end = source_span(mapping, start, end)
-        if _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
+        if (original_start, original_end) not in exact_ranges and _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
             exact_ranges.add((original_start, original_end))
             result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_NORMALIZED", "NORMALIZED_EXACT", ("LITERAL_EXACT", "NFKC")))
     max_edits = max(1, min(getattr(revision, "max_edit_distance", None) or 1, 2))
@@ -880,12 +909,15 @@ def _literal_occurrences(
         # Normalization can shorten a valid literal. Retain exact matches, but
         # do not admit fuzzy matching of the resulting short needle.
         return result
-    anchors = _fuzzy_anchor_starts(shadow, needle, limit=MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE)
-    seen: set[tuple[int, int]] = set()
+    anchors = _fuzzy_anchor_starts(shadow, needle, limit=MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE, max_edits=max_edits)
+    proposals: list[tuple[int, int, int, int]] = []
     for start in anchors:
         best: tuple[int, int] | None = None
         for candidate_length in range(max(1, window - max_edits), window + max_edits + 1):
             if start + candidate_length > len(shadow):
+                continue
+            original_start, original_end = source_span(mapping, start, start + candidate_length)
+            if not _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
                 continue
             candidate = shadow[start:start + candidate_length]
             distance = _levenshtein_bounded(needle, candidate, max_edits)
@@ -898,13 +930,15 @@ def _literal_occurrences(
             continue
         distance, candidate_length = best
         original_start, original_end = source_span(mapping, start, start + candidate_length)
-        if (original_start, original_end) in seen or (original_start, original_end) in exact_ranges or not _boundary_allows(text, original_start, original_end, getattr(revision, "boundary_mode", "ANYWHERE")):
+        proposals.append((distance, abs(candidate_length - window), original_start, original_end))
+    # One source fragment is one candidate, not shifted fuzzy windows around
+    # an exact match or multiple expansions of the same Unicode source atom.
+    accepted = list(result)
+    for distance, _length_delta, original_start, original_end in sorted(proposals):
+        if _overlaps(original_start, original_end, accepted):
             continue
-        seen.add((original_start, original_end))
-        result.append(_detected(original_start, original_end, "custom", "USER_LITERAL_APPROXIMATE", "BOUNDED_FUZZY", ("LITERAL_ANCHORED", f"EDIT_DISTANCE_{distance}")))
-        if len(seen) >= MAX_APPROXIMATE_CANDIDATES_PER_MESSAGE:
-            break
-    return result
+        accepted.append(_detected(original_start, original_end, "custom", "USER_LITERAL_APPROXIMATE", "BOUNDED_FUZZY", ("LITERAL_ANCHORED", f"EDIT_DISTANCE_{distance}")))
+    return sorted(accepted, key=lambda item: (item.start, item.end))
 
 
 def _find_all(text: str, needle: str) -> list[int]:
@@ -918,23 +952,41 @@ def _find_all(text: str, needle: str) -> list[int]:
         cursor = index + max(1, len(needle))
 
 
-def _fuzzy_anchor_starts(text: str, needle: str, *, limit: int) -> list[int]:
+def _fuzzy_anchor_starts(text: str, needle: str, *, limit: int, max_edits: int = 2) -> list[int]:
     width = min(4, max(2, len(needle) // 4))
     offsets = sorted({0, max(0, len(needle) // 2 - width // 2), len(needle) - width})
-    starts: set[int] = set()
+    by_anchor: list[list[int]] = []
     for offset in offsets:
         anchor = needle[offset:offset + width]
         cursor = 0
-        while True:
+        found_starts: list[int] = []
+        shifts = [0, *(shift for distance in range(1, max_edits + 1) for shift in (-distance, distance))]
+        while len(found_starts) < limit:
             found = text.find(anchor, cursor)
             if found < 0:
                 break
-            candidate_start = found - offset
-            if candidate_start >= 0:
-                starts.add(candidate_start)
-                if len(starts) >= limit:
-                    return sorted(starts)
+            for shift in shifts:
+                candidate_start = found - offset + shift
+                if candidate_start >= 0:
+                    found_starts.append(candidate_start)
             cursor = found + 1
+        by_anchor.append(found_starts)
+    starts: list[int] = []
+    seen: set[int] = set()
+    cursor = 0
+    while len(starts) < limit and by_anchor:
+        bucket = by_anchor[cursor % len(by_anchor)]
+        index = cursor // len(by_anchor)
+        if index >= len(bucket):
+            if all(index >= len(item) for item in by_anchor):
+                break
+            cursor += 1
+            continue
+        value = bucket[index]
+        if value not in seen:
+            seen.add(value)
+            starts.append(value)
+        cursor += 1
     return sorted(starts)
 
 
@@ -1002,7 +1054,7 @@ def preview_occurrences(
     from app.services.cleanup_review import filter_occurrences
     from app.services.cleanup_ranges import range_edit_token
     from app.services.cleanup_rule_access import canonical_rule_id, personal_name
-    from app.services.cleanup_protection import reviewed_fingerprint
+    from app.services.cleanup_protection import protection_types, reviewed_fingerprint
     scan = db.get(ContentCleanupScan, scan_id)
     query = (
         db.query(
@@ -1081,14 +1133,14 @@ def preview_occurrences(
                 "normalization_profile": revision.normalization_profile, "matcher_version": revision.matcher_version,
             },
             "protection_confirmed": reviewed_fingerprint(occurrence, fingerprint),
-            "protection_types": ["markdown_code_link_or_math"] if "PROTECTED_RANGE" in (occurrence.evidence_codes or []) else [],
+            "protection_types": protection_types(occurrence),
         })
     return result
 
 
 def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID, str], *,
                      protection_token: str | None = None, _protection_digest: str | None = None) -> None:
-    from app.services.cleanup_protection import authorize, confirm, reviewed
+    from app.services.cleanup_protection import authorize, confirm, requires_review, reviewed
     scan = db.query(ContentCleanupScan).filter_by(id=scan_id).populate_existing().with_for_update().one_or_none()
     if scan is None or scan.status != "READY":
         raise ValueError("Wait for this scan to be ready before changing decisions.")
@@ -1123,8 +1175,7 @@ def update_decisions(db: Session, scan_id: uuid.UUID, decisions: dict[uuid.UUID,
                 or conversation is None or conversation.status != "active" or conversation.deleted_at):
             row.decision = "CONFLICT"
             continue
-        protected = source.protects(row.start_offset, row.end_offset)
-        if row.decision == "PROTECTED" or protected:
+        if requires_review(row, source):
             if decision == "DELETE":
                 if _protection_digest:
                     confirm(row, source, set_digest=_protection_digest)
@@ -1372,8 +1423,8 @@ def _occurrence_still_matches(db: Session, role: str, text: str, occurrence: Con
     if (not validation.has_persisted_version(db, occurrence.message_version_id)
             or occurrence.source_content_hash != validation.source.fingerprint):
         return False
-    if validation.source.protects(occurrence.start_offset, occurrence.end_offset):
-        from app.services.cleanup_protection import reviewed
+    from app.services.cleanup_protection import requires_review, reviewed
+    if requires_review(occurrence, validation.source):
         if not reviewed(occurrence, validation.source):
             return False
     ranges = validation.matching_ranges(db, occurrence.rule_revision_id)

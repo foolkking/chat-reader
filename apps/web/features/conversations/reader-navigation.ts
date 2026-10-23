@@ -85,6 +85,13 @@ export async function navigateMountedTarget({
     }
     return { ok: false, targetId, reason: "target-not-mounted" };
   }
+  // A folded summary keeps real block anchors. An explicit navigation target
+  // must reveal its ancestors before measuring; this is not a user scroll.
+  let disclosure = target.closest<HTMLDetailsElement>("details.reader-thinking");
+  while (disclosure) {
+    disclosure.open = true;
+    disclosure = disclosure.parentElement?.closest<HTMLDetailsElement>("details.reader-thinking") ?? null;
+  }
   // Exact mounted targets can align before every remote image in the message
   // has decoded. Waiting up to five seconds here made ordinary attachment and
   // citation jumps feel stalled; keep a short guard for local targets and a

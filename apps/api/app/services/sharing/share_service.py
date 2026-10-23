@@ -300,7 +300,7 @@ def get_shared_dialogue_index(
                 ordinal=ordinal,
                 order_key=row.order_key,
                 turn_index=row.turn_index,
-                preview=dialogue_preview(row.display_preview or ""),
+                preview=dialogue_preview(row.display_preview or "", row.role),
             )
         )
     return DialogueIndexResponse(

@@ -24,10 +24,13 @@ MARKER = "\ue200cite\ue202turn12search4\ue201"
     "The ordinary fields citation, title, cite, content and turn12search4 are valid.",
     "示例：" + MARKER,
 ])
-def test_normal_fields_tables_and_examples_are_not_noise(source):
+def test_fields_tables_and_examples_are_not_actionable_without_confirmation(source):
     for detector in ("visible-turn-citation-v1", "openai-private-citation-v1", "openai-private-marker-v1"):
         rule = SimpleNamespace(detector_id=detector)
-        assert cleanup.detect_occurrences("assistant", source, rule, SimpleNamespace(match_value=None)) == []
+        matches = cleanup.detect_occurrences("assistant", source, rule, SimpleNamespace(match_value=None))
+        assert all(item.decision == "PROTECTED" and "UNCERTAIN_CONTEXT" in item.evidence_codes for item in matches)
+        if detector == "visible-turn-citation-v1" and "cite turn" in source:
+            assert matches
 
 
 @pytest.mark.parametrize("source", [

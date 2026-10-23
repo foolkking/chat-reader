@@ -1,0 +1,15 @@
+[
+  {"name":"lf-trace","source":"分析合成示例\n思考了 13s\n\n正式回答。","summary":"分析合成示例\n思考了 13s\n\n","answer":"正式回答。"},
+  {"name":"crlf-trace","source":"> 搜索合成示例\r\n>\r\n> 已思考 9s\r\n\r\n  正式回答。\r\n","summary":"> 搜索合成示例\r\n>\r\n> 已思考 9s\r\n\r\n","answer":"  正式回答。\r\n"},
+  {"name":"inline-nested-quotes","source":"> 搜索合成资料\r\n> > 思考了 1m 2s 正文🙂保留。  \r\n\r\n下一段。","summary":"> 搜索合成资料\r\n> > 思考了 1m 2s ","answer":"正文🙂保留。  \r\n\r\n下一段。"},
+  {"name":"timestamp-and-english","source":"2026/10/23 10:00:00\n\n> Checking sources\n> Thinking 7s\n\nFinal synthetic answer.","summary":"2026/10/23 10:00:00\n\n> Checking sources\n> Thinking 7s\n\n","answer":"Final synthetic answer."},
+  {"name":"same-paragraph-answer","source":"分析合成示例\nReasoning: 5s\nDo not fold this answer.","summary":"分析合成示例\nReasoning: 5s\n","answer":"Do not fold this answer."},
+  {"name":"summary-only","source":"分析合成示例\n思考了 4s","summary":"分析合成示例\n思考了 4s","answer":""},
+  {"name":"ordinary-prefix","source":"这是必须保留的普通前文。\n思考了 13s\n继续正文。","summary":null},
+  {"name":"ordinary-paragraph-before-trace","source":"请先阅读这段说明。\n\n分析合成示例\n思考了 5s\n\n正文。","summary":null},
+  {"name":"bare-label","source":"Reasoning:\nThis is ordinary prose about reasoning.","summary":null},
+  {"name":"heading-prefix","source":"# Answer\n分析合成示例\nThinking 5s\nBody.","summary":null},
+  {"name":"fenced-example","source":"```text\nThinking 5s\n```\nBody.","summary":null},
+  {"name":"quoted-fence","source":"> ```text\n> Thinking 5s\n> ```\nBody.","summary":null},
+  {"name":"indented-example","source":"    Thinking 5s\nBody.","summary":null}
+]

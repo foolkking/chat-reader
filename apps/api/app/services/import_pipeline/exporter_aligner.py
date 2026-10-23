@@ -15,7 +15,6 @@ from app.services.import_pipeline.exporter_markdown_parser import (
     _has_semantic_markdown_structure,
     _paired_section_is_reliable,
 )
-from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 
 
 @dataclass(frozen=True)
@@ -96,11 +95,7 @@ def _messages_from_json(
             warnings.append(f"Filtered empty JSON message at index {message.index}.")
             continue
 
-        cleaned = clean_thinking_summary(message.role, message.text)
-        if cleaned.removed:
-            cleaned_count += 1
-        text = cleaned.text
-        messages.append(_draft_message(message, None, text, text, "json", cleaned.warnings))
+        messages.append(_draft_message(message, None, message.text, message.text, "json", []))
 
     return messages, cleaned_count, empty_count, warnings
 
@@ -118,12 +113,9 @@ def _messages_from_markdown(
             warnings.append(f"Filtered empty Markdown section at index {section.index}.")
             continue
 
-        cleaned = clean_thinking_summary(section.role, section.markdown_text)
-        if cleaned.removed:
-            cleaned_count += 1
-        display_text = cleaned.text
+        display_text = section.markdown_text
         plain_text = normalize_text(_strip_markdown_quotes(display_text))
-        messages.append(_draft_message(None, section, plain_text, display_text, "markdown", cleaned.warnings))
+        messages.append(_draft_message(None, section, plain_text, display_text, "markdown", []))
 
     return messages, cleaned_count, empty_count, warnings
 
@@ -158,10 +150,7 @@ def _messages_from_combo(
             alignment_issues.append(_alignment_issue("json", json_message.index, json_message.role, json_message.time, "unmatched"))
         use_markdown = markdown_section is not None and alignment_status in {"exact", "normalized", "by_order"}
         source_text = markdown_section.markdown_text if use_markdown else json_message.text
-        cleaned = clean_thinking_summary(json_message.role, source_text)
-        if cleaned.removed:
-            cleaned_count += 1
-        display_text = cleaned.text
+        display_text = source_text
         plain_text = normalize_text(_strip_markdown_quotes(display_text))
 
         messages.append(
@@ -171,7 +160,7 @@ def _messages_from_combo(
                 plain_text,
                 display_text,
                 "markdown" if use_markdown else "json",
-                cleaned.warnings,
+                [],
                 alignment_status,
             )
         )
@@ -629,7 +618,7 @@ def _content_matches(left: str, right: str) -> bool:
 
 
 def _comparison_text(role: str, text: str) -> str:
-    return clean_thinking_summary(role, text).text
+    return text
 
 
 def _strip_markdown_quotes(text: str) -> str:

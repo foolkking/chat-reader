@@ -6,7 +6,6 @@ from difflib import SequenceMatcher
 
 from app.services.import_pipeline.canonical_draft import content_hash, normalize_text
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonMessage, extract_conversation_id
-from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 
 PAIRING_MAX_CANDIDATES = 5_000
 PAIRING_MAX_MATCH_OPTIONS = 20_000
@@ -496,8 +495,8 @@ def _has_semantic_markdown_structure(markdown_text: str) -> bool:
 
 
 def _paired_comparison_texts(message: ExporterJsonMessage, markdown_text: str) -> tuple[str, str]:
-    json_text = normalize_text(clean_thinking_summary(message.role, message.text).text)
-    markdown_plain = _plain_text(clean_thinking_summary(message.role, markdown_text.strip()).text)
+    json_text = normalize_text(message.text)
+    markdown_plain = _plain_text(markdown_text.strip())
     return json_text, normalize_text(markdown_plain)
 
 

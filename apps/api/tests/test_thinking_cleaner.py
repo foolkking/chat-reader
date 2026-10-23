@@ -1,4 +1,10 @@
-from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
+import json
+from pathlib import Path
+
+import pytest
+
+from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary, find_opening_thinking_summary
+from app.services.reader_preview import dialogue_preview
 
 
 def test_assistant_opening_thinking_summary_removed() -> None:
@@ -64,10 +70,8 @@ def test_long_search_source_list_can_reach_marker_after_forty_lines() -> None:
     assert result.text == "正式回答。"
 
 
-def test_assistant_exporter_search_narration_before_duration_removed() -> None:
-    result = clean_thinking_summary(
-        "assistant",
-        """我会先核对当前版本，避免给出过时路线。
+def test_unmarked_search_narration_is_not_assumed_to_be_thinking() -> None:
+    source = """我会先核对当前版本，避免给出过时路线。
 
 制定学习计划
 
@@ -83,11 +87,11 @@ https://nodejs.org/en
 
 思考了 1m 2s
 
-下面这条路线建议叫 TypeScript 全栈工程学习路线。""",
-    )
+下面这条路线建议叫 TypeScript 全栈工程学习路线。"""
+    result = clean_thinking_summary("assistant", source)
 
-    assert result.removed is True
-    assert result.text == "下面这条路线建议叫 TypeScript 全栈工程学习路线。"
+    assert result.removed is False
+    assert result.text == source
 
 
 def test_user_text_is_not_cleaned() -> None:
@@ -112,3 +116,37 @@ def test_normal_assistant_answer_not_removed() -> None:
 
     assert result.removed is False
     assert result.text == text
+
+
+CASES = json.loads((Path(__file__).parent / "fixtures" / "thinking-summary-cases.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("case", CASES, ids=lambda case: case["name"])
+def test_display_and_rule_share_conservative_source_ranges(case):
+    source = case["source"]
+    summary = find_opening_thinking_summary(source)
+    cleaned = clean_thinking_summary("assistant", source)
+    if case["summary"] is None:
+        assert summary is None
+        assert not cleaned.removed and cleaned.text == source
+    else:
+        assert summary is not None
+        assert source[:summary.end_offset] == case["summary"]
+        assert source[summary.end_offset:] == case["answer"]
+        assert cleaned.removed == bool(case["answer"])
+        if cleaned.removed:
+            assert cleaned.end_offset == summary.end_offset
+            assert cleaned.removed_text + cleaned.text == source
+    assert clean_thinking_summary("user", source).text == source
+
+
+@pytest.mark.parametrize("role", ["assistant", "user", "system"])
+def test_preview_keeps_ordinary_text_before_duration(role):
+    source = "Keep this introduction.\n\nThinking 5s\n\nAnd this answer."
+    assert dialogue_preview(source, role).startswith("Keep this introduction.")
+
+
+def test_preview_skips_only_confident_assistant_summary():
+    source = "分析合成示例\r\n思考了 5s\r\n\r\n# Visible answer"
+    assert dialogue_preview(source, "assistant") == "Visible answer"
+    assert dialogue_preview(source, "user").startswith("分析合成示例")

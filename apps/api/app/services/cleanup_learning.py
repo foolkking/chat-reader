@@ -140,7 +140,8 @@ def rule_authority(scope: OwnershipScope, config: dict, rule_id=None, base_revis
 
 
 def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None, base_revision=None, base_revision_id=None, base_edit_token=None, conversation_id=None) -> dict:
-    from app.services.content_cleanup import detect_occurrences, validate_literal_rule
+    from app.services.content_cleanup import _DetectionContext, deduplicate_occurrences, detect_occurrences, validate_literal_rule
+    from app.services.cleanup_rule_access import available_versions, effective_revision
     validate_literal_rule(config["match_value"], config["matcher_mode"])
     if not config["name"]:
         raise ValueError("A rule name is required.")
@@ -167,6 +168,22 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
     rows = query.order_by(Message.id).limit(TRIAL_MESSAGES + 1).all()
     candidate = SimpleNamespace(**config)
     scanned, characters, matches, protected, skipped = 0, 0, 0, 0, 0
+    suppressed_by_exception = 0
+    covered_by_other_rule = 0
+    target_revision_id = None
+    exception_revision_id = None
+    if rule_id is not None:
+        target_revision_id = latest.id
+        if all(config[key] == getattr(latest, key) for key in CONFIG_FIELDS if key != "name"):
+            exception_revision_id = latest.id
+    # Read-only: a trial must not seed or revise built-ins as a side effect.
+    other_revisions = [
+        effective_revision(revisions, preference)
+        for _rule, revisions, preference in available_versions(db, scope).values()
+    ]
+    other_revisions = [revision for revision in other_revisions if revision.id != target_revision_id]
+    trial_revision = SimpleNamespace(id=target_revision_id, rule=SimpleNamespace(id=rule_id or uuid.UUID(int=(1 << 128) - 1), detector_id=None))
+    ignored = exception_digests(db, scope, [exception_revision_id] if exception_revision_id else [])
     samples = []
     for _message_id, role, version_id, length in rows[:TRIAL_MESSAGES]:
         if length > TRIAL_MESSAGE_CHARACTERS or characters + length > TRIAL_CHARACTERS:
@@ -175,13 +192,31 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
         source = db.query(MessageVersion.display_text).filter_by(id=version_id).scalar()
         scanned += 1
         characters += length
-        for hit in detect_occurrences(role, source, SimpleNamespace(detector_id=None), candidate):
+        context = _DetectionContext(source)
+        target_hits = detect_occurrences(role, source, trial_revision.rule, candidate, context=context)
+        all_hits = [(trial_revision, hit) for hit in target_hits]
+        for other_revision in other_revisions:
+            other_rule = other_revision.rule
+            if other_rule.scope == "ASSISTANT_ONLY" and role != "assistant":
+                continue
+            if other_revision.role_filter and other_revision.role_filter != role:
+                continue
+            all_hits.extend((other_revision, hit) for hit in detect_occurrences(role, source, other_rule, other_revision, context=context))
+        all_hits.sort(key=lambda item: (item[0].rule.detector_id or "", str(item[0].rule.id)))
+        surviving = {(hit.start, hit.end) for revision, hit in deduplicate_occurrences(all_hits) if revision is trial_revision}
+        for hit in target_hits:
+            suppressed = bool(exception_revision_id and is_ignored(ignored, exception_revision_id, role, source, hit.start, hit.end))
+            covered = (hit.start, hit.end) not in surviving
+            suppressed_by_exception += int(suppressed and not covered)
+            covered_by_other_rule += int(covered)
             matches += 1
             protected += hit.decision == "PROTECTED"
             if len(samples) < 10:
                 samples.append({"role": role, "match_text": source[hit.start:hit.end], "context_before": source[max(0, hit.start - 48):hit.start],
-                    "context_after": source[hit.end:hit.end + 48], "protected": hit.decision == "PROTECTED"})
+                    "context_after": source[hit.end:hit.end + 48], "protected": hit.decision == "PROTECTED",
+                    "suppressed_by_exception": suppressed and not covered, "covered_by_other_rule": covered})
     return {"configuration": config, "scanned_messages": scanned, "matches": matches, "protected_matches": protected,
+        "suppressed_by_exception": suppressed_by_exception, "covered_by_other_rule": covered_by_other_rule,
         "skipped_messages": skipped, "limited": len(rows) > TRIAL_MESSAGES or skipped > 0,
         "message_limit": TRIAL_MESSAGES, "character_limit": TRIAL_CHARACTERS, "message_character_limit": TRIAL_MESSAGE_CHARACTERS,
         "samples": samples, "base_edit_token": base_edit_token,

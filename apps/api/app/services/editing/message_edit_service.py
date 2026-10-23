@@ -28,7 +28,6 @@ from app.services.import_pipeline.canonical_draft import (
     SEARCH_DOCUMENT_VERSION,
     content_hash,
 )
-from app.services.import_pipeline.thinking_cleaner import clean_thinking_summary
 from app.services.projects.project_service import add_conversation_to_project, ensure_default_project
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 from app.services.search.search_indexer import (
@@ -287,58 +286,17 @@ def auto_clean_conversation(
     progress_callback: MergeProgressCallback | None = None,
 ) -> ConversationAutoCleanResult:
     conversation = _get_active_conversation(db, conversation_id)
-    messages = (
-        db.query(Message)
-        .filter(
-            Message.conversation_id == conversation_id,
-            Message.is_deleted.is_(False),
-            Message.role == "assistant",
-        )
-        .order_by(Message.order_key.asc())
-        .all()
-    )
-    total = len(messages)
-    cleaned_count = 0
-    for index, message in enumerate(messages, start=1):
-        current_version = _get_current_version(db, message)
-        cleaned = clean_thinking_summary(message.role, current_version.display_text)
-        if cleaned.removed and cleaned.text != current_version.display_text:
-            new_version = _create_version(
-                db=db,
-                message=message,
-                text=cleaned.text,
-                plain_text=cleaned.text,
-                edit_type="auto_clean",
-                edit_reason="remove exported thinking/search summary",
-                created_by="system",
-                based_on_version_id=current_version.id,
-            )
-            _write_event(
-                db=db,
-                message=message,
-                event_type="message_edited",
-                target_version_id=new_version.id,
-                created_by="system",
-                payload={
-                    "message_id": str(message.id),
-                    "previous_version_id": str(current_version.id),
-                    "new_version_id": str(new_version.id),
-                    "edit_type": "auto_clean",
-                },
-            )
-            cleaned_count += 1
-        if progress_callback and (index == total or index % 25 == 0):
-            progress_callback("cleaning_messages", 10 + int((index / max(total, 1)) * 70), index, total)
-
-    if cleaned_count:
-        if progress_callback:
-            progress_callback("rebuilding_index", 85, total, total)
-        rebuild_search_and_toc_for_conversation(db, conversation_id)
-    db.flush()
+    total = db.query(Message.id).filter(
+        Message.conversation_id == conversation_id,
+        Message.is_deleted.is_(False),
+        Message.role == "assistant",
+    ).count()
+    if progress_callback:
+        progress_callback("preserving_source", 90, total, total)
     return ConversationAutoCleanResult(
         conversation=conversation,
         scanned_messages=total,
-        cleaned_messages=cleaned_count,
+        cleaned_messages=0,
     )
 
 

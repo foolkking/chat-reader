@@ -284,9 +284,11 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
           PLAYWRIGHT_GATE_ID: source-editor-cleanup
           E2E_CONTENT_CLEANUP: "1"
+          E2E_THINKING_SUMMARY: "1"
         run: >-
           pnpm --filter web exec playwright test --config=playwright.config.ts
           e2e/content-cleanup.spec.ts
+          e2e/thinking-summary.spec.ts
 
       - name: Release I upload-token atomicity matrix
         timeout-minutes: 20

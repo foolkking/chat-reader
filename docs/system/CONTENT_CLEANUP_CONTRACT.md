@@ -1,10 +1,61 @@
 # Content Cleanup Contract
 
+## Noise rules and thinking summaries — 2026-10-23 (local only)
+
+This section supersedes earlier source-deleting thinking cleanup and broad
+display heuristics. Release is authorized but not yet accepted. No rule is removed solely
+because of its name or usage frequency.
+
+- Imports (JSON, Markdown and paired exports) retain complete canonical source.
+  The legacy automatic-clean job counts assistant messages but does not rewrite
+  text, create versions or restore previously deleted summaries. Existing
+  version history remains the owner's recovery path.
+- Reader, Share and Offline use the same display-only opening-summary detector.
+  A duration marker is required, with at most 80 lines / 8,000 Unicode code
+  points of known trace prefix. Ordinary prose, answer headings and code stop
+  detection; a bare `Reasoning:` label or a duration later in normal prose is
+  insufficient. LF/CRLF source positions and a same-paragraph answer are retained.
+  Historical `collapsed_by_default` flags alone never authorize folding.
+  Source editing still shows the full text. Folded blocks retain real DOM
+  anchors; explicit navigation reveals the disclosure before alignment.
+- `thinking-summary-v1` is disabled by default **only without a personal
+  preference**. Server rule listings and scan admission use the same effective
+  state. An explicitly saved enabled preference remains enabled; toggling the
+  rule affects new scans, not pinned revisions, old choices or historical text.
+- Visible cite/turn tokens require whole-word boundaries, including trailing
+  reference characters and underscores. Exporter footers must begin on a line
+  and end the message, allowing trailing whitespace and LF/CRLF separators.
+  Summary candidates use exact original offsets rather than searching a
+  newline-normalized copy.
+- Normalized source-envelope duplicates and shifted fuzzy duplicates collapse
+  to one candidate. Fuzzy anchors account for edit displacement and apply
+  boundaries before choosing the best length. Approximate, unknown and
+  explanatory/example hits remain visible as unselected `PROTECTED`, requiring
+  the existing source-bound confirmation. They are not silently suppressed or
+  bulk-selected as ordinary matches. `uncertain_or_example` is distinct from
+  `markdown_code_link_or_math`; old/forged choices cannot bypass validation.
+  Fence closers handle CRLF; escaped ticks and unclosed inline code cannot
+  manufacture a protected span across a fence.
+- Editing a personal literal preserves its saved role filter, including
+  explicit all-role `null`. The edit entry is available for an existing rule
+  even when its normalized source match exceeds the new-literal length limit.
+  Text remains literal, never regex. Short text and anywhere/all-role drafts
+  show risk notes before saving, without adding another review state.
+- Trials retain raw hit counts/samples and reuse scanner precedence. Additive
+  `covered_by_other_rule` and `suppressed_by_exception` counts/sample flags
+  explain why a raw hit will not become a candidate. Exceptions apply to the
+  unchanged entitled revision/configuration, not a newly changed match config.
+  Trials remain bounded and read-only; they do not seed rules or persist source.
+
+There is no new migration, offline package format or Dexie version. The source
+Alembic head remains `20261022_0053`; package v1/v2/v3 readers and existing local
+data are retained. See [verification and limitations](../testing.md#noise-rules-and-thinking-summaries--2026-10-23-local-only).
+
 ## Current protected-review contract — released 2026-10-19
 
 Source `f3b331a` adds a protected-match review flow without changing
-the rule language or making deletion automatic. Production's single Alembic head
-after the existing cleanup migrations is `20261017_0052`; it adds nullable
+the rule language or making deletion automatic. At that release the single
+Alembic head was `20261017_0052`; it adds nullable
 `content_cleanup_occurrences.protection_review`. Existing rows remain `NULL`,
 no old selection is backfilled as consent, and message/import data is not
 rewritten. Migration/data/runtime acceptance and the consent-revoking rollback

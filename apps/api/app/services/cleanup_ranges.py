@@ -75,8 +75,8 @@ def save_ranges(db: Session, scan_id: uuid.UUID, occurrence_id: uuid.UUID, *,
     if not 0 <= row.start_offset < row.end_offset <= len(version.display_text):
         raise ValueError("The original candidate range is invalid. Rescan the source.")
     validation = _MessageValidation(message.role, version.display_text)
-    if validation.source.protects(row.start_offset, row.end_offset):
-        from app.services.cleanup_protection import reviewed
+    from app.services.cleanup_protection import requires_review, reviewed
+    if requires_review(row, validation.source):
         if not reviewed(row, validation.source):
             raise ValueError("Confirm the protected match before adjusting deletion ranges.")
     detected = validation.matching_ranges(db, row.rule_revision_id)

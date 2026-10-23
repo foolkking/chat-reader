@@ -66,7 +66,7 @@ def groups(db: Session, scan_id: uuid.UUID, *, limit: int, offset: int, q: str =
 def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=None, conversation_id=None,
                   selected_only=False, protection_token=None) -> dict:
     from app.services.content_cleanup import _SourceAnalysis, update_decisions
-    from app.services.cleanup_protection import authorize, reviewed
+    from app.services.cleanup_protection import authorize, requires_review, reviewed
     scan = db.query(ContentCleanupScan).filter_by(id=scan_id).populate_existing().with_for_update().one()
     if scan.status != "READY":
         raise ValueError("Wait for the scan to finish before changing decisions.")
@@ -98,7 +98,7 @@ def decide_filter(db: Session, scan_id: uuid.UUID, *, decision: str, rule_id=Non
                     skipped += 1
                     continue
                 sources[version_id] = _SourceAnalysis(source_text)
-            if (decision == "DELETE" and (row.decision == "PROTECTED" or sources[version_id].protects(row.start_offset, row.end_offset))
+            if (decision == "DELETE" and requires_review(row, sources[version_id])
                     and not protection_digest and not reviewed(row, sources[version_id])):
                 row.decision = "PROTECTED"
                 row.decision_updated_at = None

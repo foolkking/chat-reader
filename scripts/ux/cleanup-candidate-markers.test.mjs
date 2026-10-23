@@ -107,12 +107,14 @@ test("protected, stale, conflicting and applied candidates cannot inherit checke
   for (const [changes, en, zh] of [
     [{ decision: "PROTECTED" }, "Protected; confirmation required", "受保护，待确认"],
     [{ evidence_codes: ["PROTECTED_RANGE"] }, "Protected; confirmation required", "受保护，待确认"],
+    [{ evidence_codes: ["UNCERTAIN_CONTEXT"] }, "Protected; confirmation required", "受保护，待确认"],
+    [{ protection_types: ["uncertain_or_example"] }, "Protected; confirmation required", "受保护，待确认"],
     [{ stale: true }, "Rescan required; source retained", "需重新扫描，原文已保留"],
     [{ decision: "CONFLICT" }, "Rescan required; source retained", "需重新扫描，原文已保留"],
     [{ decision: "APPLIED" }, "Completed; will not be applied again", "已完成，不会重复处理"],
     [{ decision: "APPLIED", stale: true }, "Completed; will not be applied again", "已完成，不会重复处理"],
   ]) {
-    const protectedCandidate = changes.decision === "PROTECTED" || changes.evidence_codes?.includes("PROTECTED_RANGE");
+    const protectedCandidate = changes.decision === "PROTECTED" || changes.evidence_codes?.length || changes.protection_types?.length;
     for (const locale of [false, true]) {
       const html = render(changes, { selected: true, selectionSaving: true, zh: locale });
       assert.equal(description(html), locale ? zh : en);

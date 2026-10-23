@@ -17,7 +17,7 @@ export function CleanupProtectionReview({ scanId, scope, label, zh, busy, onCanc
   return <section className="space-y-3 rounded-lg border border-[var(--warning)]/50 p-3" aria-label={zh ? "确认受保护匹配" : "Review protected matches"}>
     <h3 className="font-semibold">{zh ? "确认受保护匹配" : "Review protected matches"}</h3>
     <p className="break-words text-sm">{label}</p>
-    <p className="text-xs leading-5 text-secondary">{zh ? "此范围包含 Markdown 链接、代码或公式等受保护内容。删除可能破坏结构或移除有用内容。确认仅保存本扫描的待删除选择，不直接修改原文；随后仍需预览并应用。" : "This scope includes protected Markdown links, code or math. Removal may break structure or remove useful content. Confirmation only saves this scan's selection; preview and apply are still required."}</p>
+    <p className="text-xs leading-5 text-secondary">{zh ? "此范围包含受保护结构、示例或不确定匹配。删除可能破坏结构或移除有用内容。确认仅保存本扫描的待删除选择，不直接修改原文；随后仍需预览并应用。" : "This scope includes protected structures, examples or uncertain matches. Removal may break structure or remove useful content. Confirmation only saves this scan's selection; preview and apply are still required."}</p>
     {preview.isLoading ? <p role="status">{zh ? "正在核对完整范围…" : "Checking the complete scope…"}</p> : null}
     {preview.isError ? <div role="alert"><p>{zh ? "无法核对范围，或原文已变化；没有保存选择。" : "The scope could not be checked or source changed. No choices were saved."}</p><button type="button" className="btn-secondary min-h-11 px-3" onClick={() => void preview.refetch()}>{zh ? "重新核对" : "Retry preview"}</button></div> : null}
     {preview.data && !preview.isError ? <>

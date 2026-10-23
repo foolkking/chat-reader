@@ -284,6 +284,7 @@ function compileComponent(relative, stubs) {
   return exports;
 }
 const tablePresentation = compileComponent("../../apps/web/features/conversations/markdown-table.tsx", {});
+const thinkingSummary = (await load("../../apps/web/features/conversations/thinking-summary.ts")).module;
 const renderer = compileComponent("../../apps/web/features/conversations/markdown-renderer.tsx", {
   "@assistant-ui/react": uiAdapter,
   "@assistant-ui/react-markdown": uiAdapter,
@@ -293,6 +294,7 @@ const renderer = compileComponent("../../apps/web/features/conversations/markdow
   "../rich-markdown/remark-ai-math-compatibility": math,
   "../rich-markdown/chatgpt-rich-text-compatibility": compatibility,
   "./markdown-table": tablePresentation,
+  "./thinking-summary": thinkingSummary,
 });
 const tableTools = compileComponent("../../apps/web/features/editing/markdown-table-tools.ts", {
   "@codemirror/lang-markdown": appRequire("@codemirror/lang-markdown"),
@@ -499,6 +501,7 @@ test("table preview retains GFM cell content for Unicode spacing, autolinks and 
 });
 const blockRenderer = compileComponent("../../apps/web/features/conversations/block-renderer.tsx", {
   "./markdown-renderer": renderer,
+  "./thinking-summary": thinkingSummary,
   "../attachments/attachment-block": { AttachmentBlock: () => null, embeddedAttachment: () => null },
   "../rich-markdown/chatgpt-rich-text-compatibility": compatibility,
 });
@@ -552,6 +555,7 @@ const assistant = compileComponent("../../apps/web/features/conversations/assist
   "../../components/preferences-provider": { useTranslations: () => key => key },
   "./block-renderer": blockRenderer,
   "./markdown-renderer": renderer,
+  "./thinking-summary": thinkingSummary,
   "./block-virtualization": { registerVirtualMessage: () => () => {}, READER_WINDOW_LAYOUT_EVENT: "synthetic-layout" },
   "./rendered-block-registry": { registerRenderedBlock: () => () => {} },
   "../attachments/attachment-block": { embeddedAttachment: () => null },

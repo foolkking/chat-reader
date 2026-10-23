@@ -20,12 +20,7 @@ import {
 } from "./reader-block-layout";
 import { extractChatGptBareBracketMath, isChatGptBareBracketMath, normalizeChatGptMathBody } from "../rich-markdown/remark-ai-math-compatibility";
 import { detectChatGptRichText, withChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
-
-const THINKING_LABEL = "思考过程";
-const THINKING_DURATION_RE =
-  /^(?:(?:已\s*)?思考(?:了)?|thinking|reasoning)\s*[:：]?\s*((?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒))$/i;
-const ANSWER_START_RE = /^(?:#{1,6}\s+\S+|(?:答案|回答|结论|最终回答|正式回答|final answer|answer)\s*[:：])/i;
-const TRACE_PREFIXES = ["考虑", "分析", "整理", "搜索", "检索", "浏览", "查找", "提炼", "规划", "总结"];
+import { findLeadingThinkingBlocks } from "./thinking-summary";
 
 export function AssistantMessageRenderer({
   message,
@@ -54,6 +49,23 @@ export function AssistantMessageRenderer({
     [allTasks, blocks, taskCheckedOverrides],
   );
 
+  const leadingThinking = useMemo(() => isAssistant ? findLeadingThinkingBlocks(blocks) : null, [blocks, isAssistant]);
+  const thinkingBlocks = useMemo(
+    () => withChatGptRichTextProfile(leadingThinking?.summaryBlocks ?? [], richTextProfile),
+    [leadingThinking, richTextProfile],
+  );
+  const visibleBlocks = useMemo(() => leadingThinking
+    ? [...(leadingThinking.remainder ? [leadingThinking.remainder] : []), ...blocks.slice(leadingThinking.endIndex + 1)]
+    : blocks, [blocks, leadingThinking]);
+  // Keep this projection outside the hook list. A message can transition from
+  // an empty block window to hydrated blocks without changing hook order.
+  const semanticBlocks = useMemo(
+    () => withChatGptRichTextProfile(resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText)), richTextProfile),
+    [currentText, richTextProfile, visibleBlocks],
+  );
+  const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
+  const displayUnits = useMemo(() => groupAttachmentBlocks(semanticBlocks), [semanticBlocks]);
+
   if (blocks.length === 0) {
     return currentText.trim() ? (
       <CopyableMarkdownBlock messageId={message.id} blockIndex={0} markdown={currentText}>
@@ -64,21 +76,18 @@ export function AssistantMessageRenderer({
     );
   }
 
-  const leadingThinking = useMemo(() => isAssistant ? findLeadingThinkingBlocks(blocks) : null, [blocks, isAssistant]);
-  const visibleBlocks = useMemo(() => leadingThinking ? blocks.slice(leadingThinking.endIndex + 1) : blocks, [blocks, leadingThinking]);
-  // Keep this projection outside the hook list. A message can transition from
-  // an empty block window to hydrated blocks without changing hook order.
-  const semanticBlocks = useMemo(
-    () => withChatGptRichTextProfile(resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText)), richTextProfile),
-    [currentText, richTextProfile, visibleBlocks],
-  );
-  const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
-  const displayUnits = useMemo(() => groupAttachmentBlocks(semanticBlocks), [semanticBlocks]);
-
   return (
     <div className="reader-block-flow break-words">
       {leadingThinking ? (
-        <div className="reader-block-slot"><CopyableMarkdownBlock messageId={message.id} blockIndex={visibleBlocks[0]?.block_index ?? 0} markdown={leadingThinking.text}><ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} richTextProfile={richTextProfile ?? undefined} /></CopyableMarkdownBlock></div>
+        <div className="reader-block-slot">
+          <ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} richTextProfile={richTextProfile ?? undefined}>
+            <div className="reader-thinking-content reader-block-flow text-[0.875em]">
+              {thinkingBlocks.map((block, index) => leadingThinking.remainder && index === leadingThinking.endIndex
+                ? <CopyableMarkdownBlock key={block.block_index} messageId={message.id} blockIndex={block.block_index} markdown={block.plain_text ?? ""}><MarkdownRenderer text={block.plain_text ?? ""} isAssistant={false} richTextProfile={richTextProfile ?? undefined} /></CopyableMarkdownBlock>
+                : <BlockElement key={block.block_index} messageId={message.id} block={block} isAssistant={false} highlightTargetId={highlightTargetId} />)}
+            </div>
+          </ThinkingDisclosure>
+        </div>
       ) : null}
       {shouldVirtualize ? (
         <div className="reader-block-slot" style={leadingThinking ? slotGapStyle(blockGapVariable(null, semanticBlocks[0])) : undefined}>
@@ -1017,57 +1026,6 @@ function shouldAdjustMeasuredRow(
   return isFirstMeasurement || instance.scrollDirection !== "backward";
 }
 
-function findLeadingThinkingBlocks(blocks: RenderBlockRead[]): { endIndex: number; text: string; label: string } | null {
-  let scannedChars = 0;
-  const captured: string[] = [];
-  for (let index = 0; index < Math.min(blocks.length, 80); index += 1) {
-    const text = stripLeadingTimestamp(readBlockText(blocks[index] ?? null)).trim();
-    if (!text) {
-      continue;
-    }
-    const lines = text.split(/\r?\n/).map((line) => stripQuote(line).trim()).filter(Boolean);
-    scannedChars += text.length;
-    if (scannedChars > 8000) {
-      return null;
-    }
-    if (lines.some((line) => ANSWER_START_RE.test(line))) {
-      return null;
-    }
-    captured.push(text);
-    const durationLine = lines.find((line) => THINKING_DURATION_RE.test(line));
-    if (durationLine) {
-      const duration = durationLine.match(THINKING_DURATION_RE)?.[1] ?? null;
-      return {
-        endIndex: index,
-        text: captured.join("\n\n"),
-        label: duration ? `${THINKING_LABEL} · ${duration.replace(/\s+/g, " ")}` : THINKING_LABEL,
-      };
-    }
-    if (!looksLikeThinkingBlock(lines)) {
-      return null;
-    }
-  }
-  return null;
-}
-
-function looksLikeThinkingBlock(lines: string[]): boolean {
-  if (lines.length === 0) {
-    return true;
-  }
-  return lines.every((line) => {
-    if (line.length <= 180 && TRACE_PREFIXES.some((prefix) => line.startsWith(prefix))) {
-      return true;
-    }
-    if (line.startsWith("[") || line.startsWith("- ") || line.startsWith("* ") || /^\d+[.)]\s+/.test(line)) {
-      return true;
-    }
-    if (line.includes("http://") || line.includes("https://") || line.includes("](")) {
-      return true;
-    }
-    return false;
-  });
-}
-
 function readBlockText(block: RenderBlockRead | null): string {
   if (!block) {
     return "";
@@ -1077,12 +1035,4 @@ function readBlockText(block: RenderBlockRead | null): string {
   }
   const value = block.data.text ?? block.data.title ?? block.data.code;
   return typeof value === "string" ? value : "";
-}
-
-function stripQuote(line: string): string {
-  let stripped = line.trim();
-  while (stripped.startsWith(">")) {
-    stripped = stripped.slice(1).trim();
-  }
-  return stripped;
 }

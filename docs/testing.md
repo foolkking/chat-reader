@@ -1,5 +1,54 @@
 # Testing
 
+## Noise rules and thinking summaries — 2026-10-23 (local only)
+
+The [current contract](system/CONTENT_CLEANUP_CONTRACT.md) owns behavior;
+the [release record](execution/NOISE_SUMMARY_RELEASE_2026-10-23.md) tracks the
+subsequent submission/deployment authorization, not a local-test release claim.
+All temporary services/configs/results use the task directory under `wkkk`,
+process-local TEMP/TMP and synthetic source only.
+
+- `corepack pnpm run test:api` with all `test_cleanup*.py` plus the noise,
+  thinking, block builder, import/alignment, archive, Reader, Share and offline
+  modules: **61 modules, 467 passed / 50 conditional skipped**, in six fresh
+  process batches. Supplemental `test_noise_rule_regressions.py`,
+  `test_reader_api_contract.py` and `test_my_shares.py`: **44 passed**, including
+  repeated coverage and four new positive-consent/role-aware preview cases.
+  Supply task-local `--basetemp` and `-o cache_dir`; PostgreSQL-only conditional
+  skips are not local PostgreSQL acceptance.
+- `node --test --test-concurrency=1 scripts/ux/*.test.mjs`: **72 files,
+  1,560 passed / zero skipped**. API/Web share the synthetic summary corpus in
+  `apps/api/tests/fixtures/thinking-summary-cases.json`; it covers safe prefixes,
+  LF/CRLF, inline answers, ordinary introductions, code and bare labels.
+- `corepack pnpm --filter web test:pwa ... thinking-summary.spec.ts
+  content-cleanup.spec.ts library-offline.spec.ts`, with
+  `E2E_THINKING_SUMMARY=1 E2E_CONTENT_CLEANUP=1`: **21 passed** using real Next,
+  isolated SQLite API/single-worker and Chrome at 1440/375px. It checks source
+  retention, shared folding, stale offline flags, ordinary preview prefixes,
+  long normalized candidate editing and trial exception/coverage explanations.
+  The cached offline data comes from real API source/blocks seeded into
+  IndexedDB; it is not a package-download or authenticated PostgreSQL fixture.
+  Final focused rerun: **6 passed**, additionally verifying that saving an
+  edited rule retains its all-role filter on the server.
+- A separate `NEXT_PUBLIC_PWA_NEGATIVE_TESTS=1 E2E_PWA_NEGATIVE=1` production
+  build runs six selected `pwa-negative.spec.ts` package cases: **6 passed** for
+  v1/v2/v3 ingestion/retention, malformed replacements, bounded writes and
+  transaction recovery. The full negative matrix remains a release CI gate.
+- `node scripts/ux/image-scale-slider-browser.mjs`: **4 passed** combinations
+  of desktop/mobile and light/dark, using actual controls/query cache/CSS with
+  explicit persistence/Reader adapters. Existing slider source was retained.
+- Image-source/PostgreSQL-service CI contracts plus offline-shell regressions:
+  **67 passed**. Web lint, typecheck and bounded standard build pass.
+  `cd apps/api; python -m alembic heads`: one `20261022_0053` head.
+
+Initial failed runs are retained task-locally, not counted as passes. Scanner
+cursor/underscore and inherited rich-formatting regressions were fixed.
+Browser fixture auth/worker/message-count/locator mistakes and cross-run saved
+exception reuse were corrected without bypassing production checks. The new
+summary browser cases are enabled in the existing `source-editor-cleanup` CI
+gate. No production-account UI, full accessibility, native clipboard or
+sustained-load acceptance is implied.
+
 ## Original-relative image scale — 2026-10-23
 
 - `cd apps/api; python -m pytest tests/test_image_display.py
@@ -9,10 +58,18 @@
   animation/bounds rejection, owner/auth checks, concurrency admission, and
   missing-derivative fail-closed/repair.
 - Existing `E2E_MESSAGE_MARKDOWN_COPY=1` real Next/API/disposable-PostgreSQL
-  tests now exercise the lower-right 1–100% selector at 1440/375px, unchanged
+  tests now exercise the lower-right 1–100% slider at 1440/375px, unchanged
   public URL, persisted width after reload, selecting 100%, original bytes, no
   page overflow, and Share editing-control absence. Clipboard is still an
   explicit adapter.
+- `node --test scripts/ux/image-scale-snap.test.mjs` covers velocity attraction,
+  finite release, all 100 slow-drag integer values, bounds and timestamps.
+  `node scripts/ux/image-scale-slider-browser.mjs` mounts the actual owner
+  control/slider/query cache/CSS at 1440/375px in light/dark mode: mouse/touch
+  commit/cancel, pause-at-stop, slow and keyboard escape, one write per release,
+  unknown-write read recovery, 44px presets and edge clamping. API persistence
+  and surrounding Reader/image layout are explicit adapters. This is local
+  component integration, not API-backed Reader/Share or production acceptance.
 - `E2E_IMPORT_FLOW=1` verifies ordinary workspace drops do not import, the
   dimmed/blurred overlay exposes the explicit central target, and central/sidebar
   targets retain destination capture. `E2E_ATTACHMENT_UPLOAD=1` verifies source

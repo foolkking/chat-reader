@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Loader2 } from "lucide-react";
 import type { AttachmentRead } from "../../lib/types";
@@ -8,8 +8,7 @@ import { getImageDisplay, setImageDisplay, uploadMessageCopyPreview, type ImageD
 import { authenticationGeneration, AUTH_GENERATION_CHANGED_EVENT } from "../../lib/offline-access";
 import { rasterizeCopySvg } from "../conversations/message-markdown-copy-prepare";
 import { useAttachmentAccess } from "./attachment-access";
-
-const IMAGE_SCALE_PERCENTAGES = Array.from({ length: 100 }, (_, index) => 100 - index);
+import { ImageScaleSlider } from "./image-scale-slider";
 
 export function storedImageDisplay(attachment: AttachmentRead): ImageDisplayRead | undefined {
   const value = attachment.metadata?.image_display_v1 as ImageDisplayRead | undefined;
@@ -43,11 +42,15 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<ImageDisplayRead | null>(null);
+  const [draft, setDraft] = useState<number | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [saved, setSaved] = useState(false);
   const active = useRef<AbortController | null>(null);
+  const writing = useRef(false);
   const root = useRef<HTMLDivElement | null>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
-  const optionRefs = useRef(new Map<number, HTMLButtonElement>());
+  const panelId = useId();
+  const panel = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
   const { display, queryKey } = useImageDisplay(attachment);
   useEffect(() => () => { active.current?.abort(); }, []);
   useEffect(() => {
@@ -55,12 +58,40 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
     const dismiss = (event: PointerEvent) => {
       if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false);
     };
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      setOpen(false);
+      trigger.current?.focus({ preventScroll: true });
+    };
     document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
   }, [open]);
-  useEffect(() => {
-    if (open && current && !busy) optionRefs.current.get(current.scale_percent)?.scrollIntoView({ block: "nearest" });
-  }, [busy, current, open]);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      if (!trigger.current || !panel.current) return;
+      const anchor = trigger.current.getBoundingClientRect();
+      const { width, height } = panel.current.getBoundingClientRect();
+      setPosition({
+        left: Math.max(16, Math.min(anchor.right - width, window.innerWidth - width - 16)),
+        top: Math.max(16, Math.min(anchor.bottom + 4, window.innerHeight - height - 16)),
+      });
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    if (panel.current) observer.observe(panel.current);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
 
   const isCurrent = (controller: AbortController) => !controller.signal.aborted && generation === authenticationGeneration();
   async function read() {
@@ -71,7 +102,7 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
       const value = await getImageDisplay(attachment.id, controller.signal);
       if (!isCurrent(controller)) return;
       if (value.source_sha256 !== attachment.asset_object?.sha256) throw new Error("Source changed");
-      setCurrent(value);
+      setCurrent(value); setDraft(value.scale_percent);
       client.setQueryData(queryKey, value);
     } catch (failure) {
       if (isCurrent(controller)) {
@@ -85,7 +116,8 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
   }
 
   async function save(percent: number) {
-    if (!current || busy) return;
+    if (!current || busy || writing.current) return;
+    writing.current = true;
     const controller = new AbortController(); active.current = controller;
     setBusy(true); setError(""); setSaved(false);
     try {
@@ -97,31 +129,20 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
       if (!isCurrent(controller)) return;
       const value = await setImageDisplay(attachment.id, current, percent, controller.signal);
       if (!isCurrent(controller)) return;
-      setCurrent(value); setSaved(true); setOpen(false);
+      setCurrent(value); setDraft(value.scale_percent); setSaved(true);
+      // Keep the slider in place after saving so fine adjustments do not
+      // require reopening it. Do not move the image while a pointer is held.
       client.setQueryData(queryKey, value);
       void client.invalidateQueries({ queryKey: ["attachment"] });
     } catch {
       if (isCurrent(controller)) setError(zh ? "保存失败，请重试。" : "Save failed. Try again.");
-    } finally { if (isCurrent(controller)) setBusy(false); }
+    } finally { writing.current = false; if (isCurrent(controller)) setBusy(false); }
   }
 
-  const shownPercent = current?.scale_percent ?? display?.scale_percent ?? 100;
-  const moveOptionFocus = (event: KeyboardEvent<HTMLDivElement>) => {
-    const selected = event.target instanceof HTMLElement ? Number(event.target.dataset.imageScaleOption) : NaN;
-    if (!Number.isInteger(selected)) return;
-    let next = selected;
-    if (event.key === "ArrowDown") next = Math.max(1, selected - 1);
-    else if (event.key === "ArrowUp") next = Math.min(100, selected + 1);
-    else if (event.key === "Home") next = 100;
-    else if (event.key === "End") next = 1;
-    else if (event.key === "Escape") { setOpen(false); trigger.current?.focus(); event.preventDefault(); return; }
-    else return;
-    event.preventDefault();
-    optionRefs.current.get(next)?.focus();
-  };
+  const shownPercent = open && !error && draft !== null ? draft : current?.scale_percent ?? display?.scale_percent ?? 100;
 
   return <div ref={root} className="image-display-control" data-markdown-copy-ignore="true" data-image-display-controls>
-    <button ref={trigger} type="button" aria-expanded={open} aria-haspopup="listbox"
+    <button ref={trigger} type="button" aria-expanded={open} aria-controls={open ? panelId : undefined}
       aria-label={zh ? `图片展示比例：${shownPercent}%` : `Image display scale: ${shownPercent}%`}
       className="image-display-trigger" disabled={busy && !current}
       onClick={() => {
@@ -132,17 +153,14 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
       <span>{shownPercent}%</span>
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
     </button>
-    {open ? <div className="image-display-menu" onKeyDown={moveOptionFocus}>
+    {open ? <div ref={panel} id={panelId} className="image-display-menu" style={position}>
       {busy && !current ? <div className="grid h-11 place-items-center" role="status" aria-label={zh ? "正在读取比例" : "Loading image scale"}><Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /></div> : null}
       {error ? <div className="p-2 text-center"><p role="alert" className="text-xs text-[var(--danger)]">{error}</p><button type="button" className="mt-1 min-h-11 px-2 text-xs font-medium text-primary" disabled={busy} onClick={() => void read()}>{zh ? "重试" : "Retry"}</button></div> : null}
-      {current && !error ? <div role="listbox" aria-label={zh ? "图片展示比例" : "Image display scale"}>
-        {IMAGE_SCALE_PERCENTAGES.map(percent => <button
-          key={percent}
-          ref={node => { if (node) optionRefs.current.set(percent, node); else optionRefs.current.delete(percent); }}
-          type="button" role="option" aria-selected={current.scale_percent === percent}
-          data-image-scale-option={percent} tabIndex={current.scale_percent === percent ? 0 : -1} className="image-display-option" disabled={busy}
-          onClick={() => void save(percent)}>{percent}%</button>)}
-      </div> : null}
+      {current && !error ? <ImageScaleSlider value={draft ?? current.scale_percent} zh={zh} disabled={busy}
+        onChange={percent => { setDraft(percent); setSaved(false); }}
+        onCommit={percent => void save(percent)}
+        onCancel={() => { setDraft(current.scale_percent); setOpen(false); trigger.current?.focus({ preventScroll: true }); }}
+      /> : null}
     </div> : null}
     {saved ? <span className="sr-only" role="status">{zh ? "比例已保存。" : "Image size saved."}</span> : null}
   </div>;

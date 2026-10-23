@@ -31,6 +31,16 @@ def related_rule_ids(db: Session, rule_id: uuid.UUID) -> list[uuid.UUID]:
     return [canonical, *(item[0] for item in db.query(Alias.old_rule_id).filter_by(canonical_rule_id=canonical))]
 
 
+def _default_enabled(rule: Rule) -> bool:
+    # Exported thinking summaries remain available for deliberate review, but
+    # must never enter a scan until the owner explicitly enables this rule.
+    return rule.detector_id != "thinking-summary-v1"
+
+
+def _enabled(rule: Rule, preference: Preference | None) -> bool:
+    return preference.enabled if preference is not None else _default_enabled(rule)
+
+
 def available_versions(db: Session, scope: OwnershipScope, *, include_disabled=False, include_hidden=False) -> dict:
     held = select(Grant.revision_id).where(Grant.user_id == scope.owner_user_id, Grant.revision_id == Revision.id).exists()
     public = select(Publication.revision_id).where(Publication.revision_id == Revision.id, Publication.withdrawn_at.is_(None)).exists()
@@ -44,7 +54,9 @@ def available_versions(db: Session, scope: OwnershipScope, *, include_disabled=F
     for revision in revisions:
         rule = canonical.get(aliases.get(revision.rule_id), revision.rule)
         preference = preferences.get(rule.id)
-        if preference and ((preference.hidden and not include_hidden) or (not preference.enabled and not include_disabled)):
+        if (preference and preference.hidden and not include_hidden) or (
+            not _enabled(rule, preference) and not include_disabled
+        ):
             continue
         if rule.id not in grouped:
             grouped[rule.id] = (rule, [], preference)
@@ -84,7 +96,7 @@ def personal_edit_token(db: Session, scope: OwnershipScope, rule: Rule, revision
         updated = updated.replace(tzinfo=timezone.utc) if updated.tzinfo is None else updated.astimezone(timezone.utc)
     state = {"owner": str(scope.owner_user_id), "rule": str(canonical), "revision": str(revision.id),
         "name": personal_name(db, scope.owner_user_id, rule), "status": rule.status,
-        "enabled": preference.enabled if preference else True, "hidden": preference.hidden if preference else False,
+        "enabled": _enabled(rule, preference), "hidden": preference.hidden if preference else False,
         "updated_at": updated.isoformat(timespec="microseconds") if updated else None}
     return hashlib.sha256(json.dumps(state, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
@@ -107,7 +119,7 @@ def rule_payload(db: Session, scope: OwnershipScope, rule: Rule, revision: Revis
         Grant.user_id == scope.owner_user_id, Revision.rule_id.in_(related_rule_ids(db, canonical))).first() is not None
     return {"id": canonical, "name": personal_name(db, scope.owner_user_id, rule), "kind": rule.kind,
         "edit_token": personal_edit_token(db, scope, rule, revision),
-        "status": "DISABLED" if preference and not preference.enabled else rule.status,
+        "status": "ACTIVE" if _enabled(rule, preference) else "DISABLED",
         "scope": rule.scope, "detector_id": rule.detector_id, "revision": revision.revision, "revision_id": revision.id,
         **{key: getattr(revision, key) for key in ("match_value", "case_sensitive", "role_filter", "matcher_mode", "normalization_profile", "boundary_mode")},
         "last_used_at": rule.last_used_at, "held": held, "revision_held": revision_held, "system_provided": bool(publication and publication.withdrawn_at is None),
@@ -187,7 +199,7 @@ def update_personal_rule(db: Session, scope: OwnershipScope, rule_id: uuid.UUID,
     if changes.get("base_revision") is not None and changes["base_revision"] != revision.revision:
         raise ValueError("Rule changed on another device. Reload the saved version; your draft can be kept.")
     if preference is None:
-        preference = Preference(user_id=scope.owner_user_id, rule_id=canonical, enabled=True, hidden=False)
+        preference = Preference(user_id=scope.owner_user_id, rule_id=canonical, enabled=_default_enabled(rule), hidden=False)
         db.add(preference)
         db.flush()
     if changes.get("name") is not None:

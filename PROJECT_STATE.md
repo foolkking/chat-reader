@@ -4,6 +4,31 @@ Last updated: 2026-10-23. This is the current snapshot, not a release history.
 
 ## Release and active work
 
+**Release authorized (2026-10-23): noise rules, summaries and pending image slider.** Imports
+preserve complete summary source; legacy automatic cleaning is now read-only.
+Reader, Share and Offline fold only a conservative opening, duration-terminated
+summary, without trusting historical block flags or hiding ordinary introductions.
+The summary noise rule defaults off only when no personal preference exists;
+saved enablement and pinned scans remain intact. Citation/footer boundaries,
+fuzzy anchors/deduplication, Markdown protection and literal-rule editing/trials
+are corrected. No historical text restoration, migration, offline/Dexie format
+change. The user subsequently authorized commit and deployment of the completed
+work, including the pending image slider below. Full exact-source CI must pass;
+wait 50 minutes after each dispatch before reading results, then independently
+verify the artifact, back up and deploy without production builds/config changes.
+No submission or production operation has occurred yet.
+See the [current cleanup contract](docs/system/CONTENT_CLEANUP_CONTRACT.md)
+and [release record](docs/execution/NOISE_SUMMARY_RELEASE_2026-10-23.md).
+
+**Local only (2026-10-23): magnetic image-scale slider.** The owner image control
+now opens a continuous 1–100% slider instead of the percentage list. Fast pointer
+movement attracts to 25/50/75/100%; slow dragging and keyboard retain exact 1%
+adjustment. Drag release commits once, with explicit preset buttons; cancelled
+gestures do not save. Original bytes, existing URLs and the bounded file-drop
+behavior are unchanged. Initially held without submission, it is now included in
+the authorized batch above; production remains `0f116fe` until new acceptance. See the
+[current behavior](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size).
+
 **Deployed and accepted (2026-10-23): compact image scale and bounded file drop.**
 The owner image-scale UI is now a lower-right floating 1–100% selector; original
 bytes, original-relative sizing and existing public-link semantics are unchanged.

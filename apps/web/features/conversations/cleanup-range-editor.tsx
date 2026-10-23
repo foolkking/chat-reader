@@ -12,7 +12,8 @@ import { candidateAfterText, candidateSelectionSource, fullCandidateRange, merge
 const sameRanges = (left: CleanupRemovalRange[], right: CleanupRemovalRange[]) =>
   left.length === right.length && left.every((range, index) => range.start_offset === right[index].start_offset && range.end_offset === right[index].end_offset);
 const editable = (item: CleanupOccurrenceRead) => Boolean(item.edit_token && !item.stale
-  && ["KEEP", "DELETE"].includes(item.decision) && !item.evidence_codes?.includes("PROTECTED_RANGE"));
+  && ["KEEP", "DELETE"].includes(item.decision) && (item.protection_confirmed
+    || (!item.protection_types?.length && !item.evidence_codes?.some(code => code === "PROTECTED_RANGE" || code === "UNCERTAIN_CONTEXT"))));
 
 export function CleanupRangeEditor({ scanId, item, onDone, onDirtyChange }: {
   scanId: string; item: CleanupOccurrenceRead;

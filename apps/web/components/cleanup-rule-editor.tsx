@@ -16,7 +16,7 @@ export function CleanupRuleEditor({ rule, initialText = "", initialRole = null, 
   const { confirm } = useInteractionDialog();
   const client = useQueryClient();
   const [initial] = useState<CleanupRuleConfiguration>(() => ({ name: rule?.name ?? "", match_value: rule?.match_value ?? initialText,
-    case_sensitive: rule?.case_sensitive ?? true, role_filter: rule?.role_filter ?? initialRole,
+    case_sensitive: rule?.case_sensitive ?? true, role_filter: rule ? rule.role_filter : initialRole,
     matcher_mode: (rule?.matcher_mode as CleanupRuleConfiguration["matcher_mode"]) ?? "EXACT",
     boundary_mode: (rule?.boundary_mode as CleanupRuleConfiguration["boundary_mode"]) ?? "ANYWHERE" }));
   const [draft, setDraft] = useState(initial);
@@ -82,9 +82,11 @@ export function CleanupRuleEditor({ rule, initialText = "", initialRole = null, 
   const locked = busy || needsCheck || unavailable;
   const fieldClass = "mt-1 min-h-11 w-full rounded-lg border border-ui bg-page px-3 py-2 text-sm text-primary";
   const update = <K extends keyof CleanupRuleConfiguration>(key: K, value: CleanupRuleConfiguration[K]) => { setDraft(previous => ({ ...previous, [key]: value })); trial.reset(); setNotice(false); };
+  const broadRule = draft.boundary_mode === "ANYWHERE" && !draft.role_filter;
+  const shortRule = draft.match_value.trim().length > 0 && draft.match_value.trim().length <= 3;
   return <section aria-label={zh ? "学习噪声规则" : "Learn noise rule"} className="space-y-4 rounded-lg border border-ui p-3 sm:p-4">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">{rule ? (zh ? `编辑规则 · 基础版本 ${baseRevision}` : `Edit rule · base revision ${baseRevision}`) : (zh ? "记住此类噪声" : "Remember this noise")}</h3><button type="button" disabled={busy} onClick={() => void cancel()} className="btn-secondary min-h-11 px-3 text-xs">{zh ? "取消" : "Cancel"}</button></div>
-    <p className="text-xs leading-5 text-secondary">{zh ? "先试运行，确认后保存为个人规则；后续扫描仍由你选择是否处理。" : "Test the rule, then confirm to save it for your account. You still choose what to remove in future scans."}</p>
+    <p className="text-xs leading-5 text-secondary">{zh ? "文本按字面匹配，不解释为正则。先试运行，确认后保存；后续扫描仍由你选择是否处理。" : "Text is literal, not a regular expression. Test before saving; you still choose what to remove in future scans."}</p>
     <fieldset disabled={locked} className="grid gap-3 sm:grid-cols-2">
       <label className="text-xs font-medium text-secondary">{zh ? "规则名称" : "Rule name"}<input autoFocus maxLength={200} className={fieldClass} value={draft.name} onChange={(event) => update("name", event.target.value)} /></label>
       <label className="text-xs font-medium text-secondary">{zh ? "匹配角色" : "Message role"}<select className={fieldClass} value={draft.role_filter ?? ""} onChange={(event) => update("role_filter", event.target.value || null)}><option value="">{zh ? "全部角色" : "All roles"}</option>{Object.keys(roles).map((role) => <option key={role} value={role}>{zh ? roles[role] : role}</option>)}</select></label>
@@ -93,6 +95,11 @@ export function CleanupRuleEditor({ rule, initialText = "", initialRole = null, 
       <label className="text-xs font-medium text-secondary">{zh ? "文本边界" : "Text boundary"}<select className={fieldClass} value={draft.boundary_mode} onChange={(event) => update("boundary_mode", event.target.value as CleanupRuleConfiguration["boundary_mode"])}><option value="ANYWHERE">{zh ? "任意位置" : "Anywhere"}</option><option value="WHOLE_LINE">{zh ? "独占一行" : "Whole line"}</option><option value="BLOCK_END">{zh ? "消息末尾" : "End of message"}</option></select></label>
       <label className="flex min-h-11 items-center gap-2 text-xs text-secondary"><input type="checkbox" checked={draft.case_sensitive} onChange={(event) => update("case_sensitive", event.target.checked)} />{zh ? "区分大小写" : "Case-sensitive"}</label>
     </fieldset>
+    {shortRule || broadRule ? <p role="note" className="rounded-md bg-[var(--callout-warning-bg)] px-3 py-2 text-xs leading-5 text-[var(--callout-warning-text)]">
+      {zh
+        ? shortRule && broadRule ? "文本较短且作用于全部角色的任意位置，可能命中普通正文；请先查看试运行上下文。" : shortRule ? "文本较短，可能命中普通正文；请先查看试运行上下文。" : "规则作用于全部角色的任意位置；请先查看试运行上下文。"
+        : shortRule && broadRule ? "This short text matches anywhere across all roles and may hit ordinary prose. Review the trial contexts first." : shortRule ? "This short text may hit ordinary prose. Review the trial contexts first." : "This rule matches anywhere across all roles. Review the trial contexts first."}
+    </p> : null}
     <div className="flex flex-wrap gap-2"><button ref={trialButtonRef} type="button" disabled={locked || !draft.name.trim() || !draft.match_value.trim()} onClick={() => { save.reset(); read.reset(); setNotice(false); trial.mutate(input); }} className="btn-secondary min-h-11 px-3 text-sm">{trial.isPending ? (zh ? "正在试运行…" : "Running trial…") : (zh ? "预览并试运行" : "Preview and test")}</button>{rule && !needsCheck ? <button type="button" disabled={busy} onClick={readCurrent} className="btn-secondary min-h-11 px-3 text-xs">{read.isPending ? (zh ? "正在读取…" : "Loading…") : (zh ? "比较服务器版本" : "Compare saved version")}</button> : null}</div>
     <div ref={feedbackRef} tabIndex={-1} className="space-y-3 outline-none">
       {failure ? <p role="alert" className="text-sm text-[var(--danger)]">{ruleError(failure, zh, read.isError ? "read" : save.isError ? "save" : "trial")}</p> : null}
@@ -109,8 +116,11 @@ export function CleanupRuleEditor({ rule, initialText = "", initialRole = null, 
     {trialMatchesDraft && trial.data ? <div ref={resultRef} className="space-y-3 border-t border-ui pt-3" aria-label={zh ? "规则试运行结果" : "Rule trial results"}>
       <p role="status" className="text-sm font-medium">{zh ? `试运行 ${trial.data.scanned_messages} 条消息 · ${trial.data.matches} 项命中 · ${trial.data.protected_matches} 项受保护` : `${trial.data.scanned_messages} messages tested · ${trial.data.matches} matches · ${trial.data.protected_matches} protected`}</p>
       <p className="text-xs leading-5 text-secondary">{zh ? `范围：${conversationId ? "当前对话" : "本人的活动对话"}。最多 ${trial.data.message_limit} 条、合计 ${trial.data.character_limit} 字符；单条超过 ${trial.data.message_character_limit} 字符会跳过。展示最多 10 项上下文。` : `Scope: ${conversationId ? "this conversation" : "your active conversations"}. Up to ${trial.data.message_limit} messages and ${trial.data.character_limit} characters; messages over ${trial.data.message_character_limit} characters are skipped. Up to 10 contexts shown.`}</p>
+      {(trial.data.suppressed_by_exception ?? 0) > 0 || (trial.data.covered_by_other_rule ?? 0) > 0 ? <p className="text-xs leading-5 text-secondary">
+        {zh ? `以上命中中：${trial.data.suppressed_by_exception ?? 0} 项被已保存例外抑制，${trial.data.covered_by_other_rule ?? 0} 项由其他规则覆盖；正式扫描不会重复列出。` : `Of the matches above, ${trial.data.suppressed_by_exception ?? 0} are suppressed by saved exceptions and ${trial.data.covered_by_other_rule ?? 0} are covered by another rule; full scans do not list them again.`}
+      </p> : null}
       {trial.data.limited ? <p className="text-xs text-[var(--warning)]">{zh ? `试运行范围受限，跳过 ${trial.data.skipped_messages} 条消息；保存后可从规则库发起完整后台扫描。` : `Limited trial; ${trial.data.skipped_messages} messages skipped. Start a full background scan from the rule library after saving.`}</p> : null}
-      {trial.data.samples.map((sample, index) => <p key={index} className="whitespace-pre-wrap break-words rounded-lg bg-subtle p-3 text-xs leading-5"><span className="text-secondary">{zh ? roles[sample.role] ?? sample.role : sample.role}{sample.protected ? (zh ? " · 保护区" : " · protected") : ""} · {sample.context_before}</span><mark className="bg-[var(--mark-bg)] text-[var(--mark-text)]">{sample.match_text}</mark><span className="text-secondary">{sample.context_after}</span></p>)}
+      {trial.data.samples.map((sample, index) => <p key={index} className="whitespace-pre-wrap break-words rounded-lg bg-subtle p-3 text-xs leading-5"><span className="text-secondary">{zh ? roles[sample.role] ?? sample.role : sample.role}{sample.protected ? (zh ? " · 需额外确认" : " · confirmation required") : ""}{sample.suppressed_by_exception ? (zh ? " · 已保存例外" : " · saved exception") : sample.covered_by_other_rule ? (zh ? " · 其他规则覆盖" : " · covered by another rule") : ""} · {sample.context_before}</span><mark className="bg-[var(--mark-bg)] text-[var(--mark-text)]">{sample.match_text}</mark><span className="text-secondary">{sample.context_after}</span></p>)}
       <button type="button" disabled={locked || save.isError} onClick={() => save.mutate(input)} className="btn-primary min-h-11 px-4 text-sm font-semibold">{save.isPending ? (zh ? "正在保存…" : "Saving…") : (zh ? "确认保存个人规则" : "Confirm personal rule")}</button>
     </div> : null}
   </section>;

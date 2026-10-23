@@ -316,7 +316,8 @@ export function CleanupReviewWorkspace({ scan, conversationId, onLocate, onAppli
           {page.isError ? <Retry error={page.error} onRetry={() => void page.refetch()} zh={zh} message={page.data ? (zh ? "候选刷新失败，下方是上次读取结果。重试可更新选择状态。" : "Candidates could not refresh. The previous list is shown below. Retry to update the selection state.") : undefined} /> : null}
           {page.data?.total === 0 ? <p className="py-5 text-sm text-secondary">{zh ? "当前筛选没有候选，正文保持不变。" : "No candidates in this filter. Content remains unchanged."}</p> : null}
           <div className="divide-y divide-[var(--border)]">{page.data?.items.map((item) => {
-            const protectedItem = item.decision === "PROTECTED" || item.evidence_codes?.includes("PROTECTED_RANGE");
+            const protectedItem = item.decision === "PROTECTED" || Boolean(item.protection_types?.length)
+              || item.evidence_codes?.some(code => code === "PROTECTED_RANGE" || code === "UNCERTAIN_CONTEXT");
             const actionable = !item.stale && (!protectedItem || item.protection_confirmed) && ["KEEP", "DELETE"].includes(item.decision);
             const disabled = listBusy || !actionable;
             return <CleanupCandidate key={item.id} item={item} zh={zh} reason={reason(item, zh)}

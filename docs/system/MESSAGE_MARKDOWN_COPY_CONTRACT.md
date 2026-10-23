@@ -105,9 +105,26 @@ operation, not automatic image rollback.
 
 ## Owner-selected image size
 
-An owner can open the compact percentage selector floating at the lower-right
-of an inline attachment image and choose a whole **1–100%**. The menu opens
-below its trigger; it does not add explanatory copy to the reading surface.
+An owner can open the compact percentage control floating at the lower-right
+of an inline attachment image and adjust a continuous, whole **1–100%** slider.
+The panel prefers the space below its trigger and clamps to the viewport at
+edges; it does not add explanatory copy to the reading surface. Four labelled,
+44px preset targets also select **25/50/75/100%** directly.
+
+Pointer attraction uses raw position/time, never the previous snapped value:
+fast movement (at least 0.12 percentage points/ms) captures within 4 points and
+releases beyond 6 points. Slow movement uses a half-point capture and 0.75-point
+release, preserving every integer and allowing escape from a stop without a
+modifier. The initial press captures within 2 points. A stationary release
+retains the last preview rather than removing its attraction after a pause.
+Keyboard arrows adjust by 1%, Page keys by 10%, Home/End select 1/100; keyboard
+values are not magnetized. Native assistive-technology changes remain supported.
+
+The displayed percentage previews locally while dragging; no intermediate
+derivatives or public URLs are written. Pointer release or keyboard key-up
+commits once through the existing owner API. A cancelled/lost-capture gesture
+or Escape discards the local draft. Save failure blocks changes until a fresh
+read confirms server state. The slider remains open after a successful save.
 The percentage is relative to the original, never the last resized result.
 Dimensions are rounded to the nearest pixel, with a one-pixel minimum. Raster
 EXIF orientation is applied before determining width/height. The original file,

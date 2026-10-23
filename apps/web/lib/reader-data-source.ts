@@ -12,6 +12,7 @@ import {
 import { readSyncedReadingPosition, saveLocalReadingPosition } from "./reading-position-sync";
 import { offlineDb, type OfflineMessageRecord } from "./offline-db";
 import { searchOffline } from "./offline-search";
+import { findOpeningThinkingSummary } from "../features/conversations/thinking-summary";
 import type {
   ConversationDetail,
   ConversationListItem,
@@ -227,7 +228,7 @@ export const offlineReaderDataSource: ReaderDataSource = {
       role_number: roleNumbers[offset + index],
       ordinal: offset + index + 1,
       order_key: message.order_key,
-      preview: previewText(message.content_preview ?? message.current_version?.display_text ?? message.current_version?.plain_text ?? ""),
+      preview: previewText(message.content_preview ?? message.current_version?.display_text ?? message.current_version?.plain_text ?? "", message.role),
       turn_index: message.turn_index ?? null,
     }));
     const conversation = await offlineDb.conversations.get(conversationId);
@@ -388,21 +389,18 @@ function offlineSearchMatch(text: string, start: number, end: number, blockIndex
 }
 
 const LEADING_TIMESTAMP_RE = /^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?\s*$/;
-const THINKING_DURATION_RE = /^(?:\u5df2?\s*\u601d\u8003(?:\u4e86)?|thinking|reasoning)\s*[:\uff1a]?\s*(?:\d+\s*(?:h|hr|hour|\u5c0f\u65f6)\s*)?(?:\d+\s*(?:m|min|\u5206\u949f|\u5206)\s*)?\d+\s*(?:s|sec|\u79d2)$/i;
 const MARKDOWN_FENCE_RE = /^\s*(?:`{3,}|~{3,})/;
 const MARKDOWN_BLOCK_PREFIX_RE = /^\s*(?:#{1,6}\s+|>+\s*|[-+*]\s+|\d+[.)]\s+)/;
 
-function previewText(value: string): string {
-  let lines = value.replace(/\r\n/g, "\n").split("\n");
+function previewText(value: string, role: string): string {
+  const summary = role === "assistant" ? findOpeningThinkingSummary(value) : null;
+  if (summary && value.slice(summary.endOffset).trim()) value = value.slice(summary.endOffset);
+  const lines = value.replace(/\r\n/g, "\n").split("\n");
   while (lines.length > 0 && !lines[0].trim()) lines.shift();
 
   const firstLine = lines[0]?.trim().replace(/^>+\s*/, "").trim();
   if (firstLine && LEADING_TIMESTAMP_RE.test(firstLine)) lines.shift();
 
-  const thinkingLineIndex = lines.slice(0, 40).findIndex((line) =>
-    THINKING_DURATION_RE.test(line.trim().replace(/^>+\s*/, "").trim()),
-  );
-  if (thinkingLineIndex >= 0) lines = lines.slice(thinkingLineIndex + 1);
 
   const plainLines: string[] = [];
   for (const line of lines) {

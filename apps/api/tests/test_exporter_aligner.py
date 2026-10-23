@@ -74,6 +74,24 @@ def test_json_markdown_exact_alignment_uses_markdown_as_display_authority() -> N
     assert result.conversation.alignment_status == "exact_match"
 
 
+@pytest.mark.parametrize("mode", ["json", "markdown", "combo"])
+def test_import_alignment_never_removes_thinking_or_ordinary_prefix(mode):
+    for source in (
+        "分析合成示例\nThinking 7s\n\nPreserved answer.",
+        "Ordinary introduction.\n\nThinking 7s\n\nPreserved answer.",
+    ):
+        json_result = parse_exporter_json(_json(messages=[
+            {"role": "Prompt", "say": "Can you help?", "time": "2026-07-01 10:00:00"},
+            {"role": "Response", "say": source, "time": "2026-07-01 10:01:00"},
+        ])) if mode != "markdown" else None
+        markdown_result = parse_exporter_markdown(_markdown().replace("Yes, I can.", source)) if mode != "json" else None
+        result = align_exporter_sources(json_result, markdown_result)
+        assert result.conversation is not None
+        assert result.conversation.cleaned_thinking_summary_count == 0
+        assert result.conversation.messages[1].display_text == source
+        assert result.conversation.messages[1].edit_type == "imported"
+
+
 def test_large_unique_pairing_is_linear_even_with_untimed_body_headings(monkeypatch: pytest.MonkeyPatch) -> None:
     body = "large-pair-body " * 65_536
     messages = []

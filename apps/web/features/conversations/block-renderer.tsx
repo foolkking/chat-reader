@@ -1,16 +1,13 @@
 import { memo } from "react";
 import type { RenderBlockRead } from "../../lib/types";
-import { InlineHeadingMarkdown, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownAttachmentOccurrence, type MarkdownTaskItem } from "./markdown-renderer";
+import { InlineHeadingMarkdown, MarkdownRenderer, stripLeadingTimestamp, type MarkdownAttachmentOccurrence, type MarkdownTaskItem } from "./markdown-renderer";
 import { AttachmentBlock, embeddedAttachment } from "../attachments/attachment-block";
 import { readChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
-
-const THINKING_LABEL = "\u601d\u8003\u8fc7\u7a0b";
 
 export const BlockRenderer = memo(function BlockRenderer({
   block,
   messageId,
   galleryItems,
-  isAssistant = true,
   taskItems,
   pendingTaskKeys,
   onTaskToggle,
@@ -49,9 +46,8 @@ export const BlockRenderer = memo(function BlockRenderer({
     return null;
   }
 
-  if (block.collapsed_by_default && block.block_type !== "heading" && block.block_type !== "code") {
-    return <ThinkingDisclosure label={THINKING_LABEL} text={text} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} richTextProfile={richTextProfile} />;
-  }
+  // Whole-message source detection owns folding. Historical block flags (also
+  // present in old offline packages) are not evidence that prose is a summary.
 
   if (block.block_type === "heading") {
     const level = normalizeHeadingLevel(block.data.level);
@@ -77,7 +73,7 @@ export const BlockRenderer = memo(function BlockRenderer({
     return <MarkdownRenderer text={`\`\`\`${language ?? ""}\n${code}\n\`\`\``} isAssistant={false} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} />;
   }
 
-  return <MarkdownRenderer text={text} isAssistant={isAssistant} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} richTextProfile={richTextProfile} />;
+  return <MarkdownRenderer text={text} isAssistant={false} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} attachmentOccurrences={readAttachmentOccurrences(block.data.attachmentOccurrences)} scopeId={`${messageId ?? "message"}-${block.id ?? block.block_index}`} richTextProfile={richTextProfile} />;
 }, (previous, next) => previous.block === next.block
   && previous.messageId === next.messageId
   && previous.galleryItems === next.galleryItems

@@ -63,7 +63,7 @@ def test_empty_text_returns_no_blocks() -> None:
 
 
 def test_thinking_summary_paragraph_is_collapsed_by_default() -> None:
-    blocks = build_basic_render_blocks("> 已思考 9s\n> checking approach")
+    blocks = build_basic_render_blocks("> checking approach\n> 已思考 9s")
 
     assert len(blocks) == 1
     assert blocks[0].block_type == "paragraph"
@@ -71,10 +71,21 @@ def test_thinking_summary_paragraph_is_collapsed_by_default() -> None:
 
 
 def test_english_thinking_marker_is_collapsed_by_default() -> None:
-    blocks = build_basic_render_blocks("Reasoning:\nchecking approach")
+    blocks = build_basic_render_blocks("> checking approach\nReasoning: 9s")
 
     assert len(blocks) == 1
     assert blocks[0].collapsed_by_default is True
+
+
+def test_bare_label_and_body_marker_do_not_collapse_prose():
+    for source in ("Reasoning:\nchecking approach", "Keep introduction.\n\nThinking 5s\n\nAnswer."):
+        assert not any(block.collapsed_by_default for block in build_basic_render_blocks(source))
+
+
+def test_same_paragraph_answer_is_not_hidden_by_block_metadata():
+    blocks = build_basic_render_blocks("分析合成示例\nThinking 5s\nKeep the answer.")
+    assert len(blocks) == 1
+    assert not blocks[0].collapsed_by_default
 
 
 def test_plain_paragraph_is_not_collapsed_by_default() -> None:

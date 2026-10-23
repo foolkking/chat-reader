@@ -117,8 +117,10 @@ export type CleanupRuleConfiguration = {
 export type CleanupRuleTrialInput = CleanupRuleConfiguration & { rule_id?: string; base_revision?: number; base_revision_id?: string; base_edit_token?: string; conversation_id?: string };
 export type CleanupRuleTrial = {
   configuration: CleanupRuleConfiguration; scanned_messages: number; matches: number; protected_matches: number;
+  suppressed_by_exception?: number; covered_by_other_rule?: number;
   skipped_messages: number; limited: boolean; message_limit: number; character_limit: number; message_character_limit: number;
-  samples: { role: string; match_text: string; context_before: string; context_after: string; protected: boolean }[];
+  samples: { role: string; match_text: string; context_before: string; context_after: string; protected: boolean;
+    suppressed_by_exception?: boolean; covered_by_other_rule?: boolean }[];
   preview_token: string;
 };
 export type CleanupException = {

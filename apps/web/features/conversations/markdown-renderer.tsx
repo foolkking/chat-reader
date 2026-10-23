@@ -20,6 +20,7 @@ import {
 } from "../rich-markdown/rich-markdown-config";
 import { normalizeDisplayMathForRenderer } from "../rich-markdown/remark-ai-math-compatibility";
 import { MarkdownTableCell, MarkdownTableContent, MarkdownTableScroll } from "./markdown-table";
+import { findOpeningThinkingSummary } from "./thinking-summary";
 import {
   detectChatGptRichText,
   projectChatGptRichText,
@@ -117,30 +118,10 @@ export type CanonicalMessagePart =
   | CanonicalFilePart
   | CanonicalImagePart;
 
-const THINKING_LABEL = "思考过程";
 const LEADING_TIMESTAMP_RE =
   /^\s*(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[ T]\d{1,2}:\d{2}(?::\d{2})?)\s*$/;
 const LEADING_TIMESTAMP_PREFIX_RE =
   /^\s*(?:\d{4}[/-]\d{1,2}[/-]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}[ T]\d{1,2}:\d{2}(?::\d{2})?)\s+/;
-const THINKING_DURATION_RE =
-  /^(?:(?:已\s*)?思考(?:了)?|thinking|reasoning)\s*[:：]?\s*((?:\d+\s*(?:h|hr|hour|小时)\s*)?(?:\d+\s*(?:m|min|分钟|分)\s*)?\d+\s*(?:s|sec|秒))$/i;
-const THINKING_LABEL_RE = /^(?:思考|思考过程|thinking|reasoning)\s*[:：]?\s*$/i;
-const ANSWER_START_RE = /^(?:#{1,6}\s+\S+|(?:答案|回答|结论|最终回答|正式回答|final answer|answer)\s*[:：])/i;
-const MAX_THINKING_SCAN_LINES = 40;
-const MAX_THINKING_SCAN_CHARS = 8000;
-
-const TRACE_PREFIXES = [
-  "考虑",
-  "分析",
-  "整理",
-  "搜索",
-  "检索",
-  "浏览",
-  "查找",
-  "提炼",
-  "规划",
-  "总结",
-];
 
 type PositionedMarkdownNode = {
   position?: {
@@ -494,13 +475,13 @@ export function markdownHeadingLabel(markdown: string): string {
     .trim();
 }
 
-export function ThinkingDisclosure({ label, text, attachmentOccurrences = [], richTextProfile }: { label: string; text: string; attachmentOccurrences?: MarkdownAttachmentOccurrence[]; richTextProfile?: ChatGptRichTextProfile }) {
+export function ThinkingDisclosure({ label, text, attachmentOccurrences = [], richTextProfile, children }: { label: string; text: string; attachmentOccurrences?: MarkdownAttachmentOccurrence[]; richTextProfile?: ChatGptRichTextProfile; children?: ReactNode }) {
   return (
     <details className="reader-thinking rounded-xl border border-ui bg-[var(--reasoning-bg)] px-4 py-3 text-[var(--quote-text)]">
       <summary className="min-h-8 cursor-pointer select-none text-sm font-medium text-primary">
         {label}
       </summary>
-      {text.trim() ? <AssistantMarkdownPart text={text} className="reader-thinking-content text-[0.875em]" attachmentOccurrences={attachmentOccurrences} richTextProfile={richTextProfile} /> : null}
+      {children ?? (text.trim() ? <AssistantMarkdownPart text={text} className="reader-thinking-content text-[0.875em]" attachmentOccurrences={attachmentOccurrences} richTextProfile={richTextProfile} /> : null)}
     </details>
   );
 }
@@ -1145,76 +1126,16 @@ function AttachmentPart({ name, detail, url }: { name: string; detail?: string; 
 }
 
 function splitThinkingSegments(text: string): MarkdownSegment[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const opening = findOpeningThinking(lines);
+  const opening = findOpeningThinkingSummary(text);
   if (opening) {
-    const thinkingText = lines.slice(0, opening.index + 1).join("\n").trim();
-    const answerText = lines.slice(opening.index + 1).join("\n").trim();
+    const thinkingText = text.slice(0, opening.endOffset);
+    const answerText = text.slice(opening.endOffset);
     return [
-      { kind: "thinking", label: thinkingLabel(opening.duration), text: thinkingText },
+      { kind: "thinking", label: opening.label, text: thinkingText },
       ...(answerText ? [{ kind: "markdown" as const, text: answerText }] : []),
     ];
   }
   return text.trim() ? [{ kind: "markdown", text }] : [];
-}
-
-function findOpeningThinking(lines: string[]): { index: number; duration: string | null } | null {
-  let scannedChars = 0;
-  for (let index = 0; index < Math.min(lines.length, MAX_THINKING_SCAN_LINES); index += 1) {
-    const raw = lines[index] ?? "";
-    const normalized = stripQuote(raw).trim();
-    scannedChars += normalized.length;
-    if (scannedChars > MAX_THINKING_SCAN_CHARS) {
-      return null;
-    }
-    if (!normalized) {
-      continue;
-    }
-    if (ANSWER_START_RE.test(normalized)) {
-      return null;
-    }
-    const duration = normalized.match(THINKING_DURATION_RE);
-    if (duration && prefixLooksLikeThinkingTrace(lines.slice(0, index))) {
-      return { index, duration: duration[1] ?? null };
-    }
-    if (!lineLooksLikeThinkingTrace(raw, normalized)) {
-      return null;
-    }
-  }
-  return null;
-}
-
-function prefixLooksLikeThinkingTrace(lines: string[]): boolean {
-  const meaningful = lines
-    .map((line) => ({ raw: line.trim(), normalized: stripQuote(line).trim() }))
-    .filter((line) => line.normalized.length > 0);
-  if (meaningful.length === 0) {
-    return true;
-  }
-  return meaningful.every((line) => lineLooksLikeThinkingTrace(line.raw, line.normalized));
-}
-
-function lineLooksLikeThinkingTrace(raw: string, normalized: string): boolean {
-  if (LEADING_TIMESTAMP_RE.test(normalized) || THINKING_LABEL_RE.test(normalized)) {
-    return true;
-  }
-  if (raw.trim().startsWith(">") && normalized.length <= 180) {
-    return true;
-  }
-  if (TRACE_PREFIXES.some((prefix) => normalized.startsWith(prefix)) && normalized.length <= 120) {
-    return true;
-  }
-  if (normalized.startsWith("[") || normalized.startsWith("- ") || normalized.startsWith("* ") || /^\d+[.)]\s+/.test(normalized)) {
-    return true;
-  }
-  if (normalized.includes("http://") || normalized.includes("https://") || normalized.includes("](")) {
-    return true;
-  }
-  return false;
-}
-
-function thinkingLabel(duration: string | null): string {
-  return duration ? `${THINKING_LABEL} · ${duration.replace(/\s+/g, " ")}` : THINKING_LABEL;
 }
 
 function stripQuote(line: string): string {
