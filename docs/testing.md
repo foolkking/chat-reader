@@ -67,7 +67,11 @@ sustained-load acceptance is implied.
   `node scripts/ux/image-scale-slider-browser.mjs` mounts the actual owner
   control/slider/query cache/CSS at 1440/375px in light/dark mode: mouse/touch
   commit/cancel, pause-at-stop, slow and keyboard escape, one write per release,
-  unknown-write read recovery, 44px presets and edge clamping. API persistence
+  unknown-write read recovery, 44px presets, translated-containing-block
+  placement, sticky-rail avoidance and edge clamping.
+  `image-display-position.test.mjs` adds five pure geometry checks.
+  The first-CI repair rerun has **1,565 service-free checks**, **4 actual-control
+  browser combinations**, and **2 API import checks** passing. API persistence
   and surrounding Reader/image layout are explicit adapters. This is local
   component integration, not API-backed Reader/Share or production acceptance.
 - `E2E_IMPORT_FLOW=1` verifies ordinary workspace drops do not import, the

@@ -107,8 +107,10 @@ operation, not automatic image rollback.
 
 An owner can open the compact percentage control floating at the lower-right
 of an inline attachment image and adjust a continuous, whole **1–100%** slider.
-The panel prefers the space below its trigger and clamps to the viewport at
-edges; it does not add explanatory copy to the reading surface. Four labelled,
+The panel prefers the space below its trigger, clamps to the viewport at
+edges and avoids visible sticky Reader rails. Placement accounts for the
+translated content column's fixed containing block; it does not add explanatory
+copy to the reading surface. Four labelled,
 44px preset targets also select **25/50/75/100%** directly.
 
 Pointer attraction uses raw position/time, never the previous snapped value:

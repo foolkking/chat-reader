@@ -16,7 +16,12 @@ change. The user subsequently authorized commit and deployment of the completed
 work, including the pending image slider below. Full exact-source CI must pass;
 wait 50 minutes after each dispatch before reading results, then independently
 verify the artifact, back up and deploy without production builds/config changes.
-No submission or production operation has occurred yet.
+Initial source `c08953b` was submitted; full CI `39949370623` failed and
+produced no deployable artifact. Its stale import assertion and desktop image
+menu occlusion are repaired for a fresh full run. Production still serves
+`0f116fe`. The user separately authorized deleting old release transfer
+archives: 18 removed, recent/current/rollback archives retained; no backups,
+images, user data or configuration were removed.
 See the [current cleanup contract](docs/system/CONTENT_CLEANUP_CONTRACT.md)
 and [release record](docs/execution/NOISE_SUMMARY_RELEASE_2026-10-23.md).
 

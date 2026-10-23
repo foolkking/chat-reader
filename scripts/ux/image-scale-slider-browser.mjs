@@ -35,7 +35,9 @@ import {ImageDisplayControls} from ${JSON.stringify(path(join(web, "features/att
 window.reads=0;window.writes=[];window.display={source_sha256:"f".repeat(64),scale_percent:100,original_width:400,original_height:240,width:400,height:240,configured:true};
 const attachment={id:"11111111-1111-4111-8111-111111111111",metadata:{},asset_object:{sha256:"f".repeat(64),detected_mime_type:"image/png"}};
 createRoot(document.getElementById("root")).render(<QueryClientProvider client={new QueryClient()}>
- <main style={{padding:24}}><figure style={{position:"relative",width:76,height:180,margin:0,background:"var(--subtle)",border:"1px solid var(--border)"}}>
+ <style>{".synthetic-reader-toc{display:block!important}@media(max-width:639px){.synthetic-reader-toc{display:none!important}}"}</style>
+ <aside className="reader-toc-column synthetic-reader-toc" style={{position:"fixed",right:0,top:0,bottom:0,width:240,zIndex:20,background:"var(--surface)"}}>Synthetic sticky section contents</aside>
+ <main style={{padding:24,boxSizing:"border-box",width:"calc(100% - 24px)",transform:"translate(12px, 16px)"}}><figure style={{position:"relative",width:76,height:180,margin:"0 0 0 auto",background:"var(--subtle)",border:"1px solid var(--border)"}}>
  <ImageDisplayControls attachment={attachment} zh={window.zh??false}/></figure><button style={{marginTop:180}}>Outside</button></main>
 </QueryClientProvider>);`);
 const webpack = require("next/dist/compiled/webpack/webpack").webpack;
@@ -77,11 +79,18 @@ try {
     const trigger = page.getByRole("button", { name: /Image display scale:|图片展示比例：/ });
     const slider = page.getByRole("slider");
     const preset = percent => page.getByRole("button", { name: `${percent}%`, exact: true });
+    // Keep the trigger exposed but put the wider menu in the sticky rail's
+    // default footprint. The real Reader CI trace reproduced this occlusion.
+    if (width >= 640) await page.locator(".synthetic-reader-toc").evaluate(node => node.style.top = "208px");
     await trigger.click();
     await expect(slider).toHaveValue("100");
     const panel = await page.locator(".image-display-menu").boundingBox();
     const anchor = await trigger.boundingBox();
     assert.ok(panel.x >= 16 && panel.x + panel.width <= width - 16 && panel.y >= anchor.y + anchor.height);
+    if (width >= 640) {
+      const rail = await page.locator(".synthetic-reader-toc").boundingBox();
+      assert.ok(panel.x + panel.width <= rail.x, "sticky TOC must not intercept menu clicks");
+    }
     for (const percent of [25, 50, 75, 100]) {
       const box = await preset(percent).boundingBox();
       assert.ok(box.width >= 44 && box.height >= 44);
@@ -155,12 +164,13 @@ try {
     assert.deepEqual(errors, []);
     await page.screenshot({ path: join(out, `${width}-${theme}.png`) });
     await trigger.click();
+    await page.locator(".synthetic-reader-toc").evaluate(node => node.remove());
     await page.locator("figure").evaluate(node => node.style.marginTop = "540px");
     await trigger.click();
     await expect(slider).toBeEnabled();
     const edge = await page.locator(".image-display-menu").boundingBox();
     assert.ok(edge.y >= 16 && edge.y + edge.height <= 784, "bottom-edge controls must remain reachable");
-    results.push({ width, theme, status: "passed", checks: ["downward/clamped panel", "44px stops", "preset persistence", "1% keyboard", "fast magnet", "one write on release", "slow escape", "Escape cancellation", "read-only unknown-write recovery", "trusted touch commit/cancel", "100% restore", "no overflow/errors", "bottom-edge visibility"] });
+    results.push({ width, theme, status: "passed", checks: ["downward/clamped panel", "translated containing block", "sticky rail avoidance", "44px stops", "preset persistence", "1% keyboard", "fast magnet", "one write on release", "slow escape", "Escape cancellation", "read-only unknown-write recovery", "trusted touch commit/cancel", "100% restore", "no overflow/errors", "bottom-edge visibility"] });
     await page.close();
   }
   writeFileSync(join(out, "result.json"), JSON.stringify({ status: "passed", results, adapters: ["API persistence", "surrounding image/Reader"] }, null, 2));

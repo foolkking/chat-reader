@@ -52,7 +52,9 @@ def test_exporter_json_import_can_be_committed_and_read(client: TestClient) -> N
     assert messages.status_code == 200
     message_payload = messages.json()
     assert len(message_payload) == 2
-    assert message_payload[1]["current_version"]["display_text"].startswith("当然可以。")
+    # Canonical import source is preserved. Reader/Share/Offline apply the
+    # conservative display-only folding projection instead of deleting it.
+    assert message_payload[1]["current_version"]["display_text"].startswith("思考了 13s\n当然可以。")
     assert any(block["block_type"] == "heading" for block in message_payload[1]["render_blocks"])
 
     blocks = client.get(f"/api/messages/{message_payload[1]['id']}/blocks")

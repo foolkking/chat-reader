@@ -52,7 +52,36 @@ is claimed.
 
 ## Release procedure and current state
 
-Not yet submitted or deployed. Exclude and preserve the pre-existing generated
+Initial source `c08953b806351766343ba15e43b7923199e8c44b` was submitted.
+Full workflow `39949370623` attempt 1 was dispatched at
+**2026-10-23 11:54:09 UTC** and first read at **12:44:32 UTC**, after its
+50-minute gate. Settings passed; API/Web failed; image build/inspection skipped.
+No artifact was deployed.
+
+- API: one historical import test still expected destructive summary deletion.
+  It now checks the preserved canonical opening. Its module rerun: **2 passed**.
+- Web: the 1440px real Markdown-copy case could not click the 100% preset;
+  the sticky section TOC intercepted pointer events. Viewport-only placement
+  also double-counted the translated content column's fixed containing-block
+  origin. Placement now converts that origin and avoids visible sticky rails.
+  The first local geometry-only repair still failed the actual Reader, which
+  exposed the containing-block issue; it was not treated as passing evidence.
+  Pure placement/snap checks: **14 passed**. Actual-control Chrome fixtures,
+  now including a translated ancestor and sticky TOC: **4 passed**.
+  All service-free UX tests: **1,565 passed**. Final real production-build
+  Reader/Share/cached-Offline/rule-edit/Markdown-copy rerun: **5 passed** at
+  1440/375px, including the once-occluded 100% preset. Lint, typecheck and
+  production build pass; no timeout increase, forced click or weakened gate.
+
+The user separately authorized old-copy deletion after the read-only capacity
+check. Only 18 older `releases/<sha>/chat-reader-images.tar.gz` transfer archives
+were removed, freeing **3,563,187,653 bytes (~3.32 GiB)**. The latest three,
+including current and rollback, remain. No backups, Docker images, volumes,
+imports, configuration or release verification records were deleted.
+Production services remained healthy at `0f116fe`, schema 0053, admission idle.
+
+The corrected source needs a new complete CI and a fresh 50-minute wait.
+Exclude and preserve the pre-existing generated
 `apps/web/tsconfig.tsbuildinfo`. Use the complete `Build release images`
 workflow, including the existing cleanup gate now explicitly enabling the new
 thinking-summary suite.

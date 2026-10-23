@@ -7,7 +7,8 @@
 和旧扫描快照；同时修正匹配边界、近似去重、保护确认、规则编辑及试运行说明。
 不自动恢复历史正文，不改 migration／离线包／Dexie。用户随后授权将本轮
 与待提交图片滑杆一起提交部署；每次 CI 触发后等满 50 分钟再读结果，全部门禁
-和精确制品通过后备份、无构建替换、验收。尚未提交或操作生产，进度见
+和精确制品通过后备份、无构建替换、验收。首轮 CI 失败后的旧断言和桌面菜单
+遮挡已窄修，准备完整重跑；尚未替换生产应用，进度见
 [发布记录](execution/NOISE_SUMMARY_RELEASE_2026-10-23.md)。
 详见[当前合同](system/CONTENT_CLEANUP_CONTRACT.md)与
 [验证范围](testing.md#noise-rules-and-thinking-summaries--2026-10-23-local-only)。

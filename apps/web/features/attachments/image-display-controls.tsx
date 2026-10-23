@@ -9,6 +9,7 @@ import { authenticationGeneration, AUTH_GENERATION_CHANGED_EVENT } from "../../l
 import { rasterizeCopySvg } from "../conversations/message-markdown-copy-prepare";
 import { useAttachmentAccess } from "./attachment-access";
 import { ImageScaleSlider } from "./image-scale-slider";
+import { imageDisplayMenuPosition } from "./image-display-position";
 
 export function storedImageDisplay(attachment: AttachmentRead): ImageDisplayRead | undefined {
   const value = attachment.metadata?.image_display_v1 as ImageDisplayRead | undefined;
@@ -75,10 +76,19 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
     const place = () => {
       if (!trigger.current || !panel.current) return;
       const anchor = trigger.current.getBoundingClientRect();
-      const { width, height } = panel.current.getBoundingClientRect();
+      const menu = panel.current.getBoundingClientRect();
+      const { width, height } = menu;
+      const rails = Array.from(document.querySelectorAll<HTMLElement>(".reader-toc-column, .reader-index-column"))
+        .filter(node => getComputedStyle(node).visibility !== "hidden")
+        .map(node => node.getBoundingClientRect());
+      const desired = imageDisplayMenuPosition(anchor, { width, height },
+        { width: window.innerWidth, height: window.innerHeight }, rails);
+      // Reader's translated content column establishes a fixed containing
+      // block. Convert viewport placement to its actual CSS origin; otherwise
+      // that column's offset is applied twice and the TOC can cover the menu.
       setPosition({
-        left: Math.max(16, Math.min(anchor.right - width, window.innerWidth - width - 16)),
-        top: Math.max(16, Math.min(anchor.bottom + 4, window.innerHeight - height - 16)),
+        left: desired.left - (menu.left - (parseFloat(panel.current.style.left) || 0)),
+        top: desired.top - (menu.top - (parseFloat(panel.current.style.top) || 0)),
       });
     };
     place();

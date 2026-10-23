@@ -13,13 +13,17 @@ image slider. `execution/NOISE_SUMMARY_RELEASE_2026-10-23.md` owns the release
 progress and exact-source/wait/artifact/backup boundaries; `deployment.md` links
 that record. No migration, offline package/Dexie change or historical restoration.
 The existing cleanup CI gate now explicitly runs the new summary browser suite.
+Its first submitted CI failure and desktop translated-menu/TOC repair are in
+the release record; `testing.md` and the image-size contract cover the added
+geometry gate. Old transfer-archive cleanup was separately user-authorized;
+it is not backup/image/data retention policy.
 
 ## Magnetic image-scale slider — 2026-10-23 (local only)
 
 `system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size` now owns the
 continuous slider, velocity-sensitive 25/50/75/100% attraction, exact keyboard/
 slow adjustment and one-save-per-release/cancel behavior. `PROJECT_STATE.md`
-and `index.md` distinguish this uncommitted batch from production `0f116fe`.
+and `index.md` distinguish this submitted batch from production `0f116fe`.
 `testing.md` links the pure snap tests and actual-control browser fixture, whose
 API/persistence and surrounding Reader/image are explicit adapters. No API,
 schema, offline, dependency or deployment boundary change; the user prohibits
