@@ -9,9 +9,14 @@
   animation/bounds rejection, owner/auth checks, concurrency admission, and
   missing-derivative fail-closed/repair.
 - Existing `E2E_MESSAGE_MARKDOWN_COPY=1` real Next/API/disposable-PostgreSQL
-  tests now exercise inline controls at 1440/375px, unchanged public URL,
-  persisted width after reload, Restore 100%, original bytes, no page overflow,
-  and Share editing-control absence. Clipboard is still an explicit adapter.
+  tests now exercise the lower-right 1–100% selector at 1440/375px, unchanged
+  public URL, persisted width after reload, selecting 100%, original bytes, no
+  page overflow, and Share editing-control absence. Clipboard is still an
+  explicit adapter.
+- `E2E_IMPORT_FLOW=1` verifies ordinary workspace drops do not import, the
+  dimmed/blurred overlay exposes the explicit central target, and central/sidebar
+  targets retain destination capture. `E2E_ATTACHMENT_UPLOAD=1` verifies source
+  editor file drops still create attachment drafts without opening Import.
 - Run attachment bundle/integrity/range/upload/storage and offline regressions,
   Reader/Share copy, service-free UX tests, Viewer modal and table browser gates,
   lint, nonincremental typecheck and bounded production build.

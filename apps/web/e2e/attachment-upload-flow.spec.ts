@@ -284,6 +284,8 @@ test("drops and pastes files at the source cursor with independent upload drafts
     });
     const droppedDraft = page.getByTestId("source-editor-attachment-drafts").getByText("dropped.txt").first();
     await expect(droppedDraft).toBeVisible();
+    await expect(page.getByRole("dialog", { name: /Import data|导入数据/ })).toHaveCount(0);
+    await expect(page.getByTestId("workspace-file-drop-overlay")).toHaveCount(0);
     await expect(page.getByTestId("source-editor-attachment-drafts").getByText(/附件 · 1 个.*已准备保存|Attachments · 1.*Ready to save/)).toBeVisible();
 
     await page.evaluate(() => {

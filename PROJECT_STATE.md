@@ -4,6 +4,16 @@ Last updated: 2026-10-23. This is the current snapshot, not a release history.
 
 ## Release and active work
 
+**Current local work (2026-10-23): compact image scale and bounded file drop.**
+The owner image-scale UI is now a lower-right floating 1–100% selector; original
+bytes, original-relative sizing and existing public-link semantics are unchanged.
+Workspace file drag now shows a dimmed/blurred surface with explicit central and
+sidebar Import targets. Ordinary page drops no longer import, while the Markdown
+source editor retains attachment-at-cursor uploads and Context continuation keeps
+its local update target. No migration, API, offline package or Dexie change. Web
+lint, typecheck and production build pass locally; this work is not yet committed,
+pushed, run through CI or deployed.
+
 **Deployed and accepted (2026-10-23): original-relative image scale.** Owner inline images
 have a 1–100% control, original/target dimensions and Restore 100%. Original bytes
 are retained; the same attachment and previously published URL follow the saved

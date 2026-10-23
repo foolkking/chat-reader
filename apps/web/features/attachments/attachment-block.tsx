@@ -155,7 +155,8 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
       data-attachment-mode="media"
       data-display-mode={displayMode}
     >
-      <button type="button" onClick={onOpen} disabled={!onOpen} className="attachment-gallery-trigger" aria-label={`${zh ? "查看" : "View"} ${attachment.display_name}`}>
+      <div className="attachment-gallery-media">
+        <button type="button" onClick={onOpen} disabled={!onOpen} className="attachment-gallery-trigger" aria-label={`${zh ? "查看" : "View"} ${attachment.display_name}`}>
         <img
           src={attachment.content_url ?? undefined}
           alt={props.alt || attachment.display_name}
@@ -174,9 +175,10 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
           <span className="truncate">{attachment.display_name}</span>
           <span>{zh ? "查看" : "View"}</span>
         </span>
-      </button>
+        </button>
+        <ImageDisplayControls attachment={attachment} zh={zh} />
+      </div>
       {visibleCaption ? <figcaption className="attachment-gallery-caption">{visibleCaption}</figcaption> : null}
-      <ImageDisplayControls attachment={attachment} zh={zh} />
     </figure>
   );
 }

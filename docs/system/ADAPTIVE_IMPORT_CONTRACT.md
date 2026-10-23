@@ -118,13 +118,18 @@ the analyzer identifies as unsafe; this fallback never invents message splits.
 The generated conversation title uses the first Markdown H1 when available,
 otherwise the existing filename fallback.
 
-Dropping files on an owner Reader page opens the existing import dialog with
-those files preselected. The page route supplies the destination snapshot:
+Dragging files over an owner workspace dims and lightly blurs non-target
+content, while a dedicated central import target and the sidebar Import button
+remain available. Only dropping on either explicit target opens the existing
+import dialog with those files preselected; dropping on ordinary page content
+does not import. The page route supplies the destination snapshot:
 the all-conversations surface defaults to unclassified, a project page uses
 that project, and a Reader opened with project context retains that project.
 Dropping directly on the sidebar Import button follows the same destination
-rule. The import dialog shows an active-project/unclassified selector; the
-selection is sent with initial upload and, for an existing adaptive session,
+rule. Local drop owners are not intercepted: the Markdown source editor keeps
+its attachment-at-cursor behavior, and Context continuation targets keep their
+own update behavior. The import dialog shows an active-project/unclassified
+selector; the selection is sent with initial upload and, for an existing adaptive session,
 saved through its destination endpoint before commit. Ownership and archived
 project checks are enforced on the server. A selected destination is immutable
 once canonical commit has started. Existing `.cr` routing remains the archive

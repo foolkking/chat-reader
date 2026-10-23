@@ -9,7 +9,7 @@ export function ContinuationDropTarget({ children, member, zh, disabled, onFiles
   const depth = useRef(0);
   const [dragging, setDragging] = useState(false);
   const filename = member === "current" ? "current.md" : "index.json";
-  return <div data-testid="continuation-drop-target" className="relative min-h-[50vh] min-w-0"
+  return <div data-testid="continuation-drop-target" data-local-file-drop-target="true" className="relative min-h-[50vh] min-w-0"
     onDragEnter={event => {
       if (!event.dataTransfer.types.includes("Files")) return;
       event.preventDefault(); depth.current += 1;

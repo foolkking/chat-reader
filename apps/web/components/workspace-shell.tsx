@@ -25,9 +25,8 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
   const { openImportDialog } = useImportDialog();
   const t = useTranslations();
   const [fileDropActive, setFileDropActive] = useState(false);
-  const [dropOverImportButton, setDropOverImportButton] = useState(false);
+  const [dropOverImportTarget, setDropOverImportTarget] = useState(false);
   const [readerProjectContext, setReaderProjectContext] = useState<{ conversationId: string; projectId: string | null } | null>(null);
-  const fileDragDepth = useRef(0);
   const routeProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
   const projectId = routeProjectId ?? searchParams?.get("projectId") ?? searchParams?.get("project_id") ?? undefined;
   const routeConversationId = pathname.match(/^\/conversations\/([^/]+)/)?.[1];
@@ -41,42 +40,54 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
     Array.from(event.dataTransfer.types).includes("Files");
   const isInsideDialog = (event: DragEvent<HTMLElement>) =>
     event.target instanceof Element && Boolean(event.target.closest('[role="dialog"]'));
+  const isLocalFileDrop = (event: DragEvent<HTMLElement>) =>
+    event.target instanceof Element && Boolean(event.target.closest('[data-local-file-drop-target="true"]'));
   const setDropTarget = (event: DragEvent<HTMLElement>) => {
-    setDropOverImportButton(
-      event.target instanceof Element && Boolean(event.target.closest('[data-testid="sidebar-import-button"]')),
+    setDropOverImportTarget(
+      event.target instanceof Element && Boolean(event.target.closest('[data-workspace-import-drop-target="true"]')),
     );
   };
   const handleFileDragEnter = (event: DragEvent<HTMLElement>) => {
     if (!hasDroppedFiles(event) || isInsideDialog(event)) return;
+    if (isLocalFileDrop(event)) {
+      setFileDropActive(false);
+      setDropOverImportTarget(false);
+      return;
+    }
     event.preventDefault();
-    fileDragDepth.current += 1;
     setFileDropActive(true);
     setDropTarget(event);
   };
   const handleFileDragOver = (event: DragEvent<HTMLElement>) => {
     if (!hasDroppedFiles(event) || isInsideDialog(event)) return;
+    if (isLocalFileDrop(event)) {
+      setFileDropActive(false);
+      setDropOverImportTarget(false);
+      return;
+    }
     event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
     setDropTarget(event);
+    event.dataTransfer.dropEffect = event.target instanceof Element
+      && event.target.closest('[data-workspace-import-drop-target="true"]') ? "copy" : "none";
   };
   const handleFileDragLeave = (event: DragEvent<HTMLElement>) => {
     if (!hasDroppedFiles(event) || isInsideDialog(event)) return;
     if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
-    fileDragDepth.current = 0;
     setFileDropActive(false);
-    setDropOverImportButton(false);
+    setDropOverImportTarget(false);
   };
   const handleFileDrop = (event: DragEvent<HTMLElement>) => {
-    if (!hasDroppedFiles(event) || isInsideDialog(event)) {
-      fileDragDepth.current = 0;
+    if (!hasDroppedFiles(event) || isInsideDialog(event) || isLocalFileDrop(event)) {
       setFileDropActive(false);
-      setDropOverImportButton(false);
+      setDropOverImportTarget(false);
       return;
     }
     event.preventDefault();
-    fileDragDepth.current = 0;
     setFileDropActive(false);
-    setDropOverImportButton(false);
+    setDropOverImportTarget(false);
+    const acceptsImport = event.target instanceof Element
+      && Boolean(event.target.closest('[data-workspace-import-drop-target="true"]'));
+    if (!acceptsImport) return;
     const files = Array.from(event.dataTransfer.files);
     if (!files.length) return;
     const archive = files.length === 1 && /\.cr$/i.test(files[0]?.name ?? "");
@@ -115,6 +126,7 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
     <WorkspaceShellContext.Provider value={value}>
       <main
         className="relative flex h-screen w-screen overflow-hidden bg-page text-primary"
+        data-file-drag-active={fileDropActive ? "true" : undefined}
         onDragEnter={handleFileDragEnter}
         onDragOver={handleFileDragOver}
         onDragLeave={handleFileDragLeave}
@@ -129,12 +141,12 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
         />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
         {fileDropActive ? (
-          <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[80] grid place-items-center bg-[var(--overlay)]/30 p-4">
-            <div className={`max-w-md border border-dashed bg-raised px-6 py-5 text-center shadow-2xl ${dropOverImportButton ? "border-[var(--accent)]" : "border-ui"}`}>
+          <div aria-hidden="true" data-testid="workspace-file-drop-overlay" className="workspace-file-drop-overlay fixed inset-0 z-[80] grid place-items-center p-4">
+            <div data-testid="workspace-import-drop-target" data-workspace-import-drop-target="true" className={`workspace-import-drop-target pointer-events-auto max-w-md border border-dashed bg-raised px-6 py-5 text-center shadow-2xl ${dropOverImportTarget ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-ui"}`}>
               <p className="text-sm font-semibold text-primary">
-                {dropOverImportButton
-                  ? (isChinese ? "释放文件，打开导入" : "Drop files to open import")
-                  : (isChinese ? "释放文件即可导入" : "Drop files to import")}
+                {dropOverImportTarget
+                  ? (isChinese ? "松开以打开导入" : "Drop to open import")
+                  : (isChinese ? "拖到这里导入" : "Drop here to import")}
               </p>
               <p className="mt-1 text-xs text-secondary">
                 {importProjectId

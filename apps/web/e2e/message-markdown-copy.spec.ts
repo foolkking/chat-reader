@@ -97,27 +97,25 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await page.route(displayRoute, route => route.fulfill({
       status: 413, contentType: "application/json", body: '{"detail":"Synthetic size admission limit"}',
     }));
-    await article.getByRole("button", { name: /Image size ·|图片大小 ·/ }).click();
-    await expect(article.getByRole("alert")).toHaveText(/View or download the original|仍可查看或下载原图/);
-    const scale = article.getByRole("spinbutton", { name: /Image scale percentage|图片缩放百分比/ });
-    await expect(scale).toBeDisabled();
+    const scaleTrigger = article.getByRole("button", { name: /Image display scale:|图片展示比例：/ });
+    await scaleTrigger.click();
+    await expect(article.getByRole("alert")).toHaveText(/cannot be resized|不支持缩放/);
     await page.unroute(displayRoute);
-    await article.getByRole("button", { name: /Reload size|重新读取/ }).click();
-    await expect(scale).toHaveValue("100");
+    await article.getByRole("button", { name: /Retry|重试/ }).click();
+    const scaleOption = (percent: number) => article.getByRole("option", { name: `${percent}%`, exact: true });
+    await expect(scaleOption(100)).toHaveAttribute("aria-selected", "true");
     // Explicitly applying the unchanged 100% configures intrinsic size; the
     // same action remains available for a missing-derivative repair.
-    const applySize = article.getByRole("button", { name: /Apply size|应用比例/ });
-    await expect(applySize).toBeEnabled();
-    await applySize.click();
+    await scaleOption(100).click();
     await expect(article.getByRole("status").filter({ hasText: /Image size saved|比例已保存/ })).toBeVisible();
-    await scale.fill("50");
-    await applySize.click();
+    await scaleTrigger.click();
+    await scaleOption(50).click();
     await expect(article.getByRole("status").filter({ hasText: /Image size saved|比例已保存/ })).toBeVisible();
-    await expect(applySize).toBeEnabled();
+    await scaleTrigger.click();
     await Promise.all([
       page.waitForResponse(response => response.url().endsWith(`/api/attachments/${svg.id}/image-display`)
         && response.request().method() === "PUT" && response.status() === 200),
-      applySize.click(),
+      scaleOption(50).click(),
     ]);
     expect((await page.request.get(`/api/attachments/${svg.id}/image-display`)).status()).toBe(200);
     const imageSize = async () => {
@@ -131,15 +129,15 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     const touchBox = await imageTrigger.boundingBox();
     expect(touchBox!.width).toBeGreaterThanOrEqual(44);
     expect(touchBox!.height).toBeGreaterThanOrEqual(44);
-    await scale.fill("25");
-    await article.getByRole("button", { name: /Apply size|应用比例/ }).click();
+    await scaleTrigger.click();
+    await scaleOption(25).click();
     await expect.poll(imageSize).toBe(5);
     await page.reload();
     await expect(article).toBeVisible();
     await expect.poll(() => inlineImage.evaluate(node => node.getBoundingClientRect().width)).toBe(5);
-    await article.getByRole("button", { name: /Image size · 25%|图片大小 · 25%/ }).click();
-    await expect(scale).toHaveValue("25");
-    await article.getByRole("button", { name: /Restore 100%|恢复 100%/ }).click();
+    await expect(scaleTrigger).toHaveAccessibleName(/Image display scale: 25%|图片展示比例：25%/);
+    await scaleTrigger.click();
+    await scaleOption(100).click();
     await expect.poll(imageSize).toBe(20);
     expect(await (await page.request.get(`/api/attachments/${svg.id}/content`)).body()).toEqual(originalBytes);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -152,7 +150,7 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await external.goto(`${baseURL}/share/${shared.token}`);
     await expect(external.locator("article[data-message-id]")).toHaveCount(2);
     await expect(external.getByTestId("message-markdown-copy")).toHaveCount(0);
-    await expect(external.getByRole("button", { name: /Image size ·|图片大小 ·/ })).toHaveCount(0);
+    await expect(external.getByRole("button", { name: /Image display scale:|图片展示比例：/ })).toHaveCount(0);
 
     // A current reference correctly prevents direct deletion; remove it through
     // the supported edit contract before removing the conversation file.

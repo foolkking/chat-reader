@@ -957,7 +957,7 @@ export function EditMessageForm({
         />
       ) : null}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <div ref={editorHostRef} className="min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror">
+        <div ref={editorHostRef} className="min-h-0 min-w-0 flex-1 overflow-hidden" data-testid="source-editor-codemirror" data-local-file-drop-target="true">
           <CodeMirror
           value={editorDocument}
           height="100%"

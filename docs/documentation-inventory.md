@@ -2,6 +2,15 @@
 
 ## Original-relative image scale — 2026-10-23
 
+The current local interaction refinement keeps the same persistence, API and
+public-link contract while moving the owner control into a lower-right floating
+1–100% selector. `system/ADAPTIVE_IMPORT_CONTRACT.md` now also owns the bounded
+workspace file-drop rule: ordinary content only reveals a dimmed/blurred overlay;
+the central target or sidebar Import button may open Import, while source-editor
+and Context continuation targets retain their local semantics. `PROJECT_STATE.md`,
+`index.md` and `testing.md` distinguish this uncommitted local batch from the
+accepted `cfaa6ed` release. No migration, offline package or Dexie change.
+
 `system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size` owns original
 preservation, same-attachment/mutable-URL behavior, source-bound metadata,
 conversion bounds and portable/offline limitations. API/testing/deployment

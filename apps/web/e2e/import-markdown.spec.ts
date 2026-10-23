@@ -28,7 +28,16 @@ test("file drops capture the current unclassified or project destination", async
 
   try {
     await page.goto("/");
-    await dispatchFileDrop("main", "unclassified-drop.md");
+    await dispatchFileDrop("main", "ignored-drop.md");
+    await expect(page.getByRole("dialog", { name: /Import data|导入数据/ })).toHaveCount(0);
+
+    await page.locator("main").evaluate((element) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["# Imported note"], "unclassified-drop.md", { type: "text/markdown" }));
+      element.dispatchEvent(new DragEvent("dragenter", { bubbles: true, cancelable: true, dataTransfer: transfer }));
+    });
+    await expect(page.getByTestId("workspace-file-drop-overlay")).toBeVisible();
+    await dispatchFileDrop('[data-testid="workspace-import-drop-target"]', "unclassified-drop.md");
     await expect(page.getByTestId("import-destination-select")).toHaveValue("");
     await expect(page.getByText("unclassified-drop.md")).toBeVisible();
     await page.getByTestId("import-dialog-close").click();

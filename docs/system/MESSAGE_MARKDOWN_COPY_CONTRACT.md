@@ -105,8 +105,9 @@ operation, not automatic image rollback.
 
 ## Owner-selected image size
 
-An owner can expand **Image size** below an inline attachment image, read its
-original dimensions, enter a whole **1–100%**, Apply, or Restore 100%.
+An owner can open the compact percentage selector floating at the lower-right
+of an inline attachment image and choose a whole **1–100%**. The menu opens
+below its trigger; it does not add explanatory copy to the reading surface.
 The percentage is relative to the original, never the last resized result.
 Dimensions are rounded to the nearest pixel, with a one-pixel minimum. Raster
 EXIF orientation is applied before determining width/height. The original file,
@@ -130,7 +131,7 @@ in ordinary Markdown clients without nonstandard image-size syntax. The
 response remains no-store with live source/scan/deletion checks. A missing
 selected derivative fails closed rather than silently serving the original;
 the owner can explicitly save again to repair it. Anonymous reads never resize.
-Apply remains available for an unchanged valid percentage after a successful
+Selecting an unchanged valid percentage remains available after a successful
 read, including initial 100%; an uncertain write must still be checked first.
 Saving a size **does not publish** an image. Only the existing explicit
 Markdown-copy publication does.
