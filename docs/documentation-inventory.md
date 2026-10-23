@@ -18,7 +18,7 @@ the release record; `testing.md` and the image-size contract cover the added
 geometry gate. Old transfer-archive cleanup was separately user-authorized;
 it is not backup/image/data retention policy.
 
-## Magnetic image-scale slider — 2026-10-23 (local only)
+## Magnetic image-scale slider — 2026-10-23 (deployed)
 
 `system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size` now owns the
 continuous slider, velocity-sensitive 25/50/75/100% attraction, exact keyboard/
