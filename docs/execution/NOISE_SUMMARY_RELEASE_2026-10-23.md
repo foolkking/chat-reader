@@ -80,7 +80,37 @@ including current and rollback, remain. No backups, Docker images, volumes,
 imports, configuration or release verification records were deleted.
 Production services remained healthy at `0f116fe`, schema 0053, admission idle.
 
-The corrected source needs a new complete CI and a fresh 50-minute wait.
+## Final CI, artifact and production acceptance
+
+Corrected exact source `18d4971339a0927bdf4120680aa16ce36365098d` was pushed
+and dispatched in [workflow run 39958042690](https://github.com/foolkking/chat-reader/actions/runs/39958042690)
+at **2026-10-23 21:03:08 +08:00**. The result was first read at
+**21:53:23 +08:00**, after the required 50-minute wait. All five required jobs
+were green. The official artifact was independently accepted: 35 OCI blobs,
+343 exact source files, archive SHA-256
+`ca93e8fa803ffaf23948a8132a1653a5fc3d9e87fb38b4fde80affb331ff2c50`, embedded
+API revision exact, no forbidden paths, and compiled markers for summary
+folding, safe rule matching/trials, image controls and sticky-rail placement.
+
+Production preflight confirmed current `0f116fe`, direct rollback `cfaa6ed`,
+schema `20261022_0053`, idle admission, 7.46 GB free before maintenance and no
+pending writers. Read-only attachment audit verified **345/345** stored files
+and SHA-256 values with zero issues. Application writers were stopped only for
+the maintenance window **2026-10-23 21:58:23–22:06:42 +08:00**. The verified
+five-component backup is `chat-reader-20261023T135839Z`; its manifest, hashes
+and PostgreSQL restore TOC passed.
+
+The CI images were loaded without local/server build. Migration remained at
+0053 with canonical row counts unchanged; PostgreSQL, production env/Compose,
+Nginx and the existing public-image privacy location were unchanged. API,
+worker and Web now all carry the exact `18d4971` revision, are healthy/running
+with restart/OOM counts zero, startup logs clean, HTTPS and denial checks pass,
+and no new kernel OOM event occurred. Final capacity was **6,564,728 KiB**
+available. Direct rollback remains `0f116fe`; no schema downgrade is needed.
+Authenticated production UI, installed external client and sustained-load
+acceptance remain unclaimed.
+
+The corrected source needed a new complete CI and a fresh 50-minute wait.
 Exclude and preserve the pre-existing generated
 `apps/web/tsconfig.tsbuildinfo`. Use the complete `Build release images`
 workflow, including the existing cleanup gate now explicitly enabling the new

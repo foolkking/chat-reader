@@ -4,7 +4,7 @@ Last updated: 2026-10-23. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Release authorized (2026-10-23): noise rules, summaries and pending image slider.** Imports
+**Deployed and accepted (2026-10-23): noise rules, summaries and image slider.** Imports
 preserve complete summary source; legacy automatic cleaning is now read-only.
 Reader, Share and Offline fold only a conservative opening, duration-terminated
 summary, without trusting historical block flags or hiding ordinary introductions.
@@ -18,10 +18,16 @@ wait 50 minutes after each dispatch before reading results, then independently
 verify the artifact, back up and deploy without production builds/config changes.
 Initial source `c08953b` was submitted; full CI `39949370623` failed and
 produced no deployable artifact. Its stale import assertion and desktop image
-menu occlusion are repaired for a fresh full run. Production still serves
-`0f116fe`. The user separately authorized deleting old release transfer
-archives: 18 removed, recent/current/rollback archives retained; no backups,
-images, user data or configuration were removed.
+menu occlusion were repaired. Exact source
+`18d4971339a0927bdf4120680aa16ce36365098d` passed all five jobs in CI
+`39958042690`, and the official artifact was independently verified. Production
+was accepted at **2026-10-23 22:06:42 +08:00**; current/rollback are
+`18d4971`/`0f116fe`, schema remains `0053`. The five-component backup is
+`chat-reader-20261023T135839Z`; no database downgrade, production build,
+configuration/Nginx change, import/volume change or OOM occurred. The user
+separately authorized deleting old release transfer archives: 18 removed,
+recent/current/rollback archives retained; no backups, images, user data or
+configuration were removed.
 See the [current cleanup contract](docs/system/CONTENT_CLEANUP_CONTRACT.md)
 and [release record](docs/execution/NOISE_SUMMARY_RELEASE_2026-10-23.md).
 
