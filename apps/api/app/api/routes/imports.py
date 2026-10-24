@@ -37,6 +37,7 @@ from app.services.import_queue import (
     primary_filename,
     queue_import,
 )
+from app.services.task_errors import public_task_error
 from app.services.import_pipeline.canonical_draft import CanonicalDraftConversation, preview_markdown, preview_text
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
@@ -581,7 +582,7 @@ def _import_status(record: ImportRecord, db: Session) -> ImportStatusResponse:
         conversation_count=len(conversation_ids),
         message_count=message_count,
         filename=primary_filename(record),
-        error_message=record.error_message,
+        error_message=public_task_error(record.error_message, fallback="IMPORT_FAILED"),
         warnings=record.warnings or [],
         queued_at=record.queued_at,
         started_at=record.started_at,

@@ -27,6 +27,26 @@ acknowledges at safe progress/transaction boundaries before cleanup. The
 canonical import commit is rejected until initial analysis has reached a
 reviewable terminal state.
 
+Upload failures before the creation transaction attempts COMMIT roll back and
+remove only that session's partial staging. Once COMMIT has been attempted,
+staged inputs are retained even if its acknowledgement, the subsequent refresh
+or response preparation fails: a failed HTTP response does not prove that no
+task was saved. Such responses say to check Tasks before re-uploading, rather
+than claiming that persistence definitely failed. A successfully queued task
+remains discoverable and processable through Task Center. If the commit did
+not persist, the retained files are orphans rather than grounds for deleting a
+possibly durable job's inputs.
+
+Cancellation source cleanup is tied to the outer database transaction. Queued
+HTTP cancellations and worker acknowledgements remove their staged directory
+only after that transaction commits; rollback, abandoned sessions and rolled-back
+savepoints retain it. A successful savepoint transfers pending cleanup to its
+parent rather than deleting immediately. The configured storage root is captured
+when cancellation is scheduled, and resolved-directory guards still apply.
+Filesystem cleanup failures after commit retain the orphan and emit only safe
+exception-class telemetry; they do not turn a committed cancellation into an
+apparent failed transaction. No automatic cleanup retry is implied.
+
 The new task type uses the generic BackgroundJob model and worker; it adds no
 migration. Other adaptive routes such as stored-source replacement,
 reanalysis, grouping and mapping validation remain synchronous FastAPI

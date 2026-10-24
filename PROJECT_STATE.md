@@ -1,8 +1,26 @@
 # Project State
 
-Last updated: 2026-10-23. This is the current snapshot, not a release history.
+Last updated: 2026-10-24. This is the current snapshot, not a release history.
 
 ## Release and active work
+
+**Local review and pruning (2026-10-24): system optimization.** The
+[short disposition and follow-up plan](docs/system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)
+replaces the open-ended candidate pool: 15 completed records retained, one
+repaired and four reverted. Commit-aware import-source protection, safe task
+errors, scoped/surviving result links and code-copy recovery remain; fixed
+attachment recovery messages now survive error redaction. The extra release-doc
+checker/snapshot and unused health-helper exception change are removed. Of 111
+unfinished candidates, 108 leave the plan. On the user's bounded continuation,
+#135 now filters deleted or no-longer-owned import results while retaining
+archived/legacy results; #120 and conditional read-only #133 are not started. Original verification
+and limits are preserved in the [dated review](docs/execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md).
+The user subsequently authorized submission and deployment of this reviewed
+batch. No new optimization cycle is authorized. Full exact-source CI, the
+50-minute result-read gate, independent artifact inspection and a verified
+stopped-writer backup precede any application replacement. Accepted runtime
+and rollback below remain unchanged until acceptance. See the
+[release record](docs/execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md).
 
 **Deployed and accepted (2026-10-23): noise rules, summaries and image slider.** Imports
 preserve complete summary source; legacy automatic cleaning is now read-only.

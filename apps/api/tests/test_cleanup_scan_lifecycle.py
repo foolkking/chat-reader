@@ -46,7 +46,8 @@ def test_actual_worker_failure_is_visible_in_scan_read(client, monkeypatch):
     assert client.get(f"/api/tasks/{job_id}").json()["status"] == "failed"
     result = client.get(f"{ROOT}/{scan['id']}").json()
     assert result["status"] == "FAILED", result
-    assert result["error_message"] == "Synthetic scan failure"
+    assert result["error_message"] == "TASK_FAILED"
+    assert "Synthetic scan failure" not in str(result)
 
 
 def test_cancelled_scan_can_be_reopened_rescanned_and_dismissed(client):

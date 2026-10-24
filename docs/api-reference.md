@@ -32,9 +32,10 @@ do not serialize capabilities; deleting the conversation file revokes the URL.
 ## Current released additions — 2026-10-19
 
 The following contracts first shipped in `f3b331a` and remain in current
-accepted source `50f6de4`. Exact-source CI and current runtime boundaries are in
-the [release record](execution/OOM_RELEASE_2026-10-19.md); prior schema/data
-checks remain in the [feature release](execution/FEATURE_RELEASE_2026-10-19.md).
+accepted source `18d4971`. Their original exact-source CI and runtime boundaries
+are in the [2026-10-19 release record](execution/OOM_RELEASE_2026-10-19.md);
+current runtime state is in `PROJECT_STATE.md`, while prior schema/data checks
+remain in the [feature release](execution/FEATURE_RELEASE_2026-10-19.md).
 
 Older dated sections below preserve their original checkpoint wording; labels
 such as “local only” or “not deployed” describe that checkpoint, not the
@@ -52,6 +53,11 @@ current accepted production release.
   work waits for worker acknowledgement. The commit route rejects a session
   before the initial analysis is reviewable. This job type reuses existing
   BackgroundJob persistence and needs no migration.
+  After COMMIT is attempted, an HTTP error is not proof that the batch was not
+  saved. The response asks users to check Tasks before re-uploading, and staged
+  sources are retained including when refresh/response preparation fails.
+  Pre-commit staging failures retain their definite failure message, roll back,
+  and remove only their partial session directory.
 - `POST /api/content-cleanup/scans/{scan_id}/protection-preview` creates a
   ten-minute, scan/rule/source/range-bound protected-match confirmation
   preview. Existing decision, range, preview and apply endpoints accept the
@@ -75,13 +81,13 @@ records; `included_content.annotation_document` describes the projection.
 extension records version, status, path and included count. Current/Index
 continuation members are unchanged. See [Context Package](system/CONTEXT_PACKAGE_CONTRACT.md).
 
-Migration `20261017_0052` adds nullable `protection_review`; it is the single
-production head/current, with existing rows left NULL. Fixed default Skill ZIPs
+Migration `20261017_0052` adds nullable `protection_review`; it is included in
+the current single production head `20261022_0053`, with existing rows left NULL. Fixed default Skill ZIPs
 remain unchanged; only editable runtimes/reviewed local builds understand the
 new annotation projection.
 
 Earlier range-editing source checkpoint (2026-10-15; its then-unapplied 0051
-migration is included in current production 0052):
+migration is included in current production 0053):
 
 - GET `/api/content-cleanup/scans/{scan_id}/occurrences/{occurrence_id}`
   reads one owner-scoped `CleanupOccurrenceRead`. Occurrence responses add
@@ -102,7 +108,7 @@ migration is included in current production 0052):
 
 See [range contract](system/CONTENT_CLEANUP_CONTRACT.md#editable-candidate-ranges-local-source-2026-10-15).
 At that checkpoint the change required schema 0051 and had not yet shipped;
-the migration is now included in production schema 0052.
+the migration is now included in production schema 0053.
 
 Conversation metadata contract (unchanged backend, verified 2026-10-09): PATCH
 `/api/conversations/{conversation_id}` returns canonical `ConversationDetail`.
@@ -572,7 +578,7 @@ Stable failure codes are `BATCH_EXPORT_SOURCE_UNAVAILABLE`,
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `POST` | `/api/tasks/{job_id}/cancel` | Cancel a conversation merge or ordered deletion. A running job returns `cancelling`; a queued/already-cancelled job returns `cancelled`; completed or unsupported tasks return `409`. |
+| `POST` | `/api/tasks/{job_id}/cancel` | Cancel a conversation merge or ordered deletion. A running job returns `cancelling`; a queued/already-cancelled job returns `cancelled`; completed or unsupported tasks return `409`. Unexpected request/commit failures roll back and return a generic `500` with a correlated request ID, not exception text. |
 | `POST` | `/api/conversations/batch-delete` | Queue ordered permanent deletion of one or more conversations; returns `202 BackgroundTaskRead`. The task commits one conversation at a time, reports `deleted_ids` progress, and supports stopping only the not-yet-started items via `/api/tasks/{job_id}/cancel`. |
 | `GET` | `/api/conversations/batch-delete/requests/{request_key}` | Read the authenticated owner's retained deletion admission; returns `{found, task}` without submitting or restarting deletion. Included in accepted source `f3b331a`. |
 
@@ -590,7 +596,42 @@ PostgreSQL 沿用账户/key 事务 advisory lock；没有新增 migration 或 wo
 明确 missing 后，允许再次危险确认并以原 key/目标重试。详见
 [删除请求审查](execution/ux-audit-conversation-delete-admission-2026-10-14.md)。
 
-`GET /api/tasks/{job_id}` and `GET /api/tasks/active` expose `cancellable` and `attempt_count`. Task status includes `cancelling` and `cancelled`. Merge results preserve canonical versions, render blocks, source refs and annotation mappings and commit atomically. Deletion task results contain `deleted_ids` and per-item `failed` entries when applicable.
+`GET /api/tasks/{job_id}` and `GET /api/tasks/active` expose `cancellable` and `attempt_count`. Task status includes `cancelling` and `cancelled`. Merge results preserve canonical versions, render blocks, source refs and annotation mappings and commit atomically. Deletion task results contain `deleted_ids` and per-item `failed` entries when applicable. New per-item deletion failures use the stable `CONVERSATION_DELETE_FAILED` error code rather than raw exception text; the failed conversation remains available and later items can still finish.
+
+New unexpected generic `BackgroundJob` failures persist `TASK_FAILED`, not raw
+library, database or filesystem exception text. Explicit user-facing domain
+errors keep their bounded existing recovery messages/codes (including offline,
+Context/export and import-admission signals); legacy plain `ValueError` branches
+retain only a fixed set of authored conditions. Worker logs retain exception
+class, not exception text. This does not rewrite historical task rows or change
+the separate canonical `ImportRecord` worker's stable failure policy.
+Canonical-import failures keep authored draft/memory diagnostics where safe;
+wrapped commit or unexpected exceptions are stored as
+`IMPORT_COMMIT_FAILED` or `IMPORT_FAILED`, not raw persistence details.
+
+Public task projections also guard records written by older workers: only a
+finite set of established recovery codes/messages and bounded numeric draft/
+retry diagnostics are returned. Unknown error text becomes `TASK_FAILED`
+(`IMPORT_FAILED` for import status/session reads, or the existing safe archive
+failure message). This applies to task list/detail and receipt projections,
+import status/adaptive sessions, bound noise-scan job errors, and batch-deletion
+item errors. Recognized offline integrity, export limits, memory admission,
+archive recovery, fixed attachment/scanner/download recovery messages and draft
+diagnostics remain actionable; dynamic provider values or private suffixes do not. This is read-time
+classification only; no stored history is rewritten and no migration is needed.
+
+Committed import result IDs retain the primary conversation first, followed by
+deduplicated event-time/ID ordering. If the primary is deleted and its FK becomes
+null, remaining batch conversations are still resolved from their import events;
+after all results are deleted the task remains committed with no result links.
+Committed task and import-status reads omit results with either deletion marker
+(`status=deleted` or nonnull `deleted_at`) or ownership no longer matching the
+import; unowned legacy imports match only unowned results. Archived results
+remain readable. A primary with no import event is checked separately rather
+than trusting its FK. Conversation/message counts use the surviving result IDs;
+stored import status, primary and event history are not rewritten.
+Reads resolve only that import's matching ID rows rather than loading global
+import-event payloads; later concurrent deletion can still invalidate a link.
 
 所有业务接口以 `/api` 为前缀。浏览器应使用相对 URL，不应直接拼接 FastAPI 的主机或端口。
 

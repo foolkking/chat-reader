@@ -5,11 +5,14 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import event
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session, sessionmaker
 
+from app.api.routes import adaptive_imports
 from app.core.database import get_db
 from app.main import app
 from app.models.background_job import BackgroundJob
@@ -22,6 +25,14 @@ from test_adaptive_import_api import _complete_analysis
 from test_import_preview_api import client as _preview_client
 
 client = _preview_client
+
+
+@pytest.fixture(autouse=True)
+def synthetic_headroom(monkeypatch):
+    # This module's kilobyte sources test worker/transaction behavior, not the
+    # current desktop's free RAM. Keep admission itself active; rejection tests
+    # override this sensor explicitly, as in test_import_draft_streaming.
+    monkeypatch.setattr("app.services.uploads.available_memory_bytes", lambda: 16 * 1024**3)
 
 
 def source() -> bytes:
@@ -83,6 +94,79 @@ def test_upload_only_stages_and_queues_without_entering_the_analyzer(client, tmp
     assert premature.json()["detail"]["code"] == "SESSION_STATE_INVALID"
 
 
+@pytest.mark.parametrize("failure", ["commit_before", "commit_after", "refresh", "response"])
+def test_create_failure_after_commit_attempt_preserves_staged_sources(
+    client, tmp_path, monkeypatch, caplog, failure,
+):
+    private_error = "synthetic private admission failure /srv/private-import/source.json"
+    original_commit = Session.commit
+    original_refresh = Session.refresh
+
+    def commit(db):
+        if failure == "commit_before":
+            raise SQLAlchemyError(private_error)
+        original_commit(db)
+        raise SQLAlchemyError(private_error)
+
+    def refresh(db, instance, *args, **kwargs):
+        if isinstance(instance, ImportRecord):
+            raise SQLAlchemyError(private_error)
+        return original_refresh(db, instance, *args, **kwargs)
+
+    def payload(_record):
+        raise RuntimeError(private_error)
+
+    with monkeypatch.context() as patch:
+        if failure.startswith("commit_"):
+            patch.setattr(Session, "commit", commit)
+        elif failure == "refresh":
+            patch.setattr(Session, "refresh", refresh)
+        else:
+            patch.setattr(adaptive_imports, "session_payload", payload)
+        response = client.post("/api/adaptive-import/sessions", files=[
+            ("files", ("source.json", source(), "application/json")),
+        ])
+    assert response.status_code == 500
+    assert response.json()["detail"]["message"] == (
+        "Import analysis submission is not confirmed. Check Tasks before uploading again."
+    )
+    assert private_error not in response.text
+    assert private_error not in caplog.text
+    root = tmp_path / "storage" / "imports"
+    staged = list(root.glob("*/source.json"))
+    assert len(staged) == 1, "An uncertain admission must not delete potentially committed job inputs."
+    assert staged[0].read_bytes() == source()
+    with database() as db:
+        records = db.query(ImportRecord).all()
+        jobs = db.query(BackgroundJob).filter_by(job_type="adaptive_import_analysis").all()
+        assert len(records) == len(jobs) == (0 if failure == "commit_before" else 1)
+        if failure == "commit_before":
+            return
+        import_id, task_id = str(records[0].id), str(jobs[0].id)
+    assert client.get(f"/api/tasks/{task_id}").json()["status"] == "queued"
+    # The durable Task Center entry still opens and processes its original input.
+    queued = client.get(f"/api/adaptive-import/sessions/{import_id}").json()
+    assert _complete_analysis(client, queued)["state"] == "READY"
+
+
+def test_create_failure_before_commit_attempt_removes_only_its_partial_staging(client, tmp_path, monkeypatch):
+    original_add = adaptive_imports.add_session_source_stream
+
+    def fail_after_staging(*args, **kwargs):
+        original_add(*args, **kwargs)
+        raise RuntimeError("synthetic staging failure")
+
+    monkeypatch.setattr(adaptive_imports, "add_session_source_stream", fail_after_staging)
+    response = client.post("/api/adaptive-import/sessions", files=[
+        ("files", ("source.json", source(), "application/json")),
+    ])
+    assert response.status_code == 500
+    assert list((tmp_path / "storage" / "imports").iterdir()) == []
+    with database() as db:
+        assert db.query(ImportRecord).count() == 0
+        assert db.query(BackgroundJob).count() == 0
+
+
 def test_worker_publishes_analysis_result_without_importing_canonical_content(client):
     queued = queue(client)
     result = _complete_analysis(client, queued)
@@ -134,8 +218,9 @@ def test_memory_rejection_retains_sources_and_explicit_retry_reuses_the_task(cli
         assert db.query(BackgroundJob).filter_by(job_type="adaptive_import_analysis").count() == 1
 
 
-def test_even_small_queued_analysis_does_not_start_under_low_host_headroom(client, tmp_path, monkeypatch):
-    monkeypatch.setattr("app.services.uploads.available_memory_bytes", lambda: 64 * 1024 * 1024)
+@pytest.mark.parametrize("available", [0, 64 * 1024 * 1024, None])
+def test_even_small_queued_analysis_does_not_start_under_low_host_headroom(client, tmp_path, monkeypatch, available):
+    monkeypatch.setattr("app.services.uploads.available_memory_bytes", lambda: available)
     # Uploading only stages bounded chunks; it need not reserve a parser heap.
     queued = queue(client)
     monkeypatch.setattr(service, "analyze_initial_session", lambda *_args, **_kwargs: pytest.fail("Low-memory parsing started."))
@@ -148,6 +233,35 @@ def test_even_small_queued_analysis_does_not_start_under_low_host_headroom(clien
     stored = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
     assert stored["state"] == "FAILED"
     assert stored["phase"] == "analysis_failed"
+
+
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError, SQLAlchemyError])
+def test_unexpected_analysis_failure_is_safe_in_tasks_and_session(
+    client, tmp_path, monkeypatch, caplog, error_type,
+):
+    queued = queue(client, count=1)
+    private_error = "synthetic private source /srv/private-source.json and database credentials"
+    job_id, factory = claim(queued)
+
+    def fail_analysis(*_args, **_kwargs):
+        raise error_type(private_error)
+
+    monkeypatch.setattr(service, "analyze_initial_session", fail_analysis)
+    process_background_job(job_id, session_factory=factory)
+    task = client.get(f"/api/tasks/{job_id}").json()
+    active = client.get("/api/tasks/active").json()
+    stored = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
+    assert task["status"] == "failed"
+    assert stored["state"] == "FAILED"
+    assert task["error_message"] == stored["error_message"] == "TASK_FAILED"
+    assert private_error not in json.dumps([task, active, stored])
+    assert private_error not in caplog.text
+    assert (tmp_path / "storage" / "imports" / queued["import_id"] / "source-0.json").read_bytes() == source()
+    failed_events = [
+        json.loads(record.message) for record in caplog.records
+        if "background_job_failed" in record.message
+    ]
+    assert failed_events[-1]["error_class"] == error_type.__name__
 
 
 @pytest.mark.parametrize("via_tasks", [False, True])
@@ -164,6 +278,112 @@ def test_queued_cancel_stops_work_and_removes_only_its_staged_sources(client, tm
     assert not path.exists()
     with database() as db:
         assert claim_next_job(db, job_type="adaptive_import_analysis") is None
+
+
+@pytest.mark.parametrize("via_tasks", [False, True])
+def test_cancel_commit_failure_preserves_staged_sources(client, tmp_path, monkeypatch, via_tasks):
+    queued = queue(client)
+    path = tmp_path / "storage" / "imports" / queued["import_id"]
+    original_files = {item.name: item.read_bytes() for item in path.iterdir()}
+
+    def fail_commit(_db):
+        raise RuntimeError("synthetic cancellation commit failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Session, "commit", fail_commit)
+        response = (
+            client.post(f"/api/tasks/{queued['analysis_task_id']}/cancel")
+            if via_tasks else client.delete(f"/api/adaptive-import/sessions/{queued['import_id']}")
+        )
+    assert response.status_code == 500
+    assert path.is_dir(), "A failed cancellation transaction must retain its original sources."
+    assert {item.name: item.read_bytes() for item in path.iterdir()} == original_files
+    assert client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()["state"] == "ANALYZING"
+    assert client.get(f"/api/tasks/{queued['analysis_task_id']}").json()["status"] == "queued"
+
+
+@pytest.mark.parametrize("outcome", ["commit", "rollback", "close"])
+def test_cancel_session_cleans_sources_only_after_outer_commit(client, tmp_path, outcome):
+    queued = queue(client, count=1)
+    path = tmp_path / "storage" / "imports" / queued["import_id"]
+    with database() as db:
+        record = db.get(ImportRecord, uuid.UUID(queued["import_id"]))
+        service.cancel_session(record)
+        assert path.is_dir(), "Scheduling a cancellation must not delete before the transaction outcome."
+        getattr(db, outcome)()
+        assert path.exists() is (outcome != "commit")
+        # An abandoned/rolled-back cleanup must not fire on a later transaction.
+        db.commit()
+        assert path.exists() is (outcome != "commit")
+
+
+@pytest.mark.parametrize("nested_commit,outer_commit", [(False, True), (True, False), (True, True)])
+def test_cancel_session_cleanup_follows_nested_transaction_outcomes(
+    client, tmp_path, nested_commit, outer_commit,
+):
+    queued = queue(client, count=1)
+    path = tmp_path / "storage" / "imports" / queued["import_id"]
+    with database() as db:
+        record = db.get(ImportRecord, uuid.UUID(queued["import_id"]))
+        nested = db.begin_nested()
+        service.cancel_session(record)
+        if nested_commit:
+            nested.commit()
+        else:
+            nested.rollback()
+        assert path.is_dir(), "A savepoint cannot authorize deleting sources before outer commit."
+        if outer_commit:
+            db.commit()
+        else:
+            db.rollback()
+        assert path.exists() is not (nested_commit and outer_commit)
+
+
+def test_cancel_cleanup_uses_the_storage_root_captured_when_scheduled(client, tmp_path, monkeypatch):
+    queued = queue(client, count=1)
+    original = tmp_path / "storage" / "imports" / queued["import_id"]
+    other_root = tmp_path / "other-imports"
+    other_source = other_root / queued["import_id"] / "source-0.json"
+    other_source.parent.mkdir(parents=True)
+    other_source.write_bytes(b"unrelated synthetic source")
+    with database() as db:
+        record = db.get(ImportRecord, uuid.UUID(queued["import_id"]))
+        service.cancel_session(record)
+        monkeypatch.setattr(service, "get_settings", lambda: SimpleNamespace(import_storage_dir=other_root))
+        db.commit()
+    assert not original.exists()
+    assert other_source.read_bytes() == b"unrelated synthetic source"
+
+
+@pytest.mark.parametrize("via_tasks", [False, True])
+def test_cancel_cleanup_failure_retains_sources_without_failing_committed_cancel(
+    client, tmp_path, monkeypatch, caplog, via_tasks,
+):
+    queued = queue(client, count=1)
+    path = tmp_path / "storage" / "imports" / queued["import_id"]
+    private_error = "synthetic private source /srv/private-import/source.json"
+
+    def fail_cleanup(_path):
+        raise PermissionError(private_error)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(service.shutil, "rmtree", fail_cleanup)
+        response = (
+            client.post(f"/api/tasks/{queued['analysis_task_id']}/cancel")
+            if via_tasks else client.delete(f"/api/adaptive-import/sessions/{queued['import_id']}")
+        )
+    assert response.status_code == (200 if via_tasks else 204), response.text
+    assert client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()["state"] == "CANCELED"
+    assert client.get(f"/api/tasks/{queued['analysis_task_id']}").json()["status"] == "cancelled"
+    assert (path / "source-0.json").read_bytes() == source()
+    events = [
+        json.loads(record.message) for record in caplog.records
+        if "adaptive_import_cancel_cleanup_failed" in record.message
+    ]
+    assert len(events) == 1
+    assert events[0]["error_class"] == "PermissionError"
+    assert private_error not in response.text
+    assert private_error not in caplog.text
 
 
 @pytest.mark.parametrize("via_tasks", [False, True])

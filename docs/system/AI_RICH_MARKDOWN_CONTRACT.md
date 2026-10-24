@@ -1,6 +1,6 @@
 # AI Rich Markdown Renderer Contract
 
-Last synchronized: 2026-10-22
+Last synchronized: 2026-10-24
 
 ## Purpose and canonical source
 
@@ -196,6 +196,15 @@ The supported profile includes CommonMark headings/lists/quotes/code plus GFM ta
 Footnote reference/backlink IDs are namespaced with the rendering scope (normally MessageVersion or attachment identity), preventing repeated `[^1]` labels from colliding. Canonical blocks may split a reference and standalone definition; Reader projects current-version blocks back into one semantic parse without changing stored text.
 
 Inline and fenced code are parsed before the AI math transform. Math delimiters inside code stay code. Existing Shiki/plain-code fallback remains authoritative. Mermaid behavior is unchanged; no new diagram runtime is introduced.
+
+Code-block copy uses the shared source-scoped clipboard controller. Pending
+requests disable duplicate clicks; only a successful matching request shows
+Copied. A missing or denied Clipboard API shows a localized alert and labelled,
+read-only manual-copy field containing the full source, including collapsed
+lines. The field is focused/selected and excluded from semantic Markdown-copy
+content. Retrying or changing source retires stale feedback; no source rewrite,
+deprecated copy command or automatic retry is introduced. This does not change
+the highlighting, parser, offline package or canonical-data contract.
 
 Reader headings use the same sanitized KaTeX subtree as paragraphs. A presentation wrapper must not apply an element allowlist after KaTeX because stripping its wrappers exposes the hidden MathML text, TeX annotation and visual HTML simultaneously. Heading images remain suppressed by the React component map instead of by destructively unwrapping semantic output.
 

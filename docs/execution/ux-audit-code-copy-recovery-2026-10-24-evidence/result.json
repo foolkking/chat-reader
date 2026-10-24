@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "date": "2026-10-24",
+  "cases": [
+    "desktop denial preserves, focuses and selects full long source",
+    "successful retry removes fallback and writes exact source to adapter",
+    "375px Chinese missing Clipboard API replaces earlier success",
+    "pending device request is disabled/busy and completes truthfully",
+    "new source retires old success feedback"
+  ],
+  "pageErrors": [],
+  "sourceSha256": "05e8e14d4dddb992affd7c552de660a938e5683749ccab88e3fa1b51a30684d0",
+  "clipboardHookSha256": "f80bd445c2ba7bee919f740bdbf6b1376382af61ceae7daecdf9f057bae709a6",
+  "evidenceLimits": "Extracted actual component functions; preferences/highlighting/device clipboard adapters. Not full Reader/Share/Offline, real clipboard permission, OS or cross-browser acceptance."
+}

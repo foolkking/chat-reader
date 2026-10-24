@@ -22,19 +22,20 @@ from app.services.editing.message_edit_service import (
     auto_clean_conversation,
     merge_conversations,
 )
-from app.services.exporting.cr_archive import create_cr_archive
-from app.services.exporting.context_package import create_context_package
+from app.services.exporting.cr_archive import CrArchiveError, create_cr_archive
+from app.services.exporting.context_package import ContextPackageError, create_context_package
+from app.services.exporting.export_service import ExportError
 from app.services.exporting.attachment_bundle import create_attachment_bundle, MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT
 from app.services.exporting.system_archive import create_system_archive
 from app.services.exporting.archive_jobs import PERSONAL_JOB_TYPES, archive_job_error, process_personal_archive_job
 from app.services.exporting.system_archive_jobs import SYSTEM_JOB_TYPES, process_system_archive_job, sync_system_archive_record
-from app.services.exporting.attachment_download import create_attachment_download, validate_attachment_download
+from app.services.exporting.attachment_download import AttachmentDownloadError, create_attachment_download, validate_attachment_download
 from app.schemas.export import ExportOptions
 from app.services.offline_packages import OfflinePackageError, build_offline_package, changed_conversations, select_conversations
 from app.services.artifact_lifecycle import cleanup_committed_artifacts
 from app.services.derived_rebuild import rebuild_conversation_derived_data
 from app.services.toc.toc_refresh import refresh_toc_data
-from app.services.assets.derivatives import build_asset_derivative
+from app.services.assets.derivatives import AssetDerivativeError, build_asset_derivative
 from app.services.content_cleanup import process_scan_chunk
 from app.services.conversations.conversation_deletion import delete_conversation_record
 from app.services.user_deletion import cleanup_deleted_account_assets, execute_user_account_delete, mark_user_deletion_failed, mark_user_deletion_queued
@@ -1065,7 +1066,11 @@ def process_background_job(
                             db.rollback()
                             last_error = exc
                     if last_error is not None:
-                        failed.append({"id": str(conversation_id), "error": _safe_error(last_error)})
+                        structured_event(
+                            logger, logging.WARNING, "conversation_delete_failed",
+                            job_id=str(job_id), error_class=type(last_error).__name__,
+                        )
+                        failed.append({"id": str(conversation_id), "error": "CONVERSATION_DELETE_FAILED"})
                     next_index = index
                     result = {"deleted_ids": succeeded_ids, "failed": failed}
                     if next_index < total:
@@ -1513,7 +1518,31 @@ def request_background_job_cancellation(job: BackgroundJob) -> BackgroundJob:
 
 
 def _safe_error(exc: Exception) -> str:
-    return (str(exc).strip() or exc.__class__.__name__)[:2000]
+    from app.services.adaptive_import.contracts import AdaptiveImportError
+    from app.services.assets.scanner import AssetScanError
+    from app.services.continuation_candidates import ContinuationError
+    from app.services.uploads import UploadLimitError
+
+    # These domain errors are explicitly authored for user-facing validation.
+    # Library, database and OS exceptions may embed SQL, content or storage paths.
+    if isinstance(exc, (
+        MessageEditError, OfflinePackageError, ContextPackageError, ExportError,
+        CrArchiveError, AttachmentDownloadError, AssetDerivativeError, AssetScanError,
+        AdaptiveImportError, UploadLimitError, ContinuationError,
+    )):
+        return (str(exc).strip() or "TASK_FAILED")[:2000]
+    # Older worker branches use plain ValueError for these static conditions.
+    # Do not treat arbitrary ValueError text or code-shaped strings as public.
+    if type(exc) is ValueError:
+        message = str(exc).strip()
+        if message in {
+            "CONTEXT_RETURN_FAILED", "CONTEXT_VALIDATION_RETIRED",
+            "The staged import session is no longer available.",
+            "Conversation not found.", "At least one TOC target must be selected.",
+            "Unsupported section TOC scope.", "Noise scan not found.",
+        }:
+            return message
+    return "TASK_FAILED"
 
 
 def _sync_adaptive_import_record_after_job(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import shutil
 import uuid
 from collections import defaultdict
@@ -8,9 +9,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import event
+from sqlalchemy.orm import Session, object_session
 
 from app.core.config import get_settings
+from app.core.observability import structured_event
 from app.models.background_job import BackgroundJob
 from app.models.import_profile import ImportInputGroup, ImportProfile, ImportProfilePreference, ImportProfileRevision, ImportStructureFamily
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, may_use_revision, personal_name, personal_profile_payload, visible_profile
@@ -19,6 +22,7 @@ from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import SourceProfile
 from app.services.adaptive_import.analysis import analyze_documents, default_mapping, normalized_stem
 from app.services.adaptive_import.contracts import AdaptiveImportError, AnalysisResult, SourceDocument
+from app.services.task_errors import public_task_error
 from app.services.adaptive_import.normalization import normalize_group, validate_drafts
 from app.services.adaptive_import.profiles import (
     BUILTINS,
@@ -33,6 +37,8 @@ from app.services.uploads import UploadLimitError
 
 MAX_ADAPTIVE_FILES = 500
 RECOVERABLE_SESSION_STATES = {"NEEDS_GROUPING", "RESOLVING", "READY", "BLOCKED"}
+_CANCELED_SESSION_CLEANUP_KEY = "adaptive_import_canceled_session_cleanup"
+logger = logging.getLogger(__name__)
 
 
 def create_session(db: Session, uploads: list[tuple[str, bytes]]) -> ImportRecord:
@@ -566,7 +572,7 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "status": record.status,
         "phase": record.phase,
         "progress": record.progress,
-        "error_message": record.error_message,
+        "error_message": public_task_error(record.error_message, fallback="IMPORT_FAILED"),
         "analysis_task_id": (record.analysis_summary or {}).get("analysis_task_id"),
         "target_project_id": (
             (record.analysis_summary or {}).get("commit_options", {}).get("project_id")
@@ -663,6 +669,11 @@ def cancel_session(record: ImportRecord) -> None:
         raise AdaptiveImportError("SESSION_ALREADY_COMMITTED", "A committed import session cannot be canceled.", layer="session")
     if record.status in {"queued", "processing"}:
         raise AdaptiveImportError("SESSION_STATE_INVALID", "Canonical import has already started; its source files cannot be removed.", layer="session")
+    db = object_session(record)
+    transaction = (db.get_nested_transaction() or db.get_transaction()) if db is not None else None
+    if transaction is None:
+        raise RuntimeError("Canceling an import session requires an active database transaction.")
+    storage_root = Path(get_settings().import_storage_dir).resolve()
     record.session_state = "CANCELED"
     record.status = "canceled"
     record.phase = "canceled"
@@ -670,7 +681,40 @@ def cancel_session(record: ImportRecord) -> None:
     record.draft_storage_uri = None
     record.draft_sha256 = None
     record.draft_summary = {}
-    remove_session_files(record.id)
+    db.info.setdefault(_CANCELED_SESSION_CLEANUP_KEY, {}).setdefault(transaction, {})[record.id] = storage_root
+
+
+@event.listens_for(Session, "after_commit")
+def _canceled_session_commit(db: Session) -> None:
+    transaction = db.get_nested_transaction() or db.get_transaction()
+    pending = db.info.get(_CANCELED_SESSION_CLEANUP_KEY, {})
+    sessions = pending.pop(transaction, {})
+    if transaction is not None and transaction.parent is not None:
+        if sessions:
+            pending.setdefault(transaction.parent, {}).update(sessions)
+    else:
+        for import_id, storage_root in sessions.items():
+            try:
+                remove_session_files(import_id, storage_root=storage_root)
+            except (OSError, RuntimeError, ValueError) as exc:
+                # The cancellation is already committed. Retain the orphan rather
+                # than report a failed transaction or expose a private file path.
+                structured_event(
+                    logger, logging.WARNING, "adaptive_import_cancel_cleanup_failed",
+                    error_class=type(exc).__name__,
+                )
+    if not pending:
+        db.info.pop(_CANCELED_SESSION_CLEANUP_KEY, None)
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _canceled_session_transaction_ended(db: Session, transaction) -> None:
+    # Successful savepoints transfer to their parent; rollback/close discard
+    # pending deletion, preserving the sources of the unchanged database record.
+    pending = db.info.get(_CANCELED_SESSION_CLEANUP_KEY, {})
+    pending.pop(transaction, None)
+    if not pending:
+        db.info.pop(_CANCELED_SESSION_CLEANUP_KEY, None)
 
 
 def _build_initial_groups(db: Session, record: ImportRecord) -> None:
@@ -1061,8 +1105,8 @@ def _extension(filename: str) -> str:
     return Path(lower).suffix
 
 
-def remove_session_files(import_id: uuid.UUID) -> None:
-    root = Path(get_settings().import_storage_dir).resolve()
+def remove_session_files(import_id: uuid.UUID, *, storage_root: Path | None = None) -> None:
+    root = (storage_root or Path(get_settings().import_storage_dir)).resolve()
     target = (root / str(import_id)).resolve()
     if target.parent == root and target.name == str(import_id) and target.is_dir():
         shutil.rmtree(target)

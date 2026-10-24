@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+## 本地优化审查与精简 — 2026-10-24
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `system/CONTINUOUS_OPTIMIZATION_BACKLOG.md` | 原审查为 15 项保留、1 项修正、4 项撤销；有界续办 #135 已本地修复，仅剩 #120 和条件观察 #133。 |
+| `execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md` | 原实施和 no-change 证据、撤销/兼容修正及 #135 续办验证与限制；不是活动待办或生产验收。 |
+| `execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md` | 后续授权的本批提交、完整 CI、50 分钟门槛、独立制品、备份与部署结果；不扩大优化范围。 |
+| `PROJECT_STATE.md` | 当前生产、回退及本地范围的唯一入口；不再额外维护发布事实 JSON 或逐段文本绑定检查器。 |
+
+保留的行为继续归现有专题所有：`system/ADAPTIVE_IMPORT_CONTRACT.md` 负责导入
+事务与输入保护，`system/OBSERVABILITY_CONTRACT.md` 和 `api-reference.md` 负责
+有限的公开错误及固定附件恢复提示，`system/BACKEND_AND_API.md` 负责相关 ID 查询
+与存活结果，`system/AI_RICH_MARKDOWN_CONTRACT.md` 负责代码复制恢复。
+`testing.md` 保留资源隔离及原验证边界，详细失败与回执只放带日期记录，避免重复账本。
+本次没有 migration、离线/Dexie 格式变化。用户随后授权提交部署本批结果，
+发布状态由上述发布记录维护，不把本地审查回执当作生产验收。
+
 ## Noise-rule / thinking-summary corrections — 2026-10-23 (deployed)
 
 `system/CONTENT_CLEANUP_CONTRACT.md` owns source preservation, conservative shared
@@ -32,17 +49,21 @@ supersedes that hold. Existing release receipts remain historical.
 
 ## Original-relative image scale — 2026-10-23
 
-The deployed interaction refinement keeps the same persistence, API and
-public-link contract while moving the owner control into a lower-right floating
-1–100% selector. `system/ADAPTIVE_IMPORT_CONTRACT.md` now also owns the bounded
+This is the **preceding 13:00 +08:00 release checkpoint**, not the current
+image-scale interaction. Its owner control was a lower-right floating 1–100%
+selector; the later [magnetic slider release](#magnetic-image-scale-slider--2026-10-23-deployed)
+supersedes that control while preserving the same persistence, API and
+public-link contract. `system/ADAPTIVE_IMPORT_CONTRACT.md` now also owns the bounded
 workspace file-drop rule: ordinary content only reveals a dimmed/blurred overlay;
 the central target or sidebar Import button may open Import, while source-editor
 and Context continuation targets retain their local semantics. `PROJECT_STATE.md`,
-`index.md` and `testing.md` distinguish source `0f116fe` / five-green CI
+`index.md` and `testing.md` retain this historical source `0f116fe` / five-green CI
 `39897308692` from the preceding `cfaa6ed` release. The dated
 `execution/IMAGE_SCALE_DROP_RELEASE_2026-10-23.md` and sanitized
 `evidence/image-scale-drop-release-2026-10-23.json` record the 13:00:36 +08:00
 acceptance, exact artifact, verified backup and direct rollback `cfaa6ed`.
+The later 22:06 +08:00 acceptance is recorded in
+`execution/NOISE_SUMMARY_RELEASE_2026-10-23.md` and the current release snapshot.
 Deployment/current-state entries agree on unchanged 0053/config/PostgreSQL.
 No migration, offline package or Dexie change.
 

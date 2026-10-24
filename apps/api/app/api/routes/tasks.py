@@ -8,6 +8,8 @@ from app.core.database import get_db
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from app.schemas.task import BackgroundTaskRead, OfflineDownloadTarget
+from app.services.adaptive_import.contracts import AdaptiveImportError
+from app.services.editing.message_edit_service import MessageEditError
 from app.services.background_jobs import (
     ACTIVE_JOB_STATUSES,
     CANCELLABLE_JOB_TYPES,
@@ -16,6 +18,7 @@ from app.services.background_jobs import (
 )
 from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_for_import, primary_filename, retry_import_manually
 from app.services.task_retention import TERMINAL_IMPORT_STATUSES, TERMINAL_JOB_STATUSES, terminal_result_cutoff
+from app.services.task_errors import ARCHIVE_FAILURE_MESSAGE, public_task_error
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -169,10 +172,13 @@ def cancel_task(
                     cancel_session(record)
                     record.completed_at = job.completed_at
         db.commit()
-    except Exception as exc:
+    except (MessageEditError, AdaptiveImportError) as exc:
         db.rollback()
         status_code = getattr(exc, "status_code", status.HTTP_409_CONFLICT)
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+    except Exception:
+        db.rollback()
+        raise
     return _job_task(job)
 
 
@@ -183,6 +189,12 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
     payload = job.payload or {}
     result = dict(job.result or {})
+    if job.job_type == "conversation_batch_delete" and isinstance(result.get("failed"), list):
+        result["failed"] = [
+            {**item, "error": public_task_error(item.get("error"), fallback="CONVERSATION_DELETE_FAILED")
+             or "CONVERSATION_DELETE_FAILED"}
+            for item in result["failed"] if isinstance(item, dict)
+        ]
     if job.job_type == "adaptive_import_analysis" and payload.get("import_id") and not result.get("import_id"):
         result["import_id"] = payload["import_id"]
     if job.job_type == "content_noise_scan" and isinstance(result.get("cleanup_apply"), dict):
@@ -217,7 +229,10 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         export_format=_task_export_format(job.job_type, payload),
         offline_target=_offline_download_target(job.job_type, payload),
         result=result,
-        error_message=job.error_message,
+        error_message=public_task_error(
+            job.error_message,
+            fallback=ARCHIVE_FAILURE_MESSAGE if job.job_type.startswith(("personal_archive_", "system_archive_")) else "TASK_FAILED",
+        ),
         queued_at=job.queued_at,
         started_at=job.started_at,
         heartbeat_at=job.heartbeat_at,
@@ -295,7 +310,7 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
         label=primary_filename(record),
         source_label=primary_filename(record),
         result={"conversation_ids": [str(value) for value in conversation_ids]},
-        error_message=record.error_message,
+        error_message=public_task_error(record.error_message, fallback="IMPORT_FAILED"),
         queued_at=record.queued_at,
         started_at=record.started_at,
         heartbeat_at=record.heartbeat_at,

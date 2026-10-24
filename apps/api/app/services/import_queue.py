@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 from app.core.database import SessionLocal
+from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
-from app.services.canonical.persistence import CommitImportResult, commit_import_preview
+from app.services.canonical.persistence import CommitImportError, CommitImportResult, commit_import_preview
+from app.services.import_pipeline.draft_store import ImportDraftError
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.services.content_cleanup import queue_import_scan
 from app.services.ownership import OwnershipScope
@@ -204,15 +206,44 @@ def run_worker_forever() -> None:
 
 
 def conversation_ids_for_import(db: Session, record: ImportRecord) -> list[uuid.UUID]:
+    if record.status != "committed":
+        return [record.conversation_id] if record.conversation_id else []
+    scope = OwnershipScope(record.owner_user_id, include_legacy_unowned=record.owner_user_id is None)
+    available = (
+        scope.predicate(Conversation),
+        Conversation.status != "deleted",
+        Conversation.deleted_at.is_(None),
+    )
+    # Deleting the primary result clears this nullable FK, but a committed
+    # batch may still have other results. Events can also outlive the committed
+    # tombstone before its cascade, or an ownership change.
+    rows = (
+        db.query(ConversationEvent.conversation_id)
+        .join(Conversation, Conversation.id == ConversationEvent.conversation_id)
+        .filter(
+            ConversationEvent.event_type == "conversation_imported",
+            ConversationEvent.payload["import_id"].as_string() == str(record.id),
+            *available,
+        )
+        .order_by(ConversationEvent.created_at.asc(), ConversationEvent.id.asc())
+        .all()
+    )
     ids: list[uuid.UUID] = []
-    if record.conversation_id:
-        ids.append(record.conversation_id)
-    if record.status != "committed" or not record.conversation_id:
-        return ids
-    rows = db.query(ConversationEvent).filter(ConversationEvent.event_type == "conversation_imported").all()
-    for row in rows:
-        if str(row.payload.get("import_id")) == str(record.id) and row.conversation_id not in ids:
-            ids.append(row.conversation_id)
+    seen: set[uuid.UUID] = set()
+    for (conversation_id,) in rows:
+        if conversation_id not in seen:
+            ids.append(conversation_id)
+            seen.add(conversation_id)
+    primary_id = record.conversation_id
+    if primary_id is not None and primary_id in seen:
+        ids.remove(primary_id)
+        ids.insert(0, primary_id)
+    elif primary_id is not None and db.query(Conversation.id).filter(
+        Conversation.id == primary_id, *available,
+    ).first() is not None:
+        # Legacy imports need not have an event for their primary. Only that
+        # fallback needs an extra ID-only lookup; never trust the FK alone.
+        ids.insert(0, primary_id)
     return ids
 
 
@@ -221,5 +252,13 @@ def primary_filename(record: ImportRecord) -> str | None:
 
 
 def _safe_error(exc: Exception) -> str:
-    message = str(exc).strip() or exc.__class__.__name__
-    return message[:2000]
+    # Durable ImportRecord errors are returned directly by Task Center and
+    # import-status APIs. Keep only authored draft diagnostics; CommitImportError
+    # may wrap an arbitrary persistence exception and echo its text.
+    if isinstance(exc, ImportDraftError):
+        return (str(exc).strip() or "IMPORT_FAILED")[:2000]
+    if isinstance(exc, CommitImportError):
+        if isinstance(exc.__cause__, ImportDraftError):
+            return (str(exc.__cause__).strip() or "IMPORT_FAILED")[:2000]
+        return "IMPORT_COMMIT_FAILED"
+    return "IMPORT_FAILED"

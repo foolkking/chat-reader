@@ -84,6 +84,64 @@ def test_batch_delete_is_ordered_background_job_and_commits_each_item(client: Te
     assert client.get("/api/conversations", params={"status_scope": "archived"}).json() == []
 
 
+def test_batch_delete_failure_is_redacted_and_does_not_block_later_items(
+    client: TestClient,
+    monkeypatch,
+    caplog,
+) -> None:
+    conversation_ids = []
+    for index in range(3):
+        created = client.post("/api/conversations", json={
+            "title": f"Batch partial failure {index}",
+            "messages": [
+                {"role": "user", "content_markdown": "Synthetic question"},
+                {"role": "assistant", "content_markdown": "Synthetic answer"},
+            ],
+        })
+        assert created.status_code == 201, created.text
+        conversation_ids.append(created.json()["conversation"]["id"])
+    queued = client.post(
+        "/api/conversations/batch-delete",
+        headers={"Idempotency-Key": "batch-delete-redaction-test"},
+        json={"conversation_ids": conversation_ids},
+    )
+    assert queued.status_code == 202
+
+    original_delete = delete_conversation_record
+    failed_attempts = 0
+
+    def fail_first_conversation(db, conversation_id):
+        nonlocal failed_attempts
+        if conversation_id == uuid.UUID(conversation_ids[0]):
+            failed_attempts += 1
+            raise RuntimeError("postgresql://private:secret@db/private?source=/srv/private")
+        return original_delete(db, conversation_id)
+
+    monkeypatch.setattr(
+        "app.services.background_jobs.delete_conversation_record",
+        fail_first_conversation,
+    )
+
+    processed = process_queued_jobs(max_jobs=10)
+    assert uuid.UUID(queued.json()["job_id"]) in processed
+    task = client.get(f"/api/tasks/{queued.json()['job_id']}")
+    assert task.status_code == 200
+    assert task.json()["status"] == "committed"
+    assert task.json()["processed_items"] == 3
+    result = task.json()["result"]
+    assert result["deleted_ids"] == conversation_ids[1:]
+    assert result["failed"] == [{"id": conversation_ids[0], "error": "CONVERSATION_DELETE_FAILED"}]
+    assert failed_attempts == 2
+    assert "private:secret" not in task.text
+    assert '"event":"conversation_delete_failed"' in caplog.text
+    assert '"error_class":"RuntimeError"' in caplog.text
+    assert "private:secret" not in caplog.text
+    assert "/srv/private" not in caplog.text
+    assert client.get(f"/api/conversations/{conversation_ids[0]}").status_code == 200
+    assert client.get(f"/api/conversations/{conversation_ids[1]}").status_code == 404
+    assert client.get(f"/api/conversations/{conversation_ids[2]}").status_code == 404
+
+
 def test_batch_delete_can_stop_before_the_next_item(client: TestClient) -> None:
     conversation_ids = [_commit_conversation(client, f"Batch cancel {index}") for index in range(2)]
     queued = client.post(

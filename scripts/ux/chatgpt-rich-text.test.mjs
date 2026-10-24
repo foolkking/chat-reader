@@ -284,12 +284,14 @@ function compileComponent(relative, stubs) {
   return exports;
 }
 const tablePresentation = compileComponent("../../apps/web/features/conversations/markdown-table.tsx", {});
+const clipboardCopy = compileComponent("../../apps/web/components/use-clipboard-copy.ts", {});
 const thinkingSummary = (await load("../../apps/web/features/conversations/thinking-summary.ts")).module;
 const renderer = compileComponent("../../apps/web/features/conversations/markdown-renderer.tsx", {
   "@assistant-ui/react": uiAdapter,
   "@assistant-ui/react-markdown": uiAdapter,
   "lucide-react": new Proxy({}, { get: () => () => null }),
   "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: "en-US", resolvedTheme: "light" }) },
+  "../../components/use-clipboard-copy": clipboardCopy,
   "../rich-markdown/rich-markdown-config": config,
   "../rich-markdown/remark-ai-math-compatibility": math,
   "../rich-markdown/chatgpt-rich-text-compatibility": compatibility,

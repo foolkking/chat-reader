@@ -5,6 +5,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.services.task_errors import public_task_error
 from app.models.content_cleanup import (
     ContentCleanupException,
     ContentCleanupOccurrence,
@@ -585,5 +586,5 @@ def _scan_read(db: Session, scan: ContentCleanupScan) -> CleanupScanRead:
         protected_count=counts.get("PROTECTED", 0),
         created_at=scan.created_at,
         completed_at=job.completed_at if job and effective_status in {"FAILED", "CANCELLED"} else scan.completed_at,
-        error_message=job.error_message if job and effective_status == "FAILED" and job.status == "failed" else scan.error_message,
+        error_message=public_task_error(job.error_message) if job and effective_status == "FAILED" and job.status == "failed" else scan.error_message,
     )

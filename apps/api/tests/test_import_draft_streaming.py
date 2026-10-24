@@ -10,6 +10,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy.exc import StatementError
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
@@ -208,3 +209,45 @@ def test_commit_memory_failure_is_visible_retryable_and_preserves_sources(client
         result = commit_import_preview(claimed, db)
         assert result.conversation_count == 1
         assert db.get(ImportRecord, claimed).status == "committed"
+
+
+@pytest.mark.parametrize("failure", ["runtime", "sql"])
+def test_canonical_import_worker_does_not_expose_persistence_exception_text(
+    client, tmp_path, monkeypatch, caplog, failure,
+):
+    monkeypatch.setenv("IMPORT_COMMIT_INLINE", "false")
+    get_settings.cache_clear()
+    preview = client.post("/api/imports/preview", files={
+        "files": ("synthetic.json", source(), "application/json"),
+    })
+    assert preview.status_code == 200, preview.text
+    import_id = preview.json()["import_id"]
+    assert client.post(f"/api/imports/{import_id}/commit").status_code == 202
+    with database() as db:
+        factory = sessionmaker(bind=db.get_bind(), expire_on_commit=False)
+        claimed = claim_next_import(db)
+        db.commit()
+
+    private_detail = "private synthetic source /srv/private-source.json; SELECT secret FROM users"
+
+    def fail_persist(*_args, **_kwargs):
+        if failure == "sql":
+            raise StatementError(
+                private_detail,
+                "INSERT INTO private_messages(secret) VALUES (:secret)",
+                {"secret": "synthetic-secret"},
+                RuntimeError("database://private-synthetic-url"),
+            )
+        raise RuntimeError(private_detail)
+
+    monkeypatch.setattr(persistence, "_persist_conversation", fail_persist)
+    assert process_import(claimed, session_factory=factory) is None
+    task = client.get(f"/api/tasks/{import_id}")
+    status = client.get(f"/api/imports/{import_id}/status")
+    assert task.status_code == status.status_code == 200
+    assert task.json()["status"] == status.json()["status"] == "failed"
+    assert task.json()["error_message"] == status.json()["error_message"] == "IMPORT_COMMIT_FAILED"
+    assert private_detail not in task.text + status.text + caplog.text
+    assert client.get("/api/conversations").json() == []
+    root = tmp_path / "storage" / "imports" / import_id
+    assert root.is_dir() and (root / "canonical-draft.jsonl").is_file()

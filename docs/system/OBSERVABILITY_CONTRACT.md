@@ -79,6 +79,25 @@ timings and configured operational modes are allowed. Opaque IDs may appear in
 transition logs when needed for correlation, but never as unbounded metric
 labels or in diagnostics output.
 
+New generic `BackgroundJob` failures store `TASK_FAILED` for unexpected
+exceptions without formatting their messages. Only explicit user-facing domain
+errors and a finite set of legacy authored `ValueError` conditions retain
+bounded public details. Adaptive analysis mirrors this sanitized task error
+into its session, while structured failure events keep exception class only.
+Archive jobs retain their existing dedicated classification. The separate
+canonical import worker also preserves authored draft diagnostics and stores
+wrapped commit/unexpected failures as stable `IMPORT_COMMIT_FAILED` /
+`IMPORT_FAILED` signals. At public read boundaries, including historical rows,
+only vetted exact recovery codes/messages and bounded numeric draft/retry
+diagnostics survive; all other text uses a safe family-specific fallback.
+Reviewed fixed attachment derivative, scanner and download recovery messages
+also survive; dynamic provider values or appended private details do not.
+Task detail/list/receipt, import status/session, bound noise-scan job failures
+and batch-deletion item failures share this policy. Stored historical values
+are not rewritten. Extending recovery messages must explicitly extend the
+projection's finite allowlist and compatibility tests; code-like prefixes or
+error-class provenance from old string-only rows are not trusted.
+
 ## Worker liveness
 
 The single production worker owns the `worker_runtime_states` row keyed by

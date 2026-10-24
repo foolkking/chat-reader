@@ -123,6 +123,7 @@ def create_adaptive_import_session(
             detail={"code": "IMPORT_TOTAL_SIZE_LIMIT", "message": "The combined files exceed this deployment's import limit."},
         )
     record: ImportRecord | None = None
+    commit_attempted = False
     try:
         with bounded_upload_staging_sync(files):
             record = begin_session(
@@ -142,12 +143,15 @@ def create_adaptive_import_session(
                     max_file_bytes=max_bytes,
                 )
             queue_session_analysis(db, record)
+            # Once COMMIT starts its outcome may be unknown to this request.
+            # A refresh/response failure cannot revoke a durable queued job.
+            commit_attempted = True
             db.commit()
             db.refresh(record)
         return session_payload(record)
     except UploadLimitError as exc:
         db.rollback()
-        if record is not None:
+        if record is not None and not commit_attempted:
             _remove_failed_session(record.id)
         raise HTTPException(
             status_code=exc.status_code,
@@ -156,19 +160,27 @@ def create_adaptive_import_session(
         ) from exc
     except AdaptiveImportError as exc:
         db.rollback()
-        if record is not None:
+        if record is not None and not commit_attempted:
             _remove_failed_session(record.id)
         raise _http_error(exc) from exc
     except SQLAlchemyError as exc:
         db.rollback()
-        if record is not None:
+        if record is not None and not commit_attempted:
             _remove_failed_session(record.id)
-        raise HTTPException(status_code=500, detail={"code": "SESSION_PERSISTENCE_FAILED", "message": "Import analysis could not be saved."}) from exc
+        message = (
+            "Import analysis submission is not confirmed. Check Tasks before uploading again."
+            if commit_attempted else "Import analysis could not be saved."
+        )
+        raise HTTPException(status_code=500, detail={"code": "SESSION_PERSISTENCE_FAILED", "message": message}) from exc
     except Exception as exc:
         db.rollback()
-        if record is not None:
+        if record is not None and not commit_attempted:
             _remove_failed_session(record.id)
-        raise HTTPException(status_code=500, detail={"code": "SESSION_ANALYSIS_FAILED", "message": "Import analysis failed safely."}) from exc
+        message = (
+            "Import analysis submission is not confirmed. Check Tasks before uploading again."
+            if commit_attempted else "Import analysis failed safely."
+        )
+        raise HTTPException(status_code=500, detail={"code": "SESSION_ANALYSIS_FAILED", "message": message}) from exc
 
 
 def _remove_failed_session(import_id: uuid.UUID) -> None:

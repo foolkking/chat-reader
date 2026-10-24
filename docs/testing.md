@@ -1,5 +1,52 @@
 # Testing
 
+## Optimization review and pruning — 2026-10-24 (local)
+
+The [dated review](execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md) owns this
+batch's targeted regression results and limits. The extra release-document
+snapshot checker has been removed; `corepack pnpm run test:ci-tools` retains
+the original changed-area selector tests, without weakening the full release
+gate. Original health endpoint tests remain. Task recovery coverage exercises
+the writer, persisted row and actual detail/list endpoints; private suffixes and
+dynamic scanner values must still be redacted. Earlier receipts below are not
+new full-suite or production acceptance.
+
+## Code-block clipboard recovery — 2026-10-24 (local)
+
+`node --test scripts/ux/code-copy-recovery.test.mjs` exercises the actual
+component functions and shared hook with controlled scheduling/device adapters:
+**8 passed**. `node scripts/ux/code-copy-browser.mjs`, with process-local
+TEMP/TMP in the task's `wkkk` directory, runs **5 local Chrome component
+scenarios** using real React/DOM/CSS and explicit preferences/highlighting/
+clipboard adapters. It checks complete selected source, missing/denied access,
+retry, pending state and 375px Chinese recovery. The final service-free UX
+suite passed **1,582/1,582**; no physical clipboard, permission prompt or full
+authenticated Reader/Share/Offline E2E is claimed. The
+[scoped review and synthetic evidence](execution/ux-audit-code-copy-recovery-2026-10-24.md)
+record the first failed SSR-fixture import and its correction, not a skipped
+product assertion. Web lint, nonincremental typecheck and one-worker production
+build passed. The two rich-Markdown Playwright source-contract checks also
+passed without a browser/server; those are not rendered E2E acceptance.
+
+## Import-analysis resource isolation — 2026-10-24 (local)
+
+The kilobyte-source lifecycle/transaction tests in
+`apps/api/tests/test_import_analysis_queue.py` use a module-local synthetic
+headroom sensor, matching the existing draft-streaming suite. The real
+admission context and worker still run; only the machine-dependent sensor is
+controlled. Production limits and memory probes are unchanged. Negative worker
+tests override the sensor with zero, 64 MiB or unknown headroom and verify that
+analysis does not start and original sources remain available.
+
+A test-process fault installed a zero-headroom sensor **before fixture setup**:
+the old suite produced **4 failures / 1 pass** in the selected correctness/
+rejection cases; the scoped fixture then passed all **34** analysis cases under
+the same fault. Independent upload-admission, compressed-input and draft
+regressions passed **44/44**, retaining concurrency, fail-closed and expanded-
+input safety checks. These are deterministic functional tests, not memory
+capacity, OOM prevention, PostgreSQL or production acceptance. The transient
+fault plugin lives only in this task's `wkkk` directory.
+
 ## Noise rules and thinking summaries — 2026-10-23 (local only)
 
 The [current contract](system/CONTENT_CLEANUP_CONTRACT.md) owns behavior;

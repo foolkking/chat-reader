@@ -2,22 +2,24 @@
 
 ## Current production — 2026-10-23
 
-Runtime source is **0f116fe / 20261022_0053**, accepted at
-**2026-10-23 05:00:36 UTC / 13:00:36 +08:00** after exact-source CI
-**39897308692** passed all five jobs and independent artifact/source checks.
+Runtime source is **18d4971 / 20261022_0053**, accepted at
+**2026-10-23 14:06:42 UTC / 22:06:42 +08:00** after exact-source CI
+**39958042690** passed all five jobs and independent artifact/source checks.
 API/Web are healthy, worker heartbeat fresh; exact images, HTTPS/denial checks,
 unchanged PostgreSQL/config/Nginx, zero application restarts/startup errors and
 unchanged OOM counter passed. The stopped-writer five-component backup is
-**chat-reader-20261023T045237Z**; current/direct rollback is **0f116fe/cfaa6ed**,
-both at 0053. No schema downgrade, production build, volume/data deletion,
-configuration change or retention pruning occurred.
+**chat-reader-20261023T135839Z**; current/direct rollback is **18d4971/0f116fe**,
+both at 0053. No schema downgrade, production build, volume/data deletion or
+configuration change occurred. Separately authorized retention removed only 18
+older release-transfer archives and retained the latest three; it did not remove
+backups, Docker images, volumes, imports or release verification records.
 
 Use the exact release's low-memory support scripts, including the pinned
 networkless `backup_volume_reader.sh`. That reader has now been exercised in
 real stopped-writer backups; the earlier local-only status below is historical.
 No authenticated production UI, installed external-client or sustained-load
 acceptance is claimed. See the
-[current release record](../execution/IMAGE_SCALE_DROP_RELEASE_2026-10-23.md).
+[current release record](../execution/NOISE_SUMMARY_RELEASE_2026-10-23.md).
 
 ## Previous audited production — 2026-10-19 (historical)
 

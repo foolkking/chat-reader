@@ -9,6 +9,7 @@ import {
 import { createContext, memo, useContext, useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
+import { useClipboardCopy } from "../../components/use-clipboard-copy";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import type { BundledLanguage, ThemedToken } from "shiki";
@@ -881,12 +882,15 @@ function CodeOrMermaidBlock(props: SyntaxHighlighterProps) {
 }
 
 function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
-  const { resolvedTheme } = usePreferences();
+  const { resolvedTheme, resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   const containerRef = useRef<HTMLElement | null>(null);
   const [shouldHighlight, setShouldHighlight] = useState(false);
   const [tokens, setTokens] = useState<ThemedToken[][] | null>(null);
   const [failed, setFailed] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const clipboard = useClipboardCopy(code);
+  const copied = clipboard.state === "copied";
+  const copying = clipboard.state === "copying";
   const [wrapped, setWrapped] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const longCode = code.split("\n").length > 80;
@@ -942,9 +946,16 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
         <div className="flex items-center gap-1">
           <CodeAction title={wrapped ? "Disable line wrapping" : "Wrap long lines"} onClick={() => setWrapped((value) => !value)}><WrapText className="h-3.5 w-3.5" /></CodeAction>
           {longCode ? <CodeAction title={expanded ? "Collapse code" : "Expand code"} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}</CodeAction> : null}
-          <CodeAction title={copied ? "Copied" : "Copy code"} onClick={async () => { await navigator.clipboard.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1200); }}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</CodeAction>
+          <CodeAction title={copying ? (zh ? "正在复制代码…" : "Copying code…") : copied ? (zh ? "已复制" : "Copied") : (zh ? "复制代码" : "Copy code")} onClick={clipboard.copy} disabled={copying}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</CodeAction>
         </div>
       </div>
+      {clipboard.state === "failed" ? <div data-markdown-copy-ignore="true" className="space-y-2 border-b border-ui p-3">
+        <p role="alert" className="text-sm text-[var(--danger)]">{zh ? "剪贴板不可用，请从下方选择并复制。" : "Clipboard unavailable. Select and copy below."}</p>
+        <textarea ref={clipboard.manualRef} readOnly value={code} rows={5}
+          aria-label={zh ? "可手动复制的代码" : "Code for manual copy"}
+          onFocus={event => event.currentTarget.select()}
+          className="w-full resize-y rounded-md border border-ui bg-surface p-3 font-mono text-sm leading-6 text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]" />
+      </div> : null}
       <div className={`relative ${longCode && !expanded ? "max-h-[30rem] overflow-hidden" : ""}`}>
         <pre className={`max-w-full overflow-x-auto bg-[var(--code-bg)] p-4 text-[0.875em] leading-[1.65] text-primary ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
           <code>
@@ -963,8 +974,8 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
   );
 }
 
-function CodeAction({ title, onClick, children }: { title: string; onClick: () => void | Promise<void>; children: React.ReactNode }) {
-  return <button type="button" title={title} aria-label={title} onClick={() => void onClick()} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary transition hover:bg-surface hover:text-primary">{children}</button>;
+function CodeAction({ title, onClick, children, disabled = false }: { title: string; onClick: () => void | Promise<void>; children: React.ReactNode; disabled?: boolean }) {
+  return <button type="button" title={title} aria-label={title} disabled={disabled} aria-busy={disabled || undefined} onClick={() => void onClick()} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary transition hover:bg-surface hover:text-primary disabled:opacity-40">{children}</button>;
 }
 
 async function getShikiTokens(language: BundledLanguage, code: string, resolvedTheme: "light" | "dark"): Promise<ThemedToken[][]> {

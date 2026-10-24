@@ -26,6 +26,7 @@
 | [EXTERNAL_DEPENDENCIES.md](EXTERNAL_DEPENDENCIES.md) | 外部运行依赖及故障影响 |
 | [KNOWN_ISSUES_AND_UNCERTAINTIES.md](KNOWN_ISSUES_AND_UNCERTAINTIES.md) | 当前风险与待验证项 |
 | [DOCUMENT_MAINTENANCE.md](DOCUMENT_MAINTENANCE.md) | 事实等级和维护规则 |
+| [CONTINUOUS_OPTIMIZATION_BACKLOG.md](CONTINUOUS_OPTIMIZATION_BACKLOG.md) | 本地改动审查、撤销处置及精简后续计划 |
 
 详细 API、开发和部署步骤分别由 [API 参考](../api-reference.md)、[本地开发](../development.md) 和 [生产部署](../deployment.md) 维护，本目录只给出结构与边界，避免重复命令。
 

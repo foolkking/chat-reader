@@ -16,9 +16,10 @@ commit endpoint rejects a session until its initial analysis is reviewable.
 This uses the existing `BackgroundJob` schema and adds no migration. Other
 adaptive replacement, reanalysis and mapping routes remain bounded synchronous
 FastAPI handlers executed in the thread pool. This task first shipped in
-`f3b331a`; current production is `50f6de4/20261017_0052`. The
-[release report](../execution/OOM_RELEASE_2026-10-19.md) records exact CI,
-limits and runtime evidence. See the
+`f3b331a`; current production is `18d4971/20261022_0053`. The
+[original release report](../execution/OOM_RELEASE_2026-10-19.md) records its
+exact CI, limits and runtime evidence; `PROJECT_STATE.md` owns the current
+runtime snapshot. See the
 [adaptive import contract](ADAPTIVE_IMPORT_CONTRACT.md#durable-initial-analysis-task).
 
 Task query consistency (local release verification, 2026-10-16): the bounded
@@ -28,6 +29,22 @@ projection per task identity in the existing active/terminal order, not duplicat
 rows. Ownership, retention windows, per-window limits and task mutation contracts
 are unchanged. Three independent-commit race cases and the full focused task API
 file passed 20/20; full PostgreSQL CI remains the release gate.
+
+Import-result lookup (local source, 2026-10-24): task and import-status reads
+filter `conversation_imported` events by the requested import ID in SQL and
+select only conversation IDs. They do not load unrelated event payloads or
+event ORM objects. The primary result stays first; remaining IDs are deduplicated
+in event-time/ID order. When deleting that primary clears its nullable import
+FK, committed batch results still resolve from surviving per-conversation
+events; deleting the final conversation leaves an empty result. No deleted
+conversation or event is restored. The event query joins current conversations
+and excludes either deletion marker and ownership no longer matching the import.
+Archived conversations remain eligible. A primary without an import event has a
+bounded ID-only availability check; an unowned legacy import matches only unowned
+results. Counts derive from the surviving IDs, while stored task/event history
+is unchanged. Noncommitted-result fast paths are unchanged. This adds no index
+or migration and does not claim constant-time lookup or continued availability
+after a read if another request subsequently deletes or transfers the result.
 
 Local offline task recovery (2026-10-08): owned task serialization projects a
 nullable `OfflineDownloadTarget` from allowlisted scope/ID/attachment-mode fields.
