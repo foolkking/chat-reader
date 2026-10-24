@@ -4,9 +4,9 @@
 
 | 文档 | 当前职责 |
 | --- | --- |
-| `system/CONTINUOUS_OPTIMIZATION_BACKLOG.md` | 原审查为 15 项保留、1 项修正、4 项撤销；有界续办 #135 已本地修复，仅剩 #120 和条件观察 #133。 |
+| `system/CONTINUOUS_OPTIMIZATION_BACKLOG.md` | 原审查为 15 项保留、1 项修正、4 项撤销；有界续办 #135 已随 3fbf79d 部署，仅剩 #120 和条件观察 #133。 |
 | `execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md` | 原实施和 no-change 证据、撤销/兼容修正及 #135 续办验证与限制；不是活动待办或生产验收。 |
-| `execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md` | 后续授权的本批提交、完整 CI、50 分钟门槛、独立制品、备份与部署结果；不扩大优化范围。 |
+| `execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md` | 本批 3fbf79d 的五项全绿 CI、50 分钟门槛、独立制品、备份及 22:02:16 +08:00 部署验收；保留首轮失败，不扩大优化范围。 |
 | `PROJECT_STATE.md` | 当前生产、回退及本地范围的唯一入口；不再额外维护发布事实 JSON 或逐段文本绑定检查器。 |
 
 保留的行为继续归现有专题所有：`system/ADAPTIVE_IMPORT_CONTRACT.md` 负责导入

@@ -39,7 +39,7 @@ Do not build production images locally/on the server, delete user data/volumes,
 prune backups/images, restore historical text or automatically downgrade.
 GitHub access uses existing credentials via API/CLI, not a new web login.
 
-## Current checkpoint
+## Pre-submit checkpoint (historical)
 
 Fresh pre-submit verification passed:
 
@@ -84,7 +84,56 @@ element validation; valid collections and valid/invalid message schemas retain
 their behavior. This is synthetic bounded validation, not sustained-load or
 complete production runtime acceptance.
 
-The corrected source requires a new complete CI and a fresh 50-minute wait.
+The corrected source required a new complete CI and a fresh 50-minute wait.
+
+## Final CI, artifact and production acceptance
+
+Corrected exact source **`3fbf79dd0f1da2906ff32d202dfa85cb8544c612`** was pushed
+and dispatched in [CI 40095860923](https://github.com/foolkking/chat-reader/actions/runs/40095860923)
+at **2026-10-24 12:54:16 UTC**. Its fresh read deadline was
+**13:44:16.414583 UTC**. First read at **13:44:18 UTC** found all three quality
+jobs successful and image building in progress; the **13:48:01 UTC** check
+confirmed all five jobs successful. No early result read or partial-gate
+deployment occurred.
+
+The exact official artifact passed independent inspection: **35 OCI blobs**,
+**344 exact source files**, complete image-descriptor/config/layer bindings,
+matching API/Web revisions and compiled code-copy/import-recovery markers.
+Forbidden paths are absent. Archive SHA-256:
+`2e20649891cc4ffc2243b799e8c17874b25e9ba473149b9b9817aa85e9ac5875`.
+All ten transferred support/proof files and exact-source LF helpers were
+verified before maintenance.
+
+Fresh production preflight confirmed current `18d4971`, prior rollback
+`0f116fe`, schema 0053, no admitted work and sufficient combined backup/image/
+transfer capacity. Application writers alone were stopped during
+**2026-10-24 13:53:38–14:02:16 UTC / 21:53:38–22:02:16 +08:00**.
+Read-only storage audit verified **346/346** stored files and SHA-256 values
+with zero issues. The stopped-writer five-component backup
+**`chat-reader-20261024T135352Z`** passed component hashes, manifest and
+PostgreSQL restore-TOC verification.
+
+CI images were loaded and applications recreated with `--no-build`; no local
+or server application-image build occurred. Migration stayed at single
+**`20261022_0053`**, with stopped-writer canonical counts unchanged. PostgreSQL
+identity/start time, production env/Compose, Nginx and the existing public-image
+privacy location remained unchanged. No imports, volumes, backups or old images
+were deleted or pruned.
+
+Production accepted at **2026-10-24 14:02:16 UTC / 22:02:16 +08:00**.
+API/Web are healthy, worker is running with a fresh `alive_idle` heartbeat, and
+all three application revisions match `3fbf79d`. HTTPS, redirects, private-route
+denial, missing-public-capability 404/no-store, clean startup logs, zero
+application restarts and unchanged host OOM counter passed. A repeated
+lightweight check passes. Its first repeat omitted the production Compose
+working directory/environment and exited before checking containers; rerunning
+with the exact production context passed without changing runtime or config.
+Final available capacity was **5,423,235,072 bytes**.
+
+Current/direct rollback pointers are **`3fbf79d`/`18d4971`**, both at 0053;
+rollback needs no schema downgrade. This was a bounded maintenance outage, not
+zero-downtime deployment. No authenticated production browser, physical
+clipboard, installed external client or sustained-load acceptance is claimed.
 
 Local SQLite, synthetic component fixtures and historical browser receipts are
 not PostgreSQL concurrency, physical clipboard, authenticated production UI or

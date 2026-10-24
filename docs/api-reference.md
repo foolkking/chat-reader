@@ -32,7 +32,7 @@ do not serialize capabilities; deleting the conversation file revokes the URL.
 ## Current released additions — 2026-10-19
 
 The following contracts first shipped in `f3b331a` and remain in current
-accepted source `18d4971`. Their original exact-source CI and runtime boundaries
+accepted source `3fbf79d`. Their original exact-source CI and runtime boundaries
 are in the [2026-10-19 release record](execution/OOM_RELEASE_2026-10-19.md);
 current runtime state is in `PROJECT_STATE.md`, while prior schema/data checks
 remain in the [feature release](execution/FEATURE_RELEASE_2026-10-19.md).

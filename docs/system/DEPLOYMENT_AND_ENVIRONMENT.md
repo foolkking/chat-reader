@@ -1,6 +1,30 @@
 # 部署与运行环境
 
-## Current production — 2026-10-23
+## Current production — 2026-10-24
+
+Runtime source is **3fbf79d / 20261022_0053**, accepted at
+**2026-10-24 14:02:16 UTC / 22:02:16 +08:00**. Corrected exact-source CI
+**40095860923** passed all five jobs after the fresh 50-minute read gate;
+independent official-artifact/OCI/source inspection passed. The initial
+audit-blocked run deployed nothing. The existing Zod dependency is fixed at
+4.6.6, with no new audit exception or weakened gate.
+
+The stopped-writer five-component backup is
+**chat-reader-20261024T135352Z**; current/direct rollback is
+**3fbf79d/18d4971**, both at 0053, so no downgrade is needed. The maintenance
+window was **13:53:38–14:02:16 UTC**, not zero downtime. API/Web are healthy,
+worker heartbeat `alive_idle`, exact images/HTTPS/denial checks pass,
+application restart/startup-error counts are zero, and the OOM counter is
+unchanged. PostgreSQL identity/start time, production env/Compose, Nginx and
+stopped-writer canonical counts are unchanged. No local/production application
+image build, user-data/volume deletion or backup/image pruning occurred.
+Use exact-source lightweight support scripts with the production Compose
+working directory/environment; never run full diagnostics inside the serving
+API. No authenticated production UI, physical clipboard or sustained-load
+acceptance is claimed. See the
+[release record](../execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md).
+
+## Previous accepted production — 2026-10-23
 
 Runtime source is **18d4971 / 20261022_0053**, accepted at
 **2026-10-23 14:06:42 UTC / 22:06:42 +08:00** after exact-source CI

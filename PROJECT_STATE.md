@@ -4,7 +4,7 @@ Last updated: 2026-10-24. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Local review and pruning (2026-10-24): system optimization.** The
+**Deployed and accepted (2026-10-24): reviewed system optimization.** The
 [short disposition and follow-up plan](docs/system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)
 replaces the open-ended candidate pool: 15 completed records retained, one
 repaired and four reverted. Commit-aware import-source protection, safe task
@@ -15,17 +15,22 @@ unfinished candidates, 108 leave the plan. On the user's bounded continuation,
 #135 now filters deleted or no-longer-owned import results while retaining
 archived/legacy results; #120 and conditional read-only #133 are not started. Original verification
 and limits are preserved in the [dated review](docs/execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md).
-The user subsequently authorized submission and deployment of this reviewed
-batch. No new optimization cycle is authorized. Full exact-source CI, the
-50-minute result-read gate, independent artifact inspection and a verified
-stopped-writer backup precede any application replacement. Accepted runtime
-and rollback below remain unchanged until acceptance. See the
-[release record](docs/execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md).
-The first CI passed API/settings but was audit-blocked; its narrow prerequisite
-updates existing transitive Zod to 4.6.6 and removes a withdrawn advisory's stale
-exception, retaining the shipped braces guard and all release gates.
+The user subsequently authorized this reviewed batch's submission/deployment,
+not a new optimization cycle. After the first audit-blocked CI, existing
+transitive Zod moves to fixed 4.6.6 and a withdrawn advisory's stale exception
+is removed; the shipped braces guard and all release gates remain.
+Exact source **`3fbf79dd0f1da2906ff32d202dfa85cb8544c612`** passed all five jobs
+in CI **`40095860923`**, first read after its fresh 50-minute gate. Independent
+artifact/source verification and stopped-writer five-component backup passed.
+Production accepted at **2026-10-24 22:02:16 +08:00**; current/direct rollback
+is **`3fbf79d`/`18d4971`**, schema **`20261022_0053`**. Backup:
+**`chat-reader-20261024T135352Z`**. API/Web/worker health, exact revisions,
+HTTPS/denial, unchanged PostgreSQL/config/Nginx and no new OOM passed.
+No production build, migration, data/volume deletion or backup/image pruning.
+See the [release record](docs/execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md);
+authenticated production UI, physical clipboard and sustained load are unclaimed.
 
-**Deployed and accepted (2026-10-23): noise rules, summaries and image slider.** Imports
+**Previous accepted release (2026-10-23): noise rules, summaries and image slider.** Imports
 preserve complete summary source; legacy automatic cleaning is now read-only.
 Reader, Share and Offline fold only a conservative opening, duration-terminated
 summary, without trusting historical block flags or hiding ordinary introductions.
@@ -42,7 +47,7 @@ produced no deployable artifact. Its stale import assertion and desktop image
 menu occlusion were repaired. Exact source
 `18d4971339a0927bdf4120680aa16ce36365098d` passed all five jobs in CI
 `39958042690`, and the official artifact was independently verified. Production
-was accepted at **2026-10-23 22:06:42 +08:00**; current/rollback are
+was accepted at **2026-10-23 22:06:42 +08:00**; then-current/rollback were
 `18d4971`/`0f116fe`, schema remains `0053`. The five-component backup is
 `chat-reader-20261023T135839Z`; no database downgrade, production build,
 configuration/Nginx change, import/volume change or OOM occurred. The user
@@ -58,7 +63,7 @@ movement attracts to 25/50/75/100%; slow dragging and keyboard retain exact 1%
 adjustment. Drag release commits once, with explicit preset buttons; cancelled
 gestures do not save. Original bytes, existing URLs and the bounded file-drop
 behavior are unchanged. Initially held without submission, it is now included in
-the authorized batch above; production now serves the accepted `18d4971` release. See the
+that release; the current batch retains this interaction unchanged. See the
 [current behavior](docs/system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size).
 
 **Deployed and accepted (2026-10-23): compact image scale and bounded file drop.**

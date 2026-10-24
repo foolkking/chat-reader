@@ -16,7 +16,7 @@ commit endpoint rejects a session until its initial analysis is reviewable.
 This uses the existing `BackgroundJob` schema and adds no migration. Other
 adaptive replacement, reanalysis and mapping routes remain bounded synchronous
 FastAPI handlers executed in the thread pool. This task first shipped in
-`f3b331a`; current production is `18d4971/20261022_0053`. The
+`f3b331a`; current production is `3fbf79d/20261022_0053`. The
 [original release report](../execution/OOM_RELEASE_2026-10-19.md) records its
 exact CI, limits and runtime evidence; `PROJECT_STATE.md` owns the current
 runtime snapshot. See the
@@ -30,7 +30,7 @@ rows. Ownership, retention windows, per-window limits and task mutation contract
 are unchanged. Three independent-commit race cases and the full focused task API
 file passed 20/20; full PostgreSQL CI remains the release gate.
 
-Import-result lookup (local source, 2026-10-24): task and import-status reads
+Import-result lookup (deployed 2026-10-24): task and import-status reads
 filter `conversation_imported` events by the requested import ID in SQL and
 select only conversation IDs. They do not load unrelated event payloads or
 event ORM objects. The primary result stays first; remaining IDs are deduplicated

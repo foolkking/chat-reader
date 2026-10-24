@@ -11,6 +11,14 @@ the writer, persisted row and actual detail/list endpoints; private suffixes and
 dynamic scanner values must still be redacted. Earlier receipts below are not
 new full-suite or production acceptance.
 
+Subsequent publication is accepted at exact source `3fbf79d`: full CI
+`40095860923` passes API, Web, settings, image build and independent artifact
+inspection. Fresh pre-submit API regression is 213 passed; runtime/backup and
+50-minute gate evidence belong to the
+[release record](execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md).
+The local synthetic receipts below retain their narrower scope; production
+authentication UI, physical clipboard and sustained load were not exercised.
+
 ## Code-block clipboard recovery — 2026-10-24 (local)
 
 `node --test scripts/ux/code-copy-recovery.test.mjs` exercises the actual
