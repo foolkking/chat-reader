@@ -16,6 +16,9 @@
 `testing.md` 保留资源隔离及原验证边界，详细失败与回执只放带日期记录，避免重复账本。
 本次没有 migration、离线/Dexie 格式变化。用户随后授权提交部署本批结果，
 发布状态由上述发布记录维护，不把本地审查回执当作生产验收。
+首轮 CI 的审计阻塞由 `system/RELEASE_SAFETY_BASELINE.md` 维护当前安全策略：
+现有间接 Zod 升到修复版 4.6.6，移除上游已撤回公告对应的无效例外；
+保留原 braces 防御补丁和完整门禁，不新增例外。
 
 ## Noise-rule / thinking-summary corrections — 2026-10-23 (deployed)
 

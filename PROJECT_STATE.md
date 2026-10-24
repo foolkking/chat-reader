@@ -21,6 +21,9 @@ batch. No new optimization cycle is authorized. Full exact-source CI, the
 stopped-writer backup precede any application replacement. Accepted runtime
 and rollback below remain unchanged until acceptance. See the
 [release record](docs/execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md).
+The first CI passed API/settings but was audit-blocked; its narrow prerequisite
+updates existing transitive Zod to 4.6.6 and removes a withdrawn advisory's stale
+exception, retaining the shipped braces guard and all release gates.
 
 **Deployed and accepted (2026-10-23): noise rules, summaries and image slider.** Imports
 preserve complete summary source; legacy automatic cleaning is now read-only.

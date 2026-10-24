@@ -1,5 +1,20 @@
 # Release Safety Baseline
 
+2026-10-24 release prerequisite: reviewed-optimization CI `40091984323`
+passed API/settings but failed the unchanged official-registry audit. New high
+advisory `GHSA-mrhx-c7xc-m3w5` affects the existing transitive Zod 4.4.3.
+A conditional override selects the advisory-defined fixed **4.6.6**, within
+assistant-ui's existing `^4.4.3` range, without a new direct dependency.
+The original braces advisory `GHSA-vfj7-8cjw-p6xm` was upstream-withdrawn at
+**2026-10-23 12:53:02 UTC** as not practically exploitable; official npm no
+longer reports it. Remove its now-unused exception rather than weaken the
+unused-exception gate. Retain the already-shipped bounded braces patch and its
+regressions as defense in depth; there is no upstream replacement release.
+No new exception, severity change or audit bypass. Low/moderate findings remain
+visible. Exact-source CI and deployment status belong to the
+[release record](../execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md).
+Earlier advisory/exception statements below are dated historical evidence.
+
 2026-10-23 release prerequisite: image-scale CI `39829506577` was blocked by
 new Next advisories `GHSA-2464-fhr4-w9xw` (critical) and
 `GHSA-p3m5-59mp-jv5r` (high). A fresh official npm audit additionally identifies

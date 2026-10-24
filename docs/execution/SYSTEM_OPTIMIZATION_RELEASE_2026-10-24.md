@@ -16,7 +16,7 @@ stay reverted; #120 and conditional #133 are not started.
 
 Implementation, red/green receipts and environment limits remain in the
 [review record](SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md) and linked UX evidence.
-No migration, dependency, API-field, offline package or Dexie format change.
+No migration, API-field, offline package or Dexie format change.
 The pre-existing generated `apps/web/tsconfig.tsbuildinfo` is preserved and
 excluded from submission.
 
@@ -55,7 +55,36 @@ Fresh pre-submit verification passed:
 Read-only production preflight confirmed `18d4971`, rollback `0f116fe`, schema
 0053, running/healthy services and no admitted background work. This is not
 deployment acceptance, and these conditions must be reverified before cutover.
-No CI or production acceptance is claimed yet.
+No successful CI or production acceptance is claimed yet.
+
+## First CI and narrow security prerequisite
+
+Source `e7ab2db4bd8161b64dec4fc3885048537c7433d2` was pushed and dispatched in
+CI `40091984323` at **2026-10-24 11:57:56 UTC**. First result read:
+**12:47:57 UTC**, after the 50-minute gate. API and settings passed; Web failed
+at dependency audit, so image build/inspection were skipped. Nothing deployed.
+
+Official npm and the primary GitHub advisory API confirmed new high
+`GHSA-mrhx-c7xc-m3w5`: transitive Zod 4.4.3 must become fixed 4.6.6, compatible
+with assistant-ui's existing range. The same audit rejects an unused braces
+exception: upstream withdrew `GHSA-vfj7-8cjw-p6xm` on **2026-10-23 12:53:02 UTC**.
+Remove that stale exception, not the policy that rejects unused entries.
+Retain the existing bounded braces patch/regressions; no new exception or
+security-gate relaxation. Other low/moderate findings are reported, not hidden.
+This is a release prerequisite, not renewed open-ended optimization.
+
+After the lockfile-only dependency resolution, official audit has **zero
+high/critical, zero exceptions, zero policy errors**; the remaining low/moderate
+findings stay reported. Only Zod changes in the dependency graph. Web lint,
+nonincremental typecheck, all **1,582** service-free UX cases and **9** existing
+braces/source-map security regressions pass. A task-local 96 MiB/15-second
+subprocess checks the actual assistant-ui Zod resolution: an oversized
+250,000-element constrained array is rejected with one size issue before any
+element validation; valid collections and valid/invalid message schemas retain
+their behavior. This is synthetic bounded validation, not sustained-load or
+complete production runtime acceptance.
+
+The corrected source requires a new complete CI and a fresh 50-minute wait.
 
 Local SQLite, synthetic component fixtures and historical browser receipts are
 not PostgreSQL concurrency, physical clipboard, authenticated production UI or
