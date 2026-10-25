@@ -26,14 +26,18 @@ for (const width of [375, 768, 1440]) for (const zh of [true, false]) {
       await page.locator('[data-testid="unclassified-new-conversation-button"]:visible').click();
       const create = page.getByTestId("new-conversation-dialog");
       await expect(create.getByRole("heading")).toHaveText(zh ? "新建对话" : "New conversation");
-      await create.locator("textarea").first().fill("Synthetic draft remains available");
+      const userMessage = create.getByPlaceholder(zh ? "输入第一条用户消息…" : "Enter the first user message…");
+      const assistantMessage = create.getByPlaceholder(zh ? "输入第一条助手消息…" : "Enter the first assistant message…");
+      await userMessage.fill("Synthetic draft remains available");
       await page.keyboard.press("Escape");
       const confirmation = page.getByRole("dialog", { name: /放弃未保存|Discard unsaved/ });
       await expect(confirmation).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(confirmation).toHaveCount(0);
-      await expect(create.locator("textarea").first()).toHaveValue("Synthetic draft remains available");
-      await create.locator("textarea").last().fill("Synthetic saved response");
+      await expect(userMessage).toHaveValue("Synthetic draft remains available");
+      await assistantMessage.fill("Synthetic saved response");
+      await expect(userMessage).toHaveValue("Synthetic draft remains available");
+      await expect(assistantMessage).toHaveValue("Synthetic saved response");
       let block = true;
       await page.route("**/api/conversations", async (route) => {
         if (route.request().method() === "POST" && block) await route.fulfill({ status: 503, json: { detail: "Synthetic save failure" } });
@@ -41,7 +45,8 @@ for (const width of [375, 768, 1440]) for (const zh of [true, false]) {
       });
       await create.getByRole("button", { name: /创建并打开|Create and open/ }).click();
       await expect(create.getByRole("alert")).toBeVisible();
-      await expect(create.locator("textarea").first()).toHaveValue("Synthetic draft remains available");
+      await expect(userMessage).toHaveValue("Synthetic draft remains available");
+      await expect(assistantMessage).toHaveValue("Synthetic saved response");
       block = false;
       const saved = page.waitForResponse((response) => response.url().endsWith("/api/conversations") && response.request().method() === "POST");
       await create.getByRole("button", { name: /创建并打开|Create and open/ }).click();

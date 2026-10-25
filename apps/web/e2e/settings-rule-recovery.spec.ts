@@ -149,7 +149,8 @@ test("1440px: a new rule with a lost response is found without creating a duplic
     await f.editor.getByRole("button", { name: "确认保存个人规则", exact: true }).click();
     await f.editor.getByRole("button", { name: "检查保存结果", exact: true }).click();
     await expect(f.editor).not.toBeVisible(); expect(writes).toBe(1);
-    expect((await f.rules()).filter(item => item.match_value === f.local)).toHaveLength(1);
+    // Learning preserves the exact literal, including intentional edge spaces.
+    expect((await f.rules()).filter(item => item.match_value === `  ${f.local}  `)).toHaveLength(1);
     await expect(f.panel.getByRole("button", { name: /Synthetic new rule/ })).toBeVisible();
   } finally { await f.context.close(); await f.admin.dispose(); }
 });
