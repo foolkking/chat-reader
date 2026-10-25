@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+## ChatGPT 正文阅读兼容 — 2026-10-25（仅本地）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `system/AI_RICH_MARKDOWN_CONTRACT.md` | v7 可见安全降级、完整候选识别、嵌套代码保护、Mermaid 文字替代及挂载子树解析复用；共享只读呈现的当前真值。 |
+| `system/BACKEND_AND_API.md` | exporter parser v6 的 `say` 类型边界、Markdown parser v5 配对合同和有界映射预览元数据。 |
+| `execution/CHATGPT_READING_REMAINING_2026-10-25.md` | 本次有界续办的实施、真实本地三链、性能测量、门禁结果及仍需源样本的八项；不覆盖原审查。 |
+| `execution/ux-audit-chatgpt-reading-2026-10-25.md` | 原 20 项优化候选、实施 2 项/暂缓 18 项的历史检查点、四项不计数的撤回调查与原验证边界。 |
+| `execution/ux-audit-chatgpt-reading-2026-10-25-evidence/` | 仅合成输入的基线/结果、探针、Chrome 回执和截图；原回执不覆盖，续办使用独立文件，不保存真实对话或凭据。 |
+| `testing.md` | 可执行的 Node、Chrome、API、源码合同和 Web 门禁及明确未验收范围。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 简短入口；区分本地修改与原有已接受生产发布，不重复维护完整审查。 |
+
+本次收紧受支持 exporter 正文类型并为映射样本补充 `content_truncated`；
+不改变 schema、`.cr`、离线包 v1/v2/v3、Dexie 或部署流程。
+import parser 为 v6，Markdown parser 仍为 v5。旧文档中的计数/发布状态仅在各自检查点内有效，
+不把四项不可达遗留代码调查计入新的 20 项候选，不恢复无限优化计划。
+
 ## 本地优化审查与精简 — 2026-10-24
 
 | 文档 | 当前职责 |

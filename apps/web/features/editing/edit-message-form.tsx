@@ -1025,6 +1025,10 @@ export function EditMessageForm({
         {showPreview ? <>
           <aside ref={previewPanelRef} className="absolute inset-y-0 right-0 z-30 w-[min(36%,38rem)] min-w-[15rem] overflow-y-auto overscroll-contain border-l border-ui bg-page p-4 shadow-2xl max-sm:inset-x-0 max-sm:w-full max-sm:min-w-0" data-testid="source-editor-rich-preview" data-preview-revision={previewSnapshot.revision} aria-label={zh ? "Markdown 实时预览" : "Live Markdown preview"}>
             <div className="mb-3 flex items-center justify-between border-b border-ui pb-2"><span className="text-xs font-semibold text-secondary">{text === previewText ? (zh ? "实时预览" : "Live preview") : (zh ? "正在更新…" : "Updating…")}</span><button type="button" className="rounded-md p-2 text-secondary hover:bg-subtle" onClick={() => onPreviewChange?.(false)} aria-label={zh ? "关闭预览" : "Close preview"}><X className="h-4 w-4" /></button></div>
+            <details className="mb-3 border-b border-ui pb-2 text-xs text-secondary" data-testid="source-editor-reading-policy">
+              <summary className="min-h-11 cursor-pointer content-center font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]">{zh ? "阅读兼容说明" : "Reading compatibility"}</summary>
+              <p className="leading-5">{zh ? "只读兼容显示：仅对已识别的导出结构恢复排版。源码、复制内容和保存的正文不因此改变；无法识别的 HTML 显示为文字，不执行脚本或小工具。预览不能补回导出文件中缺失的内容。" : "Read-only compatibility display restores formatting only for recognized export structures. It does not change source, copied text or saved content. Unrecognized HTML is shown as text; scripts and widgets never run. Preview cannot restore content missing from an export."}</p>
+            </details>
             <MarkdownRenderer text={previewText} isAssistant={false} preserveSourceOffsets scopeId={`editor-${messageId ?? formId}`} />
           </aside>
         </> : null}

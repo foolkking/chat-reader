@@ -16,7 +16,7 @@ test("JSON context recognizes single-role Markdown without accepting arbitrary M
   expect(detector).toContain("has_exporter_markdown_structure(text, expected_messages)");
   expect(parser).toContain("A single-role export requires the paired");
   expect(parser).toContain("expected = [message for message in expected_messages or [] if not message.is_empty]");
-  expect(canonical).toContain('PARSER_VERSION = "chat-reader-import-v5"');
+  expect(canonical).toContain('PARSER_VERSION = "chat-reader-import-v6"');
   expect(canonical).toContain('MARKDOWN_PARSER_VERSION = "markdown-parser-v5"');
 });
 

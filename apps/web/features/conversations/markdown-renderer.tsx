@@ -6,7 +6,7 @@ import {
   type CodeHeaderProps,
   type SyntaxHighlighterProps,
 } from "@assistant-ui/react-markdown";
-import { createContext, memo, useContext, useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type CSSProperties, type ReactNode } from "react";
+import { createContext, memo, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type AnchorHTMLAttributes, type CSSProperties, type ReactNode } from "react";
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
@@ -44,6 +44,9 @@ export type MarkdownAttachmentOccurrence = {
   attachmentId: string;
   occurrenceKey: string;
 };
+
+const EMPTY_TASK_ITEMS: MarkdownTaskItem[] = [];
+const EMPTY_ATTACHMENT_OCCURRENCES: MarkdownAttachmentOccurrence[] = [];
 
 type RichMarkdownPerformanceProbe = {
   markdownRenderTotal?: number;
@@ -373,11 +376,11 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   text,
   className = "",
   isAssistant = true,
-  taskItems = [],
+  taskItems = EMPTY_TASK_ITEMS,
   pendingTaskKeys,
   onTaskToggle,
   scopeId,
-  attachmentOccurrences = [],
+  attachmentOccurrences = EMPTY_ATTACHMENT_OCCURRENCES,
   preserveSourceOffsets = false,
   richTextProfile,
 }: {
@@ -511,27 +514,62 @@ export function AssistantMarkdownPart({
   // Math keeps its existing preprocessing semantics; rich-text projection
   // additionally maps its own display edits back to the input source offsets.
   const projection = useMemo(() => projectChatGptRichText(normalizeDisplayMathForRenderer(text), richTextProfile), [richTextProfile, text]);
+  const renderText = projection.text;
+  const interactiveComponents = useMemo(
+    () => createTaskAwareComponents(taskItems, pendingTaskKeys, onTaskToggle),
+    [onTaskToggle, pendingTaskKeys, taskItems, text],
+  );
+  const taskPlugin = useMemo(
+    () => taskItems.length > 0 ? remarkTaskKeys(taskItems) : null,
+    [taskItems, text],
+  );
+  const attachmentPlugin = useMemo(
+    () => attachmentOccurrences.length > 0 ? remarkAttachmentOccurrences(attachmentOccurrences) : null,
+    [attachmentOccurrences, text],
+  );
+  const sourcePositionPlugin = useMemo(
+    () => projection.sourcePosition ? remarkRichTextSourcePositions(projection) : null,
+    [projection],
+  );
+  const plugins = useMemo(() => richMarkdownRemarkPlugins([
+    ...(taskPlugin ? [taskPlugin] : []),
+    ...(attachmentPlugin ? [attachmentPlugin] : []),
+    ...(sourcePositionPlugin ? [sourcePositionPlugin] : []),
+  ]), [attachmentPlugin, sourcePositionPlugin, taskPlugin, text]);
+  const rehypePlugins = useMemo(() => scopedRichMarkdownRehypePlugins(resolvedScopeId), [resolvedScopeId]);
+  const rehypeOptions = useMemo(() => richMarkdownRehypeOptions(resolvedScopeId), [resolvedScopeId]);
+  const componentsByLanguage = useMemo(
+    () => ({ mermaid: { SyntaxHighlighter: MermaidDiagram, CodeHeader: MermaidCodeHeader } }),
+    [],
+  );
+  const preprocess = useCallback(() => renderText, [renderText]);
+  // Keep ordinary Markdown's exact subtree stable across host-style-only
+  // updates. Source, profile, task, attachment and scope changes still replace
+  // its parser inputs; this is not a cross-message parsed-result cache.
+  const renderedMarkdown = useMemo(() => (
+    <MarkdownTextPrimitive
+      className="reader-prose"
+      remarkPlugins={plugins}
+      rehypePlugins={rehypePlugins}
+      remarkRehypeOptions={rehypeOptions}
+      components={interactiveComponents}
+      componentsByLanguage={componentsByLanguage}
+      preprocess={preprocess}
+      skipHtml
+    />
+  ), [componentsByLanguage, interactiveComponents, plugins, preprocess, rehypeOptions, rehypePlugins]);
   if (!text.trim()) {
     return null;
   }
   recordRichMarkdownPerformance(text);
-  const renderText = projection.text;
-  const interactiveComponents = createTaskAwareComponents(taskItems, pendingTaskKeys, onTaskToggle);
-  const taskPlugin = taskItems.length > 0 ? remarkTaskKeys(taskItems) : null;
-  const attachmentPlugin = attachmentOccurrences.length > 0 ? remarkAttachmentOccurrences(attachmentOccurrences) : null;
-  const plugins = richMarkdownRemarkPlugins([
-    ...(taskPlugin ? [taskPlugin] : []),
-    ...(attachmentPlugin ? [attachmentPlugin] : []),
-    ...(projection.sourcePosition ? [remarkRichTextSourcePositions(projection)] : []),
-  ]);
   if (onTaskToggle && taskItems.length > 0) {
     return (
       <div className={`reader-prose ${className}`}>
         <ReactMarkdown
           components={interactiveComponents as Components}
           remarkPlugins={plugins}
-          rehypePlugins={scopedRichMarkdownRehypePlugins(resolvedScopeId)}
-          remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
+          rehypePlugins={rehypePlugins}
+          remarkRehypeOptions={rehypeOptions}
           skipHtml
         >
           {renderText}
@@ -540,18 +578,11 @@ export function AssistantMarkdownPart({
     );
   }
   return (
-    <TextMessagePartProvider text={text}>
-      <MarkdownTextPrimitive
-        className={`reader-prose ${className}`}
-        remarkPlugins={plugins}
-        rehypePlugins={scopedRichMarkdownRehypePlugins(resolvedScopeId)}
-        remarkRehypeOptions={richMarkdownRehypeOptions(resolvedScopeId)}
-        components={interactiveComponents}
-        componentsByLanguage={{ mermaid: { SyntaxHighlighter: MermaidDiagram, CodeHeader: MermaidCodeHeader } }}
-        preprocess={() => renderText}
-        skipHtml
-      />
-    </TextMessagePartProvider>
+    <div className={className}>
+      <TextMessagePartProvider text={text}>
+        {renderedMarkdown}
+      </TextMessagePartProvider>
+    </div>
   );
 }
 
@@ -1032,8 +1063,13 @@ function hashCode(value: string): string {
 
 function MermaidDiagram({ code }: SyntaxHighlighterProps) {
   const { resolvedLocale, resolvedTheme } = usePreferences();
-  const [svgUri, setSvgUri] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const descriptionId = useId();
+  const [rendered, setRendered] = useState<{
+    code: string; theme: string; uri?: string; title?: string; description?: string; failed?: boolean;
+  } | null>(null);
+  // Never label the previous diagram with a new source while async work runs.
+  const current = rendered?.code === code && rendered.theme === resolvedTheme ? rendered : null;
+  const zh = resolvedLocale === "zh-CN";
 
   useEffect(() => {
     let cancelled = false;
@@ -1043,6 +1079,7 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
+          suppressErrorRendering: true,
           theme: "base",
           themeVariables: {
             primaryColor: resolvedTheme === "dark" ? "#292c2a" : "#f6f8fa",
@@ -1055,13 +1092,19 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
         const id = `mermaid-${Math.random().toString(36).slice(2)}`;
         const { svg } = await mermaid.render(id, code);
         if (!cancelled) {
-          setSvgUri(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
-          setError(null);
+          const document = new DOMParser().parseFromString(svg, "image/svg+xml");
+          setRendered({
+            code, theme: resolvedTheme,
+            uri: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+            // These are supplied by Mermaid (e.g. accTitle/accDescr), not an
+            // inferred description or user HTML inserted into the page.
+            title: document.querySelector("title")?.textContent?.trim() || undefined,
+            description: document.querySelector("desc")?.textContent?.trim() || undefined,
+          });
         }
       } catch {
         if (!cancelled) {
-          setSvgUri(null);
-          setError("render");
+          setRendered({ code, theme: resolvedTheme, failed: true });
         }
       }
     }
@@ -1071,26 +1114,18 @@ function MermaidDiagram({ code }: SyntaxHighlighterProps) {
     };
   }, [code, resolvedTheme]);
 
-  if (svgUri) {
-    return (
-      <div className="overflow-x-auto rounded-b-md border border-t-0 border-ui bg-surface p-4">
-        <img src={svgUri} alt="Mermaid diagram" className="mx-auto max-w-full" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="reader-mermaid-error rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4">
-        <p className="text-xs text-[var(--callout-warning-text)]">{resolvedLocale === "zh-CN" ? "图表暂时无法渲染，已保留源码。" : "The diagram could not be rendered; the source is preserved."}</p>
-        <pre className="max-w-full overflow-x-auto rounded border border-ui bg-surface p-3 text-[0.875em] leading-[1.65] text-primary">
-          <code>{code}</code>
-        </pre>
-      </div>
-    );
-  }
-
-  return <div className="rounded-b-md border border-t-0 border-ui bg-[var(--reasoning-bg)] p-4 text-[0.875em] text-secondary">正在渲染 Mermaid 图表…</div>;
+  return <div className={`overflow-x-auto rounded-b-md border border-t-0 border-ui bg-surface p-4 ${current?.failed ? "reader-mermaid-error" : ""}`} data-testid="mermaid-diagram">
+    {current?.uri ? <>
+      <img src={current.uri} alt={current.title ?? (zh ? "Mermaid 图表；可展开下方源码" : "Mermaid diagram; source available below")} aria-describedby={current.description ? descriptionId : undefined} className="mx-auto max-w-full" />
+      {current.description ? <p id={descriptionId} className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-secondary">{current.description}</p> : null}
+    </> : <p className={`text-xs ${current?.failed ? "text-[var(--callout-warning-text)]" : "text-secondary"}`} role="status">{current?.failed
+      ? (zh ? "图表暂时无法渲染，已保留源码。" : "The diagram could not be rendered; the source is preserved.")
+      : (zh ? "正在渲染 Mermaid 图表…" : "Rendering Mermaid diagram…")}</p>}
+    <details className="mt-2 text-xs text-secondary" open={current?.failed || undefined}>
+      <summary className="min-h-11 cursor-pointer content-center font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]">{zh ? "图表源码" : "Diagram source"}</summary>
+      <pre tabIndex={0} role="region" aria-label={zh ? "Mermaid 图表源码" : "Mermaid diagram source"} className="max-h-96 max-w-full overflow-auto rounded border border-ui bg-subtle p-3 text-xs leading-5 text-primary"><code>{code}</code></pre>
+    </details>
+  </div>;
 }
 
 function CitationPart({ part }: { part: CanonicalSourcePart }) {

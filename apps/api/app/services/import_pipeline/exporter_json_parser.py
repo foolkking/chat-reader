@@ -75,7 +75,14 @@ def parse_exporter_json(content: bytes | str) -> ExporterJsonParseResult:
 
         source_role = str(raw_message.get("role") or "unknown")
         role = _map_role(source_role)
-        text = str(raw_message.get("say") or "")
+        text = raw_message.get("say")
+        if text is None:
+            # Retain legacy empty-message semantics, but make the loss boundary
+            # explicit. Structured/non-string content has no supported adapter.
+            warnings.append(f"message {index}.say is missing or null; preserved as empty text.")
+            text = ""
+        elif not isinstance(text, str):
+            raise ExporterJsonParseError(f"message {index}.say must be a string (received {type(text).__name__}).")
         normalized = normalize_text(text)
         is_empty = normalized == ""
 

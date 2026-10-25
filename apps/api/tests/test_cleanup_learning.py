@@ -146,3 +146,18 @@ def test_trial_limits_are_reported_and_skip_oversized_messages(client):
     assert trial.status_code == 200
     assert trial.json()["limited"] and trial.json()["skipped_messages"] == 1
     assert trial.json()["matches"] == 0
+
+
+def test_trial_samples_are_distributed_across_messages(client):
+    create_review(client, [
+        " ".join(["MARKER"] * 12),
+        "second-message MARKER",
+    ])
+    trial = client.post("/api/content-cleanup/rules/trial", json={
+        "name": "Synthetic distributed samples", "match_value": "MARKER",
+    })
+    assert trial.status_code == 200, trial.text
+    samples = trial.json()["samples"]
+    assert len(samples) == 4
+    assert sum(sample["match_mode"] == "RAW_EXACT" for sample in samples) == 4
+    assert any("second-message" in sample["context_before"] for sample in samples)

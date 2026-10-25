@@ -194,7 +194,20 @@ The pairing contract is:
 5. Missing head/middle/tail messages, competing optimal paths and unrelated plain bodies produce explicit alignment issues and block commit. Source artifacts stay intact.
 6. Valid paired Markdown owns canonical display Markdown; canonical JSON remains the identity/provenance authority.
 
-Parser identities are `chat-reader-import-v5` and `markdown-parser-v5`. Alignment diagnostics include `source`, zero-based `source_index`, `role`, optional `timestamp` and `reason`. Bounded pairing errors remain structured HTTP 422 responses (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, `pairing_ambiguous`, `alignment_failed`).
+Parser identities are `chat-reader-import-v6` and `markdown-parser-v5`.
+Exporter JSON `messages[].say` must be a string: objects, arrays, numbers and
+booleans are rejected instead of becoming Python representations. Missing/null
+values keep legacy empty-message handling, with an explicit per-message warning.
+String source bytes/text are not normalized for persistence by this validation.
+This does not reopen the rejected official-graph format or alter v5 pairing.
+Alignment diagnostics include `source`, zero-based `source_index`, `role`, optional `timestamp` and `reason`. Bounded pairing errors remain structured HTTP 422 responses (`pairing_candidate_limit`, `pairing_complexity_limit`, `pairing_timeout`, `pairing_ambiguous`, `alignment_failed`).
+
+Adaptive mapping's canonical preview returns at most 12 messages and the first
+2,000 characters per message, plus full `message_count` and per-message
+`content_truncated`. The UI explicitly labels both bounds and offers read-only
+Rendered/Source views through the shared renderer. Switching views does not save
+a mapping or issue another preview request. These are sample bounds, not
+canonical import truncation; save/commit continues using full message content.
 
 Preview accepts no more than two multipart files: one JSON and one Markdown.
 `MAX_IMPORT_FILE_SIZE_MB` defaults to 500 MiB per import file and is checked before the

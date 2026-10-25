@@ -22,6 +22,8 @@ CONTEXT_LENGTH = 48
 TRIAL_MESSAGES = 100
 TRIAL_CHARACTERS = 250_000
 TRIAL_MESSAGE_CHARACTERS = 20_000
+TRIAL_SAMPLE_LIMIT = 10
+TRIAL_SAMPLES_PER_MESSAGE = 3
 CONFIG_FIELDS = ("name", "match_value", "case_sensitive", "role_filter", "matcher_mode", "boundary_mode")
 
 
@@ -131,7 +133,7 @@ def list_exceptions(db: Session, scope: OwnershipScope, *, limit: int, offset: i
 
 
 def rule_config(payload: dict) -> dict:
-    return {**{key: payload[key] for key in CONFIG_FIELDS}, "name": payload["name"].strip(), "match_value": payload["match_value"].strip()}
+    return {**{key: payload[key] for key in CONFIG_FIELDS}, "name": payload["name"].strip(), "match_value": payload["match_value"]}
 
 
 def rule_authority(scope: OwnershipScope, config: dict, rule_id=None, base_revision=None, base_revision_id=None, base_edit_token=None) -> dict:
@@ -184,7 +186,9 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
     other_revisions = [revision for revision in other_revisions if revision.id != target_revision_id]
     trial_revision = SimpleNamespace(id=target_revision_id, rule=SimpleNamespace(id=rule_id or uuid.UUID(int=(1 << 128) - 1), detector_id=None))
     ignored = exception_digests(db, scope, [exception_revision_id] if exception_revision_id else [])
-    samples = []
+    sample_buckets: dict[str, list[dict]] = {}
+    sample_order: list[str] = []
+    sample_count = 0
     for _message_id, role, version_id, length in rows[:TRIAL_MESSAGES]:
         if length > TRIAL_MESSAGE_CHARACTERS or characters + length > TRIAL_CHARACTERS:
             skipped += 1
@@ -211,10 +215,29 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
             covered_by_other_rule += int(covered)
             matches += 1
             protected += hit.decision == "PROTECTED"
-            if len(samples) < 10:
-                samples.append({"role": role, "match_text": source[hit.start:hit.end], "context_before": source[max(0, hit.start - 48):hit.start],
-                    "context_after": source[hit.end:hit.end + 48], "protected": hit.decision == "PROTECTED",
-                    "suppressed_by_exception": suppressed and not covered, "covered_by_other_rule": covered})
+            if sample_count < TRIAL_SAMPLE_LIMIT:
+                bucket_key = str(_message_id)
+                bucket = sample_buckets.setdefault(bucket_key, [])
+                if bucket_key not in sample_order:
+                    sample_order.append(bucket_key)
+                if len(bucket) < TRIAL_SAMPLES_PER_MESSAGE:
+                    bucket.append({"role": role, "match_text": source[hit.start:hit.end], "context_before": source[max(0, hit.start - CONTEXT_LENGTH):hit.start],
+                        "context_after": source[hit.end:hit.end + CONTEXT_LENGTH], "protected": hit.decision == "PROTECTED",
+                        "match_mode": hit.match_mode, "evidence_codes": list(hit.evidence_codes),
+                        "suppressed_by_exception": suppressed and not covered, "covered_by_other_rule": covered})
+                    sample_count += 1
+    samples: list[dict] = []
+    while len(samples) < TRIAL_SAMPLE_LIMIT:
+        added = False
+        for bucket_key in sample_order:
+            bucket = sample_buckets[bucket_key]
+            if bucket:
+                samples.append(bucket.pop(0))
+                added = True
+                if len(samples) >= TRIAL_SAMPLE_LIMIT:
+                    break
+        if not added:
+            break
     return {"configuration": config, "scanned_messages": scanned, "matches": matches, "protected_matches": protected,
         "suppressed_by_exception": suppressed_by_exception, "covered_by_other_rule": covered_by_other_rule,
         "skipped_messages": skipped, "limited": len(rows) > TRIAL_MESSAGES or skipped > 0,

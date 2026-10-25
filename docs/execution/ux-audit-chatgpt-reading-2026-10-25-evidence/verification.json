@@ -1,0 +1,274 @@
+{
+  "date": "2026-10-25",
+  "timezone": "Asia/Shanghai",
+  "status": "local verification passed",
+  "baselineCommit": "dbfe79efd0ea746041c7867467fff9b56e58e7a1",
+  "scope": {
+    "candidates": 20,
+    "implemented": [
+      "COPY-01",
+      "TRUST-02"
+    ],
+    "deferred": 18,
+    "excludedLegacyInvestigations": [
+      "DATA-01",
+      "DATA-02",
+      "TRUST-01",
+      "DATA-03"
+    ],
+    "rendererPolicy": "ai-rich-markdown-v6",
+    "importParser": "chat-reader-import-v5",
+    "schemaHead": "20261022_0053"
+  },
+  "sourceSha256": {
+    "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "ac8e7d642c0da485648a6395ddaf208f48c9476bca1c712a08cbc055c9b7a107",
+    "apps/web/features/rich-markdown/rich-markdown-config.ts": "5010dd8980420fedeaf02ca78a760fb8b71b4bc4f1bc3249e086c1e8b90d00fa",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "a96b50d649654e154a6d71b88187b1ecbbd99860f43b5e20cee9967b372c20ac",
+    "scripts/ux/source-editor-table-browser.mjs": "be47365ec20c81d29dfd32c24113d39d60cef04ad3e89d249ff7d3a9c81fbb29"
+  },
+  "serviceFreeTestFiles": [
+    "scripts/ux/adaptive-import-session-action-lifecycle.test.mjs",
+    "scripts/ux/annotation-document-parity.test.mjs",
+    "scripts/ux/annotation-workspace-reads.test.mjs",
+    "scripts/ux/archived-project-recovery.test.mjs",
+    "scripts/ux/attachment-modal-resource.test.mjs",
+    "scripts/ux/attachment-reading.test.mjs",
+    "scripts/ux/attachment-table-preview.test.mjs",
+    "scripts/ux/chatgpt-rich-text.test.mjs",
+    "scripts/ux/cleanup-candidate-markers.test.mjs",
+    "scripts/ux/cleanup-range-selection.test.mjs",
+    "scripts/ux/cleanup-selection-acknowledgment.test.mjs",
+    "scripts/ux/code-copy-recovery.test.mjs",
+    "scripts/ux/continuation-drop-guard.test.mjs",
+    "scripts/ux/conversation-files-capability-read.test.mjs",
+    "scripts/ux/conversation-index-read-recovery.test.mjs",
+    "scripts/ux/conversation-list-recovery.test.mjs",
+    "scripts/ux/conversation-metadata-recovery.test.mjs",
+    "scripts/ux/conversation-placement-recovery.test.mjs",
+    "scripts/ux/conversation-search-selection.test.mjs",
+    "scripts/ux/conversation-toc-stale-read-recovery.test.mjs",
+    "scripts/ux/image-display-position.test.mjs",
+    "scripts/ux/image-scale-snap.test.mjs",
+    "scripts/ux/import-acknowledgement-copy.test.mjs",
+    "scripts/ux/import-background-analysis.test.mjs",
+    "scripts/ux/import-session-restore-recovery.test.mjs",
+    "scripts/ux/inline-attachment-locale.test.mjs",
+    "scripts/ux/interaction-confirmation-lifecycle.test.mjs",
+    "scripts/ux/manual-markdown-fidelity.test.mjs",
+    "scripts/ux/merge-admission.test.mjs",
+    "scripts/ux/merge-reentry.test.mjs",
+    "scripts/ux/message-markdown-copy.test.mjs",
+    "scripts/ux/message-version-recovery.test.mjs",
+    "scripts/ux/mobile-reader-header-space.test.mjs",
+    "scripts/ux/offline-attachment-query-policy.test.mjs",
+    "scripts/ux/offline-conflict-merge-draft-refresh.test.mjs",
+    "scripts/ux/offline-continuation-read-states.test.mjs",
+    "scripts/ux/offline-export-attachment-count-read.test.mjs",
+    "scripts/ux/offline-library-download-status-read.test.mjs",
+    "scripts/ux/offline-library-local-read-state.test.mjs",
+    "scripts/ux/offline-reader-query-policy.test.mjs",
+    "scripts/ux/offline-resource-check.test.mjs",
+    "scripts/ux/offline-search-readiness.test.mjs",
+    "scripts/ux/offline-search-retry.test.mjs",
+    "scripts/ux/pdf-viewer-policy.test.mjs",
+    "scripts/ux/personal-archive-scope.test.mjs",
+    "scripts/ux/project-archive-recovery.test.mjs",
+    "scripts/ux/project-fixture-cleanup.test.mjs",
+    "scripts/ux/project-recovery.test.mjs",
+    "scripts/ux/reader-autosave-feedback.test.mjs",
+    "scripts/ux/reader-detail-recovery.test.mjs",
+    "scripts/ux/reader-initial-window-recovery.test.mjs",
+    "scripts/ux/reader-navigation-readiness.test.mjs",
+    "scripts/ux/reader-navigation-retirement.test.mjs",
+    "scripts/ux/reader-navigation-sheet-lifecycle.test.mjs",
+    "scripts/ux/reader-recent-recovery.test.mjs",
+    "scripts/ux/resumed-source-gates.test.mjs",
+    "scripts/ux/share-edge-loading-lifecycle.test.mjs",
+    "scripts/ux/share-navigation-retirement.test.mjs",
+    "scripts/ux/share-navigation-sheet-lifecycle.test.mjs",
+    "scripts/ux/share-position-storage-recovery.test.mjs",
+    "scripts/ux/share-read-recovery.test.mjs",
+    "scripts/ux/share-tablet-navigation-dialog.test.mjs",
+    "scripts/ux/share-unlock-lifecycle.test.mjs",
+    "scripts/ux/sidebar-read-recovery.test.mjs",
+    "scripts/ux/sidebar-search-selection.test.mjs",
+    "scripts/ux/source-editor-attachment-picker-dialog.test.mjs",
+    "scripts/ux/source-editor-attachment-picker-read-recovery.test.mjs",
+    "scripts/ux/source-editor-discard-switch.test.mjs",
+    "scripts/ux/source-editor-table-context.test.mjs",
+    "scripts/ux/source-editor-table-references.test.mjs",
+    "scripts/ux/source-editor-table-tools.test.mjs",
+    "scripts/ux/sync-center-hidden-inspection.test.mjs",
+    "scripts/ux/sync-center-tab-read-scope.test.mjs",
+    "scripts/ux/task-status-recovery.test.mjs",
+    "scripts/ux/thinking-summary.test.mjs"
+  ],
+  "tempPolicy": {
+    "taskTempRoot": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-gpt-reading-20261025",
+    "setupPowerShell": "$taskTempRoot = 'C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-gpt-reading-20261025'; New-Item -ItemType Directory -Force -Path $taskTempRoot | Out-Null; $env:TEMP = $taskTempRoot; $env:TMP = $taskTempRoot",
+    "boundary": "Process-local only; API, worker/build/test descendants inherit TEMP/TMP. No machine/user environment mutation."
+  },
+  "gates": [
+    {
+      "name": "focused-node",
+      "cwd": ".",
+      "command": "node --test scripts/ux/chatgpt-rich-text.test.mjs scripts/ux/manual-markdown-fidelity.test.mjs scripts/ux/thinking-summary.test.mjs",
+      "exitCode": 0,
+      "passed": 82,
+      "failed": 0,
+      "skipped": 0,
+      "stdoutFile": "web-focused.txt",
+      "stdoutSha256": "12f03e1ad2ca5b3eab34b9e110fbced0e2b24378c24b87557d18e7c3ed2103f8"
+    },
+    {
+      "name": "service-free-node",
+      "cwd": ".",
+      "command": "$tests = @(Get-ChildItem -LiteralPath 'scripts/ux' -Filter '*.test.mjs' -File | Sort-Object Name | ForEach-Object { $_.FullName }); node --test --test-concurrency=1 @tests",
+      "exitCode": 0,
+      "files": 75,
+      "passed": 1586,
+      "failed": 0,
+      "skipped": 0,
+      "stdoutFile": "web-service-free.txt",
+      "stdoutSha256": "b244c1d705459d7f26c41fa7b57c5f534cf27e88d8b08fa37ba4606602b3376c"
+    },
+    {
+      "name": "isolated-chrome",
+      "cwd": ".",
+      "command": "node scripts/ux/source-editor-table-browser.mjs",
+      "exitCode": 0,
+      "passed": 83,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "browserVersion": "155.0.8059.82",
+      "stdoutFile": "browser.txt",
+      "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance",
+      "stdoutSha256": "89fd9feb370c626fa9772fe37af3170e4cc39d6421eb1cfefbf2aba388c5c099"
+    },
+    {
+      "name": "api-import-source-targeted",
+      "cwd": "apps/api",
+      "command": "python -m pytest tests/test_official_normalizer.py tests/test_import_preview_official.py tests/test_canonical_persistence_official.py tests/test_chatgpt_rich_text_source.py tests/test_exporter_json_parser.py tests/test_exporter_markdown_parser.py tests/test_canonical_persistence_exporter.py -k \"not real_paired_fixture\" -q --basetemp \"$taskTempRoot\\pytest-final\" -o \"cache_dir=$taskTempRoot\\pytest-cache\"",
+      "exitCode": 0,
+      "files": 7,
+      "passed": 16,
+      "deselected": 1,
+      "boundary": "Private real_paired_fixture deliberately deselected; pure/local regression, not full API/PostgreSQL acceptance.",
+      "stdoutFile": "api-final.txt",
+      "stdoutSha256": "6fd5a62ec97e61a3072cc3449232acd7ad7be04325c348c40d86d1d0034db666"
+    },
+    {
+      "name": "playwright-source-contracts",
+      "cwd": ".",
+      "command": "corepack pnpm --filter web exec playwright test --config=\"$taskTempRoot\\reading-source-contracts.cjs\"",
+      "config": {
+        "testDir": "E:/1project/chat-reader/apps/web/e2e",
+        "testMatch": [
+          "ai-rich-markdown-contract.spec.ts",
+          "import-compatibility-contract.spec.ts"
+        ],
+        "outputDir": "C:/Users/86182/Desktop/wkkk/chat-reader-gpt-reading-20261025/playwright-source-contracts",
+        "reporter": [
+          [
+            "list"
+          ]
+        ],
+        "workers": 1
+      },
+      "exitCode": 0,
+      "passed": 4,
+      "boundary": "Source-only checks; no webServer or browser and not PWA/E2E.",
+      "stdoutFile": "playwright-source-contracts.txt",
+      "stdoutSha256": "993621292dea0f967689776d5d8cff1352639f555c0edfb426f585bb35e4003c"
+    },
+    {
+      "name": "web-lint",
+      "cwd": ".",
+      "command": "corepack pnpm run lint",
+      "exitCode": 0,
+      "stdoutFile": "web-lint.txt",
+      "stdoutSha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+    },
+    {
+      "name": "web-typecheck",
+      "cwd": ".",
+      "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "stdoutFile": null,
+      "observation": "Completed successfully with no stdout; no raw stdout file was retained."
+    },
+    {
+      "name": "web-production-build",
+      "cwd": ".",
+      "command": "corepack pnpm --filter web build",
+      "processEnvironment": {
+        "NEXT_BUILD_CPUS": "1",
+        "NEXT_STANDALONE": "0",
+        "NEXT_DIST_DIR": "unset (standard .next)"
+      },
+      "exitCode": 0,
+      "stdoutFile": "web-build.txt",
+      "boundary": "Local build only; no deployment.",
+      "stdoutSha256": "bd6291f6629b36c05238623a25ee34f6314ade9df738c23cdffdda0820954a0c"
+    },
+    {
+      "name": "migration-head",
+      "cwd": "apps/api",
+      "command": "python -m alembic heads",
+      "exitCode": 0,
+      "heads": [
+        "20261022_0053"
+      ],
+      "stdoutFile": "migration-head.txt",
+      "boundary": "Source inspection, not a live database migration or production inspection.",
+      "stdoutSha256": "1cc735c2272fd7272babb3f87f5b0c2f0c0ddf384b2b26fa365044aded455a0e"
+    }
+  ],
+  "controlledComparison": {
+    "baselineMatched": 2,
+    "currentMatched": 7,
+    "total": 7,
+    "evidence": "controlled-regression.json",
+    "timing": "Run after implementation, isolated git blob vs current file; not a test-first timeline claim."
+  },
+  "artifactsSha256": {
+    "controlled-regression.json": "139fb79e6816f89569fdf64bc177af81322fe0d9c28a34c248bf9d2324911929",
+    "supported-say-type-probe.json": "057548697708e18176842132f646726163e8ce74469b47dbc2a63e5fa7163889",
+    "browser-result.json": "c5026d42b84b7c29e402b3c300452513a41863f5e5740c169a0a464e6b9423b0",
+    "reading-rich-1440.png": "dea51bfd80ab5406ea87722a15662966f760f741bf86c4f70f6d19c4a9e53cf0",
+    "reading-rich-375.png": "a236742bba8408e7018ef47a556cb212194eca96764506b5f8f4da7a3bb3d3c5"
+  },
+  "preexistingWorktreeChange": {
+    "path": "apps/web/tsconfig.tsbuildinfo",
+    "beforeAndAfterSha256": "216156f5ac4d05167fbd1997c4bf3141135be68ca6157e66e507961de4649fdb",
+    "action": "Preserved; not part of this implementation."
+  },
+  "retainedFailureFacts": [
+    "Four trial legacy-official API fixes and a parser-version bump were reverted after current source-detector rejection was confirmed; not counted as implemented.",
+    "Earlier overlapping experiment logs are not used as a clean baseline.",
+    "The first native Windows *.test.mjs argument did not expand and started no tests; the explicit 75-file enumeration then passed without removing tests or relaxing assertions."
+  ],
+  "unclaimedValidation": [
+    "authenticated Reader/Share/Offline end-to-end and real DOM reading-position restoration",
+    "full PWA suite and physical offline device",
+    "full API/PostgreSQL/production acceptance",
+    "screen-reader/whole-site axe/WCAG certification",
+    "physical clipboard",
+    "CPU/RSS/sustained-load performance"
+  ],
+  "unchangedBoundaries": [
+    "canonical source and import rules",
+    "Share URLs and permissions",
+    ".cr",
+    "offline package v1/v2/v3",
+    "Dexie v2",
+    "database schema and deployment process"
+  ],
+  "releaseActions": {
+    "commit": false,
+    "push": false,
+    "ci": false,
+    "deployment": false
+  },
+  "privacy": "Only synthetic inputs and sanitized test metadata. Raw stdout/config/one-off scripts remain in task temp. No user imports, conversation text/IDs, Share tokens, cookies or credentials persisted."
+}

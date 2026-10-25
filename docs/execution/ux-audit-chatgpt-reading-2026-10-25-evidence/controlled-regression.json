@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-25",
+  "baselineCommit": "dbfe79efd0ea746041c7867467fff9b56e58e7a1",
+  "method": "Isolated HEAD git blob vs current file, same installed TypeScript compiler; synthetic inputs only; no repository source replacement.",
+  "baselineSha256": "2355445cd297e53ef3be3f7e6bba51f002d66ecd727887cd14199969a6566eff",
+  "currentSha256": "ac8e7d642c0da485648a6395ddaf208f48c9476bca1c712a08cbc055c9b7a107",
+  "cases": [
+    {
+      "id": "mixed-raw-then-escaped",
+      "expectedProfile": {
+        "escapedMarkdown": true
+      },
+      "baselineProfile": {
+        "escapedMarkdown": false
+      },
+      "currentProfile": {
+        "escapedMarkdown": true
+      },
+      "baselineMatches": false,
+      "currentMatches": true,
+      "baselineProjectionChanged": true,
+      "currentProjectionChanged": true,
+      "syntheticInput": "<box><text>Synthetic raw text</text></box>\n\n\\# Synthetic heading\n\n\\<box><text>\\*\\*Synthetic emphasis\\*\\*</text>\\</box>"
+    },
+    {
+      "id": "mixed-escaped-then-raw-control",
+      "expectedProfile": {
+        "escapedMarkdown": true
+      },
+      "baselineProfile": {
+        "escapedMarkdown": true
+      },
+      "currentProfile": {
+        "escapedMarkdown": true
+      },
+      "baselineMatches": true,
+      "currentMatches": true,
+      "baselineProjectionChanged": true,
+      "currentProjectionChanged": true,
+      "syntheticInput": "\\# Synthetic heading\n\n\\<box><text>\\*\\*Synthetic emphasis\\*\\*</text>\\</box>\n\n<box><text>Synthetic raw text</text></box>"
+    },
+    {
+      "id": "later-unclosed",
+      "expectedProfile": null,
+      "baselineProfile": {
+        "escapedMarkdown": false
+      },
+      "currentProfile": null,
+      "baselineMatches": false,
+      "currentMatches": true,
+      "baselineProjectionChanged": true,
+      "currentProjectionChanged": false,
+      "syntheticInput": "<box><text>Synthetic raw text</text></box>\n\n<box><text>Synthetic unclosed"
+    },
+    {
+      "id": "later-mismatched",
+      "expectedProfile": null,
+      "baselineProfile": {
+        "escapedMarkdown": false
+      },
+      "currentProfile": null,
+      "baselineMatches": false,
+      "currentMatches": true,
+      "baselineProjectionChanged": true,
+      "currentProjectionChanged": false,
+      "syntheticInput": "<box><text>Synthetic raw text</text></box>\n\n<box><text>bad</box></text>"
+    },
+    {
+      "id": "later-missing-row-close",
+      "expectedProfile": null,
+      "baselineProfile": {
+        "escapedMarkdown": false
+      },
+      "currentProfile": null,
+      "baselineMatches": false,
+      "currentMatches": true,
+      "baselineProjectionChanged": true,
+      "currentProjectionChanged": false,
+      "syntheticInput": "<box><text>Synthetic raw text</text></box>\n\n<box><row><text>bad</text></box>"
+    },
+    {
+      "id": "later-overdepth",
+      "expectedProfile": null,
+      "baselineProfile": {
+        "escapedMarkdown": false
+      },
+      "currentProfile": null,
+      "baselineMatches": false,
+      "currentMatches": true,
+      "baselineProjectionChanged": true,
+      "currentProjectionChanged": false,
+      "syntheticInput": "<box><text>Synthetic raw text</text></box>\n\n<box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><box><text>deep</text></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box></box>"
+    },
+    {
+      "id": "later-code-control",
+      "expectedProfile": {
+        "escapedMarkdown": false
+      },
+      "baselineProfile": {
+        "escapedMarkdown": false
+      },
+      "currentProfile": {
+        "escapedMarkdown": false
+      },
+      "baselineMatches": true,
+      "currentMatches": true,
+      "baselineProjectionChanged": true,
+      "currentProjectionChanged": true,
+      "syntheticInput": "<box><text>Synthetic raw text</text></box>\n\n```html\n\\# Synthetic heading\n\n\\<box><text>\\*\\*Synthetic emphasis\\*\\*</text>\\</box>\n<box><text>unclosed\n```"
+    }
+  ],
+  "baselineMatched": 2,
+  "currentMatched": 7,
+  "total": 7,
+  "followUpObservations": {
+    "unknownHtmlSourcePreserved": true,
+    "unknownHtmlVisibleTextRetained": false,
+    "unknownHtmlRendered": "",
+    "quoteFenceLiteralWrapperRetained": true,
+    "unclosedQuoteFenceLiteralWrapperRetained": false,
+    "quoteFenceBoundary": "Closed quoted fences control retained; unclosed quote fences need parser-consistent range protection. This preexisting boundary is not repaired by this batch."
+  },
+  "followUpInputs": {
+    "unknownHtml": "<unrecognized>\nSynthetic source-only text\n</unrecognized>",
+    "closedQuotedFence": "<box><text>Synthetic raw text</text></box>\n\n> ```html\n> <box><text>Synthetic literal code</text></box>\n> ```",
+    "unclosedQuotedFence": "<box><text>Synthetic raw text</text></box>\n\n> ```html\n> <box><text>Synthetic literal code</text></box>"
+  },
+  "followUpMethod": "Unknown HTML uses the installed ReactMarkdown skipHtml SSR after the current projection, not the complete shared component; quoted fences use the current projection. These preexisting boundaries remain unfixed.",
+  "timingBoundary": "Controlled comparison was performed after implementation. It is not a test-first timeline claim."
+}

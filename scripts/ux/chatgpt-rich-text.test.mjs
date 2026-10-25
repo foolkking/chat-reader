@@ -66,6 +66,48 @@ const escaped = String.raw`\# Synthetic heading
 1\. First synthetic step
 2\. Second synthetic step`;
 
+test("nested quote/list fences, including unclosed fences, retain literal rich tags", () => {
+  for (const source of [
+    "> ```html\n> <box><text>Synthetic literal</text></box>",
+    "> ```html\n> <box><text>Synthetic literal</text></box>\n> ```",
+    "- ```html\n  <box><text>Synthetic literal</text></box>",
+    "1. ~~~~html\n   <box><text>Synthetic literal</text></box>\n   ~~~~",
+    "> - ```html\n>   <box><text>Synthetic literal</text></box>",
+    "> ```html\r\n> <box><text>Synthetic literal</text></box>\r\n> ```",
+  ]) {
+    const mixed = raw + "\n\n" + source;
+    assert.equal(detect(source), null, source);
+    assert.ok(project(mixed).text.endsWith(source), source);
+    assert.ok(project(mixed, { escapedMarkdown: true }).text.endsWith(source), source);
+    assert.match(render(mixed), /&lt;box&gt;&lt;text&gt;Synthetic literal&lt;\/text&gt;&lt;\/box&gt;/);
+  }
+});
+
+test("unknown or rejected HTML remains visible, literal and non-executable", () => {
+  for (const source of [
+    "<unrecognized>\nSynthetic retained body\n</unrecognized>",
+    "<box><row><text>Synthetic retained body</row></text></box>",
+    "<box><text>Synthetic retained body</text>",
+    '<section onclick="synthetic()">Synthetic retained body</section>',
+    "<script>Synthetic retained body</script>",
+  ]) {
+    assert.equal(project(source).text, source);
+    const html = render(source);
+    assert.match(html, /Synthetic retained body/);
+    assert.match(html, /&lt;/);
+    assert.doesNotMatch(html, /<(?:unrecognized|box|section|script)\b/);
+  }
+});
+
+test("over-budget HTML displays complete source without relaxing recovery budgets", () => {
+  const source = "<unrecognized>\n" + "Synthetic long body.\n".repeat(27_000) + "</unrecognized>";
+  assert.equal(detect(source), null);
+  assert.equal(project(source).text, source);
+  const html = render(source);
+  assert.equal((html.match(/Synthetic long body\./g) ?? []).length, 27_000);
+  assert.match(html, /&lt;\/unrecognized&gt;/);
+});
+
 test("raw rich wrappers retain answer text, emphasis, badge and divider semantics", () => {
   const html = render(raw);
   assert.match(html, /<strong>Synthetic focus<\/strong>/);
@@ -141,6 +183,46 @@ test("raw profiles do not turn deliberately escaped headings and emphasis into f
   const literal = String.raw`\# Literal and \*\*literal\*\*`;
   assert.ok(project(raw + "\n\n" + literal).text.includes(literal));
 });
+test("all balanced rich boxes contribute to the message escape profile", () => {
+  for (const mixed of [raw + "\n\n" + escaped, escaped + "\n\n" + raw]) {
+    assert.deepEqual(detect(mixed), { escapedMarkdown: true });
+    const html = render(mixed);
+    assert.match(html, /<h1>Synthetic heading<\/h1>/);
+    assert.match(html, /<strong>Synthetic focus<\/strong>/);
+    assert.match(html, /<code>sample_code<\/code>/);
+    const projected = project(mixed);
+    assert.equal(projected.sourcePosition(projected.text.indexOf("Second synthetic step")).offset,
+      mixed.indexOf("Second synthetic step"));
+  }
+});
+test("a valid first box cannot authorize partial conversion of a later malformed box", () => {
+  for (const suffix of [
+    "<box><text>unclosed",
+    "<box><text>bad</box></text>",
+    "<box><row><text>bad</text></box>",
+    "<box>".repeat(65) + "<text>deep</text>" + "</box>".repeat(65),
+  ]) {
+    const source = raw + "\n\n" + suffix;
+    assert.equal(detect(source), null);
+    assert.equal(project(source).text, source);
+  }
+});
+test("later malformed or escaped examples inside code never influence an established rich profile", () => {
+  const code = "```text\n" + escaped + "\n<box><text>unclosed\n```";
+  assert.deepEqual(detect(raw + "\n\n" + code), { escapedMarkdown: false });
+  assert.ok(project(raw + "\n\n" + code).text.includes(code));
+});
+test("an inherited escaped profile still preserves canonical task, link and negative-code content", () => {
+  const mixed = raw + "\n\n" + escaped;
+  const profile = detect(mixed);
+  for (const source of [
+    "- [ ] synthetic task\n\n[external](https://example.invalid)",
+    "```text\n<box><text>unclosed\n```",
+    String.raw`\(x^2\) and [unsafe](javascript:alert(1))`,
+  ]) {
+    assert.equal(project(source, profile).text, source);
+  }
+});
 test("rich and math compatibility compose without changing currency, formulas or code", () => {
   const formulas = String.raw`Inline \(x^2\), price USD $20.
 
@@ -176,7 +258,7 @@ test("unknown attributes, scripts, links, images and JSX expressions are never e
     + '{runSyntheticExpression()}\n\n[unsafe](javascript:alert(1))';
   const html = render(source);
   assert.doesNotMatch(html, /<(?:script|iframe|box|text)\b/);
-  assert.doesNotMatch(html, /href="javascript:|onClick=|onerror=/i);
+  assert.doesNotMatch(html, /href="javascript:|<[^>]+\b(?:onClick|onerror)=/i);
   assert.equal(globalThis.syntheticProbe, undefined);
   assert.match(html, /\{runSyntheticExpression\(\)\}/);
 });

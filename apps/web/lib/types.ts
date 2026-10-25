@@ -120,6 +120,7 @@ export type CleanupRuleTrial = {
   suppressed_by_exception?: number; covered_by_other_rule?: number;
   skipped_messages: number; limited: boolean; message_limit: number; character_limit: number; message_character_limit: number;
   samples: { role: string; match_text: string; context_before: string; context_after: string; protected: boolean;
+    match_mode?: string; evidence_codes?: string[];
     suppressed_by_exception?: boolean; covered_by_other_rule?: boolean }[];
   preview_token: string;
 };
@@ -606,7 +607,7 @@ export type AdaptiveMappingPreview = {
   preview: null | {
     title: string;
     message_count: number;
-    messages: Array<{ role: string; content: string; timestamp: string | null }>;
+    messages: Array<{ role: string; content: string; content_truncated?: boolean; timestamp: string | null }>;
   };
 };
 

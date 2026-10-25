@@ -50,6 +50,11 @@ module.exports = function(source) {
       }
     \`);
   }
+  if(this.resourcePath.replaceAll("\\\\","/").endsWith("/features/conversations/markdown-renderer.tsx")) {
+    const entry="function MermaidDiagram({ code }: SyntaxHighlighterProps) {";
+    if(!source.includes(entry)) throw Error("Mermaid accessibility probe no longer matches its actual renderer");
+    source=source.replace(entry,"export "+entry);
+  }
   return ts.transpileModule(source, { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, jsx: ts.JsxEmit.ReactJSX
 }}).outputText; };`);
@@ -111,7 +116,7 @@ import {markdownLanguage} from "@codemirror/lang-markdown";
 import {TableToolDialog} from ${JSON.stringify(dialogPath)};
 import {applyMarkdownTableAction} from ${JSON.stringify(toolsPath)};
 import {SourceEditorWorkspace} from ${JSON.stringify(workspacePath)};
-import {MarkdownRenderer,MarkdownTablePreview} from ${JSON.stringify(rendererPath)};
+import {AssistantMarkdownPart,MarkdownRenderer,MarkdownTablePreview,MermaidDiagram as ActualMermaidDiagram} from ${JSON.stringify(rendererPath)};
 const originalContextParse=markdownLanguage.parser.parse;
 markdownLanguage.parser.parse=function(...args) {
   window.tableContextParseInputs??=[];
@@ -170,10 +175,14 @@ function Root() {
   const [workspace,setWorkspace]=useState(null);
   const [previewProbe,setPreviewProbe]=useState(false);
   const [bodyProbe,setBodyProbe]=useState(null);
+  const [assistantPerfProbe,setAssistantPerfProbe]=useState(false);
+  const [mermaidProbe,setMermaidProbe]=useState(false);
   useEffect(()=>{
-    window.startBodyProbe=text=>{setWorkspace(null);setPreviewProbe(false);setBodyProbe(text);};
+    window.startBodyProbe=text=>{setWorkspace(null);setPreviewProbe(false);setAssistantPerfProbe(false);setMermaidProbe(false);setBodyProbe(text);};
     window.stopBodyProbe=()=>setBodyProbe(null);
     window.startPreviewProbe=()=>{setWorkspace(null);setBodyProbe(null);setPreviewProbe(true);};
+    window.startAssistantPerfProbe=()=>{setWorkspace(null);setBodyProbe(null);setPreviewProbe(false);setMermaidProbe(false);setAssistantPerfProbe(true);window.assistantPerfParseCount=0;};
+    window.startMermaidProbe=()=>{setWorkspace(null);setBodyProbe(null);setPreviewProbe(false);setAssistantPerfProbe(false);setMermaidProbe(true);};
     window.startWorkspace=(source,zh=false)=>{
       window.gateLocale=zh?"zh-CN":"en-US";window.workspaceWrites=[];window.workspaceDirty=false;
       window.tableContextParseInputs=[];
@@ -183,9 +192,30 @@ function Root() {
       setWorkspace({source,key:performance.now()});
     };
   },[]);
-  return bodyProbe!==null?<section data-testid="body-table-probe" className="reader-prose" style={{width:"min(100%,720px)",padding:16,boxSizing:"border-box"}}>
+  return mermaidProbe?<MermaidAccessibilityProbe/>:assistantPerfProbe?<AssistantMarkdownPerformanceProbe/>:bodyProbe!==null?<section data-testid="body-table-probe" className="reader-prose" style={{width:"min(100%,720px)",padding:16,boxSizing:"border-box"}}>
     <MarkdownRenderer text={bodyProbe} isAssistant={false} preserveSourceOffsets/>
   </section>:previewProbe?<PreviewProbe/>:workspace?<WorkspaceHarness key={workspace.key} source={workspace.source}/>:<Harness/>;
+}
+function MermaidAccessibilityProbe() {
+  const [code,setCode]=useState("graph TD\\naccTitle: Synthetic diagram title\\naccDescr: Synthetic diagram description.\\nA-->B");
+  useEffect(()=>{window.mermaidGate={setCode,locale:locale=>{window.gateLocale=locale;setCode(value=>value+"\\n");}};},[]);
+  return <section data-testid="mermaid-accessibility-probe"><ActualMermaidDiagram code={code} language="mermaid"/></section>;
+}
+function AssistantMarkdownPerformanceProbe() {
+  const [revision,setRevision]=useState(0);
+  const [styleRevision,setStyleRevision]=useState(0);
+  const [text,setText]=useState("## Synthetic stable heading\\n\\nA bounded fixed-source paragraph with **synthetic emphasis**.");
+  useEffect(()=>{window.assistantPerfGate={
+    style:()=>setStyleRevision(value=>value+1),
+    source:()=>setText(value=>value+"\\n\\nSynthetic source update."),
+    revision:()=>revision,
+    sourceCharacters:()=>text.length
+  };},[revision,text]);
+  return <section data-testid="assistant-markdown-performance-probe" data-style-revision={styleRevision}>
+    <button type="button" onClick={()=>setStyleRevision(value=>value+1)}>Change host style</button>
+    <button type="button" onClick={()=>{setText(value=>value+"\\n\\nSynthetic source update.");setRevision(value=>value+1);}}>Change source</button>
+    <AssistantMarkdownPart text={text} className={styleRevision%2?"text-secondary":"text-primary"} />
+  </section>;
 }
 function PreviewProbe() {
   const [tick,setTick]=useState(0);
@@ -212,7 +242,7 @@ await new Promise((yes, no) => webpack({
     extensions: [".tsx", ".ts", ".mjs", ".js"],
     modules: ["node_modules", join(web, "node_modules"), join(root, "node_modules")],
     alias: { ...Object.fromEntries([
-      "@assistant-ui/react", "@assistant-ui/react-markdown", "shiki", "mermaid", "../../components/preferences-provider",
+      "@assistant-ui/react", "@assistant-ui/react-markdown", "shiki", "../../components/preferences-provider",
     ].map(name => [name + "$", join(out, "adapters.mjs")])),
       "react$": appRequire.resolve("react"),
       "react/jsx-runtime$": appRequire.resolve("react/jsx-runtime"),
@@ -287,7 +317,98 @@ try {
       throw error;
     }
   };
+  await run("fixed-source AssistantMarkdownPart parse count distinguishes host-only rerenders from content updates", async () => {
+    await page.evaluate(()=>window.startAssistantPerfProbe());
+    const probe=page.getByTestId("assistant-markdown-performance-probe");
+    await expect(probe.getByRole("heading",{name:"Synthetic stable heading"})).toBeVisible();
+    const baseline=await page.evaluate(()=>window.tableMarkdownParseCount);
+    await probe.getByRole("button",{name:"Change host style"}).click();
+    await expect(probe).toHaveAttribute("data-style-revision","1");
+    const afterHostOnly=await page.evaluate(()=>window.tableMarkdownParseCount);
+    assert.equal(afterHostOnly,baseline,"host-style-only changes must reuse the unchanged Markdown subtree");
+    const fixedSourceCharacters=await page.evaluate(()=>window.assistantPerfGate.sourceCharacters());
+    await probe.getByRole("button",{name:"Change source"}).click();
+    await expect(probe).toContainText("Synthetic source update.");
+    const afterSource=await page.evaluate(()=>window.tableMarkdownParseCount);
+    assert.equal(afterSource,afterHostOnly+1,"a source update must reach the real Markdown parser exactly once");
+    writeFileSync(join(out,"assistant-markdown-performance.json"),JSON.stringify({
+      date,startedAt,status:"measured_after_fix",boundary:"actual AssistantMarkdownPart and ReactMarkdown parser in local Chrome; host-style-only rerender and source update; explicit assistant-ui forwarding adapter; synthetic content excluded",
+      fixedSourceCharacters,
+      parserEntries:{initial:baseline,afterHostStyle:afterHostOnly,afterSourceUpdate:afterSource},
+      hostStyleOnlyAdditionalParses:afterHostOnly-baseline,
+      sourceUpdateAdditionalParses:afterSource-afterHostOnly,
+      baselineHostStyleOnlyAdditionalParses:1,
+      baselineSourceUpdateAdditionalParses:1
+    },null,2));
+  });
+  await run("actual Mermaid source alternative and supplied SVG title/description are accessible",async()=>{
+    await page.evaluate(()=>window.startMermaidProbe());
+    const probe=page.getByTestId("mermaid-accessibility-probe");
+    const image=probe.getByRole("img",{name:"Synthetic diagram title"});
+    await expect(image).toBeVisible({timeout:30000});
+    const describedBy=await image.getAttribute("aria-describedby");
+    assert.ok(describedBy);
+    await expect(probe.locator(`#${describedBy}`)).toHaveText("Synthetic diagram description.");
+    const disclosure=probe.getByText("Diagram source",{exact:true});
+    await disclosure.focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(()=>disclosure.evaluate(element=>(element.parentElement).open)).toBe(true);
+    await expect(probe.getByRole("region",{name:"Mermaid diagram source"})).toContainText("accTitle: Synthetic diagram title");
+    await page.evaluate(()=>window.mermaidGate.setCode("this is invalid mermaid syntax ###"));
+    await expect(probe.getByRole("status")).toContainText("could not be rendered",{timeout:30000});
+    await expect(probe.getByRole("region",{name:"Mermaid diagram source"})).toContainText("this is invalid mermaid syntax ###");
+    await expect(probe.getByRole("img")).toHaveCount(0);
+    await expect(page.locator('body > div[id^="dmermaid-"]')).toHaveCount(0);
+    await page.evaluate(()=>window.mermaidGate.locale("zh-CN"));
+    await expect(probe.getByRole("status")).toContainText("图表暂时无法渲染");
+    await expect(probe.getByText("图表源码",{exact:true})).toBeVisible();
+  });
+  await run("real body renderer shows unsupported HTML literally without creating its elements",async()=>{
+    const text='<widget data-fixture="synthetic"><b>Visible synthetic source</b></widget>\n\n<script>synthetic inert text</script>';
+    await page.evaluate(text=>window.startBodyProbe(text),text);
+    const body=page.getByTestId("body-table-probe");
+    await expect(body).toContainText("<widget data-fixture=\"synthetic\">");
+    await expect(body).toContainText("Visible synthetic source");
+    await expect(body).toContainText("<script>synthetic inert text</script>");
+    assert.equal(await body.locator("widget,b,script").count(),0);
+    await page.evaluate(()=>window.stopBodyProbe());
+    await page.locator("#open").waitFor();
+  });
   const small = "before\n| A | B |\n| --- | --- |\n| \\(x^2\\) | **bold** |\nafter";
+  await run("real body renderer: multiple rich boxes recover later escaped text without changing code", async () => {
+    const text = '<box><text>Raw opening</text></box>\n\n'
+      + String.raw`\# Later heading
+
+\<box>
+\<text>\*\*Later emphasis\*\*</text>
+\</box>` + '\n\n```text\n<box><text>literal unclosed\n```\n\n'
+      + '[unsafe](javascript:alert(1))';
+    await page.evaluate(text => window.startBodyProbe(text), text);
+    const body = page.getByTestId("body-table-probe");
+    for (const width of [1440, 375]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(body.getByRole("heading", { name: "Later heading", exact: true })).toBeVisible();
+      await expect(body.locator("strong")).toHaveText("Later emphasis");
+      await expect(body.locator("pre code")).toHaveText("<box><text>literal unclosed");
+      assert.equal(await body.locator('script,iframe,box,text,a[href^="javascript:"]').count(), 0);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.screenshot({ path: join(out, `reading-rich-${width}.png`), fullPage: true });
+    }
+    await page.evaluate(() => window.stopBodyProbe());
+    await page.setViewportSize({ width: 1440, height: 900 });
+  });
+  await run("real body renderer: malformed later box keeps the escaped source instead of half-converting", async () => {
+    const text = String.raw`\<box>\<text>Valid opening\</text>\</box>
+
+\<box>\<text>Unclosed tail`;
+    await page.evaluate(text => window.startBodyProbe(text), text);
+    const body = page.getByTestId("body-table-probe");
+    await expect(body).toContainText("<box><text>Valid opening</text></box>");
+    await expect(body).toContainText("<box><text>Unclosed tail");
+    assert.equal(await body.locator("box,text,script,iframe").count(), 0);
+    await page.evaluate(() => window.stopBodyProbe());
+    await page.locator("#open").waitFor();
+  });
   await run("real body renderer: long cells wrap within shared bounds without widening the page", async () => {
     const text = "before\n\n| Item | Description | Value |\n| --- | --- | ---: |\n| alpha | " + "Readable long explanation. ".repeat(30) + " | 123.45 |\n| beta | " + "unbroken".repeat(80) + " | \\\\(x^2\\\\) |\n\nafter";
     await page.evaluate(text => window.startBodyProbe(text), text);

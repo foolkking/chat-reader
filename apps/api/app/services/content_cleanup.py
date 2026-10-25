@@ -197,7 +197,7 @@ def create_literal_rule(
 
 
 def validate_literal_rule(value: str, matcher_mode: str) -> None:
-    if not value or len(value) > 500:
+    if not value or not value.strip() or len(value) > 500:
         raise ValueError("Noise rule text must contain 1-500 characters.")
     if matcher_mode == "APPROXIMATE" and len(value) < 6:
         raise ValueError("Approximate noise rules require at least 6 characters.")

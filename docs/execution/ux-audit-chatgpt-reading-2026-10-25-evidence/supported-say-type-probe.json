@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-25",
+  "method": "Synthetic current supported detector + parser functions; no upload, persistence or API server acceptance claimed.",
+  "sourceProfile": "chatgpt_exporter_json",
+  "detectorWarnings": [],
+  "renderText": "{'text': 'Synthetic nested text', 'kind': 'synthetic object'}",
+  "parserWarnings": [],
+  "observation": "A non-string say is admitted by the profile detector then coerced with str; a future type-contract change must decide explicit rejection vs backward compatibility.",
+  "syntheticFilename": "synthetic-type-probe.json",
+  "syntheticInput": {
+    "metadata": {
+      "powered_by": "ChatGPT Exporter"
+    },
+    "messages": [
+      {
+        "role": "Response",
+        "say": {
+          "text": "Synthetic nested text",
+          "kind": "synthetic object"
+        }
+      }
+    ]
+  }
+}

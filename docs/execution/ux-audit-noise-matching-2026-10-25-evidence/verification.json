@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-25",
+  "noise_api_tests": "100 passed",
+  "web_lint": "passed",
+  "web_typecheck": "passed",
+  "settings_rule_learning_playwright": "6 skipped: E2E_SETTINGS_MAILBOX=1 fixture unavailable",
+  "full_api_suite": "interrupted after failures outside noise-focused scope; not used as noise acceptance gate",
+  "source_files": [
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "96D797E97877F77DAE7F5CE7BB3B011EB9D2B06D2574F44334EAAD0A144E3201"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_rule_identity.py",
+      "sha256": "1019F5C58097AA8BB490FD51E82775E6BF1620ABAFFE41450A55E14AF4BB6DEA"
+    },
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "6C0D27C0902E9979B993EEC5AB3352C23A3D24F430A9501153208FF230D1BE7A"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "0A51D2FFCBC2CCC635FCAFAAF1147BB376EE73521072F0F31999CCB3F166F7F2"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_literal_matching.py",
+      "sha256": "DD7984D8486C537B49AE7FFA0BFD8BBF28EF315C27C04BE24E33ADD946FFC766"
+    },
+    {
+      "path": "apps/web/components/cleanup-rule-editor.tsx",
+      "sha256": "FB6291C381148C8A5DCF2138E4D34B45CFE3F3B3E5CD3FB8B71FF4E4D603AAC1"
+    },
+    {
+      "path": "apps/web/e2e/settings-rule-learning.spec.ts",
+      "sha256": "3F0E5AAD7B020AD6BFDE882833461B9A0BA9248875BE5527AD24A523365844FE"
+    },
+    {
+      "path": "apps/web/lib/types.ts",
+      "sha256": "B642B94E8EA22E8394F780B3974904165B78BB4773AE3E447273F6FA40C0768B"
+    },
+    {
+      "path": "docs/execution/ux-audit-noise-matching-2026-10-25.md",
+      "sha256": "B9035013B178F10A895C78DC26EC04E8F173851E5FD7CE1A1DFDE7A8C201D6A0"
+    }
+  ]
+}

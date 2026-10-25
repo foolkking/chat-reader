@@ -1,6 +1,6 @@
 # AI Rich Markdown Renderer Contract
 
-Last synchronized: 2026-10-24
+Last synchronized: 2026-10-25
 
 ## Purpose and canonical source
 
@@ -12,12 +12,13 @@ canonical Markdown source (unchanged)
 -> react-markdown / unified parser
 -> remark-gfm + frozen AI soft breaks + remark-math
 -> AI math compatibility AST transform
+-> unsupported HTML nodes become inert visible source
 -> sanitized HAST
 -> KaTeX semantic renderer
 -> safe React components
 ```
 
-`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v5` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical.
+`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v7` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical. This display-policy version is separate from the import parser version.
 
 ## Shared consumers
 
@@ -70,7 +71,13 @@ preview, so wide/long content cannot displace them to a hidden content midpoint
 or cover cells/scrollbars. Additions still modify the whole draft, not the visible
 page. A 24px-gutter density trial failed real hit tests and was withdrawn; it is
 not the current layout. The [shared-body implementation](../execution/TABLE_BODY_SHARED_PRESENTATION_2026-10-22.md)
-records 81 current isolated Chrome scenarios, including actual body rendering.
+records its 81-scenario isolated Chrome checkpoint, including actual body rendering.
+The [2026-10-25 reading audit](../execution/ux-audit-chatgpt-reading-2026-10-25.md)
+added two body cases at its historical 83-scenario checkpoint. The
+[remaining-work continuation](../execution/CHATGPT_READING_REMAINING_2026-10-25.md)
+extends the isolated gate to 86 and separately exercises actual local
+authenticated Reader, guest Share and downloaded Offline Reader. The component
+gate itself is still not authenticated three-chain acceptance.
 The earlier [edge-reachability continuation](../execution/TABLE_TOOL_VIEWPORT_EDGES_2026-10-20.md)
 checks real coordinates/hit tests, mouse/touch and post-add focus in 45 local
 Chrome scenarios. This is presentation-only; no extra table, parser, edge scroll/
@@ -112,8 +119,14 @@ reference IDs/destinations and export data are never rewritten by this view.
 `chatgpt-rich-text-compatibility.ts` handles the reported lower-case
 `box`/`row`/`text`/`badge`/`divider` export shape. It is a sample-driven reading
 fallback, **not** a documented general ChatGPT export format, HTML/JSX parser or
-ChatKit runtime. A standalone balanced box with a recognized rich child must
-establish the profile outside code. Unknown attributes do not authorize it.
+ChatKit runtime. At least one standalone balanced box with a recognized rich
+child must establish the profile outside protected code. Detection finishes all
+recognized candidates in the current input before authorizing recovery:
+escape flags aggregate across boxes, and a later recognized mismatched,
+unclosed or over-depth structure rejects the profile instead of allowing
+partial conversion. Unsupported attributes/tag shapes are still skipped by
+the existing scanner; this is not validation of arbitrary markup.
+Unknown attributes do not authorize a profile.
 The narrow attribute allowlist tracks the documented presentation vocabulary
 for the corresponding ChatKit widget names (layout, spacing, border/radius,
 background, color/variant, badge flags and text emphasis) only as a
@@ -125,12 +138,17 @@ The display projection removes recognized layout wrappers, retains text/badge
 labels and uses a thematic break for a divider. An escaped profile additionally
 recovers bounded heading, paired strong/code delimiters and ordered-list escapes,
 plus export whitespace entities. It does not blindly unescape Markdown, links,
-TeX or HTML. Fenced, inline and standalone indented code stay literal. Missing
-content, original card styling, arbitrary widgets and exporter changes are not
-reconstructed.
+TeX or HTML. Existing inline/indented/fence guards are supplemented by the
+installed CodeMirror Markdown parser's fenced-code ranges, including nested
+quote/list and unclosed fences; CRLF masking preserves original offsets.
+Literal examples do not authorize a profile or lose their tags.
+This is not a general HTML/container parser. Missing content, original card styling,
+arbitrary widgets and exporter changes are not reconstructed.
 
 Full current-version text supplies ephemeral profile metadata to canonical
-blocks, including both virtualized paths and leading thinking. Block IDs,
+blocks, including both virtualized paths and leading thinking. These fragments
+inherit the established full-text profile; they are not independently required
+to contain a balanced outer box. Block IDs,
 indices, raw copy strings, task identity and canonical data remain unchanged.
 Source-preview positions undo these new display edits relative to the input
 after the **existing** math normalization; this is not a repair or guarantee
@@ -138,13 +156,35 @@ for older math preprocessing offset shifts.
 
 Limits are 524,288 UTF-16 source units, 8,192 tokens/edits and 64 detection nesting
 levels. Invalid detection or exhausted budgets leave input unchanged, not
-truncated. Work runs only through mounted render inputs; it adds no observer,
-timer, request, dependency or persistent field. CPU/RSS and browser geometry
-have not been measured for this fallback.
+truncated. After the compatibility projection, unsupported/rejected HTML parser
+nodes become visible text (inline) or plain source-code blocks (flow), not
+executable HAST. This also makes malformed/over-budget source readable without
+relaxing detection budgets or attempting partial rich-layout recovery.
+No arbitrary HTML, scripts or widget runtime are enabled.
+
+Work runs only through mounted render inputs; it adds no observer, timer,
+request, dependency or persistent field. The local Chrome harness checks
+mixed-box semantics, code, inert HTML, Mermaid alternatives and overflow at
+1440/375px. A separate local API/worker/PostgreSQL E2E verifies the same complete
+turn and actual message DOM anchors in Reader, guest Share and offline reload.
+It does not establish position-restoration geometry, physical-device behavior,
+CPU/RSS, general latency or sustained performance.
 
 `skipHtml`, sanitization, safe links/images and local KaTeX policy remain enabled.
 Importer originals, PostgreSQL Markdown, exports, `.cr`, offline packages v1/v2/v3
 and Dexie v2 are not migrated or rewritten.
+The [dated audit and adjacent synthetic evidence](../execution/ux-audit-chatgpt-reading-2026-10-25.md)
+own the original 20-candidate checkpoint and controlled baseline comparison.
+The [follow-up record](../execution/CHATGPT_READING_REMAINING_2026-10-25.md)
+owns subsequent HTML/code/type repairs and remaining source-dependent adapters.
+The v7 changes are local only, not accepted by an older production release.
+
+Source Editor offers an on-demand reading-policy disclosure: preview is
+display-only, unsupported markup stays visible/inert and stored source is
+unchanged. Adaptive mapping uses the same shared renderer with explicit bounded
+sample/source modes (see [API bounds](BACKEND_AND_API.md#json--markdown-pairing-v5-current)).
+Import completion keeps its first four warnings visible and exposes the
+remainder through a native, counted disclosure; warnings are not discarded.
 
 ## Math delimiter profile
 
@@ -195,7 +235,16 @@ The supported profile includes CommonMark headings/lists/quotes/code plus GFM ta
 
 Footnote reference/backlink IDs are namespaced with the rendering scope (normally MessageVersion or attachment identity), preventing repeated `[^1]` labels from colliding. Canonical blocks may split a reference and standalone definition; Reader projects current-version blocks back into one semantic parse without changing stored text.
 
-Inline and fenced code are parsed before the AI math transform. Math delimiters inside code stay code. Existing Shiki/plain-code fallback remains authoritative. Mermaid behavior is unchanged; no new diagram runtime is introduced.
+Inline and fenced code are parsed before the AI math transform. Math delimiters inside code stay code. Existing Shiki/plain-code fallback remains authoritative.
+
+The existing Mermaid runtime remains strict. Supplied SVG `title`/`desc`
+(including `accTitle`/`accDescr`) provide the image label and associated visible
+description; absent descriptions are not invented. Every diagram retains an
+accessible native source disclosure. Failure shows localized status and opens
+the exact source; Mermaid's global syntax-error drawing is suppressed so failure
+cannot leave orphan graphics outside the message. No new diagram runtime or
+raw source-HTML insertion is introduced. This is not screen-reader conformance
+acceptance.
 
 Code-block copy uses the shared source-scoped clipboard controller. Pending
 requests disable duplicate clicks; only a successful matching request shows
@@ -210,7 +259,8 @@ Reader headings use the same sanitized KaTeX subtree as paragraphs. A presentati
 
 ## HTML, links and images
 
-- Raw user HTML is inert: `skipHtml` and the sanitizer remain enabled.
+- Raw user HTML is inert and visible as literal source: an AST transform handles
+  its HTML nodes before HAST; `skipHtml` and the sanitizer remain enabled.
 - Links allow existing safe anchors/paths and approved `http`, `https`, and `mailto` schemes. External links use `noopener noreferrer`.
 - `javascript:`, `vbscript:` and unsafe `data:` targets are not executable links.
 - Remote Markdown images are not auto-loaded. The renderer shows an inert placeholder and explicit safe link where allowed.
@@ -219,6 +269,14 @@ Reader headings use the same sanitized KaTeX subtree as paragraphs. A presentati
 ## Performance and offline assets
 
 Rich Markdown is parsed per mounted message or attachment. There is no whole-Reader DOM scan, KaTeX auto-render pass or post-mount rewrite. Source Editor live preview is opt-in and starts collapsed on every workspace open; once opened, `useDeferredValue` keeps preview work behind typing, while CodeMirror's external baseline remains independent from preview rendering.
+
+`AssistantMarkdownPart` retains stable renderer configuration/components and its
+current primitive subtree. A host-only class change updates the outer wrapper
+without reparsing unchanged source; content/scope/context/attachment callback
+changes still reach the parser. A fixed synthetic browser probe measured one
+additional host-only parse before the fix and zero afterward; changing source
+still adds one parse. This is mounted-subtree reuse, not a shared message cache,
+general parse elimination or a long-task/RSS improvement claim.
 
 The local editable Table tool keeps its Markdown element stable for unchanged
 normalized display text and scope, independently of the live cell callback.
@@ -370,11 +428,30 @@ Search and exports continue using canonical Markdown/searchable text. KaTeX span
 
 Supported now: four math delimiters, common KaTeX aligned/matrix/cases environments, GFM tables/tasks/strike/autolinks, footnotes, fenced/inline code, headings, blockquotes, the frozen existing single-newline visual-break policy and the bounded rich-text reading fallback above.
 
-Deferred by design: MathJax fallback, AsciiMath, `mhchem`, arbitrary raw HTML, new callout syntax and new Mermaid behavior. Unsupported KaTeX commands use the bounded local fallback.
+Deferred by design: MathJax fallback, AsciiMath, `mhchem`, executable raw HTML,
+new callout syntax, new diagram runtimes and reconstruction of missing diagram
+meaning. Unsupported KaTeX commands use the bounded local fallback.
 
 ## Regression evidence
 
-- `scripts/ux/chatgpt-rich-text.test.mjs`: 35 service-free parser/SSR checks, including the original 27 v5 checks plus actual editable-table coordinates/math, inert links/images, GFM alignment and normalization MathML/code/reference integrity, literal/code-backtick escaped-pipe fidelity and Unicode/autolink/control-character cell presentation. Explicit assistant-ui/virtualizer adapters are not full Reader browser acceptance.
+- Latest continuation (2026-10-25): 43 shared-renderer/parser checks and
+  86 isolated Chrome scenarios, plus a separate actual local-service
+  Reader/Share/Offline/mapping E2E. Final suite results and explicit adapters are
+  recorded in the [continuation](../execution/CHATGPT_READING_REMAINING_2026-10-25.md)
+  and [testing scope](../testing.md#chatgpt-reading-compatibility--2026-10-25-local-only).
+  No complete PWA/physical-device/production or broad performance acceptance.
+- Original pre-continuation checkpoint (2026-10-25): 82 focused Node checks, all 1,586
+  service-free checks across 75 files, 83 isolated Chrome scenarios and four
+  Playwright **source** contracts pass. Seven-file API import/source regression
+  passes 16 with one deliberately deselected private fixture. Lint,
+  nonincremental typecheck, one-worker production build and single-head
+  inspection pass. See [testing scope](../testing.md#chatgpt-reading-compatibility--2026-10-25-local-only);
+  no authenticated three-chain/PWA/PostgreSQL/production acceptance is implied.
+- `scripts/ux/chatgpt-rich-text.test.mjs`: 43 service-free parser/SSR checks,
+  including v7 inert visible HTML, nested/unclosed container code and safe
+  over-budget fallback; v6 multi-box/profile negatives and prior shared table,
+  math, link, source-coordinate and code fidelity remain covered.
+  Explicit assistant-ui/virtualizer adapters are not full Reader browser acceptance.
 - `scripts/ux/source-editor-table-tools.test.mjs`: 52 service-free checks, including
   single-cell validation, seeded equivalence with the former bracket classifier,
   6,000 balanced nested images, actual GFM code-context comparisons, frozen-tree
@@ -388,8 +465,9 @@ Deferred by design: MathJax fallback, AsciiMath, `mhchem`, arbitrary raw HTML, n
   The Node Worker is test isolation only, not a new browser parser worker.
 - `scripts/ux/source-editor-table-references.test.mjs`: 10 checks using the installed CodeMirror parser for context identity, code/container exclusion, CRLF HTML boundaries, UTF-8/count bounds and explicit incomplete context.
 - `scripts/ux/source-editor-table-context.test.mjs`: five source-probe/projection
-  checks. These plus 52 table, 10 reference and 35 shared-renderer cases total 102;
-  adding the 20 common-focus cases gives the current 122-case focused gate.
+  checks. At the preceding table checkpoint, these plus 52 table, 10 reference
+  and then-35 shared-renderer cases totaled 102; adding the 20 common-focus cases
+  gave that checkpoint's 122-case focused gate.
   Earlier 71/75/83-case checkpoints retain their original scope and source hashes.
 - `scripts/ux/source-editor-table-browser.mjs`: explicit local-only Chrome gate, not part of `*.test.mjs`. Actual dialog/focus/parser/renderer/CSS and SourceEditorWorkspace/EditMessageForm/CodeMirror, with synthetic APIs/Next loader and unrelated UI adapters. The assistant-ui test adapter now forwards actual source into the renderer core rather than returning null. See the [initial component record](../execution/TABLE_TOOL_EDITING_2026-10-20.md), [real workspace continuation](../execution/TABLE_TOOL_WORKSPACE_2026-10-20.md) and [27-scenario integrity checkpoint](../execution/TABLE_TOOL_CONTENT_INTEGRITY_2026-10-20.md); none accepts authenticated server, Reader/Share/Offline or resource behavior.
 - The [long-cell continuation](../execution/TABLE_TOOL_LONG_CELL_2026-10-20.md) uses synthetic 40,000-character cells to verify the display-only renderer bound and exact Apply preservation; it does not represent real-device latency or broad memory/resource acceptance.
@@ -471,7 +549,7 @@ Deferred by design: MathJax fallback, AsciiMath, `mhchem`, arbitrary raw HTML, n
   111 focused / 1,502 service-free checks plus Web gates. Expanded profiling
   separates first-row, tail, source, navigation and GC phases; older unsegmented
   long-task totals cannot be attributed only to grid input. Long tasks remain.
-- `apps/api/tests/test_chatgpt_rich_text_source.py`: three pure importer/block-building checks retain exact synthetic source/hash and task offsets. Current v5 evidence is in [the rich-text report](../execution/ux-audit-chatgpt-rich-text-2026-10-15.md); older browser/production evidence below does not accept this new fallback.
+- `apps/api/tests/test_chatgpt_rich_text_source.py`: three pure importer/block-building checks retain exact synthetic source/hash and task offsets. Initial v5 evidence is in [the rich-text report](../execution/ux-audit-chatgpt-rich-text-2026-10-15.md); v6 local evidence is above. Older browser/production evidence does not accept the new local changes.
 - `ai-rich-markdown-parser.spec.ts`: parser delimiter, consumed inline/bracket compatibility, prose/date/version/code exclusions, currency and canonical-source invariants.
 - `ai-rich-markdown.spec.ts`: real Reader/Editor DOM, golden formula, 109-formula stress, security, MathML and 360px overflow.
 - `production-rich-markdown-copy.spec.ts`: an ephemeral UTF-8 copy of the reported production source, full Source Preview semantic count and cleanup through the product API.

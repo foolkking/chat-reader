@@ -134,6 +134,40 @@ def test_native_json_is_a_builtin_profile(client: TestClient) -> None:
     assert session["families"][0]["matched_profile_key"] == "builtin:chat-reader-exporter"
 
 
+def test_mapping_preview_exposes_bounds_without_truncating_the_import(client: TestClient) -> None:
+    source = "### Synthetic sample\n\n" + "正文🙂" * 800
+    content = _json_bytes(extra={"turns": [
+        {"speaker": "human" if index % 2 == 0 else "ai", "body": source if index == 0 else f"Synthetic {index}"}
+        for index in range(13)
+    ]})
+    session = _create(client, [("bounded.json", content, "application/json")])
+    family = session["families"][0]
+    response = client.post(
+        f"/api/adaptive-import/sessions/{session['import_id']}/families/{family['id']}/mapping/preview",
+        json={"profile_name": "Synthetic bounded preview", "mapping_spec": family["mapping_draft"],
+              "sample_group_id": family["group_ids"][0]},
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["validation"]["valid"] is True
+    assert payload["validation"]["message_count"] == 13
+    assert payload["preview"]["message_count"] == 13
+    assert len(payload["preview"]["messages"]) == 12
+    assert payload["preview"]["messages"][0]["content"] == source[:2000]
+    assert payload["preview"]["messages"][0]["content_truncated"] is True
+    assert all(item["content_truncated"] is False for item in payload["preview"]["messages"][1:])
+    ready = _save_mapping(client, session, "Synthetic bounded preview")
+    committed = client.post(f"/api/imports/{ready['import_id']}/commit")
+    assert committed.status_code == 200, committed.text
+    conversation_id = committed.json()["conversation_ids"][0]
+    detail = client.get(f"/api/conversations/{conversation_id}/messages?include_blocks=true")
+    assert detail.status_code == 200, detail.text
+    # The preview's budget never becomes a canonical-write budget.
+    canonical_messages = detail.json()
+    assert len(canonical_messages) == 13
+    assert canonical_messages[0]["current_version"]["display_text"] == source
+
+
 def test_family_mapping_is_reused_and_validated_for_every_group(client: TestClient) -> None:
     session = _create(
         client,

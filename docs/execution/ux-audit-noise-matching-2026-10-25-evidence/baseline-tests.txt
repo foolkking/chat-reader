@@ -1,0 +1,3 @@
+Baseline command (synthetic SQLite fixtures only):
+python -m pytest -p no:cacheprovider --basetemp=C:\Users\86182\Desktop\wkkk\chat-reader-noise-audit-20261025\pytest tests/test_noise_rule_regressions.py tests/test_cleanup_literal_matching.py tests/test_cleanup_unicode_normalization.py tests/test_cleanup_learning.py
+Result: 97 passed in 47.62s.

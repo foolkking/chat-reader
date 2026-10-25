@@ -1,0 +1,24 @@
+{
+  "not_run": [
+    "authenticated Reader/Share/Offline E2E",
+    "production PostgreSQL",
+    "real user imports",
+    "web search",
+    "deployment"
+  ],
+  "test_files": [
+    "apps/api/tests/test_noise_rule_regressions.py",
+    "apps/api/tests/test_cleanup_literal_matching.py",
+    "apps/api/tests/test_cleanup_unicode_normalization.py",
+    "apps/api/tests/test_cleanup_learning.py"
+  ],
+  "local_date": "2026-10-25",
+  "timezone": "America/New_York",
+  "baseline_api_tests": {
+    "collected": 97,
+    "passed": 97,
+    "failed": 0
+  },
+  "evidence": "synthetic repository tests and source inspection only",
+  "audit": "noise-matching"
+}

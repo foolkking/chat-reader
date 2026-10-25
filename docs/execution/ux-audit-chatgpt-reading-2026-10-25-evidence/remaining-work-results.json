@@ -1,0 +1,339 @@
+{
+  "date": "2026-10-25",
+  "timezone": "Asia/Shanghai",
+  "status": "bounded evidenced continuation completed locally; not full release acceptance",
+  "priorCheckpoint": {
+    "record": "../ux-audit-chatgpt-reading-2026-10-25.md",
+    "implemented": [
+      "COPY-01",
+      "TRUST-02"
+    ],
+    "deferredAtThatTime": 18,
+    "originalArtifactsVerifiedUnchanged": true,
+    "receiptSha256": "195deb4f2d932773767b4d23bf92c142c194e53b84563a99564d50180a178086",
+    "artifactsSha256": {
+      "controlled-regression.json": "139fb79e6816f89569fdf64bc177af81322fe0d9c28a34c248bf9d2324911929",
+      "supported-say-type-probe.json": "057548697708e18176842132f646726163e8ce74469b47dbc2a63e5fa7163889",
+      "browser-result.json": "c5026d42b84b7c29e402b3c300452513a41863f5e5740c169a0a464e6b9423b0",
+      "reading-rich-1440.png": "dea51bfd80ab5406ea87722a15662966f760f741bf86c4f70f6d19c4a9e53cf0",
+      "reading-rich-375.png": "a236742bba8408e7018ef47a556cb212194eca96764506b5f8f4da7a3bb3d3c5"
+    }
+  },
+  "scope": {
+    "followupsImplementedOrSafeAlternative": [
+      "COPY-03",
+      "DATA-09",
+      "DATA-10",
+      "DATA-12",
+      "COPY-05",
+      "COPY-06",
+      "COPY-04",
+      "A11Y-01"
+    ],
+    "safeAlternative": {
+      "DATA-10": "Retain whole rejected/over-budget source and expose inert HTML visibly; no segmented recovery or raised budget."
+    },
+    "partial": {
+      "PLAT-01": "Only 90-character fixed-source redundant host-style parse measured/reused; not long-body latency/CPU/RSS.",
+      "PLAT-02": "Actual local-service complete-turn Reader/guest Share/worker-downloaded Offline Reader with real message anchors and offline reload; not position-restoration/full PWA/legacy-package matrix."
+    },
+    "sourceDependentUnimplemented": {
+      "COPY-02": "Supported sanitized writing title/body export examples and expected reading order.",
+      "DATA-04": "Citation markers plus corresponding source metadata; no guessed URLs.",
+      "DATA-05": "Exported labels/values/units/precision/null semantics; no screenshot inference.",
+      "DATA-06": "Manifest and actual attachment files, including missing-file case.",
+      "DATA-07": "Actual transcript text and speaker/order/time semantics.",
+      "DATA-08": "Visible tool-result/error sample distinct from commands; no execution.",
+      "DATA-11": "Authorized affected versions, original source/backup and reviewed selective diff policy.",
+      "TRUST-03": "Actually exported static artifact and expected non-interactive presentation."
+    },
+    "rendererPolicy": "ai-rich-markdown-v7",
+    "exporterParser": "chat-reader-import-v6",
+    "markdownParser": "markdown-parser-v5",
+    "schemaHead": "20261022_0053"
+  },
+  "sourceSha256": {
+    "apps/api/app/services/adaptive_import/service.py": "fdae62087e988e2d6ce7ec7025fc43baf1e5e59fd41799221d3024dcae39089e",
+    "apps/api/app/services/import_pipeline/canonical_draft.py": "799c65ba2521a58a8e0983f136eaf2a6ecde94c954be05a5d249660ad4db31ed",
+    "apps/api/app/services/import_pipeline/exporter_json_parser.py": "305ed05496dec2f6b0b9635d7b91e40a24726e5d2a2d3d4567596d9423d8cf57",
+    "apps/api/tests/test_adaptive_import_api.py": "3b06eede2a7f5003fcaf3afce0992048110a016b3a08f38d18da96c5a8d387bc",
+    "apps/api/tests/test_exporter_json_parser.py": "0d396752a67a8f8a329a5e9e83ae9603a610ccd9263d10d3453bb50fb717420a",
+    "apps/api/tests/test_import_preview_exporter_combo.py": "bb3f4698c3be83964941efeb6ccbec4b5ba1d7b8a3a46cf7a3b134a34429ce52",
+    "apps/web/e2e/chatgpt-reading-acceptance.spec.ts": "b028510a7f2d576955b4cf1707c86585d01ecaa11eee8a87270c93753616cec3",
+    "apps/web/e2e/import-compatibility-contract.spec.ts": "1a0439d45a857e37873f9c7646014d22c7ead0124b10d722860691af53fb5025",
+    "apps/web/features/conversations/markdown-renderer.tsx": "8bef0c0499e3eab6f66626722fb1b8ac45c628e45976866d2f2ea1cb8802f833",
+    "apps/web/features/editing/edit-message-form.tsx": "5710574584978f869ba67c5af8315e05f3a5db346180d1df7451bdb80e9b9203",
+    "apps/web/features/import/import-panel.tsx": "c517f0e4c57440d9b20cf146a66bd457bfe22cf8a9969775d93b62b99282f797",
+    "apps/web/features/import/import-workspace-copy.ts": "5dc7a884230619877aef534c3079871dcd74ae721d3ee1b65e03598d69bd6b05",
+    "apps/web/features/import/mapping-workspace.tsx": "118ecf862d47d26e6e1481623eac5b2062be0306d8bf0cb5ac2410c04e250a72",
+    "apps/web/features/rich-markdown/chatgpt-rich-text-compatibility.ts": "34137a9fc5ac00bcd3768879d3bb402673ea82890a79500e95856f657fb31fce",
+    "apps/web/features/rich-markdown/rich-markdown-config.ts": "731d429aa88d5f675cf0c7362d5e1931112760c43ea3618051a0711d874f9e10",
+    "apps/web/lib/types.ts": "0685e7dd99a1373aeeeef6426bf65a86a6b9362cfe6163959ead8b29c646bdf0",
+    "scripts/ux/chatgpt-rich-text.test.mjs": "1152a733cb7f03791b5271babc699b522ea87731fecde6e921294f35ab918392",
+    "scripts/ux/source-editor-table-browser.mjs": "e20e82c03cefa63cedbda504e770f8ed644818387113f8845d9402b43f4cb7c5"
+  },
+  "documentationSha256": {
+    "PROJECT_STATE.md": "2204f8096edc9fc7bcb95428d74ae145a9748969ff52969d33513591e0ae7a59",
+    "docs/index.md": "9cd0853b5ba74f50248450d2f012297ba367d748782b4e7a4b49edc28caf7b1e",
+    "docs/documentation-inventory.md": "69c049a5a44bc7620e9e4ee079381569940e4832e67c0a2acebf9d270bf5f3fe",
+    "docs/testing.md": "ffe1be80f1ceba748dbc4343722460723fda93295e1046a0c8dcb6a6614668e6",
+    "docs/execution/README.md": "ba7d1f0c8fb4ed5f4b7909feff98c3e3217db3874cbc0a94f0b187705987187e",
+    "docs/system/AI_RICH_MARKDOWN_CONTRACT.md": "c503e74153c52049a848d23883a71888da9144956aac2b3ff40ef93bbc35e1f4",
+    "docs/system/BACKEND_AND_API.md": "eec376f12059f376f047678fa2b4add038fddab14d86281f226e3bf5a36ab046",
+    "docs/execution/CHATGPT_READING_REMAINING_2026-10-25.md": "1c7f826f1604df91ebcb9d2c37125c562507d26f306428f5f0fb084f3c90ea28",
+    "docs/execution/ux-audit-chatgpt-reading-2026-10-25.md": "124f5fec28b4e5433d52aece8b92d5d52b52b8596cbc95555b702abfc3ab2ed2",
+    "docs/execution/ux-audit-chatgpt-reading-2026-10-25-evidence/README.md": "3b392ad60f0f9b84fdeec3194641ed7e3d66023e71df7d836d6d85204a4d9365"
+  },
+  "artifactSha256": {
+    "remaining-browser-result.json": "61fc372adb82882b769aa156a0c2c4a42d13ddf3e904e5baf6157e12d56038de",
+    "remaining-parser-reuse.json": "1a02f817b521235186ef423b7a92afcab44112d618c473325236969d67e2faa4",
+    "remaining-reading-rich-1440.png": "dea51bfd80ab5406ea87722a15662966f760f741bf86c4f70f6d19c4a9e53cf0",
+    "remaining-reading-rich-375.png": "a236742bba8408e7018ef47a556cb212194eca96764506b5f8f4da7a3bb3d3c5",
+    "remaining-mapping-rendered-1440.png": "b54ea68130e942f7f25d55a600619b3b56e15548ef330f18f100d11a6a0ca58e",
+    "remaining-mapping-rendered-375.png": "6626ce73eebaf199d40d8987c4cd26cb7cc401823253b4109ed4a8045c387bed",
+    "remaining-warnings-expanded-1440.png": "ff99b87afd8b650b8ef6d488b64dcf223e25ffa130a80b8c0a97785fffc3abda",
+    "remaining-warnings-expanded-375.png": "dba6bb4537882c7a2aa62b9202bb2c7dc72b07def71f08034ac73fd5aa8cc7af"
+  },
+  "localRunLogSha256": {
+    "node-final-all.log": "894dd4c6193b08fc20c9a95825d61748d25de89e28a0f5f818fb9823490d8a97",
+    "browser-final-clean.log": "8c67ff01eede174515fa325ff16b872e8799ab18e7c69f77b38478fa07c8a2d9",
+    "api-focused-final.log": "1bc9b2f88af516fc2f943ca679cf1742bc68068e0193c3b90422144a3c4f76d6",
+    "api-failed-rerun.log": "d2b24b2ad187ca4b63e1ba7d542a237f9d5d7d457e629b942527d973d27b7e2c",
+    "playwright-final-visual.log": "d668a0d42d5a24aa588e463ad0150f68ea98b9a4f38495b9904821f915af7446",
+    "playwright-source-contract-final.log": "a31afdcc0d5e3e60b7b7e6dbdb732c78fe7ca1e66d47b1219f42a6f2b3c01291",
+    "lint-closeout.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "typecheck-closeout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build-final.log": "eda22747381e0622055c66459264135452feac627fe26b450563850cd6b16f69"
+  },
+  "gates": [
+    {
+      "name": "shared-renderer-focused",
+      "command": "node --test scripts/ux/chatgpt-rich-text.test.mjs",
+      "exitCode": 0,
+      "passed": 43,
+      "preEdit": {
+        "passed": 40,
+        "failed": 3
+      }
+    },
+    {
+      "name": "service-free-ux",
+      "command": "PowerShell Get-ChildItem scripts/ux -Filter *.test.mjs -File; node --test --test-concurrency=1 @tests",
+      "exitCode": 0,
+      "files": 75,
+      "passed": 1589,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "name": "isolated-Chrome-components",
+      "command": "node scripts/ux/source-editor-table-browser.mjs",
+      "exitCode": 0,
+      "passed": 86,
+      "browser": "155.0.8059.82",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "boundary": "local Chrome real dialog/workspace/form/CodeMirror/MarkdownRenderer core; explicit API/Next-loader/assistant-ui source-forwarding and unrelated rich-view/cleanup adapters; no authenticated server acceptance"
+    },
+    {
+      "name": "focused-api",
+      "cwd": "apps/api",
+      "command": "python -m pytest <files> -k \"not real_paired_fixture\" -q --basetemp=<task-temp>/pytest-final-import -p no:cacheprovider",
+      "files": [
+        "tests/test_adaptive_import_api.py",
+        "tests/test_official_normalizer.py",
+        "tests/test_import_preview_official.py",
+        "tests/test_canonical_persistence_official.py",
+        "tests/test_chatgpt_rich_text_source.py",
+        "tests/test_exporter_json_parser.py",
+        "tests/test_exporter_markdown_parser.py",
+        "tests/test_canonical_persistence_exporter.py",
+        "tests/test_import_preview_exporter_combo.py"
+      ],
+      "exitCode": 0,
+      "passed": 78,
+      "skipped": 2,
+      "deselected": 1,
+      "boundary": "Private optional fixtures unavailable/excluded; no user source read."
+    },
+    {
+      "name": "real-local-service-e2e-and-warning-ui",
+      "file": "apps/web/e2e/chatgpt-reading-acceptance.spec.ts",
+      "command": "corepack pnpm --filter web exec playwright test --config=<task-temp>/playwright-chatgpt-reading.config.mjs",
+      "exitCode": 0,
+      "passed": 2,
+      "durationSeconds": 12.0,
+      "environment": "isolated fresh PostgreSQL, authenticated API, single worker, production Next build, installed Edge Chromium",
+      "realApis": [
+        "synthetic login",
+        "complete-turn creation",
+        "Reader",
+        "cookie-free guest Share",
+        "worker-generated offline download",
+        "offline reload",
+        "adaptive mapping preview and persisted-draft checks"
+      ],
+      "explicitAdapters": [
+        "archive warning preview",
+        "archive commit",
+        "cleanup status/pending scan"
+      ],
+      "notClaimed": [
+        "real archive parsing in warning fixture",
+        "position restoration",
+        "full PWA/device/offline-version matrix"
+      ],
+      "serviceProcessOnlyResourceOverrides": {
+        "UPLOAD_MEMORY_RESERVE_MB": 64,
+        "UPLOAD_ANALYSIS_MEMORY_FACTOR": 1
+      },
+      "boundary": "Overrides apply only to E2E service processes; not API unit/full/rerun commands. Product defaults/probes unchanged; no capacity claim. Auth state/identifiers are not persisted in this receipt."
+    },
+    {
+      "name": "playwright-source-contracts",
+      "files": [
+        "apps/web/e2e/ai-rich-markdown-contract.spec.ts",
+        "apps/web/e2e/import-compatibility-contract.spec.ts"
+      ],
+      "exitCode": 0,
+      "passed": 4,
+      "boundary": "No browser or webServer; not PWA/E2E."
+    },
+    {
+      "name": "web-lint-closeout",
+      "command": "corepack pnpm run lint",
+      "exitCode": 0
+    },
+    {
+      "name": "web-typecheck-closeout",
+      "command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+      "exitCode": 0
+    },
+    {
+      "name": "web-production-build",
+      "command": "corepack pnpm --filter web build",
+      "exitCode": 0,
+      "processEnvironment": {
+        "NEXT_BUILD_CPUS": 1,
+        "NEXT_STANDALONE": 0,
+        "API_INTERNAL_URL": "http://127.0.0.1:8107"
+      },
+      "boundary": "Standard .next build. Only screenshot-test/documentation/evidence edits followed; no product edits or deployment."
+    },
+    {
+      "name": "migration-head-and-isolated-upgrade",
+      "commands": [
+        "python -m alembic heads",
+        "python -m alembic upgrade head"
+      ],
+      "exitCode": 0,
+      "heads": [
+        "20261022_0053"
+      ],
+      "boundary": "Upgrade of a fresh task-local PostgreSQL cluster from zero, not production."
+    },
+    {
+      "name": "full-api-initial",
+      "command": "corepack pnpm run test:api --basetemp=<task-temp>/pytest-full -p no:cacheprovider",
+      "exitCode": 1,
+      "passed": 1730,
+      "failed": 15,
+      "skipped": 189,
+      "warnings": 2,
+      "durationSeconds": 3856.75,
+      "failedSelectors": [
+        "tests/test_cleanup_group_search.py::test_import_review_discovery_only_returns_its_existing_scan",
+        "tests/test_context_continuation_export.py::test_new_tail_preserves_source_claims_without_extending_coverage",
+        "tests/test_context_continuation_export.py::test_changed_prefix_keeps_saved_files_without_claiming_freshness",
+        "tests/test_error_handling_contract.py::test_edit_conflict_returns_409",
+        "tests/test_export_api.py::test_canonical_json_export_versions_and_security",
+        "tests/test_export_api.py::test_export_validation_and_event",
+        "tests/test_export_api.py::test_canonical_json_export_streams_large_conversation",
+        "tests/test_export_api.py::test_canjson_v2_export_is_compact_streaming_jsonl",
+        "tests/test_export_api.py::test_v2_exports_include_description_only_when_requested",
+        "tests/test_export_api.py::test_canjson_v2_gzip_export_can_be_previewed_and_committed",
+        "tests/test_export_api.py::test_markdown_v2_export_has_markers_and_no_default_toc",
+        "tests/test_search_api.py::test_reindex_rebuilds_search_and_toc",
+        "tests/test_search_api.py::test_search_role_filter_and_duplicate_message_occurrences",
+        "tests/test_search_api.py::test_search_code_blocks_block_location_and_archive_scope",
+        "tests/test_search_indexer.py::test_search_reindex_is_idempotent_and_excludes_raw_uri"
+      ],
+      "observation": "Failures stop at import commit HTTP 400 or absent resulting conversation IDs. Large-conversation export traceback explicitly reports memory pressure; all other causes not proven.",
+      "diagnosticLimit": "Rolled-back task SQLite records yielded no additional persisted error cause; no full-suite baseline comparison."
+    },
+    {
+      "name": "all-initial-failures-targeted-rerun",
+      "selectors": [
+        "tests/test_cleanup_group_search.py::test_import_review_discovery_only_returns_its_existing_scan",
+        "tests/test_context_continuation_export.py::test_new_tail_preserves_source_claims_without_extending_coverage",
+        "tests/test_context_continuation_export.py::test_changed_prefix_keeps_saved_files_without_claiming_freshness",
+        "tests/test_error_handling_contract.py::test_edit_conflict_returns_409",
+        "tests/test_export_api.py::test_canonical_json_export_versions_and_security",
+        "tests/test_export_api.py::test_export_validation_and_event",
+        "tests/test_export_api.py::test_canonical_json_export_streams_large_conversation",
+        "tests/test_export_api.py::test_canjson_v2_export_is_compact_streaming_jsonl",
+        "tests/test_export_api.py::test_v2_exports_include_description_only_when_requested",
+        "tests/test_export_api.py::test_canjson_v2_gzip_export_can_be_previewed_and_committed",
+        "tests/test_export_api.py::test_markdown_v2_export_has_markers_and_no_default_toc",
+        "tests/test_search_api.py::test_reindex_rebuilds_search_and_toc",
+        "tests/test_search_api.py::test_search_role_filter_and_duplicate_message_occurrences",
+        "tests/test_search_api.py::test_search_code_blocks_block_location_and_archive_scope",
+        "tests/test_search_indexer.py::test_search_reindex_is_idempotent_and_excludes_raw_uri",
+        "tests/test_export_api.py::test_markdown_export_uses_current_version_and_selected_messages"
+      ],
+      "exitCode": 0,
+      "passed": 16,
+      "durationSeconds": 37.09,
+      "boundary": "Fresh process after prior task services stopped; no safety/default override. Not a full-suite green rerun."
+    }
+  ],
+  "preexistingWorktreeChange": {
+    "path": "apps/web/tsconfig.tsbuildinfo",
+    "beforeAndAfterSha256": "216156f5ac4d05167fbd1997c4bf3141135be68ca6157e66e507961de4649fdb",
+    "action": "Preserved; not part of this implementation."
+  },
+  "preservedBoundaries": [
+    "canonical text and full-turn semantics",
+    "stable real message DOM anchors",
+    "Share URLs and permissions",
+    ".cr format",
+    "offline package v1/v2/v3",
+    "Dexie v2 and existing data",
+    "single database head",
+    "user imports and production configuration"
+  ],
+  "failureProvenance": [
+    "Concrete pre-edit unsupported HTML/nested-code and supported say-type failures retained task-locally.",
+    "Browser fixture authentication/locator/native-details issues were fixed without bypassing product checks.",
+    "Visual QA exposed orphan Mermaid syntax-error SVG; added suppression and a negative DOM assertion.",
+    "Clipped screenshot captures replaced with viewport screenshots and controls-in-viewport assertions.",
+    "Original HEAD/current controlled comparison was post-implementation, not a universal red-first timeline."
+  ],
+  "unclaimedValidation": [
+    "green complete API rerun",
+    "complete position-restoration/offline-version/PWA matrix",
+    "physical offline device",
+    "production acceptance",
+    "screen-reader/whole-product WCAG certification",
+    "physical clipboard",
+    "long-body latency/CPU/RSS/sustained load",
+    "source-dependent adapters without actual samples"
+  ],
+  "closeout": {
+    "taskLocalWebApiWorkerStopped": true,
+    "taskLocalPostgresStopped": true,
+    "listenerPortsClosed": [
+      3107,
+      8107,
+      55439
+    ],
+    "unrelatedTempOrUserFilesCleaned": false
+  },
+  "releaseActions": {
+    "commit": false,
+    "push": false,
+    "ci": false,
+    "deployment": false
+  },
+  "privacy": "Only synthetic screenshots and sanitized metadata. No source samples, generated conversation IDs, Share tokens, cookies, auth state or credentials persisted here. Raw run outputs and isolated storage remain in task temp."
+}

@@ -169,3 +169,42 @@ def test_normalized_short_rule_trial_to_bulk_refinement_and_canonical_apply(clie
         assert message.current_version_id != original_version
         assert db.get(MessageVersion, message.current_version_id).display_text == expected
         assert db.query(MessageVersion).filter_by(message_id=message_ids[0]).count() == 2
+
+
+def test_exact_rule_preserves_leading_and_trailing_whitespace(client):
+    literal = "\n  NOISE \t"
+    source = f"Keep before{literal}after."
+    previous_scan, message_ids = create_review(client, [source])
+    config = {"name": "Synthetic whitespace envelope", "match_value": literal, "matcher_mode": "EXACT"}
+
+    trial = client.post("/api/content-cleanup/rules/trial", json=config)
+    assert trial.status_code == 200, trial.text
+    assert trial.json()["configuration"]["match_value"] == literal
+    assert trial.json()["matches"] == 1
+    assert trial.json()["samples"][0]["match_text"] == literal
+    assert trial.json()["samples"][0]["match_mode"] == "RAW_EXACT"
+
+    learned = client.post("/api/content-cleanup/rules/learn", json={
+        **config, "confirmed": True, "preview_token": trial.json()["preview_token"],
+    })
+    assert learned.status_code == 200, learned.text
+    assert learned.json()["match_value"] == literal
+
+    response = client.post(f"/api/content-cleanup/scans/{previous_scan}/rescan")
+    assert response.status_code == 202, response.text
+    scan_id = uuid.UUID(response.json()["id"])
+    with session() as db:
+        while not cleanup.process_scan_chunk(db, scan_id)["done"]:
+            db.commit()
+        db.commit()
+    occurrences = client.get(f"/api/content-cleanup/scans/{scan_id}/occurrences").json()
+    assert [row["match_text"] for row in occurrences] == [literal]
+    assert occurrences[0]["start_offset"] == source.index(literal)
+    assert occurrences[0]["message_id"] == str(message_ids[0])
+
+
+def test_whitespace_only_rule_is_rejected(client):
+    response = client.post("/api/content-cleanup/rules/trial", json={
+        "name": "Synthetic whitespace only", "match_value": " \t\r\n",
+    })
+    assert response.status_code == 409

@@ -2,6 +2,14 @@ import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
 const english: Record<string, string> = {
+  "展开其余 {0} 条提示": "Show the remaining {0} notices",
+  "只读样本：最多 12 条消息，每条最多 2000 字符；不改变映射或正文。": "Read-only sample: up to 12 messages and 2000 characters each; mapping and source are unchanged.",
+  "预览显示方式": "Preview display",
+  "渲染": "Rendered",
+  "源码": "Source",
+  "此条仅显示正文前 2000 字符。": "Only the first 2000 characters of this message are shown.",
+  "第 {0} 条消息样本": "Message {0} sample",
+  "其余 {0} 条消息未在样本中展示。": "The remaining {0} messages are not shown in this sample.",
   "导入位置": "Import destination",
   "未归类": "Unclassified",
   "当前项目": "Current project",

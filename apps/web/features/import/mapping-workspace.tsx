@@ -9,6 +9,7 @@ import { previewAdaptiveFamilyMapping, saveAdaptiveFamilyMapping } from "../../l
 import type { AdaptiveImportDiagnostic, AdaptiveImportFamily, AdaptiveImportGroup, AdaptiveImportSession, AdaptiveMappingPreview } from "../../lib/types";
 import { asArray, asObject, DiagnosticLine, FormatIcon, formatBytes, modeLabel, ResolutionBadge } from "./adaptive-import-workspace";
 import { FormatHealthCheck } from "./format-health-check";
+import { MarkdownRenderer } from "../conversations/markdown-renderer";
 
 type MappingSpec = Record<string, unknown>;
 
@@ -134,10 +135,33 @@ function RoleMappingEditor({ mapping, values, onChange }: { mapping: MappingSpec
 
 function CanonicalPreviewPane({ preview, loading }: { preview: AdaptiveMappingPreview | null; loading: boolean }) {
   const tr = useImportCopy();
+  const [sourceMode, setSourceMode] = useState(false);
   const issues = preview
     ? [...preview.validation.issues, ...preview.validation.groups.flatMap((group) => asArray(group.issues) as AdaptiveImportDiagnostic[])]
     : [];
-  return <aside className="py-5 lg:pl-5" aria-label={tr("导入预览")}><div className="flex items-center justify-between gap-3"><h4 className="text-sm font-semibold text-primary">{tr("导入预览")}</h4>{preview ? preview.validation.valid ? <span className="inline-flex items-center gap-1 text-xs font-medium text-accent"><Check className="h-3.5 w-3.5" />{tr("全部对话通过")}</span> : <span className="text-xs font-medium text-[var(--danger)]">{tr("验证失败")}</span> : null}</div>{loading ? <div className="mt-6 flex items-center gap-2 text-sm text-secondary"><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在验证所有对话")}</div> : null}{!loading && !preview ? <div className="mt-6 border-l-2 border-ui pl-3 text-sm leading-6 text-secondary">{tr("确认字段后运行“验证映射”，这里会显示 Chat Reader 实际将要导入的对话。")}</div> : null}{preview?.preview ? <div className="mt-4"><h5 className="text-sm font-semibold text-primary">{preview.preview.title}</h5><p className="mt-1 text-xs text-secondary">{preview.preview.message_count} {tr("条消息")}</p><div className="mt-4 divide-y divide-ui border-y border-ui">{preview.preview.messages.map((message, index) => <div key={index} className="py-3"><p className="text-xs font-semibold text-secondary">{roleLabel(message.role, tr)}</p><p className="mt-1 line-clamp-4 whitespace-pre-wrap text-sm leading-6 text-primary">{message.content}</p></div>)}</div></div> : null}{preview && !preview.validation.valid ? <div className="mt-4 space-y-2">{issues.map((issue, index) => <DiagnosticLine key={`${issue.code}-${issue.pointer ?? ""}-${index}`} diagnostic={issue} />)}</div> : null}</aside>;
+  return <aside className="min-w-0 py-5 lg:pl-5" aria-label={tr("导入预览")}>
+    <div className="flex items-center justify-between gap-3"><h4 className="text-sm font-semibold text-primary">{tr("导入预览")}</h4>{preview ? preview.validation.valid ? <span className="inline-flex items-center gap-1 text-xs font-medium text-accent"><Check className="h-3.5 w-3.5" />{tr("全部对话通过")}</span> : <span className="text-xs font-medium text-[var(--danger)]">{tr("验证失败")}</span> : null}</div>
+    {loading ? <div role="status" className="mt-6 flex items-center gap-2 text-sm text-secondary"><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在验证所有对话")}</div> : null}
+    {!loading && !preview ? <div className="mt-6 border-l-2 border-ui pl-3 text-sm leading-6 text-secondary">{tr("确认字段后运行“验证映射”，这里会显示 Chat Reader 实际将要导入的对话。")}</div> : null}
+    {!loading && preview?.preview ? <div className="mt-4" data-testid="mapping-canonical-preview">
+      <h5 className="break-words text-sm font-semibold text-primary">{preview.preview.title}</h5>
+      <p className="mt-1 text-xs text-secondary">{preview.preview.message_count} {tr("条消息")}</p>
+      <p className="mt-2 text-xs leading-5 text-secondary">{tr("只读样本：最多 12 条消息，每条最多 2000 字符；不改变映射或正文。")}</p>
+      <div role="group" aria-label={tr("预览显示方式")} className="my-3 flex gap-2">
+        <Segment active={!sourceMode} onClick={() => setSourceMode(false)}>{tr("渲染")}</Segment>
+        <Segment active={sourceMode} onClick={() => setSourceMode(true)}>{tr("源码")}</Segment>
+      </div>
+      <div className="divide-y divide-ui border-y border-ui">{preview.preview.messages.map((message, index) => <div key={index} className="min-w-0 py-3">
+        <p className="text-xs font-semibold text-secondary">{roleLabel(message.role, tr)}</p>
+        {message.content_truncated ? <p className="mt-1 text-xs text-secondary">{tr("此条仅显示正文前 2000 字符。")}</p> : null}
+        <div className="mt-2 max-h-80 overflow-auto break-words text-sm leading-6 text-primary" tabIndex={0} role="region" aria-label={tr("第 {0} 条消息样本", index + 1)}>
+          {sourceMode ? <pre className="whitespace-pre-wrap break-words font-mono text-xs">{message.content}</pre> : <MarkdownRenderer text={message.content} isAssistant={false} scopeId={`mapping-preview-${index}`} preserveSourceOffsets />}
+        </div>
+      </div>)}</div>
+      {preview.preview.message_count > preview.preview.messages.length ? <p className="mt-2 text-xs text-secondary">{tr("其余 {0} 条消息未在样本中展示。", preview.preview.message_count - preview.preview.messages.length)}</p> : null}
+    </div> : null}
+    {preview && !preview.validation.valid ? <div className="mt-4 space-y-2">{issues.map((issue, index) => <DiagnosticLine key={`${issue.code}-${issue.pointer ?? ""}-${index}`} diagnostic={issue} />)}</div> : null}
+  </aside>;
 }
 
 type FormProps = { mapping: MappingSpec; candidates: Record<string, unknown>; onChange: (mapping: MappingSpec) => void };

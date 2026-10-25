@@ -1,3 +1,4 @@
+import { markdownLanguage } from "@codemirror/lang-markdown";
 import type { RenderBlockRead } from "../../lib/types";
 
 export type ChatGptRichTextProfile = { escapedMarkdown: boolean };
@@ -20,6 +21,7 @@ export function detectChatGptRichText(source: string): ChatGptRichTextProfile | 
   const stack: string[] = [];
   let richChild = false;
   let escapedMarkdown = false;
+  let foundProfile = false;
   for (const tag of scanned.tags) {
     if (!stack.length) {
       const lineStart = source.lastIndexOf("\n", tag.start - 1) + 1;
@@ -27,21 +29,21 @@ export function detectChatGptRichText(source: string): ChatGptRichTextProfile | 
         || !/^(?:[ \t]|&#(?:x20|32);)*$/i.test(source.slice(lineStart, tag.start))) continue;
       stack.push(tag.name);
       richChild = false;
-      escapedMarkdown = tag.escaped;
+      escapedMarkdown ||= tag.escaped;
       continue;
     }
     escapedMarkdown ||= tag.escaped;
     if (tag.closing) {
       if (stack.at(-1) !== tag.name) return null;
       stack.pop();
-      if (!stack.length && richChild) return { escapedMarkdown };
+      if (!stack.length && richChild) foundProfile = true;
     } else {
       richChild ||= tag.name === "text" || tag.name === "badge" || tag.name === "divider";
       if (!tag.selfClosing) stack.push(tag.name);
       if (stack.length > CHATGPT_RICH_TEXT_LIMITS.depth) return null;
     }
   }
-  return null;
+  return !stack.length && foundProfile ? { escapedMarkdown } : null;
 }
 
 export type RichTextProjection = {
@@ -152,7 +154,7 @@ export function readChatGptRichTextProfile(value: unknown): ChatGptRichTextProfi
 }
 
 function scan(source: string, allowEscapedIndentation = false): Scan | null {
-  const protectedRanges: Range[] = [];
+  let protectedRanges: Range[] = [];
   const codeDelimiters: Edit[] = [];
   let fence: { start: number; marker: string; size: number } | null = null;
   let layoutDepth = 0;
@@ -189,6 +191,17 @@ function scan(source: string, allowEscapedIndentation = false): Scan | null {
     if (protectedRanges.length > CHATGPT_RICH_TEXT_LIMITS.tokens) return null;
   }
   if (fence) protectedRanges.push({ start: fence.start, end: source.length });
+  // The installed Markdown parser owns container syntax, including unclosed
+  // quote/list fences. Do not remove literal tags merely because a fence is
+  // prefixed by a container marker. CRLF masking preserves original offsets.
+  if (/`{3}|~{3}/.test(source)) {
+    const cursor = markdownLanguage.parser.parse(source.replace(/\r(?=\n|$)/g, " ")).cursor();
+    do {
+      if (cursor.name === "FencedCode") protectedRanges.push({ start: cursor.from, end: cursor.to });
+      if (protectedRanges.length > CHATGPT_RICH_TEXT_LIMITS.tokens) return null;
+    } while (cursor.next());
+  }
+  protectedRanges = mergeRanges(protectedRanges);
   // Match paired exact backtick runs in linear passes, without rescanning the
   // remainder for each unmatched opener.
   const delimiters = [...source.matchAll(/\\{1,3}`|`+/g)].filter(match =>
@@ -215,8 +228,7 @@ function scan(source: string, allowEscapedIndentation = false): Scan | null {
     }
     index = endIndex;
   }
-  protectedRanges.push(...inlineRanges);
-  protectedRanges.sort((left, right) => left.start - right.start);
+  protectedRanges = mergeRanges([...protectedRanges, ...inlineRanges]);
   const tags: Tag[] = [];
   for (const match of source.matchAll(TAG)) {
     const start = match.index, end = start + match[0].length;
@@ -232,6 +244,16 @@ function scan(source: string, allowEscapedIndentation = false): Scan | null {
     if (tags.length > CHATGPT_RICH_TEXT_LIMITS.tokens) return null;
   }
   return { protectedRanges, codeDelimiters, tags };
+}
+
+function mergeRanges(ranges: Range[]): Range[] {
+  const merged: Range[] = [];
+  for (const range of ranges.sort((left, right) => left.start - right.start)) {
+    const previous = merged.at(-1);
+    if (previous && previous.end >= range.start) previous.end = Math.max(previous.end, range.end);
+    else merged.push({ ...range });
+  }
+  return merged;
 }
 
 function overlaps(ranges: Range[], start: number, end: number): boolean {

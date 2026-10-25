@@ -1,5 +1,60 @@
 # Testing
 
+## ChatGPT reading compatibility — 2026-10-25 (local only)
+
+The [continuation and synthetic receipts](execution/CHATGPT_READING_REMAINING_2026-10-25.md)
+own the current v7/display and exporter-v6 results, residual failures and limits.
+The [original audit](execution/ux-audit-chatgpt-reading-2026-10-25.md) remains the
+historical two-implemented/eighteen-deferred checkpoint, not the current backlog.
+Use process-local TEMP/TMP under the task's `wkkk` subdirectory for every command;
+pytest cache/basetemp, browser artifacts and temporary Playwright config also
+belong there. Use synthetic input; the optional private paired fixture is excluded.
+
+- `node --test scripts/ux/chatgpt-rich-text.test.mjs`: **43 passed**, including
+  inert visible HTML, nested/unclosed code, budget fallback and prior canonical
+  preservation. The expanded pre-edit check was 40 passed / 3 failed.
+- The complete service-free gate: **75 files, 1,589 passed, zero failed/skipped**.
+  On Windows PowerShell, enumerate `Get-ChildItem scripts/ux -Filter '*.test.mjs' -File`
+  into an array and pass it to `node --test --test-concurrency=1 @tests`.
+- `node scripts/ux/source-editor-table-browser.mjs`: **86 passed** in local
+  Chrome, no page/console errors. Actual renderer/DOM/CSS check 1440/375px,
+  inert source, Mermaid descriptions/source/error recovery and fixed-source
+  parse reuse. API/Next-loader/assistant-ui source-forwarding and surrounding UI
+  adapters are explicit; this gate is not authenticated three-chain acceptance.
+- `chatgpt-reading-acceptance.spec.ts`: **2 passed** against an isolated local
+  API/worker/fresh PostgreSQL and production Web build, using installed Edge
+  Chromium and a task-local Playwright config. One exercises actual authenticated
+  Reader, guest Share and downloaded Offline Reader/reload with the same complete
+  turn/message DOM anchors, plus real bounded mapping preview and zero saves
+  from its display toggle. The other checks all six completion warnings through
+  the actual archive UI with explicit preview/commit/cleanup response adapters;
+  it does not validate archive parsing.
+  Run only with `E2E_CHATGPT_READING=1` and an isolated synthetic account supplied
+  through `E2E_AUTH_EMAIL`/`E2E_AUTH_PASSWORD`. The local resource-limited harness
+  used process-only 64 MiB upload reserve / analysis factor 1; product defaults
+  and memory probes are unchanged. No capacity conclusion follows.
+- Focused API import/mapping/type/source tests use `python -m pytest`,
+  `-k 'not real_paired_fixture'`, task-local `--basetemp` and `-p no:cacheprovider`.
+  Exact files, final counts and the broader `corepack pnpm run test:api`
+  failures are in the continuation. The full API gate is **not green** and is
+  not superseded by these focused checks. Official-graph rejection is unchanged.
+- Playwright source contracts `ai-rich-markdown-contract.spec.ts` and
+  `import-compatibility-contract.spec.ts`: **4 passed**, with a task-local
+  source-only config and no browser/webServer; not a PWA gate.
+- `corepack pnpm run lint`, `corepack pnpm --filter web exec tsc --noEmit
+  --incremental false` and the standard `corepack pnpm --filter web build` pass.
+  Build uses `NEXT_BUILD_CPUS=1`, `NEXT_STANDALONE=0`, default `.next`; the
+  preexisting unrelated `tsconfig.tsbuildinfo` hash is unchanged.
+  `cd apps/api; python -m alembic heads`: one **`20261022_0053`** head;
+  a fresh task-local PostgreSQL cluster also migrated from zero to that head.
+
+No complete PWA/offline-version/position-restoration matrix, physical device,
+production, screen-reader audit, clipboard or CPU/RSS/sustained-load acceptance
+is claimed. Eight source-dependent adapters remain unimplemented with explicit
+prerequisites; no missing data or private protocol is guessed.
+No commit, push, CI or deployment occurred; earlier production receipts below
+retain only their original source/date scope.
+
 ## Optimization review and pruning — 2026-10-24 (local)
 
 The [dated review](execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md) owns this

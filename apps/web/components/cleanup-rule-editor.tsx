@@ -120,7 +120,7 @@ export function CleanupRuleEditor({ rule, initialText = "", initialRole = null, 
         {zh ? `以上命中中：${trial.data.suppressed_by_exception ?? 0} 项被已保存例外抑制，${trial.data.covered_by_other_rule ?? 0} 项由其他规则覆盖；正式扫描不会重复列出。` : `Of the matches above, ${trial.data.suppressed_by_exception ?? 0} are suppressed by saved exceptions and ${trial.data.covered_by_other_rule ?? 0} are covered by another rule; full scans do not list them again.`}
       </p> : null}
       {trial.data.limited ? <p className="text-xs text-[var(--warning)]">{zh ? `试运行范围受限，跳过 ${trial.data.skipped_messages} 条消息；保存后可从规则库发起完整后台扫描。` : `Limited trial; ${trial.data.skipped_messages} messages skipped. Start a full background scan from the rule library after saving.`}</p> : null}
-      {trial.data.samples.map((sample, index) => <p key={index} className="whitespace-pre-wrap break-words rounded-lg bg-subtle p-3 text-xs leading-5"><span className="text-secondary">{zh ? roles[sample.role] ?? sample.role : sample.role}{sample.protected ? (zh ? " · 需额外确认" : " · confirmation required") : ""}{sample.suppressed_by_exception ? (zh ? " · 已保存例外" : " · saved exception") : sample.covered_by_other_rule ? (zh ? " · 其他规则覆盖" : " · covered by another rule") : ""} · {sample.context_before}</span><mark className="bg-[var(--mark-bg)] text-[var(--mark-text)]">{sample.match_text}</mark><span className="text-secondary">{sample.context_after}</span></p>)}
+      {trial.data.samples.map((sample, index) => <p key={index} className="whitespace-pre-wrap break-words rounded-lg bg-subtle p-3 text-xs leading-5"><span className="text-secondary">{zh ? roles[sample.role] ?? sample.role : sample.role}{sample.match_mode ? ` · ${matchModeLabel(sample.match_mode, zh)}` : ""}{sample.protected ? (zh ? " · 需额外确认" : " · confirmation required") : ""}{sample.suppressed_by_exception ? (zh ? " · 已保存例外" : " · saved exception") : sample.covered_by_other_rule ? (zh ? " · 其他规则覆盖" : " · covered by another rule") : ""} · {sample.context_before}</span><mark className="bg-[var(--mark-bg)] text-[var(--mark-text)]">{sample.match_text}</mark><span className="text-secondary">{sample.context_after}</span></p>)}
       <button type="button" disabled={locked || save.isError} onClick={() => save.mutate(input)} className="btn-primary min-h-11 px-4 text-sm font-semibold">{save.isPending ? (zh ? "正在保存…" : "Saving…") : (zh ? "确认保存个人规则" : "Confirm personal rule")}</button>
     </div> : null}
   </section>;
@@ -131,13 +131,23 @@ const fields = [["name", "规则名称", "Rule name"], ["match_value", "匹配�
   ["role_filter", "匹配角色", "Message role"], ["matcher_mode", "匹配方式", "Match mode"],
   ["boundary_mode", "文本边界", "Text boundary"], ["case_sensitive", "区分大小写", "Case-sensitive"]] as const;
 function sameConfiguration(rule: CleanupRuleRead, input: CleanupRuleConfiguration) {
-  return fields.every(([key]) => rule[key] === (key === "name" || key === "match_value" ? input[key].trim() : input[key]));
+  return fields.every(([key]) => rule[key] === (key === "name" ? input[key].trim() : input[key]));
 }
 function displayField(key: keyof CleanupRuleConfiguration, value: unknown, zh: boolean) {
   if (key === "case_sensitive") return value ? (zh ? "是" : "Yes") : (zh ? "否" : "No");
   if (key === "role_filter") return value ? (zh ? roles[String(value)] ?? String(value) : String(value)) : (zh ? "全部角色" : "All roles");
   const labels: Record<string, string[]> = { EXACT: ["精确匹配", "Exact"], NORMALIZED: ["规范化匹配", "Normalized"], APPROXIMATE: ["受限近似建议", "Bounded approximate"], ANYWHERE: ["任意位置", "Anywhere"], WHOLE_LINE: ["独占一行", "Whole line"], BLOCK_END: ["消息末尾", "End of message"] };
   return ["matcher_mode", "boundary_mode"].includes(key) ? (labels[String(value)]?.[zh ? 0 : 1] ?? String(value)) : String(value ?? "");
+}
+function matchModeLabel(mode: string, zh: boolean) {
+  const labels: Record<string, string[]> = {
+    RAW_EXACT: ["原文精确", "Raw exact"],
+    NORMALIZED_EXACT: ["规范化精确", "Normalized exact"],
+    BOUNDED_FUZZY: ["受限近似", "Bounded approximate"],
+    STRUCTURAL: ["结构检测", "Structural"],
+    MANUAL: ["手动范围", "Manual range"],
+  };
+  return labels[mode]?.[zh ? 0 : 1] ?? mode;
 }
 function ruleError(error: Error, zh: boolean, phase: "read" | "save" | "trial") {
   if (error instanceof ApiRequestError && [401, 403, 404].includes(error.status)) return zh ? "此规则已不可用。草稿仍保留，请关闭后重新打开规则库。" : "This rule is unavailable. Your draft is kept; close and reopen the rule library.";

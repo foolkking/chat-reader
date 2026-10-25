@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-25",
+  "startedAt": "2026-10-25T07:32:08.219Z",
+  "status": "measured_after_fix",
+  "boundary": "actual AssistantMarkdownPart and ReactMarkdown parser in local Chrome; host-style-only rerender and source update; explicit assistant-ui forwarding adapter; synthetic content excluded",
+  "fixedSourceCharacters": 90,
+  "parserEntries": {
+    "initial": 1,
+    "afterHostStyle": 1,
+    "afterSourceUpdate": 2
+  },
+  "hostStyleOnlyAdditionalParses": 0,
+  "sourceUpdateAdditionalParses": 1,
+  "baselineHostStyleOnlyAdditionalParses": 1,
+  "baselineSourceUpdateAdditionalParses": 1
+}

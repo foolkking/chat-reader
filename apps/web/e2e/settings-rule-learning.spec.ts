@@ -64,6 +64,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await expect(editor.getByLabel(/匹配文本|Match text/, { exact: true })).toHaveValue(trailer);
       await editor.getByRole("button", { name: /预览并试运行|Preview and test/ }).click();
       await expect(editor.getByRole("status")).toContainText(/1 项命中|1 matches/);
+      await expect(editor.getByText(/原文精确|Raw exact/).first()).toBeVisible();
       expect((await rules()).some((rule) => rule.name === "Synthetic learned rule")).toBe(false);
       if (process.env.SETTINGS_SCREENSHOT_DIR) await dialog.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/rule-learning-${width}-${locale}.png` });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

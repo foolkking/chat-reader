@@ -1,8 +1,26 @@
 # Project State
 
-Last updated: 2026-10-24. This is the current snapshot, not a release history.
+Last updated: 2026-10-25. This is the current snapshot, not a release history.
 
 ## Release and active work
+
+**Release batch (2026-10-25): bounded ChatGPT reading/import compatibility and
+noise-matching precision fixes.** The
+[continuation](docs/execution/CHATGPT_READING_REMAINING_2026-10-25.md) completes
+the evidenced follow-ups to the original 20-candidate audit; that audit's two
+implemented/eighteen-deferred checkpoint remains historical. Display policy
+`ai-rich-markdown-v7` preserves unsupported HTML visibly and inertly, protects
+nested fenced examples, and retains all-or-nothing rich-layout recognition.
+Import completion exposes all warnings; mapping offers bounded rendered/source
+previews; Mermaid retains supplied descriptions and accessible source.
+Exporter parser `chat-reader-import-v6` rejects non-string `say` rather than
+coercing it; missing/null values retain explicit empty-text warnings.
+Canonical text, schema, Share URLs, archives, offline packages and Dexie remain
+unchanged. Sample-dependent adapters are not invented or counted as completed.
+See the [current contract](docs/system/AI_RICH_MARKDOWN_CONTRACT.md#bounded-chatgpt-rich-text-reading-fallback)
+and [local validation limits](docs/testing.md#chatgpt-reading-compatibility--2026-10-25-local-only).
+The user has authorized this batch for commit, CI and deployment; production
+acceptance remains pending the standard release gates and is not implied here.
 
 **Deployed and accepted (2026-10-24): reviewed system optimization.** The
 [short disposition and follow-up plan](docs/system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)

@@ -14,7 +14,7 @@ type HastNode = {
   children?: HastNode[];
 };
 
-export const RICH_MARKDOWN_RENDERER_VERSION = "ai-rich-markdown-v5";
+export const RICH_MARKDOWN_RENDERER_VERSION = "ai-rich-markdown-v7";
 
 const BASE_REMARK_PLUGINS: NonNullable<Options["remarkPlugins"]> = [
   remarkGfm,
@@ -23,6 +23,7 @@ const BASE_REMARK_PLUGINS: NonNullable<Options["remarkPlugins"]> = [
   remarkBreaks,
   [remarkMath, { singleDollarTextMath: true }],
   remarkAiMathCompatibility,
+  remarkLiteralHtml,
 ];
 
 const BASE_REHYPE_PLUGINS: NonNullable<Options["rehypePlugins"]> = [
@@ -75,6 +76,27 @@ function rehypeMathErrorFallback() {
         { type: "text", value: latex },
       ];
     });
+  };
+}
+
+/** Preserve unsupported HTML as source, never as executable HAST. This also
+ * covers malformed/over-budget rich layouts that deliberately fail closed.
+ * Use parser nodes, not a second HTML parser or a tag-stripping regex. */
+function remarkLiteralHtml() {
+  return (tree: HastNode) => {
+    const visit = (parent: HastNode) => {
+      parent.children?.forEach((node) => {
+        if (node.type !== "html") {
+          visit(node);
+          return;
+        }
+        // Inline tags remain inline text. A flow HTML node becomes a plain
+        // code block so its complete multiline source stays legible.
+        const phrasing = ["paragraph", "heading", "tableCell", "link", "emphasis", "strong", "delete"].includes(parent.type ?? "");
+        node.type = phrasing ? "text" : "code";
+      });
+    };
+    visit(tree);
   };
 }
 

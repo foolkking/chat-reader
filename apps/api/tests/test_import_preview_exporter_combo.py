@@ -66,6 +66,19 @@ def test_preview_exporter_json_returns_conversation_preview(client: TestClient) 
     assert preview["message_count"] == 2
 
 
+@pytest.mark.parametrize("say", [{"private": "synthetic value"}, ["synthetic"], 0, False, 1.5])
+def test_preview_rejects_non_text_exporter_say_without_echoing_source(client: TestClient, say: object) -> None:
+    content = json.dumps({
+        "metadata": {"powered_by": "ChatGPT Exporter", "title": "Synthetic invalid text"},
+        "messages": [{"role": "Response", "say": say}],
+    }).encode()
+    response = client.post("/api/imports/preview", files={"files": ("export.json", content, "application/json")})
+    assert response.status_code == 422
+    assert response.json()["detail"]["code"] == "invalid_exporter_json"
+    assert "must be a string" in response.json()["detail"]["message"]
+    assert "synthetic value" not in response.text
+
+
 def test_preview_exporter_markdown_without_json_is_rejected(client: TestClient) -> None:
     response = client.post(
         "/api/imports/preview",

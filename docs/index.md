@@ -1,5 +1,18 @@
 # 文档导航
 
+## ChatGPT 正文阅读兼容 — 2026-10-25（仅本地）
+
+[续办记录](execution/CHATGPT_READING_REMAINING_2026-10-25.md)完成有证据的后续：
+v7 安全可见 HTML 降级与嵌套代码保护、完整告警、渲染/源码映射预览和 Mermaid
+文字替代；exporter parser v6 明确拒绝非字符串 `say`，不再隐式转换。
+八项依赖私有源样本的适配不猜测实现；canonical、schema、离线格式和 Dexie 不变。
+[原审查](execution/ux-audit-chatgpt-reading-2026-10-25.md)的“2 项实施/18 项暂缓”
+只代表续办前检查点，不是当前待办清单。
+[当前合同](system/AI_RICH_MARKDOWN_CONTRACT.md#bounded-chatgpt-rich-text-reading-fallback)
+与[验证边界](testing.md#chatgpt-reading-compatibility--2026-10-25-local-only)区分
+组件门禁、实际本地认证三链与尚未执行的完整 PWA/生产验收。
+未提交、推送、启动 CI 或部署；下方发布记录保持原日期和原验收范围。
+
 ## 优化审查与精简 — 2026-10-24（已部署验收）
 
 [精简计划](system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)记录原审查的 15 项保留、

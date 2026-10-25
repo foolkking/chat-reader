@@ -846,7 +846,8 @@ def evaluate_family(record: ImportRecord, family: ImportStructureFamily, mapping
             if str(group.id) == sample_key and drafts:
                 sample = drafts[0]
                 preview = {"title": sample.title, "message_count": len(sample.messages), "messages": [
-                    {"role": message.role, "content": message.display_text[:2000], "timestamp": message.created_at}
+                    {"role": message.role, "content": message.display_text[:2000],
+                     "content_truncated": len(message.display_text) > 2000, "timestamp": message.created_at}
                     for message in sample.messages[:12]]}
         except UploadLimitError:
             raise
