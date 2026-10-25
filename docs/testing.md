@@ -48,12 +48,23 @@ belong there. Use synthetic input; the optional private paired fixture is exclud
   `cd apps/api; python -m alembic heads`: one **`20261022_0053`** head;
   a fresh task-local PostgreSQL cluster also migrated from zero to that head.
 
-No complete PWA/offline-version/position-restoration matrix, physical device,
+At that local checkpoint, no complete PWA/offline-version/position-restoration matrix, physical device,
 production, screen-reader audit, clipboard or CPU/RSS/sustained-load acceptance
 is claimed. Eight source-dependent adapters remain unimplemented with explicit
 prerequisites; no missing data or private protocol is guessed.
-No commit, push, CI or deployment occurred; earlier production receipts below
-retain only their original source/date scope.
+Those are local implementation-stage receipts, not the subsequent release.
+After user authorization, exact source `c7dc074` passed all five jobs of full
+CI `40199643009`, including the API full-suite and settings/Web gates. This
+does not erase the earlier local failures or turn skipped local browser tests
+into passes. The first release run failed an obsolete trimmed-literal assertion
+and ordinal textarea locator; the retry preserves the exact literal and targets
+both localized message inputs explicitly, including draft recovery assertions.
+The [combined release record](execution/CHATGPT_NOISE_RELEASE_2026-10-25.md)
+owns independent artifact/backup/production runtime acceptance and its limits.
+The noise audit's **100 passed** local API checks and **six skipped** local
+rule-learning browser checks retain their original environment scope.
+No production authenticated UI, physical clipboard or sustained-load pass is
+implied by a green CI or runtime-health check.
 
 ## Optimization review and pruning — 2026-10-24 (local)
 

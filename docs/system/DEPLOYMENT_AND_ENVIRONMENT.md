@@ -1,8 +1,32 @@
 # 部署与运行环境
 
-## Current production — 2026-10-24
+## Current production — 2026-10-25
 
-Runtime source is **3fbf79d / 20261022_0053**, accepted at
+Runtime source is **c7dc074 / 20261022_0053**, accepted at
+**2026-10-25 15:08:17 UTC / 23:08:17 +08:00**. Exact-source CI
+**40199643009** passed all five jobs after the wait gate. Independent official
+artifact/OCI/source verification passed, including the v7 reading and noise
+match-mode markers. Current/direct rollback is **c7dc074/3fbf79d**, both at
+0053; no schema upgrade or downgrade ran.
+
+Stopped-writer five-component backup **chat-reader-20261025T145945Z** passed
+checksums, database TOC and archive checks. The maintenance window was
+**14:59:28–15:08:17 UTC**, not zero downtime. API/Web healthy, worker
+`alive_idle`, exact runtime images, HTTPS/denial, startup logs and unchanged
+OOM counters passed; a **15:11 UTC** recheck remained healthy with zero
+restarts/OOM and about **3.88 GiB** free disk.
+PostgreSQL identity/start time, production env/Compose, Nginx and stopped-writer
+canonical counts are unchanged. No production image build, user-data/volume
+deletion or backup/image pruning occurred.
+Use this exact release's lightweight support scripts with the production
+working directory/Compose environment, never full diagnostics in the serving
+API. Authenticated production UI, physical clipboard and sustained load were
+not exercised. See the
+[release record](../execution/CHATGPT_NOISE_RELEASE_2026-10-25.md).
+
+## Previous accepted production — 2026-10-24
+
+Then-runtime source was **3fbf79d / 20261022_0053**, accepted at
 **2026-10-24 14:02:16 UTC / 22:02:16 +08:00**. Corrected exact-source CI
 **40095860923** passed all five jobs after the fresh 50-minute read gate;
 independent official-artifact/OCI/source inspection passed. The initial
@@ -10,7 +34,7 @@ audit-blocked run deployed nothing. The existing Zod dependency is fixed at
 4.6.6, with no new audit exception or weakened gate.
 
 The stopped-writer five-component backup is
-**chat-reader-20261024T135352Z**; current/direct rollback is
+**chat-reader-20261024T135352Z**; then-current/direct rollback was
 **3fbf79d/18d4971**, both at 0053, so no downgrade is needed. The maintenance
 window was **13:53:38–14:02:16 UTC**, not zero downtime. API/Web are healthy,
 worker heartbeat `alive_idle`, exact images/HTTPS/denial checks pass,

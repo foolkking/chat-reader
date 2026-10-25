@@ -1,6 +1,6 @@
 # Markdown 文档台账
 
-## ChatGPT 正文阅读兼容 — 2026-10-25（仅本地）
+## ChatGPT 阅读兼容与噪声精准匹配 — 2026-10-25（已部署）
 
 | 文档 | 当前职责 |
 | --- | --- |
@@ -10,12 +10,18 @@
 | `execution/ux-audit-chatgpt-reading-2026-10-25.md` | 原 20 项优化候选、实施 2 项/暂缓 18 项的历史检查点、四项不计数的撤回调查与原验证边界。 |
 | `execution/ux-audit-chatgpt-reading-2026-10-25-evidence/` | 仅合成输入的基线/结果、探针、Chrome 回执和截图；原回执不覆盖，续办使用独立文件，不保存真实对话或凭据。 |
 | `testing.md` | 可执行的 Node、Chrome、API、源码合同和 Web 门禁及明确未验收范围。 |
-| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 简短入口；区分本地修改与原有已接受生产发布，不重复维护完整审查。 |
+| `system/CONTENT_CLEANUP_CONTRACT.md`、`api-reference.md` | 当前字面空白保真、试运行样本上限/分散及可加字段；不放宽受保护候选确认。 |
+| `execution/ux-audit-noise-matching-2026-10-25.md` | 噪声审查、100 项本地专项及原浏览器跳过边界；后续发布独立记录。 |
+| `execution/CHATGPT_NOISE_RELEASE_2026-10-25.md` | 本批精确源码、首轮失败与窄修、五项全绿 CI、独立制品、五组件备份和 23:08:17 +08:00 生产验收。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 简短当前入口；指向已接受 c7dc074/回退 3fbf79d，不重复维护完整审查。 |
 
 本次收紧受支持 exporter 正文类型并为映射样本补充 `content_truncated`；
 不改变 schema、`.cr`、离线包 v1/v2/v3、Dexie 或部署流程。
 import parser 为 v6，Markdown parser 仍为 v5。旧文档中的计数/发布状态仅在各自检查点内有效，
 不把四项不可达遗留代码调查计入新的 20 项候选，不恢复无限优化计划。
+完整 CI `40199643009` 和生产验收不覆盖本地失败/跳过的历史回执；
+`deployment.md` 与 `system/DEPLOYMENT_AND_ENVIRONMENT.md` 维护当前 0053、
+无构建替换、配置/PostgreSQL 不变及同 schema 镜像回退边界。
 
 ## 本地优化审查与精简 — 2026-10-24
 

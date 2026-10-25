@@ -1172,6 +1172,15 @@ Personal rule learning/exception additions (working tree, 2026-10-01):
 All paths share `/api/content-cleanup`. See the cleanup contract for trial
 bounds and exact exception matching; no sample source is persisted by trials.
 
+Literal precision correction (2026-10-25): trial/learn/configuration identity
+preserve the exact `match_value`, including edge whitespace; the name alone is
+trimmed, and all-whitespace rules are invalid. Existing saved revisions are not
+rewritten. Trial `samples` adds `match_mode` and `evidence_codes`, keeps at most
+ten samples and three per message, and interleaves the selected messages.
+Counts still cover all hits within the existing bounded trial, not only the
+returned samples. No regex, automatic deletion, broader matching budget,
+protection bypass or schema change is introduced.
+
 Noise-rule publication additions (`20261001_0038`, working tree):
 
 - Rule list/read responses include `revision_id`, `held`, `revision_held`,

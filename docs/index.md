@@ -1,6 +1,6 @@
 # 文档导航
 
-## ChatGPT 正文阅读兼容 — 2026-10-25（仅本地）
+## ChatGPT 阅读兼容与噪声精准匹配 — 2026-10-25（已部署验收）
 
 [续办记录](execution/CHATGPT_READING_REMAINING_2026-10-25.md)完成有证据的后续：
 v7 安全可见 HTML 降级与嵌套代码保护、完整告警、渲染/源码映射预览和 Mermaid
@@ -10,8 +10,16 @@ v7 安全可见 HTML 降级与嵌套代码保护、完整告警、渲染/源码�
 只代表续办前检查点，不是当前待办清单。
 [当前合同](system/AI_RICH_MARKDOWN_CONTRACT.md#bounded-chatgpt-rich-text-reading-fallback)
 与[验证边界](testing.md#chatgpt-reading-compatibility--2026-10-25-local-only)区分
-组件门禁、实际本地认证三链与尚未执行的完整 PWA/生产验收。
-未提交、推送、启动 CI 或部署；下方发布记录保持原日期和原验收范围。
+组件门禁、实际本地认证三链与尚未执行的完整 PWA/生产认证界面验收。
+同批[噪声审查](execution/ux-audit-noise-matching-2026-10-25.md)修复匹配文本
+首尾空白丢失，分散试运行样本并显示实际匹配模式；保护策略不放宽，见
+[当前清理合同](system/CONTENT_CLEANUP_CONTRACT.md#rules)。
+源码 `c7dc074` 的完整 CI `40199643009` 五项成功，独立制品核验、停写五组件
+备份及生产验收通过，完成时间 **2026-10-25 23:08:17 +08:00**。
+当前/直接回退为 `c7dc074`/`3fbf79d`，schema 0053，备份
+`chat-reader-20261025T145945Z`；PostgreSQL、生产配置及 Nginx 未变。详见
+[发布记录](execution/CHATGPT_NOISE_RELEASE_2026-10-25.md)。
+本地失败/跳过回执保留原边界，不声称生产认证 UI、物理剪贴板或持续负载验收。
 
 ## 优化审查与精简 — 2026-10-24（已部署验收）
 
@@ -23,7 +31,7 @@ v7 安全可见 HTML 降级与嵌套代码保护、完整告警、渲染/源码�
 现有间接 Zod 更新至 4.6.6，无新增例外或放宽门禁。源码 `3fbf79d` 的完整
 CI `40095860923` 五项成功；两次触发均等满 50 分钟再读。独立制品核验、
 停止写入后的五组件备份和生产验收通过，完成时间 **2026-10-24 22:02:16 +08:00**。
-当前/直接回退为 `3fbf79d`/`18d4971`，备份 `chat-reader-20261024T135352Z`；
+当时当前/直接回退为 `3fbf79d`/`18d4971`，备份 `chat-reader-20261024T135352Z`；
 schema 0053、PostgreSQL、生产配置和 Nginx 未变。详情见
 [发布记录](execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md)。
 下方较早发布日期的结果保留原历史边界。

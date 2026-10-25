@@ -4,7 +4,7 @@ Last updated: 2026-10-25. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Release batch (2026-10-25): bounded ChatGPT reading/import compatibility and
+**Deployed and accepted (2026-10-25): bounded ChatGPT reading/import compatibility and
 noise-matching precision fixes.** The
 [continuation](docs/execution/CHATGPT_READING_REMAINING_2026-10-25.md) completes
 the evidenced follow-ups to the original 20-candidate audit; that audit's two
@@ -19,10 +19,21 @@ Canonical text, schema, Share URLs, archives, offline packages and Dexie remain
 unchanged. Sample-dependent adapters are not invented or counted as completed.
 See the [current contract](docs/system/AI_RICH_MARKDOWN_CONTRACT.md#bounded-chatgpt-rich-text-reading-fallback)
 and [local validation limits](docs/testing.md#chatgpt-reading-compatibility--2026-10-25-local-only).
-The user has authorized this batch for commit, CI and deployment; production
-acceptance remains pending the standard release gates and is not implied here.
+Noise rules preserve intentional edge whitespace through trial/save/rescan;
+bounded trial samples span messages and identify the actual match mode without
+weakening protected-candidate confirmation. Exact source **`c7dc0749e3ba18394cb0a37b8d66e9f01837c5a8`**
+passed all five jobs in CI **`40199643009`** after the required wait gate.
+Independent official-artifact/OCI/source verification and stopped-writer
+five-component backup **`chat-reader-20261025T145945Z`** passed. Production
+accepted at **2026-10-25 23:08:17 +08:00**; current/direct rollback is
+**`c7dc074`/`3fbf79d`**, both at **`20261022_0053`**. Runtime health, worker
+freshness, HTTPS/denial, unchanged PostgreSQL/config/Nginx and no new OOM passed;
+23:11 +08:00 recheck remained healthy. No migration, production build,
+user-data/volume deletion or backup/image pruning. See the
+[release record](docs/execution/CHATGPT_NOISE_RELEASE_2026-10-25.md).
+Authenticated production UI, physical clipboard and sustained load are unclaimed.
 
-**Deployed and accepted (2026-10-24): reviewed system optimization.** The
+**Previous accepted release (2026-10-24): reviewed system optimization.** The
 [short disposition and follow-up plan](docs/system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)
 replaces the open-ended candidate pool: 15 completed records retained, one
 repaired and four reverted. Commit-aware import-source protection, safe task
@@ -40,8 +51,8 @@ is removed; the shipped braces guard and all release gates remain.
 Exact source **`3fbf79dd0f1da2906ff32d202dfa85cb8544c612`** passed all five jobs
 in CI **`40095860923`**, first read after its fresh 50-minute gate. Independent
 artifact/source verification and stopped-writer five-component backup passed.
-Production accepted at **2026-10-24 22:02:16 +08:00**; current/direct rollback
-is **`3fbf79d`/`18d4971`**, schema **`20261022_0053`**. Backup:
+Production accepted at **2026-10-24 22:02:16 +08:00**; then-current/direct rollback
+was **`3fbf79d`/`18d4971`**, schema **`20261022_0053`**. Backup:
 **`chat-reader-20261024T135352Z`**. API/Web/worker health, exact revisions,
 HTTPS/denial, unchanged PostgreSQL/config/Nginx and no new OOM passed.
 No production build, migration, data/volume deletion or backup/image pruning.

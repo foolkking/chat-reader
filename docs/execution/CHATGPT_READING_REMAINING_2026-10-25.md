@@ -178,3 +178,16 @@ no unrelated temporary/user files or production volumes were cleaned.
 No commit, push, CI, deployment, production configuration or `.env` change.
 No complete PWA/offline-version/position-restoration matrix, physical device,
 clipboard, screen-reader, sustained-load or whole-product WCAG acceptance.
+
+## Subsequent authorized release
+
+The preceding no-submission/local-only statements describe this implementation
+checkpoint. The user subsequently authorized combining it with the
+[noise precision fixes](ux-audit-noise-matching-2026-10-25.md).
+Exact source `c7dc074` passed all five jobs in full CI `40199643009`;
+independent official-artifact verification, stopped-writer five-component
+backup and production runtime acceptance completed at
+**2026-10-25 23:08:17 +08:00**. See the
+[separate release record](CHATGPT_NOISE_RELEASE_2026-10-25.md).
+Original failed/skipped receipts and unimplemented sample-dependent adapters
+remain unchanged; production authenticated browser/load acceptance is not claimed.

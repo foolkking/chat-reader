@@ -133,6 +133,18 @@ Content cleanup is a review workflow, not an automatic deletion facility. Its pr
 
 Rules have immutable revisions. Built-in rules reference versioned detector identifiers; user rules contain an explicit literal value, optional case-sensitivity, canonical role filter, match mode and boundary mode. User match modes are raw exact, NFKC/case/whitespace normalized, and bounded approximate. Boundary modes are anywhere, whole line and block end. Approximate matching is anchored and edit-bounded; arbitrary regular expressions, scripts, cross-message matching and LLM classification are not supported. Rule values are business configuration and must not be emitted to logs or documentation. The cleanup dialog owns the rule-library entry. Built-ins can be inspected or disabled; user literal rules can also be removed from the personal list while retaining acquired versions. Deleting a rule does not rewrite existing MessageVersion history.
 
+Literal `match_value` preserves intentional leading/trailing whitespace through
+configuration identity, trial, save and rescan; only the display name is trimmed.
+Empty/all-whitespace values are rejected. Normalized/approximate modes still
+apply their explicit matching normalization; preserving the configured string
+does not make them raw-exact modes or rewrite existing saved revisions.
+Trial samples remain bounded at ten total and three per message, interleaved
+across sampled messages. Each sample includes actual `match_mode` and
+`evidence_codes`; the editor distinguishes raw exact, normalized exact and
+bounded approximate while retaining protection/exception/other-rule context.
+These are bounded examples, not an exhaustive or statistically representative
+false-positive estimate. Approximate/uncertain candidates remain protected.
+
 ## Detection and review
 
 Detection is layered rather than a single global regular expression. Built-in syntax noise first uses exact structural grammar. Known short syntax tokens may then use NFKC normalization or at most one edit only when an exact citation-reference grammar anchors the candidate. User literals use their selected exact, normalized or bounded-approximate mode. Approximate scanning does not compare arbitrary full message windows and has bounded anchors, length and edit distance.
