@@ -47,6 +47,48 @@ function render(source, enabled) {
     children: projection.text,
   }));
 }
+
+const noiseProtectionFixtures = JSON.parse(readFileSync(
+  new URL("./fixtures/noise-renderer-protection.json", import.meta.url), "utf8",
+));
+for (const fixture of noiseProtectionFixtures) {
+  for (const newline of ["\n", "\r\n"]) {
+    test(`noise protection: ${fixture.name} (${newline === "\n" ? "LF" : "CRLF"})`, () => {
+      const source = fixture.source.replaceAll("\n", newline);
+      const normalized = math.normalizeDisplayMathForRenderer(source);
+      assert.equal(normalized, source, "this fixture requires unchanged normalization offsets");
+      const projection = project(normalized);
+      assert.equal(projection.text !== source, fixture.projected ?? false);
+      let captured;
+      function capture() {
+        return tree => { captured = tree; };
+      }
+      const html = renderToStaticMarkup(React.createElement(ReactMarkdown, {
+        remarkPlugins: config.richMarkdownRemarkPlugins([
+          compatibility.remarkRichTextSourcePositions(projection), capture,
+        ]),
+        rehypePlugins: config.richMarkdownRehypePlugins(),
+        skipHtml: true,
+        children: projection.text,
+      }));
+      assert.ok(html.length);
+      const ranges = [];
+      function visit(node) {
+        if (["code", "inlineCode", "math", "inlineMath"].includes(node.type)) {
+          assert.equal(typeof node.position?.start?.offset, "number");
+          assert.equal(typeof node.position?.end?.offset, "number");
+          ranges.push([node.position.start.offset, node.position.end.offset]);
+        }
+        node.children?.forEach(visit);
+      }
+      visit(captured);
+      const flags = [...source.matchAll(/NOISE/g)].map(match =>
+        ranges.some(([start, end]) => start <= match.index && end >= match.index + match[0].length));
+      assert.deepEqual(flags, fixture.protected);
+    });
+  }
+}
+
 const raw = `<box border radius="xl" padding={3}>
 <row justify="between"><text>**Synthetic focus**</text><badge color="success">Priority</badge></row>
 <divider color="subtle"/>

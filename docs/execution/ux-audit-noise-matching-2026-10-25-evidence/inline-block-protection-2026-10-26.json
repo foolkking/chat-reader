@@ -1,0 +1,148 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "baseline": {
+    "source_sha256": "72381d3c9a578fb3203884e546d8d8939a1c6b50532ffc346a170f9a23dd17c0",
+    "minimal_combinations": 34,
+    "different_combinations": 24,
+    "different_hits": {
+      "ordinary_overprotected": 30,
+      "code_missed": 18
+    },
+    "unit_tests": "24 failed / 10 passed / 160 deselected"
+  },
+  "api_regression": {
+    "modules": 26,
+    "passed": 481,
+    "batches": [
+      {
+        "batch": "protection_and_matching",
+        "modules": [
+          "tests/test_cleanup_detection_reuse.py",
+          "tests/test_cleanup_learning.py",
+          "tests/test_cleanup_literal_matching.py",
+          "tests/test_cleanup_normalization.py",
+          "tests/test_cleanup_preview_ranges.py",
+          "tests/test_cleanup_preview_retention.py",
+          "tests/test_cleanup_protection_review.py",
+          "tests/test_cleanup_reviewed_ranges.py",
+          "tests/test_cleanup_safety.py",
+          "tests/test_cleanup_source_replacement.py",
+          "tests/test_cleanup_unicode_normalization.py",
+          "tests/test_cleanup_validation_work.py",
+          "tests/test_content_cleanup.py",
+          "tests/test_noise_rule_regressions.py"
+        ],
+        "passed": 413,
+        "duration_seconds": 313.67,
+        "pytest_cache": "pytest-cache-block-regression"
+      },
+      {
+        "batch": "access_and_lifecycle",
+        "modules": [
+          "tests/test_cleanup_access.py",
+          "tests/test_cleanup_dismissal.py",
+          "tests/test_cleanup_edit_concurrency.py",
+          "tests/test_cleanup_group_search.py",
+          "tests/test_cleanup_outcomes.py",
+          "tests/test_cleanup_publication_recovery.py",
+          "tests/test_cleanup_rescan_requests.py",
+          "tests/test_cleanup_rule_grants.py",
+          "tests/test_cleanup_scan_lifecycle.py",
+          "tests/test_cleanup_scan_requests.py",
+          "tests/test_cleanup_scan_retention.py",
+          "tests/test_cleanup_selection_summary.py"
+        ],
+        "passed": 68,
+        "duration_seconds": 310.34,
+        "pytest_cache": "pytest-cache-block-extended"
+      }
+    ],
+    "noise_rule_regressions_included": 202
+  },
+  "renderer": {
+    "versions": {
+      "react": "19.2.8",
+      "react-dom": "19.2.8",
+      "react-markdown": "10.1.0",
+      "remark-gfm": "4.0.1"
+    },
+    "method": "Installed server-rendered HTML code membership for exact synthetic NOISE literal, with original source slice assertions",
+    "combinations": 11634,
+    "literal_hits": 33130,
+    "classification_differences": 0,
+    "corpora": [
+      {
+        "temporary_file": "inline-block-corpus.json",
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "combinations": 34,
+        "literal_hits": 70,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "inline-block-expanded-corpus.json",
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "combinations": 1088,
+        "literal_hits": 2240,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "container-parser-corpus.json",
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "combinations": 312,
+        "literal_hits": 780,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "continuation-parser-corpus.json",
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "combinations": 80,
+        "literal_hits": 120,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "container-edge-corpus.json",
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "combinations": 9240,
+        "literal_hits": 27720,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "indent-paragraph-corpus.json",
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "combinations": 880,
+        "literal_hits": 2200,
+        "classification_differences": 0
+      }
+    ]
+  },
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "7ddc1c71eaabe94f2f16912bb3d21576012313743aca2218db08064803ac6dd0"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "75d7e7791276f4f57de29e79cc7dd1b9c0d602cc66cd6254a2e88e2be71fdf49"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "23e81b8ab127cc850905f219547e1bd44cbdf1ac3d73af7b321a010c1392ecb0"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "limits": [
+    "The two test batches used unchanged product/test source and distinct synthetic SQLite temporary directories; the 202 focused cases are included, not added to 481.",
+    "Correlated and overlapping synthetic matrices are not independent samples or a production false-positive rate.",
+    "Raw temporary corpora remain in task-specific wkkk directories, not in this receipt.",
+    "Not full API suite, PostgreSQL concurrency, browser, full CommonMark/GFM/HTML conformance, Web build, CI, or production acceptance.",
+    "No dependency, migration, canonical format, import originals, offline package, Dexie, production config, commit, push, CI dispatch, or deployment change in this continuation."
+  ]
+}

@@ -1,13 +1,13 @@
 # 已知风险与不确定性
 
-## Current verification boundaries — 2026-10-14
+## Historical local verification checkpoint — 2026-10-14
 
-Read [Project State](../../PROJECT_STATE.md) and the
-[accumulated release record](../execution/OPTIMIZATION_RELEASE_2026-10-08.md) for
-current source, production and CI status. The older snapshots below do not define
-the current debt count or deployment state.
+The following limitations describe only the local verification checkpoint on
+2026-10-14. They are retained for provenance and must not be read as current
+defects, current source state, or production verification. The older snapshots
+below likewise do not define current debt or deployment state.
 
-| Current limitation | Control / next step |
+| Limitation recorded at that checkpoint | Control / next step recorded then |
 | --- | --- |
 | Local Web start is rejected before process creation; cause unknown | Preserve the original rejection and fixture; no alternate launcher. Isolated CI is separate from specified-Chromium local acceptance. |
 | Local personal-archive callback/limit-read repair has no browser acceptance | All 926 Node checks (36 archive-specific), lint and nonincremental types pass. Three browser files discover 19, execute zero. Controlled authentication/DOM scheduling is not real navigation or rendered-focus evidence; two new screenshots remain planned. Server restore/ownership and Root system archive are unchanged. No new build, CI or deployment. |
@@ -22,6 +22,68 @@ the current debt count or deployment state.
 | Backups are server-local; identical components may share hardlinks | Two verified logical points are not independent physical copies; no off-site/scheduled backup is configured. |
 | Device quota/eviction and malware risk vary | Retain offline-copy recovery; integrity checks do not replace the deliberately disabled malware scanner. |
 | Broader production interaction/external-model behavior is unverified | Do not infer it from health checks, isolated CI or static Skill ZIP checks. |
+
+## Current verification boundaries — 2026-10-27
+
+Use [Project State](../../PROJECT_STATE.md) for local/deployed identity and the
+[2026-10-25 release record](../execution/CHATGPT_NOISE_RELEASE_2026-10-25.md) for
+production acceptance. Current review fixes are local and uncommitted. The
+SHA-pinned workflow source contracts are not a fresh remote CI result.
+
+### Noise matching
+
+- Protection remains bounded source recognition, not a full Markdown parser or
+  exhaustive CommonMark/GFM/AI-adapter implementation. Earlier matrices and
+  test counts describe their own dated checkpoints, not current full-suite or
+  production error-rate evidence.
+- Reviewed dollar-math scope/width, multiline single-dollar math, link-title
+  delimiter ownership and HTML flow code fallback are corrected. A shared small
+  fixture checks the actual app plugins/projection and backend decisions in
+  LF/CRLF, plus normal and legacy scan/apply source persistence.
+- Bare-bracket display recovery currently covers standalone pairs containing a
+  recognized LaTeX command and not overlapping already protected syntax. Other
+  frontend recovery forms (including bare parentheses/command-free expressions)
+  are not fully mirrored. Source-changing display-math normalization and
+  inherited block profiles are not exhaustively mapped by this fixture.
+- Inline HTML remains visible text, not blanket-protected code. Unsupported
+  HTML flow is protected as the application's literal code fallback. Only a
+  conservative simple supported box-layout subset is exempt: ambiguous code,
+  indentation, large inputs or unsupported/malformed markup retain extra
+  protection. This favors safety over claiming projection equivalence.
+- Existing conservative malformed-reference, attachment-label, field/example
+  and container-prefix/newline protection can exceed native node spans. A
+  protected candidate requires explicit review; ordinary classification is not
+  proof of absence from every possible extension syntax. Preview exact source.
+- The #36 monotonic provenance optimization is withdrawn after sparse synthetic
+  whole-detection regressions (construction included). Source mapping still
+  computes the smallest contiguous raw envelope, including reordered marks.
+  Dense lookup gains alone do not justify a global speed claim. Remaining
+  indexing/tokenization changes also have setup costs; no universal latency,
+  RSS, complexity or OOM guarantee is made.
+
+See [review-fix validation and remaining limits](../execution/ux-audit-noise-matching-2026-10-25.md#37-review-fixes-and-application-renderer-contract--2026-10-27).
+All preceding corpus sizes, timing controls and immutable receipts live in that
+dated execution record; they are not repeated here as current acceptance.
+
+### Acceptance limits
+
+No new production access/deployment, authenticated browser UI, physical
+clipboard, screen-reader or sustained-load acceptance is claimed. Local SSR
+is not browser acceptance; scoped SQLite tests are not PostgreSQL concurrency,
+Share/PWA or complete API validation. The earlier interrupted full API run is
+not a pass, and its import-fixture failures have not all been attributed.
+The temporary-disk interruption was recovered after the user freed space.
+Scoped modular regression completed; the extra artifact-cleanup symlink test
+was skipped because Windows could not create a symlink. That capability remains
+unverified. Interrupted runs remain historical, not passes; the agent did not
+execute the denied temporary-directory cleanup.
+The October 14 rows above remain historical, not freshly reproduced defects.
+
+## Current verification boundaries — 2026-10-26
+
+This heading is retained only as a stable link for older documents. Read the
+[reconciled 2026-10-27 boundaries](#current-verification-boundaries--2026-10-27)
+above; historical checkpoint details remain in the dated execution record.
 
 ## Historical status (2026-09-02)
 

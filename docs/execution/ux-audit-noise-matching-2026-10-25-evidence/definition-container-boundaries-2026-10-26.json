@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "recorded_at": "2026-10-26T20:13:07.285451+08:00",
+  "scope": "Local-only definition-continuation paragraph and retained-parent noise protection",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "angle-and-multiline-definitions-2026-10-26.json",
+    "sha256": "010c4071b52058d3cb16f25afe87113e859283dd7f3f8596f1306e093231b78a"
+  },
+  "source_and_test_hashes": {
+    "apps/api/app/services/content_cleanup.py": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+    "apps/api/tests/test_content_cleanup.py": "a907e80139f3aa97ee1d8cd2c19222df6ab4dd9bb5c32fc2e8d06801aa143306",
+    "apps/api/tests/test_noise_rule_regressions.py": "c6db4e2ae2115198e8cee48e95b1c85ca11d8b14dc230ea8a04c65b6be64fc93",
+    "apps/api/tests/test_cleanup_detection_reuse.py": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397",
+    "apps/api/tests/test_cleanup_learning.py": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615",
+    "apps/web/tsconfig.tsbuildinfo": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7"
+  },
+  "source_and_tests_stable_across_final_pytest": true,
+  "baseline_sha256": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+  "runtime": {
+    "python": "3.11.7",
+    "pytest": "8.4.2",
+    "remark-parse": "11.0.0",
+    "remark-gfm": "4.0.1"
+  },
+  "independent_matrix": {
+    "before": {
+      "sources": 3744,
+      "literal_hits": 7488,
+      "ordinary_adjacent_matches": 3744,
+      "registration_differences": 312,
+      "registration_difference_kinds": {
+        "label": 148,
+        "title": 148,
+        "destination": 16
+      },
+      "native_definition_coverage_errors": 276,
+      "noise_decision_errors": 276
+    },
+    "current": {
+      "sources": 3744,
+      "literal_hits": 7488,
+      "ordinary_adjacent_matches": 3744,
+      "registration_differences": 0,
+      "registration_difference_kinds": {},
+      "native_definition_coverage_errors": 0,
+      "noise_decision_errors": 0
+    },
+    "source_sha256": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+    "baseline_sha256": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+    "corpus_sha256": "f86d048903467e55c7ca20e7b5694194a0c3ccf5ef4e6b1b29680a298b22efdc",
+    "native_definitions": 678,
+    "oracle": "Native definition identifier/end offsets, span coverage and NOISE decisions",
+    "not_whole_protected_interval_equivalence": true,
+    "baseline_missing_registration": 288,
+    "baseline_spurious_registration": 24
+  },
+  "retained_corpora": {
+    "baseline_sha256": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+    "source_sha256": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+    "ast_allowlist": [
+      "_markdown_reference_definition"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "context-corpus.json",
+        "combinations": 688,
+        "hits": 724,
+        "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "precedence-corpus.json",
+        "combinations": 804,
+        "hits": 1260,
+        "sha256": "48db1f39cfd1db5175d7f96458ecdc560cd8e5dd7d0b22eda2fd635b8cbde0ea",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "html-block-corpus.json",
+        "combinations": 3053,
+        "hits": 18223,
+        "sha256": "b7388b4d8ec9b91895ea0bbe3ec6ec048427cc62bc8dab3abe6a4246c47f6a2c",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "emphasis-corpus.json",
+        "combinations": 7918,
+        "hits": 13028,
+        "sha256": "00cd32fed8a1809274519c05623d85ef75dcb44307de2668da66cd66450fd0ce",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "strikethrough-corpus.json",
+        "combinations": 6263,
+        "hits": 10753,
+        "sha256": "60922d9ac8905a1c55cbcca00b26711c6adf361ea6ee86a50a9c172e8fb608d1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "reference-corpus.json",
+        "combinations": 1688,
+        "hits": 3376,
+        "sha256": "4b112514767ae087f494ad4c00463c3c07774211675b1efe8509ed2f3c378e47",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "autolink-corpus.json",
+        "combinations": 4010,
+        "hits": 8212,
+        "sha256": "0edcef673f2cfdc7e938a6bc4db474be3d2fd4d899b05e3943bc3392bc3af90a",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "angle-corpus.json",
+        "combinations": 2314,
+        "hits": 4827,
+        "sha256": "03406f5deeca2c38808209282e521e68baa140760848bf760af81435955b24e8",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "definition-grammar-corpus.json",
+        "combinations": 3158,
+        "hits": 6758,
+        "sha256": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+        "range_changes": 0,
+        "metadata_changes": 0
+      }
+    ],
+    "range_changes": 0,
+    "metadata_changes": 0,
+    "total_combinations": 50904,
+    "total_literal_hits": 119389
+  },
+  "prior_definition_oracle_recheck": {
+    "source_sha256": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+    "corpus_sha256": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+    "cases": 3158,
+    "native_definitions": 3010,
+    "literal_hits": 6758,
+    "adjacent_matches": 3152,
+    "registration_differences": 0,
+    "difference_families": {},
+    "coverage_errors": 0,
+    "noise_errors": []
+  },
+  "pytest": {
+    "frozen_parent_28_cases": {
+      "tests": 28,
+      "failures": 22,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 4.785,
+      "modules": {
+        "tests.test_content_cleanup": 28
+      },
+      "xml_sha256": "0922ceb3311e77a05dee27292a4c412543c20d4b12a336002d5c626cbd6f13d9"
+    },
+    "current_28_cases": {
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 2.588,
+      "modules": {
+        "tests.test_content_cleanup": 28
+      },
+      "xml_sha256": "5556a8d2f941f336c5c75d22f6437b3f328a86cef0c08474dd7b53b21eae1e99"
+    },
+    "new_16_api_cases": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 35.832,
+      "modules": {
+        "tests.test_noise_rule_regressions": 16
+      },
+      "xml_sha256": "61347232bc1fac68ba4ba8d7cfab06126d247bdc589c43134f28b313dee7002d"
+    },
+    "four_relevant_modules": {
+      "tests": 3359,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 565.981,
+      "modules": {
+        "tests.test_content_cleanup": 2618,
+        "tests.test_cleanup_detection_reuse": 207,
+        "tests.test_cleanup_learning": 12,
+        "tests.test_noise_rule_regressions": 522
+      },
+      "xml_sha256": "88a10a19dde7fee0dc1bbdfde2453322c9b763416d5ef9870d048289ff69c589",
+      "warnings": 136,
+      "reported_seconds": 566.04
+    }
+  },
+  "validation": {
+    "memory_compile": "pass",
+    "git_diff_check": "pass",
+    "no_staged_changes": true,
+    "basetemp_and_pytest_cache_under_task_temp_root": true
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "95d3ce6944d7e1f17f7159e6514b2ff1c962c65a40498676509df85ce06d3012",
+    "docs/index.md": "ae0354d96a6d74b73d9ce90a60e95c92bcdb07d62b781f8756d068da7dcf7af4",
+    "docs/documentation-inventory.md": "4bfdd1baf34c35b32551492904b4e1ea030b9a201f0876a8484a7be823144a3d",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "0a65833c243f6c9818581bcec5c2992a75c856a83cb084a87e1130234c234655",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "bc70fb2233f2c857a9d5fe21dda53d00d97d4506dee9086b8f6275cb54b2b380",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "18168b3ed9da131e13de9c5f224c5a34d9e719a4053144207cd346e9c7bc5c5e"
+  },
+  "temporary_artifacts": {
+    "task_subdirectory": "chat-reader-noise-definition-block-boundaries",
+    "files": {
+      "content-cleanup-before.py": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+      "render-boundaries.mjs": "c34eaa567b6a8d515f8c9beea9fbe8c72e4dfdb57ef894c005b427096fde11d3",
+      "compare-boundaries.py": "ae1ab3f1241f355e52bdc353670244e6616bb16f2c2b80f49dab20a962bef3bc",
+      "boundary-corpus.json": "f86d048903467e55c7ca20e7b5694194a0c3ccf5ef4e6b1b29680a298b22efdc",
+      "boundary-comparison.json": "0baf88986f56b40025fc92c560d812b7ba6cafcebf01b3601455529f42c7c747",
+      "before-registration-differences.json": "a441a9e04e94a8f691ded444570b6add5f8a9b92ebd0d495d05cc5f2cb964aa2",
+      "before-hit-differences.json": "5746e11e4583956ab08b9d0733547ec3b1b67bb6a40e67a2481065bb4cbe4d53",
+      "current-registration-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-hit-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "verify-prior-corpora.py": "7a1094c651cf151536c8ffbcf94279aa5535c24833a8096c1412ba5c42f3fd8a",
+      "prior-verification.json": "0c71ca2be7cdccc01eb66e2fae3e9ec4b50deb8eeee62f4e8ac39190fda6cb43",
+      "prior-changes.json": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "compare-prior-definitions.py": "d4f1354880c5abf2d61171ddf090e333eade1145fb65cf30312d6f59dd8027e4",
+      "definition-grammar-corpus.json": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+      "definition-grammar-verification.json": "24836ea96e35efa7f7c1e474f63a24d2e36355f3a1be861afa9503e8a45fe789",
+      "baseline_plugin.py": "8cd2ee7dad65e2d577a2a6d117f33f75cdea229eadd54ce8c12f0857f1dc42c1",
+      "frozen-red.log": "9176498e29f7bdb16a1c51cf7535af726899b1f26549427166107b869f785192",
+      "frozen-red.xml": "0922ceb3311e77a05dee27292a4c412543c20d4b12a336002d5c626cbd6f13d9",
+      "regression-green.log": "9e7696a06254d0710c8ff04570e475e93c11638128ade70d27d480c110d18c2a",
+      "regression-green.xml": "5556a8d2f941f336c5c75d22f6437b3f328a86cef0c08474dd7b53b21eae1e99",
+      "api-focused.log": "eb7579c403e2031cff1c423dfca03927a3bbb98e1f14218a12cd05f3481e5e31",
+      "api-focused.xml": "61347232bc1fac68ba4ba8d7cfab06126d247bdc589c43134f28b313dee7002d",
+      "final.log": "7bfd806bd197d5d37eb91ef2ce0d3531650085765311f68cc5db1ae25550aeb2",
+      "final.xml": "88a10a19dde7fee0dc1bbdfde2453322c9b763416d5ef9870d048289ff69c589",
+      "final-source-start.json": "30dc2005c9860b3866cd93d2a8af45b857a6b1e5e1bb70834224d8c077a29e73",
+      "final-source-end.json": "30dc2005c9860b3866cd93d2a8af45b857a6b1e5e1bb70834224d8c077a29e73"
+    }
+  },
+  "limits": [
+    "Synthetic correlated cases, not production false-positive-rate estimates",
+    "Native parser evidence is not app-adapter/sanitizer or browser acceptance",
+    "Conservative HTML/reference/whole-attachment policy extras retained",
+    "No full Markdown/extension conformance or universal complexity/performance/memory claim",
+    "No web search, browser, network, full API, PostgreSQL concurrency, CI or production validation",
+    "No dependency, migration, offline/Dexie, user import data or production configuration changes",
+    "No staging, commit, push or deployment; ongoing goal remains active"
+  ]
+}

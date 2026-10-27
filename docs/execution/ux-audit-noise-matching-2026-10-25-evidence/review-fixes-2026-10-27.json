@@ -1,0 +1,264 @@
+{
+  "date": "2026-10-27",
+  "scope": "local uncommitted review fixes; no release/deployment acceptance",
+  "baseline_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_checkpoint": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/normalized-span-index-2026-10-27.json",
+    "sha256": "b4af8c339683002daafeaaa9837f1ea55593b8f977dc49f5f7203b267d1d3d7e",
+    "disposition": "immutable historical receipt; monotonic span shortcut withdrawn"
+  },
+  "bindings_checked_unchanged": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "1d5812e81cfa079378f8057d11bb2a8168e1e3f5db11f5c283ca9e21148ff3d6"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_normalization.py",
+      "sha256": "e15345e2779632edcfc3730f55068cfdf76a0506a1b3d87dffccd8d93e1f92f5"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "scripts/ux/fixtures/noise-renderer-protection.json",
+      "sha256": "e2a3a3e11fb9c28ab36010d4ace5ad32536499688ac58db1d1be53b606c0e8e7"
+    },
+    {
+      "path": "scripts/ux/chatgpt-rich-text.test.mjs",
+      "sha256": "8f6a56ac71de67913bc903f3960996b4ddd31e811afd3d1e99d8a8622b04c093"
+    },
+    {
+      "path": "scripts/ci/release-image-sources.test.mjs",
+      "sha256": "e95ebd5dbaf6f129a89b3e089ce3b74c0bc677a89717ce984766bb183012e66e"
+    },
+    {
+      "path": ".github/workflows/build-release-images.yml",
+      "sha256": "5af958c67124a5d1717ca5f45ea34797ba041c710ad84b7597149bf32fc63248"
+    },
+    {
+      "path": ".github/workflows/performance-characterization.yml",
+      "sha256": "84e2d46d266b3992c646a65e5e251a967c6957f101f78bddede575d09e8fd8fe"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "dfb6d63cd2faa339d579cfb59789c245c07dbfc9f4f7407cc3748e78ca31dd8a"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "ffdac8c33989a56820d814ed067ad236ac838a6d55a45f2ffa66bb15e5ca9147"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_normalization.py",
+      "sha256": "d9b2637eb526faed1be4bde70c0b99fb964212546b7e35bb1210c22922d6214b"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_unicode_normalization.py",
+      "sha256": "b3e84c479702cea807bcc725897c0896bcd582bf185ddd5f4c050c1ba9d5a476"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_literal_matching.py",
+      "sha256": "dd7984d8486c537b49ae7ffa0bfd8bbf28ef315c27c04be24e33add946ffc766"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_bounded_distance.py",
+      "sha256": "8009e77f6f6bb93f8b52ea2e13bf7ed79b992e77b7e96fd69845d58c0d67b0ea"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_scan_retention.py",
+      "sha256": "1b30e0ab08e139f943fd244759f81355381d2b02f5f7f2a7cb51b8a4ff8addf3"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "fa25c0d617acc1d013d026e5402bce81ee9ee7a95b6fab9a07b0c617c789da2b"
+    },
+    {
+      "path": "apps/api/tests/test_noise_renderer_protection_contract.py",
+      "sha256": "63862b7ff4bf76378bcd5f953db651fa925a3174e39c8ca5cc9295d1461f9b05"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_safety.py",
+      "sha256": "edd11b57913f236f11021207f742fcc4a22de3c340eb34451ff366ea9aec848b"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_protection_review.py",
+      "sha256": "70b47f4e638a642577ba04106b2d2ce897efc713c99d5c36ac4d1a862cfc3b1c"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_reviewed_ranges.py",
+      "sha256": "d7adfb547fd84079ab921681e95ae5ecf01990021b53ef285c144b7307f3c526"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_execution.py",
+      "sha256": "f025292b21b2dea12dc07a69f42ccb2235c21ef66cd6c9da53de75ace9933a17"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_preview_ranges.py",
+      "sha256": "7f6fa95d50c4acdf4bdce22d47f6c9e539b911cb22508bc014b0b88870e0b965"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_access.py",
+      "sha256": "9bbbdd62685a3c2d2ea53b23203af13035c4e7c71d0eed3edec397e5a2476c0d"
+    }
+  ],
+  "verification": {
+    "complete_api_modules": [
+      {
+        "module": "apps/api/tests/test_content_cleanup.py",
+        "tests": 3182,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 73.201,
+        "junit_sha256": "11f3e35e04d618d007b8456b21fbe1111138fb4fc7feb26366219b5e0985a180"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_detection_reuse.py",
+        "tests": 207,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 14.973,
+        "junit_sha256": "764420884cc164649d76db17e7fff4d3b2b4584d969e3a5529df93bf0b21926a"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_normalization.py",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 5.418,
+        "junit_sha256": "5d04574f78c858082b5f98d0683671868729bfd2982d9455d53b8e2f8a3c8b4a"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_unicode_normalization.py",
+        "tests": 35,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 13.14,
+        "junit_sha256": "02c7c8fe4d4ce8e5f8ae24551b302269dd0bfd68b62007674dd44252faeeca0b"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_literal_matching.py",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 8.669,
+        "junit_sha256": "b7d7173fc9df0b376556e8f22bd4ab4e8e854f99e561a8d245c2d7bd31e85238"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_bounded_distance.py",
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 2.716,
+        "junit_sha256": "65d2a551803d19acbd441a935ceb24f59b3aedf2ea160d4b052360f0a1fe391d"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_learning.py",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 25.306,
+        "junit_sha256": "b15b4d825feab6c937f139b7092f76daa04d318ee42fffde1d7d88735fc846ef"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_scan_retention.py",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 17.729,
+        "junit_sha256": "86db2538f92f809c6c7c4e985d8a64a81abd8eff1598bde4f77b1cf278ff8eb1"
+      }
+    ],
+    "complete_api_passed_total": 3504,
+    "complete_api_warnings": 138,
+    "targeted_review_regressions": {
+      "passed": 83,
+      "deselected": 3189,
+      "seconds": 66.99,
+      "overlaps_complete_api_modules": true,
+      "shared_LF_CRLF_cases": 52,
+      "normal_and_legacy_apply_cases": 20,
+      "forged_apply_cases": 11
+    },
+    "app_renderer_and_source_suite": {
+      "files": 75,
+      "passed": 1641,
+      "failed": 0,
+      "skipped": 0,
+      "shared_sources": 26,
+      "shared_LF_CRLF_cases": 52,
+      "app_rich_text_tests_included": 95
+    },
+    "ci_source_contracts": {
+      "passed": 58,
+      "failed": 0,
+      "full_sha_pins": 41,
+      "workflow_non_action_yaml_unchanged": true,
+      "remote_tag_mapping_reverified": false
+    },
+    "web_lint": "passed",
+    "web_nonincremental_typecheck": "passed",
+    "preexisting_tsbuildinfo_sha256_unchanged": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7",
+    "review_mixed_membership_replay": {
+      "sources": 560,
+      "required_code_math_hits": 572,
+      "missed": 0,
+      "extra_PROTECTED_RANGE_hits": 0,
+      "source_sha256": "9e49ccccb6723177c64c0b9d32b35429c5154553cd03cbf582cf4f0d284be03d"
+    },
+    "normalization": "service matches HEAD; compact provenance and min/max envelope preserved; 2000 seeded subrange oracle comparisons",
+    "log_hashes": [
+      {
+        "task_log": "rich-boundary-green.log",
+        "sha256": "b2b9e78a1584c9c5dc4cf41dacdc2cc559aa4649705452c0bce8aac94a5256ac"
+      },
+      {
+        "task_log": "rich-boundary-red.log",
+        "sha256": "836bbb246b3054859838e683ed55f9cd0eaa7e9b6ca1ad5e3b418d005f646395"
+      },
+      {
+        "task_log": "ux-source-verified.log",
+        "sha256": "5612e130b337c9e6137a4bd15aab2bf2a97cde1e3a4a0e15b36f9fa537d229ac"
+      },
+      {
+        "task_log": "ci-contract-verified.log",
+        "sha256": "64261c905d5dcef831af5560aae57502d5baf8989b9072a95ea7b15c4bf20227"
+      },
+      {
+        "task_log": "web-lint-final.log",
+        "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+      },
+      {
+        "task_log": "web-typecheck-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "task_log": "workflow-pin-check.json",
+        "sha256": "14f6344670c086b534a31b5d8539cc74076b3459b5c1c8506755696966d2425e"
+      },
+      {
+        "task_log": "api-module-09.log",
+        "sha256": "e427d5fb4087af28e07b3724f8569e90adc7c11985904421bf85bf9e8766bc08"
+      }
+    ]
+  },
+  "not_passed_or_unclaimed": {
+    "large_single_process_regression": "stopped around 95 percent after memory growth; not acceptance",
+    "remaining_modular_api_run": "stopped in test_noise_rule_regressions.py because C drive had zero free bytes; OSError errno 28 while fixtures/JUnit wrote; remaining module jobs not run",
+    "temporary_cleanup": "attempted only task-owned stopped pytest data; command rejected by tool policy; no deletion performed",
+    "full_api_suite": "not completed; earlier audit import fixture failures remain incompletely attributed",
+    "browser_PWA_Share_PostgreSQL_concurrency": "not run",
+    "remote_CI_commit_push_deploy": "not performed"
+  }
+}

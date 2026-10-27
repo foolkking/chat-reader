@@ -60,6 +60,34 @@ def test_reordered_leading_marks_are_not_assumed_to_have_monotonic_offsets():
     assert normalization.source_span(mapping, 0, 2) == (1, 3)
 
 
+def test_compact_span_ranges_match_the_list_oracle_for_random_subranges():
+    generator = random.Random(20261027)
+    sources = [
+        "ASCII text",
+        "ßﬃ keeps casefold expansions",
+        "\u0315\u0300\u0327 reordered marks",
+        "A \t\u00a0 B  C",
+        "a\u0327\u0301 then \u0315\u0300",
+    ]
+    for source in sources:
+        for case_sensitive in (False, True):
+            key, compact = normalization.normalized_shadow(
+                source, case_sensitive=case_sensitive, compact=True,
+            )
+            list_key, spans = normalization.normalized_shadow(
+                source, case_sensitive=case_sensitive,
+            )
+            assert key == list_key
+            for _ in range(200):
+                start = generator.randrange(len(key))
+                end = generator.randrange(start + 1, len(key) + 1)
+                expected = (
+                    min(left for left, _right in spans[start:end]),
+                    max(right for _left, right in spans[start:end]),
+                )
+                assert normalization.source_span(compact, start, end) == expected
+
+
 def test_composition_tracks_interleaved_atoms_and_casefold_expansion():
     key, mapping = check("a\u0327\u0301", True)
     assert key == "\u00e1\u0327" and mapping == [(0, 3), (1, 2)]

@@ -1,0 +1,1078 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_checkpoint": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/url-decoding-2026-10-26.json",
+    "sha256": "b5feddb8056afa6ec1f79f4b00c5fd77c61b9f58d610d25390d2487260b930e6"
+  },
+  "baseline_source_sha256": "47a6f719c1136650eea064a933beb916878944705b688be5024f8d8d8efed476",
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "5201018286ad30bc5199af423f747737e47d8dc1f989e365ced10e6a26cbd5d3"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "a9388408caaaa5b72c7e5501ce2711ae0dae7c16c09ec870faac07d6df278c32"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "ab88d56fb9b61af50c17b430baa24e89096d8249ba1b2707cbc9c642d9dca3d9"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "4bd2b8f729929038d7d97799724ff5efa22aa2ebe28e177252cb322454e32d3e"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "source_start_unchanged_after_final_run": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "5201018286ad30bc5199af423f747737e47d8dc1f989e365ced10e6a26cbd5d3"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "a9388408caaaa5b72c7e5501ce2711ae0dae7c16c09ec870faac07d6df278c32"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "ab88d56fb9b61af50c17b430baa24e89096d8249ba1b2707cbc9c642d9dca3d9"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "4bd2b8f729929038d7d97799724ff5efa22aa2ebe28e177252cb322454e32d3e"
+    }
+  ],
+  "documentation_files": [
+    {
+      "path": "PROJECT_STATE.md",
+      "sha256": "fa36c715c3c9e3ff24f3b293e8a27d4268caf4c05a149abf2a20e2d5852b0e44"
+    },
+    {
+      "path": "docs/index.md",
+      "sha256": "649380e12845718159727cc8801768f10c95799ca7d419bcfcb4b50c27ef78e7"
+    },
+    {
+      "path": "docs/system/CONTENT_CLEANUP_CONTRACT.md",
+      "sha256": "4a60abee6c0152a6673478bfce9eabb9d40254004a91517f57bcfd7909884b2a"
+    },
+    {
+      "path": "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md",
+      "sha256": "04eb9a38b581f5ee2cd6b8b2032745c3f78e28f2cb551d99afb812b17900e31f"
+    },
+    {
+      "path": "docs/documentation-inventory.md",
+      "sha256": "99de3580a6c6035a2797551a26815569bb19ce05d6eb81d5961e9d681aea5b0f"
+    },
+    {
+      "path": "docs/execution/ux-audit-noise-matching-2026-10-25.md",
+      "sha256": "36917a4194bf59baac023a9519b64850befa4b48b1eb0f968f452142abdcf9e7"
+    }
+  ],
+  "primary_installed_sources": [
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/character-reference.js",
+      "sha256": "cc8138483321def7b2f4304df0e76ee2bcea84bb1bc5bc603534063b30ddd959"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-text.js",
+      "sha256": "6e59e9b77a76a825c8cd142b0a2f0495aa5122da271770cb09322456a5207451"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-util-decode-numeric-character-reference@2.0.2/node_modules/micromark-util-decode-numeric-character-reference/index.js",
+      "sha256": "74d2139b3651d79a7f4c1d3b21159d9c89459256e12b263ed2eb6b4fce599f87"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-extension-gfm-autolink-literal@2.1.0/node_modules/micromark-extension-gfm-autolink-literal/lib/syntax.js",
+      "sha256": "2b45c68982c1f80daf125b709faba88803b131a0d710b0374dd309495a74efeb"
+    },
+    {
+      "path": "node_modules/.pnpm/mdast-util-gfm-autolink-literal@2.0.1/node_modules/mdast-util-gfm-autolink-literal/lib/index.js",
+      "sha256": "4965bd92f22009a0fd0fa4f7af73903e4d793165634c26ab5827fe5386fbcff2"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/html-text.js",
+      "sha256": "017f2b1f7be2303f4b849394f29430f4daea803dbb7eaf4ce82bb63e42e6c47c"
+    }
+  ],
+  "renderer_versions": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "remark-breaks": "4.0.0",
+    "remark-math": "6.0.0"
+  },
+  "verification": {
+    "baseline_sha256": "47a6f719c1136650eea064a933beb916878944705b688be5024f8d8d8efed476",
+    "source_sha256": "5201018286ad30bc5199af423f747737e47d8dc1f989e365ced10e6a26cbd5d3",
+    "ast_changes": [
+      "_GFM_FALLBACK_BREAK",
+      "_GFM_FALLBACK_CANDIDATE",
+      "_GFM_FALLBACK_DOMAIN",
+      "_GFM_FALLBACK_TOKEN",
+      "_GFM_FALLBACK_URL",
+      "_HTML_ATTRIBUTE_NAME",
+      "_HTML_TAG_NAME",
+      "_HTML_UNQUOTED_VALUE",
+      "_gfm_protocol_ranges",
+      "_markdown_html_ranges"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "metadata_differences": 0,
+        "range_differences": 0
+      }
+    ],
+    "new_matrix": {
+      "combinations": 688,
+      "links": 626,
+      "unpositioned": 566,
+      "before_interval_differences": 452,
+      "after_interval_differences": 0,
+      "mapping": "Installed renderer plus independent CommonMark decoding/source-end provenance; captures links with and without positions, images, code/math and HTML partitions. All anchors counted; incomplete arbitrary node partition conformance is not claimed."
+    }
+  },
+  "renderer_matrix": {
+    "combinations": 688,
+    "unique_sources": 393,
+    "families": {
+      "protocol_decoding": 120,
+      "decoded_previous": 96,
+      "html_partition": 432,
+      "node_controls": 40
+    },
+    "links": 626,
+    "unpositioned": 566,
+    "oracle_adjustment": "Initial image fixture lacked image-destination attribute protection in its oracle (four combinations). Image capture corrected; first corpus/comparison retained. Baseline differences 456 to 452 reflect oracle correction, not four product repairs.",
+    "line_ending_scope": "LF/CRLF factor can duplicate sources without line endings; unique source count reported separately. Frozen unit cases always add actual LF/CRLF/non-BMP prefixes."
+  },
+  "resolved_prior_probes": [
+    {
+      "family": "encoded_protocol",
+      "source": "Retain [h&#116;tps://links.test/NOISE retained",
+      "links": [
+        {
+          "url": "https://links.test/NOISE",
+          "visible": "https://links.test/NOISE",
+          "position": null
+        }
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a> retained</p>",
+      "protected": [],
+      "after": [
+        [
+          8,
+          37
+        ]
+      ],
+      "expected": [
+        [
+          8,
+          37
+        ]
+      ]
+    },
+    {
+      "family": "decoded_previous_letter",
+      "source": "Retain [&#65;https://links.test/NOISE retained",
+      "links": [],
+      "html": "<p>Retain [Ahttps://links.test/NOISE retained</p>",
+      "protected": [
+        {
+          "start": 13,
+          "end": 37,
+          "source": "https://links.test/NOISE"
+        }
+      ],
+      "after": [],
+      "expected": []
+    },
+    {
+      "family": "inline_html_boundary",
+      "source": "Retain [https://links.test/NOISE<em>tail</em> retained",
+      "links": [
+        {
+          "url": "https://links.test/NOISE",
+          "visible": "https://links.test/NOISE",
+          "position": null
+        }
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em&gt;tail&lt;/em&gt; retained</p>",
+      "protected": [
+        {
+          "start": 8,
+          "end": 44,
+          "source": "https://links.test/NOISE<em>tail</em"
+        }
+      ],
+      "after": [
+        [
+          8,
+          32
+        ]
+      ],
+      "expected": [
+        [
+          8,
+          32
+        ]
+      ]
+    }
+  ],
+  "edge_probes": [
+    {
+      "family": "unquoted_slash_first",
+      "source": "Retain [https://links.test/NOISE<em x=/>tail retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 32,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          32
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=/&gt;tail retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "same": true
+    },
+    {
+      "family": "unquoted_slash_later",
+      "source": "Retain [https://links.test/NOISE<em x=a/b>tail retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 35,
+          "positioned": false,
+          "visible": "https://links.test/NOISE<em",
+          "url": "https://links.test/NOISE<em"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          35
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE%3Cem\">https://links.test/NOISE&lt;em</a> x=a/b&gt;tail retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "same": true
+    },
+    {
+      "family": "missing_attribute_space",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"a\"y=tail> retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 40,
+          "positioned": false,
+          "visible": "https://links.test/NOISE<em",
+          "url": "https://links.test/NOISE<em"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          40
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE%3Cem\">https://links.test/NOISE&lt;em</a> x=&quot;a&quot;y=tail&gt; retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "same": true
+    },
+    {
+      "family": "valid_attribute_space",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"a\" y=tail> retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 37,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          37
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=&quot;a&quot; y=tail&gt; retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "same": true
+    },
+    {
+      "family": "url_consumed_escape",
+      "source": "Retain https://links.test/NOISE\\<em>tail</em> retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 32,
+          "positioned": true,
+          "visible": "https://links.test/NOISE\\",
+          "url": "https://links.test/NOISE\\"
+        }
+      ],
+      "expected": [
+        [
+          7,
+          32
+        ]
+      ],
+      "html": "<p>Retain <a href=\"https://links.test/NOISE%5C\">https://links.test/NOISE\\</a>&lt;em&gt;tail&lt;/em&gt; retained</p>",
+      "unpositioned": 0,
+      "actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "same": true
+    },
+    {
+      "family": "html_code_order",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"`\">tail</em> ordinary `retained` end",
+      "links": [
+        {
+          "start": 8,
+          "end": 37,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=&quot;`&quot;&gt;tail&lt;/em&gt; ordinary <code>retained</code> end</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          37
+        ],
+        [
+          44,
+          67
+        ]
+      ],
+      "same": false
+    },
+    {
+      "family": "emphasis_text_node",
+      "source": "Retain [*h&#116;tps://links.test/NOISE* retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 38,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          38
+        ]
+      ],
+      "html": "<p>Retain [<em><a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          9,
+          39
+        ]
+      ],
+      "same": false
+    },
+    {
+      "family": "block_html",
+      "source": "<div>\nh&#116;tps://links.test/NOISE\n</div>",
+      "links": [],
+      "expected": [],
+      "html": "&lt;div&gt;\nh&amp;#116;tps://links.test/NOISE\n&lt;/div&gt;",
+      "unpositioned": 0,
+      "actual": [
+        [
+          6,
+          35
+        ]
+      ],
+      "same": false
+    }
+  ],
+  "red_baseline": {
+    "passed": 60,
+    "failed": 142,
+    "skipped": 0,
+    "junit_seconds": 1.824,
+    "per_module": {
+      "tests.test_content_cleanup": 202
+    },
+    "junit_sha256": "373a856f4e12a9c14d3c5bc841437a4afabccb7f0f957279abc37ea84541491d"
+  },
+  "focused_intermediate": {
+    "passed": 300,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 3.352,
+    "per_module": {
+      "tests.test_content_cleanup": 275,
+      "tests.test_cleanup_detection_reuse": 25
+    },
+    "junit_sha256": "3993d0d7602abfe0e310be35a86097011b7dedd6fb94ab65070d634b2534ec7b"
+  },
+  "api_selection": {
+    "passed": 52,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 111.182,
+    "per_module": {
+      "tests.test_noise_rule_regressions": 52
+    },
+    "junit_sha256": "a35ac4d89b8e8ab97c72175289d4e588433ed0d98f4c9e82df2e43bb1155da3b"
+  },
+  "api_regression": {
+    "passed": 1057,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 508.102,
+    "per_module": {
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_detection_reuse": 151,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_content_cleanup": 316,
+      "tests.test_noise_rule_regressions": 381
+    },
+    "junit_sha256": "ca56694a94e6f153ed3d1ab4040ba5566272d299b0dce7ba5ee5f2b0388d2405",
+    "pytest_reported_seconds": 508.14,
+    "entry_command": "corepack pnpm run test:api",
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "scope": "26 cleanup-related modules in one pytest process, not the complete API suite."
+  },
+  "coverage_delta_from_835": {
+    "source_span_unit_cases": 202,
+    "source_work_cases": 10,
+    "trial_scan_apply_cases": 6,
+    "ordinary_candidate_apply_cases": 4,
+    "total": 222
+  },
+  "work_counter_cases": [
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[encoded_heads-128]",
+      "source_codepoints_read": 2944
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[encoded_heads-512]",
+      "source_codepoints_read": 11776
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[encoded_prefixes-128]",
+      "source_codepoints_read": 3455
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[encoded_prefixes-512]",
+      "source_codepoints_read": 13823
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[incomplete_html_quotes-128]",
+      "source_codepoints_read": 2332
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[incomplete_html_quotes-512]",
+      "source_codepoints_read": 9244
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[incomplete_comments-128]",
+      "source_codepoints_read": 1181
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[incomplete_comments-512]",
+      "source_codepoints_read": 4637
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[html_partitions-128]",
+      "source_codepoints_read": 6016
+    },
+    {
+      "case": "test_gfm_text_node_partitioning_reuses_decoding_and_html_closers[html_partitions-512]",
+      "source_codepoints_read": 24064
+    }
+  ],
+  "work_counter_scope": "Explicit indexed/sliced source and find inspected-prefix work <=32x source length. Regex/group/decoded-array operations and process RSS are not bounded by this counter.",
+  "timings": [
+    {
+      "kind": "plain_no_url",
+      "count": 4096,
+      "source_codepoints": 61445,
+      "seconds": {
+        "before": [
+          0.01901459996588528,
+          0.01889479998499155,
+          0.019302499946206808
+        ],
+        "after": [
+          0.021651100018061697,
+          0.019420300028286874,
+          0.019397999974898994
+        ]
+      },
+      "median_seconds": {
+        "before": 0.01901459996588528,
+        "after": 0.019420300028286874
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "code_no_url",
+      "count": 4096,
+      "source_codepoints": 86021,
+      "seconds": {
+        "before": [
+          0.03125180001370609,
+          0.07403280003927648,
+          0.030329499975778162
+        ],
+        "after": [
+          0.03191080002579838,
+          0.03346639999654144,
+          0.03236059995833784
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03125180001370609,
+        "after": 0.03236059995833784
+      },
+      "range_counts": {
+        "before": 4096,
+        "after": 4096
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "ordinary_urls",
+      "count": 1024,
+      "source_codepoints": 38912,
+      "seconds": {
+        "before": [
+          0.018469200003892183,
+          0.018338699941523373,
+          0.018513399991206825
+        ],
+        "after": [
+          0.021978999953716993,
+          0.021767399972304702,
+          0.021548200049437582
+        ]
+      },
+      "median_seconds": {
+        "before": 0.018469200003892183,
+        "after": 0.021767399972304702
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "fallback_urls",
+      "count": 1024,
+      "source_codepoints": 40960,
+      "seconds": {
+        "before": [
+          0.021322799962945282,
+          0.020688300020992756,
+          0.02081779995933175
+        ],
+        "after": [
+          0.024859299999661744,
+          0.024716999963857234,
+          0.024740300024859607
+        ]
+      },
+      "median_seconds": {
+        "before": 0.02081779995933175,
+        "after": 0.024740300024859607
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "url_ticks",
+      "count": 1024,
+      "source_codepoints": 51200,
+      "seconds": {
+        "before": [
+          0.027029499993659556,
+          0.02706889994442463,
+          0.027102399966679513
+        ],
+        "after": [
+          0.03317040007095784,
+          0.03344379994086921,
+          0.03387529996689409
+        ]
+      },
+      "median_seconds": {
+        "before": 0.02706889994442463,
+        "after": 0.03344379994086921
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "entity_tail",
+      "count": 2048,
+      "source_codepoints": 10281,
+      "seconds": {
+        "before": [
+          0.005448400042951107,
+          0.005345100071281195,
+          0.005323200020939112
+        ],
+        "after": [
+          0.005429999902844429,
+          0.005444500013254583,
+          0.005450200056657195
+        ]
+      },
+      "median_seconds": {
+        "before": 0.005345100071281195,
+        "after": 0.005444500013254583
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "invalid_encoded_heads",
+      "count": 512,
+      "source_codepoints": 14858,
+      "seconds": {
+        "before": [
+          0.005650700069963932,
+          0.005583600024692714,
+          0.005651400075294077
+        ],
+        "after": [
+          0.004342899890616536,
+          0.004123799968510866,
+          0.004132600035518408
+        ]
+      },
+      "median_seconds": {
+        "before": 0.005650700069963932,
+        "after": 0.004132600035518408
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "encoded_urls",
+      "count": 1024,
+      "source_codepoints": 50176,
+      "seconds": {
+        "before": [
+          0.0107240000506863,
+          0.009993100073188543,
+          0.009863500017672777
+        ],
+        "after": [
+          0.026714899926446378,
+          0.02771609998308122,
+          0.027847300050780177
+        ]
+      },
+      "median_seconds": {
+        "before": 0.009993100073188543,
+        "after": 0.02771609998308122
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 1024
+      },
+      "same_ranges": false
+    },
+    {
+      "kind": "html_urls",
+      "count": 1024,
+      "source_codepoints": 58368,
+      "seconds": {
+        "before": [
+          0.02368490002118051,
+          0.023487200029194355,
+          0.02470720000565052
+        ],
+        "after": [
+          0.038363800034858286,
+          0.03880179999396205,
+          0.03717090003192425
+        ]
+      },
+      "median_seconds": {
+        "before": 0.02368490002118051,
+        "after": 0.038363800034858286
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": false
+    },
+    {
+      "kind": "incomplete_html_quotes",
+      "count": 512,
+      "source_codepoints": 3630,
+      "seconds": {
+        "before": [
+          0.0004461999051272869,
+          0.00040930008981376886,
+          0.0004039999330416322
+        ],
+        "after": [
+          0.003026599995791912,
+          0.0030401999829337,
+          0.0030712999869138002
+        ]
+      },
+      "median_seconds": {
+        "before": 0.00040930008981376886,
+        "after": 0.0030401999829337
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 1
+      },
+      "same_ranges": false
+    },
+    {
+      "kind": "entities_no_url",
+      "count": 4096,
+      "source_codepoints": 77824,
+      "seconds": {
+        "before": [
+          0.021086299908347428,
+          0.021205700002610683,
+          0.0218844999326393
+        ],
+        "after": [
+          0.04672980005852878,
+          0.04863850004039705,
+          0.049514600075781345
+        ]
+      },
+      "median_seconds": {
+        "before": 0.021205700002610683,
+        "after": 0.04863850004039705
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      },
+      "same_ranges": true
+    }
+  ],
+  "timing_scope": "Three warmed alternating component samples after pytest terminated. Extra text partitioning/decoding cost retained; not a universal speed or production latency claim.",
+  "temporary_root": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-noise-url-context",
+  "raw_artifacts": [
+    {
+      "name": "content-cleanup-before.py",
+      "sha256": "47a6f719c1136650eea064a933beb916878944705b688be5024f8d8d8efed476"
+    },
+    {
+      "name": "render-context.mjs",
+      "sha256": "3e31f8c596b3a94a681a76aee46c28b4bd6ebab1775b4c5ba9bde5249212fa21"
+    },
+    {
+      "name": "context-corpus-first.json",
+      "sha256": "1f8f03bd94798d6e6a4e68be5d1dfd8e66db4cbe03a6a340854f082a4745f81c"
+    },
+    {
+      "name": "baseline-comparison-first.json",
+      "sha256": "7b1f70d8850cd558808710104c50189dbb8af860661215bd15020727bf2e9ef4"
+    },
+    {
+      "name": "context-corpus.json",
+      "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105"
+    },
+    {
+      "name": "baseline-comparison.json",
+      "sha256": "88d1cbb2de6348e63d897edfbb65c0aeea15c5dacd9c42496484adde6f8f8497"
+    },
+    {
+      "name": "current-comparison.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "name": "unit-test-block.txt",
+      "sha256": "9f372621a4b9c9e179fb6e6a8d6d359baec998ceb858b51540b3508d1c6b0f9c"
+    },
+    {
+      "name": "verify-context.py",
+      "sha256": "a70f534a96b2afe5d4283c7982c67eda86c071fa1857cdf9a594436b7c237c03"
+    },
+    {
+      "name": "verification.json",
+      "sha256": "9ef5d2718e4aa792f72d3a119c02408ba62f7af46bcecb7f656db880cdc03ad8"
+    },
+    {
+      "name": "context-focus-1.xml",
+      "sha256": "dac019e40ab7f1aa1bb8b75db9ce13157a99b5a4e21285d80cfd955a58b70fbc"
+    },
+    {
+      "name": "context-focus-2.xml",
+      "sha256": "3993d0d7602abfe0e310be35a86097011b7dedd6fb94ab65070d634b2534ec7b"
+    },
+    {
+      "name": "context-red.xml",
+      "sha256": "cedf21af8f2440f9a7f7982350b00acc79ab43353803cb8fd9c67a74d99a2635"
+    },
+    {
+      "name": "context-red.log",
+      "sha256": "c50a74d242ba8ba6778850bff54679f66dc09b253cafa925cf55d901cc367f22"
+    },
+    {
+      "name": "context-red-final.xml",
+      "sha256": "373a856f4e12a9c14d3c5bc841437a4afabccb7f0f957279abc37ea84541491d"
+    },
+    {
+      "name": "context-red-final.log",
+      "sha256": "494f2f57b816fdfec64f0c5f7122ebb648498679e342da01d2265bfdd767e585"
+    },
+    {
+      "name": "context-api.xml",
+      "sha256": "a35ac4d89b8e8ab97c72175289d4e588433ed0d98f4c9e82df2e43bb1155da3b"
+    },
+    {
+      "name": "final-source-start.json",
+      "sha256": "07d114914b77e67a00ff6ce543179753481214bff1500ce379b09da4f70df557"
+    },
+    {
+      "name": "context-final.xml",
+      "sha256": "ca56694a94e6f153ed3d1ab4040ba5566272d299b0dce7ba5ee5f2b0388d2405"
+    },
+    {
+      "name": "context-final.log",
+      "sha256": "bc35763996605d4f9776b83a639118b1fbd554d4a6dfb5ff7508b24b2c7f7327"
+    },
+    {
+      "name": "resolved-prior-probes.json",
+      "sha256": "88ddebe2cc32fe9d6790192229401e13e9eb8a5076b9a5e11f32d2c0349b69f3"
+    },
+    {
+      "name": "edge-probes.mjs",
+      "sha256": "ebb1f41718a5fdd4850e139cd079a0ac76bc27e215f98003198523796763e697"
+    },
+    {
+      "name": "edge-probes.json",
+      "sha256": "1c8643dfee4dd9935381d9b50b6dcef9da906af37513b758c4cead2bc2068b4d"
+    },
+    {
+      "name": "edge-probe-results.json",
+      "sha256": "8926cea9f67c746d544ae42e8cf524016e9ead480b06b15f2c73681e44ed4db6"
+    },
+    {
+      "name": "measure-context.py",
+      "sha256": "1e90081b882da4945172d9df528b172de4af42ae792106c011dacc7d123f18fa"
+    },
+    {
+      "name": "timings.json",
+      "sha256": "b4be3eb5e0537eefa90894c3d8752712413fa2f1065b9177cf77c16fdb89a8d9"
+    }
+  ],
+  "preexisting_tsconfig_sha256": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7",
+  "validation_limits": [
+    "Verified HTML/code ordering, emphasis text-node partition and block-HTML probes still differ; email/www, complete definitions and arbitrary extensions not proven.",
+    "Decoded token strings/source-end arrays and partitions use proportional memory; no RSS/OOM or all-input linearity proof.",
+    "No browser, Web build, complete API, PostgreSQL concurrency, CI or production acceptance.",
+    "No web search, commit, push, deployment, dependency/migration/offline-format/imported-user-data or production configuration changes."
+  ]
+}

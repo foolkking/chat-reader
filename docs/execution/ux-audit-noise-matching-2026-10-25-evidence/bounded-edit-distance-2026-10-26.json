@@ -1,0 +1,900 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "recorded_at": "2026-10-26T23:05:26.713506+08:00",
+  "scope": "Local bounded edit-distance rows, internal empty-right boundary and preserved failed-prefix rejection; no matcher-policy change",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/table-inline-boundaries-2026-10-26.json",
+    "sha256": "d96a94ab4513339b585bb5520a9adeed5ebaae247f319b16a573243f3e4c3f21"
+  },
+  "source_and_test_hashes": {
+    "apps/api/app/services/content_cleanup.py": "c110dd768a9c87a3ef7a6f4630ef21cecbc90087f6939a115c48c81ed9030580",
+    "apps/api/app/services/cleanup_learning.py": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f",
+    "apps/api/tests/test_cleanup_bounded_distance.py": "8009e77f6f6bb93f8b52ea2e13bf7ed79b992e77b7e96fd69845d58c0d67b0ea",
+    "apps/api/tests/test_cleanup_literal_matching.py": "dd7984d8486c537b49ae7ffa0bfd8bbf28ef315c27c04be24e33add946ffc766",
+    "apps/api/tests/test_cleanup_normalization.py": "47bebf24351a1411d00d78b4fc2ca486cd5c89cdbbb6c5626654666722b7e532",
+    "apps/api/tests/test_cleanup_unicode_normalization.py": "b3e84c479702cea807bcc725897c0896bcd582bf185ddd5f4c050c1ba9d5a476",
+    "apps/api/tests/test_cleanup_detection_reuse.py": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397",
+    "apps/api/tests/test_noise_rule_regressions.py": "b90f1b601f6ec45e270d2e85ddb94fef8d9783c3393992fb45b98aa1d511f119",
+    "apps/api/tests/test_content_cleanup.py": "8931e543a3f6e376438c63e563f476bf40afe3dd0c8a4ebab779f1f842ebba55",
+    "apps/api/tests/test_cleanup_learning.py": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+  },
+  "source_and_tests_stable_across_final_pytest": true,
+  "runtime": {
+    "python": "3.11.7"
+  },
+  "correctness": {
+    "source_sha256": "c110dd768a9c87a3ef7a6f4630ef21cecbc90087f6939a115c48c81ed9030580",
+    "script_sha256": "89f644c593defc52da8ee5d6ad4f82c414ef8c6b1f0b034ba6a2399fd0d7ea75",
+    "baseline_source_sha256": "17b052219b77858d879ca8c4a6f47d8fe025075c8c40e16f12cf1ea5f2480219",
+    "ast_delta": "only _levenshtein_bounded changed",
+    "exhaustive_oracle_cases": 7688,
+    "exhaustive_mismatches": 0,
+    "baseline_empty_right_mismatches": 44,
+    "seeded_unicode_oracle_cases": 2000,
+    "seeded_oracle_mismatches": 0,
+    "literal_sources": 144,
+    "literal_full_metadata_comparisons": 5184,
+    "literal_metadata_differences": 0,
+    "observed_hit_modes_decisions": {
+      "NORMALIZED_EXACT": 1000,
+      "KEEP": 744,
+      "BOUNDED_FUZZY": 281,
+      "PROTECTED": 873,
+      "RAW_EXACT": 336
+    },
+    "citation_full_metadata_comparisons": 192,
+    "citation_differences": 0,
+    "input_sha256": "5a8c74961d36176763d27ddbda330cf6a5b4b521ee707139a27416eb91f62fa7"
+  },
+  "performance": {
+    "source_sha256": "c110dd768a9c87a3ef7a6f4630ef21cecbc90087f6939a115c48c81ed9030580",
+    "script_sha256": "89f644c593defc52da8ee5d6ad4f82c414ef8c6b1f0b034ba6a2399fd0d7ea75",
+    "method": "7 alternating paired samples, medians; helper and public synthetic controls; no RSS or production claim",
+    "measurements": [
+      {
+        "control": "helper-4-exact-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 200,
+        "before_ms": 0.010463,
+        "current_ms": 0.010038,
+        "before_samples_ms": [
+          0.010643499999999998,
+          0.010463,
+          0.010629999999999999,
+          0.010251,
+          0.010208,
+          0.0131535,
+          0.010107999999999999
+        ],
+        "current_samples_ms": [
+          0.010334000000000001,
+          0.010187,
+          0.0101605,
+          0.009792,
+          0.010038,
+          0.0099645,
+          0.009978
+        ]
+      },
+      {
+        "control": "helper-4-tail-substitution-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 200,
+        "before_ms": 0.0105525,
+        "current_ms": 0.010014499999999999,
+        "before_samples_ms": [
+          0.010279499999999999,
+          0.0105525,
+          0.010859,
+          0.010243500000000001,
+          0.010445,
+          0.0135635,
+          0.012544
+        ],
+        "current_samples_ms": [
+          0.010348,
+          0.0101915,
+          0.009903,
+          0.009863499999999999,
+          0.010014499999999999,
+          0.010585,
+          0.009984
+        ]
+      },
+      {
+        "control": "helper-4-head-reject-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 200,
+        "before_ms": 0.0057235,
+        "current_ms": 0.0060325,
+        "before_samples_ms": [
+          0.0056515,
+          0.005678,
+          0.0057235,
+          0.005647999999999999,
+          0.0079845,
+          0.00797,
+          0.007994
+        ],
+        "current_samples_ms": [
+          0.0055405,
+          0.005558499999999999,
+          0.0060325,
+          0.0059105,
+          0.008105,
+          0.0076815,
+          0.007891500000000001
+        ]
+      },
+      {
+        "control": "helper-4-insertion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 200,
+        "before_ms": 0.013762000000000002,
+        "current_ms": 0.014310499999999999,
+        "before_samples_ms": [
+          0.014699,
+          0.014953000000000001,
+          0.014622,
+          0.013762000000000002,
+          0.0105095,
+          0.010767,
+          0.0106265
+        ],
+        "current_samples_ms": [
+          0.014709000000000002,
+          0.014454,
+          0.014310499999999999,
+          0.01458,
+          0.010532,
+          0.010597,
+          0.013564
+        ]
+      },
+      {
+        "control": "helper-4-deletion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 200,
+        "before_ms": 0.009733,
+        "current_ms": 0.008209,
+        "before_samples_ms": [
+          0.012774,
+          0.009583000000000001,
+          0.009549499999999999,
+          0.012095,
+          0.009733,
+          0.009948,
+          0.00966
+        ],
+        "current_samples_ms": [
+          0.010443000000000001,
+          0.0112225,
+          0.0080695,
+          0.0087635,
+          0.008194,
+          0.008122,
+          0.008209
+        ]
+      },
+      {
+        "control": "helper-64-exact-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.1685,
+        "current_ms": 0.1527,
+        "before_samples_ms": [
+          0.1748,
+          0.1716,
+          0.1685,
+          0.206,
+          0.1657,
+          0.1665,
+          0.1647
+        ],
+        "current_samples_ms": [
+          0.1556,
+          0.1539,
+          0.1527,
+          0.1523,
+          0.1503,
+          0.1492,
+          0.1565
+        ]
+      },
+      {
+        "control": "helper-64-tail-substitution-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.1684,
+        "current_ms": 0.1516,
+        "before_samples_ms": [
+          0.1668,
+          0.1754,
+          0.1706,
+          0.1684,
+          0.1667,
+          0.1693,
+          0.1667
+        ],
+        "current_samples_ms": [
+          0.1512,
+          0.15,
+          0.1518,
+          0.151,
+          0.1565,
+          0.152,
+          0.1516
+        ]
+      },
+      {
+        "control": "helper-64-head-reject-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.007,
+        "current_ms": 0.0063,
+        "before_samples_ms": [
+          0.0076,
+          0.0071,
+          0.0068,
+          0.007,
+          0.0069,
+          0.0071,
+          0.0069
+        ],
+        "current_samples_ms": [
+          0.0067,
+          0.0064,
+          0.0063,
+          0.006,
+          0.0064,
+          0.0061,
+          0.0063
+        ]
+      },
+      {
+        "control": "helper-64-insertion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.1709,
+        "current_ms": 0.1548,
+        "before_samples_ms": [
+          0.1705,
+          0.1722,
+          0.174,
+          0.1709,
+          0.1701,
+          0.1757,
+          0.17
+        ],
+        "current_samples_ms": [
+          0.1548,
+          0.154,
+          0.1558,
+          0.1593,
+          0.1554,
+          0.1546,
+          0.1541
+        ]
+      },
+      {
+        "control": "helper-64-deletion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.162,
+        "current_ms": 0.1524,
+        "before_samples_ms": [
+          0.162,
+          0.1614,
+          0.1607,
+          0.1918,
+          0.1655,
+          0.1619,
+          0.1621
+        ],
+        "current_samples_ms": [
+          0.1577,
+          0.1563,
+          0.1514,
+          0.151,
+          0.1524,
+          0.1519,
+          0.1571
+        ]
+      },
+      {
+        "control": "helper-500-exact-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 1.855,
+        "current_ms": 1.2665,
+        "before_samples_ms": [
+          1.8924,
+          1.8702,
+          1.855,
+          1.816,
+          1.7985,
+          1.9088,
+          1.7672
+        ],
+        "current_samples_ms": [
+          1.4621,
+          1.6858,
+          1.2524,
+          1.2766,
+          1.2665,
+          1.2413,
+          1.2356
+        ]
+      },
+      {
+        "control": "helper-500-tail-substitution-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 1.7678,
+        "current_ms": 1.2458,
+        "before_samples_ms": [
+          1.8064,
+          1.7669,
+          1.8397,
+          1.7678,
+          1.7629,
+          1.7975,
+          1.7655
+        ],
+        "current_samples_ms": [
+          1.2548,
+          1.2458,
+          1.2471,
+          1.2422,
+          1.2371,
+          1.2856,
+          1.2372
+        ]
+      },
+      {
+        "control": "helper-500-head-reject-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.0096,
+        "current_ms": 0.0064,
+        "before_samples_ms": [
+          0.0107,
+          0.0097,
+          0.0096,
+          0.0094,
+          0.0094,
+          0.0114,
+          0.0092
+        ],
+        "current_samples_ms": [
+          0.0071,
+          0.0081,
+          0.0067,
+          0.0062,
+          0.0064,
+          0.0061,
+          0.0064
+        ]
+      },
+      {
+        "control": "helper-500-insertion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 1.8103,
+        "current_ms": 1.2375,
+        "before_samples_ms": [
+          1.8666,
+          1.8718,
+          1.8521,
+          1.7915,
+          1.8103,
+          1.7629,
+          1.7614
+        ],
+        "current_samples_ms": [
+          1.2375,
+          1.2354,
+          1.2553,
+          1.2439,
+          1.2212,
+          1.2277,
+          1.2545
+        ]
+      },
+      {
+        "control": "helper-500-deletion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 1.7845,
+        "current_ms": 1.2516,
+        "before_samples_ms": [
+          1.7698,
+          2.4187,
+          2.3499,
+          2.3786,
+          1.7593,
+          1.7834,
+          1.7845
+        ],
+        "current_samples_ms": [
+          1.2487,
+          1.6649,
+          1.819,
+          1.7409,
+          1.2516,
+          1.2337,
+          1.2457
+        ]
+      },
+      {
+        "control": "helper-2000-exact-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 12.451,
+        "current_ms": 5.1965,
+        "before_samples_ms": [
+          13.2544,
+          12.4416,
+          12.3855,
+          14.4219,
+          13.0818,
+          12.451,
+          12.4024
+        ],
+        "current_samples_ms": [
+          5.1365,
+          5.7252,
+          6.477,
+          7.3716,
+          5.1965,
+          5.1621,
+          5.1906
+        ]
+      },
+      {
+        "control": "helper-2000-tail-substitution-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 12.5844,
+        "current_ms": 5.2446,
+        "before_samples_ms": [
+          12.4818,
+          13.1415,
+          12.5844,
+          12.5578,
+          13.2898,
+          12.453,
+          12.6372
+        ],
+        "current_samples_ms": [
+          5.2399,
+          5.5085,
+          5.5794,
+          5.1698,
+          5.2024,
+          5.2446,
+          5.3779
+        ]
+      },
+      {
+        "control": "helper-2000-head-reject-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.0172,
+        "current_ms": 0.0066,
+        "before_samples_ms": [
+          0.0203,
+          0.0188,
+          0.0171,
+          0.0187,
+          0.017,
+          0.0172,
+          0.0171
+        ],
+        "current_samples_ms": [
+          0.0074,
+          0.0066,
+          0.0066,
+          0.0065,
+          0.0067,
+          0.0063,
+          0.0065
+        ]
+      },
+      {
+        "control": "helper-2000-insertion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 12.7437,
+        "current_ms": 5.1648,
+        "before_samples_ms": [
+          12.7437,
+          12.8531,
+          13.3597,
+          12.5048,
+          12.4927,
+          12.4012,
+          12.9955
+        ],
+        "current_samples_ms": [
+          5.2389,
+          5.2182,
+          5.1179,
+          5.4814,
+          5.1183,
+          5.1329,
+          5.1648
+        ]
+      },
+      {
+        "control": "helper-2000-deletion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 12.8419,
+        "current_ms": 5.1735,
+        "before_samples_ms": [
+          12.8419,
+          12.655,
+          12.852,
+          13.2706,
+          12.3915,
+          13.6244,
+          12.3907
+        ],
+        "current_samples_ms": [
+          5.4297,
+          5.1622,
+          5.4086,
+          5.1735,
+          5.1418,
+          5.4062,
+          5.1542
+        ]
+      },
+      {
+        "control": "helper-9000-exact-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 168.7603,
+        "current_ms": 23.6156,
+        "before_samples_ms": [
+          168.3563,
+          172.1816,
+          171.4812,
+          166.2311,
+          170.6492,
+          168.4602,
+          168.7603
+        ],
+        "current_samples_ms": [
+          24.1662,
+          25.292,
+          23.5813,
+          23.5102,
+          23.6156,
+          23.3333,
+          23.6736
+        ]
+      },
+      {
+        "control": "helper-9000-tail-substitution-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 167.4815,
+        "current_ms": 23.5912,
+        "before_samples_ms": [
+          167.4815,
+          169.0419,
+          170.0629,
+          167.2371,
+          168.2479,
+          166.8304,
+          166.3185
+        ],
+        "current_samples_ms": [
+          23.7605,
+          24.6435,
+          23.8208,
+          23.5126,
+          23.5197,
+          23.5504,
+          23.5912
+        ]
+      },
+      {
+        "control": "helper-9000-head-reject-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.0538,
+        "current_ms": 0.0067,
+        "before_samples_ms": [
+          0.0549,
+          0.0538,
+          0.0534,
+          0.054,
+          0.0574,
+          0.0538,
+          0.0532
+        ],
+        "current_samples_ms": [
+          0.0071,
+          0.0064,
+          0.0068,
+          0.0064,
+          0.007,
+          0.0064,
+          0.0067
+        ]
+      },
+      {
+        "control": "helper-9000-insertion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 169.1743,
+        "current_ms": 23.6998,
+        "before_samples_ms": [
+          166.9634,
+          169.1743,
+          166.5387,
+          167.4155,
+          169.7558,
+          169.3563,
+          171.6551
+        ],
+        "current_samples_ms": [
+          23.6195,
+          23.6998,
+          24.0246,
+          23.5713,
+          24.6982,
+          23.3033,
+          24.5413
+        ]
+      },
+      {
+        "control": "helper-9000-deletion-limit1",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 167.8649,
+        "current_ms": 23.7121,
+        "before_samples_ms": [
+          167.5557,
+          171.1019,
+          168.3371,
+          167.1151,
+          167.8649,
+          167.4043,
+          168.0906
+        ],
+        "current_samples_ms": [
+          24.1374,
+          24.0697,
+          23.3055,
+          23.7121,
+          24.6567,
+          23.4198,
+          23.3936
+        ]
+      },
+      {
+        "control": "public-citation-short",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.0908,
+        "current_ms": 0.0913,
+        "before_samples_ms": [
+          0.1124,
+          0.0878,
+          0.0908,
+          0.0864,
+          0.0849,
+          0.0929,
+          0.1091
+        ],
+        "current_samples_ms": [
+          0.1057,
+          0.0894,
+          0.0913,
+          0.0863,
+          0.0881,
+          0.1783,
+          0.1043
+        ]
+      },
+      {
+        "control": "public-500-ascii-tail",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 5.3438,
+        "current_ms": 4.7742,
+        "before_samples_ms": [
+          5.3548,
+          5.3444,
+          5.3438,
+          5.3537,
+          5.3003,
+          5.304,
+          5.3277
+        ],
+        "current_samples_ms": [
+          4.7513,
+          4.7101,
+          4.7576,
+          4.7742,
+          4.9181,
+          4.7788,
+          4.7847
+        ]
+      },
+      {
+        "control": "public-500-unicode-expanded-tail",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 421.0696,
+        "current_ms": 130.5597,
+        "before_samples_ms": [
+          424.8022,
+          421.0696,
+          421.4882,
+          416.8541,
+          415.6166,
+          415.3493,
+          422.0746
+        ],
+        "current_samples_ms": [
+          130.5597,
+          138.8187,
+          134.6769,
+          131.375,
+          130.4929,
+          129.5683,
+          129.3242
+        ]
+      },
+      {
+        "control": "public-no-anchor-control",
+        "repetitions": 7,
+        "calls_per_sample": 1,
+        "before_ms": 0.956,
+        "current_ms": 0.9675,
+        "before_samples_ms": [
+          0.9794,
+          0.9549,
+          0.9426,
+          0.956,
+          0.962,
+          0.9645,
+          0.9479
+        ],
+        "current_samples_ms": [
+          0.9769,
+          0.9538,
+          0.9563,
+          0.9678,
+          0.9675,
+          0.9636,
+          0.9908
+        ]
+      }
+    ]
+  },
+  "pytest": {
+    "frozen_checkpoint33": {
+      "cases": 34,
+      "results": {
+        "passed": 22,
+        "failure": 12
+      },
+      "modules": {
+        "test_cleanup_bounded_distance": 34
+      },
+      "duration_seconds": 1.017,
+      "junit": {
+        "path": "frozen-baseline.xml",
+        "sha256": "e74624f4b35afea2fee532e14d74ad05589113f0df9d30120f38de5c9befab03"
+      }
+    },
+    "intermediate_without_early_rejection": {
+      "cases": 34,
+      "results": {
+        "passed": 26,
+        "failure": 8
+      },
+      "modules": {
+        "test_cleanup_bounded_distance": 34
+      },
+      "duration_seconds": 1.86,
+      "junit": {
+        "path": "intermediate-baseline.xml",
+        "sha256": "d86fe69d2381b7d55a0e5d037c016c2ba6d3d40c9e8e27ae5dab200b6c45efed"
+      }
+    },
+    "current_bounded": {
+      "cases": 34,
+      "results": {
+        "passed": 34
+      },
+      "modules": {
+        "test_cleanup_bounded_distance": 34
+      },
+      "duration_seconds": 2.799,
+      "junit": {
+        "path": "current-bounded.xml",
+        "sha256": "715a523592bb46091a252e5b59ad99567fa71d41eea22d01b46ac80961c4bc6e"
+      }
+    },
+    "final_eight_modules": {
+      "cases": 4040,
+      "results": {
+        "passed": 4040
+      },
+      "modules": {
+        "test_cleanup_bounded_distance": 34,
+        "test_cleanup_literal_matching": 20,
+        "test_cleanup_normalization": 8,
+        "test_cleanup_unicode_normalization": 35,
+        "test_cleanup_detection_reuse": 207,
+        "test_noise_rule_regressions": 570,
+        "test_content_cleanup": 3154,
+        "test_cleanup_learning": 12
+      },
+      "duration_seconds": 766.811,
+      "junit": {
+        "path": "regression.xml",
+        "sha256": "7b908e3cb64fb078028d5898b063d425488d396c5d477308c1692023d5ecf7f6"
+      },
+      "warnings": 138,
+      "warning_type": "existing record_property/xunit2 compatibility warnings"
+    }
+  },
+  "validation": {
+    "ast_delta": "only _levenshtein_bounded versus frozen checkpoint33",
+    "memory_compile": "10 source/test files pass, no bytecode written by this check",
+    "git_diff_check": "pass",
+    "staged_paths": [],
+    "prior_receipts_unchanged": 24,
+    "preexisting_tsbuildinfo_unchanged": true,
+    "no_network_web_browser_ci_or_deployment": true
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "55baf547738d0ecc86116e2474baf03800c0e10fac2041b6b68e4add14d91296",
+    "docs/index.md": "182be7475e7669a006c54a7c9a6368f74ea448b470ecbaa2b609d118dd0c49bd",
+    "docs/documentation-inventory.md": "0cb0d01cb864dd77a657e8263108888020af633a9e8a97de17a98f56d555b6ac",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "58f96be6b5b91b417157f3828f6180a5e01bcea3378c57c06d33eb679853799e",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "de9f77eb4561203cb9affce938c30ba0d2a900d6b75cbaaae0a102c8823166a3",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "6fcc532b8672fdcc24f08063f3892f60019e1834a01573058ce5ef326f9e2e48"
+  },
+  "temporary_root": "<TASK_TEMP_ROOT>/chat-reader-noise-bounded-distance",
+  "temporary_artifacts": {
+    "content-cleanup-before.py": "17b052219b77858d879ca8c4a6f47d8fe025075c8c40e16f12cf1ea5f2480219",
+    "content-cleanup-band-without-early-exit.py": "d5d74d4b6aadf3d1e7dc9d68d6d0445d112a4daf39b5d3802a0f64b8a95bce94",
+    "bounded_baseline_plugin.py": "26ab237f21828e784036b865fc215b7f36ed2d3a8778be04b59151383c864620",
+    "verify_bounded_distance.py": "89f644c593defc52da8ee5d6ad4f82c414ef8c6b1f0b034ba6a2399fd0d7ea75",
+    "finalize_bounded_receipt.py": "417be91c86abf03e761b5bb683d5ddd70d81f17542c4e2cb771850eba31ae411",
+    "comparison-inputs.json": "5a8c74961d36176763d27ddbda330cf6a5b4b521ee707139a27416eb91f62fa7",
+    "verified-correctness.json": "db514364fa49d08a8eb2a1280abc2b75ad8222c0c3cfc162f44b3f0c970e04e7",
+    "verified-performance.json": "8aa4f07e87c047f0f2837fb5b38f565a70e9a85d3f0a81ca4deefc856b1235ea",
+    "frozen-baseline.xml": "e74624f4b35afea2fee532e14d74ad05589113f0df9d30120f38de5c9befab03",
+    "frozen-baseline.log": "8be80420512afb480457c036e0b01c043e72af71f9d3d984914aedeb0783d28d",
+    "intermediate-baseline.xml": "d86fe69d2381b7d55a0e5d037c016c2ba6d3d40c9e8e27ae5dab200b6c45efed",
+    "intermediate-baseline.log": "f3d252ec86a90fcd6e56f00a513a06bfcae9df5223f00e766d75f76eee18bb8d",
+    "current-bounded.xml": "715a523592bb46091a252e5b59ad99567fa71d41eea22d01b46ac80961c4bc6e",
+    "current-bounded.log": "50a87535d11ecec7b75c091b0ae2189d21467ad02d6098b013be9b5585093dc8",
+    "regression.xml": "7b908e3cb64fb078028d5898b063d425488d396c5d477308c1692023d5ecf7f6",
+    "regression.log": "5b3ba85a3868dc8303ac081e50080d2408090f1e3843aa799e7f91fe9224bf6d",
+    "regression-start-hashes.json": "29e785a2463f021d47e5ebe461c8a4a00fa16742d4e0aaf019861d9540fdf4fe",
+    "regression-end-hashes.json": "29e785a2463f021d47e5ebe461c8a4a00fa16742d4e0aaf019861d9540fdf4fe",
+    "prior-receipt-hashes.json": "fb452871bd4b802a087c15689036dd7f0cf151cee1fc6415b7b2cb9a390ea517",
+    "final-diff-check.log": "18f2ec89c82caafd52bb4d7397c9a7940ec0ef5f4b6df412acb97b9bb82e46f5"
+  },
+  "limits": [
+    "The 34 new tests are part of the 4040 final tests, not additional tests.",
+    "The empty-right correction is a helper boundary; existing public callers do not admit empty candidates.",
+    "Synthetic correlated matrices are not independent production samples or error-rate evidence.",
+    "List-cell/read bounds and local alternating timing controls do not measure RSS, all-input speed or production throughput.",
+    "No Web/build/browser, full API, PostgreSQL concurrency, CI or production validation was run in this batch.",
+    "Earlier table/native-parser receipts remain historical and were not regenerated in this helper-only batch."
+  ]
+}

@@ -90,12 +90,31 @@ def test_scan_apply_without_selection_preserves_all_text_and_versions(client):
         assert db.get(MessageVersion, before).display_text == text
 
 
-def test_forged_protected_decision_is_revalidated_during_apply(client):
-    text = "Keep `" + MARKER + "` here."
+@pytest.mark.parametrize("text", [
+    "Keep `" + MARKER + "` here.",
+    "left | right\n--- | ---\n$start | `prefix $ NOISE`\n\nordinary retained",
+    "# $$head\n\n`prefix $$ NOISE`\n\nordinary retained",
+    "$a +\nNOISE + b$\n\nordinary retained",
+    "[\n\\text{NOISE}\n]\n\nordinary retained",
+    "before $$$a $$ NOISE b$$$ ordinary retained",
+    '[label](/keep "`") ordinary retained `NOISE`',
+    "<div>\nNOISE\n</div>\n\nordinary retained",
+    "<!--\nNOISE\n-->\n\nordinary retained",
+    "<box padding={١}>\n<text>NOISE</text>\n</box>\n\nordinary retained",
+    "<box>\n<text>NOISE</text>\n</box>\n\n$x\n<box>\ny$\n\nordinary retained",
+])
+def test_forged_protected_decision_is_revalidated_during_apply(client, text):
+    if "NOISE" in text:
+        created = client.post(
+            "/api/content-cleanup/rules",
+            json={"name": "Renderer-protected literal", "match_value": "NOISE"},
+        )
+        assert created.status_code == 201, created.text
     scan_id, message_ids = create_review(client, [text])
     with session() as db:
         occurrence = db.query(ContentCleanupOccurrence).filter_by(scan_id=scan_id).one()
         assert occurrence.decision == "PROTECTED"
+        assert "PROTECTED_RANGE" in occurrence.evidence_codes
         # Simulate a legacy/corrupt stored decision that bypassed the HTTP guard.
         occurrence.decision = "DELETE"
         occurrence.decision_updated_at = cleanup.utc_now()

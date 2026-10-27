@@ -1,5 +1,23 @@
 # Testing
 
+## Noise protection renderer contract — 2026-10-27 (local only)
+
+`scripts/ux/fixtures/noise-renderer-protection.json` is shared by
+`apps/api/tests/test_noise_renderer_protection_contract.py` and
+`scripts/ux/chatgpt-rich-text.test.mjs`. The latter loads the actual app
+remark/rehype plugins, display-math normalization and rich-layout projection,
+then checks source-restored code/math node positions in LF/CRLF. The Python
+test independently checks detector evidence/decisions for the same source.
+Run both after changes to those ownership rules; neither replaces browser,
+PostgreSQL, Share/PWA or complete Markdown-extension acceptance.
+The existing `test_content_cleanup.py` and `test_cleanup_safety.py` also check
+ordinary batch selection, exact preview/apply source and old/forged choices.
+See the [dated review-fix receipt](execution/ux-audit-noise-matching-2026-10-25.md#37-review-fixes-and-application-renderer-contract--2026-10-27)
+for actual run results; older counts below remain their own checkpoints.
+Scoped isolated API regression completed after temporary-disk recovery. Its
+recorded Windows symlink-capability skip belongs to an additional artifact-cleanup
+test, not a skipped noise-protection assertion; interrupted attempts remain historical.
+
 ## ChatGPT reading compatibility — 2026-10-25 (local only)
 
 The [continuation and synthetic receipts](execution/CHATGPT_READING_REMAINING_2026-10-25.md)

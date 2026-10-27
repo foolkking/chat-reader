@@ -1,0 +1,1210 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "parent_checkpoint": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/url-text-nodes-2026-10-26.json",
+    "sha256": "aa56c6e1ba9d612022845c089d8398df79f625842b5941ce1d5dcdd203a56a80"
+  },
+  "baseline_source_sha256": "5201018286ad30bc5199af423f747737e47d8dc1f989e365ced10e6a26cbd5d3",
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "060711ad75857097f668adef53ebe7e63b41e5bcfe6dbea1d05cb40fa80991b6"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "87652491b63f9ff343e8c2a1b54b2e657fa7dc8e829e3561d88fea710c88462e"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "04284efc624bdc318a03c1515f5fbaaaed3095140d6d2bccac1837f335d1a0c2"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "6dc3f1ab63c1c00e213033d212da4db49420c37f33a5d4bce363f690ff0abce9"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "source_start_unchanged_after_final_run": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "060711ad75857097f668adef53ebe7e63b41e5bcfe6dbea1d05cb40fa80991b6"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "87652491b63f9ff343e8c2a1b54b2e657fa7dc8e829e3561d88fea710c88462e"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "6dc3f1ab63c1c00e213033d212da4db49420c37f33a5d4bce363f690ff0abce9"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "04284efc624bdc318a03c1515f5fbaaaed3095140d6d2bccac1837f335d1a0c2"
+    }
+  ],
+  "documentation_files": [
+    {
+      "path": "PROJECT_STATE.md",
+      "sha256": "bb72cd0416fd7169de6254bca0592b6791b16bf3d30039bf54164166cd4f72fa"
+    },
+    {
+      "path": "docs/index.md",
+      "sha256": "149b7ec13dbd295c36f336a3f23441e5a44131f34d1888a97cf8fc39de461122"
+    },
+    {
+      "path": "docs/system/CONTENT_CLEANUP_CONTRACT.md",
+      "sha256": "8eef32c58749deb2a24cb16da5ae5bdaf3c3f1ae6baac41f1fc750562fbc9b9d"
+    },
+    {
+      "path": "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md",
+      "sha256": "7feadd3fa41adf96e888f9ae2e8386504e0cd5018926f7e75bba9cabfef4e537"
+    },
+    {
+      "path": "docs/documentation-inventory.md",
+      "sha256": "5aa9b51d29f1979c6d003da98cc9c7594d70edf5faa666e1199d975217a4aa84"
+    },
+    {
+      "path": "docs/execution/ux-audit-noise-matching-2026-10-25.md",
+      "sha256": "e23c1174271105fb6744bec2426d6ecc68b928b5654e488564baada5e803561d"
+    }
+  ],
+  "primary_installed_sources": [
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/character-reference.js",
+      "sha256": "cc8138483321def7b2f4304df0e76ee2bcea84bb1bc5bc603534063b30ddd959"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/code-text.js",
+      "sha256": "6e59e9b77a76a825c8cd142b0a2f0495aa5122da271770cb09322456a5207451"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-util-decode-numeric-character-reference@2.0.2/node_modules/micromark-util-decode-numeric-character-reference/index.js",
+      "sha256": "74d2139b3651d79a7f4c1d3b21159d9c89459256e12b263ed2eb6b4fce599f87"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-extension-gfm-autolink-literal@2.1.0/node_modules/micromark-extension-gfm-autolink-literal/lib/syntax.js",
+      "sha256": "2b45c68982c1f80daf125b709faba88803b131a0d710b0374dd309495a74efeb"
+    },
+    {
+      "path": "node_modules/.pnpm/mdast-util-gfm-autolink-literal@2.0.1/node_modules/mdast-util-gfm-autolink-literal/lib/index.js",
+      "sha256": "4965bd92f22009a0fd0fa4f7af73903e4d793165634c26ab5827fe5386fbcff2"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/html-text.js",
+      "sha256": "017f2b1f7be2303f4b849394f29430f4daea803dbb7eaf4ce82bb63e42e6c47c"
+    }
+  ],
+  "renderer_versions": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "remark-breaks": "4.0.0",
+    "remark-math": "6.0.0"
+  },
+  "verification": {
+    "baseline_sha256": "5201018286ad30bc5199af423f747737e47d8dc1f989e365ced10e6a26cbd5d3",
+    "source_sha256": "060711ad75857097f668adef53ebe7e63b41e5bcfe6dbea1d05cb40fa80991b6",
+    "ast_changes": [
+      "_GFM_PROTOCOL_CONTEXT",
+      "_GFM_PROTOCOL_SLASH",
+      "_MarkdownHtmlRecognizer",
+      "_gfm_protocol_ranges",
+      "_markdown_html_ranges",
+      "protected_ranges"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "context-corpus.json",
+        "combinations": 688,
+        "hits": 724,
+        "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105",
+        "metadata_differences": 0,
+        "range_differences": 0
+      }
+    ],
+    "new_matrix": {
+      "combinations": 804,
+      "links": 636,
+      "unpositioned": 486,
+      "before_interval_differences": 248,
+      "after_interval_differences": 0,
+      "mapping": "Installed renderer plus independent CommonMark decoding/source-end provenance; captures links with and without positions, images, code/math and HTML partitions. All anchors counted; incomplete arbitrary node partition conformance is not claimed."
+    }
+  },
+  "renderer_matrix": {
+    "combinations": 804,
+    "unique_sources": 796,
+    "families": {
+      "html_code_order": 432,
+      "earlier_code_and_blocks": 24,
+      "slash_origins": 336,
+      "non_slash_controls": 12
+    },
+    "links": 636,
+    "unpositioned": 486,
+    "duplicate_scope": "Literal slash pair permutations duplicate eight sources; source cardinality reported separately.",
+    "mapping": "Installed renderer and independent CommonMark reference/source mapping, including code/HTML/link/image nodes; every anchor counted, not an arbitrary-node conformance proof."
+  },
+  "slash_origin_precheck": {
+    "named_reference_count": 2125,
+    "named_slash_aliases": [
+      "sol;"
+    ],
+    "source_forms": [
+      "/",
+      "&sol;",
+      "&#47;",
+      "&#047;",
+      "&#0047;",
+      "&#00047;",
+      "&#000047;",
+      "&#0000047;",
+      "&#x2f;",
+      "&#x2F;",
+      "&#X2f;",
+      "&#X2F;",
+      "&#x02f;",
+      "&#x02F;",
+      "&#X02f;",
+      "&#X02F;",
+      "&#x002f;",
+      "&#x002F;",
+      "&#X002f;",
+      "&#X002F;",
+      "&#x0002f;",
+      "&#x0002F;",
+      "&#X0002f;",
+      "&#X0002F;",
+      "&#x00002f;",
+      "&#x00002F;",
+      "&#X00002f;",
+      "&#X00002F;"
+    ],
+    "positive_matrix_combinations": 336,
+    "negative_controls": 12,
+    "non_incidental_guard": "All-reference pairs have no literal slash in their domain/path; they cannot pass accidentally because of an unrelated path slash.",
+    "proof_scope": "A necessary ASCII slash source condition only. Slash-containing non-URLs and escaped references may pass and still require full recognition. Other protection is not skipped."
+  },
+  "continued_probes": [
+    {
+      "family": "unquoted_slash_first",
+      "source": "Retain [https://links.test/NOISE<em x=/>tail retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 32,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          32
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=/&gt;tail retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "same": true,
+      "before": [
+        [
+          8,
+          32
+        ]
+      ]
+    },
+    {
+      "family": "unquoted_slash_later",
+      "source": "Retain [https://links.test/NOISE<em x=a/b>tail retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 35,
+          "positioned": false,
+          "visible": "https://links.test/NOISE<em",
+          "url": "https://links.test/NOISE<em"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          35
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE%3Cem\">https://links.test/NOISE&lt;em</a> x=a/b&gt;tail retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "same": true,
+      "before": [
+        [
+          8,
+          35
+        ]
+      ]
+    },
+    {
+      "family": "missing_attribute_space",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"a\"y=tail> retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 40,
+          "positioned": false,
+          "visible": "https://links.test/NOISE<em",
+          "url": "https://links.test/NOISE<em"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          40
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE%3Cem\">https://links.test/NOISE&lt;em</a> x=&quot;a&quot;y=tail&gt; retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "same": true,
+      "before": [
+        [
+          8,
+          40
+        ]
+      ]
+    },
+    {
+      "family": "valid_attribute_space",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"a\" y=tail> retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 37,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          37
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=&quot;a&quot; y=tail&gt; retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "same": true,
+      "before": [
+        [
+          8,
+          37
+        ]
+      ]
+    },
+    {
+      "family": "url_consumed_escape",
+      "source": "Retain https://links.test/NOISE\\<em>tail</em> retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 32,
+          "positioned": true,
+          "visible": "https://links.test/NOISE\\",
+          "url": "https://links.test/NOISE\\"
+        }
+      ],
+      "expected": [
+        [
+          7,
+          32
+        ]
+      ],
+      "html": "<p>Retain <a href=\"https://links.test/NOISE%5C\">https://links.test/NOISE\\</a>&lt;em&gt;tail&lt;/em&gt; retained</p>",
+      "unpositioned": 0,
+      "actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "same": true,
+      "before": [
+        [
+          7,
+          32
+        ]
+      ]
+    },
+    {
+      "family": "html_code_order",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"`\">tail</em> ordinary `retained` end",
+      "links": [
+        {
+          "start": 8,
+          "end": 37,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=&quot;`&quot;&gt;tail&lt;/em&gt; ordinary <code>retained</code> end</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "same": true,
+      "before": [
+        [
+          8,
+          37
+        ],
+        [
+          44,
+          67
+        ]
+      ]
+    },
+    {
+      "family": "emphasis_text_node",
+      "source": "Retain [*h&#116;tps://links.test/NOISE* retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 38,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          38
+        ]
+      ],
+      "html": "<p>Retain [<em><a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "actual": [
+        [
+          9,
+          39
+        ]
+      ],
+      "same": false,
+      "before": [
+        [
+          9,
+          39
+        ]
+      ]
+    },
+    {
+      "family": "block_html",
+      "source": "<div>\nh&#116;tps://links.test/NOISE\n</div>",
+      "links": [],
+      "expected": [],
+      "html": "&lt;div&gt;\nh&amp;#116;tps://links.test/NOISE\n&lt;/div&gt;",
+      "unpositioned": 0,
+      "actual": [
+        [
+          6,
+          35
+        ]
+      ],
+      "same": false,
+      "before": [
+        [
+          6,
+          35
+        ]
+      ]
+    }
+  ],
+  "red_baseline": {
+    "passed": 144,
+    "failed": 168,
+    "skipped": 0,
+    "junit_seconds": 2.054,
+    "per_module": {
+      "tests.test_content_cleanup": 312
+    },
+    "junit_sha256": "7f20025e3760f19e2281cfbb3ae030bd248ee2af25e1c8d14d60485e77b9ffb0"
+  },
+  "focused": {
+    "passed": 811,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 4.27,
+    "per_module": {
+      "tests.test_content_cleanup": 774,
+      "tests.test_cleanup_detection_reuse": 37
+    },
+    "junit_sha256": "77049244204363366c00791e07addf03581442fe4a8feeb088cf79e296aab4b9"
+  },
+  "api_regression": {
+    "passed": 1577,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 602.557,
+    "per_module": {
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_detection_reuse": 163,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_content_cleanup": 805,
+      "tests.test_noise_rule_regressions": 400
+    },
+    "junit_sha256": "0390a069604734fb9a8498b07ee25ecef774e831e0863643390f32dacfc89b5f",
+    "pytest_reported_seconds": 602.58,
+    "warnings": 96,
+    "entry_command": "corepack pnpm run test:api",
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "scope": "26 cleanup-related modules in one pytest process, not the complete API suite."
+  },
+  "coverage_delta_from_1057": {
+    "html_code_unit_cases": 312,
+    "unique_slash_pair_unit_cases": 164,
+    "negative_reference_unit_cases": 12,
+    "named_alias_unit_cases": 1,
+    "shadow_construction_cases": 8,
+    "source_read_work_cases": 4,
+    "trial_scan_apply_cases": 6,
+    "ordinary_bulk_apply_cases": 3,
+    "legacy_choice_revalidation_cases": 8,
+    "explicit_protected_apply_cases": 2,
+    "total": 520
+  },
+  "work_counter_cases": [
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[entities_without_slashes-128]",
+      "properties": {
+        "protocol_shadow_constructions": "0"
+      }
+    },
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[entities_without_slashes-512]",
+      "properties": {
+        "protocol_shadow_constructions": "0"
+      }
+    },
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[unknown_refs_without_slashes-128]",
+      "properties": {
+        "protocol_shadow_constructions": "0"
+      }
+    },
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[unknown_refs_without_slashes-512]",
+      "properties": {
+        "protocol_shadow_constructions": "0"
+      }
+    },
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[mixed_url_and_entities-128]",
+      "properties": {
+        "protocol_shadow_constructions": "1"
+      }
+    },
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[mixed_url_and_entities-512]",
+      "properties": {
+        "protocol_shadow_constructions": "1"
+      }
+    },
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[slash_but_no_url-128]",
+      "properties": {
+        "protocol_shadow_constructions": "128"
+      }
+    },
+    {
+      "case": "test_gfm_protocol_slash_origin_precheck_avoids_unnecessary_shadows[slash_but_no_url-512]",
+      "properties": {
+        "protocol_shadow_constructions": "512"
+      }
+    },
+    {
+      "case": "test_inline_html_code_precedence_does_not_revisit_source_per_tick[False-128]",
+      "properties": {
+        "html_code_source_codepoints_read": "2304"
+      }
+    },
+    {
+      "case": "test_inline_html_code_precedence_does_not_revisit_source_per_tick[False-512]",
+      "properties": {
+        "html_code_source_codepoints_read": "9216"
+      }
+    },
+    {
+      "case": "test_inline_html_code_precedence_does_not_revisit_source_per_tick[True-128]",
+      "properties": {
+        "html_code_source_codepoints_read": "7936"
+      }
+    },
+    {
+      "case": "test_inline_html_code_precedence_does_not_revisit_source_per_tick[True-512]",
+      "properties": {
+        "html_code_source_codepoints_read": "31744"
+      }
+    }
+  ],
+  "work_counter_scope": "Decoder construction counts plus explicit indexed/sliced source and find inspected-prefix work. No regex/group/decoded-array or process-RSS bound.",
+  "timings": [
+    {
+      "kind": "plain_no_url",
+      "count": 4096,
+      "source_codepoints": 61445,
+      "seconds": {
+        "before": [
+          0.0195720000192523,
+          0.01949950004927814,
+          0.02005520008970052
+        ],
+        "after": [
+          0.020688500022515655,
+          0.01973659999202937,
+          0.019667200045660138
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0195720000192523,
+        "after": 0.01973659999202937
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "code_no_url",
+      "count": 4096,
+      "source_codepoints": 86021,
+      "seconds": {
+        "before": [
+          0.03166930004954338,
+          0.07457639998756349,
+          0.03436729998793453
+        ],
+        "after": [
+          0.031438599922694266,
+          0.03183970006648451,
+          0.031536699971184134
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03436729998793453,
+        "after": 0.031536699971184134
+      },
+      "range_counts": {
+        "before": 4096,
+        "after": 4096
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "ordinary_urls",
+      "count": 1024,
+      "source_codepoints": 38912,
+      "seconds": {
+        "before": [
+          0.021730000036768615,
+          0.021570999990217388,
+          0.021505099954083562
+        ],
+        "after": [
+          0.021335799945518374,
+          0.023115300107747316,
+          0.022490500006824732
+        ]
+      },
+      "median_seconds": {
+        "before": 0.021570999990217388,
+        "after": 0.022490500006824732
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "fallback_urls",
+      "count": 1024,
+      "source_codepoints": 40960,
+      "seconds": {
+        "before": [
+          0.024624699959531426,
+          0.02453840000089258,
+          0.02426600002218038
+        ],
+        "after": [
+          0.02444489998742938,
+          0.024278600001707673,
+          0.06698440003674477
+        ]
+      },
+      "median_seconds": {
+        "before": 0.02453840000089258,
+        "after": 0.02444489998742938
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "url_ticks",
+      "count": 1024,
+      "source_codepoints": 51200,
+      "seconds": {
+        "before": [
+          0.03371200000401586,
+          0.03354500001296401,
+          0.03350790007971227
+        ],
+        "after": [
+          0.03383699990808964,
+          0.03385789995081723,
+          0.03352429997175932
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03354500001296401,
+        "after": 0.03383699990808964
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "entity_tail",
+      "count": 2048,
+      "source_codepoints": 10281,
+      "seconds": {
+        "before": [
+          0.005531400092877448,
+          0.00544459989760071,
+          0.005510800052434206
+        ],
+        "after": [
+          0.005501399980857968,
+          0.0059016000013798475,
+          0.005483499960973859
+        ]
+      },
+      "median_seconds": {
+        "before": 0.005510800052434206,
+        "after": 0.005501399980857968
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "invalid_encoded_heads",
+      "count": 512,
+      "source_codepoints": 14858,
+      "seconds": {
+        "before": [
+          0.004177400027401745,
+          0.004213099949993193,
+          0.004174600006081164
+        ],
+        "after": [
+          0.004280699999071658,
+          0.004148100037127733,
+          0.004404400009661913
+        ]
+      },
+      "median_seconds": {
+        "before": 0.004177400027401745,
+        "after": 0.004280699999071658
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "encoded_urls",
+      "count": 1024,
+      "source_codepoints": 50176,
+      "seconds": {
+        "before": [
+          0.026726799900643528,
+          0.026934399968013167,
+          0.02675920003093779
+        ],
+        "after": [
+          0.027000000001862645,
+          0.027001900016330183,
+          0.028494899976067245
+        ]
+      },
+      "median_seconds": {
+        "before": 0.02675920003093779,
+        "after": 0.027001900016330183
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "html_urls",
+      "count": 1024,
+      "source_codepoints": 58368,
+      "seconds": {
+        "before": [
+          0.03777110006194562,
+          0.03743430005852133,
+          0.038433599984273314
+        ],
+        "after": [
+          0.0374314000364393,
+          0.03779959992971271,
+          0.039316600072197616
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03777110006194562,
+        "after": 0.03779959992971271
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "incomplete_html_quotes",
+      "count": 512,
+      "source_codepoints": 3630,
+      "seconds": {
+        "before": [
+          0.0030808000592514873,
+          0.0030309000285342336,
+          0.0030427000019699335
+        ],
+        "after": [
+          0.0029881999362260103,
+          0.0032053999602794647,
+          0.0029980000108480453
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0030427000019699335,
+        "after": 0.0029980000108480453
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "entities_no_url",
+      "count": 4096,
+      "source_codepoints": 77824,
+      "seconds": {
+        "before": [
+          0.04701089998707175,
+          0.046336399973370135,
+          0.08984280005097389
+        ],
+        "after": [
+          0.02100309997331351,
+          0.02035269991029054,
+          0.02112289995420724
+        ]
+      },
+      "median_seconds": {
+        "before": 0.04701089998707175,
+        "after": 0.02100309997331351
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "html_code_no_url",
+      "count": 1024,
+      "source_codepoints": 56320,
+      "seconds": {
+        "before": [
+          0.014492799993604422,
+          0.014115099911578,
+          0.014388800016604364
+        ],
+        "after": [
+          0.02416050003375858,
+          0.02391290001105517,
+          0.0244298999896273
+        ]
+      },
+      "median_seconds": {
+        "before": 0.014388800016604364,
+        "after": 0.02416050003375858
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      },
+      "same_ranges": false
+    },
+    {
+      "kind": "html_code_with_url",
+      "count": 1024,
+      "source_codepoints": 90112,
+      "seconds": {
+        "before": [
+          0.04475469992030412,
+          0.045220899977721274,
+          0.05025430000387132
+        ],
+        "after": [
+          0.10698290006257594,
+          0.06658670003525913,
+          0.06444180000107735
+        ]
+      },
+      "median_seconds": {
+        "before": 0.045220899977721274,
+        "after": 0.06658670003525913
+      },
+      "range_counts": {
+        "before": 2048,
+        "after": 2048
+      },
+      "same_ranges": false
+    },
+    {
+      "kind": "entities_no_url_with_slash",
+      "count": 4096,
+      "source_codepoints": 81920,
+      "seconds": {
+        "before": [
+          0.04668989998754114,
+          0.04750470002181828,
+          0.0470109999878332
+        ],
+        "after": [
+          0.047863999963738024,
+          0.047189699951559305,
+          0.048080299980938435
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0470109999878332,
+        "after": 0.047863999963738024
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      },
+      "same_ranges": true
+    },
+    {
+      "kind": "entities_beside_url",
+      "count": 4096,
+      "source_codepoints": 77866,
+      "seconds": {
+        "before": [
+          0.047880199970677495,
+          0.045591100002638996,
+          0.045668200007639825
+        ],
+        "after": [
+          0.027583600021898746,
+          0.02763199992477894,
+          0.027799800038337708
+        ]
+      },
+      "median_seconds": {
+        "before": 0.045668200007639825,
+        "after": 0.02763199992477894
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      },
+      "same_ranges": true
+    }
+  ],
+  "timing_scope": "Fifteen component controls, three warmed alternating samples after pytest terminated. Corrected HTML/code intervals can differ; slash-containing negative control retained, no all-input speed guarantee.",
+  "temporary_root": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-noise-html-precedence",
+  "raw_artifacts": [
+    {
+      "name": "content-cleanup-before.py",
+      "sha256": "5201018286ad30bc5199af423f747737e47d8dc1f989e365ced10e6a26cbd5d3"
+    },
+    {
+      "name": "render-precedence.mjs",
+      "sha256": "4218dc0b7c288e30fcd0fd91c6daac9261215946027a43b42f811a94efe1c3f8"
+    },
+    {
+      "name": "precedence-corpus.json",
+      "sha256": "48db1f39cfd1db5175d7f96458ecdc560cd8e5dd7d0b22eda2fd635b8cbde0ea"
+    },
+    {
+      "name": "baseline-comparison.json",
+      "sha256": "ecfb46f6314f0fc745e240d2ba6afcc01d9f4a8d9c65c07bf2fee686c8e118cd"
+    },
+    {
+      "name": "current-comparison.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "name": "unit-test-block.txt",
+      "sha256": "034614eb694c36a14548efafe15278a8ce74124ca78e10a12548f4402ef7469e"
+    },
+    {
+      "name": "verify-precedence.py",
+      "sha256": "e6551fc3cb4d222fc51766c3726970ffa95eaa5d81dd1e637a6b00c74217a7a0"
+    },
+    {
+      "name": "verification.json",
+      "sha256": "a57fb1e0c16348dbcb765d960d6d485c09eab3262366fdcf8537a3183c4a3ba5"
+    },
+    {
+      "name": "verification.log",
+      "sha256": "a57fb1e0c16348dbcb765d960d6d485c09eab3262366fdcf8537a3183c4a3ba5"
+    },
+    {
+      "name": "precedence-focus.xml",
+      "sha256": "77049244204363366c00791e07addf03581442fe4a8feeb088cf79e296aab4b9"
+    },
+    {
+      "name": "precedence-focus.log",
+      "sha256": "02eedf2fb119b18cf4e24a10205715e66e3ff87d5f2310aad9a0caf110f54685"
+    },
+    {
+      "name": "precedence-red.xml",
+      "sha256": "7f20025e3760f19e2281cfbb3ae030bd248ee2af25e1c8d14d60485e77b9ffb0"
+    },
+    {
+      "name": "precedence-red.log",
+      "sha256": "1893634d7e41a3ffd4e8f4202ce9456ff3dbf5cd293fe9702fa54a02b5f2c6ef"
+    },
+    {
+      "name": "final-source-start.json",
+      "sha256": "07addf7c4853dbf9a96a06f655839c7ca53dd21c33ec07ce21777832bbbd4793"
+    },
+    {
+      "name": "precedence-final.xml",
+      "sha256": "0390a069604734fb9a8498b07ee25ecef774e831e0863643390f32dacfc89b5f"
+    },
+    {
+      "name": "precedence-final.log",
+      "sha256": "e34d13826ae4bbdd3ab49c9d9ea82344107516facf466edd81b7fbed589b1852"
+    },
+    {
+      "name": "continued-probes.json",
+      "sha256": "51c3f350d45e8edac196079e18a8062e2452a053ba32b363fee1a66f5d53364b"
+    },
+    {
+      "name": "measure-precedence.py",
+      "sha256": "4a5da044f2db178009edbfa4179677cd04b6661d6cd41cffd8238358daa113c8"
+    },
+    {
+      "name": "timings.json",
+      "sha256": "97189363149618f1e31c6365b3781f02c1819cf6a04d278f3fcf1b3d4f70f5ad"
+    }
+  ],
+  "preexisting_tsconfig_sha256": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7",
+  "validation_limits": [
+    "Emphasis-boundary and block-HTML probes still differ; full definitions, email/www, arbitrary grammar/extensions remain unproven.",
+    "Text provenance and indexes are operation-local proportional storage; source-work counters do not prove all-input complexity, RSS or OOM safety.",
+    "No Web build/browser, complete API suite, PostgreSQL concurrency, CI or production acceptance.",
+    "No web search, commit, push, deployment, dependency/migration/offline-format/imported-user-data or production configuration changes."
+  ]
+}

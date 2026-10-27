@@ -1,0 +1,5224 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "parent_checkpoint": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/reference-registration-2026-10-26.json",
+    "sha256": "59e781be08a55546f75608832df96bbdaf4a30734396d7748b5c7ed4b515efc6"
+  },
+  "baseline_source_sha256": "80348f1ce19005b1d28cd4aec86be0bf22efb420215d9e3d7b95efea006cf81f",
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "8e72acac31dfb3a03de9b2835754ec705c882228245ae69a3eb152efc253e590"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "37b7989fc4c9bf07f7832bcadda28dd4a5b957523fd409932d14305571e08a9f"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "source_start_unchanged_after_final_run": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "8e72acac31dfb3a03de9b2835754ec705c882228245ae69a3eb152efc253e590"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "37b7989fc4c9bf07f7832bcadda28dd4a5b957523fd409932d14305571e08a9f"
+    }
+  ],
+  "source_end_unchanged_after_final_run": [
+    {
+      "sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7",
+      "path": "apps/api/app/services/content_cleanup.py"
+    },
+    {
+      "sha256": "8e72acac31dfb3a03de9b2835754ec705c882228245ae69a3eb152efc253e590",
+      "path": "apps/api/tests/test_content_cleanup.py"
+    },
+    {
+      "sha256": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397",
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py"
+    },
+    {
+      "sha256": "37b7989fc4c9bf07f7832bcadda28dd4a5b957523fd409932d14305571e08a9f",
+      "path": "apps/api/tests/test_noise_rule_regressions.py"
+    }
+  ],
+  "documentation_files": [
+    {
+      "path": "PROJECT_STATE.md",
+      "sha256": "6a4bf01c00b6b1e217f3b91e489e4dca347a822f5b6e35e1179f95bb0cc8e160"
+    },
+    {
+      "path": "docs/index.md",
+      "sha256": "70706b4703757c02ddf46b280076f8c680acb2aad906f46d6345e743da5d6bdf"
+    },
+    {
+      "path": "docs/system/CONTENT_CLEANUP_CONTRACT.md",
+      "sha256": "a846f393f1cd8c27e04cee2c802f6b5f10cfc66dd7355a8400772841a76ff27a"
+    },
+    {
+      "path": "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md",
+      "sha256": "48c9e0ffc602e70886dd6ea588533d0d5f3158aa0439faa54c29e1d5abd510bd"
+    },
+    {
+      "path": "docs/documentation-inventory.md",
+      "sha256": "04fe2c886df4cd8772153b4c862a4302f15893db3e0874cae7431a59e5045067"
+    },
+    {
+      "path": "docs/execution/ux-audit-noise-matching-2026-10-25.md",
+      "sha256": "8b27d747231be1b9c35975da1b770c5fab3a70eff4715d22af03f350dc194ba1"
+    }
+  ],
+  "renderer_versions": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "remark-breaks": "4.0.0",
+    "remark-math": "6.0.0",
+    "micromark": "4.0.2",
+    "micromark-extension-gfm": "3.0.0",
+    "micromark-extension-math": "3.1.0"
+  },
+  "primary_installed_sources": [
+    {
+      "path": "node_modules/.pnpm/mdast-util-find-and-replace@3.0.2/node_modules/mdast-util-find-and-replace/lib/index.js",
+      "sha256": "b171699f61c99a82565a6d6f8f3a1348d7d37756f889be30def0337caa9dbe2f"
+    },
+    {
+      "path": "node_modules/.pnpm/mdast-util-gfm-autolink-literal@2.0.1/node_modules/mdast-util-gfm-autolink-literal/lib/index.js",
+      "sha256": "4965bd92f22009a0fd0fa4f7af73903e4d793165634c26ab5827fe5386fbcff2"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/autolink.js",
+      "sha256": "d0762261ea02440fbc81b5facf994bc42ba1561d4c7bf822dd9d09a7c05a69ed"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/definition.js",
+      "sha256": "800e7ef9f722e2536dc5e9774d0e22b0dcc58770d7a8011dc2c205f5fd263009"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-end.js",
+      "sha256": "0fb2b950e1ed066cc1af4072bb4ff841a640aa8e02a43dc6de288ea8044e67e4"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-extension-gfm-autolink-literal@2.1.0/node_modules/micromark-extension-gfm-autolink-literal/lib/syntax.js",
+      "sha256": "2b45c68982c1f80daf125b709faba88803b131a0d710b0374dd309495a74efeb"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-extension-gfm-footnote@2.1.0/node_modules/micromark-extension-gfm-footnote/lib/syntax.js",
+      "sha256": "5fd8d63fcbb9918a0f7b92f2ba6adea3845e9cbf7f1e74ee239f4d018943ef6b"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-extension-gfm@3.0.0/node_modules/micromark-extension-gfm/index.js",
+      "sha256": "66b05551c6efe3d6a1c75bca914c192139bc3c998fdb2b0d0784ab6685934bbc"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-extension-math@3.1.0/node_modules/micromark-extension-math/index.js",
+      "sha256": "d2651b530ac7e16dac559f6230bae438846f693dbc7b8e39b2b3001bf8455208"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-factory-destination@2.0.1/node_modules/micromark-factory-destination/index.js",
+      "sha256": "8ef4475091af9f26c98ef6ee0fcccc8964fcbf60c7654b9f3d4af34da2adaa4b"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-factory-label@2.0.1/node_modules/micromark-factory-label/index.js",
+      "sha256": "011484772e200ea32f3139c0a258627af573dcabd78bd4eb514a34495cb4aea0"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-factory-title@2.0.1/node_modules/micromark-factory-title/index.js",
+      "sha256": "1556b0f5d6f04b32d7178ea89b6381b936d7b8a18c92f4ca2844c4c062ed7a89"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-util-character@2.1.1/node_modules/micromark-util-character/index.js",
+      "sha256": "0ec487160ae3fa7f375698f9f951a0c5d7d752800bca2e3b1de15e3a07ee0417"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-util-normalize-identifier@2.0.1/node_modules/micromark-util-normalize-identifier/index.js",
+      "sha256": "6def6e2422ac8905df740d27603d8eaa5d2fdbe41122c40958ac785ff0c8dfe3"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark@4.0.2/node_modules/micromark/index.js",
+      "sha256": "0abeeca43ffae89b3d911da05de284f4ea6b80bde67ee8f30d7bc9655f4dad97"
+    }
+  ],
+  "renderer_matrix": {
+    "combinations": 4010,
+    "unique_sources": 4006,
+    "links": 3055,
+    "unpositioned_links": 1819,
+    "literal_hits": 8212,
+    "comparison": {
+      "before": {
+        "hit_membership_differences": 2507,
+        "exact_interval_differences": 2603,
+        "hits": 8212
+      },
+      "current": {
+        "hit_membership_differences": 0,
+        "exact_interval_differences": 0,
+        "hits": 8212
+      }
+    },
+    "oracle": "Installed native token/render spans plus explicit conservative reference and whole-asset protection policy. Eight literal-hit policy extras are pre-existing whole-attachment safeguards; this is not pure DOM/AST equivalence."
+  },
+  "verification": {
+    "baseline_sha256": "80348f1ce19005b1d28cd4aec86be0bf22efb420215d9e3d7b95efea006cf81f",
+    "source_sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7",
+    "ast_changes": [
+      "_GFM_ASCII_ALNUM",
+      "_GFM_AUTOLINK_ORIGIN",
+      "_GFM_EMAIL_AT",
+      "_GFM_EMAIL_PUNCTUATION",
+      "_GFM_EMAIL_TEXT",
+      "_GFM_FALLBACK_CANDIDATE",
+      "_GFM_FALLBACK_EMAIL_DOMAIN",
+      "_GFM_FALLBACK_URL",
+      "_GFM_FALLBACK_URL_HEAD",
+      "_GFM_LITERAL",
+      "_GFM_LITERAL_CONTEXT",
+      "_GFM_LITERAL_HEAD",
+      "_GFM_LITERAL_PATTERN",
+      "_GFM_PROTOCOL",
+      "_GFM_PROTOCOL_CONTEXT",
+      "_GFM_SOURCE_EMAIL_DOMAIN",
+      "_GfmProtocolTokenizer",
+      "_gfm_fallback_url_ranges",
+      "_gfm_protocol_ranges",
+      "protected_ranges"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "context-corpus.json",
+        "combinations": 688,
+        "hits": 724,
+        "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "precedence-corpus.json",
+        "combinations": 804,
+        "hits": 1260,
+        "sha256": "48db1f39cfd1db5175d7f96458ecdc560cd8e5dd7d0b22eda2fd635b8cbde0ea",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "html-block-corpus.json",
+        "combinations": 3053,
+        "hits": 18223,
+        "sha256": "b7388b4d8ec9b91895ea0bbe3ec6ec048427cc62bc8dab3abe6a4246c47f6a2c",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "emphasis-corpus.json",
+        "combinations": 7918,
+        "hits": 13028,
+        "sha256": "00cd32fed8a1809274519c05623d85ef75dcb44307de2668da66cd66450fd0ce",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "strikethrough-corpus.json",
+        "combinations": 6263,
+        "hits": 10753,
+        "sha256": "60922d9ac8905a1c55cbcca00b26711c6adf361ea6ee86a50a9c172e8fb608d1",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "reference-corpus.json",
+        "combinations": 1688,
+        "hits": 3376,
+        "sha256": "4b112514767ae087f494ad4c00463c3c07774211675b1efe8509ed2f3c378e47",
+        "metadata_differences": 0,
+        "range_differences": 0
+      }
+    ]
+  },
+  "frozen_renderer_cases": {
+    "cases": 412,
+    "unique_sources": 412,
+    "intervals_match_independent_renderer": true
+  },
+  "baseline_red": {
+    "passed": 144,
+    "failed": 268,
+    "skipped": 0,
+    "junit_seconds": 42.031,
+    "per_module": {
+      "tests.test_content_cleanup": 412
+    },
+    "junit_sha256": "3eaa820c0bb0f9dede9f167d773194c15e73795438aeb68cf0fca8c21518ea15"
+  },
+  "green": {
+    "passed": 448,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 52.075,
+    "per_module": {
+      "tests.test_cleanup_detection_reuse": 12,
+      "tests.test_content_cleanup": 412,
+      "tests.test_noise_rule_regressions": 24
+    },
+    "junit_sha256": "737cac654e7e9220861c3d495fbb7bb83969088fa84f9fafdb01bfa4e8d16e8e"
+  },
+  "api_regression": {
+    "passed": 3462,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 895.087,
+    "per_module": {
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_detection_reuse": 207,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_content_cleanup": 2540,
+      "tests.test_noise_rule_regressions": 506
+    },
+    "junit_sha256": "4e497a6d5cefccbb0648e0ef76a0eb2874037a628f0346c2009821fae5ec4e0a",
+    "warnings": 140,
+    "pytest_reported_seconds": 895.15,
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "scope": "Same 26 cleanup-related API modules as parent checkpoint, one normal-exit run; not the complete API suite."
+  },
+  "coverage_delta_from_3006": {
+    "total": 456,
+    "frozen_intervals": 412,
+    "explicit_source_reads": 12,
+    "mixed_trial_scan_apply": 4,
+    "ordinary_bulk": 4,
+    "legacy_choices": 8,
+    "explicit_confirmation": 8,
+    "rescan": 8
+  },
+  "preliminary_oracle_note": "The first 3086-case comparator omitted eight pre-existing whole-attachment safeguards. Its baseline-comparison.log is retained as an initial oracle stage, not the authoritative product baseline.",
+  "work_counters": {
+    "pytest_cases": 12,
+    "scope": "At most 64 times input length for explicit source reads; excludes regex internals, decoded-text/bucket work and RSS.",
+    "additional_probes": [
+      {
+        "version": "initial",
+        "kind": "raw_www_failed",
+        "count": 128,
+        "source_codepoints": 674,
+        "source_reads": 45805,
+        "regex_calls": 129,
+        "regex_matches": 128,
+        "range_count": 0
+      },
+      {
+        "version": "current",
+        "kind": "raw_www_failed",
+        "count": 128,
+        "source_codepoints": 674,
+        "source_reads": 3133,
+        "regex_calls": 1,
+        "regex_matches": 1,
+        "range_count": 0
+      },
+      {
+        "version": "initial",
+        "kind": "raw_www_failed",
+        "count": 512,
+        "source_codepoints": 2594,
+        "source_reads": 674605,
+        "regex_calls": 513,
+        "regex_matches": 512,
+        "range_count": 0
+      },
+      {
+        "version": "current",
+        "kind": "raw_www_failed",
+        "count": 512,
+        "source_codepoints": 2594,
+        "source_reads": 12349,
+        "regex_calls": 1,
+        "regex_matches": 1,
+        "range_count": 0
+      },
+      {
+        "version": "initial",
+        "kind": "fallback_www_failed",
+        "count": 128,
+        "source_codepoints": 547,
+        "source_reads": 539,
+        "regex_calls": 129,
+        "regex_matches": 128,
+        "range_count": 0
+      },
+      {
+        "version": "current",
+        "kind": "fallback_www_failed",
+        "count": 128,
+        "source_codepoints": 547,
+        "source_reads": 539,
+        "regex_calls": 1,
+        "regex_matches": 1,
+        "range_count": 0
+      },
+      {
+        "version": "initial",
+        "kind": "fallback_www_failed",
+        "count": 512,
+        "source_codepoints": 2083,
+        "source_reads": 2075,
+        "regex_calls": 513,
+        "regex_matches": 512,
+        "range_count": 0
+      },
+      {
+        "version": "current",
+        "kind": "fallback_www_failed",
+        "count": 512,
+        "source_codepoints": 2083,
+        "source_reads": 2075,
+        "regex_calls": 1,
+        "regex_matches": 1,
+        "range_count": 0
+      },
+      {
+        "version": "initial",
+        "kind": "email_retry",
+        "count": 128,
+        "source_codepoints": 296,
+        "source_reads": 275,
+        "regex_calls": 1,
+        "regex_matches": 0,
+        "range_count": 0
+      },
+      {
+        "version": "current",
+        "kind": "email_retry",
+        "count": 128,
+        "source_codepoints": 296,
+        "source_reads": 275,
+        "regex_calls": 0,
+        "regex_matches": 0,
+        "range_count": 0
+      },
+      {
+        "version": "initial",
+        "kind": "email_retry",
+        "count": 512,
+        "source_codepoints": 1064,
+        "source_reads": 1043,
+        "regex_calls": 1,
+        "regex_matches": 0,
+        "range_count": 0
+      },
+      {
+        "version": "current",
+        "kind": "email_retry",
+        "count": 512,
+        "source_codepoints": 1064,
+        "source_reads": 1043,
+        "regex_calls": 0,
+        "regex_matches": 0,
+        "range_count": 0
+      },
+      {
+        "version": "initial",
+        "kind": "email_chain",
+        "count": 128,
+        "source_codepoints": 3085,
+        "source_reads": 2054,
+        "regex_calls": 1,
+        "regex_matches": 0,
+        "range_count": 64
+      },
+      {
+        "version": "current",
+        "kind": "email_chain",
+        "count": 128,
+        "source_codepoints": 3085,
+        "source_reads": 2054,
+        "regex_calls": 0,
+        "regex_matches": 0,
+        "range_count": 64
+      },
+      {
+        "version": "initial",
+        "kind": "email_chain",
+        "count": 512,
+        "source_codepoints": 12301,
+        "source_reads": 8198,
+        "regex_calls": 1,
+        "regex_matches": 0,
+        "range_count": 256
+      },
+      {
+        "version": "current",
+        "kind": "email_chain",
+        "count": 512,
+        "source_codepoints": 12301,
+        "source_reads": 8198,
+        "regex_calls": 0,
+        "regex_matches": 0,
+        "range_count": 256
+      }
+    ]
+  },
+  "necessary_origins": {
+    "named_origins": {
+      "w": [],
+      "W": [],
+      ".": [
+        "period;"
+      ],
+      "@": [
+        "commat;"
+      ],
+      "/": [
+        "sol;"
+      ]
+    },
+    "numeric_cases": 75,
+    "cases": [
+      {
+        "source": "ww&#87;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#087;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#0087;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#00087;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#000087;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#0000087;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#00000087;.NOISE.test",
+        "decoded": "ww&#00000087;.NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "ww&#x57;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x0057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x00057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x000057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x0000057;.NOISE.test",
+        "decoded": "ww&#x0000057;.NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "ww&#X57;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X0057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X00057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X000057;.NOISE.test",
+        "decoded": "wwW.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X0000057;.NOISE.test",
+        "decoded": "ww&#X0000057;.NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "ww&#119;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#0119;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#00119;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#000119;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#0000119;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#00000119;.NOISE.test",
+        "decoded": "ww&#00000119;.NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "ww&#x77;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x0077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x00077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x000077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#x0000077;.NOISE.test",
+        "decoded": "ww&#x0000077;.NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "ww&#X77;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X0077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X00077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X000077;.NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "ww&#X0000077;.NOISE.test",
+        "decoded": "ww&#X0000077;.NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "www&#46;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#046;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#0046;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#00046;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#000046;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#0000046;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#00000046;NOISE.test",
+        "decoded": "www&#00000046;NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "www&#x2e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#x02e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#x002e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#x0002e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#x00002e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#x000002e;NOISE.test",
+        "decoded": "www&#x000002e;NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "www&#X2e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#X02e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#X002e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#X0002e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#X00002e;NOISE.test",
+        "decoded": "www.NOISE.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "www&#X000002e;NOISE.test",
+        "decoded": "www&#X000002e;NOISE.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "NOISE&#64;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#064;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#0064;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#00064;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#000064;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#0000064;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#00000064;links.test",
+        "decoded": "NOISE&#00000064;links.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "NOISE&#x40;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#x040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#x0040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#x00040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#x000040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#x0000040;links.test",
+        "decoded": "NOISE&#x0000040;links.test",
+        "origin_eligible": false
+      },
+      {
+        "source": "NOISE&#X40;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#X040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#X0040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#X00040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#X000040;links.test",
+        "decoded": "NOISE@links.test",
+        "origin_eligible": true
+      },
+      {
+        "source": "NOISE&#X0000040;links.test",
+        "decoded": "NOISE&#X0000040;links.test",
+        "origin_eligible": false
+      }
+    ],
+    "source_sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7"
+  },
+  "timings": [
+    {
+      "kind": "plain_no_url",
+      "count": 4096,
+      "source_codepoints": 61445,
+      "seconds": {
+        "before": [
+          0.020583200035616755,
+          0.02099890005774796,
+          0.021400899975560606
+        ],
+        "initial": [
+          0.0244341999059543,
+          0.024272700073197484,
+          0.02368780004326254
+        ],
+        "after": [
+          0.023106800043024123,
+          0.023647100082598627,
+          0.023794300039298832
+        ]
+      },
+      "median_seconds": {
+        "before": 0.02099890005774796,
+        "initial": 0.024272700073197484,
+        "after": 0.023647100082598627
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 0,
+        "after": 0
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "code_no_url",
+      "count": 4096,
+      "source_codepoints": 86021,
+      "seconds": {
+        "before": [
+          0.03538060002028942,
+          0.07583519991021603,
+          0.03412419999949634
+        ],
+        "initial": [
+          0.07955150003544986,
+          0.0386850000359118,
+          0.038713600020855665
+        ],
+        "after": [
+          0.03852880001068115,
+          0.03867500007618219,
+          0.03866099996957928
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03538060002028942,
+        "initial": 0.038713600020855665,
+        "after": 0.03866099996957928
+      },
+      "range_counts": {
+        "before": 4096,
+        "initial": 4096,
+        "after": 4096
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "ordinary_urls",
+      "count": 1024,
+      "source_codepoints": 38912,
+      "seconds": {
+        "before": [
+          0.027287499979138374,
+          0.02878170006442815,
+          0.027016000007279217
+        ],
+        "initial": [
+          0.03682290005963296,
+          0.035489800036884844,
+          0.03572029992938042
+        ],
+        "after": [
+          0.03548060008324683,
+          0.035916300024837255,
+          0.0356059999903664
+        ]
+      },
+      "median_seconds": {
+        "before": 0.027287499979138374,
+        "initial": 0.03572029992938042,
+        "after": 0.0356059999903664
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "fallback_urls",
+      "count": 1024,
+      "source_codepoints": 40960,
+      "seconds": {
+        "before": [
+          0.033673300058580935,
+          0.034494200022891164,
+          0.03404299996327609
+        ],
+        "initial": [
+          0.05252439994364977,
+          0.05242769990582019,
+          0.0524293000344187
+        ],
+        "after": [
+          0.04840860003605485,
+          0.0474897000240162,
+          0.04747620003763586
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03404299996327609,
+        "initial": 0.0524293000344187,
+        "after": 0.0474897000240162
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "url_ticks",
+      "count": 1024,
+      "source_codepoints": 51200,
+      "seconds": {
+        "before": [
+          0.04057830001693219,
+          0.04036820004694164,
+          0.04032530006952584
+        ],
+        "initial": [
+          0.055363700026646256,
+          0.054965299903415143,
+          0.05498489993624389
+        ],
+        "after": [
+          0.05532769998535514,
+          0.055015800055116415,
+          0.09705300000496209
+        ]
+      },
+      "median_seconds": {
+        "before": 0.04036820004694164,
+        "initial": 0.05498489993624389,
+        "after": 0.05532769998535514
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "entity_tail",
+      "count": 2048,
+      "source_codepoints": 10281,
+      "seconds": {
+        "before": [
+          0.010385700035840273,
+          0.010372600052505732,
+          0.010450500063598156
+        ],
+        "initial": [
+          0.011174399987794459,
+          0.010971499956212938,
+          0.011013299925252795
+        ],
+        "after": [
+          0.01114469999447465,
+          0.01120239996816963,
+          0.011075400048866868
+        ]
+      },
+      "median_seconds": {
+        "before": 0.010385700035840273,
+        "initial": 0.011013299925252795,
+        "after": 0.01114469999447465
+      },
+      "range_counts": {
+        "before": 1,
+        "initial": 1,
+        "after": 1
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "invalid_encoded_heads",
+      "count": 512,
+      "source_codepoints": 14858,
+      "seconds": {
+        "before": [
+          0.010613800026476383,
+          0.01058930007275194,
+          0.010710000060498714
+        ],
+        "initial": [
+          0.03622080001514405,
+          0.035653900005854666,
+          0.0357306000078097
+        ],
+        "after": [
+          0.03422550007235259,
+          0.03449049999471754,
+          0.03377870004624128
+        ]
+      },
+      "median_seconds": {
+        "before": 0.010613800026476383,
+        "initial": 0.0357306000078097,
+        "after": 0.03422550007235259
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 0,
+        "after": 0
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "encoded_urls",
+      "count": 1024,
+      "source_codepoints": 50176,
+      "seconds": {
+        "before": [
+          0.042405499960295856,
+          0.04086599999573082,
+          0.04092780000064522
+        ],
+        "initial": [
+          0.049754500039853156,
+          0.051541400025598705,
+          0.050927700009197
+        ],
+        "after": [
+          0.04968300007749349,
+          0.04983689996879548,
+          0.050010700011625886
+        ]
+      },
+      "median_seconds": {
+        "before": 0.04092780000064522,
+        "initial": 0.050927700009197,
+        "after": 0.04983689996879548
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "html_urls",
+      "count": 1024,
+      "source_codepoints": 58368,
+      "seconds": {
+        "before": [
+          0.051107300096191466,
+          0.05041849997360259,
+          0.05073060002177954
+        ],
+        "initial": [
+          0.07395200000610203,
+          0.07325289992149919,
+          0.07286800001747906
+        ],
+        "after": [
+          0.06852830003481358,
+          0.06919320009183139,
+          0.0708462999900803
+        ]
+      },
+      "median_seconds": {
+        "before": 0.05073060002177954,
+        "initial": 0.07325289992149919,
+        "after": 0.06919320009183139
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "incomplete_html_quotes",
+      "count": 512,
+      "source_codepoints": 3630,
+      "seconds": {
+        "before": [
+          0.006647699978202581,
+          0.006751700071617961,
+          0.006601500092074275
+        ],
+        "initial": [
+          0.007128700031898916,
+          0.00707609998062253,
+          0.007107000099495053
+        ],
+        "after": [
+          0.0071229999884963036,
+          0.0071437000297009945,
+          0.007041699951514602
+        ]
+      },
+      "median_seconds": {
+        "before": 0.006647699978202581,
+        "initial": 0.007107000099495053,
+        "after": 0.0071229999884963036
+      },
+      "range_counts": {
+        "before": 1,
+        "initial": 1,
+        "after": 1
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "entities_no_url",
+      "count": 4096,
+      "source_codepoints": 77824,
+      "seconds": {
+        "before": [
+          0.02193369995802641,
+          0.021997999981977046,
+          0.021971200010739267
+        ],
+        "initial": [
+          0.02579589991364628,
+          0.02561539993621409,
+          0.06685840000864118
+        ],
+        "after": [
+          0.02656370005570352,
+          0.0255353000247851,
+          0.025491599924862385
+        ]
+      },
+      "median_seconds": {
+        "before": 0.021971200010739267,
+        "initial": 0.02579589991364628,
+        "after": 0.0255353000247851
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 0,
+        "after": 0
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "html_code_no_url",
+      "count": 1024,
+      "source_codepoints": 56320,
+      "seconds": {
+        "before": [
+          0.04328529990743846,
+          0.08484279992990196,
+          0.043665300006978214
+        ],
+        "initial": [
+          0.04880140000022948,
+          0.04864839999936521,
+          0.04734439996536821
+        ],
+        "after": [
+          0.04776839993428439,
+          0.04855459998361766,
+          0.04735949996393174
+        ]
+      },
+      "median_seconds": {
+        "before": 0.043665300006978214,
+        "initial": 0.04864839999936521,
+        "after": 0.04776839993428439
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "html_code_with_url",
+      "count": 1024,
+      "source_codepoints": 90112,
+      "seconds": {
+        "before": [
+          0.09790549997705966,
+          0.09769729990512133,
+          0.09822200005874038
+        ],
+        "initial": [
+          0.1556855000089854,
+          0.1176666000392288,
+          0.1149407000048086
+        ],
+        "after": [
+          0.11842519999481738,
+          0.1158029999351129,
+          0.11543979996349663
+        ]
+      },
+      "median_seconds": {
+        "before": 0.09790549997705966,
+        "initial": 0.1176666000392288,
+        "after": 0.1158029999351129
+      },
+      "range_counts": {
+        "before": 2048,
+        "initial": 2048,
+        "after": 2048
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "entities_no_url_with_slash",
+      "count": 4096,
+      "source_codepoints": 81920,
+      "seconds": {
+        "before": [
+          0.07985310000367463,
+          0.07883060001768172,
+          0.07909250003285706
+        ],
+        "initial": [
+          0.11535249999724329,
+          0.11730330006685108,
+          0.11692199995741248
+        ],
+        "after": [
+          0.11790169996675104,
+          0.11684410006273538,
+          0.11971230001654476
+        ]
+      },
+      "median_seconds": {
+        "before": 0.07909250003285706,
+        "initial": 0.11692199995741248,
+        "after": 0.11790169996675104
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 0,
+        "after": 0
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "entities_beside_url",
+      "count": 4096,
+      "source_codepoints": 77866,
+      "seconds": {
+        "before": [
+          0.058704999973997474,
+          0.05938089999835938,
+          0.058773200027644634
+        ],
+        "initial": [
+          0.07015839999075979,
+          0.06809850002173334,
+          0.068109399988316
+        ],
+        "after": [
+          0.06937540008220822,
+          0.0695797000080347,
+          0.06887509999796748
+        ]
+      },
+      "median_seconds": {
+        "before": 0.058773200027644634,
+        "initial": 0.068109399988316,
+        "after": 0.06937540008220822
+      },
+      "range_counts": {
+        "before": 1,
+        "initial": 1,
+        "after": 1
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "html_closed_flow",
+      "count": 1024,
+      "source_codepoints": 83968,
+      "seconds": {
+        "before": [
+          0.05305190000217408,
+          0.09420120005961508,
+          0.05522940005175769
+        ],
+        "initial": [
+          0.06344629998784512,
+          0.06309970002621412,
+          0.06319960008841008
+        ],
+        "after": [
+          0.06397409993223846,
+          0.06411599996499717,
+          0.06739810004364699
+        ]
+      },
+      "median_seconds": {
+        "before": 0.05522940005175769,
+        "initial": 0.06319960008841008,
+        "after": 0.06411599996499717
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "html_blank_flow",
+      "count": 1024,
+      "source_codepoints": 70656,
+      "seconds": {
+        "before": [
+          0.04202250007074326,
+          0.04227279999759048,
+          0.042657700018025935
+        ],
+        "initial": [
+          0.053925200016237795,
+          0.054134099977090955,
+          0.09643090004101396
+        ],
+        "after": [
+          0.09644430002663285,
+          0.05441540002357215,
+          0.0535391999874264
+        ]
+      },
+      "median_seconds": {
+        "before": 0.04227279999759048,
+        "initial": 0.054134099977090955,
+        "after": 0.05441540002357215
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "html_inline_comment",
+      "count": 1024,
+      "source_codepoints": 60416,
+      "seconds": {
+        "before": [
+          0.030800099950283766,
+          0.03148739994503558,
+          0.0312689000274986
+        ],
+        "initial": [
+          0.03494949999731034,
+          0.034905700013041496,
+          0.03643099998589605
+        ],
+        "after": [
+          0.07717259996570647,
+          0.03456739999819547,
+          0.034488099976442754
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0312689000274986,
+        "initial": 0.03494949999731034,
+        "after": 0.03456739999819547
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "html_math_owned",
+      "count": 1024,
+      "source_codepoints": 34816,
+      "seconds": {
+        "before": [
+          0.029648599913343787,
+          0.07182980002835393,
+          0.029613199993036687
+        ],
+        "initial": [
+          0.035412800032645464,
+          0.03367710008751601,
+          0.03418640000745654
+        ],
+        "after": [
+          0.03495880006812513,
+          0.03358349995687604,
+          0.03411659994162619
+        ]
+      },
+      "median_seconds": {
+        "before": 0.029648599913343787,
+        "initial": 0.03418640000745654,
+        "after": 0.03411659994162619
+      },
+      "range_counts": {
+        "before": 2048,
+        "initial": 2048,
+        "after": 2048
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "emphasis_paired",
+      "count": 1024,
+      "source_codepoints": 57344,
+      "seconds": {
+        "before": [
+          0.07289930002298206,
+          0.07340820005629212,
+          0.0720173999434337
+        ],
+        "initial": [
+          0.082423499901779,
+          0.08127229998353869,
+          0.08153550000861287
+        ],
+        "after": [
+          0.12388620001729578,
+          0.08114299993030727,
+          0.08143409993499517
+        ]
+      },
+      "median_seconds": {
+        "before": 0.07289930002298206,
+        "initial": 0.08153550000861287,
+        "after": 0.08143409993499517
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "emphasis_unmatched",
+      "count": 1024,
+      "source_codepoints": 56320,
+      "seconds": {
+        "before": [
+          0.053268700023181736,
+          0.05521090002730489,
+          0.05359120003413409
+        ],
+        "initial": [
+          0.06229889998212457,
+          0.06232239992823452,
+          0.06241689994931221
+        ],
+        "after": [
+          0.0626664999872446,
+          0.06388729996979237,
+          0.06513320002704859
+        ]
+      },
+      "median_seconds": {
+        "before": 0.05359120003413409,
+        "initial": 0.06232239992823452,
+        "after": 0.06388729996979237
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "emphasis_rule_three",
+      "count": 2048,
+      "source_codepoints": 16431,
+      "seconds": {
+        "before": [
+          0.05728059995453805,
+          0.05726709996815771,
+          0.05706699995789677
+        ],
+        "initial": [
+          0.06112770002800971,
+          0.060705000068992376,
+          0.06072369997855276
+        ],
+        "after": [
+          0.10154289996717125,
+          0.05970119999255985,
+          0.0600279999198392
+        ]
+      },
+      "median_seconds": {
+        "before": 0.05726709996815771,
+        "initial": 0.06072369997855276,
+        "after": 0.0600279999198392
+      },
+      "range_counts": {
+        "before": 1,
+        "initial": 1,
+        "after": 1
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "emphasis_long_run",
+      "count": 4096,
+      "source_codepoints": 8243,
+      "seconds": {
+        "before": [
+          0.011050800094380975,
+          0.010951699921861291,
+          0.010867299977689981
+        ],
+        "initial": [
+          0.01164369995240122,
+          0.012118899961933494,
+          0.01183820003643632
+        ],
+        "after": [
+          0.011602599988691509,
+          0.011678599985316396,
+          0.011862699990160763
+        ]
+      },
+      "median_seconds": {
+        "before": 0.010951699921861291,
+        "initial": 0.01183820003643632,
+        "after": 0.011678599985316396
+      },
+      "range_counts": {
+        "before": 1,
+        "initial": 1,
+        "after": 1
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "emphasis_html_literal",
+      "count": 1024,
+      "source_codepoints": 67584,
+      "seconds": {
+        "before": [
+          0.07472869998309761,
+          0.07434439996723086,
+          0.1158519999589771
+        ],
+        "initial": [
+          0.08506319997832179,
+          0.08623260003514588,
+          0.08508079999592155
+        ],
+        "after": [
+          0.08668229996692389,
+          0.0858019000152126,
+          0.0861749000614509
+        ]
+      },
+      "median_seconds": {
+        "before": 0.07472869998309761,
+        "initial": 0.08508079999592155,
+        "after": 0.0861749000614509
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "ordinary_url_underscore_paths",
+      "count": 1024,
+      "source_codepoints": 57344,
+      "seconds": {
+        "before": [
+          0.03638349997345358,
+          0.03647369996178895,
+          0.037599400035105646
+        ],
+        "initial": [
+          0.04597370000556111,
+          0.04619219992309809,
+          0.04626810003537685
+        ],
+        "after": [
+          0.04651040001772344,
+          0.046949799987487495,
+          0.04608989995904267
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03647369996178895,
+        "initial": 0.04619219992309809,
+        "after": 0.04651040001772344
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "tilde_paired",
+      "count": 1024,
+      "source_codepoints": 59392,
+      "seconds": {
+        "before": [
+          0.07058709999546409,
+          0.07294550002552569,
+          0.07183639996219426
+        ],
+        "initial": [
+          0.08043120009824634,
+          0.12168340000789613,
+          0.08081879990641028
+        ],
+        "after": [
+          0.08025180001277477,
+          0.08030180004425347,
+          0.08070199994836003
+        ]
+      },
+      "median_seconds": {
+        "before": 0.07183639996219426,
+        "initial": 0.08081879990641028,
+        "after": 0.08030180004425347
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "tilde_crossing",
+      "count": 1024,
+      "source_codepoints": 68608,
+      "seconds": {
+        "before": [
+          0.0929677999811247,
+          0.13614350010175258,
+          0.09375569992698729
+        ],
+        "initial": [
+          0.10547299997415394,
+          0.10352420003619045,
+          0.10465300001669675
+        ],
+        "after": [
+          0.10561590001452714,
+          0.10470969998277724,
+          0.10464919998776168
+        ]
+      },
+      "median_seconds": {
+        "before": 0.09375569992698729,
+        "initial": 0.10465300001669675,
+        "after": 0.10470969998277724
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "tilde_invalid_run",
+      "count": 1024,
+      "source_codepoints": 61440,
+      "seconds": {
+        "before": [
+          0.05329040007200092,
+          0.05245000007562339,
+          0.05229170003440231
+        ],
+        "initial": [
+          0.06335370009765029,
+          0.06288550002500415,
+          0.06212340004276484
+        ],
+        "after": [
+          0.06375719991046935,
+          0.06203479995019734,
+          0.06288820004556328
+        ]
+      },
+      "median_seconds": {
+        "before": 0.05245000007562339,
+        "initial": 0.06288550002500415,
+        "after": 0.06288820004556328
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "label_resolver_priority",
+      "count": 512,
+      "source_codepoints": 43008,
+      "seconds": {
+        "before": [
+          0.056993499980308115,
+          0.05648380005732179,
+          0.05686610005795956
+        ],
+        "initial": [
+          0.0630561999278143,
+          0.06229270005133003,
+          0.06379450007807463
+        ],
+        "after": [
+          0.06260209996253252,
+          0.06253809994086623,
+          0.062162899994291365
+        ]
+      },
+      "median_seconds": {
+        "before": 0.05686610005795956,
+        "initial": 0.0630561999278143,
+        "after": 0.06253809994086623
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "star_list_priority",
+      "count": 1024,
+      "source_codepoints": 69632,
+      "seconds": {
+        "before": [
+          0.09938839997630566,
+          0.1430129000218585,
+          0.10028319992125034
+        ],
+        "initial": [
+          0.11019990011118352,
+          0.11116339999716729,
+          0.11090239998884499
+        ],
+        "after": [
+          0.1112475999398157,
+          0.11101909994613379,
+          0.11201579996850342
+        ]
+      },
+      "median_seconds": {
+        "before": 0.10028319992125034,
+        "initial": 0.11090239998884499,
+        "after": 0.1112475999398157
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "mixed_deep_nested",
+      "count": 512,
+      "source_codepoints": 11316,
+      "seconds": {
+        "before": [
+          0.02787640003953129,
+          0.02691210003104061,
+          0.027499600080773234
+        ],
+        "initial": [
+          0.02898009994532913,
+          0.0296500000404194,
+          0.029118799953721464
+        ],
+        "after": [
+          0.02913120004814118,
+          0.029027500073425472,
+          0.028976399917155504
+        ]
+      },
+      "median_seconds": {
+        "before": 0.027499600080773234,
+        "initial": 0.029118799953721464,
+        "after": 0.029027500073425472
+      },
+      "range_counts": {
+        "before": 1,
+        "initial": 1,
+        "after": 1
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "reference_full",
+      "count": 512,
+      "source_codepoints": 39952,
+      "seconds": {
+        "before": [
+          0.06137570005375892,
+          0.06100640003569424,
+          0.060692000086419284
+        ],
+        "initial": [
+          0.06564249994698912,
+          0.06603830005042255,
+          0.0654777999734506
+        ],
+        "after": [
+          0.06775349995587021,
+          0.06804610008839518,
+          0.0659674999769777
+        ]
+      },
+      "median_seconds": {
+        "before": 0.06100640003569424,
+        "initial": 0.06564249994698912,
+        "after": 0.06775349995587021
+      },
+      "range_counts": {
+        "before": 1025,
+        "initial": 1025,
+        "after": 1025
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "reference_raw_identity",
+      "count": 512,
+      "source_codepoints": 40978,
+      "seconds": {
+        "before": [
+          0.06266520009376109,
+          0.062354100053198636,
+          0.06293589994311333
+        ],
+        "initial": [
+          0.0681911000283435,
+          0.06831400003284216,
+          0.0689338999800384
+        ],
+        "after": [
+          0.06844500009901822,
+          0.068357800017111,
+          0.06836230005137622
+        ]
+      },
+      "median_seconds": {
+        "before": 0.06266520009376109,
+        "initial": 0.06831400003284216,
+        "after": 0.06836230005137622
+      },
+      "range_counts": {
+        "before": 1025,
+        "initial": 1025,
+        "after": 1025
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "reference_image_code",
+      "count": 512,
+      "source_codepoints": 41488,
+      "seconds": {
+        "before": [
+          0.06525749992579222,
+          0.06554619991220534,
+          0.0664083999581635
+        ],
+        "initial": [
+          0.11480660003144294,
+          0.072289599920623,
+          0.07319740008097142
+        ],
+        "after": [
+          0.07233939995057881,
+          0.07237389998044819,
+          0.07257120008580387
+        ]
+      },
+      "median_seconds": {
+        "before": 0.06554619991220534,
+        "initial": 0.07319740008097142,
+        "after": 0.07237389998044819
+      },
+      "range_counts": {
+        "before": 1025,
+        "initial": 1025,
+        "after": 1025
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "reference_inert_definition",
+      "count": 512,
+      "source_codepoints": 26112,
+      "seconds": {
+        "before": [
+          0.018003600067459047,
+          0.019151399959810078,
+          0.018664899980649352
+        ],
+        "initial": [
+          0.019060199963860214,
+          0.060078299953602254,
+          0.018580299918539822
+        ],
+        "after": [
+          0.019418600015342236,
+          0.019663100014440715,
+          0.018674999941140413
+        ]
+      },
+      "median_seconds": {
+        "before": 0.018664899980649352,
+        "initial": 0.019060199963860214,
+        "after": 0.019418600015342236
+      },
+      "range_counts": {
+        "before": 1024,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "reference_no_url",
+      "count": 1024,
+      "source_codepoints": 39952,
+      "seconds": {
+        "before": [
+          0.025754299946129322,
+          0.02557379996869713,
+          0.02597850002348423
+        ],
+        "initial": [
+          0.02822010009549558,
+          0.027999499929137528,
+          0.027797600021585822
+        ],
+        "after": [
+          0.02803629997652024,
+          0.027600400033406913,
+          0.02782859990838915
+        ]
+      },
+      "median_seconds": {
+        "before": 0.025754299946129322,
+        "initial": 0.027999499929137528,
+        "after": 0.02782859990838915
+      },
+      "range_counts": {
+        "before": 1025,
+        "initial": 1025,
+        "after": 1025
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "reference_nested_no_url",
+      "count": 512,
+      "source_codepoints": 1057,
+      "seconds": {
+        "before": [
+          0.009207500028423965,
+          0.009254500037059188,
+          0.009101999923586845
+        ],
+        "initial": [
+          0.009742400026880205,
+          0.009399100090377033,
+          0.009185300092212856
+        ],
+        "after": [
+          0.009681100025773048,
+          0.009407700039446354,
+          0.009323400096036494
+        ]
+      },
+      "median_seconds": {
+        "before": 0.009207500028423965,
+        "initial": 0.009399100090377033,
+        "after": 0.009407700039446354
+      },
+      "range_counts": {
+        "before": 1,
+        "initial": 1,
+        "after": 1
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "www_urls",
+      "count": 1024,
+      "source_codepoints": 46080,
+      "seconds": {
+        "before": [
+          0.010978900012560189,
+          0.011107599944807589,
+          0.010845600045286119
+        ],
+        "initial": [
+          0.04776710004080087,
+          0.04782580002211034,
+          0.04767020000144839
+        ],
+        "after": [
+          0.04801160003989935,
+          0.048216499970294535,
+          0.0496001000283286
+        ]
+      },
+      "median_seconds": {
+        "before": 0.010978900012560189,
+        "initial": 0.04776710004080087,
+        "after": 0.048216499970294535
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": false,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "www_encoded",
+      "count": 1024,
+      "source_codepoints": 53248,
+      "seconds": {
+        "before": [
+          0.06454709998797625,
+          0.06464819994289428,
+          0.0642160999123007
+        ],
+        "initial": [
+          0.12155929999426007,
+          0.07934659998863935,
+          0.07900870009325445
+        ],
+        "after": [
+          0.07889050000812858,
+          0.07957020006142557,
+          0.07967530004680157
+        ]
+      },
+      "median_seconds": {
+        "before": 0.06454709998797625,
+        "initial": 0.07934659998863935,
+        "after": 0.07957020006142557
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": false,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "emails",
+      "count": 1024,
+      "source_codepoints": 41984,
+      "seconds": {
+        "before": [
+          0.010145699954591691,
+          0.011037299991585314,
+          0.010255099972710013
+        ],
+        "initial": [
+          0.037182900006882846,
+          0.03699679998680949,
+          0.036691299988888204
+        ],
+        "after": [
+          0.03720869997050613,
+          0.036716300062835217,
+          0.03636279993224889
+        ]
+      },
+      "median_seconds": {
+        "before": 0.010255099972710013,
+        "initial": 0.03699679998680949,
+        "after": 0.036716300062835217
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": false,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "email_encoded",
+      "count": 1024,
+      "source_codepoints": 51200,
+      "seconds": {
+        "before": [
+          0.012578500085510314,
+          0.011657900060527027,
+          0.011584399966523051
+        ],
+        "initial": [
+          0.07338079996407032,
+          0.07226689998060465,
+          0.07246119994670153
+        ],
+        "after": [
+          0.07388289994560182,
+          0.07411560008767992,
+          0.07363939995411783
+        ]
+      },
+      "median_seconds": {
+        "before": 0.011657900060527027,
+        "initial": 0.07246119994670153,
+        "after": 0.07388289994560182
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 1024,
+        "after": 1024
+      },
+      "same_ranges_before_after": false,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "www_failed",
+      "count": 512,
+      "source_codepoints": 2594,
+      "seconds": {
+        "before": [
+          0.00035360001493245363,
+          0.0002937000244855881,
+          0.00027000007685273886
+        ],
+        "initial": [
+          0.22684219991788268,
+          0.22688969993032515,
+          0.22744239994790405
+        ],
+        "after": [
+          0.008824200020171702,
+          0.00876070000231266,
+          0.008782100048847497
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0002937000244855881,
+        "initial": 0.22688969993032515,
+        "after": 0.008782100048847497
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 0,
+        "after": 0
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "www_fallback_failed",
+      "count": 512,
+      "source_codepoints": 2083,
+      "seconds": {
+        "before": [
+          0.0002690000692382455,
+          0.0002867999719455838,
+          0.0002530999481678009
+        ],
+        "initial": [
+          0.017038999940268695,
+          0.015671400004066527,
+          0.015770900063216686
+        ],
+        "after": [
+          0.002214199979789555,
+          0.002212099963799119,
+          0.0022110999561846256
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0002690000692382455,
+        "initial": 0.015770900063216686,
+        "after": 0.002212099963799119
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 0,
+        "after": 0
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "email_retry",
+      "count": 512,
+      "source_codepoints": 1064,
+      "seconds": {
+        "before": [
+          0.00012649991549551487,
+          0.00012159999459981918,
+          0.00012560002505779266
+        ],
+        "initial": [
+          0.0004360000602900982,
+          0.0004288000054657459,
+          0.00042669998947530985
+        ],
+        "after": [
+          0.0004264999879524112,
+          0.00042559998109936714,
+          0.00043569994159042835
+        ]
+      },
+      "median_seconds": {
+        "before": 0.00012560002505779266,
+        "initial": 0.0004288000054657459,
+        "after": 0.0004264999879524112
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 0,
+        "after": 0
+      },
+      "same_ranges_before_after": true,
+      "same_ranges_initial_after": true
+    },
+    {
+      "kind": "email_chain",
+      "count": 512,
+      "source_codepoints": 12301,
+      "seconds": {
+        "before": [
+          0.0012021999573335052,
+          0.0012141999322921038,
+          0.0011684000492095947
+        ],
+        "initial": [
+          0.005509800044819713,
+          0.005673400009982288,
+          0.0055856999242678285
+        ],
+        "after": [
+          0.005629399907775223,
+          0.005621399963274598,
+          0.0055964000057429075
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0012021999573335052,
+        "initial": 0.0055856999242678285,
+        "after": 0.005621399963274598
+      },
+      "range_counts": {
+        "before": 0,
+        "initial": 256,
+        "after": 256
+      },
+      "same_ranges_before_after": false,
+      "same_ranges_initial_after": true
+    }
+  ],
+  "timing_scope": "45 local three-version controls, three alternating-order samples per version, after final API process terminated. Component cost, not end-to-end, universal complexity, memory or production latency.",
+  "continued_prior_probes": [
+    {
+      "family": "unquoted_slash_first",
+      "source": "Retain [https://links.test/NOISE<em x=/>tail retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 32,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          32
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=/&gt;tail retained</p>",
+      "unpositioned": 1,
+      "same": true,
+      "checkpoint24_actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "checkpoint25_actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "baseline_actual": [
+        [
+          8,
+          32
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "unquoted_slash_later",
+      "source": "Retain [https://links.test/NOISE<em x=a/b>tail retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 35,
+          "positioned": false,
+          "visible": "https://links.test/NOISE<em",
+          "url": "https://links.test/NOISE<em"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          35
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE%3Cem\">https://links.test/NOISE&lt;em</a> x=a/b&gt;tail retained</p>",
+      "unpositioned": 1,
+      "same": true,
+      "checkpoint24_actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "checkpoint25_actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "baseline_actual": [
+        [
+          8,
+          35
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "missing_attribute_space",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"a\"y=tail> retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 40,
+          "positioned": false,
+          "visible": "https://links.test/NOISE<em",
+          "url": "https://links.test/NOISE<em"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          40
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE%3Cem\">https://links.test/NOISE&lt;em</a> x=&quot;a&quot;y=tail&gt; retained</p>",
+      "unpositioned": 1,
+      "same": true,
+      "checkpoint24_actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "checkpoint25_actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "baseline_actual": [
+        [
+          8,
+          40
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "valid_attribute_space",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"a\" y=tail> retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 37,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          37
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=&quot;a&quot; y=tail&gt; retained</p>",
+      "unpositioned": 1,
+      "same": true,
+      "checkpoint24_actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "checkpoint25_actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "baseline_actual": [
+        [
+          8,
+          37
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "url_consumed_escape",
+      "source": "Retain https://links.test/NOISE\\<em>tail</em> retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 32,
+          "positioned": true,
+          "visible": "https://links.test/NOISE\\",
+          "url": "https://links.test/NOISE\\"
+        }
+      ],
+      "expected": [
+        [
+          7,
+          32
+        ]
+      ],
+      "html": "<p>Retain <a href=\"https://links.test/NOISE%5C\">https://links.test/NOISE\\</a>&lt;em&gt;tail&lt;/em&gt; retained</p>",
+      "unpositioned": 0,
+      "same": true,
+      "checkpoint24_actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "checkpoint25_actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "baseline_actual": [
+        [
+          7,
+          32
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "html_code_order",
+      "source": "Retain [h&#116;tps://links.test/NOISE<em x=\"`\">tail</em> ordinary `retained` end",
+      "links": [
+        {
+          "start": 8,
+          "end": 37,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&lt;em x=&quot;`&quot;&gt;tail&lt;/em&gt; ordinary <code>retained</code> end</p>",
+      "unpositioned": 1,
+      "same": true,
+      "checkpoint24_actual": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "checkpoint25_actual": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "actual": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "baseline_actual": [
+        [
+          8,
+          37
+        ],
+        [
+          66,
+          76
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "emphasis_text_node",
+      "source": "Retain [*h&#116;tps://links.test/NOISE* retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 38,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          38
+        ]
+      ],
+      "html": "<p>Retain [<em><a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "same": true,
+      "checkpoint24_actual": [
+        [
+          9,
+          39
+        ]
+      ],
+      "checkpoint25_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "baseline_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "block_html",
+      "source": "<div>\nh&#116;tps://links.test/NOISE\n</div>",
+      "links": [],
+      "expected": [],
+      "html": "&lt;div&gt;\nh&amp;#116;tps://links.test/NOISE\n&lt;/div&gt;",
+      "unpositioned": 0,
+      "same": true,
+      "checkpoint24_actual": [],
+      "checkpoint25_actual": [],
+      "checkpoint26_actual": [],
+      "actual": [],
+      "wanted_hits": [
+        false
+      ],
+      "actual_hits": [
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [],
+      "baseline_actual": [],
+      "baseline_hits": [
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "continued_probe",
+      "source": "Retain [~h&#116;tps://links.test/NOISE~NOISE retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 38,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          38
+        ]
+      ],
+      "html": "<p>Retain [<del><a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></del>NOISE retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          38,
+          39
+        ]
+      ],
+      "before": [
+        [
+          9,
+          44
+        ]
+      ],
+      "before_same": false,
+      "same": true,
+      "checkpoint25_actual": [
+        [
+          9,
+          44
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "baseline_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "continued_probe",
+      "source": "Retain [~~h&#116;tps://links.test/NOISE~~NOISE retained",
+      "links": [
+        {
+          "start": 10,
+          "end": 39,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          10,
+          39
+        ]
+      ],
+      "html": "<p>Retain [<del><a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></del>NOISE retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          10
+        ],
+        [
+          39,
+          41
+        ]
+      ],
+      "before": [
+        [
+          10,
+          46
+        ]
+      ],
+      "before_same": false,
+      "same": true,
+      "checkpoint25_actual": [
+        [
+          10,
+          46
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          10,
+          39
+        ]
+      ],
+      "actual": [
+        [
+          10,
+          39
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          10,
+          39
+        ]
+      ],
+      "baseline_actual": [
+        [
+          10,
+          39
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "continued_probe",
+      "source": "Retain [*retained ~h&#116;tps://links.test/NOISE*NOISE~ retained",
+      "links": [
+        {
+          "start": 19,
+          "end": 48,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          19,
+          48
+        ]
+      ],
+      "html": "<p>Retain [<em>retained ~<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></em>NOISE~ retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          48,
+          49
+        ]
+      ],
+      "before": [
+        [
+          19,
+          55
+        ]
+      ],
+      "before_same": false,
+      "same": true,
+      "checkpoint25_actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "baseline_actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "continued_probe",
+      "source": "Retain [~retained *h&#116;tps://links.test/NOISE~NOISE* retained",
+      "links": [
+        {
+          "start": 19,
+          "end": 48,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          19,
+          48
+        ]
+      ],
+      "html": "<p>Retain [<del>retained *<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></del>NOISE* retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          48,
+          49
+        ]
+      ],
+      "before": [
+        [
+          19,
+          55
+        ]
+      ],
+      "before_same": false,
+      "same": true,
+      "checkpoint25_actual": [
+        [
+          19,
+          54
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "baseline_actual": [
+        [
+          19,
+          48
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "continued_probe",
+      "source": "Retain [h&#116;tps://links.test/NOISE&#x2a; retained",
+      "links": [
+        {
+          "start": 8,
+          "end": 43,
+          "positioned": false,
+          "visible": "https://links.test/NOISE*",
+          "url": "https://links.test/NOISE*"
+        }
+      ],
+      "expected": [
+        [
+          8,
+          43
+        ]
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE*\">https://links.test/NOISE*</a> retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [],
+      "before": [
+        [
+          8,
+          43
+        ]
+      ],
+      "before_same": true,
+      "same": true,
+      "checkpoint25_actual": [
+        [
+          8,
+          43
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          8,
+          43
+        ]
+      ],
+      "actual": [
+        [
+          8,
+          43
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          8,
+          43
+        ]
+      ],
+      "baseline_actual": [
+        [
+          8,
+          43
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "continued_probe",
+      "source": "Retain [*h&#116;tps://links.test/NOISE* retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 38,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          38
+        ]
+      ],
+      "html": "<p>Retain [<em><a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          38,
+          39
+        ]
+      ],
+      "before": [
+        [
+          9,
+          39
+        ]
+      ],
+      "before_same": false,
+      "same": true,
+      "checkpoint25_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "checkpoint26_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "wanted_hits": [
+        true
+      ],
+      "actual_hits": [
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "baseline_actual": [
+        [
+          9,
+          38
+        ]
+      ],
+      "baseline_hits": [
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "www_literal",
+      "source": "Retain [~www.links.test/NOISE~NOISE retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 29,
+          "positioned": false,
+          "visible": "www.links.test/NOISE",
+          "url": "http://www.links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          29
+        ]
+      ],
+      "html": "<p>Retain [<del><a href=\"http://www.links.test/NOISE\">www.links.test/NOISE</a></del>NOISE retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          29,
+          30
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint26_actual": [],
+      "actual": [
+        [
+          9,
+          29
+        ]
+      ],
+      "checkpoint27_actual": [],
+      "baseline_actual": [],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "email_literal",
+      "source": "Retain [~NOISE@links.test~NOISE retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 25,
+          "positioned": false,
+          "visible": "NOISE@links.test",
+          "url": "mailto:NOISE@links.test"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          25
+        ]
+      ],
+      "html": "<p>Retain [<del><a href=\"mailto:NOISE@links.test\">NOISE@links.test</a></del>NOISE retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          25,
+          26
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint26_actual": [],
+      "actual": [
+        [
+          9,
+          25
+        ]
+      ],
+      "checkpoint27_actual": [],
+      "baseline_actual": [],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "shortcut_label_registration",
+      "source": "Retain [a*b] [~retained *h&#116;tps://links.test/NOISE~NOISE* retained\n\n[a*b]: /retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 12,
+          "positioned": true,
+          "visible": "a*b"
+        },
+        {
+          "start": 25,
+          "end": 60,
+          "positioned": false,
+          "visible": "https://links.test/NOISE~NOISE",
+          "url": "https://links.test/NOISE~NOISE"
+        }
+      ],
+      "expected": [
+        [
+          25,
+          60
+        ]
+      ],
+      "html": "<p>Retain <a href=\"/retained\">a*b</a> [~retained <em><a href=\"https://links.test/NOISE~NOISE\">https://links.test/NOISE~NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          24,
+          25
+        ],
+        [
+          60,
+          61
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        true
+      ],
+      "actual_hits": [
+        true,
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint26_actual": [
+        [
+          25,
+          60
+        ],
+        [
+          71,
+          88
+        ]
+      ],
+      "actual": [
+        [
+          25,
+          60
+        ],
+        [
+          71,
+          88
+        ]
+      ],
+      "checkpoint27_actual": [
+        [
+          25,
+          60
+        ],
+        [
+          71,
+          88
+        ]
+      ],
+      "baseline_actual": [
+        [
+          25,
+          60
+        ],
+        [
+          71,
+          88
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        true
+      ],
+      "exact_agreement": false
+    },
+    {
+      "family": "full_reference_label_registration",
+      "source": "Retain [a*b][ref] [~retained *h&#116;tps://links.test/NOISE~NOISE* retained\n\n[ref]: /retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 17,
+          "positioned": true,
+          "visible": "a*b"
+        },
+        {
+          "start": 30,
+          "end": 65,
+          "positioned": false,
+          "visible": "https://links.test/NOISE~NOISE",
+          "url": "https://links.test/NOISE~NOISE"
+        }
+      ],
+      "expected": [
+        [
+          30,
+          65
+        ]
+      ],
+      "html": "<p>Retain <a href=\"/retained\">a*b</a> [~retained <em><a href=\"https://links.test/NOISE~NOISE\">https://links.test/NOISE~NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          29,
+          30
+        ],
+        [
+          65,
+          66
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        true
+      ],
+      "actual_hits": [
+        true,
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint26_actual": [
+        [
+          7,
+          17
+        ],
+        [
+          30,
+          59
+        ],
+        [
+          76,
+          93
+        ]
+      ],
+      "actual": [
+        [
+          7,
+          17
+        ],
+        [
+          30,
+          65
+        ],
+        [
+          76,
+          93
+        ]
+      ],
+      "checkpoint27_actual": [
+        [
+          7,
+          17
+        ],
+        [
+          30,
+          65
+        ],
+        [
+          76,
+          93
+        ]
+      ],
+      "baseline_actual": [
+        [
+          7,
+          17
+        ],
+        [
+          30,
+          65
+        ],
+        [
+          76,
+          93
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        true
+      ],
+      "exact_agreement": false
+    },
+    {
+      "family": "label_matched_crossing",
+      "source": "Retain [*a~b*](/retained) [~retained *h&#116;tps://links.test/NOISE~NOISE* retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 25,
+          "positioned": true,
+          "visible": "",
+          "url": "/retained"
+        },
+        {
+          "start": 38,
+          "end": 73,
+          "positioned": false,
+          "visible": "https://links.test/NOISE~NOISE",
+          "url": "https://links.test/NOISE~NOISE"
+        }
+      ],
+      "expected": [
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          73
+        ]
+      ],
+      "html": "<p>Retain <a href=\"/retained\"><em>a~b</em></a> [~retained <em><a href=\"https://links.test/NOISE~NOISE\">https://links.test/NOISE~NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          12,
+          13
+        ],
+        [
+          37,
+          38
+        ],
+        [
+          73,
+          74
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        true
+      ],
+      "actual_hits": [
+        true,
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint26_actual": [
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          73
+        ]
+      ],
+      "actual": [
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          73
+        ]
+      ],
+      "checkpoint27_actual": [
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          73
+        ]
+      ],
+      "baseline_actual": [
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          73
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        true
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "label_literal_priority",
+      "source": "Retain [a`*`b](/retained) [~retained *h&#116;tps://links.test/NOISE~NOISE* retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 25,
+          "positioned": true,
+          "visible": "a*b",
+          "url": "/retained"
+        },
+        {
+          "start": 38,
+          "end": 67,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "expected": [
+        [
+          9,
+          12
+        ],
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          67
+        ]
+      ],
+      "html": "<p>Retain <a href=\"/retained\">a<code>*</code>b</a> [<del>retained *<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></del>NOISE* retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          27,
+          28
+        ],
+        [
+          67,
+          68
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint26_actual": [
+        [
+          9,
+          12
+        ],
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          67
+        ]
+      ],
+      "actual": [
+        [
+          9,
+          12
+        ],
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          67
+        ]
+      ],
+      "checkpoint27_actual": [
+        [
+          9,
+          12
+        ],
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          67
+        ]
+      ],
+      "baseline_actual": [
+        [
+          9,
+          12
+        ],
+        [
+          13,
+          25
+        ],
+        [
+          38,
+          67
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "multiline_definition_label",
+      "source": "Retain [retained][r* ef] [~retained *h&#116;tps://links.test/NOISE~NOISE* retained\n\n[r*\nef]: /retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 24,
+          "positioned": true,
+          "visible": "retained"
+        },
+        {
+          "start": 37,
+          "end": 66,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "nativeExpected": [
+        [
+          37,
+          66
+        ]
+      ],
+      "policyExpected": [
+        [
+          7,
+          24
+        ],
+        [
+          83,
+          102
+        ]
+      ],
+      "definitionNodes": [],
+      "expected": [
+        [
+          7,
+          24
+        ],
+        [
+          37,
+          66
+        ],
+        [
+          83,
+          102
+        ]
+      ],
+      "html": "<p>Retain <a href=\"/retained\">retained</a> [<del>retained *<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></del>NOISE* retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          26,
+          27
+        ],
+        [
+          66,
+          67
+        ]
+      ],
+      "actual": [
+        [
+          7,
+          24
+        ],
+        [
+          37,
+          72
+        ],
+        [
+          83,
+          102
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        true
+      ],
+      "hit_agreement": false,
+      "checkpoint27_actual": [
+        [
+          7,
+          24
+        ],
+        [
+          37,
+          72
+        ],
+        [
+          83,
+          102
+        ]
+      ],
+      "baseline_actual": [
+        [
+          7,
+          24
+        ],
+        [
+          37,
+          72
+        ],
+        [
+          83,
+          102
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        true
+      ],
+      "exact_agreement": false
+    },
+    {
+      "family": "multiline_definition_destination",
+      "source": "Retain [retained][r*ef] [~retained *h&#116;tps://links.test/NOISE~NOISE* retained\n\n[r*ef]:\n /retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 23,
+          "positioned": true,
+          "visible": "retained"
+        },
+        {
+          "start": 36,
+          "end": 65,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "nativeExpected": [
+        [
+          36,
+          65
+        ]
+      ],
+      "policyExpected": [
+        [
+          7,
+          23
+        ]
+      ],
+      "definitionNodes": [],
+      "expected": [
+        [
+          7,
+          23
+        ],
+        [
+          36,
+          65
+        ]
+      ],
+      "html": "<p>Retain <a href=\"/retained\">retained</a> [<del>retained *<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></del>NOISE* retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          25,
+          26
+        ],
+        [
+          65,
+          66
+        ]
+      ],
+      "actual": [
+        [
+          7,
+          23
+        ],
+        [
+          36,
+          71
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        true
+      ],
+      "hit_agreement": false,
+      "checkpoint27_actual": [
+        [
+          7,
+          23
+        ],
+        [
+          36,
+          71
+        ]
+      ],
+      "baseline_actual": [
+        [
+          7,
+          23
+        ],
+        [
+          36,
+          71
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        true
+      ],
+      "exact_agreement": false
+    },
+    {
+      "family": "multiline_definition_title",
+      "source": "[ref]: /retained\n \"~*\"\nRetain [a*b][ref] [*retained ~h&#116;tps://links.test/NOISE*NOISE~ retained",
+      "links": [
+        {
+          "start": 30,
+          "end": 40,
+          "positioned": true,
+          "visible": "a*b"
+        },
+        {
+          "start": 53,
+          "end": 82,
+          "positioned": false,
+          "visible": "https://links.test/NOISE",
+          "url": "https://links.test/NOISE"
+        }
+      ],
+      "nativeExpected": [
+        [
+          53,
+          82
+        ]
+      ],
+      "policyExpected": [
+        [
+          0,
+          16
+        ],
+        [
+          30,
+          40
+        ]
+      ],
+      "definitionNodes": [],
+      "expected": [
+        [
+          0,
+          16
+        ],
+        [
+          30,
+          40
+        ],
+        [
+          53,
+          82
+        ]
+      ],
+      "html": "<p>Retain <a href=\"/retained\" title=\"~*\">a*b</a> [<em>retained ~<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a></em>NOISE~ retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          42,
+          43
+        ],
+        [
+          82,
+          83
+        ]
+      ],
+      "actual": [
+        [
+          0,
+          16
+        ],
+        [
+          30,
+          40
+        ],
+        [
+          53,
+          88
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        true
+      ],
+      "hit_agreement": false,
+      "checkpoint27_actual": [
+        [
+          0,
+          16
+        ],
+        [
+          30,
+          40
+        ],
+        [
+          53,
+          88
+        ]
+      ],
+      "baseline_actual": [
+        [
+          0,
+          16
+        ],
+        [
+          30,
+          40
+        ],
+        [
+          53,
+          88
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        true
+      ],
+      "exact_agreement": false
+    },
+    {
+      "family": "www_decoded_head",
+      "source": "Retain [~w&#119;w.links.test/NOISE~NOISE retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 34,
+          "positioned": false,
+          "visible": "www.links.test/NOISE",
+          "url": "http://www.links.test/NOISE"
+        }
+      ],
+      "nativeExpected": [
+        [
+          9,
+          34
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          9,
+          34
+        ]
+      ],
+      "html": "<p>Retain [<del><a href=\"http://www.links.test/NOISE\">www.links.test/NOISE</a></del>NOISE retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          34,
+          35
+        ]
+      ],
+      "actual": [
+        [
+          9,
+          34
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [],
+      "baseline_actual": [],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "email_decoded_at",
+      "source": "Retain [~NOISE&commat;links.test~NOISE retained",
+      "links": [
+        {
+          "start": 9,
+          "end": 32,
+          "positioned": false,
+          "visible": "NOISE@links.test",
+          "url": "mailto:NOISE@links.test"
+        }
+      ],
+      "nativeExpected": [
+        [
+          9,
+          32
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          9,
+          32
+        ]
+      ],
+      "html": "<p>Retain [<del><a href=\"mailto:NOISE@links.test\">NOISE@links.test</a></del>NOISE retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          8,
+          9
+        ],
+        [
+          32,
+          33
+        ]
+      ],
+      "actual": [
+        [
+          9,
+          32
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [],
+      "baseline_actual": [],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "exact_agreement": true
+    },
+    {
+      "family": "noninterrupting_definition",
+      "source": "Retain paragraph\n[ref]: /retained\nRetain [a*b][ref] [~retained *h&#116;tps://links.test/NOISE~NOISE* retained",
+      "links": [
+        {
+          "start": 64,
+          "end": 99,
+          "positioned": false,
+          "visible": "https://links.test/NOISE~NOISE",
+          "url": "https://links.test/NOISE~NOISE"
+        }
+      ],
+      "nativeExpected": [
+        [
+          64,
+          99
+        ]
+      ],
+      "policyExpected": [
+        [
+          17,
+          33
+        ],
+        [
+          41,
+          51
+        ]
+      ],
+      "definitionNodes": [],
+      "expected": [
+        [
+          17,
+          33
+        ],
+        [
+          41,
+          51
+        ],
+        [
+          64,
+          99
+        ]
+      ],
+      "html": "<p>Retain paragraph<br/>\n[ref]: /retained<br/>\nRetain [a*b][ref] [~retained <em><a href=\"https://links.test/NOISE~NOISE\">https://links.test/NOISE~NOISE</a></em> retained</p>",
+      "unpositioned": 1,
+      "htmlNodes": [],
+      "attention": [
+        [
+          63,
+          64
+        ],
+        [
+          99,
+          100
+        ]
+      ],
+      "actual": [
+        [
+          17,
+          33
+        ],
+        [
+          41,
+          51
+        ],
+        [
+          64,
+          99
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        true
+      ],
+      "actual_hits": [
+        true,
+        true
+      ],
+      "hit_agreement": true,
+      "checkpoint27_actual": [
+        [
+          17,
+          33
+        ],
+        [
+          41,
+          51
+        ],
+        [
+          64,
+          99
+        ]
+      ],
+      "baseline_actual": [
+        [
+          17,
+          33
+        ],
+        [
+          41,
+          51
+        ],
+        [
+          64,
+          99
+        ]
+      ],
+      "baseline_hits": [
+        true,
+        true
+      ],
+      "exact_agreement": true
+    }
+  ],
+  "continued_new_probes": [
+    {
+      "family": "angle_email",
+      "source": "Retain <NOISE@links.test> NOISE",
+      "links": [
+        {
+          "start": 7,
+          "end": 25,
+          "positioned": true,
+          "visible": "NOISE@links.test",
+          "url": "mailto:NOISE@links.test"
+        }
+      ],
+      "nativeExpected": [
+        [
+          7,
+          25
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          7,
+          25
+        ]
+      ],
+      "html": "<p>Retain <a href=\"mailto:NOISE@links.test\">NOISE@links.test</a> NOISE</p>",
+      "unpositioned": 0,
+      "htmlNodes": [],
+      "attention": [],
+      "checkpoint27_actual": null,
+      "baseline_actual": [],
+      "actual": [
+        [
+          8,
+          24
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "hit_agreement": true,
+      "exact_agreement": false
+    },
+    {
+      "family": "angle_email_ticks",
+      "source": "Retain <NOISE`@links.test> ordinary `NOISE` retained",
+      "links": [
+        {
+          "start": 7,
+          "end": 26,
+          "positioned": true,
+          "visible": "NOISE`@links.test",
+          "url": "mailto:NOISE`@links.test"
+        }
+      ],
+      "nativeExpected": [
+        [
+          7,
+          26
+        ],
+        [
+          36,
+          43
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          7,
+          26
+        ],
+        [
+          36,
+          43
+        ]
+      ],
+      "html": "<p>Retain <a href=\"mailto:NOISE%60@links.test\">NOISE`@links.test</a> ordinary <code>NOISE</code> retained</p>",
+      "unpositioned": 0,
+      "htmlNodes": [],
+      "attention": [],
+      "checkpoint27_actual": null,
+      "baseline_actual": [
+        [
+          13,
+          37
+        ]
+      ],
+      "actual": [
+        [
+          13,
+          37
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        true
+      ],
+      "actual_hits": [
+        false,
+        false
+      ],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "hit_agreement": false,
+      "exact_agreement": false
+    },
+    {
+      "family": "escaped_angle_email",
+      "source": "Retain \\<NOISE@links.test> NOISE",
+      "links": [
+        {
+          "start": 9,
+          "end": 25,
+          "positioned": true,
+          "visible": "NOISE@links.test",
+          "url": "mailto:NOISE@links.test"
+        }
+      ],
+      "nativeExpected": [
+        [
+          9,
+          25
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          9,
+          25
+        ]
+      ],
+      "html": "<p>Retain &lt;<a href=\"mailto:NOISE@links.test\">NOISE@links.test</a>&gt; NOISE</p>",
+      "unpositioned": 0,
+      "htmlNodes": [],
+      "attention": [],
+      "checkpoint27_actual": null,
+      "baseline_actual": [],
+      "actual": [
+        [
+          9,
+          25
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "hit_agreement": true,
+      "exact_agreement": true
+    },
+    {
+      "family": "angle_email_inside_code",
+      "source": "Retain `<NOISE@links.test>` NOISE",
+      "links": [],
+      "nativeExpected": [
+        [
+          7,
+          27
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          7,
+          27
+        ]
+      ],
+      "html": "<p>Retain <code>&lt;NOISE@links.test&gt;</code> NOISE</p>",
+      "unpositioned": 0,
+      "htmlNodes": [],
+      "attention": [],
+      "checkpoint27_actual": null,
+      "baseline_actual": [
+        [
+          7,
+          27
+        ]
+      ],
+      "actual": [
+        [
+          7,
+          27
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "baseline_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "exact_agreement": true
+    },
+    {
+      "family": "earlier_code_owns_email_tick",
+      "source": "Retain `<NOISE`@links.test> NOISE",
+      "links": [],
+      "nativeExpected": [
+        [
+          7,
+          15
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          7,
+          15
+        ]
+      ],
+      "html": "<p>Retain <code>&lt;NOISE</code>@links.test&gt; NOISE</p>",
+      "unpositioned": 0,
+      "htmlNodes": [],
+      "attention": [],
+      "checkpoint27_actual": null,
+      "baseline_actual": [
+        [
+          7,
+          15
+        ]
+      ],
+      "actual": [
+        [
+          7,
+          15
+        ]
+      ],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        true,
+        false
+      ],
+      "baseline_hits": [
+        true,
+        false
+      ],
+      "hit_agreement": true,
+      "exact_agreement": true
+    },
+    {
+      "family": "angle_email_single_domain",
+      "source": "Retain <NOISE@retained> NOISE",
+      "links": [
+        {
+          "start": 7,
+          "end": 23,
+          "positioned": true,
+          "visible": "NOISE@retained",
+          "url": "mailto:NOISE@retained"
+        }
+      ],
+      "nativeExpected": [
+        [
+          7,
+          23
+        ]
+      ],
+      "policyExpected": [],
+      "definitionNodes": [],
+      "expected": [
+        [
+          7,
+          23
+        ]
+      ],
+      "html": "<p>Retain <a href=\"mailto:NOISE@retained\">NOISE@retained</a> NOISE</p>",
+      "unpositioned": 0,
+      "htmlNodes": [],
+      "attention": [],
+      "checkpoint27_actual": null,
+      "baseline_actual": [],
+      "actual": [],
+      "wanted_hits": [
+        true,
+        false
+      ],
+      "actual_hits": [
+        false,
+        false
+      ],
+      "baseline_hits": [
+        false,
+        false
+      ],
+      "hit_agreement": false,
+      "exact_agreement": false
+    }
+  ],
+  "temporary_root": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-noise-autolink-families",
+  "raw_artifacts": [
+    {
+      "path": "content-cleanup-before.py",
+      "sha256": "80348f1ce19005b1d28cd4aec86be0bf22efb420215d9e3d7b95efea006cf81f"
+    },
+    {
+      "path": "checkpoint-start.json",
+      "sha256": "73aba762e19f119d3fec7744602eb7df7831b7b0a6a982394c345cf3b858e412"
+    },
+    {
+      "path": "autolink-initial.py",
+      "sha256": "07654f281b52b8ca5f789db23c75526e1e1d52aa013f9facd752a7933470d2c8"
+    },
+    {
+      "path": "renderer-prefix.mjs",
+      "sha256": "9fad64e253ec2c7397e2c620abaefaeded0642c04e60355b2a896a79d07566d6"
+    },
+    {
+      "path": "matrix-body.mjs",
+      "sha256": "c5a73633084680f2f7b6703458b0764e80d98cda300948f0397fdffb0b136610"
+    },
+    {
+      "path": "render-autolinks.mjs",
+      "sha256": "0d063f7ceadfd7c31421267753a8cd49b0e766d0ba3cb2288043d2b898b1cdd2"
+    },
+    {
+      "path": "autolink-corpus.json",
+      "sha256": "0edcef673f2cfdc7e938a6bc4db474be3d2fd4d899b05e3943bc3392bc3af90a"
+    },
+    {
+      "path": "renderer.log",
+      "sha256": "3ccc95305a45da8c68c9d71f88fbe14465b1ba62dc734892e124d5da74e9aac7"
+    },
+    {
+      "path": "compare-autolinks.py",
+      "sha256": "d1df42e43761da26ac1667bb647a8acc90c43ea141b8cbd5a6511340fcb6ab66"
+    },
+    {
+      "path": "autolink-comparison.json",
+      "sha256": "3bac9d438601f786848bb0c1734783c9793bfe877da13886dfd84e047741e18c"
+    },
+    {
+      "path": "baseline-comparison.log",
+      "sha256": "98c0f95ed541bbf4b1d17162f9276ff472b917e4433475c804f0f5987ee42598"
+    },
+    {
+      "path": "current-comparison.log",
+      "sha256": "20b938c3a10ca0df285c842e521b141706ad0a42dc6111b9197554aba486a1de"
+    },
+    {
+      "path": "before-autolink-differences.json",
+      "sha256": "7a3307a111982ce8852ecc461f551413107329d3b8b83848491ba760399551ee"
+    },
+    {
+      "path": "current-autolink-differences.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "before-autolink-exact-differences.json",
+      "sha256": "7024a0283cb9d76af9fa6c80e5006077599574ddbac794a22b215fdf74e6b6d1"
+    },
+    {
+      "path": "current-autolink-exact-differences.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "path": "verify-autolinks.py",
+      "sha256": "323ce6aa3ea7d089af4c6e3fae0bf5c2a05093ae85597ff23f4d1b1bab5c96c3"
+    },
+    {
+      "path": "verification.json",
+      "sha256": "5d8d6de9dc028b78fa0cd502a7965fa78b1a63fc067681f9742d480806c4015a"
+    },
+    {
+      "path": "verification.log",
+      "sha256": "5d8d6de9dc028b78fa0cd502a7965fa78b1a63fc067681f9742d480806c4015a"
+    },
+    {
+      "path": "final-verify-autolinks.py",
+      "sha256": "be8fce7536ef52a8bac3aec73eff5cda24095df4530db44e3c1f3e0361d8696a"
+    },
+    {
+      "path": "final-verification.log",
+      "sha256": "ba347061d318cddaa716ecfc6c2e86a916f15e3d5cd94572d5d865c3108ddef8"
+    },
+    {
+      "path": "new-hit-metadata.json",
+      "sha256": "1b12e2f4546424c7d00061182e5dcebdfc23b4c7685e3eec6b451293f4eb118d"
+    },
+    {
+      "path": "frozen-autolink-rows.json",
+      "sha256": "34a43073c862f98e2ddb2852ef7e8074b698a76f759f62f2f82bc0ba2c160d4d"
+    },
+    {
+      "path": "frozen-oracle-verification.json",
+      "sha256": "6a0629eba3ee73a35fa57e712d45e63995ddaaba83523937abe6132aa4df9429"
+    },
+    {
+      "path": "baseline_autolinks.py",
+      "sha256": "433b42bc6a60058bede96938d2c04e17ce1cfac922343df1ac887cfc3edcc290"
+    },
+    {
+      "path": "autolink-red.xml",
+      "sha256": "3eaa820c0bb0f9dede9f167d773194c15e73795438aeb68cf0fca8c21518ea15"
+    },
+    {
+      "path": "autolink-red.log",
+      "sha256": "76759dbaaa9a078eedafaace29da2bf8289311d352d7580c811f77afafc11531"
+    },
+    {
+      "path": "autolink-green.xml",
+      "sha256": "737cac654e7e9220861c3d495fbb7bb83969088fa84f9fafdb01bfa4e8d16e8e"
+    },
+    {
+      "path": "autolink-green.log",
+      "sha256": "83f6ae2e6cdf77b47bd5a7fceb603e82bb7abb9d5c196adbdb0333e1fd7a3ed5"
+    },
+    {
+      "path": "autolink-final.xml",
+      "sha256": "4e497a6d5cefccbb0648e0ef76a0eb2874037a628f0346c2009821fae5ec4e0a"
+    },
+    {
+      "path": "autolink-final.log",
+      "sha256": "a169965123a94940dccdc00c75331ae88c99f84ba74b4c491ba9cd316ea4e777"
+    },
+    {
+      "path": "final-source-start.json",
+      "sha256": "44b2b980c0b28eb7e022fd9a4dca8d9fbb85e2f62f3b6c7b6022238848abbad5"
+    },
+    {
+      "path": "final-source-end.json",
+      "sha256": "b8df30f7318223cf284b8ea905802d067f7bd0b21e42c8bb9e97171868fccf12"
+    },
+    {
+      "path": "module-list.txt",
+      "sha256": "85aa8d2727d37c067bdaabc5e0cae4c3b775a0dfc442b524e0183fa72eaf177b"
+    },
+    {
+      "path": "initial-work-probes.json",
+      "sha256": "3cde0266fe3e2dff92f597c0c3e040dcadd348fc937160c27fdae752a5d8e54a"
+    },
+    {
+      "path": "probe-autolink-work.py",
+      "sha256": "e6f84ef7ce057f7a3d4288f1b6c1c0ff67246c10c38e97411f8de6c315f28b4d"
+    },
+    {
+      "path": "work-probes.json",
+      "sha256": "539aca7260f5f140dc414cdea152a52fa7e96393ae0726bd41e50c782bbc6486"
+    },
+    {
+      "path": "work-probes.log",
+      "sha256": "539aca7260f5f140dc414cdea152a52fa7e96393ae0726bd41e50c782bbc6486"
+    },
+    {
+      "path": "measure-autolinks.py",
+      "sha256": "2dd93d413bbf8760aaf45e88c3aa7f58f5fc4ea568ea0c6931a40eac078ff79d"
+    },
+    {
+      "path": "timings.json",
+      "sha256": "4dbc5e717704b39b6687ac63d070b0b288ceaa3e474b9d5b02f1102f4dc7f081"
+    },
+    {
+      "path": "timings.log",
+      "sha256": "457b66ac08ad7ce055b516128afc3cd63ddbb0e6370e0fb54ddd56a8b1e00680"
+    },
+    {
+      "path": "verify-origins.py",
+      "sha256": "c7b5c74b8164fcdab13cd48faf3b4f3e18c8bad549de81fa53bcee84dcaf2d1d"
+    },
+    {
+      "path": "origin-verification.json",
+      "sha256": "e455986ef6dd9e6932d95ff4a91930f8a5efaa919e8380f08247fd155474863d"
+    },
+    {
+      "path": "render-continued-probes.mjs",
+      "sha256": "6637c92a2ca31a8d6d6cb4c7a2c34f6baf407f1219b6d8a734ca692abf024772"
+    },
+    {
+      "path": "continued-probe-renderer.json",
+      "sha256": "63d7d618274f7f258e106734befa754942565065fd2d3eb062855ae2ac2ba169"
+    },
+    {
+      "path": "continued-probe-renderer.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "continued-prior-probes.json",
+      "sha256": "9e8355cfdbd51c5e9e489145bf3394db7dcf893bed7126fb1fce8f25f6623702"
+    },
+    {
+      "path": "continued-new-probes.json",
+      "sha256": "7bde0f0b2c09d5b8a698c200a10f14330b7090e89efc97db834cb768a6d67f6b"
+    },
+    {
+      "path": "verify-probe-collection.py",
+      "sha256": "9dd134ab62ec6204f7bdf8a491f1f1a0b17a52c3e8e16039dc47105e75454766"
+    },
+    {
+      "path": "verify-autolink-integrity.py",
+      "sha256": "efe7e8eabfa44bb7e4d54086f8437677fa6c876335eac9185c85d443992f563a"
+    },
+    {
+      "path": "integrity.log",
+      "sha256": "77fd7d0b661562164e82e1f8d1bb216e11fe3893cf120a35e290291fc228001a"
+    },
+    {
+      "path": "write-autolink-receipt.py",
+      "sha256": "a85f3d10a70ff90610687e2b45432fad77bd53b55d4c572b9bedab8e8e501d6d"
+    }
+  ],
+  "preexisting_tsconfig_sha256": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7",
+  "validation_limits": [
+    "GFM literal email/www probes are corrected. Three multiline-definition probes and fresh CommonMark angle-email grammar/code-ownership probes still differ; full parser parity is not claimed.",
+    "Eight whole-asset policy extras in this corpus and older 576 HTML physical-line/container/newline interval extras remain intentionally separate from native span equivalence.",
+    "Operation-local caches and measured controls are not all-input complexity, RSS, OOM, throughput or production-latency guarantees.",
+    "Installed server rendering is not application adapters/sanitizer, browser DOM, authenticated Reader, PostgreSQL concurrency, CI or production acceptance.",
+    "No web search, Web build/browser, complete API suite, CI dispatch/result fetch or production verification.",
+    "No commit/push/deploy, dependency/migration/offline-format/imported-user-data/production-config changes. Continuous optimization goal remains active."
+  ]
+}

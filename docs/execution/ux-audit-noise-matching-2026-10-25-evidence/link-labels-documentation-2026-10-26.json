@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-26",
+  "parent_receipt": "link-labels-2026-10-26.json",
+  "parent_receipt_sha256": "8f7581e028c2fbb652e5487f4ce5186a09d226ca1fb76a59e915124eb03246e6",
+  "documentation_sha256": {
+    "PROJECT_STATE.md": "d3b3a850f46137d59161e7addd88545794c0323d4206acbdc027da2442415178",
+    "docs/index.md": "7c73c7911b9de35ce0248edf348b1ae69841b31787a0763c529b81fd29d455dc",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "39631b10f644e10564be22ef01fe9d0474f99b4eb3d8fa0fa76d879f301a2bbb",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "4e5b568c6d2ce4fb546c5c016eec680b9a7c0455912b9ca61a97284ab79a4155",
+    "docs/documentation-inventory.md": "3fa1d29e79ff64bcc678ee7a8ef36829c38e64ff54d793901a95cbc82b5d6b4d",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "ad92f01d39e6d1ec4dc99ccffec5f3c1b0d40844461748e66402d85ae976402d"
+  },
+  "final_source_start_checkpoint_verified": true,
+  "final_junit_sha256": "c3009362aa5874e053b416339dc2782bb4217fc4e6cc5b18c62453c6ac7559d2",
+  "test_summary": {
+    "passed": 722,
+    "failed": 0,
+    "skipped": 0
+  },
+  "head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "submitted": false,
+  "deployed": false,
+  "updated_after_inventory_link": true,
+  "documentation_rechecked_after_inventory_update": true
+}

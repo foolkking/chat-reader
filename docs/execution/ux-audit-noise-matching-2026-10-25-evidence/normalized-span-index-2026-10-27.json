@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-27",
+  "recorded_at": "2026-10-27T00:22:34.406990+08:00",
+  "scope": "Local normalized provenance range lookup fast path; monotonic mappings use endpoints and reordered mappings retain prior scan",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/single-line-position-index-2026-10-26.json",
+    "sha256": "c930d3332513ee82127e7438df8977ddf61ddd5bac65b6128d0644f15166a79a"
+  },
+  "source_and_test_hashes": {
+    "apps/api/app/services/cleanup_normalization.py": "7780138680d4684d8bf9434f87f1e22071564fcec7d7678438e0af63a66b1cc3",
+    "apps/api/app/services/content_cleanup.py": "9e41051795a579456b5ce5bc9d1d2510d5390b8d3d3c15e556ecb6b69074950b",
+    "apps/api/tests/test_cleanup_normalization.py": "cf82df58ae7ffdc74f13d461f84e971b68b31ada34e8c16fff2cd6daecbbe369",
+    "apps/api/tests/test_cleanup_unicode_normalization.py": "b3e84c479702cea807bcc725897c0896bcd582bf185ddd5f4c050c1ba9d5a476",
+    "apps/api/tests/test_cleanup_literal_matching.py": "dd7984d8486c537b49ae7ffa0bfd8bbf28ef315c27c04be24e33add946ffc766",
+    "apps/api/tests/test_cleanup_bounded_distance.py": "8009e77f6f6bb93f8b52ea2e13bf7ed79b992e77b7e96fd69845d58c0d67b0ea",
+    "apps/api/tests/test_content_cleanup.py": "8931e543a3f6e376438c63e563f476bf40afe3dd0c8a4ebab779f1f842ebba55",
+    "apps/api/tests/test_cleanup_learning.py": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+  },
+  "baseline_hashes": {
+    "apps/api/app/services/cleanup_normalization.py": "e15345e2779632edcfc3730f55068cfdf76a0506a1b3d87dffccd8d93e1f92f5",
+    "apps/api/app/services/content_cleanup.py": "9e41051795a579456b5ce5bc9d1d2510d5390b8d3d3c15e556ecb6b69074950b",
+    "apps/api/tests/test_cleanup_normalization.py": "47bebf24351a1411d00d78b4fc2ca486cd5c89cdbbb6c5626654666722b7e532"
+  },
+  "runtime": {
+    "python": "3.11.7"
+  },
+  "correctness": {
+    "baseline_normalization_sha256": "e15345e2779632edcfc3730f55068cfdf76a0506a1b3d87dffccd8d93e1f92f5",
+    "current_normalization_sha256": "7780138680d4684d8bf9434f87f1e22071564fcec7d7678438e0af63a66b1cc3",
+    "source_cleanup_sha256": "9e41051795a579456b5ce5bc9d1d2510d5390b8d3d3c15e556ecb6b69074950b",
+    "corpora": {
+      "ascii_dense": {
+        "ranges": 5000,
+        "mapping_length": 65000,
+        "monotonic": true,
+        "before_median_ms": 68.5775,
+        "current_median_ms": 9.0449,
+        "before_samples_ms": [
+          68.5879,
+          69.2881,
+          68.9461,
+          67.031,
+          67.7167,
+          67.1912,
+          68.5775
+        ],
+        "current_samples_ms": [
+          9.0477,
+          9.066,
+          8.9155,
+          8.9182,
+          9.0449,
+          9.2965,
+          9.0095
+        ]
+      },
+      "compat_dense": {
+        "ranges": 3000,
+        "mapping_length": 21000,
+        "monotonic": true,
+        "before_median_ms": 22.5473,
+        "current_median_ms": 5.2142,
+        "before_samples_ms": [
+          22.7505,
+          22.5474,
+          22.3976,
+          22.5473,
+          23.0168,
+          22.1093,
+          22.0729
+        ],
+        "current_samples_ms": [
+          5.1874,
+          5.3296,
+          5.2789,
+          5.1759,
+          5.2142,
+          5.2193,
+          5.1526
+        ]
+      },
+      "mixed_reordered": {
+        "ranges": 2000,
+        "mapping_length": 6000,
+        "monotonic": false,
+        "before_median_ms": 6.7677,
+        "current_median_ms": 7.027,
+        "before_samples_ms": [
+          6.8965,
+          6.7677,
+          7.1574,
+          6.743,
+          6.7813,
+          6.6519,
+          6.5941
+        ],
+        "current_samples_ms": [
+          6.9981,
+          7.1478,
+          7.0938,
+          7.0071,
+          7.0423,
+          7.0266,
+          7.027
+        ]
+      }
+    },
+    "random_range_checks": 10000,
+    "differences": 0,
+    "limits": [
+      "Synthetic provenance range lookup only; no production latency/RSS claim.",
+      "Non-monotonic mappings retain the prior envelope scan."
+    ]
+  },
+  "tests": {
+    "focused_normalization": {
+      "cases": 98,
+      "results": {
+        "passed": 98
+      },
+      "modules": {
+        "test_cleanup_normalization": 9,
+        "test_cleanup_unicode_normalization": 35,
+        "test_cleanup_literal_matching": 20,
+        "test_cleanup_bounded_distance": 34
+      },
+      "duration_seconds": 26.368,
+      "junit": {
+        "path": "focused.xml",
+        "sha256": "95d2935eef37afe8d8260e6023f2d2af714d2e7564a87cc6c243ebeeb40e28ee"
+      }
+    },
+    "targeted_regression": {
+      "cases": 3264,
+      "results": {
+        "passed": 3264
+      },
+      "modules": {
+        "test_content_cleanup": 3154,
+        "test_cleanup_learning": 12,
+        "test_cleanup_normalization": 9,
+        "test_cleanup_unicode_normalization": 35,
+        "test_cleanup_literal_matching": 20,
+        "test_cleanup_bounded_distance": 34
+      },
+      "duration_seconds": 78.346,
+      "junit": {
+        "path": "regression.xml",
+        "sha256": "08ff8357a611dbb167fd0a26f33be670986b9c4faf6dea6cc7622a172894098c"
+      }
+    }
+  },
+  "validation": {
+    "source_compile": "pass",
+    "git_diff_check": "pass",
+    "staged_paths": [],
+    "no_web_browser_ci_or_deployment": true,
+    "preexisting_tsbuildinfo_sha256": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7"
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "d6e647b32238ea0406c7ff9514c24a36160dde2b90f584002909c2e2ded96714",
+    "docs/index.md": "8f12f5dc89de7c3548877b9c42cc69c7a7656182c2084d870c7a7f7a76d9f5fb",
+    "docs/documentation-inventory.md": "611e2f9e95a4b29b4b16042a578abbbb23642a8314c715f3b5428b3cd37e88a1",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "7d2bb81d1a8a7c64671c3e5e8f668dbd28eb62f1e7e9e51360e9f30f7546313e",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "77be2aeca8abe29577f417eb4b09a546ecbf5a84be9096ee7d4a25279f833bf1"
+  },
+  "temporary_root": "<TASK_TEMP_ROOT>/chat-reader-noise-span-index-20261027",
+  "temporary_artifacts": {
+    "cleanup-normalization-before.py": "e15345e2779632edcfc3730f55068cfdf76a0506a1b3d87dffccd8d93e1f92f5",
+    "content-cleanup-before.py": "9e41051795a579456b5ce5bc9d1d2510d5390b8d3d3c15e556ecb6b69074950b",
+    "test-cleanup-normalization-before.py": "47bebf24351a1411d00d78b4fc2ca486cd5c89cdbbb6c5626654666722b7e532",
+    "span_index_verification.py": "9c8e926f7e65965041547b340004c4bc09389792b0446074b4003e045df4fa45",
+    "verified-span-index.json": "6bc66bee3f32b73583850ea8c019676fb7cdc8a5143e5e8f6679e1c06b8cfec9",
+    "focused.xml": "95d2935eef37afe8d8260e6023f2d2af714d2e7564a87cc6c243ebeeb40e28ee",
+    "focused.log": "fc0118faab5b5d52b8582e02493c3923cc6ba02824ee831d68fe03f969b821c4",
+    "regression.xml": "08ff8357a611dbb167fd0a26f33be670986b9c4faf6dea6cc7622a172894098c",
+    "regression.log": "97e884894f048fcb6c493b7a7240c2b2f12ef4edab679de50dc5d6775f666923",
+    "final-diff-check.log": "719f215e6d53d8f6c9b069767e00dcbe7477fabf1dcfc377232b6a0176019920"
+  },
+  "limits": [
+    "Only compact monotonic mappings use endpoint lookup; reordered mappings retain prior envelope scan.",
+    "Synthetic provenance timings are not production latency, RSS or end-to-end scan evidence.",
+    "No Web/browser, full API, PostgreSQL, CI or production validation was run; no commit, push or deployment occurred."
+  ]
+}

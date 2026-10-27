@@ -1,0 +1,411 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "recorded_at": "2026-10-26T21:59:21.907914+08:00",
+  "scope": "Local-only GFM table cell/row inline scopes and source-based noise protection; independent cautious policies unchanged",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "empty-item-continuations-2026-10-26.json",
+    "sha256": "dce29b221b47a9d02a4552ca341015bc2496367a707aee366f7108fe60f2a923"
+  },
+  "source_and_test_hashes": {
+    "apps/api/app/services/content_cleanup.py": "17b052219b77858d879ca8c4a6f47d8fe025075c8c40e16f12cf1ea5f2480219",
+    "apps/api/tests/test_content_cleanup.py": "8931e543a3f6e376438c63e563f476bf40afe3dd0c8a4ebab779f1f842ebba55",
+    "apps/api/tests/test_cleanup_detection_reuse.py": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397",
+    "apps/api/tests/test_cleanup_learning.py": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615",
+    "apps/api/tests/test_noise_rule_regressions.py": "b90f1b601f6ec45e270d2e85ddb94fef8d9783c3393992fb45b98aa1d511f119",
+    "apps/api/app/services/cleanup_learning.py": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f",
+    "apps/web/tsconfig.tsbuildinfo": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7"
+  },
+  "source_and_tests_stable_across_final_pytest": true,
+  "baseline_sha256": "4a88ea5c2c4313b1191e1ab8973b2ac23ab7783d9ae6438a5de448a80eea5277",
+  "runtime": {
+    "python": "3.11.7",
+    "pytest": "8.4.2",
+    "remark-parse": "11.0.0",
+    "remark-gfm": "4.0.1",
+    "micromark-extension-gfm-table": "2.1.1"
+  },
+  "installed_parser_hashes": {
+    "node_modules/.pnpm/remark-parse@11.0.0/node_modules/remark-parse/package.json": "47be70916ff853a6c35d8d858844c7b104d100f70999d579884859cf8d88a50c",
+    "node_modules/.pnpm/remark-gfm@4.0.1/node_modules/remark-gfm/package.json": "c199482a69355b610bd1ff225b097776d4a990445b11e5f4c618930dacc8c79d",
+    "node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/package.json": "77614bfc3e826a49007c78569df530d2a0832188cce1b54dd4fe81b056540dc2",
+    "node_modules/.pnpm/micromark-extension-gfm-table@2.1.1/node_modules/micromark-extension-gfm-table/lib/syntax.js": "45aac9771cc150aa2e3b62ae12fc370c07b72732d84e847b47e09dd17b3a7bfe"
+  },
+  "independent_matrix": {
+    "before": {
+      "combinations": 8192,
+      "unique_sources": 5632,
+      "hits": 17472,
+      "nodes": {
+        "code": 2396,
+        "inlineCode": 2254,
+        "link": 598
+      },
+      "range_membership_errors": 2668,
+      "decision_errors": 1358,
+      "raw_native_decision_errors": 2736,
+      "policy_extra_hits": 1378,
+      "exact_inline_controls": 5796,
+      "exact_interval_errors": 2714,
+      "native_ordinary_adjacent_kept": 8192
+    },
+    "current": {
+      "combinations": 8192,
+      "unique_sources": 5632,
+      "hits": 17472,
+      "nodes": {
+        "code": 2396,
+        "inlineCode": 2254,
+        "link": 598
+      },
+      "range_membership_errors": 0,
+      "decision_errors": 0,
+      "raw_native_decision_errors": 1378,
+      "policy_extra_hits": 1378,
+      "exact_inline_controls": 5796,
+      "exact_interval_errors": 0,
+      "native_ordinary_adjacent_kept": 8192
+    },
+    "source_sha256": "17b052219b77858d879ca8c4a6f47d8fe025075c8c40e16f12cf1ea5f2480219",
+    "baseline_sha256": "4a88ea5c2c4313b1191e1ab8973b2ac23ab7783d9ae6438a5de448a80eea5277",
+    "corpus_sha256": "bec4876ac8c4abec89f8cf73916d4b1777027474a8e30e81b6c9e3029305c0dd",
+    "native_nodes": 5248,
+    "coordinate_less_links": 46,
+    "coordinate_less_link_provenance": "Independent renderer maps each unique verbatim raw label and asserts uniqueness; no Python detector oracle",
+    "oracle": "Native code/inlineCode/link literal-hit membership; decisions compose native membership with frozen independent field/table policy. Full intervals only for 5796 no-block-code controls.",
+    "not_whole_protected_interval_equivalence": true,
+    "unchanged_raw_native_decision_policy_extras": 1378
+  },
+  "retained_corpora": {
+    "baseline_sha256": "4a88ea5c2c4313b1191e1ab8973b2ac23ab7783d9ae6438a5de448a80eea5277",
+    "source_sha256": "17b052219b77858d879ca8c4a6f47d8fe025075c8c40e16f12cf1ea5f2480219",
+    "ast_allowlist": [
+      "_GfmProtocolTokenizer",
+      "_gfm_protocol_ranges",
+      "_markdown_reference_definition",
+      "_markdown_table_cells",
+      "_markdown_table_head",
+      "protected_ranges"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "context-corpus.json",
+        "combinations": 688,
+        "hits": 724,
+        "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "precedence-corpus.json",
+        "combinations": 804,
+        "hits": 1260,
+        "sha256": "48db1f39cfd1db5175d7f96458ecdc560cd8e5dd7d0b22eda2fd635b8cbde0ea",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "html-block-corpus.json",
+        "combinations": 3053,
+        "hits": 18223,
+        "sha256": "b7388b4d8ec9b91895ea0bbe3ec6ec048427cc62bc8dab3abe6a4246c47f6a2c",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "emphasis-corpus.json",
+        "combinations": 7918,
+        "hits": 13028,
+        "sha256": "00cd32fed8a1809274519c05623d85ef75dcb44307de2668da66cd66450fd0ce",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "strikethrough-corpus.json",
+        "combinations": 6263,
+        "hits": 10753,
+        "sha256": "60922d9ac8905a1c55cbcca00b26711c6adf361ea6ee86a50a9c172e8fb608d1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "reference-corpus.json",
+        "combinations": 1688,
+        "hits": 3376,
+        "sha256": "4b112514767ae087f494ad4c00463c3c07774211675b1efe8509ed2f3c378e47",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "autolink-corpus.json",
+        "combinations": 4010,
+        "hits": 8212,
+        "sha256": "0edcef673f2cfdc7e938a6bc4db474be3d2fd4d899b05e3943bc3392bc3af90a",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "angle-corpus.json",
+        "combinations": 2314,
+        "hits": 4827,
+        "sha256": "03406f5deeca2c38808209282e521e68baa140760848bf760af81435955b24e8",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "definition-grammar-corpus.json",
+        "combinations": 3158,
+        "hits": 6758,
+        "sha256": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "boundary-corpus.json",
+        "combinations": 3744,
+        "hits": 7488,
+        "sha256": "f86d048903467e55c7ca20e7b5694194a0c3ccf5ef4e6b1b29680a298b22efdc",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "empty-list-corpus.json",
+        "combinations": 7680,
+        "hits": 15360,
+        "sha256": "6561d9049ba9e9c498aad9f54bf0f7c136ea1ac1d511e70bdc4fd565549822fc",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "empty-item-corpus.json",
+        "combinations": 5040,
+        "hits": 10080,
+        "sha256": "a2e936cb572810ae4aaf2f7cebdb8a6d64bd4537c028b1b3fc129b441041a1e5",
+        "range_changes": 0,
+        "metadata_changes": 0
+      }
+    ],
+    "range_changes": 0,
+    "metadata_changes": 0,
+    "total_combinations": 67368,
+    "total_literal_hits": 152317
+  },
+  "pytest": {
+    "initial_190_source_cases": {
+      "tests": 190,
+      "failures": 110,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 18.92,
+      "modules": {
+        "tests.test_content_cleanup": 190
+      },
+      "xml_sha256": "6a2fba1ffb429236d36635dcf07d3079cecbc2182762a67746225279e6ef48d6"
+    },
+    "frozen_parent_276_source_and_api_cases": {
+      "tests": 276,
+      "failures": 174,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 57.422,
+      "modules": {
+        "tests.test_content_cleanup": 260,
+        "tests.test_noise_rule_regressions": 16
+      },
+      "xml_sha256": "54e705c11fe9d85bab17f79ddda0d30704b68737e5b13fde84de40958e43f746",
+      "failures_by_module": {
+        "tests.test_content_cleanup": 158,
+        "tests.test_noise_rule_regressions": 16
+      }
+    },
+    "current_276_source_and_api_cases": {
+      "tests": 276,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 36.365,
+      "modules": {
+        "tests.test_content_cleanup": 260,
+        "tests.test_noise_rule_regressions": 16
+      },
+      "xml_sha256": "43f45aff02916e896fa5d802729b4b3f348aa0f7642dc78b4da491255d09adb3"
+    },
+    "four_relevant_modules": {
+      "tests": 3943,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 697.901,
+      "modules": {
+        "tests.test_content_cleanup": 3154,
+        "tests.test_cleanup_detection_reuse": 207,
+        "tests.test_cleanup_learning": 12,
+        "tests.test_noise_rule_regressions": 570
+      },
+      "xml_sha256": "7b28d75206c8c07e204a88b8c34cdb13207decd39756cedb133bbef078543bd4",
+      "warnings": 136,
+      "reported_seconds": 697.96
+    },
+    "new_source_cases_within_final_run": 260,
+    "new_api_cases_within_final_run": 16,
+    "intermediate_expectation_corrections": "Five focused assertions corrected: one unchanged legacy interval did not overlap the hit; four applied counts refer to occurrences, not messages. Earlier green2 expectations also omitted unchanged field policies. No product policy weakened."
+  },
+  "validation": {
+    "memory_compile": "pass",
+    "git_diff_check": "pass",
+    "no_staged_changes": true,
+    "basetemp_and_pytest_cache_under_task_temp_root": true,
+    "new_document_anchor": "pass"
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "88e1210c13a8ab8bb0fe4c1db6f18abc96f37a9696fc80cd647513ad5417682d",
+    "docs/index.md": "17b6173aada94a6f779a579f02bddfcbf64971787c36347e3f2263d2ede5b3bd",
+    "docs/documentation-inventory.md": "0c1b3c53755566abce98887d33088c0bdb86447b236c1f7d00abf8f863006343",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "d7c239da157eb76ce66d6118137a4f8879135b0ec32aed844f2341b9638cfbe7",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "5a2ed96cfe1efe3a2a3c7a2a45e067ac76bc0f99c7e9bc69589f3fc6c61fca8d",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "1fc531e4415cc033c0e5ff8ad537d8e263160c1e600c81fe536554751f9b4864"
+  },
+  "temporary_artifacts": {
+    "task_subdirectory": "chat-reader-noise-table-inline-boundaries",
+    "files": {
+      "content-cleanup-before.py": "4a88ea5c2c4313b1191e1ab8973b2ac23ab7783d9ae6438a5de448a80eea5277",
+      "baseline_plugin.py": "dd1f1432fdcf8e74bd77d96ce74dea1c514bcdfef35d33d1dcc1bc2657ec77f9",
+      "probes.mjs": "f0c60aa01a9ae55775a593350e1305fd37af89b88ce70f0803160b9778133323",
+      "probes.py": "2c2198ee6ab29864e21357e784280467f76ebe815e2e99c4977ff48faa92259f",
+      "probes.json": "b0c92e093e46a85c6222af663365caa6ba3c412cc9e9f81e14a98d69a6c97b31",
+      "create-probes.mjs": "1730a688b587871230b10d23231b16d98864d2acf83927f5a80121570ec371f4",
+      "grammar-probes.mjs": "27bf54033427cdb1583e412ea0d383ff9f78a62f7a83df7bcc4405ccd9aefdd4",
+      "grammar-probes.json": "e381d38711d966cab34b915bab4bd2899a9b53b1e9175806ceb4fadc5260bd47",
+      "render-tables.mjs": "5bb926e547602f9468cd06169b1e7631f3b3bd49ded6f5ab8bf6ca21cfaa28db",
+      "render.log": "8106bf596298b29fbbfc26af900e1fa1b8c9d1a0b506d8c2b09619d9b3de6807",
+      "compare-tables.py": "f19e763bfd5dc847ffbd42c69e157975a3830723623cdc06955716bc90d41aee",
+      "table-corpus.json": "bec4876ac8c4abec89f8cf73916d4b1777027474a8e30e81b6c9e3029305c0dd",
+      "table-comparison.json": "0a36db2d8cbdafc961cbe2485bc71f15e8c63ccd3cad42547f1b7c674eb768bb",
+      "comparison.log": "72778c8b647f1f6296f09c30b9168c782d074e8ab6fc8c92ffe9032fc59ddd2d",
+      "before-decision-differences.json": "2ba93ebe77c83bef893b399c8a1c1de0cd24454f384c842b60715a8e3862679f",
+      "before-range-membership-differences.json": "87ae8de86e0e3651334374b64a83ecac38cb366e304b995500c667d4d34762b8",
+      "before-interval-differences.json": "4252d32f94622ac6235efdfe97ca3dd038fc63907a4c32d7f45ff0385786820d",
+      "before-raw-native-decision-differences.json": "108e6b3e92090b7553433d629ff42c5638018a3033c399324af907dd4fb7498f",
+      "before-policy-extras-differences.json": "e82d011cad6963fbaf2b6e815131a09e10ca4c83c1f744c1e1ed1a11b6a0e2d9",
+      "current-decision-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-range-membership-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-interval-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-raw-native-decision-differences.json": "e82d011cad6963fbaf2b6e815131a09e10ca4c83c1f744c1e1ed1a11b6a0e2d9",
+      "current-policy-extras-differences.json": "e82d011cad6963fbaf2b6e815131a09e10ca4c83c1f744c1e1ed1a11b6a0e2d9",
+      "verify-prior-corpora.py": "9aa83d818e1f5fe4fa63102312df0a7ac8ed5ca87b8bdcb2cc9eaeb3e2096317",
+      "prior-verification.json": "5955f3ef2f833a2408081391870488e86d0289828641f3ba0145d378f88f56fe",
+      "prior-verification.log": "e70ac2b569cafb94bc0969824f9906fcfd4e29e68b5ff34f7f82a06cab3827e5",
+      "prior-changes.json": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "red.xml": "6a2fba1ffb429236d36635dcf07d3079cecbc2182762a67746225279e6ef48d6",
+      "red.log": "7fad2a47d817208f61219705c9d3701b70a421a7fd5838a3fc54ab2785701b16",
+      "green.xml": "eb03f61a8fc3dc0a8f4bc92970f3475252730ff8e82a261015a49e08786e81e0",
+      "green.log": "f93a9a8dd6025f91c3e051282fae65b0db43f07fe0e94201d560b7f5b6b03533",
+      "green2.xml": "4171247dde0a70387a239420e9bcf96b0bcb8984f18c9346701565690ee42650",
+      "green2.log": "b39a5b34cf78124e3035e9d59b99cdfb6804ba556051fcdb5e45d0e7f62eaaad",
+      "focused.xml": "0299bc6aa399dbc17a3fb3d6e3dc899b92ff3995fa52fafc307755d195dc35d3",
+      "focused.log": "f422fae741c6bdca29dc1be8d9ddd9033b4b20073265dc6a5f03b36891cc9f41",
+      "focused-fixed.xml": "43f45aff02916e896fa5d802729b4b3f348aa0f7642dc78b4da491255d09adb3",
+      "focused-fixed.log": "f91ff3272c19af28eb39ea07fd108e4f48420a0eec54f21a615af3e7efc15eb7",
+      "baseline-fixed.xml": "54e705c11fe9d85bab17f79ddda0d30704b68737e5b13fde84de40958e43f746",
+      "baseline-fixed.log": "90c2ddceaab5cf2287ac257d150a97a1bddb4f8ed15ca646ec696e10e25afaa9",
+      "final.xml": "7b28d75206c8c07e204a88b8c34cdb13207decd39756cedb133bbef078543bd4",
+      "final.log": "dffe644d89a3e6ef9973c5d0b67dc0425ac345c968fbbdbf71494b8f96b2e730",
+      "final-source-start.json": "7144a3d5699c1bd00daffebfcdf5293669d8221f6d41f846877ab867ee3a1535",
+      "final-source-end.json": "02a220e4015bb0c0012dabc75e813f245bed1c82d8018af6c0b211e77d413748",
+      "final-diff-check.log": "18f2ec89c82caafd52bb4d7397c9a7940ec0ef5f4b6df412acb97b9bb82e46f5",
+      "write-receipt.py": "8d5b4318674a58d583a5f46a4a5a4bf82758b2d0434f46a19f425b598125843a"
+    }
+  },
+  "limits": [
+    "Correlated synthetic combinations, not production false-positive-rate estimates",
+    "1378 raw native decision differences are unchanged conservative field/table policy extras, not product defects",
+    "Full exact intervals asserted only for 5796 no-block-code controls; block prefix/newline conservative extents retained",
+    "Malformed active-link fallback remains conservative within its cell",
+    "Native parser evidence is not browser/app-adapter/sanitizer acceptance or complete Markdown/extension conformance",
+    "No universal complexity, performance, memory or production safety guarantee",
+    "No web search, browser, network, full API, PostgreSQL concurrency, CI or production validation",
+    "No dependency, migration, offline/Dexie, user import data or production configuration changes",
+    "No staging, commit, push or deployment; ongoing goal remains active"
+  ]
+}

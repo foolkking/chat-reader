@@ -1,5 +1,22 @@
 # Markdown 文档台账
 
+## 噪声审查修复 — 2026-10-27（发布准备）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `system/CONTENT_CLEANUP_CONTRACT.md`、`api-reference.md` | 当前抽样、匹配、代码／数学／链接／HTML 回退保护及明确确认合同；不把有界识别写成完整 Markdown 解析。 |
+| [日期执行记录](execution/ux-audit-noise-matching-2026-10-25.md#37-review-fixes-and-application-renderer-contract--2026-10-27)与[最终回执](execution/ux-audit-noise-matching-2026-10-25-evidence/review-fixes-completed-2026-10-27.json) | 第 37 节记录审查修复、共享实际应用渲染语料、旧扫描重验、已完成专项、环境跳过及临时盘中断历史；第 10–36 节、旧 JSON 与中断回执保持历史含义，包括已撤回的第 36 节快路径。 |
+| `PROJECT_STATE.md`、`index.md` | 简短区分本批发布准备与已接受 `c7dc074`，只链接详细过程，不复制每轮组合数和计时。 |
+| `execution/NOISE_REVIEW_RELEASE_2026-10-27.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 本次提交部署授权、精确源码 CI／制品／备份／生产验收进度；未验证阶段不得登记为已部署。 |
+| `system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` | 当前局限与未验证项；保留旧稳定锚点但明确转向最新边界，不重复日期执行记录。 |
+| `testing.md` | 共享渲染／后端语料的运行入口、实际源码位置检查和正常／旧扫描 apply 安全回归；不将 SSR 视为浏览器验收。 |
+
+## 已知风险状态校准 — 2026-10-26
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` | 将 10-14 的本地验证限制明确标为历史检查点；当前生产验收限制绑定到 10-25 发布记录，避免把旧环境失败误作现存缺陷。 |
+
 ## ChatGPT 阅读兼容与噪声精准匹配 — 2026-10-25（已部署）
 
 | 文档 | 当前职责 |
@@ -27,7 +44,7 @@ import parser 为 v6，Markdown parser 仍为 v5。旧文档中的计数/发布�
 
 | 文档 | 当前职责 |
 | --- | --- |
-| `system/CONTINUOUS_OPTIMIZATION_BACKLOG.md` | 原审查为 15 项保留、1 项修正、4 项撤销；有界续办 #135 已随 3fbf79d 部署，仅剩 #120 和条件观察 #133。 |
+| `system/CONTINUOUS_OPTIMIZATION_BACKLOG.md` | 原审查为 15 项保留、1 项修正、4 项撤销；#135 已随 3fbf79d 部署；#120 在 2026-10-26 本地固定 Actions SHA（未提交/部署）；#133 仍为条件只读观察。 |
 | `execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md` | 原实施和 no-change 证据、撤销/兼容修正及 #135 续办验证与限制；不是活动待办或生产验收。 |
 | `execution/SYSTEM_OPTIMIZATION_RELEASE_2026-10-24.md` | 本批 3fbf79d 的五项全绿 CI、50 分钟门槛、独立制品、备份及 22:02:16 +08:00 部署验收；保留首轮失败，不扩大优化范围。 |
 | `PROJECT_STATE.md` | 当前生产、回退及本地范围的唯一入口；不再额外维护发布事实 JSON 或逐段文本绑定检查器。 |

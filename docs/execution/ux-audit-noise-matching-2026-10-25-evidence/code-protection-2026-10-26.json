@@ -1,0 +1,79 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "api_regression": {
+    "modules": 14,
+    "passed": 371,
+    "duration_seconds": 193.25,
+    "noise_rule_regression_cases_included": 160,
+    "basetemp_batch": "pytest-indent-verified-final"
+  },
+  "renderer": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "method": "Installed server-rendered HTML code membership for exact synthetic NOISE literal, compared to cleanup protection classification",
+    "combinations": 10512,
+    "literal_hits": 30820,
+    "classification_differences": 0,
+    "corpora": [
+      {
+        "temporary_file": "container-parser-corpus.json",
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "combinations": 312,
+        "literal_hits": 780,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "continuation-parser-corpus.json",
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "combinations": 80,
+        "literal_hits": 120,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "container-edge-corpus.json",
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "combinations": 9240,
+        "literal_hits": 27720,
+        "classification_differences": 0
+      },
+      {
+        "temporary_file": "indent-paragraph-corpus.json",
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "combinations": 880,
+        "literal_hits": 2200,
+        "classification_differences": 0
+      }
+    ]
+  },
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "72381d3c9a578fb3203884e546d8d8939a1c6b50532ffc346a170f9a23dd17c0"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "8ed2f0d8c622badd2872eb012c597f3033db9d2cca989c17c3f0935ce786b90e"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "23e81b8ab127cc850905f219547e1bd44cbdf1ac3d73af7b321a010c1392ecb0"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "limits": [
+    "Synthetic related combinations are not independent production samples or a false-positive rate.",
+    "Temporary raw corpora remain in the task wkkk directory, not in this receipt.",
+    "Not full API suite, PostgreSQL concurrency, browser, full CommonMark/GFM/HTML conformance, Web build, CI, or production acceptance.",
+    "No migration, dependency, canonical format, import originals, offline package, Dexie, production config, commit, push, or deployment change in this continuation."
+  ]
+}

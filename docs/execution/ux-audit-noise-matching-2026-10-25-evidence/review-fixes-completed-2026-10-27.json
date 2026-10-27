@@ -1,0 +1,396 @@
+{
+  "date": "2026-10-27",
+  "scope": "completed local review fixes and isolated scoped regression; not complete API/remote CI/production acceptance",
+  "baseline_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "interrupted_checkpoint": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/review-fixes-2026-10-27.json",
+    "sha256": "1a2181a1bab2972c22e40bbda2d0b966c8ec9fc22258101498600b513880f6c8",
+    "preserved_unchanged": true
+  },
+  "bindings_checked_unchanged": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "1d5812e81cfa079378f8057d11bb2a8168e1e3f5db11f5c283ca9e21148ff3d6"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_normalization.py",
+      "sha256": "e15345e2779632edcfc3730f55068cfdf76a0506a1b3d87dffccd8d93e1f92f5"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "scripts/ux/fixtures/noise-renderer-protection.json",
+      "sha256": "e2a3a3e11fb9c28ab36010d4ace5ad32536499688ac58db1d1be53b606c0e8e7"
+    },
+    {
+      "path": "scripts/ux/chatgpt-rich-text.test.mjs",
+      "sha256": "8f6a56ac71de67913bc903f3960996b4ddd31e811afd3d1e99d8a8622b04c093"
+    },
+    {
+      "path": "scripts/ci/release-image-sources.test.mjs",
+      "sha256": "e95ebd5dbaf6f129a89b3e089ce3b74c0bc677a89717ce984766bb183012e66e"
+    },
+    {
+      "path": ".github/workflows/build-release-images.yml",
+      "sha256": "5af958c67124a5d1717ca5f45ea34797ba041c710ad84b7597149bf32fc63248"
+    },
+    {
+      "path": ".github/workflows/performance-characterization.yml",
+      "sha256": "84e2d46d266b3992c646a65e5e251a967c6957f101f78bddede575d09e8fd8fe"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "dfb6d63cd2faa339d579cfb59789c245c07dbfc9f4f7407cc3748e78ca31dd8a"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "ffdac8c33989a56820d814ed067ad236ac838a6d55a45f2ffa66bb15e5ca9147"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_normalization.py",
+      "sha256": "d9b2637eb526faed1be4bde70c0b99fb964212546b7e35bb1210c22922d6214b"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_unicode_normalization.py",
+      "sha256": "b3e84c479702cea807bcc725897c0896bcd582bf185ddd5f4c050c1ba9d5a476"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_literal_matching.py",
+      "sha256": "dd7984d8486c537b49ae7ffa0bfd8bbf28ef315c27c04be24e33add946ffc766"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_bounded_distance.py",
+      "sha256": "8009e77f6f6bb93f8b52ea2e13bf7ed79b992e77b7e96fd69845d58c0d67b0ea"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_scan_retention.py",
+      "sha256": "1b30e0ab08e139f943fd244759f81355381d2b02f5f7f2a7cb51b8a4ff8addf3"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "fa25c0d617acc1d013d026e5402bce81ee9ee7a95b6fab9a07b0c617c789da2b"
+    },
+    {
+      "path": "apps/api/tests/test_noise_renderer_protection_contract.py",
+      "sha256": "63862b7ff4bf76378bcd5f953db651fa925a3174e39c8ca5cc9295d1461f9b05"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_safety.py",
+      "sha256": "edd11b57913f236f11021207f742fcc4a22de3c340eb34451ff366ea9aec848b"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_protection_review.py",
+      "sha256": "70b47f4e638a642577ba04106b2d2ce897efc713c99d5c36ac4d1a862cfc3b1c"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_reviewed_ranges.py",
+      "sha256": "d7adfb547fd84079ab921681e95ae5ecf01990021b53ef285c144b7307f3c526"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_execution.py",
+      "sha256": "f025292b21b2dea12dc07a69f42ccb2235c21ef66cd6c9da53de75ace9933a17"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_preview_ranges.py",
+      "sha256": "7f6fa95d50c4acdf4bdce22d47f6c9e539b911cb22508bc014b0b88870e0b965"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_access.py",
+      "sha256": "9bbbdd62685a3c2d2ea53b23203af13035c4e7c71d0eed3edec397e5a2476c0d"
+    }
+  ],
+  "verification": {
+    "complete_api_modules": [
+      {
+        "module": "apps/api/tests/test_content_cleanup.py",
+        "tests": 3182,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 3182,
+        "seconds": 73.201,
+        "task_log": "api-module-01.log",
+        "log_sha256": "be54f7bf82fc9e1ed8624c4c43ece5da8aafa98bfca1d75e135422626e09b5f6",
+        "junit_sha256": "11f3e35e04d618d007b8456b21fbe1111138fb4fc7feb26366219b5e0985a180"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_detection_reuse.py",
+        "tests": 207,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 207,
+        "seconds": 14.973,
+        "task_log": "api-module-02.log",
+        "log_sha256": "db3855b2cd0e2e63a31a589049ebe96c1b53377c55b95a4cef665c62743ff300",
+        "junit_sha256": "764420884cc164649d76db17e7fff4d3b2b4584d969e3a5529df93bf0b21926a"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_normalization.py",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 9,
+        "seconds": 5.418,
+        "task_log": "api-module-03.log",
+        "log_sha256": "77c8f864cab08554bc02f4c4e14a0030136176cb506ed2f047f0c406f17dcc52",
+        "junit_sha256": "5d04574f78c858082b5f98d0683671868729bfd2982d9455d53b8e2f8a3c8b4a"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_unicode_normalization.py",
+        "tests": 35,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 35,
+        "seconds": 13.14,
+        "task_log": "api-module-04.log",
+        "log_sha256": "f21162782ea56904776065257192e2f93ef8a36737e80a68195b8c7083f86091",
+        "junit_sha256": "02c7c8fe4d4ce8e5f8ae24551b302269dd0bfd68b62007674dd44252faeeca0b"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_literal_matching.py",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 20,
+        "seconds": 8.669,
+        "task_log": "api-module-05.log",
+        "log_sha256": "d0d73cdab267495e846fb98cc7d56ee56ed3d2cc972eca4a3ecb51bc5658ddaf",
+        "junit_sha256": "b7d7173fc9df0b376556e8f22bd4ab4e8e854f99e561a8d245c2d7bd31e85238"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_bounded_distance.py",
+        "tests": 34,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 34,
+        "seconds": 2.716,
+        "task_log": "api-module-06.log",
+        "log_sha256": "1701b42006c53e1f6a4f57db957128abc3096240ab046d64366f073d72b42194",
+        "junit_sha256": "65d2a551803d19acbd441a935ceb24f59b3aedf2ea160d4b052360f0a1fe391d"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_learning.py",
+        "tests": 12,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 12,
+        "seconds": 25.306,
+        "task_log": "api-module-07.log",
+        "log_sha256": "b05e37e8b53910ebd61aa9b1a1cbd8b055d903d4d07948995eb9d84c78464412",
+        "junit_sha256": "b15b4d825feab6c937f139b7092f76daa04d318ee42fffde1d7d88735fc846ef"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_scan_retention.py",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 5,
+        "seconds": 17.729,
+        "task_log": "api-module-08.log",
+        "log_sha256": "caa6c5bd42a7a29c7265251615dcb60a9d1aaea3f3932f28bd6b397d78ccf82a",
+        "junit_sha256": "86db2538f92f809c6c7c4e985d8a64a81abd8eff1598bde4f77b1cf278ff8eb1"
+      },
+      {
+        "module": "apps/api/tests/test_noise_rule_regressions.py",
+        "tests": 570,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 570,
+        "seconds": 582.369,
+        "task_log": "api-module-09-resumed.log",
+        "log_sha256": "367bd818e7851313e359fbc4d36d09d53613ecf6f78f1e0cc6cd2fcfe17678f7",
+        "junit_sha256": "b289cf4d8982dca62ee8c8a55e02a62e515e8816a6b144d38ff1239455d42df8"
+      },
+      {
+        "module": "apps/api/tests/test_noise_renderer_protection_contract.py",
+        "tests": 52,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 52,
+        "seconds": 1.623,
+        "task_log": "api-module-10-resumed.log",
+        "log_sha256": "6e5c42664ad1b0d04806050e297b230e59d5f37e69506e36fb7f86a753347cc6",
+        "junit_sha256": "7550c69ae59c4546ef4f065306b2f505348a643650503244e3ed5510ba64441e"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_safety.py",
+        "tests": 38,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 38,
+        "seconds": 31.257,
+        "task_log": "api-module-11-resumed.log",
+        "log_sha256": "bd750a4e3e62e7fd5a4fc1c8204b99c8061261e756c38a95828353ce43e61a52",
+        "junit_sha256": "6067aee49e8e37cbba3f53e83d15757b346c8c29064503adae0edd2088e20d73"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_protection_review.py",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 3,
+        "seconds": 8.822,
+        "task_log": "api-module-12-resumed.log",
+        "log_sha256": "13199aada32520278a17862d7ba0f1b72601b98e94b863b8e24d4f2bbdebff1d",
+        "junit_sha256": "860fefeb00a97e52c56c8e5ef9d696421ee80c9a52090bc41928aa9c237b062a"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_reviewed_ranges.py",
+        "tests": 24,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 24,
+        "seconds": 26.522,
+        "task_log": "api-module-13-resumed.log",
+        "log_sha256": "2481a2867a08fdcac3b3c3b7960cc139c9fb9dd173142a61aa5317cb6ca52d74",
+        "junit_sha256": "4d8af944890d1fe82617b5fa3e7f7fe383827d077940959af3c3b036c88dd9f1"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_execution.py",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1,
+        "passed": 14,
+        "seconds": 20.756,
+        "task_log": "api-module-14-resumed.log",
+        "log_sha256": "373448c900d1ff3eec452720c12cc6b01863bb0157de349666f3ef1f9cd1e91f",
+        "junit_sha256": "fda6ca6e36bbde26645408790525ddafcb4e7169dd0b9fc4bfeddd9759c0e65d"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_preview_ranges.py",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 5,
+        "seconds": 12.571,
+        "task_log": "api-module-15-resumed.log",
+        "log_sha256": "2c1297b92793b4755c645b13128f1686bc207104f708a0ea6ae9a1c2db58243d",
+        "junit_sha256": "297850d082109a54e5eded28493c2cac607520b28b38af9269bf63b6c1322998"
+      },
+      {
+        "module": "apps/api/tests/test_cleanup_access.py",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "passed": 2,
+        "seconds": 7.707,
+        "task_log": "api-module-16-resumed.log",
+        "log_sha256": "9de358158f45d1039088bb6e51c3f10efaf39b725d24004a9f3695356638f7ff",
+        "junit_sha256": "d1857b1324e826f6cabbcf824935137d34296088b2d8f5fb25ab54dbe80d66aa"
+      }
+    ],
+    "complete_api_passed_total": 4212,
+    "complete_api_warnings": 138,
+    "targeted_review_regressions": {
+      "passed": 83,
+      "deselected": 3189,
+      "seconds": 66.99,
+      "overlaps_complete_api_modules": true,
+      "shared_LF_CRLF_cases": 52,
+      "normal_and_legacy_apply_cases": 20,
+      "forged_apply_cases": 11,
+      "included_in_completed_modular_api": true
+    },
+    "app_renderer_and_source_suite": {
+      "files": 75,
+      "passed": 1641,
+      "failed": 0,
+      "skipped": 0,
+      "shared_sources": 26,
+      "shared_LF_CRLF_cases": 52,
+      "app_rich_text_tests_included": 95
+    },
+    "ci_source_contracts": {
+      "passed": 58,
+      "failed": 0,
+      "full_sha_pins": 41,
+      "workflow_non_action_yaml_unchanged": true,
+      "remote_tag_mapping_reverified": false
+    },
+    "web_lint": "passed",
+    "web_nonincremental_typecheck": "passed",
+    "preexisting_tsbuildinfo_sha256_unchanged": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7",
+    "review_mixed_membership_replay": {
+      "sources": 560,
+      "required_code_math_hits": 572,
+      "missed": 0,
+      "extra_PROTECTED_RANGE_hits": 0,
+      "source_sha256": "9e49ccccb6723177c64c0b9d32b35429c5154553cd03cbf582cf4f0d284be03d"
+    },
+    "normalization": "service matches HEAD; compact provenance and min/max envelope preserved; 2000 seeded subrange oracle comparisons",
+    "log_hashes": [
+      {
+        "task_log": "rich-boundary-green.log",
+        "sha256": "b2b9e78a1584c9c5dc4cf41dacdc2cc559aa4649705452c0bce8aac94a5256ac"
+      },
+      {
+        "task_log": "rich-boundary-red.log",
+        "sha256": "836bbb246b3054859838e683ed55f9cd0eaa7e9b6ca1ad5e3b418d005f646395"
+      },
+      {
+        "task_log": "ux-source-verified.log",
+        "sha256": "5612e130b337c9e6137a4bd15aab2bf2a97cde1e3a4a0e15b36f9fa537d229ac"
+      },
+      {
+        "task_log": "ci-contract-verified.log",
+        "sha256": "64261c905d5dcef831af5560aae57502d5baf8989b9072a95ea7b15c4bf20227"
+      },
+      {
+        "task_log": "web-lint-final.log",
+        "sha256": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274"
+      },
+      {
+        "task_log": "web-typecheck-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "task_log": "workflow-pin-check.json",
+        "sha256": "14f6344670c086b534a31b5d8539cc74076b3459b5c1c8506755696966d2425e"
+      }
+    ],
+    "complete_api_seconds_total": 852.779,
+    "complete_api_skipped_total": 1,
+    "complete_api_skips": [
+      {
+        "module": "apps/api/tests/test_cleanup_execution.py",
+        "test": "test_outside_symlink_is_never_eligible",
+        "reason": "symlink creation is unavailable in this environment"
+      }
+    ]
+  },
+  "recovery": {
+    "user_reported_disk_cleanup": true,
+    "agent_deleted_preexisting_task_pytest_directories": false,
+    "agent_cleanup_command_was_denied": true,
+    "prior_memory_and_disk_interrupted_runs_are_not_passes": true,
+    "resumed_with_new_log_and_basetemp_names": true,
+    "resource_gates_weakened": false
+  },
+  "unclaimed": {
+    "complete_API_suite": "not run to completion; earlier audit import-fixture failures incompletely attributed",
+    "browser_PWA_Share_PostgreSQL_concurrency": "not run",
+    "remote_CI_commit_push_deploy": "not performed",
+    "universal_parser_equivalence_or_performance_improvement": "not claimed"
+  }
+}

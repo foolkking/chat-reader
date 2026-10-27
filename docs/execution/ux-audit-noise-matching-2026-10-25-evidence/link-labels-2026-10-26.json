@@ -1,0 +1,693 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "baseline_matches_prior_receipt": "link-attributes-2026-10-26.json",
+  "baseline_source_sha256": "a888437aea07d714dfd535a86b9753fcb62d24183b9a6dfd88106bb39c701ed4",
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "b86e45d106d98a7d388e009511bc63ab22830d0e4d5e79f9be1387b8b4df98f8"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "6017bd43977b50bc89cc7b4baff52cbb3b7ae45b82e77b0d14025c9276812f4f"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "868724d596bc4c26d56e06fb1f34abf7e807f5d2a90a3bec774a00cb7cdf89f5"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "23e81b8ab127cc850905f219547e1bd44cbdf1ac3d73af7b321a010c1392ecb0"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "renderer": {
+    "generated": 512,
+    "seeds": 32,
+    "containers": 4,
+    "versions": {
+      "react": "19.2.8",
+      "react-dom": "19.2.8",
+      "react-markdown": "10.1.0",
+      "remark-gfm": "4.0.1",
+      "remark-breaks": "4.0.0",
+      "remark-math": "6.0.0"
+    },
+    "scope": "Installed server renderer/parser with GFM, breaks and dollar math; not application adapters, sanitizer, browser or production.",
+    "factors": {
+      "seeds": 32,
+      "containers": 4,
+      "prefixes": 2,
+      "line_endings": 2
+    },
+    "script_sha256": "10b1345f7778fa718f83d2658c7eb09a63eac704f05d560e1cd72ce034c75262",
+    "corpus_sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+    "metadata_sha256": "9eb14d40d13987023299cb64da014e33d23706bcc44fadc8dfe3a090b2337664",
+    "position_conversion": "MDAST UTF-16 source coordinates converted with Array.from(source.slice(0, offset)).length; CRLF retained.",
+    "matrix_scope": "Candidate decisions and PROTECTED_RANGE evidence, not all Markdown syntax or real-world precision."
+  },
+  "verification": {
+    "source_sha256": "b86e45d106d98a7d388e009511bc63ab22830d0e4d5e79f9be1387b8b4df98f8",
+    "baseline_source_sha256": "a888437aea07d714dfd535a86b9753fcb62d24183b9a6dfd88106bb39c701ed4",
+    "ast_unchanged_except": [
+      "protected_ranges"
+    ],
+    "label_matrix": {
+      "combinations": 512,
+      "literal_hits": 1056,
+      "before_mismatching_combinations": 304,
+      "before_overprotected": 304,
+      "before_missed_protection": 0,
+      "after_decision_and_protection_evidence_differences": 0
+    },
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "combinations": 312,
+        "literal_hits": 780,
+        "full_metadata_differences": 0,
+        "protected_interval_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "combinations": 80,
+        "literal_hits": 120,
+        "full_metadata_differences": 0,
+        "protected_interval_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "combinations": 9240,
+        "literal_hits": 27720,
+        "full_metadata_differences": 0,
+        "protected_interval_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "combinations": 880,
+        "literal_hits": 2200,
+        "full_metadata_differences": 0,
+        "protected_interval_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "combinations": 34,
+        "literal_hits": 70,
+        "full_metadata_differences": 0,
+        "protected_interval_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "combinations": 1088,
+        "literal_hits": 2240,
+        "full_metadata_differences": 0,
+        "protected_interval_differences": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "combinations": 4896,
+        "literal_hits": 9648,
+        "full_metadata_differences": 0,
+        "protected_interval_differences": 0
+      }
+    ],
+    "remaining_bare_gfm_url_probe": [
+      "KEEP",
+      "KEEP"
+    ]
+  },
+  "verification_script_sha256": "15d09beed3cdd1dd93cbf8e98a56b016ad252c1c45aa56fbe1eb4ad89edc9847",
+  "verification_result_sha256": "bf4317ce2821eb04961ba5b314a612dd9dda363e1149530c9702f486b6b3e908",
+  "timings": {
+    "source_sha256": "b86e45d106d98a7d388e009511bc63ab22830d0e4d5e79f9be1387b8b4df98f8",
+    "timings": [
+      {
+        "kind": "no_brackets",
+        "count": 4096,
+        "source_codepoints": 61445,
+        "seconds": {
+          "before": [
+            0.017990599968470633,
+            0.018368500052019954,
+            0.01820419996511191
+          ],
+          "after": [
+            0.01917210000101477,
+            0.018104400020092726,
+            0.017982000019401312
+          ]
+        },
+        "median_seconds": {
+          "before": 0.01820419996511191,
+          "after": 0.018104400020092726
+        },
+        "protected_ranges": {
+          "before": 0,
+          "after": 0
+        },
+        "protected_ranges_sha256": {
+          "before": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "after": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      {
+        "kind": "inline_code",
+        "count": 4096,
+        "source_codepoints": 86021,
+        "seconds": {
+          "before": [
+            0.02767189999576658,
+            0.028051899978891015,
+            0.06780840002465993
+          ],
+          "after": [
+            0.028306700056418777,
+            0.028570499969646335,
+            0.0276884000049904
+          ]
+        },
+        "median_seconds": {
+          "before": 0.028051899978891015,
+          "after": 0.028306700056418777
+        },
+        "protected_ranges": {
+          "before": 4096,
+          "after": 4096
+        },
+        "protected_ranges_sha256": {
+          "before": "9c381b86944f705befe2cd684ae6b41d21f48f958a437415f76a81669e06a0a1",
+          "after": "9c381b86944f705befe2cd684ae6b41d21f48f958a437415f76a81669e06a0a1"
+        }
+      },
+      {
+        "kind": "valid_links",
+        "count": 128,
+        "source_codepoints": 3200,
+        "seconds": {
+          "before": [
+            0.001168699935078621,
+            0.0010730000212788582,
+            0.001067299977876246
+          ],
+          "after": [
+            0.0014010000741109252,
+            0.0013633999042212963,
+            0.0013282999861985445
+          ]
+        },
+        "median_seconds": {
+          "before": 0.0010730000212788582,
+          "after": 0.0013633999042212963
+        },
+        "protected_ranges": {
+          "before": 128,
+          "after": 128
+        },
+        "protected_ranges_sha256": {
+          "before": "ed2c7eddda010c52c9e9485af3be548d847a05f5791d96435ff9355d3a987c1a",
+          "after": "ed2c7eddda010c52c9e9485af3be548d847a05f5791d96435ff9355d3a987c1a"
+        }
+      },
+      {
+        "kind": "closed_labels",
+        "count": 128,
+        "source_codepoints": 4736,
+        "seconds": {
+          "before": [
+            0.0016136999474838376,
+            0.0016117000486701727,
+            0.0016231000190600753
+          ],
+          "after": [
+            0.0016731999348849058,
+            0.0017306999070569873,
+            0.0017137000104412436
+          ]
+        },
+        "median_seconds": {
+          "before": 0.0016136999474838376,
+          "after": 0.0017137000104412436
+        },
+        "protected_ranges": {
+          "before": 128,
+          "after": 0
+        },
+        "protected_ranges_sha256": {
+          "before": "3081ca5cdf23d2a12dd74132b9b3943f5340e34cf4293b8cf30d33e2a8bde994",
+          "after": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      {
+        "kind": "inactive_outer_labels",
+        "count": 128,
+        "source_codepoints": 5888,
+        "seconds": {
+          "before": [
+            0.0022133999736979604,
+            0.002295799902640283,
+            0.002243499970063567
+          ],
+          "after": [
+            0.0022980000358074903,
+            0.0024211000418290496,
+            0.002316199941560626
+          ]
+        },
+        "median_seconds": {
+          "before": 0.002243499970063567,
+          "after": 0.002316199941560626
+        },
+        "protected_ranges": {
+          "before": 256,
+          "after": 128
+        },
+        "protected_ranges_sha256": {
+          "before": "8be5cf8a2862f15c7f04eed392eee69536e061a862647cf872b5d5cfdc4ad827",
+          "after": "be41d50cf780c5ca5774f690f97ea34dd66764097b03c1615a76fbfca4d793ad"
+        }
+      },
+      {
+        "kind": "valid_links",
+        "count": 512,
+        "source_codepoints": 12800,
+        "seconds": {
+          "before": [
+            0.004171999986283481,
+            0.004676499986089766,
+            0.00421240006107837
+          ],
+          "after": [
+            0.0053057000041007996,
+            0.0052544999634847045,
+            0.005204900051467121
+          ]
+        },
+        "median_seconds": {
+          "before": 0.00421240006107837,
+          "after": 0.0052544999634847045
+        },
+        "protected_ranges": {
+          "before": 512,
+          "after": 512
+        },
+        "protected_ranges_sha256": {
+          "before": "21f714bb91478f93e6044a058bfbb85a2854ed6ab7f1a9ffb461d3c4de6bb5b1",
+          "after": "21f714bb91478f93e6044a058bfbb85a2854ed6ab7f1a9ffb461d3c4de6bb5b1"
+        }
+      },
+      {
+        "kind": "closed_labels",
+        "count": 512,
+        "source_codepoints": 18944,
+        "seconds": {
+          "before": [
+            0.00661829998716712,
+            0.006584299961104989,
+            0.007743900059722364
+          ],
+          "after": [
+            0.006566199939697981,
+            0.006609400035813451,
+            0.006615099962800741
+          ]
+        },
+        "median_seconds": {
+          "before": 0.00661829998716712,
+          "after": 0.006609400035813451
+        },
+        "protected_ranges": {
+          "before": 512,
+          "after": 0
+        },
+        "protected_ranges_sha256": {
+          "before": "ea5595a450f89c655046f87eedb9294cc94dc9ac50aafd2595d46797da049aa0",
+          "after": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      {
+        "kind": "inactive_outer_labels",
+        "count": 512,
+        "source_codepoints": 23552,
+        "seconds": {
+          "before": [
+            0.010508800041861832,
+            0.010458000004291534,
+            0.010319199995137751
+          ],
+          "after": [
+            0.010992900002747774,
+            0.01082750002387911,
+            0.010933300014585257
+          ]
+        },
+        "median_seconds": {
+          "before": 0.010458000004291534,
+          "after": 0.010933300014585257
+        },
+        "protected_ranges": {
+          "before": 1024,
+          "after": 512
+        },
+        "protected_ranges_sha256": {
+          "before": "32cf719283ccc5eb8a9e822ebb3c03a797d7a824a40a206f242b685d252731c2",
+          "after": "771175cd4efd4a52d6098fa91de221477432b406bafcc6ab0ef63c0fd3319456"
+        }
+      },
+      {
+        "kind": "valid_links",
+        "count": 1024,
+        "source_codepoints": 25600,
+        "seconds": {
+          "before": [
+            0.008515900000929832,
+            0.008344599977135658,
+            0.008469899999909103
+          ],
+          "after": [
+            0.010597100015729666,
+            0.01050309999845922,
+            0.010566300014033914
+          ]
+        },
+        "median_seconds": {
+          "before": 0.008469899999909103,
+          "after": 0.010566300014033914
+        },
+        "protected_ranges": {
+          "before": 1024,
+          "after": 1024
+        },
+        "protected_ranges_sha256": {
+          "before": "e9cf75158cf74a0e7ade7068d56a318621778b73a06209d6e3d2b6c4d04a19b3",
+          "after": "e9cf75158cf74a0e7ade7068d56a318621778b73a06209d6e3d2b6c4d04a19b3"
+        }
+      },
+      {
+        "kind": "closed_labels",
+        "count": 1024,
+        "source_codepoints": 37888,
+        "seconds": {
+          "before": [
+            0.012718699988909066,
+            0.012942600063979626,
+            0.012651799945160747
+          ],
+          "after": [
+            0.013327099964953959,
+            0.01323380006942898,
+            0.013143300078809261
+          ]
+        },
+        "median_seconds": {
+          "before": 0.012718699988909066,
+          "after": 0.01323380006942898
+        },
+        "protected_ranges": {
+          "before": 1024,
+          "after": 0
+        },
+        "protected_ranges_sha256": {
+          "before": "766e19f5b17b40b67ac05e054dbe7ab7774d0f53dd007da22418515596113bd7",
+          "after": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      },
+      {
+        "kind": "inactive_outer_labels",
+        "count": 1024,
+        "source_codepoints": 47104,
+        "seconds": {
+          "before": [
+            0.024921600008383393,
+            0.02521379990503192,
+            0.025678199948742986
+          ],
+          "after": [
+            0.02735619992017746,
+            0.026187100098468363,
+            0.025770400068722665
+          ]
+        },
+        "median_seconds": {
+          "before": 0.02521379990503192,
+          "after": 0.026187100098468363
+        },
+        "protected_ranges": {
+          "before": 2048,
+          "after": 1024
+        },
+        "protected_ranges_sha256": {
+          "before": "337281a063e56b48c93d5a64cd2e6eebce85c5ee44d49afc71317ad6fa6cb5ed",
+          "after": "ce2f4b81916f9be07f43effe60fe10b472e457f05dd4c94ab598ba6cc2167e18"
+        }
+      }
+    ]
+  },
+  "timings_result_sha256": "c0aedee9a29b63f8043623ab971ca04ac4fcc9900c3e26c1b77937ddd74cc28d",
+  "timing_scope": "Three alternating samples after focused tests exited and before final API batch started. Correct active-label checks add constant work on valid links; no all-input speed claim.",
+  "primary_local_parser_sources": [
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-end.js",
+      "sha256": "0fb2b950e1ed066cc1af4072bb4ff841a640aa8e02a43dc6de288ea8044e67e4"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-core-commonmark@2.0.3/node_modules/micromark-core-commonmark/lib/label-start-link.js",
+      "sha256": "ffdab4c9eb7c16743e91f3b20711cdded335413c279aa4fa76d2d98d515cc0ec"
+    }
+  ],
+  "api_regression": {
+    "passed": 722,
+    "failed": 0,
+    "skipped": 0,
+    "junit_duration_seconds": 519.618,
+    "per_module": {
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_noise_rule_regressions": 356,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_content_cleanup": 31,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_cleanup_detection_reuse": 126,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3
+    },
+    "junit_sha256": "c3009362aa5874e053b416339dc2782bb4217fc4e6cc5b18c62453c6ac7559d2",
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "junit_family": "xunit1",
+    "temporary_batch": "pytest-label-final",
+    "temporary_cache": "pytest-cache-label-final",
+    "entry_command": "corepack pnpm run test:api",
+    "scope": "Twenty-six cleanup modules in one pytest process, not the complete API suite."
+  },
+  "intermediate_checks": {
+    "label-red.xml": {
+      "passed": 26,
+      "failed": 38,
+      "skipped": 0,
+      "junit_duration_seconds": 3.62,
+      "per_module": {
+        "tests.test_noise_rule_regressions": 64
+      },
+      "junit_sha256": "70d6632b98c1ad08c7acdd46107c9544a1a1258e285b7757ab74c6edde50a09f"
+    },
+    "label-green.xml": {
+      "passed": 76,
+      "failed": 0,
+      "skipped": 0,
+      "junit_duration_seconds": 2.946,
+      "per_module": {
+        "tests.test_noise_rule_regressions": 64,
+        "tests.test_cleanup_detection_reuse": 12
+      },
+      "junit_sha256": "66495f529ad87e2c59ca9f4ade61c785d26bd6b31df8aba145155cd120b0c69d"
+    },
+    "label-api-work.xml": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "junit_duration_seconds": 19.189,
+      "per_module": {
+        "tests.test_noise_rule_regressions": 8,
+        "tests.test_cleanup_detection_reuse": 8
+      },
+      "junit_sha256": "dc6b6c29c06d40f092eb173ef47bfc32a6eae2ef37871abab84ce690dfdb4ec1"
+    }
+  },
+  "coverage_delta_from_prior_634": {
+    "label_unit_cases": 64,
+    "nonlink_trial_scan_apply_api_cases": 8,
+    "retained_valid_trial_apply_api_cases": 4,
+    "legacy_revalidation_api_cases": 2,
+    "explicit_confirmation_api_cases": 2,
+    "label_work_cases": 8,
+    "total_added": 88
+  },
+  "work_counter_cases": [
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[128-closed_labels-\\n]",
+      "codepoints_read": 512
+    },
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[128-closed_labels-\\r\\n]",
+      "codepoints_read": 512
+    },
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[128-inactive_outer_labels-\\n]",
+      "codepoints_read": 2048
+    },
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[128-inactive_outer_labels-\\r\\n]",
+      "codepoints_read": 2048
+    },
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[512-closed_labels-\\n]",
+      "codepoints_read": 2048
+    },
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[512-closed_labels-\\r\\n]",
+      "codepoints_read": 2048
+    },
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[512-inactive_outer_labels-\\n]",
+      "codepoints_read": 8192
+    },
+    {
+      "case": "test_link_labels_do_not_rescan_the_prefix_per_closing_marker[512-inactive_outer_labels-\\r\\n]",
+      "codepoints_read": 8192
+    }
+  ],
+  "work_counter_scope": "Explicit Python integer-index reads plus sliced source codepoints <=32 times input length for closed/deep-inactive label controls. These guard against prefix rescans; not every operation, stack visit, C-level read, allocation or universal linearity.",
+  "remaining_probe_results": [
+    {
+      "family": "full_reference_in_label",
+      "actual": [
+        "PROTECTED",
+        "KEEP"
+      ],
+      "expected": [
+        "KEEP",
+        "KEEP"
+      ]
+    },
+    {
+      "family": "collapsed_reference_in_label",
+      "actual": [
+        "PROTECTED",
+        "KEEP"
+      ],
+      "expected": [
+        "KEEP",
+        "KEEP"
+      ]
+    },
+    {
+      "family": "shortcut_reference_in_label",
+      "actual": [
+        "PROTECTED",
+        "KEEP"
+      ],
+      "expected": [
+        "KEEP",
+        "KEEP"
+      ]
+    },
+    {
+      "family": "autolink_in_label",
+      "actual": [
+        "PROTECTED",
+        "KEEP"
+      ],
+      "expected": [
+        "PROTECTED",
+        "KEEP"
+      ]
+    },
+    {
+      "family": "bare_gfm_url",
+      "actual": [
+        "KEEP",
+        "KEEP"
+      ],
+      "expected": [
+        "PROTECTED",
+        "KEEP"
+      ]
+    }
+  ],
+  "remaining_probes_script_sha256": "2386ca4e29a909581966862a19a5e5ec33f0a57d6e19916f064cf989eb2d20b7",
+  "remaining_probes_corpus_sha256": "c336e7bc1eb2a883b57558c3c2be883e9c636c6bc38a250463c825ffcd7c3ccb",
+  "remaining_probes_results_sha256": "c9fecf188120ed02af84e996c305d242ac39b33cb0cb8c1d2f8431966235a280",
+  "validation_limits": [
+    "Defined full/collapsed/shortcut references in an outer label still overprotect its non-link suffix. Inline generation tracking does not implement reference resolution.",
+    "Bare GFM URLs still lack destination protection. An explicit autolink in a label passes the renderer comparison and is not claimed defective.",
+    "Conservative incomplete same-line fallback remains after a genuine active label. No complete link/CommonMark conformance claim.",
+    "Matrices contain related and repeated synthetic combinations, not independent random samples or a production false-positive rate.",
+    "Local installed server-renderer and SQLite/API/service checks only, not application AI/HTML adapters, sanitizer, browser, PostgreSQL concurrency or production acceptance.",
+    "Prior 16,530 combinations / 42,778 hits have identical full metadata and protected intervals.",
+    "No new dependency, schema/migration, canonical format, archive, offline-package or Dexie changes.",
+    "No web search, commit, push, CI dispatch, deployment, production access or user import changes; preexisting tsconfig.tsbuildinfo retained."
+  ]
+}

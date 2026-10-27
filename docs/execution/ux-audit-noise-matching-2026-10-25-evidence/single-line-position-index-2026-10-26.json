@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "recorded_at": "2026-10-27T00:00:28.833622+08:00",
+  "scope": "Local no-LF occurrence line/column coordinate fast path; matching and protection policy unchanged",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "docs/execution/ux-audit-noise-matching-2026-10-25-evidence/bounded-edit-distance-2026-10-26.json",
+    "sha256": "f34b9aa9816be78899bb32d83226943ee15b9c68ce3a701ebe1760019439a6c1"
+  },
+  "source_and_test_hashes": {
+    "apps/api/app/services/content_cleanup.py": "9e41051795a579456b5ce5bc9d1d2510d5390b8d3d3c15e556ecb6b69074950b",
+    "apps/api/tests/test_cleanup_scan_retention.py": "1b30e0ab08e139f943fd244759f81355381d2b02f5f7f2a7cb51b8a4ff8addf3",
+    "apps/api/tests/test_content_cleanup.py": "8931e543a3f6e376438c63e563f476bf40afe3dd0c8a4ebab779f1f842ebba55",
+    "apps/api/tests/test_cleanup_safety.py": "c5d11b507e4acb1a11f6980aa8686c89a0acfb1d6f8aac0ca2a89d2fc7b7180e",
+    "apps/api/tests/test_noise_rule_regressions.py": "b90f1b601f6ec45e270d2e85ddb94fef8d9783c3393992fb45b98aa1d511f119"
+  },
+  "baseline_hashes": {
+    "apps/api/app/services/content_cleanup.py": "c110dd768a9c87a3ef7a6f4630ef21cecbc90087f6939a115c48c81ed9030580",
+    "apps/api/tests/test_cleanup_scan_retention.py": "b79b0b1a68ea85b8d712a1c3ff2e347f84920df573c7056f0aff3f15c45e51d5"
+  },
+  "runtime": {
+    "python": "3.11.7"
+  },
+  "correctness": {
+    "source_sha256": "9e41051795a579456b5ce5bc9d1d2510d5390b8d3d3c15e556ecb6b69074950b",
+    "baseline_source_sha256": "c110dd768a9c87a3ef7a6f4630ef21cecbc90087f6939a115c48c81ed9030580",
+    "comparison": "single-line fast path versus frozen legacy source-position recurrence",
+    "random_offset_cases": 80926,
+    "random_mismatches": 0,
+    "measurements": {
+      "one_line_dense": {
+        "legacy_median_ms": 502.7563,
+        "optimized_median_ms": 8.606,
+        "legacy_samples_ms": [
+          512.022,
+          495.0612,
+          504.9907,
+          500.1681,
+          502.7563,
+          507.3148,
+          499.1361
+        ],
+        "optimized_samples_ms": [
+          6.5452,
+          8.5411,
+          8.606,
+          9.1207,
+          6.4644,
+          9.0664,
+          8.9726
+        ],
+        "offsets": 20000,
+        "text_length": 200000
+      },
+      "one_line_short": {
+        "legacy_median_ms": 0.2009,
+        "optimized_median_ms": 0.0298,
+        "legacy_samples_ms": [
+          0.204,
+          0.2049,
+          0.1996,
+          0.2031,
+          0.2007,
+          0.2009,
+          0.2005
+        ],
+        "optimized_samples_ms": [
+          0.031,
+          0.0298,
+          0.03,
+          0.0296,
+          0.0298,
+          0.0297,
+          0.0296
+        ],
+        "offsets": 200,
+        "text_length": 2000
+      },
+      "many_lines": {
+        "legacy_median_ms": 5.5101,
+        "optimized_median_ms": 5.5552,
+        "legacy_samples_ms": [
+          5.4606,
+          5.5101,
+          5.5544,
+          5.4517,
+          5.4855,
+          5.5709,
+          5.5553
+        ],
+        "optimized_samples_ms": [
+          5.4722,
+          7.778,
+          5.5318,
+          5.4368,
+          5.5845,
+          7.5093,
+          5.5552
+        ],
+        "offsets": 5000,
+        "text_length": 255000
+      }
+    },
+    "limits": [
+      "Synthetic coordinate recurrence controls, not end-to-end production latency.",
+      "Only messages without LF take the new path; multiline messages retain the old recurrence."
+    ]
+  },
+  "tests": {
+    "focused_scan_retention": {
+      "cases": 5,
+      "results": {
+        "passed": 5
+      },
+      "modules": {
+        "test_cleanup_scan_retention": 5
+      },
+      "duration_seconds": 18.376,
+      "junit": {
+        "path": "scan-retention.xml",
+        "sha256": "5a73aa51d937b9654692970920c5efea9a2b1069d2505289cd160ab32128dbdd"
+      }
+    },
+    "targeted_regression": {
+      "cases": 3757,
+      "results": {
+        "passed": 3757
+      },
+      "modules": {
+        "test_content_cleanup": 3154,
+        "test_cleanup_scan_retention": 5,
+        "test_cleanup_safety": 28,
+        "test_noise_rule_regressions": 570
+      },
+      "duration_seconds": 687.182,
+      "junit": {
+        "path": "regression.xml",
+        "sha256": "2351962e03324ecb8925aff09e4f355e00df85da641d3c425ff96372f8ed6fa2"
+      }
+    }
+  },
+  "validation": {
+    "source_compile": "pass",
+    "git_diff_check": "pass",
+    "staged_paths": [],
+    "no_web_browser_ci_or_deployment": true,
+    "preexisting_tsbuildinfo_sha256": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7"
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "555e4958758ecb4637038c05ba900d1fcdb22af1b3cd9939f5373904ab7147ae",
+    "docs/index.md": "68da7d54e06c9465687bdf7d9c75169b94e42ac57e77599c92d24b3d2d31765e",
+    "docs/documentation-inventory.md": "b1b1b854c9a4e6a599fb52bae1cd6e1fb290e1921d40294e2d62f320eb1490cf",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "a626f0bc49ad64d4083d8a772afe5e09904cad6820414f66196abfb6eb5b3642",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "f50f7a6c234b7abaeb6d8be02692f7c5e2ba4bcdf7bf61d5aec9ff00d14653f0"
+  },
+  "temporary_root": "<TASK_TEMP_ROOT>/chat-reader-noise-position-index",
+  "temporary_artifacts": {
+    "content-cleanup-before.py": "c110dd768a9c87a3ef7a6f4630ef21cecbc90087f6939a115c48c81ed9030580",
+    "test-cleanup-scan-retention-before.py": "b79b0b1a68ea85b8d712a1c3ff2e347f84920df573c7056f0aff3f15c45e51d5",
+    "position_index_verification.py": "595c8bd07d1ae6b61869a74a5e041386c22aed14387fa709b365125b5e45aff3",
+    "verified-position-index.json": "61983f817d9b024e4da705359895f187927c8ad3d29bf8d24eb2aefdb0ff9c12",
+    "scan-retention.xml": "5a73aa51d937b9654692970920c5efea9a2b1069d2505289cd160ab32128dbdd",
+    "scan-retention.log": "f05eef43c8747ab55ede5102e3728372e3d4d8cad789d492524cc5ff0f9569a0",
+    "regression.xml": "2351962e03324ecb8925aff09e4f355e00df85da641d3c425ff96372f8ed6fa2",
+    "regression.log": "1c0c20946021f7437b4bb466c2afe27e36969ff6bd6229d49075cdf51014adac",
+    "final-diff-check.log": "0141345b2d47be21e3eb7a743ef1f17bca3872d2d30e239a8e69225678bab18e"
+  },
+  "limits": [
+    "Only messages without LF use the new direct coordinate formula; multiline messages retain the old recurrence.",
+    "Random coordinate and targeted API checks do not prove production latency, RSS or a complete scan bound.",
+    "Synthetic dense-hit timings measure coordinate recurrence only, not database writes or end-to-end scans.",
+    "No Web/browser, full API, PostgreSQL, CI or production validation was run; no commit, push or deployment occurred."
+  ]
+}

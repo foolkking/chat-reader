@@ -23,13 +23,23 @@ function job(name) {
   return workflow.slice(start + marker.length).split(/\n  [a-z][a-z0-9-]*:\n/, 1)[0];
 }
 
+function pinnedAction(body, action) {
+  const escaped = action.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = new RegExp(`^\\s*- uses: ${escaped}@([0-9a-f]{40})(?:\\s+# [^\\n]+)?$`, "m").exec(body);
+  assert.ok(match, `Expected immutable SHA-pinned action ${action}`);
+  return { index: match.index, sha: match[1] };
+}
+
 for (const name of ["api-quality", "web-quality", "settings-quality"]) {
   test(`${name} starts the pinned PostgreSQL fixture with bounded official-source fallback`, () => {
     const body = job(name);
     assert.doesNotMatch(body, /^    services:/m);
     assert.match(body, /id: postgres\n        timeout-minutes: 10\n        run: bash scripts\/ci\/postgres-service\.sh start/);
     assert.match(body, /if: \$\{\{ always\(\) && steps\.postgres\.outcome == 'success' \}\}\n        run: bash scripts\/ci\/postgres-service\.sh stop/);
-    assert.ok(body.indexOf("actions/checkout@v4") < body.indexOf("postgres-service.sh start"));
+    const checkout = pinnedAction(body, "actions/checkout");
+    const postgres = body.indexOf("run: bash scripts/ci/postgres-service.sh start");
+    assert.notEqual(postgres, -1);
+    assert.ok(checkout.index < postgres, "checkout must precede PostgreSQL startup");
     assert.ok(body.indexOf("postgres-service.sh start") < body.indexOf("python -m alembic upgrade head"));
   });
 }
@@ -66,7 +76,9 @@ for (const [argument, source] of [["PYTHON_BASE_IMAGE", sources.python], ["NODE_
 }
 
 test("builder setup uses Docker's built-in driver without a BuildKit container pull", () => {
-  assert.match(job("build-images"), /- uses: docker\/setup-buildx-action@v3\n        with:\n          driver: docker(?:\n|$)/);
+  const build = job("build-images");
+  pinnedAction(build, "docker/setup-buildx-action");
+  assert.match(build, /- uses: docker\/setup-buildx-action@[0-9a-f]{40}(?:\s+# [^\n]+)?\n        with:\n          driver: docker(?:\n|$)/);
 });
 
 test("both image builds explicitly select the accepted Linux amd64 platform", () => {

@@ -1,0 +1,785 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "baseline_matches_prior_receipt": "explanatory-prefilter-cost-2026-10-26.json",
+  "source_snapshots": [
+    {
+      "stage": "original_before_link_attributes",
+      "sha256": "1119d5b519084f9a6ba6d70b0591350cfa2bc9be15959e113926698e553bd5c8"
+    },
+    {
+      "stage": "initial_attribute_parser_before_title_index",
+      "sha256": "1991985ef0e93e25ecc01d268603e22257a5ec5868bfa4b1661545231c9381c5"
+    },
+    {
+      "stage": "indexed_title_closers_before_shared_tail_cache",
+      "sha256": "497782bfaa47646007963466b3973ea1f3b58ccd40147dc077b5932d23d2953f"
+    }
+  ],
+  "isolated_initial_probe": {
+    "combinations": 32,
+    "mismatching_combinations": 18,
+    "missed_protected": 14,
+    "overprotected": 4,
+    "after_mismatching_combinations": 0,
+    "fixture_control": "links.test / relative URLs and Before/Plain prose avoid unrelated example/literal keyword and leading URI field heuristics.",
+    "excluded_confounded_trials": "Earlier example.invalid, Literal and leading https: fixtures were diagnostic only, not authoritative protection measurements.",
+    "corpus_sha256": "fdba32dc6d0b063a0d284578deed18b9516d7e9b5304a476cfa6a98c42613f0f",
+    "baseline_sha256": "3fdd68288e02374de96e9505ddc40193bed4aff6d32b9dcaea97e925480a4c25"
+  },
+  "renderer_matrix": {
+    "generated": 4896,
+    "recognized": 4896,
+    "declined": 0,
+    "versions": {
+      "react": "19.2.8",
+      "react-dom": "19.2.8",
+      "react-markdown": "10.1.0",
+      "remark-gfm": "4.0.1",
+      "remark-breaks": "4.0.0",
+      "remark-math": "6.0.0"
+    },
+    "scope": "Installed syntax parser/server renderer with GFM, breaks and dollar math; not application DOM, AI math/HTML adapters, sanitizer or a browser.",
+    "combinations": 4896,
+    "literal_hits": 9648,
+    "before_mismatching_combinations": 2736,
+    "before_missed_protected": 1872,
+    "before_overprotected": 864,
+    "after_differences": 0,
+    "factors": {
+      "seeds": 34,
+      "containers": 6,
+      "prefixes": 2,
+      "line_endings": 2,
+      "image_variants": 2,
+      "leading_attribute_whitespace_variants": 3
+    },
+    "warning_limit": "Empty image URL fixtures emitted React server-render warnings. No browser/network image loading or warning-free application acceptance is claimed.",
+    "position_conversion": "MDAST UTF-16 positions mapped to original Python codepoint offsets using Array.from(source.slice(0, offset)).length; CRLF retained.",
+    "script_sha256": "75c890bc9de5a044365287c462252b852f7f86da4418ec330d0acb5f3c0a5c04",
+    "seed_sha256": "4b7aa59420cef68b2b77dfeffe9c0c2a3b618ad3388467f1272bf7b7d88d4ebd",
+    "corpus_sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+    "metadata_sha256": "675dc21cc9b39954d9800eb448ddef22287ef9ee53520078e303186a556b4c54",
+    "zero_difference_scope": "Exact candidate decisions and PROTECTED_RANGE evidence, not all Markdown syntax or real-world precision."
+  },
+  "verification": {
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "combinations": 312,
+        "literal_hits": 780,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "combinations": 80,
+        "literal_hits": 120,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "combinations": 9240,
+        "literal_hits": 27720,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "combinations": 880,
+        "literal_hits": 2200,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "combinations": 34,
+        "literal_hits": 70,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "combinations": 1088,
+        "literal_hits": 2240,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      }
+    ],
+    "link_matrix": {
+      "combinations": 4896,
+      "literal_hits": 9648,
+      "before_mismatching_combinations": 2736,
+      "before_missed_protected": 1872,
+      "before_overprotected": 864,
+      "after_differences": 0
+    },
+    "known_out_of_scope_probe_results": [
+      {
+        "kind": "bare_gfm_url",
+        "actual": [
+          "KEEP",
+          "KEEP"
+        ],
+        "renderer_expected": [
+          "PROTECTED",
+          "KEEP"
+        ]
+      },
+      {
+        "kind": "bare_gfm_url",
+        "actual": [
+          "KEEP",
+          "KEEP"
+        ],
+        "renderer_expected": [
+          "PROTECTED",
+          "KEEP"
+        ]
+      },
+      {
+        "kind": "orphan_closing_label",
+        "actual": [
+          "PROTECTED",
+          "KEEP"
+        ],
+        "renderer_expected": [
+          "KEEP",
+          "KEEP"
+        ]
+      },
+      {
+        "kind": "orphan_closing_label",
+        "actual": [
+          "PROTECTED",
+          "KEEP"
+        ],
+        "renderer_expected": [
+          "KEEP",
+          "KEEP"
+        ]
+      }
+    ],
+    "work_counters": [
+      {
+        "links": 128,
+        "complete": false,
+        "newline": "LF",
+        "source_codepoints": 2694,
+        "character_reads": {
+          "original": 6656,
+          "intermediate": 180032,
+          "after": 8576
+        }
+      },
+      {
+        "links": 128,
+        "complete": false,
+        "newline": "CRLF",
+        "source_codepoints": 2824,
+        "character_reads": {
+          "original": 7168,
+          "intermediate": 188800,
+          "after": 9088
+        }
+      },
+      {
+        "links": 128,
+        "complete": true,
+        "newline": "LF",
+        "source_codepoints": 2950,
+        "character_reads": {
+          "original": 7680,
+          "intermediate": 2944,
+          "after": 2432
+        }
+      },
+      {
+        "links": 128,
+        "complete": true,
+        "newline": "CRLF",
+        "source_codepoints": 3080,
+        "character_reads": {
+          "original": 7680,
+          "intermediate": 2944,
+          "after": 2432
+        }
+      },
+      {
+        "links": 512,
+        "complete": false,
+        "newline": "LF",
+        "source_codepoints": 10758,
+        "character_reads": {
+          "original": 26624,
+          "intermediate": 2784512,
+          "after": 34304
+        }
+      },
+      {
+        "links": 512,
+        "complete": false,
+        "newline": "CRLF",
+        "source_codepoints": 11272,
+        "character_reads": {
+          "original": 28672,
+          "intermediate": 2917888,
+          "after": 36352
+        }
+      },
+      {
+        "links": 512,
+        "complete": true,
+        "newline": "LF",
+        "source_codepoints": 11782,
+        "character_reads": {
+          "original": 30720,
+          "intermediate": 11776,
+          "after": 9728
+        }
+      },
+      {
+        "links": 512,
+        "complete": true,
+        "newline": "CRLF",
+        "source_codepoints": 12296,
+        "character_reads": {
+          "original": 30720,
+          "intermediate": 11776,
+          "after": 9728
+        }
+      }
+    ],
+    "shared_failed_tail_work_counters": [
+      {
+        "links": 128,
+        "newline": "LF",
+        "source_codepoints": 6799,
+        "character_reads": {
+          "before_tail_cache": 533121,
+          "after": 12675
+        },
+        "ranges_sha256": "d9a502bf286c40dace3cd2fb54b292bf9cfea9b628a4a132ef98263b0e534ef9"
+      },
+      {
+        "links": 128,
+        "newline": "CRLF",
+        "source_codepoints": 6929,
+        "character_reads": {
+          "before_tail_cache": 533633,
+          "after": 13187
+        },
+        "ranges_sha256": "29a89610ee9e0df963478eed745e69fe8effd894f3f18477bd334d975e18bc4d"
+      },
+      {
+        "links": 512,
+        "newline": "LF",
+        "source_codepoints": 27151,
+        "character_reads": {
+          "before_tail_cache": 8423937,
+          "after": 50691
+        },
+        "ranges_sha256": "73e081cd805944e8cb29cbd2ee34f24276c7f27d023f6c40dd5af3cf3ce9353d"
+      },
+      {
+        "links": 512,
+        "newline": "CRLF",
+        "source_codepoints": 27665,
+        "character_reads": {
+          "before_tail_cache": 8425985,
+          "after": 52739
+        },
+        "ranges_sha256": "fcdd163c31bdb9dc8d1cd92ea6ec2bf2b85a207669b4e799c647e81d32885934"
+      }
+    ],
+    "timings": [
+      {
+        "links": 128,
+        "complete": false,
+        "source_codepoints": 2688,
+        "seconds": {
+          "original": [
+            0.001236499985679984,
+            0.0011639000149443746,
+            0.0011780000058934093
+          ],
+          "intermediate": [
+            0.01851269998587668,
+            0.01762669999152422,
+            0.01792130002286285
+          ],
+          "after": [
+            0.0018116999417543411,
+            0.0015835999511182308,
+            0.0015935000265017152
+          ]
+        },
+        "median_seconds": {
+          "original": 0.0011780000058934093,
+          "intermediate": 0.01792130002286285,
+          "after": 0.0015935000265017152
+        },
+        "ranges_sha256": "74bdaf9905dbb45d53e3bd14539d0d5e82202db13a93f969d6be36fbf16d1fd7"
+      },
+      {
+        "links": 128,
+        "complete": true,
+        "source_codepoints": 2944,
+        "seconds": {
+          "original": [
+            0.0012730000307783484,
+            0.0012582000344991684,
+            0.0012647999683395028
+          ],
+          "intermediate": [
+            0.0012165999505668879,
+            0.0012131999246776104,
+            0.0012120999163016677
+          ],
+          "after": [
+            0.0014616999542340636,
+            0.0014665999915450811,
+            0.0015272999880835414
+          ]
+        },
+        "median_seconds": {
+          "original": 0.0012647999683395028,
+          "intermediate": 0.0012131999246776104,
+          "after": 0.0014665999915450811
+        },
+        "ranges_sha256": "322c580a1b7475b37d70ea899e181fb2ca0d9cf3f3c9fbb62df801990d8860c4"
+      },
+      {
+        "links": 512,
+        "complete": false,
+        "source_codepoints": 10752,
+        "seconds": {
+          "original": [
+            0.00489370001014322,
+            0.004846499999985099,
+            0.004690999980084598
+          ],
+          "intermediate": [
+            0.2683666000375524,
+            0.26752879994455725,
+            0.26612049993127584
+          ],
+          "after": [
+            0.0062809999799355865,
+            0.006250099977478385,
+            0.006301600020378828
+          ]
+        },
+        "median_seconds": {
+          "original": 0.004846499999985099,
+          "intermediate": 0.26752879994455725,
+          "after": 0.0062809999799355865
+        },
+        "ranges_sha256": "7c0ff929260dd66baab7b1b2477713c85b34e8ed032d3d9d76c849e290de53e3"
+      },
+      {
+        "links": 512,
+        "complete": true,
+        "source_codepoints": 11776,
+        "seconds": {
+          "original": [
+            0.005055999965406954,
+            0.005040199961513281,
+            0.004978499957360327
+          ],
+          "intermediate": [
+            0.004915599944069982,
+            0.004871600074693561,
+            0.004886000067926943
+          ],
+          "after": [
+            0.005869799992069602,
+            0.005864999955520034,
+            0.0058454000391066074
+          ]
+        },
+        "median_seconds": {
+          "original": 0.005040199961513281,
+          "intermediate": 0.004886000067926943,
+          "after": 0.005864999955520034
+        },
+        "ranges_sha256": "b790aeee5829ca81643593e46cf549a8d6973960d548d409b9619bad692a003c"
+      },
+      {
+        "links": 1024,
+        "complete": false,
+        "source_codepoints": 21504,
+        "seconds": {
+          "original": [
+            0.009439499932341278,
+            0.009274599957279861,
+            0.009571700007654727
+          ],
+          "intermediate": [
+            1.0638543999521062,
+            1.0638936000177637,
+            1.0638186999130994
+          ],
+          "after": [
+            0.012413099990226328,
+            0.012490900000557303,
+            0.012590000056661665
+          ]
+        },
+        "median_seconds": {
+          "original": 0.009439499932341278,
+          "intermediate": 1.0638543999521062,
+          "after": 0.012490900000557303
+        },
+        "ranges_sha256": "2f8f402f26a202ce75fab04b7681c5ad939077d24513f1dabe56b5b8dc9e62a7"
+      },
+      {
+        "links": 1024,
+        "complete": true,
+        "source_codepoints": 23552,
+        "seconds": {
+          "original": [
+            0.010353800025768578,
+            0.010468800086528063,
+            0.010381400003097951
+          ],
+          "intermediate": [
+            0.009745999937877059,
+            0.009953000000678003,
+            0.00991360004991293
+          ],
+          "after": [
+            0.012229899992235005,
+            0.01206330000422895,
+            0.011966999969445169
+          ]
+        },
+        "median_seconds": {
+          "original": 0.010381400003097951,
+          "intermediate": 0.00991360004991293,
+          "after": 0.01206330000422895
+        },
+        "ranges_sha256": "75dc34dd583c96f9a21dd31ce91b5856c112cf562ea50d390474f66e5502b87f"
+      }
+    ],
+    "code_controls": [
+      {
+        "kind": "inline_code",
+        "fragments": 4096,
+        "source_codepoints": 86021,
+        "seconds": {
+          "before": [
+            0.034062799997627735,
+            0.08016869996208698,
+            0.03529040003195405
+          ],
+          "after": [
+            0.039625999983400106,
+            0.03448219993151724,
+            0.0344223000574857
+          ]
+        },
+        "median_seconds": {
+          "before": 0.03529040003195405,
+          "after": 0.03448219993151724
+        },
+        "full_occurrences_sha256": "2a851dd82976a82d370cd73201b638c20c468d793e1aebbda522b12e869f2a75"
+      },
+      {
+        "kind": "fenced_code",
+        "fragments": 4096,
+        "source_codepoints": 77829,
+        "seconds": {
+          "before": [
+            0.05737520009279251,
+            0.056433399906381965,
+            0.05929110001306981
+          ],
+          "after": [
+            0.05706210003700107,
+            0.10109320003539324,
+            0.058207100024446845
+          ]
+        },
+        "median_seconds": {
+          "before": 0.05737520009279251,
+          "after": 0.058207100024446845
+        },
+        "full_occurrences_sha256": "8fd36e67cf743cef6169a83b413416c02e65d64a1f27cdf014edcd7005822dec"
+      }
+    ]
+  },
+  "scope_verification": {
+    "ast_unchanged_except": [
+      "_markdown_destination_end",
+      "_markdown_link_space",
+      "protected_ranges",
+      "stdlib string import"
+    ],
+    "isolated_baseline_reproduced": {
+      "combinations": 32,
+      "mismatching_combinations": 18,
+      "missed_protected": 14,
+      "overprotected": 4
+    },
+    "after_decision_and_protection_evidence_differences": 0,
+    "source_sha256": "a888437aea07d714dfd535a86b9753fcb62d24183b9a6dfd88106bb39c701ed4"
+  },
+  "scope_verification_script_sha256": "6149228fcf2b5c92e2ed590912cb78b8e1486133dd0a317520b231c3437c64ac",
+  "scope_verification_result_sha256": "bbaa9631022631b7b3ddcf806e5d667b29c1aa857705b6f3dcb2dc82ae4bff03",
+  "api_regression": {
+    "passed": 634,
+    "failed": 0,
+    "skipped": 0,
+    "junit_duration_seconds": 462.429,
+    "per_module": {
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_noise_rule_regressions": 276,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_content_cleanup": 31,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_cleanup_detection_reuse": 118,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3
+    },
+    "junit_sha256": "32911fa79df6b75eaf7bb38fa20e5579cc3baf91e049925854a3fee4caebc7a5",
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "junit_family": "xunit1",
+    "temporary_batch": "pytest-link-final",
+    "temporary_cache": "pytest-cache-link-final",
+    "entry_command": "corepack pnpm run test:api",
+    "selected_scope": "Twenty-six cleanup API modules in one pytest process, not the complete API suite."
+  },
+  "intermediate_checks": {
+    "link-red.xml": {
+      "passed": 14,
+      "failed": 34,
+      "skipped": 0,
+      "junit_duration_seconds": 3.371,
+      "per_module": {
+        "tests.test_noise_rule_regressions": 48
+      },
+      "junit_sha256": "061bd8081b82876803fca6fd42f22b465e588ba77396c906c55da2ac4434a920"
+    },
+    "link-green.xml": {
+      "passed": 48,
+      "failed": 0,
+      "skipped": 0,
+      "junit_duration_seconds": 2.491,
+      "per_module": {
+        "tests.test_noise_rule_regressions": 48
+      },
+      "junit_sha256": "0353bbf925cb7c973a7909732e85e10170d96de775187e8789788adeb1d4f8a2"
+    },
+    "title-work-red.xml": {
+      "passed": 4,
+      "failed": 4,
+      "skipped": 0,
+      "junit_duration_seconds": 4.658,
+      "per_module": {
+        "tests.test_cleanup_detection_reuse": 8
+      },
+      "junit_sha256": "bd640887c8092378dbf4652dd7f6d3dbec98082c770a46448c9c9fa8a3d35dbb"
+    },
+    "link-title-green.xml": {
+      "passed": 56,
+      "failed": 0,
+      "skipped": 0,
+      "junit_duration_seconds": 2.839,
+      "per_module": {
+        "tests.test_noise_rule_regressions": 48,
+        "tests.test_cleanup_detection_reuse": 8
+      },
+      "junit_sha256": "48ec74a35dbcde9f7f3e464dadfc29eb41a0774e569fa8003e66a2827ef7a7fc"
+    },
+    "title-tail-red.xml": {
+      "passed": 0,
+      "failed": 4,
+      "skipped": 0,
+      "junit_duration_seconds": 10.833,
+      "per_module": {
+        "tests.test_cleanup_detection_reuse": 4
+      },
+      "junit_sha256": "7110659214967b759c29b5da3fde3a11181bdf2160e8c9f2103e991d2b5065de"
+    },
+    "link-tail-green.xml": {
+      "passed": 68,
+      "failed": 0,
+      "skipped": 0,
+      "junit_duration_seconds": 2.963,
+      "per_module": {
+        "tests.test_noise_rule_regressions": 56,
+        "tests.test_cleanup_detection_reuse": 12
+      },
+      "junit_sha256": "1fe3d94addb90bb820ae4abecb4424b62bac09e20bd671d23fd621953ec2a85c"
+    },
+    "link-regression.xml": {
+      "passed": 630,
+      "failed": 0,
+      "skipped": 0,
+      "junit_duration_seconds": 461.521,
+      "per_module": {
+        "tests.test_cleanup_learning": 12,
+        "tests.test_cleanup_literal_matching": 20,
+        "tests.test_cleanup_unicode_normalization": 35,
+        "tests.test_noise_rule_regressions": 276,
+        "tests.test_cleanup_safety": 28,
+        "tests.test_content_cleanup": 31,
+        "tests.test_cleanup_normalization": 8,
+        "tests.test_cleanup_protection_review": 3,
+        "tests.test_cleanup_reviewed_ranges": 24,
+        "tests.test_cleanup_preview_ranges": 5,
+        "tests.test_cleanup_validation_work": 3,
+        "tests.test_cleanup_detection_reuse": 114,
+        "tests.test_cleanup_source_replacement": 2,
+        "tests.test_cleanup_preview_retention": 1,
+        "tests.test_cleanup_access": 2,
+        "tests.test_cleanup_dismissal": 9,
+        "tests.test_cleanup_edit_concurrency": 7,
+        "tests.test_cleanup_group_search": 2,
+        "tests.test_cleanup_outcomes": 5,
+        "tests.test_cleanup_publication_recovery": 9,
+        "tests.test_cleanup_rescan_requests": 11,
+        "tests.test_cleanup_rule_grants": 2,
+        "tests.test_cleanup_scan_lifecycle": 9,
+        "tests.test_cleanup_scan_requests": 5,
+        "tests.test_cleanup_scan_retention": 4,
+        "tests.test_cleanup_selection_summary": 3
+      },
+      "junit_sha256": "bcb722195cd1f617f299e5009f99fcec0dfe16f1355d1fcf6deccd95d79f86d6"
+    }
+  },
+  "intermediate_check_limits": {
+    "link-red.xml": "Forty valid attribute and eight code/math opener cases against original source: 34 fail, 14 pass.",
+    "title-work-red.xml": "Initial multiline title parser: four incomplete-title work budgets fail; four complete-title controls pass.",
+    "title-tail-red.xml": "Indexed title closer parser without failed-tail reuse: all four shared-tail work budgets fail.",
+    "link-tail-green.xml": "Final parser: 56 attribute/literal/block unit cases plus 12 title-work cases pass. Included in final regression; do not add counts.",
+    "link-regression.xml": "Earlier source without tail reuse passed 630 tests; final four shared-tail tests were not in that collection. Superseded, not final-source proof."
+  },
+  "coverage_delta_from_prior_554": {
+    "noise_unit_cases": 56,
+    "trial_scan_ordinary_apply_api_cases": 6,
+    "legacy_source_revalidation_api_cases": 4,
+    "explicit_consent_apply_api_cases": 2,
+    "link_work_cases": 12,
+    "total_added": 80
+  },
+  "work_counter_scope": "Python explicit integer-index source reads, <=32 per source codepoint in covered fixtures. Not C-level reads, all work, allocation/RSS or a universal linearity proof.",
+  "work_budget_junit_properties": {
+    "link_title_character_reads": [
+      8576,
+      9088,
+      2432,
+      2432,
+      34304,
+      36352,
+      9728,
+      9728
+    ],
+    "link_tail_character_reads": [
+      12675,
+      13187,
+      50691,
+      52739
+    ]
+  },
+  "verification_script_sha256": "468db1b41d05b3b034e56e6a5e43bffbee43e2c761b52b2fda8b9e1183c617da",
+  "verification_result_sha256": "a8748b6b5939c5aa990639362b8fd433b06b4e9be13849583e3dbcc5ca356ade",
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "a888437aea07d714dfd535a86b9753fcb62d24183b9a6dfd88106bb39c701ed4"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "14809ffcba99fef6fbb79d5d5a75c9a2041379ed1b020417f7e1788eaf24ff10"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "1b38e23c39759005af009b02005d2fc676c0437f1d7cc1b3424b8b27507ec724"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "23e81b8ab127cc850905f219547e1bd44cbdf1ac3d73af7b321a010c1392ecb0"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "validation_limits": [
+    "Bare GFM URLs and conservative orphan ]( fallback remain unresolved; LF/CRLF probes are recorded, not hidden.",
+    "Regular visible link labels are not universally protected; existing attachment/reference-label policy is unchanged.",
+    "Synthetic server-render/parser and SQLite/API/service checks only; not PostgreSQL concurrency, browser DOM, physical device or production acceptance.",
+    "Correctness adds measured constant parser work compared with the original incomplete parser; no all-input speed improvement claimed.",
+    "No new dependency, migration, schema, canonical format, archive, offline-package or Dexie change.",
+    "No web search, commit, push, CI dispatch, deployment, production access, user import changes or preexisting tsconfig.tsbuildinfo changes."
+  ]
+}

@@ -1,0 +1,695 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "baseline_source_sha256": "3133e9bcb0456fef247cc2525e26084ea00874adf654937c92274cfb75e71067",
+  "baseline_matches_prior_receipt": "code-protection-cost-2026-10-26.json",
+  "unchanged_top_level_function_ast_except": [
+    "detect_occurrences delegates explanatory checks to its existing per-message context",
+    "_is_explanatory_example is replaced by the private per-message index"
+  ],
+  "api_regression": {
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "passed": 543,
+    "failed": 0,
+    "skipped": 0,
+    "junit_duration_seconds": 420.762,
+    "per_module": {
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_noise_rule_regressions": 208,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_content_cleanup": 31,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_cleanup_detection_reuse": 95,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3
+    },
+    "junit_family": "xunit1",
+    "junit_sha256": "eaae6d3f1503b9cbd0d26af986ac25149fb05b59864ed0e282f863cc13106b32",
+    "temporary_batch": "pytest-example-regression",
+    "copy_work_red": {
+      "failed": 12,
+      "deselected": 51,
+      "junit_sha256": "fcf3d12c59402533f62181a87839b40823c61005406c070849efa9053468e7cf"
+    },
+    "focused_detection_reuse": {
+      "passed": 95,
+      "junit_sha256": "1b850a76f8eaccf7d1721a4d9447ddffd817adff24c96def7bf0ac77a1b2f7b7"
+    },
+    "copy_work_cases_in_full_regression": 12,
+    "prior_coordinate_work_cases_in_full_regression": 12,
+    "explanatory_index_source_slice_properties": [
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[64-ordinary-\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[64-ordinary-\\r\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[64-field-\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[64-field-\\r\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[64-table-\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[64-table-\\r\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[256-ordinary-\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[256-ordinary-\\r\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[256-field-\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[256-field-\\r\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[256-table-\\n]",
+        "value": 0
+      },
+      {
+        "case": "test_explanatory_review_does_not_copy_whole_line_per_hit[256-table-\\r\\n]",
+        "value": 0
+      }
+    ]
+  },
+  "benchmark": {
+    "method": "Same local machine. One warmup per template; three unprofiled full exact literal detection samples per size. No other task test process running during samples. Compare complete occurrence metadata with isolated prior-source module; compact [start,end,decision,evidence_codes] JSON SHA-256 matches every retained original baseline row.",
+    "body_unit": "Keep NOISE after. ",
+    "templates": {
+      "ordinary": {
+        "prefix": "",
+        "suffix": ""
+      },
+      "field": {
+        "prefix": "citation: ",
+        "suffix": ""
+      },
+      "table": {
+        "prefix": "| ",
+        "suffix": " |"
+      }
+    },
+    "before": [
+      {
+        "kind": "ordinary",
+        "matches": 128,
+        "source_codepoints": 2304,
+        "seconds": [
+          0.014607400051318109,
+          0.013150300015695393,
+          0.013509999960660934
+        ],
+        "median_seconds": 0.013509999960660934,
+        "occurrences_sha256": "b94c866238d7328d95374096b4ce8ed67d8059483dfb85a3e70eb1607df01854"
+      },
+      {
+        "kind": "ordinary",
+        "matches": 512,
+        "source_codepoints": 9216,
+        "seconds": [
+          0.19518060004338622,
+          0.19800279999617487,
+          0.1993203000165522
+        ],
+        "median_seconds": 0.19800279999617487,
+        "occurrences_sha256": "6d808809591e4897bea7ecec1be9062209c692955ea07995d26af721377cafd0"
+      },
+      {
+        "kind": "ordinary",
+        "matches": 2048,
+        "source_codepoints": 36864,
+        "seconds": [
+          3.0726979000028223,
+          3.0864860001020133,
+          3.1382855999981984
+        ],
+        "median_seconds": 3.0864860001020133,
+        "occurrences_sha256": "5fad2d00abf2251df809c38df3b5e3a9d06bf5578e52aae8151417e3f4e70ec4"
+      },
+      {
+        "kind": "field",
+        "matches": 128,
+        "source_codepoints": 2314,
+        "seconds": [
+          0.01436999998986721,
+          0.013458399916999042,
+          0.013522899942472577
+        ],
+        "median_seconds": 0.013522899942472577,
+        "occurrences_sha256": "e075346d923b9b833ec229229bd196cf73d15492dca010b50d1f37793cef5765"
+      },
+      {
+        "kind": "field",
+        "matches": 512,
+        "source_codepoints": 9226,
+        "seconds": [
+          0.1981909000314772,
+          0.19469580007717013,
+          0.2000668999971822
+        ],
+        "median_seconds": 0.1981909000314772,
+        "occurrences_sha256": "ca142f7a2163d0367c2e9e0630f0e41f99f7e2763b3066ed176e979b2a56e1de"
+      },
+      {
+        "kind": "field",
+        "matches": 2048,
+        "source_codepoints": 36874,
+        "seconds": [
+          3.1325342999771237,
+          3.1165153000038117,
+          3.105443200096488
+        ],
+        "median_seconds": 3.1165153000038117,
+        "occurrences_sha256": "757f990dca791709ceda2b52dea3da0cc7c14aede0b7d2efe12e635143d8deca"
+      },
+      {
+        "kind": "table",
+        "matches": 128,
+        "source_codepoints": 2308,
+        "seconds": [
+          0.0012218001065775752,
+          0.0010452000424265862,
+          0.001020600087940693
+        ],
+        "median_seconds": 0.0010452000424265862,
+        "occurrences_sha256": "72859c2ac9d0b6c0b1f87e6c3a9529a3c0304d3a96c40aaf3a884fc952f396b7"
+      },
+      {
+        "kind": "table",
+        "matches": 512,
+        "source_codepoints": 9220,
+        "seconds": [
+          0.006345100002363324,
+          0.006393300020135939,
+          0.006349200033582747
+        ],
+        "median_seconds": 0.006349200033582747,
+        "occurrences_sha256": "737d6a4956523f4a66f42bc97a2f9bb3c90c90552d5ea934007de68d7d149bb6"
+      },
+      {
+        "kind": "table",
+        "matches": 2048,
+        "source_codepoints": 36868,
+        "seconds": [
+          0.06102120003197342,
+          0.06119289994239807,
+          0.12762350006960332
+        ],
+        "median_seconds": 0.06119289994239807,
+        "occurrences_sha256": "49e472bea5c75893acb9543547ada880bb520d1290ff4901f390809f936f9b9b"
+      }
+    ],
+    "after": [
+      {
+        "kind": "ordinary",
+        "matches": 128,
+        "source_codepoints": 2304,
+        "seconds": [
+          0.0009532000403851271,
+          0.0009710999438539147,
+          0.0009800000116229057
+        ],
+        "median_seconds": 0.0009710999438539147,
+        "occurrences_sha256": "b94c866238d7328d95374096b4ce8ed67d8059483dfb85a3e70eb1607df01854"
+      },
+      {
+        "kind": "ordinary",
+        "matches": 512,
+        "source_codepoints": 9216,
+        "seconds": [
+          0.003683699993416667,
+          0.003705000039190054,
+          0.0037098999600857496
+        ],
+        "median_seconds": 0.003705000039190054,
+        "occurrences_sha256": "6d808809591e4897bea7ecec1be9062209c692955ea07995d26af721377cafd0"
+      },
+      {
+        "kind": "ordinary",
+        "matches": 2048,
+        "source_codepoints": 36864,
+        "seconds": [
+          0.01456859998870641,
+          0.014938400010578334,
+          0.01455830002669245
+        ],
+        "median_seconds": 0.01456859998870641,
+        "occurrences_sha256": "5fad2d00abf2251df809c38df3b5e3a9d06bf5578e52aae8151417e3f4e70ec4"
+      },
+      {
+        "kind": "field",
+        "matches": 128,
+        "source_codepoints": 2314,
+        "seconds": [
+          0.001039000111632049,
+          0.000986600061878562,
+          0.0009791000047698617
+        ],
+        "median_seconds": 0.000986600061878562,
+        "occurrences_sha256": "e075346d923b9b833ec229229bd196cf73d15492dca010b50d1f37793cef5765"
+      },
+      {
+        "kind": "field",
+        "matches": 512,
+        "source_codepoints": 9226,
+        "seconds": [
+          0.0038198999827727675,
+          0.0038586000446230173,
+          0.0038432000437751412
+        ],
+        "median_seconds": 0.0038432000437751412,
+        "occurrences_sha256": "ca142f7a2163d0367c2e9e0630f0e41f99f7e2763b3066ed176e979b2a56e1de"
+      },
+      {
+        "kind": "field",
+        "matches": 2048,
+        "source_codepoints": 36874,
+        "seconds": [
+          0.015751900034956634,
+          0.01578939997125417,
+          0.015157899935729802
+        ],
+        "median_seconds": 0.015751900034956634,
+        "occurrences_sha256": "757f990dca791709ceda2b52dea3da0cc7c14aede0b7d2efe12e635143d8deca"
+      },
+      {
+        "kind": "table",
+        "matches": 128,
+        "source_codepoints": 2308,
+        "seconds": [
+          0.0010920000495389104,
+          0.001034800079651177,
+          0.0010379001032561064
+        ],
+        "median_seconds": 0.0010379001032561064,
+        "occurrences_sha256": "72859c2ac9d0b6c0b1f87e6c3a9529a3c0304d3a96c40aaf3a884fc952f396b7"
+      },
+      {
+        "kind": "table",
+        "matches": 512,
+        "source_codepoints": 9220,
+        "seconds": [
+          0.004318100051023066,
+          0.004070499911904335,
+          0.00410570006351918
+        ],
+        "median_seconds": 0.00410570006351918,
+        "occurrences_sha256": "737d6a4956523f4a66f42bc97a2f9bb3c90c90552d5ea934007de68d7d149bb6"
+      },
+      {
+        "kind": "table",
+        "matches": 2048,
+        "source_codepoints": 36868,
+        "seconds": [
+          0.01636570005211979,
+          0.016341399983502924,
+          0.016851099906489253
+        ],
+        "median_seconds": 0.01636570005211979,
+        "occurrences_sha256": "49e472bea5c75893acb9543547ada880bb520d1290ff4901f390809f936f9b9b"
+      }
+    ],
+    "profiles": {
+      "before_1024_ordinary": {
+        "total_seconds": 0.816,
+        "explanatory_seconds": 0.802,
+        "keyword_regex_search_seconds": 0.78,
+        "sha256": "b9abeeb8711486b56364bb3536bc7b2818f3dc2bbfdb3a005a55ec67f97910d7"
+      },
+      "after_1024_ordinary": {
+        "total_seconds": 0.015,
+        "explanatory_seconds": 0.003,
+        "index_constructions": 1,
+        "sha256": "bc7283e49904c0ead607eb0fa3a01e3d67d8cef8a1bdad3ef0a6433c4107860f"
+      }
+    },
+    "sparse_controls": {
+      "method": "After the full API batch exited, warm both implementations and alternate five complete detection calls per implementation/source; no other task test process running.",
+      "results": [
+        {
+          "kind": "one_short_hit",
+          "source_codepoints": 17,
+          "hits": 1,
+          "before_seconds": [
+            5.200004670768976e-05,
+            4.4199987314641476e-05,
+            4.9400026910007e-05,
+            4.5599997974932194e-05,
+            4.199997056275606e-05
+          ],
+          "after_seconds": [
+            5.659996531903744e-05,
+            4.9600028432905674e-05,
+            5.959998816251755e-05,
+            5.100003909319639e-05,
+            4.910002462565899e-05
+          ],
+          "before_median_seconds": 4.5599997974932194e-05,
+          "after_median_seconds": 5.100003909319639e-05,
+          "occurrences_sha256": "996742e230cc540c33819f16e1522ec04efb9e3ae47c0b8986f27be101a6ac36"
+        },
+        {
+          "kind": "one_sparse_multiline_hit",
+          "source_codepoints": 49169,
+          "hits": 1,
+          "before_seconds": [
+            0.010446300031617284,
+            0.010557600064203143,
+            0.010436699958518147,
+            0.010299299960024655,
+            0.010394099983386695
+          ],
+          "after_seconds": [
+            0.017209899961017072,
+            0.01722210005391389,
+            0.017627499997615814,
+            0.01646379998419434,
+            0.01657179999165237
+          ],
+          "before_median_seconds": 0.010436699958518147,
+          "after_median_seconds": 0.017209899961017072,
+          "occurrences_sha256": "8cb41fb608535024daa4539928443e5365c40b186c29720a79fa7a8ef9aa247b"
+        },
+        {
+          "kind": "one_sparse_long_line_hit",
+          "source_codepoints": 49169,
+          "hits": 1,
+          "before_seconds": [
+            0.007485699956305325,
+            0.0074789999052882195,
+            0.007540400023572147,
+            0.007554100011475384,
+            0.007569800014607608
+          ],
+          "after_seconds": [
+            0.008457400021143258,
+            0.008438199991360307,
+            0.008555999957025051,
+            0.008470900007523596,
+            0.008430399931967258
+          ],
+          "before_median_seconds": 0.007540400023572147,
+          "after_median_seconds": 0.008457400021143258,
+          "occurrences_sha256": "8cb41fb608535024daa4539928443e5365c40b186c29720a79fa7a8ef9aa247b"
+        },
+        {
+          "kind": "no_hit_multiline",
+          "source_codepoints": 49152,
+          "hits": 0,
+          "before_seconds": [
+            1.5700003132224083e-05,
+            1.5099998563528061e-05,
+            1.4999997802078724e-05,
+            1.4999997802078724e-05,
+            1.4899997040629387e-05
+          ],
+          "after_seconds": [
+            1.5300000086426735e-05,
+            1.4999997802078724e-05,
+            1.4999997802078724e-05,
+            1.4899997040629387e-05,
+            1.4899997040629387e-05
+          ],
+          "before_median_seconds": 1.4999997802078724e-05,
+          "after_median_seconds": 1.4999997802078724e-05,
+          "occurrences_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      ],
+      "tradeoff": "Index initialization makes these single-hit controls slower; the largest multiline control adds about 6.8ms. No-hit control remains lazy. These controls rule out an all-input-speedup claim.",
+      "script_sha256": "22b36aa10c07e1513a292b4a9ab2fed1d9d0dba471b62bf6d0cf2203e01fd170"
+    }
+  },
+  "semantic_and_work_verification": {
+    "baseline_source_sha256": "3133e9bcb0456fef247cc2525e26084ea00874adf654937c92274cfb75e71067",
+    "protected_ranges_ast_unchanged": true,
+    "helper_parity": {
+      "synthetic_sources": 3415,
+      "queries": 2444480,
+      "protected_queries": 2249168,
+      "differences": 0,
+      "seed": 20261026,
+      "sources_sha256": "124c07edfef37bc1db64eecb83b201338c385f2162ee795c4b27f8001089b9e3",
+      "query_method": "Each start 0..len; unique zero-width, one-codepoint, seeded random and message-end queries.",
+      "families": "15 keyword variants including overlaps/Unicode ignorecase; 6 whitespace x 6 delimiters x 4 tail lengths; 6 field forms x 5 whitespace x 5 separators; 1200 seeded LF/CRLF/pipe/Unicode/field fragments before deduplication."
+    },
+    "work_counters": [
+      {
+        "matches": 64,
+        "kind": "ordinary",
+        "newline": "LF",
+        "source_codepoints": 1160,
+        "before_slice_codepoints": 110336,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 64,
+        "kind": "ordinary",
+        "newline": "CRLF",
+        "source_codepoints": 1162,
+        "before_slice_codepoints": 110336,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 64,
+        "kind": "field",
+        "newline": "LF",
+        "source_codepoints": 1170,
+        "before_slice_codepoints": 111616,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 64,
+        "kind": "field",
+        "newline": "CRLF",
+        "source_codepoints": 1172,
+        "before_slice_codepoints": 111616,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 64,
+        "kind": "table",
+        "newline": "LF",
+        "source_codepoints": 1164,
+        "before_slice_codepoints": 110720,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 64,
+        "kind": "table",
+        "newline": "CRLF",
+        "source_codepoints": 1166,
+        "before_slice_codepoints": 110720,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 256,
+        "kind": "ordinary",
+        "newline": "LF",
+        "source_codepoints": 4616,
+        "before_slice_codepoints": 1768448,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 256,
+        "kind": "ordinary",
+        "newline": "CRLF",
+        "source_codepoints": 4618,
+        "before_slice_codepoints": 1768448,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 256,
+        "kind": "field",
+        "newline": "LF",
+        "source_codepoints": 4626,
+        "before_slice_codepoints": 1773568,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 256,
+        "kind": "field",
+        "newline": "CRLF",
+        "source_codepoints": 4628,
+        "before_slice_codepoints": 1773568,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 256,
+        "kind": "table",
+        "newline": "LF",
+        "source_codepoints": 4620,
+        "before_slice_codepoints": 1769984,
+        "after_slice_codepoints": 0
+      },
+      {
+        "matches": 256,
+        "kind": "table",
+        "newline": "CRLF",
+        "source_codepoints": 4622,
+        "before_slice_codepoints": 1769984,
+        "after_slice_codepoints": 0
+      }
+    ],
+    "corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "combinations": 312,
+        "literal_hits": 780,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "combinations": 80,
+        "literal_hits": 120,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "combinations": 9240,
+        "literal_hits": 27720,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "combinations": 880,
+        "literal_hits": 2200,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "combinations": 34,
+        "literal_hits": 70,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "combinations": 1088,
+        "literal_hits": 2240,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      }
+    ]
+  },
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "be1afacffe70e6c402d832d3882f62128c1c17ae2c77faa44f9ff9820a03497a"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "8984727fa22cdd86f3d58a71ae53eaace4042ab78e48e51c5e44039f75903403"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "729f8e7cd07be1bf74f84beac84372ad47cb523e4b75f29c97592f92bcf7b2f6"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "23e81b8ab127cc850905f219547e1bd44cbdf1ac3d73af7b321a010c1392ecb0"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "temporary_artifacts": {
+    "root": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-noise-example-cost",
+    "verification_script_sha256": "f40d0b4a44ca6f37080b39a345563c2fd1d5f7fa57a38a3bca0f15163139e0eb",
+    "semantic_result_sha256": "e5202040ed3323d85cbb5f0e3ebe1ae4c0d26df51d79fcd21d3773dc26d5e9b7"
+  },
+  "limits": [
+    "Synthetic helper queries preserve the old conservative heuristic, not a new correctness oracle, complete table syntax, universal Markdown conformance or a production false-positive rate.",
+    "The existing 11634 combinations reuse prior renderer expectations; no new renderer/browser run is claimed here. Complete occurrence metadata and protected intervals match the immediately previous source.",
+    "Source-slice counters count instrumented Python source slicing only, not all C-level allocations or regex-engine work. Constructor-reuse assertions and measured profiles additionally cover the diagnosed repeated scans.",
+    "Index construction scans the current message and retains compact coordinates/merged eligibility intervals proportional to its content. Dense-hit timing improvements do not prove an all-input speedup, independent memory bound, RSS/OOM safety or production throughput.",
+    "Related SQLite/service/API regression only, not full API suite, PostgreSQL concurrency, browser, Web build, CI or production acceptance.",
+    "No dependency, migration, canonical format, import originals, offline package, Dexie, production config, commit, push, CI dispatch or deployment change. Preexisting tsconfig.tsbuildinfo is untouched."
+  ]
+}

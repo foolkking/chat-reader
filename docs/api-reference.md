@@ -1181,6 +1181,11 @@ Counts still cover all hits within the existing bounded trial, not only the
 returned samples. No regex, automatic deletion, broader matching budget,
 protection bypass or schema change is introduced.
 
+Local sampling correction (2026-10-26; not submitted or deployed): the first
+ten matching messages in stable scan order each receive an example before
+repeat examples are added. The ten-sample/three-per-message output limits
+and counts over all scanned hits are unchanged.
+
 Noise-rule publication additions (`20261001_0038`, working tree):
 
 - Rule list/read responses include `revision_id`, `held`, `revision_held`,

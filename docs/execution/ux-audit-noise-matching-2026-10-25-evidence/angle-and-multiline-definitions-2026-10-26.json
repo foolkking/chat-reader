@@ -1,0 +1,551 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "recorded_at": "2026-10-26T19:50:25.495539+08:00",
+  "scope": "Local-only bounded angle-autolink and multiline-definition noise protection",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "literal-autolink-families-2026-10-26.json",
+    "sha256": "19600c746f32b3414f4beff055526316a664e4c895b1bb1072219bdf8995bbe0"
+  },
+  "source_and_test_hashes": {
+    "apps/api/app/services/content_cleanup.py": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+    "apps/api/tests/test_content_cleanup.py": "e029f544f3b7a2d3a70a347d5430d197000190c61baae25c59d4fe2e2b0e03cc",
+    "apps/api/tests/test_cleanup_detection_reuse.py": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397",
+    "apps/api/tests/test_cleanup_learning.py": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615",
+    "apps/api/tests/test_noise_rule_regressions.py": "37b7989fc4c9bf07f7832bcadda28dd4a5b957523fd409932d14305571e08a9f",
+    "apps/web/tsconfig.tsbuildinfo": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7"
+  },
+  "source_stable_during_recorded_verification": true,
+  "baseline_sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7",
+  "runtime": {
+    "python": "3.11.7",
+    "pytest": "8.4.2",
+    "remark-parse": "11.0.0",
+    "remark-gfm": "4.0.1",
+    "micromark": "4.0.2",
+    "react-markdown": "10.1.0"
+  },
+  "angle_matrix": {
+    "baseline_sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7",
+    "source_sha256": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+    "comparison": {
+      "before": {
+        "exact_interval_differences": 898,
+        "hit_membership_differences": 702,
+        "families": {
+          "email_grammar": 223,
+          "email_ascii": 82,
+          "email_domain_ascii": 65,
+          "ownership": 272,
+          "containers": 90,
+          "uri_grammar": 103,
+          "shared_failure": 63
+        }
+      },
+      "current": {
+        "exact_interval_differences": 0,
+        "hit_membership_differences": 0,
+        "families": {}
+      }
+    }
+  },
+  "definition_matrix": {
+    "source_sha256": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+    "corpus_sha256": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+    "cases": 3158,
+    "native_definitions": 3010,
+    "literal_hits": 6758,
+    "adjacent_matches": 3152,
+    "registration_differences": 0,
+    "difference_families": {},
+    "coverage_errors": 0,
+    "noise_errors": []
+  },
+  "definition_matrix_scope": {
+    "oracle": "Installed native definition identifiers/end offsets, span coverage and NOISE decisions",
+    "not_a_full_protected_interval_oracle": true,
+    "ordinary_adjacent_excludes_six_native_code_controls": true,
+    "multiline_definition_nodes_previously_omitted_from_retained_probe_oracle": true
+  },
+  "baseline_and_retained_probes": {
+    "before": {
+      "native_definition_spans_covered": 200,
+      "native_definition_spans_not_fully_covered": 2810,
+      "definition_noise_not_protected": 2739,
+      "ordinary_adjacent_noise_not_keep": 0
+    },
+    "current": {
+      "native_definition_spans_covered": 3010,
+      "native_definition_spans_not_fully_covered": 0,
+      "definition_noise_not_protected": 0,
+      "ordinary_adjacent_noise_not_keep": 0
+    },
+    "probes": [
+      {
+        "family": "multiline_definition_label",
+        "expected": [
+          [
+            7,
+            24
+          ],
+          [
+            37,
+            66
+          ],
+          [
+            83,
+            102
+          ]
+        ],
+        "before": [
+          [
+            7,
+            24
+          ],
+          [
+            37,
+            72
+          ],
+          [
+            83,
+            102
+          ]
+        ],
+        "current": [
+          [
+            7,
+            24
+          ],
+          [
+            37,
+            66
+          ],
+          [
+            83,
+            102
+          ]
+        ],
+        "current_exact": true
+      },
+      {
+        "family": "multiline_definition_destination",
+        "expected": [
+          [
+            7,
+            23
+          ],
+          [
+            36,
+            65
+          ],
+          [
+            83,
+            101
+          ]
+        ],
+        "before": [
+          [
+            7,
+            23
+          ],
+          [
+            36,
+            71
+          ]
+        ],
+        "current": [
+          [
+            7,
+            23
+          ],
+          [
+            36,
+            65
+          ],
+          [
+            83,
+            101
+          ]
+        ],
+        "current_exact": true
+      },
+      {
+        "family": "multiline_definition_title",
+        "expected": [
+          [
+            0,
+            22
+          ],
+          [
+            30,
+            40
+          ],
+          [
+            53,
+            82
+          ]
+        ],
+        "before": [
+          [
+            0,
+            16
+          ],
+          [
+            30,
+            40
+          ],
+          [
+            53,
+            88
+          ]
+        ],
+        "current": [
+          [
+            0,
+            22
+          ],
+          [
+            30,
+            40
+          ],
+          [
+            53,
+            82
+          ]
+        ],
+        "current_exact": true
+      },
+      {
+        "family": "www_decoded_head",
+        "expected": [
+          [
+            9,
+            34
+          ]
+        ],
+        "before": [
+          [
+            9,
+            34
+          ]
+        ],
+        "current": [
+          [
+            9,
+            34
+          ]
+        ],
+        "current_exact": true
+      },
+      {
+        "family": "email_decoded_at",
+        "expected": [
+          [
+            9,
+            32
+          ]
+        ],
+        "before": [
+          [
+            9,
+            32
+          ]
+        ],
+        "current": [
+          [
+            9,
+            32
+          ]
+        ],
+        "current_exact": true
+      },
+      {
+        "family": "noninterrupting_definition",
+        "expected": [
+          [
+            17,
+            33
+          ],
+          [
+            41,
+            51
+          ],
+          [
+            64,
+            99
+          ]
+        ],
+        "before": [
+          [
+            17,
+            33
+          ],
+          [
+            41,
+            51
+          ],
+          [
+            64,
+            99
+          ]
+        ],
+        "current": [
+          [
+            17,
+            33
+          ],
+          [
+            41,
+            51
+          ],
+          [
+            64,
+            99
+          ]
+        ],
+        "current_exact": true
+      }
+    ]
+  },
+  "prior_corpora": {
+    "baseline_sha256": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7",
+    "source_sha256": "71f76720464e7b59f98aecf4208faa14e676deb95eb1b7f9e8f576f46927dbe7",
+    "ast_allowlist": [
+      "_GFM_LITERAL_CONTEXT",
+      "_GFM_LITERAL_HEAD",
+      "_MARKDOWN_AUTOLINK",
+      "_MARKDOWN_INLINE_CONTEXT",
+      "_MARKDOWN_LITERAL_MATH",
+      "_markdown_reference_definition",
+      "_markdown_single_line_definition",
+      "protected_ranges"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "context-corpus.json",
+        "combinations": 688,
+        "hits": 724,
+        "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "precedence-corpus.json",
+        "combinations": 804,
+        "hits": 1260,
+        "sha256": "48db1f39cfd1db5175d7f96458ecdc560cd8e5dd7d0b22eda2fd635b8cbde0ea",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "html-block-corpus.json",
+        "combinations": 3053,
+        "hits": 18223,
+        "sha256": "b7388b4d8ec9b91895ea0bbe3ec6ec048427cc62bc8dab3abe6a4246c47f6a2c",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "emphasis-corpus.json",
+        "combinations": 7918,
+        "hits": 13028,
+        "sha256": "00cd32fed8a1809274519c05623d85ef75dcb44307de2668da66cd66450fd0ce",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "strikethrough-corpus.json",
+        "combinations": 6263,
+        "hits": 10753,
+        "sha256": "60922d9ac8905a1c55cbcca00b26711c6adf361ea6ee86a50a9c172e8fb608d1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "reference-corpus.json",
+        "combinations": 1688,
+        "hits": 3376,
+        "sha256": "4b112514767ae087f494ad4c00463c3c07774211675b1efe8509ed2f3c378e47",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "autolink-corpus.json",
+        "combinations": 4010,
+        "hits": 8212,
+        "sha256": "0edcef673f2cfdc7e938a6bc4db474be3d2fd4d899b05e3943bc3392bc3af90a",
+        "range_changes": 0,
+        "metadata_changes": 0
+      }
+    ],
+    "range_changes": 0,
+    "metadata_changes": 0
+  },
+  "pytest": {
+    "same_36_tests_on_frozen_baseline": {
+      "tests": 36,
+      "failures": 30,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 6.175,
+      "modules": {
+        "tests.test_content_cleanup": 36
+      },
+      "xml_sha256": "0fb741fd63c18dac74348b19cf46bcbb8516fc248b8d2d5fc35f4e5ffe7e613a"
+    },
+    "same_36_tests_on_current": {
+      "tests": 36,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.847,
+      "modules": {
+        "tests.test_content_cleanup": 36
+      },
+      "xml_sha256": "67c5cb10221acb6d5919c0010073d4b1aa403ccd775ab4354f4ed5942f48c182"
+    },
+    "four_relevant_modules": {
+      "tests": 3315,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 558.635,
+      "modules": {
+        "tests.test_content_cleanup": 2590,
+        "tests.test_cleanup_detection_reuse": 207,
+        "tests.test_cleanup_learning": 12,
+        "tests.test_noise_rule_regressions": 506
+      },
+      "xml_sha256": "ab305a0aaf46d51bd6ca9c78a5865a04443e724e378dc420d8ed362b26c56dc5"
+    },
+    "not_complete_api_suite": true,
+    "basetemp_under_task_temp_root": true
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "0837f455ec7b82ffa567a54ac08115048b85af84f746b635dd38ba62ad058bbf",
+    "docs/index.md": "d663bfff143b724f1a8cccd3295f17bc457d602834b0a1e09311e796ab01875e",
+    "docs/documentation-inventory.md": "b8ff8300c08687f6924458b31235dd889105de4243a117966cdadf4d8c291d16",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "e3b55e95806ca6aff0b4103e42b7505999e2b86fa8393559b19d7c2812b654cf",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "7141880abe688510446d6b4b7e78b1e3aed7d06c2c7ee4a1e08ca66a69e2016e",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "17c6e5a883d8062d0f8c42b857735f66e502bb2d870063a1e829b7e14c1ef60b"
+  },
+  "temporary_artifacts": {
+    "task_subdirectory": "chat-reader-noise-multiline-definitions",
+    "files": {
+      "content-cleanup-before.py": "965de92a65691450b69b9b093bd56aa8301988127fbb05af03ccd8038f5704b7",
+      "render-definitions.mjs": "b0dc4d67072aaf78bffa85a5a2c69f20c4935f449dbddde26ebbe5635e3ca6d4",
+      "compare-definitions.py": "374e1eae00f0e72dbdf46d07160050769c9bf50fa2744aef9a5da4c73a42c2e4",
+      "definition-grammar-corpus.json": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+      "definition-grammar-verification.json": "1d1ecf9adafaa0a3bfac5613fc2a6c4182b0057461dda14ed704a0464c00e9b1",
+      "definition-grammar-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "render-continued-probes.mjs": "c9b5b55459a18f89fb9f8e5e81ade01aba5aa327fa943ada226a79c3d9551b72",
+      "continued-probe-renderer.json": "5191cf7127e0d84cd17bc46dc018a9e06d0e29aff522f336406ea16212e68663",
+      "baseline-comparison.json": "35a39444e69d1eed9d9a099247d9744935e72b6dba59d95f3bad72313a8a1a4c",
+      "angle-corpus.json": "03406f5deeca2c38808209282e521e68baa140760848bf760af81435955b24e8",
+      "angle-comparison.json": "57cd4e0a1c94fa09aa1dcebbd4d9d461ba95e791a30dd13bd4c31b184e57a8f6",
+      "compare-angles.py": "178aa8f07ed9e9be1ecd2fdd84de994257e0818ac2a7a7bdf7fac94d2a8fd4d3",
+      "verify-prior-corpora.py": "debb15cdf99a6fb344de96bc0daa25e35dcc74aed6b5a3b9dc9de1c6c3555520",
+      "prior-verification.json": "c7281491ee168be6b08af4a347bcc96310b0e45bfcc835a4e5d1997e047bb088",
+      "prior-changes.json": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "baseline_plugin.py": "6d346101cb953a778d78e0e05fb1e23005962951d9c48d9ad03fa5cfa082fc64",
+      "baseline-red.log": "b569d0c8ef8eeb9114b1889d48a18408c417a57c4a2b2e416c958e1251f3c6a6",
+      "baseline-red.xml": "0fb741fd63c18dac74348b19cf46bcbb8516fc248b8d2d5fc35f4e5ffe7e613a",
+      "same-green.log": "c6d6f88c22240d38756340dcfc9758d83cfacc3f126615a38c5755f6411263fe",
+      "same-green.xml": "67c5cb10221acb6d5919c0010073d4b1aa403ccd775ab4354f4ed5942f48c182",
+      "four-modules.log": "010bc9398442fc97f62c39963508151d40875de847cf026eefa1a1a2e4717d31",
+      "four-modules.xml": "ab305a0aaf46d51bd6ca9c78a5865a04443e724e378dc420d8ed362b26c56dc5",
+      "final-source-start.json": "8e9da1f8beb02fc7b81f482d7e2883c02ba50b5789afd9f4ed9570e77142f4fc",
+      "final-source-end.json": "8e9da1f8beb02fc7b81f482d7e2883c02ba50b5789afd9f4ed9570e77142f4fc"
+    }
+  },
+  "limits": [
+    "Synthetic correlated inputs, not production false-positive-rate estimates",
+    "Native parser checks are not browser, app-adapter or sanitizer acceptance",
+    "Existing HTML container/newline conservative extras and whole-attachment policy are retained",
+    "No universal syntax, complexity, latency, memory or performance claim",
+    "No web search, browser, network, complete API, PostgreSQL concurrency, CI or production run",
+    "No dependency, migration, offline/Dexie, import data or production configuration changes",
+    "No staging, commit, push or deployment; ongoing optimization goal remains active"
+  ]
+}

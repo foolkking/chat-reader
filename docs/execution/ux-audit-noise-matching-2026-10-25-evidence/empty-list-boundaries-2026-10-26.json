@@ -1,0 +1,341 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "recorded_at": "2026-10-26T20:44:28.395138+08:00",
+  "scope": "Local-only empty-list paragraph interruption and container-exit noise protection",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "definition-container-boundaries-2026-10-26.json",
+    "sha256": "aff874f158efee353089e70e22c4b785eabd1f6a8b7a7b9ff1e3a78f7b9316e7"
+  },
+  "source_and_test_hashes": {
+    "apps/api/tests/test_noise_rule_regressions.py": "ba59f64a34165400bc9aa46d7e61b53190451f095eee4b1ee9f751789828c8dc",
+    "apps/web/tsconfig.tsbuildinfo": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7",
+    "apps/api/app/services/cleanup_learning.py": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f",
+    "apps/api/app/services/content_cleanup.py": "34fec0705e9b80ca8b1905767a81caf0bada229d83d0d0a1e6dd10154e798efb",
+    "apps/api/tests/test_content_cleanup.py": "f2d883eb61a79488a9608db741ffbedeb3e6b5ce449963647cdb4716c4a401c3",
+    "apps/api/tests/test_cleanup_learning.py": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615",
+    "apps/api/tests/test_cleanup_detection_reuse.py": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397"
+  },
+  "source_and_tests_stable_across_final_pytest": true,
+  "baseline_sha256": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+  "runtime": {
+    "python": "3.11.7",
+    "pytest": "8.4.2",
+    "remark-parse": "11.0.0",
+    "remark-gfm": "4.0.1"
+  },
+  "independent_matrix": {
+    "before": {
+      "sources": 7680,
+      "literal_hits": 15360,
+      "ordinary_adjacent_matches": 7680,
+      "registration_differences": 880,
+      "exact_code_interval_differences": 500,
+      "registration_difference_kinds": {
+        "label": 440,
+        "title": 440
+      },
+      "native_coverage_errors": 1152,
+      "noise_decision_errors": 1128
+    },
+    "current": {
+      "sources": 7680,
+      "literal_hits": 15360,
+      "ordinary_adjacent_matches": 7680,
+      "registration_differences": 0,
+      "exact_code_interval_differences": 0,
+      "registration_difference_kinds": {},
+      "native_coverage_errors": 0,
+      "noise_decision_errors": 0
+    },
+    "source_sha256": "34fec0705e9b80ca8b1905767a81caf0bada229d83d0d0a1e6dd10154e798efb",
+    "baseline_sha256": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+    "corpus_sha256": "6561d9049ba9e9c498aad9f54bf0f7c136ea1ac1d511e70bdc4fd565549822fc",
+    "native_definitions": 3008,
+    "native_literals": 2176,
+    "exact_code_interval_cases": 2336,
+    "oracle": "Native definition identifier/end coordinates; native definition/code coverage; exact intervals for 2336 inline-only/no-code controls; protected native NOISE and ordinary adjacent KEEP",
+    "not_whole_protected_interval_equivalence": true,
+    "baseline_registration_missing": 768,
+    "baseline_registration_spurious": 112,
+    "baseline_code_intervals_missing": 384,
+    "baseline_code_intervals_spurious": 116
+  },
+  "retained_corpora": {
+    "baseline_sha256": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+    "source_sha256": "34fec0705e9b80ca8b1905767a81caf0bada229d83d0d0a1e6dd10154e798efb",
+    "ast_allowlist": [
+      "_LIST_PREFIX",
+      "_markdown_container_prefix"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "context-corpus.json",
+        "combinations": 688,
+        "hits": 724,
+        "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "precedence-corpus.json",
+        "combinations": 804,
+        "hits": 1260,
+        "sha256": "48db1f39cfd1db5175d7f96458ecdc560cd8e5dd7d0b22eda2fd635b8cbde0ea",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "html-block-corpus.json",
+        "combinations": 3053,
+        "hits": 18223,
+        "sha256": "b7388b4d8ec9b91895ea0bbe3ec6ec048427cc62bc8dab3abe6a4246c47f6a2c",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "emphasis-corpus.json",
+        "combinations": 7918,
+        "hits": 13028,
+        "sha256": "00cd32fed8a1809274519c05623d85ef75dcb44307de2668da66cd66450fd0ce",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "strikethrough-corpus.json",
+        "combinations": 6263,
+        "hits": 10753,
+        "sha256": "60922d9ac8905a1c55cbcca00b26711c6adf361ea6ee86a50a9c172e8fb608d1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "reference-corpus.json",
+        "combinations": 1688,
+        "hits": 3376,
+        "sha256": "4b112514767ae087f494ad4c00463c3c07774211675b1efe8509ed2f3c378e47",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "autolink-corpus.json",
+        "combinations": 4010,
+        "hits": 8212,
+        "sha256": "0edcef673f2cfdc7e938a6bc4db474be3d2fd4d899b05e3943bc3392bc3af90a",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "angle-corpus.json",
+        "combinations": 2314,
+        "hits": 4827,
+        "sha256": "03406f5deeca2c38808209282e521e68baa140760848bf760af81435955b24e8",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "definition-grammar-corpus.json",
+        "combinations": 3158,
+        "hits": 6758,
+        "sha256": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "boundary-corpus.json",
+        "combinations": 3744,
+        "hits": 7488,
+        "sha256": "f86d048903467e55c7ca20e7b5694194a0c3ccf5ef4e6b1b29680a298b22efdc",
+        "range_changes": 0,
+        "metadata_changes": 0
+      }
+    ],
+    "range_changes": 0,
+    "metadata_changes": 0,
+    "total_combinations": 54648,
+    "total_literal_hits": 126877
+  },
+  "pytest": {
+    "frozen_parent_76_cases": {
+      "tests": 76,
+      "failures": 68,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 12.595,
+      "modules": {
+        "tests.test_content_cleanup": 76
+      },
+      "xml_sha256": "706aa377bde6dadbfd022cff0ebb251c728b633ee624de7e863b36f207acc489"
+    },
+    "current_76_cases": {
+      "tests": 76,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 3.159,
+      "modules": {
+        "tests.test_content_cleanup": 76
+      },
+      "xml_sha256": "6cb667b146e56f54cfc09a46edcd375ae12fa87801f7315be34c9b5f65daa0a5"
+    },
+    "four_relevant_modules": {
+      "tests": 3451,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 585.246,
+      "modules": {
+        "tests.test_content_cleanup": 2694,
+        "tests.test_cleanup_detection_reuse": 207,
+        "tests.test_cleanup_learning": 12,
+        "tests.test_noise_rule_regressions": 538
+      },
+      "xml_sha256": "7a053135d9e4f7fe86fe59f748b9df88cb186fffc57c7800f5fdc630b0f958cc",
+      "warnings": 136,
+      "reported_seconds": 585.29
+    },
+    "extended_container_boundary_api_family_cases": 32,
+    "new_api_cases_within_final_run": 16,
+    "new_source_cases_within_final_run": 76,
+    "preliminary_run": "Interrupted intentionally after replacing suffix-copy emptiness check with equivalent O(1) item.end()==len(line); not a passing run. Final exact-source rerun completed normally."
+  },
+  "validation": {
+    "memory_compile": "pass",
+    "git_diff_check": "pass",
+    "no_staged_changes": true,
+    "basetemp_and_pytest_cache_under_task_temp_root": true
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "86e1e7336df4095644f93db8673391f9af88a51a3a1c4743478527e08fc4981a",
+    "docs/index.md": "1deaf9e181f4be4c5c929d629a009f4938ed1b97778ee910b845248dc619408b",
+    "docs/documentation-inventory.md": "93ba7f1cd404e83ebd17e2c82287b405df8d77fc66c181a93ac593edaf7f6999",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "a8223c879ed67c7f382265156d3de04b6b16db748561a84c7752ecbc843481d3",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "f601c885ab1fb0262616e221248519da9c749b7e39abb8454e7561c0a1fcb00e",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "b7322049f0922c26bf34be052c8ea7ed182cf73e3af5f52a3944ceaff3f68007"
+  },
+  "temporary_artifacts": {
+    "task_subdirectory": "chat-reader-noise-empty-list-boundaries",
+    "files": {
+      "content-cleanup-before.py": "ac921c1ff0f60faf33f4dd8d0b52d2cfe534fb23ab0763965951240c8a683928",
+      "render-empty-lists.mjs": "806f37c2991f2d551e61f042bd7907967dd71032333b20eb3bc9244ed29e4b19",
+      "compare-empty-lists.py": "f71bc0b60d5027ee2a1bd5d0a144b04073c2b541cb9c54248a2074901711c2a6",
+      "empty-list-corpus.json": "6561d9049ba9e9c498aad9f54bf0f7c136ea1ac1d511e70bdc4fd565549822fc",
+      "empty-list-comparison.json": "5bae54160008efb790b26c6c264a3b7667313c3142a25e042030c47ade7244b4",
+      "empty-list-comparison.log": "adc42b9872a1df0aa2adc72d707b49c11e42586a4b79a78d50e6c2b565cc16d4",
+      "before-registration-differences.json": "50be9da9c029f0d8df4c6d4f0ddaa3f9fc11fcb9835493a319c7adb4a651d586",
+      "before-hit-differences.json": "3e9041ceebefef35dd398aa100ac0256cf27cd13df6336dae8e1d093d1fe45ea",
+      "before-interval-differences.json": "1b2a8a203654c7b5c0e0f0ac3fc6cb59e90143f1363cf84e490b3df47252637a",
+      "current-registration-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-hit-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-interval-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "verify-prior-corpora.py": "d7aa1b39e4d95c5806ff593ce3df8008bdb57bc5994f720858550644bce2591e",
+      "prior-verification.json": "829e92240125945b88a8feb6b9ae11562d23f1b2caefda1cff83846a8aa492fc",
+      "prior-verification.log": "5e63d29d72927293f91e77176559269169d63921e432314621da268bf223342e",
+      "prior-changes.json": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "baseline_plugin.py": "19354761eb4f466e6f126f26e4c6ac79a421fc71488817ed14cd3b0918909766",
+      "regression-red.xml": "c667b1a092f61e0f18465b2d436fde2eb09a69ba1cb03303a83ed7508560d859",
+      "regression-red.log": "075575d10b59991bdbbe59c0f72fff4b73b9720ac8c6c6bf9354f969635fb577",
+      "frozen-red.log": "1b418219fb02e8b6ce831b3712bc69c9a6bd40c04fd308fda1f6ab9993c49791",
+      "frozen-red.xml": "706aa377bde6dadbfd022cff0ebb251c728b633ee624de7e863b36f207acc489",
+      "regression-green.log": "75ddc4768a2895acb1b4d1e2016f9b4cdd643f06d0646319b3b33560a5c088f8",
+      "regression-green.xml": "6cb667b146e56f54cfc09a46edcd375ae12fa87801f7315be34c9b5f65daa0a5",
+      "preliminary-interrupted.log": "50fee47b0f7454ed06ddd29b4efc4263b9f6b9819cb60b88754ea2381aedbca1",
+      "preliminary-source-start.json": "cc744f08d603a64b94fe452f1ee5ec87bb6bab063e57aff63ab7582b50f43dca",
+      "final.log": "3a4b4c634d5a42cfe2e88b5139691b47bc97bb9a11aa2dfb45b1983255a97004",
+      "final.xml": "7a053135d9e4f7fe86fe59f748b9df88cb186fffc57c7800f5fdc630b0f958cc",
+      "final-source-start.json": "7dfdfc15b110127132a5b27541536d0788530abc8b57309a4937f74f8f13432c",
+      "final-source-end.json": "691f2ef380c9c525a8debe36383f14253c804862549b09c2158676f4bd70380c",
+      "write-receipt.py": "a4ccf00a9b135ffa595737ea4041d7a9e0d5874cbb5741dbb2433f0dd0095e30"
+    }
+  },
+  "limits": [
+    "Synthetic correlated cases, not production false-positive-rate estimates",
+    "Native parser evidence is not browser/app-adapter/sanitizer acceptance",
+    "Conservative malformed-reference, HTML and whole-attachment policy extras retained",
+    "No complete Markdown/extension conformance or universal complexity/performance/memory claim",
+    "No web search, browser, network, full API, PostgreSQL concurrency, CI or production validation",
+    "No dependency, migration, offline/Dexie, user import data or production configuration changes",
+    "No staging, commit, push or deployment; ongoing goal remains active"
+  ]
+}

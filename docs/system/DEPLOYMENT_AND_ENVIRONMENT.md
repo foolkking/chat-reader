@@ -1,5 +1,15 @@
 # 部署与运行环境
 
+## Authorized release preparation — 2026-10-27
+
+The reviewed noise-matching/renderer-protection corrections and immutable
+Actions contracts are authorized for submission and deployment as one batch.
+No schema, production configuration or storage-format change is intended.
+Fresh full CI (first read at least 50 minutes after each dispatch), independent
+artifact verification and a stopped-writer five-component backup are mandatory.
+See the [release record](../execution/NOISE_REVIEW_RELEASE_2026-10-27.md);
+the accepted runtime below is not yet changed.
+
 ## Current production — 2026-10-25
 
 Runtime source is **c7dc074 / 20261022_0053**, accepted at

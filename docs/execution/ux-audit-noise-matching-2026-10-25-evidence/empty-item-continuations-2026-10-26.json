@@ -1,0 +1,388 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-26",
+  "recorded_at": "2026-10-26T21:13:08.617672+08:00",
+  "scope": "Local-only initially empty list item exit after extra blank lines; retain parents and source-based noise protection",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "parent_receipt": {
+    "path": "empty-list-boundaries-2026-10-26.json",
+    "sha256": "71cb52166674810921eaa12c107cc23c7fc5237f2e7be9e95c9fc0807af4fefa"
+  },
+  "source_and_test_hashes": {
+    "apps/api/app/services/content_cleanup.py": "4a88ea5c2c4313b1191e1ab8973b2ac23ab7783d9ae6438a5de448a80eea5277",
+    "apps/api/app/services/cleanup_learning.py": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f",
+    "apps/api/tests/test_content_cleanup.py": "d50bb2a402e21a703303854dad118774bb3c95f463b65321f7bef510dce83e12",
+    "apps/api/tests/test_cleanup_detection_reuse.py": "0dc39c6c7b43cbe8cf77684e11569db552b5aecea43ff5630705287faf539397",
+    "apps/api/tests/test_cleanup_learning.py": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615",
+    "apps/api/tests/test_noise_rule_regressions.py": "09df36d84ad6c551781c4b733bb2771bd9f64f34b10db74b99d3cd0162dd84d7",
+    "apps/web/tsconfig.tsbuildinfo": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7"
+  },
+  "source_and_tests_stable_across_final_pytest": true,
+  "baseline_sha256": "34fec0705e9b80ca8b1905767a81caf0bada229d83d0d0a1e6dd10154e798efb",
+  "runtime": {
+    "python": "3.11.7",
+    "pytest": "8.4.2",
+    "remark-parse": "11.0.0",
+    "remark-gfm": "4.0.1"
+  },
+  "independent_matrix": {
+    "before": {
+      "sources": 5040,
+      "hits": 10080,
+      "nodes": {
+        "code": 2964,
+        "inlineCode": 1468,
+        "definition": 888
+      },
+      "coverage_errors": 368,
+      "decision_errors": 784,
+      "decision_error_kinds": {
+        "fence": 416,
+        "html": 368
+      },
+      "raw_native_decision_errors": 808,
+      "legacy_policy_extra_sources": 24,
+      "exact_controls_native_plus_policy": 1960,
+      "exact_interval_errors": 368,
+      "native_ordinary_adjacent_kept": 4932
+    },
+    "current": {
+      "sources": 5040,
+      "hits": 10080,
+      "nodes": {
+        "code": 2964,
+        "inlineCode": 1468,
+        "definition": 888
+      },
+      "coverage_errors": 0,
+      "decision_errors": 0,
+      "decision_error_kinds": {},
+      "raw_native_decision_errors": 24,
+      "legacy_policy_extra_sources": 24,
+      "exact_controls_native_plus_policy": 1960,
+      "exact_interval_errors": 0,
+      "native_ordinary_adjacent_kept": 4980
+    },
+    "source_sha256": "4a88ea5c2c4313b1191e1ab8973b2ac23ab7783d9ae6438a5de448a80eea5277",
+    "baseline_sha256": "34fec0705e9b80ca8b1905767a81caf0bada229d83d0d0a1e6dd10154e798efb",
+    "corpus_sha256": "a2e936cb572810ae4aaf2f7cebdb8a6d64bd4537c028b1b3fc129b441041a1e5",
+    "parameter_combinations": 5760,
+    "unique_sources": 5040,
+    "native_nodes": 5320,
+    "exact_native_only_controls": 1936,
+    "exact_controls_with_legacy_definition_policy": 24,
+    "oracle": "Native code/inlineCode/definition coverage and literal-hit membership plus the separately reported legacy conservative definition-looking policy. Full intervals checked only for 1960 inline-only/no-code controls including 24 policy cases.",
+    "not_whole_protected_interval_equivalence": true,
+    "raw_native_membership_differences_retained": 24,
+    "initial_comparison_process": "Initial stdout failed to encode an emoji under default GBK after computing results. Not accepted as completed evidence; rerun with process-local UTF-8 completed normally."
+  },
+  "retained_corpora": {
+    "baseline_sha256": "34fec0705e9b80ca8b1905767a81caf0bada229d83d0d0a1e6dd10154e798efb",
+    "source_sha256": "4a88ea5c2c4313b1191e1ab8973b2ac23ab7783d9ae6438a5de448a80eea5277",
+    "ast_allowlist": [
+      "protected_ranges"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "url-corpus.json",
+        "combinations": 3150,
+        "hits": 6750,
+        "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "decoded-corpus.json",
+        "combinations": 816,
+        "hits": 1644,
+        "sha256": "d109b5f5594493c99f098defdc76d35ab4875ddd8330f77e60bd36f30db96f13",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "context-corpus.json",
+        "combinations": 688,
+        "hits": 724,
+        "sha256": "b0cb0c77bb2d28707de36137d9434f8d603124f025f713e5f2b7449e08faf105",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "precedence-corpus.json",
+        "combinations": 804,
+        "hits": 1260,
+        "sha256": "48db1f39cfd1db5175d7f96458ecdc560cd8e5dd7d0b22eda2fd635b8cbde0ea",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "html-block-corpus.json",
+        "combinations": 3053,
+        "hits": 18223,
+        "sha256": "b7388b4d8ec9b91895ea0bbe3ec6ec048427cc62bc8dab3abe6a4246c47f6a2c",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "emphasis-corpus.json",
+        "combinations": 7918,
+        "hits": 13028,
+        "sha256": "00cd32fed8a1809274519c05623d85ef75dcb44307de2668da66cd66450fd0ce",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "strikethrough-corpus.json",
+        "combinations": 6263,
+        "hits": 10753,
+        "sha256": "60922d9ac8905a1c55cbcca00b26711c6adf361ea6ee86a50a9c172e8fb608d1",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "reference-corpus.json",
+        "combinations": 1688,
+        "hits": 3376,
+        "sha256": "4b112514767ae087f494ad4c00463c3c07774211675b1efe8509ed2f3c378e47",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "autolink-corpus.json",
+        "combinations": 4010,
+        "hits": 8212,
+        "sha256": "0edcef673f2cfdc7e938a6bc4db474be3d2fd4d899b05e3943bc3392bc3af90a",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "angle-corpus.json",
+        "combinations": 2314,
+        "hits": 4827,
+        "sha256": "03406f5deeca2c38808209282e521e68baa140760848bf760af81435955b24e8",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "definition-grammar-corpus.json",
+        "combinations": 3158,
+        "hits": 6758,
+        "sha256": "d0deba251aef716c536b85d1ad55ab4816611d2690f1db248aee9fba6694e966",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "boundary-corpus.json",
+        "combinations": 3744,
+        "hits": 7488,
+        "sha256": "f86d048903467e55c7ca20e7b5694194a0c3ccf5ef4e6b1b29680a298b22efdc",
+        "range_changes": 0,
+        "metadata_changes": 0
+      },
+      {
+        "name": "empty-list-corpus.json",
+        "combinations": 7680,
+        "hits": 15360,
+        "sha256": "6561d9049ba9e9c498aad9f54bf0f7c136ea1ac1d511e70bdc4fd565549822fc",
+        "range_changes": 0,
+        "metadata_changes": 0
+      }
+    ],
+    "range_changes": 0,
+    "metadata_changes": 0,
+    "total_combinations": 62328,
+    "total_literal_hits": 142237
+  },
+  "pytest": {
+    "initial_200_source_cases": {
+      "tests": 200,
+      "failures": 80,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 14.324,
+      "modules": {
+        "tests.test_content_cleanup": 200
+      },
+      "xml_sha256": "40c310e0a461f54e8ae8d7063fd43c3657f6abfa1a23b86d91c69dd18c023f73"
+    },
+    "frozen_parent_248_source_and_api_cases": {
+      "tests": 248,
+      "failures": 96,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 146.57,
+      "modules": {
+        "tests.test_content_cleanup": 200,
+        "tests.test_noise_rule_regressions": 48
+      },
+      "xml_sha256": "7905ff4d9dfac037fbcb587ee38c1926999ef35a839542e39f7850de239b8a31",
+      "failures_by_module": {
+        "tests.test_content_cleanup": 80,
+        "tests.test_noise_rule_regressions": 16
+      }
+    },
+    "current_200_source_cases": {
+      "tests": 200,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 2.937,
+      "modules": {
+        "tests.test_content_cleanup": 200
+      },
+      "xml_sha256": "36580e6c4ab8a05bd7fcf67a9ac7f5c96e69218b2d860bc34f94b4fb457feadd"
+    },
+    "four_relevant_modules": {
+      "tests": 3667,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "xml_seconds": 728.441,
+      "modules": {
+        "tests.test_content_cleanup": 2894,
+        "tests.test_cleanup_detection_reuse": 207,
+        "tests.test_cleanup_learning": 12,
+        "tests.test_noise_rule_regressions": 554
+      },
+      "xml_sha256": "4913418764a4b0cfbbfd02d830ce3600677f3147c6b6ae32cb5eddfbaad9cae8",
+      "warnings": 136,
+      "reported_seconds": 728.49
+    },
+    "extended_container_boundary_api_family_cases": 48,
+    "new_api_cases_within_final_run": 16,
+    "new_source_cases_within_final_run": 200
+  },
+  "validation": {
+    "memory_compile": "pass",
+    "git_diff_check": "pass",
+    "no_staged_changes": true,
+    "basetemp_and_pytest_cache_under_task_temp_root": true,
+    "new_document_anchor": "pass"
+  },
+  "document_hashes": {
+    "PROJECT_STATE.md": "aededb44c471bbc5f0307318557b21a240948fb8d212146774d8650bacae61ca",
+    "docs/index.md": "6f99ffa2a29801a2d725d782fbbefba88d5530b295a379e31190f86b55cf6dca",
+    "docs/documentation-inventory.md": "d8d711f36fbe40bb313887ace6ba9c565b6a8e334bb7a1b32c2c0a8f6277b213",
+    "docs/system/CONTENT_CLEANUP_CONTRACT.md": "6887fe00dced921946bbe33b4b0d7db9961f9f2a16e40e04293aadad1a286490",
+    "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md": "f16920dd449e8d80f30aa7453689c138e85c8bd4d231bef16972ba5e9bba1f93",
+    "docs/execution/ux-audit-noise-matching-2026-10-25.md": "d2689726215746dd0ff30291319e16603f4af5c2c5646a124ae63bb8872aff1d"
+  },
+  "temporary_artifacts": {
+    "task_subdirectory": "chat-reader-noise-empty-item-continuations",
+    "files": {
+      "content-cleanup-before.py": "34fec0705e9b80ca8b1905767a81caf0bada229d83d0d0a1e6dd10154e798efb",
+      "probes.mjs": "d2f4ec0c1683999aca57fcc6a5b1d29eba6ebae0dd796ce876cdc653869e6f40",
+      "probes.py": "d751bdf212661f5754d5ebc71cd6a1f79bc0ffc45810e9269e5cdce7feb51221",
+      "probes.json": "321da07151bba34ecf46188344ef4b7abc3aaeaecec7adc581f351d20f278792",
+      "render-empty-items.mjs": "2a98d82e3be63b166682785456df5ed941b4e9b641802cf4acf0e0024bbacdd8",
+      "render.log": "b0a96cfb54088b1164161069e0e2b04df3a8344d71f73cfe6376bd19ae330072",
+      "compare-empty-items.py": "206f882387a469e297793f2e97dce6694efd5e3f8232ebc16377496371af3c6e",
+      "empty-item-corpus.json": "a2e936cb572810ae4aaf2f7cebdb8a6d64bd4537c028b1b3fc129b441041a1e5",
+      "empty-item-comparison.json": "016534e24aa92ebc2f275bfb8b5c6d7f61ad93c4ad212fa4bf88884242172b9a",
+      "comparison-red.log": "a6f245b4a817b9f35f6e5fce3e5f0fc7eda25886b54e28213134a8a9814ef2e1",
+      "comparison-green.log": "6d5e8fb3c6f99988f64698db74cb0e807423b97060218064e0f5f63b95d6aa0f",
+      "comparison-final.log": "3d741d4d72539a230782e76a21bd8f52d9b178c344c140a115fa9777d26bc76b",
+      "before-membership-differences.json": "6236fb24dec238ca52e8fe6c90f5781618ea67b29dc8cb1a20790b1778bc1e62",
+      "before-coverage-differences.json": "e000bf319f39c8995cd6f15f9d3f3fb63a57cb3ea25ddc56b5d42b6ef758bad8",
+      "before-interval-differences.json": "5e1a0c38613500df5008104f7dbdd059e4e0fbb60c8cbfbdca0b95baffe83973",
+      "before-raw-native-membership-differences.json": "8941774b3de54eb32dc1cd44fb1cc82e1167185819cea80257b7cd43486eecc7",
+      "before-policy-extras-differences.json": "e1ddcf83498afd4f529bc314b01460c3c0d14ed03cbc5559747ef37ea174968f",
+      "current-membership-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-coverage-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-interval-differences.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "current-raw-native-membership-differences.json": "5acf3b205ce4e78ba8620bf4f7eec2515eb07d5a9f9e544da5003de6ef5dd7db",
+      "current-policy-extras-differences.json": "e1ddcf83498afd4f529bc314b01460c3c0d14ed03cbc5559747ef37ea174968f",
+      "verify-prior-corpora.py": "da7e786f41b975cb127d8bb881e60c39e520fef0f8e93c1bf3745f45a826de39",
+      "prior-verification.json": "25bf860c312c051eb19b8551740122cd7d0e7b6fc066593c0f2601b6314e5f5a",
+      "prior-verification.log": "d06ba3f0c88757bb42caded35fcc302366257701e251d9c57bb7694be65c2564",
+      "prior-changes.json": "a5338d955b09046ec0b16f3a9625b7955c763aae07dc722e474e6078745f932f",
+      "baseline_plugin.py": "edba0086cff96f355f5b0e2f93727295c633fa68597570f19581ffcbaef1e4c0",
+      "regression-red.xml": "40c310e0a461f54e8ae8d7063fd43c3657f6abfa1a23b86d91c69dd18c023f73",
+      "regression-red.log": "0e054f8c51d34a81c4fa3d9768507a9424c2fcdf2f547e2d8c0ecd331f17ee46",
+      "regression-green.xml": "36580e6c4ab8a05bd7fcf67a9ac7f5c96e69218b2d860bc34f94b4fb457feadd",
+      "regression-green.log": "0cc411789af2c90f3137c4032669cf31a1f14ce38ea145d571a24ee30ead734b",
+      "frozen-red.xml": "7905ff4d9dfac037fbcb587ee38c1926999ef35a839542e39f7850de239b8a31",
+      "frozen-red.log": "ca400e18480ae9d81ec3f8515fb7835d1a73c873067a3d9a69b11117ab100291",
+      "final.xml": "4913418764a4b0cfbbfd02d830ce3600677f3147c6b6ae32cb5eddfbaad9cae8",
+      "final.log": "53197d6f069d7a69877d4f7e2c07b77ff029ea3e74e7070d372b9420f695db96",
+      "final-source-start.json": "9c851a06bd55374ebe33235fc5ded6212b6831835762a55782db8d3f9ecd6713",
+      "final-source-end.json": "162095e22eae1d03250ded3313520e09f10e81892033179af75436cbe2e492b2",
+      "final-diff-check.log": "18f2ec89c82caafd52bb4d7397c9a7940ec0ef5f4b6df412acb97b9bb82e46f5",
+      "write-receipt.py": "ea97e59f5b38d0e67162146b26e555196b123debed3cb56aea2e31125f3cbc19"
+    }
+  },
+  "limits": [
+    "Synthetic correlated cases, not production false-positive-rate estimates",
+    "Native parser evidence is not browser/app-adapter/sanitizer acceptance",
+    "24 native-member differences are explicit unchanged conservative definition-looking policy extras; not product fixes",
+    "Physical-line/block-prefix and trailing-newline conservative spans retained; exact intervals not asserted for the whole matrix",
+    "No complete Markdown/extension conformance or universal complexity/performance/memory claim",
+    "No web search, browser, network, full API, PostgreSQL concurrency, CI or production validation",
+    "No dependency, migration, offline/Dexie, user import data or production configuration changes",
+    "No staging, commit, push or deployment; ongoing goal remains active"
+  ]
+}

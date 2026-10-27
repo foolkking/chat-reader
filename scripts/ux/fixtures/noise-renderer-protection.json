@@ -1,0 +1,134 @@
+[
+  {
+    "name": "table-dollar-cannot-steal-next-cell-code",
+    "source": "left | right\n--- | ---\n$start | `prefix $ NOISE`\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "heading-dollar-cannot-steal-next-block-code",
+    "source": "# $$head\n\n`prefix $$ NOISE`\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "dollar-cannot-steal-next-table-row-code",
+    "source": "left | right\n--- | ---\n$start | value\nnext | `prefix $ NOISE`\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "multiline-single-dollar-math",
+    "source": "$a +\nNOISE + b$\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "wide-dollar-math-with-shorter-inner-run",
+    "source": "before $$a $ NOISE b$$ ordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "triple-dollar-math-with-double-inner-run",
+    "source": "before $$$a $$ NOISE b$$$ ordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "failed-triple-opener-keeps-valid-inner-pair",
+    "source": "before $$$a $$ NOISE b$$ ordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "different-dollar-widths-do-not-close",
+    "source": "before $$a NOISE $$$ ordinary NOISE",
+    "protected": [false, false]
+  },
+  {
+    "name": "bare-bracket-latex-display",
+    "source": "[\n\\text{NOISE}\n]\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "escaped-display-brackets-across-paragraph-break",
+    "source": "\\[\na +\n\nNOISE + b\n\\]\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "bare-bracket-prose-is-not-math",
+    "source": "[\nordinary NOISE words\n]\n\nordinary NOISE",
+    "protected": [false, false]
+  },
+  {
+    "name": "bare-bracket-example-inside-fence",
+    "source": "```\n[\n\\text{NOISE}\n]\n```\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "quoted-title-backtick-before-real-code",
+    "source": "[label](/keep \"`\") ordinary NOISE `NOISE`",
+    "protected": [false, true]
+  },
+  {
+    "name": "quoted-title-dollar-and-backtick-before-real-code",
+    "source": "[label](/keep \"$`\") ordinary NOISE `NOISE`",
+    "protected": [false, true]
+  },
+  {
+    "name": "image-title-backtick-before-real-code",
+    "source": "![label](/keep \"`\") ordinary NOISE `NOISE`",
+    "protected": [false, true]
+  },
+  {
+    "name": "code-owns-fake-link-title",
+    "source": "`NOISE [x](/keep \"`\") ordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "html-flow-is-literal-code-fallback",
+    "source": "<div>\n`NOISE`\n</div>\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "html-comment-is-literal-code-fallback",
+    "source": "<!--\n[retained](/NOISE)\n-->\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "html-comment-terminator-restores-prose",
+    "source": "<!--\nNOISE\n-->\nordinary NOISE\n\nRetain `NOISE`",
+    "protected": [true, false, true]
+  },
+  {
+    "name": "html-flow-terminator-owns-the-complete-line",
+    "source": "<!--NOISE@links.test--> NOISE\n\nordinary NOISE",
+    "protected": [true, true, false]
+  },
+  {
+    "name": "inline-html-is-not-flow-code",
+    "source": "ordinary <span>NOISE</span> and NOISE",
+    "protected": [false, false]
+  },
+  {
+    "name": "supported-rich-layout-is-projected-text",
+    "source": "<box border radius=\"xl\"><text>NOISE</text><divider color=\"subtle\"/></box>\n\nordinary NOISE",
+    "protected": [false, false],
+    "projected": true
+  },
+  {
+    "name": "supported-multiline-rich-flow-is-projected-text",
+    "source": "<box border>\n<text>NOISE</text>\n</box>\n\nordinary NOISE",
+    "protected": [false, false],
+    "projected": true
+  },
+  {
+    "name": "rich-non-ascii-numeric-attribute-keeps-code-fallback",
+    "source": "<box padding={١}>\n<text>NOISE</text>\n</box>\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "rich-math-tag-cannot-hide-invalid-profile",
+    "source": "<box>\n<text>NOISE</text>\n</box>\n\n$x\n<box>\ny$\n\nordinary NOISE",
+    "protected": [true, false]
+  },
+  {
+    "name": "unsupported-rich-layout-stays-literal-code",
+    "source": "<box unknown=\"x\">\nNOISE\n</box>\n\nordinary NOISE",
+    "protected": [true, false]
+  }
+]

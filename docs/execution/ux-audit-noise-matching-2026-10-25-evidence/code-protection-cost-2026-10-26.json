@@ -1,0 +1,460 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "api_regression": {
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "passed": 493,
+    "skipped": 0,
+    "failed": 0,
+    "duration_seconds": 415.02,
+    "junit_family": "xunit1",
+    "junit_sha256": "79aa662c36c916434d02faaf627832e9ccc4efa7ee599b65a33fce1b3b46b38a",
+    "work_budget_cases": 12,
+    "focused_noise_cases_included": 202,
+    "detection_reuse_cases_included": 51,
+    "temporary_batch": "pytest-cost-regression"
+  },
+  "benchmark": {
+    "method": "Same machine; warm up each template with 16 spans; three unprofiled protection calls per size, plus one full exact literal detection call for a single ordinary NOISE suffix. No other task test process was running during these timing samples.",
+    "templates": {
+      "inline": "Retain `value` text.\n",
+      "fenced": "```text\nvalue\n```\n\n"
+    },
+    "suffix": "NOISE",
+    "before": [
+      {
+        "kind": "inline",
+        "spans": 128,
+        "source_codepoints": 2693,
+        "protection_seconds": [
+          0.0033593999687582254,
+          0.003350700018927455,
+          0.0033357000211253762
+        ],
+        "median_seconds": 0.003350700018927455,
+        "single_hit_detection_seconds": 0.003955699969083071,
+        "ranges_sha256": "8b74d956c56b151536d36bcf043359865cd2e3e641fc3ccbb171ab66787b5077"
+      },
+      {
+        "kind": "inline",
+        "spans": 512,
+        "source_codepoints": 10757,
+        "protection_seconds": [
+          0.03998290002346039,
+          0.040377400000579655,
+          0.03995500004384667
+        ],
+        "median_seconds": 0.03998290002346039,
+        "single_hit_detection_seconds": 0.04057209996972233,
+        "ranges_sha256": "10cf6a3b9fd8fd7de7bd782f61f36bf9dcf294d8a2574c3835ec29a742f49b58"
+      },
+      {
+        "kind": "inline",
+        "spans": 2048,
+        "source_codepoints": 43013,
+        "protection_seconds": [
+          0.5960749000078067,
+          0.5987589999567717,
+          0.5955368999857455
+        ],
+        "median_seconds": 0.5960749000078067,
+        "single_hit_detection_seconds": 0.5945360999321565,
+        "ranges_sha256": "5e8c97f1f3026f7bc7c0315ede03026210652ab017891a864e53e3692fb264c8"
+      },
+      {
+        "kind": "inline",
+        "spans": 4096,
+        "source_codepoints": 86021,
+        "protection_seconds": [
+          2.387579199974425,
+          2.3402722000610083,
+          2.362352800089866
+        ],
+        "median_seconds": 2.362352800089866,
+        "single_hit_detection_seconds": 2.3482149000046775,
+        "ranges_sha256": "6436de3d6ecb7a321a8de2853a86635420f40e0a9313527953fdbe4554235b50"
+      },
+      {
+        "kind": "fenced",
+        "spans": 128,
+        "source_codepoints": 2437,
+        "protection_seconds": [
+          0.004179299925453961,
+          0.004060200066305697,
+          0.004106199950911105
+        ],
+        "median_seconds": 0.004106199950911105,
+        "single_hit_detection_seconds": 0.004055500030517578,
+        "ranges_sha256": "0fac4b49e045f3263de52cf010d00bdc50205305f3c86b26fc0c48b14e3d629a"
+      },
+      {
+        "kind": "fenced",
+        "spans": 512,
+        "source_codepoints": 9733,
+        "protection_seconds": [
+          0.044352700002491474,
+          0.04450429999269545,
+          0.04456059995573014
+        ],
+        "median_seconds": 0.04450429999269545,
+        "single_hit_detection_seconds": 0.043048499966971576,
+        "ranges_sha256": "c272e253bef91c44ba96b763f6defaddbfa69b9b00639f7bde780a1d4c5da6fc"
+      },
+      {
+        "kind": "fenced",
+        "spans": 2048,
+        "source_codepoints": 38917,
+        "protection_seconds": [
+          0.6487938000354916,
+          0.6081600999459624,
+          0.6117067000595853
+        ],
+        "median_seconds": 0.6117067000595853,
+        "single_hit_detection_seconds": 0.6159290000796318,
+        "ranges_sha256": "8db2eb3093788627eb687852a8a09452077d0cf98f49e648ce37868aecfb2e58"
+      },
+      {
+        "kind": "fenced",
+        "spans": 4096,
+        "source_codepoints": 77829,
+        "protection_seconds": [
+          2.397068899939768,
+          2.462469600024633,
+          2.426293099997565
+        ],
+        "median_seconds": 2.426293099997565,
+        "single_hit_detection_seconds": 2.4236842000391334,
+        "ranges_sha256": "946ef7cb65b6700bc550febe6e9b02885cf91192227eeffdcda0ebec74c961e9"
+      }
+    ],
+    "after": [
+      {
+        "kind": "inline",
+        "spans": 128,
+        "source_codepoints": 2693,
+        "protection_seconds": [
+          0.0009347000159323215,
+          0.0008631999371573329,
+          0.0008459000382572412
+        ],
+        "median_seconds": 0.0008631999371573329,
+        "single_hit_detection_seconds": 0.002387800021097064,
+        "ranges_sha256": "8b74d956c56b151536d36bcf043359865cd2e3e641fc3ccbb171ab66787b5077",
+        "baseline_median_seconds": 0.003350700018927455
+      },
+      {
+        "kind": "inline",
+        "spans": 512,
+        "source_codepoints": 10757,
+        "protection_seconds": [
+          0.0034978000912815332,
+          0.003461900050751865,
+          0.003536400035955012
+        ],
+        "median_seconds": 0.0034978000912815332,
+        "single_hit_detection_seconds": 0.0038478000788018107,
+        "ranges_sha256": "10cf6a3b9fd8fd7de7bd782f61f36bf9dcf294d8a2574c3835ec29a742f49b58",
+        "baseline_median_seconds": 0.03998290002346039
+      },
+      {
+        "kind": "inline",
+        "spans": 2048,
+        "source_codepoints": 43013,
+        "protection_seconds": [
+          0.013982199947349727,
+          0.013824100024066865,
+          0.013716500019654632
+        ],
+        "median_seconds": 0.013824100024066865,
+        "single_hit_detection_seconds": 0.013533999910578132,
+        "ranges_sha256": "5e8c97f1f3026f7bc7c0315ede03026210652ab017891a864e53e3692fb264c8",
+        "baseline_median_seconds": 0.5960749000078067
+      },
+      {
+        "kind": "inline",
+        "spans": 4096,
+        "source_codepoints": 86021,
+        "protection_seconds": [
+          0.06875970005057752,
+          0.0275402000406757,
+          0.02792100002989173
+        ],
+        "median_seconds": 0.02792100002989173,
+        "single_hit_detection_seconds": 0.027789800078608096,
+        "ranges_sha256": "6436de3d6ecb7a321a8de2853a86635420f40e0a9313527953fdbe4554235b50",
+        "baseline_median_seconds": 2.362352800089866
+      },
+      {
+        "kind": "fenced",
+        "spans": 128,
+        "source_codepoints": 2437,
+        "protection_seconds": [
+          0.0016336999833583832,
+          0.001501200022175908,
+          0.0015026000328361988
+        ],
+        "median_seconds": 0.0015026000328361988,
+        "single_hit_detection_seconds": 0.0015446000033989549,
+        "ranges_sha256": "0fac4b49e045f3263de52cf010d00bdc50205305f3c86b26fc0c48b14e3d629a",
+        "baseline_median_seconds": 0.004106199950911105
+      },
+      {
+        "kind": "fenced",
+        "spans": 512,
+        "source_codepoints": 9733,
+        "protection_seconds": [
+          0.005928899976424873,
+          0.005994000006467104,
+          0.005933600012212992
+        ],
+        "median_seconds": 0.005933600012212992,
+        "single_hit_detection_seconds": 0.006152300047688186,
+        "ranges_sha256": "c272e253bef91c44ba96b763f6defaddbfa69b9b00639f7bde780a1d4c5da6fc",
+        "baseline_median_seconds": 0.04450429999269545
+      },
+      {
+        "kind": "fenced",
+        "spans": 2048,
+        "source_codepoints": 38917,
+        "protection_seconds": [
+          0.06575389998033643,
+          0.02419889997690916,
+          0.025120000005699694
+        ],
+        "median_seconds": 0.025120000005699694,
+        "single_hit_detection_seconds": 0.02398419997189194,
+        "ranges_sha256": "8db2eb3093788627eb687852a8a09452077d0cf98f49e648ce37868aecfb2e58",
+        "baseline_median_seconds": 0.6117067000595853
+      },
+      {
+        "kind": "fenced",
+        "spans": 4096,
+        "source_codepoints": 77829,
+        "protection_seconds": [
+          0.04839230002835393,
+          0.0905736000277102,
+          0.0476929999422282
+        ],
+        "median_seconds": 0.04839230002835393,
+        "single_hit_detection_seconds": 0.048317600041627884,
+        "ranges_sha256": "946ef7cb65b6700bc550febe6e9b02885cf91192227eeffdcda0ebec74c961e9",
+        "baseline_median_seconds": 2.426293099997565
+      }
+    ],
+    "profile": {
+      "input_spans": 2048,
+      "before_function_calls": 8456277,
+      "after_function_calls": 61526,
+      "before_profile_sha256": "a9e8ffa536e02c16fca00434fc2563dc8779b4ebaafa5fc08bdf19e04aefe03e",
+      "after_profile_sha256": "b99bf9a5188d4a14bd20286955d4739f0886d5aeac7bdb2e1391097aebbe02d7"
+    }
+  },
+  "semantic_and_work_verification": {
+    "baseline_source_sha256": "7ddc1c71eaabe94f2f16912bb3d21576012313743aca2218db08064803ac6dd0",
+    "unchanged_helper_ast": true,
+    "work_counters": [
+      {
+        "count": 64,
+        "kind": "inline",
+        "newline": "LF",
+        "before_coordinate_comparisons": 8510,
+        "after_coordinate_comparisons": 446
+      },
+      {
+        "count": 64,
+        "kind": "inline",
+        "newline": "CRLF",
+        "before_coordinate_comparisons": 8510,
+        "after_coordinate_comparisons": 446
+      },
+      {
+        "count": 64,
+        "kind": "fenced",
+        "newline": "LF",
+        "before_coordinate_comparisons": 8510,
+        "after_coordinate_comparisons": 509
+      },
+      {
+        "count": 64,
+        "kind": "fenced",
+        "newline": "CRLF",
+        "before_coordinate_comparisons": 8510,
+        "after_coordinate_comparisons": 509
+      },
+      {
+        "count": 64,
+        "kind": "mixed",
+        "newline": "LF",
+        "before_coordinate_comparisons": 75799,
+        "after_coordinate_comparisons": 2901
+      },
+      {
+        "count": 64,
+        "kind": "mixed",
+        "newline": "CRLF",
+        "before_coordinate_comparisons": 75799,
+        "after_coordinate_comparisons": 2901
+      },
+      {
+        "count": 256,
+        "kind": "inline",
+        "newline": "LF",
+        "before_coordinate_comparisons": 132350,
+        "after_coordinate_comparisons": 1790
+      },
+      {
+        "count": 256,
+        "kind": "inline",
+        "newline": "CRLF",
+        "before_coordinate_comparisons": 132350,
+        "after_coordinate_comparisons": 1790
+      },
+      {
+        "count": 256,
+        "kind": "fenced",
+        "newline": "LF",
+        "before_coordinate_comparisons": 132350,
+        "after_coordinate_comparisons": 2045
+      },
+      {
+        "count": 256,
+        "kind": "fenced",
+        "newline": "CRLF",
+        "before_coordinate_comparisons": 132350,
+        "after_coordinate_comparisons": 2045
+      },
+      {
+        "count": 256,
+        "kind": "mixed",
+        "newline": "LF",
+        "before_coordinate_comparisons": 1188959,
+        "after_coordinate_comparisons": 12637
+      },
+      {
+        "count": 256,
+        "kind": "mixed",
+        "newline": "CRLF",
+        "before_coordinate_comparisons": 1188959,
+        "after_coordinate_comparisons": 12637
+      }
+    ],
+    "corpora": [
+      {
+        "temporary_file": "inline-block-corpus.json",
+        "corpus_sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "combinations": 34,
+        "literal_hits": 70,
+        "before_after_interval_differences": 0,
+        "renderer_classification_differences": 0,
+        "intervals_sha256": "4eb7e83dd938735ca64d83526a2a378863a37ca475b33f74992147e9cd8ad205"
+      },
+      {
+        "temporary_file": "inline-block-expanded-corpus.json",
+        "corpus_sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "combinations": 1088,
+        "literal_hits": 2240,
+        "before_after_interval_differences": 0,
+        "renderer_classification_differences": 0,
+        "intervals_sha256": "673438fcf1f2f8576793ff132326682f4607fa5058a6f422c2d8159276c706b6"
+      },
+      {
+        "temporary_file": "container-parser-corpus.json",
+        "corpus_sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "combinations": 312,
+        "literal_hits": 780,
+        "before_after_interval_differences": 0,
+        "renderer_classification_differences": 0,
+        "intervals_sha256": "8fa48b533231b60d2e5971e9dc59ecf166d5337c1f6613cbcbdaa1414b0bbbaa"
+      },
+      {
+        "temporary_file": "continuation-parser-corpus.json",
+        "corpus_sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "combinations": 80,
+        "literal_hits": 120,
+        "before_after_interval_differences": 0,
+        "renderer_classification_differences": 0,
+        "intervals_sha256": "4355d540066783f0a010ae18b1479663d05786eef503023b410b5cf1e074be7c"
+      },
+      {
+        "temporary_file": "container-edge-corpus.json",
+        "corpus_sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "combinations": 9240,
+        "literal_hits": 27720,
+        "before_after_interval_differences": 0,
+        "renderer_classification_differences": 0,
+        "intervals_sha256": "5e1d044d62f29c02cb6edc0053aa4a9e66dda51e460ce8a44990da47b6117d0a"
+      },
+      {
+        "temporary_file": "indent-paragraph-corpus.json",
+        "corpus_sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "combinations": 880,
+        "literal_hits": 2200,
+        "before_after_interval_differences": 0,
+        "renderer_classification_differences": 0,
+        "intervals_sha256": "6fb919124e9adc9d7a3d79b90fd8277ae9e230dd2cb7ffee86db052a0bad5f77"
+      }
+    ]
+  },
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "3133e9bcb0456fef247cc2525e26084ea00874adf654937c92274cfb75e71067"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "e9e7a28544dcd1cceda9787cf137d9d0cd28be4929f16358df46156d13a4b921"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "75d7e7791276f4f57de29e79cc7dd1b9c0d602cc66cd6254a2e88e2be71fdf49"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "23e81b8ab127cc850905f219547e1bd44cbdf1ac3d73af7b321a010c1392ecb0"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "limits": [
+    "The work counters count Python coordinate comparisons in covered inputs, including range merging; they are not a universal complexity or elapsed-time bound.",
+    "Protected intervals match the exact previous snapshot in all 11634 existing synthetic combinations; 33130 literal hit spans and renderer classifications also match. This is not new complete Markdown conformance.",
+    "Wall-clock timings are local synthetic component/service-function measurements, not API or production latency, throughput, RSS, OOM, or device guarantees.",
+    "Raw temporary benchmark/profile/JUnit/corpus artifacts remain in task-specific wkkk directories; only hashes and non-private measurements are retained here.",
+    "Not full API suite, PostgreSQL concurrency, browser, full CommonMark/GFM/HTML conformance, Web build, CI, or production acceptance.",
+    "No dependency, migration, canonical format, import originals, offline package, Dexie, production config, commit, push, CI dispatch, or deployment change."
+  ]
+}

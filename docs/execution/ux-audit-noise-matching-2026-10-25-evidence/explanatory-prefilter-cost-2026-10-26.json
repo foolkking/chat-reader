@@ -1,0 +1,1031 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "baseline_source_sha256": "be1afacffe70e6c402d832d3882f62128c1c17ae2c77faa44f9ff9820a03497a",
+  "baseline_matches_prior_receipt": "explanatory-protection-cost-2026-10-26.json",
+  "api_regression": {
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "passed": 554,
+    "failed": 0,
+    "skipped": 0,
+    "junit_duration_seconds": 466.046,
+    "per_module": {
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_noise_rule_regressions": 208,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_content_cleanup": 31,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_cleanup_detection_reuse": 106,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3
+    },
+    "junit_family": "xunit1",
+    "junit_sha256": "734627afceb32795b95f347f4e1e879b717ca40cb8f388a0a572d69f3587f0a5",
+    "temporary_batch": "pytest-sparse-regression",
+    "focused_detection_reuse": {
+      "passed": 106,
+      "junit_sha256": "b57cb7047ab5e020c8489ba8a47e7074172aae8d1e0d18f918ab64f7f9987196"
+    },
+    "prior_work_budget_cases_retained": {
+      "coordinate": 12,
+      "source_slicing": 12
+    }
+  },
+  "unicode_initial_equivalence": {
+    "testcases": 11,
+    "oracle": "Frozen prefilter-free zero-width keyword regex with Unicode IGNORECASE.",
+    "codepoints_per_keyword_tail": 1114112,
+    "constructed_forms": 12255232,
+    "chunk_initials": 4096,
+    "includes": "Non-BMP, surrogate and control code points; source is never normalized or serialized.",
+    "comparison": "All zero-width whole-match spans and full keyword capture spans, per chunk.",
+    "differences": 0,
+    "junit_properties": [
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[\\u793a\\u4f8b]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[\\u4f8b\\u5982]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[\\u6bd4\\u5982]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[\\u5b57\\u6bb5]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[\\u8bed\\u6cd5]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[\\u6807\\u8bb0\\u8bf4\\u660e]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[example]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[e.g.]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[field]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[syntax]",
+        "value": 1114112
+      },
+      {
+        "case": "test_explanatory_keyword_prefilter_preserves_every_unicode_initial[literal]",
+        "value": 1114112
+      }
+    ]
+  },
+  "benchmark": {
+    "method": "Same machine, paired prior/current modules. Warm full detection first, then alternate seven full exact literal detection samples per implementation/source; also seven explicitly constructed explanatory-index samples each. No other task test process running during samples. The manual index timings for a no-hit source do not imply production constructs an index on no hits.",
+    "paired_results": [
+      {
+        "kind": "one_short_hit",
+        "source_codepoints": 17,
+        "hits": 1,
+        "detection_seconds": {
+          "before": [
+            5.979998968541622e-05,
+            5.170004442334175e-05,
+            5.800009239464998e-05,
+            5.659996531903744e-05,
+            4.870002157986164e-05,
+            5.330005660653114e-05,
+            5.510007031261921e-05
+          ],
+          "after": [
+            5.410006269812584e-05,
+            5.0699920393526554e-05,
+            5.680008325725794e-05,
+            5.270005203783512e-05,
+            4.970002919435501e-05,
+            4.730001091957092e-05,
+            5.3999945521354675e-05
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 5.510007031261921e-05,
+          "after": 5.270005203783512e-05
+        },
+        "index_seconds": {
+          "before": [
+            1.079996582120657e-05,
+            1.1800089851021767e-05,
+            1.2499978765845299e-05,
+            1.0899966582655907e-05,
+            9.699957445263863e-06,
+            9.899958968162537e-06,
+            9.900075383484364e-06
+          ],
+          "after": [
+            9.999959729611874e-06,
+            1.0500079952180386e-05,
+            1.0200077667832375e-05,
+            9.399955160915852e-06,
+            9.09995287656784e-06,
+            9.09995287656784e-06,
+            9.200070053339005e-06
+          ]
+        },
+        "index_median_seconds": {
+          "before": 1.079996582120657e-05,
+          "after": 9.399955160915852e-06
+        },
+        "full_occurrences_sha256": "e92fe59d680642943967ecd46130029c8460b7e9142ffbabc064748af7916085"
+      },
+      {
+        "kind": "one_sparse_multiline_hit",
+        "source_codepoints": 49169,
+        "hits": 1,
+        "detection_seconds": {
+          "before": [
+            0.01653929997701198,
+            0.016647599986754358,
+            0.0167109000030905,
+            0.016594400047324598,
+            0.01658069994300604,
+            0.01652740000281483,
+            0.016572900000028312
+          ],
+          "after": [
+            0.013814300065860152,
+            0.014127600006759167,
+            0.013944200007244945,
+            0.01394940004684031,
+            0.013705299934372306,
+            0.013803599984385073,
+            0.014108500094152987
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 0.01658069994300604,
+          "after": 0.013944200007244945
+        },
+        "index_seconds": {
+          "before": [
+            0.006424899911507964,
+            0.006216599955223501,
+            0.006459700060077012,
+            0.006270999903790653,
+            0.006177600007504225,
+            0.006254900014027953,
+            0.0063102999702095985
+          ],
+          "after": [
+            0.0033576999558135867,
+            0.00343879999127239,
+            0.0033685999223962426,
+            0.00342399999499321,
+            0.0034775000531226397,
+            0.0034487000666558743,
+            0.0034696999937295914
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.006270999903790653,
+          "after": 0.00343879999127239
+        },
+        "full_occurrences_sha256": "d969d74ae940c3a7fc56112f24805f02191e9b6a73c4426ad7cbe4601f041f15"
+      },
+      {
+        "kind": "one_sparse_long_line_hit",
+        "source_codepoints": 49169,
+        "hits": 1,
+        "detection_seconds": {
+          "before": [
+            0.008438499993644655,
+            0.008433899958617985,
+            0.008453099988400936,
+            0.008386700064875185,
+            0.009122299961745739,
+            0.008390799979679286,
+            0.008292500046081841
+          ],
+          "after": [
+            0.005700899986550212,
+            0.005494199926033616,
+            0.005380099988542497,
+            0.005540599930100143,
+            0.005502799991518259,
+            0.005487599992193282,
+            0.00542709999717772
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 0.008433899958617985,
+          "after": 0.005494199926033616
+        },
+        "index_seconds": {
+          "before": [
+            0.0048831000458449125,
+            0.0049328000750392675,
+            0.004883600049652159,
+            0.004904599976725876,
+            0.0048186000203713775,
+            0.00497059989720583,
+            0.004906699992716312
+          ],
+          "after": [
+            0.001900100032798946,
+            0.0018913999665528536,
+            0.0019903999054804444,
+            0.0019195000641047955,
+            0.0019225000869482756,
+            0.0019245999865233898,
+            0.0018588999519124627
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.004904599976725876,
+          "after": 0.0019195000641047955
+        },
+        "full_occurrences_sha256": "d969d74ae940c3a7fc56112f24805f02191e9b6a73c4426ad7cbe4601f041f15"
+      },
+      {
+        "kind": "no_hit_multiline",
+        "source_codepoints": 49152,
+        "hits": 0,
+        "detection_seconds": {
+          "before": [
+            1.5700003132224083e-05,
+            1.610000617802143e-05,
+            1.9399914890527725e-05,
+            2.8999987989664078e-05,
+            1.7499900422990322e-05,
+            1.850002445280552e-05,
+            3.309990279376507e-05
+          ],
+          "after": [
+            1.7000013031065464e-05,
+            3.320001997053623e-05,
+            1.6300007700920105e-05,
+            1.8600025214254856e-05,
+            2.289994154125452e-05,
+            1.6700010746717453e-05,
+            1.7600017599761486e-05
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 1.850002445280552e-05,
+          "after": 1.7600017599761486e-05
+        },
+        "index_seconds": {
+          "before": [
+            0.006236399989575148,
+            0.007181899971328676,
+            0.006373099982738495,
+            0.006193300010636449,
+            0.006263800081796944,
+            0.00636510003823787,
+            0.00619460002053529
+          ],
+          "after": [
+            0.0033793000038713217,
+            0.0033780999947339296,
+            0.0033870000625029206,
+            0.003341300063766539,
+            0.0033605999778956175,
+            0.0034509000834077597,
+            0.0033924999879673123
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.006263800081796944,
+          "after": 0.0033793000038713217
+        },
+        "full_occurrences_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "kind": "dense_ordinary",
+        "source_codepoints": 36864,
+        "hits": 2048,
+        "detection_seconds": {
+          "before": [
+            0.014483400038443506,
+            0.014934899983927608,
+            0.014472699956968427,
+            0.014795599970966578,
+            0.014837899943813682,
+            0.014664400019682944,
+            0.014736799988895655
+          ],
+          "after": [
+            0.013337399926967919,
+            0.013417899957858026,
+            0.013669100007973611,
+            0.06405849999282509,
+            0.01357589999679476,
+            0.013306200038641691,
+            0.01320110005326569
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 0.014736799988895655,
+          "after": 0.013417899957858026
+        },
+        "index_seconds": {
+          "before": [
+            0.003625800018198788,
+            0.003626400022767484,
+            0.0035405000671744347,
+            0.0036303000524640083,
+            0.0035293999826535583,
+            0.0036219999892637134,
+            0.003729599993675947
+          ],
+          "after": [
+            0.0021930000511929393,
+            0.0021733000176027417,
+            0.0022632000036537647,
+            0.002205000026151538,
+            0.002246999996714294,
+            0.0021637999452650547,
+            0.0022421000758185983
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.003625800018198788,
+          "after": 0.002205000026151538
+        },
+        "full_occurrences_sha256": "fe311486e7666ff6033cd890e7651600bcb524e4da9f81abf1aac520bbc85686"
+      },
+      {
+        "kind": "dense_field",
+        "source_codepoints": 36874,
+        "hits": 2048,
+        "detection_seconds": {
+          "before": [
+            0.015117999981157482,
+            0.014993900083936751,
+            0.015250699943862855,
+            0.015348099987022579,
+            0.015410899999551475,
+            0.01601340004708618,
+            0.015501099987886846
+          ],
+          "after": [
+            0.014138499973341823,
+            0.01385419990401715,
+            0.013866699999198318,
+            0.013818299979902804,
+            0.013770700083114207,
+            0.013889199937693775,
+            0.013959500007331371
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 0.015348099987022579,
+          "after": 0.013866699999198318
+        },
+        "index_seconds": {
+          "before": [
+            0.003548300010152161,
+            0.00359740003477782,
+            0.0035372000420466065,
+            0.003720899927429855,
+            0.0038333000848069787,
+            0.0036091000074520707,
+            0.003582000033929944
+          ],
+          "after": [
+            0.0022329000057652593,
+            0.0022887999657541513,
+            0.0021672999719157815,
+            0.0022191000171005726,
+            0.0021680000936612487,
+            0.0021494999527931213,
+            0.0035362999187782407
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.00359740003477782,
+          "after": 0.0022191000171005726
+        },
+        "full_occurrences_sha256": "8b6742b7c314bd1166a109ffe4aa975b8e13071340578464e6e5d5bf94c33b99"
+      },
+      {
+        "kind": "dense_table",
+        "source_codepoints": 36868,
+        "hits": 2048,
+        "detection_seconds": {
+          "before": [
+            0.01676999998744577,
+            0.06614809995517135,
+            0.016181199927814305,
+            0.016353299957700074,
+            0.016408100025728345,
+            0.016624300042167306,
+            0.016577400034293532
+          ],
+          "after": [
+            0.014561699936166406,
+            0.01482789998408407,
+            0.014992300071753561,
+            0.014683600049465895,
+            0.014735799981281161,
+            0.014812299981713295,
+            0.014730700058862567
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 0.016577400034293532,
+          "after": 0.014735799981281161
+        },
+        "index_seconds": {
+          "before": [
+            0.003636099980212748,
+            0.0036057999823242426,
+            0.0035586999729275703,
+            0.003702700021676719,
+            0.0036005000583827496,
+            0.0036604999331757426,
+            0.00366539997048676
+          ],
+          "after": [
+            0.003005600068718195,
+            0.002207100042141974,
+            0.0021959999576210976,
+            0.0022481000050902367,
+            0.002197299967519939,
+            0.0027484000893309712,
+            0.0021495999535545707
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.003636099980212748,
+          "after": 0.002207100042141974
+        },
+        "full_occurrences_sha256": "e824dadf8f2749a1a86533b7aca049e35f8c36012209c6bef0666ea56c8b4ad8"
+      },
+      {
+        "kind": "dense_overlapping_keywords",
+        "source_codepoints": 69632,
+        "hits": 2048,
+        "detection_seconds": {
+          "before": [
+            0.02967619989067316,
+            0.028417499968782067,
+            0.028573199990205467,
+            0.029266499914228916,
+            0.028720700065605342,
+            0.02883780002593994,
+            0.02917399990838021
+          ],
+          "after": [
+            0.026291799964383245,
+            0.026527000009082258,
+            0.026337199960835278,
+            0.026300900033675134,
+            0.026345500024035573,
+            0.026838299934752285,
+            0.02605509990826249
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 0.02883780002593994,
+          "after": 0.026337199960835278
+        },
+        "index_seconds": {
+          "before": [
+            0.014638100052252412,
+            0.014746900065802038,
+            0.015005500055849552,
+            0.015081499936059117,
+            0.014911899925209582,
+            0.014686100068502128,
+            0.014690199983306229
+          ],
+          "after": [
+            0.012513100053183734,
+            0.012393699958920479,
+            0.012281400035135448,
+            0.06185049994383007,
+            0.01235820003785193,
+            0.01235360000282526,
+            0.012508300016634166
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.014746900065802038,
+          "after": 0.012393699958920479
+        },
+        "full_occurrences_sha256": "bacac790fada33a7e67aff4544fd6acc7ccd47d16248bb99a0f74afd19388b39"
+      },
+      {
+        "kind": "dense_unicode_keywords",
+        "source_codepoints": 41984,
+        "hits": 1024,
+        "detection_seconds": {
+          "before": [
+            0.017657299991697073,
+            0.017548799980431795,
+            0.017500600079074502,
+            0.01739270007237792,
+            0.01730229996610433,
+            0.017384600010700524,
+            0.017588900052942336
+          ],
+          "after": [
+            0.015949800028465688,
+            0.016003399970941246,
+            0.016140099964104593,
+            0.01616569992620498,
+            0.01610190002247691,
+            0.016030300059355795,
+            0.016585499979555607
+          ]
+        },
+        "detection_median_seconds": {
+          "before": 0.017500600079074502,
+          "after": 0.01610190002247691
+        },
+        "index_seconds": {
+          "before": [
+            0.01001420000102371,
+            0.010567900026217103,
+            0.009948499966412783,
+            0.010229500010609627,
+            0.010071499971672893,
+            0.010045599890872836,
+            0.0101755999494344
+          ],
+          "after": [
+            0.008478400064632297,
+            0.008557400084100664,
+            0.008536600042134523,
+            0.008643699926324189,
+            0.008619299973361194,
+            0.008573099970817566,
+            0.008503300021402538
+          ]
+        },
+        "index_median_seconds": {
+          "before": 0.010071499971672893,
+          "after": 0.008557400084100664
+        },
+        "full_occurrences_sha256": "1029787e1baec8754ec834efb2486af6cd627ced75b9291885d39b8b47df76ca"
+      }
+    ],
+    "residual_cost_control": {
+      "method": "After the full API batch exited, warm all three snapshots and rotate the first implementation for nine full-detection samples each. No other task test process running.",
+      "pre_index_source_sha256": "3133e9bcb0456fef247cc2525e26084ea00874adf654937c92274cfb75e71067",
+      "results": [
+        {
+          "kind": "one_sparse_multiline_hit",
+          "source_codepoints": 49169,
+          "hits": 1,
+          "detection_seconds": {
+            "pre_index_heuristic": [
+              0.010638499981723726,
+              0.010298799956217408,
+              0.010357800056226552,
+              0.010564199998043478,
+              0.010428599896840751,
+              0.011295399977825582,
+              0.010423199972137809,
+              0.011789399897679687,
+              0.010407099965959787
+            ],
+            "initial_index": [
+              0.016588700003921986,
+              0.016976599930785596,
+              0.016675099963322282,
+              0.017468699952587485,
+              0.016623899922706187,
+              0.016870200051926076,
+              0.016592900035902858,
+              0.017295900033786893,
+              0.017105699982494116
+            ],
+            "prefiltered_index": [
+              0.013845400069840252,
+              0.01443980005569756,
+              0.013825699919834733,
+              0.013836500002071261,
+              0.014107500086538494,
+              0.013704000040888786,
+              0.01373620005324483,
+              0.014024600037373602,
+              0.014163200045004487
+            ]
+          },
+          "detection_median_seconds": {
+            "pre_index_heuristic": 0.010428599896840751,
+            "initial_index": 0.016870200051926076,
+            "prefiltered_index": 0.013845400069840252
+          },
+          "occurrences_sha256": "8cb41fb608535024daa4539928443e5365c40b186c29720a79fa7a8ef9aa247b"
+        },
+        {
+          "kind": "one_sparse_long_line_hit",
+          "source_codepoints": 49169,
+          "hits": 1,
+          "detection_seconds": {
+            "pre_index_heuristic": [
+              0.007530200062319636,
+              0.007422700058668852,
+              0.007532699964940548,
+              0.007619600044563413,
+              0.0075026999693363905,
+              0.008049699943512678,
+              0.007595499977469444,
+              0.008477299939841032,
+              0.007487699971534312
+            ],
+            "initial_index": [
+              0.008357600076124072,
+              0.008457700023427606,
+              0.008407799992710352,
+              0.008401599945500493,
+              0.008383800042793155,
+              0.009470100048929453,
+              0.008340600063093007,
+              0.008405699976719916,
+              0.008186700055375695
+            ],
+            "prefiltered_index": [
+              0.005401999922469258,
+              0.00543310004286468,
+              0.005378399975597858,
+              0.0056241999845951796,
+              0.006043999921530485,
+              0.005650100065395236,
+              0.005441199988126755,
+              0.005583000020124018,
+              0.005303099984303117
+            ]
+          },
+          "detection_median_seconds": {
+            "pre_index_heuristic": 0.007532699964940548,
+            "initial_index": 0.008401599945500493,
+            "prefiltered_index": 0.005441199988126755
+          },
+          "occurrences_sha256": "8cb41fb608535024daa4539928443e5365c40b186c29720a79fa7a8ef9aa247b"
+        },
+        {
+          "kind": "adversarial_all_possible_initials",
+          "source_codepoints": 49158,
+          "hits": 1,
+          "detection_seconds": {
+            "pre_index_heuristic": [
+              0.010164299979805946,
+              0.01002020004671067,
+              0.00983490003272891,
+              0.010210799984633923,
+              0.010012500104494393,
+              0.010337799903936684,
+              0.010077500017359853,
+              0.010109200025908649,
+              0.010090700001455843
+            ],
+            "initial_index": [
+              0.01115649996791035,
+              0.010948900016956031,
+              0.011053299997001886,
+              0.01105570001527667,
+              0.011213900055736303,
+              0.01172110007610172,
+              0.010836300090886652,
+              0.010907999938353896,
+              0.010741100064478815
+            ],
+            "prefiltered_index": [
+              0.01220090000424534,
+              0.01275949995033443,
+              0.011862599989399314,
+              0.011952299973927438,
+              0.012144400039687753,
+              0.01234790007583797,
+              0.011974900029599667,
+              0.01221740001346916,
+              0.012630500015802681
+            ]
+          },
+          "detection_median_seconds": {
+            "pre_index_heuristic": 0.010090700001455843,
+            "initial_index": 0.011053299997001886,
+            "prefiltered_index": 0.01220090000424534
+          },
+          "occurrences_sha256": "991dbbea7fcdc37f0b5e414cb3aac52cb7905eb9e7bb0b2a0dcb4fca035759f1"
+        }
+      ]
+    },
+    "profiles": {
+      "before_index_20_calls": {
+        "seconds": 0.142,
+        "sha256": "90b8e7786f71c728003c0a35134444937f221a9b748ee37e3671ba49a6290195"
+      },
+      "after_index_20_calls": {
+        "seconds": 0.081,
+        "sha256": "36853081dfd770bbbdc3d9155145726de6f2ff3291059cbc3df6226bfdfa625b"
+      }
+    },
+    "prototype_comparison": {
+      "decision": "Use the simple leading-character assertion under existing IGNORECASE; retain the original complete zero-width keyword assertion. Reject consuming/Python-prefilter approaches with weak or negative dense-input results and the faster but harder-to-maintain fused lookbehind.",
+      "measurements": {
+        "keyword-prototype.json": {
+          "sha256": "f254a052d581f856eb37e1572718fc4279ce97b1aa9cd6b378129f48c53ae251",
+          "medians": [
+            {
+              "kind": "sparse",
+              "seconds": {
+                "lookahead": 0.00446249998640269,
+                "consuming_search": 0.004258599947206676
+              }
+            },
+            {
+              "kind": "dense_overlapping",
+              "seconds": {
+                "lookahead": 0.003813000046648085,
+                "consuming_search": 0.004480100004002452
+              }
+            }
+          ]
+        },
+        "scoped-keyword-prototype.json": {
+          "sha256": "aa3c6d46faab8b9126dcc27015a70b2e3bb72deffd6b4fac588ddcbe91f642db",
+          "medians": [
+            {
+              "kind": "sparse",
+              "seconds": {
+                "lookahead": 0.004510500002652407,
+                "scoped_leads": 0.0024673999287188053
+              }
+            },
+            {
+              "kind": "dense_overlapping",
+              "seconds": {
+                "lookahead": 0.0038760999450460076,
+                "scoped_leads": 0.0036640000762417912
+              }
+            },
+            {
+              "kind": "unicode",
+              "seconds": {
+                "lookahead": 0.002717799972742796,
+                "scoped_leads": 0.0024692999431863427
+              }
+            }
+          ]
+        },
+        "lead-filter-prototype.json": {
+          "sha256": "d051271a2b0d19f1c7e04aff1b63b43a71d8a967f4a7d096ebaeba58d9d996b1",
+          "medians": [
+            {
+              "kind": "sparse",
+              "seconds": {
+                "lookahead": 0.004410100053064525,
+                "explicit_leads": 0.003195199999026954,
+                "case_leads": 0.0036317999474704266
+              }
+            },
+            {
+              "kind": "dense_overlapping",
+              "seconds": {
+                "lookahead": 0.003841600031591952,
+                "explicit_leads": 0.006429899949580431,
+                "case_leads": 0.0065376999555155635
+              }
+            },
+            {
+              "kind": "unicode",
+              "seconds": {
+                "lookahead": 0.002673500101082027,
+                "explicit_leads": 0.004635800025425851,
+                "case_leads": 0.0047176000662148
+              }
+            }
+          ]
+        },
+        "fused-lead-prototype.json": {
+          "sha256": "339404eb0cfe323654b3ea0e02c96ad2341430d2579ff14a45be407e51da7d3c",
+          "medians": [
+            {
+              "kind": "sparse",
+              "seconds": {
+                "lookahead": 0.004564100061543286,
+                "fused_lead": 0.0007647000020369887
+              }
+            },
+            {
+              "kind": "dense_overlapping",
+              "seconds": {
+                "lookahead": 0.0037760999985039234,
+                "fused_lead": 0.0019417000003159046
+              }
+            },
+            {
+              "kind": "unicode",
+              "seconds": {
+                "lookahead": 0.002631200011819601,
+                "fused_lead": 0.00140330009162426
+              }
+            }
+          ]
+        },
+        "case-filter-prototype.json": {
+          "sha256": "84d1e0d117f38b79db359cb09628c6f4121c060503587daadf7d522d72ed7781",
+          "medians": [
+            {
+              "kind": "sparse",
+              "seconds": {
+                "lookahead": 0.004446399980224669,
+                "leading_assertion": 0.0015293000033125281,
+                "consumed_case_lead": 0.001222599996253848
+              }
+            },
+            {
+              "kind": "dense_overlapping",
+              "seconds": {
+                "lookahead": 0.003760599996894598,
+                "leading_assertion": 0.0027444999432191253,
+                "consumed_case_lead": 0.0020922000985592604
+              }
+            },
+            {
+              "kind": "unicode",
+              "seconds": {
+                "lookahead": 0.0026676999405026436,
+                "leading_assertion": 0.0019709999905899167,
+                "consumed_case_lead": 0.0015445000026375055
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "semantic_verification": {
+    "baseline_source_sha256": "be1afacffe70e6c402d832d3882f62128c1c17ae2c77faa44f9ff9820a03497a",
+    "unchanged_production_ast_except": "_EXAMPLE_KEYWORD regex assignment",
+    "helper_parity": {
+      "synthetic_sources": 3415,
+      "queries": 2444480,
+      "protected_queries": 2249168,
+      "keyword_captures": 4235,
+      "keyword_capture_differences": 0,
+      "index_coordinate_differences": 0,
+      "classification_differences": 0,
+      "seed": 20261026,
+      "sources_sha256": "124c07edfef37bc1db64eecb83b201338c385f2162ee795c4b27f8001089b9e3",
+      "query_method": "Each start 0..len; unique zero-width, one-codepoint, seeded random and message-end queries."
+    },
+    "corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "combinations": 312,
+        "literal_hits": 780,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "combinations": 80,
+        "literal_hits": 120,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "combinations": 9240,
+        "literal_hits": 27720,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "combinations": 880,
+        "literal_hits": 2200,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "combinations": 34,
+        "literal_hits": 70,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "combinations": 1088,
+        "literal_hits": 2240,
+        "full_occurrence_differences": 0,
+        "protected_interval_differences": 0,
+        "prior_renderer_classification_differences": 0
+      }
+    ]
+  },
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "1119d5b519084f9a6ba6d70b0591350cfa2bc9be15959e113926698e553bd5c8"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "54f843b4ec7d4eae64cf2613526a91a9aee47a8fad5e4acbc7913549c2d8cd12"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "729f8e7cd07be1bf74f84beac84372ad47cb523e4b75f29c97592f92bcf7b2f6"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "23e81b8ab127cc850905f219547e1bd44cbdf1ac3d73af7b321a010c1392ecb0"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "temporary_artifacts": {
+    "root": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-noise-index-sparse",
+    "verification_script_sha256": "3787c3626b6756b14bf0a5045807548f58f068476d3b99e0063a5d96fbe707cb",
+    "semantic_result_sha256": "d62e9f3f28e89ab89a6a20e72a445f5a624035db289400a850ae2f070dd7f1ea",
+    "residual_control_script_sha256": "c3ab2d8e8186612bfc7da2aeedd8a31676ce4072076b4d1b1e7366a4580a9469"
+  },
+  "limits": [
+    "Eleven Unicode equivalence tests construct 12255232 initial/tail forms; they are not that many independent testcases or a proof over arbitrary Unicode strings.",
+    "The 2444480 queries reuse the previous 3415-source synthetic matrix and fixed seed; the 11634 renderer-corpus inputs reuse existing expectations. No new renderer/browser execution is claimed.",
+    "The source AST is unchanged except for one compiled regex assignment. No matching policy, threshold, source normalization, offsets, evidence, protected confirmation, or message-context lifetime changes.",
+    "Synthetic local index/full-service timings are not API/production latency, throughput, complexity, memory/RSS/OOM or all-input speed guarantees; full-message index initialization still has a cost.",
+    "Related SQLite/service/API regression only, not full API suite, PostgreSQL concurrency, browser, Web build, CI or production acceptance.",
+    "No dependency, migration, canonical format, import originals, offline package, Dexie, production config, commit, push, CI dispatch or deployment change. Preexisting tsconfig.tsbuildinfo is untouched."
+  ]
+}

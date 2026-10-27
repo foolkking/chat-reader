@@ -110,6 +110,37 @@ be used for another source object and is released before the next message;
 there is no process-global or cross-conversation text cache. Raw exact matching
 does not build a normalized shadow.
 
+Local construction correction (2026-10-26; not submitted): code protection
+uses a forward-only cursor over the original disjoint block ranges. Previously
+emitted inline spans precede the next opener, while recognized block starts
+bound its closing search; neither requires rescanning all accumulated ranges
+per delimiter. This changes construction work, not matching, source offsets,
+protected-review consent or per-message/request lifetime.
+
+The same context now lazily builds one source-coordinate index for explanatory
+examples, named fields and table pipes, reused across rules and case profiles.
+It does not copy or regex-scan a complete line/prefix for every hit. Keyword
+eligibility retains overlapping keywords, arbitrary non-LF whitespace, the
+optional delimiter and the original 100-character tail. Named-field eligibility
+starts after the separator; table checks include the candidate's complete
+starting through ending source lines. LF/CRLF and source offsets are unchanged.
+Code protection and explanatory uncertainty retain their separate evidence
+codes even when both apply. This is the same conservative heuristic, not a new
+table parser or classification policy. Compact coordinate arrays and merged
+eligibility intervals still grow with the current input; no global text cache,
+size-independent memory bound or production latency guarantee is introduced.
+Keyword scanning first checks the possible initial characters under the same
+Unicode `IGNORECASE` policy before testing the complete alternatives. Both
+assertions remain zero-width, so overlapping captures and original source
+coordinates are unchanged; no casefolded or normalized body copy is used.
+
+Inline-link attributes also reuse source-coordinate title-closer arrays and
+closing-tail results within one protection build, including failed tails.
+Repeated incomplete titles therefore do not repeatedly walk the same title
+body or shared whitespace tail in the covered work-budget cases. These
+structures are lazy and source-local, not a global cache or a universal
+complexity/memory guarantee.
+
 Source-coordinate pairs in the cleanup shadow use compact unsigned arrays
 instead of one Python tuple/int pair per output character. Unicode NFKC,
 casefold, whitespace collapse, original source envelopes and protected-range
@@ -138,6 +169,12 @@ configuration identity, trial, save and rescan; only the display name is trimmed
 Empty/all-whitespace values are rejected. Normalized/approximate modes still
 apply their explicit matching normalization; preserving the configured string
 does not make them raw-exact modes or rewrite existing saved revisions.
+The bounded-distance helper keeps two diagonal-band rows and rejects an
+already-failed prefix without traversing the remaining candidate. Its internal
+empty-string operands obey the bounded distance; public matching still requires
+nonempty candidates. This is an implementation/work reduction, not broader
+matching or weaker protection/confirmation requirements.
+
 Trial samples remain bounded at ten total and three per message, interleaved
 across sampled messages. Each sample includes actual `match_mode` and
 `evidence_codes`; the editor distinguishes raw exact, normalized exact and
@@ -145,11 +182,256 @@ bounded approximate while retaining protection/exception/other-rule context.
 These are bounded examples, not an exhaustive or statistically representative
 false-positive estimate. Approximate/uncertain candidates remain protected.
 
+Local correction (2026-10-26; not submitted or deployed): reserve a sample for
+each of the first ten matching messages in stable scan order before adding
+repeat examples. Earlier messages cannot fill the output cap with repeats
+before those messages receive their first example. Internally at most thirty
+examples are retained; output still caps at ten, and hit counts still include
+all scanned messages, including those beyond the sample cap.
+
 ## Detection and review
 
 Detection is layered rather than a single global regular expression. Built-in syntax noise first uses exact structural grammar. Known short syntax tokens may then use NFKC normalization or at most one edit only when an exact citation-reference grammar anchors the candidate. User literals use their selected exact, normalized or bounded-approximate mode. Approximate scanning does not compare arbitrary full message windows and has bounded anchors, length and edit distance.
 
 Each occurrence records detector version, match mode and evidence codes in addition to its location. Ordinary candidates default to `KEEP`; protected Markdown ranges default to unselected `PROTECTED`. In the released 0052 flow above, protected candidates may be selected only after explicit version-bound risk confirmation; older clients without confirmation still keep them protected. Explicit decisions persist immediately and record their save time. Rules never modify source while scanning. Normal fields, tables and syntax examples do not become noise merely by containing marker keywords. Unknown and approximate markers remain suggestions requiring confirmation.
+
+Local correction (2026-10-26; not submitted or deployed): a same-length
+backtick run closes inline code even after a backslash, because backslashes
+inside code are literal. Opening backticks outside code still obey escape
+parity. Adjacent code spans remain separately protected, while ordinary text
+after a closed span remains actionable. Trial, scan, filtered selection,
+preview and apply share this protection boundary; legacy choices without
+stored protection evidence still require fresh source-based confirmation.
+Fences following explicit list/blockquote prefixes are also recognized,
+including combined containers, longer same-character closing runs, tabs
+and LF/CRLF. A closer must have only trailing whitespace; an unclosed fence
+stops on leaving its opening container. Expanded tabs classify lines only:
+all match/deletion offsets still refer to unchanged original source.
+Continuation lines retain the relevant list/quote context, so fence and
+four-column code indentation are relative to their container, not the page.
+Mixed space/Tab indentation uses four-column tab stops. Indentation alone
+cannot interrupt an ordinary paragraph; headings, blank lines and existing
+code boundaries remain distinct. A blank list line may omit list indentation
+but cannot preserve a nested quote without its `>` marker.
+Inline backtick pairs are bounded by these recognized blocks: blank separators,
+headings/thematic breaks, newly opened list/quote containers and block code
+cannot supply a closer for an earlier unmatched run. Ordinary soft line breaks
+and lazy continuation within the same paragraph still allow multiline code.
+This prevents an unmatched earlier run from hiding prose or stealing the opener
+of a later independent code span; backslash and original-offset rules remain.
+An empty new list item cannot interrupt a paragraph while its parents still
+match; its marker stays literal inside valid multiline code or definition
+labels/titles. Bare markers are nevertheless real empty items at a block
+boundary or after parent exit, including sibling items. Empty items have a
+one-space continuation indent after the marker regardless of trailing padding.
+An initially empty item may take content on its very next line, but cannot
+resume after an additional blank line. Only that item exits: matching outer
+quote/list parents remain. Nonempty items retain their existing blank-line
+continuation behavior. Otherwise a later root/parent fence or HTML block could
+be misclassified, exposing real code or protecting subsequent ordinary prose.
+Setext underlines and thematic breaks retain precedence; these are not
+reclassified as harmless empty markers. Tabs are expanded only for deciding
+line/container boundaries, never for stored match or deletion offsets.
+This is bounded block recognition, not a complete Markdown parser.
+Recognized GFM tables give every cell and row a separate inline scope.
+Unescaped pipes split cells even inside backtick-looking source; odd-backslash
+escaped pipes remain within their cell. Neither code/link delimiters nor literal
+URLs can consume a neighboring cell or row. Valid header/delimiter cell counts
+and container prefixes distinguish tables from ordinary multiline paragraphs;
+recognized table headers also interrupt continued reference definitions.
+Real code/URLs remain protected, and the independent conservative field/table
+context policy is unchanged: removing a false code range does not necessarily
+make a multi-pipe or field-looking candidate ordinary. This remains bounded
+recognition, not complete GFM conformance.
+Reference-label protection also follows successful GFM resolver order for
+full/collapsed/shortcut references and images: raw identifiers are normalized
+without entity-decoding or unescaping, valid inline resources take precedence,
+and consumed tails are not registered a second time. Recognized definitions
+own their inert content before inline scanning, including nonblank continued
+labels, next-line destinations and multiline titles. Container markers are
+removed only for identifier normalization, never from original source offsets.
+Lazy list/quote continuations are accepted; blank lines and interrupting blocks
+stop them. A continuation retains only the parents whose actual prefixes
+matched; an omitted inner marker cannot discard a valid outer prefix. With
+all parents present, the existing paragraph rule allows non-one ordered
+markers as text. After parent exit, a fresh block can interrupt the lazy
+continuation even when its ordered list starts above one. A failed next-line
+title retains a preceding valid destination-only
+definition without consuming the failed title as definition syntax. This is
+bounded recognition, not full reference-definition grammar.
+Unresolved reference-like
+text retains the existing conservative protection policy without being treated
+as an actual atomic link node. See the
+[dated parser comparison and limits](../execution/ux-audit-noise-matching-2026-10-25.md#33-gfm-table-inline-scope-boundaries--2026-10-26).
+Inline-link destinations now distinguish balanced raw URL parentheses,
+angle-delimited URLs and quoted/parenthesized titles. Parentheses inside
+angle URLs or quoted titles cannot truncate protection or consume following
+ordinary prose. Valid attribute whitespace and multiline titles/destinations
+can continue inside the recognized inline block, including continued quote
+prefixes; new blocks cannot lend a closing delimiter. Link-looking `](` inside
+code/math cannot open protection beyond that literal range. Original LF/CRLF
+and Unicode offsets are retained. This protects attributes, not every regular
+visible link label. Existing attachment/reference-label policy is unchanged.
+An actual active label closing in the source-ordered inline scan now claims
+its complete destination/title before title backticks or dollars can open a
+literal node into following prose. Earlier real code/math still owns fake
+link syntax inside it. Reference resolution uses the same source identifier
+rules in both ownership and final link-protection passes.
+Attributes require a matching, unescaped and still-active link/image label in
+the same recognized block. A forward bracket stack ignores delimiters inside
+recognized code/math/autolink ranges and consumes closed labels; an orphan
+`](` alone cannot protect ordinary text. Completing an inline link invalidates earlier link labels via
+a generation counter, without repeatedly walking the stack; image labels may
+still contain links, and links may contain images. Original-source escape
+parity and valid multiline labels are retained.
+Malformed/incomplete attributes with a real active label retain the prior
+conservative same-line fallback, bounded by the current table cell when present.
+Defined full/collapsed/shortcut references
+resolve within labels before deciding whether an enclosing link label is valid;
+definition-like text inside recognized literal spans does not define a reference.
+
+GFM literal `http(s)`, `www` and email protection distinguishes micromark's tokenizer from
+mdast's later text-node transform. Plain or unfinished brackets can still
+contain rendered links with no node positions; missing coordinates are not
+evidence that a URL is ordinary text. Actual inline link/image regions exclude
+their visible labels from this URL recognition. Bracket context resets at the
+recognized block boundaries, and brackets consumed inside a literal URL cannot
+suppress a following URL. Scheme matching uses ASCII case-insensitivity;
+tokenizer and text fallback retain their different domain and trailing-
+punctuation rules. Raw email recognition takes priority over a `www` prefix;
+failed email recognition still allows a later URL head. Literal `www` paths
+own their backticks before code scanning, while earlier code/math/HTML keeps
+ownership. The decoded text transform recognizes URLs before emails, consumes
+accepted addresses once and cannot reuse an earlier email's local part.
+A per-token suffix table, parenthesis counts and operation-local failed-domain
+reuse avoid the reproduced repeated prefix/tail scans; they are not a universal
+complexity or memory guarantee.
+
+Fallback text tokens are decoded as CommonMark text before boundary decisions:
+ASCII punctuation escapes, semicolon-terminated named references and bounded
+numeric references retain original-source end coordinates. Unknown references,
+missing semicolons and non-punctuation escapes stay literal. Numeric control/
+noncharacter replacement follows micromark, not `html.unescape`; no NFKC or
+canonical-source rewrite occurs. A kept decoded character maps to its complete
+raw escape/entity, including multi-code-point named references. Literal `<`
+inside ordinary fallback text is not itself a token terminator. Decoded token
+provenance is operation-local and reused across invalid heads sharing a token.
+Recognition runs on the decoded protocol and its preceding decoded character,
+not just a raw `http(s)` head: encoded letters, colon/slashes and escaped
+punctuation can form a link, while a preceding entity decoding to a letter can
+prevent a fallback link. Source-level tokenizer recognition remains distinct.
+Recognized inline HTML tags, comments, declarations, CDATA and processing
+instructions partition text even when displayed visibly and inertly. Their
+attributes cannot supply fallback URLs; malformed or escaped tag-looking text
+and entity-decoded `<` remain ordinary text. HTML recognition does not itself
+add protected noise ranges. Forward closer reuse avoids repeated tail searches
+on the measured incomplete-quote/comment inputs.
+
+Source-level URLs, inline HTML openers and backticks compete in source order.
+An earlier code span owns its closing ticks even if it contains a URL or
+tag-looking text; ticks already consumed by an earlier URL or valid HTML node
+cannot open a code span into following prose. HTML is recognized lazily in
+source order, not pre-masked across an earlier code span: a fake tag inside code
+cannot hide a later real tag. Invalid/escaped tag-looking text retains normal
+backtick behavior. A backslash consumed by an earlier URL cannot escape the
+next node's `<`. Both phases reuse the same inline-HTML grammar. The later text
+fallback cannot consume an already recognized code/math/link node or another
+block. These corrections close the five reproduced tail/code-order probes.
+
+Literal-autolink fallback first checks necessary source origins, both per
+message and per token. ASCII `/` can come from a literal/escaped slash, `&sol;`,
+or a length-valid decimal/hexadecimal reference to U+002F; email may instead
+have a literal or valid encoded `@`, and `www` may have literal or valid encoded
+ASCII letters and a dot. Only when none of these necessary origins is possible
+is decoding/provenance skipped; other code/math/link protection still runs.
+Slash-free ordinary entity text without an email/`www` origin still skips it.
+This is not NFKC or recursive entity decoding, and an eligible origin alone
+does not prove a link.
+
+HTML-flow bodies exclude internal Markdown recognition **and are protected**
+when the application displays them as literal code fallback. Inline HTML still
+only partitions text; visible ordinary inline tag text is not blanket protected.
+The installed grammar's raw tags, comments, processing
+instructions, declarations, CDATA, known block names and complete generic tags
+have distinct starts/terminators; generic tags cannot interrupt a paragraph.
+Explicit terminators own their whole closing line; known/generic blocks end at
+a blank line, and container exit ends a nested block. Inline HTML also cannot
+supply fake code/math/link/reference syntax. Markdown resumes after its actual
+boundary, while existing global attachment/asset safeguards remain protected.
+Earlier code and dollar-math flow own HTML-looking lines; an unclosed math flow
+retains protection through EOF or container exit. LF/CRLF and source offsets
+remain unchanged. A conservatively recognized simple supported ChatGPT
+box-layout projection is exempt from literal-flow protection so its regular
+text can still match. Unsupported attributes, malformed/ambiguous markup,
+code/indentation and large inputs retain protection rather than guessing the
+frontend projection. Numeric attributes and keyword case matching use ASCII
+semantics; a tag overlapping other protected syntax makes the profile ambiguous
+rather than silently disappearing from profile validation. This is a bounded
+subset, not a second full HTML parser or complete rich-layout equivalence.
+
+Inline dollar math now pairs **equal-width complete dollar runs** only inside
+the current recognized inline scope (including individual table cells/rows).
+Shorter inner runs remain math content. A valid single-dollar pair can span
+soft newlines in one paragraph; a failed opener cannot borrow a closer from a
+heading, another table cell/row or another block and steal later code. Inline
+LaTeX-delimiter recognition is also scope-bounded; standalone escaped display
+brackets can span paragraph breaks when they do not overlap protected syntax.
+Standalone bare bracket display pairs containing a recognized LaTeX command
+are protected unless overlapping earlier code/HTML/link protection; ordinary bracketed
+prose is not promoted to math. Other AI-adapter recovery forms are not fully
+mirrored, and conservative currency/legacy math policies are unchanged.
+
+The small source fixture in `scripts/ux/fixtures/noise-renderer-protection.json`
+is independently checked by the actual app plugin/projection SSR test and the
+API detector test, with LF/CRLF and unchanged-source offset assertions.
+Normal batch selection, preview/apply, legacy `KEEP` refresh and forged
+`DELETE` revalidation preserve the protected source. See the
+[review-fix checkpoint and limits](../execution/ux-audit-noise-matching-2026-10-25.md#37-review-fixes-and-application-renderer-contract--2026-10-27).
+
+The reproduced emphasis fallback-URL probe is now corrected as well. Resolved
+`*`/`_` emphasis/strong markers partition fallback text but do not themselves
+protect noise. Raw-source flanking, underscore intraword restrictions,
+rule-of-three matching, partially consumed runs and original-source escape
+parity determine which markers actually resolve; unmatched or entity-encoded
+markers remain literal. Source-level URLs, link/image labels, code, math and
+HTML already own their contents, which cannot supply external pairing markers.
+Valid emphasis can still surround atomic inline nodes within the same block.
+An operation-local opener index avoids repeated searches through failed runs.
+Ordinary text immediately after a real closer is no longer swallowed by the
+preceding fallback URL. This does not rewrite canonical source or an existing
+scan snapshot; rescanning uses the corrected classification.
+
+Single/double tilde strikethrough now also partitions fallback text, using
+raw-source flanking and equal valid run widths; unescaped runs of three or more
+remain literal. Escaping consumes only the first tilde in a run. The first
+successfully tokenized delimiter kind selects the outer resolver order, even
+when neither opening nor closing is allowed. Visible actual inline link/image
+labels can register this order but cannot pair with outside delimiters; their
+code/math/HTML and attributes cannot register it. Real container prefixes
+(including star bullets and tab-expanded indentation) are not inline attention.
+First-pass groups are atomic in their parent context. An operation-local,
+nonrecursive second pass can resolve within or around them without crossing
+their edges. Matched tilde markers, like emphasis markers, are text boundaries,
+not automatically protected noise. Existing confirmation and rescan semantics
+remain unchanged.
+
+This remains bounded recognition, not a complete GFM parser: full-reference
+resolver order and retained GFM literal email/`www` probes are corrected locally.
+The retained multiline-definition probes and standard CommonMark angle-email/
+URI probes are also corrected. Recognized angle autolinks own their delimiters
+and enclosed backticks in source order; a preceding code/math node still wins.
+Single-domain emails use the distinct angle-email grammar, not the GFM
+literal-email domain rules. These covered probes do not establish complete
+angle-autolink or mixed-extension equivalence.
+Physical-line code/math protection also conservatively includes container-prefix/newline
+positions absent from renderer node intervals; marker/whitespace-only rules
+can therefore differ. Complete autolink/reference-definition parsing and
+arbitrary mixed extensions are not proven. The latest interval oracle combines
+native token/render spans with explicit existing reference and whole-attachment
+safeguards; policy extras are not claimed as pure DOM/AST equivalence.
+See the
+[current limitation](KNOWN_ISSUES_AND_UNCERTAINTIES.md#current-verification-boundaries--2026-10-26)
+and [dated regression evidence](../execution/ux-audit-noise-matching-2026-10-25.md).
 
 The review workspace groups by rule and conversation, uses a group-list/detail flow on small screens, and supports selected-only filtering. Ordinary filtered bulk selection covers all matching pages, excluding protected and conflicted rows. The separate include-protected action requires the local confirmation flow above; conflicts remain excluded. Full before/after text is paged by message; the apply confirmation names conversation, message and fragment counts. A version/selection-bound preview token rejects changes made after preview. Legacy apply callers remain compatible, but cannot delete candidates without a recorded explicit decision and required protection review.
 
@@ -261,6 +543,10 @@ grapheme editor: the complete original envelope is shown for review, defaults
 to KEEP/PROTECTED, and its original subranges may be explicitly refined.
 Protection applies to the whole envelope. Only confirmed raw intervals are
 removed; retained text, CRLF and protected decomposed text are never normalized.
+The local #36 monotonic-endpoint shortcut is withdrawn: its per-character
+tracking increased sparse whole-detection cost. Compact provenance storage
+and the full min/max envelope scan remain; a lookup-only speedup is not a
+whole-scan performance guarantee.
 
 Old choices retain their exact stored bounds. If a pre-repair candidate no
 longer matches those bounds, preview/apply conflict rather than silently widen

@@ -31,3 +31,5 @@ docs/execution/table-body-shared-2026-10-22-evidence/*.txt whitespace=cr-at-eol,
 docs/evidence/message-markdown-copy-2026-10-22.json -text whitespace=cr-at-eol,-blank-at-eof
 docs/execution/message-markdown-copy-2026-10-22-evidence/** -text whitespace=cr-at-eol,-blank-at-eof
 docs/execution/message-markdown-copy-2026-10-22-evidence/*.txt whitespace=cr-at-eol,-blank-at-eof,-blank-at-eol
+# Noise-review receipts preserve their captured bytes, including Windows newlines.
+docs/execution/ux-audit-noise-matching-2026-10-25-evidence/** -text whitespace=cr-at-eol,-blank-at-eof

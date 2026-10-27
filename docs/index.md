@@ -1,5 +1,19 @@
 # 文档导航
 
+## 噪声审查修复 — 2026-10-27（已授权提交部署，准备中）
+
+保留已完成的抽样、代码／链接／URL 与表格边界修复，补上数学跨块归属、
+链接标题定界符和 HTML 字面代码回退保护；有效简单富布局仍允许普通文本匹配。
+撤回稀疏输入有负收益的单调 provenance 快路径，保留原文包络映射。
+Actions SHA 固定保留，CI 合同改为验证完整 SHA 和真实执行顺序。
+修复及专项回归已完成；环境跳过和临时盘中断的历史记录保留，不作为完整 API／CI 验收。
+用户已授权提交部署本批；完整 CI、每次触发后 50 分钟再读、独立制品与停写备份
+仍是门禁，当前尚未声明新的生产验收，见[发布记录](execution/NOISE_REVIEW_RELEASE_2026-10-27.md)。
+
+- [当前清理合同](system/CONTENT_CLEANUP_CONTRACT.md)：保护语义与有界识别策略。
+- [本轮修复与验证](execution/ux-audit-noise-matching-2026-10-25.md#37-review-fixes-and-application-renderer-contract--2026-10-27)：可重放共享语料、API 安全回归、结果与限制；第 10–36 节及旧回执只表示各自历史检查点。
+- [当前验证边界](system/KNOWN_ISSUES_AND_UNCERTAINTIES.md#current-verification-boundaries--2026-10-27)：不将本地回归视为完整语法、全量 API、CI 或生产验收。
+
 ## ChatGPT 阅读兼容与噪声精准匹配 — 2026-10-25（已部署验收）
 
 [续办记录](execution/CHATGPT_READING_REMAINING_2026-10-25.md)完成有证据的后续：
@@ -20,11 +34,15 @@ v7 安全可见 HTML 降级与嵌套代码保护、完整告警、渲染/源码�
 `chat-reader-20261025T145945Z`；PostgreSQL、生产配置及 Nginx 未变。详见
 [发布记录](execution/CHATGPT_NOISE_RELEASE_2026-10-25.md)。
 本地失败/跳过回执保留原边界，不声称生产认证 UI、物理剪贴板或持续负载验收。
+当前尚未验收项与旧风险检查点的时间边界见
+[已知风险与不确定性](system/KNOWN_ISSUES_AND_UNCERTAINTIES.md)。
 
 ## 优化审查与精简 — 2026-10-24（已部署验收）
 
 [精简计划](system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)记录原审查的 15 项保留、
-1 项修正、4 项撤销及有界续办进度，不再维护无限优化清单。
+1 项修正、4 项撤销及有界续办进度，不再维护无限优化清单。2026-10-26
+本地继续仅完成 #120：两个 workflow 的 GitHub Actions 固定到经核实的不可变 SHA；
+未提交、未运行完整 CI、未部署，生产仍是上方记录的版本。
 [历史记录](execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md)保留原实施证据及本轮撤销结果。
 用户随后要求继续，仅修复 #135 的已删除/归属不符导入结果链接，其余未启动。
 用户随后授权提交部署本批审查结果；不恢复开放式优化。首轮审计阻塞已窄修，

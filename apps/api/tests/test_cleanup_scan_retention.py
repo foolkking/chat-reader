@@ -116,3 +116,18 @@ def test_many_candidate_positions_match_legacy_offsets_across_crlf(client):
             assert row.column_start == row.start_offset - source.rfind("\n", 0, row.start_offset)
             assert row.line_end == source.count("\n", 0, row.end_offset) + 1
             assert row.column_end == row.end_offset - source.rfind("\n", 0, row.end_offset)
+
+
+def test_many_candidate_positions_on_one_line_keep_legacy_offsets(client):
+    source = ("Retained " + MARKER + " ") * 120 + "tail"
+    scan_id, _ = create_review(client, [source])
+    with session() as db:
+        rows = db.query(ContentCleanupOccurrence).filter_by(scan_id=scan_id).order_by(
+            ContentCleanupOccurrence.start_offset,
+        ).all()
+        assert len(rows) >= 100
+        for row in rows:
+            assert row.line_start == 1
+            assert row.column_start == row.start_offset + 1
+            assert row.line_end == 1
+            assert row.column_end == row.end_offset + 1

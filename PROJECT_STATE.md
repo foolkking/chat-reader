@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-25. This is the current snapshot, not a release history.
+Last updated: 2026-10-27. This is the current snapshot, not a release history.
 
 ## Release and active work
 
@@ -33,6 +33,31 @@ user-data/volume deletion or backup/image pruning. See the
 [release record](docs/execution/CHATGPT_NOISE_RELEASE_2026-10-25.md).
 Authenticated production UI, physical clipboard and sustained load are unclaimed.
 
+**Noise/CI corrections (2026-10-27; release authorized, preparation):** retain the
+trial-sampling, code/container, link/URL and table-boundary fixes. Dollar math
+now closes at an equal-width delimiter inside its actual inline scope; valid
+multiline math remains protected. Complete link titles cannot steal later code
+delimiters. Unsupported HTML flow displayed as literal code is protected;
+recognized simple rich layouts retain ordinary-text matching. Ambiguous rich
+layouts keep conservative protection rather than guessing their projection.
+The standalone bare-bracket LaTeX reproduction is covered, without claiming
+complete parity with every AI-math adapter. The #36 monotonic provenance fast
+path is withdrawn because including construction cost regressed sparse
+synthetic detection; Unicode source-envelope mapping is retained. #120 keeps
+all 41 immutable action refs, with repaired SHA-aware CI contracts. Shared
+application-renderer/API fixtures and normal/legacy scan-apply checks are
+version-controlled. See [current cleanup semantics](docs/system/CONTENT_CLEANUP_CONTRACT.md),
+[review fixes and validation](docs/execution/ux-audit-noise-matching-2026-10-25.md#37-review-fixes-and-application-renderer-contract--2026-10-27),
+and [remaining boundaries](docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md#current-verification-boundaries--2026-10-27).
+Earlier checkpoint counts and receipts remain historical. The user now authorizes
+committing and deploying this reviewed batch; exact-source full CI, the fresh
+50-minute read gate, independent artifacts and stopped-writer backup remain
+required. See the [release record](docs/execution/NOISE_REVIEW_RELEASE_2026-10-27.md).
+No new production acceptance is claimed; deployed `c7dc074` above is unchanged.
+Scoped regression completed after the user freed temporary-disk space, with one
+recorded platform skip. Interrupted memory/disk attempts remain historical, not
+passes; the agent did not execute the denied temporary-directory cleanup.
+
 **Previous accepted release (2026-10-24): reviewed system optimization.** The
 [short disposition and follow-up plan](docs/system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)
 replaces the open-ended candidate pool: 15 completed records retained, one
@@ -42,7 +67,9 @@ attachment recovery messages now survive error redaction. The extra release-doc
 checker/snapshot and unused health-helper exception change are removed. Of 111
 unfinished candidates, 108 leave the plan. On the user's bounded continuation,
 #135 now filters deleted or no-longer-owned import results while retaining
-archived/legacy results; #120 and conditional read-only #133 are not started. Original verification
+archived/legacy results; at that review checkpoint #120 and conditional
+read-only #133 were not started. The local workflow files now contain #120's
+unsubmitted SHA pins. Original verification
 and limits are preserved in the [dated review](docs/execution/SYSTEM_OPTIMIZATION_REVIEW_2026-10-24.md).
 The user subsequently authorized this reviewed batch's submission/deployment,
 not a new optimization cycle. After the first audit-blocked CI, existing

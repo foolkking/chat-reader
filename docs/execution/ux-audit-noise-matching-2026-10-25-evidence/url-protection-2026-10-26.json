@@ -1,0 +1,683 @@
+{
+  "date": "2026-10-26",
+  "status": "local_only_not_submitted_or_deployed",
+  "git_head": "bc0a1e19a74b1ba8416bb8793e41dc55ae5976ef",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows-10-10.0.19045-SP0"
+  },
+  "source_files": [
+    {
+      "path": "apps/api/app/services/content_cleanup.py",
+      "sha256": "6ce723ac0dcc898c325314f757c5bf4b83eb4bb10514583998f136c4d7d214a5"
+    },
+    {
+      "path": "apps/api/app/services/cleanup_learning.py",
+      "sha256": "4a59d9a59c05a7f02149c91a0f78d984be25530481474f031a8c89964c17124f"
+    },
+    {
+      "path": "apps/api/tests/test_content_cleanup.py",
+      "sha256": "d0094b8b7c5e9545f36e791033742952a614c136752436721ab63bf5375dfc16"
+    },
+    {
+      "path": "apps/api/tests/test_noise_rule_regressions.py",
+      "sha256": "c00994e3a4c775d4ea1daa42f6ff268b0814b5a1c28b9bea574e1267351f0f3e"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_detection_reuse.py",
+      "sha256": "e6f057854fae101f36bd9ec9b1de89873e8fdf2064d6913f41aaf2f9dc65816f"
+    },
+    {
+      "path": "apps/api/tests/test_cleanup_learning.py",
+      "sha256": "fb37247c38dace0ccbb2ac0776b775bacf5366bfca6ef83d736f07a95d1c1615"
+    }
+  ],
+  "documentation_files": [
+    {
+      "path": "PROJECT_STATE.md",
+      "sha256": "85f2a809fb1728e3ec0f7c9a775153109f7b1c1994a857fcc98a59e14c4de315"
+    },
+    {
+      "path": "docs/index.md",
+      "sha256": "361d9e717917c34efb4b38f92fd8bbbde421352f9dd6d3585effe15900f52e1a"
+    },
+    {
+      "path": "docs/system/CONTENT_CLEANUP_CONTRACT.md",
+      "sha256": "00d7af85cbcb7c85df8f614ef551dc12d90934863b5963d6361a77b41a77d4fd"
+    },
+    {
+      "path": "docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md",
+      "sha256": "32c4e51775a1d47397f90f27fb0be54007fffd98e5adc23f9a78926fc6a077ff"
+    },
+    {
+      "path": "docs/documentation-inventory.md",
+      "sha256": "aa11009e08e8d25a15a00fc753c69867b1a4233c97e6a8b34db6b86acaff90aa"
+    },
+    {
+      "path": "docs/execution/ux-audit-noise-matching-2026-10-25.md",
+      "sha256": "a25a229542c7ca6b17df4f9b75ee2ece0809c0295fcad8264b9f36df5c8749dd"
+    }
+  ],
+  "baseline_source_sha256": "6a2b2043e1dce1b52ed6a7a57f0d2801b1d0c910d98fd5597b814133882bfdc2",
+  "renderer_versions": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "remark-breaks": "4.0.0",
+    "remark-math": "6.0.0"
+  },
+  "primary_local_parser_sources": [
+    {
+      "path": "node_modules/.pnpm/micromark-extension-gfm-autolink-literal@2.1.0/node_modules/micromark-extension-gfm-autolink-literal/lib/syntax.js",
+      "sha256": "2b45c68982c1f80daf125b709faba88803b131a0d710b0374dd309495a74efeb"
+    },
+    {
+      "path": "node_modules/.pnpm/micromark-util-character@2.1.1/node_modules/micromark-util-character/index.js",
+      "sha256": "0ec487160ae3fa7f375698f9f951a0c5d7d752800bca2e3b1de15e3a07ee0417"
+    },
+    {
+      "path": "node_modules/.pnpm/mdast-util-gfm-autolink-literal@2.0.1/node_modules/mdast-util-gfm-autolink-literal/lib/index.js",
+      "sha256": "4965bd92f22009a0fd0fa4f7af73903e4d793165634c26ab5827fe5386fbcff2"
+    }
+  ],
+  "verification": {
+    "baseline_sha256": "6a2b2043e1dce1b52ed6a7a57f0d2801b1d0c910d98fd5597b814133882bfdc2",
+    "source_sha256": "6ce723ac0dcc898c325314f757c5bf4b83eb4bb10514583998f136c4d7d214a5",
+    "ast_changes": [
+      "protected_ranges",
+      "_GFM_ENTITY",
+      "_GFM_FALLBACK_DOMAIN",
+      "_GFM_PROTOCOL",
+      "_GFM_URL_BREAK",
+      "_gfm_protocol_ranges",
+      "_gfm_punctuation"
+    ],
+    "prior_corpora": [
+      {
+        "name": "container-parser-corpus.json",
+        "combinations": 312,
+        "hits": 780,
+        "sha256": "137412bfbe3af69e4131f170f4978faf53ea070ce29fc01bbb20004ec0b6593b",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "continuation-parser-corpus.json",
+        "combinations": 80,
+        "hits": 120,
+        "sha256": "ce7f7fa1e5578b8abf52c569e7bed7514e57b95f612dd76ab9aa843ac501f55d",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "container-edge-corpus.json",
+        "combinations": 9240,
+        "hits": 27720,
+        "sha256": "e0679aca6b6bec4c165347a06e9805e8d46e4e85eeb03fa85ed78dd752b38a14",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "indent-paragraph-corpus.json",
+        "combinations": 880,
+        "hits": 2200,
+        "sha256": "92edb198a361c172e3c33db147904e5cfbed4c7a374669f01b72f649df856b83",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-corpus.json",
+        "combinations": 34,
+        "hits": 70,
+        "sha256": "e3878ff8e8ac7f9ec08ab6040ebbc97965b93dc894740b3024ad2330eccc7092",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "inline-block-expanded-corpus.json",
+        "combinations": 1088,
+        "hits": 2240,
+        "sha256": "fcb5e04540ed369b2e2287a69665708ba79dd83464301e6b3eeaba62b8fdbe87",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "link-matrix.json",
+        "combinations": 4896,
+        "hits": 9648,
+        "sha256": "41d21f34c152dc4f81107121178330caac1c18ec214dec50617f75bfeb309564",
+        "metadata_differences": 0,
+        "range_differences": 0
+      },
+      {
+        "name": "label-corpus.json",
+        "combinations": 512,
+        "hits": 1056,
+        "sha256": "74b06bc9aa05f6fda5b51ccaf267b654531c4508d9770158c2bf0fea67dd8574",
+        "metadata_differences": 0,
+        "range_differences": 0
+      }
+    ],
+    "url_matrix": {
+      "combinations": 3150,
+      "links": 3050,
+      "unpositioned_links": 680,
+      "before_range_differences": 880,
+      "after_range_differences": 0,
+      "source_mapping": "Raw fallback link text searched sequentially in these direct synthetic sources; no decoded-entity or escaped-text mapping claim."
+    }
+  },
+  "renderer_factors": {
+    "domains": 15,
+    "paths": 15,
+    "contexts": 7,
+    "line_endings": 2,
+    "actual_html_anchor_count_checked": true,
+    "fallback_source_mapping_limit": "Sequential raw-visible-text mapping for this synthetic matrix only; no entity/escape decoding or arbitrary source-map claim."
+  },
+  "red_baseline": {
+    "passed": 21,
+    "failed": 23,
+    "skipped": 0,
+    "junit_seconds": 2.171,
+    "per_module": {
+      "tests.test_content_cleanup": 35,
+      "tests.test_cleanup_detection_reuse": 9
+    },
+    "junit_sha256": "43b0d18a1b04e31491b93838764019cd783652613cf58abbc02da77899de90cc"
+  },
+  "focused": {
+    "passed": 44,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 2.808,
+    "per_module": {
+      "tests.test_content_cleanup": 35,
+      "tests.test_cleanup_detection_reuse": 9
+    },
+    "junit_sha256": "914a9462173dba2eeff9eb9fb4863706db914edf9fab9f8459840664c41910e9"
+  },
+  "api_selection": {
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 18.975,
+    "per_module": {
+      "tests.test_noise_rule_regressions": 40
+    },
+    "junit_sha256": "f4db4444dcfefc8da5aafc58e7894124e7809f6a9350c759945fd2b40bc0169b"
+  },
+  "api_regression": {
+    "passed": 774,
+    "failed": 0,
+    "skipped": 0,
+    "junit_seconds": 472.728,
+    "per_module": {
+      "tests.test_cleanup_access": 2,
+      "tests.test_cleanup_detection_reuse": 135,
+      "tests.test_cleanup_dismissal": 9,
+      "tests.test_cleanup_edit_concurrency": 7,
+      "tests.test_cleanup_group_search": 2,
+      "tests.test_cleanup_learning": 12,
+      "tests.test_cleanup_literal_matching": 20,
+      "tests.test_cleanup_normalization": 8,
+      "tests.test_cleanup_outcomes": 5,
+      "tests.test_cleanup_preview_ranges": 5,
+      "tests.test_cleanup_preview_retention": 1,
+      "tests.test_cleanup_protection_review": 3,
+      "tests.test_cleanup_publication_recovery": 9,
+      "tests.test_cleanup_rescan_requests": 11,
+      "tests.test_cleanup_reviewed_ranges": 24,
+      "tests.test_cleanup_rule_grants": 2,
+      "tests.test_cleanup_safety": 28,
+      "tests.test_cleanup_scan_lifecycle": 9,
+      "tests.test_cleanup_scan_requests": 5,
+      "tests.test_cleanup_scan_retention": 4,
+      "tests.test_cleanup_selection_summary": 3,
+      "tests.test_cleanup_source_replacement": 2,
+      "tests.test_cleanup_unicode_normalization": 35,
+      "tests.test_cleanup_validation_work": 3,
+      "tests.test_content_cleanup": 66,
+      "tests.test_noise_rule_regressions": 364
+    },
+    "junit_sha256": "238bd4f3084e59cefaa4886bfee6b3ccbe3f273943059a1b9d259431c28f72a7",
+    "pytest_reported_seconds": 472.76,
+    "entry_command": "corepack pnpm run test:api",
+    "modules": [
+      "tests/test_cleanup_access.py",
+      "tests/test_cleanup_detection_reuse.py",
+      "tests/test_cleanup_dismissal.py",
+      "tests/test_cleanup_edit_concurrency.py",
+      "tests/test_cleanup_group_search.py",
+      "tests/test_cleanup_learning.py",
+      "tests/test_cleanup_literal_matching.py",
+      "tests/test_cleanup_normalization.py",
+      "tests/test_cleanup_outcomes.py",
+      "tests/test_cleanup_preview_ranges.py",
+      "tests/test_cleanup_preview_retention.py",
+      "tests/test_cleanup_protection_review.py",
+      "tests/test_cleanup_publication_recovery.py",
+      "tests/test_cleanup_rescan_requests.py",
+      "tests/test_cleanup_reviewed_ranges.py",
+      "tests/test_cleanup_rule_grants.py",
+      "tests/test_cleanup_safety.py",
+      "tests/test_cleanup_scan_lifecycle.py",
+      "tests/test_cleanup_scan_requests.py",
+      "tests/test_cleanup_scan_retention.py",
+      "tests/test_cleanup_selection_summary.py",
+      "tests/test_cleanup_source_replacement.py",
+      "tests/test_cleanup_unicode_normalization.py",
+      "tests/test_cleanup_validation_work.py",
+      "tests/test_content_cleanup.py",
+      "tests/test_noise_rule_regressions.py"
+    ],
+    "scope": "26 cleanup-related modules in one process; not full API suite."
+  },
+  "work_counter_cases": [
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[tokenizer_tail-128]",
+      "source_codepoints_read": 291
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[tokenizer_tail-512]",
+      "source_codepoints_read": 1059
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[tokenizer_tail-2048]",
+      "source_codepoints_read": 4131
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[fallback_tail-128]",
+      "source_codepoints_read": 563
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[fallback_tail-512]",
+      "source_codepoints_read": 2099
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[fallback_tail-2048]",
+      "source_codepoints_read": 8243
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[failed_heads-128]",
+      "source_codepoints_read": 5372
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[failed_heads-512]",
+      "source_codepoints_read": 21500
+    },
+    {
+      "case": "test_gfm_urls_do_not_copy_or_count_the_full_prefix_per_closing_parenthesis[failed_heads-2048]",
+      "source_codepoints_read": 86012
+    }
+  ],
+  "work_counter_limit": "32x source length explicit indexed/sliced/count-window codepoints; not all engine internals or all-input complexity.",
+  "timings": [
+    {
+      "kind": "no_urls",
+      "count": 4096,
+      "source_codepoints": 61445,
+      "seconds": {
+        "before": [
+          0.01993029995355755,
+          0.019904500106349587,
+          0.01907409995328635
+        ],
+        "after": [
+          0.020638199988752604,
+          0.019913700059987605,
+          0.01912139996420592
+        ]
+      },
+      "median_seconds": {
+        "before": 0.019904500106349587,
+        "after": 0.019913700059987605
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      }
+    },
+    {
+      "kind": "normal_urls",
+      "count": 1024,
+      "source_codepoints": 38912,
+      "seconds": {
+        "before": [
+          0.014191100024618208,
+          0.014244799967855215,
+          0.014104199944995344
+        ],
+        "after": [
+          0.01744729990605265,
+          0.01719290006440133,
+          0.01857810001820326
+        ]
+      },
+      "median_seconds": {
+        "before": 0.014191100024618208,
+        "after": 0.01744729990605265
+      },
+      "range_counts": {
+        "before": 1024,
+        "after": 1024
+      }
+    },
+    {
+      "kind": "failed_heads",
+      "count": 512,
+      "source_codepoints": 12293,
+      "seconds": {
+        "before": [
+          0.0012922000605612993,
+          0.0012206999817863107,
+          0.0012914000544697046
+        ],
+        "after": [
+          0.007840299978852272,
+          0.007654299959540367,
+          0.007908200030215085
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0012914000544697046,
+        "after": 0.007840299978852272
+      },
+      "range_counts": {
+        "before": 0,
+        "after": 0
+      }
+    },
+    {
+      "kind": "closing_tail",
+      "count": 128,
+      "source_codepoints": 296,
+      "seconds": {
+        "before": [
+          0.00016719999257475138,
+          0.00016679998952895403,
+          0.00016579998191446066
+        ],
+        "after": [
+          0.0001118999207392335,
+          0.00011410005390644073,
+          0.0001066999975591898
+        ]
+      },
+      "median_seconds": {
+        "before": 0.00016679998952895403,
+        "after": 0.0001118999207392335
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      }
+    },
+    {
+      "kind": "closing_tail",
+      "count": 512,
+      "source_codepoints": 1064,
+      "seconds": {
+        "before": [
+          0.000687599997036159,
+          0.0006356000667437911,
+          0.0006449000211432576
+        ],
+        "after": [
+          0.00033459998667240143,
+          0.0003239999059587717,
+          0.00032220000866800547
+        ]
+      },
+      "median_seconds": {
+        "before": 0.0006449000211432576,
+        "after": 0.0003239999059587717
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      }
+    },
+    {
+      "kind": "closing_tail",
+      "count": 2048,
+      "source_codepoints": 4136,
+      "seconds": {
+        "before": [
+          0.004027299932204187,
+          0.004322099965065718,
+          0.004032699973322451
+        ],
+        "after": [
+          0.0011968000326305628,
+          0.0012541000032797456,
+          0.001215200056321919
+        ]
+      },
+      "median_seconds": {
+        "before": 0.004032699973322451,
+        "after": 0.001215200056321919
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      }
+    },
+    {
+      "kind": "closing_tail",
+      "count": 8192,
+      "source_codepoints": 16424,
+      "seconds": {
+        "before": [
+          0.03749010001774877,
+          0.03746500005945563,
+          0.03734300006181002
+        ],
+        "after": [
+          0.004604699905030429,
+          0.004561499925330281,
+          0.004497100017033517
+        ]
+      },
+      "median_seconds": {
+        "before": 0.03746500005945563,
+        "after": 0.004561499925330281
+      },
+      "range_counts": {
+        "before": 1,
+        "after": 1
+      }
+    }
+  ],
+  "timing_scope": "3 warmed alternating samples per source, after pytest terminated; component construction only. Both improvements and regressions retained.",
+  "remaining_renderer_probes": [
+    {
+      "source": "Retain [https://links.test/NOISE&amp; keep",
+      "links": [
+        {
+          "url": "https://links.test/NOISE",
+          "visible": "https://links.test/NOISE",
+          "position": null
+        }
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>&amp; keep</p>",
+      "protected": [
+        {
+          "start": 8,
+          "end": 36,
+          "source": "https://links.test/NOISE&amp"
+        }
+      ]
+    },
+    {
+      "source": "Retain [https://links.test/NOISE&#33; keep",
+      "links": [
+        {
+          "url": "https://links.test/NOISE",
+          "visible": "https://links.test/NOISE",
+          "position": null
+        }
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>! keep</p>",
+      "protected": [
+        {
+          "start": 8,
+          "end": 36,
+          "source": "https://links.test/NOISE&#33"
+        }
+      ]
+    },
+    {
+      "source": "Retain [https://links.test/NOISE\\) keep",
+      "links": [
+        {
+          "url": "https://links.test/NOISE",
+          "visible": "https://links.test/NOISE",
+          "position": null
+        }
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE\">https://links.test/NOISE</a>) keep</p>",
+      "protected": [
+        {
+          "start": 8,
+          "end": 33,
+          "source": "https://links.test/NOISE\\"
+        }
+      ]
+    },
+    {
+      "source": "Retain [https://links.test/NOISE<stuff keep",
+      "links": [
+        {
+          "url": "https://links.test/NOISE<stuff",
+          "visible": "https://links.test/NOISE<stuff",
+          "position": null
+        }
+      ],
+      "html": "<p>Retain [<a href=\"https://links.test/NOISE%3Cstuff\">https://links.test/NOISE&lt;stuff</a> keep</p>",
+      "protected": [
+        {
+          "start": 8,
+          "end": 32,
+          "source": "https://links.test/NOISE"
+        }
+      ]
+    },
+    {
+      "source": "Retain https://links.test/`NOISE keep` NOISE",
+      "links": [
+        {
+          "url": "https://links.test/`NOISE",
+          "visible": "https://links.test/`NOISE",
+          "position": {
+            "start": {
+              "line": 1,
+              "column": 8,
+              "offset": 7
+            },
+            "end": {
+              "line": 1,
+              "column": 33,
+              "offset": 32
+            }
+          }
+        }
+      ],
+      "html": "<p>Retain <a href=\"https://links.test/%60NOISE\">https://links.test/`NOISE</a> keep` NOISE</p>",
+      "protected": [
+        {
+          "start": 7,
+          "end": 38,
+          "source": "https://links.test/`NOISE keep`"
+        }
+      ]
+    }
+  ],
+  "temporary_root": "C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-noise-url-parser",
+  "raw_artifacts": [
+    {
+      "name": "content-cleanup-before.py",
+      "sha256": "6a2b2043e1dce1b52ed6a7a57f0d2801b1d0c910d98fd5597b814133882bfdc2"
+    },
+    {
+      "name": "render-corpus.mjs",
+      "sha256": "859cd78f6290a9acdd60c9a3114226a5c59e93d0c777607c8c5d0a59921b323c"
+    },
+    {
+      "name": "renderer-versions.json",
+      "sha256": "1f51b2912cd95aa81d6b87c46be55cfe674a5f7b52984247f95a7cf5506551b0"
+    },
+    {
+      "name": "url-corpus.json",
+      "sha256": "92c298c6d591c841149f4a8f974a748f9a20a215179fbef4937cf673790f80f1"
+    },
+    {
+      "name": "baseline.json",
+      "sha256": "11ed0103cfd3f073fa98152186ad3318c62053edbb906b46e1f331b994f329e5"
+    },
+    {
+      "name": "after.json",
+      "sha256": "8384e895788a00939162d19b2ce7f9221adffadde40e35a0c37f9da42f0e9469"
+    },
+    {
+      "name": "verify-url-parser.py",
+      "sha256": "b42c7a729b36619a15c5c51688f1b64b03e8b658d05a5011fe80553b62b41dca"
+    },
+    {
+      "name": "verification.json",
+      "sha256": "e49715ec3108f119d2585526d98864f4a29de2fe651457a338f97dba009e7f4a"
+    },
+    {
+      "name": "url-red.log",
+      "sha256": "533f02f5edfcb266022882b098e4e455ef2e42b8ae1cac5480924beb369f0d4e"
+    },
+    {
+      "name": "url-red.xml",
+      "sha256": "43b0d18a1b04e31491b93838764019cd783652613cf58abbc02da77899de90cc"
+    },
+    {
+      "name": "url-focus.xml",
+      "sha256": "914a9462173dba2eeff9eb9fb4863706db914edf9fab9f8459840664c41910e9"
+    },
+    {
+      "name": "url-api.xml",
+      "sha256": "f4db4444dcfefc8da5aafc58e7894124e7809f6a9350c759945fd2b40bc0169b"
+    },
+    {
+      "name": "url-final.xml",
+      "sha256": "238bd4f3084e59cefaa4886bfee6b3ccbe3f273943059a1b9d259431c28f72a7"
+    },
+    {
+      "name": "measure-url-parser.py",
+      "sha256": "d10af13a245ecefd22926fbdc4aea7e560489016a0ccc3cd6564b6f94b0500a9"
+    },
+    {
+      "name": "timings.json",
+      "sha256": "144b824e98dbaa6c0592441eeba92f7f910cd1fd31023e1f688b8acf2b0caad8"
+    },
+    {
+      "name": "work.json",
+      "sha256": "6b8151b15bad2bd6e8ad3d80fdf68c738168bda6205b1cbc4ee120a958dbdab0"
+    },
+    {
+      "name": "render-probes.mjs",
+      "sha256": "9f74e6506cadb9a90aeb534917fe494efe498e4e4efcb05db1d3160d577a5e88"
+    },
+    {
+      "name": "remaining-probes.json",
+      "sha256": "ae920c66fa510b7d64a5576eb5e093f153fd8593b96bf4d5372046085f22fb88"
+    },
+    {
+      "name": "remaining-probe-results.json",
+      "sha256": "cf408af8c976f8de2ef5f3d22080d300f47d6de108c07229302e2a79fa01ef73"
+    }
+  ],
+  "preexisting_tsconfig_sha256": "210ff4b7e3e63d0cd5301321ae8cc4ea095f21da14692c6a4a4b59d05120f5d7",
+  "validation_limits": [
+    "No web search; only installed primary parser sources.",
+    "Five decoded-text/code-precedence source-span probes remain unresolved; email/www and full reference-definition parsing not proven.",
+    "No browser, Web build, complete API suite, PostgreSQL concurrency, CI dispatch or production acceptance.",
+    "No commit, push, deployment, dependencies, migrations, imported user data or offline-format changes."
+  ]
+}

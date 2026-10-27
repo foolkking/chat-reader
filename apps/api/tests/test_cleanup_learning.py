@@ -1,5 +1,8 @@
 """Synthetic exception scope, real scanner behavior and explicit rule revisions."""
+from collections import Counter
 import uuid
+
+import pytest
 
 from app.models.content_cleanup import ContentCleanupException, ContentCleanupOccurrence, ContentCleanupRule, ContentCleanupRuleRevision
 from app.models.message import Message
@@ -161,3 +164,29 @@ def test_trial_samples_are_distributed_across_messages(client):
     assert len(samples) == 4
     assert sum(sample["match_mode"] == "RAW_EXACT" for sample in samples) == 4
     assert any("second-message" in sample["context_before"] for sample in samples)
+
+
+@pytest.mark.parametrize("message_count", [1, 6, 10, 12])
+def test_trial_sample_limit_does_not_starve_later_messages(client, message_count):
+    labels = [f"message-{index}" for index in range(message_count)]
+    _, message_ids = create_review(client, [
+        f"{label} MARKER MARKER MARKER" for label in labels
+    ])
+    trial = client.post("/api/content-cleanup/rules/trial", json={
+        "name": "Synthetic fair sample cap", "match_value": "MARKER", "role_filter": "assistant",
+    })
+    assert trial.status_code == 200, trial.text
+    result = trial.json()
+    samples = result["samples"]
+    assert result["matches"] == message_count * 3
+    assert result["scanned_messages"] == message_count
+    assert result["skipped_messages"] == 0 and not result["limited"]
+    assert len(samples) == min(message_count * 3, 10)
+    sampled_labels = [sample["context_before"].split()[0] for sample in samples]
+    # Match the stable scan order, not fixture creation order (IDs are UUIDs).
+    labels_by_id = dict(zip(message_ids, labels))
+    expected_labels = [labels_by_id[message_id] for message_id in sorted(message_ids)][:10]
+    assert sampled_labels[:len(expected_labels)] == expected_labels
+    assert set(sampled_labels) == set(expected_labels)
+    assert max(Counter(sampled_labels).values()) <= 3
+    assert all(sample["match_mode"] == "RAW_EXACT" and not sample["protected"] for sample in samples)

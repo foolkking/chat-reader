@@ -3,11 +3,14 @@ from __future__ import annotations
 import unicodedata
 import hashlib
 import re
+import string
 import uuid
+from array import array
 from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from html.entities import html5
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -102,6 +105,38 @@ EXPORTER_FOOTER = re.compile(
     r"(?:\[ChatGPT Exporter\]\(https://www\.chatgptexporter\.com\)|ChatGPT Exporter"
     r" \(https://www\.chatgptexporter\.com\))\s*\Z"
 )
+_QUOTE_PREFIX = re.compile(r" {0,3}> ?")
+_LIST_PREFIX = re.compile(r" {0,3}(?P<marker>[*+-]|[0-9]{1,9}[.)])(?P<padding> +|$)")
+_FENCE_OPENING = re.compile(r" {0,3}(`{3,}|~{3,})(.*)$")
+_MATH_FENCE_OPENING = re.compile(r" {0,3}(\${2,})[^$]*$")
+_HTML_BLOCK_PREFIX = re.compile(r" {0,3}<")
+_HTML_RAW_NAMES = frozenset(("pre", "script", "style", "textarea"))
+_HTML_BLOCK_NAMES = frozenset(
+    "address article aside base basefont blockquote body caption center col colgroup "
+    "dd details dialog dir div dl dt fieldset figcaption figure footer form frame "
+    "frameset h1 h2 h3 h4 h5 h6 head header hr html iframe legend li link main menu "
+    "menuitem nav noframes ol optgroup option p param search section summary table "
+    "tbody td tfoot th thead title tr track ul".split()
+)
+_HTML_BLOCK_CLOSERS = {
+    1: re.compile(r"</(?:pre|script|style|textarea)>", re.IGNORECASE | re.ASCII),
+    2: re.compile(r"-->"),
+    3: re.compile(r"\?>"),
+    4: re.compile(r">"),
+    5: re.compile(r"\]\]>"),
+}
+_ATX_HEADING = re.compile(r" {0,3}#{1,6}(?: |$)")
+_THEMATIC_BREAK = re.compile(r" {0,3}(?:(?:\* *){3,}|(?:- *){3,}|(?:_ *){3,})$")
+_SETEXT_UNDERLINE = re.compile(r" {0,3}(?:=+|-+) *$")
+_EXAMPLE_KEYWORD = re.compile(
+    # Cheaply reject impossible starts before trying the full alternatives.
+    # Both assertions stay zero-width, retaining overlapping keyword captures.
+    r"(?=[示例比字语标efsl])"
+    r"(?=(示例|例如|比如|字段|语法|标记说明|example|e\.g\.|field|syntax|literal))",
+    re.IGNORECASE,
+)
+_EXAMPLE_WHITESPACE = re.compile(r"[^\S\n]*")
+_EXAMPLE_FIELD = re.compile(r'''(?m)^[^\S\n]*["\w.-]+["']?[^\S\n]*[:=：]''')
 
 
 @dataclass(frozen=True)
@@ -115,6 +150,48 @@ class DetectedOccurrence:
     evidence_codes: tuple[str, ...] = ()
 
 
+class _ExplanatoryIndex:
+    """Source-coordinate lookups for table cells, fields and nearby examples."""
+    def __init__(self, text: str):
+        self._length = len(text)
+        self._newlines = array("Q", (match.start() for match in re.finditer("\n", text)))
+        self._pipes = array("Q", (match.start() for match in re.finditer(r"\|", text)))
+        eligible: list[tuple[int, int]] = []
+        for match in _EXAMPLE_KEYWORD.finditer(text):
+            # The lookahead retains overlapping keywords (e.g. examplexample).
+            start = match.end(1)
+            cursor = _EXAMPLE_WHITESPACE.match(text, start).end()
+            if cursor < len(text) and text[cursor] in ":：=为是":
+                cursor += 1
+            # Eligibility concerns a candidate's start, including the LF itself.
+            eligible.append((start, min(self._line_end(start), cursor + 100) + 1))
+        for match in _EXAMPLE_FIELD.finditer(text):
+            start = match.end()
+            eligible.append((start, self._line_end(start) + 1))
+        merged = _merge_ranges(eligible)
+        self._starts = array("Q", (start for start, _end in merged))
+        self._ends = array("Q", (end for _start, end in merged))
+
+    def _line_end(self, offset: int) -> int:
+        index = bisect_left(self._newlines, offset)
+        return self._newlines[index] if index < len(self._newlines) else self._length
+
+    def protects(self, start: int, end: int) -> bool:
+        index = bisect_left(self._starts, start + 1) - 1
+        if index >= 0 and self._ends[index] > start:
+            return True
+        if len(self._pipes) < 2:
+            return False
+        # A multiline candidate includes its starting and ending source lines,
+        # not just pipes within the candidate or on its starting line.
+        index = bisect_left(self._newlines, start)
+        line_start = self._newlines[index - 1] + 1 if index else 0
+        return (
+            bisect_left(self._pipes, self._line_end(end))
+            - bisect_left(self._pipes, line_start)
+        ) >= 2
+
+
 class _DetectionContext:
     """One message/operation only; at most the two case-sensitivity profiles."""
     def __init__(self, text: str, protected: list[tuple[int, int]] | None = None):
@@ -122,6 +199,7 @@ class _DetectionContext:
         self._protected = protected
         self._starts: list[int] | None = None
         self._shadows: dict[bool, tuple[str, Sequence[tuple[int, int]]]] = {}
+        self._examples: _ExplanatoryIndex | None = None
 
     def shadow(self, *, case_sensitive: bool) -> tuple[str, Sequence[tuple[int, int]]]:
         if case_sensitive not in self._shadows:
@@ -135,6 +213,11 @@ class _DetectionContext:
             self._starts = [left for left, _right in self._protected]
         index = bisect_left(self._starts, end) - 1
         return index >= 0 and self._protected[index][1] > start
+
+    def explanatory(self, start: int, end: int) -> bool:
+        if self._examples is None:
+            self._examples = _ExplanatoryIndex(self.text)
+        return self._examples.protects(start, end)
 
 
 def ensure_builtin_rules(db: Session) -> list[ContentCleanupRuleRevision]:
@@ -502,15 +585,19 @@ def process_scan_chunk(db: Session, scan_id: uuid.UUID, *, chunk_size: int = 250
                     tuple(evidence_codes),
                 )))
         deduped = deduplicate_occurrences(detected_rows)
-        line_cursor, current_line = 0, 1
+        if "\n" not in version.display_text:
+            def source_position(offset: int) -> tuple[int, int]:
+                return 1, offset + 1
+        else:
+            line_cursor, current_line = 0, 1
 
-        def source_position(offset: int) -> tuple[int, int]:
-            nonlocal line_cursor, current_line
-            newline = version.display_text.rfind("\n", line_cursor, offset)
-            if newline >= 0:
-                current_line += version.display_text.count("\n", line_cursor, offset)
-                line_cursor = newline + 1
-            return current_line, offset - line_cursor + 1
+            def source_position(offset: int) -> tuple[int, int]:
+                nonlocal line_cursor, current_line
+                newline = version.display_text.rfind("\n", line_cursor, offset)
+                if newline >= 0:
+                    current_line += version.display_text.count("\n", line_cursor, offset)
+                    line_cursor = newline + 1
+                return current_line, offset - line_cursor + 1
 
         for revision, detected in sorted(deduped, key=lambda item: (item[1].start, item[1].end)):
             # Apply exceptions after detector precedence; otherwise a generic
@@ -616,7 +703,7 @@ def detect_occurrences(
     for item in values:
         is_protected = context.protects(item.start, item.end)
         uncertain = item.match_mode == "BOUNDED_FUZZY" or detector_id == "openai-private-marker-v1"
-        explanatory = _is_explanatory_example(text, item.start, item.end)
+        explanatory = context.explanatory(item.start, item.end)
         if uncertain or explanatory:
             is_protected = True
         evidence_codes = (*item.evidence_codes, "PROTECTED_RANGE") if context.protects(item.start, item.end) else item.evidence_codes
@@ -628,78 +715,390 @@ def detect_occurrences(
 
 def protected_ranges(text: str) -> list[tuple[int, int]]:
     ranges: list[tuple[int, int]] = []
+    html_exclusions: list[tuple[int, int]] = []
+    html_flow_ranges: list[tuple[int, int]] = []
+    inline_boundaries = [0]
+    attention_exclusions: list[tuple[int, int]] = []
+    reference_definitions: set[str] = set()
+    reference_definition_ranges: list[tuple[int, int]] = []
     lines = list(re.finditer(r".*(?:\n|$)", text))
     index = 0
+    containers: tuple[int, ...] = ()
+    empty_item_depth: int | None = None
+    paragraph_open = False
+    table_open = False
     while index < len(lines):
         line = lines[index]
-        value = line.group(0)
-        fence = re.match(r"^[ ]{0,3}(`{3,}|~{3,})[^\n]*", value)
-        if fence:
-            marker = fence.group(1)
+        value = line.group(0).rstrip("\r\n").expandtabs(4)
+        if empty_item_depth is not None:
+            parents = containers[:empty_item_depth]
+            parent_start = _fence_content_start(value, parents)
+            if parent_start is not None and not value[parent_start:].strip(" "):
+                # An initially empty item cannot resume after another blank
+                # line. Preserve its parents, not its continuation indent.
+                containers = parents
+            empty_item_depth = None
+        previous_containers = containers
+        content_start, containers, opened_container = _markdown_container_prefix(value, containers, paragraph_open)
+        table_continues = table_open and containers == previous_containers and not opened_container
+        table_open = False
+        raw_prefix = 0
+        if content_start:
+            # Container columns use expanded tabs, but all downstream spans
+            # refer to unchanged source. Visit each short prefix just once.
+            raw_prefix = column = 0
+            for character in line.group(0):
+                if column >= content_start:
+                    break
+                column += 4 - column % 4 if character == "\t" else 1
+                raw_prefix += 1
+            attention_exclusions.append((line.start(), line.start() + raw_prefix))
+        if opened_container:
+            paragraph_open = False
+            inline_boundaries.append(line.start())
+        html_kind = _html_block_opening(value, content_start, paragraph_open)
+        if html_kind is not None:
+            paragraph_open = False
+            start = line.start()
+            end = line.end()
+            closing = _HTML_BLOCK_CLOSERS.get(html_kind)
+            closing_match = closing.search(value, content_start) if closing is not None else None
+            finished = closing_match is not None
+            index += 1
+            while index < len(lines) and not finished:
+                candidate = lines[index].group(0).rstrip("\r\n").expandtabs(4)
+                candidate_start = _fence_content_start(candidate, containers)
+                if candidate_start is None or (
+                    closing is None and not candidate[candidate_start:].strip(" ")
+                ):
+                    break
+                end = lines[index].end()
+                closing_match = closing.search(candidate, candidate_start) if closing is not None else None
+                index += 1
+                finished = closing_match is not None
+            html_exclusions.append((start, end))
+            html_flow_ranges.append((start, end))
+            inline_boundaries.extend((start, end))
+            continue
+        fence = _fence_opening(value, content_start)
+        if fence is not None:
+            marker = fence
+            paragraph_open = False
+            closing_pattern = re.compile(rf" {{0,3}}{re.escape(marker[0])}{{{len(marker)},}} *$")
             start = line.start()
             end = line.end()
             index += 1
             while index < len(lines):
-                candidate = lines[index].group(0)
+                candidate = lines[index].group(0).rstrip("\r\n").expandtabs(4)
+                content_start = _fence_content_start(candidate, containers)
+                if content_start is None:
+                    # An unclosed fence ends with its list/quote container.
+                    # Reprocess this line as ordinary source, not code.
+                    break
                 end = lines[index].end()
                 index += 1
-                closing_pattern = rf"^[ ]{{0,3}}{re.escape(marker[0])}{{{len(marker)},}}[ \t]*$"
-                closing = re.match(closing_pattern, candidate.rstrip("\r\n"))
-                if closing:
-                    end = lines[index - 1].start() + closing.end()
+                if closing_pattern.fullmatch(candidate, content_start):
+                    end = lines[index - 1].start() + len(lines[index - 1].group(0).rstrip("\r\n"))
                     break
             ranges.append((start, end))
+            inline_boundaries.extend((start, end))
             continue
-        if re.match(r"^(?: {4}|\t)", value):
+        if (
+            not value.startswith("    ", content_start)
+            and not _ATX_HEADING.match(value, content_start)
+            and not _THEMATIC_BREAK.fullmatch(value, content_start)
+            and value[content_start:].strip(" ")
+            and (table_continues or _markdown_table_head(lines, index, content_start, containers))
+        ):
+            # Each GFM cell has its own inline tokenizer; neither another cell
+            # nor the next row can close a backtick run or a link label.
+            table_open = True
+            paragraph_open = False
+            inline_boundaries.append(line.start())
+            for left, right in _markdown_table_cells(line.group(0).rstrip("\r\n"), raw_prefix):
+                inline_boundaries.extend((line.start() + left, line.start() + right))
+            inline_boundaries.append(line.end())
+            index += 1
+            continue
+        if not paragraph_open:
+            definition = _markdown_reference_definition(
+                text, lines, index, raw_prefix, containers,
+            )
+            if definition is not None:
+                identifier, consumed_index, end = definition
+                reference_definitions.add(identifier)
+                reference_definition_ranges.append((line.start(), end))
+                ranges.append((line.start(), end))
+                inline_boundaries.extend((line.start(), end))
+                index = consumed_index + 1
+                continue
+        if not value[content_start:].strip(" "):
+            if opened_container and containers and containers[-1] > 0:
+                empty_item_depth = len(containers) - 1
+            paragraph_open = False
+            inline_boundaries.extend((line.start(), line.end()))
+            index += 1
+            continue
+        if not paragraph_open and value.startswith("    ", content_start):
             start = line.start()
             end = line.end()
             index += 1
-            while index < len(lines) and re.match(r"^(?: {4}|\t|\s*$)", lines[index].group(0)):
+            while index < len(lines):
+                candidate = lines[index].group(0).rstrip("\r\n").expandtabs(4)
+                candidate_start = _fence_content_start(candidate, containers)
+                if candidate_start is None or (
+                    candidate[candidate_start:].strip(" ")
+                    and not candidate.startswith("    ", candidate_start)
+                ):
+                    break
                 end = lines[index].end()
                 index += 1
             ranges.append((start, end))
+            inline_boundaries.extend((start, end))
             continue
+        if (
+            _ATX_HEADING.match(value, content_start)
+            or _THEMATIC_BREAK.fullmatch(value, content_start)
+            or paragraph_open and _SETEXT_UNDERLINE.fullmatch(value, content_start)
+        ):
+            paragraph_open = False
+            inline_boundaries.extend((line.start(), line.end()))
+        else:
+            # An ordinary paragraph may continue lazily without repeating its
+            # list/quote prefix. Indentation alone cannot interrupt it.
+            if paragraph_open and not opened_container:
+                containers = previous_containers
+            paragraph_open = True
         index += 1
+    inline_boundaries.append(len(text))
+    html_starts = [start for start, _end in html_exclusions]
+
+    def in_html(start: int, end: int) -> bool:
+        block = bisect_left(html_starts, end) - 1
+        return block >= 0 and html_exclusions[block][1] > start
+
     inline_runs = list(re.finditer(r"`+", text))
+    dollar_run_at: dict[int, tuple[int, int]] = {}
+    dollar_runs_by_width: dict[int, list[tuple[int, int]]] = {}
+    for match in re.finditer(r"\$+", text):
+        span = (match.start(), match.end())
+        dollar_run_at[match.start()] = span
+        dollar_runs_by_width.setdefault(len(match.group(0)), []).append(span)
+    dollar_run_starts_by_width = {
+        width: [start for start, _end in runs]
+        for width, runs in dollar_runs_by_width.items()
+    }
+    literal_spans: list[tuple[int, int]] = []
+    # Competing inline constructs acquire ownership in source order. In
+    # particular, math/backticks inside an autolink cannot borrow a later
+    # closer; an earlier code/math/HTML node still owns autolink-looking text.
+    protocol_tokenizer = _GfmProtocolTokenizer(text)
+    html_recognizer = _MarkdownHtmlRecognizer(text)
+    context_scope_end = consumed_end = protocol_end = context_generation = 0
+    context_labels: list[tuple[bool, int, int]] = []
+    context_title_closers: dict[str, array] = {}
+    context_title_ends: dict[tuple[int, int], int | None] = {}
+    protocol_spans: list[tuple[int, int]] = []
+    # Block ranges are disjoint and ordered. Newly recognized inline spans
+    # only advance consumed_end, so they never need to be searched again.
+    inline_blocks = _merge_ranges([*ranges, *html_exclusions]) if html_exclusions else ranges
+    block_range_count = len(inline_blocks)
+    block_index = 0
     run_index = 0
-    while run_index < len(inline_runs):
-        opening = inline_runs[run_index]
-        if _is_escaped_delimiter(text, opening.start()) or any(start <= opening.start() < end for start, end in ranges):
-            run_index += 1
+    for event in _MARKDOWN_INLINE_CONTEXT.finditer(text):
+        position = event.start()
+        if position < consumed_end:
             continue
+        while block_index < block_range_count and inline_blocks[block_index][1] <= position:
+            block_index += 1
+        if block_index < block_range_count and inline_blocks[block_index][0] <= position:
+            continue
+        if position >= context_scope_end:
+            context_labels.clear()
+            context_scope_end = inline_boundaries[bisect_left(inline_boundaries, position + 1)]
+        value = event.group(0)
+        if value == "<":
+            # A slash consumed by the preceding source URL is no longer an
+            # escape for this node. Angle autolinks precede inline HTML.
+            if position != protocol_end and _is_escaped_delimiter(text, position):
+                continue
+            autolink = _MARKDOWN_AUTOLINK.match(text, position, context_scope_end)
+            if autolink is not None:
+                literal_spans.append((position, autolink.end()))
+                consumed_end = autolink.end()
+            else:
+                end = html_recognizer.end(position, context_scope_end)
+                if end is not None:
+                    html_exclusions.append((position, end))
+                    consumed_end = end
+            continue
+        if value in ("[", "]"):
+            if _is_escaped_delimiter(text, position):
+                continue
+            if value == "[":
+                image = position > 0 and text[position - 1] == "!" and not _is_escaped_delimiter(text, position - 1)
+                context_labels.append((image, context_generation, position))
+                continue
+            if context_labels:
+                image, generation, label_start = context_labels.pop()
+                if not image and generation != context_generation:
+                    continue
+                parsed_end = (
+                    _markdown_destination_end(
+                        text, event.end() + 1, context_scope_end,
+                        context_title_closers, context_title_ends,
+                    )
+                    if text.startswith("(", event.end()) else None
+                )
+                if parsed_end is None and reference_definitions:
+                    parsed_end = _markdown_reference_use_end(
+                        text, label_start, position, context_scope_end, reference_definitions,
+                    )
+                if parsed_end is not None:
+                    # The real active label has closed. Its complete
+                    # attributes own title backticks/dollars before code/math.
+                    consumed_end = parsed_end
+                    if not image:
+                        context_generation += 1
+            continue
+        if value.startswith("$") or value in (r"\(", r"\["):
+            if not _is_escaped_delimiter(text, position):
+                math_end = (
+                    _markdown_dollar_math_end(
+                        position, context_scope_end, dollar_run_at,
+                        dollar_runs_by_width, dollar_run_starts_by_width,
+                    )
+                    if value.startswith("$")
+                    else None
+                )
+                if math_end is None and value in (r"\(", r"\["):
+                    math = _MARKDOWN_LITERAL_MATH.match(text, position, context_scope_end)
+                    math_end = math.end() if math is not None else None
+                if math_end is not None:
+                    literal_spans.append((position, math_end))
+                    consumed_end = math_end
+            continue
+        if not value.startswith("`"):
+            if not context_labels:
+                scope_start = inline_boundaries[bisect_left(inline_boundaries, position + 1) - 1]
+                end = protocol_tokenizer.literal_end(event, scope_start, context_scope_end)
+                if end is not None:
+                    protocol_spans.append((position, end))
+                    consumed_end = protocol_end = end
+            continue
+        if _is_escaped_delimiter(text, position):
+            continue
+        while run_index < len(inline_runs) and inline_runs[run_index].start() < position:
+            run_index += 1
+        opening = inline_runs[run_index]
+        scope_end = inline_boundaries[bisect_left(inline_boundaries, opening.end())]
+        # Block-code starts also bound this search, so a closer cannot be
+        # inside a block. Already emitted inline spans precede this opener.
         closing_index = run_index + 1
         while closing_index < len(inline_runs):
             closing = inline_runs[closing_index]
-            if any(start <= closing.start() < end for start, end in ranges):
-                run_index += 1
+            if closing.start() >= scope_end:
+                # An unclosed run cannot take a closer from another block.
                 break
-            if len(closing.group(0)) == len(opening.group(0)) and not _is_escaped_delimiter(text, closing.start()):
-                ranges.append((opening.start(), closing.end()))
+            # Backslashes are literal inside code: they cannot escape a
+            # same-length closing run (unlike an opener outside code).
+            if len(closing.group(0)) == len(opening.group(0)):
+                ranges.append((position, closing.end()))
+                consumed_end = closing.end()
                 run_index = closing_index + 1
                 break
             closing_index += 1
-        else:
-            run_index += 1
-    for pattern in (
-        re.compile(r"(?s)\$\$.*?\$\$|(?<!\$)\$[^$\n]+\$(?!\$)"),
-        re.compile(r"(?s)\\\[.*?\\\]|\\\(.*?\\\)"),
-        re.compile(r"(?m)^\s*\[[^\]]+\]:[ \t]*(?:<[^>\r\n]+>|\S+)(?:[ \t]+[^\r\n]*)?$"),
-        re.compile(r"<(?:https?://|mailto:)[^>\n]+>"),
-        re.compile(r"cr-asset://[0-9a-f-]{36}", re.IGNORECASE),
-        re.compile(r"!?\[[^\]\n]*\]\((?:cr-asset://|attachment://)[^)\n]*\)", re.IGNORECASE),
-        re.compile(r"!?\[[^\]\n]*\]\s*\[[^\]\n]*\]"),
-        re.compile(r"\[\^[^\]\n]+\]"),
+    html_exclusions = _merge_ranges(html_exclusions)
+    html_starts = [start for start, _end in html_exclusions]
+    ranges.extend(literal_spans)
+    ranges.extend(protocol_spans)
+    literal_range_count = len(ranges)
+    for pattern, markdown_only in (
+        (re.compile(r"(?m)^\s*\[[^\]]+\]:[ \t]*(?:<[^>\r\n]+>|\S+)(?:[ \t]+[^\r\n]*)?$"), True),
+        (re.compile(r"cr-asset://[0-9a-f-]{36}", re.IGNORECASE), False),
+        (re.compile(r"!?\[[^\]\n]*\]\((?:cr-asset://|attachment://)[^)\n]*\)", re.IGNORECASE), False),
+        (re.compile(r"!?\[[^\]\n]*\]\s*\[[^\]\n]*\]"), True),
+        (re.compile(r"\[\^[^\]\n]+\]"), True),
     ):
-        ranges.extend((match.start(), match.end()) for match in pattern.finditer(text))
-    # Markdown destinations can contain balanced/escaped parentheses. A plain
-    # `[^)]` regex left the tail of those valid URLs exposed to bulk deletion.
+        ranges.extend(
+            (match.start(), match.end()) for match in pattern.finditer(text)
+            if not markdown_only or not in_html(match.start(), match.end())
+        )
+    # Attribute delimiters, not parentheses inside angle URLs or quoted titles,
+    # determine where a valid link stops. Retain the old single-line fallback
+    # for incomplete syntax rather than weakening its conservative protection.
     destination_cursor = 0
-    for opening in re.finditer(r"\]\(", text):
-        if opening.start() < destination_cursor:
+    literal_ranges: list[tuple[int, int]] | None = None
+    literal_starts: list[int] = []
+    title_closers: dict[str, array] = {}
+    title_ends: dict[tuple[int, int], int | None] = {}
+    labels: list[tuple[bool, int, int]] = []
+    link_regions: list[tuple[int, int]] = []
+    link_labels: list[tuple[int, int]] = []
+    label_scope_end = 0
+    link_generation = 0
+    definition_blocked_ranges = _merge_ranges([*ranges[:literal_range_count], *html_exclusions])
+    attention_exclusions.extend(definition_blocked_ranges)
+    delimiters = re.finditer(r"[\[\]]", text) if "](" in text or reference_definitions else ()
+    for delimiter in delimiters:
+        start = delimiter.start()
+        if start < destination_cursor:
             continue
-        end, depth = opening.end(), 1
-        while end < len(text) and text[end] != "\n" and depth:
-            if text[end] == "\\" and end + 1 < len(text):
+        if start >= label_scope_end:
+            labels.clear()
+            label_scope_end = inline_boundaries[bisect_left(inline_boundaries, start + 1)]
+        if literal_ranges is None:
+            literal_ranges = _merge_ranges([*definition_blocked_ranges, *reference_definition_ranges])
+            literal_starts = [start for start, _end in literal_ranges]
+        literal_index = bisect_left(literal_starts, start + 1) - 1
+        if literal_index >= 0 and literal_ranges[literal_index][1] > start:
+            continue  # Code/math/autolink text cannot supply label delimiters.
+        if _is_escaped_delimiter(text, start):
+            continue
+        if delimiter.group(0) == "[":
+            image = start > 0 and text[start - 1] == "!" and not _is_escaped_delimiter(text, start - 1)
+            labels.append((image, link_generation, start))
+            continue
+        if not labels:
+            continue
+        image, generation, label_start = labels.pop()
+        if not image and generation != link_generation:
+            continue
+        attribute_start = delimiter.end() + 1
+        has_resource = text.startswith("(", delimiter.end())
+        parsed_end = (
+            _markdown_destination_end(text, attribute_start, label_scope_end, title_closers, title_ends)
+            if has_resource else None
+        )
+        if parsed_end is not None:
+            link_regions.append((label_start, parsed_end))
+            link_labels.append((label_start + 1, start))
+            attention_exclusions.append((start, parsed_end))
+            ranges.append((start, parsed_end))
+            destination_cursor = parsed_end
+            if not image:
+                link_generation += 1
+            continue
+        if reference_definitions:
+            # Reference identifiers are normalized raw source, not decoded
+            # entities or unescaped punctuation. A valid resource wins first.
+            resolved_end = _markdown_reference_use_end(
+                text, label_start, start, label_scope_end, reference_definitions,
+            )
+            if resolved_end is not None:
+                link_regions.append((label_start, resolved_end))
+                link_labels.append((label_start + 1, start))
+                attention_exclusions.append((start, resolved_end))
+                destination_cursor = resolved_end
+                if not image:
+                    # Reference images do not deactivate parent links.
+                    link_generation += 1
+                continue
+        if not has_resource:
+            continue
+        end, depth = attribute_start, 1
+        while end < label_scope_end and text[end] != "\n" and depth:
+            if text[end] == "\\" and end + 1 < label_scope_end:
                 end += 2
                 continue
             if text[end] == "(":
@@ -707,9 +1106,1413 @@ def protected_ranges(text: str) -> list[tuple[int, int]]:
             elif text[end] == ")":
                 depth -= 1
             end += 1
-        ranges.append((opening.start(), end))
+        ranges.append((start, end))
         destination_cursor = end
+    ranges.extend(_gfm_protocol_ranges(
+        text, inline_boundaries, [*ranges, *html_exclusions] if html_exclusions else ranges, link_regions,
+        link_labels, attention_exclusions,
+    ))
+    ranges.extend(_chatgpt_bracket_math_ranges(
+        text, [*ranges, *html_exclusions],
+    ))
+    projected_rich_tags = _chatgpt_rich_projection_tags(text, ranges) if html_flow_ranges else None
+    ranges.extend(
+        flow for flow in html_flow_ranges
+        if not _is_projected_chatgpt_rich_flow(text, flow, projected_rich_tags)
+    )
     return _merge_ranges(ranges)
+
+
+# A failed email attempt consumes nothing. Match only its first character so
+# a later www head in the same atext run can still be tried in source order.
+_GFM_LITERAL_PATTERN = (
+    r"(?P<email>(?<![A-Za-z0-9_+./-])(?=[A-Za-z0-9_+.-]+@)[A-Za-z0-9_+.-])"
+    r"|https?://|www\."
+)
+_GFM_LITERAL = re.compile(_GFM_LITERAL_PATTERN, re.IGNORECASE | re.ASCII)
+_MARKDOWN_INLINE_CONTEXT = re.compile(
+    _GFM_LITERAL_PATTERN + r"|`+|[\[\]<$]|\\[\[(]", re.IGNORECASE | re.ASCII,
+)
+_MARKDOWN_AUTOLINK = re.compile(
+    # CommonMark schemes have 2..32 ASCII characters. NUL is preprocessed to
+    # U+FFFD by micromark; the other ASCII controls cannot occur in its URL.
+    r"<(?:[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\x01-\x20\x7f<>]*"
+    r"|[A-Za-z0-9#$%&'*+\-./=?^_`{|}~]+@"
+    r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*"
+    r")>",
+)
+_MARKDOWN_LITERAL_MATH = re.compile(
+    r"(?s)\\\[.*?\\\]|\\\(.*?\\\)",
+)
+_BARE_BRACKET_MATH_LINE = re.compile(
+    r"(?m)^[\t ]*(?:(?P<opening>/?\[)[\t ]*\r?\n|(?P<closing>\]/?)[\t ]*(?=\r?$))",
+)
+_ESCAPED_BRACKET_MATH_LINE = re.compile(
+    r"(?m)^[\t ]*(?:(?P<opening>\\\[)[\t ]*\r?\n|(?P<closing>\\\])[\t ]*(?=\r?$))",
+)
+_BARE_BRACKET_LATEX_COMMAND = re.compile(
+    r"\\(?:alpha|approx|begin|beta|boxed|cap|cases|cdot|cdots|chi|cup|delta|"
+    r"dfrac|div|dots|epsilon|equiv|eta|exists|forall|frac|gamma|geq?|in|infty|"
+    r"int|iota|kappa|lambda|langle|ldots|left|leq?|lim|ln|log|longrightarrow|"
+    r"mathbb|mathbf|mathcal|mathit|mathrm|mathsf|mathtt|matrix|max|min|mp|mu|"
+    r"nabla|neq|notin|nu|omega|overline|partial|phi|pi|pm|pmatrix|prod|propto|"
+    r"psi|quad|qquad|rangle|rho|right|rightarrow|sigma|sim|sin|sqrt|subset|"
+    r"subseteq|sum|supset|supseteq|tan|tau|text|theta|times|to|upsilon|varphi|"
+    r"varepsilon|varrho|varsigma|vartheta|vec|xrightarrow|xi|zeta)"
+    r"(?=[^A-Za-z]|$)",
+)
+_CHATGPT_RICH_TAG = re.compile(
+    r"\\{0,3}</?(?:box|row|text|badge|divider)\b[^<>\r\n]{0,512}>",
+    re.IGNORECASE | re.ASCII,
+)
+_CHATGPT_RICH_ANY_TAG = re.compile(r"</?[A-Za-z][^<>\r\n]{0,512}>")
+_CHATGPT_RICH_ATTRIBUTES = re.compile(
+    r"^(?:\s+(?:border|radius|padding|gap|justify|align|color|size|background|direction|wrap|flex|height|width|minHeight|minWidth|maxHeight|maxWidth|minSize|maxSize|margin|aspectRatio|variant|pill|weight|textAlign|italic|lineThrough|truncate|maxLines|minLines|flush|spacing)(?:\s*=\s*(?:\"[^\"<>\r\n]{0,80}\"|'[^'<>\r\n]{0,80}'|\{\s*\d{1,3}\s*\}|\d{1,3}|true|false))?)*\s*$",
+    re.IGNORECASE | re.ASCII,
+)
+_GFM_FALLBACK_CANDIDATE = re.compile(r"https?://|www\.|@|&|\\", re.IGNORECASE | re.ASCII)
+# A decoded protocol needs ASCII '/'. These are all CommonMark source origins
+# of that character (no NFKC): literal/escaped '/', &sol;, or bounded numerics.
+_GFM_PROTOCOL_SLASH = re.compile(r"/|&(?:sol|#0{0,5}47|#[xX]0{0,4}2[fF]);")
+# Necessary source origins for the two other literal families. No NFKC:
+# w/W and '.' have only these literal, escaped-dot and numeric/named origins.
+_GFM_AUTOLINK_ORIGIN = re.compile(
+    _GFM_PROTOCOL_SLASH.pattern
+    + r"|@|&(?:commat|#0{0,5}64|#[xX]0{0,4}40);"
+    + r"|(?:[wW]|&#(?:0{0,5}87|0{0,4}119|[xX]0{0,4}(?:57|77));){3}"
+    r"(?:\\?\.|&(?:period|#0{0,5}46|#[xX]0{0,4}2[eE]);)"
+)
+# Match JavaScript's whitespace class, not Python's wider C0 whitespace class.
+_GFM_URL_BREAK = re.compile(r"[\t\n\v\f\r \u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff<]")
+_GFM_ENTITY = re.compile(r"&[A-Za-z]+;")
+_GFM_FALLBACK_TOKEN = re.compile(r"[^ \t\r\n]+")
+_GFM_FALLBACK_URL = re.compile(
+    r"(?:https?://|www(?=\.))([-.A-Za-z0-9_]+)[^ \t\r\n]*", re.IGNORECASE | re.ASCII,
+)
+_GFM_FALLBACK_URL_HEAD = re.compile(r"https?://|www(?=\.)", re.IGNORECASE | re.ASCII)
+_GFM_ASCII_ALNUM = re.compile(r"[A-Za-z0-9]")
+_GFM_EMAIL_TEXT = re.compile(r"[-+._A-Za-z0-9]+")
+_GFM_EMAIL_AT = re.compile("@")
+_GFM_EMAIL_PUNCTUATION = re.compile(r"[-+._]")
+_GFM_SOURCE_EMAIL_DOMAIN = re.compile(r"(?:[-A-Za-z0-9_]|\.(?=[A-Za-z0-9]))+")
+_GFM_FALLBACK_EMAIL_DOMAIN = re.compile(r"[-A-Za-z0-9_]+(?:\.[-A-Za-z0-9_]+)+")
+_HTML_TAG_NAME = re.compile(r"[A-Za-z][A-Za-z0-9-]*")
+_HTML_ATTRIBUTE_NAME = re.compile(r"[A-Za-z_:][A-Za-z0-9_.:-]*")
+_HTML_UNQUOTED_VALUE = re.compile(r"[^ \t\r\n\"'=<>`][^ \t\r\n\"'=<>`/]*")
+_MARKDOWN_TEXT_ESCAPE = re.compile(
+    r"\\[!\"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]"
+    r"|&(?:#[xX][0-9A-Fa-f]{1,6}|#[0-9]{1,7}|[A-Za-z0-9]{1,31});"
+)
+_MARKDOWN_DEFINITION_OPENING = re.compile(r" {0,3}\[")
+
+
+def _markdown_reference_id(value: str) -> str:
+    """CommonMark identifiers retain raw escapes/entities and trim ASCII space."""
+    return re.sub(r"[\t\n\r ]+", " ", value).strip(" ").lower().upper()
+
+
+def _markdown_reference_label_end(text: str, start: int, limit: int) -> int | None:
+    """Recognize a full reference's bounded raw label, not its visible inline text."""
+    cursor, size = start + 1, 0
+    seen = False
+    while cursor < limit and size <= 999:
+        character = text[cursor]
+        if character == "]":
+            return cursor + 1 if seen else None
+        if character == "[":
+            return None
+        if character not in "\r\n":
+            size += 2 if ord(character) > 0xffff else 1
+            seen = seen or character not in " \t"
+        cursor += 1
+        if character == "\\" and cursor < limit and text[cursor] in "[]\\":
+            size += 1
+            cursor += 1
+    return None
+
+
+def _markdown_reference_definition(
+    text: str,
+    lines: list[re.Match[str]],
+    index: int,
+    raw_prefix: int,
+    containers: tuple[int, ...],
+) -> tuple[str, int, int] | None:
+    """Recognize a reference definition, including bounded continuations.
+
+    Reference definitions are block constructs, so this helper is called only
+    while the line walker is at a paragraph boundary. The continuation support
+    intentionally stays local to the current container and does not infer an
+    arbitrary Markdown block parser: labels may continue onto adjacent
+    nonblank lines, destinations may begin on the next line, and titles may
+    continue across nonblank lines. Source coordinates are never decoded.
+    """
+    line = lines[index]
+    raw_line = line.group(0).rstrip("\r\n")
+    start = line.start() + raw_prefix
+    line_end = line.start() + len(raw_line)
+    if start >= line_end:
+        return None
+    opening = _MARKDOWN_DEFINITION_OPENING.match(text, start, line_end)
+    if opening is None:
+        return None
+
+    def continuation(
+        line_index: int,
+    ) -> tuple[int, int, int] | None:
+        next_index = line_index + 1
+        if next_index >= len(lines):
+            return None
+        candidate_line = lines[next_index]
+        candidate = candidate_line.group(0).rstrip("\r\n").expandtabs(4)
+        complete_parent = _fence_content_start(candidate, containers) is not None
+        candidate_start, _parents, opened_container = _markdown_container_prefix(
+            candidate, containers, complete_parent,
+        )
+        # Retain the parents that actually matched before a lazy continuation.
+        # Losing an inner quote must not discard an outer `>` or list indent.
+        # With every parent present this is still paragraph content, so only
+        # `1.`/`1)` may interrupt it. After parent exit a fresh list is a block,
+        # even when its start is not one.
+        if opened_container:
+            return None
+        if not candidate[candidate_start:].strip(" \t"):
+            return None
+        if (
+            _ATX_HEADING.match(candidate, candidate_start)
+            or _THEMATIC_BREAK.fullmatch(candidate, candidate_start)
+            or _SETEXT_UNDERLINE.fullmatch(candidate, candidate_start)
+            or _fence_opening(candidate, candidate_start) is not None
+            or _html_block_opening(candidate, candidate_start, True) is not None
+            or _markdown_table_head(lines, next_index, candidate_start, _parents)
+        ):
+            return None
+        raw_cursor = column = 0
+        for character in candidate_line.group(0):
+            if column >= candidate_start:
+                break
+            column += 4 - column % 4 if character == "\t" else 1
+            raw_cursor += 1
+        content_end = candidate_line.start() + len(
+            candidate_line.group(0).rstrip("\r\n")
+        )
+        if candidate_line.start() + raw_cursor >= content_end:
+            return None
+        return next_index, candidate_line.start() + raw_cursor, content_end
+
+    label_start = opening.end()
+    cursor = label_start
+    current_index = index
+    current_end = line_end
+    label_length = 0
+    label_seen = False
+    label_end: int | None = None
+    label_parts: list[str] = []
+    label_part_start = label_start
+    while True:
+        while cursor < current_end:
+            character = text[cursor]
+            if character == "[":
+                return None
+            if character == "]":
+                label_end = cursor
+                break
+            if character == "\\" and cursor + 1 < current_end and text[cursor + 1] in "[]\\":
+                cursor += 2
+                label_length += 2
+                label_seen = True
+                if label_length > 999:
+                    return None
+                continue
+            cursor += 1
+            label_length += 2 if ord(character) > 0xFFFF else 1
+            label_seen = label_seen or character not in " \t\r\n"
+            if label_length > 999:
+                return None
+        if label_end is not None:
+            label_parts.append(text[label_part_start:label_end])
+            break
+        label_parts.append(text[label_part_start:current_end])
+        next_line = continuation(current_index)
+        if next_line is None:
+            return None
+        current_index, cursor, current_end = next_line
+        label_part_start = cursor
+
+    if not label_seen or text[label_start] == "^":
+        return None  # GFM footnote definitions own this syntax.
+    if label_end + 1 >= current_end or text[label_end + 1] != ":":
+        return None
+
+    cursor = label_end + 2
+
+    def skip_inline_space(
+        position: int,
+        line_limit: int,
+    ) -> int:
+        while position < line_limit and text[position] in " \t":
+            position += 1
+        return position
+
+    cursor = skip_inline_space(cursor, current_end)
+    if cursor >= current_end:
+        next_line = continuation(current_index)
+        if next_line is None:
+            return None
+        current_index, cursor, current_end = next_line
+        cursor = skip_inline_space(cursor, current_end)
+        if cursor >= current_end:
+            return None
+
+    destination_start = cursor
+    if text[cursor] == "<":
+        cursor += 1
+        while cursor < current_end:
+            character = text[cursor]
+            if character == "\\" and cursor + 1 < current_end and text[cursor + 1] in string.punctuation:
+                cursor += 2
+                continue
+            if character == ">":
+                cursor += 1
+                break
+            if character == "<":
+                return None
+            cursor += 1
+        else:
+            return None
+    else:
+        if text[cursor] in " )\t" or 0 < ord(text[cursor]) < 32 or ord(text[cursor]) == 127:
+            return None
+        depth = 0
+        while cursor < current_end:
+            character = text[cursor]
+            if character == "\\" and cursor + 1 < current_end and text[cursor + 1] in string.punctuation:
+                cursor += 2
+                continue
+            if character in " \t":
+                break
+            if 0 < ord(character) < 32 or ord(character) == 127:
+                return None
+            if character == "(":
+                depth += 1
+            elif character == ")":
+                if depth == 0:
+                    return None
+                depth -= 1
+            cursor += 1
+        if depth:
+            return None
+    if cursor == destination_start:
+        return None
+
+    identifier = _markdown_reference_id("\n".join(label_parts))
+    destination_end = cursor
+    cursor = skip_inline_space(cursor, current_end)
+    destination_only = (
+        (identifier, current_index, current_end) if cursor == current_end else None
+    )
+    title_open: str | None = None
+    if cursor > destination_end and cursor < current_end and text[cursor] in "\"'(":
+        title_open = text[cursor]
+    elif cursor >= current_end:
+        next_line = continuation(current_index)
+        if next_line is not None:
+            next_index, next_cursor, next_end = next_line
+            next_cursor = skip_inline_space(next_cursor, next_end)
+            if next_cursor < next_end and text[next_cursor] in "\"'(":
+                current_index, cursor, current_end = next_index, next_cursor, next_end
+                title_open = text[cursor]
+    if title_open is not None:
+        title_close = ")" if title_open == "(" else title_open
+        cursor += 1
+        closed = False
+        while not closed:
+            while cursor < current_end:
+                character = text[cursor]
+                if character == "\\" and cursor + 1 < current_end and text[cursor + 1] in string.punctuation:
+                    cursor += 2
+                    continue
+                if character == title_close:
+                    cursor += 1
+                    closed = True
+                    break
+                cursor += 1
+            if closed:
+                break
+            next_line = continuation(current_index)
+            if next_line is None:
+                return destination_only
+            current_index, cursor, current_end = next_line
+            cursor = skip_inline_space(cursor, current_end)
+        if not closed or text[cursor:current_end].strip(" \t"):
+            return destination_only
+    elif text[cursor:current_end].strip(" \t"):
+        return None
+
+    return identifier, current_index, current_end
+
+
+def _markdown_text_shadow(text: str, start: int, end: int) -> tuple[str, array]:
+    """Decode text-node escapes with original-source ends, never NFKC."""
+    output: list[str] = []
+    ends = array("Q")
+    cursor = start
+    for match in _MARKDOWN_TEXT_ESCAPE.finditer(text, start, end):
+        output.append(text[cursor:match.start()])
+        ends.extend(range(cursor + 1, match.start() + 1))
+        raw = match.group(0)
+        if raw[0] == "\\":
+            value = raw[1:]
+        elif raw.startswith("&#"):
+            hexadecimal = raw[2:3].lower() == "x"
+            code = int(raw[3:-1] if hexadecimal else raw[2:-1], 16 if hexadecimal else 10)
+            # CommonMark numeric references differ from html.unescape for
+            # controls/noncharacters: use micromark's replacement policy.
+            value = "\ufffd" if (
+                code < 9 or code == 11 or 13 < code < 32 or 126 < code < 160
+                or 0xD800 <= code <= 0xDFFF or 0xFDD0 <= code <= 0xFDEF
+                or (code & 0xFFFF) in (0xFFFE, 0xFFFF) or code > 0x10FFFF
+            ) else chr(code)
+        else:
+            value = html5.get(raw[1:], raw)
+        output.append(value)
+        if value == raw:
+            ends.extend(range(match.start() + 1, match.end() + 1))
+        else:
+            ends.extend([match.end()] * len(value))
+        cursor = match.end()
+    output.append(text[cursor:end])
+    ends.extend(range(cursor + 1, end + 1))
+    return "".join(output), ends
+
+
+def _gfm_punctuation(character: str) -> bool:
+    # micromark-util-character checks UTF-16 code units; a surrogate pair is
+    # not classified as a punctuation/symbol code point by that check.
+    return ord(character) <= 0xFFFF and unicodedata.category(character)[0] in "PS"
+
+
+class _GfmProtocolTokenizer:
+    """Source-level autolinks, sharing domain/path suffix classification."""
+    def __init__(self, text: str):
+        self.text = text
+        self.limit = len(text)
+        self.tail_base = self.tail_end = -1
+        self.tail = bytearray()
+        self.failed_from = self.failed_through = -1
+
+    def literal_end(self, match: re.Match[str], lower: int = 0, limit: int | None = None) -> int | None:
+        limit = len(self.text) if limit is None else limit
+        if limit != self.limit:
+            # Suffix classifications belong to this inline scope, not a later
+            # table cell that happens to share its whitespace-delimited token.
+            self.limit = limit
+            self.tail_base = self.tail_end = self.failed_from = self.failed_through = -1
+        start = match.start()
+        previous = self.text[start - 1] if start > lower else ""
+        if match.lastgroup == "email":
+            # A character escape wins over an email beginning at punctuation.
+            if not (
+                self.text[start] in "+-._" and _is_escaped_delimiter(self.text, start)
+            ):
+                local = _GFM_EMAIL_TEXT.match(self.text, start, limit)
+                domain = _GFM_SOURCE_EMAIL_DOMAIN.match(self.text, local.end() + 1, limit)
+                if (
+                    domain is not None and "." in domain.group()
+                    and self.text[domain.end() - 1].isascii()
+                    and self.text[domain.end() - 1].isalpha()
+                ):
+                    return domain.end()
+            # The email tokenizer runs before www. A failed attempt leaves
+            # that alternative available at the exact same source position.
+            if self.text[start:start + 4].lower() != "www.":
+                return None
+        if self.text[start:start + 4].lower() == "www.":
+            if previous and previous not in "(*_[]~ \t\r\n":
+                return None
+            return self.end(start) if start + 4 < limit else None
+        if previous and previous.isascii() and previous.isalpha():
+            return None
+        return self.end(match.end())
+
+    def end(self, domain_start: int) -> int | None:
+        if self.failed_from <= domain_start <= self.failed_through:
+            return None
+        if domain_start >= self.limit:
+            return None
+        first = self.text[domain_start]
+        if (
+            ord(first) < 32 or ord(first) == 127
+            or _GFM_URL_BREAK.match(self.text, domain_start)
+            or _gfm_punctuation(first)
+        ):
+            return None
+        if domain_start >= self.tail_end:
+            stop = _GFM_URL_BREAK.search(self.text, domain_start, self.limit)
+            self.tail_base = domain_start
+            self.tail_end = stop.start() if stop else self.limit
+            # One backward suffix classification per whitespace-delimited
+            # token, reused if several invalid URL heads share that token.
+            self.tail = bytearray(self.tail_end - self.tail_base + 1)
+            self.tail[-1] = 1
+            for position in range(self.tail_end - 1, self.tail_base - 1, -1):
+                character = self.text[position]
+                index = position - self.tail_base
+                if character in "!\"')*,.:;?_~":
+                    self.tail[index] = self.tail[index + 1]
+                elif character == "]":
+                    following = self.text[position + 1] if position + 1 < self.tail_end else ""
+                    self.tail[index] = not following or following in "([" or self.tail[index + 1]
+                elif character == "&":
+                    entity = _GFM_ENTITY.match(self.text, position, self.tail_end)
+                    if entity:
+                        self.tail[index] = self.tail[entity.end() - self.tail_base]
+        cursor = domain_start
+        underscore = penultimate_underscore = -1
+        seen = False
+        while cursor < self.tail_end:
+            character = self.text[cursor]
+            if character in "._":
+                if self.tail[cursor - self.tail_base]:
+                    break
+                if character == "_":
+                    underscore = cursor
+                else:
+                    penultimate_underscore, underscore = underscore, -1
+            elif character != "-" and _gfm_punctuation(character):
+                break
+            else:
+                seen = True
+            cursor += 1
+        if max(underscore, penultimate_underscore) >= 0:
+            # Later www heads before this same bad suffix cannot repair its
+            # last two segments. Do not rescan that domain for each prefix.
+            self.failed_from = domain_start
+            self.failed_through = max(underscore, penultimate_underscore)
+        elif seen:
+            opened = closed = 0
+            while cursor < self.tail_end:
+                character = self.text[cursor]
+                if character == "(":
+                    opened += 1
+                elif character == ")" and closed < opened:
+                    closed += 1
+                elif self.tail[cursor - self.tail_base]:
+                    break
+                elif character == ")":
+                    closed += 1
+                cursor += 1
+            return cursor
+        return None
+
+
+def _gfm_fallback_url_ranges(decoded: str) -> list[tuple[int, int]]:
+    """Run the native URL-before-email transform on one decoded text token."""
+    result: list[tuple[int, int]] = []
+    consumed = 0
+    failed_through = failed_domain_end = -1
+    for head in _GFM_FALLBACK_URL_HEAD.finditer(decoded):
+        start = head.start()
+        if start < consumed or (
+            start <= failed_through and head.end() <= failed_domain_end
+        ):
+            continue
+        previous = decoded[start - 1] if start else ""
+        if previous and not (
+            _GFM_URL_BREAK.fullmatch(previous) or _gfm_punctuation(previous)
+        ):
+            continue
+        fallback = _GFM_FALLBACK_URL.match(decoded, start)
+        if fallback is None:
+            continue
+        www = decoded[start].lower() == "w"
+        domain_start = start if www else fallback.start(1)
+        domain_end = fallback.end(1)
+        last_dot = decoded.rfind(".", domain_start, domain_end)
+        bad = domain_end - 1 if last_dot < 0 else -1
+        if last_dot >= 0:
+            prior_dot = decoded.rfind(".", domain_start, last_dot)
+            for left, right in (
+                (max(domain_start, prior_dot + 1), last_dot), (last_dot + 1, domain_end),
+            ):
+                if left == right:
+                    continue
+                underscore = decoded.rfind("_", left, right)
+                if underscore >= 0:
+                    bad = max(bad, underscore)
+                elif _GFM_ASCII_ALNUM.search(decoded, left, right) is None:
+                    bad = max(bad, right - 1)
+        if bad >= 0:
+            failed_through, failed_domain_end = bad, domain_end
+            continue
+        kept_end = fallback.end()
+        while kept_end > start and decoded[kept_end - 1] in "!\"&'),.:;<>?]}":
+            kept_end -= 1
+        needed = decoded.count("(", start, kept_end) - decoded.count(")", start, kept_end)
+        cursor = kept_end
+        while cursor < fallback.end() and needed > 0:
+            if decoded[cursor] == ")":
+                needed -= 1
+                kept_end = cursor + 1
+            cursor += 1
+        if kept_end <= (start if www else head.end()):
+            continue
+        result.append((start, kept_end))
+        consumed = fallback.end()
+    return result
+
+
+class _MarkdownHtmlRecognizer:
+    """Operation-local inline-HTML grammar and reusable forward closers."""
+    def __init__(self, text: str):
+        self.text = text
+        self.closers: dict[str, tuple[int, int]] = {}
+
+    def following(self, marker: str, start: int) -> int:
+        cached = self.closers.get(marker)
+        if cached is None or cached[1] >= 0 and cached[1] < start:
+            cached = (start, self.text.find(marker, start))
+            self.closers[marker] = cached
+        return cached[1]
+
+    def end(self, start: int, limit: int, *, flow: bool = False) -> int | None:
+        text = self.text
+        end = -1
+        if text.startswith("<!--", start):
+            content_start = start + 4
+            if text.startswith(">", content_start):
+                end = content_start + 1
+            elif text.startswith("->", content_start):
+                end = content_start + 2
+            else:
+                closing = self.following("-->", content_start)
+                if closing >= 0:
+                    end = closing + 3
+        elif text.startswith("<![CDATA[", start) or text.startswith("<?", start):
+            cdata = text.startswith("<![CDATA[", start)
+            marker = "]]>" if cdata else "?>"
+            closing = self.following(marker, start + (9 if cdata else 2))
+            if closing >= 0:
+                end = closing + len(marker)
+        elif (
+            text.startswith("<!", start)
+            and start + 2 < limit
+            and text[start + 2].isascii() and text[start + 2].isalpha()
+        ):
+            closing = self.following(">", start + 3)
+            if closing >= 0:
+                end = closing + 1
+        else:
+            closing_tag = text.startswith("</", start)
+            name = _HTML_TAG_NAME.match(text, start + (2 if closing_tag else 1), limit)
+            if name is None:
+                return None
+            cursor = name.end()
+            while cursor < limit:
+                before_space = cursor
+                while cursor < limit and text[cursor] in " \t\r\n":
+                    cursor += 1
+                if cursor < limit and text[cursor] == ">":
+                    end = cursor + 1
+                    break
+                if not closing_tag and text.startswith("/>", cursor):
+                    end = cursor + 2
+                    break
+                if closing_tag or cursor == before_space:
+                    break
+                attribute = _HTML_ATTRIBUTE_NAME.match(text, cursor, limit)
+                if attribute is None:
+                    break
+                cursor = attribute.end()
+                after_name = cursor
+                while cursor < limit and text[cursor] in " \t\r\n":
+                    cursor += 1
+                if cursor == limit or text[cursor] != "=":
+                    cursor = after_name
+                    continue
+                cursor += 1
+                while cursor < limit and text[cursor] in " \t\r\n":
+                    cursor += 1
+                if cursor == limit:
+                    break
+                if text[cursor] in "\"'":
+                    closing = self.following(text[cursor], cursor + 1)
+                    if closing < 0 or closing >= limit:
+                        break
+                    cursor = closing + 1
+                else:
+                    # HTML-flow's complete-tag tokenizer treats an immediate
+                    # slash as the self-closing marker, not an unquoted value.
+                    if flow and text[cursor] == "/":
+                        if text.startswith("/>", cursor):
+                            end = cursor + 2
+                        break
+                    value = _HTML_UNQUOTED_VALUE.match(text, cursor, limit)
+                    if value is None:
+                        break
+                    cursor = value.end()
+        return end if start < end <= limit else None
+
+
+def _markdown_html_ranges(
+    text: str, boundaries: list[int], blocked: list[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    """Recognized HTML partitions text but does not itself protect noise."""
+    if "<" not in text:
+        return []
+    blocked_starts = [start for start, _end in blocked]
+    recognizer = _MarkdownHtmlRecognizer(text)
+    result: list[tuple[int, int]] = []
+    consumed_end = 0
+    for opening in re.finditer("<", text):
+        start = opening.start()
+        if start < consumed_end:
+            continue
+        blocked_index = bisect_left(blocked_starts, start + 1) - 1
+        if blocked_index >= 0 and blocked[blocked_index][1] > start:
+            continue
+        if _is_escaped_delimiter(text, start) and not (
+            blocked_index >= 0 and blocked[blocked_index][1] == start
+        ):
+            continue
+        limit = boundaries[bisect_left(boundaries, start + 1)]
+        end = recognizer.end(start, limit)
+        if end is not None:
+            result.append((start, end))
+            consumed_end = end
+    return result
+
+
+@dataclass
+class _MarkdownAttentionDelimiter:
+    start: int
+    end: int
+    marker: str
+    can_close: bool
+    can_open: bool = False
+    scope_end: int = 0
+
+
+def _markdown_attention_ranges(
+    text: str, boundaries: list[int], blocked: list[tuple[int, int]],
+    link_labels: list[tuple[int, int]], registration_blocked: list[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    """Resolve emphasis/strikethrough text boundaries without protecting markers.
+
+    The first successfully tokenized delimiter kind selects the outer resolver
+    order. Resolved first-pass spans are atomic in their parent context; the
+    second kind can wrap them or resolve inside them, but cannot cross an edge.
+    Opener buckets avoid repeated backward searches, and parent contexts avoid
+    recursive reparsing of nested spans.
+    """
+    if not any(marker in text for marker in ("*", "_", "~")):
+        return []
+    blocked_starts = [start for start, _end in blocked]
+    labels = _merge_ranges(link_labels)
+    label_starts = [start for start, _end in labels]
+    registration_blocked = _merge_ranges(registration_blocked)
+    registration_starts = [start for start, _end in registration_blocked]
+    records: list[_MarkdownAttentionDelimiter] = []
+    priorities: dict[int, bool] = {}
+    scope_end = 0
+
+    def group(character: str) -> int:
+        if not character or character != "<" and _GFM_URL_BREAK.fullmatch(character):
+            return 1
+        return 2 if _gfm_punctuation(character) else 0
+
+    for run in re.finditer(r"\*+|_+|~+", text):
+        start, end = run.span()
+        if start >= scope_end:
+            scope_end = boundaries[bisect_left(boundaries, start + 1)]
+        registration_index = bisect_left(registration_starts, start + 1) - 1
+        if registration_index >= 0 and registration_blocked[registration_index][1] > start:
+            continue
+        blocked_index = bisect_left(blocked_starts, start + 1) - 1
+        registration_only = blocked_index >= 0 and blocked[blocked_index][1] > start
+        if registration_only:
+            label_index = bisect_left(label_starts, start + 1) - 1
+            if label_index < 0 or labels[label_index][1] <= start:
+                continue
+        if _is_escaped_delimiter(text, start) and not (
+            blocked_index >= 0 and blocked[blocked_index][1] == start
+        ):
+            start += 1
+            if start == end:
+                continue
+        marker = text[start]
+        if marker == "~" and end - start > 2:
+            continue  # A failed triple run cannot restart in its middle.
+        # Label contents register resolvers while being tokenized, before the
+        # label is resolved atomically. They cannot supply external openers.
+        priorities.setdefault(scope_end, marker == "~")
+        if registration_only:
+            continue
+        previous = text[start - 1] if start else ""
+        following = text[end] if end < scope_end else ""
+        before, after = group(previous), group(following)
+        opens = bool(not after or after == 2 and before)
+        closes = bool(not before or before == 2 and after)
+        if marker != "~":
+            opens = opens or following in ("*", "_", "~")
+            closes = closes or previous in ("*", "_", "~")
+        can_open = bool(opens and (marker != "_" or before or not closes))
+        can_close = bool(closes and (marker != "_" or after or not opens))
+        records.append(_MarkdownAttentionDelimiter(start, end, marker, can_close, can_open, scope_end))
+
+    def resolve(
+        runs: list[_MarkdownAttentionDelimiter], parents: list[tuple[int, int]],
+    ) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+        result: list[tuple[int, int]] = []
+        spans: list[tuple[int, int]] = []
+        states: dict[int, tuple[list[_MarkdownAttentionDelimiter], dict]] = {}
+        parent_stack: list[tuple[int, int, int]] = []
+        parent_index = active_scope = 0
+        for closer in runs:
+            if closer.scope_end != active_scope:
+                states.clear()
+                active_scope = closer.scope_end
+            while parent_index < len(parents) and parents[parent_index][0] <= closer.start:
+                left, right = parents[parent_index]
+                while parent_stack and parent_stack[-1][1] <= left:
+                    parent_stack.pop()
+                parent_index += 1
+                parent_stack.append((left, right, parent_index))
+            while parent_stack and parent_stack[-1][1] <= closer.start:
+                parent_stack.pop()
+            parent = parent_stack[-1][2] if parent_stack else 0
+            pending, kinds = states.setdefault(parent, ([], {}))
+
+            def push(delimiter: _MarkdownAttentionDelimiter) -> None:
+                pending.append(delimiter)
+                key = delimiter.marker, delimiter.can_close, (delimiter.end - delimiter.start) % 3
+                kinds.setdefault(key, []).append(delimiter)
+
+            def pop() -> _MarkdownAttentionDelimiter:
+                delimiter = pending.pop()
+                key = delimiter.marker, delimiter.can_close, (delimiter.end - delimiter.start) % 3
+                kinds[key].pop()
+                return delimiter
+
+            marker = closer.marker
+            while closer.can_close and closer.start < closer.end:
+                size = closer.end - closer.start
+                opener = None
+                remainders = (size,) if marker == "~" else range(3)
+                for also_closes in (False, True):
+                    for remainder in remainders:
+                        if marker != "~" and (also_closes or closer.can_open) and size % 3 and (remainder + size) % 3 == 0:
+                            continue
+                        bucket = kinds.get((marker, also_closes, remainder))
+                        if bucket and (opener is None or bucket[-1].start > opener.start):
+                            opener = bucket[-1]
+                if opener is None:
+                    break
+                while pending[-1] is not opener:
+                    pop()
+                pop()
+                use = size if marker == "~" else 2 if opener.end - opener.start > 1 and size > 1 else 1
+                left, right = opener.end - use, closer.start + use
+                result.extend(((left, opener.end), (closer.start, right)))
+                spans.append((left, right))
+                opener.end -= use
+                closer.start = right
+                if opener.start < opener.end:
+                    push(opener)
+            if closer.can_open and closer.start < closer.end:
+                push(closer)
+        return result, spans
+
+    first = [run for run in records if (run.marker == "~") == priorities[run.scope_end]]
+    second = [run for run in records if (run.marker == "~") != priorities[run.scope_end]]
+    markers, spans = resolve(first, [])
+    if second:
+        nested, _spans = resolve(second, sorted(spans, key=lambda span: (span[0], -span[1])))
+        markers.extend(nested)
+    return _merge_ranges(markers)
+
+
+def _gfm_protocol_ranges(
+    text: str,
+    boundaries: list[int],
+    protected: list[tuple[int, int]],
+    link_regions: list[tuple[int, int]],
+    link_labels: list[tuple[int, int]],
+    attention_exclusions: list[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    """Recognize http(s), www and email literals, including text-node fallback.
+
+    Real Markdown link/image labels cannot contain a literal autolink. Plain
+    brackets can: mdast's later transform creates links without positions.
+    Keep these cases distinct rather than treating a missing position as proof
+    that no URL was rendered.
+    """
+    if _GFM_AUTOLINK_ORIGIN.search(text) is None or _GFM_FALLBACK_CANDIDATE.search(text) is None:
+        return []
+    blocked = _merge_ranges([*protected, *link_regions])
+    # Legacy conservative reference/footnote protection is not proof of an
+    # atomic Markdown node. Literal syntax, actual labels and attributes are.
+    syntax_blocked = _merge_ranges([*attention_exclusions, *link_regions])
+    html_ranges = _markdown_html_ranges(text, boundaries, syntax_blocked)
+    blocked = _merge_ranges([*blocked, *html_ranges])
+    blocked_starts = [start for start, _end in blocked]
+    brackets = iter(re.finditer(r"[\[\]]", text))
+    bracket = next(brackets, None)
+    depth = scope_end = consumed_end = 0
+    tokenizer = _GfmProtocolTokenizer(text)
+    result: list[tuple[int, int]] = []
+    for match in _GFM_LITERAL.finditer(text):
+        start = match.start()
+        if start < consumed_end:
+            continue
+        blocked_index = bisect_left(blocked_starts, start + 1) - 1
+        if blocked_index >= 0 and blocked[blocked_index][1] > start:
+            continue
+        while bracket is not None and bracket.start() < start:
+            position = bracket.start()
+            if position >= scope_end:
+                depth = 0
+                scope_end = boundaries[bisect_left(boundaries, position + 1)]
+            blocked_index = bisect_left(blocked_starts, position + 1) - 1
+            if (
+                position >= consumed_end
+                and not (blocked_index >= 0 and blocked[blocked_index][1] > position)
+                and not _is_escaped_delimiter(text, position)
+            ):
+                depth = depth + 1 if bracket.group(0) == "[" else max(0, depth - 1)
+            bracket = next(brackets, None)
+        if start >= scope_end:
+            depth = 0
+            scope_end = boundaries[bisect_left(boundaries, start + 1)]
+        lower = boundaries[bisect_left(boundaries, start + 1) - 1]
+        end = tokenizer.literal_end(match, lower, scope_end) if not depth else None
+        if end is not None and end > start:
+            result.append((start, end))
+            consumed_end = end
+    # Fallback runs on *whole decoded text tokens*, not on raw protocol heads.
+    # This also decodes the preceding character before checking its boundary.
+    # Source tokenizer links and other nodes split text; their contents cannot
+    # supply a fallback URL or its prefix/path. Keep a single shadow per token.
+    excluded = _merge_ranges([*blocked, *result])
+    attention = _markdown_attention_ranges(
+        text, boundaries, _merge_ranges([*syntax_blocked, *html_ranges, *result]), link_labels,
+        [*attention_exclusions, *html_ranges, *result],
+    )
+    if attention:
+        excluded = _merge_ranges([*excluded, *attention])
+    partitions = sorted(set([*boundaries, *(p for span in excluded for p in span)]))
+    excluded_index = 0
+    for left, right in zip(partitions, partitions[1:]):
+        while excluded_index < len(excluded) and excluded[excluded_index][1] <= left:
+            excluded_index += 1
+        if excluded_index < len(excluded) and excluded[excluded_index][0] <= left:
+            continue
+        for token in _GFM_FALLBACK_TOKEN.finditer(text, left, right):
+            if (
+                _GFM_AUTOLINK_ORIGIN.search(text, token.start(), token.end()) is None
+                or _GFM_FALLBACK_CANDIDATE.search(text, token.start(), token.end()) is None
+            ):
+                continue
+            decoded, source_ends = _markdown_text_shadow(text, token.start(), token.end())
+            url_ranges = _gfm_fallback_url_ranges(decoded)
+            for start, end in url_ranges:
+                raw_start = source_ends[start - 1] if start else token.start()
+                result.append((raw_start, source_ends[end - 1]))
+            # URL transforms run before email transforms. Their links split
+            # text nodes; email must not be recovered from an existing URL.
+            gaps = [0, *(p for span in url_ranges for p in span), len(decoded)]
+            for left, right in zip(gaps[::2], gaps[1::2]):
+                consumed = left
+                for at in _GFM_EMAIL_AT.finditer(decoded, left, right):
+                    position = at.start()
+                    if position < consumed:
+                        continue
+                    domain = _GFM_FALLBACK_EMAIL_DOMAIN.match(decoded, position + 1, right)
+                    if domain is None or not (
+                        decoded[domain.end() - 1].isascii() and decoded[domain.end() - 1].isalpha()
+                    ):
+                        continue
+                    local = position
+                    while local > consumed and (
+                        decoded[local - 1].isascii()
+                        and (decoded[local - 1].isalnum() or decoded[local - 1] in "-+._")
+                    ):
+                        local -= 1
+                    previous = decoded[local - 1] if local > left else ""
+                    if previous and (
+                        previous == "/" or not (
+                            _GFM_URL_BREAK.fullmatch(previous) or _gfm_punctuation(previous)
+                        )
+                    ):
+                        # The JS regex may retry after punctuation within atext
+                        # when its leftmost run has an invalid preceding byte.
+                        punctuation = _GFM_EMAIL_PUNCTUATION.search(decoded, local, position)
+                        local = punctuation.end() if punctuation else position
+                    if local == position:
+                        continue
+                    start = source_ends[local - 1] if local else token.start()
+                    result.append((start, source_ends[domain.end() - 1]))
+                    consumed = domain.end()
+    return result
+
+
+def _markdown_link_space(text: str, cursor: int, limit: int) -> int:
+    """Skip attribute whitespace and continued quote prefixes in this block."""
+    line_prefix = False
+    while cursor < limit:
+        character = text[cursor]
+        if character in " \t\r\n":
+            line_prefix = line_prefix or character in "\r\n"
+            cursor += 1
+        elif line_prefix and character == ">":
+            # New containers are already excluded by the inline block limit.
+            cursor += 1
+        else:
+            break
+    return cursor
+
+
+def _markdown_destination_end(
+    text: str, start: int, limit: int, title_closers: dict[str, array],
+    title_ends: dict[tuple[int, int], int | None],
+) -> int | None:
+    """Recognize a complete inline destination/title in unchanged source."""
+    cursor = _markdown_link_space(text, start, limit)
+    if cursor >= limit:
+        return None
+    if text[cursor] == ")":
+        return cursor + 1
+    if text[cursor] == "<":
+        cursor += 1
+        while cursor < limit:
+            character = text[cursor]
+            if character == "\\" and cursor + 1 < limit and text[cursor + 1] in string.punctuation:
+                cursor += 2
+                continue
+            if character == ">":
+                cursor += 1
+                break
+            if character in "<\r\n":
+                return None
+            cursor += 1
+        else:
+            return None
+    else:
+        depth = 0
+        while cursor < limit:
+            character = text[cursor]
+            if character == "\\" and cursor + 1 < limit and text[cursor + 1] in string.punctuation:
+                cursor += 2
+                continue
+            if character == ")":
+                if depth == 0:
+                    return cursor + 1
+                depth -= 1
+            elif character == "(":
+                depth += 1
+            elif character in " \t\r\n":
+                break
+            elif ord(character) < 32 or ord(character) == 127:
+                return None
+            cursor += 1
+        if depth:
+            return None
+    after_space = _markdown_link_space(text, cursor, limit)
+    if after_space >= limit:
+        return None
+    if text[after_space] == ")":
+        return after_space + 1
+    if after_space == cursor or text[after_space] not in "\"'(":
+        return None
+    closing = ")" if text[after_space] == "(" else text[after_space]
+    if not title_closers:
+        # Unclosed titles must not rescan a whole paragraph per opener.
+        title_closers.update((marker, array("Q")) for marker in "\"')")
+        for match in re.finditer("[\"')]", text):
+            if not _is_escaped_delimiter(text, match.start()):
+                title_closers[match.group(0)].append(match.start())
+    positions = title_closers[closing]
+    index = bisect_left(positions, after_space + 1)
+    if index == len(positions) or positions[index] >= limit:
+        return None
+    key = (positions[index], limit)
+    if key not in title_ends:
+        # Many incomplete openers can share one closer and a long invalid
+        # whitespace tail. Reuse failed tails too, within this source/block.
+        cursor = _markdown_link_space(text, positions[index] + 1, limit)
+        title_ends[key] = cursor + 1 if cursor < limit and text[cursor] == ")" else None
+    return title_ends[key]
+
+
+def _markdown_reference_use_end(
+    text: str, label_start: int, label_end: int, limit: int, definitions: set[str],
+) -> int | None:
+    normalized_label = _markdown_reference_id(text[label_start + 1:label_end])
+    reference_end = label_end + 1
+    if text.startswith("[", reference_end):
+        reference_close = _markdown_reference_label_end(text, reference_end, limit)
+        if reference_close is not None:
+            identifier = _markdown_reference_id(text[reference_end + 1:reference_close - 1])
+            if identifier in definitions:
+                return reference_close
+        elif text.startswith("[]", reference_end) and normalized_label in definitions:
+            return reference_end + 2
+    elif normalized_label in definitions:
+        return reference_end
+    return None
+
+
+def _markdown_dollar_math_end(
+    position: int,
+    limit: int,
+    run_at: dict[int, tuple[int, int]],
+    runs_by_width: dict[int, list[tuple[int, int]]],
+    starts_by_width: dict[int, list[int]],
+) -> int | None:
+    """Match a dollar-math closer of the opener's exact run width in this scope."""
+    opening = run_at.get(position)
+    if opening is None:
+        return None
+    width = opening[1] - opening[0]
+    starts = starts_by_width[width]
+    runs = runs_by_width[width]
+    index = bisect_left(starts, opening[1])
+    if index < len(runs) and runs[index][0] < limit:
+        return runs[index][1]
+    return None
+
+
+def _ranges_overlap_any(
+    start: int, end: int, ranges: list[tuple[int, int]], starts: list[int],
+) -> bool:
+    index = bisect_left(starts, end) - 1
+    return index >= 0 and ranges[index][1] > start
+
+
+def _chatgpt_bracket_math_ranges(
+    text: str, blocked: list[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    """Recover standalone display brackets, requiring a command for bare pairs."""
+    if "[" not in text or "\\" not in text:
+        return []
+    blocked = _merge_ranges(blocked)
+    blocked_starts = [start for start, _end in blocked]
+    result = []
+    for pattern, command_required in (
+        (_ESCAPED_BRACKET_MATH_LINE, False),
+        (_BARE_BRACKET_MATH_LINE, True),
+    ):
+        opening: tuple[int, int] | None = None
+        for delimiter in pattern.finditer(text):
+            if delimiter.group("opening") is not None:
+                if opening is None:
+                    opening = delimiter.span()
+                continue
+            if opening is None:
+                continue
+            start, body_start = opening
+            opening = None
+            end = delimiter.end()
+            body = text[body_start:delimiter.start()]
+            if not body.strip() or command_required and not _BARE_BRACKET_LATEX_COMMAND.search(body):
+                continue
+            if _ranges_overlap_any(start, end, blocked, blocked_starts):
+                continue
+            result.append((start, end))
+    return result
+
+
+def _chatgpt_rich_projection_tags(
+    text: str, blocked: list[tuple[int, int]],
+) -> set[tuple[int, int]] | None:
+    """Recognize a conservative subset of the supported box-tag projection.
+
+    Ambiguous code/indentation and large inputs keep literal-flow protection,
+    rather than guessing whether the frontend's code-aware projection applies.
+    """
+    if (
+        re.search(r"<box\b", text, re.IGNORECASE | re.ASCII) is None
+        or len(text) > 262_144 or "`" in text or "~~~" in text
+        or re.search(r"(?m)^(?: {4}|\t)", text)
+    ):
+        return None
+    blocked = _merge_ranges(blocked)
+    blocked_starts = [start for start, _end in blocked]
+    tags: list[tuple[int, int, str, bool, bool]] = []
+    for match in _CHATGPT_RICH_TAG.finditer(text):
+        start, end = match.span()
+        if start and text[start - 1] == "\\":
+            continue
+        if _ranges_overlap_any(start, end, blocked, blocked_starts):
+            # Our protected ranges also contain math/links. The frontend's
+            # profile scan only skips code; dropping one of its tags could
+            # incorrectly turn an invalid global profile into a valid one.
+            return None
+        parsed = re.match(
+            r"^\\*<(\/?)(box|row|text|badge|divider)(.*?)>$",
+            match.group(0), re.IGNORECASE | re.ASCII,
+        )
+        if parsed is None:
+            continue
+        closing = bool(parsed.group(1))
+        name = parsed.group(2).lower()
+        attributes = parsed.group(3)
+        self_closing = bool(re.search(r"/\s*$", attributes))
+        attribute_text = re.sub(r"/\s*$", "", attributes)
+        if closing:
+            if attribute_text.strip() or self_closing:
+                continue
+        elif not _CHATGPT_RICH_ATTRIBUTES.fullmatch(attribute_text):
+            continue
+        if (name == "divider") != self_closing:
+            continue
+        tags.append((start, end, name, closing, self_closing))
+        if len(tags) > 8192:
+            return None
+
+    stack: list[str] = []
+    rich_child = False
+    found_profile = False
+    for start, end, name, closing, self_closing in tags:
+        if not stack:
+            line_start = text.rfind("\n", 0, start) + 1
+            prefix = text[line_start:start]
+            if (
+                name != "box" or closing or self_closing
+                or re.fullmatch(r"(?:[ \t]|&#(?:x20|32);)*", prefix, re.IGNORECASE) is None
+            ):
+                continue
+            stack.append(name)
+            rich_child = False
+            continue
+        if closing:
+            if stack[-1] != name:
+                return None
+            stack.pop()
+            if not stack and rich_child:
+                found_profile = True
+        else:
+            rich_child = rich_child or name in {"text", "badge", "divider"}
+            if not self_closing:
+                stack.append(name)
+            if len(stack) > 64:
+                return None
+    if stack or not found_profile:
+        return None
+    return {(start, end) for start, end, _name, _closing, _self_closing in tags}
+
+
+def _is_projected_chatgpt_rich_flow(
+    text: str,
+    flow: tuple[int, int],
+    projected_tags: set[tuple[int, int]] | None,
+) -> bool:
+    """Do not classify a valid rich-layout tag projection as literal HTML code."""
+    if not projected_tags:
+        return False
+    start, end = flow
+    value = text[start:end]
+    if any(marker in value for marker in ("<!--", "<!", "<?")):
+        return False
+    if "<" in _CHATGPT_RICH_ANY_TAG.sub("", value):
+        return False
+    found = False
+    for match in _CHATGPT_RICH_ANY_TAG.finditer(value):
+        absolute_start = start + match.start()
+        while absolute_start > start and text[absolute_start - 1] == "\\":
+            absolute_start -= 1
+        absolute_end = start + match.end()
+        if (absolute_start, absolute_end) not in projected_tags:
+            return False
+        found = True
+    return found
+
+
+def _markdown_container_prefix(
+    line: str, containers: tuple[int, ...], paragraph_open: bool,
+) -> tuple[int, tuple[int, ...], bool]:
+    """Retain matching parents, then consume new explicit list/quote prefixes.
+
+    Container entries are zero for a quote, or the continuation indentation
+    of a list item. Parsing expanded tabs is only for line classification;
+    protected offsets always refer to the original, unexpanded source.
+    """
+    cursor = 0
+    retained = []
+    for indent in containers:
+        if indent == 0:
+            quote = _QUOTE_PREFIX.match(line, cursor)
+            if quote is None:
+                break
+            cursor = quote.end()
+        elif line.startswith(" " * indent, cursor):
+            cursor += indent
+        elif not line[cursor:].strip(" "):
+            cursor = len(line)
+        else:
+            break
+        retained.append(indent)
+    opened = False
+    while cursor < len(line):
+        # A thematic break wins over interpreting its markers as nested lists.
+        if _THEMATIC_BREAK.fullmatch(line, cursor):
+            break
+        quote = _QUOTE_PREFIX.match(line, cursor)
+        if quote:
+            retained.append(0)
+            cursor = quote.end()
+            opened = True
+            paragraph_open = False
+            continue
+        item = _LIST_PREFIX.match(line, cursor)
+        if item:
+            marker = item.group("marker")
+            # Padding is greedy: reaching EOL identifies an empty item without
+            # copying the remaining line for every possible nested prefix.
+            empty_item = item.end() == len(line)
+            interrupting = paragraph_open and len(retained) == len(containers)
+            if interrupting and (
+                empty_item or marker[0].isdigit() and marker not in ("1.", "1)")
+            ):
+                # Empty items cannot interrupt prose; ordered lists must start
+                # at one. After parent exit these are fresh blocks/siblings.
+                break
+            # More than four spaces after a list marker means one padding
+            # space followed by content indentation, not arbitrary padding.
+            padding = len(item.group("padding"))
+            end = item.end() if padding <= 4 else item.start("padding") + 1
+            # Empty items, including bare markers, have an implicit one-space
+            # continuation indent regardless of their actual trailing spaces.
+            indent_end = item.start("padding") + 1 if empty_item else end
+            retained.append(indent_end - cursor)
+            cursor = end
+            opened = True
+            paragraph_open = False
+            continue
+        break
+    return cursor, tuple(retained), opened
+
+
+def _fence_opening(line: str, cursor: int) -> str | None:
+    fence = _FENCE_OPENING.fullmatch(line, cursor)
+    if fence is None:
+        math = _MATH_FENCE_OPENING.fullmatch(line, cursor)
+        return math.group(1) if math else None
+    if fence.group(1)[0] == "`" and "`" in fence.group(2):
+        return None
+    return fence.group(1)
+
+
+def _markdown_table_cells(line: str, cursor: int) -> list[tuple[int, int]]:
+    """Split unescaped pipes, including pipes inside backtick-looking source."""
+    end = len(line.rstrip(" \t"))
+    while cursor < end and line[cursor] in " \t":
+        cursor += 1
+    if cursor == end:
+        return []
+    pipes = [
+        match.start() for match in re.compile(r"\|").finditer(line, cursor, end)
+        if not _is_escaped_delimiter(line, match.start())
+    ]
+    if cursor == end - 1 and pipes:
+        return []  # One bare pipe is not a table header.
+    if pipes and pipes[0] == cursor:
+        cursor += 1
+        pipes = pipes[1:]
+    if pipes and pipes[-1] == end - 1:
+        end -= 1
+        pipes = pipes[:-1]
+    cells = []
+    for right in [*pipes, end]:
+        left = cursor
+        while left < right and line[left] in " \t":
+            left += 1
+        trimmed = right
+        while trimmed > left and line[trimmed - 1] in " \t":
+            trimmed -= 1
+        cells.append((left, trimmed))
+        cursor = right + 1
+    return cells
+
+
+def _markdown_table_head(
+    lines: list[re.Match[str]], index: int, cursor: int, containers: tuple[int, ...],
+) -> bool:
+    if index + 1 >= len(lines):
+        return False
+    header = lines[index].group(0).rstrip("\r\n").expandtabs(4)
+    if header.startswith("    ", cursor):
+        return False
+    delimiter = lines[index + 1].group(0).rstrip("\r\n").expandtabs(4)
+    start = _fence_content_start(delimiter, containers)
+    if start is None or delimiter.startswith("    ", start):
+        return False
+    # A delimiter cannot be a lazy line or introduce a list/quote container.
+    _start, parents, opened = _markdown_container_prefix(delimiter, containers, True)
+    if opened or parents != containers or not any(c in delimiter[start:] for c in "|:"):
+        return False
+    cells = _markdown_table_cells(delimiter, start)
+    return bool(
+        cells and len(cells) == len(_markdown_table_cells(header, cursor))
+        and all(re.fullmatch(r":?-+:?", delimiter[left:right]) for left, right in cells)
+    )
+
+
+def _html_block_opening(line: str, cursor: int, paragraph_open: bool) -> int | None:
+    """Classify the installed CommonMark HTML-flow starts, not inline HTML.
+
+    Flow bodies suppress Markdown recognition; they are not themselves noise
+    protection. Kinds 1-5 use explicit terminators and 6-7 stop at a blank line.
+    A strict generic tag (7) cannot interrupt an already open paragraph.
+    """
+    opening = _HTML_BLOCK_PREFIX.match(line, cursor)
+    if opening is None:
+        return None
+    start = opening.end() - 1
+    if line.startswith("<!--", start):
+        return 2
+    if line.startswith("<?", start):
+        return 3
+    if line.startswith("<![CDATA[", start):
+        return 5
+    if line.startswith("<!", start) and re.match(r"[A-Za-z]", line[start + 2:start + 3]):
+        return 4
+    closing_tag = line.startswith("</", start)
+    name = _HTML_TAG_NAME.match(line, start + (2 if closing_tag else 1))
+    if name is None:
+        return None
+    following = line[name.end():name.end() + 1]
+    if following and following not in " />":
+        return None
+    normalized = name.group(0).lower()
+    if not closing_tag and normalized in _HTML_RAW_NAMES and following != "/":
+        return 1
+    if normalized in _HTML_BLOCK_NAMES:
+        return 6 if following != "/" or line.startswith("/>", name.end()) else None
+    if paragraph_open:
+        return None
+    end = _MarkdownHtmlRecognizer(line).end(start, len(line), flow=True)
+    return 7 if end is not None and not line[end:].strip(" ") else None
+
+
+def _fence_content_start(line: str, containers: tuple[int, ...]) -> int | None:
+    cursor = 0
+    for indent in containers:
+        if indent == 0:
+            quote = _QUOTE_PREFIX.match(line, cursor)
+            if quote is None:
+                return None
+            cursor = quote.end()
+        elif line.startswith(" " * indent, cursor):
+            cursor += indent
+        elif not line[cursor:].strip(" "):
+            # Blank list lines may omit indentation, but not a nested quote's
+            # explicit marker. Let remaining quote containers fail normally.
+            cursor = len(line)
+        else:
+            return None
+    return cursor
 
 
 def _is_escaped_delimiter(text: str, index: int) -> bool:
@@ -719,21 +2522,6 @@ def _is_escaped_delimiter(text: str, index: int) -> bool:
         backslashes += 1
         cursor -= 1
     return backslashes % 2 == 1
-
-
-def _is_explanatory_example(text: str, start: int, end: int) -> bool:
-    """Conservatively leave table cells, named fields and syntax examples alone."""
-    line_start = text.rfind("\n", 0, start) + 1
-    line_end = text.find("\n", end)
-    line = text[line_start:line_end if line_end >= 0 else len(text)]
-    prefix = text[line_start:start]
-    if line.count("|") >= 2:
-        return True
-    if re.search(r"(?:示例|例如|比如|字段|语法|标记说明|example|e\.g\.|field|syntax|literal)\s*(?:[:：=]|为|是)?[^\n]{0,100}$", prefix, re.IGNORECASE):
-        return True
-    if re.match(r'^\s*["\w.-]+["\']?\s*[:=：]\s*', prefix):
-        return True
-    return False
 
 
 def _detected(start: int, end: int, kind: str, reason_code: str, match_mode: str, evidence_codes: tuple[str, ...]) -> DetectedOccurrence:
@@ -1017,26 +2805,59 @@ def _boundary_allows(text: str, start: int, end: int, mode: str) -> bool:
 def _levenshtein_bounded(left: str, right: str, limit: int) -> int | None:
     if abs(len(left) - len(right)) > limit:
         return None
+    if not left:
+        return len(right) if len(right) <= limit else None
+    if not right:
+        return len(left) if len(left) <= limit else None
+
+    # Keep only the diagonal band that can still reach the requested edit
+    # distance.  The old implementation filled a len(right)-wide row even
+    # though callers cap `limit` at two; this made a long normalized literal
+    # allocate and touch a full candidate-sized row for every fuzzy probe.
+    # Swapping is distance-preserving and keeps the row iteration on the
+    # shorter input when the two lengths differ.
+    if len(left) > len(right):
+        left, right = right, left
     sentinel = limit + 1
-    previous = [sentinel] * (len(right) + 1)
-    for column in range(min(len(right), limit) + 1):
-        previous[column] = column
+    right_length = len(right)
+    previous_start = 0
+    previous_end = min(right_length, limit)
+    previous = list(range(previous_end + 1))
     for row, left_char in enumerate(left, 1):
-        current = [sentinel] * (len(right) + 1)
-        if row <= limit:
-            current[0] = row
-        first_column = max(1, row - limit)
-        last_column = min(len(right), row + limit)
-        for column in range(first_column, last_column + 1):
-            current[column] = min(
-                current[column - 1] + 1,
-                previous[column] + 1,
-                previous[column - 1] + (left_char != right[column - 1]),
+        current_start = max(0, row - limit)
+        current_end = min(right_length, row + limit)
+        current = [sentinel] * (current_end - current_start + 1)
+        for column in range(current_start, current_end + 1):
+            slot = column - current_start
+            if column == 0:
+                current[slot] = row
+                continue
+            insertion = (
+                current[slot - 1] + 1
+                if column - 1 >= current_start
+                else sentinel
             )
-        if min(current[first_column:last_column + 1], default=sentinel) > limit:
+            deletion = (
+                previous[column - previous_start] + 1
+                if previous_start <= column <= previous_end
+                else sentinel
+            )
+            substitution = (
+                previous[column - 1 - previous_start]
+                + (left_char != right[column - 1])
+                if previous_start <= column - 1 <= previous_end
+                else sentinel
+            )
+            current[slot] = min(insertion, deletion, substitution)
+        if min(current) > limit:
             return None
-        previous = current
-    return previous[-1] if previous[-1] <= limit else None
+        previous_start, previous_end, previous = current_start, current_end, current
+    distance = (
+        previous[len(right) - previous_start]
+        if previous_start <= len(right) <= previous_end
+        else sentinel
+    )
+    return distance if distance <= limit else None
 
 
 def preview_occurrences(

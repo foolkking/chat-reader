@@ -188,7 +188,6 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
     ignored = exception_digests(db, scope, [exception_revision_id] if exception_revision_id else [])
     sample_buckets: dict[str, list[dict]] = {}
     sample_order: list[str] = []
-    sample_count = 0
     for _message_id, role, version_id, length in rows[:TRIAL_MESSAGES]:
         if length > TRIAL_MESSAGE_CHARACTERS or characters + length > TRIAL_CHARACTERS:
             skipped += 1
@@ -208,6 +207,15 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
             all_hits.extend((other_revision, hit) for hit in detect_occurrences(role, source, other_rule, other_revision, context=context))
         all_hits.sort(key=lambda item: (item[0].rule.detector_id or "", str(item[0].rule.id)))
         surviving = {(hit.start, hit.end) for revision, hit in deduplicate_occurrences(all_hits) if revision is trial_revision}
+        # Reserve one bucket per matching message before applying the output
+        # cap, so repeated hits in early messages cannot consume later slots.
+        # Retain at most TRIAL_SAMPLE_LIMIT * TRIAL_SAMPLES_PER_MESSAGE examples.
+        sample_bucket: list[dict] | None = None
+        if target_hits and len(sample_buckets) < TRIAL_SAMPLE_LIMIT:
+            bucket_key = str(_message_id)
+            sample_bucket = []
+            sample_buckets[bucket_key] = sample_bucket
+            sample_order.append(bucket_key)
         for hit in target_hits:
             suppressed = bool(exception_revision_id and is_ignored(ignored, exception_revision_id, role, source, hit.start, hit.end))
             covered = (hit.start, hit.end) not in surviving
@@ -215,17 +223,11 @@ def trial_rule(db: Session, scope: OwnershipScope, config: dict, *, rule_id=None
             covered_by_other_rule += int(covered)
             matches += 1
             protected += hit.decision == "PROTECTED"
-            if sample_count < TRIAL_SAMPLE_LIMIT:
-                bucket_key = str(_message_id)
-                bucket = sample_buckets.setdefault(bucket_key, [])
-                if bucket_key not in sample_order:
-                    sample_order.append(bucket_key)
-                if len(bucket) < TRIAL_SAMPLES_PER_MESSAGE:
-                    bucket.append({"role": role, "match_text": source[hit.start:hit.end], "context_before": source[max(0, hit.start - CONTEXT_LENGTH):hit.start],
-                        "context_after": source[hit.end:hit.end + CONTEXT_LENGTH], "protected": hit.decision == "PROTECTED",
-                        "match_mode": hit.match_mode, "evidence_codes": list(hit.evidence_codes),
-                        "suppressed_by_exception": suppressed and not covered, "covered_by_other_rule": covered})
-                    sample_count += 1
+            if sample_bucket is not None and len(sample_bucket) < TRIAL_SAMPLES_PER_MESSAGE:
+                sample_bucket.append({"role": role, "match_text": source[hit.start:hit.end], "context_before": source[max(0, hit.start - CONTEXT_LENGTH):hit.start],
+                    "context_after": source[hit.end:hit.end + CONTEXT_LENGTH], "protected": hit.decision == "PROTECTED",
+                    "match_mode": hit.match_mode, "evidence_codes": list(hit.evidence_codes),
+                    "suppressed_by_exception": suppressed and not covered, "covered_by_other_rule": covered})
     samples: list[dict] = []
     while len(samples) < TRIAL_SAMPLE_LIMIT:
         added = False
