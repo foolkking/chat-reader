@@ -42,7 +42,7 @@ pins. This does not substitute for executing the complete workflow.
 
 ## Release gates and current checkpoint
 
-Status: **CI-only keyboard-focus repair authorized; complete rerun pending, not deployed**.
+Status: **CI-only keyboard-focus repair passed CI and was deployed/accepted**.
 Source **`f83ce40b04bd446918ba764787a03a1ccebbc88d`**, full workflow
 **`40446169506`**, attempt 1. Dispatch completed at **03:48:00 UTC /
 11:48:00 +08:00**; the first result read must be no earlier than
@@ -130,8 +130,8 @@ retry/cancel response while checking disabled actions, then require either focus
 on the relocated row or preservation of deliberately focused dialog Close.
 Each also requires exactly one mutation request. No timeout increase, sleep,
 skip, weaker assertion, workflow or release-gate change is made.
-All checks remain **unverified until the new complete CI finishes**. No image
-or production operation has occurred.
+At that checkpoint the checks were unverified and no image or production
+operation had occurred; the completed results are recorded below.
 
 1. Commit/push only this reviewed batch, then dispatch full `Build release images`
    for the exact source. After **each** dispatch, wait at least **50 minutes**
@@ -152,3 +152,52 @@ Never build application images on King or the workstation, overwrite production
 env/Compose/Nginx, restart PostgreSQL, delete user imports/volumes, prune backups
 or images, or run full diagnostics inside the serving API.
 Record exact CI, verification, backup and acceptance facts here as they occur.
+
+### Complete CI, artifact and production acceptance
+
+The repaired exact source
+`b4effda45c74b0295823736a7da5db70265f57dd` was pushed to `master` and passed
+all five required jobs in `Build release images`, workflow run
+`40463956431`, attempt 1:
+`api-quality`, `web-quality`, `settings-quality`, `build-images` and
+`inspect-release-artifact`. The dispatch completed at
+`2026-10-27 06:55:06Z`; the first result read was
+`2026-10-27 07:45:12Z`, after the required 50-minute boundary
+`2026-10-27 07:45:06Z`.
+
+The deployable artifact is GitHub artifact `12717900348`,
+`chat-reader-images-b4effda45c74b0295823736a7da5db70265f57dd-1`.
+Its ZIP digest is
+`sha256:d8e515f6a3adfe2efcf232b2345c711978df481d60580c7ffe379c0dda7c3c6f`,
+and the extracted OCI archive digest is
+`d03e1824cb1c3cae1e6ef6fbd875c1780e18b2552009cc6ca5be3f52580b2313`.
+The source/run/attempt, OCI descriptor and config/layer chains, embedded
+source, Linux/amd64 image metadata and forbidden-path checks passed:
+35 blobs, 23 layers, 21,339 layer entries and 336 embedded API source files
+were independently checked. The current CI artifact contract does not require
+the stale `match_modes` bundle marker used by an older local audit copy; the
+repository CI inspector and current release verifier were used instead.
+
+Remote staged-artifact capacity preflight passed with 4,175,048 KiB available
+against 4,013,187 KiB required. The production baseline remained
+`c7dc0749e3ba18394cb0a37b8d66e9f01837c5a8`, direct rollback remained
+`3fbf79dd0f1da2906ff32d202dfa85cb8544c612`, and the schema was
+`20261022_0053`. Application writers were stopped from
+`2026-10-27 07:57:17Z` to `2026-10-27 08:06:17Z`; PostgreSQL stayed running.
+The fresh verified five-component backup is
+`/opt/chat-reader/backups/chat-reader-20261027T075731Z`. Its read-only
+attachment audit was complete and clean: 337 active attachments, 356 asset
+objects/files, and 356 SHA-256 verifications.
+
+No migration was applied: head/current remained `20261022_0053`, and canonical
+row counts were unchanged. The application was recreated with
+`--no-build --no-deps`; runtime acceptance passed at
+`2026-10-27 08:06:17Z` (`16:06:17 +08:00`). API/Web/worker run the exact
+`b4effda` images and are healthy/fresh. HTTPS health/login, HTTP-to-HTTPS
+redirect, authentication/denial and public-image privacy checks passed;
+startup logs had zero error-keyword lines, PostgreSQL/config/Compose/Nginx
+hashes were unchanged, and no new kernel or host OOM was observed.
+Current/direct rollback pointers are now `b4effda`/`c7dc074`. No production
+build, configuration or Nginx write, user-data/volume deletion, backup/image
+pruning or database downgrade occurred. Authenticated browser acceptance,
+physical clipboard behavior and sustained load remain unclaimed.

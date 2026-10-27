@@ -33,7 +33,7 @@ user-data/volume deletion or backup/image pruning. See the
 [release record](docs/execution/CHATGPT_NOISE_RELEASE_2026-10-25.md).
 Authenticated production UI, physical clipboard and sustained load are unclaimed.
 
-**Noise/CI corrections (2026-10-27; release authorized, preparation):** retain the
+**Noise/CI corrections (2026-10-27; deployed and accepted):** retain the
 trial-sampling, code/container, link/URL and table-boundary fixes. Dollar math
 now closes at an equal-width delimiter inside its actual inline scope; valid
 multiline math remains protected. Complete link titles cannot steal later code
@@ -50,21 +50,29 @@ version-controlled. See [current cleanup semantics](docs/system/CONTENT_CLEANUP_
 [review fixes and validation](docs/execution/ux-audit-noise-matching-2026-10-25.md#37-review-fixes-and-application-renderer-contract--2026-10-27),
 and [remaining boundaries](docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md#current-verification-boundaries--2026-10-27).
 Earlier checkpoint counts and receipts remain historical. The user now authorizes
-committing and deploying this reviewed batch; exact-source full CI, the fresh
-50-minute read gate, independent artifacts and stopped-writer backup remain
-required. CI run `40451679590` (source `0c5f033`) failed in the unrelated
+committing and deploying this reviewed batch; that release gate is complete.
+CI run `40451679590` (source `0c5f033`) failed in the unrelated
 default-PWA Task Center keyboard-focus assertion after the dedicated noise
 cleanup gate passed; downstream auth/PWA-negative and image jobs were skipped.
 The user subsequently authorized debugging CI to completion without local
 test/build/browser execution. The narrow repair moves Task Center focus
 restoration from a single mutation animation frame to the committed DOM
 replacement, and adds held retry/cancel response and deliberate-focus tests.
-It is pending complete CI acceptance; production is unchanged. See the
-[release record](docs/execution/NOISE_REVIEW_RELEASE_2026-10-27.md). No new
-production acceptance is claimed; deployed `c7dc074` above is unchanged.
-Scoped regression completed after the user freed temporary-disk space, with one
-recorded platform skip. Interrupted memory/disk attempts remain historical, not
-passes; the agent did not execute the denied temporary-directory cleanup.
+The exact source `b4effda45c74b0295823736a7da5db70265f57dd` passed all five jobs
+in CI run `40463956431`, attempt 1; the result was first read at
+`2026-10-27 07:45:12Z`, after the required 50-minute gate. The official
+artifact `12717900348` matched its GitHub digest; independent verification
+passed 35 OCI blobs, 23 image layers, 21,339 layer entries and 336 embedded API
+source files with no forbidden paths. Production accepted at
+`2026-10-27 16:06:17 +08:00` after a stopped-writer five-component backup
+`chat-reader-20261027T075731Z`. Current/direct rollback are now
+`b4effda`/`c7dc074`; schema remains `20261022_0053`. API/Web/worker revisions,
+health, HTTPS/denial/privacy checks, unchanged PostgreSQL/config/Nginx,
+canonical counts, startup logs and OOM counters passed. No migration,
+production build, user-data/volume deletion, configuration change or backup/
+image pruning occurred. Authenticated production UI, physical clipboard and
+sustained load remain unclaimed. See the
+[release record](docs/execution/NOISE_REVIEW_RELEASE_2026-10-27.md).
 
 **Previous accepted release (2026-10-24): reviewed system optimization.** The
 [short disposition and follow-up plan](docs/system/CONTINUOUS_OPTIMIZATION_BACKLOG.md)
