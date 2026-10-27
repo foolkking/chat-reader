@@ -12,6 +12,8 @@ for (const locale of ["zh-CN", "en-US"] as const) {
       const admin = await settingsAdmin(playwright.request, baseURL!);
       const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale });
       const page = await context.newPage(), headers = { Origin: baseURL! };
+      let releaseNotebookReads = () => {};
+      const notebookReadsReleased = new Promise<void>(resolve => { releaseNotebookReads = resolve; });
       try {
         expect((await context.request.post(`${baseURL}/api/auth/register`, { headers, data: {
           email: `annotation-write-${randomUUID()}@example.test`,
@@ -66,6 +68,7 @@ for (const locale of ["zh-CN", "en-US"] as const) {
         });
         await page.route(`**/api/conversations/${id}/notebook`, async route => {
           if (route.request().method() === "PUT") noteWrites++;
+          if (scenario === "delete" && route.request().method() === "GET") await notebookReadsReleased;
           await route.continue();
         });
         if (scenario === "bookmark") await page.route(`**/api/conversations/${id}/annotations`, async route => {
@@ -86,6 +89,16 @@ for (const locale of ["zh-CN", "en-US"] as const) {
           await expect(page.getByRole("button", { name: /^(Check bookmark|核对书签)$/ })).toHaveCount(0);
           expect(writes).toHaveLength(1); expect((await list()).map(item => item.id)).toEqual(writes);
         } else {
+          if (scenario === "delete") {
+            // Deletion requires ready notebook/conflict reads. Hold the initial
+            // notebook response so this write-recovery case cannot race that guard.
+            await page.getByRole("button", { name: /^(Notes|精选笔记)$/ }).click();
+            const editor = page.getByRole("region", { name: /^(Notebook editor|笔记编辑器)$/ });
+            await expect(editor).toHaveCount(0);
+            expect(writes).toHaveLength(0);
+            releaseNotebookReads();
+            await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
+          }
           await page.getByRole("button", { name: /^(All|全部批注)$/ }).click();
           const first = page.locator(`#annotation-${annotations[0].id}`);
           await expect(first).toBeVisible();
@@ -138,7 +151,7 @@ for (const locale of ["zh-CN", "en-US"] as const) {
         }
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         await page.screenshot({ path: info.outputPath(`${scenario}-recovered-${locale}.png`) });
-      } finally { await context.close(); await admin.dispose(); }
+      } finally { releaseNotebookReads(); await context.close(); await admin.dispose(); }
     });
   }
 }
