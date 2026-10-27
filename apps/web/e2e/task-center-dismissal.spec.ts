@@ -206,6 +206,67 @@ test("failures precede completed results and retry keeps keyboard focus on the m
   await expect(row.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "40");
 });
 
+for (const operation of ["retry", "cancel"] as const) {
+  for (const moveFocus of [false, true]) {
+    test(`delayed ${operation}: ${moveFocus ? "preserves focus moved to dialog Close" : "restores the relocated task row"}`, async ({ page }) => {
+      let current = {
+        ...activeTask,
+        job_type: operation === "retry" ? "conversation_export" : "conversation_merge",
+        status: operation === "retry" ? "failed" : "processing",
+        phase: operation === "retry" ? "failed" : "messages",
+        source_label: "Synthetic task-focus source",
+        cancellable: operation === "cancel",
+        completed_at: (operation === "retry" ? "2026-08-31T00:00:10Z" : null) as string | null,
+      };
+      let release!: () => void, arrived!: () => void;
+      const gate = new Promise<void>(resolve => { release = resolve; });
+      const requested = new Promise<void>(resolve => { arrived = resolve; });
+      const writes: string[] = [];
+      await page.route("**/api/**", async route => {
+        const path = new URL(route.request().url()).pathname;
+        if (path.startsWith("/api/tasks/") && route.request().method() !== "GET") writes.push(path);
+        if (path === `/api/tasks/${taskId}/${operation}` && route.request().method() === "POST") {
+          arrived();
+          await gate;
+          current = {
+            ...current,
+            status: operation === "retry" ? "queued" : "cancelled",
+            phase: operation === "retry" ? "queued" : "cancelled",
+            cancellable: false,
+            completed_at: operation === "retry" ? null : "2026-08-31T00:00:11Z",
+          };
+          return json(route, current);
+        }
+        return mockOwnerApi(route, [], [current]);
+      });
+      try {
+        await page.goto("/");
+        await page.getByTestId("sidebar-tasks-button").click();
+        const panel = page.getByTestId("task-center-panel");
+        const row = panel.locator(`[id="task-row-${taskId}"]`);
+        const action = row.getByRole("button", { name: operation === "retry" ? "Retry" : "Cancel merge", exact: true });
+        await action.focus();
+        await expect(action).toBeFocused();
+        await page.keyboard.press("Enter");
+        await requested;
+        await expect(action).toBeDisabled();
+        const close = panel.getByRole("button", { name: "Close", exact: true });
+        if (moveFocus) {
+          await close.focus();
+          await expect(close).toBeFocused();
+        }
+        release();
+        await expect(panel.getByRole("region", { name: operation === "retry" ? "In progress" : "Cancelled", exact: true }))
+          .toContainText("Synthetic task-focus source");
+        await expect(moveFocus ? close : row).toBeFocused();
+        expect(writes).toEqual([`/api/tasks/${taskId}/${operation}`]);
+      } finally {
+        release();
+      }
+    });
+  }
+}
+
 test("batch import completion reports the full scope and waits for an explicit destination", async ({ page }) => {
   await page.context().addCookies([{
     name: "chat_reader_session",

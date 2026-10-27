@@ -42,7 +42,7 @@ pins. This does not substitute for executing the complete workflow.
 
 ## Release gates and current checkpoint
 
-Status: **first full CI failed; narrow test correction, not deployed**.
+Status: **CI-only keyboard-focus repair authorized; complete rerun pending, not deployed**.
 Source **`f83ce40b04bd446918ba764787a03a1ccebbc88d`**, full workflow
 **`40446169506`**, attempt 1. Dispatch completed at **03:48:00 UTC /
 11:48:00 +08:00**; the first result read must be no earlier than
@@ -78,6 +78,60 @@ Removed file bytes total **364,619,667 (about 348 MiB)**; available disk became
 were unchanged; no backup, volume, user data or configuration was touched.
 This does not authorize any further cleanup or waive the fresh staged-artifact
 capacity gate.
+
+### Complete rerun
+
+The test-only correction passed local lint, nonincremental typecheck and
+collection of all eight original scenarios, without changing their skip policy.
+Source **`0c5f0334dd9af87b4ce4e9883cf2bd1250a11ffc`** was committed/pushed;
+complete CI **`40451679590`**, attempt 1, was dispatched at
+**04:47:33 UTC / 12:47:33 +08:00**. Its independent 50-minute read boundary is
+**2026-10-27 05:37:33 UTC / 13:37:33 +08:00** (the reader adds two seconds).
+The first run's failed result/evidence remains preserved. Production has not
+been stopped or replaced. An initial SSH push failed without updating remote
+source; the HTTPS credential-helper push then succeeded before dispatch.
+
+The result was first read at **05:37:39 UTC / 13:37:39 +08:00**, after the
+gate. API and settings quality passed. Web lint, typecheck, production build,
+dependency/source contracts, ordinary-user recovery regressions, and the
+dedicated **Source Editor content cleanup browser gate** all passed. The
+default PWA baseline then failed only
+`task-center-dismissal.spec.ts:176` (“retry keeps keyboard focus on the moving
+task”): after the synthetic task moved from Failed to In progress, focus was
+not on its row. It is outside the noise changes and their changed paths; the
+noise-specific release gates completed before this baseline failure. The
+single-owner authentication and negative-PWA gates, artifact inspection, and
+image build were consequently skipped. This is a real required CI failure,
+not a passing or deployable run. No scope was changed and no retry, commit,
+push, artifact deployment or production action followed.
+
+### CI-only focus repair
+
+After that stopped checkpoint, the user explicitly requested debugging CI to
+completion **without local execution**. From this instruction onward, no local
+tests, build, browser, API or worker are run. Source reading/editing and Git/
+GitHub CLI operations are used; CI owns all validation.
+
+The failed trace confirms an accepted retry and the new In progress row, with
+the row remaining unfocused for the full assertion timeout. The old restoration
+was a single `requestAnimationFrame` scheduled by mutation success. Source
+inspection identifies a scheduling race: the query notification's React commit
+can occur after that frame, while the old focused element is still connected.
+The repair tracks the actual focused task-row element and restores only after
+its DOM removal in the existing layout effect. A real focus move to another
+control retires restoration, including moves outside the monitor; authentication
+generation, monitor membership and body-only lost-focus checks remain required.
+No timers, mutation retries, forced focus on success or global focus policy
+changes are introduced. Retry/cancel requests and their cache ownership guards
+are unchanged.
+
+The original failing assertion remains. Four added browser scenarios hold the
+retry/cancel response while checking disabled actions, then require either focus
+on the relocated row or preservation of deliberately focused dialog Close.
+Each also requires exactly one mutation request. No timeout increase, sleep,
+skip, weaker assertion, workflow or release-gate change is made.
+All checks remain **unverified until the new complete CI finishes**. No image
+or production operation has occurred.
 
 1. Commit/push only this reviewed batch, then dispatch full `Build release images`
    for the exact source. After **each** dispatch, wait at least **50 minutes**

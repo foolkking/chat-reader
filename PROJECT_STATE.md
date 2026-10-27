@@ -52,8 +52,16 @@ and [remaining boundaries](docs/system/KNOWN_ISSUES_AND_UNCERTAINTIES.md#current
 Earlier checkpoint counts and receipts remain historical. The user now authorizes
 committing and deploying this reviewed batch; exact-source full CI, the fresh
 50-minute read gate, independent artifacts and stopped-writer backup remain
-required. See the [release record](docs/execution/NOISE_REVIEW_RELEASE_2026-10-27.md).
-No new production acceptance is claimed; deployed `c7dc074` above is unchanged.
+required. CI run `40451679590` (source `0c5f033`) failed in the unrelated
+default-PWA Task Center keyboard-focus assertion after the dedicated noise
+cleanup gate passed; downstream auth/PWA-negative and image jobs were skipped.
+The user subsequently authorized debugging CI to completion without local
+test/build/browser execution. The narrow repair moves Task Center focus
+restoration from a single mutation animation frame to the committed DOM
+replacement, and adds held retry/cancel response and deliberate-focus tests.
+It is pending complete CI acceptance; production is unchanged. See the
+[release record](docs/execution/NOISE_REVIEW_RELEASE_2026-10-27.md). No new
+production acceptance is claimed; deployed `c7dc074` above is unchanged.
 Scoped regression completed after the user freed temporary-disk space, with one
 recorded platform skip. Interrupted memory/disk attempts remain historical, not
 passes; the agent did not execute the denied temporary-directory cleanup.

@@ -35,6 +35,7 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const pendingDismissFocus = useRef<{ row: HTMLElement; next: Element | null } | null>(null);
   const monitorRef = useRef<HTMLDivElement>(null);
   const scanFocus = useRef<{ element: HTMLElement; id: string } | null>(null);
+  const taskFocus = useRef<{ element: HTMLElement; rowId: string; generation: number } | null>(null);
   useLayoutEffect(() => {
     const dismissal = pendingDismissFocus.current;
     if (dismissal && !dismissal.row.isConnected && dismissFeedbackRef.current) {
@@ -46,6 +47,17 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     const previous = scanFocus.current;
     if (previous && !previous.element.isConnected && document.activeElement === document.body) {
       monitorRef.current?.querySelector<HTMLElement>(`[data-cleanup-scan-id="${previous.id}"] button:not(:disabled)`)?.focus({ preventScroll: true });
+    }
+    const task = taskFocus.current;
+    if (task && (task.generation !== authenticationGeneration() || !task.element.isConnected)) {
+      taskFocus.current = null;
+      // Query notifications can commit after a mutation's animation frame.
+      // Recover from the actual DOM replacement, not a guessed paint boundary.
+      const replacement = document.getElementById(task.rowId);
+      if (task.generation === authenticationGeneration() && document.activeElement === document.body
+        && replacement && monitorRef.current?.contains(replacement)) {
+        replacement.focus({ preventScroll: true });
+      }
     }
   });
   const reviewDismissed = (origin: HTMLElement | null) => {
@@ -268,17 +280,23 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     const taskRow = (task: BackgroundTaskRead) => (
       <div key={task.job_id} id={`task-row-${task.job_id}`} tabIndex={-1} data-task-row={task.job_type} className="px-4 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
         <TaskContent task={task} busy={pending}
-          onRetry={() => { if (!pending) retryMutation.mutate(task.job_id, { onSuccess: restoreMovedTaskFocus(task.job_id) }); }}
-          onCancel={() => { if (!pending) cancelMutation.mutate(task.job_id, { onSuccess: restoreMovedTaskFocus(task.job_id) }); }}
+          onRetry={() => { if (!pending) retryMutation.mutate(task.job_id); }}
+          onCancel={() => { if (!pending) cancelMutation.mutate(task.job_id); }}
           onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) ? () => dismissTask(task.job_id) : undefined} />
       </div>
     );
     return (
       <div ref={monitorRef} className="space-y-4" aria-label={t("tasks")} onFocusCapture={event => {
+        const taskRow = event.target.closest<HTMLElement>("[data-task-row]");
+        taskFocus.current = taskRow ? { element: event.target, rowId: taskRow.id, generation: authenticationGeneration() } : null;
         const row = event.target.closest<HTMLElement>("[data-cleanup-scan-id]");
         // Result dismissal owns its separate adjacent-row/notice restoration.
         const id = row && ["QUEUED", "SCANNING"].includes(row.dataset.cleanupScanStatus ?? "") ? row.dataset.cleanupScanId : null;
         scanFocus.current = id ? { element: event.target, id } : null;
+      }} onBlurCapture={event => {
+        // A deliberate move to another control retires this restoration, even
+        // if that control is outside the monitor (for example, dialog Close).
+        if (event.relatedTarget && event.relatedTarget !== document.body) taskFocus.current = null;
       }}>
         <div className="flex items-center justify-between gap-3">
           <span className="text-sm text-secondary">{zh ? "任务进度与结果" : "Progress and results"}</span>
@@ -311,19 +329,6 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
 function TaskSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   if (!count) return null;
   return <section aria-label={title}><div className="mb-2 flex items-center justify-between px-1"><h3 className="text-xs font-semibold text-primary">{title}</h3><span className="text-[11px] tabular-nums text-secondary">{count}</span></div><div className="divide-y divide-ui overflow-hidden rounded-xl border border-ui bg-surface ">{children}</div></section>;
-}
-
-function restoreMovedTaskFocus(taskId: string): () => void {
-  const focused = document.activeElement;
-  const rowId = `task-row-${taskId}`;
-  const originatedInRow = focused && document.getElementById(rowId)?.contains(focused);
-  return () => window.requestAnimationFrame(() => {
-    // Retry/cancel may move the row into another section. Restore only lost
-    // focus; never pull it back after the person has moved to another control.
-    if (originatedInRow && !focused.isConnected && document.activeElement === document.body) {
-      document.getElementById(rowId)?.focus();
-    }
-  });
 }
 
 function NoiseReviewSummary({ scans, tasks, onReview, onDismissed, busy = false, resultsOnly = false }: { busy?: boolean; resultsOnly?: boolean; scans: CleanupScanRead[]; tasks: BackgroundTaskRead[]; onReview: (id: string) => void; onDismissed: (origin: HTMLElement | null) => void }) {
