@@ -16,33 +16,31 @@ deployment. The latest instruction removes fixed waiting for CI failure
 diagnosis; earlier 50-minute checkpoints remain historical evidence.
 Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Full CI **`40731382479`**, attempt 1, targets exact **`7a58de2`**
-and was created at **2026-10-29 00:59:41 Beijing**. At **01:09:16**,
-Web/API/settings were running; the early ordinary-user UX gate passed at
-01:04:17. This is not full Web/PWA or release acceptance.
-Previous run `40711849550`, attempt 2, targets `a967c01`, not the interrupted
-uncommitted follow-up. At **01:00:46**, its final result was API success,
-Web/settings failure and both image jobs skipped. Web retained 1,817 UX,
-36 Context and 100 mutation passes. Default PWA had 159 passes / two failures /
+change. Full CI **`40731382479`**, attempt 1, targets exact **`7a58de2`**.
+At **2026-10-29 01:36:43 Beijing**, Web failed; **01:42:10** confirmed API
+success and settings still running. Web passed 1,822 ordinary-user UX cases,
+36 Context and 100 mutation cases. Default PWA had 159 passes / two failures /
 750 conditional skips; subsequent auth/negative gates were not reached.
-The independent settings matrix had 462 passes / one failure: its blocked
-signout-cleanup fixture no longer listed the held database. The exact cause
-is unconfirmed; no settings correction or passed rerun is claimed.
-Verified official traces show the fallback and real-wheel departure corrections
-now pass. Both remaining cases wait for an old search result after an initial
-changed offline URL falls back from failed RSC to cached HTML, resetting the
-transient query. Tests explicitly repeat the query before replaying.
-Equivalent search targets now emit only in-memory activation, not another
-`router.replace`, avoiding unnecessary RSC/document navigation; changed targets
-retain routing. Explicit renderer-only UI is excluded from the text-anchor
-index. Browser probes verify initial/replayed code-word Range geometry within
-2px, with <36px code-text return and same Reader/URL. Controlled regressions
-cover no-route body/file/annotation replay, canonical offsets and legacy quotes.
-These source/browser corrections are committed in `7a58de2` and under CI,
-not locally run. No alignment
-tolerance, stability, timeout, retry or release gate changes. The fresh full
-exact-source CI remains required; earlier attempts/digests remain in the release
-record. No accepted deployable artifact exists.
+Both failures stop at the new initial code-pulse probe, before replay:
+verified official DOM snapshots contain a fenced-code trailing newline, while
+the probe expected none and recorded no sample (`Infinity`). This is not a
+measured >2px geometry error. The probe now requires the actual raw code text,
+including its newline, and a Range selecting only the word; 2px pulse,
+same Reader/URL, finite >200px departure and <36px return requirements remain.
+Equivalent targets' no-route activation and explicit renderer-UI exclusion
+passed controlled regressions, not the still-unreached mounted replay path.
+
+Previous run `40711849550` attempt 2 also had an independent settings failure
+(462 passes / one failure): its blocked signout-cleanup fixture no longer
+listed the held database. That cause remains unconfirmed. The fixture now
+holds a genuine existing connection in an inert same-origin tab, requires an
+actual native delete request and reads the retained record before releasing
+the connection. It retains authentication/private-UI fences, Retry, final
+database/cache removal and unrelated-cache protection; auth/cleanup product
+code is unchanged. These two fixture corrections are authored, not locally run
+or browser-accepted. A fresh full exact-source CI is required; no tolerance,
+stability, timeout, retry or release gate changes. Earlier attempts/digests
+remain in the release record. No accepted deployable artifact exists.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;

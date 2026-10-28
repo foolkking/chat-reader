@@ -162,6 +162,27 @@ database-existence assertion. The official artifact identity/digest is
 recorded in the release record. A connection/navigation race is a hypothesis,
 not a verified cause; no settings source correction or passed rerun is claimed.
 
+Run `40731382479` failed Web at the **2026-10-29 01:36:43 Beijing** read;
+**01:42:10** confirmed API success and settings still running. Web passed
+**1,822 UX / 36 Context / 100 mutation** cases; Default PWA retained
+**159 passes / two failures / 750 conditional skips**. Both cases fail the
+new initial pulse probe before replay: official DOM snapshots contain
+`"😀 needle\n"`, but its guard required `"😀 needle"`, so it records no sample.
+`Infinity` is absence of measurement, not an accepted geometry deviation.
+The corrected fixture checks that exact raw text, retains the trailing newline
+and requires its independent Range to select only `"needle"`. The 2px pulse,
+same Reader/URL, departure/return and all later assertions remain unchanged.
+
+The independent earlier blocked-signout fixture now holds an existing native
+database connection in an inert same-origin tab, outside app navigation/hooks.
+It aborts accidental database creation, requires the actual native deletion
+request and reads the retained record before explicitly closing the connection.
+Authentication/private-UI fences, Retry, final database/cache removal and
+unrelated-cache protection remain. No product auth/cleanup source changes,
+mocked delete-block outcome, longer timeout or retry allowance is introduced.
+Both fixture corrections are authored, not locally executed or CI-accepted;
+require a fresh full exact-source workflow and all release gates.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

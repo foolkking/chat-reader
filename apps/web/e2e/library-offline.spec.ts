@@ -406,7 +406,9 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
       const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
       const nodes: Text[] = [];
       while (walker.nextNode()) nodes.push(walker.currentNode as Text);
-      if (nodes.map(node => node.textContent).join("") !== "😀 needle") return;
+      // Fenced Markdown renders a trailing newline. Keep it in the fixture
+      // precondition while measuring only the word, not the newline/toolbar.
+      if (nodes.map(node => node.textContent).join("") !== "😀 needle\n") return;
       const range = document.createRange();
       let offset = 0;
       for (const node of nodes) {
@@ -417,6 +419,7 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
         }
         offset += node.length;
       }
+      if (range.toString() !== "needle") return;
       const expected = range.getBoundingClientRect();
       const actual = pulse.getBoundingClientRect();
       probe.__syntheticOfflineCodePulseDeltas!.push(Math.max(
@@ -441,6 +444,7 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
       url.searchParams.get("renderBlockId"), url.searchParams.get("characterOffset"), url.searchParams.get("endCharacterOffset")];
   }).toEqual(["/library", "offline-fixture", "offline-version-2", "offline-block-2-2", "2", "8"]);
   await expect(page.locator("#block-offline-message-2-2")).toBeVisible();
+  await expect.poll(() => page.locator("#block-offline-message-2-2 pre code").textContent()).toBe("😀 needle\n");
   // The same word occurs in block 1. Check both the later block/range contract
   // and the exact code-text pulse, not a misleading pulse over the toolbar.
   await expect.poll(() => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("settled");

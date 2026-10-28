@@ -591,6 +591,51 @@ independent exact-image verification, fresh host preflight and stopped-writer
 five-component backup remain mandatory; production/direct rollback remains
 `b4effda`/`c7dc074`, schema `20261022_0053`.
 
+#### Attempt-9 Web failure and bounded fixture corrections
+
+At **2026-10-29 01:36:43 Beijing**
+(`2026-10-28T17:36:43.2724890Z`), exact source/run/attempt was verified before
+reading the failed Web job. A **01:42:10** follow-up
+(`17:42:10.1245619Z`) confirmed API success and settings still running.
+Web passed **1,822 ordinary-user UX**, **36 Context**, **45 focused online**,
+**two Share focus**, **100 source-editor/mutation**, **six cleanup**,
+**18 upload**, **31 Markdown/image** and **13 PDF** cases. Default PWA had
+**159 passes / two failures / 750 conditional skips**; subsequent auth/
+negative gates were not reached.
+
+Official Web artifact **`12835774977`**, 24,517,411 bytes, was matched to
+this run/source/attempt and downloaded SHA-256
+`d60464a319dfdd6defd13bd41c8d556c7957bc6641fc478a79f078f0c45d881e`.
+Both width cases fail the newly added initial code-pulse probe, before
+scrolling/replay. Official trace DOM snapshots show `<code>` contains
+`"😀 needle\n"`; the probe's exact guard expected no trailing newline and
+therefore discarded every sample. `Infinity` does not establish a measured
+>2px pulse error. This run cannot validate the later mounted replay path.
+
+The correction preserves the renderer's fenced-code newline and checks the
+exact raw DOM text explicitly. The independent Range must select only
+`"needle"`; the 2px geometry assertion, initial/replayed samples, same Reader/
+URL, finite >200px departure, <36px return and all subsequent file/annotation
+requirements remain. No product source change is needed for this probe defect.
+
+The independently failed earlier settings fixture is strengthened in this
+same correction batch. An inert same-origin tab holds the genuine existing
+database connection, with no app navigation/hooks able to release it.
+Accidental database creation is rejected. A native deletion/versionchange
+request must be observed and the actual retained conversation record must be
+readable before the connection is explicitly released. That direct evidence
+replaces the ambiguous pending-delete database enumeration assertion; final
+database/cache absence, unrelated-cache retention, authentication/private-UI
+fences and Retry remain. No product authentication/cleanup logic, fake blocked
+outcome, timeout, retry or gate change is introduced. The earlier failure's
+exact lifecycle/enumeration cause is still not proven by its trace-disabled
+evidence; this fixture correction is not a claimed product defect repair.
+
+Both fixture corrections are statically reviewed only, not locally executed
+or browser-accepted. A fresh complete exact-source CI is required. The
+protected build-info file, production revisions, schema and all independent
+artifact/preflight/stopped-writer backup gates remain unchanged.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),

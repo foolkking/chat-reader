@@ -4,6 +4,12 @@ import { readLocal } from "./settings-offline-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL, auth and worker");
+type CleanupFixtureWindow = Window & {
+  restoreCleanup?: () => void;
+  readBlockedConversationId?: () => Promise<string | null>;
+  blockedDeleteRequested?: boolean;
+};
+
 async function prepare(context: BrowserContext, page: Page, baseURL: string) {
   const headers = { Origin: baseURL }, password = "synthetic cleanup failure passphrase", email = `purge-${Date.now()}@example.test`;
   const response = await context.request.post(`${baseURL}/api/auth/register`, { headers, data: { email, password, confirm_password: password } });
@@ -35,14 +41,41 @@ for (const failure of ["database", "cache", "blocked"] as const) test(`signout c
   const admin = await settingsAdmin(playwright.request, baseURL!), context = await browser.newContext({ locale: "en-US", viewport: { width: failure === "cache" ? 375 : 1440, height: 900 } });
   try {
     const page = await context.newPage(), seed = await prepare(context, page, baseURL!);
-    let staleTab: Page | undefined;
+    let staleTab: Page | undefined, blockerTab: Page | undefined;
     if (failure === "blocked") {
-      await page.evaluate(async (name) => {
+      // Keep the real blocking connection outside the app's signout/navigation
+      // lifetime. This inert page has no app hooks that close its database.
+      blockerTab = await context.newPage();
+      await blockerTab.route("**/__synthetic-signout-cleanup-holder__", route => route.fulfill({
+        contentType: "text/html", body: "<!doctype html><title>Synthetic cleanup connection holder</title>",
+      }));
+      await blockerTab.goto(`${baseURL}/__synthetic-signout-cleanup-holder__`);
+      await blockerTab.evaluate(async ({ name, id }) => {
         await new Promise<void>((resolve, reject) => {
           const open = indexedDB.open(name); open.onerror = () => reject(open.error);
-          open.onsuccess = () => { const db = open.result; (window as typeof window & { restoreCleanup?: () => void }).restoreCleanup = () => db.close(); resolve(); };
+          open.onupgradeneeded = () => {
+            open.transaction?.abort();
+            reject(new Error("Expected the existing downloaded database"));
+          };
+          open.onsuccess = () => {
+            const db = open.result, fixture = window as CleanupFixtureWindow;
+            fixture.blockedDeleteRequested = false;
+            db.onversionchange = event => {
+              if (event.newVersion === null) fixture.blockedDeleteRequested = true;
+            };
+            fixture.restoreCleanup = () => db.close();
+            fixture.readBlockedConversationId = () => new Promise<string | null>((read, fail) => {
+              const tx = db.transaction("conversations", "readonly");
+              const record = tx.objectStore("conversations").get(id);
+              tx.oncomplete = () => read(record.result?.id ?? null);
+              tx.onabort = () => fail(tx.error);
+            });
+            resolve();
+          };
         });
-      }, seed.db);
+      }, { name: seed.db, id: seed.id });
+      expect(await blockerTab.evaluate(() => (window as CleanupFixtureWindow).readBlockedConversationId!())).toBe(seed.id);
+      await page.bringToFront();
     } else {
       const install = ({ failure, asset }: { failure: string; asset: string }) => {
         const removeDb = IDBFactory.prototype.deleteDatabase, removeCache = CacheStorage.prototype.delete;
@@ -61,7 +94,12 @@ for (const failure of ["database", "cache", "blocked"] as const) test(`signout c
     await expect(page.getByRole("button", { name: "Settings", exact: true })).toHaveCount(0);
     expect((await (await context.request.get(`${baseURL}/api/auth/session`)).json()).authenticated).toBe(false);
     if (failure === "database") expect((await readLocal(page, seed.userId)).conversations).toHaveLength(1);
-    else if (failure === "blocked") expect(await page.evaluate(async (name) => (await indexedDB.databases()).some((item) => item.name === name), seed.db)).toBe(true);
+    // A pending-delete database listing is not proof of whether the genuine
+    // connection still blocks cleanup. Read the actual retained record.
+    else if (failure === "blocked") {
+      expect(await blockerTab!.evaluate(() => (window as CleanupFixtureWindow).blockedDeleteRequested)).toBe(true);
+      expect(await blockerTab!.evaluate(() => (window as CleanupFixtureWindow).readBlockedConversationId!())).toBe(seed.id);
+    }
     else expect(await page.evaluate((name) => caches.has(name), seed.asset)).toBe(true);
     if (failure !== "blocked") {
       await page.goto(`${baseURL}/login`);
@@ -75,7 +113,7 @@ for (const failure of ["database", "cache", "blocked"] as const) test(`signout c
       await expect(recovery).toBeVisible(); await expect(page.getByTestId("reader-scroll-root")).toHaveCount(0);
       expect((await context.request.post(`${baseURL}/api/auth/logout`, { headers: { Origin: baseURL! } })).status()).toBe(204);
     }
-    await page.evaluate(() => (window as typeof window & { restoreCleanup?: () => void }).restoreCleanup?.());
+    await (blockerTab ?? page).evaluate(() => (window as CleanupFixtureWindow).restoreCleanup?.());
     await recovery.getByRole("button", { name: "Retry local cleanup", exact: true }).click();
     await expect(page.locator("#login-password")).toBeVisible();
     expect(await page.evaluate(async (name) => (await indexedDB.databases()).some((item) => item.name === name), seed.db)).toBe(false);
