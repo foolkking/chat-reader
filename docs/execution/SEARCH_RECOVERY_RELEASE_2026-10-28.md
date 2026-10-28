@@ -134,11 +134,23 @@ weaken the release gates:
   update the archive truncation assertion, and make the settings E2E setup
   test the default focus preference before exercising annotations.
 
-These corrections remain under the inherited no-local-runtime boundary. They
-must be committed/pushed as a new exact-source full CI run, which receives a
-new 50-minute result-read gate. Production remains `b4effda` with direct
-rollback `c7dc074`; no writer was stopped and no production data/configuration
-was changed.
+These corrections were committed and pushed as
+`eae099b1b61b8fc99e2ed21893a0fa6fe053271e`. Static inspection confirms the
+worker asks FlexSearch for at most the positive indexed-document corpus size,
+filters scope before the exposed lookahead/page window, and retains the
+bounded exactness contract; the added tests cover targets beyond 100/200
+unrelated/title hits and all four pages across 151 scoped matches. Reader list,
+search, prefetch, and TOC fixtures now model the production infinite-query
+contracts. The settings run's exact failure was the first `Exit focus mode`
+expectation at line 146 while navigating with `?annotations=open`; that
+explicit deep link intentionally disables focus mode. The setup now navigates
+without the override so it tests the saved default before opening Annotations.
+
+No local runtime checks were run. A documentation-only closeout correction
+updates the current checkpoint before dispatching the next complete
+exact-source CI; that new run must pass its own 50-minute result-read gate.
+Production remains `b4effda` with direct rollback `c7dc074`; no writer was
+stopped and no production data/configuration was changed.
 
 Implementation evidence and remaining verification boundaries:
 

@@ -19,7 +19,8 @@ authenticated Web typecheck and two API rollback assertions. Targeted fixes
 were committed/pushed as `db051db`; full CI `40637231494` was first read at
 **2026-10-28 14:09:24 Beijing** after its gate and failed in the Web ordinary
 user recovery matrix and settings browser matrix; no artifact was produced.
-The corrective source/test pass is currently uncommitted. No local
+Corrective implementation and regression updates were committed/pushed as
+`eae099b`; the next exact-source full CI has not yet been dispatched. No local
 tests/builds were run. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
 no application replacement has occurred. The user separately authorized removing only the
