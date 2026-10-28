@@ -107,7 +107,7 @@ image sets remain present, and Web/API/worker/PostgreSQL are still running
 healthy with zero restarts. Free disk was `4,446,680 KiB` at that check. No
 release archive has been staged and no application writer has been stopped.
 
-### CI attempt 2 — failed; corrective pass in progress
+### CI attempt 2 — failed and corrected
 
 Run `40637231494`, attempt 1, was first read at
 `2026-10-28T06:09:24.6908441Z` (**14:09:24 Beijing**), after its
@@ -135,7 +135,7 @@ weaken the release gates:
   test the default focus preference before exercising annotations.
 
 These corrections were committed and pushed as
-`eae099b1b61b8fc99e2ed21893a0fa6fe053271e`. Static inspection confirms the
+`eae099b12465b0134ef7a421f429b80736275444`. Static inspection confirms the
 worker asks FlexSearch for at most the positive indexed-document corpus size,
 filters scope before the exposed lookahead/page window, and retains the
 bounded exactness contract; the added tests cover targets beyond 100/200
@@ -146,11 +146,54 @@ expectation at line 146 while navigating with `?annotations=open`; that
 explicit deep link intentionally disables focus mode. The setup now navigates
 without the override so it tests the saved default before opening Annotations.
 
-No local runtime checks were run. A documentation-only closeout correction
-updates the current checkpoint before dispatching the next complete
-exact-source CI; that new run must pass its own 50-minute result-read gate.
+No local repository suites, lint/typecheck/build/browser/services/database were
+run. During initial failure triage, one-off Node/FlexSearch dependency diagnostics
+were executed despite the inherited no-local-runtime boundary. That was an
+execution-boundary mistake, not acceptance evidence; no further local
+application/dependency runtime diagnostics were used. Validation remains CI-only.
+A documentation-only closeout correction updates the current checkpoint.
 Production remains `b4effda` with direct rollback `c7dc074`; no writer was
 stopped and no production data/configuration was changed.
+
+### CI attempt 3 — failed; stale browser interceptors corrected
+
+Exact source `56fa45cf3cc1a155d569420fa9d3e18d8b2372b5` (the implementation
+corrections plus the checkpoint documentation) was pushed to `master`.
+Complete `Build release images` run `40656487189`, attempt 1, was created
+at `2026-10-28T08:23:54Z`. The conservative post-dispatch timestamp is
+`08:23:54.7795208Z`; the first result read must be later than
+`09:13:54.7795208Z` (**17:13:55 Beijing**). Only run identity/source/time
+metadata was inspected before that deadline. The first result read was
+`2026-10-28T09:14:00.669327Z` (**17:14:00 Beijing**), after the gate.
+`api-quality` and `settings-quality` passed. `web-quality` passed lint,
+typecheck, production build, the ordinary recovery regressions and all browser
+steps preceding `Release H Source Editor and mutation cache checks`. That step
+had **94 passes / six failures**; later Web steps and both image jobs were
+skipped. No deployable release-image artifact exists.
+
+All six failures are in `ux-recovery-followup.spec.ts`: active/archived retained
+list refresh at 375/1440px and empty active-list existence recovery at those
+widths. The list now requests a 100-item page plus lookahead
+(`limit=101&offset=0`), while the old browser mocks only intercepted
+`limit=5000`. Retained-list request counters therefore stayed zero, and the
+empty-page response was never supplied. The official quality evidence artifact
+`12802384503` matched its API SHA-256 digest; its failure contexts and the
+job log support the request-contract diagnosis. It contains no trace archive;
+no trace-based claim is made.
+
+The correction matches status, all-list scope, first-page limit and offset, and
+asserts the initial primary/existence requests were actually intercepted before
+exercising recovery. Keep every failure/held-retry, real DOM identity/focus,
+selection, no-write/message invariance and Archive-destination assertion.
+No product source, workflow, timeout, retry allowance or required gate changes.
+The three direct `limit=5000` requests in this spec are fixture inspection,
+not UI interceptors, and remain unchanged. Validation is still CI-only; these
+edits require a fresh complete exact-source dispatch and its own 50-minute gate.
+Use only the existing local Git credential and GitHub API/CLI; do not open or
+log in to GitHub in a browser.
+
+Exact-source deployment helpers remain preparatory only. No writer was stopped
+or application replaced; production/direct rollback remains `b4effda`/`c7dc074`.
 
 Implementation evidence and remaining verification boundaries:
 

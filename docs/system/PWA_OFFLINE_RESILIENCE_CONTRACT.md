@@ -100,13 +100,16 @@ are source-only; tests, real liveQuery/browser and CI acceptance remain pending.
 
 ## Scoped search and Library targets — 2026-10-27, source only
 
-The in-memory FlexSearch worker receives conversation/type/role filters before
-the field-result limit. A single compound scope tag enforces their conjunction;
-each document has at most seven fixed scope memberships, not a separate text
-index per conversation. Results are deduplicated and capped again before reply.
-The installed FlexSearch implementation unions multiple selected tag lists, so
-separate independent tags must not be treated as an AND filter. This fixes scope
-starvation, not the engine's lexical behavior or total internal query memory.
+The in-memory FlexSearch worker applies conversation/type/role conjunction
+before the exposed result page and lookahead limit. The initial compound-tag
+implementation was superseded during the 2026-10-28 release correction:
+FlexSearch 0.8.212's tag path silently clips content candidates to 100 before
+intersection. Scoped queries now use an explicit positive indexed-corpus bound,
+then filter IDs against the existing document map and deduplicate before paging.
+There is no separate text index or duplicated scope membership per conversation.
+Replies still disclose only the bounded total/continuation contract. This fixes
+scope starvation, not the engine's lexical behavior or large-corpus query memory;
+the broader internal scoped candidate work is not a performance improvement.
 
 Current-conversation queries search content, not conversation titles or internal
 type strings. Global Library search retains titles. An attachment's own filename

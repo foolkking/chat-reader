@@ -6,6 +6,8 @@
 | --- | --- |
 | `execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md` | 本次已提交合并批次的范围、无本地执行边界、逐轮 50 分钟 CI 门禁、用户单独批准的三个旧版镜像清理及制品／备份／部署事实；不把先前未运行用例算作通过。 |
 | `PROJECT_STATE.md`、`deployment.md`、`index.md`、`execution/README.md` | 当前发布入口；精确生产／回退状态以新发布回执为准，历史检查点保留。 |
+| `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`、`system/BACKEND_AND_API.md` | 二轮 CI 揭示 FlexSearch 标签路径隐式 100 候选上限后的当前作用域修复；文档承认完整内部候选与内存／性能代价，不保留过时复合标签描述。 |
+| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 第三轮 Web 六条旧分页拦截失败的诊断、首批命中保护及不放宽恢复／发布断言的验证边界。 |
 
 ## 完整性复审实施 — 2026-10-28（源码完成，未验收）
 

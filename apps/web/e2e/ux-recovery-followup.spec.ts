@@ -2027,7 +2027,9 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         page.on("request", request => {
           if (new URL(request.url()).pathname.startsWith("/api/conversations") && !["GET", "HEAD", "OPTIONS"].includes(request.method())) writes += 1;
         });
-        await page.route(url => url.pathname === "/api/conversations" && url.searchParams.get("status_scope") === mode && url.searchParams.get("limit") === "5000", async route => {
+        await page.route(url => url.pathname === "/api/conversations"
+          && url.searchParams.get("status_scope") === mode && url.searchParams.get("scope") === "all"
+          && url.searchParams.get("limit") === "101" && url.searchParams.get("offset") === "0", async route => {
           reads += 1;
           if (holdRead) await heldRead;
           if (failRead) await route.fulfill({ status: 503, json: { detail: "Synthetic list exception must not render" } });
@@ -2039,6 +2041,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         const list = page.locator("section[aria-busy]").filter({ has: page.getByRole("heading", { name: heading, exact: true }) });
         const link = list.locator(`a[href="/conversations/${id}"]`);
         await expect(link).toBeVisible();
+        await expect.poll(() => reads).toBeGreaterThan(0);
         const original = await link.elementHandle();
         if (!original) throw new Error("Synthetic reading link was not mounted");
         await link.focus();
@@ -2100,7 +2103,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       await page.route(url => url.pathname === "/api/conversations", async route => {
         if (route.request().method() !== "GET") return route.continue();
         const url = new URL(route.request().url());
-        if (url.searchParams.get("status_scope") === "active" && url.searchParams.get("limit") === "5000") {
+        if (url.searchParams.get("status_scope") === "active" && url.searchParams.get("scope") === "all"
+          && url.searchParams.get("limit") === "101" && url.searchParams.get("offset") === "0") {
           primaryReads += 1; await route.fulfill({ status: 200, json: [] });
         } else if (url.searchParams.get("include_archived") === "true" && url.searchParams.get("limit") === "1") {
           existenceReads += 1;
@@ -2109,6 +2113,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         } else await route.continue();
       });
       await page.goto("/");
+      await expect.poll(() => primaryReads).toBeGreaterThan(0);
+      await expect.poll(() => existenceReads).toBeGreaterThan(0);
       const error = page.getByRole("alert").filter({ hasText: zh ? "无法检查已保存的对话" : "Could not check saved conversations" });
       await expect(error).toBeVisible();
       await expect(page.getByText(zh ? "现有对话已归入项目，可在左侧展开项目查看。" : "Existing conversations are filed in projects. Expand a project in the sidebar to view them.", { exact: true })).toHaveCount(0);

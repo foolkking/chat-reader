@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; CI correction in progress):**
+**Search and reader recovery release (2026-10-28; third CI failure corrected):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -20,8 +20,15 @@ were committed/pushed as `db051db`; full CI `40637231494` was first read at
 **2026-10-28 14:09:24 Beijing** after its gate and failed in the Web ordinary
 user recovery matrix and settings browser matrix; no artifact was produced.
 Corrective implementation and regression updates were committed/pushed as
-`eae099b`; the next exact-source full CI has not yet been dispatched. No local
-tests/builds were run. Fresh
+`eae099b`; exact-source full CI `40656487189` targeted `56fa45c` (including
+the documentation checkpoint correction). First read at **2026-10-28
+17:14:00 Beijing**, after its gate, confirmed API/settings success and Web
+failure: six recovery browser cases still intercepted the retired `limit=5000`
+list instead of the current `limit=101&offset=0` first page. Their precise
+interceptors and initial-hit assertions are corrected for a fresh complete CI;
+product code, assertions and release gates are not relaxed. No deployable
+artifact exists. No local repository suites or builds were run;
+the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
 no application replacement has occurred. The user separately authorized removing only the
 unused `f3b331a`/`50f6de4`/`5992d0e` application images; this exact cleanup

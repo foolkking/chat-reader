@@ -1,5 +1,19 @@
 # Testing
 
+## Search/recovery release CI correction — 2026-10-28
+
+The [release record](execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md) owns the
+current execution evidence; source-only sections below preserve their earlier
+checkpoints. Exact `56fa45c` run `40656487189` passed API/settings quality but
+failed six recovery browser cases after 94 passes in the source-editor/mutation
+step. The old UI mocks intercepted `limit=5000`, not the current paged list's
+`limit=101&offset=0`. Corrected interceptors explicitly check status/scope and
+first-page boundaries; initial primary/existence hit assertions prevent silent
+fixture bypass. All retained-node/focus, held Retry, selection, no-write and
+Archive-destination requirements remain. No local tests/build/browser/service
+commands validate this correction; require the unchanged complete CI and
+release gates. Official quality evidence is not a deployable image artifact.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)
