@@ -167,8 +167,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     catch { if (isCurrent()) setCommentStorage("failed"); return; }
     pendingCommentDrafts.set(id, { annotation, value, storage });
     if (commentPersistQueue.has(id)) return;
-    let task: Promise<void>;
-    task = (async () => {
+    const task: Promise<void> = Promise.resolve().then(async () => {
       while (pendingCommentDrafts.has(id)) {
         const pending = pendingCommentDrafts.get(id)!;
         pendingCommentDrafts.delete(id);
@@ -199,7 +198,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
           if (!newer) break;
         }
       }
-    })().finally(() => {
+    }).finally(() => {
       if (commentPersistQueue.get(id) === task) commentPersistQueue.delete(id);
     });
     commentPersistQueue.set(id, task);

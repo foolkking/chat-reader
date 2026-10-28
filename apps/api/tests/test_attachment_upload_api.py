@@ -81,8 +81,10 @@ def test_attachment_rename_refreshes_search_and_offline_revision_atomically(clie
     # Normalized same-name requests must not rebuild the index or bump delta.
     assert client.patch(endpoint, json={"display_name": "  renameduniqueneedle.md  "}).status_code == 200
     assert _attachment_rename_snapshot(conversation_id, attachment_id) == after
-    with pytest.raises(RuntimeError, match="Synthetic index failure"):
-        client.patch(endpoint, json={"display_name": "rollbackuniqueneedle.md"})
+    failed_rename = client.patch(endpoint, json={"display_name": "rollbackuniqueneedle.md"})
+    # The app's request boundary projects handler exceptions into HTTP 500
+    # responses; the transaction must still roll back the name, index and delta.
+    assert failed_rename.status_code == 500
     assert _attachment_rename_snapshot(conversation_id, attachment_id) == after
 
 

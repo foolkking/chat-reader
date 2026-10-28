@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; authorized, preparing):**
+**Search and reader recovery release (2026-10-28; submitted, CI pending):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -14,8 +14,15 @@ database are authorized; full exact-source CI, a fresh 50-minute result-read
 gate per dispatch, independent artifact verification and stopped-writer
 five-component backup are required before deployment. Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change; recorded production/direct rollback remains `b4effda`/`c7dc074`,
-schema `20261022_0053`, pending fresh host verification.
+change. Source `51c26c3` is pushed; CI `40631876492` failed in Web lint, the
+authenticated Web typecheck and two API rollback assertions. Targeted fixes
+are prepared for a new complete run; no local tests/builds were run. Fresh
+read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
+no application replacement has occurred. The user separately authorized removing only the
+unused `f3b331a`/`50f6de4`/`5992d0e` application images; this exact cleanup
+completed, retaining both protected revisions, archives, backups and data.
+A fresh exact-artifact capacity PASS is still required. Schema remains
+`20261022_0053`.
 
 **Completeness follow-up optimization (2026-10-28; source implemented, unverified):**
 the [source review](docs/execution/ux-audit-completeness-review-2026-10-28.md)

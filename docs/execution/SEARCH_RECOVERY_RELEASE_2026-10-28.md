@@ -44,16 +44,59 @@ PASS. CI performs validation; no gate or assertion is weakened.
    On failure, restore the previous verified images without database downgrade.
 
 Never build applications on the workstation or King, overwrite production
-env/Compose/Nginx, restart PostgreSQL, delete user data/volumes, prune backups/
-images, or run full diagnostics inside the serving API.
+env/Compose/Nginx, restart PostgreSQL, delete user data/volumes, prune backups
+or images, or run full diagnostics inside the serving API. The one explicitly
+approved exact-list old-image cleanup is recorded below.
 
 ## Checkpoint
 
-Release preparation is in progress. The prior accepted production/direct
-rollback is `b4effda`/`c7dc074`, schema `20261022_0053`; this is a recorded
-baseline, not a fresh host verification. No CI or production result is claimed
-at this checkpoint. Exact submission, CI, artifact, backup and acceptance facts
-will be recorded as they occur.
+Source `51c26c3ba79eacaf614f8316f80996cb289b060f` was committed and pushed
+as one batch: 98 files, excluding the pre-existing `apps/web/tsconfig.tsbuildinfo`.
+Complete CI run `40631876492`, attempt 1, was dispatched for that exact source.
+Its creation time is `2026-10-28T04:21:36Z`; a conservative dispatch upper
+bound recorded after the metadata-index delay is `04:22:02.2168441Z`.
+The run was first read at `05:12:07Z`, after the resulting
+**05:12:02.2168441Z (13:12:02 Beijing)** result-read gate; its exact outcomes
+and fixes are recorded below.
+
+Fresh read-only host checks confirmed production/direct rollback
+`b4effda`/`c7dc074` and healthy existing applications/PostgreSQL. Applications
+have not been stopped or replaced. The preliminary capacity probe using the
+current release archive refused: `3,547,948 KiB` available against
+`4,013,203 KiB` required, before staging the new archive. Do not lower
+headrooms or treat this old-archive probe as the new artifact's capacity PASS.
+The user separately approved removing only the obsolete, unused application
+images for `f3b331a`, `50f6de4` and `5992d0e`. The exact 12 API/worker/migrate/Web
+references were rechecked against every container and both protected release
+pointers, then removed without force or broad prune. Free space became
+`4,446,956 KiB`; current/direct-rollback images were reverified present.
+No release archive, backup, user data, volume or application container was
+removed. A fresh exact-artifact capacity check is still required.
+No application service has been stopped or replaced. CI rerun and production
+acceptance remain pending.
+
+### CI attempt 1 — failed and corrected
+
+Run `40631876492` attempt 1 was first read at `05:12:07Z`, after its gate.
+All three quality jobs failed, so image-build and artifact-inspection jobs
+were correctly skipped; there was no deployable artifact.
+
+- `web-quality`: lint found `prefer-const` in the comment-draft persistence
+  queue. Replace the mutable declaration with a promise deferred through
+  `Promise.resolve().then(...)`, preserving queue identity and retry behavior.
+- `settings-quality`: its authenticated Web production build reached
+  TypeScript and found implicit `any` on the TOC page callback. Type the
+  callback result as the existing `TocResponse` contract.
+- `api-quality`: 5,899 passed and 3 skipped; two parameterizations of the
+  attachment-rename rollback test failed because the HTTP test client projects
+  handler exceptions as a 500 response rather than re-raising them. Assert the
+  500 boundary response and retain the before/after snapshot equality that
+  proves name, search index and offline revision rollback.
+
+These were the observed failure classes. The source and this record are
+corrected without running local tests/builds or weakening CI. The correction
+must be committed/pushed and dispatched as a new exact-source full CI run;
+its own 50-minute result-read gate applies.
 
 Implementation evidence and remaining verification boundaries:
 

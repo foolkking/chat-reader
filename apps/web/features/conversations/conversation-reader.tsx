@@ -14,7 +14,7 @@ import {
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
 import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
-import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput } from "../../lib/types";
+import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput, TocResponse } from "../../lib/types";
 import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
 import { ExportPanel, type ExportPanelState } from "../exporting/export-panel";
@@ -2546,7 +2546,7 @@ export function ConversationReader({
         queryKey: ["toc", readerSourceKey, conversationId, anchorMessageId, "sheet", "pages"],
         initialPageParam: 0,
         queryFn: ({ pageParam }) => dataSource.getToc(conversationId, { messageId: anchorMessageId, offset: pageParam, limit: 200 }),
-        getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.offset + lastPage.limit : undefined,
+        getNextPageParam: (lastPage: TocResponse) => lastPage.has_more ? lastPage.offset + lastPage.limit : undefined,
         staleTime: 30_000,
         ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
       });
