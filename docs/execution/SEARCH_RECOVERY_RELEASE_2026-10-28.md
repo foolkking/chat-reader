@@ -636,6 +636,37 @@ or browser-accepted. A fresh complete exact-source CI is required. The
 protected build-info file, production revisions, schema and all independent
 artifact/preflight/stopped-writer backup gates remain unchanged.
 
+A **2026-10-29 01:53:39 Beijing** follow-up confirmed the previous run's final
+result: API/settings success, Web failure and both image jobs skipped.
+Settings passed **463 matrix cases** and **one independent new-instance
+restore case**. The earlier blocked-fixture failure did not recur in
+`7a58de2`; its exact cause remains unproven. This does not validate the
+newly strengthened fixture in a different source candidate.
+
+### CI attempt 10 — exact fixture correction dispatched
+
+Both bounded fixture corrections and evidence were committed/pushed as
+**`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`**.
+Full `Build release images` run **`40738934749`**, attempt 1, was dispatched
+once after checking remote `master`. Dispatch intent:
+`2026-10-28T17:46:43.1669422Z`; conservative post-dispatch timestamp:
+`17:46:45.7925594Z`; run creation **`17:46:46Z`**
+(**2026-10-29 01:46:46 Beijing**). No failed-job-only rerun or duplicate
+dispatch is used.
+
+At **01:59:52 Beijing** (`17:59:52.9456543Z`), the exact source/run/attempt
+was verified and Web/API/settings remained in progress. Web job
+**`122994948626`** early ordinary-user UX step 18 passed
+(`17:50:13Z`–`17:51:15Z`); Web had reached the Share-focus browser step.
+This is not full mounted code-pulse/replay, PWA, new settings-fixture,
+official-image or deployment acceptance.
+
+Documentation-only checkpoints retain the exact candidate/run/attempt chain.
+No local runtime validation or dependency diagnostics ran. All five jobs,
+independent official-image verification, fresh capacity/rollback/queue checks
+and stopped-writer five-component backup remain required; the protected
+build-info file and production/direct rollback/schema remain unchanged.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),

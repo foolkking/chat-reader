@@ -183,6 +183,19 @@ mocked delete-block outcome, longer timeout or retry allowance is introduced.
 Both fixture corrections are authored, not locally executed or CI-accepted;
 require a fresh full exact-source workflow and all release gates.
 
+At **2026-10-29 01:53:39 Beijing**, the previous run's final result was API/
+settings success, Web failure and both image jobs skipped. Settings passed
+463 matrix cases and one independent new-instance restore case. The earlier
+blocked-fixture failure did not recur, but this is not evidence for the new
+fixture or a proven cause of the earlier failure.
+
+Both corrections are pushed as exact `f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`.
+Full run **`40738934749`**, attempt 1, was created at **01:46:46 Beijing**.
+At **01:59:52**, Web/API/settings were still running. Web early ordinary-user
+UX step 18 passed at **01:51:15**; mounted code-pulse/replay, full PWA,
+new settings fixture and image/deployment acceptance remain pending.
+A documentation-only checkpoint preserves this exact source/run/attempt.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

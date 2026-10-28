@@ -16,9 +16,14 @@ deployment. The latest instruction removes fixed waiting for CI failure
 diagnosis; earlier 50-minute checkpoints remain historical evidence.
 Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Full CI **`40731382479`**, attempt 1, targets exact **`7a58de2`**.
-At **2026-10-29 01:36:43 Beijing**, Web failed; **01:42:10** confirmed API
-success and settings still running. Web passed 1,822 ordinary-user UX cases,
+change. Latest full CI **`40738934749`**, attempt 1, targets exact **`f8a6a06`**,
+created at **2026-10-29 01:46:46 Beijing**. At **01:59:52**, Web/API/settings
+were running; early ordinary-user UX passed at **01:51:15**. No full Web/PWA
+or release pass is claimed. Previous full CI `40731382479`, attempt 1,
+targets `7a58de2`: **01:53:39** confirmed API/settings success, Web failure
+and both image jobs skipped. Settings had 463 passes plus an independent
+new-instance restore pass; the earlier blocked-fixture failure did not recur
+in that source. Web passed 1,822 ordinary-user UX cases,
 36 Context and 100 mutation cases. Default PWA had 159 passes / two failures /
 750 conditional skips; subsequent auth/negative gates were not reached.
 Both failures stop at the new initial code-pulse probe, before replay:
@@ -37,8 +42,9 @@ holds a genuine existing connection in an inert same-origin tab, requires an
 actual native delete request and reads the retained record before releasing
 the connection. It retains authentication/private-UI fences, Retry, final
 database/cache removal and unrelated-cache protection; auth/cleanup product
-code is unchanged. These two fixture corrections are authored, not locally run
-or browser-accepted. A fresh full exact-source CI is required; no tolerance,
+code is unchanged. These two fixture corrections are committed in `f8a6a06`,
+not locally run or browser-accepted. The fresh full exact-source CI is running;
+no tolerance,
 stability, timeout, retry or release gate changes. Earlier attempts/digests
 remain in the release record. No accepted deployable artifact exists.
 No local repository suites or builds were run;
