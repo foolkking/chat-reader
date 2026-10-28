@@ -542,6 +542,55 @@ semantics and all full CI/artifact/backup/deployment gates remain.
 The existing `tsconfig.tsbuildinfo` hash is unchanged and excluded.
 No production replacement or accepted deployable artifact exists.
 
+#### Attempt-2 final status and independent settings failure
+
+A follow-up at **2026-10-29 01:00:46 Beijing**
+(`2026-10-28T17:00:46.9512930Z`) confirmed the whole previous run completed:
+API passed, Web/settings failed and both image jobs were skipped.
+Settings job **`122936416856`** failed its real browser matrix with
+**462 passes / one failure** at
+`e2e/settings-signout-cleanup.spec.ts`, “signout cleanup recovers from blocked
+deletion failure”. Authentication was cleared, private Reader content hidden
+and cleanup recovery displayed; the subsequent database-existence assertion
+was false while the test expected a held native connection to block deletion.
+
+Official settings evidence artifact **`12834189588`**, 16,099,231 bytes,
+was matched to this exact run/source/attempt and downloaded SHA-256
+`13b6039d8ade0a02980677b843307ba5959757b68e1bd3689b922c1a99d15993`.
+The test disables trace; its failure log/context does not prove why the
+connection ceased blocking. A page/navigation lifetime race is a source-level
+hypothesis, not an accepted runtime diagnosis. No settings implementation or
+fixture was changed, and no settings pass is claimed. This failure is
+independent of the two Web PWA failures above.
+
+### CI attempt 9 — exact replay correction dispatched
+
+The targeted corrections above were committed/pushed as exact
+**`7a58de20bdd08e2785abc9d8813dcfa31b651956`**.
+Complete `Build release images` run **`40731382479`**, attempt 1, was
+dispatched once against verified remote `master`. Dispatch intent:
+`2026-10-28T16:59:38.2424652Z`; conservative post-dispatch timestamp:
+`16:59:40.1720543Z`; run creation: **`16:59:41Z`**
+(**2026-10-29 00:59:41 Beijing**). This is a fresh full workflow,
+not a failed-job-only rerun.
+
+An early metadata read at **01:04:19 Beijing** verified the source/run/attempt
+and Web job **`122968337658`** step 18, “Ordinary-user recovery and bounded
+attachment regressions”, **success** (started `17:03:13Z`, completed
+`17:04:17Z`). At **01:09:16 Beijing**
+(`2026-10-28T17:09:16.5202203Z`), Web/API/settings remained in progress;
+Web had reached the Context browser matrix. Early UX success is not full
+Web/PWA, mounted code geometry, official image or release acceptance.
+
+Documentation-only checkpoints preserve this exact application candidate
+and source/run/attempt chain. No local tests/lint/typecheck/build/browser/
+services/database or dependency diagnostics ran. The pre-existing
+`tsconfig.tsbuildinfo` remains untouched and excluded. No production writer
+was stopped, image accepted/loaded or application replaced. All five CI jobs,
+independent exact-image verification, fresh host preflight and stopped-writer
+five-component backup remain mandatory; production/direct rollback remains
+`b4effda`/`c7dc074`, schema `20261022_0053`.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),

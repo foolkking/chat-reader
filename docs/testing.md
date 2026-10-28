@@ -147,6 +147,21 @@ and new documents and captures pulse insertion without extending its lifetime.
 Same root/URL, finite >200px departure, <36px return, exact/fallback separation,
 timeouts, retries and full release gates remain. No local execution is used.
 
+The correction is pushed as exact `7a58de20bdd08e2785abc9d8813dcfa31b651956`.
+Complete run **`40731382479`**, attempt 1, was created at
+**2026-10-29 00:59:41 Beijing**. At **01:09:16**, Web/API/settings remained
+in progress; early ordinary-user UX step 18 succeeded at **01:04:17**.
+This confirms that early gate only, not mounted browser geometry, full PWA,
+image or deployment acceptance. A documentation-only checkpoint does not
+change that exact source/run/attempt chain.
+
+The prior attempt-2 final result, read at **01:00:46**, was API success,
+Web/settings failure and both image jobs skipped. Its settings matrix had
+**462 passes / one failure** at the blocked-deletion signout fixture's
+database-existence assertion. The official artifact identity/digest is
+recorded in the release record. A connection/navigation race is a hypothesis,
+not a verified cause; no settings source correction or passed rerun is claimed.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

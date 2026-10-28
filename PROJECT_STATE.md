@@ -16,13 +16,18 @@ deployment. The latest instruction removes fixed waiting for CI failure
 diagnosis; earlier 50-minute checkpoints remain historical evidence.
 Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Latest CI `40711849550`, attempt 2, targets exact `a967c01`;
-the first attempt was cancelled for supersession before the interrupted
-source follow-up was committed. The rerun therefore does not contain it.
-At **2026-10-29 00:48:12 Beijing**, Web failed, API passed and settings
-was running. Web UX passed all 1,817 cases; Context and source-editor/mutation
-matrices passed 36 and 100. Default PWA had 159 passes / two failures / 750
-conditional skips; subsequent auth/negative gates were not reached.
+change. Full CI **`40731382479`**, attempt 1, targets exact **`7a58de2`**
+and was created at **2026-10-29 00:59:41 Beijing**. At **01:09:16**,
+Web/API/settings were running; the early ordinary-user UX gate passed at
+01:04:17. This is not full Web/PWA or release acceptance.
+Previous run `40711849550`, attempt 2, targets `a967c01`, not the interrupted
+uncommitted follow-up. At **01:00:46**, its final result was API success,
+Web/settings failure and both image jobs skipped. Web retained 1,817 UX,
+36 Context and 100 mutation passes. Default PWA had 159 passes / two failures /
+750 conditional skips; subsequent auth/negative gates were not reached.
+The independent settings matrix had 462 passes / one failure: its blocked
+signout-cleanup fixture no longer listed the held database. The exact cause
+is unconfirmed; no settings correction or passed rerun is claimed.
 Verified official traces show the fallback and real-wheel departure corrections
 now pass. Both remaining cases wait for an old search result after an initial
 changed offline URL falls back from failed RSC to cached HTML, resetting the
@@ -33,9 +38,10 @@ retain routing. Explicit renderer-only UI is excluded from the text-anchor
 index. Browser probes verify initial/replayed code-word Range geometry within
 2px, with <36px code-text return and same Reader/URL. Controlled regressions
 cover no-route body/file/annotation replay, canonical offsets and legacy quotes.
-These source/browser corrections are authored, not locally run. No alignment
-tolerance, stability, timeout, retry or release gate changes. A fresh full
-exact-source CI is required; earlier attempts/digests remain in the release
+These source/browser corrections are committed in `7a58de2` and under CI,
+not locally run. No alignment
+tolerance, stability, timeout, retry or release gate changes. The fresh full
+exact-source CI remains required; earlier attempts/digests remain in the release
 record. No accepted deployable artifact exists.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
