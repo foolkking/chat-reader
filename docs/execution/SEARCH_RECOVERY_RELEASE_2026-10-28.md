@@ -95,8 +95,50 @@ were correctly skipped; there was no deployable artifact.
 
 These were the observed failure classes. The source and this record are
 corrected without running local tests/builds or weakening CI. The correction
-must be committed/pushed and dispatched as a new exact-source full CI run;
-its own 50-minute result-read gate applies.
+was committed and pushed as `db051dbfec5b72b782ce73de8dcb1602c89eba39`.
+Complete CI run `40637231494`, attempt 1, was dispatched for that exact
+source; metadata-only creation time is `2026-10-28T05:18:33Z`. The conservative
+dispatch upper bound is `05:18:37.465063Z`; do not read any result before
+`06:08:37.465063Z` (**14:08:37 Beijing**). This is a new 50-minute gate.
+
+Fresh post-cleanup checks confirmed all 12 specifically approved old image
+references are absent, both current `b4effda` and direct rollback `c7dc074`
+image sets remain present, and Web/API/worker/PostgreSQL are still running
+healthy with zero restarts. Free disk was `4,446,680 KiB` at that check. No
+release archive has been staged and no application writer has been stopped.
+
+### CI attempt 2 — failed; corrective pass in progress
+
+Run `40637231494`, attempt 1, was first read at
+`2026-10-28T06:09:24.6908441Z` (**14:09:24 Beijing**), after its
+`06:08:37.465063Z` result-read gate. `api-quality` passed, but
+`web-quality` and `settings-quality` failed; the image and artifact jobs were
+skipped, so this run produced no deployable artifact.
+
+The failures split into implementation/test-contract issues, not a reason to
+weaken the release gates:
+
+- Keep uncertain-deletion comment drafts as explicit orphan recovery copies.
+  The old assertion incorrectly expected an authoritative absence check to
+  erase unsaved text; the test is being strengthened to require read-only
+  orphan display and explicit discard.
+- Keep message-only search fallback when canonical `matches` are absent.
+  A snippet is not a verified range, so it must not create a character offset,
+  end offset or quote highlight.
+- Fix the offline scoped-search completeness bug without FlexSearch tag
+  intersection: query with a positive corpus bound, filter conversation/type/
+  role against the document map, then expose only the bounded page lookahead.
+- Synchronize static harnesses with `useInfiniteQuery`, page parameters,
+  `prefetchInfiniteQuery`, and the no-placeholder paginated TOC contract.
+  Restore the worker startup helper dependency in the isolated viewer harness,
+  update the archive truncation assertion, and make the settings E2E setup
+  test the default focus preference before exercising annotations.
+
+These corrections remain under the inherited no-local-runtime boundary. They
+must be committed/pushed as a new exact-source full CI run, which receives a
+new 50-minute result-read gate. Production remains `b4effda` with direct
+rollback `c7dc074`; no writer was stopped and no production data/configuration
+was changed.
 
 Implementation evidence and remaining verification boundaries:
 

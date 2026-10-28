@@ -346,15 +346,12 @@ test("changed version/range/quote is not substituted for the selected occurrence
   } finally { f.dispose(); }
 });
 
-test("fallback matches retain exact existing locator fields; title-only documents do not become navigable occurrences", async () => {
+test("missing canonical matches fall back to the message, never snippet-derived ranges; title-only documents are not navigable", async () => {
   const f = fixture({ mode: "offline", items: [{ ...A, message_id: null }, { ...B, matches: [] }] });
   try {
     f.key("Enter"); await setImmediate();
     const { target, context } = f.calls.navigation[0];
-    assert.equal(target.messageId, B.message_id);
-    assert.equal(target.characterOffset, 10);
-    assert.equal(target.endCharacterOffset, 10 + B.snippet.length);
-    assert.equal(target.quote, B.snippet);
+    assert.deepEqual(target, { messageId: B.message_id, messageVersionId: B.message_version_id });
     assert.equal(context.targets.length, 1);
     assert.equal(f.options.networkMode, "always");
     assert.equal(f.options.enabled, true);

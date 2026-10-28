@@ -53,6 +53,11 @@ function fixture({ projectView = false, state = "empty", open = false, selection
   const list = { data: state === "loading" || state === "initial-error" ? undefined : rows,
     isLoading: state === "loading", isSuccess: !failed && state !== "loading", isError: failed,
     isFetching: false, error: status ? new ApiRequestError(status) : new Error("Synthetic list failure"), refetch: async () => {} };
+  const pagedList = { ...list,
+    data: list.data === undefined ? undefined : { pages: [{ items: rows, offset: 0, hasMore: false }], pageParams: [0] },
+    hasNextPage: false, isFetchingNextPage: false, isFetchNextPageError: false,
+    fetchNextPage: async () => {},
+  };
   const admission = { phase: pending ? "unknown" : "idle", request: pending ? request : null, error: null, storageFailed: false,
     start: () => { throw new Error("Opening recovery must not submit"); }, check: () => { throw new Error("Opening recovery must not fetch"); }, retry: noop, clearError: noop };
   const client = { invalidateQueries: async value => { invalidations.push(value); if (refreshRejects) throw new Error("Synthetic refresh failure"); }, setQueriesData: noop, setQueryData: noop };
@@ -81,9 +86,10 @@ function fixture({ projectView = false, state = "empty", open = false, selection
     react: { ...React, useState: initial => { const name = stateNames[stateIndex++]; return [Object.hasOwn(overrides, name) ? overrides[name] : typeof initial === "function" ? initial() : initial, value => setters.push({ name, value })]; },
       useRef: initial => { const ref = React.useRef(initial); refs[refNames[refIndex++]] = ref; return ref; } },
     "react/jsx-runtime": { ...jsx, jsx: capture(jsx.jsx), jsxs: capture(jsx.jsxs) },
-    "@tanstack/react-query": { useQueryClient: () => client, useQuery: input => input.queryKey[0] === "projects"
-      ? { data: [{ id: projectId, name: "Synthetic project", conversation_count: rows.length, pinned_count: 0 }], isFetching: false }
-      : input.queryKey[1] === "existence" ? { data: [], isSuccess: true } : list },
+    "@tanstack/react-query": { useQueryClient: () => client, useInfiniteQuery: input => input.queryKey[0] === "conversations" ? pagedList : list,
+      useQuery: input => input.queryKey[0] === "projects"
+        ? { data: [{ id: projectId, name: "Synthetic project", conversation_count: rows.length, pinned_count: 0 }], isFetching: false }
+        : input.queryKey[1] === "existence" ? { data: [], isSuccess: true } : list },
     "@dnd-kit/core": { DndContext: childrenOnly, DragOverlay: () => null, useSensor: noop, useSensors: noop },
     "@dnd-kit/sortable": { SortableContext: childrenOnly, useSortable: () => ({ setNodeRef: noop }) },
     "@dnd-kit/utilities": { CSS: { Transform: { toString: noop } } },

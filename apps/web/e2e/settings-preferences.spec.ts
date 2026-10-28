@@ -142,7 +142,7 @@ test("focus and annotation defaults follow the account into the Reader", async (
     const created = await a.request.post(`${baseURL}/api/conversations`, { headers: { Origin: baseURL! }, data: { title: "Synthetic preference reader", messages: [{ role: "user", content_markdown: "Synthetic reader question" }, { role: "assistant", content_markdown: "Synthetic reader answer" }] } });
     expect(created.status()).toBe(201); const id = (await created.json()).conversation.id;
     expect((await b.request.post(`${baseURL}/api/auth/login`, { headers: { Origin: baseURL! }, data: { email, password } })).status()).toBe(200);
-    const reader = await b.newPage(); await reader.goto(`${baseURL}/conversations/${id}?annotations=open`);
+    const reader = await b.newPage(); await reader.goto(`${baseURL}/conversations/${id}`);
     await expect(reader.getByRole("button", { name: "Exit focus mode", exact: true }).first()).toBeVisible();
     await reader.getByRole("button", { name: "Exit focus mode", exact: true }).first().click();
     await reader.getByRole("button", { name: "Annotations", exact: true }).click();

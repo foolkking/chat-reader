@@ -23,7 +23,7 @@ function fixture({ mode = "offline", prepare } = {}) {
   let cursor = 0, options, tree, lastRead, heldDispatch = false, generation = 1;
   const slot = initialize => { const i = cursor++; if (!Object.hasOwn(slots, i)) slots[i] = initialize(); return i; };
   const dataSource = { mode, searchConversation: async (...args) => {
-    searches.push(args); return { items: [] };
+    searches.push(args); return { items: [], total: 0, limit: 50, offset: args[1].offset, has_more: false };
   } };
   let props = { conversationId: "synthetic-offline-conversation", dataSource, sourceKey: "synthetic-offline",
     initialState: { query: "synthetic", documentType: "message", role: "all", activeIndex: 0 },
@@ -44,11 +44,13 @@ function fixture({ mode = "offline", prepare } = {}) {
       useLayoutEffect: () => {},
     },
     "react/jsx-runtime": require("react/jsx-runtime"),
-    "@tanstack/react-query": { useQuery: next => {
+    "@tanstack/react-query": { useInfiniteQuery: next => {
       options = next;
-      return { data: { items: [] }, isError: true, isFetching: false, refetch: () => {
+      return { data: { pages: [{ items: [], total: 0, limit: 50, offset: 0, has_more: false }], pageParams: [0] },
+        isError: true, isFetching: false, isFetchingNextPage: false, isFetchNextPageError: false,
+        hasNextPage: false, fetchNextPage: () => Promise.resolve({}), refetch: () => {
         if (heldDispatch) return Promise.resolve({});
-        lastRead = options.queryFn();
+        lastRead = options.queryFn({ pageParam: options.initialPageParam, signal: undefined });
         lastRead.catch(() => {}); // Query-style error ownership, inspected below.
         return lastRead;
       } };
@@ -59,6 +61,7 @@ function fixture({ mode = "offline", prepare } = {}) {
     "../../lib/offline-access": { captureOfflineAccess: () => generation, assertOfflineAccess: captured => {
       if (captured !== generation) throw Error("Synthetic retired access");
     } },
+    "../../lib/reader-search-cache": { READER_SEARCH_CHANGED_EVENT: "synthetic-search-content-changed" },
   };
   const exports = {};
   new Function("require", "exports", compiled)(name => {
@@ -69,6 +72,7 @@ function fixture({ mode = "offline", prepare } = {}) {
   render();
   return {
     searches, get options() { return options; }, get lastRead() { return lastRead; },
+    readQuery: () => options.queryFn({ pageParam: options.initialPageParam, signal: undefined }),
     change: patch => { props = { ...props, ...patch }; render(); },
     holdDispatch: value => { heldDispatch = value; },
     retireAccess: () => { generation++; },
@@ -83,14 +87,14 @@ test("ordinary local searches do not rebuild; manual retry awaits one rebuild be
   const hold = deferred();
   let preparations = 0;
   const f = fixture({ prepare: () => { preparations++; return hold.promise; } });
-  await f.options.queryFn();
+  await f.readQuery();
   assert.equal(preparations, 0);
   f.retry();
   assert.equal(preparations, 1);
   assert.equal(f.searches.length, 1);
   hold.resolve(); await f.lastRead;
   assert.equal(f.searches.length, 2);
-  await f.options.queryFn();
+  await f.readQuery();
   assert.equal(preparations, 1);
   assert.equal(f.searches.length, 3);
 });
@@ -105,7 +109,7 @@ test("an unconsumed retry preparation cannot move to another conversation scope"
   const f = fixture({ prepare: async () => { preparations++; } });
   f.holdDispatch(true); f.retry();
   f.change({ conversationId: "synthetic-other-conversation" });
-  await f.options.queryFn();
+  await f.readQuery();
   assert.equal(preparations, 0);
   assert.equal(f.searches[0][0], "synthetic-other-conversation");
 });
@@ -127,7 +131,7 @@ test("actual local query options execute while the installed QueryClient is mark
   try {
     onlineManager.setOnline(false);
     assert.equal(f.options.networkMode, "always");
-    await client.fetchQuery({ ...f.options, retry: false });
+    await client.fetchInfiniteQuery({ ...f.options, retry: false });
     assert.equal(f.searches.length, 1);
   } finally { client.clear(); onlineManager.setOnline(previousOnline); }
 });

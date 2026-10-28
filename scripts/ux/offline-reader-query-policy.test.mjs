@@ -59,10 +59,13 @@ function readerFixture(mode = "offline", patch = {}) {
     return evaluate(call.arguments[0], bindings);
   });
   const prefetches = matches(reader, node => ts.isCallExpression(node)
-    && node.expression.getText(reader) === "queryClient.prefetchQuery");
+    && ["queryClient.prefetchQuery", "queryClient.prefetchInfiniteQuery"].includes(node.expression.getText(reader)));
   assert.equal(prefetches.length, 2);
   options.push(...prefetches.map(call => evaluate(call.arguments[0], bindings)));
-  return { calls, options, bindings };
+  const prefetchKinds = prefetches.map(call => call.expression.getText(reader).endsWith("InfiniteQuery") ? "infinite" : "query");
+  const runQueryFn = (index) => options[index].queryFn(prefetchKinds[index - 3] === "infinite"
+    ? { pageParam: options[index].initialPageParam } : undefined);
+  return { calls, options, bindings, prefetchKinds, runQueryFn };
 }
 
 // Compile each actual shared component, capturing its query before rendering.
@@ -81,7 +84,8 @@ function navigationFixture(name, props = {}) {
       useMemo: create => create(), useCallback: callback => callback, memo: component => component,
     },
     "react/jsx-runtime": require("react/jsx-runtime"),
-    "@tanstack/react-query": { useQuery: value => { options = value; throw stop; } },
+    "@tanstack/react-query": { useQuery: value => { options = value; throw stop; },
+      useInfiniteQuery: value => { options = value; throw stop; } },
     "lucide-react": {},
     "../../components/preferences-provider": {
       useTranslations: () => key => key,
@@ -112,7 +116,10 @@ test("all three Reader reads and both sheet prefetch options execute while marke
   assert.deepEqual(f.options.map(options => options.networkMode), Array(5).fill("always"));
   await disconnected(async client => {
     for (const options of f.options.slice(0, 3)) await client.fetchQuery(options);
-    for (const options of f.options.slice(3)) await client.prefetchQuery(options);
+    for (const [index, options] of f.options.slice(3).entries()) {
+      if (f.prefetchKinds[index] === "infinite") await client.prefetchInfiniteQuery(options);
+      else await client.prefetchQuery(options);
+    }
     assert.deepEqual(f.calls.map(call => call[0]), ["metadata", "position", "turn-window", "index", "toc"]);
     assert.ok(f.options.every(options => client.getQueryState(options.queryKey).status === "success"));
   });
@@ -125,17 +132,17 @@ test("saved anchor, complete-turn budget, query identities and navigation ranges
     ["reading-position", "offline", "synthetic-conversation"],
     ["reader-turn-window", "offline", "synthetic-conversation", "synthetic-saved"],
     ["conversation-index", "offline:7:synthetic", "synthetic-conversation", "synthetic-saved", "sheet"],
-    ["toc", "offline:7:synthetic", "synthetic-conversation", "synthetic-saved", "sheet"],
+    ["toc", "offline:7:synthetic", "synthetic-conversation", "synthetic-saved", "sheet", "pages"],
   ]);
-  for (const options of f.options) await options.queryFn();
+  for (const [index] of f.options.entries()) await f.runQueryFn(index);
   assert.deepEqual(f.calls[2], ["turn-window", f.bindings.dataSource, "synthetic-conversation", "synthetic-saved", 5]);
   assert.deepEqual(f.calls[3], ["index", "synthetic-conversation", { anchorMessageId: "synthetic-saved", limit: 80 }]);
-  assert.deepEqual(f.calls[4], ["toc", "synthetic-conversation", { messageId: "synthetic-saved", limit: 200 }]);
+  assert.deepEqual(f.calls[4], ["toc", "synthetic-conversation", { messageId: "synthetic-saved", offset: 0, limit: 200 }]);
   assert.equal(f.options[3].staleTime, 60_000);
   assert.equal(f.options[4].staleTime, 30_000);
   assert.ok(f.options.every(options => !Object.hasOwn(options, "retry")));
   const start = readerFixture("offline", { initialAnchorMessageId: null, anchorMessageId: undefined });
-  await start.options[2].queryFn();
+  await start.runQueryFn(2);
   assert.equal(start.calls[0][3], undefined);
   assert.equal(start.options[3].queryKey[3], "start");
 });
@@ -196,7 +203,7 @@ test("a local read retry can continue without waiting for reconnect", async () =
   });
 });
 
-test("both shared navigation queries execute local loaders offline without changing ranges or placeholders", async () => {
+test("shared navigation executes offline: index retains its placeholder, paginated TOC does not reuse a stale anchor", async () => {
   const calls = [];
   const loadPage = async options => { calls.push(options); return { items: [] }; };
   const index = navigationFixture("ConversationIndex", { networkMode: "always", sourceKey: "synthetic-local",
@@ -207,14 +214,17 @@ test("both shared navigation queries execute local loaders offline without chang
     for (const { options } of [index, toc]) {
       assert.equal(options.enabled, true);
       assert.equal(options.networkMode, "always");
-      const previous = { items: [] };
-      assert.equal(options.placeholderData(previous), previous);
-      await client.fetchQuery(options);
     }
+    const previous = { items: [] };
+    assert.equal(index.options.placeholderData(previous), previous);
+    assert.equal(Object.hasOwn(toc.options, "placeholderData"), false);
+    assert.equal(toc.options.initialPageParam, 0);
+    await client.fetchQuery(index.options);
+    await client.fetchInfiniteQuery(toc.options);
   });
   assert.deepEqual(calls, [
     { anchorMessageId: "synthetic-saved", offset: undefined, limit: 80 },
-    { messageId: "synthetic-saved", limit: 200 },
+    { messageId: "synthetic-saved", offset: 0, limit: 200 },
   ]);
   assert.deepEqual(index.calls, []);
   assert.deepEqual(toc.calls, []);
@@ -224,7 +234,7 @@ test("default shared/Share navigation retains remote loaders and inherited polic
   const index = navigationFixture("ConversationIndex", { activeMessageId: "synthetic-saved" });
   const toc = navigationFixture("ConversationToc", { activeMessageId: "synthetic-saved" });
   for (const { options } of [index, toc]) assert.equal(Object.hasOwn(options, "networkMode"), false);
-  await index.options.queryFn(); await toc.options.queryFn();
+  await index.options.queryFn(); await toc.options.queryFn({ pageParam: toc.options.initialPageParam });
   assert.equal(index.calls[0][0], "remote-index");
   assert.equal(toc.calls[0][0], "remote-toc");
   await disconnected(async client => {

@@ -63,6 +63,7 @@ function fixture(name, props, overrides = {}, extra = {}) {
   const scope = { ...policy, ...registry, window, document: {}, UIEvent: class {},
     usePreferences: () => ({ resolvedLocale: "en-US" }),
     complexErrorMessage: compile(complexFn("complexErrorMessage").getText(complexSource), {}, "complexErrorMessage"),
+    isPreviewLimitError: compile(complexFn("isPreviewLimitError").getText(complexSource), {}, "isPreviewLimitError"),
     useState: initial => { const key = stateNames[stateIndex++]; assert.ok(key, "named state");
       if (!states.has(key)) states.set(key, Object.hasOwn(overrides, key) ? overrides[key] : typeof initial === "function" ? initial() : initial);
       return [states.get(key), value => { states.set(key, typeof value === "function" ? value(states.get(key)) : value); }]; },

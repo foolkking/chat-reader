@@ -256,5 +256,5 @@ test("renaming arbitrary ZIP bytes as DOCX cannot claim a readable document", as
 test("ordinary ZIP still uses the same read-only directory parser", async () => {
   const response = await parseOffice("synthetic.zip", "archive", { "notes.txt": "synthetic archive text" });
   assert.equal(response.ok, true); assert.equal(response.result.kind, "archive");
-  assert.deepEqual(response.result.entries[0].preview, { kind: "text", text: "synthetic archive text" });
+  assert.deepEqual(response.result.entries[0].preview, { kind: "text", text: "synthetic archive text", truncated: false });
 });

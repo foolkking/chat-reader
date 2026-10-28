@@ -668,9 +668,16 @@ test("a missing annotation found by checking is not reported as an acknowledged 
     button(tree, "Delete").onClick(); await setImmediate();
     assert.ok(commentList(f).readCommentDraft("first"));
     button(f.render(), "Check deletion results").onClick(); await setImmediate();
-    assert.equal(commentList(f).readCommentDraft("first"), undefined);
+    assert.equal(commentList(f).readCommentDraft("first").text, "Draft for the annotation being deleted");
+    const orphan = find(f.render(), node => node.type === "textarea" && node.props["aria-label"] === "Comment draft for a deleted annotation");
+    assert.equal(orphan.props.value, "Draft for the annotation being deleted");
+    assert.equal(orphan.props.readOnly, true);
+    assert.equal(f.r.storedCommentCount, 1, "checking absence must not discard unsaved writing");
     button(f.render(), "Clean notebook references").onClick(); await setImmediate();
     assert.match(text(f.render()), /0\/1 deletions confirmed/);
+    button(f.render(), "Discard this draft").onClick(); await setImmediate();
+    assert.equal(commentList(f).readCommentDraft("first"), undefined);
+    assert.equal(f.r.storedCommentCount, 0, "only explicit draft discard removes its recovery record");
   } finally { f.r.dispose(); }
 });
 
@@ -1057,7 +1064,11 @@ test("failed local discard retries deletion before hydration and retains the lea
     await commentList(f).onDiscardComment(original); await setImmediate(); f.render(); f.r.flush();
     assert.equal(commentList(f).readCommentDraft(original.id), undefined);
     const leaving = new Event("beforeunload", { cancelable: true });
+    // Browser BeforeUnloadEvent has a writable string returnValue; Node Event
+    // only exposes the legacy read-only boolean. Model the browser contract.
+    Object.defineProperty(leaving, "returnValue", { value: "unchanged", writable: true });
     f.r.events.dispatchEvent(leaving); assert.equal(leaving.defaultPrevented, true);
+    assert.equal(leaving.returnValue, "");
     const failedAttempts = f.r.commentDeleteAttempts;
     button(f.render(), "Retry local drafts").onClick(); f.render(); f.r.flush(); await setImmediate();
     assert.ok(f.r.commentDeleteAttempts > failedAttempts);

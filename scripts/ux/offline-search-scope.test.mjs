@@ -15,7 +15,7 @@ const document = (id, overrides = {}) => ({
   plain_text: "needle body", order_key: id, metadata: {}, ...overrides,
 });
 
-// Actual worker handler, compound-tag construction and installed FlexSearch.
+// Actual worker handler, scope filtering and installed FlexSearch.
 // Only message delivery/self are adapters; not a real browser Worker or Dexie.
 function fixture(documents) {
   let handler;
@@ -67,9 +67,28 @@ test("scoped pages use lookahead, retain distinct IDs and disclose when the boun
   assert.deepEqual(pages.map(page => page.items.length), [50, 50, 21]);
   assert.deepEqual(pages.map(page => page.hasMore), [true, true, false]);
   assert.deepEqual(pages.map(page => page.totalIsExact), [false, false, true]);
+  assert.deepEqual(pages.map(page => page.total), [51, 101, 121]);
   assert.equal(pages.at(-1).total, 121);
   assert.equal(new Set(pages.flatMap(page => page.items.map(item => item.id))).size, 121);
   assert.deepEqual(pages.flatMap(page => page.items.map(item => item.id)), documents.map(item => item.id));
+});
+
+test("title/body union stays scoped and complete past the library's implicit 100-result window", () => {
+  const unrelated = Array.from({ length: 350 }, (_, index) => document(`unrelated-${index}`, {
+    conversation_id: "synthetic-other-conversation", title: "needle title",
+  }));
+  const targets = Array.from({ length: 151 }, (_, index) => document(`target-${String(index).padStart(3, "0")}`, {
+    title: "needle title", plain_text: index % 2 ? "needle body" : "other content",
+  }));
+  const scope = { conversationId: targets[0].conversation_id, documentType: "message", role: "assistant" };
+  const f = fixture([...unrelated, ...targets]);
+  const pages = [0, 50, 100, 150].map(offset => f.page("needle", offset, 50, scope));
+  assert.deepEqual(pages.map(page => page.items.length), [50, 50, 50, 1]);
+  assert.deepEqual(pages.map(page => page.hasMore), [true, true, true, false]);
+  assert.deepEqual(pages.map(page => page.totalIsExact), [false, false, false, true]);
+  const ids = pages.flatMap(page => page.items.map(item => item.id));
+  assert.deepEqual(ids, targets.map(item => item.id));
+  assert.equal(new Set(ids).size, targets.length);
 });
 
 test("an exactly full scoped page has no spurious next page", () => {
