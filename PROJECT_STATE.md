@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; fourth full CI failed, corrected source pending CI):**
+**Search and reader recovery release (2026-10-28; fifth full CI dispatched):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -34,8 +34,9 @@ isolates the shared synthetic API fixture's memory sensor, retains real
 low/unknown-memory rejection, and publishes personal/system Skill dirty
 aggregates during layout before success can be acted on. Immediate-close and
 other-draft protection regressions are authored, not run locally. The earlier
-six list browser fixes were not reached in this run. A fresh complete
-exact-source CI is required; no release gate is relaxed and no accepted
+six list browser fixes were not reached in this run. Corrections are pushed as
+`d1b8965`; full CI `40676535658` targets that exact source. Do not read results
+before **2026-10-28 19:50:17 Beijing**. No release gate is relaxed and no accepted
 deployable artifact exists. No local
 repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh

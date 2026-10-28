@@ -250,6 +250,27 @@ are required. Full quality, official artifact, independent source verification,
 fresh capacity and stopped-writer backup gates remain pending. No production
 action occurred.
 
+### CI attempt 5 — dispatched; result-read gate active
+
+The synthetic admission fixture isolation, Skill leave-guard corrections and
+regressions were committed/pushed as
+**`d1b8965dd80cd843853e185cda1513859696fcc2`**. Static source/diff review only;
+the pre-existing `apps/web/tsconfig.tsbuildinfo` remains unmodified by this task
+and excluded. Existing local Git credentials and a command-local HTTPS mapping
+were used; no browser/GitHub page or web search was opened.
+
+After verifying the remote `master` SHA, complete `Build release images` run
+**`40676535658`**, attempt 1, was created for that exact source at
+`2026-10-28T11:00:16Z`. The conservative post-dispatch timestamp is
+`11:00:16.3244826Z`; do not read results/jobs/logs/artifacts before
+`11:50:16.3244826Z` (**2026-10-28 19:50:17 Beijing**, rounded up).
+Only run identity/source/time metadata has been inspected. This subsequent
+documentation-only checkpoint does not change the application candidate;
+artifact/source checks must retain the exact `d1b8965`/run/attempt chain.
+All five jobs, official artifact/source verification, fresh capacity and
+stopped-writer backup remain required. No writer stopped, image loaded or
+application replaced; production/direct rollback remains `b4effda`/`c7dc074`.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),
