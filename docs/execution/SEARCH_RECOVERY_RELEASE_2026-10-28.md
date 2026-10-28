@@ -412,6 +412,63 @@ Web had advanced to Playwright installation; Web/API/settings remained in
 progress. This confirms the corrected early gate, not full browser/PWA,
 official image or deployment acceptance. No local validation was substituted.
 
+#### Default PWA failure read and browser precondition correction
+
+First failure results were read at **2026-10-28 22:46:42 Beijing**
+(`14:46:42.3598096Z`), verifying exact source/run/attempt first. The Web job
+failed in step 34, `Default PWA baseline`. A **22:58:02 Beijing**
+(`14:58:02.0102689Z`) follow-up confirmed the complete run failed:
+API/settings succeeded, Web failed and both image jobs were skipped.
+
+| Web gate | Official result |
+| --- | --- |
+| Ordinary-user recovery / bounded attachments | 1,817 passed / zero failed |
+| Skill/Context | 36 passed |
+| Focused online / Share focus | 45 / two passed |
+| Source editor and mutations | 100 passed |
+| Cleanup / upload | Six / 18 passed |
+| Markdown/image / PDF | 31 / 13 passed |
+| Default PWA | 158 passed / three failed / 750 conditional skips |
+| Subsequent authenticated / negative PWA | Not reached |
+
+Official quality evidence artifact **`12825355485`**, 24,918,072 bytes,
+was independently matched to this run/source and its downloaded SHA-256:
+`8d072a178a79f0db18b56dd86a0de3ebb09aa57c2f60b4133e3a8ce0c9e82a75`.
+Its traces, error contexts and static screencast frames—not a local browser—
+show that the earlier count assertion and initial body/fallback alignment
+failures no longer block progress. This does not make the three whole
+browser cases pass:
+
+- Both widths reach exact `settled` before failing the later replay setup.
+  One real 1500px wheel expands the complete-turn window from six to ten
+  messages and finishes `next:settled`, preserving the reading anchor.
+  The official desktop trace remains at scroll 139 after that transition;
+  target/reading-line distances are 114.5px (375px) and 42.296875px (1440px),
+  not the test's required >200px. A wheel cannot consume the future
+  asynchronously mounted content.
+- The replay setup now waits for message 10 and `next:settled`, then sends
+  a second real 600px wheel. It still requires finite >200px departure,
+  not Infinity from a missing target; same Reader/URL, stage transitions,
+  exact text pulse and <36px return are retained. No programmatic scroll,
+  arbitrary sleep or assertion/timeout/retry relaxation is introduced.
+- The stale-version case already has preserved content, `settled:fallback`,
+  a visible target and scroll zero. Its new total-height assertion was
+  incorrect: Reader frame min-height/padding can overflow while the selected
+  message is at an unreachable upper reading line. The replacement asserts
+  actual viewport/uncovered-anchor geometry, scroll zero and a >24px
+  unreachable gap above the 120px line, retaining no false exact text pulse.
+  Earlier “no scrollable height” wording describes the prior diagnosis;
+  actual upper-endpoint reachability, not total frame height, is the contract.
+
+Only these browser test preconditions/assertions and evidence documentation
+change; production navigation code and all quality/artifact/deployment gates
+remain unchanged. No local tests/lint/typecheck/build/browser/services/database
+or dependency diagnostics ran. Static source/diff inspection is not execution
+evidence. The protected `tsconfig.tsbuildinfo` hash remains unchanged and is
+excluded. A fresh full exact-source CI is required, without fixed waiting for
+failure diagnosis under the latest instruction. No deployable image was
+accepted and no production operation occurred.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),

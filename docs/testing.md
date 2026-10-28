@@ -93,6 +93,32 @@ previously failed ordinary-user UX gate succeeded (22:04:33–22:05:43).
 Web/API/settings were still running. This is early-gate evidence, not a full
 Web/PWA, exact mounted geometry, image-artifact or deployment acceptance.
 
+Run `40701765161` was read again at **2026-10-28 22:46:42 Beijing**;
+**22:58:02** confirmed API/settings success, Web failure and both image jobs
+skipped. The full Web log confirms **1,817 UX passes**, Context 36 passes,
+source-editor/mutation 100 passes and Default PWA **158 passes / three failures /
+750 conditional skips**. Auth/negative gates were not reached.
+Official trace evidence is independently matched to run/source and SHA-256
+in the release record; no local browser is substituted.
+
+The initial exact body navigation and stale-version fallback now reach their
+expected settled states. The three whole browser cases still fail later:
+two replay setups assume one wheel consumes not-yet-mounted next turns;
+the stale-version test incorrectly requires the whole frame to have no
+overflow. Earlier descriptions of a wholly non-scrollable fallback fixture
+are superseded by the actual upper-endpoint geometry, not deleted history.
+The corrected replay setup waits for message 10 and `next:settled`, then
+uses another real 600px wheel. Departure must be finite and >200px, so a
+missing/unmounted target returning Infinity cannot satisfy it. Same DOM/URL,
+navigation transitions, exact pulse and <36px return remain required.
+The fallback case requires scroll zero and its actual message anchor to be
+visible in the viewport, below scroll padding and more than 24px above the
+120px reading line. Total `scrollHeight <= clientHeight` is not part of the
+navigation contract. Content preservation, `settled:fallback` and no exact
+text pulse remain. No product code, timeout, retry, tolerance or workflow
+gate changed. These test corrections are authored, **not locally executed**;
+require a fresh complete exact-source CI and all release gates.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

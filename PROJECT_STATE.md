@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; seventh full CI dispatched):**
+**Search and reader recovery release (2026-10-28; seventh CI failed, targeted correction):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -16,34 +16,24 @@ deployment. The latest instruction removes fixed waiting for CI failure
 diagnosis; earlier 50-minute checkpoints remain historical evidence.
 Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Full CI `40676535658` (exact `d1b8965`) was first read at
-**2026-10-28 20:34:38 Beijing**, after its 19:50:17 gate. API/settings passed;
-Web's Skill/Context matrix passed 36 cases and the source-editor/mutation
-matrix passed 100, including the earlier six list-interceptor corrections.
-Default PWA had 157 passes / four failures / 750 conditional skips:
-one obsolete search-count assertion and three `target-not-aligned` failures
-at physical scroll boundaries. Verified official trace evidence supports a
-narrow correction: the normal 24px alignment remains; only an actual clamped
-endpoint with the selected anchor visible can also stabilize. The existing
-three-frame/240ms, cancellation, stale fallback and exact-pulse requirements
-remain. Controlled alignment regressions and a no-scroll fallback browser
-assertion are authored, not locally run. Complete CI `40692514416`, attempt 1,
-targets exact `4402635`; first read at **2026-10-28 21:50:25 Beijing**.
-Web's UX gate had 1,816 passes / one failure: a newly authored occlusion
-fixture accidentally entered normal 24px alignment, not the endpoint path.
-The corrected test pairs an identical exact Range at an unreachable reading
-line, with/without header padding, retaining the rejection assertion and
-production implementation unchanged. The other 11 alignment cases passed;
-browser gates were not reached. A **22:01:44 Beijing** follow-up confirmed
-API/settings success, Web failure and both image jobs skipped. The fixture
-correction is pushed as `99ecb93`; full CI `40701765161`, attempt 1, targets
-that exact source. At **22:06:03 Beijing**, the previously failing ordinary-user
-UX gate was confirmed successful (completed 22:05:43); Web/API/settings remain
-in progress, so full browser/release acceptance is still pending.
-Failure diagnosis follows actual CI status without fixed
-waiting, per the latest instruction. Earlier attempts remain in the release
-record. No quality/artifact/deployment gate is relaxed and no accepted
-deployable artifact exists.
+change. Latest complete CI `40701765161`, attempt 1, targets exact `99ecb93`.
+First failure read: **2026-10-28 22:46:42 Beijing**; **22:58:02** follow-up
+confirmed API/settings success, Web failure and both image jobs skipped.
+Web UX passed all 1,817 cases; Context and source-editor/mutation matrices
+passed 36 and 100. Default PWA had 158 passes / three failures / 750
+conditional skips; subsequent auth/negative gates were not reached.
+Verified official traces show initial exact body navigation and stale-version
+fallback now settle. Both replay cases fail later because one wheel appends
+complete turns while preserving the anchor, not guaranteeing >200px departure.
+The fallback test incorrectly equates scroll zero with no total frame overflow.
+Targeted browser corrections wait for the committed next window before a
+second real wheel and require a finite >200px departure; fallback checks use
+the actual visible/uncovered anchor and unreachable upper reading line.
+Same Reader/URL replay, <36px return, exact pulse and no stale exact pulse
+remain. No production navigation code, tolerance, timeout, retry or gate change.
+These corrections are authored, not locally run; a fresh exact-source full CI
+remains required. Earlier attempts and artifact digests are in the release
+record. No accepted deployable artifact exists.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;

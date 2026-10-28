@@ -413,7 +413,17 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
   expect(originalRoot).not.toBeNull();
   await readerRoot.hover();
   await page.mouse.wheel(0, 1500);
-  await expect.poll(() => readingLineDelta(page, "block-offline-message-2-2")).toBeGreaterThan(200);
+  // The first wheel can reach the short target window's boundary and append
+  // complete turns while preserving its reading anchor. Scroll the committed
+  // window with another real wheel, rather than assuming the first delta can
+  // consume content that had not mounted yet.
+  await expect(readerRoot.locator("#message-offline-message-10")).toBeAttached();
+  await expect(readerRoot).toHaveAttribute("data-reader-edge-stage", "next:settled");
+  await page.mouse.wheel(0, 600);
+  await expect.poll(async () => {
+    const delta = await readingLineDelta(page, "block-offline-message-2-2");
+    return Number.isFinite(delta) && delta > 200;
+  }).toBe(true);
   // Reveal the mobile header after real user scrolling, then reopen Library.
   await page.mouse.wheel(0, -100);
   if (width < 768) await page.getByTestId("mobile-sidebar-button").click();

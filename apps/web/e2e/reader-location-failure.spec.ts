@@ -146,9 +146,29 @@ test("stale search version falls back without an exact text pulse", async ({ pag
   const reader = page.getByTestId("reader-scroll-root");
   await expect(reader.locator(`#message-${messageId}`)).toContainText(preservedText);
   await expect(reader).toHaveAttribute("data-navigation-stage", "settled:fallback", { timeout: 15_000 });
-  await expect(reader.locator(`#message-${messageId}`)).toBeVisible();
-  expect(await reader.evaluate(root => root.scrollTop)).toBe(0);
-  expect(await reader.evaluate(root => root.scrollHeight <= root.clientHeight)).toBe(true);
+  await expect(reader.locator(`#message-${messageId}`)).toBeInViewport();
+  // A frame's min-height/padding can overflow even at the upper endpoint.
+  // Check the selected fallback anchor's actual unreachable reading line and
+  // visible, uncovered geometry instead of assuming the whole root fits.
+  const boundary = await reader.evaluate((root, id) => {
+    const target = root.querySelector<HTMLElement>(`#message-${id}`)!;
+    const targetRect = target.getBoundingClientRect();
+    const rootRect = root.getBoundingClientRect();
+    const viewportTop = rootRect.top + root.clientTop;
+    return {
+      scrollTop: root.scrollTop,
+      readingLineDelta: targetRect.top - (rootRect.top + 120),
+      anchorTop: targetRect.top - viewportTop,
+      anchorBottom: targetRect.bottom - viewportTop,
+      paddingTop: Math.max(0, Number.parseFloat(getComputedStyle(root).scrollPaddingTop) || 0),
+      viewportHeight: root.clientHeight,
+    };
+  }, messageId);
+  expect(boundary.scrollTop).toBe(0);
+  expect(boundary.readingLineDelta).toBeLessThan(-24);
+  expect(boundary.anchorTop).toBeGreaterThanOrEqual(boundary.paddingTop - 1);
+  expect(boundary.anchorTop).toBeLessThan(boundary.viewportHeight);
+  expect(boundary.anchorBottom).toBeGreaterThan(boundary.paddingTop);
   await expect(page.locator('[data-locate-pulse="text"]')).toHaveCount(0);
 });
 
