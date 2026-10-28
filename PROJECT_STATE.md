@@ -36,17 +36,21 @@ No auth/cleanup product logic, timeout, retry, alignment or release gate
 was weakened. Earlier failed runs, diagnoses and verified evidence digests
 remain in the release record; this CI is not production acceptance.
 Official image artifact **`12842966625`** was produced and inspected in CI.
-Independent downloaded-image/source acceptance, fresh host preflight and
-stopped-writer five-component backup are **still pending**. No accepted
-deployable artifact or production replacement is claimed.
+Independent downloaded-image/source acceptance passed at **03:04:17 Beijing**:
+35 OCI blobs, 23 layers, 336 embedded API source files and exact Web build
+identity matched. The staged archive passed both-end hashes. Fresh host
+preflight passed at **03:18:34**, with `4,212,648 KiB` available against
+`4,013,395 KiB` required, unchanged healthy production and idle queues.
+Stopped-writer five-component backup and production replacement/acceptance
+are **still pending**; no deployment is claimed.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. The
 previously recorded read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
 no application replacement has occurred. The user separately authorized removing only the
 unused `f3b331a`/`50f6de4`/`5992d0e` application images; this exact cleanup
 completed, retaining both protected revisions, archives, backups and data.
-A fresh exact-artifact capacity PASS is still required. Schema remains
-`20261022_0053`.
+The fresh exact-artifact capacity PASS above does not waive the immediate
+pre-maintenance recheck or backup gate. Schema remains `20261022_0053`.
 
 **Completeness follow-up optimization (2026-10-28; source implemented, unverified):**
 the [source review](docs/execution/ux-audit-completeness-review-2026-10-28.md)

@@ -737,3 +737,43 @@ Implementation evidence and remaining verification boundaries:
   not durable through forced reload/crash; bounded Office previews are not
   full fidelity or malicious-document certification. Authenticated production
   UI, physical clipboard and sustained-load acceptance are not implied by CI.
+
+### Independent artifact and staged preflight — 2026-10-29
+
+The official immutable artifact `12842966625` was downloaded through the
+authenticated GitHub API; its ZIP SHA-256 matched the published
+`e2ceed535501781bd11df8f22c3f29fd0b4e9be2b593fc2a92c9977ad7485913`.
+Only the four expected regular members were accepted. At **03:04:17 Beijing**
+(`2026-10-28T19:04:17.394551Z`), independent, non-executing archive inspection
+passed: **35 OCI blobs / 23 layers / 21,339 layer entries / 336 embedded API
+source files**, exact Web compiled revision, Linux/amd64, four tags, descriptor/
+config/diff-ID chain and forbidden-path absence. The release manifest matches
+source `f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`, run `40738934749`,
+producer attempt 1. No application was imported or run locally.
+
+| Identity | Accepted SHA-256 |
+| --- | --- |
+| Image transfer archive | `2f12e1509e8d1143381f379ca9b99be8da9560f80748e44748f6c3cb5443345f` |
+| API OCI manifest | `8b2c1ed98622e48130330b9aaeddf25d68e5d2572f15be926f5424e07522d0b8` |
+| Web OCI manifest | `4bc549085c13430f35330688dcbd25d0f211abc2a293d4245a3261abd4b046c6` |
+| API Docker config | `42050e03b2b12035a4ed2022a7b76a5e8752995195424360815d6efd429c26a9` |
+| Web Docker config | `79547082314015a5a2d8d0949e043d1c2982f08303b749c886b753e378852dd0` |
+
+Support packaging initially exposed Windows `git archive` checkout-filter
+line endings. The strict member hash check refused before application stop
+or support execution. The rejected archive is retained, not deployed.
+A separately named replacement packages canonical `git show` blob bytes;
+all nine support members match the accepted commit. Both-end transfer hashes
+also cover the reviewed task-only orchestration and receipts. This is not a
+source change or a CI rerun.
+
+At **03:18:34 Beijing** (`19:18:34.457918Z`), the actual staged-artifact
+preflight passed: **4,212,648 KiB available / 4,013,395 KiB required**, including
+3,178,808 KiB backup, 703,515 KiB images and 131,072 KiB transfer headroom.
+No headroom was lowered or files/images/backups removed. Current/direct
+rollback remains `b4effda`/`c7dc074`; all protected images are present, current
+services healthy with zero restarts/OOM, schema `20261022_0053` and queues idle.
+The production env/Compose/Nginx and PostgreSQL are unchanged. No writer has
+been stopped or image loaded yet. Immediate recheck, resource-bounded read-only
+attachment audit, stopped-writer five-component backup and deployment/runtime
+acceptance remain mandatory.
