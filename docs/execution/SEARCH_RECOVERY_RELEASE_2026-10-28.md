@@ -195,6 +195,25 @@ log in to GitHub in a browser.
 Exact-source deployment helpers remain preparatory only. No writer was stopped
 or application replaced; production/direct rollback remains `b4effda`/`c7dc074`.
 
+### CI attempt 4 — dispatched; result-read gate active
+
+The interceptor correction and pending source-contract documentation were
+committed as **`1dcd9f9986c70adfcb7b92e3a4ea3be74e640590`**. Two existing SSH
+push attempts failed at transport before completing; a command-local HTTPS
+mapping and the existing local Git credential pushed the same commit without
+changing repository remote configuration or persisting the token. Only the
+pre-existing `apps/web/tsconfig.tsbuildinfo` remained outside the commit.
+
+Complete workflow run **`40666671235`**, attempt 1, was created for that exact
+source at `2026-10-28T09:45:01Z`. The conservative post-dispatch timestamp is
+`09:45:01.2255937Z`; no result may be read until after
+`10:35:01.2255937Z` (**2026-10-28 18:35:02 Beijing**, rounded up).
+Only identity/source/time metadata was inspected. This documentation-only
+dispatch checkpoint is not a new application candidate; all later artifact
+checks must keep the exact `1dcd9f9` source/run/attempt chain. Full quality,
+official artifact, independent source verification, fresh capacity and
+stopped-writer backup gates remain pending. No production action occurred.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),
