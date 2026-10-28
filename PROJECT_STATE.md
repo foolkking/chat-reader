@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; fifth CI correction, awaiting full CI):**
+**Search and reader recovery release (2026-10-28; sixth full CI dispatched):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -25,9 +25,11 @@ narrow correction: the normal 24px alignment remains; only an actual clamped
 endpoint with the selected anchor visible can also stabilize. The existing
 three-frame/240ms, cancellation, stale fallback and exact-pulse requirements
 remain. Controlled alignment regressions and a no-scroll fallback browser
-assertion are authored, not locally run. A new complete exact-source dispatch
-and fresh 50-minute gate are required. Earlier attempts remain in the release
-record. No release gate is relaxed and no accepted deployable artifact exists.
+assertion are authored, not locally run. Corrections are pushed as `4402635`;
+complete CI `40692514416`, attempt 1, targets that exact source. Do not read
+results before **2026-10-28 21:50:13 Beijing**. Only source/run/date metadata
+has been inspected. Earlier attempts remain in the release record. No release
+gate is relaxed and no accepted deployable artifact exists.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;

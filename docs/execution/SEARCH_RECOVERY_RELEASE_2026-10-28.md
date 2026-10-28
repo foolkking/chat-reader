@@ -323,6 +323,30 @@ all five jobs, independent official image verification, fresh capacity/
 rollback/queue checks and stopped-writer five-component backup remain pending.
 No production operation occurred.
 
+### CI attempt 6 — dispatched; result-read gate active
+
+The physical-boundary alignment correction, complete count assertion and
+regressions were committed/pushed as
+**`440263573900cc7f8162b96c36f350f92c1785f6`**. Only static source/diff review
+and textual diff checks ran; no local tests/lint/typecheck/build/browser/
+services/database or dependency diagnostics ran. The pre-existing
+`apps/web/tsconfig.tsbuildinfo` hash remains unchanged and excluded.
+
+After verifying the remote `master` SHA, the complete `Build release images`
+workflow was dispatched once. Run **`40692514416`**, attempt 1, was created at
+`2026-10-28T13:00:12Z` for that exact source. The conservative post-dispatch
+timestamp is `13:00:12.7596140Z`; do not read results/jobs/logs/artifacts before
+`13:50:12.7596140Z` (**2026-10-28 21:50:13 Beijing**, rounded up).
+Only identity/source/date metadata has been inspected. This subsequent
+documentation-only checkpoint does not change the application candidate;
+independent image/source verification must preserve the exact
+`4402635`/run/attempt chain.
+
+All five jobs, official image verification, fresh capacity/rollback/queue
+checks and stopped-writer five-component backup remain required. No writer
+stopped, image loaded or application replaced; production/direct rollback
+remains `b4effda`/`c7dc074`, schema `20261022_0053`.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),
