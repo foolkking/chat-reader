@@ -37,7 +37,10 @@ class SearchResult:
     rank: float
     source_profile: str | None
     occurrence_count: int = 1
+    matches_truncated: bool = False
     matches: list[SearchMatch] | None = None
+    attachment_id: uuid.UUID | None = None
+    attachment_display_name: str | None = None
     annotation_id: uuid.UUID | None = None
     annotation_type: str | None = None
     annotation_color: str | None = None
@@ -50,6 +53,7 @@ class SearchResultPage:
     limit: int
     offset: int
     total: int
+    has_more: bool
 
 
 def search(
@@ -77,7 +81,7 @@ def search(
 
     rank_expr = literal(1.0)
     lowered_query = normalized_query.lower()
-    like_query = f"%{lowered_query}%"
+    like_query = f"%{_escape_like_pattern(lowered_query)}%"
     base_query = (
         db.query(SearchDocument, Conversation.display_title.label("conversation_title"), rank_expr.label("rank"))
         .join(Conversation, Conversation.id == SearchDocument.conversation_id)
@@ -111,8 +115,8 @@ def search(
             else func.plainto_tsquery("simple", _safe_tsquery_text(normalized_query))
         )
         ts_rank_expr = func.ts_rank_cd(SearchDocument.search_tsv, tsquery)
-        title_match = SearchDocument.title.ilike(like_query)
-        text_match = SearchDocument.search_text.ilike(like_query)
+        title_match = SearchDocument.title.ilike(like_query, escape="\\")
+        text_match = SearchDocument.search_text.ilike(like_query, escape="\\")
         exact_title_match = func.lower(SearchDocument.title) == lowered_query
         heading_match = (SearchDocument.document_type == "heading") & text_match
         rank_expr = (
@@ -154,10 +158,10 @@ def search(
             base_query = base_query.filter(SearchDocument.created_at >= date_from)
         if date_to is not None:
             base_query = base_query.filter(SearchDocument.created_at <= date_to)
-        ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
+        ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc(), SearchDocument.id.asc())
     else:
-        title_match = SearchDocument.title.ilike(like_query)
-        text_match = SearchDocument.search_text.ilike(like_query)
+        title_match = SearchDocument.title.ilike(like_query, escape="\\")
+        text_match = SearchDocument.search_text.ilike(like_query, escape="\\")
         rank_expr = (
             case((func.lower(SearchDocument.title) == lowered_query, 8.0), else_=0.0)
             + case((title_match, 6.0), else_=0.0)
@@ -191,7 +195,7 @@ def search(
             base_query = base_query.filter(SearchDocument.created_at >= date_from)
         if date_to is not None:
             base_query = base_query.filter(SearchDocument.created_at <= date_to)
-        ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc())
+        ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc(), SearchDocument.id.asc())
 
     rows = ordered_query.with_entities(
         SearchDocument.id.label("document_id"),
@@ -207,9 +211,11 @@ def search(
     group_conversations: list[set[uuid.UUID]] = []
     for row in rows:
         content_hash = row.content_hash
+        # Global/project search folds copies across conversations. Within one
+        # conversation every distinct message must keep its own navigable target.
         key = (
             ("message", content_hash)
-            if row.document_type == "message" and content_hash
+            if conversation_id is None and row.document_type == "message" and content_hash
             else (row.document_type, str(row.document_id))
         )
         existing_position = group_positions.get(key)
@@ -269,7 +275,7 @@ def search(
         for document_id, _, _, _, conversation_title, rank, occurrence_count in page_rows
         if (document := documents.get(document_id)) is not None
     ]
-    return SearchResultPage(query=normalized_query, items=items, limit=limit, offset=offset, total=total)
+    return SearchResultPage(query=normalized_query, items=items, limit=limit, offset=offset, total=total, has_more=offset + len(items) < total)
 
 
 def _status_filter(status_scope: str):
@@ -318,25 +324,32 @@ def _annotation_fields(document: SearchDocument) -> tuple[uuid.UUID | None, str 
     return annotation_id, metadata.get("annotation_type"), metadata.get("annotation_color")
 
 
+def _attachment_fields(document: SearchDocument) -> tuple[uuid.UUID | None, str | None]:
+    if document.document_type != "attachment":
+        return None, None
+    metadata = document.metadata_ if isinstance(document.metadata_, dict) else {}
+    try:
+        attachment_id = uuid.UUID(str(metadata["attachment_id"])) if metadata.get("attachment_id") else None
+    except (ValueError, TypeError):
+        attachment_id = None
+    display_name = document.title or metadata.get("display_name")
+    return attachment_id, display_name if isinstance(display_name, str) else None
+
+
 def _snippet(text: str, query: str) -> str:
-    normalized_text = " ".join(text.split())
-    query_lower = query.lower()
-    text_lower = normalized_text.lower()
-    index = text_lower.find(query_lower)
-    snippet_length = len(query)
-    if index < 0:
-        for token in _query_tokens(query_lower):
-            index = text_lower.find(token)
-            if index >= 0:
-                snippet_length = len(token)
-                break
-    if index < 0:
-        return normalized_text[:160]
-    start = max(0, index - 80)
-    end = min(len(normalized_text), index + snippet_length + 80)
+    matches = _find_text_matches(text, query, None, max_matches=1)
+    if not matches:
+        return " ".join(text.split())[:160]
+    match = matches[0]
+    return _snippet_at_range(text, match.match_start, match.match_end)
+
+
+def _snippet_at_range(text: str, match_start: int, match_end: int) -> str:
+    start = max(0, match_start - 80)
+    end = min(len(text), match_end + 80)
     prefix = "..." if start > 0 else ""
-    suffix = "..." if end < len(normalized_text) else ""
-    return f"{prefix}{normalized_text[start:end]}{suffix}"
+    suffix = "..." if end < len(text) else ""
+    return f"{prefix}{' '.join(text[start:end].split())}{suffix}"
 
 
 def _build_search_result(
@@ -350,7 +363,11 @@ def _build_search_result(
     db: Session,
 ) -> SearchResult:
     matches = _document_matches(document, normalized_query, db, block_texts_by_version)
+    matches_truncated = len(matches) > 100
+    matches = matches[:100]
+    first_match = matches[0] if matches else None
     annotation_id, annotation_type, annotation_color = _annotation_fields(document)
+    attachment_id, attachment_display_name = _attachment_fields(document)
     return SearchResult(
         document_id=document.id,
         document_type=document.document_type,
@@ -360,14 +377,17 @@ def _build_search_result(
         message_version_id=document.message_version_id,
         role=document.role,
         order_key=document.order_key,
-        block_index=_document_block_index(document),
-        render_block_id=_document_render_block_id(document),
-        character_offset=_document_character_offset(document),
+        block_index=first_match.block_index if first_match else _document_block_index(document),
+        render_block_id=first_match.render_block_id if first_match else _document_render_block_id(document),
+        character_offset=first_match.match_start if first_match else _document_character_offset(document),
         snippet=_result_snippet(document, normalized_query, matches, block_texts_by_version),
         rank=rank,
         source_profile=document.source_profile,
         occurrence_count=occurrence_count,
         matches=matches,
+        matches_truncated=matches_truncated,
+        attachment_id=attachment_id,
+        attachment_display_name=attachment_display_name,
         annotation_id=annotation_id,
         annotation_type=annotation_type,
         annotation_color=annotation_color,
@@ -386,7 +406,7 @@ def _result_snippet(
         if match.block_index is not None:
             block_texts = {index: text for index, text, _block_id in block_texts_by_version.get(document.message_version_id, [])}
             text = block_texts.get(match.block_index, text) or text
-        return _snippet(text, match.quote)
+        return _snippet_at_range(text, match.match_start, match.match_end)
     return _snippet(document.plain_text or document.search_text, query)
 
 
@@ -396,7 +416,12 @@ def _document_matches(
     db: Session,
     block_texts_by_version: dict[uuid.UUID, list[tuple[int, str, uuid.UUID]]] | None = None,
 ) -> list[SearchMatch]:
-    if document.message_version_id is None:
+    # SearchMatch is a canonical RenderBlock range, not a range in an
+    # attachment extract, annotation comment or conversation title.
+    if document.document_type not in {"message", "heading", "code"} or document.message_version_id is None:
+        return []
+    requested_block_index = _document_block_index(document) if document.document_type in {"heading", "code"} else None
+    if document.document_type in {"heading", "code"} and requested_block_index is None:
         return []
     candidates = (block_texts_by_version or {}).get(document.message_version_id)
     if candidates is None:
@@ -405,50 +430,107 @@ def _document_matches(
         ).order_by(RenderBlock.block_index.asc()).all()
         candidates = [(block.block_index, block.plain_text or "", block.id) for block in blocks]
     if not candidates:
-        candidates = [(None, document.plain_text or document.search_text, None)]
+        return []
     matches: list[SearchMatch] = []
     for block_index, text, block_id in candidates:
-        matches.extend(_find_text_matches(text, query, block_index, block_id))
-        if len(matches) >= 100:
+        if requested_block_index is not None and block_index != requested_block_index:
+            continue
+        remaining = 101 - len(matches)
+        if remaining <= 0:
             break
-    return matches[:100]
+        matches.extend(_find_text_matches(text, query, block_index, block_id, max_matches=remaining))
+    return matches
 
 
-def _find_text_matches(text: str, query: str, block_index: int | None, render_block_id: uuid.UUID | None = None) -> list[SearchMatch]:
-    normalized_text = " ".join(text.split())
-    normalized_query = " ".join(query.split())
-    if not normalized_text or not normalized_query:
+def _find_text_matches(
+    text: str,
+    query: str,
+    block_index: int | None,
+    render_block_id: uuid.UUID | None = None,
+    *,
+    max_matches: int = 100,
+) -> list[SearchMatch]:
+    if max_matches <= 0:
         return []
-    lower_text = normalized_text.casefold()
-    lower_query = normalized_query.casefold()
-    offsets: list[tuple[int, int]] = []
+    lower_text, folded_spans = _normalized_search_text(text)
+    lower_query = " ".join(query.split()).casefold()
+    if not lower_text or not lower_query:
+        return []
     cursor = 0
+    offsets: list[tuple[int, int]] = []
     while True:
         index = lower_text.find(lower_query, cursor)
         if index < 0:
             break
-        offsets.append((index, index + len(normalized_query)))
-        cursor = index + max(1, len(normalized_query))
+        end = index + len(lower_query)
+        raw_span = _raw_match_span(folded_spans, index, end)
+        if not offsets or offsets[-1] != raw_span:
+            offsets.append(raw_span)
+        if len(offsets) >= max_matches:
+            break
+        cursor = index + max(1, len(lower_query))
     if not offsets:
         for token in _query_tokens(lower_query):
             index = lower_text.find(token)
             if index >= 0:
-                offsets.append((index, index + len(token)))
+                offsets.append(_raw_match_span(folded_spans, index, index + len(token)))
                 break
     result: list[SearchMatch] = []
     for start, end in offsets:
         before_start = max(0, start - 80)
-        after_end = min(len(normalized_text), end + 80)
+        after_end = min(len(text), end + 80)
         result.append(SearchMatch(
             block_index=block_index,
             render_block_id=render_block_id,
             match_start=start,
             match_end=end,
-            quote=normalized_text[start:end],
-            context_before=normalized_text[before_start:start],
-            context_after=normalized_text[end:after_end],
+            quote=text[start:end],
+            context_before=text[before_start:start],
+            context_after=text[end:after_end],
         ))
     return result
+
+
+def _normalized_search_text(text: str) -> tuple[str, list[tuple[int, int]]]:
+    """Return a case-folded search surface and raw code-point spans.
+
+    The search surface collapses whitespace like the legacy matcher, while
+    every emitted code point retains the source range it came from. This
+    keeps canonical reader offsets in the original RenderBlock text even when
+    casefold expands a character such as ``ß``.
+    """
+    output: list[str] = []
+    spans: list[tuple[int, int]] = []
+    pending_start: int | None = None
+    pending_end: int | None = None
+    has_content = False
+    for index, char in enumerate(text):
+        if char.isspace():
+            if has_content and pending_start is None:
+                pending_start = index
+            if pending_start is not None:
+                pending_end = index + 1
+            continue
+        if pending_start is not None and pending_end is not None:
+            output.append(" ")
+            spans.append((pending_start, pending_end))
+            pending_start = None
+            pending_end = None
+        folded = char.casefold()
+        output.extend(folded)
+        spans.extend([(index, index + 1)] * len(folded))
+        has_content = True
+    return "".join(output), spans
+
+
+def _raw_match_span(spans: list[tuple[int, int]], start: int, end: int) -> tuple[int, int]:
+    if start < 0 or end <= start or start >= len(spans):
+        return (0, 0)
+    return spans[start][0], spans[min(end, len(spans)) - 1][1]
+
+
+def _escape_like_pattern(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def _query_tokens(query: str) -> list[str]:
@@ -460,7 +542,7 @@ def _needs_substring_first(query: str) -> bool:
         return True
     if len(query.strip()) <= 2:
         return True
-    return bool(re.search(r"[./:#?&=_`'\"()[\]{}<>@\\-]", query))
+    return bool(re.search(r"[./:#?&=%_`'\"()[\]{}<>@\\-]", query))
 
 
 def _safe_tsquery_text(query: str) -> str:

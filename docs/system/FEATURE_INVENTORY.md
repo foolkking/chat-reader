@@ -100,4 +100,4 @@ implementation authority.
 
 ## 明确不包含
 
-注册/登录、多用户 ACL、在线消息生成、模型选择、未经 Adapter 标准化的 OpenAI 官方图/ZIP 导入、回答分支切换、团队协作、标签、日历、语义/向量搜索、HTML/PDF 导出、完整消息虚拟列表和应用内管理后台均不适用或未实现。Office/OCR/CAD/复杂压缩包预览为 `NOT_IMPLEMENTED`，只提供下载降级。
+明确不包含：未经 Adapter 标准化的 OpenAI 官方图/ZIP 导入、回答分支切换、团队协作、标签、日历、语义/向量搜索、HTML/PDF 导出和完整消息虚拟列表。账号、管理员和权限边界以[身份专题](USER_ROLES_AND_PERMISSIONS.md)与[管理专题](ADMINISTRATION_CONTRACT.md)为准；不是“没有账号系统”。DOC（提取正文）、DOCX/ODT、XLSX/ODS、PPTX/ODP 和 ZIP 具有浏览器内有界只读预览，并保留原文件下载；XLS/PPT、其他未支持压缩格式、OCR、CAD、3D、图表/工程格式和 EPUB 仍为未实现或下载降级，不应与已支持格式混写。2026-10-28 的截断提示等源码增强尚未运行验收，详见[附件合同](ATTACHMENT_RENDERER_CONTRACT.md)。

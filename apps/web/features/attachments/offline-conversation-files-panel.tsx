@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Download, Eye, File, Image as ImageIcon, LocateFixed, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import {
   getOfflineAttachment,
@@ -13,14 +13,19 @@ import type { AttachmentRead, NavigateTarget } from "../../lib/types";
 import { buildAttachmentRenderPlan, friendlyAttachmentType } from "./preview-adapter-registry";
 import { formatBytes, useAttachmentViewer } from "./attachment-viewer";
 import { attachmentOccurrenceTarget } from "./attachment-location";
+import { useAttachmentSearchActivation, useAttachmentSearchTarget } from "./use-attachment-search-target";
 
 type OfflineFilter = "all" | "used" | "unused" | "unavailable";
 
 export function OfflineConversationFilesPanel({
   conversationId,
+  initialAttachmentId,
+  searchReplayKey = 0,
   onLocate,
 }: {
   conversationId: string;
+  initialAttachmentId?: string | null;
+  searchReplayKey?: number;
   onLocate: (target: NavigateTarget) => void | Promise<void>;
 }) {
   const { resolvedLocale } = usePreferences();
@@ -29,6 +34,12 @@ export function OfflineConversationFilesPanel({
   const [filter, setFilter] = useState<OfflineFilter>("all");
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const searchActivation = useAttachmentSearchActivation(conversationId, initialAttachmentId, searchReplayKey);
+  useEffect(() => {
+    if (!initialAttachmentId) return;
+    setSearch("");
+    setFilter("all");
+  }, [conversationId, initialAttachmentId, searchReplayKey]);
   const filesQuery = useQuery({
     queryKey: ["offline-conversation-attachments", conversationId],
     queryFn: () => listOfflineConversationAttachments(conversationId),
@@ -103,6 +114,7 @@ export function OfflineConversationFilesPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {filesQuery.isLoading ? <p className="text-sm text-secondary">{zh ? "正在加载文件…" : "Loading files…"}</p> : null}
+        {initialAttachmentId && filesQuery.isSuccess && !filesQuery.isFetching && !filesQuery.data.some((item) => item.id === initialAttachmentId) ? <p role="status" className="mb-3 text-sm text-secondary">{zh ? "离线包中没有此搜索结果对应的文件记录，请重新搜索或更新离线副本。" : "This file is not in the offline package. Search again or update the offline copy."}</p> : null}
         {filesQuery.isError ? (
           <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-[var(--danger)]">
             <p>{zh ? "无法读取离线文件列表。" : "Unable to read offline files."}</p>
@@ -120,6 +132,7 @@ export function OfflineConversationFilesPanel({
           <OfflineFileRow
             key={attachment.id}
             attachment={attachment}
+            searchTarget={attachment.id === initialAttachmentId ? searchActivation : null}
             zh={zh}
             divided={index > 0}
             onOpen={openAttachment}
@@ -133,8 +146,9 @@ export function OfflineConversationFilesPanel({
   );
 }
 
-function OfflineFileRow({ attachment, zh, divided, onOpen, onDownload, onLocate }: {
+function OfflineFileRow({ attachment, searchTarget, zh, divided, onOpen, onDownload, onLocate }: {
   attachment: AttachmentRead;
+  searchTarget?: { focused: boolean } | null;
   zh: boolean;
   divided: boolean;
   onOpen: (attachment: AttachmentRead, trigger: HTMLElement) => void;
@@ -145,17 +159,21 @@ function OfflineFileRow({ attachment, zh, divided, onOpen, onDownload, onLocate 
   const available = attachment.resolution_status === "resolved";
   const image = (attachment.detected_mime_type ?? attachment.asset_object?.detected_mime_type ?? "").startsWith("image/");
   const occurrences = attachment.occurrences ?? [];
+  const [referenceCount, setReferenceCount] = useState(3);
+  const referencesOpen = referenceCount > 3;
+  const visibleOccurrences = occurrences.slice(0, referenceCount);
+  const searchTargetRef = useAttachmentSearchTarget(searchTarget ?? null);
   return (
-    <article className={`flex min-h-16 items-center gap-3 px-3 py-2 ${divided ? "border-t border-ui" : ""}`} data-attachment-id={attachment.id} data-resolution-status={attachment.resolution_status}>
+    <article ref={searchTargetRef} tabIndex={-1} className={`flex min-h-16 items-center gap-3 px-3 py-2 ${divided ? "border-t border-ui" : ""}`} data-attachment-id={attachment.id} data-resolution-status={attachment.resolution_status} data-search-target={searchTarget ? "true" : undefined} data-dialog-initial-focus={searchTarget ? "true" : undefined}>
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-subtle text-secondary">{image ? <ImageIcon className="h-4 w-4" /> : <File className="h-4 w-4" />}</span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</p>
         <p className="truncate text-[11px] text-secondary">{friendlyAttachmentType(attachment, zh)} · {formatBytes(attachment.asset_object?.byte_size ?? 0)} · {available ? (zh ? "已缓存" : "Cached") : attachment.resolution_status === "missing" ? (zh ? "文件缺失" : "Missing") : (zh ? "离线不可用" : "Unavailable offline")}</p>
-        {occurrences.length ? <div className="mt-1 flex flex-wrap gap-1">{occurrences.slice(0, 3).map((occurrence, index) => (
-          <button key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`} type="button" onClick={() => void onLocate(attachmentOccurrenceTarget(attachment, occurrence))} className="inline-flex min-h-7 items-center gap-1 rounded px-1.5 text-[11px] text-secondary hover:bg-subtle hover:text-primary">
+        {occurrences.length ? <div className="mt-1 flex flex-wrap gap-1" aria-label={zh ? "正文引用" : "Message references"}>{visibleOccurrences.map((occurrence, index) => (
+          <button key={`${occurrence.message_version_id}:${occurrence.occurrence_key}`} type="button" onClick={() => void onLocate(attachmentOccurrenceTarget(attachment, occurrence))} className="inline-flex min-h-11 items-center gap-1 rounded px-1.5 text-[11px] text-secondary hover:bg-subtle hover:text-primary">
             <LocateFixed className="h-3 w-3" />{zh ? `引用 ${index + 1}` : `Reference ${index + 1}`}
           </button>
-        ))}{occurrences.length > 3 ? <span className="px-1.5 py-1 text-[11px] text-secondary">+{occurrences.length - 3}</span> : null}</div> : null}
+        ))}{occurrences.length > referenceCount ? <button type="button" aria-expanded={referencesOpen} onClick={() => setReferenceCount((value) => value + 50)} className="inline-flex min-h-11 items-center rounded px-1.5 text-[11px] font-medium text-accent hover:bg-subtle">{zh ? `查看更多引用（还有 ${occurrences.length - visibleOccurrences.length} 处）` : `More references (${occurrences.length - visibleOccurrences.length} remaining)`}</button> : null}{referencesOpen ? <button type="button" onClick={() => setReferenceCount(3)} className="inline-flex min-h-11 items-center rounded px-1.5 text-[11px] text-secondary underline">{zh ? "收起引用" : "Show fewer"}</button> : null}</div> : null}
       </div>
       <div className="flex shrink-0 items-center gap-1">
         {available && plan.actions.open ? <button type="button" onClick={(event) => onOpen(attachment, event.currentTarget)} className="inline-flex h-11 w-11 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? `查看 ${attachment.display_name}` : `View ${attachment.display_name}`} title={zh ? "查看" : "View"}><Eye className="h-4 w-4" /></button> : null}

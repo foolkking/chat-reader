@@ -28,7 +28,8 @@ test("successful conversation/message read commits ready before optional search 
   assert.match(reload, /const localMessages = await offlineDb\.messages\.toArray\(\)/);
   assert.match(reload, /localListCommitted = true/);
   assert.match(reload, /phase: "ready", refreshing: false, refreshError: false/);
-  assert.ok(reload.indexOf("localListCommitted = true") < reload.indexOf("offlineDb.searchDocuments.toArray()"));
+  assert.match(reload, /await reloadSearchIndex\(\)/);
+  assert.ok(reload.indexOf("localListCommitted = true") < reload.indexOf("await reloadSearchIndex()"));
 });
 
 test("initial local read failure is not presented as an empty library", () => {

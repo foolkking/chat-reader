@@ -24,7 +24,7 @@ import {
   type CompleteTurnWindow,
 } from "../conversations/reader-window";
 import { ConversationIndex } from "../toc/conversation-index";
-import { ConversationToc, resolveActiveHeadingId } from "../toc/conversation-toc";
+import { ConversationToc } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MobileReaderSheet } from "../../components/mobile-reader-sheet";
@@ -129,12 +129,6 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     ),
     enabled: shareQuery.isSuccess && storageReady && storageIsCurrent,
   });
-  const tocQuery = useQuery({
-    queryKey: ["shared-toc", token, activeMessageId],
-    queryFn: () => getSharedToc(token, { messageId: activeMessageId ?? undefined, limit: 200 }),
-    enabled: Boolean(shareQuery.data?.capabilities.toc && activeMessageId),
-    staleTime: 30_000,
-  });
 
   const payload = shareQuery.data;
   const zh = (payload?.share.locale ?? resolvedLocale) === "zh-CN";
@@ -209,11 +203,6 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     rootRef: tabletNavigationPanelRef,
     onClose: () => handleNavigationOpenChange(false),
   });
-  const toc = tocQuery.data?.items ?? [];
-  const activeHeadingId = useMemo(
-    () => resolveActiveHeadingId(toc, activeBlockId),
-    [activeBlockId, toc],
-  );
 
   useEffect(() => {
     if (!payload) return;
@@ -902,10 +891,12 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         </ReaderMarkdownCopyBoundary>} toc={<div className="h-full">
           <ConversationToc
             conversationId={payload.conversation.id}
+            sourceKey={`share:${token}`}
             activeMessageId={navigationTargetMessageId ?? activeMessageId}
-            activeHeadingId={activeHeadingId}
+            activeBlockId={activeBlockId}
+            ready={payload.capabilities.toc}
             observerKey={tocObserverKey}
-            items={toc}
+            loadPage={(options) => getSharedToc(token, options)}
             onNavigate={async (item) => {
               await navigateToTarget(tocNavigationTarget(item));
             }}
@@ -918,7 +909,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
         header={<NavigationTabs tab={navigationTab} onTabChange={handleNavigationTabChange} onClose={() => handleNavigationOpenChange(false)} />}
         status={<>{currentMobileNavigation?.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{currentMobileNavigation?.error ? <p className="text-sm text-[var(--danger)]">{t("locateFailed")}</p> : null}</>}
       >
-        {navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={(item) => navigateFromNavigationSheet(item.messageId)} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />}
+        {navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={(item) => navigateFromNavigationSheet(item.messageId)} /> : <ConversationToc conversationId={payload.conversation.id} sourceKey={`share:${token}`} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeBlockId={activeBlockId} ready={payload.capabilities.toc} observerKey={tocObserverKey} loadPage={(options) => getSharedToc(token, options)} mode="sheet" onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />}
       </MobileReaderSheet>
       {navigationOpen && navigationViewport === "tablet" ? (
         <div className="fixed inset-0 z-50 hidden justify-end bg-black/25 md:flex xl:hidden">
@@ -926,7 +917,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
           <section ref={tabletNavigationPanelRef} role="dialog" aria-modal="true" aria-label={t("navigationTitle")} tabIndex={-1} className="relative flex h-full w-[min(28rem,42vw)] flex-col border-l border-ui bg-page shadow-2xl">
             <header className="border-b border-ui p-4"><NavigationTabs tab={navigationTab} onTabChange={handleNavigationTabChange} onClose={() => handleNavigationOpenChange(false)} /></header>
             <div className="px-4 py-2" aria-live="polite">{currentMobileNavigation?.pending ? <p className="text-sm text-accent">{t("locating")}</p> : null}{currentMobileNavigation?.error ? <p className="text-sm text-[var(--danger)]">{t("locateFailed")}</p> : null}</div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={(item) => navigateFromNavigationSheet(item.messageId)} /> : <ConversationToc conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} items={toc} mode="sheet" onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4">{navigationTab === "dialogue" ? <ConversationIndex conversationId={payload.conversation.id} activeMessageId={navigationTargetMessageId ?? activeMessageId} ready={initialWindowQuery.isSuccess} mode="sheet" loadPage={indexLoader} onNavigate={(item) => navigateFromNavigationSheet(item.messageId)} /> : <ConversationToc conversationId={payload.conversation.id} sourceKey={`share:${token}`} activeMessageId={navigationTargetMessageId ?? activeMessageId} activeBlockId={activeBlockId} ready={payload.capabilities.toc} observerKey={tocObserverKey} loadPage={(options) => getSharedToc(token, options)} mode="sheet" onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />}</div>
           </section>
         </div>
       ) : null}

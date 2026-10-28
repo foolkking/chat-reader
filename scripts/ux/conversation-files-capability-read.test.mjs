@@ -21,7 +21,7 @@ test("conversation files exposes a local capability-read retry", () => {
 
 test("capability refresh failure does not alter attachment upload actions", () => {
   assert.match(source, /createAttachmentUploadSession\(conversationId\)/);
-  assert.match(source, /uploadAttachmentItem\(session\.id, file/);
-  assert.match(source, /finalizeConversationAttachments\(conversationId, itemIds\)/);
+  assert.match(source, /uploadAttachmentItem\(session\.id, entry\.file/);
+  assert.match(source, /finalizeConversationAttachments\(conversationId, entries\.map/);
   assert.doesNotMatch(source, /getCapabilities\(\)\.then/);
 });

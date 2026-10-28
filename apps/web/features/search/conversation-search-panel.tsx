@@ -1,15 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { NavigationResult, SearchResultItem } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { remoteReaderDataSource, type ReaderDataSource } from "../../lib/reader-data-source";
 import { assertOfflineAccess, captureOfflineAccess } from "../../lib/offline-access";
+import { READER_SEARCH_CHANGED_EVENT, type ReaderSearchChange } from "../../lib/reader-search-cache";
 
 export type SearchNavigationTarget = {
-  messageId: string;
+  messageId?: string;
   messageVersionId?: string | null;
   renderBlockId?: string | null;
   blockIndex?: number;
@@ -18,6 +19,8 @@ export type SearchNavigationTarget = {
   quote?: string;
   prefix?: string;
   suffix?: string;
+  attachmentId?: string | null;
+  annotationId?: string | null;
 };
 
 export type ConversationSearchPanelState = {
@@ -74,10 +77,11 @@ export function ConversationSearchPanel({
   const [activeOccurrenceKey, setActiveOccurrenceKey] = useState(initialState?.activeOccurrenceKey ?? null);
   const [documentType, setDocumentType] = useState(initialState?.documentType ?? "message");
   const [role, setRole] = useState(initialState?.role ?? "all");
+  const [contentEpoch, setContentEpoch] = useState(0);
   const zh = resolvedLocale === "zh-CN";
   // Retire intent on the raw input, before the debounced query can catch up.
   const navigationScope = useMemo(() => ({ active: false, sequence: 0, pendingKey: null as string | null }),
-    [active, conversationId, dataSource, documentType, query, role, sourceKey]);
+    [active, contentEpoch, conversationId, dataSource, documentType, query, role, sourceKey]);
   const [navigationFeedback, setNavigationFeedback] = useState<{
     scope: typeof navigationScope; pendingKey: string | null; failed: boolean;
   } | null>(null);
@@ -105,9 +109,23 @@ export function ConversationSearchPanel({
     const timer = window.setTimeout(() => setDebounced(query.trim()), 220);
     return () => window.clearTimeout(timer);
   }, [query]);
-  const results = useQuery({
+  useEffect(() => {
+    const onContentChanged = (event: Event) => {
+      const detail = (event as CustomEvent<ReaderSearchChange>).detail;
+      if (detail?.conversationId && detail.conversationId !== conversationId) return;
+      if (detail?.mode && detail.mode !== dataSource.mode) return;
+      navigationScope.active = false;
+      navigationScope.sequence++;
+      navigationScope.pendingKey = null;
+      setContentEpoch((value) => value + 1);
+    };
+    window.addEventListener(READER_SEARCH_CHANGED_EVENT, onContentChanged);
+    return () => window.removeEventListener(READER_SEARCH_CHANGED_EVENT, onContentChanged);
+  }, [conversationId, dataSource.mode, navigationScope]);
+  const results = useInfiniteQuery({
     queryKey: ["conversation-search", sourceKey, conversationId, debounced, documentType, role],
-    queryFn: async () => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam, signal }) => {
       const access = dataSource.mode === "offline" ? captureOfflineAccess() : null;
       const preparation = retryPreparation.current;
       if (preparation?.scope === searchScope) {
@@ -120,18 +138,30 @@ export function ConversationSearchPanel({
         documentType: documentType === "all" ? undefined : documentType,
         role: role === "all" ? undefined : role,
         limit: 50,
+        offset: pageParam,
+        signal,
       });
       if (access !== null) assertOfflineAccess(access);
       return response;
+    },
+    getNextPageParam: (lastPage) => {
+      const hasMore = lastPage.has_more ?? lastPage.offset + lastPage.items.length < lastPage.total;
+      if (!hasMore || lastPage.items.length === 0) return undefined;
+      return lastPage.offset + lastPage.limit;
     },
     enabled: debounced.length > 0,
     networkMode: dataSource.mode === "offline" ? "always" : undefined,
   });
   const currentResults = query.trim() === debounced;
   const occurrences = useMemo(
-    () => (currentResults ? results.data?.items ?? [] : []).flatMap((item) => toOccurrences(item)),
-    [currentResults, results.data?.items],
+    () => (currentResults ? results.data?.pages.flatMap((page) => page.items) ?? [] : []).flatMap((item) => toOccurrences(item)),
+    [currentResults, results.data?.pages],
   );
+  const loadedDocumentCount = results.data?.pages.reduce((total, page) => total + page.items.length, 0) ?? 0;
+  const lastResultPage = results.data?.pages.at(-1);
+  const resultTotal = lastResultPage?.total ?? 0;
+  const exactResultTotal = lastResultPage?.total_is_exact !== false;
+  const hasMoreResults = results.hasNextPage;
   // A refresh may reorder documents or the matches within one document.
   // Never replace a deliberately selected occurrence with its old row number.
   const selectedIndex = activeOccurrenceKey === null
@@ -164,7 +194,12 @@ export function ConversationSearchPanel({
     try {
       const result = await onNavigate(occurrence.target, context, isCurrent);
       if (!isCurrent()) return;
-      if (result.ok) { setNavigationFeedback(null); close(); }
+      if (result.ok) {
+        setNavigationFeedback(null);
+        // Switching to Files already closes/unmounts this mobile panel.
+        // Calling onClose afterward would close the destination panel.
+        if (!occurrence.target.attachmentId) close();
+      }
       else if (result.reason !== "cancelled") {
         setNavigationFeedback({ scope: navigationScope, pendingKey: null, failed: true });
       }
@@ -192,9 +227,11 @@ export function ConversationSearchPanel({
           if (event.key === "Escape") { event.preventDefault(); close(); }
         }} className="h-11 w-full rounded-lg border border-ui bg-surface px-3 text-sm text-primary outline-none placeholder:text-secondary focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--focus)]" placeholder={zh ? "搜索当前对话" : "Search this conversation"} />
         <div className="mt-3 flex flex-wrap items-end gap-2">
-          <span className="mr-auto text-xs text-secondary" role="status">{debounced && currentResults && !results.isError && !results.isFetching ? (zh ? `${occurrences.length} 个结果` : `${occurrences.length} results`) : ""}</span>
+          <span className="mr-auto text-xs text-secondary" role="status">{debounced && currentResults && results.data ? (zh
+            ? `${exactResultTotal ? `已加载 ${loadedDocumentCount} / ${resultTotal} 条结果` : `已加载 ${loadedDocumentCount} 条结果${hasMoreResults ? "，仍有更多" : ""}`} · ${occurrences.length} 个定位项`
+            : `${exactResultTotal ? `${loadedDocumentCount} of ${resultTotal} results loaded` : `${loadedDocumentCount} results loaded${hasMoreResults ? ", more available" : ""}`} · ${occurrences.length} locations`) : ""}</span>
           <label className="text-xs font-medium text-secondary">{zh ? "我 / ChatGPT" : "Role"}<select value={role} onChange={(event) => { if (event.target.value !== role) retireNavigation(); setRole(event.target.value); setActiveIndex(0); setActiveOccurrenceKey(null); }} className="ml-1 h-8 rounded-md border border-ui bg-surface px-2 text-sm text-primary"><option value="all">{zh ? "全部" : "All"}</option><option value="user">{zh ? "我" : "You"}</option><option value="assistant">ChatGPT</option></select></label>
-          <label className="text-xs font-medium text-secondary">{zh ? "筛选" : "Filter"}<select value={documentType} onChange={(event) => { if (event.target.value !== documentType) retireNavigation(); setDocumentType(event.target.value); setActiveIndex(0); setActiveOccurrenceKey(null); }} className="ml-1 h-8 rounded-md border border-ui bg-surface px-2 text-sm text-primary"><option value="all">{zh ? "全部" : "All"}</option><option value="message">{zh ? "正文" : "Messages"}</option><option value="heading">{zh ? "章节" : "Sections"}</option><option value="code">{zh ? "代码" : "Code"}</option><option value="annotation">{zh ? "批注" : "Annotations"}</option></select></label>
+         <label className="text-xs font-medium text-secondary">{zh ? "筛选" : "Filter"}<select value={documentType} onChange={(event) => { if (event.target.value !== documentType) retireNavigation(); setDocumentType(event.target.value); setActiveIndex(0); setActiveOccurrenceKey(null); }} className="ml-1 h-8 rounded-md border border-ui bg-surface px-2 text-sm text-primary"><option value="all">{zh ? "全部" : "All"}</option><option value="message">{zh ? "正文" : "Messages"}</option><option value="heading">{zh ? "章节" : "Sections"}</option><option value="code">{zh ? "代码" : "Code"}</option><option value="annotation">{zh ? "批注" : "Annotations"}</option><option value="attachment">{zh ? "附件" : "Attachments"}</option></select></label>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -206,22 +243,69 @@ export function ConversationSearchPanel({
         {currentResults && results.isError ? <div role="alert" className="p-4 text-sm text-[var(--danger)]"><p>{zh ? "搜索暂不可用" : "Search unavailable"}</p><button type="button" disabled={results.isFetching} className="min-h-10 underline" onClick={() => {
           if (results.isFetching) return;
           if (onPrepareRetry) retryPreparation.current = { scope: searchScope, prepare: onPrepareRetry };
-          void results.refetch();
+          void (results.isFetchNextPageError ? results.fetchNextPage() : results.refetch());
         }}>{zh ? "重试" : "Retry"}</button></div> : null}
         {currentResults && results.data && !results.isError && !results.isFetching && activeOccurrenceKey !== null && selectedIndex < 0 ? <p role="status" className="p-4 text-sm text-secondary">{zh ? "此前选中的匹配已不在当前结果中，请重新选择或修改搜索。" : "The selected match is no longer in these results. Choose a match or change the search."}</p> : null}
         {occurrences.map((occurrence, index) => <button key={`${occurrence.item.document_id}-${index}`} type="button" aria-busy={currentNavigation?.pendingKey === occurrence.key} onMouseEnter={() => selectIndex(index)} onClick={() => void activate(index)} className={`block w-full border-b border-ui px-4 py-3 text-left ${selectedIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
-          <span className="block text-xs font-medium text-secondary">{roleLabel(occurrence.item.role, zh)}</span>
-          <span className="mt-1 block text-sm leading-6 text-primary"><ContextSnippet before={occurrence.before} match={occurrence.match} after={occurrence.after} /></span>
-          <span className="mt-1 block text-xs text-secondary">{documentTypeLabel(occurrence.item.document_type, zh)}{occurrence.item.occurrence_count > 1 ? ` · ${zh ? `第 ${index + 1} 个命中` : `Match ${index + 1}`}` : ""}</span>
+          <span className="block text-xs font-medium text-secondary">{occurrence.item.document_type === "attachment"
+            ? occurrence.item.attachment_display_name ?? documentTypeLabel("attachment", zh)
+            : roleLabel(occurrence.item.role, zh)}</span>
+          <span className="mt-1 block text-sm leading-6 text-primary">{occurrence.match
+            ? <ContextSnippet before={occurrence.before} match={occurrence.match} after={occurrence.after} />
+            : occurrence.item.snippet}</span>
+          <span className="mt-1 block text-xs text-secondary">{documentTypeLabel(occurrence.item.document_type, zh)}{occurrence.item.occurrence_count > 1 ? ` · ${zh ? `第 ${index + 1} 个命中` : `Match ${index + 1}`}` : ""}{occurrence.item.matches_truncated ? ` · ${zh ? "匹配过多，仅显示前 100 个" : "More matches exist; showing the first 100"}` : ""}</span>
         </button>)}
+        {currentResults && !results.isError && hasMoreResults ? <div className="p-4"><button type="button" className="btn-secondary min-h-11 w-full" disabled={results.isFetchingNextPage} onClick={() => void results.fetchNextPage()}>{results.isFetchingNextPage ? (zh ? "正在加载更多…" : "Loading more…") : (zh ? "加载更多结果" : "Load more results")}</button></div> : null}
       </div>
     </div>
   );
 }
 
 function toOccurrences(item: SearchResultItem): SearchOccurrence[] {
+  if (item.document_type === "attachment") {
+    if (!item.attachment_id) return [];
+    return [{
+      key: JSON.stringify([item.document_id, item.attachment_id]),
+      item,
+      target: { attachmentId: item.attachment_id },
+      before: "",
+      match: "",
+      after: "",
+    }];
+  }
+  if (item.document_type === "annotation") {
+    if (!item.annotation_id) return [];
+    // Annotation text is a separate search surface; its saved anchor, not
+    // comment/snippet text, owns the Reader position.
+    return [{
+      key: JSON.stringify([item.document_id, item.annotation_id, item.message_version_id ?? null]),
+      item,
+      target: {
+        messageId: item.message_id ?? undefined,
+        messageVersionId: item.message_version_id,
+        blockIndex: item.block_index ?? undefined,
+        characterOffset: item.character_offset ?? undefined,
+        annotationId: item.annotation_id,
+      },
+      before: item.snippet,
+      match: "",
+      after: "",
+    }];
+  }
   if (!item.message_id) return [];
-  const matches = item.matches?.length ? item.matches : [{ block_index: item.block_index, match_start: item.character_offset ?? 0, match_end: (item.character_offset ?? 0) + item.snippet.length, quote: item.snippet, context_before: "", context_after: "" }];
+  const matches = item.matches?.length ? item.matches : null;
+  if (!matches) {
+    // Older/offline projections may not contain canonical block matches.
+    // Keep the message searchable without inventing an offset from its snippet.
+    return [{
+      key: JSON.stringify([item.document_id, item.message_id, item.message_version_id ?? null, "message-only"]),
+      item,
+      target: { messageId: item.message_id, messageVersionId: item.message_version_id },
+      before: item.snippet,
+      match: "",
+      after: "",
+    }];
+  }
   return matches.map((match) => ({
     key: JSON.stringify([item.document_id, item.message_id, item.message_version_id ?? null,
       match.render_block_id ?? item.render_block_id ?? null, match.block_index ?? item.block_index,
@@ -249,7 +333,7 @@ function ContextSnippet({ before, match, after }: { before: string; match: strin
 }
 
 function documentTypeLabel(value: string, zh: boolean) {
-  const labels: Record<string, [string, string]> = { message: ["正文", "Message"], heading: ["章节", "Section"], code: ["代码", "Code"], annotation: ["批注", "Annotation"] };
+  const labels: Record<string, [string, string]> = { message: ["正文", "Message"], heading: ["章节", "Section"], code: ["代码", "Code"], annotation: ["批注", "Annotation"], attachment: ["附件", "Attachment"] };
   return labels[value]?.[zh ? 0 : 1] ?? value;
 }
 

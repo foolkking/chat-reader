@@ -120,7 +120,14 @@ renderer 使用 React 组件和受控 Markdown pipeline，禁止 raw HTML 执行
 
 ## 搜索
 
-PostgreSQL `search_documents` 同时支持全文排名和基于 `pg_trgm` GIN 索引的大小写不敏感 substring。substring 对中文、`package.json`、URL 和标点查询尤其重要。搜索结果只引用 canonical conversation/message/heading/code/annotation，不索引 raw artifact；heading/code/annotation 记录精确目标字段，相同 `Message.content_hash` 的跨会话 message 结果会折叠并返回 `occurrence_count`。
+PostgreSQL `search_documents` 同时支持全文排名和基于 `pg_trgm` GIN 索引的大小写不敏感 substring。substring 对中文、`package.json`、URL 和标点查询尤其重要，`\`、`%`、`_` 按字面匹配。搜索结果只引用 canonical conversation/message/heading/code/annotation/attachment，不索引 raw artifact；全局／项目查询按 `Message.content_hash` 折叠并返回会话计数 `occurrence_count`，明确的当前对话查询保留各消息身份。
+
+正文 `SearchMatch` 使用真实 RenderBlock 原文的 Unicode code point 范围；附件定位文件，
+批注沿用保存锚点，不混用偏移域。全局/侧栏共享精确链接，Reader 按当前授权块校验，
+离线当前对话在 FlexSearch 内先按复合范围筛选再限量，只查内容域；资料库保留
+全局标题搜索，复用同一 canonical 目标但留在 `/library`。旧包缺失块或失效范围
+降级，不迁移用户数据。详细语义见
+[搜索与编辑](system/BACKEND_AND_API.md#搜索与编辑)。
 
 ## 编辑和版本
 

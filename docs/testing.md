@@ -1,5 +1,187 @@
 # Testing
 
+## Completeness follow-up optimization — 2026-10-28 (source only)
+
+The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)
+follows the completeness review. All cases below are **authored, not executed**.
+No local tests, lint, typecheck, build, browser, services or database commands,
+CI dispatch, commit, push or deployment ran. Static diff checks are not runtime
+acceptance.
+
+| Area | Authored regression sources | Evidence boundary |
+| --- | --- | --- |
+| Rename derivation | `apps/api/tests/test_attachment_upload_api.py`: placed/unplaced attachments, name search, offline revision/catalog, normalized no-op and failure after actual index writes | Real route/indexer with the existing SQLite fixture and injected failure, not PostgreSQL transaction or offline-delta acceptance |
+| Discard recovery | `scripts/ux/annotation-comment-drafts.test.mjs`: failed deletes, scoped intent retry and newer CAS writes; `annotation-workspace-reads.test.mjs`: explicit local retry before hydration and leave guard until deletion confirms | Actual helper/workspace with serialized storage and React/event adapters, not real IndexedDB failure, forced-refresh durability or multi-tab proof |
+| Custom ordering | `conversation-list-recovery.test.mjs`: active/archived 499/500/501 boundaries, incomplete pages, ascending/descending rank conversion and pinned timestamp groups | Actual component handler with API/drag adapters and a server-order comparator, not real HTTP refetch or browser DnD evidence |
+| TOC position | `toc-pagination.test.mjs`: owner/offline/Share append and cache publication preserve manual position; changed active row/source can recenter | Actual effect with controlled frame/geometry adapters, not measured DOM scrolling or reading-position restoration |
+| Office/ZIP precision | `complex-preview-bounds.test.mjs`: manifest relationships/order, absent-manifest warnings, invalid/external/duplicate relationship failure, sparse/self-closing/invalid/far coordinates, empty/shared-string references and typed ZIP caps | Actual worker handler and installed fflate with synthetic inputs, not full Office/ODS fidelity, hostile-file safety or performance acceptance |
+
+Later authorized gates must include the unchanged Web/API/UX requirements,
+then real IndexedDB delete failure/retry and same-runtime A→B→A timing, newer
+edits during deletion, account retirement, forced-refresh warnings, browser
+drag-save-refetch for both sort directions and pinned priorities, owner/offline/
+Share TOC at 375/1440px, PostgreSQL rename rollback/search and offline revision
+consumption. A failed storage transaction cannot make an in-memory delete
+intent durable across a forced reload or crash; do not turn that limitation
+into an unverified guarantee. Office malformed-input and Viewer error/download
+acceptance also remain pending. No migration or offline-format change is made.
+
+## Reader completeness and recovery — 2026-10-28 (source only)
+
+The [implementation record](execution/UX_AUDIT_OPTIMIZATION_2026-10-28.md)
+follows the 12-direction review. **All new/updated cases below are authored,
+not executed.** No local tests, lint, typecheck, build, browser, services,
+database, CI dispatch, commit, push or deployment ran. A clean textual diff
+check, if recorded, is not runtime acceptance.
+
+| Area | Authored regression sources | Evidence boundary |
+| --- | --- | --- |
+| Share expiry/copy | `scripts/ux/share-expiry-and-copy.test.mjs`: empty/malformed/rollover/past values issue no create; presets/custom/Never; finite-share edit; clipboard absent/rejected/success/unmount | Actual component handlers/hook with controlled React/query/API adapters; no native date-control, focus, DST UI or physical clipboard evidence |
+| Durable comments | `annotation-comment-drafts.test.mjs`: account/mode/tab separation, CAS, retired access, rapid return waiting for writes; `annotation-workspace-reads.test.mjs`: failed save A→B→A, newer input and conflict/old-scope assertions retained | Actual helper/workspace source with serialized table/transaction or repository doubles, not real IndexedDB durability or multi-tab browser acceptance |
+| Search freshness | `reader-search-cache.test.mjs`: closed-cache reset, scoped preservation and late query cancellation; `offline-search-lifecycle.test.mjs` fixture updated for post-index invalidation | Installed QueryClient/observer and actual helper; no server mutation/index timing or browser lifecycle acceptance |
+| Search continuation | `conversation-search-selection.test.mjs`, `offline-search-scope.test.mjs`, `offline-search-ranges.test.mjs`; API `test_search_api.py` | Actual panel/matcher/worker and installed FlexSearch with adapters; 121 result documents, exact 50, exact 100/101 matches, retained occurrence identity; PostgreSQL performance not measured |
+| TOC/offline references | `toc-pagination.test.mjs`, `conversation-toc-stale-read-recovery.test.mjs`, `offline-file-references.test.mjs` | Actual owner/offline/Share source keys, page metadata, heading 201 active, retry/empty/source changes; reference 4 through 54 canonical targets. No rendered scrolling or package migration claim |
+| Upload recovery | `attachment-upload-queue.test.mjs` | Actual callbacks with API/XHR/setter doubles: third-file retry, same-name identity, cancel/no automatic finalize, explicit receipt confirmation, unknown/expired/committed check, refresh failure and retirement; no real HTTP/XHR proof |
+| Large lists | `conversation-list-recovery.test.mjs`, `conversation-metadata-recovery.test.mjs`, `conversation-placement-recovery.test.mjs` | Installed infinite observer and actual component options; offsets through item 5,001, loaded-only labels, retained read-error/selection cases and confirmed metadata/placement publication into pages; not a measured large-DOM/layout claim |
+| Complex preview bounds | `complex-preview-bounds.test.mjs` | Actual ZIP/XML worker handler and installed fflate; paragraph/row/column/slide/line/text cap versus cap+1, not Office visual fidelity or hostile-file security proof |
+
+Existing replay/capability/modal fixtures are synchronized with the scoped files
+workspace, per-entry upload APIs and paged contracts. Prior three search batches'
+browser cases remain authored, unexecuted and unaccepted; their coverage is not
+silently promoted by this batch.
+
+Before later submission, obtain execution authorization and run the unchanged
+required Web lint/typecheck/build, API and `node --test scripts/ux/*.test.mjs`
+gates in the authorized environment, followed by relevant PWA/Playwright cases.
+Additional real-browser acceptance must cover native custom expiry/focus,
+clipboard fallback, same-tab draft refresh and storage failure/account lock,
+search edits while open and closed, 201+ owner/offline/Share headings at
+375/1440px, offline reference navigation, cancelled/unknown uploads and layout.
+Historical offline package v1/v2/v3, Dexie v2 data and real-DOM reading positions
+must remain intact. No new migration or format acceptance is claimed.
+
+`STATE-SEARCH-SCALE` remains conditional. The implementation record defines a
+synthetic PostgreSQL measurement matrix and result-equivalence gate; no query
+rewrite or latency/RSS improvement is claimed without those measurements.
+
+## Search lifecycle and replay — 2026-10-27 (source only)
+
+The [implementation record](execution/SEARCH_LIFECYCLE_2026-10-27.md) covers
+NAV-REPLAY, OFFLINE-FRESHNESS and OFFLINE-DUPLICATE. Cases below are **authored,
+not executed**. No local test/lint/typecheck/build/browser/service/migration
+command or CI dispatch ran; no submission or deployment acceptance is implied.
+
+- `scripts/ux/offline-search-documents.test.mjs` loads the actual transpiled
+  read-only projection: canonical/local duplicates, tombstones, known legacy
+  prefixes, distinct entity/conversation identities, opaque legacy retention,
+  saved anchors and non-mutation. It does not import or migrate a real package.
+- `offline-search-lifecycle.test.mjs` extracts actual LibraryShell callbacks
+  and effects. Controlled Dexie notifications, access generations, timers and
+  worker transport check rapid edits, old timers versus explicit refresh,
+  serialized initialization, deletion, subscription/capture/worker failure,
+  retry/reattachment, auth retirement/reauthorization, unmount and old query
+  replies. The liveQuery adapter does not execute the transactional read
+  callback; this is not real Dexie notification or React acceptance.
+- `search-result-target.test.mjs` and
+  `offline-library-search-navigation.test.mjs` add equivalent target identity,
+  explicit repeat intent and different-target isolation using actual extracted
+  parent/list functions. `reader-search-replay.test.mjs` exercises actual Reader
+  navigation and panel effects with controlled hooks/DOM: bookmark once,
+  same-target replay, file visibility/focus ownership, annotation filter reset,
+  delayed rows and one-time single-item review alignment. These adapters are
+  not a typecheck or rendered focus/scroll proof.
+- The existing default PWA suite's `library-offline.spec.ts` extends disconnected
+  375/1440px body navigation with real user scrolling and a second activation,
+  navigation-stage/pulse/alignment assertions, unchanged URL and the same
+  connected Reader root. Desktop file/annotation cases hide then reactivate the
+  target. A separate desktop case edits/deletes through the real annotation UI
+  and repository, asserting fresh unique Library hits without page reload.
+  Canonical duplicate seed documents are synthetic. Native IndexedDB seeding
+  does not stand in for Dexie write notifications; mutations use the real UI.
+  Mobile panel replay and expanded single-item review have controlled source
+  coverage here, not new browser acceptance.
+- `offline-library-local-read-state.test.mjs` retains the ready-before-optional-
+  search source contract against the extracted rebuild entry point.
+
+Only source inspection and Git whitespace checks are available for this batch.
+The normal full UX/Web/API/PWA and release gates remain required when authorized;
+no new workflow is added. No rendered/contrast design checklist score or
+large-corpus performance result is claimed. Older green CI covers none of the
+three unsubmitted search batches.
+
+## Scoped search and offline entries — 2026-10-27 (source only)
+
+The [follow-up implementation](execution/SEARCH_RECALL_OFFLINE_2026-10-27.md)
+is **unverified, unsubmitted and undeployed**. All cases below are authored,
+not executed. The user's no-local constraint still excludes tests, lint,
+typecheck, build, browser, services and migration commands; no CI was dispatched.
+The declared optional offline version field closes the source omission, not the
+real typecheck gate.
+
+- `apps/api/tests/test_search_api.py` adds three identical assistant answers in
+  one conversation, two matches per message and distinct paged message targets;
+  the same corpus still folds globally with a count of two conversations.
+- `scripts/ux/offline-search-scope.test.mjs` executes the actual transpiled
+  worker handler and installed FlexSearch when run. Synthetic out-of-scope,
+  wrong-role and wrong-type documents precede the final target beyond the old
+  window. It checks every partial filter combination, field domains, legacy
+  filename content, bounded union and reinitialization. Only `self`/message
+  delivery are adapters; this is not a real Worker thread or IndexedDB test.
+- `offline-search-readiness.test.mjs` checks bridge scope/limit delivery with
+  the existing transport adapter. `offline-search-ranges.test.mjs` uses the
+  extracted shared projection/matcher and controlled Dexie/recall/access reads:
+  raw ranges, indexed versions, later heading/code blocks, legacy block fallback,
+  wrong-conversation rejection, access retirement and non-body target domains.
+- `search-result-target.test.mjs` adds offline-route body/file/annotation URLs.
+  `offline-library-search-navigation.test.mjs` exercises actual extracted list
+  activation and parent opening with controlled hooks/layout, projection,
+  routing and storage: double-clicks, latest choice, query/result/route/unmount
+  retirement, failure/retry and unchanged description/notebook behavior.
+- The existing default PWA suite's `library-offline.spec.ts` adds real-worker
+  scoped recall after 300 unrelated documents, title/type exclusion and
+  disconnected 375/1440px Library body/file/annotation destinations using
+  synthetic IndexedDB rows. Later-block/range URLs and non-fallback navigation,
+  file-row focus/no automatic viewer or download, and saved annotation anchors
+  are asserted. This does not extend the existing exact-pulse geometry case or
+  prove historical package migration.
+
+Existing full API, `node --test scripts/ux/*.test.mjs`, Web typecheck/lint/build,
+PWA and release gates remain required. No workflow or schema is added. No
+browser output exists to score rendered design/contrast; older green CI cannot
+accept the unsubmitted search work.
+
+## Search correctness and exact navigation — 2026-10-27 (source only)
+
+The [implementation record](execution/SEARCH_CORRECTNESS_2026-10-27.md) is
+**unverified, unsubmitted and undeployed**. The user forbids local test/build/
+browser/service execution for this batch; no lint, typecheck, migration command
+or CI dispatch ran either. The cases below are authored, not passing receipts.
+
+- `apps/api/tests/test_search_api.py`: literal `%/_/\\` API queries, attachment
+  target fields, original casefold/whitespace ranges and the 100-match cap.
+  `test_annotation_search_index.py` asserts that comment text is not a body range.
+- `test_search_correctness_postgres.py` exercises the actual PostgreSQL
+  ILIKE/full-text candidate branch through the existing disposable-database
+  fixture, only when `SETTINGS_POSTGRES_INTEGRATION=1`. It is included by the
+  unchanged API full-suite CI gate; a local conditional skip is not acceptance.
+- The ordinary `node --test scripts/ux/*.test.mjs` gate includes the shared
+  URL/canonical-anchor, Unicode matcher, rendered attachment group and offline
+  method regressions, including the existing primary-table fallback for an
+  empty legacy block index. Existing sidebar/conversation selection and Reader
+  readiness/retirement adapters track the added dependencies and destinations.
+  Text-anchor Range/TreeWalker, hooks, FlexSearch and Dexie adapters are explicit;
+  these cases do not prove real DOM geometry, focus, worker recall or migration.
+- The default browser gate's `reader-location-failure.spec.ts` adds exact
+  Unicode/repeated-range and stale-version checks with explicit API adapters.
+  The isolated `E2E_RICH_MARKDOWN_ATTACHMENT=1` gate's
+  `attachment-reading.spec.ts` adds 375/1440px file-target focus and no automatic
+  preview/content-read checks against its existing synthetic upload fixture.
+  These cases are also unexecuted. The senior-designer rendered/contrast
+  checklist is not scored without actual rendered evidence.
+
+Existing full lint/typecheck/build/API/PWA and release gates remain required;
+no new workflow, migration, offline-package version or Dexie version is added.
+
 ## Noise protection renderer contract — 2026-10-27 (local only)
 
 `scripts/ux/fixtures/noise-renderer-protection.json` is shared by

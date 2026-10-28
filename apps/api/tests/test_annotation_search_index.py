@@ -42,6 +42,7 @@ def test_annotation_search_create_update_delete_and_conversation_scope(client: T
     assert item["character_offset"] == 0
     assert item["annotation_type"] == "comment"
     assert item["annotation_color"] == "green"
+    assert item["matches"] == []  # Comment text is not a canonical RenderBlock range.
 
     current_scope = client.get("/api/search", params={"q": "annotation needle", "conversation_id": first_id})
     other_scope = client.get("/api/search", params={"q": "annotation needle", "conversation_id": second_id})

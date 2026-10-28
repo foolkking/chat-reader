@@ -1,8 +1,16 @@
 import type { OfflineSearchDocument } from "./offline-db";
 import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
 
+export type OfflineSearchScope = {
+  conversationId?: string;
+  documentType?: string;
+  role?: string;
+  contentOnly?: boolean;
+};
+
 let worker: Worker | null = null;
-type WorkerReply = { requestId: string; items: OfflineSearchDocument[]; runtime?: { workerUrl: string; assets: string[] } };
+type WorkerReply = { requestId: string; items: OfflineSearchDocument[]; total?: number; totalIsExact?: boolean; hasMore?: boolean; runtime?: { workerUrl: string; assets: string[] } };
+export type OfflineSearchPage = { items: OfflineSearchDocument[]; total: number; total_is_exact: boolean; offset: number; has_more: boolean };
 type SearchIndex = { worker: Worker; access: number; ready: Promise<WorkerReply> };
 let searchIndex: SearchIndex | null = null;
 const pending = new Map<string, { resolve: (reply: WorkerReply) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
@@ -55,9 +63,13 @@ export async function initializeOfflineSearch(documents: OfflineSearchDocument[]
   if (worker !== current || searchIndex !== index) throw new Error("Offline search is unavailable.");
 }
 
-export async function searchOffline(query: string, limit = 80): Promise<OfflineSearchDocument[]> {
+export async function searchOffline(query: string, limit = 80, scope?: OfflineSearchScope): Promise<OfflineSearchDocument[]> {
+  return (await searchOfflinePage(query, limit, 0, scope)).items;
+}
+
+export async function searchOfflinePage(query: string, limit = 80, offset = 0, scope?: OfflineSearchScope): Promise<OfflineSearchPage> {
   const access = captureOfflineAccess();
-  if (!query.trim()) return [];
+  if (!query.trim()) return { items: [], total: 0, total_is_exact: true, offset, has_more: false };
   const index = searchIndex;
   if (!index) throw new Error("Offline search is unavailable.");
   assertOfflineAccess(index.access);
@@ -66,10 +78,14 @@ export async function searchOffline(query: string, limit = 80): Promise<OfflineS
   await index.ready;
   assertOfflineAccess(access);
   if (searchIndex !== index || worker !== index.worker) throw new Error("Offline search is unavailable.");
-  const result = await request("search", { query, limit });
+  const result = await request("search", { query, limit, offset, scope });
   assertOfflineAccess(access);
   if (searchIndex !== index || worker !== index.worker) throw new Error("Offline search is unavailable.");
-  return result.items;
+  return {
+    items: result.items, total: result.total ?? offset + result.items.length,
+    total_is_exact: result.totalIsExact ?? false,
+    offset, has_more: result.hasMore ?? result.items.length >= limit,
+  };
 }
 
 function request(type: string, payload: Record<string, unknown>): Promise<WorkerReply> {

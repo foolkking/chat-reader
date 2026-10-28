@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
@@ -123,7 +123,12 @@ export function ConversationMetadataDialog({ conversation, field, onClose, onAcc
     };
     client.setQueryData<ConversationDetail>(filters[0].queryKey, item => item ? update(item) : item);
     for (const queryKey of [["conversations"], ["project-conversations"]]) {
-      client.setQueriesData<ConversationListItem[]>({ queryKey }, items => Array.isArray(items) ? items.map(update) : items);
+      client.setQueriesData<ConversationListItem[] | InfiniteData<{ items: ConversationListItem[] }>>(
+        { queryKey },
+        items => Array.isArray(items) ? items.map(update) : items ? {
+          ...items, pages: items.pages.map(page => ({ ...page, items: page.items.map(update) })),
+        } : items,
+      );
     }
     client.setQueriesData<RecentItemRead[]>({ queryKey: ["recent-items"] }, items => (
       Array.isArray(items) ? items.map(item => ({ ...item, conversation: update(item.conversation) })) : items

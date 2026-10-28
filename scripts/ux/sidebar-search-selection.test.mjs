@@ -6,6 +6,12 @@ import { test } from "node:test";
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = require("typescript");
 const source = readFileSync(new URL("../../apps/web/features/search/sidebar-search.tsx", import.meta.url), "utf8");
+const targetSource = readFileSync(new URL("../../apps/web/features/search/search-result-target.ts", import.meta.url), "utf8");
+const targetCompiled = ts.transpileModule(targetSource, { compilerOptions: {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+} }).outputText;
+const targetExports = {};
+new Function("exports", targetCompiled)(targetExports);
 const compiled = ts.transpileModule(source, { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
 } }).outputText;
@@ -62,6 +68,7 @@ function fixture({ locale = "en-US" } = {}) {
     "next/navigation": { useRouter: () => ({ push: path => navigation.push(path) }) },
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
     "../../lib/api": { searchConversations: () => { throw new Error("This fixture must not issue a search request"); } },
+    "./search-result-target": targetExports,
   };
   const exports = {};
   new Function("require", "exports", "window", compiled)(name => {

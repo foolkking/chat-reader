@@ -35,6 +35,7 @@ export function SelectionModeButton({
 export function SelectionToolbar({
   selectedCount,
   totalCount,
+  loadedOnly = false,
   busy = false,
   className = "",
   context = "conversation",
@@ -47,6 +48,7 @@ export function SelectionToolbar({
 }: {
   selectedCount: number;
   totalCount: number;
+  loadedOnly?: boolean;
   busy?: boolean;
   className?: string;
   context?: "conversation" | "project";
@@ -85,7 +87,7 @@ export function SelectionToolbar({
         </span>
         <span className="min-w-0 flex-1" aria-live="polite">
           <span className="block text-xs font-semibold uppercase tracking-wide text-secondary">{zh ? "批量操作" : "Bulk actions"}</span>
-          <span className="block truncate text-sm font-semibold text-primary">{zh ? `已选择 ${selectedCount} / ${totalCount}` : `${selectedCount} of ${totalCount} selected`}</span>
+          <span className="block truncate text-sm font-semibold text-primary">{zh ? `已选择 ${selectedCount} / ${totalCount}${loadedOnly ? "（已加载）" : ""}` : `${selectedCount} of ${totalCount}${loadedOnly ? " loaded" : ""} selected`}</span>
         </span>
         <button type="button" disabled={busy} onClick={onDone} className={`${buttonClass} text-primary`} title={zh ? "退出选择模式" : "Exit selection mode"}>
           <X className="h-4 w-4" /> {zh ? "完成" : "Done"}
@@ -94,7 +96,7 @@ export function SelectionToolbar({
       <div className="selection-toolbar-actions relative flex min-w-0 max-w-full flex-1 basis-[44rem] items-center gap-1.5 overflow-x-auto pb-0.5">
         <div className="selection-toolbar-group flex shrink-0 items-center gap-1 rounded-lg border border-ui bg-surface p-0.5">
           <button type="button" disabled={busy || allSelected || totalCount === 0} onClick={onSelectAll} className={buttonClass} title={zh ? "选择当前列表中的全部项目" : "Select every item in this list"}>
-            <CheckSquare2 className="h-4 w-4" /> {zh ? "全选" : "Select all"}
+            <CheckSquare2 className="h-4 w-4" /> {loadedOnly ? (zh ? "全选已加载" : "Select loaded") : (zh ? "全选" : "Select all")}
           </button>
           <button type="button" disabled={busy || totalCount === 0} onClick={onInvert} className={buttonClass} title={zh ? "反转当前列表中的选择" : "Invert the current selection"}>
             <RefreshCcw className="h-4 w-4" /> {zh ? "反选" : "Invert"}

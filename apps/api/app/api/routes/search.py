@@ -80,7 +80,10 @@ def search_documents(
                 rank=item.rank,
                 source_profile=item.source_profile,
                 occurrence_count=item.occurrence_count,
+                matches_truncated=item.matches_truncated,
                 matches=item.matches or [],
+                attachment_id=item.attachment_id,
+                attachment_display_name=item.attachment_display_name,
                 annotation_id=item.annotation_id,
                 annotation_type=item.annotation_type,
                 annotation_color=item.annotation_color,
@@ -90,6 +93,7 @@ def search_documents(
         limit=page.limit,
         offset=page.offset,
         total=page.total,
+        has_more=page.has_more,
     )
 
 

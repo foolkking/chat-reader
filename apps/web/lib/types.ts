@@ -834,7 +834,10 @@ export type SearchResultItem = {
   rank: number;
   source_profile: string | null;
   occurrence_count: number;
+  matches_truncated?: boolean;
   matches?: SearchMatch[];
+  attachment_id?: string | null;
+  attachment_display_name?: string | null;
   annotation_id?: string | null;
   annotation_type?: string | null;
   annotation_color?: string | null;
@@ -856,6 +859,9 @@ export type SearchResponse = {
   limit: number;
   offset: number;
   total: number;
+  has_more?: boolean;
+  /** Offline bounded lookahead can report a lower bound, not a full count. */
+  total_is_exact?: boolean;
 };
 
 export type SearchReindexResponse = {

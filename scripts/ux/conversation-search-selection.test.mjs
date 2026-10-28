@@ -36,8 +36,8 @@ const initial = { query: "synthetic", documentType: "message", role: "all", acti
 // Actual compiled panel/handlers; hooks, effects, query state, timers and
 // navigation are controlled adapters, not mounted React/browser/search evidence.
 function fixture({ items = [A, B], locale = "en-US", initialState = initial, navigate, mode = "remote" } = {}) {
-  const slots = [], effects = [], layouts = [], timers = new Map();
-  const calls = { states: [], navigation: [], owners: [], events: [], closes: 0, writes: 0 };
+  const slots = [], effects = [], layouts = [], timers = new Map(), events = new EventTarget();
+  const calls = { states: [], navigation: [], owners: [], events: [], closes: 0, writes: 0, nextPages: 0 };
   let cursor = 0, timer = 0, tree, options, rows = items, queryState = {};
   const slot = make => { const index = cursor++; return slots[index] ?? (slots[index] = make()); };
   const react = {
@@ -78,13 +78,16 @@ function fixture({ items = [A, B], locale = "en-US", initialState = initial, nav
   };
   const stubs = {
     react, "react/jsx-runtime": require("react/jsx-runtime"),
-    "@tanstack/react-query": { useQuery: next => {
-      options = next; return { data: { items: rows }, isError: false, isFetching: false, refetch: async () => {}, ...queryState };
+    "@tanstack/react-query": { useInfiniteQuery: next => {
+      options = next; return { data: { pages: [{ items: rows, total: rows.length, limit: 50, offset: 0, has_more: false }], pageParams: [0] },
+        isError: false, isFetching: false, hasNextPage: false, isFetchingNextPage: false,
+        refetch: async () => {}, fetchNextPage: async () => { calls.nextPages++; }, ...queryState };
     } },
     "lucide-react": { Search: () => null, X: () => null },
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
     "../../lib/reader-data-source": { remoteReaderDataSource: dataSource },
     "../../lib/offline-access": { captureOfflineAccess: () => 1, assertOfflineAccess: () => {} },
+    "../../lib/reader-search-cache": { READER_SEARCH_CHANGED_EVENT: "synthetic-search-content-changed" },
   };
   const exports = {};
   new Function("require", "exports", "window", compiled)(name => {
@@ -92,6 +95,7 @@ function fixture({ items = [A, B], locale = "en-US", initialState = initial, nav
   }, exports, {
     setTimeout: callback => { const id = ++timer; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id),
+    addEventListener: events.addEventListener.bind(events), removeEventListener: events.removeEventListener.bind(events),
   });
   const render = () => {
     cursor = 0; tree = exports.ConversationSearchPanel(props);
@@ -111,6 +115,14 @@ function fixture({ items = [A, B], locale = "en-US", initialState = initial, nav
     change(patch) { props = { ...props, ...patch }; render(); },
     setItems(next) { rows = next; render(); },
     setQueryState(next) { queryState = next; render(); },
+    contentChanged(detail) {
+      events.dispatchEvent(new CustomEvent("synthetic-search-content-changed", { detail })); render();
+    },
+    loadMore() {
+      const node = walk(tree).find(node => node.type === "button" && /Load more|加载更多/.test(String(node.props.children)));
+      assert.ok(node); node.props.onClick(); render();
+    },
+    text() { return walk(tree).flatMap(node => [node.props.children].flat()).filter(value => typeof value === "string").join(" "); },
     type(value, { debounce = true } = {}) {
       input().onChange({ target: { value } }); render(); if (debounce) timersRun();
     },
@@ -127,6 +139,7 @@ function fixture({ items = [A, B], locale = "en-US", initialState = initial, nav
       && typeof node.props.children === "string" && /Locating match|正在定位匹配/.test(node.props.children)); },
     failure() { return walk(tree).filter(node => node.props.role === "alert")
       .map(node => node.props.children).filter(value => typeof value === "string").join(" "); },
+    hasContextSnippet() { return walk(tree).some(node => typeof node.props.match === "string"); },
     busy() { return resultRows().filter(node => node.props["aria-busy"]).map(rowMatch); },
     selected() { return resultRows().filter(node => /(?:^|\s)bg-subtle(?:\s|$)/.test(node.props.className)).map(rowMatch); },
     missingNotice() { return walk(tree).some(node => node.props.role === "status"
@@ -185,6 +198,42 @@ test("two matches in the same document keep separate identities when their order
     f.key("Enter"); await setImmediate();
     assert.equal(f.calls.navigation[0].target.characterOffset, 50);
     assert.equal(f.calls.navigation[0].context.index, 0);
+  } finally { f.dispose(); }
+});
+
+test("appended pages retain the selected occurrence and disclose document versus location limits", () => {
+  const f = fixture({ items: [{ ...A, matches_truncated: true }] });
+  try {
+    f.hover(0);
+    const pages = [
+      { items: [{ ...A, matches_truncated: true }], total: 3, total_is_exact: false, limit: 50, offset: 0, has_more: true },
+      { items: [B], total: 3, total_is_exact: false, limit: 50, offset: 50, has_more: true },
+    ];
+    f.setQueryState({ data: { pages, pageParams: [0, 50] }, hasNextPage: true });
+    assert.deepEqual(f.selected(), ["Synthetic match A"]);
+    assert.match(f.text(), /first 100/);
+    assert.match(f.text(), /2 results loaded/);
+    assert.match(f.text(), /more available/i);
+    f.loadMore(); assert.equal(f.calls.nextPages, 1);
+    assert.equal(f.options.getNextPageParam(pages[0]), 50);
+    assert.equal(f.options.getNextPageParam({ ...pages[1], items: [], has_more: true }), undefined);
+    assert.equal(f.options.getNextPageParam({ ...pages[1], has_more: false }), undefined);
+  } finally { f.dispose(); }
+});
+
+test("content replacement retires in-flight navigation only in the matching conversation and mode", async () => {
+  const wait = deferred(), f = fixture({ navigate: () => wait.promise });
+  try {
+    f.click(0);
+    const owns = f.calls.owners[0];
+    f.contentChanged({ mode: "offline", conversationId: "synthetic-conversation" });
+    assert.equal(owns(), true);
+    f.contentChanged({ mode: "remote", conversationId: "synthetic-another-conversation" });
+    assert.equal(owns(), true);
+    f.contentChanged({ mode: "remote", conversationId: "synthetic-conversation" });
+    assert.equal(owns(), false);
+    wait.resolve({ ok: true, targetId: "synthetic-stale-target" }); await setImmediate();
+    assert.equal(f.calls.closes, 0);
   } finally { f.dispose(); }
 });
 
@@ -434,6 +483,59 @@ for (const locale of ["en-US", "zh-CN"]) {
   }
 }
 
+test("current-conversation attachment search routes to the file row without a body locator", async () => {
+  const attachment = {
+    ...A,
+    document_type: "attachment",
+    message_id: null,
+    message_version_id: null,
+    attachment_id: "synthetic-attachment",
+  };
+  const f = fixture({ items: [attachment] });
+  try {
+    f.click(0); await setImmediate();
+    assert.deepEqual(f.calls.navigation[0].target, { attachmentId: "synthetic-attachment" });
+    assert.equal(f.calls.closes, 0, "opening the destination file panel must not immediately close it");
+    assert.equal(f.hasContextSnippet(), false);
+  } finally { f.dispose(); }
+});
+
+test("annotation search uses its saved anchor and never treats comment matches as body offsets", async () => {
+  const annotation = {
+    ...A,
+    document_type: "annotation",
+    annotation_id: "synthetic-annotation",
+    block_index: 2,
+    character_offset: 5,
+    matches: [match("comment-only", 31)],
+  };
+  const f = fixture({ items: [annotation] });
+  try {
+    f.click(0); await setImmediate();
+    assert.deepEqual(f.calls.navigation[0].target, {
+      messageId: annotation.message_id,
+      messageVersionId: annotation.message_version_id,
+      blockIndex: 2,
+      characterOffset: 5,
+      annotationId: "synthetic-annotation",
+    });
+    assert.equal(f.hasContextSnippet(), false);
+  } finally { f.dispose(); }
+});
+
+test("body results without canonical matches keep a message target, not a snippet-derived offset", async () => {
+  const legacy = { ...A, matches: [], character_offset: 10 };
+  const f = fixture({ items: [legacy] });
+  try {
+    f.click(0); await setImmediate();
+    assert.deepEqual(f.calls.navigation[0].target, {
+      messageId: legacy.message_id,
+      messageVersionId: legacy.message_version_id,
+    });
+    assert.equal(f.hasContextSnippet(), false);
+  } finally { f.dispose(); }
+});
+
 // Extract the actual Reader adapter without importing/mounting the full Reader.
 // Only the underlying navigation and publication setters are controlled.
 const readerSource = readFileSync(new URL("../../apps/web/features/conversations/conversation-reader.tsx", import.meta.url), "utf8");
@@ -452,10 +554,18 @@ const readerCompiled = ts.transpileModule(`exports.navigate = ${readerCallback};
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
 function readerAdapter(navigate) {
-  const calls = { targets: [], contexts: [], highlights: [] }, exports = {};
-  new Function("navigateToTarget", "publishSearchNavigation", "setSearchHighlight", "exports", readerCompiled)(
+  const calls = { targets: [], contexts: [], highlights: [], attachments: [], annotations: [] }, exports = {};
+  const recentOwner = { active: true };
+  new Function("navigateToTarget", "publishSearchNavigation", "setSearchHighlight",
+    "openSearchAttachment", "openSearchAnnotation", "ownsReaderReadRecovery", "recentOwner", "exports", readerCompiled)(
     target => { calls.targets.push(target); return navigate(target); },
-    context => calls.contexts.push(context), highlight => calls.highlights.push(highlight), exports);
+    context => calls.contexts.push(context), highlight => calls.highlights.push(highlight),
+    attachmentId => calls.attachments.push(attachmentId),
+    (target, isCurrent) => {
+      calls.annotations.push({ target, hasCurrentGuard: typeof isCurrent === "function" });
+      return Promise.resolve({ ok: true, targetId: `annotation-${target.annotationId}` });
+    },
+    owner => owner.active, recentOwner, exports);
   return { navigate: exports.navigate, calls };
 }
 
@@ -473,6 +583,33 @@ test("actual Reader adapter skips retired admission and preserves optional two-a
   assert.deepEqual(adapter.calls.contexts, [context]);
   assert.deepEqual(adapter.calls.highlights, [{ targetId: "synthetic-target", quote: "Synthetic",
     start: 10, end: 20, prefix: "before", suffix: "after" }]);
+});
+
+test("actual Reader adapter routes attachment and annotation targets to their own destinations", async () => {
+  const adapter = readerAdapter(async () => ({ ok: true, targetId: "unexpected-body-target" }));
+  const attachment = await adapter.navigate(
+    { attachmentId: "synthetic-attachment" },
+    { query: "synthetic", targets: [], index: 0 },
+  );
+  assert.equal(attachment.ok, true);
+  assert.deepEqual(adapter.calls.attachments, ["synthetic-attachment"]);
+  assert.deepEqual(adapter.calls.targets, []);
+
+  const annotationTarget = {
+    annotationId: "synthetic-annotation",
+    messageId: A.message_id,
+    messageVersionId: A.message_version_id,
+    blockIndex: 2,
+    characterOffset: 5,
+  };
+  const annotation = await adapter.navigate(
+    annotationTarget,
+    { query: "synthetic", targets: [annotationTarget], index: 0 },
+    () => true,
+  );
+  assert.equal(annotation.ok, true);
+  assert.deepEqual(adapter.calls.annotations, [{ target: annotationTarget, hasCurrentGuard: true }]);
+  assert.deepEqual(adapter.calls.targets, []);
 });
 
 test("actual Reader adapter and actual panel suppress late search publication after query retirement", async () => {

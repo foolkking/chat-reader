@@ -46,6 +46,8 @@ export type OfflineSearchDocument = {
   id: string;
   conversation_id: string;
   message_id: string | null;
+  /** Older packages and locally created private documents may omit this. */
+  message_version_id?: string | null;
   document_type: string;
   role: string | null;
   title: string | null;
@@ -841,7 +843,7 @@ async function removeOfflineConversationsUnlocked(conversationIds: string[], rev
         db.readingPositions.bulkDelete(conversationIds),
         db.attachments.where("conversation_id").anyOf(conversationIds).delete(),
         db.outbox.where("conversation_id").anyOf(conversationIds).delete(),
-        db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("continuation-draft:") || row.key.startsWith("reading-sync:"))
+        db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("annotation-comment-draft:") || row.key.startsWith("continuation-draft:") || row.key.startsWith("reading-sync:"))
           && conversationIds.includes((row.value as { conversation_id: string }).conversation_id)).delete(),
       ]);
       const packages = await db.packages.toArray();
@@ -1053,7 +1055,7 @@ export async function countOfflinePendingChanges(conversationIds: string[], db =
   const operations = await db.outbox.where("conversation_id").anyOf(conversationIds).count();
   const conflicts = await db.settings.where("key").startsWith("sync-conflict:")
     .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
-  const drafts = await db.settings.filter((item) => item.key.startsWith("notebook-draft:") || item.key.startsWith("continuation-draft:"))
+  const drafts = await db.settings.filter((item) => item.key.startsWith("notebook-draft:") || item.key.startsWith("annotation-comment-draft:") || item.key.startsWith("continuation-draft:"))
     .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
   return operations + conflicts + drafts;
 }
@@ -1069,6 +1071,7 @@ export async function syncOfflineAnnotationSearch(annotation: AnnotationRead, db
     id: `local-annotation:${annotation.id}`,
     conversation_id: annotation.conversation_id,
     message_id: annotation.message_id,
+    message_version_id: annotation.message_version_id,
     document_type: "annotation",
     role: null,
     title: conversation?.display_title ?? conversation?.title ?? "Conversation",

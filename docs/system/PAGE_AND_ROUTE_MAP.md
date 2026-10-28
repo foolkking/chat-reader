@@ -71,7 +71,7 @@ Connection state /offline
 ## 状态页与边界
 
 - 全局 loading 使用 Next App Router `loading.tsx`；Reader/搜索/列表各自有 loading、empty、error、retry。
-- 仓库没有自定义登录、权限不足或账号失效页，因为应用没有账号系统。
+- 账号入口包括上方的 `/login`、`/register` 等路由；业务接口受当前会话和 ownership 边界约束，不是“没有账号系统”。身份与权限详见[身份专题](USER_ROLES_AND_PERMISSIONS.md)，管理员只读内容和目录见[管理专题](ADMINISTRATION_CONTRACT.md)；不据此额外声称每个页面都有独立的 401/403 设计。
 - Library 未下载态在桌面/移动都提供“打开资料库”；有网络时可下载目标 conversation。
 - Service Worker navigation fallback 仅限 `/library` scope；普通 `/offline` 页面不承载私有正文缓存。
 

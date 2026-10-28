@@ -342,6 +342,189 @@ test("keeps the active revision after a failed update and cold-starts offline", 
   expect(normalNavigationFailed).toBe(true);
 });
 
+test("offline conversation search scopes before its limit and excludes title/type-only hits", async ({ page, context }) => {
+  await page.goto("/library");
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await seedOfflineSearchFixture(page);
+  await page.goto("/library?conversationId=offline-fixture");
+  const librarySearch = page.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]');
+  await librarySearch.fill("TitleOnlyFixture");
+  await expect(page.locator("[data-reader-primary-sidebar]:visible").getByRole("button", { name: /TitleOnlyFixture/ })).toBeVisible();
+  await librarySearch.fill("");
+  await context.setOffline(true);
+
+  await openReaderHeaderAction(page, /^(搜索|Search)$/);
+  const input = page.locator("#conversation-search-input");
+  const panel = input.locator("../..");
+  await input.locator("..").locator("select").first().selectOption("assistant");
+  await input.fill("target-annotation-40");
+  await expect(panel.getByRole("status").filter({ hasText: /^(1 个结果|1 results)$/ })).toBeVisible();
+
+  await input.fill("TitleOnlyFixture");
+  await expect(panel.getByText(/没有找到.*TitleOnlyFixture|No results for.*TitleOnlyFixture/)).toBeVisible();
+  await input.fill("message");
+  await expect(panel.getByText(/没有找到.*message|No results for.*message/)).toBeVisible();
+
+  await input.fill("target-annotation-40");
+  await panel.getByRole("button").filter({ hasText: /target-annotation-40/ }).click();
+  await expect(page.locator("#block-offline-message-40-1")).toBeVisible();
+  await expect.poll(() => readingLineDelta(page, "block-offline-message-40-1")).toBeLessThan(36);
+  expect(new URL(page.url()).pathname).toBe("/library");
+});
+
+for (const width of [375, 1440]) test(`${width}px: library search preserves offline body, file and annotation targets`, async ({ page, context }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/library");
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await seedOfflineSearchFixture(page);
+  await page.reload();
+  const input = () => page.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]');
+  const sidebar = () => page.locator("[data-reader-primary-sidebar]:visible");
+  await input().fill("needle");
+  const codeResult = sidebar().getByRole("button", { name: /Synthetic later code/ });
+  await expect(codeResult).toBeVisible();
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await context.setOffline(true);
+  let downloads = 0;
+  const onlineSearchRequests: string[] = [];
+  page.on("download", () => { downloads += 1; });
+  page.on("request", request => {
+    if (new URL(request.url()).pathname === "/api/search") onlineSearchRequests.push(request.method());
+  });
+
+  await codeResult.click();
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return [url.pathname, url.searchParams.get("conversationId"), url.searchParams.get("messageVersionId"),
+      url.searchParams.get("renderBlockId"), url.searchParams.get("characterOffset"), url.searchParams.get("endCharacterOffset")];
+  }).toEqual(["/library", "offline-fixture", "offline-version-2", "offline-block-2-2", "2", "8"]);
+  await expect(page.locator("#block-offline-message-2-2")).toBeVisible();
+  // The same word occurs in block 1. Check the later block/range contract and
+  // non-fallback navigation; transient exact-pulse geometry has its own Reader
+  // browser regression in reader-location-failure.spec.ts.
+  await expect.poll(() => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("settled");
+  for (const key of ["quote", "prefix", "suffix", "q"]) expect(new URL(page.url()).searchParams.has(key)).toBe(false);
+
+  const bodyUrl = page.url();
+  const readerRoot = page.locator('[data-reader-scroll-root="true"]');
+  const originalRoot = await readerRoot.elementHandle();
+  expect(originalRoot).not.toBeNull();
+  await readerRoot.hover();
+  await page.mouse.wheel(0, 1500);
+  await expect.poll(() => readingLineDelta(page, "block-offline-message-2-2")).toBeGreaterThan(200);
+  // Reveal the mobile header after real user scrolling, then reopen Library.
+  await page.mouse.wheel(0, -100);
+  if (width < 768) await page.getByTestId("mobile-sidebar-button").click();
+  await readerRoot.evaluate(root => {
+    root.setAttribute("data-e2e-navigation-transitions", "0");
+    new MutationObserver(records => {
+      root.setAttribute("data-e2e-navigation-transitions",
+        String(Number(root.getAttribute("data-e2e-navigation-transitions")) + records.length));
+    }).observe(root, { attributes: true, attributeFilter: ["data-navigation-stage"] });
+  });
+  await codeResult.click();
+  await expect.poll(() => readerRoot.getAttribute("data-e2e-navigation-transitions").then(Number)).toBeGreaterThan(0);
+  await expect(page.locator('[data-locate-pulse="text"]')).toBeVisible();
+  await expect.poll(() => readerRoot.getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("settled");
+  await expect.poll(() => readingLineDelta(page, "block-offline-message-2-2")).toBeLessThan(36);
+  expect(page.url()).toBe(bodyUrl);
+  expect(await originalRoot!.evaluate(root => root.isConnected
+    && root === document.querySelector('[data-reader-scroll-root="true"]'))).toBe(true);
+  await originalRoot!.dispose();
+
+  await page.goto("/library");
+  await input().fill("cached-note");
+  await sidebar().getByRole("button", { name: /cached-note\.txt/ }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("attachmentId")).toBe("11111111-1111-4111-8111-111111111111");
+  expect(new URL(page.url()).pathname).toBe("/library");
+  expect(new URL(page.url()).searchParams.get("files")).toBe("open");
+  expect(new URL(page.url()).searchParams.has("messageId")).toBe(false);
+  const file = page.getByTestId("offline-conversation-files-panel").locator('[data-attachment-id="11111111-1111-4111-8111-111111111111"]');
+  await expect(file).toBeVisible();
+  await expect(file).toHaveAttribute("data-search-target", "true");
+  await expect(file).toBeFocused();
+  await expect(page.getByTestId("attachment-viewer-shell")).toHaveCount(0);
+  expect(downloads).toBe(0);
+
+  if (width >= 768) {
+    const fileUrl = page.url();
+    const fileSearch = page.getByTestId("offline-conversation-files-panel").getByPlaceholder(/搜索文件|Search files/);
+    await fileSearch.fill("synthetic-no-file");
+    await expect(file).toHaveCount(0);
+    await sidebar().getByRole("button", { name: /cached-note\.txt/ }).click();
+    await expect(fileSearch).toHaveValue("");
+    await expect(file).toBeFocused();
+    expect(page.url()).toBe(fileUrl);
+    await expect(page.getByTestId("attachment-viewer-shell")).toHaveCount(0);
+    expect(downloads).toBe(0);
+  }
+
+  await page.goto("/library");
+  await input().fill("Distant");
+  await sidebar().getByRole("button", { name: /Distant annotation fixture/ }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("annotationId")).toBe("offline-far");
+  const annotationUrl = new URL(page.url());
+  expect(annotationUrl.pathname).toBe("/library");
+  expect(annotationUrl.searchParams.get("annotations")).toBe("open");
+  expect(annotationUrl.searchParams.get("messageVersionId")).toBe("offline-version-40");
+  expect(annotationUrl.searchParams.get("blockIndex")).toBe("1");
+  expect(annotationUrl.searchParams.get("characterOffset")).toBe("7");
+  expect(annotationUrl.searchParams.has("endCharacterOffset")).toBe(false);
+  await expect(page.locator("#annotation-offline-far")).toBeVisible();
+  await expect(page.locator("#block-offline-message-40-1")).toBeVisible();
+  if (width >= 768) {
+    const noteUrl = page.url();
+    const noteFilter = page.getByPlaceholder(/搜索批注|Search annotations/);
+    await noteFilter.fill("synthetic-no-annotation");
+    await expect(page.locator("#annotation-offline-far")).toHaveCount(0);
+    await sidebar().getByRole("button", { name: /Distant annotation fixture/ }).click();
+    await expect(noteFilter).toHaveValue("");
+    await expect(page.locator("#annotation-offline-far")).toBeVisible();
+    expect(page.url()).toBe(noteUrl);
+  }
+  expect(onlineSearchRequests).toEqual([]);
+  expect(downloads).toBe(0);
+});
+
+test("offline annotation edits and deletion refresh Library search without reloading or duplicate entities", async ({ page, context }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/library");
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await seedOfflineSearchFixture(page);
+  await page.goto("/library?conversationId=offline-fixture&annotations=open&annotationId=offline-far");
+  const row = page.locator("#annotation-offline-far");
+  await expect(row).toBeVisible();
+  await expect(offlineReadyStatus(page)).toBeVisible();
+  await context.setOffline(true);
+  const url = page.url();
+  const input = page.locator('input:visible[placeholder="搜索本地正文、代码与批注"], input:visible[placeholder="Search offline text, code, and annotations"]');
+  const sidebar = page.locator("[data-reader-primary-sidebar]:visible");
+  await input.fill("Distant");
+  await expect(sidebar.getByRole("button", { name: /Distant annotation fixture/ })).toHaveCount(1);
+
+  // Use the real annotation repository/Dexie write path. Native IndexedDB
+  // fixture writes alone do not emit Dexie's liveQuery mutation notifications.
+  await row.getByRole("textbox", { name: /^(评论|Comment)$/ }).fill("LifecycleFresh first edit");
+  await row.getByRole("button", { name: /^(保存评论|Save comment)$/ }).click();
+  await expect(row.getByText(/^(未保存的评论|Unsaved comment)$/)).toHaveCount(0);
+  await expect(sidebar.getByRole("button", { name: /Distant annotation fixture/ })).toHaveCount(0);
+  await expect(sidebar.getByText(/无本地结果|No offline results/)).toBeVisible();
+  await input.fill("LifecycleFresh");
+  await expect(sidebar.getByRole("button", { name: /LifecycleFresh first edit/ })).toHaveCount(1);
+  await row.getByRole("textbox", { name: /^(评论|Comment)$/ }).fill("LifecycleFresh revised edit");
+  await row.getByRole("button", { name: /^(保存评论|Save comment)$/ }).click();
+  await expect(sidebar.getByRole("button", { name: /LifecycleFresh revised edit/ })).toHaveCount(1);
+  await expect(sidebar.getByRole("button", { name: /LifecycleFresh first edit/ })).toHaveCount(0);
+
+  await row.getByRole("button", { name: /^(删除批注|Delete annotation)$/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /^(删除|Delete)$/ }).click();
+  await expect(row).toHaveCount(0);
+  await expect(sidebar.getByRole("button", { name: /LifecycleFresh/ })).toHaveCount(0);
+  await expect(sidebar.getByText(/无本地结果|No offline results/)).toBeVisible();
+  expect(page.url()).toBe(url);
+  await expect(page.getByTestId("reader-scroll-root")).toBeVisible();
+});
+
 test("offline search exposes worker failure and retries against the retained copy", async ({ page, context }) => {
   await context.addInitScript(() => {
     const NativeWorker = window.Worker;
@@ -1016,6 +1199,75 @@ async function arrangeOfflineSidebarFixture(page: import("@playwright/test").Pag
       transaction.onabort = () => reject(transaction.error);
     });
     database.close();
+  });
+}
+
+async function seedOfflineSearchFixture(page: Page): Promise<void> {
+  await seedOfflineFixture(page);
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("chat-reader-offline-library");
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(["conversations", "messages", "blocks", "searchDocuments"], "readwrite");
+      const conversations = tx.objectStore("conversations");
+      const conversation = conversations.get("offline-fixture");
+      conversation.onsuccess = () => conversations.put({ ...conversation.result, id: "synthetic-other-conversation",
+        display_title: "Synthetic unrelated conversation", message_count: 0, turn_count: 0 });
+      const documents = tx.objectStore("searchDocuments");
+      // Primary-key order puts these ahead of the real result. More than the
+      // old 200-candidate window must not starve the current conversation.
+      for (let index = 0; index < 300; index += 1) documents.put({
+        id: `000-synthetic-decoy-${String(index).padStart(3, "0")}`,
+        conversation_id: "synthetic-other-conversation", message_id: null,
+        document_type: "message", role: "assistant", title: "Synthetic unrelated title",
+        plain_text: "prefix target-annotation-40 suffix", search_text: "prefix target-annotation-40 suffix",
+        order_key: null, turn_index: null, metadata: {},
+      });
+      const target = documents.get("document:offline-target");
+      target.onsuccess = () => documents.put({ ...target.result, title: "TitleOnlyFixture",
+        metadata: { block_index: 0, character_offset: 0 } });
+      const messages = tx.objectStore("messages");
+      const message = messages.get("offline-message-2");
+      message.onsuccess = () => {
+        const text = "Section 2\nneedle first\n😀 needle";
+        messages.put({ ...message.result, block_count: 3, char_count: Array.from(text).length,
+          current_version: { ...message.result.current_version, plain_text: text, display_text: text } });
+      };
+      tx.objectStore("blocks").put({
+        key: "offline-message-2:1", id: "offline-block-2-1", conversation_id: "offline-fixture",
+        message_id: "offline-message-2", block_index: 1, block_type: "paragraph",
+        plain_text: "needle first", data: { text: "needle first" },
+      });
+      tx.objectStore("blocks").put({
+        key: "offline-message-2:2", id: "offline-block-2-2", conversation_id: "offline-fixture",
+        message_id: "offline-message-2", block_index: 2, block_type: "code",
+        plain_text: "😀 needle", data: { code: "😀 needle", language: "text" },
+      });
+      documents.put({
+        id: "document:synthetic-later-code", conversation_id: "offline-fixture", message_id: "offline-message-2",
+        message_version_id: "offline-version-2", document_type: "code", role: "assistant",
+        title: "Synthetic later code", plain_text: "😀 needle", search_text: "😀 needle",
+        order_key: "000002", turn_index: 1, metadata: { block_index: 2, character_offset: 0 },
+      });
+      documents.put({
+        id: "document:synthetic-file", conversation_id: "offline-fixture", message_id: "offline-message-1",
+        message_version_id: "offline-version-1", document_type: "attachment", role: null,
+        title: "cached-note.txt", plain_text: "cached-note.txt", search_text: "cached-note.txt",
+        order_key: "000001", turn_index: 1, metadata: { attachment_id: "11111111-1111-4111-8111-111111111111" },
+      });
+      documents.put({
+        id: "document:synthetic-canonical-annotation", conversation_id: "offline-fixture", message_id: "offline-message-40",
+        message_version_id: "offline-version-40", document_type: "annotation", role: null,
+        title: "Synthetic annotation", plain_text: "target-annotation-40\nDistant annotation fixture",
+        search_text: "target-annotation-40\nDistant annotation fixture", order_key: "000040", turn_index: 20,
+        metadata: { annotation_id: "offline-far", block_index: 1, character_offset: 7 },
+      });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
   });
 }
 

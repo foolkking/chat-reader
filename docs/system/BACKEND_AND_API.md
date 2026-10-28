@@ -389,6 +389,44 @@ message-window 和 block-range 端点仍保留兼容性与其他功能，但不�
 
 ### 搜索与编辑
 
+搜索包含 canonical conversation/message/heading/code/annotation/attachment，
+不把导入 raw artifact 当作正文。SQL substring 的 `\`、`%`、`_` 按字面转义；
+这些符号查询不通过全文分支扩大为 token 候选，普通文本保留既有全文排名。
+全局和仅按项目限定的查询继续折叠同 hash 的 message，`occurrence_count` 表示
+出现的会话数。明确传入 `conversation_id` 时保留不同消息的独立结果与落点；
+相同消息内的多个命中仍在 `matches` 中，计数不改成命中数。
+
+`SearchMatch` 仅指向 canonical `RenderBlock.plain_text` 的 Unicode code point
+左闭右开范围；规范化搜索影子保留到原文的映射，quote 等于原文切片。
+搜索响应带 `offset`、`total`、`has_more`；当前对话和离线 Reader 按页追加结果，
+不扩大正文或单文档匹配预算。单个正文文档最多返回 100 个 `matches`，超过时
+`matches_truncated=true`，而不是把前 100 个伪装成完整命中集合。
+heading/code 限定所属 block，每个结果最多构造 100 个命中，配额在内部循环中生效。
+这不是数据库候选分页或总内存优化，也不承诺新增完整 Unicode casefold 召回。
+
+全局/侧栏使用同一链接构造器；正文链接携带 message/version/block 与范围终点，
+不携带 quote/context。Reader 从已授权的当前块还原摘录并校验身份、范围及已知 quote，
+精确范围优先于重复摘录重匹配；旧版本、缺失块或非法范围退到消息，不制造精确高亮。
+既有不带范围终点的链接继续兼容。附件结果通过可选 `attachment_id`/
+`attachment_display_name` 打开现有文件面板并定位文件行，不自动预览或下载；
+附件提取文本不是正文偏移。批注结果打开批注并沿用其保存锚点，不将评论命中当正文范围。
+离线复用现有 FlexSearch 与 canonical blocks：conversation/type/role 作为一个复合
+筛选标签，先筛选再限制字段结果，合并去重后再限制回传条数，不再全库过取再筛选。
+当前对话只查询内容域，不能因会话标题或内部类型命中而冒充正文；全库仍可搜标题。
+附件自己的文件名属于文件内容域，旧记录只有提取正文时也保留名称检索；批注搜索
+引用／评论，但定位使用保存锚点。每文档最多七个固定范围标签，不创建逐对话全文索引。
+这是作用域正确性修复，不承诺词法／排名完全一致，也不是总内存或分页性能优化。
+
+离线当前对话与 `/library` 侧栏共用目标投影和链接构造器，始终留在
+`/library?conversationId=…`；正文传当前可验证的 canonical 范围，文件／批注进入
+既有面板。query、结果集、路由或组件卸载会退休待完成的侧栏选择；失败保留结果并
+允许重试。旧包缺 blocks 时保留消息级结果，不从摘要伪造范围；版本字段可选 nullable，
+优先保留索引身份，缺字段才回退本机当前版本。离线包 v1/v2/v3、Dexie v2 和
+已有本机数据无需迁移。
+本轮发布/验证状态以 `PROJECT_STATE.md` 和
+[首批记录](../execution/SEARCH_CORRECTNESS_2026-10-27.md)、
+[检索完整性跟进](../execution/SEARCH_RECALL_OFFLINE_2026-10-27.md)为准。
+
 编辑默认生成新 MessageVersion；第一版永久不可覆盖或删除，第二版及以后可通过显式 `replace_current` 原地覆盖。版本选择只更新单消息 `current_version_id`，版本删除在需要时先回退当前版本，并重定位或标记批注。上述写操作会更新 message/conversation 派生字段、offline revision、blocks、headings 和 SearchDocument，并写审计事件。MessageVersion 记录 normalizer、Markdown parser、block builder 和 search document 版本；幂等 derived rebuild 任务可升级历史派生数据和旧 hash。
 
 会话拆分保留旧连续区间接口，并增加 split-workspace preview/execute 合同：`range_copy` 复制完整连续区间，`boundary_copy` 创建边界前后两个新会话，`discrete_copy` 只复制明确 ID。三种模式均不修改来源会话，并校验空结果、重复 ID、跨会话 ID、非法边界和 Project。
@@ -419,6 +457,15 @@ not make private artifact endpoints public and does not persist source content
 inside an Import Profile.
 
 Ordinary uploads use expiring `attachment_upload_sessions/items`. The conversation attachment endpoint explicitly finalizes an uploaded item, promotes/reuses AssetObject bytes, and creates a conversation-owned Attachment identity. Message save never promotes uploads: it only references Attachments that already belong to the conversation. Split/merge clone Attachment identities for the target conversation, reuse AssetObject bytes, and rewrite occurrence/block/source Markdown IDs.
+
+`PATCH /api/conversations/{conversation_id}/attachments/{attachment_id}` treats a
+display-name change as a derived-state mutation: affected conversation search
+documents are rebuilt and each affected conversation's `offline_revision` is
+bumped before the same transaction commits. The owning conversation is included
+even when the attachment has no message reference. A derived-write failure
+rolls back name, search and revision together. An unchanged normalized name is
+a no-op; original filenames remain part of the existing search text. Existing
+conversation/attachment ownership and availability checks are unchanged.
 
 The source editor may use a transient upload marker while an item is in flight, but successful upload finalization replaces it with `cr-asset://<attachment-uuid>` before save. `PATCH /api/messages/{id}` rejects non-empty legacy `upload_item_ids`, unresolved upload markers, mismatched Markdown/occurrence declarations, duplicate occurrence keys, and cross-conversation Attachment IDs. Its synchronous transaction is limited to base-version validation, one batch Attachment ownership query, the current Markdown/version/render blocks/occurrences, current-version pointer and required annotation migration. Whole-conversation search, TOC, statistics and summary rebuild is queued after commit through a coalesced `conversation_derived_rebuild` task.
 

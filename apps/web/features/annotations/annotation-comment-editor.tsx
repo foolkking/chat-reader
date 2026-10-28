@@ -3,12 +3,14 @@
 import { useState } from "react";
 import type { AnnotationRead } from "../../lib/types";
 
-export type CommentDraft = { base: AnnotationRead; text: string; status: "dirty" | "saving" | "error" | "conflict" };
+import type { CommentDraft } from "../../lib/annotation-comment-drafts";
+export type { CommentDraft } from "../../lib/annotation-comment-drafts";
 
 // The workspace owns draft lifetime across filters/close. Keystrokes only
 // rerender this editor; a long annotation list need not rerender for each one.
-export function AnnotationCommentEditor({ annotation, readDraft, focused, zh, onChange, onSave, onDiscard, onCheck }: {
+export function AnnotationCommentEditor({ annotation, readDraft, focused, zh, loading = false, onChange, onSave, onDiscard, onCheck }: {
   annotation: AnnotationRead; readDraft: (id: string) => CommentDraft | undefined; focused: boolean; zh: boolean;
+  loading?: boolean;
   onChange: (annotation: AnnotationRead, value: string) => void;
   onSave: (annotation: AnnotationRead, overwrite?: boolean, automatic?: boolean) => Promise<void>;
   onDiscard: (annotation: AnnotationRead) => Promise<void>; onCheck: () => Promise<void>;
@@ -18,7 +20,7 @@ export function AnnotationCommentEditor({ annotation, readDraft, focused, zh, on
   const changed = draft && annotation.comment_markdown !== draft.base.comment_markdown && annotation.comment_markdown !== draft.text;
   return <div className="mt-2 space-y-2">
     <label className="block space-y-1 text-xs text-secondary"><span>{zh ? "评论" : "Comment"}</span><textarea
-      autoFocus={focused && annotation.annotation_type === "comment"} value={draft?.text ?? annotation.comment_markdown}
+      autoFocus={focused && annotation.annotation_type === "comment"} readOnly={loading} aria-busy={loading} value={draft?.text ?? annotation.comment_markdown}
       onChange={event => { onChange(annotation, event.target.value); render(value => value + 1); }}
       onBlur={event => { if (!(event.relatedTarget as HTMLElement | null)?.closest?.("[data-comment-actions]")) void onSave(annotation, false, true); }}
       className="min-h-20 w-full resize-y rounded-md border border-ui bg-page px-3 py-2 text-sm text-primary outline-none focus:border-[var(--accent)]"

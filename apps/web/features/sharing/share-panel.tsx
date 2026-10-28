@@ -1,10 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { ApiRequestError, createShare, getConversationShares, revokeShare, updateShare } from "../../lib/api";
 import type { ShareRead } from "../../lib/types";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
+import { useClipboardCopy } from "../../components/use-clipboard-copy";
 
 export function SharePanel({
   conversationId,
@@ -22,6 +23,9 @@ export function SharePanel({
   const [description, setDescription] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [expiryMode, setExpiryMode] = useState<"7d" | "30d" | "never" | "custom">("7d");
+  const [expiryError, setExpiryError] = useState<string | null>(null);
+  const expiryInputRef = useRef<HTMLInputElement>(null);
+  const expiryErrorId = useId();
   const [useSelection, setUseSelection] = useState(false);
   const [includeToc, setIncludeToc] = useState(true);
   const [includeMetadata, setIncludeMetadata] = useState(true);
@@ -53,6 +57,15 @@ export function SharePanel({
 
   async function submit() {
     setError(null);
+    setExpiryError(null);
+    if (expiryMode === "custom") {
+      const validation = validateFutureExpiry(expiresAt);
+      if (!validation.ok) {
+        setExpiryError(zh ? validation.zh : validation.en);
+        expiryInputRef.current?.focus();
+        return;
+      }
+    }
     if (passwordProtected && sharePassword.length < 12) {
       setError(zh ? "分享密码至少需要 12 个字符。" : "Share passwords must be at least 12 characters.");
       return;
@@ -88,13 +101,6 @@ export function SharePanel({
     }
   }
 
-  async function copyUrl() {
-    if (!createdUrl) {
-      return;
-    }
-    await navigator.clipboard?.writeText(createdUrl);
-  }
-
   return (
     <section className="min-w-0 overflow-x-hidden">
       <div className="grid gap-4">
@@ -118,17 +124,22 @@ export function SharePanel({
         {!compact ? <div>
           <p className="mb-2 text-sm text-secondary">{t("expiry")}</p>
           <div className="grid grid-cols-4 rounded-lg bg-subtle p-1">
-            {([{"label":t("sevenDays"),"value":"7d"},{"label":t("thirtyDays"),"value":"30d"},{"label":t("never"),"value":"never"},{"label":t("custom"),"value":"custom"}] as const).map((item) => <button key={item.value} type="button" onClick={() => setExpiryMode(item.value)} className={`min-h-9 rounded-md text-xs ${expiryMode === item.value ? "bg-surface font-medium shadow-sm" : "text-secondary"}`}>{item.label}</button>)}
+            {([{"label":t("sevenDays"),"value":"7d"},{"label":t("thirtyDays"),"value":"30d"},{"label":t("never"),"value":"never"},{"label":t("custom"),"value":"custom"}] as const).map((item) => <button key={item.value} type="button" aria-pressed={expiryMode === item.value} onClick={() => { setExpiryMode(item.value); setExpiryError(null); }} className={`min-h-11 rounded-md text-xs ${expiryMode === item.value ? "bg-surface font-medium shadow-sm" : "text-secondary"}`}>{item.label}</button>)}
           </div>
         </div> : null}
         {!compact && expiryMode === "custom" ? <label className="text-sm text-[#374151]">
           {zh ? "到期时间" : "Expiry date"}
           <input
+            ref={expiryInputRef}
             type="datetime-local"
             value={expiresAt}
-            onChange={(event) => setExpiresAt(event.target.value)}
+            min={minimumDatetimeLocalValue()}
+            aria-invalid={Boolean(expiryError)}
+            aria-describedby={expiryError ? expiryErrorId : undefined}
+            onChange={(event) => { setExpiresAt(event.target.value); setExpiryError(null); }}
             className="mt-1 block w-full rounded-xl border border-[#d1d5db] px-3 py-2 text-sm outline-none focus:border-[#111827] focus:ring-2 focus:ring-[#111827]/10"
           />
+          {expiryError ? <span id={expiryErrorId} role="alert" className="mt-1 block text-xs text-red-700">{expiryError}</span> : null}
         </label> : null}
         {!compact ? <label className="flex items-center gap-2 text-sm text-[#374151]">
           <input
@@ -187,13 +198,7 @@ export function SharePanel({
               >
                 {t("open")}
               </a>
-              <button
-                type="button"
-                onClick={copyUrl}
-                className="rounded-lg border border-[#d1d5db] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
-              >
-                {t("copyLink")}
-              </button>
+              <ShareUrlCopy key={createdUrl} value={createdUrl} zh={zh} />
             </div>
           </div>
         ) : null}
@@ -248,6 +253,10 @@ function ShareManagementRow({
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [expiresAt, setExpiresAt] = useState(toDatetimeLocalValue(share.expires_at));
+  const [neverExpires, setNeverExpires] = useState(!share.expires_at);
+  const [expiryError, setExpiryError] = useState<string | null>(null);
+  const expiryInputRef = useRef<HTMLInputElement>(null);
+  const expiryErrorId = useId();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(share.theme);
@@ -256,11 +265,18 @@ function ShareManagementRow({
   const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
 
   async function saveExpiry() {
+    const validation = neverExpires ? { ok: true as const } : validateFutureExpiry(expiresAt);
+    if (!validation.ok) {
+      setExpiryError(zh ? validation.zh : validation.en);
+      expiryInputRef.current?.focus();
+      return;
+    }
+    setExpiryError(null);
     setBusy("save");
     setError(null);
     try {
       await updateShare(share.id, {
-        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        expires_at: neverExpires ? null : new Date(expiresAt).toISOString(),
         theme,
         locale,
       });
@@ -293,13 +309,6 @@ function ShareManagementRow({
     } finally {
       setBusy(null);
     }
-  }
-
-  async function copyShareUrl() {
-    if (!share.share_url) {
-      return;
-    }
-    await navigator.clipboard?.writeText(share.share_url);
   }
 
   async function regenerateShareLink() {
@@ -356,13 +365,7 @@ function ShareManagementRow({
               >
                 {t("open")}
               </a>
-              <button
-                type="button"
-                onClick={() => void copyShareUrl()}
-                className="rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
-              >
-                {t("copyLink")}
-              </button>
+              <ShareUrlCopy key={share.share_url} value={share.share_url} zh={zh} />
             </>
           ) : null}
           {!share.share_url && !share.revoked_at && !share.password_required ? (
@@ -407,15 +410,21 @@ function ShareManagementRow({
       </div>
       <div className="mt-3 grid gap-2">
         <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2"><label className="min-w-0 text-xs font-medium text-secondary">{t("shareTheme")}<select value={theme} onChange={(event) => setTheme(event.target.value as "light" | "dark")} className="mt-1 block w-full min-w-0 rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label><label className="min-w-0 text-xs font-medium text-secondary">{t("shareLanguage")}<select value={locale} onChange={(event) => setLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 block w-full min-w-0 rounded-lg border border-ui bg-surface px-2.5 py-1.5 text-sm"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label></div>
+        <label className="flex min-h-11 items-center gap-2 text-xs text-secondary"><input type="checkbox" checked={neverExpires} disabled={Boolean(share.revoked_at) || busy !== null} onChange={(event) => { setNeverExpires(event.target.checked); setExpiryError(null); }} />{zh ? "永不过期" : "Never expires"}</label>
         <label className="text-xs font-medium text-[#6b7280]">
           {zh ? "延长有效期" : "Extend expiry"}
           <input
             type="datetime-local"
+            ref={expiryInputRef}
             value={expiresAt}
-            onChange={(event) => setExpiresAt(event.target.value)}
-            disabled={Boolean(share.revoked_at)}
+            min={minimumDatetimeLocalValue()}
+            aria-invalid={Boolean(expiryError)}
+            aria-describedby={expiryError ? expiryErrorId : undefined}
+            onChange={(event) => { setExpiresAt(event.target.value); setExpiryError(null); }}
+            disabled={Boolean(share.revoked_at) || neverExpires || busy !== null}
             className="mt-1 block w-full rounded-lg border border-[#d1d5db] px-2.5 py-1.5 text-sm text-[#111827] outline-none focus:border-[#10a37f] focus:ring-2 focus:ring-[#10a37f]/10 disabled:bg-[#f7f7f8]"
           />
+          {expiryError ? <span id={expiryErrorId} role="alert" className="mt-1 block text-xs text-[var(--danger)]">{expiryError}</span> : null}
         </label>
         <button
           type="button"
@@ -479,6 +488,21 @@ function PrivacyToggle({ label, checked, onChange }: { label: string; checked: b
   );
 }
 
+function ShareUrlCopy({ value, zh }: { value: string; zh: boolean }) {
+  const clipboard = useClipboardCopy(value);
+  return <div className="min-w-0">
+    <button type="button" disabled={clipboard.state === "copying"} onClick={() => void clipboard.copy()}
+      className="min-h-11 rounded-lg border border-ui bg-surface px-3 text-xs font-medium text-primary disabled:opacity-60">
+      {clipboard.state === "copying" ? (zh ? "正在复制…" : "Copying…") : clipboard.state === "copied" ? (zh ? "已复制链接" : "Link copied") : (zh ? "复制链接" : "Copy link")}
+    </button>
+    {clipboard.state === "copied" ? <span className="sr-only" role="status">{zh ? "分享链接已复制。" : "Share link copied."}</span> : null}
+    {clipboard.state === "failed" ? <label className="mt-2 block text-xs text-secondary" role="status">
+      {zh ? "无法自动复制，请手动复制完整链接。" : "Automatic copying failed. Copy the full link manually."}
+      <textarea ref={clipboard.manualRef} readOnly value={value} rows={3} className="mt-1 block w-full rounded-md border border-ui bg-surface p-2 text-sm text-primary" />
+    </label> : null}
+  </div>;
+}
+
 function toDatetimeLocalValue(value?: string | null): string {
   if (!value) {
     return "";
@@ -493,7 +517,24 @@ function toDatetimeLocalValue(value?: string | null): string {
 
 function expiryValue(mode: "7d" | "30d" | "never" | "custom", customValue: string): string | null {
   if (mode === "never") return null;
-  if (mode === "custom") return customValue ? new Date(customValue).toISOString() : null;
+  if (mode === "custom") return new Date(customValue).toISOString();
   const days = mode === "7d" ? 7 : 30;
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function minimumDatetimeLocalValue(): string {
+  const date = new Date(Date.now() + 60_000);
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return offsetDate.toISOString().slice(0, 16);
+}
+
+function validateFutureExpiry(value: string): { ok: true } | { ok: false; zh: string; en: string } {
+  if (!value) return { ok: false, zh: "请选择到期时间。选择“永不过期”可不设置日期。", en: "Choose an expiry time, or select “Never” to keep the share permanent." };
+  const date = new Date(value);
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  const actual = [date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()];
+  if (Number.isNaN(date.getTime()) || !parts || actual.some((part, index) => part !== Number(parts[index + 1] ?? 0)))
+    return { ok: false, zh: "到期时间格式无效或该本地时间不存在。", en: "The expiry time is invalid or does not exist in your local timezone." };
+  if (date.getTime() <= Date.now()) return { ok: false, zh: "到期时间必须晚于当前时间。", en: "The expiry time must be in the future." };
+  return { ok: true };
 }

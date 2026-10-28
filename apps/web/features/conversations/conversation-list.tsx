@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, type DragEndEvent, type DragStartEvent, useSensor, useSensors } from "@dnd-kit/core";
@@ -33,6 +33,24 @@ import { useLinearSelection } from "../../components/use-linear-selection";
 import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
 import { HoverPreviewLink } from "../../components/hover-preview-link";
 
+type ConversationPage = { items: ConversationListItem[]; offset: number; hasMore: boolean };
+
+function sameSortPriority(left: ConversationListItem, right: ConversationListItem): boolean {
+  return left.is_global_pinned === right.is_global_pinned && left.global_pinned_at === right.global_pinned_at;
+}
+
+function reverseSortGroups(rows: ConversationListItem[]): ConversationListItem[] {
+  if (!rows.length) return rows;
+  const result: ConversationListItem[] = [];
+  let start = 0;
+  for (let index = 1; index <= rows.length; index += 1) {
+    if (index < rows.length && sameSortPriority(rows[index], rows[start])) continue;
+    result.push(...rows.slice(start, index).reverse());
+    start = index;
+  }
+  return result;
+}
+
 export function ConversationList({
   onImportClick,
   mode = "active",
@@ -60,6 +78,7 @@ export function ConversationList({
   const mergeResultRef = useRef<HTMLParagraphElement>(null);
   const sortBusy = useRef(false);
   const [sortError, setSortError] = useState(false);
+  const [sortBoundaryNotice, setSortBoundaryNotice] = useState(false);
   const [activeSortId, setActiveSortId] = useState<string | null>(null);
   const [activeSortSize, setActiveSortSize] = useState<{ width: number; height: number } | null>(null);
   const sortSensors = useSensors(
@@ -67,17 +86,19 @@ export function ConversationList({
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const conversationsQuery = useQuery({
-    queryKey: ["conversations", mode, conversationSortMode, conversationSortDirection],
-    queryFn: () => getConversations({
-      statusScope: mode,
-      scope: "all",
-      sort: conversationSortMode,
-      direction: conversationSortDirection,
-      limit: 5000,
-    }),
-    // Keep the visible list stable while a sort change or mutation refreshes it.
-    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[1] === mode ? previous : undefined,
+  const pageSize = 100;
+  const conversationsQuery = useInfiniteQuery({
+    queryKey: ["conversations", "paged", mode, conversationSortMode, conversationSortDirection],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam, signal }): Promise<ConversationPage> => {
+      const rows = await getConversations({
+        statusScope: mode, scope: "all", sort: conversationSortMode,
+        direction: conversationSortDirection, limit: pageSize + 1, offset: pageParam,
+      }, signal);
+      return { items: rows.slice(0, pageSize), offset: pageParam, hasMore: rows.length > pageSize };
+    },
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.offset + pageSize : undefined,
+    // Do not show or mutate the old sort's rows under the new sort controls.
     staleTime: 10_000,
   });
   const projectsQuery = useQuery({
@@ -96,13 +117,17 @@ export function ConversationList({
     }),
     // Only needed to distinguish the empty active state. Avoid an extra list
     // request when the primary query already returned conversations.
-    enabled: mode === "active" && conversationsQuery.isSuccess && conversationsQuery.data.length === 0,
+    enabled: mode === "active" && conversationsQuery.isSuccess && (conversationsQuery.data?.pages[0]?.items.length ?? 0) === 0,
     staleTime: 30_000,
   });
   const isArchivedMode = mode === "archived";
+  const customOrderLimit = 500;
   const listUnavailable = conversationsQuery.isError && conversationsQuery.error instanceof ApiRequestError
     && [401, 403, 404].includes(conversationsQuery.error.status);
-  const conversations = listUnavailable ? [] : (conversationsQuery.data ?? []).filter((conversation) => conversation.status === mode);
+  const loadedConversations = [...new Map((conversationsQuery.data?.pages.flatMap((page) => page.items) ?? []).map((row) => [row.id, row])).values()];
+  const conversations = listUnavailable ? [] : loadedConversations.filter((conversation) => conversation.status === mode);
+  const customOrderTooLarge = conversationSortMode === "custom"
+    && (conversations.length > customOrderLimit || (conversations.length === customOrderLimit && conversationsQuery.hasNextPage));
   const placement = useConversationPlacement({ scope: "conversation-list:" + mode, unavailable: listUnavailable, onChanged: refreshLists });
   const selectedMergeConversations = mergeOrderIds
     .map((id) => conversations.find((conversation) => conversation.id === id))
@@ -122,13 +147,23 @@ export function ConversationList({
   }, [selectedConversationIds.size]);
 
   useEffect(() => {
+    setSelectedConversationIds(new Set());
+    setMergeOrderIds([]);
+    setSelectionMode(false);
+    setSortError(false);
+    setSortBoundaryNotice(false);
+  }, [mode, conversationSortMode, conversationSortDirection]);
+
+  useEffect(() => {
     const handleDeleteProgress = (event: Event) => {
       const detail = (event as CustomEvent<{ deletedIds?: string[] }>).detail;
       const deletedIds = new Set(detail?.deletedIds ?? []);
       if (!deletedIds.size) return;
-      queryClient.setQueriesData<ConversationListItem[] | undefined>(
+      queryClient.setQueriesData<ConversationListItem[] | InfiniteData<ConversationPage> | undefined>(
         { queryKey: ["conversations"] },
-        (current) => current?.filter((conversation) => !deletedIds.has(conversation.id)),
+        (current) => Array.isArray(current)
+          ? current.filter((conversation) => !deletedIds.has(conversation.id))
+          : current ? { ...current, pages: current.pages.map((page) => ({ ...page, items: page.items.filter((conversation) => !deletedIds.has(conversation.id)) })) } : current,
       );
     };
     window.addEventListener("chat-reader:conversation-delete-progress", handleDeleteProgress);
@@ -147,15 +182,29 @@ export function ConversationList({
   }
 
   async function handleSortEnd(event: DragEndEvent) {
-    if (listUnavailable || sortBusy.current || conversationSortMode !== "custom" || !event.over || event.active.id === event.over.id) return;
-    const rows = conversationsQuery.data ?? [];
+    if (listUnavailable || conversationsQuery.isFetching || conversationsQuery.isError || conversationsQuery.hasNextPage
+      || customOrderTooLarge || sortBusy.current || conversationSortMode !== "custom" || !event.over
+      || event.active.id === event.over.id) return;
+    const rows = conversations;
     const oldIndex = rows.findIndex((item) => item.id === event.active.id);
     const newIndex = rows.findIndex((item) => item.id === event.over?.id);
     if (oldIndex < 0 || newIndex < 0) return;
-    sortBusy.current = true; setSortError(false);
+    if (!sameSortPriority(rows[oldIndex], rows[newIndex])) {
+      setSortBoundaryNotice(true);
+      return;
+    }
+    sortBusy.current = true; setSortError(false); setSortBoundaryNotice(false);
     try {
-    await updateConversationOrder(arrayMove(rows, oldIndex, newIndex).map((item) => item.id));
-    await queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      const reordered = arrayMove(rows, oldIndex, newIndex);
+      // The API stores one canonical ascending rank, while the custom list may
+      // be rendered descending. Reverse each equal-priority group so a reload
+      // returns the same visible order. Pin status AND pinned timestamp take
+      // precedence over manual rank on the server.
+      const canonicalRows = conversationSortDirection === "desc"
+        ? reverseSortGroups(reordered)
+        : reordered;
+      await updateConversationOrder(canonicalRows.map((item) => item.id));
+      await queryClient.invalidateQueries({ queryKey: ["conversations"] });
     } catch { setSortError(true); }
     finally { sortBusy.current = false; }
   }
@@ -314,7 +363,7 @@ export function ConversationList({
             {isArchivedMode ? (resolvedLocale === "zh-CN" ? "已归档对话" : "Archived conversations") : (resolvedLocale === "zh-CN" ? "对话记录" : "Conversation history")}
           </h2>
           {conversationsQuery.isFetching ? <span role="status" className="text-xs text-secondary">{resolvedLocale === "zh-CN" ? "正在更新" : "Updating"}</span> : null}
-          <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `共 ${conversations.length} 个` : `${conversations.length} total`}</p>
+          <p className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `已加载 ${conversations.length} 个${conversationsQuery.hasNextPage ? "，仍有更多" : ""}` : `${conversations.length} loaded${conversationsQuery.hasNextPage ? ", more available" : ""}`}</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <ConversationSortMenu />
@@ -322,9 +371,13 @@ export function ConversationList({
         </div>
       </div>
       {readError}
-      {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请重新拖动以重试。" : "Order was not saved. Drag again to retry."}</p> : null}
+      {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{resolvedLocale === "zh-CN" ? "排序未保存，请检查当前列表范围后重试。" : "Order was not saved. Check the current list scope and retry."}</p> : null}
+      {sortBoundaryNotice ? <p role="status" className="text-sm text-secondary">{zh ? "不能跨置顶优先级拖拽；置顶对话优先按置顶时间排序。可先取消置顶，再自定义排序。" : "Cannot drag across pin priorities; pinned conversations sort by pin time first. Unpin them before customizing their order."}</p> : null}
+      {conversationSortMode === "custom" && conversationsQuery.hasNextPage && !customOrderTooLarge ? <p role="status" className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? "自定义排序需要先加载全部对话，避免只对当前页面重排。" : "Load all conversations before custom drag ordering so a page cannot reorder only part of the list."}</p> : null}
+      {customOrderTooLarge ? <p role="status" className="text-sm text-secondary">{resolvedLocale === "zh-CN" ? `当前范围超过 ${customOrderLimit} 个对话，已达到自定义排序的 API 上限，已停用拖拽。` : `This scope exceeds the ${customOrderLimit}-conversation custom-order API limit, so dragging is disabled.`}</p> : null}
       {batchExport.feedback}
       {selectionMode ? <SelectionToolbar
+        loadedOnly={conversationsQuery.hasNextPage}
         selectedCount={selectedConversationIds.size}
         totalCount={conversations.length}
         busy={bulkBusy !== null || isMerging}
@@ -407,7 +460,7 @@ export function ConversationList({
       </SelectionToolbar> : null}
       <DndContext sensors={sortSensors} onDragStart={handleSortStart} onDragCancel={() => { setActiveSortId(null); setActiveSortSize(null); }} onDragEnd={(event) => { setActiveSortId(null); setActiveSortSize(null); void handleSortEnd(event); }}><SortableContext items={conversations.map((item) => item.id)} strategy={verticalListSortingStrategy}><div className="overflow-hidden rounded-xl border border-ui bg-surface">
         {conversations.map((conversation) => (
-            <SortableConversationRow id={conversation.id} enabled={!selectionMode} key={conversation.id}><article
+            <SortableConversationRow id={conversation.id} enabled={!selectionMode && conversationSortMode === "custom" && !customOrderTooLarge && !conversationsQuery.hasNextPage && !conversationsQuery.isFetching && !conversationsQuery.isError} key={conversation.id}><article
             {...linearSelection.itemHandlers(conversation.id)}
             data-state={selectedConversationIds.has(conversation.id) ? "selected" : undefined}
             aria-selected={selectionMode ? selectedConversationIds.has(conversation.id) : undefined}
@@ -455,7 +508,9 @@ export function ConversationList({
             </div>
           </article></SortableConversationRow>
         ))}
-      </div></SortableContext><DragOverlay adjustScale={false}>{activeSortId ? <div data-testid="conversation-list-drag-overlay" className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSortSize ? { width: activeSortSize.width, height: activeSortSize.height } : undefined} aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
+      </div></SortableContext>
+      {conversationsQuery.hasNextPage ? <div className="flex justify-center pt-1"><button type="button" className="btn-secondary min-h-11 px-4" disabled={conversationsQuery.isFetching || bulkBusy !== null || isMerging} onClick={() => void conversationsQuery.fetchNextPage()}>{conversationsQuery.isFetchingNextPage ? (resolvedLocale === "zh-CN" ? "正在加载更多…" : "Loading more…") : conversationsQuery.isFetchNextPageError ? (zh ? "重试加载更多对话" : "Retry loading more conversations") : (resolvedLocale === "zh-CN" ? "加载更多对话" : "Load more conversations")}</button></div> : null}
+      <DragOverlay adjustScale={false}>{activeSortId ? <div data-testid="conversation-list-drag-overlay" className="reader-drag-overlay px-4 py-3 text-sm font-semibold text-primary" style={activeSortSize ? { width: activeSortSize.width, height: activeSortSize.height } : undefined} aria-hidden="true"><p className="truncate">{conversations.find((item) => item.id === activeSortId)?.display_title || conversations.find((item) => item.id === activeSortId)?.title}</p><p className="mt-1 line-clamp-2 text-xs font-normal text-secondary">{conversations.find((item) => item.id === activeSortId)?.description_markdown || conversations.find((item) => item.id === activeSortId)?.first_user_message || ""}</p></div> : null}</DragOverlay></DndContext>
     </section>
   );
 }

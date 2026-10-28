@@ -60,7 +60,21 @@ export function resolveTextAnchorRange(root: HTMLElement, anchor: TextAnchor): R
 
   const quote = anchor.quote?.trim();
   if (quote) {
-    const exact = bestMatch(source.text, quote, anchor.prefix, anchor.suffix);
+    const preferredStart = anchor.startOffset === undefined ? undefined
+      : source.codePointToCodeUnit[clamp(anchor.startOffset, 0, source.codePointToCodeUnit.length - 1)];
+    const preferredEnd = anchor.endOffset === undefined
+      ? preferredStart === undefined ? undefined : preferredStart + quote.length
+      : source.codePointToCodeUnit[clamp(anchor.endOffset, 0, source.codePointToCodeUnit.length - 1)];
+    // A range from the same canonical version disambiguates repeated text even
+    // when both occurrences have identical surrounding context. Other callers'
+    // explicit context must still be able to reject an outdated offset.
+    if (preferredStart !== undefined && preferredEnd !== undefined
+      && source.text.slice(preferredStart, preferredEnd) === quote
+      && (!anchor.prefix?.trim() || contextScore(source.text.slice(0, preferredStart), anchor.prefix, "prefix") > 0)
+      && (!anchor.suffix?.trim() || contextScore(source.text.slice(preferredEnd), anchor.suffix, "suffix") > 0)) {
+      return rangeForTextOffsets(source.segments, preferredStart, preferredEnd);
+    }
+    const exact = bestMatch(source.text, quote, anchor.prefix, anchor.suffix, preferredStart);
     if (exact) return rangeForTextOffsets(source.segments, exact.start, exact.end);
 
     const normalizedSource = normalizeMarkdownAnchor(source.text);
@@ -140,7 +154,7 @@ function rangeForTextOffsets(segments: TextNodeSegment[], start: number, end: nu
   return range.collapsed && end > start ? null : range;
 }
 
-function bestMatch(source: string, quote: string, prefix?: string | null, suffix?: string | null): { start: number; end: number } | null {
+function bestMatch(source: string, quote: string, prefix?: string | null, suffix?: string | null, preferredStart?: number): { start: number; end: number } | null {
   let cursor = 0;
   let best: { start: number; end: number; score: number } | null = null;
   while (cursor <= source.length - quote.length) {
@@ -150,7 +164,8 @@ function bestMatch(source: string, quote: string, prefix?: string | null, suffix
     const before = source.slice(Math.max(0, start - 160), start);
     const after = source.slice(end, end + 160);
     const score = contextScore(before, prefix, "prefix") + contextScore(after, suffix, "suffix");
-    if (!best || score > best.score) best = { start, end, score };
+    if (!best || score > best.score || (score === best.score && preferredStart !== undefined
+      && Math.abs(start - preferredStart) < Math.abs(best.start - preferredStart))) best = { start, end, score };
     cursor = start + Math.max(1, quote.length);
   }
   return best;

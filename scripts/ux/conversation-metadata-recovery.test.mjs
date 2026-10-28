@@ -329,6 +329,19 @@ test("confirmed metadata updates existing list and project copies, preserving re
     assert.deepEqual(f.client.getQueryData(f.keys.project)[0].project_relation, f.relation);
   } finally { await f.dispose(); }
 });
+test("confirmed metadata updates paged lists without losing page metadata or unrelated rows", async () => {
+  const f = await fixture({ field: "title" });
+  const key = ["conversations", "paged", "active", "recent_read", "desc"];
+  try {
+    f.client.setQueryData(key, { pages: [{ items: [f.initial, f.other], offset: 100, hasMore: true }], pageParams: [100] });
+    f.change("Synthetic paged title"); await f.submit();
+    const data = f.client.getQueryData(key);
+    assert.equal(data.pages[0].items[0].title, "Synthetic paged title");
+    assert.deepEqual(data.pages[0].items[1], f.other);
+    assert.equal(data.pages[0].offset, 100); assert.equal(data.pages[0].hasMore, true);
+    assert.deepEqual(data.pageParams, [100]);
+  } finally { await f.dispose(); }
+});
 test("recent metadata changes without replacing the real reading anchor", async () => {
   const f = await fixture({ field: "title" });
   try { f.change("Synthetic renamed recent"); await f.submit(); const recent = f.client.getQueryData(f.keys.recent)[0]; assert.equal(recent.conversation.title, "Synthetic renamed recent"); assert.deepEqual({ ...recent, conversation: f.recent.conversation }, f.recent); }

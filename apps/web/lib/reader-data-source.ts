@@ -10,9 +10,11 @@ import {
   searchConversations,
 } from "./api";
 import { readSyncedReadingPosition, saveLocalReadingPosition } from "./reading-position-sync";
-import { offlineDb, type OfflineMessageRecord } from "./offline-db";
-import { searchOffline } from "./offline-search";
+import { offlineDb, type OfflineMessageRecord, type OfflineSearchDocument } from "./offline-db";
+import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
+import { searchOfflinePage } from "./offline-search";
 import { findOpeningThinkingSummary } from "../features/conversations/thinking-summary";
+import { findSearchTextMatches } from "./search-text-matches";
 import type {
   ConversationDetail,
   ConversationListItem,
@@ -25,6 +27,7 @@ import type {
   ReadingPositionResponse,
   RenderBlockRead,
   SearchMatch,
+  SearchResultItem,
   SearchResponse,
   TocItem,
   TocResponse,
@@ -46,6 +49,8 @@ export type ReaderSearchOptions = {
   documentType?: string;
   role?: string;
   limit?: number;
+  offset?: number;
+  signal?: AbortSignal;
 };
 
 export type TocOptions = {
@@ -126,6 +131,7 @@ export const remoteReaderDataSource: ReaderDataSource = {
       target.occurrenceKey ?? "",
       target.canonicalStart ?? target.characterOffset ?? "",
       target.canonicalEnd ?? target.endCharacterOffset ?? "",
+      target.source ?? "",
       options?.includeNavigation ? "navigation" : "target",
     ].join(":");
     const existing = targetContextInflight.get(key);
@@ -143,6 +149,8 @@ export const remoteReaderDataSource: ReaderDataSource = {
       documentType: options.documentType,
       role: options.role,
       limit: options.limit ?? 50,
+      offset: options.offset ?? 0,
+      signal: options.signal,
     });
   },
   getReadingPosition: (id) => readSyncedReadingPosition(id, true),
@@ -263,55 +271,33 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return loadTargetContext(offlineReaderDataSource, conversationId, target, options);
   },
   async searchConversation(conversationId, options) {
+    options.signal?.throwIfAborted();
+    const access = captureOfflineAccess();
     const limit = options.limit ?? 50;
-    const documents = (await searchOffline(options.query, Math.max(limit * 4, 100)))
+    const offset = options.offset ?? 0;
+    const page = await searchOfflinePage(options.query, limit, offset, {
+      conversationId,
+      documentType: options.documentType,
+      role: options.role,
+      contentOnly: true,
+    });
+    const documents = page.items
       .filter((item) => item.conversation_id === conversationId)
       .filter((item) => !options.documentType || item.document_type === options.documentType)
       .filter((item) => !options.role || item.role === options.role)
       .slice(0, limit);
-    const items = await Promise.all(documents.map(async (item, index) => {
-      const message = item.message_id ? await offlineDb.messages.get(item.message_id) : null;
-      const requestedBlockIndex = metadataNumber(item.metadata, "block_index");
-      const blocks = message
-        ? (await offlineDb.blocks.where("message_id").equals(message.id).sortBy("block_index"))
-          .filter((block) => requestedBlockIndex === null || block.block_index === requestedBlockIndex)
-        : [];
-      const candidates = blocks.length
-        ? blocks.map((block) => ({ blockIndex: block.block_index, renderBlockId: block.id, text: block.plain_text ?? "" }))
-        : [{ blockIndex: requestedBlockIndex, renderBlockId: null, text: item.plain_text }];
-      const matches = candidates.flatMap((candidate) => findOfflineSearchMatches(candidate.text, options.query, candidate.blockIndex, candidate.renderBlockId)).slice(0, 100);
-      const firstMatch = matches[0];
-      const snippet = firstMatch
-        ? `${firstMatch.context_before ? "..." : ""}${firstMatch.context_before}${firstMatch.quote}${firstMatch.context_after}${firstMatch.context_after ? "..." : ""}`
-        : item.plain_text.slice(0, 320);
-      return {
-        document_id: item.id,
-        document_type: item.document_type,
-        conversation_id: item.conversation_id,
-        conversation_title: item.title ?? "Conversation",
-        message_id: item.message_id,
-        message_version_id: message?.current_version?.id ?? null,
-        role: item.role,
-        order_key: item.order_key,
-        block_index: firstMatch?.block_index ?? requestedBlockIndex,
-        render_block_id: firstMatch?.render_block_id ?? null,
-        character_offset: firstMatch?.match_start ?? metadataNumber(item.metadata, "character_offset"),
-        snippet,
-        rank: documents.length - index,
-        source_profile: "offline",
-        occurrence_count: matches.length || 1,
-        matches,
-        annotation_id: typeof item.metadata.annotation_id === "string" ? item.metadata.annotation_id : null,
-        annotation_type: typeof item.metadata.annotation_type === "string" ? item.metadata.annotation_type : null,
-        annotation_color: typeof item.metadata.annotation_color === "string" ? item.metadata.annotation_color : null,
-      };
-    }));
+    const items = await Promise.all(documents.map((item, index) =>
+      resolveOfflineSearchResult(item, options.query, documents.length - index)));
+    assertOfflineAccess(access);
+    options.signal?.throwIfAborted();
     return {
       query: options.query,
       items,
       limit,
-      offset: 0,
-      total: documents.length,
+      offset,
+      total: page.total,
+      total_is_exact: page.total_is_exact,
+      has_more: page.has_more,
     };
   },
   async getReadingPosition(conversationId) {
@@ -323,6 +309,73 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return null;
   },
 };
+
+/** Project an indexed offline document into the shared, canonical search target. */
+export async function resolveOfflineSearchResult(
+  item: OfflineSearchDocument,
+  query: string,
+  rank = 1,
+): Promise<SearchResultItem> {
+  const access = captureOfflineAccess();
+  const storedMessage = item.message_id ? await offlineDb.messages.get(item.message_id) : null;
+  const message = storedMessage?.conversation_id === item.conversation_id ? storedMessage : null;
+  const requestedBlockIndex = metadataNumber(item.metadata, "block_index") ?? metadataNumber(item.metadata, "start_block_index");
+  const bodyDocument = ["message", "heading", "code"].includes(item.document_type);
+  const blocks = message && bodyDocument
+    ? (await getOfflineMessageBlocks(message.id))
+      .filter((block) => item.document_type === "message" || requestedBlockIndex === null || block.block_index === requestedBlockIndex)
+    : [];
+  const candidates = bodyDocument && (item.document_type === "message" || requestedBlockIndex !== null)
+    ? blocks.map((block) => ({ blockIndex: block.block_index, renderBlockId: block.id ?? null, text: block.plain_text ?? "" }))
+    : [];
+  const matches: SearchMatch[] = [];
+  for (const candidate of candidates) {
+    const remaining = 101 - matches.length;
+    if (remaining <= 0) break;
+    matches.push(...findSearchTextMatches(candidate.text, query, candidate.blockIndex, candidate.renderBlockId, remaining));
+  }
+  const matchesTruncated = matches.length > 100;
+  const visibleMatches = matches.slice(0, 100);
+  const firstMatch = visibleMatches[0];
+  const snippet = firstMatch
+    ? `${firstMatch.context_before ? "..." : ""}${firstMatch.context_before}${firstMatch.quote}${firstMatch.context_after}${firstMatch.context_after ? "..." : ""}`
+    : item.plain_text.slice(0, 320);
+  const result: SearchResultItem = {
+    document_id: item.id,
+    document_type: item.document_type,
+    conversation_id: item.conversation_id,
+    conversation_title: item.title ?? "Conversation",
+    message_id: item.message_id,
+    // Preserve indexed identity; only older/private documents may lack it.
+    message_version_id: item.message_version_id ?? message?.current_version?.id ?? null,
+    role: item.role,
+    order_key: item.order_key,
+    // Comments/extracts are not body ranges. Annotations keep their saved anchor.
+    block_index: firstMatch?.block_index ?? (item.document_type === "annotation" ? requestedBlockIndex : null),
+    render_block_id: firstMatch?.render_block_id ?? (item.document_type === "annotation"
+      && typeof item.metadata.render_block_id === "string" ? item.metadata.render_block_id : null),
+    character_offset: firstMatch?.match_start ?? (item.document_type === "annotation"
+      ? metadataNumber(item.metadata, "character_offset") ?? metadataNumber(item.metadata, "start_offset")
+      : null),
+    snippet,
+    rank,
+    source_profile: "offline",
+    occurrence_count: 1,
+    matches: visibleMatches,
+    matches_truncated: matchesTruncated,
+    attachment_id: item.document_type === "attachment"
+      ? (typeof item.metadata.attachment_id === "string"
+        ? item.metadata.attachment_id
+        : typeof item.metadata.source_attachment_id === "string" ? item.metadata.source_attachment_id : null)
+      : null,
+    attachment_display_name: item.document_type === "attachment" ? item.title : null,
+    annotation_id: typeof item.metadata.annotation_id === "string" ? item.metadata.annotation_id : null,
+    annotation_type: typeof item.metadata.annotation_type === "string" ? item.metadata.annotation_type : null,
+    annotation_color: typeof item.metadata.annotation_color === "string" ? item.metadata.annotation_color : null,
+  };
+  assertOfflineAccess(access);
+  return result;
+}
 
 /**
  * Read the canonical message set for an offline conversation. The indexed
@@ -348,44 +401,6 @@ async function getOfflineMessageBlocks(messageId: string): Promise<RenderBlockRe
   return (await offlineDb.blocks.toArray())
     .filter((block) => String(block.message_id) === id)
     .sort((left, right) => left.block_index - right.block_index);
-}
-
-function findOfflineSearchMatches(text: string, query: string, blockIndex: number | null, renderBlockId: string | null = null): SearchMatch[] {
-  const normalizedText = text.replace(/\s+/g, " ").trim();
-  const normalizedQuery = query.replace(/\s+/g, " ").trim();
-  if (!normalizedText || !normalizedQuery) return [];
-  const lowerText = normalizedText.toLocaleLowerCase();
-  const lowerQuery = normalizedQuery.toLocaleLowerCase();
-  const matches: SearchMatch[] = [];
-  let cursor = 0;
-  while (cursor <= lowerText.length - lowerQuery.length) {
-    const index = lowerText.indexOf(lowerQuery, cursor);
-    if (index < 0) break;
-    matches.push(offlineSearchMatch(normalizedText, index, index + normalizedQuery.length, blockIndex, renderBlockId));
-    cursor = index + Math.max(1, normalizedQuery.length);
-  }
-  if (!matches.length) {
-    const token = lowerQuery.split(/\s+/).find(Boolean);
-    if (token) {
-      const index = lowerText.indexOf(token);
-      if (index >= 0) matches.push(offlineSearchMatch(normalizedText, index, index + token.length, blockIndex, renderBlockId));
-    }
-  }
-  return matches;
-}
-
-function offlineSearchMatch(text: string, start: number, end: number, blockIndex: number | null, renderBlockId: string | null): SearchMatch {
-  const beforeStart = Math.max(0, start - 80);
-  const afterEnd = Math.min(text.length, end + 80);
-  return {
-    block_index: blockIndex,
-    render_block_id: renderBlockId,
-    match_start: start,
-    match_end: end,
-    quote: text.slice(start, end),
-    context_before: text.slice(beforeStart, start),
-    context_after: text.slice(end, afterEnd),
-  };
 }
 
 const LEADING_TIMESTAMP_RE = /^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?\s*$/;

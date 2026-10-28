@@ -19,6 +19,8 @@ import { OFFLINE_SYNC_CHANGED_EVENT } from "../../lib/annotation-sync";
 import { useAnnotationWorkspaceReads, type AnnotationReadKind, type AnnotationReadStatus } from "./use-annotation-workspace-reads";
 import { AnnotationCommentEditor, type CommentDraft } from "./annotation-comment-editor";
 import { DirectExportDownload } from "../exporting/direct-export-download";
+import { captureCommentDraftStorage, readAnnotationCommentDrafts, removeAnnotationCommentDraft, trackCommentDraftPersistence, writeAnnotationCommentDraft, type CommentDraftStorage } from "../../lib/annotation-comment-drafts";
+import { invalidateReaderSearch } from "../../lib/reader-search-cache";
 
 type SelectionDraft = {
   messageId: string;
@@ -71,11 +73,12 @@ function useScopedState<T>(scopeKey: number, initial: T) {
   return [state.scopeKey === scopeKey ? state.value : initial, update] as const;
 }
 
-export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, repository, open, onOpenChange, onNavigate }: {
+export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, searchReplayKey = 0, repository, open, onOpenChange, onNavigate }: {
   conversationId: string;
   messages: MessageListItem[];
   activeMessageId: string | null;
   initialAnnotationId?: string | null;
+  searchReplayKey?: number;
   repository: AnnotationRepository;
   open: boolean;
   onOpenChange: (value: boolean) => void;
@@ -86,14 +89,22 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const { resolvedLocale, annotationDefaultPosition, setAnnotationDefaultPosition } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const refreshExportDependencies = () => {
-    if (repository.mode === "remote")
+    if (repository.mode === "remote") {
       void queryClient.invalidateQueries({ queryKey: ["conversation", "remote", conversationId] });
+      invalidateReaderSearch(queryClient, { mode: "remote", conversationId });
+    }
   };
   const { annotations, notebook, conflicts: notebookConflicts, reads, reload, publishNotebook: setNotebook,
     notebookReady, canUseNotebook, isCurrent, scopeKey, currentAnnotations, updateAnnotations } = useAnnotationWorkspaceReads(conversationId, repository, open);
   const [, refreshComments] = useScopedState(scopeKey, 0);
   const commentDraftsRef = useMemo(() => ({ current: {} as Record<string, CommentDraft> }), [scopeKey]);
   const commentDrafts = commentDraftsRef.current;
+  const commentDraftVersions = useMemo(() => new Map<string, number>(), [scopeKey]);
+  const commentPersistQueue = useMemo(() => new Map<string, Promise<void>>(), [scopeKey]);
+  const pendingCommentDrafts = useMemo(() => new Map<string, { annotation: AnnotationRead; value: CommentDraft | null; storage: CommentDraftStorage }>(), [scopeKey]);
+  const commentDeleteIntents = useMemo(() => new Map<string, AnnotationRead>(), [scopeKey]);
+  const [commentStorage, setCommentStorage] = useScopedState<"loading" | "ready" | "failed">(scopeKey, "loading");
+  const [commentStorageAttempt, retryCommentStorage] = useScopedState(scopeKey, 0);
   const commentWrites = useMemo(() => new Set<string>(), [scopeKey]);
   const styleGate = useMemo(() => ({ busy: false, needsCheck: false }), [scopeKey]);
   const [styleFeedback, setStyleFeedback] = useScopedState<{ status: "saving" | "checking" | "failed"; confirmed: number; total: number } | null>(scopeKey, null);
@@ -132,13 +143,14 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const conflictOpener = useRef<HTMLElement | null>(null);
   const [reviewMode, setReviewMode] = useState<"continuous" | "single">("continuous");
   const [reviewIndex, setReviewIndex] = useState(0);
+  const searchReviewActivation = useMemo(() => ({ aligned: false }), [initialAnnotationId, searchReplayKey, scopeKey]);
   const [desktop, setDesktop] = useState(false);
   const [panel, setPanel] = useState<PanelState>({ x: 0, y: 72, width: 400, height: 620 });
   const panelRef = useRef(panel);
   const dragRef = useRef<{ type: DragType; startX: number; startY: number; panel: PanelState } | null>(null);
   const focusedMessageId = activeMessageId;
 
-  const hasCommentDrafts = Object.keys(commentDrafts).length > 0;
+  const hasCommentDrafts = Object.keys(commentDrafts).length > 0 || commentDeleteIntents.size > 0;
   useEffect(() => {
     if (!hasCommentDrafts) return;
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -146,13 +158,115 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     return () => window.removeEventListener("beforeunload", guard);
   }, [hasCommentDrafts]);
 
+  const persistCommentDraft = useCallback((annotation: AnnotationRead, value: CommentDraft | null) => {
+    const id = annotation.id;
+    if (value) commentDeleteIntents.delete(id);
+    else commentDeleteIntents.set(id, annotation);
+    let storage: CommentDraftStorage;
+    try { storage = captureCommentDraftStorage(); }
+    catch { if (isCurrent()) setCommentStorage("failed"); return; }
+    pendingCommentDrafts.set(id, { annotation, value, storage });
+    if (commentPersistQueue.has(id)) return;
+    let task: Promise<void>;
+    task = (async () => {
+      while (pendingCommentDrafts.has(id)) {
+        const pending = pendingCommentDrafts.get(id)!;
+        pendingCommentDrafts.delete(id);
+        const expectedVersion = commentDraftVersions.get(id) ?? 0;
+        try {
+          if (pending.value) {
+            const version = await writeAnnotationCommentDraft(conversationId, id, expectedVersion, pending.value, repository.mode, pending.storage);
+            commentDraftVersions.set(id, version);
+          } else {
+            await removeAnnotationCommentDraft(conversationId, id, expectedVersion, repository.mode, pending.storage);
+            commentDraftVersions.delete(id);
+          }
+          if (!pendingCommentDrafts.has(id)) commentDeleteIntents.delete(id);
+          if (isCurrent()) refreshComments(value => value + 1);
+        } catch {
+          if (isCurrent()) setCommentStorage("failed");
+          // Keep a failed delete as an explicit intent. A later hydration
+          // must not turn an unconfirmed discard into a recovered draft.
+          const newer = pendingCommentDrafts.has(id);
+          if (!pending.value && !newer) pendingCommentDrafts.set(id, pending);
+          const latest = commentDraftsRef.current[id];
+          if (latest && isCurrent()) {
+            commentDraftsRef.current = { ...commentDraftsRef.current, [id]: { ...latest, status: "error" } };
+            refreshComments(value => value + 1);
+          }
+          // Do not spin on a failed local transaction. The explicit storage
+          // retry effect will start this retained operation again.
+          if (!newer) break;
+        }
+      }
+    })().finally(() => {
+      if (commentPersistQueue.get(id) === task) commentPersistQueue.delete(id);
+    });
+    commentPersistQueue.set(id, task);
+    trackCommentDraftPersistence(conversationId, repository.mode, storage, task);
+  }, [commentDeleteIntents, commentDraftVersions, commentDraftsRef, commentPersistQueue, conversationId, isCurrent, pendingCommentDrafts, refreshComments, repository.mode, setCommentStorage]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        await Promise.all(commentPersistQueue.values());
+        if (cancelled || !isCurrent()) return;
+        const currentItems = currentAnnotations() ?? [];
+        // A failed null write remains queued in memory. Retry it before
+        // reading the store, otherwise the stale record could be classified
+        // as a new recoverable draft.
+        for (const pending of [...pendingCommentDrafts.values()])
+          persistCommentDraft(pending.annotation, pending.value);
+        for (const [id, annotation] of [...commentDeleteIntents])
+          if (!commentPersistQueue.has(id)) persistCommentDraft(annotation, null);
+        await Promise.all(commentPersistQueue.values());
+        if (cancelled || !isCurrent()) return;
+        if (commentDeleteIntents.size) throw new Error("Comment draft deletion is not yet confirmed.");
+        const stored = await readAnnotationCommentDrafts(conversationId, repository.mode);
+        if (cancelled || !isCurrent()) return;
+        for (const record of stored) {
+          if (cancelled || !isCurrent()) return;
+          commentDraftVersions.set(record.annotation_id, record.version);
+          if (commentDeleteIntents.has(record.annotation_id)) continue;
+          const current = currentItems.find((item) => item.id === record.annotation_id);
+          if (current && current.comment_markdown === record.text) {
+            await removeAnnotationCommentDraft(
+              conversationId,
+              record.annotation_id,
+              record.version,
+              repository.mode,
+            );
+            commentDraftVersions.delete(record.annotation_id);
+            continue;
+          }
+          if (!commentDraftsRef.current[record.annotation_id])
+            commentDraftsRef.current[record.annotation_id] = { base: record.base, text: record.text,
+              // Recovery is always explicit; reopening must not replay an
+              // uncertain server write through blur autosave.
+              status: "error" };
+        }
+        if (cancelled || !isCurrent()) return;
+        setCommentStorage(pendingCommentDrafts.size || commentDeleteIntents.size ? "failed" : "ready");
+        for (const draft of Object.values(commentDraftsRef.current))
+          persistCommentDraft(draft.base, draft);
+      } catch {
+        if (!cancelled && isCurrent()) setCommentStorage("failed");
+      } finally {
+        if (!cancelled && isCurrent()) refreshComments(value => value + 1);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [commentDeleteIntents, commentDraftVersions, commentDraftsRef, commentPersistQueue, commentStorageAttempt, conversationId, currentAnnotations, isCurrent, pendingCommentDrafts, persistCommentDraft, refreshComments, repository.mode, scopeKey, setCommentStorage]);
+
   function changeCommentDraft(annotation: AnnotationRead, value: string) {
-    if (!isCurrent()) return;
+    if (!isCurrent() || commentStorage === "loading") return;
     const existing = commentDraftsRef.current[annotation.id];
     const next = { ...commentDraftsRef.current, [annotation.id]: { base: existing?.base ?? annotation,
       text: value, status: commentWrites.has(annotation.id) ? "saving" as const : "dirty" as const } };
     if (!commentWrites.has(annotation.id) && value === annotation.comment_markdown) delete next[annotation.id];
     commentDraftsRef.current = next;
+    persistCommentDraft(annotation, next[annotation.id] ?? null);
     // Typing rerenders only the editor. The workspace needs to update when a
     // draft appears/disappears or its operation state changes.
     if (existing?.status !== next[annotation.id]?.status) refreshComments(value => value + 1);
@@ -161,13 +275,16 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   function setCommentResult(id: string, value: CommentDraft | null) {
     if (!isCurrent()) return;
     const next = { ...commentDraftsRef.current };
+    const base = value?.base ?? next[id]?.base;
     if (value) next[id] = value; else delete next[id];
     commentDraftsRef.current = next; refreshComments(value => value + 1);
+    const annotation = currentAnnotations()?.find(item => item.id === id) ?? base;
+    if (annotation) persistCommentDraft(annotation, value);
   }
 
   async function saveComment(annotation: AnnotationRead, overwrite = false, automatic = false) {
     const draft = commentDraftsRef.current[annotation.id];
-    if (!draft || !isCurrent() || commentWrites.has(annotation.id) || styleGate.busy || deleteGate.busy || deleteGate.operation) return;
+    if (!draft || !isCurrent() || commentStorage !== "ready" || commentWrites.has(annotation.id) || styleGate.busy || deleteGate.busy || deleteGate.operation) return;
     if (automatic && draft.status !== "dirty") return;
     let current = currentAnnotations()?.find(item => item.id === annotation.id);
     if (!current) { setCommentResult(annotation.id, { ...draft, status: "error" }); return; }
@@ -244,7 +361,11 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     if (!initialAnnotationId) return;
     setFocusedAnnotationId(initialAnnotationId);
     setView("all");
-  }, [initialAnnotationId, setFocusedAnnotationId]);
+    setAnnotationQuery("");
+    setTypeFilter("all");
+    setColorFilter("all");
+    setStatusFilter("all");
+  }, [initialAnnotationId, searchReplayKey, setFocusedAnnotationId]);
 
   const closeWorkspace = async () => {
     if (notebookDraftAtRisk && !await dialog.confirm({ title: zh ? "草稿尚未写入本机，仍要关闭？" : "The draft is not saved on this device. Close anyway?", description: zh ? "返回笔记可重试保存；关闭可能丢失最近的输入。" : "Return to the notebook to retry saving. Closing may lose recent input.", confirmLabel: zh ? "仍然关闭" : "Close anyway", danger: true })) return;
@@ -437,14 +558,6 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     };
   }, []);
 
-  useEffect(() => {
-    if (!open || !focusedAnnotationId) return;
-    const frame = window.requestAnimationFrame(() => {
-      document.getElementById(`annotation-${focusedAnnotationId}`)?.scrollIntoView({ block: "nearest" });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [focusedAnnotationId, open, view]);
-
   async function createTextAnnotation(annotationType: Exclude<AnnotationType, "bookmark">, color: AnnotationColor) {
     const selected = selectionRef.current;
     if (!selected || !isCurrent() || creationGate.busy) return;
@@ -567,6 +680,28 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     });
   }, [annotationQuery, annotations, colorFilter, focusedMessageId, statusFilter, typeFilter, view]);
 
+  useEffect(() => {
+    if (!open || !initialAnnotationId || searchReviewActivation.aligned || view !== "all"
+      || annotationQuery || typeFilter !== "all" || colorFilter !== "all" || statusFilter !== "all") return;
+    const index = visibleAnnotations.findIndex((item) => item.id === initialAnnotationId);
+    if (index < 0) return;
+    // Keep single/continuous mode and drafts, but reveal this activation's row
+    // once data and reset filters are committed. Later manual review stays put.
+    searchReviewActivation.aligned = true;
+    setReviewIndex(index);
+  }, [annotationQuery, colorFilter, initialAnnotationId, open, searchReviewActivation, statusFilter, typeFilter, view, visibleAnnotations]);
+
+  const focusedAnnotationIndex = visibleAnnotations.findIndex((item) => item.id === focusedAnnotationId);
+  const focusedAnnotationVisible = view !== "notebook" && focusedAnnotationIndex >= 0
+    && (!expanded || reviewMode !== "single" || focusedAnnotationIndex === Math.min(reviewIndex, visibleAnnotations.length - 1));
+  useEffect(() => {
+    if (!open || !focusedAnnotationVisible || !focusedAnnotationId) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`annotation-${focusedAnnotationId}`)?.scrollIntoView({ block: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedAnnotationId, focusedAnnotationVisible, open, searchReplayKey, view]);
+
   const selectedAnnotations = useMemo(() => annotations.filter(item => selectedAnnotationIds.has(item.id)), [annotations, selectedAnnotationIds]);
   const annotationExport = view !== "notebook" ? <div data-comment-actions className="shrink-0 border-b border-ui px-3 py-2">
     {repository.mode === "remote" ? <DirectExportDownload key={`${scopeKey}:${conversationId}`} href={`/api/conversations/${conversationId}/exports/annotations`} format="markdown" label={zh ? "导出全部批注" : "Export all annotations"} compact /> : null}
@@ -637,7 +772,8 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
           operation.removed.push(current.id);
           operation.confirmed++;
           updateAnnotations(items => items.filter(item => item.id !== current.id));
-          delete commentDraftsRef.current[current.id];
+          // Deleting an annotation does not silently discard unsaved writing.
+          // Its draft remains available below as an orphan recovery copy.
           setSelectedAnnotationIds(ids => new Set([...ids].filter(id => id !== current.id)));
           publishDeletion(operation);
         }
@@ -685,7 +821,6 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       // never repeats a delete or saves the notebook.
       const removed = operation.ids.filter(id => !present.has(id));
       const removedIds = new Set(removed);
-      for (const id of removed) delete commentDraftsRef.current[id];
       refreshComments(value => value + 1);
       setSelectedAnnotationIds(ids => new Set([...ids].filter(id => !removedIds.has(id))));
       const references = reads.notebook.currentData()?.blocks.some(block => block.annotation_id && removedIds.has(block.annotation_id));
@@ -791,7 +926,21 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       <button type="button" className="min-h-11 px-3 underline" onClick={() => { if (!additionGate.busy && additionGate.request?.status === "review") publishNoteAddition(null); }}>{zh ? "结束加入笔记" : "Finish adding to notes"}</button>
     </> : null}
   </div> : null;
-  const writeFeedback = <>{styleStatus}{deletionStatus}{creationStatus}{additionStatus}</>;
+  const orphanedCommentDrafts = reads.annotations.status === "ready"
+    ? Object.values(commentDraftsRef.current).filter((draft) => !annotations.some((item) => item.id === draft.base.id)) : [];
+  const commentStorageFeedback = <div className="space-y-2">
+    {commentStorage === "loading" ? <p role="status" className="text-xs text-secondary">{zh ? "正在恢复本机评论草稿…" : "Recovering local comment drafts…"}</p> : null}
+    {commentStorage === "failed" ? <div role="alert" className="text-xs text-[var(--danger)]">
+      <p>{zh ? "本机评论草稿读写失败，最近输入可能只在此页面内。请重试，离开或刷新前先复制重要内容。" : "Local comment draft storage failed. Recent input may exist only on this page. Retry, and copy important text before leaving or refreshing."}</p>
+      <button type="button" className="min-h-11 underline" onClick={() => retryCommentStorage(value => value + 1)}>{zh ? "重试本机草稿" : "Retry local drafts"}</button>
+    </div> : null}
+    {orphanedCommentDrafts.map((draft) => <div key={draft.base.id} className="rounded-md border border-ui bg-subtle p-3 text-xs text-secondary">
+      <span>{zh ? "原批注已不存在；草稿仍保留，可复制后用于其他批注。" : "The original annotation is gone. This draft is retained; copy it into another annotation if needed."}</span>
+      <textarea readOnly aria-label={zh ? "已删除批注的评论草稿" : "Comment draft for a deleted annotation"} rows={4} value={draft.text} className="mt-2 block w-full rounded border border-ui bg-surface p-2 text-sm text-primary" />
+      <button type="button" className="min-h-11 underline" onClick={() => void discardCommentDraft(draft.base)}>{zh ? "放弃此草稿" : "Discard this draft"}</button>
+    </div>)}
+  </div>;
+  const writeFeedback = <>{commentStorageFeedback}{styleStatus}{deletionStatus}{creationStatus}{additionStatus}</>;
 
   async function addSelectedToNotebook() {
     await addToNotebook(selectedAnnotations.map(item => item.id));
@@ -972,14 +1121,14 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
         {selectedAnnotations.length > styleCount ? <p className="w-full text-secondary">{zh ? "书签不参与样式修改。" : "Bookmarks keep their existing style."}</p> : null}
         {notebookReady && noteAdditionCount < selectedAnnotations.length ? <p className="w-full text-secondary">{zh ? "已在笔记中的批注不会重复添加。" : "Annotations already in notes will not be added again."}</p> : null}
       </div> : null}
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={desktop} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} /> : null}</>}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={desktop} commentsLoading={commentStorage === "loading"} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} /> : null}</>}</div>
       {desktop ? <><button type="button" role="separator" aria-orientation="vertical" className="absolute bottom-0 left-0 top-12 z-20 w-2 cursor-col-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-left", event)} onDoubleClick={() => { const next = defaultPanel(); panelRef.current = next; setPanel(next); writeStoredPanel(next); }} aria-label="从左侧调整批注窗口宽度" /><button type="button" role="separator" aria-orientation="vertical" className="absolute bottom-0 right-0 top-12 z-20 w-2 cursor-col-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-right", event)} aria-label="从右侧调整批注窗口宽度" /><button type="button" role="separator" aria-orientation="horizontal" className="absolute bottom-0 left-0 right-6 z-20 h-2 cursor-row-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-bottom", event)} aria-label="调整批注窗口高度" /><button type="button" className="absolute bottom-0 right-0 z-30 flex h-6 w-6 cursor-se-resize items-end justify-end p-0.5 text-secondary" onPointerDown={(event) => beginPanelDrag("resize-bottom-right", event)} aria-label="调整批注窗口大小"><Maximize2 className="h-3.5 w-3.5" /></button></> : null}
     </section> : null}
     {open && expanded ? <section className="fixed inset-0 z-[150] flex min-h-0 flex-col bg-raised" aria-label={zh ? "批注阅读" : "Annotation reading"} data-annotation-mode="expanded">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><MessageSquareText className="h-5 w-5 text-accent" /><h2 className="min-w-0 flex-1 truncate text-base font-semibold">{zh ? "批注阅读" : "Annotation reading"}</h2><button type="button" onClick={() => setExpanded(false)} className="inline-flex h-9 items-center gap-1 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle" aria-label={zh ? "退出展开阅读" : "Exit expanded reading"}><Minimize2 className="h-4 w-4" />{zh ? "退出" : "Exit"}</button><button type="button" onClick={() => void closeWorkspace()} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header>
       {annotationExport}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ui px-4 py-3"><div className="flex items-center gap-1 rounded-md bg-subtle p-1"><button type="button" onClick={() => { setReviewMode("continuous"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "continuous" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "连续阅读" : "Continuous"}</button><button type="button" onClick={() => { setReviewMode("single"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "single" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "逐条回顾" : "Review one by one"}</button></div><div className="flex min-w-0 flex-1 items-center gap-2"><span className="text-xs text-secondary">{view === "notebook" ? (notebook?.title || (zh ? "精选笔记" : "Notes")) : `${visibleAnnotations.length} ${zh ? "条批注" : "annotations"}`}</span></div>{view !== "notebook" ? <div className="flex items-center gap-2"><select aria-label={zh ? "批注类型" : "Annotation type"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部类型" : "All types"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}<option value="bookmark">{localizedAnnotationType("bookmark", zh)}</option></select><button type="button" onClick={() => setView("notebook")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "精选笔记" : "Notes"}</button></div> : <button type="button" onClick={() => setView("all")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "全部批注" : "All annotations"}</button>}</div>
-      <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto w-full max-w-4xl p-4 md:p-8">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={desktop} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} reviewMode={reviewMode} reviewIndex={reviewIndex} onReviewIndexChange={setReviewIndex} /> : null}</>}</div></div>
+      <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto w-full max-w-4xl p-4 md:p-8">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={desktop} commentsLoading={commentStorage === "loading"} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} reviewMode={reviewMode} reviewIndex={reviewIndex} onReviewIndexChange={setReviewIndex} /> : null}</>}</div></div>
     </section> : null}
   </>;
 }
@@ -1000,9 +1149,10 @@ function AnnotationReadFeedback({ kind, status, hasData, unavailable, zh, onRetr
   </div>;
 }
 
-function AnnotationList({ items, editable, messages, focusedAnnotationId, selectionMode, selectedAnnotationIds, onToggleSelected, onNavigate, readCommentDraft, onDraftChange, onSaveComment, onDiscardComment, onCheckComments, onStyle, onDelete, onAddToNotebook, reviewMode = "continuous", reviewIndex = 0, onReviewIndexChange }: {
+function AnnotationList({ items, editable, commentsLoading, messages, focusedAnnotationId, selectionMode, selectedAnnotationIds, onToggleSelected, onNavigate, readCommentDraft, onDraftChange, onSaveComment, onDiscardComment, onCheckComments, onStyle, onDelete, onAddToNotebook, reviewMode = "continuous", reviewIndex = 0, onReviewIndexChange }: {
   items: AnnotationRead[];
   editable: boolean;
+  commentsLoading: boolean;
   messages: MessageListItem[];
   focusedAnnotationId: string | null;
   selectionMode: boolean;
@@ -1044,7 +1194,7 @@ function AnnotationList({ items, editable, messages, focusedAnnotationId, select
         {editable && !selectionMode ? <button type="button" onClick={() => void onDelete(annotation)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]" aria-label={zh ? "删除批注" : "Delete annotation"} title={zh ? "删除批注" : "Delete annotation"}><Trash2 className="h-4 w-4" /></button> : null}
       </div>
        {editable ? <div className="mt-2 flex flex-wrap items-center gap-2"><select value={annotation.annotation_type === "bookmark" ? "bookmark" : annotation.annotation_type} disabled={annotation.annotation_type === "bookmark"} onChange={(event) => void onStyle(annotation, event.target.value as Exclude<AnnotationType, "bookmark">, annotation.color ?? "yellow")} className="min-h-8 rounded-md border border-ui bg-page px-2 text-xs">{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}{annotation.annotation_type === "bookmark" ? <option value="bookmark">{localizedAnnotationType("bookmark", zh)}</option> : null}</select><AnnotationColorPicker value={annotation.color ?? "yellow"} disabled={annotation.annotation_type === "bookmark"} onChange={(color) => void onStyle(annotation, annotation.annotation_type as Exclude<AnnotationType, "bookmark">, color)} zh={zh} /></div> : null}
-       {editable ? <AnnotationCommentEditor annotation={annotation} readDraft={readCommentDraft} focused={focusedAnnotationId === annotation.id} zh={zh} onChange={onDraftChange} onSave={onSaveComment} onDiscard={onDiscardComment} onCheck={onCheckComments} /> : annotation.comment_markdown ? <div className="mt-2 text-sm"><MarkdownRenderer text={annotation.comment_markdown} /></div> : null}
+       {editable ? <AnnotationCommentEditor annotation={annotation} readDraft={readCommentDraft} focused={focusedAnnotationId === annotation.id} zh={zh} loading={commentsLoading} onChange={onDraftChange} onSave={onSaveComment} onDiscard={onDiscardComment} onCheck={onCheckComments} /> : annotation.comment_markdown ? <div className="mt-2 text-sm"><MarkdownRenderer text={annotation.comment_markdown} /></div> : null}
        {editable ? <button type="button" onClick={() => void onAddToNotebook(annotation)} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-accent hover:bg-subtle"><BookmarkPlus className="h-3.5 w-3.5" />{zh ? "加入精选笔记" : "Add to notes"}</button> : null}
     </article>;
   })}</div>;

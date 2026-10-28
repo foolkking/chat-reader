@@ -1,5 +1,82 @@
 # Markdown 文档台账
 
+## 搜索与阅读恢复发布 — 2026-10-28
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md` | 本次已授权合并批次的范围、无本地执行边界、逐轮 50 分钟 CI 门禁及制品／备份／部署事实；不把先前未运行用例算作通过。 |
+| `PROJECT_STATE.md`、`deployment.md`、`index.md`、`execution/README.md` | 当前发布入口；精确生产／回退状态以新发布回执为准，历史检查点保留。 |
+
+## 完整性复审实施 — 2026-10-28（源码完成，未验收）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md` | 记录 9 项完整性复审修复的源码范围、兼容边界和未运行验收门禁；不是 CI 或发布回执。 |
+| `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 当前同运行期草稿删除意图、完整分页／500 条排序边界、置顶优先级和 TOC 追加位置合同；不宣称失败删除在强制刷新后持久化。 |
+| `system/ATTACHMENT_RENDERER_CONTRACT.md` | XLSX 坐标、Office 关系声明与缺失 manifest 降级、空 shared strings 和分类 ZIP 错误合同；ODS 不新增保真承诺。 |
+| `system/BACKEND_AND_API.md` | 附件改名、搜索派生与离线 revision 的同事务边界，含未引用附件及失败回滚。 |
+| `testing.md#completeness-follow-up-optimization--2026-10-28-source-only` | 9 项修复的已编写未运行回归、替身证据边界和待授权真实验收门禁。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 链接当前实施状态，并保留历史审查的证据边界。 |
+
+## 完整性复审与下一轮 — 2026-10-28（历史审查）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/ux-audit-completeness-review-2026-10-28.md` | 9 项源码完整性发现、2 项新增／7 项继承边界、保留／增强／暂缓处置和下一轮有界批次；实施前证据快照。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 简短链接本次历史复审及其源码实施跟进，不改变未验收或生产／回退记录。 |
+
+## 扩展优化实施 — 2026-10-28（源码完成，未验收）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/UX_AUDIT_OPTIMIZATION_2026-10-28.md` | 记录同日 12 个方向的源码实施、未实施的性能测量项、兼容边界和未验收状态；不是 CI 或生产回执。 |
+| `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 当前搜索分页、草稿恢复、TOC/引用/上传状态和复杂预览范围的行为合同。 |
+| `system/BACKEND_AND_API.md`、`api-reference.md` | 当前搜索响应的分页与 `matches_truncated` 字段，以及字面范围语义。 |
+| `system/FEATURE_INVENTORY.md`、`system/PAGE_AND_ROUTE_MAP.md`、`system/ATTACHMENT_RENDERER_CONTRACT.md` | 账号、附件有界预览和下载降级的当前能力边界，避免把历史状态当现状。 |
+| `testing.md#reader-completeness-and-recovery--2026-10-28-source-only` | 本批专项回归源码、测试替身边界和待授权的真实运行门禁；不把已编写写成已通过。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 本批完成范围、性能条件项和未验收入口；生产/回退仍以已接受的历史发布证据为准。 |
+
+## 扩展优化方向 — 2026-10-28（仅审查）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/ux-audit-optimization-directions-2026-10-28.md` | 当前未提交工作树的扩展方向审查：12 个有界候选、源码与推断分级、验收条件、建议批次及不改动项；不是实现合同或生产验收。 |
+| `index.md`、`execution/README.md` | 简短链接本次仅审查结果，不改变当前生产、三批搜索未验收状态或已精简的优化计划。 |
+
+## 检索结果生命周期与重复定位 — 2026-10-27（源码完成，未验收）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/ux-audit-search-lifecycle-2026-10-27.md` | 保留实施前重复导航、索引新鲜度／去重及条件分页提示的源码审查；同日跟进链接实施记录，不改写原证据。 |
+| `execution/SEARCH_LIFECYCLE_2026-10-27.md` | 记录三个发现的有界实现、实体权威、重建／访问代际、兼容及 source-only 边界；当时暂缓的 SEARCH-CAP 由 2026-10-28 源码批次跟进。 |
+| `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md#search-lifecycle-and-replay--2026-10-27-source-only` | 当前源码的显式再次激活、面板可见性、只读投影和窄内容订阅合同；不宣称大库性能或全站缓存治理。 |
+| `testing.md#search-lifecycle-and-replay--2026-10-27-source-only` | 纯投影、受控生命周期／实际 effect 和真实浏览器用例的不同覆盖边界；均已编写未执行。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 源码完成但未验收／未提交入口；三批搜索源码与既有生产／回退状态分离。 |
+
+## 检索完整性与离线入口 — 2026-10-27（源码完成，未验收）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/ux-audit-search-recall-2026-10-27.md` | 实施前源码 quick review、五项发现及验收条件；同日跟进指向实施记录，不将原观察改写成运行回执。 |
+| `execution/SEARCH_RECALL_OFFLINE_2026-10-27.md` | 授权后的有界实施、复合筛选标签选择、兼容边界、回归分层与未执行状态。 |
+| `system/BACKEND_AND_API.md#搜索与编辑`、`architecture.md`、`api-reference.md#search-and-toc` | 当前对话按消息身份保留结果，全局／项目仍按 hash 折叠；不改端点、数据库分页或 schema。 |
+| `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md#scoped-search-and-library-targets--2026-10-27-source-only` | 离线先筛选后限量、内容域和文件名域、共享 canonical 目标与迟到选择隔离；包版本／Dexie 不变。 |
+| `testing.md#scoped-search-and-offline-entries--2026-10-27-source-only` | 真实 FlexSearch、受控 bridge／projection／导航、API 与 375/1440px 离线浏览器用例及各自证据边界；全部未执行。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 当前源码完成但未验收／未提交入口；类型遗漏已补，不宣称 typecheck 或 CI 通过，不改变生产版本。 |
+
+## 搜索正确性与精确定位 — 2026-10-27（源码完成，未验收）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `system/BACKEND_AND_API.md#搜索与编辑`、`architecture.md` | 当前源码的字面检索、canonical Unicode 范围、100 条构造上限和正文／批注／附件偏移域边界；不声称候选分页或总内存优化。 |
+| `api-reference.md#search-and-toc` | `matches` 原文范围和可加附件身份／名称字段；不新增端点或 migration。 |
+| `testing.md#search-correctness-and-exact-navigation--2026-10-27-source-only` | 新增 API／PostgreSQL／受控 UX／隔离浏览器用例及未执行边界；旧版本 CI 不覆盖本批。 |
+| `execution/SEARCH_CORRECTNESS_2026-10-27.md` | 只读发现、实施范围、静态检查和用户禁止本地执行／CI／提交／部署的检查点。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 本批本地未提交状态与当前生产分离的简短入口。 |
+
+保留已有 Share URL、`.cr`、离线包 v1/v2/v3 和 Dexie v2。没有运行本地门禁、
+服务或浏览器，没有 CI dispatch、提交、部署或生产数据操作。
+
 ## 噪声审查修复 — 2026-10-27（发布准备）
 
 | 文档 | 当前职责 |

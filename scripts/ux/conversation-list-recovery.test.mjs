@@ -7,7 +7,7 @@ import { setImmediate } from "node:timers/promises";
 const appRequire = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = appRequire("typescript"), React = appRequire("react"), jsx = appRequire("react/jsx-runtime");
 const { renderToStaticMarkup } = appRequire("react-dom/server");
-const { QueryClient, QueryObserver } = appRequire("@tanstack/react-query");
+const { QueryClient, QueryObserver, InfiniteQueryObserver } = appRequire("@tanstack/react-query");
 const noop = () => {}, childrenOnly = ({ children }) => children;
 const row = mode => ({ id: `synthetic-${mode}`, title: `Synthetic ${mode} conversation`, display_title: `Synthetic ${mode} conversation`,
   status: mode, first_user_message: "Synthetic preview", message_count: 2 });
@@ -26,22 +26,28 @@ const compiled = ts.transpileModule(source, { fileName: "conversation-list.tsx",
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
 } }).outputText;
 
-// Real QueryObserver request/cache transitions and actual component JSX. React
+// Real infinite/query observer request/cache transitions and actual JSX. React
 // renders are independent static snapshots; selection, transport and unrelated
 // children are explicit doubles, not browser/lifecycle/layout/focus acceptance.
 async function fixture({ mode = "active", rows = [row(mode)], cached = true, error = new Error("Synthetic raw upstream detail"),
-  selected = false, locale = "en-US", existenceRows = [], existenceError = null, existenceCached = false } = {}) {
+  selected = false, locale = "en-US", existenceRows = [], existenceError = null, existenceCached = false,
+  sortMode = "recent_read", direction = "desc" } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   let mainError = error, savedError = existenceError, mainRows = rows, reads = 0, existenceReads = 0, held = null, imports = 0;
-  const main = new QueryObserver(client, { queryKey: ["conversations", mode, "recent_read", "desc"], enabled: false,
-    initialData: cached ? rows : undefined, queryFn: async () => { reads += 1; if (held) return held; if (mainError) throw mainError; return mainRows; } });
+  const page = (items, offset = 0) => ({ items: items.slice(offset, offset + 100), offset, hasMore: items.length > offset + 100 });
+  const main = new InfiniteQueryObserver(client, { queryKey: ["conversations", "paged", mode, sortMode, direction], enabled: false,
+    initialPageParam: 0, getNextPageParam: last => last.hasMore ? last.offset + 100 : undefined,
+    initialData: cached ? { pages: [page(rows)], pageParams: [0] } : undefined,
+    queryFn: async ({ pageParam }) => { reads += 1; const items = held ? await held : mainRows;
+      if (mainError) throw mainError; return page(items, pageParam); } });
   const existence = new QueryObserver(client, { queryKey: ["conversations", "existence"], enabled: false,
     initialData: existenceCached ? existenceRows : undefined,
     queryFn: async () => { existenceReads += 1; if (savedError) throw savedError; return existenceRows; } });
   const stopMain = main.subscribe(noop), stopExistence = existence.subscribe(noop);
   await main.refetch();
   if (mode === "active" && main.getCurrentResult().isSuccess && rows.length === 0) await existence.refetch();
-  const retryButtons = [], inputs = new Map(), mergeOwners = [], apiReads = [];
+  const retryButtons = [], inputs = new Map(), mergeOwners = [], apiReads = [], orderWrites = [], sortableRows = [];
+  let dragContext;
   let stateIndex = 0;
   const RenderedRetry = props => { retryButtons.push(props); return React.createElement("button", props); };
   const capture = factory => (type, props, key) => {
@@ -50,19 +56,26 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     if (type === "button" && ["Retry", "重试"].includes(props.children)) return factory(RenderedRetry, props, key);
     return factory(type, props, key);
   };
-  const overrides = { selectedConversationIds: new Set(selected ? rows.map(item => item.id) : []),
-    selectionMode: selected, mergeOrderIds: selected ? rows.map(item => item.id) : [] };
+  const overrides = { selectedConversationIds: new Set(selected ? rows.slice(0, 100).map(item => item.id) : []),
+    selectionMode: selected, mergeOrderIds: selected ? rows.slice(0, 100).map(item => item.id) : [] };
   const mocks = {
     react: { ...React, useState: initial => { const name = stateNames[stateIndex++]; return React.useState(Object.hasOwn(overrides, name) ? overrides[name] : initial); } },
     "react/jsx-runtime": { ...jsx, jsx: capture(jsx.jsx), jsxs: capture(jsx.jsxs) },
-    "@tanstack/react-query": { useQueryClient: () => client, useQuery: input => {
+    "@tanstack/react-query": { useQueryClient: () => client, useInfiniteQuery: input => {
+      inputs.set(input.queryKey[2], input); return main.getCurrentResult();
+    }, useQuery: input => {
       inputs.set(input.queryKey[1], input);
       return input.queryKey[0] === "projects" ? { data: [] } : input.queryKey[1] === "existence" ? existence.getCurrentResult() : main.getCurrentResult();
     } },
-    "@dnd-kit/core": { DndContext: childrenOnly, DragOverlay: () => null, useSensor: noop, useSensors: noop },
-    "@dnd-kit/sortable": { SortableContext: childrenOnly, useSortable: () => ({ setNodeRef: noop }) },
+    "@dnd-kit/core": { DndContext: props => { dragContext = props; return props.children; },
+      DragOverlay: () => null, useSensor: noop, useSensors: noop },
+    "@dnd-kit/sortable": { SortableContext: childrenOnly,
+      arrayMove: appRequire("@dnd-kit/sortable").arrayMove,
+      useSortable: input => { sortableRows.push(input); return { setNodeRef: noop }; } },
     "@dnd-kit/utilities": { CSS: { Transform: { toString: noop } } },
-    "../../lib/api": { ApiRequestError, getConversations: async input => { apiReads.push(input); return rows; } },
+    "../../lib/api": { ApiRequestError,
+      updateConversationOrder: async ids => { orderWrites.push(ids); },
+      getConversations: async input => { apiReads.push(input); return mainRows.slice(input.offset ?? 0, (input.offset ?? 0) + input.limit); } },
     "./markdown-renderer": { stripLeadingTimestamp: text => text },
     "./conversation-action-menu": { ConversationActionMenu: () => null },
     "./conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
@@ -72,13 +85,14 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     "./conversation-undo": {},
     "./merge-conversations-dialog": { MergeConversationsDialog: props => { mergeOwners.push(props); return null; } },
     "../../components/sort-menu": { ConversationSortMenu: () => null },
-    "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: "recent_read", conversationSortDirection: "desc" }) },
+    "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: sortMode, conversationSortDirection: direction }) },
     "../../components/quick-start-guide": { QuickStartGuide: () => null },
     "../../lib/activity-time": { formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
     "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({}) },
     "./use-batch-export": { useBatchExport: () => ({ feedback: null }) },
     "../../components/selection-toolbar": { SelectionModeButton: () => null,
-      SelectionToolbar: ({ selectedCount }) => React.createElement("aside", { "data-testid": "synthetic-selection-toolbar" }, selectedCount) },
+      SelectionToolbar: ({ selectedCount, loadedOnly }) => { inputs.set("selection", { selectedCount, loadedOnly });
+        return React.createElement("aside", { "data-testid": "synthetic-selection-toolbar" }, selectedCount); } },
     "../../components/use-linear-selection": { useLinearSelection: () => ({ itemHandlers: () => ({}), checkboxClass: () => "flex" }) },
     "../../lib/batch-selection": {},
     "../../components/hover-preview-link": { HoverPreviewLink: ({ href, children }) => React.createElement("a", { href }, children) },
@@ -89,9 +103,11 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     if (name.startsWith(".")) throw new Error(`Unexpected component dependency: ${name}`);
     return appRequire(name);
   }, module, module.exports);
-  const render = () => { stateIndex = 0; retryButtons.length = 0; mergeOwners.length = 0;
+  const render = () => { stateIndex = 0; retryButtons.length = 0; mergeOwners.length = 0; sortableRows.length = 0;
     return renderToStaticMarkup(React.createElement(module.exports.ConversationList, { mode, onImportClick: () => { imports += 1; } })); };
-  return { client, main, existence, render, retryButtons, inputs, mergeOwners, apiReads, reads: () => reads, existenceReads: () => existenceReads, imports: () => imports,
+  return { client, main, existence, render, retryButtons, inputs, mergeOwners, apiReads, orderWrites, sortableRows,
+    async drag(from, to) { assert.ok(dragContext); dragContext.onDragEnd({ active: { id: from }, over: { id: to } }); await setImmediate(); },
+    reads: () => reads, existenceReads: () => existenceReads, imports: () => imports,
     recover: () => { mainError = null; savedError = null; }, setRows: next => { mainRows = next; },
     holdRead: () => { let release; held = new Promise(resolve => { release = resolve; }); return () => { release(mainRows); held = null; }; },
     dispose: () => { stopMain(); stopExistence(); main.destroy(); existence.destroy(); client.clear(); } };
@@ -102,7 +118,7 @@ for (const mode of ["active", "archived"]) {
     const f = await fixture({ mode });
     try {
       const html = f.render();
-      assert.equal(f.main.getCurrentResult().isError, true); assert.equal(f.main.getCurrentResult().data.length, 1);
+      assert.equal(f.main.getCurrentResult().isError, true); assert.equal(f.main.getCurrentResult().data.pages[0].items.length, 1);
       assert.match(html, new RegExp(`href="/conversations/synthetic-${mode}"`));
       assert.match(html, /Previously loaded items are shown/); assert.match(html, /role="alert"/);
       assert.doesNotMatch(html, /Synthetic raw upstream detail/); assert.equal(f.retryButtons.length, 1);
@@ -149,14 +165,15 @@ for (const mode of ["active", "archived"]) {
       assert.match(html, /aria-busy="true"/);
     } finally { release(); await setImmediate(); f.dispose(); }
   });
-  test(`${mode}: sort placeholders belong only to the same list scope`, async () => {
+  test(`${mode}: sorts start with their own pages and page requests preserve the list scope`, async () => {
     const f = await fixture({ mode, error: null });
     try {
-      f.render(); const options = f.inputs.get(mode), previous = [row(mode)];
-      assert.equal(options.placeholderData(previous, { queryKey: ["conversations", mode, "title", "asc"] }), previous);
-      assert.equal(options.placeholderData(previous, { queryKey: ["conversations", mode === "active" ? "archived" : "active"] }), undefined);
-      assert.equal(options.placeholderData(previous, { queryKey: ["conversations", "existence"] }), undefined);
-      await options.queryFn(); assert.equal(f.apiReads[0].scope, "all"); assert.equal(f.apiReads[0].statusScope, mode);
+      f.render(); const options = f.inputs.get(mode);
+      assert.equal(options.placeholderData, undefined);
+      assert.deepEqual(options.queryKey, ["conversations", "paged", mode, "recent_read", "desc"]);
+      await options.queryFn({ pageParam: 100, signal: new AbortController().signal });
+      assert.equal(f.apiReads[0].scope, "all"); assert.equal(f.apiReads[0].statusScope, mode);
+      assert.equal(f.apiReads[0].offset, 100); assert.equal(f.apiReads[0].limit, 101);
     } finally { f.dispose(); }
   });
   test(`${mode}: successful rendering excludes conversations of the other status`, async () => {
@@ -172,6 +189,26 @@ test("a verified first-run empty workspace keeps transcript import and no archiv
   const f = await fixture({ rows: [], error: null });
   try { const html = f.render(); assert.match(html, /There are no conversations here yet/); assert.match(html, />Import conversations</); assert.doesNotMatch(html, /href="\/archived"/); }
   finally { f.dispose(); }
+});
+
+test("large lists can reach items beyond 5,000 without claiming an unloaded total", async () => {
+  const rows = Array.from({ length: 5001 }, (_, index) => ({
+    ...row("active"), id: `synthetic-large-${index}`, title: `Synthetic item ${index}`, display_title: `Synthetic item ${index}`,
+  }));
+  const f = await fixture({ rows, error: null, selected: true });
+  try {
+    assert.match(f.render(), /100 loaded, more available/);
+    assert.equal(f.inputs.get("selection").loadedOnly, true);
+    const options = f.inputs.get("active");
+    for (let offset = 0; offset <= 5000; offset += 100) {
+      const page = await options.queryFn({ pageParam: offset, signal: new AbortController().signal });
+      assert.equal(page.items[0].id, `synthetic-large-${offset}`);
+      assert.equal(options.getNextPageParam(page), offset < 5000 ? offset + 100 : undefined);
+    }
+    await f.main.fetchNextPage();
+    assert.match(f.render(), /200 loaded, more available/);
+    assert.equal(new Set(f.main.getCurrentResult().data.pages.flatMap(page => page.items.map(item => item.id))).size, 200);
+  } finally { f.dispose(); }
 });
 
 test("an archived-only workspace points to Archive, not project filing", async () => {
@@ -206,3 +243,63 @@ test("Chinese archived-only empty state gives an actual archive link", async () 
   try { const html = f.render(); assert.match(html, /暂无活动对话/); assert.match(html, />查看归档</); assert.match(html, /href="\/archived"/); assert.doesNotMatch(html, /归入项目|未分类/); }
   finally { f.dispose(); }
 });
+
+for (const mode of ["active", "archived"]) for (const count of [499, 500, 501]) {
+  test(`${mode}: custom order permits at most 500 fully loaded conversations (${count})`, async () => {
+    const rows = Array.from({ length: count }, (_, index) => ({ ...row(mode), id: `synthetic-order-${index}` }));
+    const f = await fixture({ mode, rows, error: null, sortMode: "custom", direction: "asc" });
+    try {
+      f.render();
+      assert.ok(f.sortableRows.every(item => item.disabled));
+      await f.drag(rows[0].id, rows[1].id);
+      assert.deepEqual(f.orderWrites, []);
+      while (f.main.getCurrentResult().hasNextPage) {
+        await f.main.fetchNextPage();
+        const html = f.render();
+        if (count === 501 && f.sortableRows.length === 500) {
+          assert.match(html, /500-conversation custom-order API limit/);
+          assert.doesNotMatch(html, /Load all conversations before custom drag ordering/);
+        }
+      }
+      const html = f.render();
+      assert.equal(f.sortableRows.length, count);
+      assert.ok(f.sortableRows.every(item => item.disabled === (count > 500)));
+      await f.drag(rows[0].id, rows[1].id);
+      assert.equal(f.orderWrites.length, count <= 500 ? 1 : 0);
+      if (count <= 500) assert.deepEqual(f.orderWrites[0], [rows[1].id, rows[0].id, ...rows.slice(2).map(item => item.id)]);
+      else assert.match(html, /500-conversation custom-order API limit/);
+    } finally { f.dispose(); }
+  });
+}
+
+for (const direction of ["asc", "desc"]) {
+  test(`custom ${direction}: saved ranks preserve visible order within server pin priorities`, async () => {
+    const rows = [
+      ...["pin-new", "pin-same-a", "pin-same-b", "pin-old", "plain-a", "plain-b"].map(id => ({ ...row("active"), id })),
+    ].map((item, index) => ({ ...item, is_global_pinned: index < 4,
+      global_pinned_at: index === 0 ? "2026-01-03T00:00:00Z" : index < 3 ? "2026-01-02T00:00:00Z" : index === 3 ? "2026-01-01T00:00:00Z" : null }));
+    const f = await fixture({ rows, error: null, sortMode: "custom", direction });
+    try {
+      f.render();
+      // Different pin timestamps outrank manual rank, just like pin status.
+      await f.drag("pin-new", "pin-same-a");
+      await f.drag("pin-old", "plain-a");
+      assert.deepEqual(f.orderWrites, []);
+      await f.drag("plain-a", "plain-b");
+      const expected = ["pin-new", "pin-same-a", "pin-same-b", "pin-old", "plain-b", "plain-a"];
+      const canonical = direction === "asc" ? expected
+        : ["pin-new", "pin-same-b", "pin-same-a", "pin-old", "plain-a", "plain-b"];
+      assert.deepEqual(f.orderWrites[0], canonical);
+      const ranks = new Map(canonical.map((id, index) => [id, index]));
+      const reloaded = [...rows].sort((a, b) =>
+        Number(b.is_global_pinned) - Number(a.is_global_pinned)
+        || (b.global_pinned_at ?? "").localeCompare(a.global_pinned_at ?? "")
+        || (ranks.get(a.id) - ranks.get(b.id)) * (direction === "asc" ? 1 : -1));
+      assert.deepEqual(reloaded.map(item => item.id), expected);
+      await f.drag("pin-same-a", "pin-same-b");
+      assert.deepEqual(f.orderWrites[1], direction === "asc"
+        ? ["pin-new", "pin-same-b", "pin-same-a", "pin-old", "plain-a", "plain-b"]
+        : ["pin-new", "pin-same-a", "pin-same-b", "pin-old", "plain-b", "plain-a"]);
+    } finally { f.dispose(); }
+  });
+}

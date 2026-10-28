@@ -2,17 +2,21 @@
 
 import { liveQuery } from "dexie";
 import { enqueueOfflineDownload, listOfflineDownloads, offlineDownloadFailureMessage, retryOfflineDownload, usableOfflineRevisions, type OfflineDownload } from "../../lib/offline-downloads";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Download, FolderTree, HardDrive, Library, LoaderCircle, PanelLeftClose, RefreshCw, Search, Trash2, Wifi, WifiOff, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ConversationReader } from "../conversations/conversation-reader";
 import { ApiRequestError, getOfflineCatalog } from "../../lib/api";
 import { OfflinePackageImportError, OfflinePendingChangesError, OfflineDownloadInProgressError, offlineDb, removeOfflineConversations, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
-import { offlineReaderDataSource } from "../../lib/reader-data-source";
+import { offlineReaderDataSource, resolveOfflineSearchResult } from "../../lib/reader-data-source";
+import { matchesLibrarySearchTarget, searchResultHref, type SearchResultReplay } from "../search/search-result-target";
 import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
+import { buildOfflineSearchDocuments } from "../../lib/offline-search-documents";
+import { invalidateReaderSearch } from "../../lib/reader-search-cache";
+import { AUTH_GENERATION_CHANGED_EVENT, assertOfflineAccess, captureOfflineAccess } from "../../lib/offline-access";
 import { getInitialOfflineShellStatus, getOfflineShellStatus, prepareOfflineShell, subscribeOfflineShellStatus, type OfflineShellStatus } from "../../lib/offline-shell";
-import type { OfflineCatalogConversation, OfflineCatalogResponse } from "../../lib/types";
+import type { AnnotationRead, NotebookRead, OfflineCatalogConversation, OfflineCatalogResponse, SearchResultItem } from "../../lib/types";
 import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
 import { SidebarPreferences } from "../../components/sidebar-preferences";
 import { usePreferences } from "../../components/preferences-provider";
@@ -37,11 +41,13 @@ type LibrarySidebarConversation = {
   catalog: OfflineCatalogConversation | null;
 };
 type LibraryProjectGroup = { id: string; name: string; conversations: LibrarySidebarConversation[]; total: number };
+type SearchSnapshot = { documents: OfflineSearchDocument[]; annotations: AnnotationRead[]; notebooks: NotebookRead[] };
 const APP_TITLE = "chat-reader";
 const LAST_LIBRARY_CONVERSATION_KEY = "chat-reader:last-library-conversation";
 
 export function LibraryShell() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
@@ -63,8 +69,12 @@ export function LibraryShell() {
   const [readerFocusMode, setReaderFocusMode] = useState(false);
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<OfflineSearchDocument[]>([]);
+  const [searchResultQuery, setSearchResultQuery] = useState("");
   const [searchIndexRevision, setSearchIndexRevision] = useState(0);
+  const [searchIndexReady, setSearchIndexReady] = useState(false);
+  const [searchWatchRevision, setSearchWatchRevision] = useState(0);
   const [searchFailed, setSearchFailed] = useState(false);
+  const [searchReplay, setSearchReplay] = useState<SearchResultReplay | null>(null);
   const [localRead, setLocalRead] = useState<OfflineLibraryReadState>({
     phase: "loading",
     refreshing: true,
@@ -77,6 +87,9 @@ export function LibraryShell() {
   const completedDownloadsRef = useRef("");
   const reloadSequenceRef = useRef(0);
   const reloadQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const searchReloadSequenceRef = useRef(0);
+  const searchReloadQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const searchWatchFailedRef = useRef(false);
   const libraryMountedRef = useRef(false);
   const localReadRef = useRef(localRead);
   const selectedConversation = selectedId ? conversations.find((item) => item.id === selectedId) ?? null : null;
@@ -91,6 +104,7 @@ export function LibraryShell() {
     return () => {
       libraryMountedRef.current = false;
       reloadSequenceRef.current += 1;
+      searchReloadSequenceRef.current += 1;
     };
   }, []);
 
@@ -128,8 +142,118 @@ export function LibraryShell() {
     }
   }, [selectedConversation, titleConversation]);
 
+  const reloadSearchIndex = useCallback(async (snapshot?: SearchSnapshot) => {
+    const sequence = ++searchReloadSequenceRef.current;
+    setSearchIndexReady(false);
+    setSearchResults([]);
+    setSearchResultQuery("");
+    setSearchFailed(false);
+    const current = () => libraryMountedRef.current && sequence === searchReloadSequenceRef.current;
+    let access: number;
+    try {
+      access = captureOfflineAccess();
+    } catch (cause) {
+      if (current()) setSearchFailed(true);
+      throw cause;
+    }
+    const db = offlineDb;
+    const run = searchReloadQueueRef.current.then(async () => {
+      if (!current()) return;
+      assertOfflineAccess(access);
+      const contents = snapshot ?? await db.transaction("r", [db.searchDocuments, db.annotations, db.notebooks], async () => ({
+        documents: await db.searchDocuments.toArray(),
+        annotations: await db.annotations.toArray(),
+        notebooks: await db.notebooks.toArray(),
+      }));
+      assertOfflineAccess(access);
+      if (!current()) return;
+      const localConversations = await db.conversations.toArray();
+      assertOfflineAccess(access);
+      if (!current()) return;
+      await initializeOfflineSearch(buildOfflineSearchDocuments(
+        contents.documents, contents.annotations, contents.notebooks, localConversations,
+      ));
+      assertOfflineAccess(access);
+      if (!current()) return;
+      setSearchFailed(false);
+      setSearchIndexReady(true);
+      setSearchIndexRevision((revision) => revision + 1);
+      invalidateReaderSearch(queryClient, { mode: "offline" });
+    });
+    const guarded = run.catch((cause: unknown) => {
+      if (current()) setSearchFailed(true);
+      throw cause;
+    });
+    searchReloadQueueRef.current = guarded.catch(() => undefined);
+    return guarded;
+  }, [queryClient]);
+
+  useEffect(() => {
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let subscription: { unsubscribe: () => void } | undefined;
+    const invalidate = () => {
+      clearTimeout(timer);
+      searchReloadSequenceRef.current += 1;
+      setSearchIndexReady(false);
+      setSearchResults([]);
+      setSearchResultQuery("");
+    };
+    const retire = () => {
+      if (!active) return;
+      active = false;
+      searchWatchFailedRef.current = true;
+      invalidate();
+      setSearchFailed(true);
+      subscription?.unsubscribe();
+    };
+    const fail = () => {
+      if (!active) return;
+      searchWatchFailedRef.current = true;
+      invalidate();
+      setSearchFailed(true);
+    };
+    // Observe only content stores, not outbox/reading-position events. Snapshots
+    // are transactional; rapid edits share one pending rebuild, with no writes.
+    window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, retire);
+    try {
+      const access = captureOfflineAccess(), db = offlineDb;
+      subscription = liveQuery(() => {
+        assertOfflineAccess(access);
+        return db.transaction("r", [db.searchDocuments, db.annotations, db.notebooks], async () => ({
+          documents: await db.searchDocuments.toArray(),
+          annotations: await db.annotations.toArray(),
+          notebooks: await db.notebooks.toArray(),
+        }));
+      }).subscribe({
+        next: (snapshot) => {
+          if (!active) return;
+          try { assertOfflineAccess(access); } catch { retire(); return; }
+          invalidate();
+          const sequence = searchReloadSequenceRef.current;
+          timer = setTimeout(() => {
+            if (!active || sequence !== searchReloadSequenceRef.current) return;
+            try { assertOfflineAccess(access); } catch { retire(); return; }
+            void reloadSearchIndex(snapshot).catch(() => undefined);
+          }, 80);
+        },
+        error: fail,
+      });
+    } catch { fail(); }
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      subscription?.unsubscribe();
+      window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, retire);
+    };
+  }, [reloadSearchIndex, searchWatchRevision]);
+
   const reloadLocal = useCallback(() => {
     if (!libraryMountedRef.current) return Promise.resolve();
+    if (searchWatchFailedRef.current) {
+      searchWatchFailedRef.current = false;
+      setSearchWatchRevision((revision) => revision + 1);
+    }
     const sequence = ++reloadSequenceRef.current;
     const previousLocalRead = localReadRef.current;
     const hadVisibleLocalRead = previousLocalRead.phase === "ready";
@@ -173,63 +297,7 @@ export function LibraryShell() {
       localReadRef.current = readyLocalRead;
       setLocalRead(readyLocalRead);
       try {
-        const [documents, annotations, notebooks] = await Promise.all([
-          offlineDb.searchDocuments.toArray(),
-          offlineDb.annotations.toArray(),
-          offlineDb.notebooks.toArray(),
-        ]);
-        if (!libraryMountedRef.current || sequence !== reloadSequenceRef.current) return;
-        const titles = new Map(reconciled.map((item) => [item.id, item.display_title]));
-        const privateDocuments: OfflineSearchDocument[] = [
-          ...fallback.filter((item) => item.description_markdown).map((item) => ({
-            id: `description:${item.id}`,
-            conversation_id: item.id,
-            message_id: null,
-            document_type: "description",
-            role: null,
-            title: item.display_title,
-            plain_text: item.description_markdown ?? "",
-            search_text: item.description_markdown ?? "",
-            order_key: null,
-            turn_index: null,
-            metadata: {},
-          })),
-          ...annotations.filter((item) => !item.is_deleted).map((item) => ({
-            id: `annotation:${item.id}`,
-            conversation_id: item.conversation_id,
-            message_id: item.message_id,
-            document_type: "annotation",
-            role: null,
-            title: titles.get(item.conversation_id) ?? "批注",
-            plain_text: [item.quote, item.comment_markdown].filter(Boolean).join("\n"),
-            search_text: [item.quote, item.comment_markdown].filter(Boolean).join("\n"),
-            order_key: null,
-            turn_index: null,
-            metadata: { annotation_id: item.id },
-          })),
-          ...notebooks.map((item) => {
-            const markdown = item.blocks.filter((block) => block.type === "markdown").map((block) => block.markdown ?? "").join("\n");
-            return {
-              id: `notebook:${item.id}`,
-              conversation_id: item.conversation_id,
-              message_id: null,
-              document_type: "notebook",
-              role: null,
-              title: item.title || titles.get(item.conversation_id) || "精选笔记",
-              plain_text: markdown,
-              search_text: markdown,
-              order_key: null,
-              turn_index: null,
-              metadata: { notebook_id: item.id },
-            };
-          }),
-        ];
-        await initializeOfflineSearch([...documents, ...privateDocuments]);
-        if (!libraryMountedRef.current || sequence !== reloadSequenceRef.current) return;
-        setSearchFailed(false);
-        // Cold-start input can arrive before IndexedDB and the worker are ready.
-        // Re-run the current query after each committed index refresh.
-        setSearchIndexRevision((revision) => revision + 1);
+        await reloadSearchIndex();
       } catch {
         if (libraryMountedRef.current && sequence === reloadSequenceRef.current) setSearchFailed(true);
       }
@@ -251,7 +319,7 @@ export function LibraryShell() {
     });
     reloadQueueRef.current = guardedRun.catch(() => undefined);
     return guardedRun;
-  }, []);
+  }, [reloadSearchIndex]);
 
   useEffect(() => { void reloadLocal().catch(() => setSearchFailed(true)); }, [reloadLocal]);
   const retryLocalRead = useCallback(() => {
@@ -389,15 +457,19 @@ export function LibraryShell() {
   }, [catalogQuery.data, conversations, download, reloadLocal, runDownload, zh]);
 
   useEffect(() => {
-    if (!searchIndexRevision) return;
+    if (!searchIndexReady) return;
+    const indexSequence = searchReloadSequenceRef.current;
     let active = true;
     const timer = window.setTimeout(() => {
       void searchOffline(query).then((results) => {
-        if (active) setSearchResults(results);
-      }).catch(() => { if (active) setSearchFailed(true); });
+        if (active && indexSequence === searchReloadSequenceRef.current) {
+          setSearchResults(results);
+          setSearchResultQuery(query);
+        }
+      }).catch(() => { if (active && indexSequence === searchReloadSequenceRef.current) setSearchFailed(true); });
     }, 120);
     return () => { active = false; window.clearTimeout(timer); };
-  }, [query, searchIndexRevision]);
+  }, [query, searchIndexReady, searchIndexRevision]);
 
   function openConversation(conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) {
     setSelectedId(conversationId);
@@ -408,6 +480,19 @@ export function LibraryShell() {
     if (blockIndex !== null && blockIndex !== undefined) params.set("blockIndex", String(blockIndex));
     if (characterOffset !== null && characterOffset !== undefined) params.set("characterOffset", String(characterOffset));
     router.replace(`/library?${params.toString()}`);
+  }
+
+  function openSearchResult(item: SearchResultItem) {
+    const href = searchResultHref(item, "library");
+    // A changed URL already carries a fresh destination. Only a repeat of the
+    // current URL needs a separate intent; never add a nonce to saved links.
+    if (matchesLibrarySearchTarget(href, searchParams?.toString() ?? "")) {
+      setSearchReplay((current) => ({ href, sequence: (current?.sequence ?? 0) + 1 }));
+    }
+    setSelectedId(item.conversation_id);
+    window.localStorage.setItem(LAST_LIBRARY_CONVERSATION_KEY, item.conversation_id);
+    setMobileOpen(false);
+    router.replace(href);
   }
 
   async function removeLocal(ids: string[]) {
@@ -475,8 +560,8 @@ export function LibraryShell() {
       groupedProjects={groupedProjects}
       query={query}
       setQuery={setQuery}
-      searchResults={searchResults}
-      searchState={searchFailed ? "unavailable" : searchIndexRevision ? "ready" : "loading"}
+      searchResults={searchIndexReady && searchResultQuery === query ? searchResults : []}
+      searchState={searchFailed ? "unavailable" : searchIndexReady && searchResultQuery === query ? "ready" : "loading"}
       onRetrySearch={() => {
         setSearchFailed(false);
         setSearchIndexRevision(0);
@@ -495,6 +580,7 @@ export function LibraryShell() {
       onClose={() => setMobileOpen(false)}
       onCollapse={() => setLibrarySidebarExpanded(false)}
       onOpen={openConversation}
+      onOpenSearchResult={openSearchResult}
       onDownload={(scope, id) => startDownload({ scope, id })}
       onRetryDownload={retryDownload}
       onRetryLocalRead={retryLocalRead}
@@ -508,7 +594,7 @@ export function LibraryShell() {
     />
   );
   const readerContent = selectedId && selectedConversation ? (
-    <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams?.get("messageId") ?? ""}:${searchParams?.get("blockIndex") ?? ""}:${searchParams?.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={openLibrary} onFocusModeChange={setReaderFocusMode} onPrepareSearchRetry={reloadLocal} />
+    <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams?.get("messageId") ?? ""}:${searchParams?.get("blockIndex") ?? ""}:${searchParams?.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={openLibrary} onFocusModeChange={setReaderFocusMode} onPrepareSearchRetry={reloadLocal} searchReplay={searchReplay} />
   ) : requestedCatalogConversation ? (
     <div className="flex h-full flex-col items-center justify-center overflow-y-auto px-6 py-6 text-center" aria-label={zh ? "离线下载" : "Offline download"}>
       <Library className="h-10 w-10 shrink-0 text-accent" />
@@ -564,7 +650,7 @@ function formatLibraryConversationTitle(conversation: { display_title: string; p
   return project ? `${project} / ${title}` : title;
 }
 
-function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, searchState, onRetrySearch, download, storage, assetMode, offlineShellStatus, error, failedDownload, localRead, downloadStatusError, catalogReadError, catalogReadFetching, suppressDesktopError, onClose, onCollapse, onOpen, onDownload, onRetryDownload, onRetryLocalRead, onRetryDownloadStatus, onRetryCatalog, onAssetModeChange, onRetryShell, onRemove }: {
+function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, searchState, onRetrySearch, download, storage, assetMode, offlineShellStatus, error, failedDownload, localRead, downloadStatusError, catalogReadError, catalogReadFetching, suppressDesktopError, onClose, onCollapse, onOpen, onOpenSearchResult, onDownload, onRetryDownload, onRetryLocalRead, onRetryDownloadStatus, onRetryCatalog, onAssetModeChange, onRetryShell, onRemove }: {
   online: boolean;
   catalog?: OfflineCatalogResponse;
   conversations: OfflineConversationRecord[];
@@ -591,6 +677,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
   onClose: () => void;
   onCollapse: () => void;
   onOpen: (conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) => void;
+  onOpenSearchResult: (item: SearchResultItem) => void;
   onDownload: (scope: "conversation" | "project" | "all", id?: string) => void;
   onRetryDownload: () => void;
   onRetryLocalRead: () => void;
@@ -646,7 +733,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
       {error ? <div role="status" className={`flex items-center gap-2 rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)] ${suppressDesktopError ? "md:hidden" : ""}`}><p className="min-w-0 flex-1">{error}</p>{failedDownload && online ? <button type="button" onClick={onRetryDownload} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium hover:bg-surface" aria-label={zh ? "重试离线下载" : "Retry offline download"}><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试" : "Retry"}</button> : null}{catalogReadError && online ? <button type="button" disabled={catalogReadFetching} onClick={onRetryCatalog} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium hover:bg-surface disabled:opacity-50" aria-label={zh ? "重试读取在线目录" : "Retry online catalog"}><RefreshCw className={`h-3.5 w-3.5 ${catalogReadFetching ? "motion-safe:animate-spin" : ""}`} />{zh ? "重试目录" : "Retry catalog"}</button> : null}</div> : null}
     </div>
     <div className="min-h-0 flex-1 overflow-y-auto p-2">
-      {query ? localRead.phase !== "ready" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "读取本地资料后才能搜索…" : "Read local copies before searching…"}</p> : searchState === "unavailable" ? <div role="alert" className="space-y-2 px-3 py-5 text-sm text-secondary"><p>{zh ? "离线搜索暂不可用。若离线资源缺失，请联网更新后重试。已下载的对话仍然保留。" : "Offline search is unavailable. If resources are missing, reconnect to update them and retry. Downloaded conversations are retained."}</p><button type="button" onClick={onRetrySearch} className="btn-secondary min-h-11 px-3">{zh ? "重试离线搜索" : "Retry offline search"}</button></div> : searchState === "loading" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "正在准备离线搜索…" : "Preparing offline search…"}</p> : <SearchResultList items={searchResults} conversations={conversations} onOpen={onOpen} /> : localRead.phase !== "ready" ? null : <>
+      {query ? localRead.phase !== "ready" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "读取本地资料后才能搜索…" : "Read local copies before searching…"}</p> : searchState === "unavailable" ? <div role="alert" className="space-y-2 px-3 py-5 text-sm text-secondary"><p>{zh ? "离线搜索暂不可用。若离线资源缺失，请联网更新后重试。已下载的对话仍然保留。" : "Offline search is unavailable. If resources are missing, reconnect to update them and retry. Downloaded conversations are retained."}</p><button type="button" onClick={onRetrySearch} className="btn-secondary min-h-11 px-3">{zh ? "重试离线搜索" : "Retry offline search"}</button></div> : searchState === "loading" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "正在准备离线搜索…" : "Preparing offline search…"}</p> : <SearchResultList items={searchResults} query={query} conversations={conversations} onOpen={onOpen} onOpenSearchResult={onOpenSearchResult} /> : localRead.phase !== "ready" ? null : <>
         <section aria-labelledby="library-projects-heading">
           <div className="flex min-h-8 items-center justify-between px-2"><h2 id="library-projects-heading" className="text-xs font-semibold text-secondary">{zh ? "项目" : "Projects"}</h2><span className="text-[11px] text-secondary">{groupedProjects.length}</span></div>
           <ProjectRows projects={groupedProjects} selectedId={selectedId} expandedProjects={expandedProjects} setExpandedProjects={setExpandedProjects} catalog={catalog} onOpen={onOpen} onDownload={onDownload} onRemove={onRemove} />
@@ -754,11 +841,52 @@ function ProjectRows({ projects, selectedId, expandedProjects, setExpandedProjec
   })}{!projects.length ? <p className="px-2 py-2 text-xs text-secondary">{zh ? "暂无项目。" : "No projects."}</p> : null}</div>;
 }
 
-function SearchResultList({ items, conversations, onOpen }: { items: OfflineSearchDocument[]; conversations: OfflineConversationRecord[]; onOpen: (conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) => void }) {
+function SearchResultList({ items, query, conversations, onOpen, onOpenSearchResult }: {
+  items: OfflineSearchDocument[];
+  query: string;
+  conversations: OfflineConversationRecord[];
+  onOpen: (conversationId: string, messageId?: string | null, blockIndex?: number | null, characterOffset?: number | null) => void;
+  onOpenSearchResult: (item: SearchResultItem) => void;
+}) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const titles = new Map(conversations.map((item) => [item.id, item.display_title]));
-  return <div className="space-y-1">{items.map((item) => <button key={item.id} type="button" onClick={() => onOpen(item.conversation_id, item.message_id, metadataNumber(item.metadata, "block_index"), metadataNumber(item.metadata, "character_offset"))} className="w-full rounded-md px-3 py-2 text-left hover:bg-surface"><p className="truncate text-sm font-medium">{item.title || titles.get(item.conversation_id) || (zh ? "对话" : "Conversation")}</p><p className="mt-1 line-clamp-3 text-xs leading-5 text-secondary">{item.plain_text.slice(0, 240)}</p></button>)}{!items.length ? <p className="px-3 py-8 text-center text-sm text-secondary">{zh ? "无本地结果" : "No offline results"}</p> : null}</div>;
+  const routeKey = useSearchParams()?.toString() ?? "";
+  const scope = useMemo<{ active: boolean; sequence: number; pendingId: string | null }>(
+    () => ({ active: false, sequence: 0, pendingId: null }), [items, query, routeKey],
+  );
+  const [navigation, setNavigation] = useState<{ scope: typeof scope; pendingId: string | null; failedId: string | null } | null>(null);
+  useLayoutEffect(() => {
+    scope.active = true;
+    return () => { scope.active = false; scope.sequence += 1; scope.pendingId = null; };
+  }, [scope]);
+  const activate = async (item: OfflineSearchDocument) => {
+    if (!scope.active || scope.pendingId === item.id) return;
+    const sequence = ++scope.sequence;
+    const isCurrent = () => scope.active && scope.sequence === sequence;
+    // Description/notebook entries keep their existing conversation-level behavior.
+    if (!["message", "heading", "code", "attachment", "annotation"].includes(item.document_type)) {
+      scope.pendingId = null;
+      setNavigation(null);
+      onOpen(item.conversation_id, item.message_id, metadataNumber(item.metadata, "block_index"), metadataNumber(item.metadata, "character_offset"));
+      return;
+    }
+    scope.pendingId = item.id;
+    setNavigation({ scope, pendingId: item.id, failedId: null });
+    try {
+      const result = await resolveOfflineSearchResult(item, query);
+      if (!isCurrent()) return;
+      scope.pendingId = null;
+      setNavigation(null);
+      onOpenSearchResult(result);
+    } catch {
+      if (isCurrent()) {
+        scope.pendingId = null;
+        setNavigation({ scope, pendingId: null, failedId: item.id });
+      }
+    }
+  };
+  return <div className="space-y-1">{items.map((item) => <div key={item.id}><button type="button" aria-busy={navigation?.scope === scope && navigation.pendingId === item.id || undefined} onClick={() => void activate(item)} className="w-full rounded-md px-3 py-2 text-left hover:bg-surface"><p className="truncate text-sm font-medium">{item.title || titles.get(item.conversation_id) || (zh ? "对话" : "Conversation")}</p><p className="mt-1 line-clamp-3 text-xs leading-5 text-secondary">{item.plain_text.slice(0, 240)}</p></button>{navigation?.scope === scope && navigation.failedId === item.id ? <p role="alert" className="px-3 pb-2 text-xs text-secondary">{zh ? "无法定位此结果，本地副本已保留。请重试。" : "Could not locate this result. Your local copy is retained. Try again."}</p> : null}</div>)}{!items.length ? <p className="px-3 py-8 text-center text-sm text-secondary">{zh ? "无本地结果" : "No offline results"}</p> : null}</div>;
 }
 
 function mergeLibraryConversations(localConversations: OfflineConversationRecord[], catalog?: OfflineCatalogResponse): LibrarySidebarConversation[] {

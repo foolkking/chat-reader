@@ -6,6 +6,8 @@ from app.schemas.message import MessageListItem
 
 
 class SearchMatch(BaseModel):
+    """Half-open Unicode code-point range in canonical RenderBlock.plain_text."""
+
     block_index: int | None = None
     render_block_id: UUID | None = None
     match_start: int
@@ -31,7 +33,10 @@ class SearchResultItem(BaseModel):
     rank: float
     source_profile: str | None
     occurrence_count: int = 1
+    matches_truncated: bool = False
     matches: list[SearchMatch] = Field(default_factory=list)
+    attachment_id: UUID | None = None
+    attachment_display_name: str | None = None
     annotation_id: UUID | None = None
     annotation_type: str | None = None
     annotation_color: str | None = None
@@ -43,6 +48,7 @@ class SearchResponse(BaseModel):
     limit: int
     offset: int
     total: int
+    has_more: bool = False
 
 
 class SearchReindexRequest(BaseModel):

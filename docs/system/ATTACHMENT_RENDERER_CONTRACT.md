@@ -1,5 +1,39 @@
 # Attachment Renderer Contract
 
+## Explicit preview bounds — 2026-10-28, source only
+
+Current code has bounded browser previews for DOC (extracted body text),
+DOCX/ODT, XLSX/ODS, PPTX/ODP and ZIP. This does not include XLS/PPT, arbitrary
+archive formats, EPUB or full Office layout fidelity. The worker now reports
+actual overflow rather than treating an exactly full budget as truncated:
+2,000 document paragraphs, 32 tables / 200 rows per document table, 32 sheets /
+2,000 rows per sheet, 64 columns, 500 slides / 200 text lines per slide,
+50,000 XLSX shared strings, and the legacy DOC 2,000,000-character body cap.
+XLSX preview rows retain bounded source row/column coordinates, including
+sparse and self-closing entries. ODS uses the adapted sequential row structure;
+no new repeated-row/column or spanning-cell fidelity is claimed. XLSX workbook
+and PPTX presentation relationships determine sheet/slide identity and order.
+If a manifest exists, invalid/missing/external relationships fail explicitly
+rather than guessing; only a wholly absent manifest permits bounded filename
+order with generic names and an unverified-order warning. Empty shared-string
+entries retain their positions, while invalid or budget-external references
+use an explicit placeholder.
+ZIP entry text additionally discloses its 200,000-character preview cap.
+The Viewer names the bounded category and directs the user to the unchanged
+original for complete content.
+
+Existing 50 MiB source, 5,000 ZIP entries, 16 MiB individual expanded entry and
+96 MiB expanded-total rejection limits remain. Source-size, entry-count,
+individual-entry, expanded-total and invalid-structure ZIP failures are
+reported separately. Archive text/image previews share an 8 MiB aggregate
+budget; this does not recursively extract archives. Source regression cases
+are authored but not run; no local runtime, browser, CI, submission or release
+acceptance is implied. See
+[implementation](../execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md) and
+[verification boundaries](../testing.md#completeness-follow-up-optimization--2026-10-28-source-only).
+Older format and verification statements below retain their dated checkpoint
+meaning, not the current all-format support matrix.
+
 ## Explicit copy publication — 2026-10-22 source
 
 The owner message action can explicitly publish referenced images for portable
@@ -202,8 +236,10 @@ Resolution order is `detected MIME/content format -> declared MIME -> compound f
 | MP3/WAV/OGG/FLAC/M4A/AAC | compact media | audio | runtime probe |
 | MP4/WebM/MOV | compact media/file-row | video after runtime probe | runtime probe |
 | AVI/MKV | file-row | none | download-only |
-| Office/ODF/EPUB | file-row | none | `NOT_IMPLEMENTED`, download-only |
-| Archive/compressed | file-row | none | `NOT_IMPLEMENTED`, download-only |
+| DOC, DOCX/ODT, XLSX/ODS, PPTX/ODP | file-row | bounded read-only body/document/grid/slide preview | current formats; explicit preview bounds are source-only as recorded above |
+| ZIP | file-row | bounded directory and small text/image entry preview | no recursive extraction; rejection/entry-text bounds as above |
+| XLS/PPT, other unsupported archives | file-row | none | download-only |
+| EPUB | file-row | none | `NOT_IMPLEMENTED`, download-only |
 | VSDX/drawio/DXF/STL/OBJ | file-row | none | `NOT_IMPLEMENTED`, download-only |
 
 Download-only rows never open a false Viewer.
@@ -288,7 +324,7 @@ Commit `a89bc28f5f7cb4028474e8e4488f771aadb9c19f` was built by GitHub Actions ru
 
 Final commit `5baea32cdada3ed22ae01268cac128f88fa9f527` was built by GitHub Actions run `31269172465` and deployed to King from archive SHA-256 `55a53e8606ae1e404255729dbb566172913997b3678648e3630b95be73400f6e`. Production Chrome verified the single `document.body` dialog, image Gallery and filmstrip, Markdown Rendered/Source, trusted MIME versus generic-text refinement, download-only engineering formats, TIFF fallback without a broken image, Esc, body scroll lock and restoration. Core Viewer production acceptance is PASS.
 
-This does not promote unexecuted conditional PWA/Offline tests, animated-image frame enforcement, TIFF converted first-page preview, or optional complex viewers. Office, Spreadsheet, Presentation, EPUB, Archive, Diagram, CAD and 3D remain `NOT_IMPLEMENTED` with reliable authenticated download-only fallback.
+This does not promote unexecuted conditional PWA/Offline tests, animated-image frame enforcement, TIFF converted first-page preview, OCR/CAD/Diagram/3D support, or full Office layout fidelity. The current-format and source-only truncation contracts are in the 2026-10-28 section above; this older verification is not evidence for those additions.
 
 ```text
 ATTACHMENT_RENDERER_CONTRACT = APPROVED
@@ -332,7 +368,7 @@ The contract remains `Viewer = consume`, `Files panel = manage`, and `Editor = c
 | PPTX/ODP | viewer-only file row | `presentation` | bounded static slide text/navigation, otherwise download |
 | ZIP | viewer-only file row | `archive` | bounded directory and small text/image entry preview, no recursive extraction |
 
-`fflate` is reused for the lazy ZIP Worker; it does not replace the established export/offline implementation. The Worker rejects oversized source files, excessive central-directory entries, oversized entries and excessive expanded bytes before preview. Original authenticated downloads remain available. DOC/XLS/PPT, RTF, TAR-family, EPUB, VSDX, drawio, DXF, STL, OBJ and unknown formats remain `NOT_IMPLEMENTED` with reliable download-only behavior.
+`fflate` is reused for the lazy ZIP Worker; it does not replace the established export/offline implementation. The Worker rejects oversized source files, excessive central-directory entries, oversized entries and excessive expanded bytes before preview. At this historical 2026-08-09 checkpoint DOC/XLS/PPT, RTF, TAR-family, EPUB, VSDX, drawio, DXF, STL, OBJ and unknown formats were download-only. Current DOC extraction and explicit overflow notices are described above; this dated addendum is not their implementation or verification receipt.
 
 # 2026-08-10 CSV/TSV Viewer Closure
 

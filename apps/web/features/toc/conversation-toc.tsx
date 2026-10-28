@@ -1,56 +1,76 @@
 "use client";
 
-import { useQuery, type NetworkMode } from "@tanstack/react-query";
+import { useInfiniteQuery, type NetworkMode } from "@tanstack/react-query";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useTranslations } from "../../components/preferences-provider";
 import { usePreferences } from "../../components/preferences-provider";
 import { PanelRightOpen, PinOff } from "lucide-react";
 import { getConversationToc } from "../../lib/api";
-import type { TocItem } from "../../lib/types";
+import type { TocItem, TocResponse } from "../../lib/types";
 import { markdownHeadingLabel } from "../conversations/markdown-renderer";
 
-export function ConversationToc({ conversationId, sourceKey = "remote", networkMode, activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, ready = true, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; networkMode?: NetworkMode; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; ready?: boolean; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<{ items: TocItem[] }>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
+export function ConversationToc({ conversationId, sourceKey = "remote", networkMode, activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, ready = true, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; networkMode?: NetworkMode; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; ready?: boolean; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<TocResponse>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
   const t = useTranslations();
   const { resolvedLocale, sectionTocMode, setSectionTocMode } = usePreferences();
-  const [cachedItems, setCachedItems] = useState<Record<string, TocItem[]>>({});
-  const [lastActiveMessageId, setLastActiveMessageId] = useState<string | null>(activeMessageId ?? null);
+  const cacheScope = JSON.stringify([sourceKey, conversationId]);
+  const [cache, setCache] = useState<{ scope: string; items: Record<string, TocItem[]> }>({ scope: cacheScope, items: {} });
+  const [lastActive, setLastActive] = useState({ scope: cacheScope, messageId: activeMessageId ?? null });
+  const cachedItems = useMemo(() => cache.scope === cacheScope ? cache.items : {}, [cache, cacheScope]);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const previousTocView = useRef<{ scope: string; activeHeadingId: string; row: HTMLButtonElement; container: HTMLDivElement } | null>(null);
   const onNavigateRef = useRef(onNavigate);
   useEffect(() => { onNavigateRef.current = onNavigate; }, [onNavigate]);
   const stableNavigate = useCallback((item: TocItem) => onNavigateRef.current?.(item), []);
   const collapse = useCallback(() => { void setSectionTocMode("rail"); }, [setSectionTocMode]);
   const expand = useCallback(() => { void setSectionTocMode("visible"); }, [setSectionTocMode]);
   useEffect(() => {
-    setCachedItems({});
-    setLastActiveMessageId(activeMessageId ?? null);
-  }, [conversationId, sourceKey]);
-  useEffect(() => { if (activeMessageId) setLastActiveMessageId(activeMessageId); }, [activeMessageId]);
-  const effectiveMessageId = activeMessageId ?? lastActiveMessageId;
-  const tocQuery = useQuery({ queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode], queryFn: () => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({ messageId: effectiveMessageId ?? undefined, limit: 200 }), enabled: items === undefined && ready && Boolean(effectiveMessageId), staleTime: 30_000, placeholderData: (previous) => previous, ...(networkMode ? { networkMode } : {}) });
+    if (activeMessageId) setLastActive({ scope: cacheScope, messageId: activeMessageId });
+  }, [activeMessageId, cacheScope]);
+  const effectiveMessageId = activeMessageId ?? (lastActive.scope === cacheScope ? lastActive.messageId : null);
+  const tocQuery = useInfiniteQuery({
+    queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode, "pages"],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({
+      messageId: effectiveMessageId ?? undefined, offset: pageParam, limit: 200,
+    }),
+    getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.offset + lastPage.limit : undefined,
+    enabled: items === undefined && ready && Boolean(effectiveMessageId),
+    staleTime: 30_000,
+    ...(networkMode ? { networkMode } : {}),
+  });
+  const loadedApiItems = useMemo(() => tocQuery.data?.pages.flatMap((page) => page.items) ?? [], [tocQuery.data]);
+  const totalApiItems = tocQuery.data?.pages[0]?.total ?? loadedApiItems.length;
   useEffect(() => {
     if (!effectiveMessageId || !tocQuery.data) return;
-    const matching = tocQuery.data.items.filter((item) => item.message_id === effectiveMessageId);
+    const matching = loadedApiItems.filter((item) => item.message_id === effectiveMessageId);
     // An empty canonical response is meaningful after a manual TOC rebuild:
     // replace the previous entry as well so removed headings cannot survive in
     // the local fallback cache.
-    setCachedItems((current) => ({ ...current, [effectiveMessageId]: matching }));
-  }, [effectiveMessageId, tocQuery.data]);
+    setCache((current) => ({ scope: cacheScope, items: {
+      ...(current.scope === cacheScope ? current.items : {}), [effectiveMessageId]: matching,
+    } }));
+  }, [cacheScope, effectiveMessageId, loadedApiItems, tocQuery.data]);
   const visibleItems = useMemo(() => {
     if (!effectiveMessageId) return [];
     const cached = cachedItems[effectiveMessageId] ?? [];
-    const apiItems = items ?? tocQuery.data?.items ?? cached;
+    const apiItems = items ?? (tocQuery.isSuccess ? loadedApiItems : (loadedApiItems.length ? loadedApiItems : cached));
     const currentApiItems = apiItems.filter((item) => item.message_id === effectiveMessageId);
-    if (currentApiItems.length) return currentApiItems;
+    if (items !== undefined || tocQuery.isSuccess) return currentApiItems;
     const currentCachedItems = cached.filter((item) => item.message_id === effectiveMessageId);
     return currentCachedItems.length ? currentCachedItems : activeItems.filter((item) => item.message_id === effectiveMessageId);
-  }, [activeItems, cachedItems, effectiveMessageId, items, tocQuery.data?.items]);
+  }, [activeItems, cachedItems, effectiveMessageId, items, loadedApiItems, tocQuery.isSuccess]);
   const activeHeadingId = suppliedActiveHeadingId ?? resolveActiveHeadingId(visibleItems, activeBlockId);
 
   useEffect(() => {
     const row = activeRowRef.current;
     const container = scrollContainerRef.current;
-    if (!row || !container || container.clientHeight === 0) return;
+    if (!activeHeadingId || !row || !container || container.clientHeight === 0 || (mode === "panel" && sectionTocMode === "rail")) return;
+    const previous = previousTocView.current;
+    // Includes the cache publication render after an append/refetch. Data
+    // changes alone must not undo the user's real TOC scroll position.
+    if (previous?.scope === cacheScope && previous.activeHeadingId === activeHeadingId
+      && previous.row === row && previous.container === container) return;
     const frame = window.requestAnimationFrame(() => {
       const rowRect = row.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
@@ -60,9 +80,10 @@ export function ConversationToc({ conversationId, sourceKey = "remote", networkM
       const maxTop = Math.max(0, container.scrollHeight - container.clientHeight);
       const nextTop = Math.max(0, Math.min(maxTop, centeredTop));
       if (Math.abs(container.scrollTop - nextTop) > 1) container.scrollTop = nextTop;
+      previousTocView.current = { scope: cacheScope, activeHeadingId, row, container };
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [activeHeadingId, visibleItems]);
+  }, [activeHeadingId, cacheScope, mode, sectionTocMode, visibleItems]);
 
   if (mode === "panel" && sectionTocMode === "rail") return <TocRail items={visibleItems} activeHeadingId={activeHeadingId} onExpand={expand} onNavigate={stableNavigate} />;
   if (items === undefined && (!ready || (Boolean(effectiveMessageId) && tocQuery.isFetching)) && visibleItems.length === 0) return <TocShell mode={mode} state="loading" label={resolvedLocale === "zh-CN" ? "\u6b63\u5728\u52a0\u8f7d\u7ae0\u8282\u76ee\u5f55" : "Loading section contents"} onCollapse={mode === "panel" ? collapse : undefined} />;
@@ -71,14 +92,16 @@ export function ConversationToc({ conversationId, sourceKey = "remote", networkM
 
   const staleReadError = items === undefined && tocQuery.isError && visibleItems.length > 0;
   const body = <TocButtonList items={visibleItems} activeHeadingId={activeHeadingId} activeRowRef={activeRowRef} onNavigate={stableNavigate} />;
-  return <TocFrame mode={mode} title={t("sectionToc")} count={visibleItems.length} scrollContainerRef={scrollContainerRef} onCollapse={mode === "panel" ? collapse : undefined}>
+  const hasMore = items === undefined && tocQuery.hasNextPage;
+  return <TocFrame mode={mode} title={t("sectionToc")} count={items === undefined ? totalApiItems : visibleItems.length} scrollContainerRef={scrollContainerRef} onCollapse={mode === "panel" ? collapse : undefined}>
     {staleReadError ? (
       <div role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-md border border-ui bg-subtle px-2 py-2 text-xs text-secondary">
         <span>{resolvedLocale === "zh-CN" ? "章节目录更新失败，仍显示上次内容。" : "Could not update section contents. Showing the previous entries."}</span>
-        <button type="button" disabled={tocQuery.isFetching} onClick={() => void tocQuery.refetch()} className="min-h-8 shrink-0 rounded-md border border-ui bg-surface px-2 text-xs font-medium text-primary hover:bg-subtle disabled:opacity-50">{t("retry")}</button>
+        <button type="button" disabled={tocQuery.isFetching} onClick={() => void (tocQuery.isFetchNextPageError ? tocQuery.fetchNextPage() : tocQuery.refetch())} className="min-h-11 shrink-0 rounded-md border border-ui bg-surface px-2 text-xs font-medium text-primary hover:bg-subtle disabled:opacity-50">{t("retry")}</button>
       </div>
     ) : null}
     {body}
+    {hasMore ? <button type="button" className="mt-2 min-h-11 w-full rounded-md border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-60" disabled={tocQuery.isFetchingNextPage} onClick={() => void tocQuery.fetchNextPage()}>{tocQuery.isFetchingNextPage ? (resolvedLocale === "zh-CN" ? "正在加载更多…" : "Loading more…") : (resolvedLocale === "zh-CN" ? `加载更多章节（已显示 ${visibleItems.length} / ${totalApiItems}）` : `Load more sections (${visibleItems.length} of ${totalApiItems})`)}</button> : null}
   </TocFrame>;
 }
 
@@ -106,7 +129,7 @@ export function resolveActiveHeadingId(items: TocItem[], activeBlockId?: string 
   if (exact) return activeBlockId;
   const blockIndex = Number.parseInt(activeBlockId.split("-").at(-1) ?? "", 10);
   if (!Number.isFinite(blockIndex)) return null;
-  const nearest = items.reduce<TocItem | null>((current, item) => (
+  const nearest = items.filter(item => activeBlockId.startsWith(`block-${item.message_id}-`)).reduce<TocItem | null>((current, item) => (
     item.block_index <= blockIndex && (!current || item.block_index > current.block_index)
       ? item
       : current

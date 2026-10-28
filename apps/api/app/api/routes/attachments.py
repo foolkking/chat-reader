@@ -58,6 +58,7 @@ from app.services.assets.upload_service import (
     get_upload_session,
     remove_unreferenced_attachment,
 )
+from app.services.conversation_revision import bump_offline_revision
 from app.services.uploads import UploadLimitError, bounded_upload_staging_sync
 from app.services.sharing.share_service import ShareError, resolve_accessible_share
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
@@ -336,8 +337,23 @@ def update_conversation_attachment(
     display_name = Path(payload.display_name).name.strip()[:500]
     if not display_name:
         raise HTTPException(status_code=422, detail="Attachment display name is required.")
-    attachment.display_name = display_name
-    db.commit()
+    if display_name == attachment.display_name:
+        return attachment_read(attachment)
+    from app.services.search.search_indexer import rebuild_search_documents_for_conversation
+
+    try:
+        attachment.display_name = display_name
+        # Unplaced files also belong to the owner's offline package.
+        affected_ids = _attachment_conversation_ids(db, attachment_id) | {conversation_id}
+        for affected_conversation_id in affected_ids:
+            rebuild_search_documents_for_conversation(db, affected_conversation_id)
+            affected_conversation = db.get(Conversation, affected_conversation_id)
+            if affected_conversation is not None:
+                bump_offline_revision(affected_conversation)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return attachment_read(attachment)
 
 
@@ -620,6 +636,19 @@ def _owned_conversation(db: Session, conversation_id: uuid.UUID, scope: Ownershi
     if conversation is None or conversation.deleted_at is not None:
         raise AttachmentUploadError("Conversation not found.", 404)
     return conversation
+
+
+def _attachment_conversation_ids(db: Session, attachment_id: uuid.UUID) -> set[uuid.UUID]:
+    return {
+        row[0]
+        for row in (
+            db.query(Message.conversation_id)
+            .join(MessageVersion, MessageVersion.message_id == Message.id)
+            .join(MessageVersionAttachment, MessageVersionAttachment.message_version_id == MessageVersion.id)
+            .filter(MessageVersionAttachment.attachment_id == attachment_id)
+            .all()
+        )
+    }
 
 
 def _owned_upload_session(

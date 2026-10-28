@@ -258,6 +258,21 @@ test("moving to a project preserves the placement PUT/revision contract (control
     assert.equal(f.writes.length, 1); assert.deepEqual(f.writes[0].input, { target_project_id: "target", target_section: "normal", expected_offline_revision: 7 });
   } finally { await f.dispose(); }
 });
+test("confirmed placement updates loaded pages without replacing reading or page state", async () => {
+  const f = await fixture();
+  const key = ["conversations", "paged", "active", "recent_read", "desc"];
+  try {
+    f.client.setQueryData(key, { pages: [{ items: [f.initial, f.other], offset: 100, hasMore: true }], pageParams: [100] });
+    await f.open(); await f.select("target"); await f.submit();
+    const data = f.client.getQueryData(key), saved = data.pages[0].items[0];
+    assert.equal(saved.project_id, "target");
+    assert.equal(saved.last_read_at, f.initial.last_read_at);
+    assert.equal(saved.reading_progress, f.initial.reading_progress);
+    assert.deepEqual(data.pages[0].items[1], f.other);
+    assert.equal(data.pages[0].offset, 100); assert.equal(data.pages[0].hasMore, true);
+    assert.deepEqual(data.pageParams, [100]);
+  } finally { await f.dispose(); }
+});
 test("moving to Unclassified remains one click without a confirmation (control)", async () => {
   const f = await fixture(); try { await f.openMenu(); await f.click("Move to unclassified");
     assert.equal(f.writes.length, 1); assert.equal(f.writes[0].input.target_project_id, null); assert.equal(f.confirms.length, 0);

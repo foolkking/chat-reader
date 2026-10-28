@@ -138,6 +138,10 @@ export async function createAttachmentUploadSession(
   );
 }
 
+export async function getAttachmentUploadSession(sessionId: string): Promise<AttachmentUploadSessionRead> {
+  return fetchJson<AttachmentUploadSessionRead>(`/api/attachment-upload-sessions/${sessionId}`);
+}
+
 export function uploadAttachmentItem(
   sessionId: string,
   file: File,
@@ -208,7 +212,9 @@ export async function getConversations(
     sort?: ConversationSortMode;
     direction?: SortDirection;
     limit?: number;
+    offset?: number;
   } = {},
+  signal?: AbortSignal,
 ): Promise<ConversationListItem[]> {
   const params = new URLSearchParams();
   if (input.includeArchived) {
@@ -221,8 +227,9 @@ export async function getConversations(
   if (input.sort) params.set("sort", input.sort);
   if (input.direction) params.set("direction", input.direction);
   if (input.limit) params.set("limit", String(input.limit));
+  if (input.offset !== undefined) params.set("offset", String(input.offset));
   const query = params.toString();
-  return fetchJson<ConversationListItem[]>(`/api/conversations${query ? `?${query}` : ""}`);
+  return fetchJson<ConversationListItem[]>(`/api/conversations${query ? `?${query}` : ""}`, { signal });
 }
 
 export async function createConversation(input: ConversationCreateInput): Promise<ConversationCreateResponse> {
@@ -994,6 +1001,7 @@ export async function searchConversations(input: {
   statusScope?: "active" | "archived" | "all";
   dateFrom?: string;
   dateTo?: string;
+  signal?: AbortSignal;
 }): Promise<SearchResponse> {
   const params = new URLSearchParams({
     q: input.q,
@@ -1015,7 +1023,7 @@ export async function searchConversations(input: {
   if (input.statusScope) params.set("status_scope", input.statusScope);
   if (input.dateFrom) params.set("date_from", input.dateFrom);
   if (input.dateTo) params.set("date_to", input.dateTo);
-  return fetchJson<SearchResponse>(`/api/search?${params.toString()}`);
+  return fetchJson<SearchResponse>(`/api/search?${params.toString()}`, { signal: input.signal });
 }
 
 export async function reindexSearch(input: { conversationId?: string } = {}): Promise<SearchReindexResponse> {

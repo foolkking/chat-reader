@@ -11,6 +11,7 @@ import { SearchBox } from "./search-box";
 import { orderSearchResults, SearchResults } from "./search-results";
 import { MobilePageHeader } from "../../components/mobile-page-header";
 import { useWorkspaceShell } from "../../components/workspace-shell";
+import { searchResultHref } from "./search-result-target";
 
 const PAGE_SIZE = 50;
 
@@ -87,15 +88,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const openSelected = () => {
     const item = orderedItems[activeIndex];
     if (!item) return;
-    const target = new URLSearchParams();
-    if (item.message_id) target.set("messageId", item.message_id);
-    if (item.block_index !== null) target.set("blockIndex", String(item.block_index));
-    if (item.character_offset != null) target.set("characterOffset", String(item.character_offset));
-    if (item.document_type === "annotation") {
-      target.set("annotations", "open");
-      if (item.annotation_id) target.set("annotationId", item.annotation_id);
-    }
-    router.push(`/conversations/${item.conversation_id}${target.size ? `?${target}` : ""}`);
+    router.push(searchResultHref(item));
   };
   const clearFilters = () => update({ status_scope: "active", document_type: "all", role: "all", project_id: "all", date_from: "", date_to: "" });
   const selectIndex = (index: number) => setSelection({ scope, documentId: orderedItems[index]?.document_id ?? null });
@@ -112,7 +105,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   }
   const content = (
       <section className="flex min-w-0 flex-1 flex-col">
-        <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码和批注" : "Search conversations, messages, sections, code, and annotations"} onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)} />
+         <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码、批注和附件" : "Search conversations, messages, sections, code, annotations, and attachments"} onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)} />
         <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
           <SearchBox initialQuery={query} onSearch={(value) => { if (value === query) void result.refetch(); else update({ q: value }); }} hasResults={items.length > 0} onMoveSelection={moveSelection} onOpenSelection={openSelected} />
           <div className="flex min-h-10 flex-wrap items-center gap-3">
@@ -122,7 +115,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
           </div>
           <div id="global-search-filters" hidden={!filtersOpen} className={filtersOpen ? "grid gap-3 border-y border-ui py-4 sm:grid-cols-2 lg:grid-cols-4" : "hidden"}>
             <Filter label={zh ? "范围" : "Status"} value={statusScope} onChange={(value) => update({ status_scope: value })} options={[["active", zh ? "未归档" : "Active"], ["archived", zh ? "已归档" : "Archived"], ["all", zh ? "全部" : "All"]]} />
-            <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"], ["annotation", zh ? "批注" : "Annotations"]]} />
+             <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"], ["annotation", zh ? "批注" : "Annotations"], ["attachment", zh ? "附件" : "Attachments"]]} />
             <Filter label={zh ? "角色" : "Role"} value={role} onChange={(value) => update({ role: value })} options={[["all", zh ? "全部" : "All"], ["user", zh ? "用户" : "User"], ["assistant", "ChatGPT"]]} />
             <div>
               <Filter label={zh ? "项目" : "Project"} value={projectId} onChange={(value) => update({ project_id: value })} options={[["all", zh ? "全部项目" : "All projects"], ...projectOptions]} />

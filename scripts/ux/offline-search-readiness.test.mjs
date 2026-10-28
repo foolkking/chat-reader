@@ -174,3 +174,17 @@ unit("reset retires initialization and searches awaiting that initialization", a
     assert.equal(f.timers.size, 0);
   } finally { f.dispose(); }
 });
+
+unit("scope and content field selection reach the existing worker without overfetching", async () => {
+  const f = fixture();
+  try {
+    await f.initialize();
+    const scope = { conversationId: "synthetic-conversation", documentType: "message", role: "assistant", contentOnly: true };
+    const searching = f.searchOffline("synthetic", 3, scope);
+    const post = await f.next("search");
+    assert.equal(post.message.limit, 3);
+    assert.deepEqual(post.message.scope, scope);
+    f.reply(post, { items: [document] });
+    assert.deepEqual(await searching, [document]);
+  } finally { f.dispose(); }
+});

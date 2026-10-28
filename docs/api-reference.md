@@ -788,9 +788,23 @@ PostgreSQL 使用账户/key 事务 advisory lock 串行化 admission；本地并
 
 ## Search And TOC
 
-`GET /api/search` 接受 `q`、`limit`、`offset`、`conversation_id`、`project_id`、`document_type`、`role`、`status_scope`、`date_from` 和 `date_to`。`document_type` 使用 `conversation`、`message`、`heading`、`code`、`annotation` 或 `attachment`；heading/code/annotation 结果返回目标字段以支持精确定位。重复 message 结果通过 `occurrence_count` 表示跨会话出现次数。
+`GET /api/search` 接受 `q`、`limit`、`offset`、`conversation_id`、`project_id`、`document_type`、`role`、`status_scope`、`date_from` 和 `date_to`。`document_type` 使用 `conversation`、`message`、`heading`、`code`、`annotation` 或 `attachment`；heading/code/annotation 结果返回目标字段以支持精确定位。全局／仅项目查询按 message hash 折叠，`occurrence_count` 表示出现的会话数；传入 `conversation_id` 后，不同消息即使正文相同也各有结果、独立目标和分页项，单条消息的多个命中仍使用 `matches`。
 
-`POST /api/search/reindex` 重建 canonical 搜索文档，属于管理操作；当前没有认证，公网部署应在反向代理层限制访问。
+substring 中的 `\`、`%`、`_` 是字面字符，不是用户可用的 LIKE 通配符。
+正文 `matches` 的 `match_start/match_end` 是 canonical `RenderBlock.plain_text`
+的 Unicode code point 左闭右开范围，`quote` 等于原文切片，带
+`block_index/render_block_id`；每结果最多 100 条，超过时
+`matches_truncated=true`。顶层目标字段跟随首条正文命中；响应的
+`offset/total/has_more` 描述结果文档分页。
+附件增加可选 `attachment_id`、`attachment_display_name`，用于打开文件面板；
+批注继续返回 `annotation_id` 与保存锚点。二者的摘录均不是正文偏移，
+`matches` 为空。该可加字段合同不要求重建已有索引或迁移数据；本批源码尚未提交部署，
+验证边界见[首批记录](execution/SEARCH_CORRECTNESS_2026-10-27.md)与
+[当前对话／离线跟进](execution/SEARCH_RECALL_OFFLINE_2026-10-27.md)。
+
+`POST /api/search/reindex` 重建 canonical 搜索文档，受当前认证 middleware 与
+`ownership_scope` 约束：指定对话必须归属当前账户且未删除，未指定时仅重建该账户的
+未删除对话。不是无认证的全库管理入口，Share token 不授予此权限。
 
 TOC 使用 `GET /api/conversations/{id}/toc`。返回 heading 带 message id、block index、level、title、anchor 和顺序信息，并支持 `message_id`、`max_level`、`role`、`q`、`order_key_from`、`order_key_to`、`offset` 和 `limit`。
 

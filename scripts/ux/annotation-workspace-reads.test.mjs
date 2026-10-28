@@ -16,8 +16,10 @@ class OfflineAccessError extends Error {}
 // Real compiled hook/components. React scheduling, repository, storage and DOM
 // are explicit doubles; these tests do not measure rendered layout or memory.
 function runtime(extra = {}, desktop = false, observeWorkspace) {
-  let cursor = 0, generation = 1;
+  let cursor = 0, generation = 1, commentDeleteFailure = false, commentDeleteAttempts = 0;
   const hooks = [], pending = new Map(), modules = new Map(), events = new EventTarget();
+  const commentStorage = new Map();
+  const commentKey = (conversation, id, mode) => `${conversation}:${mode}:${id}`;
   const hook = init => { const index = cursor++; if (!hooks[index]) hooks[index] = init(); return hooks[index]; };
   const memo = (make, deps) => { const entry = hook(() => ({})); if (!same(entry.deps, deps)) Object.assign(entry, { value: make(), deps }); return entry.value; };
   const react = { ...React,
@@ -48,6 +50,27 @@ function runtime(extra = {}, desktop = false, observeWorkspace) {
     "./notebook-view": { NotebookView: "Notebook" },
     "../../components/settings-focused-dialog": { SettingsFocusedDialog: "Settings" },
     "../../lib/offline-conflicts": { ensureNotebookConflict: async () => "synthetic-conflict" },
+    "../../lib/reader-search-cache": { invalidateReaderSearch: noop },
+    "../../lib/annotation-comment-drafts": {
+      captureCommentDraftStorage: () => ({ access: generation }),
+      trackCommentDraftPersistence: noop,
+      readAnnotationCommentDrafts: async (conversation, mode) => [...commentStorage.values()]
+        .filter(value => value.conversation_id === conversation && value.mode === mode),
+      writeAnnotationCommentDraft: async (conversation, id, expectedVersion, value, mode) => {
+        const key = commentKey(conversation, id, mode), previous = commentStorage.get(key);
+        assert.equal(previous?.version ?? 0, expectedVersion);
+        const version = expectedVersion + 1;
+        commentStorage.set(key, { ...value, version, conversation_id: conversation, annotation_id: id, mode });
+        return version;
+      },
+      removeAnnotationCommentDraft: async (conversation, id, expectedVersion, mode) => {
+        commentDeleteAttempts++;
+        if (commentDeleteFailure) throw new Error("Synthetic local draft delete failure");
+        const key = commentKey(conversation, id, mode), previous = commentStorage.get(key);
+        if (previous) assert.equal(previous.version, expectedVersion);
+        commentStorage.delete(key);
+      },
+    },
     "../../lib/annotation-sync": { OFFLINE_SYNC_CHANGED_EVENT: "sync" }, ...extra,
     "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: noop }) },
   };
@@ -77,6 +100,9 @@ function runtime(extra = {}, desktop = false, observeWorkspace) {
     flush() { for (const [index, fn] of pending) { hooks[index].cleanup?.(); hooks[index].cleanup = fn(); } pending.clear(); },
     dispose() { for (const entry of hooks) entry.cleanup?.(); pending.clear(); },
     authorize(value, event) { generation = value; if (event) events.dispatchEvent(new Event(event)); },
+    failCommentDelete(value) { commentDeleteFailure = value; },
+    get commentDeleteAttempts() { return commentDeleteAttempts; },
+    get storedCommentCount() { return commentStorage.size; },
     events,
   };
 }
@@ -1002,6 +1028,50 @@ test("a late comment acknowledgement cannot publish into another conversation", 
     const work = list.onSaveComment(original); f.props.conversationId = "synthetic-b"; f.render(); f.r.flush(); await setImmediate();
     pending.resolve({ ...original, comment_markdown: "old scope draft" }); await work;
     assert.equal(commentList(f).readCommentDraft(original.id), undefined); assert.notEqual(commentList(f).items[0].comment_markdown, "old scope draft");
+  } finally { f.r.dispose(); }
+});
+
+test("a failed comment recovers after A to B to A without replaying its uncertain server write", async () => {
+  const f = batchFixture(); let attempts = 0;
+  f.repo.value.update = async () => { attempts++; throw Error("synthetic unknown result"); };
+  try {
+    await f.start(); let list = commentList(f); const original = list.items[0];
+    list.onDraftChange(original, "durable recovery text"); await list.onSaveComment(original); await setImmediate();
+    f.props.conversationId = "synthetic-b"; f.render(); f.r.flush(); await setImmediate();
+    f.props.conversationId = "synthetic-a"; f.render(); f.r.flush(); await setImmediate();
+    list = commentList(f);
+    assert.equal(list.readCommentDraft(original.id).text, "durable recovery text");
+    assert.equal(list.readCommentDraft(original.id).status, "error");
+    await list.onSaveComment(original, false, true);
+    assert.equal(attempts, 1);
+  } finally { f.r.dispose(); }
+});
+
+test("failed local discard retries deletion before hydration and retains the leave guard until confirmed", async () => {
+  const f = batchFixture();
+  try {
+    await f.start(); let list = commentList(f); const original = list.items[0];
+    list.onDraftChange(original, "synthetic draft to discard"); await setImmediate();
+    assert.equal(f.r.storedCommentCount, 1);
+    f.r.failCommentDelete(true);
+    await commentList(f).onDiscardComment(original); await setImmediate(); f.render(); f.r.flush();
+    assert.equal(commentList(f).readCommentDraft(original.id), undefined);
+    const leaving = new Event("beforeunload", { cancelable: true });
+    f.r.events.dispatchEvent(leaving); assert.equal(leaving.defaultPrevented, true);
+    const failedAttempts = f.r.commentDeleteAttempts;
+    button(f.render(), "Retry local drafts").onClick(); f.render(); f.r.flush(); await setImmediate();
+    assert.ok(f.r.commentDeleteAttempts > failedAttempts);
+    assert.equal(commentList(f).readCommentDraft(original.id), undefined, "retry must not hydrate discarded text");
+    assert.equal(f.r.storedCommentCount, 1, "failed storage still contains the old record");
+    assert.ok(button(f.render(), "Retry local drafts"));
+    f.r.failCommentDelete(false);
+    button(f.render(), "Retry local drafts").onClick(); f.render(); f.r.flush(); await setImmediate();
+    f.render(); f.r.flush();
+    assert.equal(commentList(f).readCommentDraft(original.id), undefined);
+    assert.equal(f.r.storedCommentCount, 0);
+    assert.equal(find(f.render(), node => node.type === "button" && text(node.props.children) === "Retry local drafts"), undefined);
+    const safeLeaving = new Event("beforeunload", { cancelable: true });
+    f.r.events.dispatchEvent(safeLeaving); assert.equal(safeLeaving.defaultPrevented, false);
   } finally { f.r.dispose(); }
 });
 

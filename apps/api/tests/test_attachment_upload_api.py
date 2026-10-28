@@ -2,6 +2,8 @@ import json
 import uuid
 from pathlib import Path
 
+import pytest
+
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.main import app
@@ -10,8 +12,78 @@ from app.models.background_job import BackgroundJob
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.models.search_document import SearchDocument
 from app.services import uploads
 from test_import_preview_api import client  # noqa: F401
+
+
+def _attachment_rename_snapshot(conversation_id: str, attachment_id: str) -> tuple:
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    try:
+        conversation = db.get(Conversation, uuid.UUID(conversation_id))
+        attachment = db.get(Attachment, uuid.UUID(attachment_id))
+        assert conversation is not None and attachment is not None
+        documents = db.query(SearchDocument).filter(
+            SearchDocument.conversation_id == conversation.id,
+        ).all()
+        return (attachment.display_name, conversation.offline_revision,
+                sorted((str(document.id), document.search_text) for document in documents))
+    finally:
+        db.close()
+        generator.close()
+
+
+@pytest.mark.parametrize("placed", [False, True])
+def test_attachment_rename_refreshes_search_and_offline_revision_atomically(client, tmp_path: Path, monkeypatch, placed) -> None:
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ASSET_STORAGE_BACKEND", "local")
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    get_settings.cache_clear()
+    conversation_id, message = _conversation_with_message(client)
+    item = _upload(client, _create_session(client, conversation_id)["id"], "original.md")
+    finalized = client.post(f"/api/conversations/{conversation_id}/attachments", json={"upload_item_ids": [item["id"]]})
+    assert finalized.status_code == 201, finalized.text
+    attachment_id = finalized.json()["items"][0]["id"]
+    if placed:
+        saved = client.patch(f"/api/messages/{message['id']}", json={
+            "content_markdown": message["current_version"]["display_text"] + f"\n\n[File](cr-asset://{attachment_id})",
+            "base_version_id": message["current_version"]["id"],
+        })
+        assert saved.status_code == 200, saved.text
+    endpoint = f"/api/conversations/{conversation_id}/attachments/{attachment_id}"
+    assert client.patch(endpoint, json={"display_name": "prioruniqueneedle.md"}).status_code == 200
+    before = _attachment_rename_snapshot(conversation_id, attachment_id)
+    response = client.patch(endpoint, json={"display_name": "renameduniqueneedle.md"})
+    assert response.status_code == 200, response.text
+    after = _attachment_rename_snapshot(conversation_id, attachment_id)
+    assert after[0] == "renameduniqueneedle.md"
+    assert after[1] == before[1] + 1
+    assert not any("prioruniqueneedle" in text for _, text in after[2])
+    result = client.get("/api/search", params={
+        "q": "renameduniqueneedle", "document_type": "attachment", "conversation_id": conversation_id,
+    })
+    assert result.status_code == 200, result.text
+    assert result.json()["total"] == (1 if placed else 0)
+    catalog = client.get("/api/offline/catalog")
+    assert catalog.status_code == 200, catalog.text
+    assert next(row for row in catalog.json()["conversations"] if row["id"] == conversation_id)["revision"] == after[1]
+
+    from app.services.search.search_indexer import rebuild_search_documents_for_conversation
+
+    def fail_rebuild(*args, **kwargs):
+        # Fail after DELETE/flush/INSERT so rollback must restore index rows too.
+        rebuild_search_documents_for_conversation(*args, **kwargs)
+        raise RuntimeError("Synthetic index failure")
+
+    monkeypatch.setattr("app.services.search.search_indexer.rebuild_search_documents_for_conversation", fail_rebuild)
+    # Normalized same-name requests must not rebuild the index or bump delta.
+    assert client.patch(endpoint, json={"display_name": "  renameduniqueneedle.md  "}).status_code == 200
+    assert _attachment_rename_snapshot(conversation_id, attachment_id) == after
+    with pytest.raises(RuntimeError, match="Synthetic index failure"):
+        client.patch(endpoint, json={"display_name": "rollbackuniqueneedle.md"})
+    assert _attachment_rename_snapshot(conversation_id, attachment_id) == after
 
 
 def _conversation_with_message(client) -> tuple[str, dict]:

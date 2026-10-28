@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type InfiniteData, type QueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -48,9 +48,12 @@ function publishPlacement(client: QueryClient, result: ConversationPlacementResp
     offline_revision: saved.offline_revision, updated_at: saved.updated_at,
   } : item;
   client.setQueryData<ConversationDetail>(["conversation", "remote", saved.id], item => item ? update(item) : item);
-  for (const [key, rows] of client.getQueriesData<ConversationListItem[]>({ queryKey: ["conversations"] })) {
-    if (!Array.isArray(rows)) continue;
-    client.setQueryData(key, rows.filter(item => !(key[1] === "history" && saved.project_id !== null && applies(item))).map(update));
+  for (const [key, rows] of client.getQueriesData<ConversationListItem[] | InfiniteData<{ items: ConversationListItem[] }>>({ queryKey: ["conversations"] })) {
+    if (Array.isArray(rows)) {
+      client.setQueryData(key, rows.filter(item => !(key[1] === "history" && saved.project_id !== null && applies(item))).map(update));
+    } else if (rows) {
+      client.setQueryData(key, { ...rows, pages: rows.pages.map(page => ({ ...page, items: page.items.map(update) })) });
+    }
   }
   for (const [key, rows] of client.getQueriesData<ProjectConversationRead[]>({ queryKey: ["project-conversations"] })) {
     if (!Array.isArray(rows)) continue;

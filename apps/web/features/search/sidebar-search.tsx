@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { searchConversations } from "../../lib/api";
 import { usePreferences } from "../../components/preferences-provider";
+import { searchResultHref } from "./search-result-target";
 
 export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter();
@@ -47,16 +48,8 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
   const openResult = (index: number) => {
     const item = items[index];
     if (!item) return;
-    const params = new URLSearchParams();
-    if (item.message_id) params.set("messageId", item.message_id);
-    if (item.block_index !== null) params.set("blockIndex", String(item.block_index));
-    if (item.character_offset != null) params.set("characterOffset", String(item.character_offset));
-    if (item.document_type === "annotation") {
-      params.set("annotations", "open");
-      if (item.annotation_id) params.set("annotationId", item.annotation_id);
-    }
     onNavigate?.();
-    router.push(`/conversations/${item.conversation_id}${params.size ? `?${params}` : ""}`);
+    router.push(searchResultHref(item));
   };
 
   return (
@@ -84,11 +77,11 @@ export function SidebarSearch({ onNavigate }: { onNavigate?: () => void }) {
       />
       {query ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={resolvedLocale === "zh-CN" ? "清除搜索" : "Clear search"}><X className="h-3.5 w-3.5" /></button> : null}
       {query.trim() ? (
-        <div className="absolute inset-x-0 top-11 z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
-          {items.map((item, index) => (
-            <button key={item.document_id} type="button" onMouseEnter={() => selectIndex(index)} onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
-              <span className="block truncate text-sm font-medium text-primary">{item.conversation_title}</span>
-              <span className="mt-0.5 block truncate text-xs text-secondary">{item.snippet}</span>
+         <div className="absolute inset-x-0 top-11 z-40 overflow-hidden rounded-lg border border-ui bg-raised shadow-xl">
+           {items.map((item, index) => (
+             <button key={item.document_id} type="button" onMouseEnter={() => selectIndex(index)} onClick={() => openResult(index)} className={`block w-full px-3 py-2 text-left ${activeIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
+               <span className="block truncate text-sm font-medium text-primary">{item.document_type === "attachment" ? (item.attachment_display_name ?? item.conversation_title) : item.conversation_title}</span>
+               <span className="mt-0.5 block truncate text-xs text-secondary">{item.snippet}</span>
             </button>
           ))}
           {currentResults && !result.isError && !result.isFetching && items.length === 0 ? <p className="px-3 py-3 text-sm text-secondary">{labels.empty}</p> : null}

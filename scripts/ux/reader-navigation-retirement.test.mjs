@@ -26,6 +26,7 @@ const compile = text => ts.transpileModule(text, { compilerOptions: {
 } }).outputText;
 const inputNames = ["conversationId", "dataSource", "conversationQuery", "queryClient", "recentOwner", "recentOwnerRef",
   "searchNavigation", "searchNavigationRef", "setSearchNavigation", "setSearchHighlight", "navigationTokenRef",
+  "openSearchAttachment", "openSearchAnnotation",
   "navigationInProgressRef", "lastNavigationTargetRef", "restoreAttemptedRef", "readingRestoreTokenRef", "restoreInProgressRef",
   "windowGenerationRef", "loadedWindowRef", "applyLoadedWindow", "userScrollIntentRef", "scrollDirectionRef",
   "scrollIntentSequenceRef", "setNavigationStatus", "setNavigationFailureReason", "setActiveMessageId", "setActiveBlockId",
@@ -43,6 +44,8 @@ ${helpers.map(node => node.getText(ast)).join("\n")}
 exports.renderNavigation = renderNavigation;`);
 const windowExports = {};
 new Function("exports", compile(read("features/conversations/reader-window.ts")))(windowExports);
+const searchTargetExports = {};
+new Function("exports", compile(read("features/search/search-result-target.ts")))(searchTargetExports);
 const same = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
 const deferred = () => {
   let resolve, reject;
@@ -51,7 +54,7 @@ const deferred = () => {
 };
 const message = name => ({ id: `synthetic-message-${name}`, role: "assistant", order_key: name,
   current_version: { id: `synthetic-version-${name}` },
-  render_blocks: [{ id: `synthetic-block-${name}`, block_index: 0, block_type: "paragraph" }] });
+  render_blocks: [{ id: `synthetic-block-${name}`, block_index: 0, block_type: "paragraph", plain_text: "012Synthetic unchanged text" }] });
 const A = message("A"), B = message("B");
 const target = (item, source = "message-action") => ({ messageId: item.id, source,
   messageVersionId: item.current_version.id, blockIndex: 0, renderBlockId: item.render_blocks[0].id });
@@ -64,7 +67,7 @@ const searchContext = (query = "synthetic") => ({ query, index: 0, targets: [tar
 // alignment, settling, timers and state publication are controlled adapters.
 // This is not mounted React, a browser, physical cancellation or DOM evidence.
 function fixture({ mode = "remote", items = [B] } = {}) {
-  const calls = { writes: [], windows: [], contexts: [], turns: [], leases: [], mounts: [], settles: [],
+  const calls = { writes: [], windows: [], contexts: [], turns: [], leases: [], mounts: [], settles: [], attachments: [], annotations: [],
     stages: [], cache: [], reports: [], released: [], timerClears: [], timers: [] };
   const handlers = {};
   let epoch = 1, cursor = 0, layout, current, now = 0;
@@ -98,6 +101,11 @@ function fixture({ mode = "remote", items = [B] } = {}) {
   };
   state.recentOwner = { active: true, epoch, conversationId: state.conversationId, dataSource: state.dataSource };
   state.recentOwnerRef = { current: state.recentOwner };
+  state.openSearchAttachment = attachmentId => calls.attachments.push(attachmentId);
+  state.openSearchAnnotation = async target => {
+    calls.annotations.push(target);
+    return { ok: true, targetId: `annotation-${target.annotationId}` };
+  };
   state.queryClient = { setQueryData: (...args) => calls.cache.push(args) };
   const setter = name => value => { state[name] = value; calls.writes.push([name, value]); };
   for (const name of ["SearchNavigation", "SearchHighlight", "NavigationStatus", "NavigationFailureReason",
@@ -134,6 +142,7 @@ function fixture({ mode = "remote", items = [B] } = {}) {
     },
     restoreScrollAnchor: async options => { calls.settles.push(options); return handlers.settle?.(options); },
     captureScrollAnchor: () => null, resolveTextAnchorRange: () => null, firstVisibleRangeRect: () => null,
+    resolveCanonicalSearchAnchor: searchTargetExports.resolveCanonicalSearchAnchor,
     reportReaderPerformance: (...args) => calls.reports.push(args),
   };
   new Function(...Object.keys(dependencies), compiled)(...Object.values(dependencies));
@@ -166,11 +175,12 @@ for (const mode of ["remote", "offline"]) {
   test(`${mode}: current exact navigation retains locators, timing budgets and lease cleanup`, async () => {
     const f = fixture({ mode });
     try {
-      const result = await f.current.navigate({ ...target(A, "search"), characterOffset: 3, endCharacterOffset: 7, quote: "Synthetic" });
+      const result = await f.current.navigate({ ...target(A, "search"), characterOffset: 3, endCharacterOffset: 12, quote: "Synthetic" });
       assert.equal(result.ok, true);
       assert.deepEqual(f.calls.windows, [A.id]);
+      assert.equal(f.calls.contexts[0].quote, undefined, "an exact search range must not be rematched as an ambiguous quote");
       assert.equal(f.calls.mounts[0].characterOffset, 3);
-      assert.equal(f.calls.mounts[0].endCharacterOffset, 7);
+      assert.equal(f.calls.mounts[0].endCharacterOffset, 12);
       assert.equal(f.calls.mounts[0].quote, "Synthetic");
       assert.equal(f.calls.mounts[0].timeoutMs, 8000);
       assert.equal(f.calls.settles[0].minimumMs, 1400);
@@ -178,6 +188,26 @@ for (const mode of ["remote", "offline"]) {
       assert.equal(f.state.navigationStatus, "idle");
       assert.deepEqual(f.calls.released, [A.id]);
       assert.equal(f.state.navigationInProgressRef.current, false);
+    } finally { f.dispose(); }
+  });
+}
+
+for (const kind of ["stale-version", "out-of-range", "wrong-block"]) {
+  test(`search ${kind} falls back to the message without applying an old range or quote`, async () => {
+    const f = fixture();
+    try {
+      const exact = { ...target(A, "search"), characterOffset: 3, endCharacterOffset: 12, quote: "Synthetic" };
+      const invalid = kind === "stale-version" ? { ...exact, messageVersionId: "synthetic-old-version" }
+        : kind === "out-of-range" ? { ...exact, endCharacterOffset: 1000 }
+        : { ...exact, renderBlockId: "synthetic-missing-block" };
+      const result = await f.current.navigate(invalid);
+      assert.equal(result.ok, true);
+      assert.equal(result.fallback, true);
+      assert.equal(result.targetId, `message-${A.id}`);
+      assert.equal(f.calls.mounts[0].characterOffset, undefined);
+      assert.equal(f.calls.mounts[0].endCharacterOffset, undefined);
+      assert.equal(f.calls.mounts[0].quote, null);
+      assert.equal(f.state.navigationStatus, "stale");
     } finally { f.dispose(); }
   });
 }
@@ -404,6 +434,32 @@ test("current footer navigation publishes its context/index and the exact highli
     assert.deepEqual(f.state.searchNavigation, { ...context, index: 1 });
     assert.equal(f.state.searchNavigationRef.current, f.state.searchNavigation);
     assert.equal(f.state.searchHighlight.targetId, `block-${B.id}-0`);
+  } finally { f.dispose(); }
+});
+
+test("footer attachment and annotation results use their dedicated destinations", async () => {
+  const f = fixture({ items: [A, B] });
+  try {
+    const attachmentContext = { query: "file", index: 0, targets: [{ attachmentId: "synthetic-attachment" }] };
+    f.current.publish(attachmentContext); f.render();
+    await f.current.next(0);
+    assert.deepEqual(f.calls.attachments, ["synthetic-attachment"]);
+    assert.deepEqual(f.calls.windows, []);
+    assert.deepEqual(f.calls.mounts, []);
+
+    const annotationTarget = {
+      annotationId: "synthetic-annotation",
+      messageId: A.id,
+      messageVersionId: A.current_version.id,
+      blockIndex: 2,
+      characterOffset: 5,
+    };
+    const annotationContext = { query: "note", index: 0, targets: [annotationTarget] };
+    f.current.publish(annotationContext); f.render();
+    await f.current.next(0);
+    assert.deepEqual(f.calls.annotations, [annotationTarget]);
+    assert.deepEqual(f.calls.windows, []);
+    assert.deepEqual(f.calls.mounts, []);
   } finally { f.dispose(); }
 });
 

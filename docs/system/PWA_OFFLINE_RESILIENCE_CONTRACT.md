@@ -1,5 +1,131 @@
 # PWA and Offline Resilience Contract
 
+## Reader completeness and recoverability additions — 2026-10-28, source only
+
+The current Reader/search surfaces keep bounded resource budgets while exposing
+their continuation state. Remote and offline current-conversation search use
+offset pages and `has_more`; a scoped query reset cancels old requests, clears
+cached pages even for a closed panel and refetches active queries. A matching
+content-change event also retires the current navigation intent. A document may still
+return at most 100 canonical matches, but `matches_truncated` is explicit.
+Offline totals use bounded worker lookahead: `total_is_exact=false` denotes a
+lower bound, not a full count. These are never claimed to be server totals.
+
+TOC panels use infinite pages for owner and Share data, while preserving the
+existing real-DOM anchor navigation and local fallback during an initial read.
+An empty successful page replaces stale cached headings. Appending a TOC page
+or publishing cached headings does not recenter an unchanged active row. A
+changed active heading, scope or row/container DOM identity may still center
+it; the Reader's explicit navigation contract is unchanged. Offline file
+references after the first three are revealed through an explicit
+keyboard-operable control; expanding them does not fetch an attachment preview.
+
+Comment drafts are stored in the existing account-scoped Dexie settings table
+with conversation, repository mode, tab identity and compare-and-swap version.
+Rapid return to a conversation waits for its previous coalesced persistence
+queue. Recovery is explicit and never replays an uncertain server write. A saved
+baseline removes only the matching draft; conflicts and deleted annotations
+remain recoverable or discardable in the workspace. Draft persistence failure
+keeps the in-memory draft and the leave-page guard. A failed discard retains a
+delete intent with its original CAS baseline in the same runtime, retries it
+before hydration, and blocks stale recovery while deletion remains unconfirmed.
+The workspace retains its leave-page guard. This intent is not durable across
+a forced full reload or crash when storage failed; it is not a persisted
+tombstone or cross-tab collaborative editing. The pending-changes recovery
+export also includes comment drafts.
+
+The conversation list uses bounded pages and distinguishes loaded rows from
+remaining rows; bulk selection explicitly covers loaded data only. Custom
+ordering requires all pages and no more than the API's 500-ID contract rather
+than partially reordering a loaded subset. Descending custom views reverse each
+equal-priority group (pin status and pinned timestamp) into canonical ascending
+rank before saving; crossing priority groups is rejected because manual rank
+cannot override them.
+Attachment uploads retain stable
+per-file state, continue after a single item failure, support cancel of the
+in-flight item and retry failed items without silently re-finalizing completed
+receipts. Cancelled batches retain uploaded receipts behind an explicit add
+action; unknown confirmation is checked against current files and session
+receipts before retry, and an expired session requires a new upload. Complex Office/ODF/ZIP previews report the exact bounded category
+when parsing stops and keep original download as the completeness authority.
+Attachment rename updates affected search documents and offline revisions,
+including the owning conversation for an unplaced attachment, in the same
+transaction. A derived-write failure rolls back the rename; a normalized
+same-name no-op does not rebuild or advance revisions.
+
+The implementation record is
+[here](../execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md). This
+is source-only and unverified: no local tests, browser, service, database, CI,
+commit or deployment acceptance is claimed. See the
+[follow-up verification boundaries](../testing.md#completeness-follow-up-optimization--2026-10-28-source-only).
+
+## Search lifecycle and replay — 2026-10-27, source only
+
+Library search distinguishes URL restoration from an explicit repeat activation.
+Equivalent conversation/version/block/range/panel targets get an in-memory
+sequence; query ordering and display-only settings do not define a new target.
+Panel open flags are display-only when precise entity identity exists; legacy
+panel-only links still distinguish files from annotations.
+Reader consumes that intent through its existing navigation owner and real DOM
+anchors, without adding URL nonces or widening its remount key. Ordinary bookmark
+restoration remains the initial navigation. File/annotation activations reveal
+filtered-out targets; files refocus a committed row without opening a preview or
+download. Annotation single-item review aligns once per activation after data
+and filters settle, retaining drafts, reading mode and later manual browsing.
+
+The index input is a read-only projection. Local annotation entities, including
+tombstones, supersede persistent documents with the same conversation/entity ID.
+Identifiable legacy-only duplicates collapse, but distinct entities are not
+merged by text. Known legacy ID prefixes can supply missing annotation metadata;
+opaque records whose identity cannot be inferred remain for compatibility.
+Projection never deletes imported documents or pending local edits.
+
+LibraryShell observes transactional snapshots of search documents, annotations
+and notebooks, not outbox or reading-position events. Notifications invalidate
+visible hits immediately and coalesce rebuild requests for 80ms. Initialization
+is serialized; index/query generations retire old snapshots, timers and replies.
+Refresh reads do not scan the full message table. Captured access/database
+identity is checked at asynchronous boundaries; auth transitions/unmount retire
+work, and existing explicit retry can reattach a failed/retired watcher. Local
+conversation read success remains independent of optional index availability.
+
+Rebuilds still process the full corpus; no measured latency, incremental-index,
+large-library performance or all-panel cache-freshness guarantee is made.
+At this checkpoint current-conversation pagination/truncation was deferred;
+the 2026-10-28 source-only section above supersedes that boundary. Packages v1/v2/v3,
+Dexie v2, Share, canonical data and reading-position semantics are unchanged.
+The [record](../execution/SEARCH_LIFECYCLE_2026-10-27.md) and
+[regression boundaries](../testing.md#search-lifecycle-and-replay--2026-10-27-source-only)
+are source-only; tests, real liveQuery/browser and CI acceptance remain pending.
+
+## Scoped search and Library targets — 2026-10-27, source only
+
+The in-memory FlexSearch worker receives conversation/type/role filters before
+the field-result limit. A single compound scope tag enforces their conjunction;
+each document has at most seven fixed scope memberships, not a separate text
+index per conversation. Results are deduplicated and capped again before reply.
+The installed FlexSearch implementation unions multiple selected tag lists, so
+separate independent tags must not be treated as an AND filter. This fixes scope
+starvation, not the engine's lexical behavior or total internal query memory.
+
+Current-conversation queries search content, not conversation titles or internal
+type strings. Global Library search retains titles. An attachment's own filename
+remains file content even if an older record contains only an extract in its body;
+annotation quote/comment search still navigates by the saved annotation anchor.
+
+The Library sidebar and offline Reader share canonical target projection.
+Body links carry version/block/range identity without excerpts; files and
+annotations open their existing panels, always on `/library`. Missing blocks
+retain message-level fallback; indexed versions are preserved and optional legacy
+versions may fall back to the local current version. Query/result/route changes,
+unmounts and newer selections retire old pending activations; failed reads retain
+copies and allow explicit retry. Existing offline-access fences remain in force.
+
+Dexie v2, packages v1/v2/v3, Share and stored user data are unchanged. The
+[implementation record](../execution/SEARCH_RECALL_OFFLINE_2026-10-27.md) and
+[authored regression boundaries](../testing.md#scoped-search-and-offline-entries--2026-10-27-source-only)
+are source-only: no local test, browser or CI acceptance is claimed.
+
 ## Library download-status subscription — 2026-10-15, source only
 
 The Library's local `listOfflineDownloads()` subscription has an independent

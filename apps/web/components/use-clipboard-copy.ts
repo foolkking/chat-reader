@@ -8,6 +8,10 @@ type CopyPhase = "copying" | "copied" | "failed";
 export function useClipboardCopy(value: string) {
   const [result, setResult] = useState<{ value: string; phase: CopyPhase } | null>(null);
   const sequence = useRef(0);
+  useEffect(() => {
+    // A late clipboard completion must not update an unmounted control.
+    return () => { sequence.current += 1; };
+  }, []);
   const manualRef = useRef<HTMLTextAreaElement>(null);
   const state = result?.value === value ? result.phase : "idle";
   useEffect(() => {

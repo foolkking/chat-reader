@@ -12,9 +12,17 @@ test("conversation TOC distinguishes stale refresh failure from initial empty fa
   assert.match(source, /role="alert"/);
 });
 
-test("conversation TOC offers a query-only retry for stale content", () => {
-  assert.match(source, /onClick=\{\(\) => void tocQuery\.refetch\(\)\}/);
+test("conversation TOC retries the failed page without restarting successful pages", () => {
+  assert.match(source, /tocQuery\.isFetchNextPageError \? tocQuery\.fetchNextPage\(\) : tocQuery\.refetch\(\)/);
   assert.match(source, /disabled=\{tocQuery\.isFetching\}/);
   assert.match(source, /t\("retry"\)/);
   assert.match(source, /onNavigate=\{stableNavigate\}/);
+});
+
+test("conversation TOC retains canonical pagination and never substitutes old cached items for a successful empty response", () => {
+  assert.match(source, /useInfiniteQuery/);
+  assert.match(source, /offset: pageParam, limit: 200/);
+  assert.match(source, /lastPage\.has_more \? lastPage\.offset \+ lastPage\.limit : undefined/);
+  assert.match(source, /if \(items !== undefined \|\| tocQuery\.isSuccess\) return currentApiItems/);
+  assert.doesNotMatch(source, /placeholderData/);
 });

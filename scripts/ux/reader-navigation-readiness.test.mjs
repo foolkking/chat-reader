@@ -45,6 +45,9 @@ const loadModule = (code, imports = appRequire, document) => {
   const module = { exports: {} }; new Function("require", "module", "exports", "document", code)(imports, module, module.exports, document); return module.exports;
 };
 const windowHelpers = loadModule(moduleCode("reader-window"));
+const searchTargetHelpers = loadModule(compile(readFileSync(
+  new URL("../../apps/web/features/search/search-result-target.ts", import.meta.url), "utf8",
+)));
 const registryCode = moduleCode("rendered-block-registry"), activeCode = moduleCode("reader-active-position");
 const refDefaults = {
   initialWindowAppliedRef: false, windowGenerationRef: 1, navigationTokenRef: 0, navigationInProgressRef: false,
@@ -204,6 +207,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
   };
   const module = { exports: {} };
   const dependencies = { module, useEffect, useCallback, window, document, Element: Surface, CSS: { escape: value => value },
+    resolveCanonicalSearchAnchor: searchTargetHelpers.resolveCanonicalSearchAnchor,
     authenticationGeneration: () => epoch, captureTask, ApiRequestError, ACTIVE_READING_OFFSET: 120,
     ...windowHelpers, loadTurnNeighborhood: windowHelpers.loadCompleteTurnWindow,
     startTransition: action => action(), resolveActiveReadingTarget: active.resolveActiveReadingTarget,

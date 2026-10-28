@@ -1,8 +1,98 @@
 # Project State
 
-Last updated: 2026-10-27. This is the current snapshot, not a release history.
+Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
+
+**Search and reader recovery release (2026-10-28; authorized, preparing):**
+the user now authorizes submitting and deploying the completed search,
+offline/Reader recovery and nine completeness follow-ups as one batch.
+Earlier source-only/no-submission statements below retain their checkpoint
+meaning; the [release record](docs/execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md)
+owns current progress. No local tests/lint/typecheck/build/browser/services/
+database are authorized; full exact-source CI, a fresh 50-minute result-read
+gate per dispatch, independent artifact verification and stopped-writer
+five-component backup are required before deployment. Exclude pre-existing
+`apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
+change; recorded production/direct rollback remains `b4effda`/`c7dc074`,
+schema `20261022_0053`, pending fresh host verification.
+
+**Completeness follow-up optimization (2026-10-28; source implemented, unverified):**
+the [source review](docs/execution/ux-audit-completeness-review-2026-10-28.md)
+recorded nine bounded gaps: two new recovery/paging interactions and seven
+inherited issues. The [implementation record](docs/execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)
+now covers discard-intent recovery, attachment rename derivation, 500-item
+ordering limits, descending custom order, TOC append anchoring, sparse/
+relationship-aware previews, shared-string identity and typed ZIP errors.
+Regressions are authored, **not executed**; see the
+[follow-up verification boundaries](docs/testing.md#completeness-follow-up-optimization--2026-10-28-source-only).
+No local gate, browser/service/database check, CI dispatch, commit, push or
+deployment ran; this batch remains unaccepted.
+
+**Reader completeness and recovery (2026-10-28; local, unsubmitted):**
+the [12-direction review](docs/execution/ux-audit-optimization-directions-2026-10-28.md)
+now has a bounded [source implementation](docs/execution/UX_AUDIT_OPTIMIZATION_2026-10-28.md).
+Custom Share expiry cannot silently become permanent; copying has feedback and
+manual recovery. Same-tab comment drafts persist in existing account-scoped
+settings with CAS and explicit recovery. Current-conversation search resets on
+content changes, paginates and discloses bounded matches/totals. Owner/Offline/
+Share TOCs, offline file references and conversation lists expose continuation.
+Attachment upload queues support per-file retry/cancel and check unknown
+finalization before replay; bounded complex previews disclose truncation.
+Capability documentation is reconciled. Search candidate/grouping performance
+remains conditional: only a synthetic measurement protocol is delivered, not an
+unmeasured query rewrite. Regression cases are authored, **not executed**.
+No local tests/lint/typecheck/build/browser/services/database, CI dispatch,
+commit, push or deployment ran. See the [verification boundaries](docs/testing.md#reader-completeness-and-recovery--2026-10-28-source-only).
+All unsubmitted batches remain unaccepted; production/rollback, schema,
+offline packages v1/v2/v3 and Dexie v2 are unchanged.
+
+**Search lifecycle and replay (2026-10-27; local, unsubmitted):**
+the [review](docs/execution/ux-audit-search-lifecycle-2026-10-27.md) now has a
+bounded implementation follow-up. Repeating an equivalent Library search target
+reuses the existing Reader with an in-memory activation, not a URL nonce or wider
+remount. File/annotation targets reveal filtered-out rows; single-item annotation
+review aligns once without discarding drafts or modes. Read-only annotation
+projection prefers local entities/tombstones. A narrow content subscription
+invalidates old hits, coalesces serialized rebuilds and fences stale/auth-retired
+work; explicit retry can reattach a failed watcher. SEARCH-CAP was deferred at
+this checkpoint; its source follow-up is the 2026-10-28 batch above.
+See the [source contract](docs/system/PWA_OFFLINE_RESILIENCE_CONTRACT.md#search-lifecycle-and-replay--2026-10-27-source-only),
+[implementation record](docs/execution/SEARCH_LIFECYCLE_2026-10-27.md) and
+[verification boundaries](docs/testing.md#search-lifecycle-and-replay--2026-10-27-source-only).
+Cases are authored, not executed; no local runtime checks, browser/services, CI,
+commit or deployment ran. All three search batches remain unverified; production,
+rollback, schema and offline formats are unchanged.
+
+**Scoped search and offline entries (2026-10-27; local, unsubmitted):**
+the [review](docs/execution/ux-audit-search-recall-2026-10-27.md) has a source
+implementation follow-up. The optional offline message-version field is declared;
+conversation-scoped online search preserves distinct identical messages, while
+global/project hash folding remains. Offline queries filter conversation/type/role
+before the result limit and separate content from global titles. Library results
+reuse canonical body ranges and file/annotation destinations without leaving
+`/library`; retired asynchronous selections cannot reopen old results.
+Regression cases are authored, not executed. No local tests, lint, typecheck,
+build, browser, services, CI dispatch, commit or deployment ran. See the
+[implementation record](docs/execution/SEARCH_RECALL_OFFLINE_2026-10-27.md) and
+[verification boundaries](docs/testing.md#scoped-search-and-offline-entries--2026-10-27-source-only).
+This closes the type omission in source, not the pending real typecheck gate.
+The search work remains unverified; production/rollback is unchanged.
+
+**Search correctness and exact navigation (2026-10-27; local, unsubmitted):**
+literal SQL wildcard escaping, canonical Unicode code-point match ranges,
+bounded match construction and shared exact result links are implemented.
+Attachments open the existing file panel; annotations use their saved anchors,
+not comment/extract offsets. Content-free links hydrate only against the
+authorized current RenderBlock; stale/invalid ranges fall back without an
+exact highlight. Offline v1/v2/v3 and Dexie v2 remain unchanged. Regression
+cases and documentation are authored, but no local tests, lint, typecheck,
+build, browser or services ran under the user's no-local constraint. No CI
+dispatch, commit or deployment is authorized for this batch. See the
+[current source contract](docs/system/BACKEND_AND_API.md#搜索与编辑),
+[verification boundaries](docs/testing.md#search-correctness-and-exact-navigation--2026-10-27-source-only)
+and [implementation record](docs/execution/SEARCH_CORRECTNESS_2026-10-27.md).
+The accepted production/rollback remains `b4effda`/`c7dc074`, recorded below.
 
 **Deployed and accepted (2026-10-25): bounded ChatGPT reading/import compatibility and
 noise-matching precision fixes.** The

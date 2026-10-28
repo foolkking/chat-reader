@@ -88,6 +88,22 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await settingsAppearance(page.request, baseURL!, locale);
   });
 
+  test("a file search target opens and focuses the file row without previewing or downloading it", async ({ page, attachmentConversation }) => {
+    const id = attachmentConversation.conversation.id;
+    const attachment = await upload(page.request, id, "search-target.txt", "text/plain", Buffer.from("Synthetic search target"));
+    const contentRequests: string[] = [];
+    page.on("request", request => {
+      if (new URL(request.url()).pathname === `/api/attachments/${attachment.id}/content`) contentRequests.push(request.method());
+    });
+    await page.goto(`/conversations/${id}?files=open&attachmentId=${attachment.id}`);
+    const row = page.getByTestId("conversation-files-panel").locator(`[data-attachment-id="${attachment.id}"]`);
+    await expect(row).toBeVisible();
+    await expect(row).toHaveAttribute("data-search-target", "true");
+    await expect(row).toBeFocused();
+    await expect(page.getByTestId("attachment-viewer-shell")).toHaveCount(0);
+    expect(contentRequests).toEqual([]);
+  });
+
   test("CSV pages keep row order and truncated previews preserve the true header and original source", async ({ page, attachmentConversation }, info) => {
     const id = attachmentConversation.conversation.id;
     const csv = Array.from({ length: 101 }, (_, row) => Array.from({ length: 64 }, (_, col) => `r${row}c${col}`).join(",")).join("\n");

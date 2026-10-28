@@ -82,6 +82,73 @@ test("missing target preserves the safe initial Reader window", async ({ page })
   await expect(page.locator("[data-locate-pulse]")).toHaveCount(0);
 });
 
+test("content-free exact search URL locates the second Unicode occurrence rather than the first quote", async ({ page }) => {
+  const text = "😀 prefix needle gap needle end";
+  const turn = readerTurnFixture(text);
+  await page.route(`**/api/conversations/${conversationId}/reader-turn*`, route => json(route, turn));
+  const message = turn.items[0];
+  const start = Array.from(text.slice(0, text.lastIndexOf("needle"))).length;
+  const params = new URLSearchParams({
+    messageId,
+    messageVersionId: message.current_version.id,
+    renderBlockId: message.render_blocks[0].id,
+    blockIndex: "0",
+    characterOffset: String(start),
+    endCharacterOffset: String(start + "needle".length),
+  });
+  // Capture the real transient pulse in its commit, rather than making a
+  // delayed CI assertion depend on its 720ms presentation lifetime.
+  await page.addInitScript(blockId => {
+    const probe = window as typeof window & { __syntheticSearchPulseDelta?: number };
+    const observer = new MutationObserver(() => {
+      const pulse = document.querySelector<HTMLElement>('[data-locate-pulse="text"]');
+      const block = document.getElementById(blockId);
+      if (!pulse || !block) return;
+      const nodes: Text[] = [];
+      const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+      const value = nodes.map(node => node.textContent).join("");
+      const start = value.lastIndexOf("needle");
+      if (start < 0) return;
+      let position = 0;
+      const range = document.createRange();
+      for (const node of nodes) {
+        if (position <= start && start < position + node.length) range.setStart(node, start - position);
+        if (position < start + 6 && start + 6 <= position + node.length) {
+          range.setEnd(node, start + 6 - position);
+          break;
+        }
+        position += node.length;
+      }
+      const expected = range.getBoundingClientRect();
+      const actual = pulse.getBoundingClientRect();
+      probe.__syntheticSearchPulseDelta = Math.max(Math.abs(actual.x - expected.x), Math.abs(actual.y - expected.y));
+      observer.disconnect();
+    });
+    observer.observe(document, { childList: true, subtree: true });
+  }, `block-${messageId}-0`);
+  await page.goto(`/conversations/${conversationId}?${params}`);
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & { __syntheticSearchPulseDelta?: number }).__syntheticSearchPulseDelta ?? Number.POSITIVE_INFINITY,
+  )).toBeLessThanOrEqual(2);
+});
+
+test("stale search version falls back without an exact text pulse", async ({ page }) => {
+  const params = new URLSearchParams({
+    messageId,
+    messageVersionId: "dddddddd-dddd-4ddd-8ddd-ddddddddddd9",
+    renderBlockId: "dddddddd-dddd-4ddd-8ddd-ddddddddddd3",
+    blockIndex: "0",
+    characterOffset: "0",
+    endCharacterOffset: "6",
+  });
+  await page.goto(`/conversations/${conversationId}?${params}`);
+  const reader = page.getByTestId("reader-scroll-root");
+  await expect(reader.locator(`#message-${messageId}`)).toContainText(preservedText);
+  await expect(reader).toHaveAttribute("data-navigation-stage", "settled:fallback", { timeout: 15_000 });
+  await expect(page.locator('[data-locate-pulse="text"]')).toHaveCount(0);
+});
+
 async function mockReaderApi(route: Route): Promise<void> {
   const request = route.request();
   const url = new URL(request.url());
@@ -193,7 +260,7 @@ function conversationFixture() {
   };
 }
 
-function readerTurnFixture() {
+function readerTurnFixture(text = preservedText) {
   return {
     conversation_id: conversationId,
     turn_key: "turn-0",
@@ -210,8 +277,8 @@ function readerTurnFixture() {
       current_version: {
         id: "dddddddd-dddd-4ddd-8ddd-ddddddddddd2",
         version_number: 1,
-        plain_text: preservedText,
-        display_text: preservedText,
+        plain_text: text,
+        display_text: text,
         blocks: [],
         content_hash: "message-hash",
       },
@@ -219,12 +286,12 @@ function readerTurnFixture() {
         id: "dddddddd-dddd-4ddd-8ddd-ddddddddddd3",
         block_index: 0,
         block_type: "paragraph",
-        plain_text: preservedText,
-        data: { text: preservedText },
-        char_count: preservedText.length,
+        plain_text: text,
+        data: { text },
+        char_count: text.length,
       }],
       block_count: 1,
-      char_count: preservedText.length,
+      char_count: text.length,
       is_heavy: false,
       ordinal: 1,
       content_preview: null,
