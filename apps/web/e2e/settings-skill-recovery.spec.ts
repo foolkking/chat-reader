@@ -32,6 +32,9 @@ for (const system of [false, true]) {
       await shot(page, `skill-unconfirmed-${system}`);
       await f.row.getByRole("button", { name: "Retry replacement", exact: true }).click();
       await expect(f.row.getByRole("status")).toHaveText("Replaced");
+      await page.keyboard.press("Escape");
+      await expect(f.dialog).toHaveCount(0);
+      await expect(page.getByRole("dialog", { name: "Discard unsaved changes?" })).toHaveCount(0);
       expect((await (await page.request.get(f.path)).json()).bundle_revision).toBe(saved.bundle_revision);
       expect(await (await page.request.get(`${f.path}/revisions?limit=50`)).json()).toEqual(before);
       expect(writes).toBe(2);

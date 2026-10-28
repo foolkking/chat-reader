@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; fourth full CI dispatched):**
+**Search and reader recovery release (2026-10-28; fourth full CI failed, corrected source pending CI):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -26,9 +26,17 @@ the documentation checkpoint correction). First read at **2026-10-28
 failure: six recovery browser cases still intercepted the retired `limit=5000`
 list instead of the current `limit=101&offset=0` first page. Their precise
 interceptors and initial-hit assertions were committed/pushed as `1dcd9f9`.
-Complete CI `40666671235` targets that exact source; results may first be read
-after **2026-10-28 18:35:02 Beijing**. Product code, assertions and release
-gates are not relaxed. No accepted deployable artifact exists. No local
+Complete CI `40666671235` targeted that exact source and was first read at
+**2026-10-28 18:43:47 Beijing**, after its gate. Settings passed; API had
+75 synthetic import failures under memory admission and Web had one
+post-replacement stale unsaved-changes guard failure. The source correction
+isolates the shared synthetic API fixture's memory sensor, retains real
+low/unknown-memory rejection, and publishes personal/system Skill dirty
+aggregates during layout before success can be acted on. Immediate-close and
+other-draft protection regressions are authored, not run locally. The earlier
+six list browser fixes were not reached in this run. A fresh complete
+exact-source CI is required; no release gate is relaxed and no accepted
+deployable artifact exists. No local
 repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;

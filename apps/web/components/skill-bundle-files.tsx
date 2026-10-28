@@ -1,6 +1,6 @@
 "use client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiRequestError, getSkill, getSkillRevisions, replaceSkillBundle } from "../lib/api";
 import { adminApi } from "../lib/admin-client";
 import { authenticationGeneration } from "../lib/offline-access";
@@ -35,7 +35,8 @@ export function SkillBundleFiles({ skill, onDirtyChange, system = false, onBusyC
   const conflict = status === 409 && /Skill changed/i.test(replace.error?.message ?? "");
   const retryable = !status || status >= 500 || status === 429;
   const busy = replace.isPending || reading;
-  useEffect(() => { onDirtyChange?.(Boolean(file)); }, [file, onDirtyChange]);
+  // The visible selection/success and its leave guard must share a commit.
+  useLayoutEffect(() => { onDirtyChange?.(Boolean(file)); }, [file, onDirtyChange]);
   useEffect(() => { onBusyChange?.(busy); }, [busy, onBusyChange]);
   useEffect(() => {
     const target = replace.isSuccess ? choose.current : replace.isError && !reading ? (latest !== null ? latestDownload.current : recovery.current ?? choose.current) : null;

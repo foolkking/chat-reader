@@ -54,6 +54,9 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await row.getByLabel(/替换 Skill ZIP|Replace Skill ZIP/).setInputFiles({ name: "browser-skill.zip", mimeType: "application/zip", buffer: bundle(script + " updated") });
       await row.getByRole("button", { name: /^(确认替换|Replace)$/ }).click();
       await expect(row).toContainText(/已替换|Replaced/);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+      await expect(page.getByRole("dialog", { name: /放弃未保存的更改|Discard unsaved changes/ })).toHaveCount(0);
       const resolved = await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en")).json();
       expect(resolved.bundle_revision).toBe(2);
       const bytes = await (await page.request.get(resolved.bundle_url)).body();
@@ -87,6 +90,11 @@ test("unsaved replacement survives cancelled navigation and a real version confl
     await expect(dialog.getByRole("button", { name: "English", exact: true })).toHaveCount(0);
     const row = dialog.locator("article").filter({ hasText: name });
     await row.getByLabel("Replace Skill ZIP / Markdown").setInputFiles({ name: "browser-skill.zip", mimeType: "application/zip", buffer: bundle(name + " local draft") });
+    await page.keyboard.press("Escape");
+    const leave = page.getByRole("dialog", { name: "Discard unsaved changes?" });
+    await expect(leave).toBeVisible();
+    await leave.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Maintenance", exact: true }).click();
     await page.getByRole("dialog", { name: "Discard unsaved changes?" }).getByRole("button", { name: "Cancel", exact: true }).click();
     expect(await row.getByLabel("Replace Skill ZIP / Markdown").evaluate((input: HTMLInputElement) => input.files?.length)).toBe(1);
@@ -153,6 +161,8 @@ test("format conversion respects the selected Bundle and exposes loading failure
     await personal.getByRole("button", { name: "Replace", exact: true }).click();
     await expect(personal.getByRole("status")).toHaveText("Replaced");
     await page.keyboard.press("Escape");
+    await expect(skills).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Discard unsaved changes?" })).toHaveCount(0);
     await page.getByRole("button", { name: "Import data", exact: true }).click();
     // Reopening resumes the existing failed import; it does not need another upload.
     await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toBeVisible();
@@ -166,6 +176,42 @@ test("format conversion respects the selected Bundle and exposes loading failure
     await page.unroute("**/api/skills/resolve?**");
     await page.request.delete(`/api/skills/${skill.id}`, { headers: { Origin: baseURL! } });
   }
+});
+
+test("a confirmed replacement does not clear another unsaved Skill upload", async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await settingsAppearance(page.request, baseURL!, "en-US");
+  const name = `Synthetic saved with another draft ${Date.now()}`;
+  const created = await page.request.post("/api/skills", { headers: { Origin: baseURL! }, multipart: {
+    category: "EXPORT_CONTEXT", name,
+    file: { name: "original.md", mimeType: "text/markdown", buffer: Buffer.from("# Original synthetic Skill") },
+  } });
+  expect(created.status()).toBe(201);
+  const skill = await created.json();
+  try {
+    const dialog = await openSkills(page, 375);
+    const row = dialog.locator("article").filter({ hasText: name });
+    await row.getByLabel("Replace Skill ZIP / Markdown").setInputFiles({
+      name: "saved.md", mimeType: "text/markdown", buffer: Buffer.from("# Confirmed synthetic replacement"),
+    });
+    await dialog.getByRole("button", { name: "Upload my Skill", exact: true }).click();
+    const draftName = dialog.getByLabel("Skill name", { exact: true });
+    const draftFile = dialog.getByLabel("Choose a Skill ZIP or Markdown file", { exact: true });
+    await draftName.fill("Synthetic unsaved upload");
+    await draftFile.setInputFiles({ name: "unsaved.md", mimeType: "text/markdown", buffer: Buffer.from("# Retained upload draft") });
+    await row.getByRole("button", { name: "Replace", exact: true }).click();
+    await expect(row.getByRole("status")).toHaveText("Replaced");
+    await page.keyboard.press("Escape");
+    const leave = page.getByRole("dialog", { name: "Discard unsaved changes?" });
+    await expect(leave).toBeVisible();
+    await leave.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(dialog).toBeVisible();
+    await expect(draftName).toHaveValue("Synthetic unsaved upload");
+    expect(await draftFile.evaluate((input: HTMLInputElement) => input.files?.length)).toBe(1);
+    expect((await (await page.request.get(`/api/skills/${skill.id}`)).json()).bundle_revision).toBe(2);
+    const listing = await (await page.request.get("/api/skills?category=EXPORT_CONTEXT&locale=en")).json();
+    expect(listing.some((item: { name: string }) => item.name === "Synthetic unsaved upload")).toBe(false);
+  } finally { await page.request.delete(`/api/skills/${skill.id}`, { headers: { Origin: baseURL! } }); }
 });
 
 

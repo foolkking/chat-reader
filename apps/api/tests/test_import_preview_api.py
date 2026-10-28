@@ -10,11 +10,16 @@ from app.core.config import get_settings
 from app.core.database import Base, get_db
 from app.main import app
 from app.models.user import User
+from app.services import uploads
 from app.services.ownership import LEGACY_OWNER_USER_ID
 
 
 @pytest.fixture()
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
+    # Synthetic API fixtures exercise protocol/data contracts, not runner RAM.
+    # Keep admission active: memory-boundary tests override this probe explicitly.
+    # Do not patch the core probe used by the host/cgroup diagnostics tests.
+    monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 16 * 1024**3)
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "storage" / "imports"))
     monkeypatch.setenv("EXPORT_STORAGE_DIR", str(tmp_path / "storage" / "exports"))
     monkeypatch.setenv("IMPORT_COMMIT_INLINE", "true")
@@ -167,3 +172,44 @@ def test_removed_crbundle_product_route_is_not_exposed(client: TestClient) -> No
     )
 
     assert response.status_code == 404
+
+
+@pytest.mark.parametrize("available", [0, None])
+def test_synthetic_client_still_rejects_unadmitted_commits_and_preserves_retry(
+    client: TestClient,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    available: int | None,
+) -> None:
+    preview = client.post(
+        "/api/imports/preview",
+        files={"files": (
+            "synthetic.json",
+            b'{"metadata":{"powered_by":"ChatGPT Exporter"},"messages":[{"role":"Prompt","say":"Synthetic admission fixture"}]}',
+            "application/json",
+        )},
+    )
+    assert preview.status_code == 200, preview.text
+    import_id = preview.json()["import_id"]
+    root = tmp_path / "storage" / "imports" / import_id
+    before = {path.name: path.read_bytes() for path in root.iterdir()}
+    probes = []
+
+    def pressured() -> int | None:
+        probes.append(available)
+        return available
+
+    with monkeypatch.context() as patch:
+        patch.setattr(uploads, "available_memory_bytes", pressured)
+        rejected = client.post(f"/api/imports/{import_id}/commit")
+    assert rejected.status_code == 400, rejected.text
+    assert "memory pressure" in rejected.json()["detail"]
+    assert probes, "Synthetic headroom must not bypass the real admission path."
+    assert client.get("/api/conversations").json() == []
+    assert {path.name: path.read_bytes() for path in root.iterdir()} == before
+
+    # The scoped pressure override is gone; retry the retained import, not a copy.
+    saved = client.post(f"/api/imports/{import_id}/commit")
+    assert saved.status_code == 200, saved.text
+    assert len(saved.json()["conversation_ids"]) == 1
+    assert len(client.get("/api/conversations").json()) == 1

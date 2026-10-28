@@ -14,6 +14,29 @@ Archive-destination requirements remain. No local tests/build/browser/service
 commands validate this correction; require the unchanged complete CI and
 release gates. Official quality evidence is not a deployable image artifact.
 
+Run `40666671235` (exact `1dcd9f9`) was first read at **2026-10-28
+18:43:47 Beijing**, after its 18:35:02 gate. Settings passed. API had
+5,826 passes / 75 failures / three skips; the failing synthetic imports were
+rejected by memory admission. The shared `test_import_preview_api.py` client
+now controls only `uploads.available_memory_bytes`, following the existing
+streaming/analysis fixtures. Admission, production thresholds, core host/cgroup
+probe tests and explicit pressure overrides stay intact. New parameterized
+HTTP regressions require zero/unknown memory to reject commit without canonical
+writes or source changes, then accept the same retained import after the scoped
+override ends. This does not measure runner memory or certify resource usage.
+
+Web's Context step had 34 passes / one failure. Verified official quality
+evidence shows `Replaced` together with `Discard unsaved changes?`; the child
+and aggregate dirty notifications previously crossed passive-effect commits.
+Personal/system Skill aggregates now publish in layout effects. Browser
+regressions require immediate Escape after confirmed success (including lost
+response recovery), immediate protection of a selected unsaved replacement,
+and retention of a separate unsaved upload after another file is saved.
+These additions are authored, not locally executed; no sleeps, forced clicks,
+discard-on-success workaround, timeout or retry changes are introduced.
+The earlier six list-interceptor fixes were not reached in this run and remain
+unaccepted. Require a new complete exact-source CI and all release gates.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

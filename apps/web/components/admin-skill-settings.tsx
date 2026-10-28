@@ -1,6 +1,6 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AdminRequestError, adminApi, type SystemSkill } from "../lib/admin-client";
 import { SkillBundleFiles } from "./skill-bundle-files";
 import { usePreferences } from "./preferences-provider";
@@ -44,7 +44,7 @@ export function AdminSkillSettings({ onDirtyChange }: { onDirtyChange?: (dirty: 
   });
   const dirty = Object.values(dirtyMembers).some(Boolean);
   const busy = changeDefault.isPending || restore.isPending || Object.values(busyMembers).some(Boolean);
-  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useLayoutEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   useEffect(() => {
     if (notice && query.isError) setRefreshError(true);
   }, [notice, query.isError]);

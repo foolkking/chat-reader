@@ -195,7 +195,7 @@ log in to GitHub in a browser.
 Exact-source deployment helpers remain preparatory only. No writer was stopped
 or application replaced; production/direct rollback remains `b4effda`/`c7dc074`.
 
-### CI attempt 4 — dispatched; result-read gate active
+### CI attempt 4 — failed; synthetic admission and Skill leave-guard corrections
 
 The interceptor correction and pending source-contract documentation were
 committed as **`1dcd9f9986c70adfcb7b92e3a4ea3be74e640590`**. Two existing SSH
@@ -208,11 +208,47 @@ Complete workflow run **`40666671235`**, attempt 1, was created for that exact
 source at `2026-10-28T09:45:01Z`. The conservative post-dispatch timestamp is
 `09:45:01.2255937Z`; no result may be read until after
 `10:35:01.2255937Z` (**2026-10-28 18:35:02 Beijing**, rounded up).
-Only identity/source/time metadata was inspected. This documentation-only
-dispatch checkpoint is not a new application candidate; all later artifact
-checks must keep the exact `1dcd9f9` source/run/attempt chain. Full quality,
-official artifact, independent source verification, fresh capacity and
-stopped-writer backup gates remain pending. No production action occurred.
+Only identity/source/time metadata was inspected before that gate. The
+documentation-only dispatch checkpoint `d7f0a21` was not a new application
+candidate. First result read was **`2026-10-28T10:43:47.5995079Z`**
+(**18:43:47 Beijing**), after the gate. Settings passed; API and Web failed.
+Image build/inspection were skipped and no deployable artifact was produced.
+
+- API had **5,826 passes / 75 failures / three skips**. The failures clustered
+  in small synthetic imports from offline annotations onward: commit was
+  rejected with memory pressure, or queued transcript analysis reported
+  insufficient memory. The shared SQLite/TestClient fixture did not control
+  the host headroom sensor, unlike existing draft-streaming/analysis fixtures.
+  Only that synthetic fixture now provides deterministic headroom to
+  `uploads.available_memory_bytes`; no admission code, concurrency gate,
+  threshold or core host/cgroup probe changes. Existing low/unknown-memory
+  overrides remain. New HTTP parameterizations require actual probe calls,
+  rejection at zero/unknown headroom, unchanged source files and zero canonical
+  conversations, then a successful retry of the retained import after the
+  scoped pressure override ends. Runner memory consumption is not measured or
+  accepted by this test isolation.
+- Web's **Context files, export and reader recovery** step had **34 passes /
+  one failure**. The selected-normalizer flow displayed `Replaced` and then
+  opened `Discard unsaved changes?`, whose backdrop blocked Import. Official
+  quality artifact `12807191516` matched
+  `sha256:a3d5d58148d625c4588bf571db9827d026f869393626c0515b107c1f901b166b`;
+  its failure context confirms both states. There is no trace-based claim.
+  The file selection and personal/system aggregate dirty notifications now use
+  layout effects, settling the leave guard before visible success can be
+  acted on. Do not clear the whole form unconditionally. Browser assertions
+  cover immediate Escape after successful replacement in the width/locale
+  matrix and personal/system lost-response recovery; an unsaved selection and
+  a separate unsaved upload still require cancellation-safe confirmation.
+- The six list-interceptor corrections from attempt 3 were **not reached**
+  because the earlier Context gate failed; they are not counted as accepted.
+
+The corrections and regressions are source-only at this checkpoint. No local
+tests/lint/typecheck/build/browser/service/database commands ran. No workflow,
+timeout, retry allowance, production memory protection or required release gate
+is weakened. A fresh complete exact-source dispatch and a new 50-minute gate
+are required. Full quality, official artifact, independent source verification,
+fresh capacity and stopped-writer backup gates remain pending. No production
+action occurred.
 
 Implementation evidence and remaining verification boundaries:
 

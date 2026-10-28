@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Loader2, RotateCcw, Trash2, Upload } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ApiRequestError, createSkill, deleteSkill, getSkills, setSkillSelection, updateSkill } from "../lib/api";
 import { usePreferences } from "./preferences-provider";
 import { useInteractionDialog } from "./interaction-dialog-provider";
@@ -40,7 +40,9 @@ export function SkillSettings({ focused = false, onDirtyChange }: { focused?: bo
     return () => { mounted.current = false; };
   }, []);
   const dirty = Boolean(name.trim() || file || Object.values(bundleDirty).some(Boolean));
-  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
+  // Settle the aggregate guard before a visible replacement can be closed.
+  // Other rows and the upload form still contribute their unsaved drafts.
+  useLayoutEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const refreshSkills = async (requestedCategory = category, requestedLocale = locale) => {
     const requestedScope = `${requestedCategory}:${requestedLocale}`;
     try {
