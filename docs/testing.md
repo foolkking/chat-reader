@@ -74,6 +74,8 @@ The new covered-endpoint fixture placed its target at 100px relative to a
 120px reading line, inside the normal 24px tolerance, so it never tested the
 endpoint exception. The other 11 navigation-alignment cases passed; no Web
 browser gate was reached. API passed; settings was still running at 21:55:40.
+A **22:01:44 Beijing** follow-up confirmed API/settings success, Web failure
+and both image jobs skipped.
 
 Only the faulty fixture is corrected: an exact Range starts at 32px in a
 non-scrollable window, with explicit preconditions that it is outside the
@@ -84,6 +86,12 @@ production code, alignment tolerance/stability, timeouts, retries and browser
 assertions are unchanged. Static review only, **not locally executed**.
 The unchanged complete exact-source CI and all artifact/deployment gates remain
 required; the previous browser corrections are not promoted to passed evidence.
+The fixture correction is pushed as `99ecb93`; complete run `40701765161`,
+attempt 1, targets that exact source.
+At **2026-10-28 22:06:03 Beijing**, official job/step metadata confirmed the
+previously failed ordinary-user UX gate succeeded (22:04:33–22:05:43).
+Web/API/settings were still running. This is early-gate evidence, not a full
+Web/PWA, exact mounted geometry, image-artifact or deployment acceptance.
 
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 

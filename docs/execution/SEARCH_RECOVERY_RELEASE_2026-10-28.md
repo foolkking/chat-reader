@@ -382,6 +382,36 @@ jobs, independent official image verification, fresh host preflight and
 stopped-writer five-component backup remain required. No production action
 occurred.
 
+A final status follow-up at **2026-10-28 22:01:44 Beijing**
+(`14:01:44.7629427Z`) confirmed API/settings success, Web failure and both image
+jobs skipped. This does not validate the unreachable Web browser gates.
+
+### CI attempt 7 — dispatched; fixed failure-diagnosis wait removed
+
+The paired occlusion-fixture correction and evidence updates were
+committed/pushed as **`99ecb934ac11d9072d81f3d79949b045d29597da`**.
+After verifying remote `master`, complete `Build release images` run
+**`40701765161`**, attempt 1, was created for that exact source at
+`2026-10-28T14:00:45Z`; the conservative post-dispatch timestamp is
+`14:00:45.2102118Z`. It was dispatched once, not a failed-job-only rerun.
+
+Per the latest user instruction, failure diagnosis follows actual remote CI
+status without the former fixed waiting period. No local tests/lint/
+typecheck/build/browser/services/database or dependency diagnostics ran.
+No quality gate, workflow timeout, retry allowance, independent official
+artifact verification, fresh host preflight or stopped-writer backup
+requirement is removed. Production/direct rollback and schema are unchanged.
+A subsequent documentation-only checkpoint retains the exact application
+candidate/run/attempt chain above.
+
+An early status read at **2026-10-28 22:06:03 Beijing**
+(`14:06:03.3021023Z`) verified this source/run/attempt and confirmed Web job
+`122863172153` step 18, `Ordinary-user recovery and bounded attachment
+regressions`, **success** (started `14:04:33Z`, completed `14:05:43Z`).
+Web had advanced to Playwright installation; Web/API/settings remained in
+progress. This confirms the corrected early gate, not full browser/PWA,
+official image or deployment acceptance. No local validation was substituted.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),

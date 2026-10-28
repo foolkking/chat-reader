@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; sixth Web CI correction):**
+**Search and reader recovery release (2026-10-28; seventh full CI dispatched):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -34,10 +34,16 @@ fixture accidentally entered normal 24px alignment, not the endpoint path.
 The corrected test pairs an identical exact Range at an unreachable reading
 line, with/without header padding, retaining the rejection assertion and
 production implementation unchanged. The other 11 alignment cases passed;
-browser gates were not reached. API passed; settings was still in progress at
-21:55:40. A new complete exact-source CI is required. Earlier attempts remain
-in the release record. No quality/artifact/deployment gate is relaxed and no
-accepted deployable artifact exists.
+browser gates were not reached. A **22:01:44 Beijing** follow-up confirmed
+API/settings success, Web failure and both image jobs skipped. The fixture
+correction is pushed as `99ecb93`; full CI `40701765161`, attempt 1, targets
+that exact source. At **22:06:03 Beijing**, the previously failing ordinary-user
+UX gate was confirmed successful (completed 22:05:43); Web/API/settings remain
+in progress, so full browser/release acceptance is still pending.
+Failure diagnosis follows actual CI status without fixed
+waiting, per the latest instruction. Earlier attempts remain in the release
+record. No quality/artifact/deployment gate is relaxed and no accepted
+deployable artifact exists.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
