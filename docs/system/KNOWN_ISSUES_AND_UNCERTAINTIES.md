@@ -1,5 +1,27 @@
 # 已知风险与不确定性
 
+## Current verification boundaries — 2026-10-29
+
+Use [Project State](../../PROJECT_STATE.md) and the
+[current release record](../execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md)
+for exact source/CI/artifact/backup and production acceptance. Runtime/direct
+rollback is `f8a6a06`/`b4effda`, schema `20261022_0053`; all five exact-source CI
+jobs, independent artifact acceptance and the stopped-writer deployment/
+operational recheck passed. No local application suites/build/browser/services/
+database validated this release. Earlier uncommitted/no-deployment statements
+below describe their own checkpoints, not the current runtime.
+
+- CI and health/privacy checks do not establish authenticated production UI,
+  physical clipboard, screen-reader behavior or sustained-load acceptance.
+- Same-runtime failed-delete intent is not crash/forced-reload durable.
+  Bounded Office previews are not full-fidelity or hostile-document certification.
+- Noise protection remains bounded recognition with the limitations below;
+  a passing corpus is not exhaustive Markdown/AI-adapter parity or an
+  unmeasured performance guarantee.
+- The new five-component backup is verified, not restore-drill accepted.
+  Server-local points may share hardlinks; independent off-site recovery and
+  scheduled backups remain unconfigured. Future releases need fresh capacity.
+
 ## Historical local verification checkpoint — 2026-10-14
 
 The following limitations describe only the local verification checkpoint on
@@ -25,10 +47,11 @@ below likewise do not define current debt or deployment state.
 
 ## Current verification boundaries — 2026-10-27
 
-Use [Project State](../../PROJECT_STATE.md) for local/deployed identity and the
-[2026-10-25 release record](../execution/CHATGPT_NOISE_RELEASE_2026-10-25.md) for
-production acceptance. Current review fixes are local and uncommitted. The
-SHA-pinned workflow source contracts are not a fresh remote CI result.
+This stable heading retains the original local-only noise-review checkpoint.
+Its uncommitted/acceptance-limit statements are historical; read the
+[2026-10-29 boundaries](#current-verification-boundaries--2026-10-29) above for
+later CI and production acceptance. The semantic limitations below remain;
+SHA-pinned source contracts alone are not a fresh remote CI result.
 
 ### Noise matching
 

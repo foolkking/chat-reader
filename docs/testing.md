@@ -223,10 +223,21 @@ All source/fixture changes were verified by official CI only; no local
 tests/lint/typecheck/build/browser/services/database or dependency diagnostics
 ran in this correction cycle.
 
-CI image build and inspection also passed. Independent downloaded-image/
-source acceptance, fresh host preflight, stopped-writer five-component backup
-and production acceptance remain pending. A documentation-only checkpoint
-does not change the accepted CI source or start deployment.
+CI image build/inspection and independent downloaded-image/source acceptance
+passed. Fresh actual-artifact capacity/rollback/idle-queue preflight and
+stopped-writer five-component backup `chat-reader-20261028T192159Z` passed.
+Production acceptance completed at **2026-10-29 03:31:15 +08:00**;
+the **03:32:31** independent operational recheck rehashed all five components
+and repeated exact images, health/worker heartbeat, release pointers,
+HTTP/privacy, PostgreSQL/configuration, logs and OOM checks, all passing.
+Runtime/direct rollback is `f8a6a06`/`b4effda`, schema `20261022_0053`.
+See the [release record](execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md)
+for the 9m32s maintenance window, exact identities and preserved evidence.
+Documentation-only commits do not change the accepted application source.
+No authenticated production browser, physical-clipboard, sustained-load or
+isolated restore-drill acceptance is claimed. Source-only sections below retain
+their earlier checkpoints; these later CI/operational results supersede only
+their submission/release status, not their stated test-double or fidelity limits.
 
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 

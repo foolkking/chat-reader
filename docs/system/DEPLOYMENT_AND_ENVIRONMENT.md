@@ -1,22 +1,57 @@
 # 部署与运行环境
 
-## Authorized release preparation — 2026-10-27
+## Current production — 2026-10-29
 
-The reviewed noise-matching/renderer-protection corrections and immutable
-Actions contracts are authorized for submission and deployment as one batch.
-No schema, production configuration or storage-format change is intended.
-Fresh full CI (first read at least 50 minutes after each dispatch), independent
-artifact verification and a stopped-writer five-component backup are mandatory.
-See the [release record](../execution/NOISE_REVIEW_RELEASE_2026-10-27.md);
-the accepted runtime below is not yet changed.
+Runtime/direct rollback is **f8a6a06 / b4effda**, both at
+**20261022_0053**. Exact source
+`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713` passed all five jobs in full CI
+`40738934749`, attempt 1, after the 50-minute read gate. Independent official
+artifact `12842966625` acceptance verified archive/OCI/source/image identity;
+the actual staged-artifact capacity, protected images and idle queues passed.
 
-## Current production — 2026-10-25
+Only application writers were stopped. The resource-bounded read-only
+attachment audit was complete/clean with 358 SHA-256 verifications.
+Five-component backup **chat-reader-20261028T192159Z** passed checksums, TOC and
+archive checks before image loading. Applications were replaced using
+`--no-build --no-deps`; no schema upgrade/downgrade ran.
+Acceptance completed at **2026-10-28 19:31:15 UTC /
+2026-10-29 03:31:15 +08:00**; independent **19:32:31 UTC / 03:32:31 +08:00**
+recheck passed, including five-component rehash and all 12 new/direct-rollback/
+older `c7dc074` image tags. Maintenance was **19:21:43–19:31:15 UTC /
+03:21:43–03:31:15 +08:00 (9m32s)**, not zero downtime.
 
-Runtime source is **c7dc074 / 20261022_0053**, accepted at
+API/Web/PostgreSQL are healthy, worker `alive_idle`; exact runtime images,
+HTTPS/denial/privacy, zero startup error keywords/restarts and unchanged OOM
+passed. PostgreSQL ID/start/restarts, env/Compose/Nginx and stopped-writer
+canonical counts are unchanged. No operational-checkout/configuration writes,
+PostgreSQL restart, production application build, user-data/volume deletion,
+backup pruning or additional image cleanup occurred. The earlier separately
+authorized three-version image cleanup remains in the release history.
+Available disk at recheck was **3,233,960 KiB**; do not waive the next release's
+fresh capacity check. Use exact-source lightweight support, never full serving
+API diagnostics or check-only overlays with runtime `up`.
+
+No local application tests/build/browser/services/database validated this
+release. Authenticated production UI, physical clipboard, sustained load and
+an isolated restore drill for this backup were not exercised. Server-local
+hardlinked backup points are not independent physical/off-site copies.
+See the [current release record](../execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md).
+
+## Previous accepted production — 2026-10-27
+
+Then-runtime/direct rollback was **b4effda / c7dc074**, schema 0053.
+Exact-source CI `40463956431`, independent official-artifact verification and
+stopped-writer backup `chat-reader-20261027T075731Z` passed before acceptance
+at **2026-10-27 08:06:17 UTC / 16:06:17 +08:00**.
+See the [historical release record](../execution/NOISE_REVIEW_RELEASE_2026-10-27.md).
+
+## Previous accepted production — 2026-10-25
+
+Then-runtime source was **c7dc074 / 20261022_0053**, accepted at
 **2026-10-25 15:08:17 UTC / 23:08:17 +08:00**. Exact-source CI
 **40199643009** passed all five jobs after the wait gate. Independent official
 artifact/OCI/source verification passed, including the v7 reading and noise
-match-mode markers. Current/direct rollback is **c7dc074/3fbf79d**, both at
+match-mode markers. Then-current/direct rollback was **c7dc074/3fbf79d**, both at
 0053; no schema upgrade or downgrade ran.
 
 Stopped-writer five-component backup **chat-reader-20261025T145945Z** passed

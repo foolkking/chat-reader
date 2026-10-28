@@ -4,53 +4,52 @@ Last updated: 2026-10-29. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28 batch; 2026-10-29 replay correction):**
-the user now authorizes submitting and deploying the completed search,
-offline/Reader recovery and nine completeness follow-ups as one batch.
-Earlier source-only/no-submission statements below retain their checkpoint
-meaning; the [release record](docs/execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md)
-owns current progress. No local tests/lint/typecheck/build/browser/services/
-database are authorized; full exact-source CI, independent artifact
-verification and stopped-writer five-component backup are required before
-deployment. The latest instruction removes fixed waiting for CI failure
-diagnosis; earlier 50-minute checkpoints remain historical evidence.
-Exclude pre-existing
-`apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Exact **`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`** passed all five
-jobs in full CI **`40738934749`**, attempt 1. First all-green metadata:
-**2026-10-29 02:49:49 Beijing**; full source/run/attempt/job verification:
-**02:50:36**. Web passed **1,822 ordinary-user UX**, **36 Context**,
-**100 mutation**, **161 Default PWA**, **18 authentication** and
-**19 negative PWA** cases; 750 Default PWA conditional skips remain.
-The 375/1440px offline body/file/annotation workflows both passed, including
-initial/replayed code-word pulses within 2px, same Reader/URL, finite >200px
-departure and <36px return. Equivalent targets avoid redundant routing;
-explicit renderer-only UI is excluded from text offsets. The probe preserves
-the fenced-code newline while selecting only the word.
+**Search and Reader recovery — deployed and accepted 2026-10-29.**
+Exact **`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`** passed all five jobs in
+full CI **`40738934749`**, attempt 1. The complete source/run/attempt/job
+verification at **02:50:36 Beijing** was after the 50-minute gate.
+Web passed **1,822 UX / 36 Context / 100 mutation / 161 Default PWA /
+18 authentication / 19 negative PWA** cases; 750 conditional skips remain.
+Both 375/1440px offline body/file/annotation workflows passed retained
+Reader/URL and initial/replayed code-word pulses within 2px.
+API passed **5,903 / three skipped**; settings **463 matrix cases plus one
+independent restore**, including the strengthened genuine blocked-deletion
+fixture. No alignment, authentication, cleanup or release gate was weakened.
 
-API passed **5,903 / three skipped**. Settings passed **463 matrix cases**
-plus **one independent new-instance restore**. Its strengthened real blocked
-connection fixture passed, requiring a native deletion request and retained
-record before release, then Retry/removal and privacy/cache protections.
-No auth/cleanup product logic, timeout, retry, alignment or release gate
-was weakened. Earlier failed runs, diagnoses and verified evidence digests
-remain in the release record; this CI is not production acceptance.
-Official image artifact **`12842966625`** was produced and inspected in CI.
-Independent downloaded-image/source acceptance passed at **03:04:17 Beijing**:
-35 OCI blobs, 23 layers, 336 embedded API source files and exact Web build
-identity matched. The staged archive passed both-end hashes. Fresh host
-preflight passed at **03:18:34**, with `4,212,648 KiB` available against
-`4,013,395 KiB` required, unchanged healthy production and idle queues.
-Stopped-writer five-component backup and production replacement/acceptance
-are **still pending**; no deployment is claimed.
-No local repository suites or builds were run;
-the release record discloses the one-off dependency diagnostic exception. The
-previously recorded read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
-no application replacement has occurred. The user separately authorized removing only the
-unused `f3b331a`/`50f6de4`/`5992d0e` application images; this exact cleanup
-completed, retaining both protected revisions, archives, backups and data.
-The fresh exact-artifact capacity PASS above does not waive the immediate
-pre-maintenance recheck or backup gate. Schema remains `20261022_0053`.
+Official artifact **`12842966625`** passed independent archive/OCI/source
+acceptance: **35 blobs / 23 layers / 336 embedded API source files**, exact
+Web revision and both-end hashes. Fresh actual-artifact capacity/rollback/
+idle-queue checks passed without lowering headrooms. Stopped-writer backup
+**`chat-reader-20261028T192159Z`** passed all five component checksums,
+database TOC and archive checks; the independent follow-up rehashed all five.
+The resource-bounded read-only attachment audit verified **358 hashes**, clean.
+
+Production replacement/acceptance completed at **03:31:15 +08:00**, with an
+independent **03:32:31** recheck. Current/direct rollback is
+**`f8a6a06`/`b4effda`**; the older `c7dc074` image set is retained.
+API/Web are healthy, worker `alive_idle`, exact image identities and HTTPS/
+denial/privacy checks pass, with zero startup error-keyword lines/restarts
+and no new OOM. Schema remains **`20261022_0053`**, with no upgrade/downgrade;
+stopped-writer canonical row counts, PostgreSQL identity/start time,
+production env/Compose/Nginx and operational checkout are unchanged.
+Maintenance was **03:21:43–03:31:15 +08:00 (9m32s)**, not zero downtime.
+
+No local tests/lint/typecheck/build/browser/services/database validated this
+release; the record preserves the earlier one-off dependency diagnostic
+exception. No production application build, data/volume deletion or backup
+pruning occurred. Only the separately authorized obsolete
+`f3b331a`/`50f6de4`/`5992d0e` image cleanup preceded this release.
+The pre-existing `apps/web/tsconfig.tsbuildinfo` remains untouched/excluded.
+Authenticated production UI, physical clipboard, sustained load and an isolated
+restore drill for this backup remain unclaimed. The
+[release record](docs/execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md) owns
+exact identities, failed-run history, verification receipts and boundaries.
+
+### Historical implementation checkpoints
+
+The dated source-only entries below retain their original pre-submission
+meaning. They do not override the later authorization, exact-source CI,
+artifact verification or production state in the release summary above.
 
 **Completeness follow-up optimization (2026-10-28; source implemented, unverified):**
 the [source review](docs/execution/ux-audit-completeness-review-2026-10-28.md)
@@ -128,6 +127,8 @@ dispatch, commit or deployment is authorized for this batch. See the
 [verification boundaries](docs/testing.md#search-correctness-and-exact-navigation--2026-10-27-source-only)
 and [implementation record](docs/execution/SEARCH_CORRECTNESS_2026-10-27.md).
 The accepted production/rollback remains `b4effda`/`c7dc074`, recorded below.
+
+### Earlier accepted releases (historical)
 
 **Deployed and accepted (2026-10-25): bounded ChatGPT reading/import compatibility and
 noise-matching precision fixes.** The
@@ -974,14 +975,14 @@ Earlier ledgers remain unchanged.
 
 ## Verification boundaries and release safety
 
-- Local lint, nonincremental typecheck, bounded Web build and single source head
-  0051 have passing evidence. Accepted-production full API CI is **1,288 passed /
-  3 skipped**. Local and older suites overlap; do not add them as unique cases.
-- In the accepted release CI, all 13 Web gates pass, including the
-  100-case mutation gate. Default PWA: **139 passed / 737 conditional skips**;
-  adaptive-import recovery has one conditional skip. Skips are not passes.
-- The 16 formerly pending selection/offline cases ran in isolated settings CI.
-  This is not local acceptance with the user's specified Windows Chromium.
+- Exact-source CI `40738934749` / `f8a6a06` passed all five jobs:
+  API **5,903 passed / 3 skipped**, Web UX **1,822**, mutation **100**,
+  Default PWA **161 passed / 750 conditional skips**, authentication **18**
+  and negative PWA **19**; settings **463** plus **1** independent restore.
+  Skips are not passes; older overlapping counts are not additive.
+- No local tests/lint/typecheck/build/browser/services/database validated this
+  correction/release. CI acceptance is not specified-Windows-Chromium,
+  authenticated production UI, physical-clipboard or sustained-load acceptance.
 - One authorized original local Web start was rejected before process creation
   with only `blocked by policy`. Cause remains unknown. No alternate launcher
   was used; do not retry through a different route. See the
@@ -992,18 +993,18 @@ Earlier ledgers remain unchanged.
 - King is a low-memory host. Build images only in CI, never locally/on King.
   Preserve its operational checkout, Compose, `.env.production` and PostgreSQL.
   Stage exact-source support separately; never pull/reset the server checkout.
-- The current completed release verified provenance, 313 attachment hashes, capacity and
-  a consistent five-component backup. Stop application writers, not PostgreSQL,
-  when a future migration requires it; use `--no-deps --no-build`. Never replay
-  completed release helpers or automatically downgrade/restore the database.
-- Current verified backups: `chat-reader-20261012T143850Z` and
-  `chat-reader-20261016T152523Z`. The exact older 20261008T134403Z point was pruned only
-  after acceptance under the two-backup policy; final report has no candidates.
-  No off-site or scheduled backup is configured.
-- Current rollback points to 84988a2; its exact API/Web images are already loaded.
-  Stop writers and perform the tested consent-revoking 0051→0050 downgrade before old-code restart.
-  Older rollback pointers are historical, not the active recovery target.
-  Follow [deployment](docs/deployment.md), not old commands from dated records.
+- The current release verified provenance, actual staged capacity, a bounded
+  read-only attachment audit and stopped-writer five-component backup
+  `chat-reader-20261028T192159Z`. Stop application writers, not PostgreSQL,
+  before future consistent release backups; use `--no-deps --no-build`.
+  Never replay completed release helpers or automatically restore the database.
+- Existing verified backups are retained; no backup pruning was authorized in
+  this batch. Server-local backups may share hardlinks and are not independent
+  physical/off-site copies. No off-site or scheduled backup is configured.
+- Current/direct rollback is `f8a6a06`/`b4effda`, both at `20261022_0053`;
+  image rollback needs no schema downgrade. The older `c7dc074` image set is
+  retained. Older rollback pointers and downgrade commands are historical.
+  Follow [deployment](docs/deployment.md) and the current release record.
 - King Compose 2.27 does not accept `run --pull never`. Release-only overlays use
   `pull_policy: never`; validate configuration and mounted checks before stopping
   writers. The interrupted first attempt and verified recovery remain recorded.
@@ -1119,11 +1120,12 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Current next-action boundary: table polishing is finished at the user's direction.
-The bounded backup/preflight repair is locally verified but not released; any
-later release still needs actual Docker/stopped-writer backup verification.
-Do not restart the historical unlimited audit or the remaining resource/browser
-gates automatically. Keep all existing local changes and evidence.
+Current next-action boundary: this authorized release and independent
+post-deployment recheck are complete; do not start another optimization cycle.
+Exact-source backup/preflight helpers have passed actual Docker/stopped-writer
+verification; that does not prove an isolated restore drill.
+Do not restart the historical unlimited audit or remaining resource/browser
+gates automatically. Preserve the pre-existing build-info change and evidence.
 
 ### Earlier ordinary-user audit backlog — historical, not an active work order
 

@@ -1,5 +1,18 @@
 # Search and reader recovery release — 2026-10-28
 
+## Final status — 2026-10-29
+
+**Deployed and accepted.** Exact `f8a6a06`, full CI `40738934749` attempt 1,
+all five jobs successful; independent official artifact `12842966625`,
+actual-artifact host preflight and stopped-writer five-component backup
+`chat-reader-20261028T192159Z` passed. Maintenance completed at
+**03:31:15 +08:00**; independent **03:32:31** recheck passed.
+Current/direct rollback is **`f8a6a06`/`b4effda`**, schema **`20261022_0053`**;
+older `c7dc074` images and existing data/archives/backups are retained.
+See [final deployment evidence](#production-deployment-and-independent-recheck--accepted).
+Earlier pending/failed checkpoints below remain dated history, not current
+release state. No further optimization or cleanup is authorized by this closeout.
+
 ## Authority and scope
 
 The user authorized **submission and deployment** of the completed workspace
@@ -777,3 +790,71 @@ The production env/Compose/Nginx and PostgreSQL are unchanged. No writer has
 been stopped or image loaded yet. Immediate recheck, resource-bounded read-only
 attachment audit, stopped-writer five-component backup and deployment/runtime
 acceptance remain mandatory.
+
+### Production deployment and independent recheck — accepted
+
+The immediate pre-maintenance check passed with **4,212,456 KiB available /
+4,013,395 KiB required** and unchanged healthy `b4effda` applications,
+`c7dc074` rollback images and idle queues. Only Web/API/import-worker were
+stopped; PostgreSQL remained running. The resource-bound read-only attachment
+audit was applicable, complete and clean, with zero issues: **337 active
+attachments / 358 asset objects/files / 358 SHA-256 verifications**.
+
+The fresh verified five-component backup is
+**`/opt/chat-reader/backups/chat-reader-20261028T192159Z`** (UTC stamp).
+PostgreSQL custom dump TOC, imports/exports/offline/assets archive listings
+and all five checksums passed before image loading. The backup source is the
+previous runtime `b4effda`; all application writers remained stopped through
+the canonical before/after comparison. All seven bounded table counts were
+unchanged. The immutable eight-file backup contract remains; no invented
+source snapshot or unperformed restore drill is claimed.
+
+Only the independently accepted CI archive was loaded. Loaded API/worker/
+migrate/Web identities, labels and architecture matched the accepted proof.
+Both migration preflight and `--require-current` reported
+**`20261022_0053` head/current**; no upgrade, downgrade or schema change ran.
+Existing public-image privacy routing matched the canonical source and
+`nginx -t` passed without any configuration write or reload.
+API/import-worker/Web were recreated with **`--no-build --no-deps`**;
+the read-only resource overlay was used only for bounded one-offs, never
+runtime `up`.
+
+Runtime acceptance passed at **2026-10-28 19:31:13.609607 UTC /
+2026-10-29 03:31:13.609607 +08:00**. Current/direct-rollback pointers were
+published and maintenance completed at **19:31:15 UTC / 03:31:15 +08:00**.
+The actual maintenance window was **19:21:43–19:31:15 UTC /
+03:21:43–03:31:15 +08:00 (9m32s)**, not zero downtime.
+
+| Accepted boundary | Result |
+| --- | --- |
+| Runtime / direct rollback | `f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713` / `b4effda45c74b0295823736a7da5db70265f57dd` |
+| API / worker image | `sha256:42050e03b2b12035a4ed2022a7b76a5e8752995195424360815d6efd429c26a9` |
+| Web image | `sha256:79547082314015a5a2d8d0949e043d1c2982f08303b749c886b753e378852dd0` |
+| Health / heartbeat | PostgreSQL/API/Web healthy; worker `alive_idle`; zero application restarts/OOM |
+| HTTP/TLS | Local/API/Web and HTTPS health/login 200; HTTP→HTTPS 301 |
+| Access/privacy | Anonymous capabilities/copy/image-display 401; public diagnostics and absent image capability 404; image response `no-store` |
+| Configuration / data | PostgreSQL ID/start/restarts, production env/Compose/Nginx and stopped-writer canonical counts unchanged; schema 0053 |
+| Logs / host OOM | Zero startup error-keyword lines and new kernel OOM lines; host counter unchanged |
+
+An independent follow-up completed at **19:32:31.407015 UTC /
+03:32:31.407015 +08:00**. It rehashed all five backup components, verified
+the exact eight regular backup files and absence of a leftover operation lock,
+and repeated runtime images, health/heartbeat, release pointers, HTTP/privacy,
+configuration/PostgreSQL, logs and OOM checks. All passed. All **12 image tags**
+for new `f8a6a06`, direct rollback `b4effda` and older `c7dc074` remain present;
+existing archives/backups and user data are retained. Disk available was
+**3,233,960 KiB**; future releases still need a fresh capacity gate.
+
+No local application test/lint/typecheck/build/browser/service/database
+validation or King application build was used. The earlier dependency
+diagnostic exception remains disclosed above. No production env/Compose/Nginx
+or operational-checkout write, PostgreSQL restart, automatic schema rollback,
+user-data/volume deletion, backup prune or further image cleanup occurred.
+Documentation-only commits after `f8a6a06` do not change the accepted
+application candidate. The pre-existing build-info change remains excluded.
+
+The authorized release is complete. Authenticated production browser UI,
+physical clipboard, screen-reader/sustained-load acceptance, full Office
+fidelity and an isolated restore drill for this new backup are not claimed.
+Server-local backups can share hardlinks; verified logical points are not
+independent physical/off-site copies. No new open-ended optimization is started.

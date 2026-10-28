@@ -5,9 +5,11 @@
 | 文档 | 当前职责 |
 | --- | --- |
 | `execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md` | 本次合并批次范围、无本地执行边界、历史 50 分钟检查点及最新取消失败诊断等待指令、三个旧版镜像清理及制品／备份／部署事实；不把未运行用例算作通过。 |
-| `PROJECT_STATE.md`、`deployment.md`、`index.md`、`execution/README.md` | 当前发布入口；精确生产／回退状态以新发布回执为准，历史检查点保留。 |
+| `PROJECT_STATE.md`、`deployment.md`、`index.md`、`execution/README.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前发布入口；2026-10-29 已部署 `f8a6a06`／直接回退 `b4effda`、0053、停写备份及独立复核，历史检查点保留且不覆盖当前状态。 |
 | `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`、`system/BACKEND_AND_API.md` | 作用域检索、边界可见锚点及精确范围合同；PWA 合同补等价目标不再次路由与明确非正文 UI 排除，不改变格式／身份／回退约束。 |
-| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 逐轮 CI 证据；`f8a6a06`／`40738934749` 第一次尝试五项全通过，1,822 UX／161 默认 PWA／18 认证／19 负向、API／设置及真实阻塞夹具结果；无本地执行，独立镜像与生产验收仍待完成。 |
+| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 逐轮 CI 证据；`f8a6a06`／`40738934749` 第一次尝试五项全通过，Web／API／设置及真实阻塞夹具、独立制品／停写备份／部署复核结果；无本地应用验证，不宣称生产认证 UI 或恢复演练。 |
+| `system/DISASTER_RECOVERY_RUNBOOK.md` | 校准五组件备份实际八文件合同；完整恢复审计的聚合快照独立保存，不把部署行数比较或备份校验当作恢复演练。 |
+| `system/KNOWN_ISSUES_AND_UNCERTAINTIES.md` | 当前验收边界链接本轮精确回执；保留旧噪声锚点但标明历史检查点，持续披露非完整语法／Office 保真、草稿持久性、认证界面／持续负载及异地恢复限制。 |
 
 ## 完整性复审实施 — 2026-10-28（源码完成，未验收）
 
