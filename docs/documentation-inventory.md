@@ -6,8 +6,8 @@
 | --- | --- |
 | `execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md` | 本次合并批次范围、无本地执行边界、历史 50 分钟检查点及最新取消失败诊断等待指令、三个旧版镜像清理及制品／备份／部署事实；不把未运行用例算作通过。 |
 | `PROJECT_STATE.md`、`deployment.md`、`index.md`、`execution/README.md` | 当前发布入口；精确生产／回退状态以新发布回执为准，历史检查点保留。 |
-| `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`、`system/BACKEND_AND_API.md` | 二轮 CI 揭示 FlexSearch 标签路径隐式 100 候选上限后的当前作用域修复；PWA 合同另记录第五轮揭示的实际滚动边界可见锚点判定，保留精确定位／稳定／回退约束。 |
-| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 分页拦截、内存探针／Skill、计数与滚动边界的逐轮证据；第七轮 UX 1,817 通过、PWA 三条后续测试假设失败，以及真实滚轮续页／顶部锚点几何修正的未本地执行边界，不放宽发布门禁。 |
+| `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`、`system/BACKEND_AND_API.md` | 作用域检索、边界可见锚点及精确范围合同；PWA 合同补等价目标不再次路由与明确非正文 UI 排除，不改变格式／身份／回退约束。 |
+| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 逐轮 CI 证据；10-29 精确 `a967c01` 重跑 PWA 159 通过／2 失败，重新查询、内存重放及独立代码 Range／高亮断言的未本地执行边界，不放宽发布门禁。 |
 
 ## 完整性复审实施 — 2026-10-28（源码完成，未验收）
 

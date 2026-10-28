@@ -486,13 +486,16 @@ export function LibraryShell() {
     const href = searchResultHref(item, "library");
     // A changed URL already carries a fresh destination. Only a repeat of the
     // current URL needs a separate intent; never add a nonce to saved links.
-    if (matchesLibrarySearchTarget(href, searchParams?.toString() ?? "")) {
+    const repeat = matchesLibrarySearchTarget(href, searchParams?.toString() ?? "");
+    if (repeat) {
       setSearchReplay((current) => ({ href, sequence: (current?.sequence ?? 0) + 1 }));
     }
     setSelectedId(item.conversation_id);
     window.localStorage.setItem(LAST_LIBRARY_CONVERSATION_KEY, item.conversation_id);
     setMobileOpen(false);
-    router.replace(href);
+    // Even replacing an equivalent URL can request an uncached RSC payload
+    // offline and fall back to a document navigation, losing this Reader.
+    if (!repeat) router.replace(href);
   }
 
   async function removeLocal(ids: string[]) {

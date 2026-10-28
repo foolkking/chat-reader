@@ -1,10 +1,10 @@
 # Project State
 
-Last updated: 2026-10-28. This is the current snapshot, not a release history.
+Last updated: 2026-10-29. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; seventh CI failed, targeted correction):**
+**Search and reader recovery release (2026-10-28 batch; 2026-10-29 replay correction):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -16,23 +16,26 @@ deployment. The latest instruction removes fixed waiting for CI failure
 diagnosis; earlier 50-minute checkpoints remain historical evidence.
 Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Latest complete CI `40701765161`, attempt 1, targets exact `99ecb93`.
-First failure read: **2026-10-28 22:46:42 Beijing**; **22:58:02** follow-up
-confirmed API/settings success, Web failure and both image jobs skipped.
-Web UX passed all 1,817 cases; Context and source-editor/mutation matrices
-passed 36 and 100. Default PWA had 158 passes / three failures / 750
+change. Latest CI `40711849550`, attempt 2, targets exact `a967c01`;
+the first attempt was cancelled for supersession before the interrupted
+source follow-up was committed. The rerun therefore does not contain it.
+At **2026-10-29 00:48:12 Beijing**, Web failed, API passed and settings
+was running. Web UX passed all 1,817 cases; Context and source-editor/mutation
+matrices passed 36 and 100. Default PWA had 159 passes / two failures / 750
 conditional skips; subsequent auth/negative gates were not reached.
-Verified official traces show initial exact body navigation and stale-version
-fallback now settle. Both replay cases fail later because one wheel appends
-complete turns while preserving the anchor, not guaranteeing >200px departure.
-The fallback test incorrectly equates scroll zero with no total frame overflow.
-Targeted browser corrections wait for the committed next window before a
-second real wheel and require a finite >200px departure; fallback checks use
-the actual visible/uncovered anchor and unreachable upper reading line.
-Same Reader/URL replay, <36px return, exact pulse and no stale exact pulse
-remain. No production navigation code, tolerance, timeout, retry or gate change.
-These corrections are authored, not locally run; a fresh exact-source full CI
-remains required. Earlier attempts and artifact digests are in the release
+Verified official traces show the fallback and real-wheel departure corrections
+now pass. Both remaining cases wait for an old search result after an initial
+changed offline URL falls back from failed RSC to cached HTML, resetting the
+transient query. Tests explicitly repeat the query before replaying.
+Equivalent search targets now emit only in-memory activation, not another
+`router.replace`, avoiding unnecessary RSC/document navigation; changed targets
+retain routing. Explicit renderer-only UI is excluded from the text-anchor
+index. Browser probes verify initial/replayed code-word Range geometry within
+2px, with <36px code-text return and same Reader/URL. Controlled regressions
+cover no-route body/file/annotation replay, canonical offsets and legacy quotes.
+These source/browser corrections are authored, not locally run. No alignment
+tolerance, stability, timeout, retry or release gate changes. A fresh full
+exact-source CI is required; earlier attempts/digests remain in the release
 record. No accepted deployable artifact exists.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh

@@ -11,6 +11,11 @@ or zero-height targets cannot use this exception. Content growth re-evaluates
 reachability; three consecutive frames and at least 240ms of stable layout
 remain required. Cancellation still retires the attempt, and a missing/stale
 text anchor remains a disclosed fallback, never an exact text pulse.
+The text index excludes explicitly marked renderer-only
+`data-markdown-copy-ignore="true"` UI as well as annotation overlays: a code
+language label or manual-copy recovery text is not canonical block content.
+Legacy quote/context recovery is retained; this is not a general proof of
+all Markdown-to-canonical text equivalence.
 No URL, package, Dexie, canonical identity or user-scroll semantics change.
 This source correction awaits complete CI; see the
 [verification boundary](../testing.md#searchrecovery-release-ci-correction--2026-10-28).
@@ -78,7 +83,11 @@ commit or deployment acceptance is claimed. See the
 
 Library search distinguishes URL restoration from an explicit repeat activation.
 Equivalent conversation/version/block/range/panel targets get an in-memory
-sequence; query ordering and display-only settings do not define a new target.
+sequence without another `router.replace` or RSC/document navigation; query
+ordering and display-only settings do not define a new target. Changed targets
+still route normally. An initial changed offline route can fall back to cached
+HTML and reset the transient Library query; query persistence across that
+document load is not claimed.
 Panel open flags are display-only when precise entity identity exists; legacy
 panel-only links still distinguish files from annotations.
 Reader consumes that intent through its existing navigation owner and real DOM

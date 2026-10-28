@@ -13,11 +13,32 @@ const compiled = ts.transpileModule(source, { compilerOptions: {
 // The real resolver with controlled TreeWalker/Range adapters. This verifies
 // string/range selection, not browser layout, selection geometry or focus.
 function resolve(text, anchor) {
-  const node = { textContent: text, length: text.length };
+  return resolveNodes([textNode(text)], anchor);
+}
+
+function textNode(text, ignoredSelector) {
+  return {
+    textContent: text,
+    length: text.length,
+    parentElement: { closest: selector => ignoredSelector && selector.includes(ignoredSelector) ? {} : null },
+  };
+}
+
+function resolveNodes(nodes, anchor) {
   const document = {
-    createTreeWalker: () => {
-      let consumed = false;
-      return { currentNode: node, nextNode: () => { if (consumed) return false; consumed = true; return true; } };
+    createTreeWalker: (_root, _show, filter) => {
+      let index = -1;
+      return {
+        currentNode: null,
+        nextNode() {
+          while (++index < nodes.length) {
+            if (filter.acceptNode(nodes[index]) !== 1) continue;
+            this.currentNode = nodes[index];
+            return true;
+          }
+          return false;
+        },
+      };
     },
     createRange: () => ({
       setStart(node, offset) { this.startContainer = node; this.startOffset = offset; },
@@ -54,4 +75,37 @@ test("stronger supplied context still rejects an outdated offset for legacy anno
   });
   assert.equal(range.startOffset, 7);
   assert.equal(range.endOffset, 13);
+});
+
+test("canonical code offsets exclude language, copy recovery and annotation overlay text", () => {
+  const code = textNode("😀 needle");
+  const range = resolveNodes([
+    textNode("text", '[data-markdown-copy-ignore="true"]'),
+    textNode("Clipboard unavailable. Select and copy below.", '[data-markdown-copy-ignore="true"]'),
+    textNode("😀 needle", '[data-markdown-copy-ignore="true"]'),
+    textNode("needle", "[data-annotation-overlay-root]"),
+    code,
+  ], { startOffset: 2, endOffset: 8 });
+  assert.equal(range.startContainer, code);
+  assert.equal(range.endContainer, code);
+  assert.equal(range.startOffset, 3);
+  assert.equal(range.endOffset, 9);
+});
+
+test("a legacy quote can recover when its old offset counted a renderer label", () => {
+  const code = textNode("😀 needle");
+  const range = resolveNodes([
+    textNode("text", '[data-markdown-copy-ignore="true"]'), code,
+  ], { quote: "needle", prefix: "text😀 ", startOffset: 6, endOffset: 12 });
+  assert.equal(range.startContainer, code);
+  assert.equal(range.startOffset, 3);
+  assert.equal(range.endOffset, 9);
+});
+
+test("renderer-only UI cannot create a text anchor", () => {
+  const range = resolveNodes([
+    textNode("needle", '[data-markdown-copy-ignore="true"]'),
+    textNode("needle", "[data-annotation-overlay-root]"),
+  ], { quote: "needle", startOffset: 0, endOffset: 6 });
+  assert.equal(range, null);
 });

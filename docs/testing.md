@@ -119,6 +119,34 @@ text pulse remain. No product code, timeout, retry, tolerance or workflow
 gate changed. These test corrections are authored, **not locally executed**;
 require a fresh complete exact-source CI and all release gates.
 
+Run `40711849550` targets exact `a967c01`. Attempt 1 was dispatched at
+**2026-10-28 23:02:05 Beijing**, then cancelled for a source follow-up before
+the turn was interrupted; the uncommitted follow-up was not in CI. Attempt 2
+started **2026-10-29 00:04:37 Beijing** against the same source. At
+**00:48:12**, Web failed, API passed and settings was running. Web retained
+1,817 UX / 36 Context / 100 mutation passes. Default PWA had **159 passes /
+two failures / 750 conditional skips**: the fallback case and real-wheel
+departure now pass, but both body/file/annotation workflows fail before the
+repeat body click.
+
+Verified official traces show initial offline RSC failure followed by a cached
+HTML document load; the transient query is empty, so the old result button is
+absent. The browser cases now explicitly repeat body/file/annotation queries
+before testing their same-URL reactivation. Source review also found that the
+parent emitted a replay and still unconditionally replaced the equivalent
+URL. Equivalent targets now skip routing; body/file/annotation regressions
+require no additional route request, while changed identities still route.
+This new path is not yet browser-accepted. The interrupted text-index change
+also excludes explicitly marked renderer-only UI; controlled TreeWalker/Range
+cases check canonical Unicode code offsets, legacy quote recovery and no
+anchor from UI-only text. These adapters do not validate browser geometry.
+The browser probe independently builds the code-word Range inside `pre code`,
+checks both initial/replayed pulse position and assigned size within 2px, and
+measures return against the code text, not its toolbar. It installs on current
+and new documents and captures pulse insertion without extending its lifetime.
+Same root/URL, finite >200px departure, <36px return, exact/fallback separation,
+timeouts, retries and full release gates remain. No local execution is used.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

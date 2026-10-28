@@ -469,6 +469,79 @@ excluded. A fresh full exact-source CI is required, without fixed waiting for
 failure diagnosis under the latest instruction. No deployable image was
 accepted and no production operation occurred.
 
+### CI attempt 8 — dispatch, cancellation and later rerun
+
+The browser scroll/fallback test correction was committed/pushed as
+**`a967c015505fa522a4669c5f2e28df61ee86848a`**. Full run **`40711849550`**,
+attempt 1, was dispatched once at `2026-10-28T15:02:05Z`
+(**2026-10-28 23:02:05 Beijing**); conservative post-dispatch timestamp:
+`15:02:05.2479570Z`. Failure diagnosis had no fixed waiting period.
+At **23:05:58 Beijing**, the early UX step was successful but Web/API/settings
+were still running. A cancellation was requested at **23:06:01** to supersede
+the source with a narrowly scoped code-text range follow-up; **23:09:36**
+confirmed cancellation. The turn was interrupted before that follow-up was
+committed or another workflow dispatched. It remained in the working tree,
+not in the official source candidate. No passed full CI or image is claimed.
+
+The same run was later rerun as **attempt 2**, starting
+`2026-10-28T16:04:37Z` (**2026-10-29 00:04:37 Beijing**), still targeting
+exact `a967c01`. At **2026-10-29 00:48:12 Beijing**
+(`2026-10-28T16:48:12.3707902Z`), identity was verified before reading results:
+Web job **`122936416397`** failed, API passed and settings was still running.
+
+| Web gate | Official attempt-2 result |
+| --- | --- |
+| Ordinary-user recovery / bounded attachments | 1,817 passed / zero failed |
+| Skill/Context | 36 passed |
+| Focused online / Share focus | 45 / two passed |
+| Source editor and mutations | 100 passed |
+| Cleanup / upload | Six / 18 passed |
+| Markdown/image / PDF | 31 / 13 passed |
+| Default PWA | 159 passed / two failed / 750 conditional skips |
+| Subsequent authenticated / negative PWA | Not reached |
+
+Official quality evidence artifact **`12832919974`**, 25,323,354 bytes,
+was independently matched to this run/source/attempt name and downloaded
+SHA-256:
+`1810303d32d40be8e637914d5b4ca86b4c4fb7f39e9a55d2b886238ebfd87197`.
+Its traces show failed initial offline RSC/fetch requests followed by a
+successful cached-HTML document request. Both sidebar queries are then empty.
+The earlier real-wheel departure now succeeds and the stale-version fallback
+case passes; both remaining workflows time out waiting for the old result
+button, before the actual second body selection.
+
+#### Targeted correction — 2026-10-29
+
+- Reissue the transient body/file/annotation query after an initial changed
+  offline URL may load cached HTML. Retain the same-URL/root replay requirements,
+  not a reload workaround or cached result injected by the test.
+- Source review found `openSearchResult` emitted replay but also always called
+  `router.replace`. Equivalent targets now activate in memory without another
+  route request; changed targets retain routing. This avoids the source-level
+  risk of repeated offline RSC/document loads. The failed browser cases did
+  not reach this second routing path; it is not yet accepted runtime evidence.
+  Actual parent/list adapter regressions require no extra route for body,
+  attachment or annotation replay, including display-only query differences.
+- Complete the interrupted text-index correction: exclude explicit
+  `data-markdown-copy-ignore="true"` renderer UI alongside annotation overlays.
+  Controlled real-resolver cases verify Unicode code offsets, retained legacy
+  quote recovery and rejection of UI-only anchors. This is not a broader
+  canonical DOM equivalence rewrite or annotation-format migration.
+- Independently observe the actual code-word Range inside `pre code`, never
+  the toolbar, for initial and repeated text pulses. Require position and
+  assigned dimensions within 2px; presentation scale animation is not treated
+  as a dimension mismatch. Install the observer on both current/new documents
+  and measure code-text, not wrapper, distance for <36px return. Keep finite
+  >200px departure, stable navigation, same Reader/URL, URL privacy, file/
+  annotation recovery, no downloads and no online search requests.
+
+Only static source/diff inspection is performed locally; no tests/lint/
+typecheck/build/browser/services/database or dependency diagnostics run.
+Timeouts, retries, alignment tolerance/stability, cancellation, exact/fallback
+semantics and all full CI/artifact/backup/deployment gates remain.
+The existing `tsconfig.tsbuildinfo` hash is unchanged and excluded.
+No production replacement or accepted deployable artifact exists.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),

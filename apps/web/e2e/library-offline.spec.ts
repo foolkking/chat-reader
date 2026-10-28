@@ -393,6 +393,46 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
   page.on("request", request => {
     if (new URL(request.url()).pathname === "/api/search") onlineSearchRequests.push(request.method());
   });
+  // Observe each transient pulse at insertion. The independent expected Range
+  // is inside <pre><code>, never the language/copy toolbar before it.
+  const installCodePulseProbe = () => {
+    const probe = window as typeof window & { __syntheticOfflineCodePulseDeltas?: number[] };
+    probe.__syntheticOfflineCodePulseDeltas = [];
+    const seen = new WeakSet<Element>();
+    new MutationObserver(() => {
+      const pulse = document.querySelector<HTMLElement>('[data-locate-pulse="text"]');
+      const code = document.querySelector("#block-offline-message-2-2 pre code");
+      if (!pulse || seen.has(pulse) || !code) return;
+      const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+      const nodes: Text[] = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+      if (nodes.map(node => node.textContent).join("") !== "😀 needle") return;
+      const range = document.createRange();
+      let offset = 0;
+      for (const node of nodes) {
+        if (offset <= 3 && 3 < offset + node.length) range.setStart(node, 3 - offset);
+        if (offset < 9 && 9 <= offset + node.length) {
+          range.setEnd(node, 9 - offset);
+          break;
+        }
+        offset += node.length;
+      }
+      const expected = range.getBoundingClientRect();
+      const actual = pulse.getBoundingClientRect();
+      probe.__syntheticOfflineCodePulseDeltas!.push(Math.max(
+        Math.abs(actual.x - expected.x), Math.abs(actual.y - expected.y),
+        // The presentation pulse starts at scaleX(.96). Its assigned dimensions
+        // must match the real Range without making the animation a size error.
+        Math.abs(Number.parseFloat(pulse.style.width) - expected.width),
+        Math.abs(Number.parseFloat(pulse.style.height) - expected.height),
+      ));
+      seen.add(pulse);
+    }).observe(document, { childList: true, subtree: true });
+  };
+  // The first changed target may use cached HTML after offline RSC failure.
+  // Install on both the current document and any resulting document load.
+  await page.addInitScript(installCodePulseProbe);
+  await page.evaluate(installCodePulseProbe);
 
   await codeResult.click();
   await expect.poll(() => {
@@ -401,10 +441,12 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
       url.searchParams.get("renderBlockId"), url.searchParams.get("characterOffset"), url.searchParams.get("endCharacterOffset")];
   }).toEqual(["/library", "offline-fixture", "offline-version-2", "offline-block-2-2", "2", "8"]);
   await expect(page.locator("#block-offline-message-2-2")).toBeVisible();
-  // The same word occurs in block 1. Check the later block/range contract and
-  // non-fallback navigation; transient exact-pulse geometry has its own Reader
-  // browser regression in reader-location-failure.spec.ts.
+  // The same word occurs in block 1. Check both the later block/range contract
+  // and the exact code-text pulse, not a misleading pulse over the toolbar.
   await expect.poll(() => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("settled");
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & { __syntheticOfflineCodePulseDeltas?: number[] }).__syntheticOfflineCodePulseDeltas?.[0] ?? Number.POSITIVE_INFINITY,
+  )).toBeLessThanOrEqual(2);
   for (const key of ["quote", "prefix", "suffix", "q"]) expect(new URL(page.url()).searchParams.has(key)).toBe(false);
 
   const bodyUrl = page.url();
@@ -421,12 +463,16 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
   await expect(readerRoot).toHaveAttribute("data-reader-edge-stage", "next:settled");
   await page.mouse.wheel(0, 600);
   await expect.poll(async () => {
-    const delta = await readingLineDelta(page, "block-offline-message-2-2");
+    const delta = await readingLineDelta(page, "block-offline-message-2-2", true);
     return Number.isFinite(delta) && delta > 200;
   }).toBe(true);
   // Reveal the mobile header after real user scrolling, then reopen Library.
   await page.mouse.wheel(0, -100);
   if (width < 768) await page.getByTestId("mobile-sidebar-button").click();
+  // A changed offline destination can reload the shell and reset its
+  // transient query. Reissue the search before testing the same-URL replay.
+  await input().fill("needle");
+  await expect(codeResult).toBeVisible();
   await readerRoot.evaluate(root => {
     root.setAttribute("data-e2e-navigation-transitions", "0");
     new MutationObserver(records => {
@@ -437,8 +483,11 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
   await codeResult.click();
   await expect.poll(() => readerRoot.getAttribute("data-e2e-navigation-transitions").then(Number)).toBeGreaterThan(0);
   await expect(page.locator('[data-locate-pulse="text"]')).toBeVisible();
+  await expect.poll(() => page.evaluate(() =>
+    (window as typeof window & { __syntheticOfflineCodePulseDeltas?: number[] }).__syntheticOfflineCodePulseDeltas?.[1] ?? Number.POSITIVE_INFINITY,
+  )).toBeLessThanOrEqual(2);
   await expect.poll(() => readerRoot.getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("settled");
-  await expect.poll(() => readingLineDelta(page, "block-offline-message-2-2")).toBeLessThan(36);
+  await expect.poll(() => readingLineDelta(page, "block-offline-message-2-2", true)).toBeLessThan(36);
   expect(page.url()).toBe(bodyUrl);
   expect(await originalRoot!.evaluate(root => root.isConnected
     && root === document.querySelector('[data-reader-scroll-root="true"]'))).toBe(true);
@@ -463,6 +512,7 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
     const fileSearch = page.getByTestId("offline-conversation-files-panel").getByPlaceholder(/搜索文件|Search files/);
     await fileSearch.fill("synthetic-no-file");
     await expect(file).toHaveCount(0);
+    await input().fill("cached-note");
     await sidebar().getByRole("button", { name: /cached-note\.txt/ }).click();
     await expect(fileSearch).toHaveValue("");
     await expect(file).toBeFocused();
@@ -489,6 +539,7 @@ for (const width of [375, 1440]) test(`${width}px: library search preserves offl
     const noteFilter = page.getByPlaceholder(/搜索批注|Search annotations/);
     await noteFilter.fill("synthetic-no-annotation");
     await expect(page.locator("#annotation-offline-far")).toHaveCount(0);
+    await input().fill("Distant");
     await sidebar().getByRole("button", { name: /Distant annotation fixture/ }).click();
     await expect(noteFilter).toHaveValue("");
     await expect(page.locator("#annotation-offline-far")).toBeVisible();
@@ -1304,11 +1355,19 @@ async function hasConnectedAnnotationHighlight(page: import("@playwright/test").
   }, quote);
 }
 
-async function readingLineDelta(page: import("@playwright/test").Page, targetId: string): Promise<number> {
-  return page.evaluate((id) => {
+async function readingLineDelta(page: import("@playwright/test").Page, targetId: string, codeTextOnly = false): Promise<number> {
+  return page.evaluate(({ id, codeTextOnly }) => {
     const target = document.getElementById(id);
     const root = document.querySelector<HTMLElement>("[data-navigation-stage]") ?? target?.closest<HTMLElement>(".overflow-y-auto");
     if (!target || !root) return Number.POSITIVE_INFINITY;
-    return Math.abs(target.getBoundingClientRect().top - (root.getBoundingClientRect().top + 120));
-  }, targetId);
+    let rect = target.getBoundingClientRect();
+    if (codeTextOnly) {
+      const code = target.querySelector("pre code");
+      if (!code) return Number.POSITIVE_INFINITY;
+      const range = document.createRange();
+      range.selectNodeContents(code);
+      rect = range.getBoundingClientRect();
+    }
+    return Math.abs(rect.top - (root.getBoundingClientRect().top + 120));
+  }, { id: targetId, codeTextOnly });
 }

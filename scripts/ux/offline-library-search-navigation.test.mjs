@@ -138,11 +138,34 @@ test("after completing a navigation, the same target can replay without a URL no
     f.route(href.split("?")[1]);
     f.click(0); await setImmediate(); f.render();
     assert.deepEqual(f.calls.replays, [{ href, sequence: 1 }, { href, sequence: 2 }]);
-    assert.deepEqual(f.calls.routes, [href, href, href]);
+    assert.deepEqual(f.calls.routes, [href], "equivalent targets must not request routing/RSC again");
     f.click(1); await setImmediate(); f.render();
     assert.equal(f.calls.replays.length, 2, "a different target uses the URL effect, not the previous replay");
+    assert.equal(f.calls.routes.length, 2);
+    assert.equal(new URL(f.calls.routes[1], "https://example.invalid").searchParams.get("messageId"), B.message_id);
   } finally { f.dispose(); }
 });
+
+for (const kind of ["attachment", "annotation"]) {
+  test(`the same ${kind} result reopens its target in memory without another route request`, async () => {
+    const f = fixture({ project: async item => ({
+      ...projected(item), document_type: kind,
+      ...(kind === "attachment" ? { attachment_id: "synthetic-attachment" } : { annotation_id: "synthetic-annotation" }),
+    }) });
+    try {
+      f.click(0); await setImmediate(); f.render();
+      const href = f.calls.routes[0];
+      const params = new URLSearchParams(href.split("?")[1]);
+      params.set("annotation_layout", "expanded");
+      f.route(params.toString());
+      f.click(0); await setImmediate(); f.render();
+      assert.deepEqual(f.calls.routes, [href]);
+      assert.deepEqual(f.calls.replays, [{ href, sequence: 1 }]);
+      assert.deepEqual(f.calls.mobile, [false, false]);
+      assert.deepEqual(f.calls.selected, [A.conversation_id, A.conversation_id]);
+    } finally { f.dispose(); }
+  });
+}
 
 test("only the latest deliberately selected result can publish its navigation", async () => {
   const first = deferred(), second = deferred();

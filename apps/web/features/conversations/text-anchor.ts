@@ -118,7 +118,10 @@ function collectText(root: HTMLElement): TextIndex {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
-      return parent?.closest("[data-annotation-overlay-root]")
+      // Renderer toolbars and manual-copy recovery UI are not part of the
+      // canonical block text. In particular, a code language label must not
+      // shift content-free search offsets into that label.
+      return parent?.closest('[data-annotation-overlay-root], [data-markdown-copy-ignore="true"]')
         ? NodeFilter.FILTER_REJECT
         : NodeFilter.FILTER_ACCEPT;
     },
