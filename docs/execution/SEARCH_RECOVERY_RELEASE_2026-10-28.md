@@ -667,6 +667,65 @@ independent official-image verification, fresh capacity/rollback/queue checks
 and stopped-writer five-component backup remain required; the protected
 build-info file and production/direct rollback/schema remain unchanged.
 
+#### Attempt-10 final CI acceptance — five successful jobs
+
+First all-green metadata was read at **2026-10-29 02:49:49 Beijing**
+(`2026-10-28T18:49:49.8903075Z`). A complete follow-up at **02:50:36**
+(`18:50:36.1005034Z`) verified exact source
+**`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`**, run **`40738934749`**,
+attempt **1**, completed run success and exactly the five required successful
+jobs—none skipped:
+
+| Job | Official job ID | Completion (UTC, 2026-10-28) |
+| --- | --- | --- |
+| `web-quality` | `122994948626` | `18:24:34Z` |
+| `api-quality` | `122994949291` | `18:10:01Z` |
+| `settings-quality` | `122994949459` | `18:44:15Z` |
+| `build-images` | `123026451791` | `18:48:44Z` |
+| `inspect-release-artifact` | `123028820437` | `18:49:02Z` |
+
+Official Web logs confirm **1,822 UX**, **36 Context**, **45 focused online**,
+**two Share focus**, **100 source-editor/mutation**, **six cleanup**,
+**18 upload**, **31 Markdown/image**, **13 PDF**, **161 Default PWA**,
+**18 authentication** and **19 negative PWA** passes. Default PWA retains
+750 conditional skips. Both 375/1440px offline body/file/annotation workflows
+passed (14.6s/20.5s), including initial/replayed code-word pulse geometry within
+2px, retained Reader/URL, finite >200px departure, <36px return, panel recovery
+and no download/online-search requests. No assertion/timeout/retry relaxation
+or local browser/runtime substitute was used.
+
+Official API logs confirm **5,903 passes / three skips**. Settings confirms
+**463 matrix passes** and **one independent new-instance restore pass**.
+The strengthened genuine native blocked-deletion fixture passed in **8.0s**,
+including delete-request observation, actual retained-record read, explicit
+connection release, Retry/removal and authentication/cache protections.
+This accepts that bounded fixture, not an unproven cause of the earlier
+trace-disabled failure or a product authentication rewrite.
+
+Web quality evidence artifact **`12839549442`**, 18,695,344 bytes, was
+independently matched to the exact run/source/attempt and its downloaded
+SHA-256:
+`8578a9b0ad8306201fc2b03f0fbf979d1b15cd1417208cdc434bc26633fb3e6d`.
+It is quality evidence, not a deployable image.
+
+Official image artifact **`12842966625`** is named
+`chat-reader-images-f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713-1`,
+182,650,039 bytes, with GitHub-reported SHA-256
+`e2ceed535501781bd11df8f22c3f29fd0b4e9be2b593fc2a92c9977ad7485913`.
+CI inspection checked the manifest's source/run/producer-attempt chain,
+revision labels and forbidden-path absence. That is **not** the separate
+independent downloaded-image/source acceptance required before deployment;
+the image artifact has not been downloaded or independently accepted here.
+
+Documentation-only checkpoints preserve the accepted CI source/run/attempt.
+The protected build-info file remains unchanged and excluded. No local tests,
+lint/typecheck/build/browser/services/database or dependency diagnostics ran
+in this correction cycle. No production writer was stopped, image loaded,
+application replaced, configuration/data changed or deployment accepted.
+Independent official-image acceptance, fresh capacity/rollback/queue checks
+and stopped-writer five-component backup remain pending. Recorded production/
+direct rollback stays `b4effda`/`c7dc074`, schema `20261022_0053`.
+
 Implementation evidence and remaining verification boundaries:
 
 - [Search correctness](SEARCH_CORRECTNESS_2026-10-27.md),

@@ -7,7 +7,7 @@
 | `execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md` | 本次合并批次范围、无本地执行边界、历史 50 分钟检查点及最新取消失败诊断等待指令、三个旧版镜像清理及制品／备份／部署事实；不把未运行用例算作通过。 |
 | `PROJECT_STATE.md`、`deployment.md`、`index.md`、`execution/README.md` | 当前发布入口；精确生产／回退状态以新发布回执为准，历史检查点保留。 |
 | `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`、`system/BACKEND_AND_API.md` | 作用域检索、边界可见锚点及精确范围合同；PWA 合同补等价目标不再次路由与明确非正文 UI 排除，不改变格式／身份／回退约束。 |
-| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 逐轮 CI 证据；`f8a6a06`／`40738934749` 的精确派发与早期 UX、上轮 1,822 UX／设置通过及代码换行探针失败，探针／设置阻塞夹具的未本地执行边界，不放宽定位、认证、清理或发布门禁。 |
+| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 逐轮 CI 证据；`f8a6a06`／`40738934749` 第一次尝试五项全通过，1,822 UX／161 默认 PWA／18 认证／19 负向、API／设置及真实阻塞夹具结果；无本地执行，独立镜像与生产验收仍待完成。 |
 
 ## 完整性复审实施 — 2026-10-28（源码完成，未验收）
 

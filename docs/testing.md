@@ -196,6 +196,38 @@ UX step 18 passed at **01:51:15**; mounted code-pulse/replay, full PWA,
 new settings fixture and image/deployment acceptance remain pending.
 A documentation-only checkpoint preserves this exact source/run/attempt.
 
+#### Exact-source CI acceptance — 2026-10-29
+
+Run **`40738934749`**, attempt **1**, exact
+**`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`**, completed with **all five jobs
+successful**. First all-green metadata was read at **02:49:49 Beijing**;
+the complete source/run/attempt/job chain was verified at **02:50:36**.
+Web finished at **02:24:34**, with **1,822 UX**, **36 Context**,
+**45 focused online**, **two Share focus**, **100 mutation**, **six cleanup**,
+**18 upload**, **31 Markdown/image**, **13 PDF**, **161 Default PWA**,
+**18 authentication** and **19 negative PWA** passes. The Default PWA matrix
+retains 750 conditional skips.
+
+Both 375/1440px offline body/file/annotation cases passed, including initial/
+replayed code-word Range geometry within 2px, same Reader/URL, finite >200px
+departure and <36px return. The corrected raw-code newline precondition did
+not relax those assertions. The Web quality evidence artifact was independently
+matched to run/source/attempt and downloaded digest in the release record;
+it is not a deployable image.
+
+API passed **5,903 / three skipped**. Settings passed **463 matrix cases**
+and **one independent new-instance restore**. The strengthened native blocked
+deletion fixture passed in 8.0s, including the observed delete request,
+retained-record read, Retry/removal and authentication/cache protections.
+All source/fixture changes were verified by official CI only; no local
+tests/lint/typecheck/build/browser/services/database or dependency diagnostics
+ran in this correction cycle.
+
+CI image build and inspection also passed. Independent downloaded-image/
+source acceptance, fresh host preflight, stopped-writer five-component backup
+and production acceptance remain pending. A documentation-only checkpoint
+does not change the accepted CI source or start deployment.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

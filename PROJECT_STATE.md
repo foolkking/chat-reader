@@ -16,40 +16,32 @@ deployment. The latest instruction removes fixed waiting for CI failure
 diagnosis; earlier 50-minute checkpoints remain historical evidence.
 Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Latest full CI **`40738934749`**, attempt 1, targets exact **`f8a6a06`**,
-created at **2026-10-29 01:46:46 Beijing**. At **01:59:52**, Web/API/settings
-were running; early ordinary-user UX passed at **01:51:15**. No full Web/PWA
-or release pass is claimed. Previous full CI `40731382479`, attempt 1,
-targets `7a58de2`: **01:53:39** confirmed API/settings success, Web failure
-and both image jobs skipped. Settings had 463 passes plus an independent
-new-instance restore pass; the earlier blocked-fixture failure did not recur
-in that source. Web passed 1,822 ordinary-user UX cases,
-36 Context and 100 mutation cases. Default PWA had 159 passes / two failures /
-750 conditional skips; subsequent auth/negative gates were not reached.
-Both failures stop at the new initial code-pulse probe, before replay:
-verified official DOM snapshots contain a fenced-code trailing newline, while
-the probe expected none and recorded no sample (`Infinity`). This is not a
-measured >2px geometry error. The probe now requires the actual raw code text,
-including its newline, and a Range selecting only the word; 2px pulse,
-same Reader/URL, finite >200px departure and <36px return requirements remain.
-Equivalent targets' no-route activation and explicit renderer-UI exclusion
-passed controlled regressions, not the still-unreached mounted replay path.
+change. Exact **`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`** passed all five
+jobs in full CI **`40738934749`**, attempt 1. First all-green metadata:
+**2026-10-29 02:49:49 Beijing**; full source/run/attempt/job verification:
+**02:50:36**. Web passed **1,822 ordinary-user UX**, **36 Context**,
+**100 mutation**, **161 Default PWA**, **18 authentication** and
+**19 negative PWA** cases; 750 Default PWA conditional skips remain.
+The 375/1440px offline body/file/annotation workflows both passed, including
+initial/replayed code-word pulses within 2px, same Reader/URL, finite >200px
+departure and <36px return. Equivalent targets avoid redundant routing;
+explicit renderer-only UI is excluded from text offsets. The probe preserves
+the fenced-code newline while selecting only the word.
 
-Previous run `40711849550` attempt 2 also had an independent settings failure
-(462 passes / one failure): its blocked signout-cleanup fixture no longer
-listed the held database. That cause remains unconfirmed. The fixture now
-holds a genuine existing connection in an inert same-origin tab, requires an
-actual native delete request and reads the retained record before releasing
-the connection. It retains authentication/private-UI fences, Retry, final
-database/cache removal and unrelated-cache protection; auth/cleanup product
-code is unchanged. These two fixture corrections are committed in `f8a6a06`,
-not locally run or browser-accepted. The fresh full exact-source CI is running;
-no tolerance,
-stability, timeout, retry or release gate changes. Earlier attempts/digests
-remain in the release record. No accepted deployable artifact exists.
+API passed **5,903 / three skipped**. Settings passed **463 matrix cases**
+plus **one independent new-instance restore**. Its strengthened real blocked
+connection fixture passed, requiring a native deletion request and retained
+record before release, then Retry/removal and privacy/cache protections.
+No auth/cleanup product logic, timeout, retry, alignment or release gate
+was weakened. Earlier failed runs, diagnoses and verified evidence digests
+remain in the release record; this CI is not production acceptance.
+Official image artifact **`12842966625`** was produced and inspected in CI.
+Independent downloaded-image/source acceptance, fresh host preflight and
+stopped-writer five-component backup are **still pending**. No accepted
+deployable artifact or production replacement is claimed.
 No local repository suites or builds were run;
-the release record discloses the one-off dependency diagnostic exception. Fresh
-read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
+the release record discloses the one-off dependency diagnostic exception. The
+previously recorded read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
 no application replacement has occurred. The user separately authorized removing only the
 unused `f3b331a`/`50f6de4`/`5992d0e` application images; this exact cleanup
 completed, retaining both protected revisions, archives, backups and data.
