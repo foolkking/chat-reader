@@ -4,7 +4,7 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; fifth full CI dispatched):**
+**Search and reader recovery release (2026-10-28; fifth CI correction, awaiting full CI):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
@@ -14,31 +14,21 @@ database are authorized; full exact-source CI, a fresh 50-minute result-read
 gate per dispatch, independent artifact verification and stopped-writer
 five-component backup are required before deployment. Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
-change. Source `51c26c3` is pushed; CI `40631876492` failed in Web lint, the
-authenticated Web typecheck and two API rollback assertions. Targeted fixes
-were committed/pushed as `db051db`; full CI `40637231494` was first read at
-**2026-10-28 14:09:24 Beijing** after its gate and failed in the Web ordinary
-user recovery matrix and settings browser matrix; no artifact was produced.
-Corrective implementation and regression updates were committed/pushed as
-`eae099b`; exact-source full CI `40656487189` targeted `56fa45c` (including
-the documentation checkpoint correction). First read at **2026-10-28
-17:14:00 Beijing**, after its gate, confirmed API/settings success and Web
-failure: six recovery browser cases still intercepted the retired `limit=5000`
-list instead of the current `limit=101&offset=0` first page. Their precise
-interceptors and initial-hit assertions were committed/pushed as `1dcd9f9`.
-Complete CI `40666671235` targeted that exact source and was first read at
-**2026-10-28 18:43:47 Beijing**, after its gate. Settings passed; API had
-75 synthetic import failures under memory admission and Web had one
-post-replacement stale unsaved-changes guard failure. The source correction
-isolates the shared synthetic API fixture's memory sensor, retains real
-low/unknown-memory rejection, and publishes personal/system Skill dirty
-aggregates during layout before success can be acted on. Immediate-close and
-other-draft protection regressions are authored, not run locally. The earlier
-six list browser fixes were not reached in this run. Corrections are pushed as
-`d1b8965`; full CI `40676535658` targets that exact source. Do not read results
-before **2026-10-28 19:50:17 Beijing**. No release gate is relaxed and no accepted
-deployable artifact exists. No local
-repository suites or builds were run;
+change. Full CI `40676535658` (exact `d1b8965`) was first read at
+**2026-10-28 20:34:38 Beijing**, after its 19:50:17 gate. API/settings passed;
+Web's Skill/Context matrix passed 36 cases and the source-editor/mutation
+matrix passed 100, including the earlier six list-interceptor corrections.
+Default PWA had 157 passes / four failures / 750 conditional skips:
+one obsolete search-count assertion and three `target-not-aligned` failures
+at physical scroll boundaries. Verified official trace evidence supports a
+narrow correction: the normal 24px alignment remains; only an actual clamped
+endpoint with the selected anchor visible can also stabilize. The existing
+three-frame/240ms, cancellation, stale fallback and exact-pulse requirements
+remain. Controlled alignment regressions and a no-scroll fallback browser
+assertion are authored, not locally run. A new complete exact-source dispatch
+and fresh 50-minute gate are required. Earlier attempts remain in the release
+record. No release gate is relaxed and no accepted deployable artifact exists.
+No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;
 no application replacement has occurred. The user separately authorized removing only the

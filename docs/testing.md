@@ -37,6 +37,35 @@ discard-on-success workaround, timeout or retry changes are introduced.
 The earlier six list-interceptor fixes were not reached in this run and remain
 unaccepted. Require a new complete exact-source CI and all release gates.
 
+Run `40676535658` (exact `d1b8965`) was first read at **2026-10-28
+20:34:38 Beijing**, after its 19:50:17 gate. API/settings passed. Web's Context
+matrix passed 36 and source-editor/mutation matrix passed 100, including the
+previous six list fixes. Default PWA had 157 passes / four failures / 750
+conditional skips. The failed count assertion still expected `1 results`;
+the actual panel correctly disclosed `1 of 1 results loaded · 1 locations`.
+Its replacement asserts the complete loaded/total/location text, retaining
+the 300 decoys, scoped role and title/type exclusion checks.
+
+The other three failures reported `target-not-aligned`. Verified official
+trace evidence shows a six-message offline window clamped at its lower scroll
+boundary and a single-message fallback page with no scrollable height.
+`reader-navigation.ts` now also accepts an actually clamped endpoint only
+when the selected element/Range anchor remains visible below scroll padding.
+Normal 24px alignment, three consecutive frames / 240ms, cancellation,
+timeouts, stale fallback disclosure and no false exact pulse are retained.
+The boundary is re-evaluated each frame if content grows.
+`reader-navigation-alignment.test.mjs` authors 12 cases against the actual
+navigation module with controlled DOM/Range/RAF/resize adapters: interior
+alignment, Reader/window upper and lower boundaries, offscreen/occluded/
+stalled/zero-height failures, growth, missing-range fallback and cancellation.
+It does not validate mounted browser geometry or the text-range resolver.
+The stale-version browser case additionally requires its short Reader to be
+visible, non-scrollable and at scroll zero. Existing offline body/file/
+annotation, repeat-navigation/same-DOM, URL and pulse assertions remain.
+These corrections are **not run locally**; the unchanged complete CI and
+all release gates remain required. Auth/negative browser steps were not
+reached and the failed run produced no deployable image artifact.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

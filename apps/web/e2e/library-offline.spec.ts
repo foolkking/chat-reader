@@ -358,7 +358,9 @@ test("offline conversation search scopes before its limit and excludes title/typ
   const panel = input.locator("../..");
   await input.locator("..").locator("select").first().selectOption("assistant");
   await input.fill("target-annotation-40");
-  await expect(panel.getByRole("status").filter({ hasText: /^(1 个结果|1 results)$/ })).toBeVisible();
+  await expect(panel.getByRole("status").filter({
+    hasText: /^(已加载 1 \/ 1 条结果 · 1 个定位项|1 of 1 results loaded · 1 locations)$/,
+  })).toBeVisible();
 
   await input.fill("TitleOnlyFixture");
   await expect(panel.getByText(/没有找到.*TitleOnlyFixture|No results for.*TitleOnlyFixture/)).toBeVisible();

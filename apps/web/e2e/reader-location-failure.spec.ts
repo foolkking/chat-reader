@@ -146,6 +146,9 @@ test("stale search version falls back without an exact text pulse", async ({ pag
   const reader = page.getByTestId("reader-scroll-root");
   await expect(reader.locator(`#message-${messageId}`)).toContainText(preservedText);
   await expect(reader).toHaveAttribute("data-navigation-stage", "settled:fallback", { timeout: 15_000 });
+  await expect(reader.locator(`#message-${messageId}`)).toBeVisible();
+  expect(await reader.evaluate(root => root.scrollTop)).toBe(0);
+  expect(await reader.evaluate(root => root.scrollHeight <= root.clientHeight)).toBe(true);
   await expect(page.locator('[data-locate-pulse="text"]')).toHaveCount(0);
 });
 

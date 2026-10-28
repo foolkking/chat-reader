@@ -1,5 +1,20 @@
 # PWA and Offline Resilience Contract
 
+## Mounted Reader alignment at scroll boundaries — 2026-10-28, source only
+
+Navigation measures the selected real element or exact text Range each frame.
+It normally aligns within 24px of the requested reading line. A short mounted
+window may make that line unreachable: only the actual clamped scroll endpoint
+can also qualify, with the selected anchor visible inside the viewport below
+its scroll padding. Merely visible but still scrollable, offscreen, occluded
+or zero-height targets cannot use this exception. Content growth re-evaluates
+reachability; three consecutive frames and at least 240ms of stable layout
+remain required. Cancellation still retires the attempt, and a missing/stale
+text anchor remains a disclosed fallback, never an exact text pulse.
+No URL, package, Dexie, canonical identity or user-scroll semantics change.
+This source correction awaits complete CI; see the
+[verification boundary](../testing.md#searchrecovery-release-ci-correction--2026-10-28).
+
 ## Reader completeness and recoverability additions — 2026-10-28, source only
 
 The current Reader/search surfaces keep bounded resource budgets while exposing

@@ -250,7 +250,7 @@ are required. Full quality, official artifact, independent source verification,
 fresh capacity and stopped-writer backup gates remain pending. No production
 action occurred.
 
-### CI attempt 5 — dispatched; result-read gate active
+### CI attempt 5 — dispatch checkpoint
 
 The synthetic admission fixture isolation, Skill leave-guard corrections and
 regressions were committed/pushed as
@@ -270,6 +270,58 @@ artifact/source checks must retain the exact `d1b8965`/run/attempt chain.
 All five jobs, official artifact/source verification, fresh capacity and
 stopped-writer backup remain required. No writer stopped, image loaded or
 application replaced; production/direct rollback remains `b4effda`/`c7dc074`.
+
+#### Result read and targeted correction
+
+First results were read at **2026-10-28 20:34:38 Beijing**
+(`12:34:38.1767363Z`), after the 19:50:17 gate. Exact source/run/attempt
+identity was checked before reading results. API/settings quality succeeded;
+Web quality failed in `Default PWA baseline`. Both image jobs were skipped;
+no deployable artifact was produced. Earlier API/Skill fixes were exercised,
+and the six list cases from attempt 3 are now included in the passed matrix.
+
+| Web browser gate | Official result |
+| --- | --- |
+| Skill/Context | 36 passed |
+| Focused online / Share focus | 45 / two passed |
+| Source editor and mutations | 100 passed |
+| Cleanup / upload | Six / 18 passed |
+| Markdown/image / PDF | 31 / 13 passed |
+| Default PWA | 157 passed / four failed / 750 conditional skips |
+| Subsequent authenticated / negative PWA | Not reached |
+
+Official `web-quality` evidence artifact `12813042951` (31,214,757 bytes)
+was independently matched to this run/source and its downloaded SHA-256:
+`59b9439000cc9828e40a2b0fbbcf4e480b9582cd406442cbcb7d2ccc37ed2384`.
+Its traces/error contexts, not a local browser run, ground this diagnosis:
+
+- The scoped offline search returns the correct `target-annotation-40` hit
+  and current `1 of 1 results loaded · 1 locations` status. One test still
+  asserted the old count-only wording. The complete count assertion is
+  updated without removing decoys, role or title/type exclusion checks.
+- Both 375/1440px offline body cases fail `target-not-aligned` in a short
+  six-message window at its lower scroll boundary. The stale-version case
+  fails on a single-message page with no vertical scroll available. These
+  visible anchors cannot reach the fixed reading line.
+- Mounted alignment gains only a visible physical-endpoint exception. It
+  still rejects offscreen/covered/zero-height targets and a stalled scroll
+  away from that endpoint. Normal 24px alignment, three frames / 240ms,
+  cancellation, timeouts and fallback/exact-pulse semantics are unchanged.
+  Reachability is measured anew if the mounted content grows.
+- Twelve controlled regression cases exercise the actual navigation module;
+  DOM/Range/RAF/resize are adapters, not real mounted geometry or the text
+  resolver. The existing stale-version browser case also requires a visible,
+  non-scrollable Reader at scroll zero. Exact body/file/annotation, replay/
+  same-DOM and pulse requirements remain.
+
+The correction has static source/diff review only. No local tests/lint/
+typecheck/build/browser/services/database or dependency diagnostics ran in
+this correction. The pre-existing `tsconfig.tsbuildinfo` hash is unchanged
+and excluded. No workflow gate, timeout or retry allowance changes. A fresh
+complete exact-source dispatch and 50-minute result-read gate are required;
+all five jobs, independent official image verification, fresh capacity/
+rollback/queue checks and stopped-writer five-component backup remain pending.
+No production operation occurred.
 
 Implementation evidence and remaining verification boundaries:
 

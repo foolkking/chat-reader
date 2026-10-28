@@ -348,7 +348,25 @@ function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number
   const rootTop = root?.getBoundingClientRect().top ?? 0;
   const expectedTop = rootTop + offset;
   const targetRect = textRect ?? target.getBoundingClientRect();
-  return Math.abs(targetRect.top - expectedTop) <= 24;
+  const delta = targetRect.top - expectedTop;
+  if (Math.abs(delta) <= 24) return true;
+
+  // A short mounted window cannot always put its first/last anchor on the
+  // reading line. Accept only the actual clamped endpoint, with the anchor
+  // still visible; a stuck scroll or an offscreen virtual row is not success.
+  const scroller = root ?? document.scrollingElement;
+  const viewportHeight = root?.clientHeight ?? window.innerHeight;
+  if (!scroller || viewportHeight <= 0) return false;
+  const scrollTop = root?.scrollTop ?? window.scrollY;
+  const maximum = Math.max(0, scroller.scrollHeight - viewportHeight);
+  const requested = scrollTop + delta;
+  const reachable = Math.min(maximum, Math.max(0, requested));
+  if (requested === reachable || Math.abs(scrollTop - reachable) > 1) return false;
+  const paddingTop = Math.max(0, Number.parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0);
+  const viewportTop = rootTop + (root?.clientTop ?? 0);
+  return targetRect.top >= viewportTop + paddingTop - 1
+    && targetRect.top < viewportTop + viewportHeight
+    && targetRect.bottom > viewportTop + paddingTop;
 }
 
 async function stabilizeTargetAlignment({
@@ -420,10 +438,10 @@ async function stabilizeTargetAlignment({
       if (aligned) {
         if (alignedSince === null) alignedSince = now;
         alignedFrames += 1;
-        // A real Range must remain within the 24px tolerance for three
-        // consecutive animation frames and for at least 240ms. The latter
-        // filters out the first frame before virtual rows/images finish
-        // changing their geometry.
+        // Alignment (the 24px reading line or a visible clamped endpoint)
+        // must hold for three consecutive frames and at least 240ms. The
+        // latter filters out the first frame before virtual rows/images
+        // finish changing their geometry.
         if (alignedFrames >= 3 && now - alignedSince >= 240 && now - lastResizeAt >= 240) {
           finish({ stable: true, usedTextAnchor, textAnchorMissing: wantsTextAnchor && !usedTextAnchor });
           return;
