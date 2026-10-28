@@ -127,8 +127,22 @@ test("a clamped but offscreen virtual target still fails", async () => {
 });
 
 test("a target covered by the mobile header cannot pass the endpoint exception", async () => {
-  const f = fixture({ extent: 400, contentTop: 100, paddingTop: 160 });
-  assert.equal((await f.run()).ok, false);
+  // Stay outside the normal 24px tolerance so both controls must use the
+  // physical-endpoint path. Only the selected Range's visibility changes.
+  const options = { extent: 400, contentTop: 32, rangeInset: 0 };
+  const visible = fixture(options);
+  assert.ok(visible.root.scrollHeight <= visible.root.clientHeight);
+  assert.ok(Math.abs(visible.rangeRect().top - visible.root.getBoundingClientRect().top - 120) > 24);
+  assert.equal((await visible.run()).ok, true);
+  assert.equal(visible.root.scrollTop, 0);
+
+  const paddingTop = 56;
+  const covered = fixture({ ...options, paddingTop });
+  assert.ok(covered.rangeRect().bottom <= covered.root.getBoundingClientRect().top + paddingTop);
+  assert.deepEqual(await covered.run(), {
+    ok: false, targetId: covered.target.id, reason: "target-not-aligned",
+  });
+  assert.equal(covered.root.scrollTop, 0);
 });
 
 test("a scroll stalled away from its physical endpoint is not accepted", async () => {

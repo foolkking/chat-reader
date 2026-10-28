@@ -66,6 +66,25 @@ These corrections are **not run locally**; the unchanged complete CI and
 all release gates remain required. Auth/negative browser steps were not
 reached and the failed run produced no deployable image artifact.
 
+Run `40692514416` (exact `4402635`, attempt 1) was first read at
+**2026-10-28 21:50:25 Beijing**. The user explicitly removed waiting for the
+failed Web diagnosis; this read also happened after the original 21:50:13
+checkpoint. Web's ordinary-user UX gate had **1,816 passes / one failure**.
+The new covered-endpoint fixture placed its target at 100px relative to a
+120px reading line, inside the normal 24px tolerance, so it never tested the
+endpoint exception. The other 11 navigation-alignment cases passed; no Web
+browser gate was reached. API passed; settings was still running at 21:55:40.
+
+Only the faulty fixture is corrected: an exact Range starts at 32px in a
+non-scrollable window, with explicit preconditions that it is outside the
+normal tolerance. The same geometry must succeed without header padding and
+fail `target-not-aligned` when 56px padding fully covers that Range. Both stay
+at scroll zero. This preserves and strengthens the rejection assertion;
+production code, alignment tolerance/stability, timeouts, retries and browser
+assertions are unchanged. Static review only, **not locally executed**.
+The unchanged complete exact-source CI and all artifact/deployment gates remain
+required; the previous browser corrections are not promoted to passed evidence.
+
 ## Completeness follow-up optimization — 2026-10-28 (source only)
 
 The [nine-finding implementation](execution/UX_AUDIT_COMPLETENESS_IMPLEMENTATION_2026-10-28.md)

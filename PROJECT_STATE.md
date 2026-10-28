@@ -4,15 +4,17 @@ Last updated: 2026-10-28. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and reader recovery release (2026-10-28; sixth full CI dispatched):**
+**Search and reader recovery release (2026-10-28; sixth Web CI correction):**
 the user now authorizes submitting and deploying the completed search,
 offline/Reader recovery and nine completeness follow-ups as one batch.
 Earlier source-only/no-submission statements below retain their checkpoint
 meaning; the [release record](docs/execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md)
 owns current progress. No local tests/lint/typecheck/build/browser/services/
-database are authorized; full exact-source CI, a fresh 50-minute result-read
-gate per dispatch, independent artifact verification and stopped-writer
-five-component backup are required before deployment. Exclude pre-existing
+database are authorized; full exact-source CI, independent artifact
+verification and stopped-writer five-component backup are required before
+deployment. The latest instruction removes fixed waiting for CI failure
+diagnosis; earlier 50-minute checkpoints remain historical evidence.
+Exclude pre-existing
 `apps/web/tsconfig.tsbuildinfo`. No migration or production configuration/data
 change. Full CI `40676535658` (exact `d1b8965`) was first read at
 **2026-10-28 20:34:38 Beijing**, after its 19:50:17 gate. API/settings passed;
@@ -25,11 +27,17 @@ narrow correction: the normal 24px alignment remains; only an actual clamped
 endpoint with the selected anchor visible can also stabilize. The existing
 three-frame/240ms, cancellation, stale fallback and exact-pulse requirements
 remain. Controlled alignment regressions and a no-scroll fallback browser
-assertion are authored, not locally run. Corrections are pushed as `4402635`;
-complete CI `40692514416`, attempt 1, targets that exact source. Do not read
-results before **2026-10-28 21:50:13 Beijing**. Only source/run/date metadata
-has been inspected. Earlier attempts remain in the release record. No release
-gate is relaxed and no accepted deployable artifact exists.
+assertion are authored, not locally run. Complete CI `40692514416`, attempt 1,
+targets exact `4402635`; first read at **2026-10-28 21:50:25 Beijing**.
+Web's UX gate had 1,816 passes / one failure: a newly authored occlusion
+fixture accidentally entered normal 24px alignment, not the endpoint path.
+The corrected test pairs an identical exact Range at an unreachable reading
+line, with/without header padding, retaining the rejection assertion and
+production implementation unchanged. The other 11 alignment cases passed;
+browser gates were not reached. API passed; settings was still in progress at
+21:55:40. A new complete exact-source CI is required. Earlier attempts remain
+in the release record. No quality/artifact/deployment gate is relaxed and no
+accepted deployable artifact exists.
 No local repository suites or builds were run;
 the release record discloses the one-off dependency diagnostic exception. Fresh
 read-only host checks confirmed production/direct rollback `b4effda`/`c7dc074`;

@@ -323,7 +323,7 @@ all five jobs, independent official image verification, fresh capacity/
 rollback/queue checks and stopped-writer five-component backup remain pending.
 No production operation occurred.
 
-### CI attempt 6 — dispatched; result-read gate active
+### CI attempt 6 — dispatch checkpoint
 
 The physical-boundary alignment correction, complete count assertion and
 regressions were committed/pushed as
@@ -346,6 +346,41 @@ All five jobs, official image verification, fresh capacity/rollback/queue
 checks and stopped-writer five-component backup remain required. No writer
 stopped, image loaded or application replaced; production/direct rollback
 remains `b4effda`/`c7dc074`, schema `20261022_0053`.
+
+#### Web failure read and fixture correction
+
+The user explicitly removed waiting for the failed `web-quality` diagnosis.
+First results were read at **2026-10-28 21:50:25 Beijing**
+(`13:50:25.3884392Z`), also after the original 21:50:13 checkpoint.
+Exact `440263573900cc7f8162b96c36f350f92c1785f6` / `40692514416` / attempt 1
+was verified. The official Web job `122830708331` failed in step 18,
+`Ordinary-user recovery and bounded attachment regressions`, with
+**1,816 passes / one failure**. The other 11 new navigation-alignment cases
+passed. API succeeded; settings was still running at the **21:55:40 Beijing**
+status read. Browser/build/release verification was not reached by Web;
+no deployable image acceptance is possible from this failed quality gate.
+
+The single failure was introduced by the previous test fixture, not evidence
+that the preceding browser failures were fixed. Its target at 100px was only
+20px above the 120px reading line, inside the normal 24px tolerance. It thus
+never entered the physical-endpoint exception named by the test. The fixture
+is corrected to use an exact Range at 32px in a non-scrollable window:
+
+- Preconditions require the target to lie outside the normal tolerance.
+- The identical Range must succeed with no header padding at scroll zero.
+- With 56px scroll padding covering the entire Range, it must fail
+  `target-not-aligned` and retain scroll zero.
+
+No production implementation, rejection assertion, browser expectation,
+timeout, retry allowance or required workflow gate is weakened. Only static
+source/diff review ran locally; the corrected paired test is authored, not
+executed locally. The existing `tsconfig.tsbuildinfo` remains untouched and
+excluded. Per the latest instruction, this CI failure-diagnosis cycle no
+longer imposes the fixed waiting period; earlier dispatch/read timestamps
+remain historical facts. A complete fresh exact-source CI, all five successful
+jobs, independent official image verification, fresh host preflight and
+stopped-writer five-component backup remain required. No production action
+occurred.
 
 Implementation evidence and remaining verification boundaries:
 

@@ -4,10 +4,10 @@
 
 | 文档 | 当前职责 |
 | --- | --- |
-| `execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md` | 本次已提交合并批次的范围、无本地执行边界、逐轮 50 分钟 CI 门禁、用户单独批准的三个旧版镜像清理及制品／备份／部署事实；不把先前未运行用例算作通过。 |
+| `execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md` | 本次合并批次范围、无本地执行边界、历史 50 分钟检查点及最新取消失败诊断等待指令、三个旧版镜像清理及制品／备份／部署事实；不把未运行用例算作通过。 |
 | `PROJECT_STATE.md`、`deployment.md`、`index.md`、`execution/README.md` | 当前发布入口；精确生产／回退状态以新发布回执为准，历史检查点保留。 |
 | `system/PWA_OFFLINE_RESILIENCE_CONTRACT.md`、`system/BACKEND_AND_API.md` | 二轮 CI 揭示 FlexSearch 标签路径隐式 100 候选上限后的当前作用域修复；PWA 合同另记录第五轮揭示的实际滚动边界可见锚点判定，保留精确定位／稳定／回退约束。 |
-| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 第三轮分页拦截、第四轮内存探针／Skill 草稿保护及第五轮通过证据；旧计数断言与滚动边界修复的受控适配器／真实浏览器证据边界，新增回归尚未本地执行，不放宽发布门禁。 |
+| `testing.md#searchrecovery-release-ci-correction--2026-10-28` | 分页拦截、内存探针／Skill、旧计数与滚动边界修复的逐轮证据；第六轮 11 条定位回归通过及遮挡夹具分支错误、更强对照的未本地执行边界，不放宽发布门禁。 |
 
 ## 完整性复审实施 — 2026-10-28（源码完成，未验收）
 
