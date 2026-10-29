@@ -16,6 +16,7 @@ new Function("exports", compile("features/search/search-result-target.ts"))(targ
 new Function("exports", compile("lib/search-text-matches.ts"))(matcher);
 const stubs = {
   "react/jsx-runtime": jsx,
+  "lucide-react": { Check: () => null },
   "next/link": { default: props => jsx.jsx("a", props) },
   "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: "en-US" }) },
   "../../lib/search-text-matches": matcher,

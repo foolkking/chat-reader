@@ -1,5 +1,43 @@
 # Markdown 文档台账
 
+## 两轮 Web 功能候选实施 — 2026-10-30（进行中）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 24 项逐项处置：19 项有界源码、5 项未实施合同缺口；离线响应租约、复核修复及真实验证记录，不冒充生产故障归因或发布验收。 |
+| `testing.md` | 当前本地 UX／浏览器／ASGI／API 门禁与最终 CI 边界，保留第一批历史回执。 |
+| `system/BACKEND_AND_API.md`、`api-reference.md` | 新账户配置、批注聚合、附件目录、严格重复候选、分页来源事件与下载租约接口。 |
+| `system/DATA_AND_STORAGE.md`、`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 0054→0056、CAS 与集合上限、账号隔离、短下载租约；不改变 `.cr`／离线包／Dexie。 |
+| `system/FEATURE_INVENTORY.md`、`system/USER_FLOWS.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 有界能力与交互、迁移和保留附加表的应用回退边界。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 当前实施及待发布状态；历史检查点不覆盖当前验证。 |
+
+## Web 功能候选第二轮 — 2026-10-30（仅审查）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/web-feature-opportunities-round2-2026-10-30.md` | 新增 WEB-15 至 WEB-24 共 10 项候选，区分源码现状与需求假设，包含最小范围、兼容边界和待验证条件；两轮累计 24 项，不是已批准实施清单。 |
+| `execution/web-feature-opportunities-2026-10-29.md` | 保留第一轮 14 项的历史审查快照，追加第二轮链接，不改写原有数量或验证边界。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 增量候选入口；仅文档更新，未实施、未运行验收、未重查生产，不覆盖此前源码及发布状态。 |
+
+## 恢复复审与 Web 功能候选 — 2026-10-29（仅审查）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/ux-audit-next-batch-followup-2026-10-29.md` | 上一批源码的 10 项恢复／表单／排序复审，区分五项新增交互与五项继承问题；含优先级、证据和待验收条件，不是修复回执。 |
+| `execution/web-feature-opportunities-2026-10-29.md` | 14 项 Web 用户功能候选；区分现有能力、需求假设、最小范围、扩范围成本与验证顺序，不是已批准产品合同。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 仅审查交付入口；保持上一批源码未验收及生产／迁移边界，不宣称新增实现或测试通过。 |
+
+## 下一批优化 — 2026-10-29（源码完成，未验收／未提交）
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/ux-audit-next-batch-2026-10-29.md` | 保留原始 15 项实施前证据快照，不再代表当前未实施状态。 |
+| `execution/UX_NEXT_BATCH_IMPLEMENTATION_2026-10-29.md` | 逐项源码实施、回归文件及验证／schema／回退边界；源码 0054 未运行。 |
+| `system/BACKEND_AND_API.md`、`api-reference.md` | split workspace 的新幂等路径、复合键回执和旧接口兼容边界。 |
+| `system/USER_FLOWS.md`、`system/DATA_AND_STORAGE.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前 UX 与数据回执合同；明确生产 0053 不变、0054 待授权，区分应用回退和会丢回执的 downgrade。 |
+| `testing.md` | 逐项已编写未运行的 Node、API/PostgreSQL 与 Playwright 回归及待验收门禁。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 实施进度及回归未运行事实；不代表 CI／发布／生产验收。 |
+
 ## 搜索与阅读恢复发布 — 2026-10-28
 
 | 文档 | 当前职责 |

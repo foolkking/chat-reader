@@ -8,18 +8,21 @@ import type {
   CleanupScanRead,
   BackgroundTaskRead,
   AnnotationCreateInput,
+  AnnotationInboxResponse,
   AnnotationRead,
   AnnotationSyncOperation,
   AnnotationSyncResponse,
   AnnotationUpdateInput,
   AttachmentRead,
   AttachmentListRead,
+  AttachmentDirectoryResponse,
   AttachmentUploadItemRead,
   AttachmentUploadSessionRead,
   CapabilitiesRead,
   ConversationEventListResponse,
   ConversationDetail,
   ConversationListItem,
+  DuplicateReviewResponse,
   ConversationManagementResponse,
   ConversationCreateInput,
   ConversationCreateResponse,
@@ -80,6 +83,8 @@ import type {
   TocRefreshInput,
   UserPreferenceRead,
   UserPreferenceUpdate,
+  UserFeatureCollection,
+  UserFeatureEntry,
   SortDirection,
   SkillCategory,
   SkillLocale,
@@ -123,6 +128,27 @@ export async function getAttachment(attachmentId: string, shareToken?: string, a
 
 export async function getConversationAttachments(conversationId: string): Promise<AttachmentRead[]> {
   return (await fetchJson<AttachmentListRead>(`/api/conversations/${conversationId}/attachments`)).items;
+}
+
+export async function getAttachmentDirectory(
+  input: {
+    q?: string;
+    mimeType?: string;
+    used?: "all" | "used" | "unused";
+    projectId?: string;
+    limit?: number;
+    offset?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<AttachmentDirectoryResponse> {
+  const params = new URLSearchParams();
+  if (input.q?.trim()) params.set("q", input.q.trim());
+  if (input.mimeType?.trim()) params.set("mime_type", input.mimeType.trim());
+  if (input.used) params.set("used", input.used);
+  if (input.projectId) params.set("project_id", input.projectId);
+  params.set("limit", String(input.limit ?? 50));
+  params.set("offset", String(input.offset ?? 0));
+  return fetchJson<AttachmentDirectoryResponse>(`/api/attachments/directory?${params.toString()}`, { signal: input.signal });
 }
 
 export async function createAttachmentUploadSession(
@@ -200,6 +226,35 @@ export async function updatePreferences(input: UserPreferenceUpdate): Promise<Us
   return fetchJson<UserPreferenceRead>("/api/preferences", jsonRequest("PATCH", input));
 }
 
+export async function getUserFeatureEntries<T>(
+  collection: UserFeatureCollection,
+  signal?: AbortSignal,
+): Promise<UserFeatureEntry<T>[]> {
+  return fetchJson<UserFeatureEntry<T>[]>(`/api/user-feature-entries/${collection}`, { signal });
+}
+
+export async function saveUserFeatureEntry<T>(
+  collection: UserFeatureCollection,
+  id: string,
+  input: { expected_revision: number; value: T },
+): Promise<UserFeatureEntry<T>> {
+  return fetchJson<UserFeatureEntry<T>>(
+    `/api/user-feature-entries/${collection}/${encodeURIComponent(id)}`,
+    jsonRequest("PUT", input),
+  );
+}
+
+export async function deleteUserFeatureEntry(
+  collection: UserFeatureCollection,
+  id: string,
+  expectedRevision: number,
+): Promise<void> {
+  await fetchJson<void>(
+    `/api/user-feature-entries/${collection}/${encodeURIComponent(id)}?expected_revision=${expectedRevision}`,
+    { method: "DELETE" },
+  );
+}
+
 export function syncPreferenceFields(input: import("./types").PreferenceSyncRequest, signal?: AbortSignal): Promise<import("./types").PreferenceSyncResponse> {
   return fetchJson("/api/preferences/sync", { ...jsonRequest("POST", input), signal });
 }
@@ -230,6 +285,21 @@ export async function getConversations(
   if (input.offset !== undefined) params.set("offset", String(input.offset));
   const query = params.toString();
   return fetchJson<ConversationListItem[]>(`/api/conversations${query ? `?${query}` : ""}`, { signal });
+}
+
+export async function getDuplicateReviews(
+  input: {
+    statusScope?: "active" | "archived" | "all";
+    limit?: number;
+    offset?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<DuplicateReviewResponse> {
+  const params = new URLSearchParams();
+  if (input.statusScope) params.set("status_scope", input.statusScope);
+  params.set("limit", String(input.limit ?? 25));
+  params.set("offset", String(input.offset ?? 0));
+  return fetchJson<DuplicateReviewResponse>(`/api/conversations/duplicates?${params.toString()}`, { signal: input.signal });
 }
 
 export async function createConversation(input: ConversationCreateInput): Promise<ConversationCreateResponse> {
@@ -298,6 +368,21 @@ export function uploadMessageCopyPreview(attachmentId: string, sourceHash: strin
 
 export async function getConversationAnnotations(conversationId: string, includeDeleted = false): Promise<AnnotationRead[]> {
   return fetchJson<AnnotationRead[]>(`/api/conversations/${conversationId}/annotations${includeDeleted ? "?include_deleted=true" : ""}`);
+}
+
+export async function getAnnotationInbox(
+  options: {
+    anchorStatus?: AnnotationRead["anchor_status"];
+    limit?: number;
+    offset?: number;
+    signal?: AbortSignal;
+  } = {},
+): Promise<AnnotationInboxResponse> {
+  const params = new URLSearchParams();
+  if (options.anchorStatus) params.set("anchor_status", options.anchorStatus);
+  params.set("limit", String(options.limit ?? 50));
+  params.set("offset", String(options.offset ?? 0));
+  return fetchJson<AnnotationInboxResponse>(`/api/annotations/inbox?${params.toString()}`, { signal: options.signal });
 }
 
 export async function createConversationAnnotation(conversationId: string, input: AnnotationCreateInput): Promise<AnnotationRead> {
@@ -461,7 +546,7 @@ export async function unarchiveConversation(conversationId: string): Promise<Con
 
 export async function getConversationMessages(
   conversationId: string,
-  options: { includeBlocks?: boolean; limit?: number; offset?: number } = {},
+  options: { includeBlocks?: boolean; limit?: number; offset?: number; signal?: AbortSignal } = {},
 ): Promise<MessageListItem[]> {
   const params = new URLSearchParams({
     include_blocks: String(options.includeBlocks ?? true),
@@ -471,6 +556,7 @@ export async function getConversationMessages(
 
   return fetchJson<MessageListItem[]>(
     `/api/conversations/${conversationId}/messages?${params.toString()}`,
+    { signal: options.signal },
   );
 }
 
@@ -729,10 +815,14 @@ export async function previewConversationSplit(conversationId: string, input: Co
   );
 }
 
-export async function executeConversationSplit(conversationId: string, input: ConversationSplitWorkspaceInput): Promise<ConversationSplitWorkspaceResponse> {
+export async function executeConversationSplit(conversationId: string, input: ConversationSplitWorkspaceInput, idempotencyKey?: string): Promise<ConversationSplitWorkspaceResponse> {
+  const request = jsonRequest("POST", splitWorkspaceBody(input));
   return fetchJson<ConversationSplitWorkspaceResponse>(
-    `/api/conversations/${conversationId}/split-workspace`,
-    jsonRequest("POST", splitWorkspaceBody(input)),
+    `/api/conversations/${conversationId}/split-workspace${idempotencyKey ? "/requests" : ""}`,
+    {
+      ...request,
+      ...(idempotencyKey ? { headers: { ...request.headers, "Idempotency-Key": idempotencyKey } } : {}),
+    },
   );
 }
 
@@ -861,14 +951,16 @@ export async function placeProject(projectId: string, input: ProjectPlacementInp
 
 export async function getProjectConversations(
   projectId: string,
-  input: { sort?: ConversationSortMode; direction?: SortDirection; limit?: number } = {},
+  input: { sort?: ConversationSortMode; direction?: SortDirection; limit?: number; offset?: number; signal?: AbortSignal } = {},
 ): Promise<ProjectConversationRead[]> {
   const params = new URLSearchParams();
   if (input.sort) params.set("sort", input.sort);
   if (input.direction) params.set("direction", input.direction);
   if (input.limit) params.set("limit", String(input.limit));
+  if (input.offset !== undefined) params.set("offset", String(input.offset));
   return fetchJson<ProjectConversationRead[]>(
     `/api/projects/${projectId}/conversations${params.size ? `?${params.toString()}` : ""}`,
+    { signal: input.signal },
   );
 }
 
@@ -1687,7 +1779,7 @@ export function getConversationExportUrl(
 
 export async function getConversationEvents(
   conversationId: string,
-  options: { limit?: number; offset?: number; eventType?: string } = {},
+  options: { limit?: number; offset?: number; eventType?: string; lineageOnly?: boolean; signal?: AbortSignal } = {},
 ): Promise<ConversationEventListResponse> {
   const params = new URLSearchParams({
     limit: String(options.limit ?? 50),
@@ -1696,8 +1788,10 @@ export async function getConversationEvents(
   if (options.eventType) {
     params.set("event_type", options.eventType);
   }
+  if (options.lineageOnly) params.set("lineage_only", "true");
   return fetchJson<ConversationEventListResponse>(
     `/api/conversations/${conversationId}/events?${params.toString()}`,
+    { signal: options.signal },
   );
 }
 

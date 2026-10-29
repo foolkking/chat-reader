@@ -1,5 +1,19 @@
 # 后端与 API
 
+## 两轮 Web 功能合同 — 2026-10-30（待发布）
+
+新增接口与限制见 [API 参考](../api-reference.md#两轮-web-功能--2026-10-30本地待发布)：
+配置条目依附现有 subject preferences、严格类型值与 CAS revision，集合成员写锁防止
+不同随机 entry ID 重复加入待读及并发越过容量。私人批注收件箱、文件目录和精确
+重复候选均在数据库层按当前 owner 过滤，不由前端遍历对话拉取全集。
+来源事件支持 `lineage_only=true` 分页，标题仍由每个相关对话的 owner 读取独立授权。
+
+离线下载在锁定产物行后提交短租约，跨过 handler 返回到真正 ASGI 文件读取／传输
+的时间窗。响应每 15 秒延长 90 秒有效期，成功／异常／取消时释放；不使用 pathsend。
+提交后旧文件清理及全局回收候选排除有效租约。它保护可重放的清理竞态，不代表
+已证明没有请求状态／网络 trace 的原始用户故障原因。包格式、权限和校验均不降低。
+0054→0055→0056 及回退边界见 [数据合同](DATA_AND_STORAGE.md)。
+
 ## Adaptive Import initial-analysis task (deployed 2026-10-19)
 
 `POST /api/adaptive-import/sessions` performs bounded multipart staging and
@@ -432,6 +446,14 @@ lookahead 之前共同筛选。2026-10-28 CI 修复撤回复合标签路径：�
 编辑默认生成新 MessageVersion；第一版永久不可覆盖或删除，第二版及以后可通过显式 `replace_current` 原地覆盖。版本选择只更新单消息 `current_version_id`，版本删除在需要时先回退当前版本，并重定位或标记批注。上述写操作会更新 message/conversation 派生字段、offline revision、blocks、headings 和 SearchDocument，并写审计事件。MessageVersion 记录 normalizer、Markdown parser、block builder 和 search document 版本；幂等 derived rebuild 任务可升级历史派生数据和旧 hash。
 
 会话拆分保留旧连续区间接口，并增加 split-workspace preview/execute 合同：`range_copy` 复制完整连续区间，`boundary_copy` 创建边界前后两个新会话，`discrete_copy` 只复制明确 ID。三种模式均不修改来源会话，并校验空结果、重复 ID、跨会话 ID、非法边界和 Project。
+
+`POST /api/conversations/{id}/split-workspace/requests` 是带回执的新幂等执行入口，
+要求 1–128 字符 `Idempotency-Key`。它按来源对话与 key 做 PostgreSQL 事务锁，
+将规范化请求摘要、结果 ID/标题/计数与复制事务原子提交；相同请求返回同一结果，
+相同 key 的不同载荷返回结构化 409。权限在回执读取前再次核验；硬删除来源时回执级联删除。
+旧 `/split-workspace` 路径继续兼容但无键调用没有幂等保证。客户端只在同一已确认
+计划上安全重试；当前源码新增 migration `20261029_0054`，生产仍为 `0053`，
+尚未迁移或发布。当前部署和回退边界见[部署记录](../deployment.md#下一批源码迁移--2026-10-29未部署)。
 
 ### Share
 

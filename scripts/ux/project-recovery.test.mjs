@@ -213,19 +213,24 @@ test("late cancelled reads cannot replace confirmed metadata and active refresh 
   }
 });
 
-async function listFixture({ cached = true, rows = [row], error = new Error("Synthetic raw upstream detail"), locale = "en-US", selectedIds = [] } = {}) {
+async function listFixture({ cached = true, rows = [row], error = new Error("Synthetic raw upstream detail"), locale = "en-US",
+  selectedIds = [], sort = "recent_read", hasMore = false, count = rows.length, serverRows = rows } = {}) {
   const client = new query.QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   let reads = 0;
-  const observer = new query.QueryObserver(client, {
-    queryKey: ["project-conversations", project.id, "recent_read", "desc"],
-    initialData: cached ? rows : undefined,
+  const observer = new query.InfiniteQueryObserver(client, {
+    queryKey: ["project-conversations", project.id, sort, "desc"],
+    initialData: cached ? { pages: [{ items: rows, offset: 0, hasMore }], pageParams: [0] } : undefined,
+    initialPageParam: 0,
+    getNextPageParam: page => page.hasMore ? page.offset + 100 : undefined,
     enabled: false,
-    queryFn: async () => { reads += 1; if (error) throw error; return rows; },
+    queryFn: async () => { reads += 1; if (error) throw error; return { items: rows, offset: 0, hasMore }; },
   });
   await observer.refetch();
   let options;
   let stateIndex = 0;
   const retryButtons = [];
+  const sortableRows = [], pageRequests = [], orderingWrites = [];
+  let nextPageError = null;
   const jsxRuntime = appRequire("react/jsx-runtime");
   const captureJsx = (factory) => (type, props, key) => {
     if (type === "button" && ["Retry", "重试"].includes(props.children)) retryButtons.push(props);
@@ -240,15 +245,33 @@ async function listFixture({ cached = true, rows = [row], error = new Error("Syn
     "@tanstack/react-query": {
       useQueryClient: () => client,
       useQuery: (input) => {
-        if (input.queryKey[0] === "projects") return { data: [project], isFetching: false };
+        if (input.queryKey[0] === "projects") return { data: [{ ...project, conversation_count: count }], isFetching: false };
+        throw new Error("Unexpected unpaged project-list query");
+      },
+      useInfiniteQuery: (input) => {
         options = input;
         return observer.getCurrentResult();
       },
     },
     "@dnd-kit/core": { DndContext: childrenOnly, DragOverlay: () => null, useSensor: noop, useSensors: noop },
-    "@dnd-kit/sortable": { SortableContext: childrenOnly, useSortable: () => ({ setNodeRef: noop }) },
+    "@dnd-kit/sortable": { SortableContext: childrenOnly, useSortable: input => { sortableRows.push(input); return { setNodeRef: noop }; } },
     "@dnd-kit/utilities": { CSS: { Transform: { toString: noop } } },
-    "../../lib/api": { ApiRequestError },
+    "../../lib/api": { ApiRequestError,
+      getProjectConversations: async (id, input) => {
+        pageRequests.push({ id, ...input });
+        if (nextPageError) throw nextPageError;
+        return serverRows.slice(input.offset, input.offset + input.limit);
+      },
+      updateProjectConversationOrder: async (id, ids) => orderingWrites.push({ id, ids }),
+    },
+    "next/navigation": { useRouter: () => ({ push: noop }) },
+    "../../components/import-dialog-provider": { useImportDialog: () => ({ openImportDialog: noop }) },
+    "../conversations/new-conversation-dialog": { NewConversationDialog: () => null },
+    "../conversations/use-batch-result-check": { useBatchResultCheck: () => ({ record: noop, blockedIds: new Set(), surface: null }) },
+    "../../components/batch-operation-feedback": { BatchOperationFeedback: () => null },
+    "../../components/bulk-move-review": { BulkMoveReview: () => null },
+    "../../lib/list-pagination": loadComponent("lib/list-pagination.ts", {}),
+    "../../lib/offline-access": { authenticationGeneration: () => 0, AUTH_GENERATION_CHANGED_EVENT: "synthetic:auth-changed" },
     "../conversations/conversation-action-menu": { ConversationActionMenu: () => null },
     "../conversations/conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
       submit: async () => { throw new Error("A project read-recovery test must not delete"); } }) },
@@ -262,11 +285,11 @@ async function listFixture({ cached = true, rows = [row], error = new Error("Syn
     "./project-sidebar": { ProjectSidebar: () => null },
     "../../components/sort-menu": { ConversationSortMenu: () => null },
     "../../components/preferences-provider": {
-      usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: "recent_read", conversationSortDirection: "desc" }),
+      usePreferences: () => ({ resolvedLocale: locale, conversationSortMode: sort, conversationSortDirection: "desc" }),
     },
     "../../lib/activity-time": { formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
     "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({}) },
-    "../conversations/use-batch-export": { useBatchExport: () => ({ feedback: null }) },
+    "../conversations/use-batch-export": { useBatchExport: () => ({ feedback: null, overLimit: count => count > 5000 }) },
     "../../components/selection-toolbar": {
       SelectionModeButton: () => null,
       SelectionToolbar: ({ selectedCount }) => React.createElement("aside", { "data-testid": "synthetic-selection-toolbar" }, String(selectedCount)),
@@ -278,14 +301,15 @@ async function listFixture({ cached = true, rows = [row], error = new Error("Syn
     "../../components/hover-preview-link": { HoverPreviewLink: ({ href, children }) => React.createElement("a", { href }, children) },
   });
   const markup = renderToStaticMarkup(React.createElement(ProjectConversationList, { projectId: project.id }));
-  return { client, observer, markup, options, retryButtons, reads: () => reads };
+  return { client, observer, markup, options, retryButtons, sortableRows, pageRequests, orderingWrites,
+    setPageError: value => { nextPageError = value; }, reads: () => reads };
 }
 
 test("failed refresh keeps same-project cached rows, the real reading link and a safe retry notice", async () => {
   const fixture = await listFixture();
   try {
     assert.equal(fixture.observer.getCurrentResult().isError, true);
-    assert.equal(fixture.observer.getCurrentResult().data.length, 1);
+    assert.equal(fixture.observer.getCurrentResult().data.pages[0].items.length, 1);
     assert.match(fixture.markup, /Synthetic retained conversation/);
     assert.match(fixture.markup, /href="\/conversations\/synthetic-conversation\?projectId=synthetic-project"/);
     assert.match(fixture.markup, /role="alert"/);
@@ -305,12 +329,12 @@ test("initial list failure explains retry without showing an empty project or ra
   } finally { fixture.client.clear(); }
 });
 
-test("sort placeholders retain only their own project, never another project's rows", async () => {
+test("sort changes never display the old sort as the current editable project list", async () => {
   const fixture = await listFixture({ error: null });
   try {
-    const previous = [row];
-    assert.equal(fixture.options.placeholderData(previous, { queryKey: ["project-conversations", "synthetic-other"] }), undefined);
-    assert.equal(fixture.options.placeholderData(previous, { queryKey: ["project-conversations", project.id] }), previous);
+    assert.equal(fixture.options.placeholderData, undefined);
+    assert.deepEqual(fixture.options.queryKey, ["project-conversations", project.id, "recent_read", "desc"]);
+    assert.equal(fixture.options.getNextPageParam({ offset: 0, hasMore: true }), 100);
   } finally { fixture.client.clear(); }
 });
 
@@ -357,7 +381,7 @@ test("the retry control requests only the failed query without dropping its cach
     fixture.retryButtons[0].onClick();
     await setImmediate();
     assert.equal(fixture.reads(), 2);
-    assert.deepEqual(fixture.observer.getCurrentResult().data, [row]);
+    assert.deepEqual(fixture.observer.getCurrentResult().data.pages[0].items, [row]);
   } finally { fixture.client.clear(); }
 });
 
@@ -368,4 +392,65 @@ test("Chinese project recovery uses localized status and retry labels", async ()
     assert.match(fixture.markup, />重试<\/button>/);
     assert.doesNotMatch(fixture.markup, /Synthetic raw upstream detail/);
   } finally { fixture.client.clear(); }
+});
+
+for (const count of [499, 500, 501]) {
+  test(`project custom order ${count}: only a complete scope at or below 500 admits dragging`, async () => {
+    const rows = Array.from({ length: count }, (_, index) => ({ ...row, id: `synthetic-order-${index}` }));
+    const f = await listFixture({ rows, error: null, sort: "custom" });
+    try {
+      assert.equal(f.sortableRows.length, count);
+      assert.equal(f.sortableRows.every(item => item.disabled === (count > 500)), true);
+      if (count > 500) assert.match(f.markup, /exceeds the 500-item custom-order limit/);
+      assert.equal(f.orderingWrites.length, 0);
+    } finally { f.client.clear(); }
+  });
+}
+
+test("500 loaded project rows with a continuation are not a complete editable order", async () => {
+  const rows = Array.from({ length: 500 }, (_, index) => ({ ...row, id: `synthetic-partial-${index}` }));
+  const f = await listFixture({ rows, count: 501, hasMore: true, error: null, sort: "custom" });
+  try {
+    assert.equal(f.sortableRows.every(item => item.disabled), true);
+    assert.match(f.markup, /500 conversations loaded, more available/);
+    assert.match(f.markup, /Load more conversations/);
+  } finally { f.client.clear(); }
+});
+
+test("actual project query options reach item 5,001, retaining loaded pages through a continuation error", async () => {
+  const serverRows = Array.from({ length: 5001 }, (_, index) => ({ ...row, id: `synthetic-page-${index}` }));
+  const f = await listFixture({ error: null, serverRows, count: serverRows.length });
+  const client = new query.QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  const observer = new query.InfiniteQueryObserver(client, { ...f.options, enabled: false });
+  try {
+    await observer.refetch();
+    assert.equal(observer.getCurrentResult().data.pages[0].items.length, 100);
+    f.setPageError(new Error("Synthetic continuation outage"));
+    await observer.fetchNextPage();
+    assert.equal(observer.getCurrentResult().isFetchNextPageError, true);
+    assert.equal(observer.getCurrentResult().data.pages.length, 1);
+    f.setPageError(null);
+    for (let page = 1; page <= 51 && observer.getCurrentResult().hasNextPage; page++) await observer.fetchNextPage();
+    assert.equal(observer.getCurrentResult().hasNextPage, false);
+    const rows = observer.getCurrentResult().data.pages.flatMap(page => page.items);
+    assert.equal(rows.length, 5001);
+    assert.equal(new Set(rows.map(item => item.id)).size, 5001);
+    assert.equal(rows.at(-1).id, "synthetic-page-5000");
+    assert.equal(f.pageRequests.at(-1).offset, 5000);
+    assert.equal(f.pageRequests.every(input => input.limit === 101 && input.signal instanceof AbortSignal), true);
+  } finally { observer.destroy(); client.clear(); f.client.clear(); }
+});
+
+test("successful empty project reuses project-scoped create and import actions; failed reads do not", async () => {
+  const f = await listFixture({ rows: [], error: null });
+  try {
+    assert.match(f.markup, /No conversations in this project/);
+    assert.match(f.markup, />New conversation<\/button>/);
+    assert.match(f.markup, />Import conversations<\/button>/);
+  } finally { f.client.clear(); }
+  for (const status of [401, 403, 404]) {
+    const denied = await listFixture({ rows: [], error: new ApiRequestError("Synthetic denied", status) });
+    try { assert.doesNotMatch(denied.markup, />New conversation<\/button>|>Import conversations<\/button>/); }
+    finally { denied.client.clear(); }
+  }
 });

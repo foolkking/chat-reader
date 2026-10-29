@@ -4,7 +4,7 @@ import { releaseExportScope } from "../../lib/export-usage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitBranch, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   ApiRequestError,
   deleteMessage,
@@ -14,6 +14,7 @@ import {
 } from "../../lib/api";
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
 import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
+import { getCurrentOfflineRuntimeUserId } from "../../lib/auth-client";
 import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput, TocResponse } from "../../lib/types";
 import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
@@ -48,6 +49,7 @@ import { matchesLibrarySearchTarget, resolveCanonicalSearchAnchor, type SearchRe
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { AnnotationWorkspace } from "../annotations/annotation-workspace";
 import { ReadingPositionSyncStatus } from "../../components/reading-position-sync-status";
+import { ReadingListButton } from "../reading/reading-list-button";
 import { ConversationSplitWorkspace } from "../editing/conversation-split-workspace";
 import { offlineAnnotationRepository, remoteAnnotationRepository } from "../../lib/annotation-repository";
 import { ResizableDockPanel } from "../../components/resizable-pane";
@@ -61,11 +63,19 @@ import { tocNavigationTarget } from "./reader-locator-target";
 import { ConversationFilesPanel } from "../attachments/conversation-files-panel";
 import { OfflineConversationFilesPanel } from "../attachments/offline-conversation-files-panel";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
+import { ConversationLineagePanel } from "./conversation-lineage-panel";
 import { resolveActiveReadingTarget } from "./reader-active-position";
 import { TocRefreshDialog } from "../toc/toc-refresh-dialog";
 import { ReaderMarkdownCopyBoundary } from "./reader-markdown-copy";
 import { reportReaderPerformance, type ReaderPerformanceOutcome } from "./reader-performance";
 import { useDialogFocus } from "../../components/use-dialog-focus";
+import {
+  parseSearchReadingQueue,
+  searchReadingQueueStorageKey,
+  withSearchReadingQueue,
+  type SearchReadingQueue,
+} from "../search/search-reading-queue";
+import { buildReaderTurnGroups } from "./reader-turn-folding";
 
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
@@ -111,6 +121,12 @@ export function ConversationReader({
   const targetBlockIndex = numberOrNull(searchParams?.get("blockIndex") ?? null);
   const targetCharacterOffset = numberOrNull(searchParams?.get("characterOffset") ?? null);
   const targetEndCharacterOffset = numberOrNull(searchParams?.get("endCharacterOffset") ?? null);
+  const searchQueueId = searchParams?.get("searchQueue") ?? null;
+  const searchQueueOwnerId = getCurrentOfflineRuntimeUserId();
+  const rawSearchQueueIndex = searchParams?.get("searchIndex");
+  const parsedSearchQueueIndex = Number(rawSearchQueueIndex);
+  const searchQueueIndex = rawSearchQueueIndex !== null && Number.isSafeInteger(parsedSearchQueueIndex) && parsedSearchQueueIndex >= 0
+    ? parsedSearchQueueIndex : null;
   const requestedAttachmentId = searchParams?.get("attachmentId") ?? null;
   const requestedFilesOpen = searchParams?.get("files") === "open";
   const requestedAnnotationId = searchParams?.get("annotationId") ?? null;
@@ -119,6 +135,49 @@ export function ConversationReader({
     ? searchReplay.sequence : 0;
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
   const messages = loadedWindow.items;
+  const [collapsedTurnKeys, setCollapsedTurnKeys] = useState<Set<string>>(() => new Set());
+  const collapsedTurnKeysRef = useRef<Set<string>>(new Set());
+  const turnGroups = useMemo(() => buildReaderTurnGroups(loadedWindow.turns, messages), [loadedWindow.turns, messages]);
+  const turnByMessageId = useMemo(() => {
+    const index = new Map<string, (typeof turnGroups)[number]>();
+    for (const group of turnGroups) for (const messageId of group.messageIds) index.set(messageId, group);
+    return index;
+  }, [turnGroups]);
+  const [searchReadingQueue, setSearchReadingQueue] = useState<SearchReadingQueue | null>(null);
+  const toggleTurnCollapsed = useCallback((key: string) => {
+    const next = new Set(collapsedTurnKeysRef.current);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    collapsedTurnKeysRef.current = next;
+    setCollapsedTurnKeys(next);
+  }, []);
+  useEffect(() => {
+    collapsedTurnKeysRef.current = new Set();
+    setCollapsedTurnKeys(new Set());
+  }, [conversationId]);
+  useEffect(() => {
+    if (!searchQueueId) {
+      setSearchReadingQueue(null);
+      return;
+    }
+    let queue: SearchReadingQueue | null = null;
+    try {
+      const raw = window.sessionStorage.getItem(searchReadingQueueStorageKey(searchQueueId, searchQueueOwnerId));
+      queue = raw ? parseSearchReadingQueue(JSON.parse(raw)) : null;
+    } catch {
+      queue = null;
+    }
+    if (!queue || searchQueueIndex === null || searchQueueIndex >= queue.hrefs.length) {
+      try { window.sessionStorage.removeItem(searchReadingQueueStorageKey(searchQueueId, searchQueueOwnerId)); } catch { /* session storage may be unavailable */ }
+      setSearchReadingQueue(null);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("searchQueue");
+      url.searchParams.delete("searchIndex");
+      router.replace(`${url.pathname}${url.search}`, { scroll: false });
+      return;
+    }
+    setSearchReadingQueue(queue);
+  }, [router, searchQueueId, searchQueueIndex, searchQueueOwnerId]);
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -142,6 +201,7 @@ export function ConversationReader({
     setSearchHighlight(null);
   }, [publishSearchNavigation]);
   const [showFiles, setShowFiles] = useState(false);
+  const [lineageOpen, setLineageOpen] = useState(false);
   const [searchAttachmentTarget, setSearchAttachmentTarget] = useState<{ conversationId: string; attachmentId: string } | null>(null);
   const fileSearchAttachmentId = searchAttachmentTarget?.conversationId === conversationId ? searchAttachmentTarget.attachmentId : null;
   const [searchAnnotationTarget, setSearchAnnotationTarget] = useState<{ conversationId: string; annotationId: string } | null>(null);
@@ -1077,6 +1137,21 @@ export function ConversationReader({
       if (!ownsReaderReadRecovery(recentOwner)) {
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
       }
+      const currentWindow = loadedWindowRef.current;
+      const targetTurn = buildReaderTurnGroups(currentWindow.turns, currentWindow.items)
+        .find((turn) => turn.messageIds.includes(messageId));
+      if (targetTurn && collapsedTurnKeysRef.current.has(targetTurn.key)) {
+        const expanded = new Set(collapsedTurnKeysRef.current);
+        expanded.delete(targetTurn.key);
+        collapsedTurnKeysRef.current = expanded;
+        setCollapsedTurnKeys(expanded);
+        await new Promise<void>((resolve) => {
+          window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+        });
+        if (!ownsReaderReadRecovery(recentOwner)) {
+          return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
+        }
+      }
       let tocOriginCapturedByThisNavigation: ScrollAnchorSnapshot | null = null;
       let originalWindowIdentity = "";
       if (!options?.restorePosition
@@ -1270,6 +1345,15 @@ export function ConversationReader({
         mountStartedAt = window.performance.now();
 
         if (targetPage) {
+          const targetPageTurn = buildReaderTurnGroups(targetPage.turns, targetPage.items)
+            .find((turn) => turn.messageIds.includes(messageId));
+          const expandsTargetPageTurn = Boolean(targetPageTurn && collapsedTurnKeysRef.current.has(targetPageTurn.key));
+          if (targetPageTurn && expandsTargetPageTurn) {
+            const expanded = new Set(collapsedTurnKeysRef.current);
+            expanded.delete(targetPageTurn.key);
+            collapsedTurnKeysRef.current = expanded;
+            setCollapsedTurnKeys(expanded);
+          }
           initialWindowAppliedRef.current = true;
           const root = scrollContainerRef.current;
           if (root) {
@@ -1277,6 +1361,11 @@ export function ConversationReader({
             root.dataset.previousScrollTop = "0";
           }
           applyLoadedWindow(replaceLoadedWindow(targetPage, generation));
+          if (expandsTargetPageTurn) {
+            await new Promise<void>((resolve) => {
+              window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+            });
+          }
           setNavigationStage(scrollContainerRef.current, "target-window-committed");
         }
 
@@ -2647,6 +2736,23 @@ export function ConversationReader({
   }
   const readerSourceKey = readerCacheIdentity(dataSource, conversation);
 
+  const navigateSearchQueue = (index: number) => {
+    const href = searchReadingQueue?.hrefs[index];
+    if (!searchQueueId || !href) return;
+    const target = withSearchReadingQueue(href, searchQueueId, index);
+    if (target) router.replace(target);
+  };
+  const closeSearchQueue = () => {
+    if (searchQueueId) {
+      try { window.sessionStorage.removeItem(searchReadingQueueStorageKey(searchQueueId, searchQueueOwnerId)); } catch { /* session storage may be unavailable */ }
+    }
+    setSearchReadingQueue(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("searchQueue");
+    url.searchParams.delete("searchIndex");
+    router.replace(`${url.pathname}${url.search}`, { scroll: false });
+  };
+
   const headerActions: ReaderHeaderAction[] = [
     ...(canManageCanonical ? [{
       id: "edit-source",
@@ -2689,6 +2795,12 @@ export function ConversationReader({
       label: t("export"),
       icon: FileOutput,
       onSelect: () => { void openUtilityPanel("export"); },
+    } as ReaderHeaderAction] : []),
+    ...(dataSource.mode === "remote" ? [{
+      id: "lineage",
+      label: resolvedLocale === "zh-CN" ? "来源追溯" : "Conversation lineage",
+      icon: GitBranch,
+      onSelect: () => setLineageOpen(true),
     } as ReaderHeaderAction] : []),
     ...(canBrowseAttachments ? [{
       id: "conversation-files",
@@ -2833,6 +2945,7 @@ export function ConversationReader({
             {focusMode ? <div className="flex items-center gap-2">{returnToReadingButton()}<button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
               <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
               {returnToReadingButton()}
+              {dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} /> : null}
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
                 {desktopPrimaryActions.map((action) => {
                   const Icon = action.icon;
@@ -2869,6 +2982,7 @@ export function ConversationReader({
               </button>
             ) : null}
             {!mobileActionsExpanded ? returnToReadingButton(true) : null}
+            {dataSource.mode === "remote" && !mobileActionsExpanded ? <ReadingListButton conversationId={conversation.id} compact /> : null}
             {canManageCanonical && !mobileActionsExpanded ? <button type="button" onClick={() => openSourceEditor()} aria-pressed={Boolean(sourceEditorTarget)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui ${sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}><Pencil className="h-5 w-5" /></button> : null}
             <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
@@ -2904,6 +3018,25 @@ export function ConversationReader({
             <button type="button" onClick={() => { clearSearchNavigation(); void openUtilityPanel("search"); }} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium hover:bg-surface">{resolvedLocale === "zh-CN" ? "返回搜索" : "Return to search"}</button>
             <button type="button" onClick={() => { clearSearchNavigation(); setLocatePulse(null); }} className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-surface" aria-label={t("close")}><X className="h-4 w-4" /></button>
           </div> : null}
+          {!focusMode && searchReadingQueue && searchQueueId && searchQueueIndex !== null ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 text-sm text-primary" role="status" data-search-reading-queue="true">
+              <span className="w-full min-w-0 truncate font-medium sm:w-auto sm:flex-1">
+                {resolvedLocale === "zh-CN" ? `搜索命中连续阅读 · ${searchQueueIndex + 1} / ${searchReadingQueue.hrefs.length}` : `Search-hit reading · ${searchQueueIndex + 1} / ${searchReadingQueue.hrefs.length}`}
+              </span>
+              <button type="button" onClick={() => navigateSearchQueue(searchQueueIndex - 1)} disabled={searchQueueIndex === 0} className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-medium hover:bg-surface disabled:opacity-40">
+                <ChevronUp className="h-4 w-4" aria-hidden="true" />{resolvedLocale === "zh-CN" ? "上一个" : "Previous"}
+              </button>
+              <button type="button" onClick={() => navigateSearchQueue(searchQueueIndex + 1)} disabled={searchQueueIndex >= searchReadingQueue.hrefs.length - 1} className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 text-xs font-medium hover:bg-surface disabled:opacity-40">
+                {resolvedLocale === "zh-CN" ? "下一个" : "Next"}<ChevronDown className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <button type="button" onClick={() => router.push(searchReadingQueue.returnHref ?? "/search")} className="inline-flex min-h-11 items-center rounded-md px-2 text-xs font-medium hover:bg-surface">
+                {resolvedLocale === "zh-CN" ? "返回结果" : "Return to results"}
+              </button>
+              <button type="button" onClick={closeSearchQueue} className="inline-flex min-h-11 shrink-0 items-center rounded-md px-2 text-xs text-secondary hover:bg-surface" aria-label={resolvedLocale === "zh-CN" ? "退出连续阅读" : "Exit continuous reading"}>
+                {resolvedLocale === "zh-CN" ? "退出" : "Exit"}
+              </button>
+            </div>
+          ) : null}
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
 
@@ -2975,10 +3108,14 @@ export function ConversationReader({
                     {edgeError === "previous" ? <button type="button" onClick={() => void loadPreviousWindow()} className="rounded-lg border border-ui bg-surface px-3 py-1.5 text-sm text-secondary hover:bg-subtle">{t("retryEarlier")}</button> : null}
                   </div>
                   {messages.map((message) => {
+                    const turn = turnByMessageId.get(message.id);
+                    const isTurnLead = turn?.firstMessageId === message.id;
+                    const turnCollapsed = Boolean(turn && collapsedTurnKeys.has(turn.key));
                     return (
                     <MessageItem
                       key={message.id}
                       message={message}
+                      conversationTitle={conversation.display_title || conversation.title}
                       onChanged={applyMessageChange}
                       readOnly={!canManageCanonical}
                       highlightTargetId={null}
@@ -2987,6 +3124,11 @@ export function ConversationReader({
                       onInsert={canManageCanonical ? setMessageInsertTarget : undefined}
                       onDelete={canManageCanonical ? deleteReaderMessage : undefined}
                       attachmentAccess={libraryMode ? { kind: "offline" } : { kind: "owner" }}
+                      turnCollapsed={turnCollapsed}
+                      turnLead={isTurnLead}
+                      turnMessageCount={turn?.messageIds.length ?? 1}
+                      hiddenByTurn={turnCollapsed && !isTurnLead}
+                      onToggleTurn={isTurnLead && turn ? () => toggleTurnCollapsed(turn.key) : undefined}
                       selected={selectedMessageIds.has(message.id)}
                       onSelectedChange={!canManageCanonical ? undefined : (selected) => {
                         setSelectedMessageIds((current) => {
@@ -3143,6 +3285,19 @@ export function ConversationReader({
             /> : <OfflineConversationFilesPanel conversationId={conversation.id} initialAttachmentId={fileSearchAttachmentId} searchReplayKey={searchReplayKey} onLocate={async (target) => { setShowFiles(false); await navigateToTarget(target); }} />}
         </FloatingWorkspacePanel>
       ) : null}
+      {!focusMode && lineageOpen ? (
+        <FloatingWorkspacePanel
+          storageKey="chat-reader:conversation-lineage-workspace-floating-v1"
+          placement="reader-floating"
+          testId="conversation-lineage-workspace"
+          title={resolvedLocale === "zh-CN" ? "来源追溯" : "Conversation lineage"}
+          closeLabel={t("close")}
+          resetLabel={resolvedLocale === "zh-CN" ? "重置追溯窗口位置" : "Reset lineage window position"}
+          onClose={() => setLineageOpen(false)}
+        >
+          <ConversationLineagePanel conversationId={conversation.id} locale={resolvedLocale} onClose={() => setLineageOpen(false)} />
+        </FloatingWorkspacePanel>
+      ) : null}
       {continuationOpen && (canManageCanonical || dataSource.mode === "offline") ? <ContinuationWorkspace key={conversationId} conversationId={conversationId} viewState={continuationView} showGuideInitially={continuationGuideRequested} offline={dataSource.mode === "offline"} onClose={() => setContinuationOpen(false)} onNavigate={async reference => {
         let messageId = reference.messageId;
         if (!messageId && reference.sequence) {
@@ -3172,6 +3327,8 @@ export function ConversationReader({
         conversationTitle={conversation.display_title || conversation.title}
         selectedMessageIds={selectedOrderedIds}
         onClose={() => setSplitWorkspaceOpen(false)}
+        restoreFocus={() => document.querySelector<HTMLElement>(window.innerWidth < 768
+          ? "[data-reader-mobile-more-actions='true']" : "[data-reader-header-more-actions='true']")}
         onCompleted={async () => {
           setSelectedMessageIds(new Set());
           await queryClient.invalidateQueries({ queryKey: ["conversations"] });

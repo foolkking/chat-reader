@@ -7,6 +7,8 @@ import { batchExportError, batchExportFailureCode } from "../../lib/batch-export
 import { authenticationGeneration, OFFLINE_ACCESS_LOCKED_EVENT } from "../../lib/offline-access";
 import type { BackgroundTaskRead } from "../../lib/types";
 
+export const BATCH_EXPORT_SELECTION_LIMIT = 5000;
+
 function openTasks() { window.dispatchEvent(new Event("chat-reader:open-task-center")); }
 
 export function useBatchExport(zh: boolean) {
@@ -27,6 +29,12 @@ export function useBatchExport(zh: boolean) {
     if (request.current || selected.length === 0) return;
     const generation = authenticationGeneration();
     const ids = selected.map((item) => item.id);
+    if (ids.length > BATCH_EXPORT_SELECTION_LIMIT) {
+      // Invalid selection is not a new accepted export intent. Keep any
+      // earlier lost acknowledgement's key available for its exact retry.
+      setNotice({ generation, error: "BATCH_EXPORT_LIMIT" });
+      return;
+    }
     const selection = JSON.stringify(ids);
     if (pending.current?.selection !== selection || pending.current.generation !== generation) {
       pending.current = { selection, generation, key: `batch-export-${crypto.randomUUID()}` };
@@ -62,5 +70,5 @@ export function useBatchExport(zh: boolean) {
     <button type="button" onClick={openTasks} className="min-h-11 text-accent underline underline-offset-2">{zh ? "查看任务" : "View tasks"}</button>
     <button type="button" onClick={() => setNotice(null)} className="min-h-11 text-secondary">{zh ? "关闭" : "Dismiss"}</button>
   </div> : null;
-  return { submit, feedback };
+  return { submit, feedback, overLimit: (selectedCount: number) => selectedCount > BATCH_EXPORT_SELECTION_LIMIT };
 }

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { getProjects, searchConversations } from "../../lib/api";
+import { archiveConversation, getProjects, searchConversations } from "../../lib/api";
 import type { SearchResultItem } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { ProjectSidebar } from "../projects/project-sidebar";
@@ -12,6 +12,10 @@ import { orderSearchResults, SearchResults } from "./search-results";
 import { MobilePageHeader } from "../../components/mobile-page-header";
 import { useWorkspaceShell } from "../../components/workspace-shell";
 import { searchResultHref } from "./search-result-target";
+import { SavedSearchesPanel } from "./saved-searches-panel";
+import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
+import { buildSearchReadingQueue, sanitizeSearchReturnHref, searchReadingQueueStorageKey, withSearchReadingQueue } from "./search-reading-queue";
+import { getCurrentOfflineRuntimeUserId } from "../../lib/auth-client";
 
 const PAGE_SIZE = 50;
 
@@ -40,8 +44,13 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const [collection, setCollection] = useState<{ scope: string; items: SearchResultItem[] }>({ scope, items: [] });
   const items = collection.scope === scope ? collection.items : [];
   const [selection, setSelection] = useState<{ scope: string; documentId: string | null }>({ scope, documentId: null });
+  const [conversationSelection, setConversationSelection] = useState<{ scope: string; ids: string[] }>({ scope, ids: [] });
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchNotice, setBatchNotice] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const orderedItems = orderSearchResults(items);
+  const readingQueueCandidate = buildSearchReadingQueue(orderedItems, searchResultHref);
+  const selectedConversationIds = new Set(conversationSelection.scope === scope ? conversationSelection.ids : []);
   const activeIndex = selection.scope === scope
     ? orderedItems.findIndex((item) => item.document_id === selection.documentId) : -1;
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
@@ -65,6 +74,8 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   useEffect(() => {
     setSelection((current) => current.scope !== scope || (current.documentId !== null && !items.some((item) => item.document_id === current.documentId))
       ? { scope, documentId: null } : current);
+    setConversationSelection((current) => current.scope === scope ? current : { scope, ids: [] });
+    setBatchNotice(null);
   }, [items, scope]);
   useEffect(() => {
     if (!result.data) return;
@@ -90,8 +101,55 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     if (!item) return;
     router.push(searchResultHref(item));
   };
+  const startContinuousReading = () => {
+    const queue = buildSearchReadingQueue(orderedItems, searchResultHref);
+    if (!queue) return;
+    const queueId = window.crypto.randomUUID();
+    const href = withSearchReadingQueue(queue.hrefs[0], queueId, 0);
+    if (!href) return;
+    try {
+      queue.returnHref = sanitizeSearchReturnHref(`${window.location.pathname}${window.location.search}`) ?? "/search";
+      window.sessionStorage.setItem(searchReadingQueueStorageKey(queueId, getCurrentOfflineRuntimeUserId()), JSON.stringify(queue));
+      router.push(href);
+    } catch {
+      setBatchNotice(zh
+        ? "浏览器无法暂存本次阅读队列；搜索结果未更改。请稍后重试。"
+        : "The browser could not keep this temporary reading queue. Search results were not changed; try again.");
+    }
+  };
   const clearFilters = () => update({ status_scope: "active", document_type: "all", role: "all", project_id: "all", date_from: "", date_to: "" });
   const selectIndex = (index: number) => setSelection({ scope, documentId: orderedItems[index]?.document_id ?? null });
+  const toggleConversationSelection = (conversationId: string, checked: boolean) => {
+    setConversationSelection((current) => {
+      const ids = new Set(current.scope === scope ? current.ids : []);
+      if (checked) ids.add(conversationId);
+      else ids.delete(conversationId);
+      return { scope, ids: [...ids] };
+    });
+  };
+  const applyBatchResult = (batch: BatchSelectionResult) => {
+    const remaining = [...batch.failedIds, ...batch.unconfirmedIds, ...batch.notStartedIds];
+    setConversationSelection({ scope, ids: remaining });
+    setBatchNotice(zh
+      ? `已确认归档 ${batch.succeededIds.length} 项，明确失败 ${batch.failedIds.length} 项，结果未确认 ${batch.unconfirmedIds.length} 项，未开始 ${batch.notStartedIds.length} 项。这里只处理你明确勾选且当前已加载的对话。`
+      : `${batch.succeededIds.length} archived, ${batch.failedIds.length} definite failures, ${batch.unconfirmedIds.length} unconfirmed, ${batch.notStartedIds.length} not started. Only explicitly selected conversations from the loaded results were processed.`);
+  };
+  const archiveSelected = async () => {
+    const ids = [...selectedConversationIds];
+    if (!ids.length || batchBusy) return;
+    setBatchBusy(true);
+    setBatchNotice(null);
+    try {
+      const batch = await runBatchSelection(ids, archiveConversation, 4);
+      applyBatchResult(batch);
+      if (batch.succeededIds.length && statusScope === "active") {
+        setCollection((current) => ({ scope: current.scope, items: current.items.filter((item) => !batch.succeededIds.includes(item.conversation_id)) }));
+      }
+      void result.refetch();
+    } finally {
+      setBatchBusy(false);
+    }
+  };
   const moveSelection = (delta: number) => {
     if (!orderedItems.length) return;
     const next = Math.max(0, Math.min(orderedItems.length - 1, activeIndex + delta));
@@ -108,11 +166,38 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
          <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码、批注和附件" : "Search conversations, messages, sections, code, annotations, and attachments"} onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)} />
         <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
           <SearchBox initialQuery={query} onSearch={(value) => { if (value === query) void result.refetch(); else update({ q: value }); }} hasResults={items.length > 0} onMoveSelection={moveSelection} onOpenSelection={openSelected} />
+          <SavedSearchesPanel
+            current={{ q: query, document_type: documentType as "all" | "conversation" | "message" | "heading" | "code" | "annotation" | "attachment", role: role as "all" | "user" | "assistant", project_id: projectId === "all" ? null : projectId, status_scope: statusScope as "active" | "archived" | "all", date_from: dateFrom || null, date_to: dateTo || null }}
+            onApply={(saved) => {
+              update({
+                q: saved.q,
+                document_type: saved.document_type,
+                role: saved.role,
+                project_id: saved.project_id ?? "",
+                status_scope: saved.status_scope,
+                date_from: saved.date_from ?? "",
+                date_to: saved.date_to ?? "",
+              });
+            }}
+          />
           <div className="flex min-h-10 flex-wrap items-center gap-3">
             <button type="button" aria-expanded={filtersOpen} aria-controls="global-search-filters" onClick={() => setFiltersOpen((value) => !value)} className="min-h-10 rounded-lg border border-ui px-3 text-sm font-medium hover:bg-subtle">{zh ? "筛选" : "Filters"}{filterCount ? ` · ${filterCount}` : ""}</button>
             {filterCount ? <button type="button" onClick={clearFilters} className="min-h-10 text-sm text-accent">{zh ? "清除筛选" : "Clear filters"}</button> : null}
             <span role="status" className="ml-auto text-xs text-secondary">{query && !invalidDates && !result.isError ? (result.isFetching ? (zh ? "正在搜索…" : "Searching…") : (zh ? `${items.length} / ${total} 条结果` : `${items.length} / ${total} results`)) : ""}</span>
           </div>
+          {query && items.length ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-ui bg-surface px-3 py-2 text-xs text-secondary">
+              <span>{zh ? `已明确选择 ${selectedConversationIds.size} 个对话` : `${selectedConversationIds.size} conversations explicitly selected`}</span>
+              <span className="text-secondary">{zh ? "仅处理当前已加载结果，不会隐式选择全部搜索结果。" : "Only loaded results are included; all search results are never selected implicitly."}</span>
+              {readingQueueCandidate ? <button type="button" onClick={startContinuousReading} className="min-h-9 rounded-md border border-ui bg-page px-3 font-medium text-primary hover:bg-subtle">
+                {zh ? `连续阅读 ${readingQueueCandidate.hrefs.length} 个已加载命中` : `Read ${readingQueueCandidate.hrefs.length} loaded hits in sequence`}
+              </button> : null}
+              <button type="button" disabled={selectedConversationIds.size === 0 || batchBusy} onClick={() => void archiveSelected()} className="btn-secondary ml-auto inline-flex min-h-9 items-center px-3 text-xs disabled:opacity-50">
+                {batchBusy ? (zh ? "正在归档…" : "Archiving…") : (zh ? "归档已选对话" : "Archive selected")}
+              </button>
+            </div>
+          ) : null}
+          {batchNotice ? <p role="status" className="text-xs text-secondary">{batchNotice}</p> : null}
           <div id="global-search-filters" hidden={!filtersOpen} className={filtersOpen ? "grid gap-3 border-y border-ui py-4 sm:grid-cols-2 lg:grid-cols-4" : "hidden"}>
             <Filter label={zh ? "范围" : "Status"} value={statusScope} onChange={(value) => update({ status_scope: value })} options={[["active", zh ? "未归档" : "Active"], ["archived", zh ? "已归档" : "Archived"], ["all", zh ? "全部" : "All"]]} />
              <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"], ["annotation", zh ? "批注" : "Annotations"], ["attachment", zh ? "附件" : "Attachments"]]} />
@@ -134,7 +219,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
           {result.isError ? <div role="alert" className="border-l-2 border-[var(--danger)] pl-4 text-sm text-[var(--danger)]"><p>{zh ? "搜索失败，请重试。" : "Search failed. Try again."}{items.length ? (zh ? " 以下为之前加载的结果。" : " Previously loaded results are shown below.") : ""}</p><button type="button" disabled={result.isFetching} onClick={() => void result.refetch()} className="min-h-10 underline">{zh ? "重试" : "Retry"}</button></div> : null}
           {query && !invalidDates && !result.isError && !result.isFetching && items.length === 0 ? <State text={zh ? "没有找到结果。请清除筛选或修改关键词。" : "No results. Clear filters or try another query."} /> : null}
           <p id="search-selection-status" role="status" className="sr-only">{activeIndex >= 0 && orderedItems[activeIndex] ? `${activeIndex + 1} / ${items.length}: ${orderedItems[activeIndex].conversation_title}` : ""}</p>
-          <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={selectIndex} /> : null}</div>
+          <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={selectIndex} selectedConversationIds={selectedConversationIds} onConversationSelectionChange={toggleConversationSelection} /> : null}</div>
           {!result.isError && items.length < total ? <button type="button" onClick={() => setPaging({ scope, offset: items.length })} disabled={result.isFetching} className="mx-auto block min-h-10 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
         </div></div>
       </section>

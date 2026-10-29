@@ -7,8 +7,8 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import case, func, or_
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.models.attachment import (
@@ -23,9 +23,12 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.render_block import RenderBlock
 from app.models.conversation import Conversation
+from app.models.project_conversation import ProjectConversation
 from app.schemas.attachment import (
     AttachmentFinalizeRequest,
     AttachmentBatchDownloadRequest,
+    AttachmentDirectoryItem,
+    AttachmentDirectoryResponse,
     AttachmentListRead,
     AttachmentOccurrenceLocationRead,
     AttachmentRead,
@@ -322,6 +325,136 @@ def list_conversation_attachments(
     return AttachmentListRead(items=items)
 
 
+@router.get("/api/attachments/directory", response_model=AttachmentDirectoryResponse)
+def list_attachment_directory(
+    request: Request,
+    q: str | None = Query(default=None, max_length=200),
+    mime_type: str | None = Query(default=None, max_length=200),
+    used: str = Query(default="all", pattern="^(all|used|unused)$"),
+    project_id: uuid.UUID | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+) -> AttachmentDirectoryResponse:
+    """List owned files across conversations; this endpoint is read-only."""
+    scope = ownership_scope_from_request(request)
+    query = (
+        db.query(Attachment, Conversation)
+        .join(Conversation, Conversation.id == Attachment.conversation_id)
+        .filter(
+            scope.predicate(Conversation),
+            Conversation.deleted_at.is_(None),
+            Conversation.status.in_(("active", "archived")),
+            Attachment.deleted_at.is_(None),
+            Attachment.status != "detached",
+        )
+    )
+    if q:
+        search = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Attachment.display_name.ilike(search),
+                Attachment.original_filename.ilike(search),
+            )
+        )
+    if mime_type:
+        query = query.outerjoin(AssetObject, AssetObject.id == Attachment.asset_object_id).filter(
+            or_(
+                Attachment.declared_mime_type == mime_type,
+                Attachment.detected_mime_type == mime_type,
+                AssetObject.detected_mime_type == mime_type,
+            )
+        )
+    if project_id is not None:
+        query = query.join(ProjectConversation, ProjectConversation.conversation_id == Conversation.id).filter(
+            ProjectConversation.project_id == project_id
+        )
+
+    current_usage = (
+        db.query(MessageVersionAttachment.id)
+        .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+        .join(Message, Message.current_version_id == MessageVersion.id)
+        .filter(
+            MessageVersionAttachment.attachment_id == Attachment.id,
+            Message.is_deleted.is_(False),
+        )
+        .exists()
+    )
+    if used == "used":
+        query = query.filter(current_usage)
+    elif used == "unused":
+        query = query.filter(~current_usage)
+
+    total = int(query.with_entities(func.count(Attachment.id)).scalar() or 0)
+    rows = (
+        query.options(
+            selectinload(Attachment.asset_object),
+            selectinload(Conversation.project_links).selectinload(ProjectConversation.project),
+        )
+        .order_by(Attachment.created_at.desc(), Attachment.id.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    attachment_ids = [attachment.id for attachment, _conversation in rows]
+    occurrence_stats: dict[uuid.UUID, tuple[int, int, int]] = {}
+    if attachment_ids:
+        stats = (
+            db.query(
+                MessageVersionAttachment.attachment_id,
+                func.count(MessageVersionAttachment.id),
+                func.sum(
+                    case(
+                        (Message.current_version_id == MessageVersionAttachment.message_version_id, 1),
+                        else_=0,
+                    )
+                ),
+                func.count(func.distinct(Message.id)),
+            )
+            .join(MessageVersion, MessageVersion.id == MessageVersionAttachment.message_version_id)
+            .join(Message, Message.id == MessageVersion.message_id)
+            .filter(
+                MessageVersionAttachment.attachment_id.in_(attachment_ids),
+                Message.is_deleted.is_(False),
+            )
+            .group_by(MessageVersionAttachment.attachment_id)
+            .all()
+        )
+        occurrence_stats = {
+            attachment_id: (int(total_count), int(current_count or 0), int(message_count))
+            for attachment_id, total_count, current_count, message_count in stats
+        }
+
+    items: list[AttachmentDirectoryItem] = []
+    for attachment, conversation in rows:
+        project_summary = _conversation_project_summary(conversation)
+        total_occurrences, current_occurrences, message_count = occurrence_stats.get(attachment.id, (0, 0, 0))
+        read = attachment_read(attachment)
+        item_data = read.model_dump()
+        item_data.update(
+            {
+                "conversation_title": conversation.title,
+                "conversation_display_title": conversation.display_title,
+                "project_id": project_summary[0],
+                "project_name": project_summary[1],
+                "occurrence_count": total_occurrences,
+                "current_occurrence_count": current_occurrences,
+                "message_count": message_count,
+                "is_used": current_occurrences > 0,
+            }
+        )
+        items.append(
+            AttachmentDirectoryItem(**item_data)
+        )
+    return AttachmentDirectoryResponse(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=offset + len(items) < total,
+    )
+
+
 @router.patch("/api/conversations/{conversation_id}/attachments/{attachment_id}", response_model=AttachmentRead)
 def update_conversation_attachment(
     conversation_id: uuid.UUID,
@@ -548,6 +681,14 @@ def get_shared_attachment_metadata(
         return attachment_read(attachment, content_prefix=f"/api/shared/{token}/attachments")
     except (AttachmentAccessError, ShareError) as exc:
         raise HTTPException(status_code=getattr(exc, "status_code", 404), detail=str(exc)) from exc
+
+
+def _conversation_project_summary(conversation: Conversation) -> tuple[uuid.UUID | None, str | None]:
+    for relation in conversation.project_links:
+        project = relation.project
+        if project is not None and not project.is_default and not project.is_archived:
+            return project.id, project.name
+    return None, None
 
 
 def _content_response(

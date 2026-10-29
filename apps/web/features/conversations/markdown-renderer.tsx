@@ -20,7 +20,8 @@ import {
   scopedRichMarkdownRehypePlugins,
 } from "../rich-markdown/rich-markdown-config";
 import { normalizeDisplayMathForRenderer } from "../rich-markdown/remark-ai-math-compatibility";
-import { MarkdownTableCell, MarkdownTableContent, MarkdownTableScroll } from "./markdown-table";
+import { MarkdownTableCell, MarkdownTableContent } from "./markdown-table";
+import { ReaderMarkdownTable } from "./markdown-table-export-actions";
 import { findOpeningThinkingSummary } from "./thinking-summary";
 import {
   detectChatGptRichText,
@@ -240,9 +241,9 @@ const markdownComponents: Components & {
   },
   table({ children, node }) {
     return (
-      <MarkdownTableScroll {...markdownSourcePositionAttributes(node)}>
+      <ReaderMarkdownTable {...markdownSourcePositionAttributes(node)} node={node}>
         <MarkdownTableContent>{children}</MarkdownTableContent>
-      </MarkdownTableScroll>
+      </ReaderMarkdownTable>
     );
   },
   tbody({ children }) {

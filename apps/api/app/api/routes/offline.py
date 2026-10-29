@@ -2,8 +2,8 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
-from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -13,6 +13,7 @@ from app.schemas.offline import OfflineCatalogResponse, OfflinePackageCreate, Of
 from app.services.background_jobs import queue_offline_package
 from app.services.offline_packages import OfflinePackageError, build_catalog
 from app.services.artifact_lifecycle import validate_final_artifact
+from app.services.offline_download import OfflineFileResponse, acquire_offline_download
 from app.services.ownership import OwnershipScope, ownership_scope_from_request, subject_key_from_request
 
 router = APIRouter(prefix="/api/offline", tags=["offline"])
@@ -116,9 +117,13 @@ def download_offline_package(
     package_id: uuid.UUID,
     request: Request,
     db: Session = Depends(get_db),
-) -> FileResponse:
+) -> OfflineFileResponse:
     ownership_scope = ownership_scope_from_request(request)
-    package = db.get(OfflinePackageArtifact, package_id)
+    package = db.scalar(
+        select(OfflinePackageArtifact)
+        .where(OfflinePackageArtifact.id == package_id)
+        .with_for_update()
+    )
     if package is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offline package not found.")
     job = db.get(BackgroundJob, package.job_id)
@@ -130,9 +135,18 @@ def download_offline_package(
     path = Path(package.storage_uri).resolve()
     if not path.is_relative_to(root) or not validate_final_artifact(path, expected_size=package.byte_size):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Offline package file is missing.")
+    lease_id = acquire_offline_download(db, str(path))
     package.download_count += 1
     db.commit()
-    return FileResponse(path, media_type="application/zip", filename=package.filename)
+    return OfflineFileResponse(
+        path,
+        media_type="application/zip",
+        filename=package.filename,
+        headers={"Cache-Control": "private, no-store"},
+        session_factory=sessionmaker(bind=db.get_bind(), autoflush=False),
+        storage_uri=str(path),
+        lease_id=lease_id,
+    )
 
 
 def _owns_job(job: BackgroundJob, scope: OwnershipScope) -> bool:

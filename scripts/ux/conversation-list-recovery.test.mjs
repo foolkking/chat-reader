@@ -78,6 +78,7 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
       getConversations: async input => { apiReads.push(input); return mainRows.slice(input.offset ?? 0, (input.offset ?? 0) + input.limit); } },
     "./markdown-renderer": { stripLeadingTimestamp: text => text },
     "./conversation-action-menu": { ConversationActionMenu: () => null },
+    "./batch-title-trim": { BatchTitleTrim: () => null },
     "./conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
       submit: async () => { throw new Error("A read-recovery test must not delete"); } }) },
     // Placement has its own executable suite; this fixture isolates list reads.
@@ -89,7 +90,11 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     "../../components/quick-start-guide": { QuickStartGuide: () => null },
     "../../lib/activity-time": { formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
     "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({}) },
-    "./use-batch-export": { useBatchExport: () => ({ feedback: null }) },
+    "./use-batch-export": { useBatchExport: () => ({ feedback: null, overLimit: count => count > 5000 }) },
+    "./use-batch-result-check": { useBatchResultCheck: () => ({ record: noop, blockedIds: new Set(), surface: null }) },
+    "../../components/batch-operation-feedback": { BatchOperationFeedback: () => null },
+    "../../components/bulk-move-review": { BulkMoveReview: () => null },
+    "../../lib/offline-access": { authenticationGeneration: () => 0, AUTH_GENERATION_CHANGED_EVENT: "synthetic:auth-changed" },
     "../../components/selection-toolbar": { SelectionModeButton: () => null,
       SelectionToolbar: ({ selectedCount, loadedOnly }) => { inputs.set("selection", { selectedCount, loadedOnly });
         return React.createElement("aside", { "data-testid": "synthetic-selection-toolbar" }, selectedCount); } },

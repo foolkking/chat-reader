@@ -414,6 +414,8 @@ const renderer = compileComponent("../../apps/web/features/conversations/markdow
   "@assistant-ui/react": uiAdapter,
   "@assistant-ui/react-markdown": uiAdapter,
   "lucide-react": new Proxy({}, { get: () => () => null }),
+  "./markdown-table-export-actions": { ReaderMarkdownTable: ({ children }) =>
+    React.createElement("div", { className: "markdown-table max-w-full overflow-x-auto rounded-lg border border-ui bg-surface" }, children) },
   "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: "en-US", resolvedTheme: "light" }) },
   "../../components/use-clipboard-copy": clipboardCopy,
   "../rich-markdown/rich-markdown-config": config,

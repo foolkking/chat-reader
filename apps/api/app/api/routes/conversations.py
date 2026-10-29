@@ -1,12 +1,17 @@
+import hashlib
+import json
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, status
-from sqlalchemy import case, func
+from sqlalchemy import case, func, text
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
+from app.models.conversation_split import ConversationSplitReceipt
+from app.models.annotation import ConversationAnnotation
+from app.models.attachment import Attachment
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.project import Project
@@ -22,6 +27,9 @@ from app.schemas.conversation import (
     ConversationPlacementRead,
     ConversationPlacementRequest,
     ConversationPlacementResponse,
+    DuplicateReviewGroup,
+    DuplicateReviewResponse,
+    DuplicateReviewConversation,
     ConversationUpdate,
     MessageInsertRequest,
     MessageInsertResponse,
@@ -75,7 +83,7 @@ from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn
 from app.services.reader_locator import resolve_reader_locator
 from app.api.routes.tasks import background_job_read
 from app.services.conversations.conversation_deletion import delete_conversation_record
-from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
+from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request, subject_key_from_request
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
@@ -206,6 +214,127 @@ def list_conversations(
         .all()
     )
     return [_conversation_item(conversation) for conversation in conversations]
+
+
+@router.get("/duplicates", response_model=DuplicateReviewResponse)
+def list_duplicate_reviews(
+    request: Request,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    status_scope: str = Query(default="all", pattern="^(active|archived|all)$"),
+    db: Session = Depends(get_db),
+) -> DuplicateReviewResponse:
+    """Return exact content-hash groups for review without merge/delete actions."""
+    scope = ownership_scope_from_request(request)
+    base_filters = [
+        scope.predicate(Conversation),
+        Conversation.deleted_at.is_(None),
+        Conversation.content_hash.is_not(None),
+    ]
+    if status_scope == "active":
+        base_filters.append(Conversation.status == "active")
+    elif status_scope == "archived":
+        base_filters.append(Conversation.status == "archived")
+    else:
+        base_filters.append(Conversation.status.in_(("active", "archived")))
+
+    grouped = (
+        db.query(
+            Conversation.content_hash.label("content_hash"),
+            func.count(Conversation.id).label("group_count"),
+        )
+        .filter(*base_filters)
+        .group_by(Conversation.content_hash)
+        .having(func.count(Conversation.id) > 1)
+        .order_by(func.count(Conversation.id).desc(), Conversation.content_hash.asc())
+    )
+    group_summary = grouped.order_by(None).subquery()
+    total_groups, total_conversations = db.query(
+        func.count(), func.coalesce(func.sum(group_summary.c.group_count), 0)
+    ).select_from(group_summary).one()
+    total_groups, total_conversations = int(total_groups), int(total_conversations)
+    page_rows = grouped.offset(offset).limit(limit).all()
+    page_hashes = [row.content_hash for row in page_rows]
+    if not page_hashes:
+        return DuplicateReviewResponse(
+            groups=[],
+            total_groups=total_groups,
+            total_conversations=total_conversations,
+            limit=limit,
+            offset=offset,
+            has_more=offset < total_groups,
+        )
+
+    conversations = (
+        db.query(Conversation)
+        .filter(*base_filters, Conversation.content_hash.in_(page_hashes))
+        .options(selectinload(Conversation.project_links).selectinload(ProjectConversation.project))
+        .order_by(
+            Conversation.content_hash.asc(),
+            Conversation.updated_at.desc().nullslast(),
+            Conversation.imported_at.desc(),
+            Conversation.id.asc(),
+        )
+        .all()
+    )
+    conversation_ids = [conversation.id for conversation in conversations]
+    attachment_counts = dict(
+        db.query(Attachment.conversation_id, func.count(Attachment.id))
+        .filter(
+            Attachment.conversation_id.in_(conversation_ids),
+            Attachment.deleted_at.is_(None),
+            Attachment.status != "detached",
+        )
+        .group_by(Attachment.conversation_id)
+        .all()
+    )
+    annotation_counts = dict(
+        db.query(ConversationAnnotation.conversation_id, func.count(ConversationAnnotation.id))
+        .filter(
+            ConversationAnnotation.conversation_id.in_(conversation_ids),
+            ConversationAnnotation.subject_key == subject_key_from_request(request),
+            ConversationAnnotation.is_deleted.is_(False),
+        )
+        .group_by(ConversationAnnotation.conversation_id)
+        .all()
+    )
+    by_hash: dict[str, list[DuplicateReviewConversation]] = {str(value): [] for value in page_hashes}
+    for conversation in conversations:
+        project_id, project_name = _conversation_project_summary(conversation)
+        by_hash[str(conversation.content_hash)].append(
+            DuplicateReviewConversation(
+                id=conversation.id,
+                title=conversation.title,
+                display_title=conversation.display_title,
+                status=conversation.status,
+                content_hash=conversation.content_hash,
+                message_count=conversation.message_count,
+                turn_count=conversation.turn_count,
+                created_at=conversation.created_at,
+                updated_at=conversation.updated_at,
+                imported_at=conversation.imported_at,
+                project_id=project_id,
+                project_name=project_name,
+                attachment_count=int(attachment_counts.get(conversation.id, 0)),
+                annotation_count=int(annotation_counts.get(conversation.id, 0)),
+            )
+        )
+    groups = [
+        DuplicateReviewGroup(
+            content_hash=str(row.content_hash),
+            count=int(row.group_count),
+            conversations=by_hash.get(str(row.content_hash), []),
+        )
+        for row in page_rows
+    ]
+    return DuplicateReviewResponse(
+        groups=groups,
+        total_groups=total_groups,
+        total_conversations=total_conversations,
+        limit=limit,
+        offset=offset,
+        has_more=offset + len(page_rows) < total_groups,
+    )
 
 
 @router.put("/order", status_code=status.HTTP_204_NO_CONTENT)
@@ -511,15 +640,52 @@ def preview_split_workspace(
     )
 
 
+@router.post("/{conversation_id}/split-workspace/requests", response_model=ConversationSplitWorkspaceResponse)
+def execute_keyed_split_workspace(
+    conversation_id: uuid.UUID,
+    payload: ConversationSplitWorkspaceRequest,
+    request: Request,
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=1, max_length=128),
+    db: Session = Depends(get_db),
+) -> ConversationSplitWorkspaceResponse:
+    # A distinct endpoint fails closed on older API images instead of silently
+    # ignoring a new client's key and creating a duplicate during rollback.
+    return execute_split_workspace(conversation_id, payload, request, idempotency_key=idempotency_key, db=db)
+
+
 @router.post("/{conversation_id}/split-workspace", response_model=ConversationSplitWorkspaceResponse)
 def execute_split_workspace(
     conversation_id: uuid.UUID,
     payload: ConversationSplitWorkspaceRequest,
     request: Request,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=128),
     db: Session = Depends(get_db),
 ) -> ConversationSplitWorkspaceResponse:
     _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     try:
+        payload_data = payload.model_dump(mode="json", exclude_none=True)
+        request_digest = hashlib.sha256(
+            json.dumps(payload_data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        if idempotency_key:
+            if db.bind is not None and db.bind.dialect.name == "postgresql":
+                lock_material = f"conversation-split:{conversation_id}:{idempotency_key}"
+                lock_id = int.from_bytes(hashlib.sha256(lock_material.encode("utf-8")).digest()[:8], "big", signed=True)
+                db.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": lock_id})
+            # A competing write may have retired access while this request
+            # waited for the operation lock. Never disclose a stale receipt.
+            _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
+            receipt = db.query(ConversationSplitReceipt).filter_by(
+                conversation_id=conversation_id,
+                idempotency_key=idempotency_key,
+            ).one_or_none()
+            if receipt is not None:
+                if receipt.request_digest != request_digest:
+                    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={
+                        "code": "SPLIT_IDEMPOTENCY_CONFLICT",
+                        "message": "Idempotency key was already used for a different split request.",
+                    })
+                return ConversationSplitWorkspaceResponse.model_validate(receipt.response)
         groups = plan_conversation_split(
             db,
             conversation_id=conversation_id,
@@ -537,19 +703,33 @@ def execute_split_workspace(
             titles=payload.titles,
             project_id=payload.project_id,
         )
+        response = ConversationSplitWorkspaceResponse(
+            mode=payload.mode,
+            conversations=[ConversationTransformResponse(
+                conversation_id=result.conversation.id,
+                title=result.conversation.title,
+                display_title=result.conversation.display_title,
+                message_count=result.message_count,
+            ) for result in results],
+        )
+        if idempotency_key:
+            db.add(ConversationSplitReceipt(
+                conversation_id=conversation_id,
+                idempotency_key=idempotency_key,
+                request_digest=request_digest,
+                response=response.model_dump(mode="json"),
+            ))
         db.commit()
-    except MessageEditError as exc:
+    except (MessageEditError, ProjectServiceError) as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-    return ConversationSplitWorkspaceResponse(
-        mode=payload.mode,
-        conversations=[ConversationTransformResponse(
-            conversation_id=result.conversation.id,
-            title=result.conversation.title,
-            display_title=result.conversation.display_title,
-            message_count=result.message_count,
-        ) for result in results],
-    )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise
+    return response
 
 
 @router.post("/{conversation_id}/projects/{project_id}", response_model=ConversationDetail)
@@ -643,15 +823,21 @@ def list_conversation_events(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     event_type: str | None = None,
+    lineage_only: bool = False,
     db: Session = Depends(get_db),
 ) -> ConversationEventListResponse:
     _managed_conversation_or_404(db, conversation_id, ownership_scope_from_request(request))
     query = db.query(ConversationEvent).filter(ConversationEvent.conversation_id == conversation_id)
     if event_type:
         query = query.filter(ConversationEvent.event_type == event_type)
+    if lineage_only:
+        query = query.filter(ConversationEvent.event_type.in_([
+            "conversation_merged", "conversation_merged_into",
+            "conversation_split", "conversation_created_from_split",
+        ]))
     total = query.count()
     events = (
-        query.order_by(ConversationEvent.created_at.desc())
+        query.order_by(ConversationEvent.created_at.desc(), ConversationEvent.id.desc())
         .offset(offset)
         .limit(limit)
         .all()
@@ -882,14 +1068,7 @@ def _anchor_order_key(
 
 
 def _conversation_item(conversation: Conversation) -> ConversationListItem:
-    project_id = None
-    project_name = None
-    for relation in conversation.project_links:
-        project = relation.project
-        if project is not None and not project.is_default and not project.is_archived:
-            project_id = project.id
-            project_name = project.name
-            break
+    project_id, project_name = _conversation_project_summary(conversation)
     return ConversationListItem(
         id=conversation.id,
         title=conversation.title,
@@ -913,6 +1092,14 @@ def _conversation_item(conversation: Conversation) -> ConversationListItem:
         reading_progress=_reading_progress(conversation.recent_item.context) if conversation.recent_item else None,
         manual_sort_order=conversation.manual_sort_order,
     )
+
+
+def _conversation_project_summary(conversation: Conversation) -> tuple[uuid.UUID | None, str | None]:
+    for relation in conversation.project_links:
+        project = relation.project
+        if project is not None and not project.is_default and not project.is_archived:
+            return project.id, project.name
+    return None, None
 
 
 @router.get("/{conversation_id}/reader-turn", response_model=ReaderTurnResponse)

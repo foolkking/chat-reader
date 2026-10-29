@@ -49,6 +49,45 @@ export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead,
   "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction" | "reader_default_focus" | "annotation_default_position"
 >>;
 
+export type UserFeatureCollection = "saved-search" | "export-preset" | "reading-list" | "offline-checklist";
+export type SavedSearchValue = {
+  name: string;
+  q: string;
+  document_type: "all" | "conversation" | "message" | "heading" | "code" | "annotation" | "attachment";
+  role: "all" | "user" | "assistant";
+  project_id: string | null;
+  status_scope: "active" | "archived" | "all";
+  date_from: string | null;
+  date_to: string | null;
+};
+export type ExportPresetValue = {
+  name: string;
+  format: "context" | "canjson" | "markdown";
+  include_continuation: boolean;
+  include_attachments: boolean;
+  include_description: boolean;
+  include_annotations: boolean;
+  include_notebook: boolean;
+  include_source_refs: boolean;
+};
+export type ReadingListValue = {
+  conversation_id: string;
+  state: "unread" | "read";
+};
+export type OfflineChecklistValue = {
+  name: string;
+  targets: Array<{ scope: "conversation" | "project"; id: string }>;
+  include_assets: "none" | "small" | "all";
+};
+export type UserFeatureEntry<T> = {
+  id: string;
+  collection: UserFeatureCollection;
+  revision: number;
+  value: T;
+  created_at: string;
+  updated_at: string;
+};
+
 export type PreferenceField = keyof UserPreferenceUpdate;
 export type PreferenceSyncRequest = { operation_id: string; changes: UserPreferenceUpdate; base_revisions: Partial<Record<PreferenceField, number>> };
 export type PreferenceSyncResponse = { operation_id: string; preferences: UserPreferenceRead; applied: PreferenceField[]; conflicts: PreferenceField[] };
@@ -83,6 +122,38 @@ export type ConversationDetail = ConversationListItem & {
   render_version: number;
   content_hash: string | null;
   sort_time: string | null;
+};
+
+export type DuplicateReviewConversation = {
+  id: string;
+  title: string;
+  display_title: string;
+  status: string;
+  content_hash: string;
+  message_count: number;
+  turn_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+  imported_at: string;
+  project_id: string | null;
+  project_name: string | null;
+  attachment_count: number;
+  annotation_count: number;
+};
+
+export type DuplicateReviewGroup = {
+  content_hash: string;
+  count: number;
+  conversations: DuplicateReviewConversation[];
+};
+
+export type DuplicateReviewResponse = {
+  groups: DuplicateReviewGroup[];
+  total_groups: number;
+  total_conversations: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
 };
 
 export type CleanupRuleRead = {
@@ -336,6 +407,21 @@ export type AttachmentRead = {
 };
 
 export type AttachmentListRead = { items: AttachmentRead[] };
+
+export type AttachmentDirectoryItem = AttachmentRead & {
+  conversation_title: string;
+  conversation_display_title: string;
+  project_id: string | null;
+  project_name: string | null;
+};
+
+export type AttachmentDirectoryResponse = {
+  items: AttachmentDirectoryItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+};
 
 export type AttachmentUploadItemRead = {
   id: string;
@@ -1243,6 +1329,18 @@ export type AnnotationRead = {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+};
+
+export type AnnotationInboxItem = AnnotationRead & {
+  conversation_title: string;
+};
+
+export type AnnotationInboxResponse = {
+  items: AnnotationInboxItem[];
+  limit: number;
+  offset: number;
+  total: number;
+  has_more: boolean;
 };
 
 export type AnnotationCreateInput = Partial<Pick<AnnotationRead, "id" | "message_id" | "message_version_id" | "color" | "start_block_index" | "start_offset" | "end_block_index" | "end_offset" | "quote" | "prefix" | "suffix" | "anchor_status">> & {

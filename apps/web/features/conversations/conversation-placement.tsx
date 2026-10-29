@@ -9,6 +9,7 @@ import { useDialogFocus } from "../../components/use-dialog-focus";
 import { ApiRequestError, getConversation, getProjects, placeConversation } from "../../lib/api";
 import { authenticationGeneration } from "../../lib/offline-access";
 import type { ConversationDetail, ConversationListItem, ConversationPlacementResponse, ProjectConversationRead, ProjectRead, RecentItemRead } from "../../lib/types";
+import type { ListPage } from "../../lib/list-pagination";
 
 type Destination = { id: string | null; name: string };
 type PlacementPhase = "choosing" | "moving" | "unknown" | "checking" | "review" | "unavailable" | "confirmed";
@@ -52,17 +53,30 @@ function publishPlacement(client: QueryClient, result: ConversationPlacementResp
     if (Array.isArray(rows)) {
       client.setQueryData(key, rows.filter(item => !(key[1] === "history" && saved.project_id !== null && applies(item))).map(update));
     } else if (rows) {
-      client.setQueryData(key, { ...rows, pages: rows.pages.map(page => ({ ...page, items: page.items.map(update) })) });
+      client.setQueryData(key, { ...rows, pages: rows.pages.map(page => ({
+        ...page,
+        items: page.items.filter(item => !(key[1] === "history" && saved.project_id !== null && applies(item))).map(update),
+      })) });
     }
   }
-  for (const [key, rows] of client.getQueriesData<ProjectConversationRead[]>({ queryKey: ["project-conversations"] })) {
-    if (!Array.isArray(rows)) continue;
-    client.setQueryData(key, rows.filter(item => !(key[1] !== result.placement.project_id && applies(item))).map(item => {
+  for (const [key, cached] of client.getQueriesData<ProjectConversationRead[] | InfiniteData<ListPage<ProjectConversationRead>>>({ queryKey: ["project-conversations"] })) {
+    const updateProjectRow = (item: ProjectConversationRead): ProjectConversationRead => {
       if (!applies(item)) return item;
       return { ...update(item), project_relation: { ...item.project_relation,
         is_pinned: result.placement.is_pinned, sort_order: result.placement.sort_order,
         pinned_at: result.placement.is_pinned ? item.project_relation.pinned_at : null } };
-    }));
+    };
+    if (Array.isArray(cached)) {
+      client.setQueryData(key, cached.filter(item => !(key[1] !== result.placement.project_id && applies(item))).map(updateProjectRow));
+    } else if (cached) {
+      client.setQueryData(key, {
+        ...cached,
+        pages: cached.pages.map(page => ({
+          ...page,
+          items: page.items.filter(item => !(key[1] !== result.placement.project_id && applies(item))).map(updateProjectRow),
+        })),
+      });
+    }
   }
   client.setQueriesData<RecentItemRead[]>({ queryKey: ["recent-items"] }, rows => Array.isArray(rows)
     ? rows.map(item => applies(item.conversation) ? { ...item, project_id: result.placement.project_id, conversation: update(item.conversation) } : item)

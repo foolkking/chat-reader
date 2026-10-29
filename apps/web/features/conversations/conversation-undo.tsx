@@ -51,7 +51,7 @@ export function ConversationUndoNotice({ undo, onDone, disabled = false }: {
           if (conversation.status !== undo.targetStatus) notApplied.add(id);
         });
         confirmedIds = result.succeededIds.filter((id) => !notApplied.has(id));
-        nextMode = result.failedIds.length ? "check" : "retry";
+        nextMode = result.failedIds.length || result.unconfirmedIds.length || result.notStartedIds.length ? "check" : "retry";
       } else {
         const operation = undo.targetStatus === "active" ? unarchiveConversation : archiveConversation;
         const result = await runBatchSelection(remainingIds, async (id) => {

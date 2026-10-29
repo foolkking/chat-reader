@@ -78,6 +78,10 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead } = {
     "./adaptive-import-workspace": { AdaptiveImportWorkspace: "AdaptiveImportWorkspace" },
     "./format-conversion-guide": { FormatConversionGuide: "FormatConversionGuide" },
     "./import-noise-review": { ImportNoiseReview: "ImportNoiseReview" },
+    "./pasted-transcript": {
+      createPastedTranscriptFile: () => null,
+      pastedTranscriptByteLength: () => 0,
+    },
     "next/navigation": { useRouter: () => ({ push: value => calls.push(["navigate", value]) }) }, "next/link": { default: "a" },
     "@tanstack/react-query": {
       useQueryClient: () => queryClient,

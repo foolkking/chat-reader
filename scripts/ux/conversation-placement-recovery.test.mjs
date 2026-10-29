@@ -273,6 +273,30 @@ test("confirmed placement updates loaded pages without replacing reading or page
     assert.deepEqual(data.pageParams, [100]);
   } finally { await f.dispose(); }
 });
+test("confirmed placement removes stale project/history membership across loaded pages without inventing a destination row", async () => {
+  const f = await fixture();
+  try {
+    const related = { ...f.initial, project_relation: f.relation };
+    const source = { pages: [
+      { items: [f.other], offset: 0, hasMore: true },
+      { items: [related], offset: 100, hasMore: true },
+    ], pageParams: [0, 100] };
+    const target = { pages: [{ items: [{ ...f.other, project_id: "target", project_relation: f.relation }], offset: 0, hasMore: true }], pageParams: [0] };
+    const history = { pages: [{ items: [f.initial, f.other], offset: 100, hasMore: true }], pageParams: [100] };
+    f.client.setQueryData(f.keys.source, source);
+    f.client.setQueryData(f.keys.target, target);
+    f.client.setQueryData(f.keys.history, history);
+    await f.open(); await f.select("target"); await f.submit();
+    const nextSource = f.client.getQueryData(f.keys.source);
+    assert.deepEqual(nextSource.pages.map(page => page.items.map(item => item.id)), [[f.other.id], []]);
+    assert.deepEqual(nextSource.pageParams, [0, 100]);
+    assert.equal(nextSource.pages[1].offset, 100);
+    assert.equal(nextSource.pages[1].hasMore, true);
+    assert.deepEqual(f.client.getQueryData(f.keys.target), target);
+    assert.deepEqual(f.client.getQueryData(f.keys.history), { ...history, pages: [{ ...history.pages[0], items: [f.other] }] });
+    assert.deepEqual(f.client.getQueryData(f.keys.position), f.position);
+  } finally { await f.dispose(); }
+});
 test("moving to Unclassified remains one click without a confirmation (control)", async () => {
   const f = await fixture(); try { await f.openMenu(); await f.click("Move to unclassified");
     assert.equal(f.writes.length, 1); assert.equal(f.writes[0].input.target_project_id, null); assert.equal(f.confirms.length, 0);

@@ -21,8 +21,8 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Clock3, Folder, Import, ListTodo, PanelLeftClose, Plus, X } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Archive, ChevronDown, ChevronRight, Clock3, Command, Folder, Import, ListTodo, PanelLeftClose, Plus, X } from "lucide-react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -53,6 +53,7 @@ import { ConversationSortMenu } from "../../components/sort-menu";
 import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { ProjectActionMenu, ProjectArchiveFeedback, useProjectArchive, type ProjectArchiveController } from "./project-action-menu";
 import { projectMutationError } from "./project-error-copy";
+import { flattenPages, type ListPage } from "../../lib/list-pagination";
 
 type DragConversation = { activeType: "conversation"; id: string; title: string; description?: string; projectName?: string | null; projectId: string | null; projectPinned: boolean; offlineRevision: number };
 type DragProject = { activeType: "project"; id: string };
@@ -179,15 +180,18 @@ export function ProjectSidebar({
     // container and loses the placement intent.
     placeholderData: (previous) => previous,
   });
-  const conversationsQuery = useQuery({
+  const pageSize = 100;
+  const conversationsQuery = useInfiniteQuery({
     queryKey: ["conversations", "history", conversationSortMode, conversationSortDirection],
-    queryFn: () => getConversations({
-      scope: "history",
-      sort: conversationSortMode,
-      direction: conversationSortDirection,
-      limit: 5000,
-    }),
-    placeholderData: (previous) => previous,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam, signal }): Promise<ListPage<ConversationListItem>> => {
+      const rows = await getConversations({
+        scope: "history", sort: conversationSortMode, direction: conversationSortDirection,
+        limit: pageSize + 1, offset: pageParam,
+      }, signal);
+      return { items: rows.slice(0, pageSize), offset: pageParam, hasMore: rows.length > pageSize };
+    },
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.offset + pageSize : undefined,
   });
   const createMutation = useMutation({
     mutationFn: createProject,
@@ -216,8 +220,8 @@ export function ProjectSidebar({
         queryClient.cancelQueries({ queryKey: ["conversations", "history"] }),
       ]);
       const projectSnapshots = queryClient.getQueriesData<ProjectRead[]>({ queryKey: ["projects"] });
-      const branchSnapshots = queryClient.getQueriesData<ProjectConversationRead[]>({ queryKey: ["project-conversations"] });
-      const historySnapshots = queryClient.getQueriesData<ConversationListItem[]>({ queryKey: ["conversations", "history"] });
+      const branchSnapshots = queryClient.getQueriesData<InfiniteData<ListPage<ProjectConversationRead>>>({ queryKey: ["project-conversations"] });
+      const historySnapshots = queryClient.getQueriesData<InfiniteData<ListPage<ConversationListItem>>>({ queryKey: ["conversations", "history"] });
       const targetProject = projects.find((project) => project.id === variables.projectId);
       const optimisticConversation = findConversationInSnapshots(variables.conversationId, branchSnapshots, historySnapshots);
       if (optimisticConversation) {
@@ -240,16 +244,21 @@ export function ProjectSidebar({
               : 0,
           },
         };
-        for (const [key, rows] of branchSnapshots) {
-          if (!rows) continue;
+        for (const [key, data] of branchSnapshots) {
+          if (!data) continue;
           const projectId = String(key[1] ?? "");
-          const without = rows.filter((item) => item.id !== variables.conversationId);
-          queryClient.setQueryData(key, projectId === variables.projectId ? insertConversation(without, movedProjectConversation, variables.beforeId, variables.afterId) : without);
+          queryClient.setQueryData(key, patchPagedRows(
+            data, variables.conversationId,
+            projectId === variables.projectId ? movedProjectConversation : undefined,
+            variables.beforeId, variables.afterId,
+          ));
         }
-        for (const [key, rows] of historySnapshots) {
-          if (!rows) continue;
-          const without = rows.filter((item) => item.id !== variables.conversationId);
-          queryClient.setQueryData(key, variables.projectId === null ? insertConversation(without, moved, variables.beforeId, variables.afterId) : without);
+        for (const [key, data] of historySnapshots) {
+          if (!data) continue;
+          queryClient.setQueryData(key, patchPagedRows(
+            data, variables.conversationId, variables.projectId === null ? moved : undefined,
+            variables.beforeId, variables.afterId,
+          ));
         }
       }
       for (const [key, rows] of projectSnapshots) {
@@ -347,7 +356,7 @@ export function ProjectSidebar({
   const projectsUnavailable = projectsQuery.isError && isSidebarReadUnavailable(projectsQuery.error);
   const conversationsUnavailable = conversationsQuery.isError && isSidebarReadUnavailable(conversationsQuery.error);
   const projects = useMemo(() => projectsUnavailable ? [] : (projectsQuery.data ?? []).filter((project) => !project.is_default && !project.is_archived), [projectsQuery.data, projectsUnavailable]);
-  const conversations = conversationsUnavailable ? [] : conversationsQuery.data ?? [];
+  const conversations = conversationsUnavailable ? [] : flattenPages(conversationsQuery.data?.pages);
   const projectArchive = useProjectArchive({ projects, unavailable: projectsUnavailable, onChanged: refreshSidebar });
   const placement = useConversationPlacement({ scope: "sidebar:" + (pathname ?? ""), unavailable: projectsUnavailable || conversationsUnavailable, onChanged: refreshSidebar });
 
@@ -503,6 +512,9 @@ export function ProjectSidebar({
       conversationsLoading={conversationsQuery.isLoading}
       conversationsError={conversationsQuery.isError}
       conversationsFetching={conversationsQuery.isFetching}
+      conversationsHasMore={conversationsQuery.hasNextPage}
+      conversationsLoadingMore={conversationsQuery.isFetchingNextPage}
+      onLoadMoreConversations={() => { void conversationsQuery.fetchNextPage(); }}
       onRetryConversations={() => { void conversationsQuery.refetch(); }}
       expandedProjects={expandedProjects}
       toggleProject={(projectId) => setExpandedProjects((current) => toggleSet(current, projectId))}
@@ -633,6 +645,9 @@ type SidebarContentProps = {
   conversationsLoading: boolean;
   conversationsError: boolean;
   conversationsFetching: boolean;
+  conversationsHasMore: boolean;
+  conversationsLoadingMore: boolean;
+  onLoadMoreConversations: () => void;
   onRetryConversations: () => void;
   expandedProjects: Set<string>;
   toggleProject: (projectId: string) => void;
@@ -676,6 +691,7 @@ function SidebarContent(props: SidebarContentProps) {
           <button type="button" data-testid="sidebar-import-button" data-workspace-import-drop-target="true" onClick={props.onImportClick} className="min-h-11 w-full rounded-xl border border-ui bg-surface px-3 text-sm font-medium shadow-sm hover:bg-subtle"><span className="inline-flex items-center justify-center gap-2"><Import className="h-4 w-4" />{t("importData")}</span></button>
         </div>
         <SidebarSearch onNavigate={props.closeMobile} />
+        <button type="button" data-testid="sidebar-action-palette-button" onClick={() => window.dispatchEvent(new Event("chat-reader:open-action-palette"))} className="mt-2 flex min-h-10 w-full items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"><Command className="h-4 w-4 text-accent" />{zh ? "快捷操作" : "Quick actions"}<kbd className="ml-auto text-[11px] text-secondary">Alt⇧P</kbd></button>
         <button type="button" data-testid="sidebar-tasks-button" onClick={props.onTasksClick} className="mt-2 flex min-h-10 w-full items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"><ListTodo className="h-4 w-4 text-accent" />{t("tasks")}</button>
         <ImportTaskMonitor placement="sidebar" />
         <nav className="grid grid-cols-2 gap-1 md:grid-cols-1" aria-label={t("quickNavigation")}>
@@ -717,7 +733,7 @@ function SidebarContent(props: SidebarContentProps) {
           /> : null}
         </section>
 
-        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} fetching={props.conversationsFetching} onRetry={props.onRetryConversations} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} onNewConversation={props.onNewConversation} placement={props.placement} />
+        <HistoryDropZone pathname={props.pathname} conversations={props.conversations} loading={props.conversationsLoading} error={props.conversationsError} fetching={props.conversationsFetching} hasMore={props.conversationsHasMore} loadingMore={props.conversationsLoadingMore} onLoadMore={props.onLoadMoreConversations} onRetry={props.onRetryConversations} closeMobile={props.closeMobile} onChanged={props.onConversationChanged} onNewConversation={props.onNewConversation} placement={props.placement} />
       </div>
       <div className="shrink-0 border-t border-ui p-3">
         <SidebarPreferences onNavigate={props.closeMobile} />
@@ -742,14 +758,22 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
   const zh = resolvedLocale === "zh-CN";
   const sortable = useSortable({ id: `project-order:${project.id}`, data: { activeType: "project", dropType: "project-order-slot", id: project.id, projectId: project.id } satisfies DragProject & ProjectOrderDrop });
   const { setNodeRef, isOver } = useDroppable({ id: `project-conversation-container:${project.id}`, data: { dropType: "project-conversation-container", projectId: project.id } satisfies ConversationContainerDrop });
-  const conversationsQuery = useQuery({
+  const pageSize = 100;
+  const conversationsQuery = useInfiniteQuery({
     queryKey: ["project-conversations", project.id, conversationSortMode, conversationSortDirection],
-    queryFn: () => getProjectConversations(project.id, { sort: conversationSortMode, direction: conversationSortDirection, limit: 5000 }),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam, signal }): Promise<ListPage<ProjectConversationRead>> => {
+      const rows = await getProjectConversations(project.id, {
+        sort: conversationSortMode, direction: conversationSortDirection,
+        limit: pageSize + 1, offset: pageParam, signal,
+      });
+      return { items: rows.slice(0, pageSize), offset: pageParam, hasMore: rows.length > pageSize };
+    },
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.offset + pageSize : undefined,
     enabled: expanded,
-    placeholderData: (previous) => previous,
   });
   const unavailable = conversationsQuery.isError && isSidebarReadUnavailable(conversationsQuery.error);
-  const conversations = unavailable ? [] : conversationsQuery.data ?? [];
+  const conversations = unavailable ? [] : flattenPages(conversationsQuery.data?.pages);
   const projectActivityTime = project.last_read_at ?? project.updated_at;
   return (
     <div data-testid={`project-order-slot-${project.id}`} style={{ transform: CSS.Transform.toString(sortable.transform), transition: sortable.transition }}><div ref={setNodeRef} data-testid={`project-conversation-container-${project.id}`} className={`rounded-lg ${isOver ? "bg-[var(--accent-soft)] ring-1 ring-[var(--accent)]" : ""}`}>
@@ -761,7 +785,7 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
       {expanded ? (
         <div className="ml-6 border-l border-ui pl-1" role="group" aria-label={zh ? `项目对话：${project.name}` : `Conversations in ${project.name}`} aria-busy={conversationsQuery.isFetching}>
           {conversations.map((conversation, index) => <div key={conversation.id}><ConversationInsertSlot projectId={project.id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} /><DraggableConversationRow conversation={conversation} projectId={project.id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} placement={placement} /></div>)}
-          {conversations.length ? <ConversationInsertSlot projectId={project.id} beforeConversationId={null} afterConversationId={conversations[conversations.length - 1].id} /> : null}
+          {conversations.length && !conversationsQuery.hasNextPage ? <ConversationInsertSlot projectId={project.id} beforeConversationId={null} afterConversationId={conversations[conversations.length - 1].id} /> : null}
           {conversationsQuery.isLoading ? <p role="status" className="px-3 py-2 text-xs text-secondary">{zh ? "正在加载项目对话…" : "Loading project conversations…"}</p> : null}
           {conversationsQuery.isError ? <SidebarReadError
             message={conversations.length
@@ -771,13 +795,14 @@ function ProjectBranch({ project, expanded, active, pathname, toggle, closeMobil
             onRetry={() => { void conversationsQuery.refetch(); }}
           /> : null}
           {conversationsQuery.isSuccess && conversations.length === 0 ? <p className="px-3 py-2 text-xs text-secondary">{zh ? "拖动对话到这里" : "Drag conversations here"}</p> : null}
+          {conversationsQuery.hasNextPage ? <button type="button" disabled={conversationsQuery.isFetching} onClick={() => void conversationsQuery.fetchNextPage()} className="mx-2 my-1 min-h-10 rounded-md px-2 text-xs text-accent hover:bg-surface disabled:opacity-50">{conversationsQuery.isFetchingNextPage ? (zh ? "正在加载…" : "Loading…") : conversationsQuery.isFetchNextPageError ? (zh ? "重试加载更多" : "Retry loading more") : (zh ? `加载更多（已显示 ${conversations.length}）` : `Load more (${conversations.length} shown)`)}</button> : null}
         </div>
       ) : null}
     </div></div>
   );
 }
 
-function HistoryDropZone({ pathname, conversations, loading, error, fetching, onRetry, closeMobile, onChanged, onNewConversation, placement }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: boolean; fetching: boolean; onRetry: () => void; closeMobile: () => void; onChanged: () => Promise<void>; onNewConversation: () => void; placement: ConversationPlacementController }) {
+function HistoryDropZone({ pathname, conversations, loading, error, fetching, hasMore, loadingMore, onLoadMore, onRetry, closeMobile, onChanged, onNewConversation, placement }: { pathname: string; conversations: ConversationListItem[]; loading: boolean; error: boolean; fetching: boolean; hasMore: boolean; loadingMore: boolean; onLoadMore: () => void; onRetry: () => void; closeMobile: () => void; onChanged: () => Promise<void>; onNewConversation: () => void; placement: ConversationPlacementController }) {
   const { setNodeRef, isOver } = useDroppable({ id: "unclassified-container", data: { dropType: "unclassified-container", projectId: null } satisfies ConversationContainerDrop });
   const t = useTranslations();
   const zh = usePreferences().resolvedLocale === "zh-CN";
@@ -787,7 +812,7 @@ function HistoryDropZone({ pathname, conversations, loading, error, fetching, on
         <h2 className="text-xs font-semibold text-secondary">{t("unclassified")}</h2>
         <div className="flex items-center gap-1">
           <ConversationSortMenu compact />
-          <span className="text-[11px] text-secondary">{loading || error && conversations.length === 0 ? "—" : conversations.length}</span>
+          <span className="text-[11px] text-secondary">{loading || error && conversations.length === 0 ? "—" : `${conversations.length}${hasMore ? "+" : ""}`}</span>
           <button type="button" data-testid="unclassified-new-conversation-button" onClick={() => { onNewConversation(); closeMobile(); }} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface hover:text-primary" aria-label="新建对话" title="新建对话"><Plus className="h-4 w-4" /></button>
         </div>
       </div>
@@ -801,7 +826,8 @@ function HistoryDropZone({ pathname, conversations, loading, error, fetching, on
           onRetry={onRetry}
         /> : null}
         {conversations.map((conversation, index) => <div key={conversation.id}><ConversationInsertSlot projectId={null} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} /><DraggableConversationRow conversation={conversation} projectId={conversation.project_id} beforeConversationId={conversation.id} afterConversationId={conversations[index - 1]?.id ?? null} active={pathname === `/conversations/${conversation.id}`} closeMobile={closeMobile} onChanged={onChanged} placement={placement} /></div>)}
-        {conversations.length ? <ConversationInsertSlot projectId={null} beforeConversationId={null} afterConversationId={conversations[conversations.length - 1].id} /> : null}
+        {conversations.length && !hasMore ? <ConversationInsertSlot projectId={null} beforeConversationId={null} afterConversationId={conversations[conversations.length - 1].id} /> : null}
+        {hasMore ? <button type="button" disabled={fetching} onClick={onLoadMore} className="mx-2 my-1 min-h-10 rounded-md px-2 text-xs text-accent hover:bg-surface disabled:opacity-50">{loadingMore ? (zh ? "正在加载…" : "Loading…") : (zh ? `加载更多（已显示 ${conversations.length}）` : `Load more (${conversations.length} shown)`)}</button> : null}
         {!loading && !error && conversations.length === 0 ? <p className="px-2 py-2 text-xs leading-5 text-secondary">{t("noUnclassified")}</p> : null}
       </nav>
     </div>
@@ -875,18 +901,38 @@ function isProjectConversation(
 
 function findConversationInSnapshots(
   conversationId: string,
-  branchSnapshots: Array<[readonly unknown[], ProjectConversationRead[] | undefined]>,
-  historySnapshots: Array<[readonly unknown[], ConversationListItem[] | undefined]>,
+  branchSnapshots: Array<[readonly unknown[], InfiniteData<ListPage<ProjectConversationRead>> | undefined]>,
+  historySnapshots: Array<[readonly unknown[], InfiniteData<ListPage<ConversationListItem>> | undefined]>,
 ): ConversationListItem | ProjectConversationRead | null {
-  for (const [, rows] of branchSnapshots) {
-    const match = rows?.find((item) => item.id === conversationId);
+  for (const [, data] of branchSnapshots) {
+    const match = data?.pages.flatMap((page) => page.items).find((item) => item.id === conversationId);
     if (match) return match;
   }
-  for (const [, rows] of historySnapshots) {
-    const match = rows?.find((item) => item.id === conversationId);
+  for (const [, data] of historySnapshots) {
+    const match = data?.pages.flatMap((page) => page.items).find((item) => item.id === conversationId);
     if (match) return match;
   }
   return null;
+}
+
+function patchPagedRows<T extends ConversationListItem>(
+  data: InfiniteData<ListPage<T>>,
+  conversationId: string,
+  moved?: T,
+  beforeId?: string,
+  afterId?: string,
+): InfiniteData<ListPage<T>> {
+  const pages = data.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== conversationId) }));
+  if (!moved || pages.length === 0) return { ...data, pages };
+  const anchorPage = pages.findIndex((page) => page.items.some((item) => item.id === beforeId || item.id === afterId));
+  const pageIndex = anchorPage >= 0 ? anchorPage : pages[pages.length - 1].hasMore ? -1 : pages.length - 1;
+  if (pageIndex < 0) return { ...data, pages };
+  const page = pages[pageIndex];
+  pages[pageIndex] = {
+    ...page,
+    items: insertConversation(page.items, moved, beforeId, afterId),
+  };
+  return { ...data, pages };
 }
 
 function insertConversation<T extends ConversationListItem>(

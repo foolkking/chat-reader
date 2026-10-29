@@ -9,11 +9,13 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ApiRequestError,
   archiveConversation,
+  getConversation,
   getConversations,
   getProjects,
   mergeConversations,
   moveConversationToProject,
   unarchiveConversation,
+  updateConversation,
   updateConversationOrder,
 } from "../../lib/api";
 import type { ConversationListItem, ProjectRead } from "../../lib/types";
@@ -30,8 +32,13 @@ import { formatActivityTime, fullActivityTime } from "../../lib/activity-time";
 import { useBatchExport } from "./use-batch-export";
 import { SelectionModeButton, SelectionToolbar } from "../../components/selection-toolbar";
 import { useLinearSelection } from "../../components/use-linear-selection";
-import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
+import { runBatchSelection, type BatchSelectionProgress, type BatchSelectionResult } from "../../lib/batch-selection";
 import { HoverPreviewLink } from "../../components/hover-preview-link";
+import { BatchOperationFeedback } from "../../components/batch-operation-feedback";
+import { BulkMoveReview } from "../../components/bulk-move-review";
+import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
+import { useBatchResultCheck } from "./use-batch-result-check";
+import { BatchTitleTrim, type BatchTitleTrimResult } from "./batch-title-trim";
 
 type ConversationPage = { items: ConversationListItem[]; offset: number; hasMore: boolean };
 
@@ -62,10 +69,34 @@ export function ConversationList({
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const batchExport = useBatchExport(resolvedLocale === "zh-CN");
+  const batchCheck = useBatchResultCheck(zh, "conversation-list:" + mode);
   const deletion = useConversationDeletion();
   const deleteFlight = useRef(false);
+  const batchStop = useRef<AbortController | null>(null);
   const mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const viewRef = useRef({ mode });
+  if (viewRef.current.mode !== mode) viewRef.current = { mode };
+  const currentView = viewRef.current;
+  const viewGeneration = authenticationGeneration();
+  function isCurrentView() {
+    return mounted.current && viewRef.current === currentView && viewGeneration === authenticationGeneration();
+  }
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; batchStop.current?.abort(); }; }, []);
+  useEffect(() => {
+    const clearForIdentityChange = () => {
+      batchStop.current?.abort();
+      batchStop.current = null;
+      setBatchProgress(null);
+      setBatchNotice(null);
+      setBulkBusy(null);
+      setUndo(null);
+      setSelectedConversationIds(new Set());
+      setMergeOrderIds([]);
+      setSelectionMode(false);
+    };
+    window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, clearForIdentityChange);
+    return () => window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, clearForIdentityChange);
+  }, []);
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [isMerging, setIsMerging] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
@@ -75,7 +106,10 @@ export function ConversationList({
   const [selectionMode, setSelectionMode] = useState(false);
   const [batchNotice, setBatchNotice] = useState<ReactNode>(null);
   const [mergeOpen, setMergeOpen] = useState(false);
-  const mergeResultRef = useRef<HTMLParagraphElement>(null);
+  const mergeResultRef = useRef<HTMLDivElement>(null);
+  const [batchProgress, setBatchProgress] = useState<BatchSelectionProgress | null>(null);
+  const [titleTrimOpen, setTitleTrimOpen] = useState(false);
+  const [titleTrimConversations, setTitleTrimConversations] = useState<ConversationListItem[]>([]);
   const sortBusy = useRef(false);
   const [sortError, setSortError] = useState(false);
   const [sortBoundaryNotice, setSortBoundaryNotice] = useState(false);
@@ -145,6 +179,15 @@ export function ConversationList({
   useEffect(() => {
     if (selectedConversationIds.size > 0) setSelectionMode(true);
   }, [selectedConversationIds.size]);
+
+  useEffect(() => {
+    batchStop.current?.abort();
+    batchStop.current = null;
+    setBatchProgress(null);
+    setBatchNotice(null);
+    setBulkBusy(null);
+    setUndo(null);
+  }, [mode]);
 
   useEffect(() => {
     setSelectedConversationIds(new Set());
@@ -253,7 +296,80 @@ export function ConversationList({
           setMergeTitle("Merged conversation");
           setBatchNotice(<MergeAdmissionNotice task={task} zh={resolvedLocale === "zh-CN"} />);
         }} />
-      {batchNotice ? <p ref={mergeResultRef} tabIndex={-1} className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</p> : null}
+      <BatchTitleTrim
+        open={titleTrimOpen}
+        conversations={titleTrimConversations}
+        busy={bulkBusy === "title-trim"}
+        locale={resolvedLocale}
+        onClose={() => { if (bulkBusy !== "title-trim") setTitleTrimOpen(false); }}
+        onConfirm={async (changes) => {
+          if (bulkBusy !== null || !isCurrentView()) {
+            return { succeededIds: [], failedIds: [], unknownIds: changes.map((change) => change.id) };
+          }
+          setBulkBusy("title-trim");
+          const succeededIds: string[] = [];
+          const failedIds: string[] = [];
+          const unknownIds: string[] = [];
+          let stopped = false;
+          try {
+            for (let index = 0; index < changes.length; index += 1) {
+              const change = changes[index];
+              if (!isCurrentView()) {
+                unknownIds.push(...changes.slice(index).map((item) => item.id));
+                stopped = true;
+                break;
+              }
+              let current: ConversationListItem;
+              try {
+                current = await getConversation(change.id, AbortSignal.timeout(15_000));
+              } catch {
+                unknownIds.push(...changes.slice(index).map((item) => item.id));
+                stopped = true;
+                break;
+              }
+              if (current.title !== change.originalTitle || current.display_title !== change.originalDisplayTitle) {
+                unknownIds.push(...changes.slice(index).map((item) => item.id));
+                stopped = true;
+                break;
+              }
+              try {
+                const saved = await updateConversation(change.id, {
+                  title: change.nextTitle,
+                  display_title: change.nextTitle,
+                }, AbortSignal.timeout(15_000));
+                if (saved.id !== change.id || saved.title !== change.nextTitle || saved.display_title !== change.nextTitle) {
+                  unknownIds.push(...changes.slice(index).map((item) => item.id));
+                  stopped = true;
+                  break;
+                }
+                succeededIds.push(change.id);
+              } catch (error) {
+                if (error instanceof ApiRequestError && [400, 422].includes(error.status)) {
+                  failedIds.push(change.id);
+                } else {
+                  unknownIds.push(...changes.slice(index).map((item) => item.id));
+                  stopped = true;
+                  break;
+                }
+              }
+            }
+            const remaining = [...failedIds, ...unknownIds];
+            setSelectedConversationIds(new Set(remaining));
+            setMergeOrderIds(remaining);
+            setBatchNotice(resolvedLocale === "zh-CN"
+              ? `标题修整完成 ${succeededIds.length} 项${failedIds.length ? `，明确失败 ${failedIds.length} 项` : ""}${unknownIds.length ? `，结果未确认 ${unknownIds.length} 项` : ""}${stopped ? "；已停止后续提交，请先核对未确认项。" : "。"}`
+              : `Title cleanup completed ${succeededIds.length}${failedIds.length ? `, ${failedIds.length} definite failures` : ""}${unknownIds.length ? `, ${unknownIds.length} unconfirmed` : ""}${stopped ? "; later submissions were stopped—check unconfirmed items first." : "."}`);
+            await refreshLists();
+            setTitleTrimOpen(false);
+            return { succeededIds, failedIds, unknownIds } satisfies BatchTitleTrimResult;
+          } finally {
+            if (isCurrentView()) setBulkBusy(null);
+          }
+        }}
+      />
+      {!listUnavailable && batchNotice ? <div ref={mergeResultRef} tabIndex={-1} className="rounded-md border border-ui bg-subtle px-3 py-2 text-xs text-secondary" role="status">{batchNotice}</div> : null}
+      <BatchOperationFeedback progress={batchProgress} zh={zh} onStop={() => batchStop.current?.abort()} />
+      {!listUnavailable ? batchCheck.surface : null}
       {content}
     </div>;
   }
@@ -289,10 +405,37 @@ export function ConversationList({
   }
 
   function applyBatchResult(result: BatchSelectionResult) {
-    applySelection(result.failedIds);
+    batchCheck.record(result);
+    const remaining = [...result.failedIds, ...result.unconfirmedIds, ...result.notStartedIds];
+    setSelectedConversationIds(new Set(remaining));
+    setMergeOrderIds(remaining);
     setBatchNotice(resolvedLocale === "zh-CN"
-      ? `已完成 ${result.succeededIds.length} 项，失败 ${result.failedIds.length} 项${result.failedIds.length ? "；失败项已保留选择" : ""}`
-      : `${result.succeededIds.length} completed, ${result.failedIds.length} failed${result.failedIds.length ? "; failed items remain selected" : ""}`);
+      ? `已确认完成 ${result.succeededIds.length} 项，明确失败 ${result.failedIds.length} 项，结果未确认 ${result.unconfirmedIds.length} 项，未开始 ${result.notStartedIds.length} 项。未确认项请先刷新并核对当前状态，不要盲目重复提交。`
+      : `${result.succeededIds.length} confirmed complete, ${result.failedIds.length} definite failures, ${result.unconfirmedIds.length} unconfirmed, ${result.notStartedIds.length} not started. Refresh and check current state before retrying unconfirmed items.`);
+  }
+
+  async function runBatch(ids: string[], operation: (id: string) => Promise<unknown>) {
+    if (!isCurrentView() || listUnavailable || ids.some((id) => batchCheck.blockedIds.has(id)) || batchStop.current) return null;
+    const controller = new AbortController();
+    const generation = authenticationGeneration();
+    const abortOnIdentityChange = () => controller.abort();
+    batchStop.current = controller;
+    window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, abortOnIdentityChange);
+    setBatchProgress({ total: ids.length, succeeded: 0, failed: 0, unconfirmed: 0, inFlight: 0, notStarted: ids.length });
+    try {
+      const result = await runBatchSelection(ids, operation, 4, {
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (isCurrentView() && generation === authenticationGeneration()) setBatchProgress(progress);
+          else controller.abort();
+        },
+      });
+      return isCurrentView() && generation === authenticationGeneration() ? result : null;
+    } finally {
+      window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, abortOnIdentityChange);
+      if (batchStop.current === controller) batchStop.current = null;
+      if (isCurrentView() && generation === authenticationGeneration()) setBatchProgress(null);
+    }
   }
 
   function toggleConversationSelection(conversationId: string, selected: boolean) {
@@ -392,51 +535,66 @@ export function ConversationList({
             selectedConversations={selectedMergeConversations}
             bulkBusy={bulkBusy}
             projects={(projectsQuery.data ?? []).filter((project) => !project.is_default && !project.is_archived)}
+            exportOverLimit={batchExport.overLimit(selectedConversationIds.size)}
+            unresolvedSelection={[...selectedConversationIds].some((id) => batchCheck.blockedIds.has(id))}
             onOpenMerge={() => setMergeOpen(true)}
+            onOpenTitleTrim={() => {
+              const snapshot = selectedMergeConversations.map((conversation) => ({ ...conversation }));
+              setTitleTrimConversations(snapshot);
+              setTitleTrimOpen(true);
+            }}
             onMove={async (ids, projectId) => {
+              if (bulkBusy !== null || batchStop.current || !isCurrentView()) return;
               setBulkBusy("move");
               try {
-                const result = await runBatchSelection(ids, (id) => moveConversationToProject(id, projectId));
+                const result = await runBatch(ids, (id) => moveConversationToProject(id, projectId));
+                if (!result) return;
                 applyBatchResult(result);
                 await refreshLists();
               } finally {
-                setBulkBusy(null);
+                if (isCurrentView()) setBulkBusy(null);
               }
             }}
             onExport={async (selected) => {
+              if (bulkBusy !== null || batchStop.current || !isCurrentView()) return;
               setBulkBusy("export");
               try {
                 await batchExport.submit(selected);
               } finally {
-                setBulkBusy(null);
+                if (isCurrentView()) setBulkBusy(null);
               }
             }}
             onArchive={async (ids) => {
+              if (bulkBusy !== null || batchStop.current || !isCurrentView()) return;
               setBulkBusy("archive");
               try {
-                const result = await runBatchSelection(ids, archiveConversation);
+                const result = await runBatch(ids, archiveConversation);
+                if (!result) return;
                 applyBatchResult(result);
                 if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "active",
                   resolvedLocale === "zh-CN" ? `已归档 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "conversation" : "conversations"} archived`, refreshLists));
                 await refreshLists();
               } finally {
-                setBulkBusy(null);
+                if (isCurrentView()) setBulkBusy(null);
               }
             }}
             onRestore={async (ids) => {
+              if (bulkBusy !== null || batchStop.current || !isCurrentView()) return;
               setBulkBusy("restore");
               try {
-                const result = await runBatchSelection(ids, unarchiveConversation);
+                const result = await runBatch(ids, unarchiveConversation);
+                if (!result) return;
                 applyBatchResult(result);
                 if (result.succeededIds.length) setUndo(createConversationUndo(result.succeededIds, "archived",
                   resolvedLocale === "zh-CN" ? `已恢复 ${result.succeededIds.length} 个会话` : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "conversation" : "conversations"} restored`, refreshLists));
                 await refreshLists();
               } finally {
-                setBulkBusy(null);
+                if (isCurrentView()) setBulkBusy(null);
               }
             }}
             onDelete={async (ids) => {
-              if (deleteFlight.current) return;
+              if (deleteFlight.current || bulkBusy !== null || batchStop.current || !isCurrentView()
+                || ids.some((id) => batchCheck.blockedIds.has(id))) return;
               deleteFlight.current = true;
               // Freeze the visible order before confirmation, not after an
               // asynchronous list refresh or change of selection.
@@ -445,7 +603,7 @@ export function ConversationList({
               setBulkBusy("delete");
               try {
                 const task = await deletion.submit(orderedIds);
-                if (!task || !mounted.current) return;
+                if (!task || !isCurrentView()) return;
                 applySelection([]);
                 setSelectionMode(false);
                 setBatchNotice(resolvedLocale === "zh-CN"
@@ -453,7 +611,7 @@ export function ConversationList({
                   : `Deletion started for ${orderedIds.length} conversations in order. Track progress or stop pending items in the task area.`);
               } finally {
                 deleteFlight.current = false;
-                if (mounted.current) setBulkBusy(null);
+                if (isCurrentView()) setBulkBusy(null);
               }
             }}
           />
@@ -546,9 +704,12 @@ function BulkActions({
   onMove,
   onExport,
   onOpenMerge,
+  onOpenTitleTrim,
   onArchive,
   onRestore,
   onDelete,
+  exportOverLimit,
+  unresolvedSelection,
 }: {
   mode: "active" | "archived";
   selectedConversations: ConversationListItem[];
@@ -557,9 +718,12 @@ function BulkActions({
   onMove: (ids: string[], projectId: string | null) => Promise<void>;
   onExport: (conversations: ConversationListItem[]) => Promise<void>;
   onOpenMerge: () => void;
+  onOpenTitleTrim: () => void;
   onArchive: (ids: string[]) => Promise<void>;
   onRestore: (ids: string[]) => Promise<void>;
   onDelete: (ids: string[]) => Promise<void>;
+  exportOverLimit: boolean;
+  unresolvedSelection: boolean;
 }) {
   const selectedIds = selectedConversations.map((conversation) => conversation.id);
   const isArchivedMode = mode === "archived";
@@ -568,22 +732,16 @@ function BulkActions({
   return (
     <>
       <div className="selection-toolbar-action-group flex flex-wrap items-center gap-1.5">
-        {mode === "active" ? <select
-          defaultValue=""
-          disabled={bulkBusy !== null || selectedIds.length === 0}
-          onChange={(event) => { const value = event.target.value; if (value) void onMove(selectedIds, value === "__none" ? null : value); event.target.value = ""; }}
-          className="min-h-9 max-w-full rounded-lg border border-ui bg-surface px-2 text-sm text-primary"
-          aria-label={zh ? "移动到项目" : "Move to project"}
-        >
-          <option value="" disabled>{zh ? "移动到项目" : "Move to project"}</option>
-          <option value="__none">{zh ? "移出项目" : "Remove from project"}</option>
-          {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-        </select> : null}
-        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0} onClick={() => void onExport(selectedConversations)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{bulkBusy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
+        {mode === "active" ? <BulkMoveReview label="conversation" selectedIds={selectedIds} projects={projects} busy={bulkBusy !== null || unresolvedSelection} onMove={onMove} /> : null}
+        <div className="flex flex-col">
+          <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0 || exportOverLimit || unresolvedSelection} onClick={() => void onExport(selectedConversations)} title={exportOverLimit ? (zh ? "单次最多导出 5000 个对话" : "A single export supports at most 5,000 conversations") : undefined} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{bulkBusy === "export" ? (zh ? "正在导出" : "Exporting") : (zh ? "导出" : "Export")}</button>
+          {exportOverLimit ? <span className="text-xs text-[var(--danger)]">{zh ? "单次最多 5000 项" : "Maximum 5,000 items"}</span> : null}
+        </div>
+        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0 || unresolvedSelection} onClick={onOpenTitleTrim} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-60">{zh ? "修整标题" : "Clean titles"}</button>
         {isArchivedMode ? (
           <button
             type="button"
-            disabled={bulkBusy !== null || selectedIds.length === 0}
+            disabled={bulkBusy !== null || selectedIds.length === 0 || unresolvedSelection}
             onClick={() => void onRestore(selectedIds)}
             className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
           >
@@ -592,15 +750,15 @@ function BulkActions({
         ) : (
           <button
             type="button"
-            disabled={bulkBusy !== null || selectedIds.length === 0}
+            disabled={bulkBusy !== null || selectedIds.length === 0 || unresolvedSelection}
             onClick={() => void onArchive(selectedIds)}
             className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:cursor-wait disabled:opacity-60"
           >
             {zh ? "归档" : "Archive"}
           </button>
         )}
-        {mode === "active" ? <button type="button" disabled={bulkBusy !== null || selectedIds.length < 2} onClick={onOpenMerge} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40">{zh ? "合并对话" : "Merge"}</button> : null}
-        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0} onClick={() => void onDelete(selectedIds)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-40">{zh ? "删除所选" : "Delete selected"}</button>
+        {mode === "active" ? <button type="button" disabled={bulkBusy !== null || selectedIds.length < 2 || unresolvedSelection} onClick={onOpenMerge} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-primary disabled:opacity-40">{zh ? "合并对话" : "Merge"}</button> : null}
+        <button type="button" disabled={bulkBusy !== null || selectedIds.length === 0 || unresolvedSelection} onClick={() => void onDelete(selectedIds)} className="min-h-9 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-40">{zh ? "删除所选" : "Delete selected"}</button>
       </div>
     </>
   );

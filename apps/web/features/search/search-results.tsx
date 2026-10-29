@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Check } from "lucide-react";
 import type { SearchResultItem } from "../../lib/types";
 import { findSearchTextMatches } from "../../lib/search-text-matches";
 import { usePreferences } from "../../components/preferences-provider";
@@ -11,11 +12,41 @@ export function orderSearchResults(items: SearchResultItem[]) {
   return [...items].sort((a, b) => groupOrder.indexOf(a.document_type) - groupOrder.indexOf(b.document_type));
 }
 
-export function SearchResults({ items, query, activeIndex = -1, onActiveIndexChange }: { items: SearchResultItem[]; query: string; activeIndex?: number; onActiveIndexChange?: (index: number) => void }) {
+export function SearchResults({
+  items,
+  query,
+  activeIndex = -1,
+  onActiveIndexChange,
+  selectedConversationIds,
+  onConversationSelectionChange,
+}: {
+  items: SearchResultItem[];
+  query: string;
+  activeIndex?: number;
+  onActiveIndexChange?: (index: number) => void;
+  selectedConversationIds?: ReadonlySet<string>;
+  onConversationSelectionChange?: (conversationId: string, selected: boolean) => void;
+}) {
   const { resolvedLocale } = usePreferences();
   const groups = ["annotation", "conversation", "message", "heading", "code", "attachment"].map((type) => ({ type, items: items.map((item, index) => ({ item, index })).filter(({ item }) => item.document_type === type) })).filter((group) => group.items.length > 0);
   return <div className="space-y-4">{groups.map((group) => <section key={group.type} aria-labelledby={`search-group-${group.type}`}><h2 id={`search-group-${group.type}`} className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-secondary">{groupLabel(group.type, resolvedLocale)}</h2><div className="overflow-hidden rounded-xl border border-ui bg-surface">{group.items.map(({ item, index }) => {
-    return <Link key={item.document_id} data-search-index={index} aria-current={activeIndex === index ? "true" : undefined} onMouseEnter={() => onActiveIndexChange?.(index)} href={searchResultHref(item)} className={`block border-b border-ui px-5 py-4 last:border-0 hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--focus)] ${activeIndex === index ? "bg-subtle" : ""}`}><div className="flex gap-4"><div className="min-w-0 flex-1"><h2 className="truncate text-base font-semibold text-primary">{item.document_type === "attachment" ? (item.attachment_display_name ?? item.conversation_title) : item.conversation_title}</h2><p className="mt-1 text-sm leading-6 text-secondary"><Highlight text={clean(item.snippet)} query={item.matches?.[0]?.quote || query} /></p>{item.document_type === "attachment" ? <p className="mt-1 text-xs text-accent">{item.attachment_display_name ?? (resolvedLocale === "zh-CN" ? "附件" : "Attachment")}</p> : null}{item.document_type === "annotation" ? <p className="mt-1 text-xs text-accent">{item.annotation_type ?? "annotation"}{item.annotation_color ? ` · ${item.annotation_color}` : ""}</p> : null}{item.occurrence_count > 1 ? <p className="mt-1 text-xs text-secondary">{resolvedLocale === "zh-CN" ? `同时存在于 ${item.occurrence_count} 个对话` : `Also found in ${item.occurrence_count} conversations`}</p> : null}</div><div className="shrink-0 text-xs text-secondary">{documentLabel(item.document_type, resolvedLocale)}{item.role ? ` · ${roleLabel(item.role, resolvedLocale)}` : ""}</div></div></Link>;
+    const canSelectConversation = Boolean(item.conversation_id && onConversationSelectionChange);
+    const selected = Boolean(item.conversation_id && selectedConversationIds?.has(item.conversation_id));
+    return <div key={item.document_id} onMouseEnter={() => onActiveIndexChange?.(index)} className={`flex gap-3 border-b border-ui px-5 py-4 last:border-0 hover:bg-subtle ${activeIndex === index ? "bg-subtle" : ""}`}>
+      {canSelectConversation ? (
+        <button
+          type="button"
+          aria-pressed={selected}
+          aria-label={resolvedLocale === "zh-CN" ? (selected ? "取消选择对话" : "选择对话") : (selected ? "Deselect conversation" : "Select conversation")}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onConversationSelectionChange?.(item.conversation_id, !selected)}
+          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border text-accent focus:outline-none focus:ring-2 focus:ring-[var(--focus)] ${selected ? "border-accent bg-[var(--accent-soft)]" : "border-ui"}`}
+        >
+          {selected ? <Check className="h-4 w-4" aria-hidden="true" /> : null}
+        </button>
+      ) : null}
+      <Link href={searchResultHref(item)} data-search-index={index} aria-current={activeIndex === index ? "true" : undefined} className="min-w-0 flex-1 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--focus)]"><div className="flex gap-4"><div className="min-w-0 flex-1"><h2 className="truncate text-base font-semibold text-primary">{item.document_type === "attachment" ? (item.attachment_display_name ?? item.conversation_title) : item.conversation_title}</h2><p className="mt-1 text-sm leading-6 text-secondary"><Highlight text={clean(item.snippet)} query={item.matches?.[0]?.quote || query} /></p>{item.document_type === "attachment" ? <p className="mt-1 text-xs text-accent">{item.attachment_display_name ?? (resolvedLocale === "zh-CN" ? "附件" : "Attachment")}</p> : null}{item.document_type === "annotation" ? <p className="mt-1 text-xs text-accent">{item.annotation_type ?? "annotation"}{item.annotation_color ? ` · ${item.annotation_color}` : ""}</p> : null}{item.occurrence_count > 1 ? <p className="mt-1 text-xs text-secondary">{resolvedLocale === "zh-CN" ? `同时存在于 ${item.occurrence_count} 个对话` : `Also found in ${item.occurrence_count} conversations`}</p> : null}</div><div className="shrink-0 text-xs text-secondary">{documentLabel(item.document_type, resolvedLocale)}{item.role ? ` · ${roleLabel(item.role, resolvedLocale)}` : ""}</div></div></Link>
+    </div>;
   })}</div></section>)}</div>;
 }
 

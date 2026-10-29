@@ -11,11 +11,14 @@ export function ShortcutManager() {
       const isFind = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f";
       const isGlobalSearch = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
       const isSlash = event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey;
-      if (!isFind && !isSlash && !isGlobalSearch) return;
+      const isActionPalette = event.altKey && event.shiftKey && event.key.toLowerCase() === "p" && !event.ctrlKey && !event.metaKey;
+      if (!isFind && !isSlash && !isGlobalSearch && !isActionPalette) return;
       event.preventDefault();
       window.dispatchEvent(
         new Event(
-          isGlobalSearch
+          isActionPalette
+            ? "chat-reader:open-action-palette"
+            : isGlobalSearch
             ? "chat-reader:focus-global-search"
             : pathname?.startsWith("/conversations/")
               ? "chat-reader:open-reader-search"

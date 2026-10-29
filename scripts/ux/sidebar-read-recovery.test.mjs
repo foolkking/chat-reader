@@ -7,7 +7,7 @@ import { setImmediate } from "node:timers/promises";
 const appRequire = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = appRequire("typescript"), React = appRequire("react"), jsx = appRequire("react/jsx-runtime");
 const { renderToStaticMarkup } = appRequire("react-dom/server");
-const { QueryClient, QueryObserver } = appRequire("@tanstack/react-query");
+const { QueryClient, QueryObserver, InfiniteQueryObserver } = appRequire("@tanstack/react-query");
 const noop = () => {}, childrenOnly = ({ children }) => children;
 const project = { id: "synthetic-sidebar-project", name: "Synthetic sidebar project", is_default: false,
   is_archived: false, conversation_count: 1, pinned_count: 0 };
@@ -59,7 +59,8 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   const data = { ...defaults, [scope]: rows }, errors = { projects: null, history: null, branch: null, [scope]: error };
   const holds = {}, observers = new Map(), stops = [], inputs = new Map(), retryButtons = [], requests = [], writes = [], navigation = [];
-  for (const name of Object.keys(keys)) if (name !== scope || cached) client.setQueryData(keys[name], data[name]);
+  for (const name of Object.keys(keys)) if (name !== scope || cached) client.setQueryData(keys[name],
+    name === "projects" ? data[name] : { pages: [{ items: data[name], offset: 0, hasMore: false }], pageParams: [0] });
   let stateIndex = 0;
   const RenderedRetry = props => { retryButtons.push(props); return React.createElement("button", props); };
   const capture = factory => (type, props, key) => type === "button" && ["Retry", "重试"].includes(props.children)
@@ -68,7 +69,8 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
     requests.push({ scope: name, options });
     if (holds[name]) await holds[name];
     if (errors[name]) throw errors[name];
-    return data[name];
+    if (name === "projects") return data[name];
+    return data[name].slice(options.offset ?? 0, (options.offset ?? 0) + (options.limit ?? data[name].length));
   };
   const mutation = name => async input => { writes.push({ name, input }); throw new Error("A read-recovery test must not write"); };
   const mocks = {
@@ -87,6 +89,14 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
         observers.set(name, observer); stops.push(observer.subscribe(noop));
       }
       return observers.get(name).getCurrentResult();
+    }, useInfiniteQuery: input => {
+      const name = input.queryKey[0] === "project-conversations" ? "branch" : "history";
+      inputs.set(name, input);
+      if (!observers.has(name)) {
+        const observer = new InfiniteQueryObserver(client, { ...input, enabled: false, retry: false });
+        observers.set(name, observer); stops.push(observer.subscribe(noop));
+      }
+      return observers.get(name).getCurrentResult();
     } },
     "@dnd-kit/core": { DndContext: childrenOnly, DragOverlay: () => null, useSensor: noop, useSensors: noop,
       useDraggable: () => ({ setNodeRef: noop, attributes: {}, listeners: {} }), useDroppable: () => ({ setNodeRef: noop }),
@@ -96,7 +106,7 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
     "next/link": { default: ({ href, children, ...props }) => React.createElement("a", { href, ...props }, children) },
     "next/navigation": { usePathname: () => "/", useRouter: () => ({ push: target => navigation.push(target) }) },
     "../../lib/api": { ApiRequestError, getProjects: options => read("projects", options),
-      getConversations: options => read("history", options), getProjectConversations: (id, options) => read("branch", { id, ...options }),
+      getConversations: options => read("history", options), getProjectConversations: (id, { signal: _signal, ...options }) => read("branch", { id, ...options }),
       createProject: mutation("createProject"), placeConversation: mutation("placeConversation"), placeProject: mutation("placeProject") },
     "../conversations/conversation-action-menu": { ConversationActionMenu: () => null },
     "../conversations/conversation-placement": { useConversationPlacement: () => ({}), ConversationPlacementSurface: () => null },
@@ -114,6 +124,7 @@ async function fixture({ scope = "history", cached = true, rows = defaults[scope
     "../../components/sort-menu": { ConversationSortMenu: () => null },
     "../../lib/activity-time": { formatActivityTime: () => "Synthetic time", fullActivityTime: () => "Synthetic time" },
     "./project-action-menu": { ProjectActionMenu: () => null, ProjectArchiveFeedback: () => null, useProjectArchive: () => ({}) },
+    "../../lib/list-pagination": { flattenPages: pages => pages?.flatMap(page => page.items) ?? [] },
   };
   const module = { exports: {} };
   new Function("require", "module", "exports", compiled)(name => {
@@ -149,7 +160,8 @@ for (const scope of ["projects", "history", "branch"]) {
     const f = await fixture({ scope });
     try {
       assert.equal(f.observers.get(scope).getCurrentResult().isError, true);
-      assert.equal(f.observers.get(scope).getCurrentResult().data.length, 1);
+      const loaded = f.observers.get(scope).getCurrentResult().data;
+      assert.equal(scope === "projects" ? loaded.length : loaded.pages[0].items.length, 1);
       const html = f.render();
       assert.ok(html.includes(`href="${href[scope]}"`), "cached reading link must remain");
       assert.ok(html.includes(`data-testid="${dropId[scope]}"`), "existing drop row must remain");
@@ -181,8 +193,8 @@ for (const scope of ["projects", "history", "branch"]) {
       for (const other of Object.keys(keys).filter(name => name !== scope)) assert.equal(f.reads(other), 0);
       assert.deepEqual(f.requests[0], f.requests[1]);
       const expected = scope === "projects" ? { sort: "custom", direction: "asc" }
-        : scope === "history" ? { scope: "history", sort: "recent_read", direction: "desc", limit: 5000 }
-          : { id: project.id, sort: "recent_read", direction: "desc", limit: 5000 };
+        : scope === "history" ? { scope: "history", sort: "recent_read", direction: "desc", limit: 101, offset: 0 }
+          : { id: project.id, sort: "recent_read", direction: "desc", limit: 101, offset: 0 };
       assert.deepEqual(f.requests[1].options, expected);
       assert.deepEqual(f.writes, []); assert.deepEqual(f.navigation, []);
       assert.ok(f.render().includes(`href="${href[scope]}"`)); assert.equal(f.retryButtons.length, 0);
@@ -205,7 +217,8 @@ for (const scope of ["projects", "history", "branch"]) {
       const f = await fixture({ scope, error: new ApiRequestError(status) });
       try {
         const html = f.render();
-        assert.equal(f.observers.get(scope).getCurrentResult().data.length, 1);
+        const loaded = f.observers.get(scope).getCurrentResult().data;
+        assert.equal(scope === "projects" ? loaded.length : loaded.pages[0].items.length, 1);
         assert.ok(!html.includes(identity[scope]), "access-unavailable data must not remain visible");
         assert.ok(!html.includes(`data-testid="${dropId[scope]}"`));
         assert.doesNotMatch(html, /Previously loaded|Synthetic raw upstream detail/);
@@ -273,3 +286,28 @@ test("retrying Unclassified does not fetch a collapsed project branch", async ()
     assert.deepEqual(f.writes, []);
   } finally { f.dispose(); }
 });
+
+for (const scope of ["history", "branch"]) {
+  test(`${scope}: actual sidebar pagination reaches item 5,001 and does not expose a false global tail`, async () => {
+    const rows = Array.from({ length: 5001 }, (_, index) => conversation(`synthetic-sidebar-page-${index}`, scope === "branch" ? project.id : null));
+    const f = await fixture({ scope, rows, error: null });
+    try {
+      const observer = f.observers.get(scope);
+      assert.equal(observer.getCurrentResult().data.pages[0].items.length, 100);
+      const tail = `conversation-insert:${scope === "branch" ? project.id : "unclassified"}:end`;
+      assert.equal(f.render().includes(`data-testid="${tail}"`), false);
+      f.fail(new Error("Synthetic sidebar continuation failure"));
+      await observer.fetchNextPage();
+      assert.equal(observer.getCurrentResult().isFetchNextPageError, true);
+      assert.equal(observer.getCurrentResult().data.pages[0].items.length, 100);
+      f.recover();
+      for (let page = 1; page <= 51 && observer.getCurrentResult().hasNextPage; page++) await observer.fetchNextPage();
+      assert.equal(observer.getCurrentResult().hasNextPage, false);
+      const loaded = observer.getCurrentResult().data.pages.flatMap(page => page.items);
+      assert.equal(new Set(loaded.map(item => item.id)).size, 5001);
+      assert.equal(loaded.at(-1).id, "synthetic-sidebar-page-5000");
+      assert.equal(f.requests.filter(item => item.scope === scope).at(-1).options.offset, 5000);
+      assert.deepEqual(f.writes, []);
+    } finally { f.dispose(); }
+  });
+}

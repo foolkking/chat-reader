@@ -15,6 +15,7 @@ import { ImportPreviewCard } from "./import-preview-card";
 import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
 import { FormatConversionGuide } from "./format-conversion-guide";
 import { ImportNoiseReview } from "./import-noise-review";
+import { createPastedTranscriptFile, pastedTranscriptByteLength } from "./pasted-transcript";
 
 type ImportMode = "adaptive" | "archive";
 type ImportSessionRestoreState = {
@@ -63,6 +64,8 @@ export function ImportPanel({
   });
   const router = useRouter();
   const [mode, setMode] = useState<ImportMode>(initialMode);
+  const [inputMethod, setInputMethod] = useState<"files" | "paste">("files");
+  const [pastedText, setPastedText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [archivePreview, setArchivePreview] = useState<ImportPreviewResponse | null>(null);
   const [session, setSession] = useState<AdaptiveImportSession | null>(null);
@@ -83,7 +86,11 @@ export function ImportPanel({
   const previewButtonRef = useRef<HTMLButtonElement>(null);
   const targetSessionRef = useRef<string | null>(null);
   const activeSessionKey = sessionStorageKey(repairProfileId);
-  const largestFileMiB = Math.ceil(files.reduce((largest, file) => Math.max(largest, file.size), 0) / (1024 * 1024));
+  const activeFileBytes = inputMethod === "paste"
+    ? (pastedText ? pastedTranscriptByteLength(pastedText) : 0)
+    : files.reduce((largest, file) => Math.max(largest, file.size), 0);
+  const activeTotalBytes = inputMethod === "paste" ? activeFileBytes : files.reduce((bytes, file) => bytes + file.size, 0);
+  const largestFileMiB = Math.ceil(activeFileBytes / (1024 * 1024));
   const fileOverLimit = capabilities.data && largestFileMiB > capabilities.data.maximum_import_size_mb;
 
   useEffect(() => onWorkspaceChange?.(Boolean(session)), [onWorkspaceChange, session]);
@@ -268,17 +275,26 @@ export function ImportPanel({
 
   const validationError = useMemo(() => {
     if (capabilities.data && !capabilities.data.allow_user_import) return tr("管理员已关闭导入功能。");
+    if (inputMethod === "paste") {
+      if (!pastedText.trim()) return null;
+      if (capabilities.data && activeFileBytes > capabilities.data.maximum_import_size_mb * 1024 * 1024) return tr("粘贴文本不能超过当前上限 {0} MiB。", capabilities.data.maximum_import_size_mb);
+      const pasteTotalLimit = capabilities.data?.maximum_import_total_mb;
+      if (pasteTotalLimit != null && activeTotalBytes > pasteTotalLimit * 1024 * 1024) return tr("粘贴文本超过本批导入上限 {0} MiB。", pasteTotalLimit);
+      return null;
+    }
     if (capabilities.data && files.some((file) => file.size > capabilities.data.maximum_import_size_mb * 1024 * 1024)) return tr("单个文件不能超过当前上限 {0} MiB。", capabilities.data.maximum_import_size_mb);
     const totalLimit = capabilities.data?.maximum_import_total_mb;
     if (totalLimit != null && files.reduce((bytes, file) => bytes + file.size, 0) > totalLimit * 1024 * 1024) return tr("本批文件合计不能超过 {0} MiB，请分批导入。", totalLimit);
     return validateFiles(files, mode, tr);
-  }, [files, mode, capabilities.data, tr]);
+  }, [activeFileBytes, activeTotalBytes, files, inputMethod, mode, pastedText, capabilities.data, tr]);
   const targetProject = projects.data?.find((project) => project.id === targetProjectId);
   const destinationUnavailable = Boolean(targetProjectId && projects.isSuccess && !targetProject);
 
   function reset(nextMode = mode) {
     resumeSessionRef.current = null;
     setMode(nextMode);
+    setInputMethod("files");
+    setPastedText("");
     setFiles([]);
     setArchivePreview(null);
     setSession(null);
@@ -301,6 +317,16 @@ export function ImportPanel({
     window.sessionStorage.removeItem(activeSessionKey);
     reset(nextMode);
     setFiles(nextFiles);
+  }
+
+  function previewImportSource() {
+    if (inputMethod === "paste") {
+      const pastedFile = createPastedTranscriptFile(pastedText);
+      if (pastedFile) adaptiveMutation.mutate([pastedFile]);
+      return;
+    }
+    if (mode === "archive") archiveMutation.mutate(files);
+    else adaptiveMutation.mutate(files);
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -375,12 +401,14 @@ export function ImportPanel({
     );
   }
 
-  const selectedLabel = files.length === 0 ? tr("尚未选择文件") : files.length === 1 ? files[0]?.name : tr("已选择 {0} 个文件", files.length);
+  const selectedLabel = inputMethod === "paste"
+    ? (pastedText.trim() ? tr("已准备一段粘贴文本") : tr("尚未粘贴文本"))
+    : files.length === 0 ? tr("尚未选择文件") : files.length === 1 ? files[0]?.name : tr("已选择 {0} 个文件", files.length);
   const archiveCanCommit = Boolean(archivePreview?.can_commit ?? archivePreview?.archive_summary);
-  const totalOverLimit = capabilities.data?.maximum_import_total_mb != null && files.reduce((bytes, file) => bytes + file.size, 0) > capabilities.data.maximum_import_total_mb * 1024 * 1024;
+  const totalOverLimit = capabilities.data?.maximum_import_total_mb != null && activeTotalBytes > capabilities.data.maximum_import_total_mb * 1024 * 1024;
   const sourceError = adaptiveMutation.error;
   const formatError = sourceError instanceof ApiRequestError && ["SOURCE_UNSUPPORTED", "JSON_INVALID", "NO_MESSAGE_STRUCTURE", "MARKDOWN_ENCODING_INVALID", "MARKDOWN_FENCE_UNCLOSED"].includes(sourceError.code ?? "");
-  const showConversion = mode === "adaptive" && !commitResult && capabilities.data?.allow_user_import && !fileOverLimit && !totalOverLimit && files.length <= 500
+  const showConversion = inputMethod === "files" && mode === "adaptive" && !commitResult && capabilities.data?.allow_user_import && !fileOverLimit && !totalOverLimit && files.length <= 500
     && !files.some(file => /\.(?:cr|zip)$/i.test(file.name) || file.name.toLowerCase() === "skill.md")
     && (!sourceError || formatError);
 
@@ -396,7 +424,26 @@ export function ImportPanel({
         disabled={busy || mode === "archive"}
         unavailable={destinationUnavailable}
       />
-      <div
+      {mode === "adaptive" && !repairProfileId ? <div className="flex flex-wrap gap-2" role="group" aria-label={tr("导入来源")}>
+        <button type="button" aria-pressed={inputMethod === "files"} className={inputMethod === "files" ? "btn-primary min-h-11 px-3 text-sm" : "btn-secondary min-h-11 px-3 text-sm"} onClick={() => setInputMethod("files")}>{tr("选择文件")}</button>
+        <button type="button" aria-pressed={inputMethod === "paste"} className={inputMethod === "paste" ? "btn-primary min-h-11 px-3 text-sm" : "btn-secondary min-h-11 px-3 text-sm"} onClick={() => setInputMethod("paste")}>{tr("粘贴文本")}</button>
+      </div> : null}
+      {inputMethod === "paste" && mode === "adaptive" && !repairProfileId ? <div className="space-y-2">
+        <label htmlFor="pasted-transcript" className="block text-sm font-medium text-primary">{tr("粘贴 Markdown 或纯文本对话")}</label>
+        <textarea
+          id="pasted-transcript"
+          data-testid="pasted-transcript-input"
+          value={pastedText}
+          onChange={(event) => setPastedText(event.currentTarget.value)}
+          disabled={busy}
+          spellCheck={false}
+          rows={8}
+          placeholder={tr("在此处粘贴文本；点击“分析并继续”后才会上传。")}
+          className="w-full resize-y rounded-lg border border-ui bg-surface p-3 text-sm leading-6 text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-60"
+        />
+        <p className="text-xs leading-5 text-secondary">{tr("不会自动读取剪贴板。文本只保留在此页面内存中，只有你明确开始分析时才上传；请勿粘贴不打算导入的敏感内容。")}</p>
+        {pastedText.trim() ? <p className="text-xs text-secondary">{tr("输入大小：")}{(activeFileBytes / (1024 * 1024)).toFixed(2)} MiB</p> : null}
+      </div> : <div
         onDragEnter={(event) => { event.preventDefault(); if (!busy) setDragging(true); }}
         onDragOver={(event) => event.preventDefault()}
         onDragLeave={() => setDragging(false)}
@@ -410,8 +457,8 @@ export function ImportPanel({
           {mode === "adaptive" ? tr("选择 JSON / Markdown 文件") : tr("选择 .cr 归档")}
           <input ref={fileInputRef} disabled={busy} data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => { const selected = Array.from(event.currentTarget.files ?? []); if (selected.length) chooseFiles(selected); }} />
         </label>
-        {files.length ? <p className="mt-3 break-all text-sm text-secondary">{selectedLabel}</p> : null}
-      </div>
+        {files.length ? <p className="mt-3 break-all text-sm text-secondary">{inputMethod === "files" ? selectedLabel : tr("已保留 {0} 个文件选项", files.length)}</p> : null}
+      </div>}
       {validationError ? <ErrorLine message={validationError} /> : null}
       {capabilities.data ? <SupportLimitAction capabilities={capabilities.data} limit="import_size_mb" active={Boolean(fileOverLimit || !capabilities.data.allow_user_import)} requestedValue={largestFileMiB} returnFocus={() => previewButtonRef.current} onReturn={() => { void capabilities.refetch(); }} /> : null}
       {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
@@ -425,7 +472,7 @@ export function ImportPanel({
         {conversionOpen ? <div id={conversionId} className="pb-4 pt-2"><FormatConversionGuide resultAction={<button type="button" disabled={busy} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => fileInputRef.current?.click()}>{files.length > 1 ? tr("重新选择本批文件") : tr("选择转换后的文件")}</button>} /></div> : null}
       </div> : null}
       <div className="flex flex-wrap gap-3">
-        <button ref={previewButtonRef} type="button" disabled={!files.length || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={() => mode === "archive" ? archiveMutation.mutate(files) : adaptiveMutation.mutate(files)} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
+        <button ref={previewButtonRef} type="button" disabled={!(inputMethod === "paste" ? pastedText.trim() : files.length) || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={previewImportSource} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
           {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
         </button>
         {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? tr("正在导入") : tr("恢复归档")}</button> : null}

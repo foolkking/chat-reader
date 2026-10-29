@@ -1,5 +1,109 @@
 # Testing
 
+## Two-round Web features — 2026-10-30 local integration
+
+The [implementation record](execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)
+separates 19 bounded source implementations from five unimplemented contract
+items. Earlier in this task, complete Web lint/typecheck/build passed; the
+full explicit `scripts/ux/*.test.mjs` list passed **1,853/1,853**, the Reader
+location/folding/queue browser file **8/8**, example plus feature inventory
+**3/3**, and offline lease tests **6/6**. Test adapters were updated to inject
+new production dependencies rather than ignoring the callbacks under test.
+
+Final review then corrected unread-on-add, inaccessible/failed reading-list
+reads, continuation beyond 20 entries, collection limits and concurrent
+membership, account-isolated queue keys and safe return URLs, deterministic
+lineage pagination, transient lookup recovery and Quick Actions focus/IME/
+keyboard behavior. Final reruns are recorded below; the earlier counts are not evidence
+for these later changes. New PostgreSQL tests use explicitly selected disposable
+databases, including different-ID duplicate additions and the final capacity slot.
+Schema head is expected to be `20261030_0056`; migration application, complete
+PostgreSQL and full PWA acceptance remain the unchanged exact-source CI gate.
+
+One attempted local `test:pwa` run lacked `APP_ENV=test` and backend services:
+its authentication/proxy failures caused interruption, not product acceptance.
+Mocked browser runs explicitly set test mode and do not replace real-service CI.
+No authenticated production UI, physical clipboard, target spreadsheet, load
+test, original user's offline network trace or production deployment is claimed.
+The user requires waiting 50 minutes after each CI dispatch before inspecting
+that run; failure diagnosis is followed by a fresh exact-source run and wait.
+
+Final local receipts:
+
+| Gate | Result / boundary |
+| --- | --- |
+| Web lint / typecheck / production build | Passed after the final UI corrections. Original pre-task buildinfo restored, SHA-256 `210FF4B7E3E63D0CD5301321AE8CC4EA095F21DA14692C6A4A4B59D05120F5D7`; excluded from submission. |
+| All explicit UX Node files | **1,856 passed**, no failures/skips; includes real version-diff bounds, account queue keys and safe return route validation. |
+| Reader location + opportunity flows + inventory Playwright | **15 passed**, including two helper checks and one inventory check; 12 mounted mock-backed cases cover 375/1440px example, no writes, TSV denial, real CSV download, keyboard/focus, unread-on-add, 21st item, search return and folding. |
+| User feature entries / offline transfer leases / split API files | **21 passed**, including final headers-to-open cleanup assertion and owner/collection/capacity/membership checks. |
+| Duplicate review API file | **2 passed** after moving group pagination/counts into SQL. |
+| Alembic heads | Sole head **`20261030_0056`**; this is not production migration evidence. |
+| Full local API (earlier collected source) | **5,724 passed / 192 conditional skips / 2 failed**, 4,772.10 seconds. Module-import-time lease-test clocks expired before execution; fixed to per-case clocks and focused files reran successfully. Not a full final-source pass. |
+| New PostgreSQL concurrency / full real-service PWA / CI | Pending exact-source CI; no local acceptance claim. |
+
+## Two-round Web feature batch 1 — 2026-10-30 (local source checks)
+
+The [implementation record](execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)
+tracks all 24 candidates plus the reported offline-package download failure.
+This batch covers WEB-15/17/18/24 only. `node --test
+scripts/ux/web-opportunity-primitives.test.mjs` passed all five cases for source
+citation formatting/private target, HAST table extraction and bounded TSV/CSV,
+formula-text handling, and explicit pasted Markdown file creation. Full Web
+lint and typecheck passed. The pre-existing `apps/web/tsconfig.tsbuildinfo` was
+backed up and restored with the same SHA256.
+
+These checks do not exercise the rendered controls, authenticated import API,
+physical clipboard, CSV download, 375/1440px layout, or prove the example makes
+zero runtime writes. No Web build, Playwright/PWA, API/PostgreSQL, CI, commit,
+or deployment has run yet. Do not treat this source batch as acceptance.
+
+## Next-batch project, batch and split — 2026-10-29 source-only
+
+The [implementation record](execution/UX_NEXT_BATCH_IMPLEMENTATION_2026-10-29.md)
+maps all 15 findings to source and regression artifacts. No tests or commands in
+this section were executed for this batch; the user prohibited local validation,
+CI dispatch, commit and deployment.
+
+Authored Node cases cover:
+
+- `scripts/ux/batch-selection-progress.test.mjs`: definite 4xx versus unknown
+  outcomes, four in-flight requests, stop admission, progress conservation.
+- `scripts/ux/batch-action-recovery.test.mjs`: export 4,999/5,000/5,001
+  boundaries and preservation of a pending safe retry key; list-owned
+  read-only current-state checks and retired scope/account work; explicit,
+  frozen, rapid-repeat-safe bulk move confirmation.
+- `scripts/ux/project-recovery.test.mjs`: 499/500/501 ordering boundary,
+  partial 500-item scope, actual query-option pagination to item 5,001,
+  continuation retry and empty project state.
+- `scripts/ux/sidebar-read-recovery.test.mjs`: project and Unclassified sidebar
+  query pagination, continuation failure retention, no false tail and item 5,001.
+- `scripts/ux/conversation-placement-recovery.test.mjs`: page-shaped caches
+  across loaded pages, preserving offsets and not manufacturing target rows.
+- Existing conversation-list, merge-reentry and archived-project recovery
+  sources were adapted to the new cache/outcome contracts.
+
+Authored API cases cover same-key replay, request mismatch, distinct new keys,
+no-key legacy compatibility and persisted row counts in
+`apps/api/tests/test_split_merge_api.py`. The opt-in
+`apps/api/tests/test_split_receipts_postgres.py` adds a real PostgreSQL
+same-key concurrency barrier, owner rejection, conflict, schema upgrade from
+0053 and downgrade row-preservation check. It was not run.
+
+The two 375/1440px flows in
+`apps/web/e2e/ux-recovery-followup.spec.ts` exercise real server commits followed
+by dropped acknowledgements, separate empty/failed project reads, check-read
+failure/recovery, split same-key replay, parent selection reset, reverse range
+validation, focus wrapping/restore, project-scoped empty create/import, mobile
+sort and outside-pointer focus. They are authored, not browser evidence. No
+React mount, Node/Python test, pytest, lint, typecheck, build, Alembic command,
+browser, service or database was run.
+
+Required next acceptance remains full unchanged CI, including API/PostgreSQL,
+single Alembic head, Web UX and mutation/PWA/browser flows, followed only with
+separate release authorization by exact artifact, fresh stopped-writer backup,
+migration compatibility and deployment gates. Do not treat test discovery or
+these authored cases as passes; do not downgrade 0054 automatically.
+
 ## Search/recovery release CI correction — 2026-10-28
 
 The [release record](execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md) owns the

@@ -95,6 +95,18 @@ class AnnotationRead(BaseModel):
     updated_at: datetime
 
 
+class AnnotationInboxItem(AnnotationRead):
+    conversation_title: str
+
+
+class AnnotationInboxResponse(BaseModel):
+    items: list[AnnotationInboxItem]
+    limit: int
+    offset: int
+    total: int
+    has_more: bool
+
+
 class NotebookBlock(BaseModel):
     id: UUID
     type: Literal["markdown", "annotation_reference"]

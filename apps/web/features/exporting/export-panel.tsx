@@ -10,6 +10,7 @@ import { DirectExportDownload } from "./direct-export-download";
 import { captureOfflineAccess, assertOfflineAccess } from "../../lib/offline-access";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
+import { ExportPresetsPanel } from "./export-presets-panel";
 import {
   ApiRequestError,
   getConversationAttachments,
@@ -107,6 +108,19 @@ export function ExportPanel({
 
   return (
     <section className="min-w-0 space-y-5">
+      {!maintenance ? <ExportPresetsPanel
+        current={{ format, include_continuation: includeContinuation, include_attachments: includeAttachments, include_description: includeDescription, include_annotations: includeAnnotations, include_notebook: includeNotebook, include_source_refs: includeSourceRefs }}
+        onApply={(preset) => {
+          setFormat(preset.format);
+          setIncludeContinuation(preset.include_continuation);
+          setIncludeAttachments(preset.include_attachments);
+          setIncludeDescription(preset.include_description);
+          setIncludeAnnotations(preset.include_annotations);
+          setIncludeNotebook(preset.include_notebook);
+          setIncludeSourceRefs(preset.include_source_refs);
+          resetQueuedResult();
+        }}
+      /> : null}
       {!maintenance ? <div className="grid grid-cols-3 rounded-lg bg-subtle p-1" role="group" aria-label={zh ? "导出格式" : "Export format"}>
         <FormatButton active={format === "context"} onClick={() => { setFormat("context"); resetQueuedResult(); }} icon={<FileArchive className="h-4 w-4 shrink-0" />} label={zh ? "交给 AI" : "For AI"} />
         <FormatButton active={format === "canjson"} onClick={() => { setFormat("canjson"); resetQueuedResult(); }} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />

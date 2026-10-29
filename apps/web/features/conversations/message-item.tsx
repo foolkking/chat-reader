@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import { BookmarkPlus, CheckSquare2, MoreHorizontal, Pencil, Plus, Square, Trash2, X } from "lucide-react";
+import { BookmarkPlus, CheckSquare2, ChevronDown, ChevronUp, MoreHorizontal, Pencil, Plus, Quote, Square, Trash2, X } from "lucide-react";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { normalizedMessageBlocks } from "../editing/message-source-position";
@@ -11,6 +11,7 @@ import { AssistantMessageRenderer } from "./assistant-message-renderer";
 import { AttachmentAccessProvider, type AttachmentAccess } from "../attachments/attachment-access";
 import { ApiRequestError, toggleMessageTask } from "../../lib/api";
 import { MessageMarkdownCopyButton, MessageMarkdownCopyFeedback, useMessageMarkdownCopy } from "./use-message-markdown-copy";
+import { buildReaderCitationMarkdown, selectedMessageText } from "./reader-citation";
 
 function MessageItemComponent({
   message,
@@ -27,6 +28,12 @@ function MessageItemComponent({
   scrollRootMode = "element",
   attachmentAccess = { kind: "owner" },
   userLabel,
+  conversationTitle = "Conversation",
+  turnCollapsed = false,
+  turnLead = false,
+  turnMessageCount = 1,
+  hiddenByTurn = false,
+  onToggleTurn,
 }: {
   message: MessageListItem;
   onChanged?: (message?: MessageListItem, conversationRevision?: number) => Promise<void> | void;
@@ -42,17 +49,26 @@ function MessageItemComponent({
   scrollRootMode?: "element" | "window";
   attachmentAccess?: AttachmentAccess;
   userLabel?: string;
+  conversationTitle?: string;
+  turnCollapsed?: boolean;
+  turnLead?: boolean;
+  turnMessageCount?: number;
+  hiddenByTurn?: boolean;
+  onToggleTurn?: () => void;
 }) {
   const { t, resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const articleRef = useRef<HTMLElement | null>(null);
   const mobileActionsRef = useRef<HTMLDivElement | null>(null);
   const mobileActionsTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const citationSelectionRef = useRef<string | null>(null);
   const taskToggleInFlightRef = useRef(false);
   const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [pendingTaskKeys, setPendingTaskKeys] = useState<Set<string>>(() => new Set());
   const [taskCheckedOverrides, setTaskCheckedOverrides] = useState<Map<string, boolean>>(() => new Map());
   const [taskError, setTaskError] = useState<string | null>(null);
+  const [citationStatus, setCitationStatus] = useState<string | null>(null);
+  const [citationFallback, setCitationFallback] = useState<string | null>(null);
   const blocks = normalizedMessageBlocks(message);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
   const isUser = message.role === "user";
@@ -67,6 +83,41 @@ function MessageItemComponent({
     onChanged: replaceMessagePreservingAnchor,
   });
   const markdownCopy = useMessageMarkdownCopy(message.id, message.current_version?.id, !readOnly && attachmentAccess.kind === "owner", zh);
+
+  function captureCitationSelection(clearPrevious = false) {
+    if (clearPrevious) citationSelectionRef.current = null;
+    const body = articleRef.current?.querySelector<HTMLElement>(".reader-message-body");
+    const nextSelection = body ? selectedMessageText(body, window.getSelection()) : null;
+    if (nextSelection) citationSelectionRef.current = nextSelection;
+  }
+
+  async function copySelectionAsCitation() {
+    const body = articleRef.current?.querySelector<HTMLElement>(".reader-message-body");
+    const selectedText = citationSelectionRef.current ?? (body ? selectedMessageText(body, window.getSelection()) : null);
+    citationSelectionRef.current = null;
+    if (!selectedText) {
+      setCitationFallback(null);
+      setCitationStatus(zh ? "请先在这条消息正文中选择要引用的内容。" : "Select text within this message first.");
+      return;
+    }
+    const citation = buildReaderCitationMarkdown(selectedText, {
+      conversationId: message.conversation_id,
+      messageId: message.id,
+      conversationTitle,
+      ordinal: message.ordinal ?? message.order_key,
+      origin: window.location.origin,
+    });
+    if (!citation) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(citation);
+      setCitationFallback(null);
+      setCitationStatus(zh ? "引用已复制；来源链接需要原对话访问权限。" : "Citation copied; the source link still requires access to the original conversation.");
+    } catch {
+      setCitationFallback(citation);
+      setCitationStatus(zh ? "无法自动访问剪贴板。引用已选中，请手动复制。" : "Clipboard access was denied. The citation is selected for manual copying.");
+    }
+  }
 
   useEffect(() => {
     if (!mobileActionsOpen) return;
@@ -163,6 +214,22 @@ function MessageItemComponent({
       {!readOnly && attachmentAccess.kind === "owner" ? <MessageMarkdownCopyButton controller={markdownCopy} zh={zh} onActivate={mobile ? () => {
         setMobileActionsOpen(false); mobileActionsTriggerRef.current?.focus({ preventScroll: true });
       } : undefined} /> : null}
+      {!readOnly && attachmentAccess.kind === "owner" ? <button
+        type="button"
+        onPointerDown={() => captureCitationSelection(true)}
+        onFocus={() => captureCitationSelection()}
+        onClick={() => {
+          void copySelectionAsCitation();
+          if (mobile) {
+            setMobileActionsOpen(false);
+            mobileActionsTriggerRef.current?.focus({ preventScroll: true });
+          }
+        }}
+        className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle"
+        aria-label={zh ? "复制所选内容并附上来源" : "Copy selection with source"}
+        title={zh ? "复制为引用" : "Copy as citation"}
+        data-markdown-copy-ignore="true"
+      ><Quote className="h-4 w-4" aria-hidden="true" /></button> : null}
       {onBookmark ? (
         <button type="button" onClick={() => void onBookmark(message)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "\u6536\u85cf\u6d88\u606f" : "Bookmark message"} title={zh ? "\u6536\u85cf\u6d88\u606f" : "Bookmark message"}>
           <BookmarkPlus className="h-4 w-4" />
@@ -189,6 +256,7 @@ function MessageItemComponent({
   return (
     <article
       ref={articleRef}
+      hidden={hiddenByTurn}
       id={messageDomId}
       data-message-id={message.id}
       data-message-version-id={message.current_version?.id}
@@ -197,13 +265,30 @@ function MessageItemComponent({
       data-hover-surface="none"
       aria-current={isNavigationTarget ? "location" : undefined}
       data-state={highlightTargetId === messageDomId ? (selected ? "current-selected" : "current") : selected ? "selected" : undefined}
-      className={`reader-message reader-interactive-row group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:justify-start sm:rounded-2xl ${highlightTargetId === messageDomId ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""}`}
+      className={`reader-message reader-interactive-row group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:justify-start sm:rounded-2xl ${hiddenByTurn ? "!hidden" : ""} ${highlightTargetId === messageDomId ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""}`}
     >
       <div className="min-w-0 w-full max-w-full flex-1">
         <div data-message-meta className="relative mb-2 flex min-h-10 items-center gap-2">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${isUser ? "bg-[var(--accent-soft)] text-accent" : "bg-[var(--text)] text-[var(--surface)]"}`}>{isUser ? "U" : "CR"}</span>
           <span className="text-xs font-semibold text-secondary">{isUser ? userLabel ?? t("you") : "Assistant"} - #{message.ordinal ?? message.order_key}</span>
           {!isUser ? <span className="hidden font-mono text-[11px] text-secondary group-hover:inline">{message.order_key}</span> : null}
+          {turnLead && onToggleTurn ? (
+            <button
+              type="button"
+              data-reader-turn-toggle="true"
+              aria-expanded={!turnCollapsed}
+              aria-label={turnCollapsed
+                ? (zh ? `展开本轮（${turnMessageCount} 条消息）` : `Expand turn (${turnMessageCount} messages)`)
+                : (zh ? `折叠本轮（${turnMessageCount} 条消息）` : `Fold turn (${turnMessageCount} messages)`)}
+              onClick={onToggleTurn}
+              className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-xs text-secondary hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)]"
+            >
+              {turnCollapsed ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronUp className="h-4 w-4" aria-hidden="true" />}
+              <span>{turnCollapsed
+                ? (zh ? `已折叠 · ${turnMessageCount} 条` : `Folded · ${turnMessageCount}`)
+                : (zh ? "折叠本轮" : "Fold turn")}</span>
+            </button>
+          ) : null}
           {hasActions ? (
             <>
               <div className={`ml-auto hidden min-h-10 items-center transition group-hover:opacity-100 group-focus-within:opacity-100 sm:flex ${versionHistory.needsAttention ? "opacity-100" : "opacity-0"}`}>{actions(false)}</div>
@@ -238,7 +323,15 @@ function MessageItemComponent({
           ) : null}
         </div>
         <MessageMarkdownCopyFeedback controller={markdownCopy} zh={zh} />
-        <div className={isUser
+        {citationStatus ? <p role="status" className="mb-2 text-xs text-secondary">{citationStatus}</p> : null}
+        {citationFallback ? <label className="mb-3 block text-xs text-secondary" data-markdown-copy-ignore="true">
+          {zh ? "手动复制引用：" : "Manually copy the citation:"}
+          <textarea readOnly value={citationFallback} onFocus={(event) => event.currentTarget.select()} rows={Math.min(6, Math.max(2, citationFallback.split("\n").length))} className="mt-1 w-full rounded-md border border-ui bg-surface p-2 font-mono text-xs text-primary" />
+        </label> : null}
+        {turnCollapsed && turnLead ? <p className="mb-2 text-xs text-secondary">
+          {zh ? `本轮共 ${turnMessageCount} 条消息。展开后可继续阅读、定位和使用消息操作。` : `This turn has ${turnMessageCount} messages. Expand to read, navigate, or use message actions.`}
+        </p> : null}
+        <div hidden={turnCollapsed} aria-hidden={turnCollapsed || undefined} className={isUser
           ? wideUserMessage
             ? "reader-message-body message-user message-user-rich w-full min-w-0 text-primary"
             : "reader-message-body message-user w-full min-w-0 rounded-lg border-l-2 border-[var(--accent)] bg-subtle px-4 py-4 text-primary sm:px-5"
@@ -266,6 +359,7 @@ function MessageItemComponent({
 
 export const MessageItem = memo(MessageItemComponent, (previous, next) => (
   previous.message === next.message
+  && previous.conversationTitle === next.conversationTitle
   && previous.userLabel === next.userLabel
   && previous.readOnly === next.readOnly
   && previous.selected === next.selected
@@ -277,6 +371,11 @@ export const MessageItem = memo(MessageItemComponent, (previous, next) => (
   && previous.attachmentAccess?.kind === next.attachmentAccess?.kind
   && (previous.attachmentAccess?.kind !== "admin" || next.attachmentAccess?.kind !== "admin" || previous.attachmentAccess.userId === next.attachmentAccess.userId)
   && (previous.attachmentAccess?.kind !== "share" || next.attachmentAccess?.kind !== "share" || previous.attachmentAccess.token === next.attachmentAccess.token)
+  && previous.turnCollapsed === next.turnCollapsed
+  && previous.turnLead === next.turnLead
+  && previous.turnMessageCount === next.turnMessageCount
+  && previous.hiddenByTurn === next.hiddenByTurn
+  && previous.onToggleTurn === next.onToggleTurn
 ));
 
 function shouldUseWideUserLayout(text: string, blocks: RenderBlockRead[]): boolean {

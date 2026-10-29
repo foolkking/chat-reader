@@ -40,6 +40,38 @@ class ConversationDetail(ConversationListItem):
     sort_time: datetime | None
 
 
+class DuplicateReviewConversation(BaseModel):
+    id: UUID
+    title: str
+    display_title: str
+    status: str
+    content_hash: str
+    message_count: int
+    turn_count: int
+    created_at: datetime | None
+    updated_at: datetime | None
+    imported_at: datetime
+    project_id: UUID | None = None
+    project_name: str | None = None
+    attachment_count: int = 0
+    annotation_count: int = 0
+
+
+class DuplicateReviewGroup(BaseModel):
+    content_hash: str
+    count: int
+    conversations: list[DuplicateReviewConversation]
+
+
+class DuplicateReviewResponse(BaseModel):
+    groups: list[DuplicateReviewGroup]
+    total_groups: int
+    total_conversations: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
 class ConversationCreateMessage(BaseModel):
     role: Literal["user", "assistant"]
     content_markdown: str = Field(min_length=1, max_length=200_000)

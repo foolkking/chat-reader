@@ -86,7 +86,7 @@ function fixture({ projectView = false, state = "empty", open = false, selection
     react: { ...React, useState: initial => { const name = stateNames[stateIndex++]; return [Object.hasOwn(overrides, name) ? overrides[name] : typeof initial === "function" ? initial() : initial, value => setters.push({ name, value })]; },
       useRef: initial => { const ref = React.useRef(initial); refs[refNames[refIndex++]] = ref; return ref; } },
     "react/jsx-runtime": { ...jsx, jsx: capture(jsx.jsx), jsxs: capture(jsx.jsxs) },
-    "@tanstack/react-query": { useQueryClient: () => client, useInfiniteQuery: input => input.queryKey[0] === "conversations" ? pagedList : list,
+    "@tanstack/react-query": { useQueryClient: () => client, useInfiniteQuery: () => pagedList,
       useQuery: input => input.queryKey[0] === "projects"
         ? { data: [{ id: projectId, name: "Synthetic project", conversation_count: rows.length, pinned_count: 0 }], isFetching: false }
         : input.queryKey[1] === "existence" ? { data: [], isSuccess: true } : list },
@@ -105,16 +105,25 @@ function fixture({ projectView = false, state = "empty", open = false, selection
     "../../components/hover-preview-link": { HoverPreviewLink: ({ href, children }) => React.createElement("a", { href }, children) },
     "../../components/mobile-page-header": { MobilePageHeader: () => null },
     "../../components/workspace-shell": { useWorkspaceShell: () => ({ embedded: true }) },
+    "next/navigation": { useRouter: () => ({ push: noop }) },
+    "../../components/import-dialog-provider": { useImportDialog: () => ({ openImportDialog: noop }) },
+    "../conversations/new-conversation-dialog": { NewConversationDialog: () => null },
+    "../../components/batch-operation-feedback": { BatchOperationFeedback: () => null },
+    "../../components/bulk-move-review": { BulkMoveReview: () => null },
+    "../../lib/list-pagination": { flattenPages: pages => pages?.flatMap(page => page.items) ?? [] },
+    "../../lib/offline-access": { authenticationGeneration: () => 0, AUTH_GENERATION_CHANGED_EVENT: "synthetic:auth-changed" },
     "./project-symbol": { ProjectSymbol: () => null }, "./project-sidebar": { ProjectSidebar: () => null },
   };
   for (const prefix of ["./", "../conversations/"]) {
     mocks[`${prefix}conversation-action-menu`] = { ConversationActionMenu: () => null };
+    mocks[`${prefix}batch-title-trim`] = { BatchTitleTrim: () => null };
     mocks[`${prefix}conversation-deletion-provider`] = { useConversationDeletion: () => ({ busy: false,
       submit: async () => { throw new Error("A merge-reentry test must not delete"); } }) };
     mocks[`${prefix}conversation-placement`] = { useConversationPlacement: () => ({}), ConversationPlacementSurface: () => null };
     mocks[`${prefix}conversation-undo`] = {};
     mocks[`${prefix}markdown-renderer`] = { stripLeadingTimestamp: text => text };
-    mocks[`${prefix}use-batch-export`] = { useBatchExport: () => ({ feedback: null }) };
+    mocks[`${prefix}use-batch-export`] = { useBatchExport: () => ({ feedback: null, overLimit: count => count > 5000 }) };
+    mocks[`${prefix}use-batch-result-check`] = { useBatchResultCheck: () => ({ record: noop, blockedIds: new Set(), surface: null }) };
     mocks[`${prefix}merge-conversations-dialog`] = mergeModule;
   }
   const page = load(relative, mocks)[componentName];

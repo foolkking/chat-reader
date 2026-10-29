@@ -33,9 +33,9 @@ const projectOptions: SortOption<ProjectSortMode>[] = [
   { value: "custom", zh: "自定义", en: "Custom" },
 ];
 
-export function ConversationSortMenu({ compact = false }: { compact?: boolean } = {}) {
+export function ConversationSortMenu({ compact = false, hideCustomDirection = false }: { compact?: boolean; hideCustomDirection?: boolean } = {}) {
   const preferences = usePreferences();
-  return <SortMenu compact={compact} options={conversationOptions} mode={preferences.conversationSortMode} direction={preferences.conversationSortDirection} onChange={preferences.setConversationSort} locale={preferences.resolvedLocale} />;
+  return <SortMenu compact={compact} hideCustomDirection={hideCustomDirection} options={conversationOptions} mode={preferences.conversationSortMode} direction={preferences.conversationSortDirection} onChange={preferences.setConversationSort} locale={preferences.resolvedLocale} />;
 }
 
 export function ProjectSortMenu() {
@@ -43,13 +43,14 @@ export function ProjectSortMenu() {
   return <SortMenu options={projectOptions} mode={preferences.projectSortMode} direction={preferences.projectSortDirection} onChange={preferences.setProjectSort} locale={preferences.resolvedLocale} />;
 }
 
-function SortMenu<T extends string>({ options, mode, direction, onChange, locale, compact = false }: {
+function SortMenu<T extends string>({ options, mode, direction, onChange, locale, compact = false, hideCustomDirection = false }: {
   options: SortOption<T>[];
   mode: T;
   direction: SortDirection;
   onChange: (mode: T, direction: SortDirection) => Promise<void>;
   locale: "zh-CN" | "en-US";
   compact?: boolean;
+  hideCustomDirection?: boolean;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -59,10 +60,11 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
     const closeOnOutside = (event: PointerEvent) => {
       if (rootRef.current?.contains(event.target as Node)) return;
       setOpen(false);
-      window.setTimeout(() => triggerRef.current?.focus({ preventScroll: true }), 0);
+      // The outside pointer owns the next focus target. Restoring the trigger
+      // here would steal focus after the clicked input receives it.
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       setOpen(false);
@@ -93,7 +95,7 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
         aria-expanded={open}
         aria-label={locale === "zh-CN" ? "对话排序" : "Sort conversations"}
         title={label}
-        className={`flex cursor-pointer items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle ${compact ? "h-7 w-7 justify-center" : "min-h-9 gap-2 px-3 text-sm"}`}
+        className={`flex cursor-pointer items-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle ${compact ? "h-11 w-11 justify-center sm:h-7 sm:w-7" : "min-h-11 gap-2 px-3 text-sm sm:min-h-9"}`}
       >
         <ArrowUpDown className="h-4 w-4" />{compact ? null : <span>{label}</span>}
       </button>
@@ -103,19 +105,19 @@ function SortMenu<T extends string>({ options, mode, direction, onChange, locale
         className="fixed inset-x-3 bottom-[calc(.75rem+env(safe-area-inset-bottom))] z-[150] max-h-[min(70dvh,32rem)] w-auto overflow-y-auto rounded-lg border border-ui bg-raised p-1 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-11 sm:w-52 sm:shadow-xl"
       >
         {options.map((option) => (
-          <button key={option.value} role="menuitem" type="button" onClick={() => { setOpen(false); void onChange(option.value, direction); }} className="flex min-h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle">
+          <button key={option.value} role="menuitem" type="button" onClick={() => { setOpen(false); void onChange(option.value, direction); }} className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle sm:min-h-9">
             <span className="flex-1">{locale === "zh-CN" ? option.zh : option.en}</span>
             {option.value === mode ? <Check className="h-4 w-4 text-accent" /> : null}
           </button>
         ))}
-        <div className="mt-1 flex border-t border-ui pt-1">
+        {!(hideCustomDirection && mode === "custom") ? <div className="mt-1 flex border-t border-ui pt-1">
           {(["desc", "asc"] as const).map((value) => (
-            <button key={value} role="menuitem" type="button" onClick={() => { setOpen(false); void onChange(mode, value); }} className={`flex min-h-9 flex-1 items-center justify-center gap-1 rounded-md text-xs ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
+            <button key={value} role="menuitem" type="button" onClick={() => { setOpen(false); void onChange(mode, value); }} className={`flex min-h-11 flex-1 items-center justify-center gap-1 rounded-md text-xs sm:min-h-9 ${direction === value ? "bg-subtle text-primary" : "text-secondary hover:bg-subtle"}`}>
               {value === "desc" ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
               {locale === "zh-CN" ? (value === "desc" ? "降序" : "升序") : value === "desc" ? "Descending" : "Ascending"}
             </button>
           ))}
-        </div>
+        </div> : null}
       </div> : null}
     </div>
   );

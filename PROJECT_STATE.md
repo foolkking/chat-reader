@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-29. This is the current snapshot, not a release history.
+Last updated: 2026-10-30. This is the current snapshot, not a release history.
 
 ## Release and active work
 
@@ -44,6 +44,69 @@ Authenticated production UI, physical clipboard, sustained load and an isolated
 restore drill for this backup remain unclaimed. The
 [release record](docs/execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md) owns
 exact identities, failed-run history, verification receipts and boundaries.
+
+**Two-round Web features and download protection (2026-10-30; local, not released):**
+19 candidates have bounded source implementations: saved searches, annotation
+inbox, manual reading list, read-only version comparison, bounded print draft,
+explicit search-result batch archive, file directory, exact-hash duplicate
+review, export presets, quick actions, offline checklists, source citations,
+continuous search-hit reading, pasted-text import, table TSV/CSV, turn folding,
+event-backed lineage, title-trim preview and the synthetic example.
+WEB-05/08/11/21/22 remain explicitly unimplemented: visitor projection,
+independent dual-Reader state, portable tags, genuine read-content baselines
+and frozen-share lifecycle need contract work; no UI placeholders claim them.
+Migrations 0054→0055→0056 add split receipts, account-scoped feature entries and
+short offline transfer leases. A reproducible headers-to-file-open cleanup race
+is protected until transfer completion/disconnect; the user's original failure
+has no supplied network trace and is not claimed to have that exact cause.
+Final local lint/typecheck/build passed, UX **1,856/1,856**, focused API **21/21**
+plus duplicate review **2/2**, and Playwright **15/15** (includes two helper
+checks and one inventory check). Head is `20261030_0056`. Full local API ended
+with 5,724 passes, 192 conditional skips and two lease-test clock failures:
+collection-time timestamps expired during the 79-minute run. Tests now create
+their clocks per case and the full focused files passed; a new full CI, not that
+failed local run, must certify the final source. Buildinfo was restored to its
+original pre-task SHA-256 and stays excluded. Final review includes unread-on-add,
+membership/limit concurrency, account-isolated search return, lineage paging and
+modal keyboard recovery. Full PostgreSQL/PWA CI and production gates are pending.
+Production/direct rollback remains the last accepted f8a6a06/b4effda at 0053,
+not revalidated by these local checks. User authorized commit, full CI, a fresh
+50-minute wait after each dispatch, then deployment only after all release gates.
+The precise checklist and receipts are in
+[the implementation record](docs/execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)
+and [testing boundary](docs/testing.md#two-round-web-features--2026-10-30-local-integration).
+
+**Next-batch optimization (2026-10-29; historical pre-validation checkpoint):**
+all 15 directions in the [review](docs/execution/ux-audit-next-batch-2026-10-29.md)
+have a bounded [implementation](docs/execution/UX_NEXT_BATCH_IMPLEMENTATION_2026-10-29.md):
+project/sidebar pagination and safe ordering, batch outcome checks/progress/stop,
+explicit move confirmation, export limits, split result/idempotency/focus/range
+recovery, mobile sorting and project-scoped empty actions. Regressions are
+authored, not run. Source adds migration `20261029_0054` after `20261022_0053`
+for split receipts; no migration has executed. No local tests/lint/typecheck/
+build/browser/services/database, CI dispatch, commit, push or deployment ran.
+Production, direct rollback, offline/Dexie/archive formats and the pre-existing
+buildinfo are unchanged. See the [verification boundary](docs/testing.md#next-batch-project-batch-and-split--2026-10-29-source-only).
+
+**Follow-up review and Web opportunities (2026-10-29; documents only):**
+the [follow-up audit](docs/execution/ux-audit-next-batch-followup-2026-10-29.md)
+records 10 bounded recovery/form/ordering directions, separating five new
+interactions from five inherited issues. The
+[Web opportunity review](docs/execution/web-feature-opportunities-2026-10-29.md)
+adds 14 user-facing candidates, with existing capabilities, demand hypotheses,
+smallest useful scope and acceptance boundaries distinguished. Neither document
+is implementation authorization, a verified fix or an accepted product scope.
+No product code, tests, CI, migration, commit, push or deployment was changed
+or executed by this review; the preceding source-only and production states remain.
+
+**Web opportunity extension (2026-10-30; documents only):**
+the [second-round review](docs/execution/web-feature-opportunities-round2-2026-10-30.md)
+adds 10 non-duplicate candidates, bringing the two-round pool to 24. Suggested
+validation starts with pasted-text import, source-linked quotations, table data
+export and continuous search-hit reading. User demand remains hypothetical;
+snapshot sharing and read-content baselines require explicit contract design.
+No product implementation, runtime verification, CI, commit, push or deployment
+ran. Production was not rechecked; its last accepted record above is unchanged.
 
 ### Historical implementation checkpoints
 
@@ -1120,8 +1183,11 @@ meaning. [Execution records](docs/execution/README.md) own dated evidence;
 Historical “uncommitted/no deployment authorized” statements do not override the
 current user-authorized release above.
 
-Current next-action boundary: this authorized release and independent
-post-deployment recheck are complete; do not start another optimization cycle.
+Current next-action boundary: the accepted release and independent
+post-deployment recheck are complete. The subsequently authorized, bounded
+15-item 2026-10-29 source batch above is implemented but unverified/unsubmitted.
+Do not dispatch CI, commit, push, migrate or deploy it without authorization;
+do not start an additional optimization cycle.
 Exact-source backup/preflight helpers have passed actual Docker/stopped-writer
 verification; that does not prove an isolated restore drill.
 Do not restart the historical unlimited audit or remaining resource/browser

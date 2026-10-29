@@ -3,7 +3,7 @@ import json
 import uuid
 from http import HTTPStatus
 
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
@@ -15,6 +15,7 @@ from app.models.message_version import MessageVersion
 from app.models.heading import Heading
 from app.schemas.annotation import (
     AnnotationCreate,
+    AnnotationAnchorStatus,
     AnnotationRead,
     AnnotationSyncRequest,
     AnnotationSyncResponse,
@@ -27,6 +28,7 @@ from app.schemas.annotation import (
     SyncOperationResult,
 )
 from app.services.preferences import DEFAULT_SUBJECT_KEY
+from app.services.ownership import OwnershipScope
 from app.services.subject_account import lock_subject_account
 from app.services.search.annotation_indexer import sync_annotation_document
 
@@ -57,6 +59,54 @@ def list_annotations(
         ConversationAnnotation.created_at.asc(),
         ConversationAnnotation.id.asc(),
     ).all()
+
+
+def list_annotation_inbox(
+    db: Session,
+    *,
+    ownership_scope: OwnershipScope,
+    subject_key: str = DEFAULT_SUBJECT_KEY,
+    anchor_status: AnnotationAnchorStatus | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[tuple[ConversationAnnotation, str]], int]:
+    base = (
+        db.query(ConversationAnnotation, Conversation.display_title, Conversation.title)
+        .join(Conversation, Conversation.id == ConversationAnnotation.conversation_id)
+        .filter(
+            ConversationAnnotation.subject_key == subject_key,
+            ConversationAnnotation.is_deleted.is_(False),
+            Conversation.deleted_at.is_(None),
+            ownership_scope.predicate(Conversation),
+        )
+    )
+    if anchor_status is not None:
+        base = base.filter(ConversationAnnotation.anchor_status == anchor_status)
+    total = int(
+        db.query(func.count(ConversationAnnotation.id))
+        .join(Conversation, Conversation.id == ConversationAnnotation.conversation_id)
+        .filter(
+            ConversationAnnotation.subject_key == subject_key,
+            ConversationAnnotation.is_deleted.is_(False),
+            Conversation.deleted_at.is_(None),
+            ownership_scope.predicate(Conversation),
+            *((
+                ConversationAnnotation.anchor_status == anchor_status,
+            ) if anchor_status is not None else ()),
+        )
+        .scalar()
+        or 0
+    )
+    rows = (
+        base.order_by(
+            ConversationAnnotation.updated_at.desc(),
+            ConversationAnnotation.id.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return [(annotation, display_title or title) for annotation, display_title, title in rows], total
 
 
 def create_annotation(

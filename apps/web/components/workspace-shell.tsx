@@ -113,6 +113,10 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
   const ownerSurface = pathname === "/"
     || pathname === "/archived"
     || pathname === "/recent"
+    || pathname === "/reading-list"
+    || pathname === "/annotations"
+    || pathname === "/files"
+    || pathname === "/duplicates"
     || pathname === "/search"
     || pathname.startsWith("/conversations/")
     || pathname.startsWith("/projects/");

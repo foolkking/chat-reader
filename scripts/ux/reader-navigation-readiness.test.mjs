@@ -45,6 +45,7 @@ const loadModule = (code, imports = appRequire, document) => {
   const module = { exports: {} }; new Function("require", "module", "exports", "document", code)(imports, module, module.exports, document); return module.exports;
 };
 const windowHelpers = loadModule(moduleCode("reader-window"));
+const turnFoldingHelpers = loadModule(moduleCode("reader-turn-folding"));
 const searchTargetHelpers = loadModule(compile(readFileSync(
   new URL("../../apps/web/features/search/search-result-target.ts", import.meta.url), "utf8",
 )));
@@ -56,7 +57,7 @@ const refDefaults = {
   preferenceStableAnchorRef: null, lastSavedSignatureRef: "", latestStablePositionRef: null,
   pointerDraggingRef: false, pointerDragMovedRef: false, pointerScrollTopRef: 0, activeMessageIdRef: null, activeBlockIdRef: null,
   locatePulseTimerRef: null, lastNavigationTargetRef: null, previousTurnAnchorRef: null, nextTurnAnchorRef: null,
-  tocReturnPointRef: null,
+  tocReturnPointRef: null, collapsedTurnKeysRef: new Set(),
   edgeTransitionRef: null, loadingPreviousRef: false, loadingNextRef: false, previousSentinelVisibleRef: false,
   nextSentinelVisibleRef: false, firstContentReportedRef: false, firstContentStartedAtRef: 0,
 };
@@ -65,7 +66,7 @@ const inputNames = [...Object.keys(refDefaults), "loadedWindowRef", "scrollConta
   "windowQuery", "positionQuery", "targetMessageId", "savedPosition", "loadedWindow", "initialPaintReady", "mergedIntoConversationId",
   "queryClient", "setInitialPaintReady", "setLoadedWindow", "setPendingTargetMessageId", "setNavigationStatus", "setNavigationFailureReason",
   "setActiveMessageId", "setActiveBlockId", "setLocatePulse", "setReadingSaveError",
-  "setTocReturnPoint", "setTocReturnError", "pruneMessageState"];
+  "setTocReturnPoint", "setTocReturnError", "pruneMessageState", "setCollapsedTurnKeys"];
 const compiled = compile(`function InspectReadiness(input) {
   const { ${inputNames.join(", ")} } = input;
   const conversation = conversationQuery.data, messages = loadedWindow.items, isOffline = dataSource.mode === "offline";
@@ -184,6 +185,10 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     setActiveBlockId: value => { state.activeBlockIdRef.current = value; change("activeBlockId", value); },
     setTocReturnPoint: value => change("tocReturnPoint", value),
     setTocReturnError: value => change("tocReturnError", value),
+    setCollapsedTurnKeys: value => {
+      state.collapsedTurnKeysRef.current = value;
+      dirty = true;
+    },
     setLocatePulse: () => {}, setReadingSaveError: value => change("readingSaveError", value), pruneMessageState: () => {},
   });
   state.loadedWindowRef.current = state.loadedWindow;
@@ -210,6 +215,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     resolveCanonicalSearchAnchor: searchTargetHelpers.resolveCanonicalSearchAnchor,
     authenticationGeneration: () => epoch, captureTask, ApiRequestError, ACTIVE_READING_OFFSET: 120,
     ...windowHelpers, loadTurnNeighborhood: windowHelpers.loadCompleteTurnWindow,
+    buildReaderTurnGroups: turnFoldingHelpers.buildReaderTurnGroups,
     startTransition: action => action(), resolveActiveReadingTarget: active.resolveActiveReadingTarget,
     navigateMountedTarget, restoreScrollAnchor, estimateCharacterOffsetAtReadingLine: () => null,
     captureScrollAnchor: scope => { const target = active.resolveActiveReadingTarget(scope, 120);

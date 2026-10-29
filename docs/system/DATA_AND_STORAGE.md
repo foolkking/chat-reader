@@ -1,5 +1,35 @@
 # 数据与持久化
 
+## 两轮 Web 功能数据 — 2026-10-30（本地源码，待发布）
+
+源码单一迁移链为 `20261022_0053 → 20261029_0054 → 20261030_0055 →
+20261030_0056`，生产尚未升级，仍以 `PROJECT_STATE.md` 的已接受记录为准。
+
+| 新表 | 真值／生命周期 |
+| --- | --- |
+| `conversation_split_receipts`（0054） | 源对话／请求键与摘要、小型结果；源对话硬删除级联，不能在未知写结果仍待恢复时自动删回执。 |
+| `user_feature_entries`（0055） | subject／collection 的严格值与 CAS revision；FK 到 `user_preferences.subject_key`，账户配置删除时级联。保存搜索、导出预设、离线常备清单各最多 20，待读最多 500，同对话成员写入防重。 |
+| `offline_package_leases`（0056） | storage URI／随机 lease ID、过期时间及 expiry 索引；仅短期传输围栏，无正文。90 秒有效、15 秒续期、响应结束释放；崩溃遗留到期后不保护文件。 |
+
+三个表都随 PostgreSQL 停写备份；配置条目未加入个人／系统便携 `.cr` 或客户端
+离线包，跨设备使用同账户服务器值，不声称归档导入会迁移这些配置。
+canonical 对话／版本、旧 Share URL、offline package v1/v2/v3、Dexie v2 及已存
+本机数据不改。应用回退保留附加表；downgrade 会删除新配置／回执／传输围栏，
+不是自动回滚步骤，须另行授权、确认无下载／未知结果并独立备份。
+
+## 当前生产与待发布源码 — 2026-10-29
+
+生产 schema 仍为单一 head `20261022_0053`；下一批本地源码另增
+`20261029_0054` `conversation_split_receipts`。该表以源 conversation 和
+幂等键为复合主键，只保存规范化请求摘要及小型拆分结果回执，不保存消息正文；
+源 conversation 硬删除时外键级联清除。它随 canonical PostgreSQL 备份，
+不纳入可移植 `.cr` 数据或客户端离线包。
+
+新 API 分离幂等路径，允许先升级 schema、再启用新客户端；旧镜像对此路径返回 404，
+不会忽略幂等键后继续写入。源码迁移未经 Alembic 运行、CI、备份或发布验证；
+回滚时优先保留附加表。只有在确认不再需要任何重试回执且经独立审批／备份后才能
+downgrade 删除该表。`PROJECT_STATE.md` 记录当前生产事实。
+
 Current 2026-10-06 production uses single head `20261006_0048`. ExportArtifact
 stores the pinned retention policy and reclamation state; `export_artifact_leases`
 coordinates short usage, claims and active downloads. Existing deadlines survive

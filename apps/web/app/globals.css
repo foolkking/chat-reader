@@ -1128,3 +1128,49 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
     transition: none !important;
   }
 }
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  .print-reading-draft {
+    max-width: none !important;
+    padding: 0 !important;
+    color: #111827 !important;
+  }
+
+  .print-reading-draft-toolbar {
+    border-bottom-color: #d1d5db !important;
+  }
+
+  .print-reading-draft-toolbar button,
+  .print-reading-draft-warning {
+    display: none !important;
+  }
+
+  .print-reading-draft [data-reader-message-actions],
+  .print-reading-draft [data-message-actions],
+  .print-reading-draft button {
+    display: none !important;
+  }
+
+  .print-reading-draft section {
+    overflow: visible !important;
+  }
+
+  .print-reading-draft article {
+    break-inside: avoid;
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+  }
+
+  .print-reading-draft a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+}

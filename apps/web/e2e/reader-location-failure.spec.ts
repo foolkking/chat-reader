@@ -1,7 +1,7 @@
 import { expect, test, type Route } from "@playwright/test";
 import { loadCompleteTurnWindow } from "../features/conversations/reader-window";
 import { codePointOffsetToCodeUnit, matchTextAnchor } from "../features/conversations/text-anchor";
-import type { ReaderTurnResponse } from "../lib/types";
+import type { ReaderTurnResponse, ReadingListValue, UserFeatureEntry } from "../lib/types";
 
 test.use({ serviceWorkers: "block" });
 
@@ -172,6 +172,97 @@ test("stale search version falls back without an exact text pulse", async ({ pag
   await expect(page.locator('[data-locate-pulse="text"]')).toHaveCount(0);
 });
 
+test("search-hit reading advances between safe targets and exit clears its session queue", async ({ page }) => {
+  const queueId = "queue-12345678";
+  const queueKey = `chat-reader:search-reading-queue:${queueId}`;
+  const versionId = "dddddddd-dddd-4ddd-8ddd-ddddddddddd2";
+  const blockId = "dddddddd-dddd-4ddd-8ddd-ddddddddddd3";
+  const makeHref = (characterOffset: number) => {
+    const params = new URLSearchParams({
+      messageId,
+      messageVersionId: versionId,
+      renderBlockId: blockId,
+      blockIndex: "0",
+      characterOffset: String(characterOffset),
+      endCharacterOffset: String(characterOffset + 6),
+    });
+    return `/conversations/${conversationId}?${params}`;
+  };
+  const hrefs = [makeHref(0), makeHref(10)];
+  const queue = JSON.stringify({ version: 1, createdAt: Date.now(), hrefs, returnHref: "/search?q=synthetic&role=assistant" });
+  await page.addInitScript(({ key, value }) => window.sessionStorage.setItem(key, value), { key: queueKey, value: queue });
+
+  const first = new URL(hrefs[0], "http://127.0.0.1");
+  first.searchParams.set("searchQueue", queueId);
+  first.searchParams.set("searchIndex", "0");
+  await page.goto(`${first.pathname}${first.search}`);
+
+  const banner = page.locator('[data-search-reading-queue="true"]');
+  await expect(banner).toContainText("1 / 2");
+  await banner.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/characterOffset=10.*searchQueue=queue-12345678.*searchIndex=1/);
+  await expect(banner).toContainText("2 / 2");
+
+  await banner.getByRole("button", { name: "Return to results" }).click();
+  await expect(page).toHaveURL(/\/search\?q=synthetic&role=assistant$/);
+  await page.goBack();
+  await expect(banner).toContainText("2 / 2");
+  await page.getByRole("button", { name: "Exit continuous reading" }).click();
+  await expect(page).not.toHaveURL(/searchQueue|searchIndex/);
+  await expect.poll(() => page.evaluate((key) => window.sessionStorage.getItem(key), queueKey)).toBeNull();
+});
+
+test("adding to reading list starts unread and only the next explicit action marks it read", async ({ page }) => {
+  const entries: UserFeatureEntry<ReadingListValue>[] = [];
+  const writes: ReadingListValue[] = [];
+  await page.route("**/api/user-feature-entries/reading-list**", async (route) => {
+    if (route.request().method() === "GET") return json(route, entries);
+    const payload = route.request().postDataJSON() as { expected_revision: number; value: ReadingListValue };
+    writes.push(payload.value);
+    const saved: UserFeatureEntry<ReadingListValue> = {
+      id: new URL(route.request().url()).pathname.split("/").at(-1)!,
+      collection: "reading-list", revision: payload.expected_revision + 1, value: payload.value,
+      created_at: "2026-10-30T00:00:00Z", updated_at: "2026-10-30T00:00:00Z",
+    };
+    entries.splice(0, entries.length, saved);
+    await json(route, saved);
+  });
+  await page.goto(`/conversations/${conversationId}`);
+  const control = page.getByTestId("reading-list-toggle").filter({ visible: true });
+  await expect(control).toHaveAttribute("aria-label", "Add to reading list");
+  await control.click();
+  await expect(control).toHaveAttribute("aria-label", "Mark read");
+  expect(writes).toEqual([{ conversation_id: conversationId, state: "unread" }]);
+  await control.click();
+  await expect(control).toHaveAttribute("aria-label", "Mark unread");
+  expect(writes.map((value) => value.state)).toEqual(["unread", "read"]);
+});
+
+test("folded turns keep stable anchors mounted and navigation expands before locating", async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await page.goto(`/conversations/${conversationId}`);
+
+  const reader = page.getByTestId("reader-scroll-root");
+  const article = reader.locator(`#message-${messageId}`);
+  const body = article.locator(".reader-message-body");
+  const anchor = page.locator(`#block-${messageId}-0`);
+  await expect(article).toContainText(preservedText);
+  await expect(anchor).toHaveCount(1);
+
+  const foldButton = article.locator('[data-reader-turn-toggle="true"]');
+  await foldButton.click();
+  await expect(foldButton).toHaveAttribute("aria-expanded", "false");
+  await expect(body).toBeHidden();
+  await expect(article).toBeVisible();
+  await expect(anchor).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Reader navigation" }).click();
+  await page.locator('button[title^="U1 ·"]').last().click();
+  await expect(foldButton).toHaveAttribute("aria-expanded", "true");
+  await expect(body).toBeVisible();
+  await expect(reader).toHaveAttribute("data-navigation-stage", /^(settled|settled:fallback)$/, { timeout: 15_000 });
+});
+
 async function mockReaderApi(route: Route): Promise<void> {
   const request = route.request();
   const url = new URL(request.url());
@@ -196,6 +287,7 @@ async function mockReaderApi(route: Route): Promise<void> {
     created_at: "2026-08-31T00:00:00Z",
     updated_at: "2026-08-31T00:00:00Z",
   });
+  if (path === "/api/search") return json(route, { items: [], total: 0, limit: 50, offset: 0 });
   if (path === `/api/conversations/${conversationId}`) return json(route, conversationFixture());
   if (path === `/api/conversations/${conversationId}/reading-position`) {
     if (request.method() === "GET") return json(route, { conversation_id: conversationId, position: null });

@@ -19,6 +19,7 @@ const FEATURE_TEST_OWNERS: Record<string, string> = {
   search: "reader-restoration.spec.ts / search API coverage",
   sharing: "share-focus.spec.ts",
   toc: "toc-refresh-contract.spec.ts",
+  onboarding: "web-opportunity-features.spec.ts",
 };
 
 test("every Web feature directory has a named test owner or explicit shared-contract reason", () => {

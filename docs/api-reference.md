@@ -1,5 +1,25 @@
 # API 参考
 
+## 两轮 Web 功能 — 2026-10-30（本地待发布）
+
+所有入口沿用同源 owner 认证，不创建新的公开能力；当前生产状态以
+`PROJECT_STATE.md` 为准。新表需升级至单一 head `20261030_0056`。
+
+| Method/path | Contract |
+| --- | --- |
+| `GET /api/user-feature-entries/{collection}` | 当前 subject 的配置；collection 为 `saved-search / export-preset / reading-list / offline-checklist`，只读值与 revision，不返回 subject。命名类各最多 20、待读最多 500。 |
+| `PUT /api/user-feature-entries/{collection}/{entry_id}` | `{expected_revision, value}`，创建为 0，更新必须匹配当前 revision。严格 schema；跨账户／集合 ID 碰撞、重复待读成员、容量／版本冲突为 409；无效字段 422。集合成员在 PostgreSQL 事务锁下串行。 |
+| `DELETE /api/user-feature-entries/{collection}/{entry_id}?expected_revision=…` | CAS 删除，204；不可用 404、旧 revision 409。删除配置不删除对话或本机离线副本。 |
+| `GET /api/annotations/inbox` | 当前 owner／subject、未删除对话的私人批注，`anchor_status` 可选，`limit` 1–100、`offset`；返回 items／total／has_more 和来源标题。 |
+| `GET /api/attachments/directory` | 当前 owner 的未删除文件目录，名称／MIME／使用状态／project_id 筛选和 limit 1–200／offset；不是跨账户 hash 目录，也不授予新下载权。 |
+| `GET /api/conversations/duplicates` | 当前 owner 精确内容 hash 分组，`status_scope=active/archived/all`、limit 1–100／offset；带文件／批注计数，只读，不证明历史等同。 |
+| `GET /api/conversations/{id}/events?lineage_only=true` | 只包含四种 split／merge 事件，created_at／id 降序，沿用 limit 1–200／offset／total；关联事件不替代相关对话的访问检查。 |
+| `GET /api/offline/packages/{id}/download` | 既有 owner／文件校验后取得短下载租约，响应 `private, no-store`。ASGI 传输续期／释放，清理跳过有效租约；不改变 ZIP／`.crpkg` 内容合同。 |
+
+配置保存在 PostgreSQL，当前不进入 `.cr`／离线包。前端临时搜索阅读队列仅在
+账号隔离 sessionStorage 中保留安全目标和原搜索 URL，最多 100 条／两小时；
+不保存摘录，不扩展服务端权限。
+
 ## 图片展示比例 — 2026-10-23 source
 
 两个接口均为 owner-only、no-store，不创建公开能力。
@@ -695,7 +715,8 @@ Adaptive JSON / Markdown：
 | GET | `/api/conversations/merge/requests/{request_key}` | 本人原合并请求的只读回执；返回 `{found, task}`，不排队或重试（已包含于 accepted source `f3b331a`） |
 | POST | `/api/conversations/{id}/split` | 从连续消息范围创建新会话 |
 | POST | `/api/conversations/{id}/split-workspace/preview` | 校验并预览 range/boundary/discrete 拆分计划，不写数据 |
-| POST | `/api/conversations/{id}/split-workspace` | 按已校验计划创建一个或两个新会话，来源不变 |
+| POST | `/api/conversations/{id}/split-workspace` | 兼容执行路径；创建一个或两个新会话，来源不变。可选 `Idempotency-Key` 只在新 schema/API 中受支持 |
+| POST | `/api/conversations/{id}/split-workspace/requests` | 新 API 的幂等执行路径；必须带 1–128 字符 `Idempotency-Key`，相同键及规范化载荷重放原回执，载荷不同返回 409 `SPLIT_IDEMPOTENCY_CONFLICT`。旧 API 返回 404，不回退为无保护写入 |
 | PATCH | `/api/conversations/{id}/pin` | 修改全局置顶 |
 | PUT | `/api/conversations/{id}/placement` | 单事务跨 Project/未分类移动或同区间隔排序，支持 revision 冲突检查 |
 | GET | `/api/conversations/{id}/events` | 管理和编辑事件 |
@@ -732,7 +753,7 @@ Adaptive JSON / Markdown：
 | GET | `/api/projects` | Project 列表 |
 | POST | `/api/projects` | 创建 Project |
 | PATCH | `/api/projects/{id}` | 重命名、置顶或归档 Project |
-| GET | `/api/projects/{id}/conversations` | Project 会话列表 |
+| GET | `/api/projects/{id}/conversations` | Project 会话列表；支持 `sort`、`direction`、`limit`（1–5000）与 `offset`，Web 列表分 100 项加载 |
 | POST | `/api/projects/{id}/conversations/{conversation_id}` | 兼容接口；将会话移动到该 Project |
 | DELETE | `/api/projects/{id}/conversations/{conversation_id}` | 移回内部 Inbox/Conversation history |
 | PATCH | `/api/projects/{id}/conversations/{conversation_id}/pin` | Project 内置顶 |
@@ -741,7 +762,7 @@ Adaptive JSON / Markdown：
 | PUT | `/api/conversations/{id}/project` | 单归属移动；`project_id=null` 移回 history |
 | PUT | `/api/projects/order` | 更新 Project 自定义顺序 |
 | PUT | `/api/conversations/order` | 更新未分类 Conversation 自定义顺序 |
-| PUT | `/api/projects/{id}/conversations/order` | 更新 Project 内 Conversation 自定义顺序 |
+| PUT | `/api/projects/{id}/conversations/order` | 更新 Project 内 Conversation 自定义顺序；最多 500 个 ID，项目 custom 顺序固定 canonical ascending，不接受反转语义 |
 | POST | `/api/projects/{id}/recent` | 更新 Project 最近阅读时间 |
 
 Project 列表支持 `sort=recent_read|updated|created|title|conversation_count|custom` 与 `direction=asc|desc`。Conversation 列表和 Project 内列表支持 `sort=recent_read|updated|created|imported|title|message_count|custom`；置顶项始终优先。

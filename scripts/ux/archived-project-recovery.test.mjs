@@ -243,7 +243,7 @@ test("partial bulk restore publishes confirmed rows and retains unconfirmed sele
     f.button("Restore selected").onClick(); await setImmediate();
     assert.deepEqual([...f.states.get("selectedProjectIds")], [rows[1].id]);
     assert.equal(f.client.getQueryData(f.keys[0])[0].is_archived, false);
-    assert.match(f.render(), /could not be confirmed/); assert.ok(f.button("Check restore result"));
+    assert.match(f.render(), /1 project restored; 0 definite failures, 1 unconfirmed, 0 not started/); assert.ok(f.button("Check restore result"));
   } finally { f.dispose(); }
 });
 
@@ -359,7 +359,7 @@ for (const mode of ["single", "bulk"]) {
         for (const key of [...f.keys, ...affectedKeys]) assert.equal(f.client.getQueryState(key).isInvalidated, true);
 
         const html = f.render();
-        assert.match(html, new RegExp(`${rows.length} projects? deleted, 0 failed`));
+        assert.match(html, new RegExp(`${rows.length} projects? deleted; 0 definite failures, 0 unconfirmed, 0 not started`));
         assert.match(html, /conversations remain in Unclassified/);
         assert.doesNotMatch(html, /Synthetic project/);
         assert.equal(f.observer.getCurrentResult().isFetching, refresh === "held");

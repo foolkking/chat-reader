@@ -31,7 +31,7 @@ const inputNames = ["conversationId", "dataSource", "conversationQuery", "queryC
   "windowGenerationRef", "loadedWindowRef", "applyLoadedWindow", "userScrollIntentRef", "scrollDirectionRef",
   "scrollIntentSequenceRef", "setNavigationStatus", "setNavigationFailureReason", "setActiveMessageId", "setActiveBlockId",
   "locatePulseTimerRef", "setLocatePulse", "scrollContainerRef", "resolvedLocatorKeysRef", "previousTurnAnchorRef",
-  "nextTurnAnchorRef", "initialWindowAppliedRef"];
+  "nextTurnAnchorRef", "initialWindowAppliedRef", "collapsedTurnKeysRef", "setCollapsedTurnKeys"];
 const compiled = compile(`function renderNavigation(input) {
   const { ${inputNames.join(", ")} } = input;
   ${guard.getText(ast)}
@@ -44,6 +44,8 @@ ${helpers.map(node => node.getText(ast)).join("\n")}
 exports.renderNavigation = renderNavigation;`);
 const windowExports = {};
 new Function("exports", compile(read("features/conversations/reader-window.ts")))(windowExports);
+const turnFoldingExports = {};
+new Function("exports", compile(read("features/conversations/reader-turn-folding.ts")))(turnFoldingExports);
 const searchTargetExports = {};
 new Function("exports", compile(read("features/search/search-result-target.ts")))(searchTargetExports);
 const same = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
@@ -83,7 +85,7 @@ function fixture({ mode = "remote", items = [B] } = {}) {
     restoreAttemptedRef: false, readingRestoreTokenRef: 0, restoreInProgressRef: false,
     windowGenerationRef: 0, userScrollIntentRef: false, scrollDirectionRef: null,
     scrollIntentSequenceRef: 0, locatePulseTimerRef: null, previousTurnAnchorRef: null, nextTurnAnchorRef: null,
-    initialWindowAppliedRef: false, searchNavigationRef: null,
+    initialWindowAppliedRef: false, searchNavigationRef: null, collapsedTurnKeysRef: new Set(),
   })) state[name] = { current: value };
   state.scrollContainerRef = { current: root };
   state.loadedWindowRef = { current: windowExports.replaceLoadedWindow(page(items), 0) };
@@ -111,6 +113,10 @@ function fixture({ mode = "remote", items = [B] } = {}) {
   for (const name of ["SearchNavigation", "SearchHighlight", "NavigationStatus", "NavigationFailureReason",
     "ActiveMessageId", "ActiveBlockId", "LocatePulse"]) state[`set${name}`] = setter(name[0].toLowerCase() + name.slice(1));
   state.applyLoadedWindow = value => { state.loadedWindowRef.current = value; calls.writes.push(["window", value]); };
+  state.setCollapsedTurnKeys = value => {
+    state.collapsedTurnKeysRef.current = value;
+    calls.writes.push(["collapsedTurnKeys", value]);
+  };
   const exports = {};
   const dependencies = {
     exports, useCallback: (callback, deps) => {
@@ -132,6 +138,7 @@ function fixture({ mode = "remote", items = [B] } = {}) {
       return handlers.window ? handlers.window(id) : page([id === A.id ? A : B]);
     },
     replaceLoadedWindow: windowExports.replaceLoadedWindow,
+    buildReaderTurnGroups: turnFoldingExports.buildReaderTurnGroups,
     acquireReaderBlockLease: async (id, _index, isCurrent) => {
       calls.leases.push({ id, isCurrent });
       return handlers.lease ? handlers.lease(id) : { release: () => calls.released.push(id) };

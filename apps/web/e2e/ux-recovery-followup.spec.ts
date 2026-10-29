@@ -1902,7 +1902,7 @@ test("a batch with zero confirmed archives offers no empty undo", async ({ page 
     await page.getByRole("button", { name: "Manage conversations", exact: true }).click();
     await page.getByRole("checkbox", { name: "Select Synthetic rejected archive", exact: true }).check();
     await page.getByTestId("selection-toolbar").getByRole("button", { name: "Archive", exact: true }).click();
-    await expect(page.getByRole("status").filter({ hasText: "0 completed, 1 failed" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "0 confirmed complete, 0 definite failures, 1 unconfirmed, 0 not started" })).toBeVisible();
     await expect(page.locator('[aria-label="Undo conversation action"]')).toHaveCount(0);
     await expect(page.getByRole("checkbox", { name: "Select Synthetic rejected archive", exact: true })).toBeChecked();
     expect(await status(page, id)).toBe("active");
@@ -2179,3 +2179,207 @@ test("failed project-filter loading retains URL scope through project retry", as
     expect((await page.request.delete(`/api/projects/${project.id}`)).ok()).toBe(true);
   }
 });
+
+for (const [width, zh] of [[375, true], [1440, false]] as const) {
+  test(`${width}px: split receipts survive parent selection reset and retry an actual committed split without duplicates`, async ({ page }) => {
+    await preferences(page, zh);
+    await page.setViewportSize({ width, height: 900 });
+    const created = await createConversation(page, `Synthetic split receipt ${width}`);
+    const sourceId = created.conversation.id;
+    const resultIds = new Set<string>();
+    const writes: Array<{ key: string | undefined; body: unknown }> = [];
+    const path = `/api/conversations/${sourceId}/split-workspace/requests`;
+    const before = await Promise.all(created.messages.map(async message => (await page.request.get(`/api/messages/${message.id}`)).json()));
+    const openSplit = async () => {
+      await page.locator(width < 768 ? "[data-reader-mobile-more-actions='true']" : "[data-reader-header-more-actions='true']").click();
+      await page.getByRole("button", { name: zh ? "拆分为新对话" : "Split into new conversation", exact: true }).filter({ visible: true }).click();
+      return page.getByRole("dialog", { name: zh ? "拆分对话" : "Split conversation", exact: true });
+    };
+    try {
+      await page.goto(`/conversations/${sourceId}`);
+      const article = page.locator(`article[data-message-id="${created.messages[0].id}"]`);
+      if (width < 768) await article.getByTestId("mobile-message-actions-trigger").click();
+      else await article.hover();
+      await article.getByRole("button", { name: zh ? "选择" : "Select", exact: true }).filter({ visible: true }).click();
+      if (width < 768) await article.getByTestId("mobile-message-actions-trigger").click();
+      let dialog = await openSplit();
+      await expect(dialog.getByRole("button", { name: zh ? "关闭" : "Close", exact: true })).toBeFocused();
+      const start = dialog.getByRole("combobox", { name: zh ? "起始消息" : "Start", exact: true });
+      const end = dialog.getByRole("combobox", { name: zh ? "结束消息" : "End", exact: true });
+      await expect(start).toBeEnabled();
+      await start.selectOption(created.messages[1].id);
+      await end.selectOption(created.messages[0].id);
+      await expect(dialog.getByText(zh ? "结束消息不能早于起始消息。" : "End must not precede start.", { exact: true })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: zh ? "生成预览" : "Preview", exact: true })).toBeDisabled();
+      await start.selectOption(created.messages[0].id);
+      await end.selectOption(created.messages[1].id);
+      await dialog.getByRole("button", { name: zh ? "生成预览" : "Preview", exact: true }).click();
+      await expect(dialog.getByRole("textbox")).toHaveCount(1);
+      await dialog.getByRole("textbox").fill(`Synthetic split target ${width}`);
+      const close = dialog.getByRole("button", { name: zh ? "关闭" : "Close", exact: true });
+      await close.focus();
+      await page.keyboard.press("Shift+Tab");
+      await expect(dialog.getByRole("button", { name: zh ? "创建新对话" : "Create", exact: true })).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(close).toBeFocused();
+      await page.route(url => url.pathname === path, async route => {
+        if (route.request().method() !== "POST") return route.continue();
+        writes.push({ key: route.request().headers()["idempotency-key"], body: route.request().postDataJSON() });
+        const response = await route.fetch();
+        expect(response.ok()).toBe(true);
+        const result = await response.json() as { conversations: Array<{ conversation_id: string }> };
+        result.conversations.forEach(item => resultIds.add(item.conversation_id));
+        if (writes.length === 1) await route.abort("failed"); // The real transaction committed before this lost acknowledgement.
+        else await route.fulfill({ response });
+      });
+      await dialog.getByRole("button", { name: zh ? "创建新对话" : "Create", exact: true }).click();
+      await expect(dialog.getByRole("button", { name: zh ? "安全重试同一次拆分" : "Retry the same split safely", exact: true })).toBeEnabled();
+      await expect(start).toBeDisabled();
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+      await expect(page.locator(width < 768 ? "[data-reader-mobile-more-actions='true']" : "[data-reader-header-more-actions='true']")).toBeFocused();
+      dialog = await openSplit();
+      await dialog.getByRole("button", { name: zh ? "安全重试同一次拆分" : "Retry the same split safely", exact: true }).click();
+      await expect(dialog.locator('a[href^="/conversations/"]')).toHaveCount(1);
+      await expect(dialog.locator('a[href^="/conversations/"]')).toHaveAttribute("href", `/conversations/${[...resultIds][0]}`);
+      await expect(article.getByRole("button", { name: zh ? "取消选择消息" : "Deselect message", exact: true })).toHaveCount(0);
+      await expect(dialog.getByRole("button", { name: zh ? "创建新对话" : "Create", exact: true })).toBeDisabled();
+      expect(writes).toHaveLength(2);
+      expect(writes[0].key).toBeTruthy();
+      expect(writes[1]).toEqual(writes[0]);
+      expect(resultIds.size).toBe(1);
+      expect(await Promise.all(created.messages.map(async message => (await page.request.get(`/api/messages/${message.id}`)).json()))).toEqual(before);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toHaveCount(0);
+    } finally {
+      await page.unrouteAll({ behavior: "wait" });
+      for (const id of resultIds) expect((await page.request.delete(`/api/conversations/${id}`)).ok()).toBe(true);
+      expect((await page.request.delete(`/api/conversations/${sourceId}`)).ok()).toBe(true);
+    }
+  });
+
+  for (const listOutcome of ["empty", "failed"] as const) {
+    test(`${width}px: a first batch archive with a lost committed response keeps a read-only result check after ${listOutcome} list reads`, async ({ page }) => {
+      await preferences(page, zh);
+      await page.setViewportSize({ width, height: 900 });
+      const projectResponse = await page.request.post("/api/projects", { data: { name: `Synthetic batch receipt ${width} ${listOutcome}` } });
+      expect(projectResponse.status()).toBe(201);
+      const project = await projectResponse.json() as ProjectRead;
+      const created = await createConversation(page, `Synthetic uncertain batch ${width} ${listOutcome}`, project.id);
+      const id = created.conversation.id;
+      let archiveWrites = 0, committed = false, failCheck = true;
+      try {
+        await page.route(url => url.pathname === `/api/conversations/${id}/archive`, async route => {
+          if (route.request().method() !== "POST") return route.continue();
+          archiveWrites++;
+          const response = await route.fetch();
+          expect(response.ok()).toBe(true);
+          committed = true;
+          await route.abort("failed");
+        });
+        await page.route(url => url.pathname === `/api/projects/${project.id}/conversations`, async route => {
+          if (committed && listOutcome === "failed") return route.fulfill({ status: 503, json: { detail: "Synthetic batch list outage" } });
+          await route.continue();
+        });
+        await page.route(url => url.pathname === `/api/conversations/${id}`, async route => {
+          if (route.request().method() === "GET" && failCheck) return route.fulfill({ status: 503, json: { detail: "Synthetic current-state outage" } });
+          await route.continue();
+        });
+        await page.goto(`/projects/${project.id}`);
+        const view = page.getByTestId("mobile-page-header").locator("..");
+        await view.getByRole("button", { name: zh ? "批量操作" : "Manage conversations", exact: true }).filter({ visible: true }).click();
+        await view.getByRole("checkbox", { name: `${zh ? "选择" : "Select"} ${created.conversation.title}`, exact: true }).check();
+        await view.getByTestId("selection-toolbar").getByRole("button", { name: zh ? "归档" : "Archive", exact: true }).click();
+        const check = view.getByRole("region", { name: zh ? "批量结果核对" : "Batch result check", exact: true });
+        await expect(check).toBeVisible();
+        await expect(view.getByRole("status").filter({ hasText: zh
+          ? "已确认完成 0 项，明确失败 0 项，结果未确认 1 项，未开始 0 项"
+          : "0 confirmed complete, 0 definite failures, 1 unconfirmed, 0 not started" })).toBeVisible();
+        await expect(page.locator(`[aria-label="${zh ? "撤销对话操作" : "Undo conversation action"}"]`)).toHaveCount(0);
+        if (listOutcome === "empty") await expect(view.getByRole("heading", { name: zh ? "这个项目还没有对话" : "No conversations in this project", exact: true })).toBeVisible();
+        else {
+          await expect(view.getByRole("alert").filter({ hasText: zh ? "项目对话更新失败" : "Could not update project conversations" })).toBeVisible();
+          await expect(view.getByTestId("selection-toolbar").getByRole("button", { name: zh ? "归档" : "Archive", exact: true })).toBeDisabled();
+        }
+        await check.getByRole("button", { name: zh ? "核对未确认项当前状态" : "Check current state of unconfirmed items", exact: true }).click();
+        await expect(check.getByRole("alert")).toContainText(zh ? "1 项未能读取" : "1 items could not be read");
+        failCheck = false;
+        await check.getByRole("button", { name: zh ? "核对未确认项当前状态" : "Check current state of unconfirmed items", exact: true }).click();
+        await expect(check.getByRole("link", { name: created.conversation.title, exact: true })).toHaveAttribute("href", `/conversations/${id}`);
+        await expect(check).toContainText(zh ? "已归档" : "Archived");
+        await check.getByRole("button", { name: zh ? "已核对，按当前状态继续" : "Reviewed; continue with current state", exact: true }).click();
+        expect(archiveWrites).toBe(1);
+        expect(await status(page, id)).toBe("archived");
+        await expect(page.locator(`[aria-label="${zh ? "撤销对话操作" : "Undo conversation action"}"]`)).toHaveCount(0);
+      } finally {
+        await page.unrouteAll({ behavior: "wait" });
+        expect((await page.request.delete(`/api/conversations/${id}`)).ok()).toBe(true);
+        expect((await page.request.patch(`/api/projects/${project.id}`, { data: { is_archived: true } })).ok()).toBe(true);
+        expect((await page.request.delete(`/api/projects/${project.id}`)).ok()).toBe(true);
+      }
+    });
+  }
+
+  test(`${width}px: an empty project exposes direct sorting, importing and project-scoped creation`, async ({ page }) => {
+    await preferences(page, zh);
+    await page.setViewportSize({ width, height: 900 });
+    const response = await page.request.post("/api/projects", { data: { name: `Synthetic empty project with a long title ${width}` } });
+    expect(response.status()).toBe(201);
+    const project = await response.json() as ProjectRead;
+    let createdId = "";
+    try {
+      await page.goto(`/projects/${project.id}`);
+      const view = page.getByTestId("mobile-page-header").locator("..");
+      const sort = view.getByTestId("sort-menu-trigger").filter({ visible: true });
+      await sort.click();
+      await view.getByRole("menuitem", { name: zh ? "自定义" : "Custom", exact: true }).click();
+      await sort.click();
+      await expect(view.getByRole("menuitem", { name: zh ? "升序" : "Ascending", exact: true })).toHaveCount(0);
+      await expect(view.getByRole("menuitem", { name: zh ? "降序" : "Descending", exact: true })).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(sort).toBeFocused();
+      await view.getByRole("button", { name: zh ? "导入对话" : "Import conversations", exact: true }).click();
+      await expect(page.getByTestId("import-dialog-close")).toBeVisible();
+      await page.getByTestId("import-dialog-close").click();
+      await view.getByRole("button", { name: zh ? "新建对话" : "New conversation", exact: true }).click();
+      const dialog = page.getByTestId("new-conversation-dialog").filter({ visible: true });
+      await expect(dialog.getByRole("combobox")).toHaveValue(project.id);
+      await dialog.locator("textarea").nth(0).fill("Synthetic project question");
+      await dialog.locator("textarea").nth(1).fill("Synthetic project answer");
+      const saved = page.waitForResponse(response => new URL(response.url()).pathname === "/api/conversations" && response.request().method() === "POST");
+      await dialog.getByRole("button", { name: zh ? "创建并打开" : "Create and open", exact: true }).click();
+      const result = await (await saved).json() as ConversationCreateResponse;
+      createdId = result.conversation.id;
+      expect(result.conversation.project_id).toBe(project.id);
+      await expect(page).toHaveURL(url => url.pathname === `/conversations/${createdId}`);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    } finally {
+      if (createdId) expect((await page.request.delete(`/api/conversations/${createdId}`)).ok()).toBe(true);
+      expect((await page.request.patch(`/api/projects/${project.id}`, { data: { is_archived: true } })).ok()).toBe(true);
+      expect((await page.request.delete(`/api/projects/${project.id}`)).ok()).toBe(true);
+    }
+  });
+}
+
+for (const width of [375, 1440]) {
+  test(`${width}px: outside sort dismissal preserves a real search input while Escape restores its trigger`, async ({ page }) => {
+    await preferences(page, false);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    if (width < 768) await page.getByRole("button", { name: "Open sidebar", exact: true }).filter({ visible: true }).click();
+    const sort = page.getByTestId("sort-menu-trigger").filter({ visible: true }).first();
+    const search = page.getByTestId("sidebar-global-search").filter({ visible: true });
+    await sort.click();
+    await expect(page.getByTestId("sort-menu-panel").filter({ visible: true })).toHaveCount(1);
+    await search.click();
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect(search).toBeFocused();
+    await search.pressSequentially("Synthetic focus continuity");
+    await expect(search).toHaveValue("Synthetic focus continuity");
+    await search.fill("");
+    await sort.click();
+    await page.keyboard.press("Escape");
+    await expect(sort).toBeFocused();
+    await expect(page.getByTestId("sort-menu-panel")).toHaveCount(0);
+  });
+}

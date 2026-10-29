@@ -16,6 +16,7 @@ from app.models.attachment import (
 )
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
+from app.models.conversation_split import ConversationSplitReceipt
 from app.models.content_cleanup import (
     ContentCleanupException,
     ContentCleanupOccurrence,
@@ -36,6 +37,7 @@ from app.models.import_profile import ImportInputGroup, ImportProfile, ImportPro
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.offline_package_artifact import OfflinePackageArtifact
+from app.models.offline_package_lease import OfflinePackageLease
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.reading_position import ReadingPosition
@@ -46,6 +48,7 @@ from app.models.share import Share, ShareUnlockSession
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.models.user_preference import UserPreference
+from app.models.user_feature_entry import UserFeatureEntry
 from app.models.worker_runtime_state import WorkerRuntimeState
 from app.models.user_skill import UserSkill, UserSkillSelection
 from app.models.skill_bundle import SkillFileObject, SkillBundleRevision, SkillBundleMember
@@ -82,6 +85,7 @@ __all__ = [
     "ConversationAnnotation",
     "ConversationNotebook",
     "ConversationEvent",
+    "ConversationSplitReceipt",
     "ContentCleanupOccurrence",
     "ContentCleanupRule",
     "ContentCleanupRuleRevision",
@@ -100,6 +104,7 @@ __all__ = [
     "MessageVersion",
     "MessageVersionAttachment",
     "OfflinePackageArtifact",
+    "OfflinePackageLease",
     "Project",
     "ProjectConversation",
     "ReadingPosition",
@@ -111,6 +116,7 @@ __all__ = [
     "SourceArtifact",
     "SourceMessageRef",
     "UserPreference",
+    "UserFeatureEntry",
     "WorkerRuntimeState",
     "UserSkill",
     "UserSkillSelection",

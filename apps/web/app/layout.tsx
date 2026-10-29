@@ -12,6 +12,7 @@ import { AuthBoundary } from "../components/auth-boundary";
 import { AttachmentViewerProvider } from "../features/attachments/attachment-viewer";
 import { WorkspaceShellBoundary } from "../components/workspace-shell";
 import { SupportRequestLink } from "../components/support-request-link";
+import { ActionPalette } from "../components/action-palette";
 import { resolveLocale } from "../lib/i18n";
 import type { UserPreferenceRead } from "../lib/types";
 import { headers } from "next/headers";
@@ -50,7 +51,7 @@ export default async function RootLayout({
         <QueryProvider>
           <AuthBoundary authEnabled={authEnabled}>
             <PreferencesProvider initialPreferences={preferences} initialLocale={initialLocale}>
-              <InteractionDialogProvider><ConversationDeletionProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><OfflineSyncManager /><OfflineDownloadManager /><SupportRequestLink /><WorkspaceShellBoundary>{children}</WorkspaceShellBoundary></AttachmentViewerProvider></ImportDialogProvider></ConversationDeletionProvider></InteractionDialogProvider>
+              <InteractionDialogProvider><ConversationDeletionProvider><ImportDialogProvider><AttachmentViewerProvider><ShortcutManager /><ActionPalette /><OfflineSyncManager /><OfflineDownloadManager /><SupportRequestLink /><WorkspaceShellBoundary>{children}</WorkspaceShellBoundary></AttachmentViewerProvider></ImportDialogProvider></ConversationDeletionProvider></InteractionDialogProvider>
             </PreferencesProvider>
             <ServiceWorkerRegistration />
           </AuthBoundary>

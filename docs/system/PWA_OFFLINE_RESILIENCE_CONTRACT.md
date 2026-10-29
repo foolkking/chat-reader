@@ -1,5 +1,31 @@
 # PWA and Offline Resilience Contract
 
+## Offline transfer and reading views — 2026-10-30 source
+
+Offline package downloads now acquire a persisted, short-lived transfer lease
+under the artifact row lock before returning the response. The ASGI response
+renews a 90-second lease every 15 seconds and releases it on completion,
+disconnect or cancellation. It disables pathsend so the lease covers actual
+file reads, not merely response construction. Post-commit superseded-file
+cleanup and cleanup-candidate snapshots exclude active leases. Expired leases
+do not retain files. This closes a reproducible headers-to-open cleanup race;
+the original reported browser failure lacks a network trace, so its exact cause
+is unproven. No permission, artifact validation or package format is weakened.
+
+Offline checklists store explicit scopes/IDs and asset policy on the server,
+not a claim that another device has downloaded them. Running freezes those IDs
+into the existing queue and retains the existing failure/conflict contracts.
+The new account feature metadata is not serialized into `.cr` or offline
+packages. Offline package v1/v2/v3 and Dexie v2 stay compatible and unchanged.
+
+Turn folding follows authoritative complete turns and keeps stable real DOM
+message/block nodes. Navigation expands the target before layout measurement;
+folding does not change export counts or canonical body. Global search reading
+queues are short account-isolated session state, at most 100 content-free target
+URLs plus a validated search-return URL, with two-hour expiry. They do not
+replace Reader authorization or exact version/range validation, and no
+programmatic navigation marks a reading-list item read.
+
 ## Mounted Reader alignment at scroll boundaries — 2026-10-28, source only
 
 Navigation measures the selected real element or exact text Range each frame.

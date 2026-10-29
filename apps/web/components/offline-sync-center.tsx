@@ -18,6 +18,7 @@ import { PendingChangesPanel } from "./pending-changes-panel";
 import { PreferenceSyncStatus } from "./preference-sync-status";
 import { ReadingPositionSyncStatus } from "./reading-position-sync-status";
 import type { OfflineDownloadTarget } from "../lib/types";
+import { OfflineChecklistsPanel } from "../features/offline/offline-checklists-panel";
 
 type Copy = { conversation: OfflineConversationRecord; assets: Awaited<ReturnType<typeof inspectOfflineCopyAssets>> };
 type Conflict = { key: string; conversationId: string };
@@ -259,6 +260,14 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
     finally { setBusy(false); }
   }, [zh]);
   const download = (scope: OfflineDownload["scope"], scopeId?: string) => action(() => enqueueOfflineDownload({ scope, scopeId, assetMode: mode }));
+  const runChecklist = (value: import("../lib/types").OfflineChecklistValue) => action(async () => {
+    // Freeze the selected IDs before queueing. A catalog refresh during the
+    // loop must not expand or shrink the user's explicit checklist.
+    const targets = value.targets.map((target) => ({ ...target }));
+    for (const target of targets) {
+      await enqueueOfflineDownload({ scope: target.scope, scopeId: target.id, assetMode: value.include_assets });
+    }
+  });
   const remove = (copy: Copy, attachmentsOnly: boolean) => action(async () => {
     const snapshot = await readOfflinePending([copy.conversation.id]);
     if (snapshot.count) { setCleanup({ conversationId: copy.conversation.id, attachmentsOnly, snapshot }); return; }
@@ -357,6 +366,7 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
           <button className="btn-primary inline-flex min-h-11 items-center gap-2 px-3 text-sm" disabled={!online || busy} onClick={() => void download("all")}><Download className="h-4 w-4" />{zh ? "下载／更新全部" : "Download / update all"}</button>
         </div>
         {online && catalog.data?.projects.length ? <div className="flex flex-wrap gap-2"><select aria-label={zh ? "选择项目" : "Choose project"} className="min-h-11 min-w-0 flex-1 rounded-md border border-ui bg-surface px-3 text-sm" value={project} onChange={(event) => setProject(event.target.value)}><option value="">{zh ? "选择项目" : "Choose project"}</option>{catalog.data.projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="btn-secondary min-h-11 px-3 text-sm" disabled={!project || busy} onClick={() => void download("project", project)}>{zh ? "下载项目" : "Download project"}</button></div> : null}
+        <OfflineChecklistsPanel catalog={catalog.data} online={online} busy={busy} onRun={runChecklist} />
         {catalog.isError && online ? <p className="text-xs text-secondary">{zh ? "服务器目录暂不可用；本地副本仍可访问。" : "Server catalog is unavailable; local copies remain accessible."}</p> : null}
         {downloadsReady ? downloads.filter((item) => ["queued", "generating", "downloading", "writing"].includes(item.state)).map((item) => <div key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 border-y border-ui py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]" role="status"><div className="flex items-center gap-3"><span className="min-w-0 flex-1 break-words text-sm">{item.label || (zh ? "全部对话" : "All conversations")} · {item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : !online ? (zh ? "已暂停，联网后继续" : "Paused; resumes when online") : stateLabel(item.state)}</span><button className="btn-secondary min-h-9 px-3 text-xs" disabled={busy || item.cancelRequested} onClick={() => void action(() => cancelOfflineDownload(item.id))}>{item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : (zh ? "取消" : "Cancel")}</button></div><progress className="h-1.5 w-full accent-[var(--accent)]" max={100} value={item.progress} aria-label={zh ? "下载进度" : "Download progress"} /></div>) : null}
         <ul className="divide-y divide-[var(--border)]">{copiesReady ? copies.map((copy) => <li key={copy.conversation.id} className="space-y-2 py-4">

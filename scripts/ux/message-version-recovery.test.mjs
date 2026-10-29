@@ -405,6 +405,10 @@ for (const locale of ["en-US", "zh-CN"]) unit(`${locale}: initial read failure o
       useEffect: fn => effects.push(fn),
     };
     if (name === "lucide-react") return { ChevronLeft: "left", ChevronRight: "right", History: "history", Trash2: "trash", X: "close" };
+    if (name === "./version-diff") return {
+      buildVersionDiff: () => ({ lines: [], truncated: false }),
+      versionText: value => value.display_text || value.plain_text || "",
+    };
     if (name === "../../components/preferences-provider") return { usePreferences: () => ({ resolvedLocale: locale }) };
     if (name.startsWith(".")) throw Error(`Unexpected dependency ${name}`);
     return require(name);

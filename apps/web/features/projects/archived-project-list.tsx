@@ -183,12 +183,13 @@ export function ArchivedProjectList() {
         saved.push(await updateProject(projectId, { is_archived: false }));
       });
       if (!mounted.current) return;
-      applySelection(result.failedIds);
+      const unresolved = [...result.failedIds, ...result.unconfirmedIds, ...result.notStartedIds];
+      applySelection(unresolved);
       publishRestored(saved);
-      retainUnconfirmed(result.failedIds);
+      retainUnconfirmed(unresolved);
       setBatchNotice(zh
-        ? `已恢复 ${result.succeededIds.length} 个项目${result.failedIds.length ? `，${result.failedIds.length} 个结果待核对；已保留选择，请先核对再重试。` : "。"}`
-        : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "project" : "projects"} restored${result.failedIds.length ? `; ${result.failedIds.length} could not be confirmed. Selection is kept; check before retrying.` : "."}`);
+        ? `已确认恢复 ${result.succeededIds.length} 个项目；明确失败 ${result.failedIds.length} 个，结果未确认 ${result.unconfirmedIds.length} 个，未开始 ${result.notStartedIds.length} 个。请先核对未确认项。`
+        : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "project" : "projects"} restored; ${result.failedIds.length} definite failures, ${result.unconfirmedIds.length} unconfirmed, ${result.notStartedIds.length} not started. Check unresolved items first.`);
       if (saved.length) void refreshProjects().catch(() => undefined);
     } finally {
       actionBusy.current = false;
@@ -215,7 +216,8 @@ export function ArchivedProjectList() {
       setBatchNotice(null);
       const result = await runBatchSelection(ids, deleteProject);
       if (!mounted.current) return;
-      applySelection(result.failedIds);
+      const unresolved = [...result.failedIds, ...result.unconfirmedIds, ...result.notStartedIds];
+      applySelection(unresolved);
       if (result.succeededIds.length) {
         const deleted = new Set(result.succeededIds);
         void queryClient.cancelQueries({ queryKey: ["projects"] });
@@ -223,8 +225,8 @@ export function ArchivedProjectList() {
           current?.filter((item) => !deleted.has(item.id)));
       }
       setBatchNotice(zh
-        ? `已删除 ${result.succeededIds.length} 个项目，失败 ${result.failedIds.length} 个${result.failedIds.length ? "；失败项已保留选择" : "；对话已保留在未分类"}`
-        : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "project" : "projects"} deleted, ${result.failedIds.length} failed${result.failedIds.length ? "; failed items remain selected" : "; conversations remain in Unclassified"}`);
+        ? `已确认删除 ${result.succeededIds.length} 个项目；明确失败 ${result.failedIds.length} 个，结果未确认 ${result.unconfirmedIds.length} 个，未开始 ${result.notStartedIds.length} 个。未确认项请先核对项目列表，项目内对话不会随项目删除。`
+        : `${result.succeededIds.length} ${result.succeededIds.length === 1 ? "project" : "projects"} deleted; ${result.failedIds.length} definite failures, ${result.unconfirmedIds.length} unconfirmed, ${result.notStartedIds.length} not started. Check unresolved projects first; conversations remain in Unclassified.`);
       if (result.succeededIds.length) void refreshProjects().catch(() => undefined);
     } finally {
       actionBusy.current = false;

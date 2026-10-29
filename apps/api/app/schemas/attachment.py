@@ -114,6 +114,21 @@ class AttachmentListRead(BaseModel):
     items: list[AttachmentRead]
 
 
+class AttachmentDirectoryItem(AttachmentRead):
+    conversation_title: str
+    conversation_display_title: str
+    project_id: UUID | None = None
+    project_name: str | None = None
+
+
+class AttachmentDirectoryResponse(BaseModel):
+    items: list[AttachmentDirectoryItem]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
+
 class AttachmentTextSearchMatch(BaseModel):
     byte_offset: int
     preview: str

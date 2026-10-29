@@ -1390,7 +1390,16 @@ def process_background_job(
                 attempt=job.attempt_count,
             )
             for category, paths, root in post_commit_cleanup:
-                cleanup_committed_artifacts(paths, root=root, category=category)
+                if category == "offline":
+                    from app.services.offline_download import cleanup_offline_artifacts
+                    cleanup_offline_artifacts(
+                        paths,
+                        root=root,
+                        session_factory=session_factory,
+                        unlinker=cleanup_committed_artifacts,
+                    )
+                else:
+                    cleanup_committed_artifacts(paths, root=root, category=category)
             if account_asset_cleanup_keys:
                 cleanup_deleted_account_assets(db, job_id)
     except BackgroundJobCancelled:

@@ -7,7 +7,9 @@ from app.core.database import get_db
 from app.models.annotation import ConversationAnnotation
 from app.models.conversation import Conversation
 from app.schemas.annotation import (
+    AnnotationAnchorStatus,
     AnnotationCreate,
+    AnnotationInboxResponse,
     AnnotationRead,
     AnnotationSyncRequest,
     AnnotationSyncResponse,
@@ -23,6 +25,7 @@ from app.services.annotations import (
     get_notebook,
     list_notebook_conflicts,
     list_annotations,
+    list_annotation_inbox,
     notebook_read,
     put_notebook,
     sync_annotations,
@@ -31,6 +34,37 @@ from app.services.annotations import (
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request, subject_key_from_request
 
 router = APIRouter(tags=["annotations"])
+
+
+@router.get("/api/annotations/inbox", response_model=AnnotationInboxResponse)
+def get_annotation_inbox(
+    request: Request,
+    anchor_status: AnnotationAnchorStatus | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+) -> AnnotationInboxResponse:
+    rows, total = list_annotation_inbox(
+        db,
+        ownership_scope=ownership_scope_from_request(request),
+        subject_key=subject_key_from_request(request),
+        anchor_status=anchor_status,
+        limit=limit,
+        offset=offset,
+    )
+    return AnnotationInboxResponse(
+        items=[
+            {
+                **annotation_read(annotation).model_dump(),
+                "conversation_title": title,
+            }
+            for annotation, title in rows
+        ],
+        limit=limit,
+        offset=offset,
+        total=total,
+        has_more=offset + len(rows) < total,
+    )
 
 
 @router.get("/api/conversations/{conversation_id}/annotations", response_model=list[AnnotationRead])

@@ -217,7 +217,7 @@ def scan_cleanup_candidates(
     scanned_paths: dict[str, set[Path]] = {category: set() for category in roots}
     for item in scanned:
         scanned_paths.setdefault(item.category, set()).add(item.path)
-    referenced = _referenced_paths_for_snapshot(db, scanned_paths, ExportArtifact, OfflinePackageArtifact)
+    referenced = _referenced_paths_for_snapshot(db, scanned_paths, ExportArtifact, OfflinePackageArtifact, now=now)
     active_job_ids = _active_job_ids_for_snapshot(db, scanned, BackgroundJob)
     superseded = _superseded_paths_for_snapshot(db, scanned, referenced, BackgroundJob)
 
@@ -276,13 +276,25 @@ def _chunks(values: Iterable[Any], size: int = _REFERENCE_QUERY_CHUNK_SIZE) -> I
         yield chunk
 
 
-def _referenced_paths_for_snapshot(db, scanned_paths, export_model, offline_model) -> dict[str, set[Path]]:
+def _referenced_paths_for_snapshot(db, scanned_paths, export_model, offline_model, *, now: datetime) -> dict[str, set[Path]]:
     referenced: dict[str, set[Path]] = {category: set() for category in scanned_paths}
     for category, model in (("export", export_model), ("offline", offline_model)):
         values = [str(path) for path in scanned_paths.get(category, set())]
         for chunk in _chunks(values):
             for (storage_uri,) in db.query(model.storage_uri).filter(model.storage_uri.in_(chunk)).all():
                 referenced.setdefault(category, set()).add(Path(storage_uri).resolve())
+    from app.models.offline_package_lease import OfflinePackageLease
+    values = [str(path) for path in scanned_paths.get("offline", set())]
+    for chunk in _chunks(values):
+        for (storage_uri,) in (
+            db.query(OfflinePackageLease.storage_uri)
+            .filter(
+                OfflinePackageLease.storage_uri.in_(chunk),
+                OfflinePackageLease.expires_at > now,
+            )
+            .all()
+        ):
+            referenced.setdefault("offline", set()).add(Path(storage_uri).resolve())
     return referenced
 
 

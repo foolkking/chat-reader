@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, History, Trash2, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import type { MessageVersionHistoryController, VersionFeedback, VersionIssue } from "./use-message-version-history";
+import { buildVersionDiff, versionText } from "./version-diff";
 
 export function VersionHistoryPanel({ controller, mobile = false }: {
   controller: MessageVersionHistoryController;
@@ -17,8 +18,13 @@ export function VersionHistoryPanel({ controller, mobile = false }: {
   const liveScope = useRef(controller.scope);
   liveScope.current = controller.scope;
   const [openScope, setOpenScope] = useState<object | null>(null);
+  const [compareId, setCompareId] = useState<string | null>(null);
   const open = openScope === controller.scope;
   const { versions, current, currentIndex, feedback, phase } = controller;
+  const compareVersion = compareId ? versions.find((item) => item.id === compareId) ?? null : null;
+  const comparison = compareVersion && current && compareVersion.id !== current.id
+    ? buildVersionDiff(versionText(compareVersion), versionText(current))
+    : null;
   const busy = phase !== "idle";
   const warning = feedback ? feedbackText(feedback, zh)
     : controller.readFailed ? readFailureText(controller.readIssue, zh)
@@ -28,6 +34,7 @@ export function VersionHistoryPanel({ controller, mobile = false }: {
   function close() {
     if (liveScope.current !== controller.scope) return;
     setOpenScope(null);
+    setCompareId(null);
     trigger.current?.focus({ preventScroll: true });
   }
   useEffect(() => {
@@ -42,6 +49,9 @@ export function VersionHistoryPanel({ controller, mobile = false }: {
     window.addEventListener("keydown", onEscape, true);
     return () => window.removeEventListener("keydown", onEscape, true);
   }, [open, controller.scope]);
+  useEffect(() => {
+    setCompareId(null);
+  }, [controller.scope, current?.id]);
 
   if (!controller.active) return null;
   if (controller.loading && versions.length === 0) {
@@ -91,6 +101,47 @@ export function VersionHistoryPanel({ controller, mobile = false }: {
             <>
               {current.edit_reason ? <p className="mt-2 text-xs text-secondary">{current.edit_reason}</p> : null}
               <pre className={`mt-3 overflow-auto whitespace-pre-wrap rounded-lg bg-subtle p-3 text-xs leading-5 text-primary ${mobile ? "max-h-40" : "max-h-64"}`}>{current.display_text || current.plain_text || ""}</pre>
+              {versions.length > 1 ? (
+                <div className="mt-4 border-t border-ui pt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-xs font-semibold text-primary">{zh ? "只读比较" : "Read-only comparison"}</h4>
+                      <p className="mt-1 text-xs text-secondary">{zh ? "只读取历史，不会切换或保存版本。" : "Reads history only; it never switches or saves a version."}</p>
+                    </div>
+                    <select
+                      aria-label={zh ? "选择要比较的版本" : "Choose a version to compare"}
+                      value={compareId ?? ""}
+                      onChange={(event) => setCompareId(event.target.value || null)}
+                      className="min-h-10 max-w-full rounded-lg border border-ui bg-surface px-2 text-xs text-primary"
+                    >
+                      <option value="">{zh ? "选择历史版本" : "Choose a history version"}</option>
+                      {versions.filter((item) => item.id !== current.id).map((item) => (
+                        <option key={item.id} value={item.id}>
+                          v{item.version_number} · {new Date(item.created_at).toLocaleString(resolvedLocale)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {compareVersion && comparison ? (
+                    <div className="mt-3">
+                      <p className="text-xs text-secondary">
+                        {zh ? `v${compareVersion.version_number} → 当前 v${current.version_number}` : `v${compareVersion.version_number} → current v${current.version_number}`}
+                        {comparison.truncated ? (zh ? "（比较已限制范围）" : " (comparison bounded)") : ""}
+                      </p>
+                      <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-ui bg-page p-2 text-xs leading-5">
+                        {comparison.lines.map((line, index) => (
+                          <span
+                            key={`${index}-${line.kind}`}
+                            className={`block px-1 ${line.kind === "added" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : line.kind === "removed" ? "bg-rose-500/10 text-rose-700 dark:text-rose-300" : "text-secondary"}`}
+                          >
+                            {line.kind === "added" ? "+ " : line.kind === "removed" ? "- " : "  "}{line.text || " "}
+                          </span>
+                        ))}
+                      </pre>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="mt-3 flex justify-end">
                 <button type="button" disabled={!current.can_delete || !controller.canWrite} onClick={() => void controller.remove()} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-40" title={current.is_initial ? (zh ? "初始版本不能删除" : "The initial version cannot be deleted") : (zh ? "永久删除版本" : "Permanently delete version")}><Trash2 className="h-4 w-4" />{current.is_initial ? (zh ? "初始版本受保护" : "Initial version protected") : (zh ? "永久删除" : "Delete permanently")}</button>
               </div>

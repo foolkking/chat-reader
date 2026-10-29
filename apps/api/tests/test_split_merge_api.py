@@ -10,6 +10,9 @@ from sqlalchemy.orm import sessionmaker
 from app.core.database import get_db
 from app.main import app
 from app.models.attachment import Attachment, MessageVersionAttachment
+from app.models.conversation import Conversation
+from app.models.conversation_split import ConversationSplitReceipt
+from app.models.conversation_event import ConversationEvent
 from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.services.background_jobs import claim_next_job, process_background_job
@@ -69,6 +72,29 @@ def _database_session():
     finally:
         db.close()
         generator.close()
+
+
+def test_lineage_events_filter_excludes_edits_and_pages_deterministically(client: TestClient) -> None:
+    conversation_id = _commit_messages(client, "Synthetic lineage", [{"role": "Prompt", "say": "Synthetic question"}])
+    created_at = datetime(2026, 10, 30, tzinfo=timezone.utc)
+    with _database_session() as db:
+        for index, kind in enumerate([
+            "message_edited", "conversation_split", "conversation_merged",
+            "conversation_created_from_split", "conversation_merged_into", "pin_changed",
+        ]):
+            db.add(ConversationEvent(
+                id=uuid.UUID(int=index + 1), conversation_id=uuid.UUID(conversation_id),
+                event_type=kind, payload={}, created_at=created_at, created_by="user",
+            ))
+        db.commit()
+    response = client.get(f"/api/conversations/{conversation_id}/events?lineage_only=true&limit=2")
+    assert response.status_code == 200
+    first = response.json()
+    assert first["total"] == 4
+    assert [event["id"] for event in first["items"]] == [str(uuid.UUID(int=5)), str(uuid.UUID(int=4))]
+    second = client.get(f"/api/conversations/{conversation_id}/events?lineage_only=true&limit=2&offset=2").json()
+    assert [event["id"] for event in second["items"]] == [str(uuid.UUID(int=3)), str(uuid.UUID(int=2))]
+    assert client.get(f"/api/conversations/{conversation_id}/events?event_type=message_edited").json()["total"] == 1
 
 
 def test_split_message_creates_inserted_message_version_event_and_reindex(client: TestClient) -> None:
@@ -377,3 +403,55 @@ def test_split_workspace_plans_and_executes_range_boundary_and_discrete_modes(cl
     )
     assert discrete_created.status_code == 200
     assert _window(client, discrete_created.json()["conversations"][0]["conversation_id"], limit=10)["total"] == 2
+
+
+def test_split_workspace_idempotency_replays_receipt_and_rejects_key_reuse(client: TestClient) -> None:
+    conversation_id = _commit_messages(
+        client,
+        "Idempotent Split",
+        [
+            {"role": "Prompt", "say": "Question"},
+            {"role": "Response", "say": "Answer"},
+        ],
+    )
+    messages = _window(client, conversation_id, limit=10)["items"]
+    payload = {
+        "mode": "range_copy",
+        "start_message_id": messages[0]["id"],
+        "end_message_id": messages[1]["id"],
+        "titles": ["Idempotent result"],
+    }
+    headers = {"Idempotency-Key": "split-replay-test-001"}
+
+    first = client.post(f"/api/conversations/{conversation_id}/split-workspace", json=payload, headers=headers)
+    replay = client.post(f"/api/conversations/{conversation_id}/split-workspace/requests", json=payload, headers=headers)
+
+    assert first.status_code == 200
+    assert replay.status_code == 200
+    assert replay.json() == first.json()
+    assert client.post(f"/api/conversations/{conversation_id}/split-workspace/requests", json=payload).status_code == 422
+    created_id = first.json()["conversations"][0]["conversation_id"]
+    assert _window(client, created_id, limit=10)["total"] == 2
+    assert _window(client, conversation_id, limit=10)["total"] == 2
+
+    mismatched = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace",
+        json={**payload, "titles": ["Different request"]},
+        headers=headers,
+    )
+    assert mismatched.status_code == 409
+    assert mismatched.json()["detail"]["code"] == "SPLIT_IDEMPOTENCY_CONFLICT"
+    with _database_session() as db:
+        assert db.query(ConversationSplitReceipt).filter_by(conversation_id=uuid.UUID(conversation_id)).count() == 1
+        assert db.query(Conversation).filter_by(source_type="split").count() == 1
+
+    separate = client.post(
+        f"/api/conversations/{conversation_id}/split-workspace",
+        json=payload,
+        headers={"Idempotency-Key": "split-replay-test-002"},
+    )
+    assert separate.status_code == 200
+    assert separate.json()["conversations"][0]["conversation_id"] != created_id
+    with _database_session() as db:
+        assert db.query(ConversationSplitReceipt).filter_by(conversation_id=uuid.UUID(conversation_id)).count() == 2
+        assert db.query(Conversation).filter_by(source_type="split").count() == 2
