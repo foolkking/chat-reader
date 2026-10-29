@@ -80,8 +80,13 @@ API passed 5,924 / three skipped. Web's stale table assertion and settings'
 project merge failure blocked release. A mounted reproduction found colliding
 New/Merge React keys leaving duplicate portals; distinct scoped keys repair it,
 with single-dialog/order/title/close/reopen checks. Fix validation passed
-lint/build/TypeScript, 1,856 UX and 19 Playwright cases. A fresh complete CI
-and wait are required; no production migration or application change occurred.
+lint/build/TypeScript, 1,856 UX and 19 Playwright cases. Second exact-source CI
+`40965493242` passed API/settings but failed Web: four merge-recovery tests
+selected the wrong semantic element and a 375px fixed sort menu was clipped by
+sticky-header blur. The real mobile issue is repaired by isolating the blur
+layer; the test now matches the focused result div. Post-fix build/lint, 1,856 UX
+and 19 Playwright pass. A fresh complete CI and wait are required; production
+was not changed.
 
 **Next-batch optimization (2026-10-29; historical pre-validation checkpoint):**
 all 15 directions in the [review](docs/execution/ux-audit-next-batch-2026-10-29.md)

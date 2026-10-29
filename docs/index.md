@@ -11,6 +11,9 @@
 首轮完整 CI `40956346174` 的 API 5,924 条通过，但 Web 旧断言及项目合并重复
 弹窗阻塞发布；真实挂载复现后修复 key 冲突，新增单弹窗／排序／关闭回归，
 窄修后 UX 1,856／Playwright 19 条通过，待重新完整 CI，未部署。
+第二次 CI `40965493242` 虽 API／设置全过，Web 仍被错误恢复节点选择器和移动排序菜单
+裁切阻断；前者已对齐真实 div 提示，后者已隔离页头 blur 固定定位影响，
+375px 视口回归及 build/lint/UX 1,856/Playwright 19 均通过，再次完整 CI 待验。
 见[当前数据合同](system/DATA_AND_STORAGE.md)
 与[验证边界](testing.md#two-round-web-features--2026-10-30-local-integration)。
 

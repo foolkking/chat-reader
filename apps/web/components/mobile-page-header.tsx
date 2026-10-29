@@ -19,8 +19,9 @@ export function MobilePageHeader({
   return (
     <header
       data-testid="mobile-page-header"
-      className={`sticky top-0 z-40 flex min-h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-3 border-b border-ui bg-surface/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:px-[2vw] ${className}`}
+      className={`sticky top-0 z-40 isolate flex min-h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-3 border-b border-ui px-4 pt-[env(safe-area-inset-top)] md:px-[2vw] ${className}`}
     >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-surface/95 backdrop-blur" />
       <MobileSidebarTrigger onOpen={onOpenSidebar} />
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-base font-semibold">{title}</h1>

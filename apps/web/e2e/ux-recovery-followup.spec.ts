@@ -1707,7 +1707,7 @@ for (const [projectView, width, zh] of [[false, 1440, false], [true, 375, true]]
           await retry.click();
         }
         await expect(dialog).toHaveCount(0);
-        const resultNotice = page.locator('p[role="status"][tabindex="-1"]').filter({ hasText: zh
+        const resultNotice = page.locator('div[role="status"][tabindex="-1"]').filter({ hasText: zh
           ? /^(合并请求已受理|原合并已完成)/ : /^(Merge request accepted|The original merge completed)/ });
         await expect(resultNotice).toBeVisible();
         await expect(resultNotice).toBeFocused();

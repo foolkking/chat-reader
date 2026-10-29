@@ -103,7 +103,7 @@ test("reading list exposes items after the first twenty without mutating them", 
 
 for (const projectView of [false, true]) {
   test(`merge keyboard ordering follows two canonical title markers in the ${projectView ? "project" : "global"} list`, async ({ page }) => {
-    await page.setViewportSize({ width: projectView ? 768 : 1440, height: 900 });
+    await page.setViewportSize({ width: projectView ? 375 : 1440, height: 900 });
     const projectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
     const timestamp = "2026-10-30T00:00:00Z";
     const conversations = ["Synthetic Alpha", "Synthetic Beta"].map((title, index) => ({
@@ -137,6 +137,17 @@ for (const projectView of [false, true]) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
     });
     await page.goto(projectView ? `/projects/${projectId}` : "/");
+    if (projectView) {
+      const mobileHeader = page.getByTestId("mobile-page-header");
+      const sort = mobileHeader.getByTestId("sort-menu-trigger");
+      await sort.click();
+      const sortMenu = page.getByTestId("sort-menu-panel");
+      await expect(sortMenu).toBeVisible();
+      await expect(sortMenu.getByRole("menuitem", { name: "Custom", exact: true })).toBeInViewport();
+      await page.keyboard.press("Escape");
+      await expect(sortMenu).toHaveCount(0);
+      await expect(sort).toBeFocused();
+    }
     await page.getByRole("button", { name: "Manage conversations", exact: true }).click();
     for (const conversation of conversations) await page.getByRole("checkbox", { name: `Select ${conversation.title}`, exact: true }).check();
     await page.getByTestId("selection-toolbar").getByRole("button", { name: "Merge", exact: true }).click();

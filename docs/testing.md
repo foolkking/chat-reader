@@ -55,6 +55,18 @@ and reopening. Final fix validation: lint/build/TypeScript, **1,856 UX** and
 **19 Playwright** (two helper, three source/inventory, 14 mounted flows) passed.
 The real authenticated matrix must pass again in a fresh complete CI run.
 
+Second full CI `40965493242`, exact `b6fe9c3`, was first read at
+2026-10-30 07:13:32 +08:00 after its wait gate. API and settings passed;
+Web Release H Source Editor/mutation failed four recovery tests because they
+selected a `p` although the focused result notice is a `div[role=status]`, and
+one 375px project-sort case because an ancestor sticky header's `backdrop-filter`
+made the fixed menu out-of-viewport. Other Web stages and images did not pass.
+The test now follows the actual notice element; the mobile translucent header
+uses an isolated decorative blur layer, preserving a viewport-positioned menu.
+The focused regression checks mobile menu viewport, Escape restoration and
+trigger focus. Post-fix build, lint, **1,856 UX** and **19 Playwright** pass.
+Another complete exact-source CI and fresh 50-minute wait are required.
+
 ## Two-round Web feature batch 1 — 2026-10-30 (local source checks)
 
 The [implementation record](execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)
