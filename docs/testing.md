@@ -41,6 +41,20 @@ Final local receipts:
 | Full local API (earlier collected source) | **5,724 passed / 192 conditional skips / 2 failed**, 4,772.10 seconds. Module-import-time lease-test clocks expired before execution; fixed to per-case clocks and focused files reran successfully. Not a full final-source pass. |
 | New PostgreSQL concurrency / full real-service PWA / CI | Pending exact-source CI; no local acceptance claim. |
 
+First full CI `40956346174`, exact `bb5d4f4`, was first read at
+2026-10-30 06:06:22 +08:00 after its 50-minute gate. API **5,924 passed /
+3 skipped**; Web focused-online **44 passed / one failed** and settings
+**462 passed / one failed**. Remaining Web gates, independent settings restore
+and images did not pass. No deployment followed.
+The old table source assertion now follows the real wrapper/scroller chain.
+A mounted mock-backed project case reproduced duplicate merge portals caused by
+colliding sibling React keys for New/Merge dialogs. Distinct project-scoped
+keys fix the product; the strengthened regression rejects duplicate dialogs,
+checks exactly two titles, keyboard reordering, retained title, complete close
+and reopening. Final fix validation: lint/build/TypeScript, **1,856 UX** and
+**19 Playwright** (two helper, three source/inventory, 14 mounted flows) passed.
+The real authenticated matrix must pass again in a fresh complete CI run.
+
 ## Two-round Web feature batch 1 — 2026-10-30 (local source checks)
 
 The [implementation record](execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)

@@ -102,11 +102,17 @@ for (const project of [false, true]) {
       await page.getByRole("toolbar").getByRole("button", { name: "Merge", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Merge conversations", exact: true });
       await dialog.getByLabel("Merge title", { exact: true }).fill("Synthetic retained merge title");
-      const rows = dialog.locator(".reader-interactive-row");
-      const before = await rows.allTextContents();
-      await rows.first().getByRole("button", { name: /^Move down:/ }).focus(); await page.keyboard.press("Enter");
-      await expect.poll(async () => (await rows.allTextContents()).map(text => text.replace(/^\d+/, ""))).toEqual(before.map(text => text.replace(/^\d+/, "")).reverse());
-      const orderedTitles = (await rows.allTextContents()).map(text => text.replace(/^\d+/, ""));
+      // Read canonical title markers, not shared hover/sort styling. This must
+      // remain one dialog with exactly the two selected conversations.
+      await expect(page.getByRole("dialog")).toHaveCount(1);
+      const titleMarkers = dialog.locator("[data-merge-order-title]");
+      await expect(titleMarkers).toHaveCount(2);
+      const readOrder = () => titleMarkers.evaluateAll(elements => elements.map(element => element.getAttribute("data-merge-order-title")!));
+      const before = await readOrder();
+      expect([...before].sort()).toEqual(sources.map(row => row.title).sort());
+      await dialog.getByRole("button", { name: `Move down: ${before[0]}`, exact: true }).focus(); await page.keyboard.press("Enter");
+      await expect.poll(readOrder).toEqual([...before].reverse());
+      const orderedTitles = await readOrder();
       await expect(dialog.getByRole("button", { name: "Merge 2 conversations", exact: true })).toBeDisabled();
       if (process.env.E2E_SETTINGS_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SETTINGS_SCREENSHOTS}/support-merge-${project ? 768 : 1440}.png` });
       await dialog.getByRole("button", { name: "Request a higher limit", exact: true }).click();
@@ -114,7 +120,7 @@ for (const project of [false, true]) {
       await sendRequest(page, "Synthetic merge limit request"); await approve(admin, context.request);
       await page.keyboard.press("Escape");
       await expect(dialog.getByLabel("Merge title", { exact: true })).toHaveValue("Synthetic retained merge title");
-      expect((await rows.allTextContents()).map(text => text.replace(/^\d+/, ""))).toEqual(orderedTitles);
+      expect(await readOrder()).toEqual(orderedTitles);
       await expect(dialog.getByRole("button", { name: "Merge 2 conversations", exact: true })).toBeEnabled();
       expect((await (await context.request.get("/api/conversations")).json())).toHaveLength(2);
       if (!project) {
@@ -126,7 +132,7 @@ for (const project of [false, true]) {
         expect((await response.json()).detail.code).toBe("MERGE_MESSAGE_LIMIT");
         await expect(dialog.getByText("The merge limit or source conversations changed. Review the latest counts and limits, then retry.", { exact: true })).toBeVisible();
         await expect(dialog.getByLabel("Merge title", { exact: true })).toHaveValue("Synthetic retained merge title");
-        expect((await rows.allTextContents()).map(text => text.replace(/^\d+/, ""))).toEqual(orderedTitles);
+        expect(await readOrder()).toEqual(orderedTitles);
         const grant = await admin.put(`/api/admin/users/${userId}/limit-overrides`, { headers: { "Idempotency-Key": crypto.randomUUID() }, data: { base_revision: 2, limits: { merge_message_count: 4 }, reason: "Synthetic reviewed restoration" } });
         expect(grant.status()).toBe(200);
         await dialog.getByRole("button", { name: "Refresh limits", exact: true }).click();

@@ -348,7 +348,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
               />
             ) : null}
             {sortError ? <p role="alert" className="text-sm text-[var(--danger)]">{zh ? "排序结果未确认，请先刷新并核对当前顺序。" : "The order result is unconfirmed. Refresh and check the current order before trying again."}</p> : null}
-            {!projectUnavailable ? <MergeConversationsDialog key={projectId} open={mergeOpenScope === projectId}
+            {!projectUnavailable ? <MergeConversationsDialog key={`merge:${projectId}`} open={mergeOpenScope === projectId}
               conversations={selectedMergeConversations} title={mergeTitle} busy={bulkBusy === "merge"}
               recoveryDisabled={bulkBusy !== null} projectId={projectId}
               onTitleChange={setMergeTitle} onReorder={setMergeOrderIds}
@@ -373,7 +373,7 @@ export function ProjectConversationList({ projectId }: { projectId: string }) {
             {!projectUnavailable ? batchCheck.surface : null}
             <ConversationPlacementSurface placement={placement} />
             <NewConversationDialog
-              key={projectId}
+              key={`new:${projectId}`}
               open={newConversationOpen && canAddToProject}
               projects={projectsQuery.data ?? []}
               initialProjectId={projectId}

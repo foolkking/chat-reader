@@ -5,7 +5,7 @@
 | 文档 | 当前职责 |
 | --- | --- |
 | `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 24 项逐项处置：19 项有界源码、5 项未实施合同缺口；离线响应租约、复核修复及真实验证记录，不冒充生产故障归因或发布验收。 |
-| `testing.md` | 当前本地 UX／浏览器／ASGI／API 门禁与最终 CI 边界，保留第一批历史回执。 |
+| `testing.md` | 当前本地 UX／浏览器／ASGI／API、首轮 CI 失败及真实重复 portal 复现／key 修复回归，保留各检查点边界。 |
 | `system/BACKEND_AND_API.md`、`api-reference.md` | 新账户配置、批注聚合、附件目录、严格重复候选、分页来源事件与下载租约接口。 |
 | `system/DATA_AND_STORAGE.md`、`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 0054→0056、CAS 与集合上限、账号隔离、短下载租约；不改变 `.cr`／离线包／Dexie。 |
 | `system/FEATURE_INVENTORY.md`、`system/USER_FLOWS.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 有界能力与交互、迁移和保留附加表的应用回退边界。 |

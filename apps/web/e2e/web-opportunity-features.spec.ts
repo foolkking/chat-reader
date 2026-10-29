@@ -100,3 +100,71 @@ test("reading list exposes items after the first twenty without mutating them", 
   await expect(page.getByRole("button", { name: /Load more/ })).toHaveCount(0);
   expect(writes).toEqual([]);
 });
+
+for (const projectView of [false, true]) {
+  test(`merge keyboard ordering follows two canonical title markers in the ${projectView ? "project" : "global"} list`, async ({ page }) => {
+    await page.setViewportSize({ width: projectView ? 768 : 1440, height: 900 });
+    const projectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
+    const timestamp = "2026-10-30T00:00:00Z";
+    const conversations = ["Synthetic Alpha", "Synthetic Beta"].map((title, index) => ({
+      id: `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb${index + 1}`,
+      title, display_title: title, description_markdown: null,
+      first_user_message: `${title} question`, message_count: 2, turn_count: 1,
+      status: "active", is_global_pinned: false, manual_sort_order: index,
+      project_id: projectView ? projectId : null,
+      project_name: projectView ? "Synthetic merge project" : null,
+      created_at: timestamp, updated_at: timestamp, imported_at: timestamp,
+      last_read_at: null, offline_revision: 1,
+      project_relation: { is_pinned: false, pinned_at: null, added_at: timestamp, sort_order: index },
+    }));
+    const mergeWrites: string[] = [];
+    await page.route("**/api/**", async route => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/conversations/merge" && route.request().method() === "POST") mergeWrites.push(path);
+      const value = path === "/api/auth/session" ? { authenticated: true, principal_id: "synthetic-owner", auth_mode: "single_password" }
+        : path === "/api/auth/capabilities" ? { maximum_merge_message_count: 4, maximum_export_conversation_count: 100 }
+          : path === "/api/preferences" ? {
+            theme_mode: "light", locale_mode: "en-US", conversation_sort_mode: "recent_read",
+            conversation_sort_direction: "desc", project_sort_mode: "custom", project_sort_direction: "asc",
+            created_at: timestamp, updated_at: timestamp,
+          }
+            : path === "/api/projects" ? [{
+              id: projectId, name: "Synthetic merge project", description: null, color: null, icon: null,
+              is_archived: false, is_default: false, archived_at: null, sort_order: 0,
+              conversation_count: 2, pinned_count: 0, created_at: timestamp, updated_at: timestamp, last_read_at: null,
+            }]
+              : path === "/api/conversations" || path === `/api/projects/${projectId}/conversations` ? conversations : [];
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(value) });
+    });
+    await page.goto(projectView ? `/projects/${projectId}` : "/");
+    await page.getByRole("button", { name: "Manage conversations", exact: true }).click();
+    for (const conversation of conversations) await page.getByRole("checkbox", { name: `Select ${conversation.title}`, exact: true }).check();
+    await page.getByTestId("selection-toolbar").getByRole("button", { name: "Merge", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Merge conversations", exact: true });
+    const titles = dialog.locator("[data-merge-order-title]");
+    await expect(titles).toHaveCount(2);
+    const readOrder = () => titles.evaluateAll(elements => elements.map(element => element.getAttribute("data-merge-order-title")));
+    const before = await readOrder();
+    expect([...before].sort()).toEqual(conversations.map(conversation => conversation.title).sort());
+    const title = dialog.getByLabel("Merge title", { exact: true });
+    await title.fill("Synthetic retained title");
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(titles).toHaveCount(2);
+    const move = dialog.getByRole("button", { name: `Move down: ${before[0]}`, exact: true });
+    await move.focus();
+    await page.keyboard.press("Enter");
+    await expect.poll(readOrder).toEqual([...before].reverse());
+    await expect(titles).toHaveCount(2);
+    await expect(title).toHaveValue("Synthetic retained title");
+    await expect(dialog.getByRole("button", { name: "Merge 2 conversations", exact: true })).toBeEnabled();
+    expect(mergeWrites).toEqual([]);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByTestId("selection-toolbar").getByRole("button", { name: "Merge", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(title).toHaveValue("Synthetic retained title");
+    await expect.poll(readOrder).toEqual([...before].reverse());
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+}

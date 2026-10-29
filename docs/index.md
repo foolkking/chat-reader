@@ -8,6 +8,9 @@
 修复可重放的清理竞态，不把无网络证据的原始故障归因当作已证实。
 最终本地 lint／typecheck／build、UX 1,856、Playwright 15、API 专项 21＋2 条通过。
 全 API 的两条测试时钟失败已定向修复验证，不算全量通过；完整 CI／发布仍待完成。
+首轮完整 CI `40956346174` 的 API 5,924 条通过，但 Web 旧断言及项目合并重复
+弹窗阻塞发布；真实挂载复现后修复 key 冲突，新增单弹窗／排序／关闭回归，
+窄修后 UX 1,856／Playwright 19 条通过，待重新完整 CI，未部署。
 见[当前数据合同](system/DATA_AND_STORAGE.md)
 与[验证边界](testing.md#two-round-web-features--2026-10-30-local-integration)。
 

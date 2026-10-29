@@ -45,7 +45,7 @@ restore drill for this backup remain unclaimed. The
 [release record](docs/execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md) owns
 exact identities, failed-run history, verification receipts and boundaries.
 
-**Two-round Web features and download protection (2026-10-30; local, not released):**
+**Two-round Web features and download protection (2026-10-30; CI follow-up, not released):**
 19 candidates have bounded source implementations: saved searches, annotation
 inbox, manual reading list, read-only version comparison, bounded print draft,
 explicit search-result batch archive, file directory, exact-hash duplicate
@@ -75,6 +75,13 @@ not revalidated by these local checks. User authorized commit, full CI, a fresh
 The precise checklist and receipts are in
 [the implementation record](docs/execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)
 and [testing boundary](docs/testing.md#two-round-web-features--2026-10-30-local-integration).
+Exact `bb5d4f4` was pushed; first CI `40956346174` was read after 50 minutes.
+API passed 5,924 / three skipped. Web's stale table assertion and settings'
+project merge failure blocked release. A mounted reproduction found colliding
+New/Merge React keys leaving duplicate portals; distinct scoped keys repair it,
+with single-dialog/order/title/close/reopen checks. Fix validation passed
+lint/build/TypeScript, 1,856 UX and 19 Playwright cases. A fresh complete CI
+and wait are required; no production migration or application change occurred.
 
 **Next-batch optimization (2026-10-29; historical pre-validation checkpoint):**
 all 15 directions in the [review](docs/execution/ux-audit-next-batch-2026-10-29.md)
