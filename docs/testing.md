@@ -65,7 +65,17 @@ The test now follows the actual notice element; the mobile translucent header
 uses an isolated decorative blur layer, preserving a viewport-positioned menu.
 The focused regression checks mobile menu viewport, Escape restoration and
 trigger focus. Post-fix build, lint, **1,856 UX** and **19 Playwright** pass.
-Another complete exact-source CI and fresh 50-minute wait are required.
+The next full CI `40973535996`, exact `75177a0`, was first read at
+2026-10-30 08:20:03 +08:00 after its 50-minute gate. API and settings passed;
+Web had 170 passed and one failure in `task-center-dismissal.spec.ts`: the test
+incorrectly required the sort trigger to reclaim focus after an outside pointer
+click. The component intentionally leaves focus to that clicked target and only
+restores the trigger for Escape. The test now clicks the sidebar search input
+and asserts it retains focus, then separately asserts Escape restoration.
+Focused Playwright **1/1** and file lint pass. The complete local file attempt
+had 21 passes and 12 preference-persistence failures because the local API was
+not running; these are not product acceptance. A fresh exact-source complete CI
+and 50-minute wait are required; no deployment occurred.
 
 ## Two-round Web feature batch 1 — 2026-10-30 (local source checks)
 

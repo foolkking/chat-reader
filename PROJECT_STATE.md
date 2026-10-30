@@ -85,8 +85,20 @@ lint/build/TypeScript, 1,856 UX and 19 Playwright cases. Second exact-source CI
 selected the wrong semantic element and a 375px fixed sort menu was clipped by
 sticky-header blur. The real mobile issue is repaired by isolating the blur
 layer; the test now matches the focused result div. Post-fix build/lint, 1,856 UX
-and 19 Playwright pass. A fresh complete CI and wait are required; production
+and 19 Playwright pass. This required a fresh complete CI and wait; production
 was not changed.
+Third full CI **`40973535996`** targeted
+`75177a0e5c994f02fdaa20f0e542949fc2138a5b` and was first read at
+2026-10-30 08:20:03 +08:00 after the 50-minute wait. API and settings passed;
+Web had one Task Center sort-menu focus assertion fail after 170 passes, so
+image gates were skipped. The test incorrectly expected an outside pointer
+click to return focus to the sort trigger, contrary to the component's contract
+that the clicked outside target owns focus. It now clicks the sidebar search
+input and checks that it retains focus; Escape separately restores the sort
+trigger. Focused Playwright **1/1** and file lint pass. In a complete local
+file attempt, 21 cases passed and 12 persistence cases failed because the local
+API was not running; this is not counted as a product or full-file pass. A
+fresh exact-source full CI is required; production remains unchanged.
 
 **Next-batch optimization (2026-10-29; historical pre-validation checkpoint):**
 all 15 directions in the [review](docs/execution/ux-audit-next-batch-2026-10-29.md)

@@ -14,6 +14,9 @@
 第二次 CI `40965493242` 虽 API／设置全过，Web 仍被错误恢复节点选择器和移动排序菜单
 裁切阻断；前者已对齐真实 div 提示，后者已隔离页头 blur 固定定位影响，
 375px 视口回归及 build/lint/UX 1,856/Playwright 19 均通过，再次完整 CI 待验。
+第三次 CI `40973535996` API／设置通过，Web 唯一失败是外点菜单后错误期待焦点回到
+触发器；已对齐实际“外部目标接管焦点、Escape 恢复触发器”合同。聚焦 Playwright 1/1
+及 lint 通过；需要下一轮完整 CI，未部署。
 见[当前数据合同](system/DATA_AND_STORAGE.md)
 与[验证边界](testing.md#two-round-web-features--2026-10-30-local-integration)。
 

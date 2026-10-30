@@ -416,16 +416,17 @@ test("recent terminal task results survive refresh and presentation dismissal st
   expect(mutationRequests).toEqual([]);
 });
 
-test("sort menu closes on outside click and Escape and restores trigger focus", async ({ page }) => {
+test("sort menu closes on outside click without stealing focus and Escape restores trigger focus", async ({ page }) => {
   await page.route("**/api/**", async (route) => mockOwnerApi(route, [], []));
   await page.goto("/");
   const trigger = page.getByTestId("sort-menu-trigger").filter({ visible: true }).last();
+  const outsideInput = page.getByTestId("sidebar-global-search").filter({ visible: true }).first();
 
   await trigger.click();
   await expect(page.getByTestId("sort-menu-panel").filter({ visible: true })).toBeVisible();
-  await page.mouse.click(900, 700);
+  await outsideInput.click();
   await expect(page.getByTestId("sort-menu-panel").filter({ visible: true })).toHaveCount(0);
-  await expect.poll(() => trigger.evaluate((element) => document.activeElement === element)).toBe(true);
+  await expect.poll(() => outsideInput.evaluate((element) => document.activeElement === element)).toBe(true);
 
   await trigger.click();
   await page.keyboard.press("Escape");
