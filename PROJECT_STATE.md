@@ -31,6 +31,13 @@ failure traces and named cleanup stages are enabled. These follow-up changes
 still require fresh full CI; the precise cleanup timeout phase was not recorded
 by the old trace-off fixture. Production is unchanged.
 
+Next run `41034600829` passed Web/API and both previous settings failures;
+settings was 462 passed / one mobile offline-recovery failure at opening
+Settings after reload. Library deep links previously closed the initial
+sidebar in a passive effect, after Settings could appear interactive. Selection
+now applies in layout while preserving the cached initial hydration tree;
+the browser gate waits for the applied destination. Fresh full CI is required.
+
 **Current production accepted — 2026-10-30:**
 Exact source **`0d1efacaa8145dff0c8c70ceda82460af5883854`** passed all five
 jobs in full CI **`40992509041`**, attempt 1. Dispatch was

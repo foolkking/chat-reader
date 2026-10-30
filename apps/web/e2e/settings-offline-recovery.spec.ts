@@ -4,7 +4,7 @@ import { readLocal } from "./settings-offline-helper";
 import type { OfflineDownload } from "../lib/offline-downloads";
 import type { BackgroundTaskRead } from "../lib/types";
 
-test.use({ trace: "off", actionTimeout: 20_000 });
+test.use({ trace: "retain-on-failure", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL, authentication and worker");
 
 async function register(context: BrowserContext, baseURL: string, locale: string) {
@@ -77,6 +77,9 @@ async function failurePageFixture(page: Page, userId: string, record?: OfflineDo
 }
 
 async function openCenter(page: Page) {
+  // Hydrated cached /library HTML initially has no query selection. Wait for
+  // the actual destination, not a sidebar that navigation is about to close.
+  await expect(page.locator("[data-library-navigation-ready]")).toHaveAttribute("data-library-navigation-ready", "true");
   const settings = page.getByRole("button", { name: /^(Settings|设置)$/ });
   const sidebar = page.getByRole("button", { name: /^(Open sidebar|打开侧栏)$/ });
   // Wait for the account/preferences boundary. The mobile library can already

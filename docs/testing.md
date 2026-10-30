@@ -53,6 +53,14 @@ failure traces improve diagnosis; cleanup assertions/timeouts are unchanged.
 The old evidence does not identify the exact timeout stage, so cleanup is not
 claimed fixed before fresh CI.
 
+Run `41034600829` passed Web/API and the prior notebook/cleanup cases, with
+462 settings passes / one failure waiting for mobile Settings after reload.
+Cached Library HTML initially shows a sidebar, but its deep-link passive
+effect can close it after a visibility check. Apply that same state transition
+in layout and wait for the actual applied destination before opening settings.
+Deterministic tests execute the real effect and preserve no-query behavior;
+the original first-copy/rebuild/content assertions and timeouts are unchanged.
+
 ## Fifth full CI and accepted deployment — 2026-10-30
 
 Exact `0d1efacaa8145dff0c8c70ceda82460af5883854` passed all five jobs in

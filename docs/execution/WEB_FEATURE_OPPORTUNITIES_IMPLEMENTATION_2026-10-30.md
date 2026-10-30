@@ -371,3 +371,17 @@ assertion was removed and the run did not enter artifact or deployment gates.
 用例保留失败 trace、为清理末段加命名步骤；不删除断言、不增加重试或放宽超时。
 旧失败证据缺少具体悬挂阶段，因此该辅助修复不是生产清理故障已解决的证据，
 须由新完整 CI 验证。此轮 CI 调试不运行本地门禁，生产仍 `0d1efac`／0056。
+
+### 手机离线页的初始导航与设置入口
+
+`3ac755c` 的完整 CI `41034600829` 于 **09:35:55Z** 派发，
+**10:26:01Z** 首次读取，满足 50 分钟门槛。Web／API 通过，上一轮笔记和
+退出清理用例均通过；settings **462 passed／1 failed**，停在手机首次下载
+失败后 reload 再打开 Settings，未进入后面的恢复断言。
+
+源码中缓存 `/library` 初始树先显示侧栏，带 conversationId 的真实目的地再由
+passive effect 关闭侧栏；辅助步骤可能刚看到 Settings，就失去该按钮。
+保留首次 hydration 树，将相同选择／关闭动作移至 layout，避免交互后再关闭；
+辅助步骤等待已应用的导航目的地，不用 sleep／强制点击／重试。新增执行真实
+effect 的深链接与无 query 回归，保留原首次副本、失败文案、重建及内容断言。
+本轮仍不运行本地门禁、不改生产，须新完整 CI。

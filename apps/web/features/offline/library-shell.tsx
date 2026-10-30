@@ -108,8 +108,11 @@ export function LibraryShell() {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Offline navigation reuses the cached /library HTML without query params.
+    // Keep the same initial hydration tree, but apply a deep link before the
+    // first interactive paint. A passive effect could close a sidebar whose
+    // Settings control had already become visible to the user.
     if (requestedId) { setSelectedId(requestedId); setMobileOpen(false); }
   }, [requestedId]);
 
@@ -622,7 +625,7 @@ export function LibraryShell() {
   );
 
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary">
+    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary" data-library-navigation-ready={String(!requestedId || selectedId === requestedId)}>
       {!readerFocusMode ? <ReaderSidebarFrame
         desktopExpanded={desktopSidebarExpanded}
         onDesktopExpand={() => setLibrarySidebarExpanded(true)}

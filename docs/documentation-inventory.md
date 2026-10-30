@@ -15,6 +15,9 @@ The later Web/API-green, settings-red run `41026649429` and its bounded
 notebook-feedback / local-inspection follow-up are owned by testing and the
 execution record; the old trace-off cleanup timeout remains unlocalized until
 fresh CI evidence. No production acceptance is inferred.
+Testing and the execution record also own the later `41034600829`
+mobile-navigation failure and its cached-hydration/layout boundary correction;
+the preceding notebook and cleanup cases passed that run.
 
 ## 两轮 Web 功能发布验收 — 2026-10-30
 
