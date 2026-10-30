@@ -134,6 +134,23 @@ Fourth source batch `c50210ffcc4105f4256c3d98c5baad2950160709`, run
 must withdraw orphan classification, even when visible candidates were already
 encountered. A deterministic permission-error regression preserves all files.
 
+Frozen candidate `28fec951962bfce548e450b750c58a51bf9868ce`, full CI
+`41112123152`, dispatched 03:04:03 +08; no first status read before
+03:54:03 +08 absent a user-reported failure. Only verification-driven corrections
+may follow this freeze; no additional product scope is being added.
+
+Third CI first read at **03:30:51 +08** respected its 50-minute threshold.
+Grouped catalog measurements were **7 SQL / 14.50 ms (47)** and
+**7 SQL / 21.69 ms (470)** in this synthetic SQLite workload, versus the
+earlier 283/2,821-query characterization. Only the later dedicated comparison
+can certify same-runner timing; these counts demonstrate the bounded query shape.
+The API focused step had **26 passes / one failure**: the 47-row test seeded
+unowned conversations, but the correctly owner-scoped background worker
+serialized zero of them. The fixture now assigns the real migrated test owner;
+production ownership isolation is unchanged, and the 47-count assertion stays.
+Web repeated the already-corrected query-policy adapter failures. API full,
+capacity comparison and image acceptance remain unverified for this checkpoint.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset

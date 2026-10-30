@@ -13,7 +13,7 @@ from app.models.context_continuation import ContextMemberObject
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.attachment_storage_integrity import audit_local_attachment_storage
 from app.services.continuation_files import update_files
-from app.services.ownership import LEGACY_OWNERSHIP_SCOPE
+from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, LEGACY_OWNER_USER_ID
 from test_attachment_storage_integrity import _conversation, _database
 from test_cr_archive import _run_job
 from test_import_preview_api import client  # noqa: F401
@@ -26,6 +26,10 @@ def test_repaired_six_context_pairs_build_a_complete_47_conversation_package(cli
     db, generator = _database()
     try:
         conversations = [_conversation() for _ in range(47)]
+        for conversation in conversations:
+            # Match real imported rows. The worker deliberately does not inherit
+            # a request's legacy-unowned read compatibility for owned jobs.
+            conversation.owner_user_id = LEGACY_OWNER_USER_ID
         db.add_all(conversations)
         db.commit()
         for index, conversation in enumerate(conversations[:6]):
