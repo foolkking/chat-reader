@@ -1,5 +1,21 @@
 # API 参考
 
+## 累计功能补齐 — 2026-10-30（待发布，源码 head 0058）
+
+| Method/path | Contract |
+| --- | --- |
+| `GET /api/conversations?q=…` | 可选标题子串搜索，最多 200 字符；owner／状态过滤及分页不变，`%`／`_` 按字面处理，不是 SQL 通配符。 |
+| `POST /api/conversations/{id}/shares/preview?anchor_message_id=…` | owner-only、no-store；复用分享范围和策略，返回完整轮次、准确范围总数／有界目录及前后轮锚点。不创建 token、Share、事件或访问计数，不是公开链接。 |
+| `GET /api/conversations/{id}/new-messages?limit=50` | owner-only、no-store；无显式基线 count 为 null；按未见身份比较，返回计数、首个锚点、至多 100 条摘要。 |
+| `POST /api/conversations/{id}/new-messages/baseline` | 显式替换当前账户活跃消息身份集，上限 100,000、超限 413；不改变阅读位置。 |
+| `GET/PUT/DELETE /api/user-feature-entries/conversation-tag[/…]` | 沿用配置 CAS 与账户权限；名称 1–40 字符、成员上限 2,000、最多 100 标签；规范化重名／版本／不可用目标冲突为 409。 |
+| `POST /api/conversations/{id}/shares` | 新增可选 `content_mode: live / frozen`，默认 live；frozen 的附件、批注／笔记／访客导出、资源上限返回明确 422 错误码，不静默截断。旧 URL 与 live 语义不变。 |
+| `GET /api/shared/{token}/*` | frozen 的 bootstrap／reader-turn／message-window／dialogue-index／toc／blocks／locator 从快照读取，仍校验访问策略，范围外消息 404。 |
+
+冻结内容设置不可变；PATCH 的访问／外观仍使用 settings revision。到期回收后
+PATCH 为 `FROZEN_SHARE_RECLAIMED`（409），不可复活。见
+[数据生命周期](system/DATA_AND_STORAGE.md)。下方 0056 是前次发布检查点。
+
 ## 两轮 Web 功能 — 2026-10-30（本地待发布）
 
 所有入口沿用同源 owner 认证，不创建新的公开能力；当前生产状态以

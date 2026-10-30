@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 from app.schemas.preferences import ResolvedLocale, ResolvedTheme
 from app.schemas.conversation import ConversationListItem
-from app.schemas.message import DialogueIndexResponse
+from app.schemas.message import DialogueIndexResponse, ReaderTurnResponse
 from app.schemas.search import MessageWindowResponse
 from app.schemas.toc import TocResponse
 
@@ -22,6 +22,7 @@ class ShareCreate(BaseModel):
     include_annotations: bool = False
     include_notebook: bool = False
     allow_export: bool = False
+    content_mode: Literal["live", "frozen"] = "live"
     expires_at: datetime | None = None
     theme: ResolvedTheme | None = None
     locale: ResolvedLocale | None = None
@@ -42,6 +43,7 @@ class ShareRead(BaseModel):
     include_annotations: bool
     include_notebook: bool
     allow_export: bool
+    content_mode: Literal["live", "frozen"]
     theme: ResolvedTheme
     locale: ResolvedLocale
     expires_at: datetime | None
@@ -58,6 +60,19 @@ class ShareRead(BaseModel):
 class ShareCreateResponse(ShareRead):
     token: str
     share_url: str
+
+
+class SharePreviewResponse(BaseModel):
+    conversation: ConversationListItem
+    message_count: int
+    turn_count: int
+    sampled_turn: ReaderTurnResponse | None = None
+    has_previous_turn: bool = False
+    has_next_turn: bool = False
+    toc: TocResponse | None = None
+    has_more_messages: bool = False
+    capabilities: dict[str, bool] = Field(default_factory=dict)
+    description_markdown: str | None = None
 
 
 class ShareUpdate(BaseModel):

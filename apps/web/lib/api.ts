@@ -65,6 +65,8 @@ import type {
   ProjectUpdate,
   ProjectSortMode,
   ReadingPositionResponse,
+  ReadingContentBaselineResponse,
+  ReadingContentChangesResponse,
   RecentItemInput,
   RecentItemRead,
   RenderBlockRead,
@@ -75,6 +77,7 @@ import type {
   ShareCreateInput,
   ShareCreateResponse,
   ShareRead,
+  SharePreviewResponse,
   OwnedSharePage,
   ShareBatchResult,
   ShareUpdateInput,
@@ -261,6 +264,7 @@ export function syncPreferenceFields(input: import("./types").PreferenceSyncRequ
 
 export async function getConversations(
   input: {
+    q?: string;
     includeArchived?: boolean;
     statusScope?: "active" | "archived" | "all";
     scope?: "all" | "history";
@@ -272,6 +276,7 @@ export async function getConversations(
   signal?: AbortSignal,
 ): Promise<ConversationListItem[]> {
   const params = new URLSearchParams();
+  if (input.q?.trim()) params.set("q", input.q.trim());
   if (input.includeArchived) {
     params.set("include_archived", "true");
   }
@@ -1246,6 +1251,40 @@ export async function revokeShare(shareId: string): Promise<ShareRead> {
 
 export async function getOwnedShare(shareId: string, signal?: AbortSignal): Promise<ShareRead> {
   return normalizeShareUrl(await fetchJson<ShareRead>(`/api/shares/${shareId}`, { signal }));
+}
+
+export async function previewShare(
+  conversationId: string,
+  input: ShareCreateInput,
+  anchorMessageId?: string,
+  signal?: AbortSignal,
+): Promise<SharePreviewResponse> {
+  const params = new URLSearchParams();
+  if (anchorMessageId) params.set("anchor_message_id", anchorMessageId);
+  const suffix = params.size ? `?${params.toString()}` : "";
+  return fetchJson<SharePreviewResponse>(
+    `/api/conversations/${conversationId}/shares/preview${suffix}`,
+    { ...jsonRequest("POST", input), signal },
+  );
+}
+
+export function getNewMessageChanges(
+  conversationId: string,
+  signal?: AbortSignal,
+): Promise<ReadingContentChangesResponse> {
+  return fetchJson<ReadingContentChangesResponse>(
+    `/api/conversations/${conversationId}/new-messages`,
+    { signal },
+  );
+}
+
+export function captureNewMessageBaseline(
+  conversationId: string,
+): Promise<ReadingContentBaselineResponse> {
+  return fetchJson<ReadingContentBaselineResponse>(
+    `/api/conversations/${conversationId}/new-messages/baseline`,
+    jsonRequest("POST", {}),
+  );
 }
 
 export async function updateShare(shareId: string, input: ShareUpdateInput, signal?: AbortSignal): Promise<ShareRead> {

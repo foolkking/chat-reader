@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import LargeBinary, Text, cast, func, or_, select
 from sqlalchemy.orm import Query, Session
 
 from app.core.config import get_settings
@@ -16,13 +16,24 @@ from app.models.conversation_event import ConversationEvent
 from app.models.heading import Heading
 from app.models.message import Message
 from app.models.message_version import MessageVersion
+from app.models.attachment import MessageVersionAttachment
 from app.models.render_block import RenderBlock
 from app.models.share import Share, ShareUnlockSession
+from app.models.share_snapshot import ShareSnapshot
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.schemas.conversation import ConversationListItem
 from app.schemas.message import DialogueIndexItem, DialogueIndexResponse, MessageListItem, MessageVersionRead, ReaderTurnResponse, RenderBlockRead
 from app.schemas.search import MessageWindowResponse
-from app.schemas.share import OwnedSharePage, OwnedShareRead, ShareCreate, ShareCreateResponse, ShareRead, ShareUpdate, SharedConversationBootstrap
+from app.schemas.share import (
+    OwnedSharePage,
+    OwnedShareRead,
+    ShareCreate,
+    ShareCreateResponse,
+    SharePreviewResponse,
+    ShareRead,
+    ShareUpdate,
+    SharedConversationBootstrap,
+)
 from app.services.auth import hash_password, verify_password
 from app.services.preferences import get_or_create_preferences
 from app.schemas.toc import TocItem, TocResponse
@@ -92,6 +103,7 @@ def create_share(
         include_annotations=payload.include_annotations,
         include_notebook=payload.include_notebook,
         allow_export=payload.allow_export,
+        content_mode=payload.content_mode,
         theme=theme,
         locale=locale,
         expires_at=payload.expires_at,
@@ -103,6 +115,7 @@ def create_share(
     )
     db.add(share)
     db.flush()
+    _build_frozen_snapshot(db, share, conversation)
     _write_event(
         db,
         conversation.id,
@@ -118,6 +131,122 @@ def create_share(
         token=token,
         share_url=share_url,
     )
+
+
+def preview_share(
+    db: Session,
+    conversation_id: uuid.UUID,
+    payload: ShareCreate,
+    ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+    *,
+    anchor_message_id: uuid.UUID | None = None,
+) -> SharePreviewResponse:
+    """Render a bounded owner preview without creating a token or Share row."""
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
+    if conversation is None:
+        raise ShareError("Conversation not found.", HTTPStatus.NOT_FOUND)
+    _validate_share_payload(db, conversation, payload)
+    policy = get_feature_policy(db)
+    if not policy.allow_share_links:
+        raise ShareError("Share links are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
+    if payload.share_password and not policy.allow_share_password:
+        raise ShareError("Password-protected shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
+    if not payload.share_password and not policy.allow_public_share:
+        raise ShareError("Public shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
+    preview = Share(
+        id=uuid.uuid4(),
+        conversation_id=conversation.id,
+        token_prefix="preview",
+        title=payload.title,
+        description=payload.description,
+        scope=payload.scope,
+        selected_message_ids=[str(item) for item in payload.selected_message_ids],
+        include_toc=payload.include_toc,
+        include_metadata=payload.include_metadata,
+        include_description=payload.include_description,
+        include_annotations=payload.include_annotations,
+        include_notebook=payload.include_notebook,
+        allow_export=payload.allow_export,
+        content_mode=payload.content_mode,
+        theme=payload.theme or "light",
+        locale=payload.locale or "zh-CN",
+        metadata_={},
+    )
+    query = _share_message_query(db, preview)
+    if preview.content_mode == "frozen":
+        _validate_frozen_content(db, preview, query)
+    total = query.count()
+    first_message = (
+        query.filter(Message.id == anchor_message_id).one_or_none()
+        if anchor_message_id is not None
+        else query.order_by(Message.order_key.asc()).first()
+    )
+    if anchor_message_id is not None and first_message is None:
+        raise ShareError("Preview message is outside the selected share scope.", HTTPStatus.NOT_FOUND)
+    sampled_turn = None
+    if first_message is not None:
+        try:
+            sampled_turn = load_reader_turn_from_query(
+                db,
+                conversation.id,
+                query,
+                first_message.id,
+                attachment_content_prefix="/api/attachments",
+            )
+        except (ReaderTurnHydrationError, ValueError) as exc:
+            raise ShareError("The visitor preview is temporarily unavailable.", HTTPStatus.CONFLICT) from exc
+    toc_response = None
+    if payload.include_toc:
+        toc_query = db.query(Heading).filter(Heading.conversation_id == conversation.id)
+        if payload.scope == "selected_messages":
+            toc_query = toc_query.filter(Heading.message_id.in_(set(payload.selected_message_ids)))
+        headings = toc_query.order_by(Heading.heading_index.asc()).limit(200).all()
+        toc_response = TocResponse(
+            conversation_id=conversation.id,
+            items=[_toc_item(item) for item in headings],
+            limit=200,
+            offset=0,
+            total=toc_query.count(),
+            has_more=toc_query.count() > len(headings),
+        )
+    return SharePreviewResponse(
+        conversation=_conversation_item(conversation),
+        message_count=total,
+        turn_count=_query_share_turn_count(query),
+        sampled_turn=sampled_turn,
+        has_previous_turn=bool(sampled_turn and sampled_turn.previous_anchor_message_id),
+        has_next_turn=bool(sampled_turn and sampled_turn.next_anchor_message_id),
+        toc=toc_response,
+        has_more_messages=total > (sampled_turn.end_offset if sampled_turn else 0),
+        capabilities={
+            "dialogue_index": True,
+            "toc": payload.include_toc,
+            "blocks": True,
+            "export": payload.allow_export,
+            "annotations": payload.include_annotations,
+            "notebook": payload.include_notebook,
+        },
+        description_markdown=conversation.description_markdown if payload.include_description else None,
+    )
+
+
+def _query_share_turn_count(query: Query) -> int:
+    rows = list(query.with_entities(Message.role, Message.turn_index).order_by(Message.order_key.asc()).yield_per(1000))
+    if not rows:
+        return 0
+    user_roles = {"user", "prompt", "human"}
+    if any((role or "").lower() in user_roles for role, _turn_index in rows):
+        return 1 + sum(1 for role, _turn_index in rows[1:] if (role or "").lower() in user_roles)
+    if any(turn_index is not None for _role, turn_index in rows):
+        count = 1
+        last_key = rows[0][1]
+        for index, (_role, turn_index) in enumerate(rows[1:], start=1):
+            key = turn_index if turn_index is not None else ("synthetic", index)
+            if key != last_key:
+                count += 1
+            last_key = key
+        return count
+    return len(rows)
 
 
 def list_shares(
@@ -176,15 +305,17 @@ def list_owned_shares(
 def get_shared_conversation_by_token(db: Session, token: str, unlock_token: str | None = None) -> SharedConversationBootstrap:
     share = _get_accessible_share(db, token, unlock_token)
     conversation = _get_conversation(db, share.conversation_id)
+    snapshot = _snapshot_for_share(db, share)
     share.access_count += 1
     share.last_accessed_at = _utc_now()
     share.updated_at = share.last_accessed_at
     db.flush()
+    conversation_item = ConversationListItem.model_validate(snapshot.conversation) if snapshot else _conversation_item(conversation)
     return SharedConversationBootstrap(
         share=share_read(share),
-        conversation=_conversation_item(conversation),
-        message_count=_share_message_query(db, share).count(),
-        turn_count=conversation.turn_count,
+        conversation=conversation_item,
+        message_count=snapshot.message_count if snapshot else _share_message_query(db, share).count(),
+        turn_count=snapshot.turn_count if snapshot else conversation.turn_count,
         capabilities={
             "dialogue_index": True,
             "toc": share.include_toc,
@@ -193,7 +324,9 @@ def get_shared_conversation_by_token(db: Session, token: str, unlock_token: str 
             "annotations": share.include_annotations,
             "notebook": share.include_notebook,
         },
-        description_markdown=conversation.description_markdown if share.include_description else None,
+        description_markdown=(
+            snapshot.description_markdown if snapshot else conversation.description_markdown
+        ) if share.include_description else None,
     )
 
 
@@ -208,6 +341,15 @@ def get_shared_message_window(
     unlock_token: str | None = None,
 ) -> MessageWindowResponse:
     share = _get_accessible_share(db, token, unlock_token)
+    snapshot = _snapshot_for_share(db, share)
+    if snapshot is not None:
+        return _frozen_message_window(
+            snapshot,
+            offset=offset,
+            limit=limit,
+            anchor_message_id=anchor_message_id,
+            anchor_before=anchor_before,
+        )
     query = _share_message_query(db, share)
     total = query.count()
     if anchor_message_id is not None:
@@ -229,6 +371,9 @@ def get_shared_message_window(
 
 def get_shared_reader_turn(db: Session, token: str, *, anchor_message_id: uuid.UUID | None, unlock_token: str | None = None) -> ReaderTurnResponse:
     share = _get_accessible_share(db, token, unlock_token)
+    snapshot = _snapshot_for_share(db, share)
+    if snapshot is not None:
+        return _frozen_reader_turn(snapshot, anchor_message_id)
     try:
         return load_reader_turn_from_query(
             db,
@@ -253,6 +398,14 @@ def get_shared_dialogue_index(
     unlock_token: str | None = None,
 ) -> DialogueIndexResponse:
     share = _get_accessible_share(db, token, unlock_token)
+    snapshot = _snapshot_for_share(db, share)
+    if snapshot is not None:
+        return _frozen_dialogue_index(
+            snapshot,
+            offset=offset,
+            limit=limit,
+            anchor_message_id=anchor_message_id,
+        )
     conversation = _get_conversation(db, share.conversation_id)
     base_query = _share_message_query(db, share)
     total = base_query.count()
@@ -327,6 +480,16 @@ def get_shared_toc(
     unlock_token: str | None = None,
 ) -> TocResponse:
     share = _get_accessible_share(db, token, unlock_token)
+    snapshot = _snapshot_for_share(db, share)
+    if snapshot is not None:
+        return _frozen_toc(
+            snapshot,
+            message_id=message_id,
+            offset=offset,
+            limit=limit,
+            max_level=max_level,
+            conversation_id=share.conversation_id,
+        )
     if not share.include_toc:
         return TocResponse(conversation_id=share.conversation_id, items=[], limit=limit, offset=0, total=0)
     query = db.query(Heading).filter(Heading.conversation_id == share.conversation_id)
@@ -359,6 +522,9 @@ def get_shared_message_blocks(
     unlock_token: str | None = None,
 ) -> list[RenderBlockRead]:
     share = _get_accessible_share(db, token, unlock_token)
+    snapshot = _snapshot_for_share(db, share)
+    if snapshot is not None:
+        return _frozen_blocks(snapshot, message_id=message_id, start=start, limit=limit)
     message = _ensure_shared_message(db, share, message_id)
     if message.current_version_id is None:
         return []
@@ -421,6 +587,7 @@ def revoke_share(
     if share.revoked_at is None:
         share.revoked_at = _utc_now()
         share.updated_at = share.revoked_at
+        db.query(ShareSnapshot).filter(ShareSnapshot.share_id == share.id).delete(synchronize_session=False)
         _write_event(
             db,
             share.conversation_id,
@@ -450,7 +617,7 @@ def share_settings_revision(share: Share) -> str:
     values = {name: getattr(share, name) for name in (
         "title", "description", "scope", "selected_message_ids", "include_toc",
         "include_metadata", "include_description", "include_annotations", "include_notebook",
-        "allow_export", "theme", "locale", "password_version",
+        "allow_export", "theme", "locale", "password_version", "content_mode",
     )}
     values.update(id=str(share.id), password_required=share.password_hash is not None,
                   expires_at=_as_utc(share.expires_at).isoformat() if share.expires_at else None,
@@ -482,6 +649,26 @@ def update_share(
         raise ShareError("Share has been revoked.", HTTPStatus.GONE)
     if payload.base_revision is not None and not hmac.compare_digest(payload.base_revision, share_settings_revision(share)):
         raise ShareError("Share settings changed. Review the latest settings before saving.", HTTPStatus.CONFLICT, code="SHARE_SETTINGS_CHANGED")
+    if share.content_mode == "frozen" and db.get(ShareSnapshot, share.id) is None:
+        raise ShareError("Frozen content has been reclaimed. Create a new share.", HTTPStatus.CONFLICT, code="FROZEN_SHARE_RECLAIMED")
+    if share.content_mode == "frozen" and (
+        {"scope", "selected_message_ids"} & provided_fields
+        or any(
+            field in provided_fields
+            for field in (
+                "include_toc",
+                "include_metadata",
+                "include_description",
+                "include_annotations",
+                "include_notebook",
+                "allow_export",
+            )
+        )
+    ):
+        raise ShareError(
+            "Frozen share content cannot be changed. Create a new share for a different snapshot.",
+            HTTPStatus.CONFLICT,
+        )
     if "expires_at" in provided_fields and payload.expires_at is not None and _as_utc(payload.expires_at) <= _utc_now():
         raise ShareError("Share expiry must be in the future.")
     if "title" in provided_fields:
@@ -553,6 +740,7 @@ def share_read(share: Share) -> ShareRead:
         include_annotations=share.include_annotations,
         include_notebook=share.include_notebook,
         allow_export=share.allow_export,
+        content_mode=share.content_mode,
         theme=share.theme,
         locale=share.locale,
         expires_at=share.expires_at,
@@ -664,6 +852,367 @@ def _share_message_query(db: Session, share: Share) -> Query:
     return query
 
 
+def _build_frozen_snapshot(db: Session, share: Share, conversation: Conversation) -> None:
+    if share.content_mode != "frozen":
+        return
+    existing = db.get(ShareSnapshot, share.id)
+    if existing is not None:
+        return
+    query = _share_message_query(db, share)
+    _validate_frozen_content(db, share, query)
+    messages = query.order_by(Message.order_key.asc(), Message.id.asc()).all()
+    items = [
+        _full_message_item(db, message, ordinal=index + 1).model_dump(mode="json")
+        for index, message in enumerate(messages)
+    ]
+    heading_query = db.query(Heading).filter(Heading.conversation_id == conversation.id)
+    if share.scope == "selected_messages":
+        heading_query = heading_query.filter(Heading.message_id.in_(_selected_message_ids(share)))
+    headings = heading_query.order_by(Heading.heading_index.asc()).limit(5001).all() if share.include_toc else []
+    if len(headings) > 5000:
+        raise ShareError("Frozen shares are limited to 5,000 headings.", HTTPStatus.UNPROCESSABLE_ENTITY, code="FROZEN_SHARE_LIMIT")
+    turn_ranges = _snapshot_turn_ranges([MessageListItem.model_validate(item) for item in items])
+    conversation_data = _conversation_item(conversation).model_dump(mode="json")
+    toc_data = [_toc_item(heading).model_dump(mode="json") for heading in headings]
+    description = conversation.description_markdown if share.include_description else None
+    payload = {"conversation": conversation_data, "messages": items, "toc": toc_data, "description": description}
+    if len(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")) > 24 * 1024 * 1024:
+        raise ShareError("Frozen content exceeds the 24 MiB snapshot limit.", HTTPStatus.UNPROCESSABLE_ENTITY, code="FROZEN_SHARE_LIMIT")
+    db.add(ShareSnapshot(
+        share_id=share.id,
+        conversation=conversation_data,
+        messages=items,
+        toc=toc_data,
+        description_markdown=description,
+        message_count=len(items),
+        turn_count=len(turn_ranges),
+        created_at=_utc_now(),
+    ))
+    db.flush()
+
+
+def _validate_frozen_content(db: Session, share: Share, query: Query) -> None:
+    if query.count() > 5000:
+        raise ShareError(
+            "Frozen shares are limited to 5,000 messages. Use a live share or select a smaller range.",
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            code="FROZEN_SHARE_LIMIT",
+        )
+    version_ids = query.with_entities(Message.current_version_id).statement
+    def byte_length(column):
+        value = cast(column, Text)
+        return func.coalesce(
+            func.octet_length(value) if db.get_bind().dialect.name == "postgresql"
+            else func.length(cast(value, LargeBinary)), 0,
+        )
+    version_bytes = db.scalar(select(func.coalesce(func.sum(
+        byte_length(MessageVersion.plain_text) + byte_length(MessageVersion.display_text)
+        + byte_length(MessageVersion.blocks),
+    ), 0)).where(MessageVersion.id.in_(version_ids)))
+    block_count, block_bytes = db.query(
+        func.count(RenderBlock.id),
+        func.coalesce(func.sum(byte_length(RenderBlock.plain_text) + byte_length(RenderBlock.data)), 0),
+    ).filter(RenderBlock.message_version_id.in_(version_ids)).one()
+    # Bound bytes and object counts in SQL before hydrating immutable bodies.
+    if version_bytes + block_bytes > 24 * 1024 * 1024 or block_count > 50_000:
+        raise ShareError("Frozen content exceeds the snapshot resource limit.", HTTPStatus.UNPROCESSABLE_ENTITY, code="FROZEN_SHARE_LIMIT")
+    attachment = db.query(MessageVersionAttachment.id).filter(
+        MessageVersionAttachment.message_version_id.in_(version_ids)
+    ).first()
+    if attachment is not None:
+        raise ShareError(
+            "Frozen shares currently support text-only content. Remove attachments or use a live share.",
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            code="FROZEN_SHARE_TEXT_ONLY",
+        )
+    if share.include_annotations or share.include_notebook or share.allow_export:
+        raise ShareError(
+            "Frozen shares currently support only messages, headings and the optional conversation description.",
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            code="FROZEN_SHARE_UNSUPPORTED_OPTIONS",
+        )
+
+
+def _full_message_item(db: Session, message: Message, *, ordinal: int) -> MessageListItem:
+    version = db.get(MessageVersion, message.current_version_id) if message.current_version_id else None
+    blocks = (
+        db.query(RenderBlock)
+        .filter(RenderBlock.message_version_id == message.current_version_id)
+        .order_by(RenderBlock.block_index.asc())
+        .all()
+        if message.current_version_id
+        else []
+    )
+    if version is None or len(blocks) != message.block_count:
+        raise ShareError("Frozen content is incomplete. Rebuild the conversation and retry.", HTTPStatus.CONFLICT)
+    return MessageListItem(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        role=message.role,
+        order_key=message.order_key,
+        turn_index=message.turn_index,
+        created_at=message.created_at,
+        current_version=_version_read(version) if version else None,
+        render_blocks=[_block_read(block) for block in blocks],
+        block_count=message.block_count,
+        char_count=message.char_count,
+        is_heavy=message.is_heavy,
+        ordinal=ordinal,
+        content_preview=None,
+        content_truncated=False,
+    )
+
+
+def _snapshot_for_share(db: Session, share: Share) -> ShareSnapshot | None:
+    if share.content_mode != "frozen":
+        return None
+    snapshot = db.get(ShareSnapshot, share.id)
+    if snapshot is None:
+        raise ShareError("Frozen share content is unavailable.", HTTPStatus.CONFLICT)
+    return snapshot
+
+
+def _snapshot_items(snapshot: ShareSnapshot) -> list[MessageListItem]:
+    try:
+        return [MessageListItem.model_validate(item) for item in snapshot.messages]
+    except (TypeError, ValueError) as exc:
+        raise ShareError("Frozen share content is unavailable.", HTTPStatus.CONFLICT) from exc
+
+
+def _snapshot_turn_ranges(items: list[MessageListItem]) -> list[tuple[int, int]]:
+    if not items:
+        return []
+    user_roles = {"user", "prompt", "human"}
+    if any(item.role.lower() in user_roles for item in items):
+        ranges: list[tuple[int, int]] = []
+        start = 0
+        for index, item in enumerate(items):
+            if index > 0 and item.role.lower() in user_roles:
+                ranges.append((start, index))
+                start = index
+        ranges.append((start, len(items)))
+        return ranges
+    if any(item.turn_index is not None for item in items):
+        ranges = []
+        start = 0
+        last_key = items[0].turn_index
+        for index, item in enumerate(items[1:], start=1):
+            key = item.turn_index if item.turn_index is not None else ("synthetic", index)
+            if key != last_key:
+                ranges.append((start, index))
+                start = index
+            last_key = key
+        ranges.append((start, len(items)))
+        return ranges
+    return [(index, index + 1) for index in range(len(items))]
+
+
+def _frozen_message_window(
+    snapshot: ShareSnapshot,
+    *,
+    offset: int,
+    limit: int,
+    anchor_message_id: uuid.UUID | None,
+    anchor_before: int,
+) -> MessageWindowResponse:
+    items = _snapshot_items(snapshot)
+    if anchor_message_id is not None:
+        anchor_index = next((index for index, item in enumerate(items) if item.id == anchor_message_id), None)
+        if anchor_index is None:
+            raise ShareError("Shared message not found.", HTTPStatus.NOT_FOUND)
+        offset = max(0, min(max(len(items) - limit, 0), anchor_index - anchor_before))
+    page = items[offset:offset + limit]
+    return MessageWindowResponse(
+        items=page,
+        limit=limit,
+        offset=offset,
+        total=len(items),
+        has_previous=offset > 0,
+        has_more=offset + len(page) < len(items),
+    )
+
+
+def _frozen_reader_turn(snapshot: ShareSnapshot, anchor_message_id: uuid.UUID | None) -> ReaderTurnResponse:
+    items = _snapshot_items(snapshot)
+    if not items:
+        return ReaderTurnResponse(
+            conversation_id=uuid.UUID(str(snapshot.conversation["id"])),
+            turn_key="empty",
+            start_offset=0,
+            end_offset=0,
+            total_messages=0,
+        )
+    anchor_index = 0
+    if anchor_message_id is not None:
+        anchor_index = next((index for index, item in enumerate(items) if item.id == anchor_message_id), -1)
+        if anchor_index < 0:
+            raise ShareError("Anchor message not found.", HTTPStatus.NOT_FOUND)
+    ranges = _snapshot_turn_ranges(items)
+    selected_index = next(index for index, (start, end) in enumerate(ranges) if start <= anchor_index < end)
+    start, end = ranges[selected_index]
+    return ReaderTurnResponse(
+        conversation_id=uuid.UUID(str(snapshot.conversation["id"])),
+        turn_key=f"turn-{selected_index}",
+        start_offset=start,
+        end_offset=end,
+        total_messages=len(items),
+        items=items[start:end],
+        previous_anchor_message_id=items[ranges[selected_index - 1][0]].id if selected_index else None,
+        next_anchor_message_id=items[ranges[selected_index + 1][0]].id if selected_index + 1 < len(ranges) else None,
+    )
+
+
+def _frozen_dialogue_index(
+    snapshot: ShareSnapshot,
+    *,
+    offset: int,
+    limit: int,
+    anchor_message_id: uuid.UUID | None,
+) -> DialogueIndexResponse:
+    items = _snapshot_items(snapshot)
+    if anchor_message_id is not None:
+        anchor_index = next((index for index, item in enumerate(items) if item.id == anchor_message_id), None)
+        if anchor_index is None:
+            raise ShareError("Shared message not found.", HTTPStatus.NOT_FOUND)
+        offset = max(0, min(max(len(items) - limit, 0), anchor_index - limit // 2))
+    role_counts: dict[str, int] = {}
+    for item in items[:offset]:
+        role_counts[item.role] = role_counts.get(item.role, 0) + 1
+    result: list[DialogueIndexItem] = []
+    for ordinal, item in enumerate(items[offset:offset + limit], start=offset + 1):
+        role_counts[item.role] = role_counts.get(item.role, 0) + 1
+        preview = item.current_version.display_text if item.current_version else ""
+        result.append(
+            DialogueIndexItem(
+                message_id=item.id,
+                role=item.role,
+                role_number=role_counts[item.role],
+                ordinal=ordinal,
+                order_key=item.order_key,
+                turn_index=item.turn_index,
+                preview=dialogue_preview(preview[:8000], item.role),
+            )
+        )
+    return DialogueIndexResponse(
+        conversation_id=uuid.UUID(str(snapshot.conversation["id"])),
+        items=result,
+        message_count=len(items),
+        turn_count=snapshot.turn_count,
+        limit=limit,
+        offset=offset,
+        total=len(items),
+        has_previous=offset > 0,
+        has_more=offset + len(result) < len(items),
+    )
+
+
+def _frozen_toc(
+    snapshot: ShareSnapshot,
+    *,
+    message_id: uuid.UUID | None,
+    offset: int,
+    limit: int,
+    max_level: int | None,
+    conversation_id: uuid.UUID,
+) -> TocResponse:
+    items = [TocItem.model_validate(item) for item in snapshot.toc]
+    if message_id is not None:
+        items = [item for item in items if item.message_id == message_id]
+    if max_level is not None:
+        items = [item for item in items if item.level <= max_level]
+    page = items[offset:offset + limit]
+    return TocResponse(
+        conversation_id=conversation_id,
+        items=page,
+        limit=limit,
+        offset=offset,
+        total=len(items),
+        has_more=offset + len(page) < len(items),
+    )
+
+
+def _frozen_blocks(
+    snapshot: ShareSnapshot,
+    *,
+    message_id: uuid.UUID,
+    start: int,
+    limit: int,
+) -> list[RenderBlockRead]:
+    item = next((item for item in _snapshot_items(snapshot) if item.id == message_id), None)
+    if item is None:
+        raise ShareError("Shared message not found.", HTTPStatus.NOT_FOUND)
+    return item.render_blocks[start:start + limit]
+
+
+def resolve_frozen_locator(
+    share: Share,
+    payload,
+    *,
+    db: Session,
+) -> dict:
+    snapshot = _snapshot_for_share(db, share)
+    items = _snapshot_items(snapshot)
+    item = next((candidate for candidate in items if candidate.id == payload.message_id), None)
+    if item is None:
+        raise ShareError("Shared message not found.", HTTPStatus.NOT_FOUND)
+    version_id = item.current_version.id if item.current_version else None
+    if payload.message_version_id and payload.message_version_id != version_id:
+        return {
+            "conversation_id": share.conversation_id,
+            "status": "MESSAGE_ONLY",
+            "message_id": item.id,
+            "message_version_id": version_id,
+            "reason": "frozen snapshot does not contain that version",
+            "fallback_kind": "message",
+        }
+    if payload.render_block_id:
+        block = next((block for block in item.render_blocks if block.id == payload.render_block_id), None)
+        if block is None:
+            return {
+                "conversation_id": share.conversation_id,
+                "status": "MESSAGE_ONLY",
+                "message_id": item.id,
+                "message_version_id": version_id,
+                "reason": "frozen snapshot block not found",
+                "fallback_kind": "message",
+            }
+        return {
+            "conversation_id": share.conversation_id,
+            "status": "EXACT",
+            "message_id": item.id,
+            "message_version_id": version_id,
+            "render_block_id": block.id,
+            "block_index": block.block_index,
+        }
+    return {
+        "conversation_id": share.conversation_id,
+        "status": "MESSAGE_ONLY",
+        "message_id": item.id,
+        "message_version_id": version_id,
+        "reason": "frozen snapshot locator",
+        "fallback_kind": "message",
+    }
+
+
+def reclaim_expired_frozen_snapshots(session_factory, *, now: datetime | None = None, limit: int = 500) -> int:
+    """Remove frozen payload bytes shortly after access expiry using a bounded batch."""
+    current = now or _utc_now()
+    with session_factory() as db:
+        expired_ids = db.query(ShareSnapshot.share_id).join(
+            Share,
+            Share.id == ShareSnapshot.share_id,
+        ).filter(
+            Share.content_mode == "frozen",
+            Share.expires_at.is_not(None),
+            Share.expires_at <= current,
+        ).order_by(Share.expires_at.asc(), Share.id.asc()).limit(limit).with_for_update(of=Share).all()
+        ids = [row[0] for row in expired_ids]
+        if ids:
+            db.query(ShareSnapshot).filter(ShareSnapshot.share_id.in_(ids)).delete(synchronize_session=False)
+        db.commit()
+        return len(ids)
+
+
 def _ensure_shared_message(db: Session, share: Share, message_id: uuid.UUID) -> Message:
     message = _share_message_query(db, share).filter(Message.id == message_id).one_or_none()
     if message is None:
@@ -680,6 +1229,8 @@ def _validate_share_payload(db: Session, conversation: Conversation, payload: Sh
         raise ShareError("Unsupported share theme.")
     if payload.locale is not None and payload.locale not in {"zh-CN", "en-US"}:
         raise ShareError("Unsupported share locale.")
+    if payload.content_mode not in {"live", "frozen"}:
+        raise ShareError("Unsupported share content mode.")
     if payload.scope == "selected_messages" and not payload.selected_message_ids:
         raise ShareError("selected_messages share requires at least one message.")
     if payload.selected_message_ids:

@@ -125,7 +125,7 @@ const visitReader = node => {
   ts.forEachChild(node, visitReader);
 };
 visitReader(readerSource); assert.ok(readerEscapeEffect);
-function readerEscape(event, utilityPanel = "files") {
+function readerEscape(event, utilityPanel = "files", desktopPanel = null) {
   const calls = [];
   let listener, cleanup;
   const window = {
@@ -135,9 +135,11 @@ function readerEscape(event, utilityPanel = "files") {
   new Function("useEffect", "window", "utilityPanel", "setUtilityPanel", "conversationId",
     "releaseExportScope", "showFiles", "setShowFiles", "mobileActionsExpanded", "desktopActionsExpanded",
     "setMobileActionsExpanded", "setDesktopActionsExpanded", "showExport", "showSearch", "showShare",
+    "showTags", "showUpdates", "closeDesktopUtilityPanels",
     compile(readerEscapeEffect.getText(readerSource)))(
     effect => { cleanup = effect(); }, window, utilityPanel, value => calls.push(["panel", value]),
     "synthetic", scope => calls.push(["release", scope]), false, noop, false, false, noop, noop, false, false, false,
+    desktopPanel === "tags", desktopPanel === "updates", () => calls.push(["desktop", null]),
   );
   assert.ok(listener);
   listener({ key: "Escape", preventDefault: () => calls.push(["preventDefault"]), ...event });
@@ -156,6 +158,12 @@ test("Reader still closes its own surface on ordinary unhandled Escape", () => {
   assert.deepEqual(readerEscape({}), [["panel", null], ["preventDefault"]]);
   assert.deepEqual(readerEscape({}, "export"), [["release", "export:synthetic"], ["panel", null], ["preventDefault"]]);
 });
+for (const panel of ["tags", "updates"]) {
+  test(`Reader Escape closes the ${panel} utility without handling IME`, () => {
+    assert.deepEqual(readerEscape({}, null, panel), [["desktop", null], ["preventDefault"]]);
+    assert.deepEqual(readerEscape({ isComposing: true }, null, panel), []);
+  });
+}
 
 test("the separately portalled Viewer explicitly accepts pointers under a modal body", () => {
   let root;

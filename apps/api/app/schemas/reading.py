@@ -32,6 +32,30 @@ class ReadingPositionResponse(BaseModel):
     position: ReadingPositionRead | None
 
 
+class NewMessageRead(BaseModel):
+    message_id: UUID
+    order_key: str
+    role: str
+    preview: str
+
+
+class ReadingContentChangesResponse(BaseModel):
+    conversation_id: UUID
+    baseline_available: bool
+    baseline_captured_at: datetime | None = None
+    new_message_count: int | None = None
+    first_new_message_id: UUID | None = None
+    items: list[NewMessageRead] = Field(default_factory=list)
+    limit: int
+    has_more: bool
+
+
+class ReadingContentBaselineResponse(BaseModel):
+    conversation_id: UUID
+    captured_at: datetime
+    message_count: int
+
+
 class ReadingPositionSyncRequest(BaseModel):
     operation_id: UUID
     base_revision: int = Field(ge=0)

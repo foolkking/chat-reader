@@ -1,25 +1,50 @@
 # Testing
 
-## Fourth full CI and failed deployment — 2026-10-30
+## Completion follow-up — 2026-10-30 (not released)
 
-Exact `a8ee7c4e7aca42671e8e628bc5c9c0608dde747b` passed all five jobs in
-`40980409615`. Dispatch was **08:33:16 +08:00**; first result read was
-**09:23:22**, after 50 minutes; the complete five-job check was **09:36:09**.
-API passed **5,924 / three skipped**; settings **463 plus one independent
-restore**. Web passed **1,856 UX**, and adaptive/CSP/Context/focused/Share/
-mutation/cleanup/upload/Markdown/PDF/default PWA/auth/negative browser gates
-passed **9/4/36/45/2/110/6/18/31/13/171/18/19** respectively.
-These are CI results, not authenticated production UI acceptance.
+New focused API tests cover no-side-effect scoped previews, frozen source edits
+and deletes, snapshot locator/scope/revoke/expiry/reclamation, unsupported options
+and attachments, explicit identity baselines including 1,000-row boundaries,
+private normalized tags, offline tag projection/revision and title lookup scope.
+Reader Escape tests now inject the new utility callback into the real-handler
+harness and cover tags/updates plus IME; no guard or assertion was removed.
+Comparison browser fixtures now return genuine paged index/TOC contracts rather
+than conversation details for those endpoints. The initial run had 7 passes and
+2 fixture-shape failures; it is not counted as a pass. Final results and fresh CI
+receipts belong in the implementation record. Earlier successful CI below only
+certifies `0d1efac`, not the new 0057/0058 source.
 
-Official artifact `12947655749` passed independent archive/OCI/source checks,
-but production replacement failed the strict Web startup-error gate.
-Automatic application recovery completed **10:11:24 +08:00**; schema remains
-0056 and the old apps are healthy. Original failing container error lines were
-not saved, so a later synthetic Server Reference ID reproduction is evidence
-of an unnecessary page-action surface, not proof of the sole original cause.
-The repair passes lint/typecheck/build, **1,863 UX** (including seven actual-proxy
-policy tests) and **one mounted HTTP page-method case**;
-no existing zero-error, authentication, API or full-release gate is waived.
+Final local follow-up: lint, typecheck and production build passed; UX tests
+passed **1,865/1,865**; `web-opportunity-features.spec.ts` passed **9/9**
+(including independent 375/1440px comparison panes). The focused API selection
+passed **84 with 4 conditional skips** in 158.24 seconds; Alembic has one head,
+`20261030_0058`. These focused checks do not replace full PostgreSQL/PWA CI.
+The pre-existing buildinfo was restored byte-for-byte and remains excluded.
+
+## Fifth full CI and accepted deployment — 2026-10-30
+
+Exact `0d1efacaa8145dff0c8c70ceda82460af5883854` passed all five jobs in
+`40992509041`, attempt 1. It was dispatched at **02:34:47Z**, first read at
+**03:24:47Z** after the required 50-minute wait, and all five jobs were green
+by **03:36:35Z**. API passed **5,924 / 3 skipped**; settings **463 plus one
+independent restore**; Web passed **1,863/1,863 UX** and all adaptive/CSP/
+Context/focused/Share/mutation/cleanup/upload/Markdown/PDF/default-PWA/auth/
+negative gates. The image and independent artifact jobs also passed.
+
+Artifact `12952232763` matched its GitHub digest; ZIP SHA-256 is
+`1aced2fef34f87d9886a34c8445bf3fe4267474edc24416aa7392322734d0730`.
+Independent artifact checks passed 35 blobs, 23 layers, 346 embedded API files,
+exact Web revision and forbidden-path checks. Production acceptance completed at
+**04:01:19Z** after maintenance **03:51:39–04:01:19Z**. The new backup
+`chat-reader-20261030T035153Z` was independently rehashed; schema stayed at
+`20261030_0056`, with current/direct rollback `0d1efac`/`f8a6a06` and older
+protected set `b4effda`.
+
+The independent recheck at **04:35:55Z** passed health, exact images, release
+state, PostgreSQL/config/Nginx invariants, HTTPS/denial/privacy, 50 page-method
+probes, zero startup error keywords and zero new OOM. This does not claim
+authenticated production UI, physical clipboard, sustained load or restore-drill
+acceptance. The previous failed replacement and its recovery remain historical.
 
 ## Two-round Web features — 2026-10-30 local integration
 
@@ -38,14 +63,15 @@ lineage pagination, transient lookup recovery and Quick Actions focus/IME/
 keyboard behavior. Final reruns are recorded below; the earlier counts are not evidence
 for these later changes. New PostgreSQL tests use explicitly selected disposable
 databases, including different-ID duplicate additions and the final capacity slot.
-Schema head is expected to be `20261030_0056`; migration application, complete
-PostgreSQL and full PWA acceptance remain the unchanged exact-source CI gate.
+Schema head is `20261030_0056`; complete PostgreSQL, full PWA and artifact gates
+were certified by exact-source CI `40992509041`, followed by production acceptance.
 
 One attempted local `test:pwa` run lacked `APP_ENV=test` and backend services:
 its authentication/proxy failures caused interruption, not product acceptance.
 Mocked browser runs explicitly set test mode and do not replace real-service CI.
 No authenticated production UI, physical clipboard, target spreadsheet, load
-test, original user's offline network trace or production deployment is claimed.
+test or original user's offline network trace is claimed; production deployment
+acceptance is owned by the release record above.
 The user requires waiting 50 minutes after each CI dispatch before inspecting
 that run; failure diagnosis is followed by a fresh exact-source run and wait.
 
@@ -60,7 +86,7 @@ Final local receipts:
 | Duplicate review API file | **2 passed** after moving group pagination/counts into SQL. |
 | Alembic heads | Sole head **`20261030_0056`**; this is not production migration evidence. |
 | Full local API (earlier collected source) | **5,724 passed / 192 conditional skips / 2 failed**, 4,772.10 seconds. Module-import-time lease-test clocks expired before execution; fixed to per-case clocks and focused files reran successfully. Not a full final-source pass. |
-| New PostgreSQL concurrency / full real-service PWA / CI | Pending exact-source CI; no local acceptance claim. |
+| New PostgreSQL concurrency / full real-service PWA / CI | Certified in exact-source CI `40992509041`; local-only rows above remain local evidence. |
 
 First full CI `40956346174`, exact `bb5d4f4`, was first read at
 2026-10-30 06:06:22 +08:00 after its 50-minute gate. API **5,924 passed /

@@ -1,11 +1,18 @@
 from datetime import date, datetime
 from typing import Literal
 import uuid
+import unicodedata
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
-FeatureCollection = Literal["saved-search", "export-preset", "reading-list", "offline-checklist"]
+FeatureCollection = Literal[
+    "saved-search",
+    "export-preset",
+    "reading-list",
+    "offline-checklist",
+    "conversation-tag",
+]
 SearchDocumentType = Literal["all", "conversation", "message", "heading", "code", "annotation", "attachment"]
 SearchRole = Literal["all", "user", "assistant"]
 SearchStatusScope = Literal["active", "archived", "all"]
@@ -53,7 +60,7 @@ class ExportPresetValue(BaseModel):
     @field_validator("name", mode="before")
     @classmethod
     def trim_name(cls, value):
-        return value.strip() if isinstance(value, str) else value
+        return unicodedata.normalize("NFC", value).strip() if isinstance(value, str) else value
 
 
 class ReadingListValue(BaseModel):
@@ -87,6 +94,24 @@ class OfflineChecklistValue(BaseModel):
         keys = [(item.scope, item.id) for item in self.targets]
         if len(keys) != len(set(keys)):
             raise ValueError("targets must be unique.")
+        return self
+
+
+class ConversationTagValue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=40)
+    conversation_ids: list[uuid.UUID] = Field(default_factory=list, max_length=2000)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def trim_name(cls, value):
+        return unicodedata.normalize("NFC", value).strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def unique_conversations(self):
+        if len(self.conversation_ids) != len(set(self.conversation_ids)):
+            raise ValueError("conversation_ids must be unique.")
         return self
 
 

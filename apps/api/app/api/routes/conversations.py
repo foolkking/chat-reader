@@ -3,7 +3,7 @@ import json
 import uuid
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Request, status
-from sqlalchemy import case, func, text
+from sqlalchemy import case, func, or_, text
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
@@ -160,6 +160,7 @@ def list_conversations(
     offset: int = Query(default=0, ge=0),
     source_type: str | None = None,
     source_profile: str | None = None,
+    q: str = Query(default="", max_length=200),
     include_archived: bool = False,
     status_scope: str | None = Query(default=None, pattern="^(active|archived|all)$"),
     scope: str = Query(default="all", pattern="^(all|history)$"),
@@ -180,6 +181,11 @@ def list_conversations(
             selectinload(Conversation.project_links).selectinload(ProjectConversation.project),
         )
     )
+    if q.strip():
+        query = query.filter(or_(
+            Conversation.display_title.icontains(q.strip(), autoescape=True),
+            Conversation.title.icontains(q.strip(), autoescape=True),
+        ))
     if status_scope == "active":
         query = query.filter(Conversation.status == "active", Conversation.deleted_at.is_(None))
     elif status_scope == "archived":

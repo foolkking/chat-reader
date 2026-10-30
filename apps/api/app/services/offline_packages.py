@@ -25,6 +25,7 @@ from app.models.project_conversation import ProjectConversation
 from app.models.reading_position import ReadingPosition
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
+from app.models.user_feature_entry import UserFeatureEntry
 from app.models.import_record import utc_now
 from app.schemas.offline import (
     OfflineCatalogConversation,
@@ -470,6 +471,7 @@ def _write_conversation_payload(
         "project_name": project_name,
         "project_context": _project_context(db, conversation.id),
         "continuation": offline_continuation(db, conversation.id),
+        "tags": _offline_conversation_tags(db, conversation.id, subject_key),
     }
 
     output.write(b"{")
@@ -552,6 +554,20 @@ def _write_conversation_payload(
     if progress_callback:
         progress_callback("packaging_attachments", 1, 1)
     output.write(b"}")
+
+
+def _offline_conversation_tags(db: Session, conversation_id: uuid.UUID, subject_key: str) -> list[str]:
+    """Carry account-owned tag names with a package without changing v1/v2/v3 shape."""
+    result: list[str] = []
+    for row in db.query(UserFeatureEntry).filter(
+        UserFeatureEntry.subject_key == subject_key,
+        UserFeatureEntry.collection == "conversation-tag",
+    ).all():
+        value = row.value if isinstance(row.value, dict) else {}
+        ids = value.get("conversation_ids") if isinstance(value.get("conversation_ids"), list) else []
+        if str(conversation_id) in {str(item) for item in ids} and isinstance(value.get("name"), str):
+            result.append(value["name"])
+    return sorted(set(result), key=str.casefold)
 
 
 def _write_message_batch(

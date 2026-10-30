@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.schemas.message import DialogueIndexResponse, LocatorTargetRequest, ReaderTurnResponse, RenderBlockRead, ResolvedLocatorResponse
 from app.schemas.search import MessageWindowResponse
 from app.schemas.annotation import AnnotationRead, NotebookRead
-from app.schemas.share import ShareCreate, ShareCreateResponse, ShareRead, ShareRevokeResponse, ShareUnlockInput, ShareUnlockResponse, ShareUpdate, SharedConversationBootstrap
+from app.schemas.share import ShareCreate, ShareCreateResponse, SharePreviewResponse, ShareRead, ShareRevokeResponse, ShareUnlockInput, ShareUnlockResponse, ShareUpdate, SharedConversationBootstrap
 from app.schemas.share import OwnedSharePage, ShareBatchResult, ShareBatchRevokeInput, ShareBatchRevokeResponse
 from app.schemas.toc import TocResponse
 from app.services.sharing.share_service import (
@@ -28,6 +28,8 @@ from app.services.sharing.share_service import (
     list_owned_shares,
     get_owned_share,
     revoke_share,
+    preview_share,
+    resolve_frozen_locator,
     share_create_response,
     share_read,
     SHARE_UNLOCK_COOKIE_NAME,
@@ -41,6 +43,32 @@ from app.services.reader_locator import resolve_reader_locator
 from app.services.ownership import ownership_scope_from_request
 
 router = APIRouter(tags=["shares"])
+
+
+@router.post(
+    "/api/conversations/{conversation_id}/shares/preview",
+    response_model=SharePreviewResponse,
+)
+def preview_conversation_share(
+    conversation_id: uuid.UUID,
+    payload: ShareCreate,
+    request: Request,
+    response: Response,
+    anchor_message_id: uuid.UUID | None = None,
+    db: Session = Depends(get_db),
+) -> SharePreviewResponse:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return preview_share(
+            db,
+            conversation_id,
+            payload,
+            ownership_scope_from_request(request),
+            anchor_message_id=anchor_message_id,
+        )
+    except ShareError as exc:
+        db.rollback()
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)} if exc.code else str(exc)) from exc
 
 
 @router.get("/api/shares", response_model=OwnedSharePage)
@@ -91,7 +119,7 @@ def create_conversation_share(
         return share_create_response(result)
     except ShareError as exc:
         db.rollback()
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)} if exc.code else str(exc)) from exc
 
 
 @router.get("/api/conversations/{conversation_id}/shares", response_model=list[ShareRead])
@@ -243,6 +271,8 @@ def resolve_shared_locator_route(
     """Resolve a locator without widening the share's message scope."""
     try:
         share = _get_accessible_share(db, token, request.cookies.get(SHARE_UNLOCK_COOKIE_NAME))
+        if share.content_mode == "frozen":
+            return ResolvedLocatorResponse(**resolve_frozen_locator(share, payload, db=db))
         _ensure_shared_message(db, share, payload.message_id)
         return resolve_reader_locator(db, share.conversation_id, payload)
     except ShareError as exc:

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.routes.conversations import _conversation_item
@@ -8,6 +8,8 @@ from app.core.database import get_db
 from app.models.reading_position import ReadingPosition
 from app.models.recent_item import RecentItem
 from app.schemas.reading import (
+    ReadingContentBaselineResponse,
+    ReadingContentChangesResponse,
     ReadingPositionRead,
     ReadingPositionResponse,
     ReadingPositionUpsert,
@@ -27,8 +29,63 @@ from app.services.reading.reading_service import (
     ReadingSyncReplayError,
 )
 from app.services.ownership import ownership_scope_from_request, subject_key_from_request
+from app.services.reading_content import (
+    ReadingContentError,
+    capture_reading_content_baseline,
+    get_new_message_changes,
+)
 
 router = APIRouter(tags=["reading"])
+
+
+@router.get(
+    "/api/conversations/{conversation_id}/new-messages",
+    response_model=ReadingContentChangesResponse,
+)
+def get_new_messages(
+    conversation_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    limit: int = Query(default=50, ge=1, le=100),
+    db: Session = Depends(get_db),
+) -> ReadingContentChangesResponse:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return get_new_message_changes(
+            db,
+            conversation_id,
+            subject_key=subject_key_from_request(request),
+            ownership_scope=ownership_scope_from_request(request),
+            limit=limit,
+        )
+    except ReadingContentError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post(
+    "/api/conversations/{conversation_id}/new-messages/baseline",
+    response_model=ReadingContentBaselineResponse,
+)
+def put_new_message_baseline(
+    conversation_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+) -> ReadingContentBaselineResponse:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        result = capture_reading_content_baseline(
+            db,
+            conversation_id,
+            subject_key=subject_key_from_request(request),
+            ownership_scope=ownership_scope_from_request(request),
+        )
+        db.commit()
+        return result
+    except ReadingContentError as exc:
+        db.rollback()
+        status_code = status.HTTP_413_REQUEST_ENTITY_TOO_LARGE if "too large" in str(exc) else status.HTTP_404_NOT_FOUND
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.post("/api/conversations/{conversation_id}/reading-position/sync", response_model=ReadingPositionSyncResponse)

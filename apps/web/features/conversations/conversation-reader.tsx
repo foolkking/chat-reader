@@ -4,7 +4,7 @@ import { releaseExportScope } from "../../lib/export-usage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitBranch, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitBranch, GitCompareArrows, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, Tag, X } from "lucide-react";
 import {
   ApiRequestError,
   deleteMessage,
@@ -50,6 +50,8 @@ import { useInteractionDialog } from "../../components/interaction-dialog-provid
 import { AnnotationWorkspace } from "../annotations/annotation-workspace";
 import { ReadingPositionSyncStatus } from "../../components/reading-position-sync-status";
 import { ReadingListButton } from "../reading/reading-list-button";
+import { ConversationTagsPanel } from "../reading/conversation-tags-panel";
+import { NewMessagesPanel } from "../reading/new-messages-panel";
 import { ConversationSplitWorkspace } from "../editing/conversation-split-workspace";
 import { offlineAnnotationRepository, remoteAnnotationRepository } from "../../lib/annotation-repository";
 import { ResizableDockPanel } from "../../components/resizable-pane";
@@ -180,6 +182,8 @@ export function ConversationReader({
   }, [router, searchQueueId, searchQueueIndex, searchQueueOwnerId]);
   const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
   const [showShare, setShowShare] = useState(false);
+  const [showTags, setShowTags] = useState(false);
+  const [showUpdates, setShowUpdates] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const requestedContinuation = searchParams?.get("continuation");
   const [continuationOpen, setContinuationOpen] = useState(requestedContinuation === "current" || requestedContinuation === "index");
@@ -264,7 +268,7 @@ export function ConversationReader({
     error?: string;
   } | null>(null);
   const desktopUtilityOpenerRef = useRef<HTMLElement | null>(null);
-  const desktopUtilityPanelRef = useRef<"search" | "share" | "export" | null>(null);
+  const desktopUtilityPanelRef = useRef<ReaderUtilityPanel>(null);
   const navigationOpenerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -2433,12 +2437,14 @@ export function ConversationReader({
       desktopUtilityOpenerRef.current = document.activeElement;
       desktopUtilityPanelRef.current = panel === "files" ? null : panel;
     }
-    const alreadyOpen = panel === "search" ? showSearch : panel === "share" ? showShare : panel === "export" ? showExport : showFiles;
+    const alreadyOpen = panel === "search" ? showSearch : panel === "share" ? showShare : panel === "export" ? showExport : panel === "tags" ? showTags : panel === "updates" ? showUpdates : showFiles;
     if (alreadyOpen) {
       releaseExportScope(`export:${conversationId}`);
       setShowSearch(false);
       setShowShare(false);
       setShowExport(false);
+      setShowTags(false);
+      setShowUpdates(false);
       setShowFiles(false);
       setUtilityPanel(null);
       return;
@@ -2453,6 +2459,8 @@ export function ConversationReader({
       setShowExport(false);
       setShowSearch(false);
       setShowFiles(false);
+      setShowTags(false);
+      setShowUpdates(false);
       setUtilityPanel(panel);
       return;
     }
@@ -2461,7 +2469,9 @@ export function ConversationReader({
     setShowExport(panel === "export");
     setShowSearch(panel === "search");
     setShowFiles(panel === "files");
-  }, [conversationId, closeSourceEditorForWorkspace, setUtilityPanel, showExport, showFiles, showSearch, showShare]);
+    setShowTags(panel === "tags");
+    setShowUpdates(panel === "updates");
+  }, [conversationId, closeSourceEditorForWorkspace, setUtilityPanel, showExport, showFiles, showSearch, showShare, showTags, showUpdates]);
 
   const refreshAttachmentReferences = useCallback(async () => {
     setNavigationStatus("idle");
@@ -2475,6 +2485,8 @@ export function ConversationReader({
     setShowExport(false);
     setShowSearch(false);
     setShowFiles(false);
+    setShowTags(false);
+    setShowUpdates(false);
   }, [conversationId]);
 
   const restoreDesktopUtilityFocus = useCallback(() => {
@@ -2608,12 +2620,13 @@ export function ConversationReader({
     const closeTopSurface = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
       if (utilityPanel !== null) { if (utilityPanel === "export") releaseExportScope(`export:${conversationId}`); setUtilityPanel(null); event.preventDefault(); return; }
+      if (showShare || showExport || showSearch || showTags || showUpdates) { closeDesktopUtilityPanels(); event.preventDefault(); return; }
       if (showFiles) { setShowFiles(false); event.preventDefault(); return; }
       if (mobileActionsExpanded || desktopActionsExpanded) { setMobileActionsExpanded(false); setDesktopActionsExpanded(false); event.preventDefault(); }
     };
     window.addEventListener("keydown", closeTopSurface);
     return () => window.removeEventListener("keydown", closeTopSurface);
-  }, [conversationId, desktopActionsExpanded, mobileActionsExpanded, setUtilityPanel, showExport, showFiles, showSearch, showShare, utilityPanel]);
+  }, [closeDesktopUtilityPanels, conversationId, desktopActionsExpanded, mobileActionsExpanded, setUtilityPanel, showExport, showFiles, showSearch, showShare, showTags, showUpdates, utilityPanel]);
 
   async function openNavigation(tab: "dialogue" | "sections", opener?: HTMLElement | null) {
     if (!(await closeSourceEditorForWorkspace())) return;
@@ -2789,6 +2802,24 @@ export function ConversationReader({
       label: t("share"),
       icon: Share2,
       onSelect: () => { void openUtilityPanel("share"); },
+    } as ReaderHeaderAction] : []),
+    ...(dataSource.mode === "remote" || dataSource.mode === "offline" ? [{
+      id: "tags",
+      label: resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags",
+      icon: Tag,
+      onSelect: () => { void openUtilityPanel("tags"); },
+    } as ReaderHeaderAction] : []),
+    ...(dataSource.mode === "remote" ? [{
+      id: "updates",
+      label: resolvedLocale === "zh-CN" ? "新增消息" : "New messages",
+      icon: Bell,
+      onSelect: () => { void openUtilityPanel("updates"); },
+    } as ReaderHeaderAction] : []),
+    ...(dataSource.mode === "remote" ? [{
+      id: "compare",
+      label: resolvedLocale === "zh-CN" ? "对照阅读" : "Compare conversation",
+      icon: GitCompareArrows,
+      onSelect: () => router.push(`/compare?left=${encodeURIComponent(conversation.id)}`),
     } as ReaderHeaderAction] : []),
     ...(dataSource.capabilities.export ? [{
       id: "export",
@@ -3256,16 +3287,24 @@ export function ConversationReader({
       <MobileReaderSheet open={utilityPanel === "files" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} initialAttachmentId={fileSearchAttachmentId} searchReplayKey={searchReplayKey} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} initialAttachmentId={fileSearchAttachmentId} searchReplayKey={searchReplayKey} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} />}
       </MobileReaderSheet>
-      {!focusMode && (showShare || showExport || showSearch) ? (
-        <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : t("export")} onClose={closeDesktopUtilityPanels} restoreFocus={restoreDesktopUtilityFocus}>
+      {!focusMode && (showShare || showExport || showSearch || showTags || showUpdates) ? (
+        <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : showTags ? (resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags") : showUpdates ? (resolvedLocale === "zh-CN" ? "新增消息" : "New messages") : t("export")} onClose={closeDesktopUtilityPanels} restoreFocus={restoreDesktopUtilityFocus}>
             <div className="flex h-full min-w-0 w-full overflow-hidden">
-              {showSearch ? <ConversationSearchPanel active={!sourceEditorTarget} conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} onPrepareRetry={onPrepareSearchRetry} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : t("export")} closeLabel={t("close")} onClose={() => { setShowShare(false); setShowExport(false); }}>
+              {showSearch ? <ConversationSearchPanel active={!sourceEditorTarget} conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} onPrepareRetry={onPrepareSearchRetry} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : showTags ? (resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags") : showUpdates ? (resolvedLocale === "zh-CN" ? "新增消息" : "New messages") : t("export")} closeLabel={t("close")} onClose={closeDesktopUtilityPanels}>
                 {showShare ? <SharePanel conversationId={conversation.id} selectedMessageIds={selectedIds} /> : null}
+                {showTags ? <ConversationTagsPanel conversationId={conversation.id} offline={dataSource.mode === "offline"} /> : null}
+                {showUpdates ? <NewMessagesPanel conversationId={conversation.id} onNavigate={(messageId) => { setShowUpdates(false); void navigateToTarget({ messageId, source: "message-action" }); }} /> : null}
                 {showExport ? dataSource.mode === "offline" ? <OfflineExportPanel conversationId={conversation.id} /> : <ExportPanel stateRef={exportPanelState} sourceRevision={conversation.offline_revision} conversationId={conversation.id} selectedMessageIds={selectedIds} readingStartMessageId={activeMessageId} onOpenContinuation={() => { releaseExportScope(`export:${conversationId}`); setShowExport(false); setUtilityPanel(null); setContinuationGuideRequested(true); setContinuationOpen(true); }} /> : null}
               </ReaderPanelShell>}
             </div>
         </ReaderUtilityDrawer>
       ) : null}
+      <MobileReaderSheet open={utilityPanel === "tags" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
+        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto"><ConversationTagsPanel conversationId={conversation.id} offline={dataSource.mode === "offline"} /></div>
+      </MobileReaderSheet>
+      <MobileReaderSheet open={utilityPanel === "updates" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "新增消息" : "New messages"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "新增消息" : "New messages"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
+        <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto"><NewMessagesPanel conversationId={conversation.id} onNavigate={(messageId) => { setUtilityPanel(null); void navigateToTarget({ messageId, source: "message-action" }); }} /></div>
+      </MobileReaderSheet>
       {!focusMode && showFiles ? (
         <FloatingWorkspacePanel
           storageKey="chat-reader:conversation-files-workspace-floating-v2"

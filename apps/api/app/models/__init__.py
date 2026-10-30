@@ -41,10 +41,12 @@ from app.models.offline_package_lease import OfflinePackageLease
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.reading_position import ReadingPosition
+from app.models.reading_content_baseline import ReadingContentBaseline, ReadingContentBaselineMessage
 from app.models.recent_item import RecentItem
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
 from app.models.share import Share, ShareUnlockSession
+from app.models.share_snapshot import ShareSnapshot
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.models.user_preference import UserPreference
@@ -108,11 +110,14 @@ __all__ = [
     "Project",
     "ProjectConversation",
     "ReadingPosition",
+    "ReadingContentBaseline",
+    "ReadingContentBaselineMessage",
     "RecentItem",
     "RenderBlock",
     "SearchDocument",
     "Share",
     "ShareUnlockSession",
+    "ShareSnapshot",
     "SourceArtifact",
     "SourceMessageRef",
     "UserPreference",

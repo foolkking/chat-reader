@@ -1,23 +1,26 @@
 # Markdown 文档台账
 
-## 第四轮 CI 与失败部署恢复 — 2026-10-30
+## 累计功能补齐 — 2026-10-30（待发布）
+
+`PROJECT_STATE.md`／`index.md`／execution 入口区分新源码与 `0d1efac` 生产；
+执行记录负责 24 项状态、回归和新发布回执；`system/DATA_AND_STORAGE.md` 负责
+0057/0058、标签和冻结生命周期；`api-reference.md` 负责新增入口；
+`system/USER_FLOWS.md` 与 PWA 合同负责对照／基线／离线标签；testing 与部署
+文档维护验收和回退边界。旧的 19／5 结论仅属于前次已发布检查点。
+
+## 两轮 Web 功能发布验收 — 2026-10-30
 
 | 文档 | 当前职责 |
 | --- | --- |
-| `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 第四轮五项成功、独立制品、四组旧镜像清理、停写备份、0056 升级、Web 日志失败与自动恢复；去除重复第三轮章节，不把候选或修复假设当作验收。 |
-| `PROJECT_STATE.md`、`index.md`、`execution/README.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前应用 f8a6a06／直接回退 b4effda，但数据库已为 0056；下一次新鲜 CI／50 分钟／停写备份，不重复升级或自动降级。 |
-| `testing.md`、`system/AUTHENTICATION_CONTRACT.md` | 精确 CI 证据和页面 GET/HEAD／API 写入边界；保留原失败日志缺失、生产认证 UI 与物理设备未验收的限制。 |
+| `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 24 项逐项处置、19 项已发布有界功能、5 项未实施合同缺口、离线租约修复、CI `40992509041`、制品、停写备份、部署和独立复核。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前生产 `0d1efac`／直接回退 `f8a6a06`／较旧保护集 `b4effda`，schema `0056`；保留历史失败替换但不当作当前状态。 |
+| `testing.md` | 最终 CI 五项门禁、测试计数、此前失败修复及未声称的真实设备／认证 UI／负载边界。 |
+| `system/DATA_AND_STORAGE.md`、`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 已发布的 0054→0056 数据生命周期、离线短租约和 v1/v2/v3、Dexie v2 兼容合同。 |
 
-## 两轮 Web 功能候选实施 — 2026-10-30（进行中）
+## 两轮 Web 功能候选实施 — 2026-10-30（已发布）
 
-| 文档 | 当前职责 |
-| --- | --- |
-| `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 24 项逐项处置：19 项有界源码、5 项未实施合同缺口；离线响应租约、复核修复及真实验证记录，不冒充生产故障归因或发布验收。 |
-| `testing.md` | 当前本地 UX／浏览器／ASGI／API、两次 CI 失败根因及重复 portal、移动菜单修复回归，保留各检查点边界。 |
-| `system/BACKEND_AND_API.md`、`api-reference.md` | 新账户配置、批注聚合、附件目录、严格重复候选、分页来源事件与下载租约接口。 |
-| `system/DATA_AND_STORAGE.md`、`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 0054→0056、CAS 与集合上限、账号隔离、短下载租约；不改变 `.cr`／离线包／Dexie。 |
-| `system/FEATURE_INVENTORY.md`、`system/USER_FLOWS.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 有界能力与交互、迁移和保留附加表的应用回退边界。 |
-| `PROJECT_STATE.md`、`index.md`、`execution/README.md` | 当前实施及待发布状态；历史检查点不覆盖当前验证。 |
+19 项有界功能已随 `0d1efac` 发布；WEB-05/08/11/21/22 仍需产品或数据
+合同，不计入已交付。执行记录保留完整证据和未完成边界。
 
 ## Web 功能候选第二轮 — 2026-10-30（仅审查）
 

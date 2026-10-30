@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.database import get_db
 from app.schemas.user_feature_entries import UserFeatureEntryRead, UserFeatureEntryWrite
-from app.services.ownership import subject_key_from_request
+from app.services.ownership import ownership_scope_from_request, subject_key_from_request
 from app.services.user_feature_entries import (
     UserFeatureEntryConflict,
     delete_entry,
@@ -49,6 +49,7 @@ def save_user_feature_entry(
             entry_id,
             payload.expected_revision,
             payload.value,
+            ownership_scope_from_request(request),
         )
         db.commit()
         return result
@@ -81,6 +82,7 @@ def remove_user_feature_entry(
             collection,
             entry_id,
             expected_revision,
+            ownership_scope_from_request(request),
         )
         db.commit()
     except UserFeatureEntryConflict as error:

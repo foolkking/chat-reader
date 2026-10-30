@@ -30,6 +30,7 @@ class Share(Base):
     include_annotations: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     include_notebook: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     allow_export: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    content_mode: Mapped[str] = mapped_column(Text, nullable=False, default="live", server_default="live")
     theme: Mapped[str] = mapped_column(Text, nullable=False, default="light")
     locale: Mapped[str] = mapped_column(Text, nullable=False, default="zh-CN")
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -46,7 +47,7 @@ class Share(Base):
     unlock_blocked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     conversation = relationship("Conversation")
-
+    snapshot = relationship("ShareSnapshot", back_populates="share", uselist=False, cascade="all, delete-orphan")
 
 Index("idx_shares_conversation_id", Share.conversation_id)
 Index("idx_shares_token_hash", Share.token_hash)

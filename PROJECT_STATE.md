@@ -4,30 +4,69 @@ Last updated: 2026-10-30. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Current production after failed replacement — 2026-10-30:**
-application/current/direct rollback is **f8a6a06 / f8a6a06 / b4effda**,
-but database schema is now **20261030_0056**, not 0053. Full CI
-**40980409615** passed all five jobs for **a8ee7c4**, after the required
-50-minute wait. Its independently verified official artifact was deployed,
-but the strict Web startup-log gate failed. Automatic recovery restored the
-old applications and markers at **10:11:24 +08:00**, without downgrading.
-Maintenance began at **09:59:26 +08:00** (11m58s). Services recovered healthy;
-PostgreSQL identity/start time, production configuration and canonical
-stopped-writer row counts were unchanged. The verified five-component backup
-**chat-reader-20261030T015946Z** and protected rollback images are retained.
-This is a failed deployment, not feature acceptance.
+**Active completion follow-up — 2026-10-30, not yet released:**
+WEB-05/08/11/21/22 now have bounded source implementations: no-side-effect
+visitor preview, independent read-only comparison, account tags and offline
+name snapshots, explicit message-identity baselines and text-only frozen shares.
+Source head is `20261030_0058`; production remains `0d1efac` at `0056` until
+fresh exact-source CI, artifact acceptance, backup, migration and deployment pass.
+These new server records are not portable `.cr` data. See
+[data contracts](docs/system/DATA_AND_STORAGE.md) and the
+[implementation record](docs/execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md).
+The older 19-delivered/5-missing statements below describe the accepted release,
+not this follow-up worktree.
 
-The original failed Web container's error lines were not retained before
-recreation. A synthetic page POST reproduces a Server Reference ID error on
-the old application too; rejected page POSTs occurred in the failure window,
-but this does not establish the unique cause. A page-method boundary now
-rejects non-GET/HEAD requests before action decoding; all `/api/*` methods and
-existing page authentication remain unchanged. Lint/typecheck/build, **1,863 UX**
-(including seven actual-proxy tests) and **one mounted HTTP regression** pass;
-a fresh full CI/wait/deployment is pending.
-There are still **19 bounded implemented candidates and five unimplemented
-contract gaps**, not 24 delivered features. See the
-[implementation/recovery record](docs/execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md).
+**Current production accepted — 2026-10-30:**
+Exact source **`0d1efacaa8145dff0c8c70ceda82460af5883854`** passed all five
+jobs in full CI **`40992509041`**, attempt 1. Dispatch was
+**2026-10-30 02:34:47Z**; the first permitted read was **03:24:47Z**
+after the required 50-minute wait, and all jobs were green by **03:36:35Z**.
+API passed **5,924 / 3 skipped**, settings **463 plus one independent restore**,
+and Web passed **1,863/1,863 UX** plus its adaptive/CSP/Context/focused/Share/
+mutation/cleanup/upload/Markdown/PDF/default-PWA/auth/negative gates. The
+build-images and inspect-release-artifact jobs also passed.
+
+Official artifact **`12952232763`** matched its GitHub digest; the downloaded
+ZIP SHA-256 is
+`1aced2fef34f87d9886a34c8445bf3fe4267474edc24416aa7392322734d0730`.
+Independent verification passed **35 blobs / 23 layers / 346 embedded API
+files**, exact compiled Web revision, and no forbidden paths. Production
+acceptance completed at **2026-10-30 04:01:19Z** after maintenance from
+**03:51:39Z**; the independent post-deployment recheck at **04:35:55Z** also
+passed. Current/direct rollback/older protected image sets are
+**`0d1efac` / `f8a6a06` / `b4effda`**. Schema is **`20261030_0056`**.
+
+The new stopped-writer five-component backup
+**`chat-reader-20261030T035153Z`** passed independent rehashing. API/Web/
+worker/PostgreSQL are healthy, all runtime revisions match the source, HTTPS/
+denial/privacy checks pass, 50 page-method probes return the bounded 405
+contract, startup error-keyword lines are **0**, new kernel OOM lines are **0**,
+and the host OOM counter is unchanged. PostgreSQL identity, canonical stopped-
+writer counts, production env/Compose/Nginx and rollback pointers are
+unchanged. Available disk at recheck was **3,547,288 KiB**. Authenticated
+production UI, physical clipboard, sustained load and an isolated restore drill
+remain unclaimed.
+
+**Two-round Web features and download protection — accepted in this release:**
+19 candidates have bounded source implementations: saved searches, annotation
+inbox, manual reading list, read-only version comparison, bounded print draft,
+explicit search-result batch archive, file directory, exact-hash duplicate
+review, export presets, quick actions, offline checklists, source citations,
+continuous search-hit reading, pasted-text import, table TSV/CSV, turn folding,
+event-backed lineage, title-trim preview and the synthetic example.
+WEB-05/08/11/21/22 remain explicitly unimplemented contract gaps: visitor
+projection, independent dual-Reader state, portable tags, genuine read-content
+baselines and frozen-share lifecycle. They are not represented by UI
+placeholders or counted as delivered features. The offline download fix protects
+a reproducible headers-to-file-open cleanup race with short transfer leases;
+the original user failure has no network trace, so its exact cause remains
+unproven. Existing Share URLs, `.cr`, offline package v1/v2/v3, Dexie v2 and
+local data remain compatible.
+
+The implementation record owns the 24-item disposition, CI history, artifact
+receipts, deployment gates and remaining product decisions. The historical
+source-only and failed-deployment paragraphs below retain their checkpoint
+meaning and do not override this current release state.
 
 **Search and Reader recovery — historical accepted release, 2026-10-29.**
 Exact **`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`** passed all five jobs in

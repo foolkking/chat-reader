@@ -29,11 +29,17 @@ def run_task_worker_forever(*, shutdown: WorkerShutdown | None = None) -> None:
     settings = get_settings()
     from pathlib import Path
     from app.services.export_retention import reclaim_exports
+    from app.services.sharing.share_service import reclaim_expired_frozen_snapshots
+
+    def run_maintenance():
+        reclaim_exports(SessionLocal, Path(settings.export_storage_dir))
+        reclaim_expired_frozen_snapshots(SessionLocal)
+
     # Same worker's bounded maintenance callback runs even during a long import.
     # It never claims/processes a second user job.
     reporter = WorkerHeartbeatReporter(
         interval_seconds=settings.worker_heartbeat_interval_seconds,
-        maintenance=lambda: reclaim_exports(SessionLocal, Path(settings.export_storage_dir)),
+        maintenance=run_maintenance,
     )
     try:
         reporter.start()

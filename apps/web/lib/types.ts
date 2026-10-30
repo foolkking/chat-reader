@@ -16,7 +16,7 @@ export type ConversationSortMode = "recent_read" | "updated" | "created" | "impo
 export type ProjectSortMode = "recent_read" | "updated" | "created" | "title" | "conversation_count" | "custom";
 export type DialogueIndexPanelState = "rail" | "preview" | "pinned";
 export type ReaderSidebarState = "collapsed" | "expanded";
-export type ReaderUtilityPanel = null | "navigation" | "search" | "share" | "export" | "files";
+export type ReaderUtilityPanel = null | "navigation" | "search" | "share" | "export" | "files" | "tags" | "updates";
 export type HeaderActionRailState = "collapsed" | "expanded";
 
 export type NeighborhoodExpansionState = {
@@ -49,7 +49,7 @@ export type UserPreferenceUpdate = Partial<Pick<UserPreferenceRead,
   "conversation_sort_direction" | "project_sort_mode" | "project_sort_direction" | "reader_default_focus" | "annotation_default_position"
 >>;
 
-export type UserFeatureCollection = "saved-search" | "export-preset" | "reading-list" | "offline-checklist";
+export type UserFeatureCollection = "saved-search" | "export-preset" | "reading-list" | "offline-checklist" | "conversation-tag";
 export type SavedSearchValue = {
   name: string;
   q: string;
@@ -78,6 +78,10 @@ export type OfflineChecklistValue = {
   name: string;
   targets: Array<{ scope: "conversation" | "project"; id: string }>;
   include_assets: "none" | "small" | "all";
+};
+export type ConversationTagValue = {
+  name: string;
+  conversation_ids: string[];
 };
 export type UserFeatureEntry<T> = {
   id: string;
@@ -949,6 +953,21 @@ export type SearchResponse = {
   /** Offline bounded lookahead can report a lower bound, not a full count. */
   total_is_exact?: boolean;
 };
+export type ReadingContentChangesResponse = {
+  conversation_id: string;
+  baseline_available: boolean;
+  baseline_captured_at: string | null;
+  new_message_count: number | null;
+  first_new_message_id: string | null;
+  items: Array<{ message_id: string; order_key: string; role: string; preview: string }>;
+  limit: number;
+  has_more: boolean;
+};
+export type ReadingContentBaselineResponse = {
+  conversation_id: string;
+  captured_at: string;
+  message_count: number;
+};
 
 export type SearchReindexResponse = {
   conversation_count: number;
@@ -1227,6 +1246,7 @@ export type ShareRead = {
   include_annotations: boolean;
   include_notebook: boolean;
   allow_export: boolean;
+  content_mode: "live" | "frozen";
   theme: ResolvedTheme;
   locale: ResolvedLocale;
   expires_at?: string | null;
@@ -1250,6 +1270,7 @@ export type ShareCreateInput = {
   include_annotations?: boolean;
   include_notebook?: boolean;
   allow_export?: boolean;
+  content_mode?: "live" | "frozen";
   expires_at?: string | null;
   theme?: ResolvedTheme | null;
   locale?: ResolvedLocale | null;
@@ -1329,6 +1350,18 @@ export type AnnotationRead = {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+};
+export type SharePreviewResponse = {
+  conversation: ConversationListItem;
+  message_count: number;
+  turn_count: number;
+  sampled_turn: ReaderTurnResponse | null;
+  has_previous_turn: boolean;
+  has_next_turn: boolean;
+  toc: TocResponse | null;
+  has_more_messages: boolean;
+  capabilities: Record<string, boolean>;
+  description_markdown: string | null;
 };
 
 export type AnnotationInboxItem = AnnotationRead & {

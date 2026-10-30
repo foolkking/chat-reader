@@ -41,6 +41,7 @@ export function ShareEditor({ share: initialShare, onSaved, onClose, onDirtyChan
   const { resolvedLocale } = usePreferences(), zh = resolvedLocale === "zh-CN";
   const { confirm } = useInteractionDialog(), client = useQueryClient();
   const [share, setShare] = useState(initialShare);
+  const frozen = share.content_mode === "frozen";
   const [needsReview, setNeedsReview] = useState(false), [latest, setLatest] = useState<ShareRead | null>(null);
   const backRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLElement>(null), errorFocus = useRef<string | null>(null);
@@ -92,6 +93,7 @@ export function ShareEditor({ share: initialShare, onSaved, onClose, onDirtyChan
 
   function requestError(failure: unknown, reading = false): string {
     if (failure instanceof ApiRequestError) {
+      if (failure.code === "FROZEN_SHARE_RECLAIMED") return zh ? "冻结内容已到期回收，不能重新启用；请返回来源对话创建新分享。" : "The expired snapshot has been reclaimed and cannot be re-enabled. Create a new share from the source conversation.";
       if (failure.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
       if (failure.status === 403) return zh ? "当前权限不允许此操作。你的修改仍保留，可返回列表查看或撤销分享。" : "Your current permissions do not allow this action. Your changes are retained; return to the list to view or revoke shares.";
       if (failure.status === 404) return zh ? "此分享已不存在或你已无权访问。你的修改仍保留，请返回列表确认。" : "This share no longer exists or is no longer accessible. Your changes are retained; return to the list to check.";
@@ -191,7 +193,8 @@ export function ShareEditor({ share: initialShare, onSaved, onClose, onDirtyChan
     </div>
     <fieldset disabled={busy} className="min-w-0 disabled:opacity-60" onChange={() => setError(null)}>
       <SettingsSection title={zh ? "分享内容" : "Shared content"} summary={zh ? `${scopeSummary} · 附加内容 ${extras.length} 项` : `${scopeSummary} · ${extras.length} extras included`} icon={<FileText className="h-5 w-5" />} open={section === "content"} onToggle={() => toggleSection("content")}>
-        <fieldset className="grid min-w-0 gap-3"><legend className="sr-only">{zh ? "分享内容范围" : "Content scope"}</legend>
+        {frozen ? <p className="mb-3 text-xs text-secondary">{zh ? "此分享使用冻结快照，内容范围与附加内容不可更改。可调整访问权限或外观；不同内容须创建新分享。" : "This share uses a frozen snapshot. Scope and included content cannot change. Edit access or appearance, or create a new share for different content."}</p> : null}
+        <fieldset disabled={frozen} className="grid min-w-0 gap-3 disabled:opacity-60"><legend className="sr-only">{zh ? "分享内容范围" : "Content scope"}</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             <Choice name="edit-share-scope" title={zh ? "整个对话" : "Entire conversation"} description={zh ? "分享这个对话中的全部消息。" : "Share every message in this conversation."} checked={scope === "conversation"} onChange={() => setScope("conversation")} />
             <Choice name="edit-share-scope" title={zh ? "仅所选消息" : "Selected messages only"} description={zh ? "挑选需要分享的消息，其余内容保持私密。" : "Choose messages to share. Keep the rest private."} checked={scope === "selected_messages"} onChange={() => setScope("selected_messages")} />
@@ -230,7 +233,7 @@ export function ShareEditor({ share: initialShare, onSaved, onClose, onDirtyChan
           </select></label>
           {expiryPreset === "custom" ? <label className="mt-3 block text-sm text-secondary">{zh ? "到期时间（留空为永久）" : "Expiry (empty means never)"}<input type="datetime-local" className={control} value={expires} onChange={(e) => setExpires(e.target.value)} /></label> : null}
           <p className="mt-2 text-xs leading-5 text-secondary">{zh ? "到期后链接停止访问，对话原文仍然保留。" : "The link stops working when it expires. Your conversation stays intact."}</p></div>
-          <label className="flex min-h-11 items-center justify-between gap-4 border-t border-ui pt-4"><span><span className="block text-sm font-medium text-primary">{flagLabels[5]}</span><span className="mt-1 block text-xs leading-5 text-secondary">{zh ? "允许访客下载分享范围内的内容副本。" : "Let visitors download a copy of the shared content."}</span></span><input type="checkbox" className="h-4 w-4 shrink-0 accent-[var(--accent)]" aria-label={flagLabels[5]} checked={options.allow_export} onChange={(e) => setOptions((value) => ({ ...value, allow_export: e.target.checked }))} /></label>
+          <label className="flex min-h-11 items-center justify-between gap-4 border-t border-ui pt-4"><span><span className="block text-sm font-medium text-primary">{flagLabels[5]}</span><span className="mt-1 block text-xs leading-5 text-secondary">{zh ? "允许访客下载分享范围内的内容副本。" : "Let visitors download a copy of the shared content."}</span></span><input type="checkbox" disabled={frozen} className="h-4 w-4 shrink-0 accent-[var(--accent)]" aria-label={flagLabels[5]} checked={options.allow_export} onChange={(e) => setOptions((value) => ({ ...value, allow_export: e.target.checked }))} /></label>
         </div>
       </SettingsSection>
       <SettingsSection title={zh ? "链接外观" : "Link appearance"} summary={zh ? `${theme === "dark" ? "深色" : "浅色"} · ${locale === "zh-CN" ? "中文" : "English"} · 标题与说明` : `${theme === "dark" ? "Dark" : "Light"} · ${locale === "zh-CN" ? "中文" : "English"} · Title and description`} icon={<Palette className="h-5 w-5" />} open={section === "appearance"} onToggle={() => toggleSection("appearance")}>

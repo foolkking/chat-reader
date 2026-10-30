@@ -3,6 +3,48 @@ import { readFile } from "node:fs/promises";
 
 test.use({ serviceWorkers: "block" });
 
+for (const width of [375, 1440]) {
+  test(`comparison panes have independent complete turns and stay read-only at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const writes: string[] = [];
+    const reads: string[] = [];
+    await page.route("**/api/**", async route => {
+      const request = route.request(), path = new URL(request.url()).pathname;
+      if (request.method() !== "GET") writes.push(`${request.method()} ${path}`);
+      reads.push(path);
+      const side = path.includes("synthetic-left") ? "left" : "right";
+      const payload = path.endsWith("/reader-turn") ? {
+        conversation_id: `synthetic-${side}`, turn_key: "turn-1", start_offset: 0, end_offset: 1, total_messages: 2,
+        items: [{ id: `synthetic-${side}-message`, conversation_id: `synthetic-${side}`, role: "user", order_key: "a", turn_index: 0, block_count: 0, char_count: 0, is_heavy: false, current_version: null, render_blocks: [] }],
+        previous_anchor_message_id: null, next_anchor_message_id: `synthetic-${side}-next`,
+      } : path.endsWith("/dialogue-index") ? {
+        conversation_id: `synthetic-${side}`, items: [], message_count: 2, turn_count: 2,
+        limit: 80, offset: 0, total: 0, has_previous: false, has_more: false,
+      } : path.endsWith("/toc") ? {
+        conversation_id: `synthetic-${side}`, items: [], limit: 200, offset: 0, total: 0, has_more: false,
+      } : path.startsWith("/api/conversations/") ? {
+        id: `synthetic-${side}`, title: `Synthetic ${side}`, display_title: `Synthetic ${side}`,
+      } : [];
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+    });
+    await page.goto("/compare?left=synthetic-left&right=synthetic-right");
+    const left = page.getByRole("region", { name: "Left conversation", exact: true });
+    const right = page.getByRole("region", { name: "Right conversation", exact: true });
+    await expect(left.getByRole("heading", { name: "Synthetic left", exact: true })).toBeVisible();
+    if (width < 768) await page.getByRole("button", { name: "Right", exact: true }).click();
+    await expect(right.getByRole("heading", { name: "Synthetic right", exact: true })).toBeVisible();
+    await expect(right.getByRole("button", { name: "Next turn", exact: true })).toBeEnabled();
+    await expect.poll(() => reads.includes("/api/conversations/synthetic-left/reader-turn") && reads.includes("/api/conversations/synthetic-right/reader-turn")).toBe(true);
+    const roots = await page.locator("[data-reader-scroll-root]").evaluateAll(elements => elements.map(element => ({
+      overflow: getComputedStyle(element).overflowY, height: element.clientHeight,
+    })));
+    expect(roots).toHaveLength(2);
+    expect(roots.filter(root => root.height > 0).every(root => root.overflow === "auto")).toBe(true);
+    expect(writes).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
 for (const viewport of [
   { width: 375, height: 812, label: "mobile" },
   { width: 1440, height: 900, label: "desktop" },

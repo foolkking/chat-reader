@@ -380,6 +380,7 @@ type PackageConversation = Record<string, unknown> & {
   notebook: NotebookRead | null;
   reading_position: ReadingPositionRead | null;
   attachments?: OfflineAttachmentRecord[];
+  tags?: string[];
 };
 
 type OfflinePackagePayload = {
@@ -679,6 +680,9 @@ export async function importOfflinePackage(packageId: string, response: Response
         }
         const conversation = normalizeOfflineConversation(raw, now);
         conversation.offline_asset_mode = payload.asset_mode ?? (payload.version === 3 ? "all" : undefined);
+        if (Array.isArray(raw.tags)) {
+          await db.settings.put({ key: `conversation-tags:${raw.id}`, value: raw.tags });
+        }
         conversation.last_read_at = existingConversations.get(raw.id)?.last_read_at ?? conversation.last_read_at;
         await db.conversations.put(conversation);
         // Keep IndexedDB request batches bounded. Large exports can contain
@@ -845,6 +849,8 @@ async function removeOfflineConversationsUnlocked(conversationIds: string[], rev
         db.outbox.where("conversation_id").anyOf(conversationIds).delete(),
         db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("annotation-comment-draft:") || row.key.startsWith("continuation-draft:") || row.key.startsWith("reading-sync:"))
           && conversationIds.includes((row.value as { conversation_id: string }).conversation_id)).delete(),
+        db.settings.filter((row) => row.key.startsWith("conversation-tags:")
+          && conversationIds.includes(row.key.slice("conversation-tags:".length))).delete(),
       ]);
       const packages = await db.packages.toArray();
       for (const item of packages) {
@@ -933,6 +939,15 @@ export async function inspectOfflineCopyAssets(conversationId: string, mode: "no
 
 export async function clearOfflineAttachmentCache(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {
   return withOfflineDataWrite(() => clearOfflineAttachmentCacheUnlocked(conversationIds, reviewedFingerprint));
+}
+
+export async function getOfflineConversationTags(conversationId: string): Promise<string[]> {
+  const access = captureOfflineAccess();
+  const row = await offlineDb.settings.get(`conversation-tags:${conversationId}`);
+  assertOfflineAccess(access);
+  return Array.isArray(row?.value)
+    ? row.value.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 async function clearOfflineAttachmentCacheUnlocked(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {

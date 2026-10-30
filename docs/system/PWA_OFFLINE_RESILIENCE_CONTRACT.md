@@ -1,6 +1,15 @@
 # PWA and Offline Resilience Contract
 
-## Offline transfer and reading views — 2026-10-30 source
+## Account tag snapshots — 2026-10-30 source follow-up
+
+New v3 packages may contain optional conversation `tags: string[]`. They are
+read-only account-owned name snapshots, not another tag editor or authority.
+Tag membership/rename/delete increments affected offline revisions. Import is
+atomic with the package; v1/v2/v3 remain readable, missing tags do not erase an
+existing local snapshot, and deleting the offline conversation removes its tag
+settings. Dexie stays at version 2. No `.cr` shape or old local data is replaced.
+
+## Offline transfer and reading views — 2026-10-30 released
 
 Offline package downloads now acquire a persisted, short-lived transfer lease
 under the artifact row lock before returning the response. The ASGI response
@@ -43,7 +52,7 @@ language label or manual-copy recovery text is not canonical block content.
 Legacy quote/context recovery is retained; this is not a general proof of
 all Markdown-to-canonical text equivalence.
 No URL, package, Dexie, canonical identity or user-scroll semantics change.
-This source correction awaits complete CI; see the
+The exact source correction is included in the accepted `0d1efac` release; see the
 [verification boundary](../testing.md#searchrecovery-release-ci-correction--2026-10-28).
 
 ## Reader completeness and recoverability additions — 2026-10-28, source only

@@ -2,8 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useId, useRef, useState } from "react";
-import { ApiRequestError, createShare, getConversationShares, revokeShare, updateShare } from "../../lib/api";
-import type { ShareRead } from "../../lib/types";
+import { ApiRequestError, createShare, getConversationShares, previewShare, revokeShare, updateShare } from "../../lib/api";
+import type { SharePreviewResponse, ShareRead } from "../../lib/types";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
 
@@ -33,6 +33,7 @@ export function SharePanel({
   const [includeAnnotations, setIncludeAnnotations] = useState(false);
   const [includeNotebook, setIncludeNotebook] = useState(false);
   const [allowExport, setAllowExport] = useState(false);
+  const [contentMode, setContentMode] = useState<"live" | "frozen">("live");
   const [passwordProtected, setPasswordProtected] = useState(false);
   const [sharePassword, setSharePassword] = useState("");
   const [sharePasswordConfirm, setSharePasswordConfirm] = useState("");
@@ -41,6 +42,8 @@ export function SharePanel({
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [preview, setPreview] = useState<SharePreviewResponse | null>(null);
   const sharesQuery = useQuery({
     queryKey: ["shares", conversationId],
     queryFn: () => getConversationShares(conversationId),
@@ -87,6 +90,7 @@ export function SharePanel({
         include_annotations: includeAnnotations,
         include_notebook: includeNotebook,
         allow_export: allowExport,
+        content_mode: contentMode,
         expires_at: expiryValue(expiryMode, expiresAt),
         theme: shareTheme,
         locale: shareLocale,
@@ -98,6 +102,52 @@ export function SharePanel({
       setError(shareWriteError(failure, zh, "create"));
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function previewCurrentShare(anchorMessageId?: string) {
+    setError(null);
+    setExpiryError(null);
+    if (expiryMode === "custom") {
+      const validation = validateFutureExpiry(expiresAt);
+      if (!validation.ok) {
+        setExpiryError(zh ? validation.zh : validation.en);
+        expiryInputRef.current?.focus();
+        return;
+      }
+    }
+    if (passwordProtected && sharePassword.length < 12) {
+      setError(zh ? "分享密码至少需要 12 个字符。" : "Share passwords must be at least 12 characters.");
+      return;
+    }
+    if (passwordProtected && sharePassword !== sharePasswordConfirm) {
+      setError(zh ? "两次输入的分享密码不一致。" : "Share password confirmation does not match.");
+      return;
+    }
+    setIsPreviewing(true);
+    try {
+      const result = await previewShare(conversationId, {
+        title: title.trim() || null,
+        description: description.trim() || null,
+        scope: useSelection ? "selected_messages" : "conversation",
+        selected_message_ids: useSelection ? selectedMessageIds : [],
+        include_toc: includeToc,
+        include_metadata: includeMetadata,
+        include_description: includeDescription,
+        include_annotations: includeAnnotations,
+        include_notebook: includeNotebook,
+        allow_export: allowExport,
+        content_mode: contentMode,
+        expires_at: expiryValue(expiryMode, expiresAt),
+        theme: shareTheme,
+        locale: shareLocale,
+        share_password: passwordProtected ? sharePassword : null,
+      }, anchorMessageId);
+      setPreview(result);
+    } catch (failure) {
+      setError(shareWriteError(failure, zh, "preview"));
+    } finally {
+      setIsPreviewing(false);
     }
   }
 
@@ -152,7 +202,18 @@ export function SharePanel({
         </label> : null}
         {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={includeToc} onChange={(event) => setIncludeToc(event.target.checked)} />{zh ? "包含章节目录" : "Include section contents"}</label> : null}
         {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={includeMetadata} onChange={(event) => setIncludeMetadata(event.target.checked)} />{zh ? "包含元数据" : "Include metadata"}</label> : null}
-        {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={allowExport} onChange={(event) => setAllowExport(event.target.checked)} />{zh ? "允许导出" : "Allow export"}</label> : null}
+        {!compact ? <label className="flex items-center gap-2 text-sm text-primary"><input type="checkbox" checked={allowExport} disabled={contentMode === "frozen"} onChange={(event) => setAllowExport(event.target.checked)} />{zh ? "允许导出" : "Allow export"}</label> : null}
+        {!compact ? <fieldset className="grid gap-2 border-y border-ui py-3">
+          <legend className="px-1 text-xs font-semibold text-secondary">{zh ? "内容生命周期" : "Content lifecycle"}</legend>
+          <label className="flex items-start gap-2 text-sm text-primary">
+            <input type="radio" name={`share-content-mode-${conversationId}`} checked={contentMode === "live"} onChange={() => setContentMode("live")} />
+            <span><span className="block">{zh ? "跟随原文更新" : "Follow source updates"}</span><span className="block text-xs text-secondary">{zh ? "旧链接保持原有实时分享语义。" : "Existing live-share semantics are preserved."}</span></span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-primary">
+            <input type="radio" name={`share-content-mode-${conversationId}`} checked={contentMode === "frozen"} onChange={() => { setContentMode("frozen"); setIncludeAnnotations(false); setIncludeNotebook(false); setAllowExport(false); }} />
+            <span><span className="block">{zh ? "冻结本次内容" : "Freeze this content"}</span><span className="block text-xs text-secondary">{zh ? "冻结正文快照：最多 5,000 条／24 MiB，当前不含附件、批注、笔记或访客导出；撤销和到期仍有效。" : "Text snapshot: up to 5,000 messages / 24 MiB; attachments, annotations, notes and visitor export are not yet supported. Revoke and expiry still apply."}</span></span>
+          </label>
+        </fieldset> : null}
         <fieldset className="grid gap-2 border-y border-ui py-3">
           <legend className="px-1 text-xs font-semibold text-secondary">{zh ? "访问权限" : "Access"}</legend>
           <label className="flex items-center gap-2 text-sm text-primary"><input type="radio" name={`share-access-${conversationId}-${compact ? "compact" : "full"}`} checked={!passwordProtected} onChange={() => setPasswordProtected(false)} />{zh ? "任何拥有链接的人" : "Anyone with the link"}</label>
@@ -165,19 +226,25 @@ export function SharePanel({
         {!compact ? <fieldset className="grid gap-2 border-y border-ui py-3">
           <legend className="px-1 text-xs font-semibold text-secondary">{zh ? "私人内容（默认不分享）" : "Private content (not shared by default)"}</legend>
           <PrivacyToggle label={zh ? "包含对话说明" : "Include description"} checked={includeDescription} onChange={setIncludeDescription} />
-          <PrivacyToggle label={zh ? "包含批注" : "Include annotations"} checked={includeAnnotations} onChange={setIncludeAnnotations} />
-          <PrivacyToggle label={zh ? "包含精选笔记" : "Include notes"} checked={includeNotebook} onChange={setIncludeNotebook} />
+          <PrivacyToggle label={zh ? "包含批注" : "Include annotations"} checked={includeAnnotations} disabled={contentMode === "frozen"} onChange={setIncludeAnnotations} />
+          <PrivacyToggle label={zh ? "包含精选笔记" : "Include notes"} checked={includeNotebook} disabled={contentMode === "frozen"} onChange={setIncludeNotebook} />
         </fieldset> : null}
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        <button
-          type="button"
-          data-testid="create-share-button"
-          onClick={submit}
-          disabled={isCreating || (useSelection && selectedMessageIds.length === 0)}
-        className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          {isCreating ? t("creating") : t("createShare")}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => void previewCurrentShare()} disabled={isPreviewing || isCreating || (useSelection && selectedMessageIds.length === 0)} className="rounded-lg border border-ui px-3 py-2 text-sm font-medium text-primary disabled:opacity-45">
+            {isPreviewing ? (zh ? "正在预览…" : "Previewing…") : (zh ? "预览访客视角" : "Preview visitor view")}
+          </button>
+          <button
+            type="button"
+            data-testid="create-share-button"
+            onClick={submit}
+            disabled={isCreating || isPreviewing || (useSelection && selectedMessageIds.length === 0)}
+            className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            {isCreating ? t("creating") : t("createShare")}
+          </button>
+        </div>
+        {preview ? <SharePreviewCard preview={preview} zh={zh} onNavigate={(messageId) => void previewCurrentShare(messageId)} busy={isPreviewing} /> : null}
         {createdUrl ? (
           <div className="rounded-lg border border-ui bg-subtle p-3">
             <a
@@ -327,6 +394,7 @@ function ShareManagementRow({
         include_notebook: share.include_notebook,
         allow_export: share.allow_export,
         expires_at: share.expires_at ?? null,
+        content_mode: share.content_mode,
       });
       onCreatedUrl(response.share_url);
       if (!await onChanged()) setError(shareRefreshError(zh, "regenerate"));
@@ -344,6 +412,7 @@ function ShareManagementRow({
           <p className="truncate font-medium text-[#111827]">{share.title || share.token_prefix}</p>
           <p className="text-xs text-[#6b7280]">
             {share.scope === "selected_messages" ? (zh ? "所选消息" : "Selected messages") : (zh ? "整个对话" : "Conversation")} · {zh ? `${share.access_count} 次打开` : `${share.access_count} opens`}
+            {" · "}{share.content_mode === "frozen" ? (zh ? "冻结" : "frozen") : (zh ? "实时" : "live")}
             {share.revoked_at ? (zh ? " · 已撤销" : " · revoked") : ""}
           </p>
           {share.share_url ? (
@@ -441,7 +510,7 @@ function ShareManagementRow({
   );
 }
 
-type ShareWriteAction = "create" | "update" | "regenerate" | "revoke";
+type ShareWriteAction = "create" | "update" | "regenerate" | "revoke" | "preview";
 
 function shareRefreshError(zh: boolean, action: ShareWriteAction): string {
   if (action === "create") {
@@ -454,13 +523,38 @@ function shareRefreshError(zh: boolean, action: ShareWriteAction): string {
       ? "新链接已生成，但列表刷新失败。请刷新列表核对当前分享状态。"
       : "A new link was generated, but the list could not refresh. Refresh the list to verify the current share state.";
   }
+  if (action === "preview") {
+    return zh ? "预览结果未确认，请稍后重试。" : "The preview was not confirmed. Try again shortly.";
+  }
   return zh
     ? "操作已完成，但列表刷新失败。请刷新列表核对当前分享状态。"
     : "The action completed, but the list could not refresh. Refresh the list to verify the current share state.";
 }
 
+function SharePreviewCard({ preview, zh, onNavigate, busy }: { preview: SharePreviewResponse; zh: boolean; onNavigate: (messageId: string) => void; busy: boolean }) {
+  const turn = preview.sampled_turn;
+  return <div className="rounded-lg border border-ui bg-subtle p-3 text-sm" data-testid="share-preview">
+    <p className="font-medium text-primary">{zh ? "访客将看到的内容" : "What visitors will see"}</p>
+    <p className="mt-1 text-xs text-secondary">
+      {zh ? `${preview.message_count} 条消息，${preview.turn_count} 个轮次` : `${preview.message_count} messages, ${preview.turn_count} turns`}
+    {preview.message_count > 0 ? (zh ? " · 按完整轮次抽样核对" : " · inspect one complete turn at a time") : ""}
+    </p>
+    {preview.description_markdown ? <p className="mt-2 whitespace-pre-wrap text-xs text-secondary">{preview.description_markdown}</p> : null}
+    {turn ? <div className="mt-2 grid gap-2">{turn.items.map(item => <article key={item.id} className="rounded-md border border-ui bg-surface p-2"><p className="text-[11px] uppercase text-secondary">{item.role}</p><p className="mt-1 line-clamp-6 whitespace-pre-wrap text-xs text-primary">{item.current_version?.display_text || ""}</p></article>)}</div> : <p className="mt-2 text-xs text-secondary">{zh ? "当前范围没有可展示的消息。" : "There are no messages in the selected scope."}</p>}
+    {preview.toc?.items.length ? <p className="mt-2 text-xs text-secondary">{zh ? `目录包含 ${preview.toc.items.length} 项` : `${preview.toc.items.length} contents items included`}</p> : null}
+    {turn ? <div className="mt-3 flex items-center justify-between gap-2">
+      <button type="button" disabled={busy || !turn.previous_anchor_message_id || !preview.has_previous_turn} onClick={() => onNavigate(turn.previous_anchor_message_id!)} className="min-h-9 rounded-md border border-ui px-3 text-xs disabled:opacity-40">{zh ? "上一轮" : "Previous turn"}</button>
+      <span className="text-[11px] text-secondary">{zh ? `第 ${turn.start_offset + 1}–${turn.end_offset} 条` : `Messages ${turn.start_offset + 1}–${turn.end_offset}`}</span>
+      <button type="button" disabled={busy || !turn.next_anchor_message_id || !preview.has_next_turn} onClick={() => onNavigate(turn.next_anchor_message_id!)} className="min-h-9 rounded-md border border-ui px-3 text-xs disabled:opacity-40">{zh ? "下一轮" : "Next turn"}</button>
+    </div> : null}
+  </div>;
+}
+
 function shareWriteError(failure: unknown, zh: boolean, action: ShareWriteAction): string {
   if (failure instanceof ApiRequestError) {
+    if (failure.code === "FROZEN_SHARE_TEXT_ONLY") return zh ? "冻结分享暂不支持附件；请缩小选区或改为跟随原文更新。" : "Frozen shares do not support attachments yet. Select text-only messages or use a live share.";
+    if (failure.code === "FROZEN_SHARE_LIMIT") return zh ? "冻结内容超出 5,000 条消息／5,000 个标题／24 MiB 上限，请缩小选区或使用实时分享。" : "The snapshot exceeds 5,000 messages / 5,000 headings / 24 MiB. Select less content or use a live share.";
+    if (failure.code === "FROZEN_SHARE_UNSUPPORTED_OPTIONS") return zh ? "冻结分享暂不支持批注、笔记或访客导出；请关闭这些选项。" : "Frozen shares do not support annotations, notes or visitor export. Turn off these options.";
     if (failure.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
     if (failure.status === 403) return zh ? "当前权限不允许此操作。" : "Your current permissions do not allow this action.";
     if (failure.status === 404) return zh ? "分享或所属对话已不存在，请刷新列表确认。" : "The share or its conversation is no longer available. Refresh the list to confirm.";
@@ -479,11 +573,11 @@ function shareWriteError(failure: unknown, zh: boolean, action: ShareWriteAction
     : "The action result is not confirmed. Refresh the list before deciding whether to retry.";
 }
 
-function PrivacyToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
+function PrivacyToggle({ label, checked, disabled = false, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange: (value: boolean) => void }) {
   return (
     <label className="flex min-h-9 items-center justify-between gap-3 text-sm text-primary">
       <span>{label}</span>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 shrink-0 accent-[var(--accent)]" />
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 shrink-0 accent-[var(--accent)] disabled:opacity-50" />
     </label>
   );
 }
