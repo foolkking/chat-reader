@@ -83,7 +83,8 @@ function Files(){
   const [utilityPanel,updateUtilityPanel]=useState(null);
   const setUtilityPanel=value=>{window.modalEvents?.push({kind:"set-panel",value});updateUtilityPanel(value);};
   const conversationId="synthetic-conversation",showFiles=false;
-  const showExport=false,showSearch=false,showShare=false;
+  const showExport=false,showSearch=false,showShare=false,showTags=false,showUpdates=false;
+  const closeDesktopUtilityPanels=()=>{throw Error("Unexpected desktop utility close");};
   const desktopActionsExpanded=false,mobileActionsExpanded=false;
   const setShowFiles=()=>{throw Error("Unexpected desktop close");};
   const setDesktopActionsExpanded=()=>{},setMobileActionsExpanded=()=>{};

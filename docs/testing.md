@@ -21,6 +21,15 @@ passed **84 with 4 conditional skips** in 158.24 seconds; Alembic has one head,
 `20261030_0058`. These focused checks do not replace full PostgreSQL/PWA CI.
 The pre-existing buildinfo was restored byte-for-byte and remains excluded.
 
+Full follow-up CI `41014403002` for `a87bf96` failed its mounted Viewer/mobile
+sheet gate: the real Reader effect referenced new utility states/callbacks that
+the browser harness had not supplied. The component never mounted, so
+`#open-files` timed out. Supply those explicit synthetic dependencies; retain
+all existing Viewer, focus, Escape, touch and identity assertions. This is a
+test-adapter correction, not a passing CI receipt. The user reported the failure
+before the 50-minute deadline and requested continuation, so failure diagnosis
+was read early; subsequent dispatches still retain the 50-minute gate.
+
 ## Fifth full CI and accepted deployment — 2026-10-30
 
 Exact `0d1efacaa8145dff0c8c70ceda82460af5883854` passed all five jobs in
