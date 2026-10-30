@@ -436,7 +436,25 @@ export async function updateConversationNotebook(
 }
 
 export async function getOfflineCatalog(): Promise<OfflineCatalogResponse> {
-  return fetchJson<OfflineCatalogResponse>("/api/offline/catalog");
+  const generation = authenticationGeneration();
+  const read = async () => {
+    const catalog = await fetchJson<OfflineCatalogResponse>("/api/offline/catalog");
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    return catalog;
+  };
+  try {
+    return await read();
+  } catch (error) {
+    const transient = error instanceof ApiRequestError
+      ? [500, 502, 503, 504].includes(error.status)
+      : error instanceof Error && error.message === "CONNECTION_FAILED";
+    if (!transient || generation !== authenticationGeneration()) throw error;
+    // The same-origin proxy can lose a reused connection before this read
+    // reaches the API. Retry only this read, once; never package admission.
+    await new Promise<void>(resolve => setTimeout(resolve, 250));
+    if (generation !== authenticationGeneration()) throw error;
+    return read();
+  }
 }
 
 export async function queueOfflinePackage(

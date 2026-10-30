@@ -3,6 +3,9 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 const enabled = process.env.E2E_READER_CAPACITY === "1";
 test.skip(!enabled, "E2E_READER_CAPACITY=1 is required");
 test.setTimeout(900_000);
+// DOM snapshots/screencasts at every Playwright action are a diagnostic
+// workload, not Reader frame timing. Correctness gates retain their traces.
+test.use({ trace: "off" });
 
 type Tier = 398 | 1000 | 10000;
 type Profile = "plain" | "math" | "mixed";
@@ -22,7 +25,11 @@ for (const profile of profiles) {
         runs.push(await measureReader(page, conversationId, run));
       }
       const warm = await measureWarmRevisit(page, conversationId);
-      const payload = { fixture: { version: "release-d-reader-capacity-v1", seed: 20260814, profile, messages }, runs, warm };
+      const payload = {
+        fixture: { version: "release-d-reader-capacity-v1", seed: 20260814, profile, messages },
+        measurement: { version: 2, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34 },
+        runs, warm,
+      };
       await testInfo.attach(`reader-capacity-${profile}-${messages}.json`, {
         body: Buffer.from(JSON.stringify(payload, null, 2)),
         contentType: "application/json",
@@ -103,11 +110,12 @@ function buildMessage(index: number, messages: number, profile: Profile): string
 }
 
 async function measureReader(page: Page, conversationId: string, run: number) {
-  const requests = { total: 0, conversation: 0, bytes: 0 };
+  const requests = { total: 0, conversation: 0, dialogueIndex: 0, bytes: 0 };
   const onResponse = async (response: import("@playwright/test").Response) => {
     if (!response.url().includes("/api/")) return;
     requests.total += 1;
     if (response.url().includes("/api/conversations/")) requests.conversation += 1;
+    if (response.url().includes("/dialogue-index?")) requests.dialogueIndex += 1;
     const length = Number(response.headers()["content-length"] ?? 0);
     if (Number.isFinite(length)) requests.bytes += length;
   };
@@ -139,27 +147,33 @@ async function measureWarmRevisit(page: Page, conversationId: string) {
 }
 
 async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, steps = 30) {
+  // Move once, before the timed window. Repeated hover actions wait for
+  // stability and capture diagnostic snapshots between every wheel event.
+  await root.hover();
   await page.evaluate(() => {
-    const state = { frames: [] as number[], longTasks: [] as number[], lastFrame: 0, startedAt: performance.now() };
+    const state = {
+      frames: [] as number[], longTasks: [] as number[], lastFrame: 0,
+      startedAt: performance.now(), frameId: 0, observer: null as PerformanceObserver | null,
+    };
     (window as typeof window & { __capacityTelemetry?: typeof state }).__capacityTelemetry = state;
     const frame = (time: number) => {
       if (state.lastFrame) state.frames.push(time - state.lastFrame);
       state.lastFrame = time;
-      if (state.frames.length < 420) requestAnimationFrame(frame);
+      state.frameId = requestAnimationFrame(frame);
     };
-    requestAnimationFrame(frame);
+    state.frameId = requestAnimationFrame(frame);
     if (PerformanceObserver.supportedEntryTypes.includes("longtask")) {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) if (entry.startTime >= state.startedAt) state.longTasks.push(entry.duration);
       });
       observer.observe({ type: "longtask" });
+      state.observer = observer;
     }
   });
   const samples: number[] = [];
   let mountedMessagesMax = 0;
   let mountedBlocksMax = 0;
   for (let step = 0; step < steps; step += 1) {
-    await root.hover();
     await page.mouse.wheel(0, 120);
     await page.waitForTimeout(34);
     const sample = await root.evaluate((element) => ({
@@ -173,7 +187,18 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     mountedBlocksMax = Math.max(mountedBlocksMax, sample.blocks);
     if (sample.horizontalOverflow) throw new Error("page-level horizontal overflow during capacity run");
   }
-  const value = await page.evaluate(() => (window as typeof window & { __capacityTelemetry?: { frames: number[]; longTasks: number[] } }).__capacityTelemetry ?? { frames: [], longTasks: [] });
+  const value = await page.evaluate(() => {
+    const state = (window as typeof window & { __capacityTelemetry?: {
+      frames: number[]; longTasks: number[]; startedAt: number; frameId: number; observer: PerformanceObserver | null;
+    } }).__capacityTelemetry;
+    if (!state) throw new Error("Capacity telemetry was not installed");
+    cancelAnimationFrame(state.frameId);
+    for (const entry of state.observer?.takeRecords() ?? []) {
+      if (entry.startTime >= state.startedAt) state.longTasks.push(entry.duration);
+    }
+    state.observer?.disconnect();
+    return { frames: state.frames, longTasks: state.longTasks, durationMs: performance.now() - state.startedAt };
+  });
   const memory = await page.evaluate(() => {
     const performanceWithMemory = performance as Performance & { memory?: { usedJSHeapSize?: number } };
     return {
@@ -181,8 +206,11 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
       usedJSHeapBytes: performanceWithMemory.memory?.usedJSHeapSize ?? null,
     };
   });
-  const frames = value.frames.filter((item) => item < 1000).sort((left, right) => left - right);
+  // A >=1s freeze is a failure, not a frame to silently discard.
+  const frames = value.frames.sort((left, right) => left - right);
   return {
+    durationMs: value.durationMs,
+    frameCount: frames.length,
     mountedMessagesMax,
     mountedBlocksMax,
     scrollMonotonic: samples.every((value, index) => index === 0 || value + 2 >= samples[index - 1]!),

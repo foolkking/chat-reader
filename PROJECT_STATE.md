@@ -8,8 +8,16 @@ Last updated: 2026-10-31. This is the current snapshot, not a release history.
 Reference-aware audits, offline preflight, collection projections, focus/edge
 navigation and explicit unknown-write recovery are implemented in candidate
 source. First CI found a fixture setup error and a real stale-auth pathname
-race; fixes and grouped catalog queries are awaiting fresh CI. The measured
-47/470 synthetic baseline is 283/2,821 SQL, not production latency.
+race; subsequent CI confirms bounded 7-query catalog shape at both 47/470
+synthetic sizes (baseline 283/2,821) and 1,889 UX script passes. These are
+focused receipts, not full acceptance or production latency. Candidate
+`b27ce75`, run `41119273117`, was first read at 04:46:10 +08 after the
+50-minute threshold: API **5,966 passed / three skipped**, including isolated
+repair/read/export/package restoration. Web placement readiness, one settings
+catalog transport failure and Reader capacity block acceptance. Follow-up
+source preserves budgets, separates diagnostic trace overhead from measurement,
+reuses covered index windows and retries only transient catalog reads once,
+with account fences. Fresh full CI is still required.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

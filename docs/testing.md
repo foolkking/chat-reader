@@ -17,6 +17,18 @@ Frame p95 34 ms, maximum long task 150 ms, total long tasks 250 ms and stricter
 far-target mounted-DOM budgets are unchanged. No measured improvement or
 capacity pass is claimed before its artifact exists.
 
+Run `41119273117` passed the full API (5,966 / three skipped), but failed Web,
+settings (462 / one failure) and capacity. Its version-1 capacity receipt is
+retained as a failure, not retrospectively relabeled. The next identical
+baseline/candidate harness uses measurement version 2: no per-action DOM
+trace/screencast, one pointer setup before the timed wheel window, disconnected
+observers/cancelled RAF at its end, and explicit duration/frame/request counts.
+It no longer discards >=1-second frames. Fixture, three cold runs, warm revisit,
+30 x 120px wheels, 34ms sample delay, readiness and all budgets remain unchanged.
+Version-1 and version-2 timings are different protocols, not direct product
+speedup evidence; same-runner version-2 baseline/candidate is required.
+Other correctness/browser gates retain their diagnostic tracing.
+
 Regressions cover six repaired Context pairs in a 47-conversation v3 package,
 actual read/export/offline after isolated archive restoration (also PostgreSQL),
 unsafe/truncated audit classification, attachment/Context preflight errors,
@@ -25,6 +37,11 @@ account tag mapping. Browser coverage includes 375/1440 collection/focus states,
 orphan review-only links, body identity/geometry, hidden navigation reads,
 hover/drag/scrollbar boundaries, keyboard ownership and lost-response recovery.
 Synthetic CI package/restore acceptance is not production download acceptance.
+Additional source tests execute index-window coverage/recentering and bounded
+catalog-read retry/account fences. The first-copy browser flow now injects a
+transient pre-admission catalog 500 as well as its existing worker failure,
+retaining exactly-one-admission, no false retained-copy and explicit rebuild
+assertions. Package admission itself is never automatically replayed.
 
 ## Current accepted release — 2026-10-30
 

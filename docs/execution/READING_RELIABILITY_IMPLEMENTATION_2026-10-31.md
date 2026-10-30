@@ -161,6 +161,56 @@ one-project-per-conversation constraint; it now uses two owned conversations
 with separate owned/foreign links and still requires no foreign projection.
 Neither correction changes application authorization, schema or release gates.
 
+Owner-fixture correction `6976ee4`, run `41116168009`, dispatched
+03:33:03 +08 (first-read threshold 04:23:03 +08). The subsequent exact
+candidate `b27ce7599e09e945ce6eb9088111423d2264bb1d`, full run
+`41119273117`, dispatched **03:56:08 +08**, includes both test-contract
+corrections. Do not read it before **04:46:08 +08** absent a user-reported
+failure. No full-suite, browser, restoration or capacity acceptance is inferred
+from the earlier focused passes.
+
+### Seventh CI — failure evidence and bounded follow-up
+
+First read **04:46:10 +08**, after its 04:46:08 threshold. API passed
+**5,966 / three skipped**, including migrated PostgreSQL restoration and
+business read/export/offline checks. This is synthetic isolated acceptance,
+not a production full-package download.
+
+Web passed 1,889 UX and the focused preceding gates; mutation had 108 passes /
+two failures. Both placement snapshots show the active project **already
+expanded with its target row**. An immediate `row.count()` after opening the
+new default-collapsed sidebar raced the response and waited for a nonexistent
+Expand button. The test now waits for the real row; acknowledgement, held
+reads, single write, Reader identity/position and keyboard checks remain.
+
+Settings had **462 passes / one failure**. Its trace shows initial catalog 200
+then pre-admission catalog 500; Next logs a proxy socket hang-up and no package
+POST reached the API. This did not reach the injected worker failure. A bounded
+250ms, one-retry policy applies only to transient catalog reads, fenced before/
+after by account generation. Auth/scope/validation errors do not retry; no
+package write is replayed. The first-copy regression now deterministically
+injects that catalog failure and still requires one admission, truthful retained
+copy guidance and explicit new-identity rebuild.
+
+Capacity v1 failed baseline **six passes / three failures**, candidate **five /
+four**. All 10k profiles exceed 34ms frame p95; candidate plain-398 also has a
+189ms task. Mounted message maxima remain <=30. The retained plain-10k candidate
+trace contains 1,002 DOM snapshots / 737 screencast frames across its three
+navigations and warm revisit; repeated hover actions participate in every wheel
+sample. This is evidence of instrumentation work, not proof it explains every
+failed frame. The next common v2 harness disables those diagnostics only for
+capacity, hovers once before timing, stops RAF/observers, includes all frames
+and reports duration/frame/index-request counts. It keeps all old numeric
+budgets, readiness and workloads. Do not compare v1/v2 as a product speedup.
+
+The same trace also shows an 80-row index request for each changed active
+message. Candidate source reuses a page only while every ordinal in the full
+clamped +/-24 window is present; missing rows, gaps, far targets, boundaries
+and data-source scope changes recenter. Actual predicate/effect regressions
+are authored. Same-runner baseline/candidate v2 must establish the result;
+both phase failures still fail the gate. No local gate ran and no application
+deployment occurred.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset

@@ -60,6 +60,7 @@ export function ConversationIndex({
   const [jumpOrdinal, setJumpOrdinal] = useState("");
   const [panelState, setPanelState] = useState<DialogueIndexPanelState>(mode === "sheet" ? "pinned" : "rail");
   const [remotePage, setRemotePage] = useState<DialogueIndexResponse | null>(null);
+  const [aroundRequest, setAroundRequest] = useState({ conversationId, sourceKey, anchor: activeMessageId ?? undefined });
   const [pageLoading, setPageLoading] = useState(false);
   const [pageError, setPageError] = useState<PageReadIntent | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -69,11 +70,13 @@ export function ConversationIndex({
   const closeTimerRef = useRef<number | null>(null);
   const loader = loadPage ?? ((options) => getConversationDialogueIndex(conversationId, options));
   const desktopFullIndex = mode === "rail" && rangeMode !== "around";
+  const sameRequestScope = aroundRequest.conversationId === conversationId && aroundRequest.sourceKey === sourceKey;
+  const queryAnchor = sameRequestScope ? aroundRequest.anchor : activeMessageId ?? undefined;
 
   const indexQuery = useQuery({
-    queryKey: ["conversation-index", sourceKey, conversationId, desktopFullIndex ? "all" : activeMessageId ?? "start"],
+    queryKey: ["conversation-index", sourceKey, conversationId, desktopFullIndex ? "all" : queryAnchor ?? "start"],
     queryFn: () => loader({
-      anchorMessageId: desktopFullIndex ? undefined : activeMessageId ?? undefined,
+      anchorMessageId: desktopFullIndex ? undefined : queryAnchor,
       offset: desktopFullIndex ? 0 : undefined,
       limit: desktopFullIndex ? 5000 : 80,
     }),
@@ -82,6 +85,17 @@ export function ConversationIndex({
     placeholderData: (previous) => previous,
     ...(networkMode ? { networkMode } : {}),
   });
+
+  useEffect(() => {
+    if (messages !== undefined || desktopFullIndex || !ready || !auxiliary.visible) return;
+    const anchor = activeMessageId ?? undefined;
+    if (sameRequestScope && (queryAnchor === anchor || indexQuery.isFetching
+      || dialogueIndexPageCoversAround(indexQuery.data, conversationId, activeMessageId))) return;
+    // Keep the same 80-row projection while it covers the entire +/-24
+    // visible range. Scrolling within it must not reread/recount a 10k index
+    // for every active message. A boundary/far target still recenters.
+    setAroundRequest({ conversationId, sourceKey, anchor });
+  }, [activeMessageId, auxiliary.visible, conversationId, desktopFullIndex, indexQuery.data, indexQuery.isFetching, messages, queryAnchor, ready, sameRequestScope, sourceKey]);
 
   useEffect(() => {
     setRemotePage(null);
@@ -294,6 +308,16 @@ export function ConversationIndex({
       if (target) await onNavigate?.(toIndexItem(target));
     }
   }
+}
+
+export function dialogueIndexPageCoversAround(page: DialogueIndexResponse | undefined, conversationId: string, activeMessageId?: string | null): boolean {
+  if (!page || page.conversation_id !== conversationId || !activeMessageId) return false;
+  const active = page.items.find(item => item.message_id === activeMessageId);
+  if (!active) return false;
+  const first = Math.max(1, active.ordinal - AROUND_WINDOW), last = Math.min(page.total, active.ordinal + AROUND_WINDOW);
+  const ordinals = new Set(page.items.map(item => item.ordinal));
+  for (let ordinal = first; ordinal <= last; ordinal += 1) if (!ordinals.has(ordinal)) return false;
+  return true;
 }
 
 function PageButton({ disabled, onClick, children }: { disabled: boolean; onClick: () => void; children: React.ReactNode }) { return <button type="button" disabled={disabled} onClick={onClick} className="min-h-9 rounded-md border border-ui px-2 text-xs text-secondary disabled:opacity-40">{children}</button>; }

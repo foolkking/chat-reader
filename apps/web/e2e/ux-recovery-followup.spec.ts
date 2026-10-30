@@ -629,7 +629,10 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       if (await expand.count()) await expand.click();
       const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
       const row = sidebar.getByTestId("conversation-row-" + fixture.conversation.conversation.id);
-      if (!await row.count()) await sidebar.getByRole("button", { name: "Expand " + fixture.projects[0].name, exact: true }).click();
+      // The active project is already expanded. Opening the default-collapsed
+      // sidebar can precede its asynchronous conversation response; a missing
+      // row at this instant is not a collapsed project.
+      await expect(row).toBeVisible();
       await row.getByRole("button", { name: (zh ? "管理 " : "Manage ") + fixture.conversation.conversation.title, exact: true }).click();
       await page.getByRole("menuitem", { name: zh ? "移动到项目" : "Move to project", exact: true }).click();
       const picker = page.getByRole("dialog", { name: zh ? "移动对话" : "Move conversation", exact: true });

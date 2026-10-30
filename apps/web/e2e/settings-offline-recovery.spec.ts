@@ -201,8 +201,18 @@ for (const [code, locale, width] of [["OFFLINE_ASSET_INTEGRITY", "zh-CN", 375], 
             await route.fulfill({ response, json: { ...task, status: "failed", error_message: code } });
           } else await route.fulfill({ response });
         });
+        let failCatalogRead = false, catalogFailures = 0;
+        await page.route("**/api/offline/catalog", async route => {
+          if (failCatalogRead) {
+            failCatalogRead = false; catalogFailures += 1;
+            await route.fulfill({ status: 500, contentType: "text/plain", body: "Internal Server Error" });
+          } else await route.continue();
+        });
         await page.goto(`${baseURL}/library?conversationId=${conversationId}`);
+        failCatalogRead = true;
         await page.getByRole("button", { name: /^(Download offline copy|下载离线副本)$/ }).click();
+        await expect.poll(() => admissions.length).toBe(failedIndex + 1);
+        expect(catalogFailures).toBe(1);
         await expect.poll(async () => (await downloads(page, userId)).find(row => row.error === code)?.state).toBe("failed");
         expect(await storedMessages(page, userId)).toEqual(original);
         expect((await readLocal(page, userId)).conversations).toHaveLength(unrelatedCopy ? 1 : 0);
