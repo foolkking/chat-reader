@@ -71,6 +71,9 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
   await expect(page.locator('[data-focus-mode="on"]')).toBeVisible();
   await expect(page.locator("[data-reader-workspace-nav]")).toBeHidden();
   await article.evaluate(element => element.setAttribute("data-synthetic-identity", "retained"));
+  const contentBox = await page.locator(".reader-content-column").boundingBox();
+  const readerBox = await page.getByTestId("reader-scroll-root").boundingBox();
+  expect(Math.abs(contentBox!.x + contentBox!.width / 2 - readerBox!.x - readerBox!.width / 2)).toBeLessThanOrEqual(3);
   const before = await article.boundingBox();
   const initial = reads.length;
   await page.waitForTimeout(400);
@@ -108,12 +111,70 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
   await toc.focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => reads.some(path => path.endsWith("/toc"))).toBe(true);
+  if (width === 1440) {
+    const panel = page.locator('.reader-toc-column[data-focus-panel="open"]');
+    const panelBox = await panel.boundingBox(), headerBox = await panel.locator(":scope > header").boundingBox();
+    expect(headerBox!.height).toBeLessThan(90);
+    expect(panelBox!.height - headerBox!.height).toBeGreaterThan(100);
+    await page.screenshot({ path: testInfo.outputPath("focus-toc-desktop.png") });
+  }
   await page.keyboard.press("Escape");
   await expect(toc).toBeFocused();
+  const help = page.locator('summary[aria-label="Reading keyboard help"]').filter({ visible: true });
+  await help.click();
+  const helpPanel = page.getByRole("heading", { name: "Reading keyboard help", exact: true }).filter({ visible: true });
+  await expect(helpPanel).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath(`focus-help-${width}.png`) });
+  await page.keyboard.press("Escape");
+  await expect(help).toBeFocused();
   await page.getByRole("button", { name: "Exit focus mode", exact: true }).filter({ visible: true }).click();
   await expect(page.locator("[data-reader-workspace-nav]")).not.toHaveAttribute("hidden");
   await expect(article).toHaveAttribute("data-synthetic-identity", "retained");
   if (width === 1440) await expect(page.getByRole("button", { name: "Open sidebar", exact: true })).toBeVisible();
+});
+
+test("Reader shortcuts respect consumed keys, IME, editable controls and modal ownership", async ({ page }) => {
+  await page.goto(`/conversations/${conversationId}`);
+  await expect(page.locator(`#message-${messageId}`)).toContainText(preservedText);
+  const outcomes = await page.getByTestId("reader-scroll-root").evaluate(element => {
+    const root = element as HTMLElement;
+    const fire = (target: HTMLElement, init: KeyboardEventInit = {}, consume = false) => {
+      const event = new KeyboardEvent("keydown", { key: "PageDown", bubbles: true, cancelable: true, ...init });
+      if (consume) event.preventDefault();
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    // Synthetic events have no browser default scrolling. This checks whether
+    // the actual Reader listener consumes them, with a positive control.
+    const normal = fire(root);
+    const ime = fire(root, { isComposing: true });
+    const legacyIme = fire(root, { keyCode: 229 });
+    const controls: boolean[] = [];
+    for (const tag of ["input", "textarea", "select", "button"]) {
+      const element = document.createElement(tag);
+      root.appendChild(element);
+      controls.push(fire(element));
+      element.remove();
+    }
+    const editable = document.createElement("div");
+    editable.contentEditable = "true"; root.appendChild(editable);
+    controls.push(fire(editable)); editable.remove();
+    const auxiliary = document.createElement("div");
+    auxiliary.dataset.readerAuxiliary = ""; root.appendChild(auxiliary);
+    controls.push(fire(auxiliary)); auxiliary.remove();
+    const modal = document.createElement("div");
+    modal.setAttribute("role", "dialog"); modal.setAttribute("aria-modal", "true");
+    document.body.appendChild(modal);
+    const behindModal = fire(root);
+    modal.remove();
+    let byCalls = 0;
+    const scrollBy = root.scrollBy;
+    root.scrollBy = () => { byCalls++; };
+    fire(root, { key: "ArrowDown" }, true);
+    root.scrollBy = scrollBy;
+    return { normal, ime, legacyIme, controls, behindModal, consumedScrollCalls: byCalls };
+  });
+  expect(outcomes).toEqual({ normal: true, ime: false, legacyIme: false, controls: [false, false, false, false, false, false], behindModal: false, consumedScrollCalls: 0 });
 });
 
 test("stale block fallback preserves Reader content and reports no false exact pulse", async ({ page }) => {

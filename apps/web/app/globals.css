@@ -1176,6 +1176,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 
 /* Focus navigation borrows a margin, never reflows the canonical body. */
+.reader-frame[data-focus-mode="on"] .reader-layout-grid { padding-left: 0; }
 .reader-frame[data-focus-mode="on"] .reader-index-column[data-focus-panel="open"],
 .reader-frame[data-focus-mode="on"] .reader-toc-column[data-focus-panel="open"] {
   display: flex !important;
@@ -1201,7 +1202,8 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 .reader-frame[data-focus-mode="on"] .reader-index-column[data-focus-panel="open"] { left: .75rem; }
 .reader-frame[data-focus-mode="on"] .reader-toc-column[data-focus-panel="open"] { right: 1.5rem; }
-.reader-frame[data-focus-mode="on"] [data-focus-panel="open"] > :last-child { flex: 1; min-height: 0; overflow: auto; }
+.reader-frame[data-focus-mode="on"] [data-focus-panel="open"] > header { height: auto; max-height: none; }
+.reader-frame[data-focus-mode="on"] [data-focus-panel="open"] > :last-child { flex: 1; min-height: 0; height: auto; max-height: none; overflow: auto; }
 .reader-focus-edge { position: fixed; top: 4rem; bottom: 1rem; width: 12px; z-index: 70; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
 .reader-focus-edge-index { left: 0; }
 .reader-focus-edge-toc { right: 16px; }

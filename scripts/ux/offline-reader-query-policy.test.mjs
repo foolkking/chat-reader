@@ -71,7 +71,7 @@ function readerFixture(mode = "offline", patch = {}) {
 // Compile each actual shared component, capturing its query before rendering.
 // Hooks, preferences and API functions are adapters; real QueryClient scheduling
 // is exercised separately below. No simulated output is browser evidence.
-function navigationFixture(name, props = {}) {
+function navigationFixture(name, props = {}, auxiliary = { visible: true, overlay: false }) {
   const filename = name === "ConversationIndex" ? "conversation-index" : "conversation-toc";
   const code = ts.transpileModule(read(`features/toc/${filename}.tsx`), { compilerOptions }).outputText;
   const calls = [], stop = {}, exports = {};
@@ -91,6 +91,7 @@ function navigationFixture(name, props = {}) {
       useTranslations: () => key => key,
       usePreferences: () => ({ resolvedLocale: "en-US", sectionTocMode: "visible", setSectionTocMode: () => {} }),
     },
+    "../../components/reader-auxiliary-visibility": { useReaderAuxiliaryVisibility: () => auxiliary },
     "../../lib/api": { getConversationDialogueIndex: api("remote-index"), getConversationToc: api("remote-toc") },
     "../conversations/markdown-renderer": { markdownHeadingLabel: value => value },
   };
@@ -131,8 +132,8 @@ test("saved anchor, complete-turn budget, query identities and navigation ranges
     ["conversation", "offline", "synthetic-conversation"],
     ["reading-position", "offline", "synthetic-conversation"],
     ["reader-turn-window", "offline", "synthetic-conversation", "synthetic-saved"],
-    ["conversation-index", "offline:7:synthetic", "synthetic-conversation", "synthetic-saved", "sheet"],
-    ["toc", "offline:7:synthetic", "synthetic-conversation", "synthetic-saved", "sheet", "pages"],
+    ["conversation-index", "offline:7:synthetic", "synthetic-conversation", "synthetic-saved"],
+    ["toc", "offline:7:synthetic", "synthetic-conversation", "synthetic-saved", "pages"],
   ]);
   for (const [index] of f.options.entries()) await f.runQueryFn(index);
   assert.deepEqual(f.calls[2], ["turn-window", f.bindings.dataSource, "synthetic-conversation", "synthetic-saved", 5]);
@@ -250,6 +251,20 @@ test("supplied navigation items and readiness gates still disable local queries"
   assert.equal(navigationFixture("ConversationToc", { networkMode: "always", activeMessageId: "synthetic-saved", ready: false }).options.enabled, false);
   assert.equal(navigationFixture("ConversationToc", { networkMode: "always" }).options.enabled, false);
 });
+
+for (const name of ["ConversationIndex", "ConversationToc"]) {
+  test(`${name}: hidden navigation is disabled and a focus overlay shares the canonical anchor cache`, () => {
+    const props = { networkMode: "always", sourceKey: "synthetic-local", activeMessageId: "synthetic-saved" };
+    const hidden = navigationFixture(name, props, { visible: false, overlay: false });
+    const visible = navigationFixture(name, props);
+    const overlay = navigationFixture(name, props, { visible: true, overlay: true });
+    assert.equal(hidden.options.enabled, false);
+    assert.equal(visible.options.enabled, true);
+    assert.equal(overlay.options.enabled, true);
+    assert.deepEqual(overlay.options.queryKey, visible.options.queryKey);
+    assert.equal(overlay.options.networkMode, "always");
+  });
+}
 
 test("all four Reader navigation placements receive the source policy, without altering Share callers", () => {
   const navigationTags = ast => matches(ast, node =>

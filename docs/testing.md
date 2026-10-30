@@ -1,5 +1,31 @@
 # Testing
 
+## Reading reliability — 2026-10-31 (candidate, CI only)
+
+No local gates run for this batch. First CI `41098242354` was read after the
+50-minute threshold: settings 463 plus independent restore 1 passed; API
+fixture setup and the Web stale-auth route race failed. Fresh-source runs and
+their permitted first-read times are tracked in the implementation record.
+
+The additive `reading-performance.yml` comparison runs baseline `43a714f`
+then candidate on the same disposable runner with the same harness. It retains
+47/470 catalog SQL measurements and 398/1,000/10,000 Reader tiers, three cold
+runs plus warm revisit, across plain/math/mixed bodies. Both phases are
+collected if a capacity assertion fails, but either failure fails the gate;
+images require this gate in addition to the existing API/Web/settings gates.
+Frame p95 34 ms, maximum long task 150 ms, total long tasks 250 ms and stricter
+far-target mounted-DOM budgets are unchanged. No measured improvement or
+capacity pass is claimed before its artifact exists.
+
+Regressions cover six repaired Context pairs in a 47-conversation v3 package,
+actual read/export/offline after isolated archive restoration (also PostgreSQL),
+unsafe/truncated audit classification, attachment/Context preflight errors,
+bounded private collection summaries, equal-sized distinct assets and one-query
+account tag mapping. Browser coverage includes 375/1440 collection/focus states,
+orphan review-only links, body identity/geometry, hidden navigation reads,
+hover/drag/scrollbar boundaries, keyboard ownership and lost-response recovery.
+Synthetic CI package/restore acceptance is not production download acceptance.
+
 ## Current accepted release — 2026-10-30
 
 Exact `127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5` passed all five jobs in

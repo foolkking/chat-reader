@@ -186,6 +186,68 @@ test("lost saved-search response is confirmed read-only without creating a secon
   expect(identities).toHaveLength(1);
 });
 
+for (const width of [375, 1440]) {
+  test(`annotation inbox separates previews, filters every type and keeps orphan links review-only at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    const writes: string[] = [], fullReads: string[] = [];
+    const timestamp = "2026-10-31T00:00:00Z";
+    const items = ["highlight", "underline", "strikethrough", "comment", "bookmark"].map((kind, index) => ({
+      id: `synthetic-annotation-${index}`, conversation_id: "synthetic-inbox-conversation",
+      conversation_title: "Synthetic annotation review", annotation_type: kind,
+      anchor_status: index === 0 ? "orphaned" : index === 1 ? "needs_review" : index === 2 ? "remapped" : "valid",
+      message_id: `synthetic-source-${index}`, message_version_id: `synthetic-version-${index}`,
+      start_block_index: 2, revision: 1, created_at: timestamp, updated_at: timestamp,
+      quote_preview: `Source excerpt ${index}: ${"摘录🙂".repeat(20)}`,
+      comment_preview: `My retained comment ${index}: ${"评论🙂".repeat(25)}`,
+      quote_truncated: true, comment_truncated: true,
+    }));
+    await page.route("**/api/**", async route => {
+      const url = new URL(route.request().url()), path = url.pathname;
+      if (route.request().method() !== "GET") writes.push(path);
+      if (path === "/api/annotations/inbox" || /\/api\/annotations\/synthetic/.test(path)) fullReads.push(path);
+      let payload: unknown = [];
+      if (path === "/api/annotations/inbox/summary") {
+        const type = url.searchParams.get("annotation_type"), status = url.searchParams.get("anchor_status");
+        const selected = items.filter(item => (!type || item.annotation_type === type)
+          && (!status || (status === "attention" ? ["orphaned", "needs_review"].includes(item.anchor_status) : item.anchor_status === status)));
+        payload = { items: selected, total: selected.length, limit: 50, offset: 0, has_more: false };
+      } else if (path === "/api/projects") payload = [{ id: "synthetic-review-project", name: "Synthetic review project", is_default: false }];
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+    });
+    await page.goto("/annotations");
+    await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(5);
+    const orphan = page.getByTestId("annotation-inbox-item-synthetic-annotation-0");
+    await expect(orphan.locator("blockquote")).toContainText("Source excerpt 0");
+    await expect(orphan).toContainText("My retained comment 0");
+    const orphanLink = orphan.getByRole("link", { name: "Open annotation for review", exact: true });
+    const orphanHref = await orphanLink.getAttribute("href");
+    expect(orphanHref).toContain("annotationId=synthetic-annotation-0");
+    expect(orphanHref).not.toMatch(/messageId|messageVersionId|blockIndex/);
+    const remappedHref = await page.getByTestId("annotation-inbox-item-synthetic-annotation-2")
+      .getByRole("link", { name: "Open source and annotation", exact: true }).getAttribute("href");
+    expect(remappedHref).toContain("messageId=synthetic-source-2");
+    expect(remappedHref).toContain("blockIndex=2");
+    await page.screenshot({ path: testInfo.outputPath(`annotation-inbox-${width}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    for (const type of ["highlight", "underline", "strikethrough", "comment", "bookmark"]) {
+      await page.getByLabel("Type", { exact: true }).selectOption(type);
+      await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(1);
+      await expect(page).toHaveURL(new RegExp(`annotation_type=${type}`));
+    }
+    await page.getByLabel("Type", { exact: true }).selectOption("");
+    await page.getByRole("button", { name: "Review anchor problems", exact: true }).click();
+    await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(2);
+    await page.getByLabel("Project", { exact: true }).selectOption("synthetic-review-project");
+    await page.getByLabel("Sort", { exact: true }).selectOption("created");
+    await expect(page).toHaveURL(/project_id=synthetic-review-project/);
+    await expect(page).toHaveURL(/sort=created/);
+    await page.getByRole("button", { name: "Clear filters", exact: true }).click();
+    await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(5);
+    expect(writes).toEqual([]);
+    expect(fullReads).toEqual([]);
+  });
+}
+
 for (const projectView of [false, true]) {
   test(`merge keyboard ordering follows two canonical title markers in the ${projectView ? "project" : "global"} list`, async ({ page }) => {
     await page.setViewportSize({ width: projectView ? 375 : 1440, height: 900 });

@@ -4,6 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getProjects } from "../lib/api";
+import { authenticationGeneration } from "../lib/offline-access";
+
+// Scroll-only, bounded to this tab/account epoch. Do not persist search text in
+// sessionStorage keys or carry one account's collection position into another.
+const positions = new Map<string, number>();
+let positionGeneration = -1;
 
 // Quiet archive-ledger controls: existing paper/ink tokens, 4px spacing,
 // restrained borders and the application font. Search leads, metadata follows.
@@ -34,15 +40,21 @@ export function useCollectionScroll(rootRef: React.RefObject<HTMLElement | null>
     if (!ready) return;
     const scroller = rootRef.current?.closest<HTMLElement>("[data-collection-scroll]");
     if (!scroller) return;
-    const key = `chat-reader:collection-scroll:${scope}`;
-    try { scroller.scrollTop = Math.max(0, Number(sessionStorage.getItem(key)) || 0); } catch { /* Optional restoration. */ }
-    const save = () => { try { sessionStorage.setItem(key, String(scroller.scrollTop)); } catch { /* Optional. */ } };
+    const generation = authenticationGeneration();
+    if (positionGeneration !== generation) { positions.clear(); positionGeneration = generation; }
+    scroller.scrollTop = Math.max(0, positions.get(scope) ?? 0);
+    const save = () => {
+      if (authenticationGeneration() !== generation) return;
+      positions.delete(scope);
+      positions.set(scope, scroller.scrollTop);
+      if (positions.size > 100) positions.delete(positions.keys().next().value!);
+    };
     scroller.addEventListener("scroll", save, { passive: true });
     return () => { save(); scroller.removeEventListener("scroll", save); };
   }, [ready, rootRef, scope]);
 }
 
-export const collectionControlClass = "min-h-11 rounded-lg border border-ui bg-surface px-3 text-sm text-primary";
+export const collectionControlClass = "min-h-11 rounded-lg border border-ui bg-surface px-3 text-base text-primary md:text-sm";
 
 export function CollectionFilters({ q, projectId, zh, update, children, disabled = false }: {
   q: string; projectId: string; zh: boolean; update: (changes: Record<string, string>) => void;

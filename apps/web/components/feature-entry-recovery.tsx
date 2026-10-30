@@ -87,7 +87,9 @@ export function useFeatureEntryRecovery<T>(collection: UserFeatureCollection, zh
     <p>{attempt.phase === "matches"
       ? (zh ? "已读取核对：当前状态与原请求目标一致。" : "Read-only check: the current state matches your request.")
       : attempt.phase === "absent"
-        ? (zh ? "已读取核对：原请求的条目不存在。可按原身份重试，不会另建重复条目。" : "Read-only check: the entry is absent. Retry the original identity, not a new entry.")
+        ? attempt.entry.revision === 0
+          ? (zh ? "已读取核对：原请求的条目不存在。可按原身份重试，不会另建重复条目。" : "Read-only check: the entry is absent. Retry the original identity, not a new entry.")
+          : (zh ? "已读取核对：条目已不存在。草稿仍保留，可按当前状态继续编辑；不会自动重新创建。" : "Read-only check: the entry no longer exists. Keep your draft and edit against the current state; it will not be recreated automatically.")
         : attempt.phase === "different"
           ? (zh ? "当前值与原请求不同，请对照后继续编辑；不会自动覆盖。" : "The current value differs. Review it before editing; nothing is overwritten automatically.")
           : attempt.phase === "read_failed"

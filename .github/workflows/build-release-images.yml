@@ -564,8 +564,8 @@ jobs:
     uses: ./.github/workflows/reading-performance.yml
 
   build-images:
-    needs: [api-quality, web-quality, settings-quality]
-    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' }}
+    needs: [api-quality, web-quality, settings-quality, reading-performance-comparison]
+    if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' && needs.reading-performance-comparison.result == 'success' }}
     runs-on: ubuntu-latest
     # Same Docker Official Image indexes as Hub; independently verified before pinning.
     # See docs/execution/CI_REGISTRY_SOURCE_2026-10-10.md for provenance/update rules.

@@ -99,11 +99,33 @@ comparison, not a substitute for the full existing gates. Added a synthetic
 read/export/offline checks after isolated Context archive restoration, including
 the migrated PostgreSQL fixture. These are authored, not yet passed.
 
+Second run first read at **02:59:02 +08** respected that deadline. API repeated
+the known pre-creation fixture error; Web lint/typecheck/build passed, but
+the UX suite had **1,880 passes / four failures** in the offline query-policy
+adapter: old placement-specific cache expectations and an unregistered
+visibility-context import. The adapter now asserts the shared canonical key,
+retains source/network/turn/range checks and adds hidden/overlay enablement
+coverage. No product retry policy or offline scheduling is weakened.
+
 The third source batch additionally makes unsafe/truncated audit walks withdraw
 all orphan classifications, tests symlink boundaries, fences stale feature-entry
 callbacks before requests, and tests desktop edge hover/selection/scrollbar
 behavior. These strengthen the original gates; no assertion or capacity budget
 is relaxed. Application deployment is not part of this source checkpoint.
+
+Third batch `388e3fda5f85a3f8fa24dad82f830c7fc7e678d0`, full CI
+`41108969129`, dispatched 02:40:48 +08; first status read is not permitted
+before 03:30:48 +08 unless the user reports failure. First-run settings later
+completed **463 plus independent restore 1**, without changing its failed
+overall conclusion.
+
+Follow-up source review fixes focus-only inherited column padding/header height
+and keeps asset-integrity errors from being caught as generic IO errors.
+Additional browser cases exercise all five annotation filters, orphan links,
+mobile/desktop help and actual keyboard-consumption guards. Collection scroll
+memory is bounded to 100 tab/account-epoch entries, not raw search URL keys in
+sessionStorage. The comparison becomes an image prerequisite and records both
+phases without ignoring any failure. These follow-up changes await fresh CI.
 
 ## Incident correction
 

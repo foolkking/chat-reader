@@ -62,3 +62,34 @@ def test_context_preflight_reports_owned_source_before_body_packaging(bundle_sta
         }
         assert db.query(OfflinePackageArtifact).filter_by(job_id=jid).count() == 0
         assert key not in str(job.result)
+
+
+@pytest.mark.parametrize("damage,expected", [
+    ("missing", "OFFLINE_ASSET_IO"), ("size", "OFFLINE_ASSET_INTEGRITY"),
+])
+def test_asset_preflight_keeps_integrity_and_io_codes_distinct_before_bodies(bundle_state, tmp_path, monkeypatch, damage, expected):
+    from app.services import offline_packages
+    info = bundle_state
+    monkeypatch.setenv("OFFLINE_STORAGE_DIR", str(tmp_path / "offline"))
+    get_settings.cache_clear()
+    if damage == "missing":
+        info["paths"][0].unlink()
+    else:
+        info["paths"][0].write_bytes(b"short")
+    def forbidden_body(*_args, **_kwargs):
+        raise AssertionError("Dependencies must fail before body packaging")
+    monkeypatch.setattr(offline_packages, "_write_package_payload", forbidden_body)
+    with info["factory"]() as db:
+        job = queue_offline_package(db, scope="conversation", conversation_id=info["sources"][0],
+            project_id=None, known_revisions={}, include_assets="all",
+            idempotency_key=str(uuid.uuid4()), subject_key=str(info["owners"][0]),
+            ownership_scope=OwnershipScope(info["owners"][0]))
+        db.commit()
+        jid = job.id
+    run(info["factory"], jid)
+    with info["factory"]() as db:
+        job = db.get(BackgroundJob, jid)
+        assert job.status == "failed" and job.processed_items == 0
+        assert job.error_message == expected
+        assert job.result["offline_failure"]["code"] == expected
+        assert db.query(OfflinePackageArtifact).filter_by(job_id=jid).count() == 0

@@ -104,6 +104,20 @@ test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable",
   assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv -o faulthandler_timeout=120(?:\n|$)/);
 });
 
+test("reading capacity comparison is additive and required before release images", () => {
+  assert.match(job("reading-performance-comparison"), /uses: \.\/\.github\/workflows\/reading-performance\.yml/);
+  assert.match(job("build-images"), /needs: \[api-quality, web-quality, settings-quality, reading-performance-comparison\]/);
+  assert.match(job("build-images"), /needs\.reading-performance-comparison\.result == 'success'/);
+  const comparison = read(".github/workflows/reading-performance.yml");
+  assert.match(comparison, /for phase in baseline candidate; do/);
+  assert.match(comparison, /baseline=43a714f2c13f6e6573eb02916c8ff8f78dd2d82e/);
+  assert.match(comparison, /candidate="\$\{\{ github\.sha \}\}"/);
+  assert.match(comparison, /cp "\$RUNNER_TEMP\/reading-comparison\/harness\.ts" apps\/web\/e2e\/reader-capacity\.spec\.ts/);
+  assert.match(comparison, /failed=1/);
+  assert.match(comparison, /exit "\$failed"/);
+  assert.doesNotMatch(comparison, /continue-on-error/);
+});
+
 for (const [name, prefix] of [["web-quality", "release-a-quality-evidence"], ["settings-quality", "settings-quality-evidence"]]) {
   test(`${name} preserves separate evidence for each retry attempt`, () => {
     assert.ok(job(name).includes(`name: ${prefix}-\${{ github.sha }}-\${{ github.run_attempt }}`));

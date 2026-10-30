@@ -333,6 +333,8 @@ def _build_offline_package(
                 raise OfflineDependencyError("OFFLINE_ASSET_INTEGRITY", affected_count=1)
             with path.open("rb") as source:
                 source.read(1)
+        except OfflineDependencyError:
+            raise
         except (OSError, ValueError) as exc:
             raise OfflineDependencyError("OFFLINE_ASSET_IO", affected_count=1) from exc
     catalog = build_catalog(db, ownership_scope)
