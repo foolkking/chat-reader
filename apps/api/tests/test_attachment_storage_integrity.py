@@ -147,6 +147,30 @@ def test_only_complete_reference_scans_can_classify_orphans(client, tmp_path):
         generator.close()
 
 
+def test_unreadable_subtree_withdraws_already_seen_orphans(client, tmp_path, monkeypatch):
+    from app.services.assets import attachment_storage_integrity as integrity
+    db, generator = _database()
+    root = tmp_path / "assets"
+    blocked = root / "blocked"
+    _write(root / "visible-orphan", b"do not classify a partial walk")
+    _write(blocked / "member", b"synthetic unreadable subtree")
+    original = integrity.os.scandir
+    def guarded(path):
+        if Path(path) == blocked:
+            raise PermissionError("synthetic unreadable directory")
+        return original(path)
+    monkeypatch.setattr(integrity.os, "scandir", guarded)
+    try:
+        report = audit_local_attachment_storage(db, root)
+        assert not report.complete and not report.orphan_classification_safe
+        assert report.issue_counts == {"FILESYSTEM_SCAN_ERROR": 1}
+        assert (root / "visible-orphan").read_bytes() == b"do not classify a partial walk"
+        assert (blocked / "member").read_bytes() == b"synthetic unreadable subtree"
+    finally:
+        db.close()
+        generator.close()
+
+
 @pytest.mark.parametrize("key", ["../outside", "C:/outside", "objects//alias", "objects/./alias", "."])
 def test_unsafe_reference_keys_disable_orphan_candidates(client, tmp_path, key):
     db, generator = _database()

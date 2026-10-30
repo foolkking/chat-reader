@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 import hashlib
+import os
 from pathlib import Path, PurePosixPath
 import uuid
 
@@ -231,8 +232,12 @@ def audit_local_attachment_storage(
         complete = False
         issues.append(AttachmentStorageIssue("ASSET_ROOT_MISSING"))
     elif objects_complete:
+        def scan_error(_error):
+            nonlocal complete
+            complete = False
+            issues.append(AttachmentStorageIssue("FILESYSTEM_SCAN_ERROR"))
         try:
-            for candidate in root.rglob("*"):
+            for candidate in _storage_entries(root, scan_error):
                 try:
                     relative = candidate.relative_to(root)
                 except ValueError:
@@ -254,7 +259,7 @@ def audit_local_attachment_storage(
                     continue
                 try:
                     resolved = candidate.resolve()
-                except OSError:
+                except (OSError, RuntimeError):
                     complete = False
                     issues.append(AttachmentStorageIssue("FILESYSTEM_ENTRY_CHANGED", storage_key=storage_key))
                     continue
@@ -285,6 +290,21 @@ def audit_local_attachment_storage(
         scanned_context_object_count=derived_counts["CONTEXT"],
         scanned_skill_object_count=derived_counts["SKILL"],
     )
+
+
+def _storage_entries(root: Path, on_error):
+    # pathlib.rglob can suppress directory permission errors. Use an explicit
+    # error callback so a skipped subtree cannot masquerade as a complete scan.
+    for directory, folders, files in os.walk(root, followlinks=False, onerror=on_error):
+        parent = Path(directory)
+        if parent == root:
+            folders[:] = [name for name in folders if name not in _TECHNICAL_DIRECTORIES]
+        for name in folders:
+            candidate = parent / name
+            if candidate.is_symlink():
+                yield candidate
+        for name in files:
+            yield parent / name
 
 
 def _resolve_storage_key(root: Path, storage_key: str) -> Path:

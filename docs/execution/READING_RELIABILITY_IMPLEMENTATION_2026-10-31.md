@@ -127,6 +127,13 @@ memory is bounded to 100 tab/account-epoch entries, not raw search URL keys in
 sessionStorage. The comparison becomes an image prerequisite and records both
 phases without ignoring any failure. These follow-up changes await fresh CI.
 
+Fourth source batch `c50210ffcc4105f4256c3d98c5baad2950160709`, run
+`41111725452`, dispatched 03:01:15 +08; no first status read before
+03:51:15 +08 absent a user-reported failure. A final audit-walk review replaces
+`rglob` with explicit `os.walk(onerror=...)`: skipped permission-denied subtrees
+must withdraw orphan classification, even when visible candidates were already
+encountered. A deterministic permission-error regression preserves all files.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset
