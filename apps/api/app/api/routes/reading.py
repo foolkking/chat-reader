@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
@@ -17,6 +18,7 @@ from app.schemas.reading import (
     ReadingPositionSyncResponse,
     RecentItemCreate,
     RecentItemRead,
+    ReadingListSummaryResponse,
 )
 from app.services.reading.reading_service import (
     ReadingServiceError,
@@ -36,6 +38,24 @@ from app.services.reading_content import (
 )
 
 router = APIRouter(tags=["reading"])
+
+
+@router.get("/api/reading-list", response_model=ReadingListSummaryResponse)
+def get_reading_list(
+    request: Request, response: Response,
+    state: Literal["unread", "read", "all"] = "unread",
+    q: str = Query(default="", max_length=200),
+    project_id: uuid.UUID | None = None,
+    sort: Literal["added_desc", "added_asc", "last_read"] = "added_desc",
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    from app.services.reading_list import reading_list_summary
+    response.headers["Cache-Control"] = "no-store"
+    return reading_list_summary(db, subject_key=subject_key_from_request(request),
+        ownership_scope=ownership_scope_from_request(request), state=state, q=q,
+        project_id=project_id, sort=sort, limit=limit, offset=offset)
 
 
 @router.get(

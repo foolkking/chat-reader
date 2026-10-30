@@ -11,12 +11,14 @@ type WorkspaceShellContextValue = {
   embedded: boolean;
   openMobileSidebar: () => void;
   setReaderProjectContext: (conversationId: string, projectId: string | null | undefined) => void;
+  setReaderFocus: (conversationId: string, active: boolean) => void;
 };
 
 const WorkspaceShellContext = createContext<WorkspaceShellContextValue>({
   embedded: false,
   openMobileSidebar: () => undefined,
   setReaderProjectContext: () => undefined,
+  setReaderFocus: () => undefined,
 });
 
 export function WorkspaceShellBoundary({ children }: { children: React.ReactNode }) {
@@ -30,6 +32,13 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
   const routeProjectId = pathname.match(/^\/projects\/([^/]+)/)?.[1];
   const projectId = routeProjectId ?? searchParams?.get("projectId") ?? searchParams?.get("project_id") ?? undefined;
   const routeConversationId = pathname.match(/^\/conversations\/([^/]+)/)?.[1];
+  const [readerFocus, setReaderFocus] = useState<{ conversationId: string; active: boolean } | null>(null);
+  const setReaderFocusForRoute = useCallback((conversationId: string, active: boolean) => {
+    if (conversationId !== routeConversationId) return;
+    setReaderFocus(current => !active && current?.conversationId !== conversationId
+      ? current : { conversationId, active });
+  }, [routeConversationId]);
+  const readerFocused = readerFocus?.conversationId === routeConversationId && readerFocus?.active === true;
   const importProjectId = projectId ?? (
     routeConversationId && readerProjectContext?.conversationId === routeConversationId
       ? readerProjectContext.projectId ?? undefined
@@ -124,7 +133,8 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
     embedded: ownerSurface,
     openMobileSidebar: () => setMobileOpenSignal((current) => current + 1),
     setReaderProjectContext: setReaderProjectContextForRoute,
-  }), [ownerSurface, setReaderProjectContextForRoute]);
+    setReaderFocus: setReaderFocusForRoute,
+  }), [ownerSurface, setReaderProjectContextForRoute, setReaderFocusForRoute]);
   if (!ownerSurface) return <WorkspaceShellContext.Provider value={value}>{children}</WorkspaceShellContext.Provider>;
   return (
     <WorkspaceShellContext.Provider value={value}>
@@ -136,13 +146,16 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
         onDragLeave={handleFileDragLeave}
         onDrop={handleFileDrop}
       >
+        <div hidden={readerFocused} className={readerFocused ? "hidden" : "flex shrink-0"} data-reader-workspace-nav>
         <ProjectSidebar
+          readerMode={Boolean(routeConversationId)}
           currentProjectId={projectId}
           currentProjectDropTargetId={routeProjectId}
           mobileOpenSignal={mobileOpenSignal}
           showMobileTrigger={false}
           onImportClick={() => openImportDialog({ projectId: importProjectId ?? null })}
         />
+        </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
         {fileDropActive ? (
           <div aria-hidden="true" data-testid="workspace-file-drop-overlay" className="workspace-file-drop-overlay fixed inset-0 z-[80] grid place-items-center p-4">

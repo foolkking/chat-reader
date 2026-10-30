@@ -156,7 +156,7 @@ export function ProjectSidebar({
     window.addEventListener("chat-reader:open-task-center", openTasks);
     return () => window.removeEventListener("chat-reader:open-task-center", openTasks);
   }, []);
-  const [desktopExpanded, setDesktopExpanded] = useState(!readerMode || Boolean(currentProjectId));
+  const [desktopExpanded, setDesktopExpanded] = useState(!readerMode);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set(currentProjectId ? [currentProjectId] : []));
   const [activeDrag, setActiveDrag] = useState<DragConversation | DragProject | null>(null);
   const [activeDragSize, setActiveDragSize] = useState<{ width: number; height: number } | null>(null);
@@ -309,7 +309,7 @@ export function ProjectSidebar({
   }, [mobileOpenSignal]);
 
   useEffect(() => {
-    if (!readerMode || currentProjectId) return;
+    if (!readerMode) return;
     try {
       setDesktopExpanded(window.localStorage.getItem("chat-reader:reader-sidebar-expanded") === "true");
     } catch { /* The online workspace also works when browser storage is disabled. */ }
@@ -328,7 +328,6 @@ export function ProjectSidebar({
         setShowMobileDrawer(true);
       } else {
         setDesktopExpanded(true);
-        try { window.localStorage.setItem("chat-reader:reader-sidebar-expanded", "true"); } catch { /* Optional preference. */ }
       }
     };
     window.addEventListener("chat-reader:focus-global-search", openGlobalSearch);

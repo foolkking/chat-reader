@@ -19,6 +19,10 @@ export function ReadingListButton({
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const queryClient = useQueryClient();
+  const refresh = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: readingListQueryKey }),
+    queryClient.invalidateQueries({ queryKey: ["reading-list-summary"] }),
+  ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const entriesQuery = useQuery({
@@ -46,11 +50,11 @@ export function ReadingListButton({
         entry?.id ?? crypto.randomUUID(),
         { expected_revision: entry?.revision ?? 0, value: nextValue },
       );
-      await queryClient.invalidateQueries({ queryKey: readingListQueryKey });
+      await refresh();
     } catch (cause) {
       if (cause instanceof ApiRequestError && cause.status === 409) {
         setError(zh ? "清单已在其他窗口更新，已重新加载。" : "The list changed in another window and was reloaded.");
-        await queryClient.invalidateQueries({ queryKey: readingListQueryKey });
+        await refresh();
       } else {
         setError(zh ? "更新待读清单失败。" : "Could not update the reading list.");
       }
@@ -65,11 +69,11 @@ export function ReadingListButton({
     setError(null);
     try {
       await deleteUserFeatureEntry("reading-list", entry.id, entry.revision);
-      await queryClient.invalidateQueries({ queryKey: readingListQueryKey });
+      await refresh();
     } catch (cause) {
       if (cause instanceof ApiRequestError && cause.status === 409) {
         setError(zh ? "清单已在其他窗口更新，已重新加载。" : "The list changed in another window and was reloaded.");
-        await queryClient.invalidateQueries({ queryKey: readingListQueryKey });
+        await refresh();
       } else {
         setError(zh ? "移出待读清单失败。" : "Could not remove this item from the reading list.");
       }

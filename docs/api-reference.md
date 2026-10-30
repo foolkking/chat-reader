@@ -1,5 +1,15 @@
 # API 参考
 
+## 阅读集合摘要 — 2026-10-31（源码实施，待 CI）
+
+| Method/path | Contract |
+| --- | --- |
+| `GET /api/reading-list` | 当前账户最多 500 项配置的只读批量投影；`state=unread/read/all`（默认 unread）、`q`（标题，最多 200 字符）、`project_id`、`sort=added_desc/added_asc/last_read`、`limit` 1–100（默认 20）、`offset`。返回 items、筛选后的三状态 counts、total/has_more。不可用对话不返回标题、项目或位置；不读正文、不自动改阅读状态。 |
+| `GET /api/annotations/inbox/summary` | owner/subject 私人摘要；q 匹配标题／摘录／评论，按字面处理 `%/_`；项目／对话／五种批注类型／锚点状态过滤，attention 为 orphaned+needs_review；sort=updated/created；limit 默认 50、最大 100。SQL 投影摘录 240、评论 400 个字符及截断标志，不返回全文。 |
+
+两者均 no-store，现有配置 CAS 写入与完整批注接口不变，不新增 migration。
+失联批注只打开复核工作区，不把旧坐标声称为有效精确定位。
+
 ## 累计功能补齐 — 2026-10-30（已发布，生产 head 0058）
 
 | Method/path | Contract |

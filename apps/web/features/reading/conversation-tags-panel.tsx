@@ -27,6 +27,7 @@ export function ConversationTagsPanel({ conversationId, offline = false }: { con
     void client.invalidateQueries({ queryKey: ["conversations"] });
   };
   const tagsQuery = useQuery({
+    ...(offline ? { networkMode: "always" as const } : {}),
     queryKey,
     queryFn: async ({ signal }): Promise<UserFeatureEntry<ConversationTagValue>[]> => {
       if (!offline) return getUserFeatureEntries<ConversationTagValue>("conversation-tag", signal);

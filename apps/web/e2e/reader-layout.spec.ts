@@ -88,7 +88,7 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
     await page.getByRole("button", { name: /Focus mode|专注模式/ }).click();
     await expect(page.locator('[data-focus-mode="on"]')).toBeVisible();
     await expect(page.locator(".reader-index-column")).toBeHidden();
-    await expect(page.locator("[data-reader-primary-sidebar]")).toHaveCount(0);
+    await expect(page.locator("[data-reader-primary-sidebar]")).toBeHidden();
     await expect(page.locator('div[aria-label="Primary reader actions"]')).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => localStorage.getItem("chat-reader:reader-default-focus"))).not.toBe("true");
   await expect.poll(() => page.evaluate(() => localStorage.getItem("chat-reader:reader-focus-mode"))).toBeNull();

@@ -25,6 +25,7 @@ import { SharePanel } from "../sharing/share-panel";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc, resolveActiveHeadingId } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
+import { ReaderKeyboardHelp } from "../../components/reader-keyboard-help";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MessageItem } from "./message-item";
 import { MessageInsertDialog } from "./message-insert-dialog";
@@ -452,6 +453,12 @@ export function ConversationReader({
   useEffect(() => {
     setFocusMode(requestedFilesOpen || requestedAnnotationsOpen ? false : readerDefaultFocus);
   }, [readerDefaultFocus, requestedAnnotationsOpen, requestedFilesOpen]);
+
+  const setWorkspaceReaderFocus = workspace.setReaderFocus;
+  useLayoutEffect(() => {
+    setWorkspaceReaderFocus(conversationId, focusMode);
+    return () => setWorkspaceReaderFocus(conversationId, false);
+  }, [conversationId, focusMode, setWorkspaceReaderFocus]);
 
   useEffect(() => {
     const token = focusTransitionRef.current + 1;
@@ -1678,7 +1685,10 @@ export function ConversationReader({
 
   useEffect(() => {
     const handleReadingShortcut = (event: KeyboardEvent) => {
-      if (utilityPanel !== null || isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || utilityPanel !== null
+        || isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey
+        || document.querySelector('[role="dialog"][aria-modal="true"]')
+        || (event.target instanceof Element && event.target.closest('[data-reader-auxiliary], [role="dialog"], input, select, button, a[href]'))) return;
       const root = scrollContainerRef.current;
       if (!root) return;
       const page = Math.max(120, root.clientHeight * 0.88);
@@ -2638,14 +2648,14 @@ export function ConversationReader({
     setUtilityPanel("navigation");
     const anchorMessageId = activeMessageId ?? undefined;
     void queryClient.prefetchQuery({
-      queryKey: ["conversation-index", readerSourceKey, conversationId, anchorMessageId ?? "start", "sheet"],
+      queryKey: ["conversation-index", readerSourceKey, conversationId, anchorMessageId ?? "start"],
       queryFn: () => dataSource.getDialogueIndex(conversationId, { anchorMessageId, limit: 80 }),
       staleTime: 60_000,
       ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
     });
     if (anchorMessageId) {
       void queryClient.prefetchInfiniteQuery({
-        queryKey: ["toc", readerSourceKey, conversationId, anchorMessageId, "sheet", "pages"],
+        queryKey: ["toc", readerSourceKey, conversationId, anchorMessageId, "pages"],
         initialPageParam: 0,
         queryFn: ({ pageParam }) => dataSource.getToc(conversationId, { messageId: anchorMessageId, offset: pageParam, limit: 200 }),
         getNextPageParam: (lastPage: TocResponse) => lastPage.has_more ? lastPage.offset + lastPage.limit : undefined,
@@ -2956,7 +2966,7 @@ export function ConversationReader({
         mobileOpenSignal={mobileSidebarOpenSignal}
         showMobileTrigger={false}
       /> : null}
-      <section ref={readerMainSectionRef} data-reader-main-section="true" className="relative flex min-w-0 flex-1 flex-col">
+      <section ref={readerMainSectionRef} data-reader-main-section="true" data-reader-focus={focusMode ? "on" : "off"} className="relative flex min-w-0 flex-1 flex-col">
         <header ref={reserveMobileReaderHeaderSpace} data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible || tocReturnPoint ? "translate-y-0" : "-translate-y-full"}`}>
           {mergedIntoConversationId ? <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-[3vw] py-2 text-sm text-amber-900" role="status"><span className="min-w-0 flex-1">{resolvedLocale === "zh-CN" ? "此对话已合并，当前内容可能正在更新。" : "This conversation was merged and may be updating."}</span><button type="button" className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-white" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{resolvedLocale === "zh-CN" ? "打开目标对话" : "Open target"}</button></div> : null}
           {loadingProgress < 100 ? (
@@ -2973,8 +2983,9 @@ export function ConversationReader({
                   <span>{loadedLabel}</span>
                 </div>
             </div> : <div className="flex-1" />}
-            {focusMode ? <div className="flex items-center gap-2">{returnToReadingButton()}<button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
+            {focusMode ? <div className="flex items-center gap-2"><ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton()}<button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
               <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
+              <ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />
               {returnToReadingButton()}
               {dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} /> : null}
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
@@ -2992,7 +3003,7 @@ export function ConversationReader({
               />
             </div>}
           </div>
-          {focusMode ? <div className="flex min-h-14 items-center justify-end gap-2 px-[3vw] py-2 md:hidden">{returnToReadingButton(true)}<button type="button" onClick={toggleFocusMode} className="inline-flex h-10 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
+          {focusMode ? <div data-reader-focus-controls className="flex min-h-14 items-center justify-end gap-2 px-[3vw] py-2 md:hidden"><ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton(true)}<button type="button" onClick={toggleFocusMode} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ui bg-surface text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" /></button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
             <MobileSidebarTrigger
               onOpen={() => isOffline ? onOpenLibrary?.() : workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
             />
@@ -3017,15 +3028,15 @@ export function ConversationReader({
             {canManageCanonical && !mobileActionsExpanded ? <button type="button" onClick={() => openSourceEditor()} aria-pressed={Boolean(sourceEditorTarget)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui ${sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}><Pencil className="h-5 w-5" /></button> : null}
             <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
-          {!focusMode && tocReturnError ? (
+          {tocReturnError ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert" data-testid="reader-return-to-toc-origin-error">
               <span className="min-w-0 flex-1">{tocReturnError}</span>
               <button type="button" onClick={() => void returnToTocOrigin()} className="shrink-0 rounded-md border border-[var(--danger)]/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={navigationStatus === "loading"}>{resolvedLocale === "zh-CN" ? "重试返回" : "Retry return"}</button>
               <button type="button" onClick={() => void locateTocOriginMessage()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle" disabled={navigationStatus === "loading"}>{resolvedLocale === "zh-CN" ? "定位原消息" : "Locate message"}</button>
             </div>
           ) : null}
-          {!focusMode && navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">{t("locating")}</div> : null}
-          {!focusMode && navigationStatus === "stale" ? (
+          {navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">{t("locating")}</div> : null}
+          {navigationStatus === "stale" ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-amber-50 px-[3vw] py-2 text-sm text-amber-800" role="status">
               <span className="min-w-0 flex-1">{navigationTargetIsAttachment ? (resolvedLocale === "zh-CN" ? "附件引用对应的正文版本已变化。" : "The message version for this attachment reference has changed.") : t("locateChanged")}</span>
               <button type="button" onClick={() => { const target = lastNavigationTargetRef.current; if (target) void navigateToTarget(target); }} className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={!lastNavigationTargetRef.current}>{resolvedLocale === "zh-CN" ? "重新定位" : "Retry locate"}</button>
@@ -3033,7 +3044,7 @@ export function ConversationReader({
               {navigationTargetIsAttachment ? <button type="button" onClick={() => void refreshAttachmentReferences()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle">{resolvedLocale === "zh-CN" ? "刷新文件引用" : "Refresh file references"}</button> : null}
             </div>
           ) : null}
-          {!focusMode && navigationStatus === "failed" ? (
+          {navigationStatus === "failed" ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert">
               <span className="min-w-0 flex-1">{navigationFailureMessage}</span>
               <button type="button" onClick={() => { const target = lastNavigationTargetRef.current; if (target) void navigateToTarget({ ...target, allowMessageFallback: true }); }} className="shrink-0 rounded-md border border-[var(--danger)]/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={!lastNavigationTargetRef.current}>{resolvedLocale === "zh-CN" ? "重新定位" : "Retry locate"}</button>

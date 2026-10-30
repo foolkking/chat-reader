@@ -51,6 +51,7 @@ function fixture(sourceKey = "remote", withGeometry = false) {
       } },
   };
   const mocks = {
+    "../../components/reader-auxiliary-visibility": { useReaderAuxiliaryVisibility: () => ({ visible: true, overlay: false }) },
     react, "react/jsx-runtime": require("react/jsx-runtime"),
     "@tanstack/react-query": { useInfiniteQuery: input => { options = input; return {
       ...state, refetch: () => { calls.refetch++; }, fetchNextPage: () => { calls.next++; },

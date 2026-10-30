@@ -8,10 +8,14 @@ import { PanelRightOpen, PinOff } from "lucide-react";
 import { getConversationToc } from "../../lib/api";
 import type { TocItem, TocResponse } from "../../lib/types";
 import { markdownHeadingLabel } from "../conversations/markdown-renderer";
+import { useReaderAuxiliaryVisibility } from "../../components/reader-auxiliary-visibility";
 
-export function ConversationToc({ conversationId, sourceKey = "remote", networkMode, activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, ready = true, mode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; networkMode?: NetworkMode; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; ready?: boolean; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<TocResponse>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
+export function ConversationToc({ conversationId, sourceKey = "remote", networkMode, activeMessageId, activeItems = [], activeBlockId, activeHeadingId: suppliedActiveHeadingId, items, ready = true, mode: suppliedMode = "panel", loadPage, onNavigate }: { conversationId: string; sourceKey?: string; networkMode?: NetworkMode; activeMessageId?: string | null; activeItems?: TocItem[]; observerKey?: string; activeBlockId?: string | null; activeHeadingId?: string | null; items?: TocItem[]; ready?: boolean; mode?: "panel" | "sheet"; loadPage?: (options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number }) => Promise<TocResponse>; onNavigate?: (item: TocItem) => void | Promise<void>; }) {
   const t = useTranslations();
-  const { resolvedLocale, sectionTocMode, setSectionTocMode } = usePreferences();
+  const { resolvedLocale, sectionTocMode: preferredSectionTocMode, setSectionTocMode } = usePreferences();
+  const auxiliary = useReaderAuxiliaryVisibility();
+  const sectionTocMode = auxiliary.overlay ? "visible" : preferredSectionTocMode;
+  const mode = auxiliary.overlay ? "sheet" : suppliedMode;
   const cacheScope = JSON.stringify([sourceKey, conversationId]);
   const [cache, setCache] = useState<{ scope: string; items: Record<string, TocItem[]> }>({ scope: cacheScope, items: {} });
   const [lastActive, setLastActive] = useState({ scope: cacheScope, messageId: activeMessageId ?? null });
@@ -29,13 +33,13 @@ export function ConversationToc({ conversationId, sourceKey = "remote", networkM
   }, [activeMessageId, cacheScope]);
   const effectiveMessageId = activeMessageId ?? (lastActive.scope === cacheScope ? lastActive.messageId : null);
   const tocQuery = useInfiniteQuery({
-    queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, mode, "pages"],
+    queryKey: ["toc", sourceKey, conversationId, effectiveMessageId, "pages"],
     initialPageParam: 0,
     queryFn: ({ pageParam }) => (loadPage ?? ((options) => getConversationToc(conversationId, options)))({
       messageId: effectiveMessageId ?? undefined, offset: pageParam, limit: 200,
     }),
     getNextPageParam: (lastPage) => lastPage.has_more ? lastPage.offset + lastPage.limit : undefined,
-    enabled: items === undefined && ready && Boolean(effectiveMessageId),
+    enabled: items === undefined && ready && Boolean(effectiveMessageId) && auxiliary.visible,
     staleTime: 30_000,
     ...(networkMode ? { networkMode } : {}),
   });
@@ -136,3 +140,4 @@ export function resolveActiveHeadingId(items: TocItem[], activeBlockId?: string 
   ), null);
   return nearest ? blockDomId(nearest) : null;
 }
+

@@ -107,6 +107,31 @@ class AnnotationInboxResponse(BaseModel):
     has_more: bool
 
 
+class AnnotationInboxSummaryItem(BaseModel):
+    id: UUID
+    conversation_id: UUID
+    conversation_title: str
+    message_id: UUID | None
+    message_version_id: UUID | None
+    start_block_index: int | None
+    annotation_type: AnnotationType
+    anchor_status: AnnotationAnchorStatus
+    revision: int
+    quote_preview: str
+    comment_preview: str
+    quote_truncated: bool
+    comment_truncated: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class AnnotationInboxSummaryResponse(BaseModel):
+    items: list[AnnotationInboxSummaryItem]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
+
 class NotebookBlock(BaseModel):
     id: UUID
     type: Literal["markdown", "annotation_reference"]

@@ -4,7 +4,10 @@
 
 `execution/READING_RELIABILITY_IMPLEMENTATION_2026-10-31.md` 跟踪批准的分批
 目标，区分源码、CI、生产文件恢复与发布证据。当前合同入口保持旧生产状态，
-不把本轮尚未验收的实现记成已发布。
+不把本轮尚未验收的实现记成已发布。`api-reference.md` 记录两个新增只读
+集合摘要及旧接口兼容；执行记录明确 12 个文件的无覆盖恢复与前置备份限制。
+`reading-performance.yml` 负责同一隔离 runner 的先基线、后候选测量，
+`build-release-images.yml` 调用它；尚无本轮 CI／性能通过声明。
 
 ## 累计 24 项补齐发布 — 2026-10-30
 

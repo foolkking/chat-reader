@@ -557,6 +557,10 @@ jobs:
         if: ${{ always() && steps.postgres.outcome == 'success' }}
         run: bash scripts/ci/postgres-service.sh stop
 
+  reading-performance-comparison:
+    needs: [api-quality]
+    uses: ./.github/workflows/reading-performance.yml
+
   build-images:
     needs: [api-quality, web-quality, settings-quality]
     if: ${{ needs.api-quality.result == 'success' && needs.web-quality.result == 'success' && needs.settings-quality.result == 'success' }}

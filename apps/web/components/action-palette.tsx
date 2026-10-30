@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, BookmarkPlus, Clock3, Command, CopyCheck, Files, FlaskConical, Highlighter, Library, Search, Upload, X } from "lucide-react";
+import { Archive, BookmarkPlus, Clock3, Command, CopyCheck, Files, Highlighter, Library, Search, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useImportDialog } from "./import-dialog-provider";
@@ -57,7 +57,6 @@ export function ActionPalette() {
       { id: "file-directory", label: zh ? "文件目录" : "File directory", keywords: "files attachments directory 文件 附件 目录", icon: Files, run: () => navigate("/files") },
       { id: "duplicate-review", label: zh ? "重复项审查" : "Duplicate review", keywords: "duplicates exact review 重复 相同 审查", icon: CopyCheck, run: () => navigate("/duplicates") },
       { id: "archived", label: t("archived"), keywords: "archived archive 归档", icon: Archive, run: () => navigate("/archived") },
-      { id: "example", label: zh ? "打开合成示例" : "Open synthetic example", keywords: "example 示例 demo", icon: FlaskConical, run: () => navigate("/example") },
     ];
   }, [openImportDialog, router, t, zh]);
 

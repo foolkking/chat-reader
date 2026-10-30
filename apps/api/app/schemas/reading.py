@@ -6,6 +6,30 @@ import json
 from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.conversation import ConversationListItem
+from app.schemas.user_feature_entries import UserFeatureEntryRead
+
+
+class ReadingListProjectSummary(BaseModel):
+    id: UUID
+    name: str
+
+
+class ReadingListSummaryItem(BaseModel):
+    entry: UserFeatureEntryRead
+    title: str | None
+    projects: list[ReadingListProjectSummary]
+    available: bool
+    resume_available: bool
+    last_read_at: datetime | None
+
+
+class ReadingListSummaryResponse(BaseModel):
+    items: list[ReadingListSummaryItem]
+    counts: dict[Literal["unread", "read", "all"], int]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
 
 
 class ReadingPositionUpsert(BaseModel):

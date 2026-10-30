@@ -56,6 +56,49 @@ test.beforeEach(async ({ context, page }) => {
   await page.route("**/api/**", mockReaderApi);
 });
 
+for (const width of [375, 1440]) test(`focus edge navigation preserves the body and fetches only revealed navigation at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.route("**/api/preferences", route => json(route, {
+    theme_mode: width === 375 ? "light" : "dark", locale_mode: "en-US",
+    reader_default_focus: true, reader_width_mode: "standard", reader_density_mode: "comfortable",
+    reader_font_size_px: 17, section_toc_mode: "visible", created_at: "2026-10-31T00:00:00Z", updated_at: "2026-10-31T00:00:00Z",
+  }));
+  const reads: string[] = [];
+  page.on("request", request => { const path = new URL(request.url()).pathname; if (/\/(toc|dialogue-index)$/.test(path)) reads.push(path); });
+  await page.goto(`/conversations/${conversationId}`);
+  const article = page.locator(`#message-${messageId}`);
+  await expect(article).toContainText(preservedText);
+  await expect(page.locator('[data-focus-mode="on"]')).toBeVisible();
+  await expect(page.locator("[data-reader-workspace-nav]")).toBeHidden();
+  await article.evaluate(element => element.setAttribute("data-synthetic-identity", "retained"));
+  const before = await article.boundingBox();
+  const initial = reads.length;
+  await page.waitForTimeout(400);
+  expect(reads).toHaveLength(initial);
+  const index = page.getByRole("button", { name: "Dialogue index", exact: true }).filter({ visible: true });
+  await index.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name: "Dialogue index", exact: true })).toBeVisible();
+  await expect.poll(() => reads.some(path => path.endsWith("/dialogue-index"))).toBe(true);
+  await expect(article).toHaveAttribute("data-synthetic-identity", "retained");
+  const after = await article.boundingBox();
+  expect(after?.x).toBeCloseTo(before!.x, 0);
+  expect(after?.y).toBeCloseTo(before!.y, 0);
+  await page.screenshot({ path: testInfo.outputPath(`focus-index-${width}.png`) });
+  await page.keyboard.press("Escape");
+  await expect(index).toBeFocused();
+  const toc = page.getByRole("button", { name: "Section contents", exact: true }).filter({ visible: true });
+  await toc.focus();
+  await page.keyboard.press("Enter");
+  await expect.poll(() => reads.some(path => path.endsWith("/toc"))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(toc).toBeFocused();
+  await page.getByRole("button", { name: "Exit focus mode", exact: true }).filter({ visible: true }).click();
+  await expect(page.locator("[data-reader-workspace-nav]")).not.toHaveAttribute("hidden");
+  await expect(article).toHaveAttribute("data-synthetic-identity", "retained");
+  if (width === 1440) await expect(page.getByRole("button", { name: "Open sidebar", exact: true })).toBeVisible();
+});
+
 test("stale block fallback preserves Reader content and reports no false exact pulse", async ({ page }) => {
   await page.goto(`/conversations/${conversationId}?messageId=${messageId}&blockIndex=0&characterOffset=9999`);
 

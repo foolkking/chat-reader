@@ -390,6 +390,20 @@ export async function getAnnotationInbox(
   return fetchJson<AnnotationInboxResponse>(`/api/annotations/inbox?${params.toString()}`, { signal: options.signal });
 }
 
+export async function getReadingListSummary(params: URLSearchParams, signal?: AbortSignal) {
+  const generation = authenticationGeneration();
+  const result = await fetchJson<import("./types").ReadingListSummaryResponse>(`/api/reading-list?${params}`, { signal });
+  if (generation !== authenticationGeneration()) throw new Error("Account changed");
+  return result;
+}
+
+export async function getAnnotationInboxSummary(params: URLSearchParams, signal?: AbortSignal) {
+  const generation = authenticationGeneration();
+  const result = await fetchJson<import("./types").AnnotationInboxSummaryResponse>(`/api/annotations/inbox/summary?${params}`, { signal });
+  if (generation !== authenticationGeneration()) throw new Error("Account changed");
+  return result;
+}
+
 export async function createConversationAnnotation(conversationId: string, input: AnnotationCreateInput): Promise<AnnotationRead> {
   return fetchJson<AnnotationRead>(`/api/conversations/${conversationId}/annotations`, jsonRequest("POST", input));
 }

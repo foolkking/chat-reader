@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-10-30. This is the current snapshot, not a release history.
+Last updated: 2026-10-31. This is the current snapshot, not a release history.
 
 ## Release and active work
 
@@ -8,7 +8,10 @@ Last updated: 2026-10-30. This is the current snapshot, not a release history.
 The approved reading/reliability plan starts with reference-aware asset audits,
 offline dependency preflight and Context retry integrity. Reading-list/inbox
 projections, focus navigation and measured performance follow. Local gates are
-not run; existing production remains unchanged. See the
+not run. The application revision/schema remain unchanged; 12 missing Context
+files were independently hash/size-checked and restored without overwrite after
+a stopped-writer five-component backup. Preserved source copies remain intact.
+This is file-read recovery, not full offline-package acceptance. See the
 [implementation record](docs/execution/READING_RELIABILITY_IMPLEMENTATION_2026-10-31.md).
 
 **Current production accepted — 2026-10-30, all 24 bounded features:**

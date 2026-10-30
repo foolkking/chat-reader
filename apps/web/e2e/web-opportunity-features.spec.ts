@@ -106,20 +106,21 @@ test("quick actions supports keyboard choice, focus trapping and Escape restorat
   await page.keyboard.press("ArrowDown");
   await expect(dialog.getByRole("option", { selected: true })).toContainText("Import");
   await page.keyboard.press("Shift+Tab");
-  await expect(dialog.getByTestId("action-palette-example")).toBeFocused();
+  await expect(dialog.getByTestId("action-palette-archived")).toBeFocused();
+  await expect(dialog.getByTestId("action-palette-example")).toHaveCount(0);
   await page.keyboard.press("Tab");
   await expect(input).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(opener).toBeFocused();
   await page.keyboard.press("Alt+Shift+P");
-  await input.fill("synthetic");
+  await input.fill("recent");
   await page.keyboard.press("Enter");
   await expect(dialog).toHaveCount(0);
-  await expect(page).toHaveURL(/\/example$/);
+  await expect(page).toHaveURL(/\/recent$/);
 });
 
-test("reading list exposes items after the first twenty without mutating them", async ({ page }) => {
+test("reading list pages its summary, clears page selection and makes no per-row detail requests", async ({ page }, testInfo) => {
   const entries = Array.from({ length: 21 }, (_, index) => ({
     id: `synthetic-entry-${index}`, collection: "reading-list", revision: 1,
     value: { conversation_id: `synthetic-conversation-${index}`, state: "unread" },
@@ -127,20 +128,62 @@ test("reading list exposes items after the first twenty without mutating them", 
     updated_at: "2026-10-30T00:00:00Z",
   }));
   const writes: string[] = [];
+  const details: string[] = [];
   await page.route("**/api/**", async (route) => {
     if (route.request().method() !== "GET") writes.push(route.request().method());
-    const path = new URL(route.request().url()).pathname;
-    const payload = path === "/api/user-feature-entries/reading-list" ? entries
-      : path.startsWith("/api/conversations/synthetic-conversation-")
-        ? { id: path.split("/").at(-1), title: "Synthetic reading item" } : [];
+    const url = new URL(route.request().url()), path = url.pathname;
+    if (path.startsWith("/api/conversations/")) details.push(path);
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+    const payload = path === "/api/reading-list" ? {
+      items: entries.slice(offset, offset + 20).map(entry => ({ entry, title: `Synthetic reading ${entry.id}`, available: true, projects: [], resume_available: false, last_read_at: null })),
+      total: 21, limit: 20, offset, has_more: offset + 20 < 21, counts: { unread: 21, read: 0, all: 21 },
+    } : [];
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
   });
   await page.goto("/reading-list");
   await expect(page.locator('[data-testid^="reading-list-item-"]')).toHaveCount(20);
-  await page.getByRole("button", { name: "Load more (20 / 21)" }).click();
-  await expect(page.locator('[data-testid^="reading-list-item-"]')).toHaveCount(21);
-  await expect(page.getByRole("button", { name: /Load more/ })).toHaveCount(0);
+  await page.getByRole("checkbox", { name: "0 selected on this page" }).check();
+  await expect(page.getByRole("checkbox", { name: "20 selected on this page" })).toBeChecked();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page).toHaveURL(/offset=20/);
+  await expect(page.locator('[data-testid^="reading-list-item-"]')).toHaveCount(1);
+  await expect(page.getByRole("checkbox", { name: "0 selected on this page" })).not.toBeChecked();
+  await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+  await page.goto("/recent");
+  await page.goBack();
+  await expect(page).toHaveURL(/reading-list\?offset=20/);
+  await expect(page.locator('[data-testid^="reading-list-item-"]')).toHaveCount(1);
+  await page.screenshot({ path: testInfo.outputPath("reading-list-paged.png") });
   expect(writes).toEqual([]);
+  expect(details).toEqual([]);
+});
+
+test("lost saved-search response is confirmed read-only without creating a second identity", async ({ page }) => {
+  const entries: unknown[] = [], identities: string[] = [];
+  await page.route("**/api/**", async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.startsWith("/api/user-feature-entries/saved-search/") && route.request().method() === "PUT") {
+      const input = route.request().postDataJSON();
+      const id = path.split("/").at(-1)!;
+      identities.push(id);
+      entries.push({ id, collection: "saved-search", revision: 1, value: input.value,
+        created_at: "2026-10-31T00:00:00Z", updated_at: "2026-10-31T00:00:00Z" });
+      return route.abort("failed");
+    }
+    const payload = path === "/api/user-feature-entries/saved-search" ? entries
+      : path === "/api/search" ? { items: [], total: 0, limit: 50, offset: 0 } : [];
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+  });
+  await page.goto("/search?q=synthetic");
+  await page.getByRole("button", { name: "Save current search", exact: true }).click();
+  await page.getByRole("textbox", { name: "Name", exact: true }).fill("Synthetic retained search");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Check current state", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Check current state", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Accept checked result", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Accept checked result", exact: true }).click();
+  await expect(page.getByText("Synthetic retained search", { exact: true })).toBeVisible();
+  expect(identities).toHaveLength(1);
 });
 
 for (const projectView of [false, true]) {

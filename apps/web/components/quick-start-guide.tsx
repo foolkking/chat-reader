@@ -1,7 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
-import Link from "next/link";
 import { usePreferences } from "./preferences-provider";
 
 // Calm reading-desk layout: one flat list, existing ink/accent tokens, 4px scale.
@@ -21,7 +20,6 @@ export function QuickStartGuide({ onImport }: { onImport?: () => void }) {
         ].map(([title, body], index) => <li key={index} className="flex gap-3"><span className="mt-0.5 text-xs tabular-nums text-secondary">0{index + 1}</span><div><p className="font-medium text-primary">{title}</p><p className="text-secondary">{body}</p></div></li>)}
       </ol>
       {onImport ? <button type="button" className="btn-secondary mt-4 min-h-11 px-3 text-sm" onClick={() => { setOpen(false); onImport(); }}>{zh ? "开始导入" : "Start importing"}</button> : null}
-      <Link href="/example" className="btn-secondary mt-4 inline-flex min-h-11 items-center px-3 text-sm">{zh ? "先试读合成示例" : "Try a synthetic example"}</Link>
     </section> : null}
   </div>;
 }

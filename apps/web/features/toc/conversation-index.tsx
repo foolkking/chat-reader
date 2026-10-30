@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "../../components/preferences-provider";
 import { getConversationDialogueIndex } from "../../lib/api";
 import type { DialogueIndexPanelState, DialogueIndexItem, DialogueIndexResponse, MessageListItem } from "../../lib/types";
+import { useReaderAuxiliaryVisibility } from "../../components/reader-auxiliary-visibility";
 
 const AROUND_WINDOW = 24;
 const PREVIEW_OPEN_DELAY = 180;
@@ -32,7 +33,7 @@ export function ConversationIndex({
   messages,
   activeMessageId,
   ready = true,
-  mode = "rail",
+  mode: suppliedMode = "rail",
   sourceKey = "remote",
   networkMode,
   loadPage,
@@ -49,6 +50,8 @@ export function ConversationIndex({
   loadPage?: (options: { offset?: number; limit?: number; anchorMessageId?: string }) => Promise<DialogueIndexResponse>;
   onNavigate?: (item: ConversationIndexItem) => void | Promise<void>;
 }) {
+  const auxiliary = useReaderAuxiliaryVisibility();
+  const mode = auxiliary.overlay ? "sheet" : suppliedMode;
   const t = useTranslations();
   const [showFilter, setShowFilter] = useState(false);
   const [rangeMode, setRangeMode] = useState<"all" | "around" | "custom">("around");
@@ -68,13 +71,13 @@ export function ConversationIndex({
   const desktopFullIndex = mode === "rail" && rangeMode !== "around";
 
   const indexQuery = useQuery({
-    queryKey: ["conversation-index", sourceKey, conversationId, desktopFullIndex ? "all" : activeMessageId ?? "start", mode],
+    queryKey: ["conversation-index", sourceKey, conversationId, desktopFullIndex ? "all" : activeMessageId ?? "start"],
     queryFn: () => loader({
       anchorMessageId: desktopFullIndex ? undefined : activeMessageId ?? undefined,
       offset: desktopFullIndex ? 0 : undefined,
       limit: desktopFullIndex ? 5000 : 80,
     }),
-    enabled: messages === undefined && ready,
+    enabled: messages === undefined && ready && auxiliary.visible,
     staleTime: 60_000,
     placeholderData: (previous) => previous,
     ...(networkMode ? { networkMode } : {}),

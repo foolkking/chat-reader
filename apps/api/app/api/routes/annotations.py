@@ -1,4 +1,5 @@
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
@@ -10,6 +11,8 @@ from app.schemas.annotation import (
     AnnotationAnchorStatus,
     AnnotationCreate,
     AnnotationInboxResponse,
+    AnnotationInboxSummaryResponse,
+    AnnotationType,
     AnnotationRead,
     AnnotationSyncRequest,
     AnnotationSyncResponse,
@@ -34,6 +37,27 @@ from app.services.annotations import (
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request, subject_key_from_request
 
 router = APIRouter(tags=["annotations"])
+
+
+@router.get("/api/annotations/inbox/summary", response_model=AnnotationInboxSummaryResponse)
+def get_annotation_inbox_summary(
+    request: Request, response: Response,
+    anchor_status: Literal["valid", "remapped", "orphaned", "needs_review", "attention"] | None = None,
+    annotation_type: AnnotationType | None = None,
+    q: str = Query(default="", max_length=200),
+    project_id: uuid.UUID | None = None,
+    conversation_id: uuid.UUID | None = None,
+    sort: Literal["updated", "created"] = "updated",
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    from app.services.annotations import annotation_inbox_summary
+    response.headers["Cache-Control"] = "no-store"
+    return annotation_inbox_summary(db, ownership_scope=ownership_scope_from_request(request),
+        subject_key=subject_key_from_request(request), anchor_status=anchor_status,
+        annotation_type=annotation_type, q=q, project_id=project_id, conversation_id=conversation_id,
+        sort=sort, limit=limit, offset=offset)
 
 
 @router.get("/api/annotations/inbox", response_model=AnnotationInboxResponse)

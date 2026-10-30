@@ -20,7 +20,7 @@ export default function AnnotationInboxRoute() {
         onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
         className="md:px-6"
       />
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+      <div data-collection-scroll className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
           <AnnotationInboxPage />
         </div>
