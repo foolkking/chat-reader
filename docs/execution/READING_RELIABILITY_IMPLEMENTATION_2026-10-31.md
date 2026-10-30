@@ -250,6 +250,17 @@ Next required work, after the user restores GitHub Actions capacity:
    speedup claims. App deployment, full production 47-conversation download
    and a new coherent post-repair backup remain unclaimed.
 
+At **06:09:54 +08**, read-only reinspection still finds run `41128941676`
+as the latest full workflow on this branch; its terminal capacity check still
+has zero steps and the billing/spending-limit annotation. There is no live
+process/job to wait on, and no new dispatch is attempted. Static review of the
+unreached browser gates found one additional old-default fixture assumption:
+the workspace soft-navigation test interacts with expanded project links
+after entering a Reader without setting an expanded preference. It now sets
+that real preference before navigation. Same Sidebar identity and exactly one
+document request remain required; default-collapsed/focus coverage is separate.
+This is source progress, not an executed or passing browser receipt.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset

@@ -51,6 +51,10 @@ remain. The capacity job had **zero steps**: GitHub rejected job startup for
 account billing/spending limits, not a measured v2 pass/failure. No local or
 alternate-runner workaround is used. A fresh full exact-source CI and target
 visual review remain required after Actions capacity is restored.
+The workspace soft-navigation DOM-persistence case explicitly selects the
+expanded Reader sidebar preference, because its subsequent steps use project
+links. Same-node and single-document assertions stay intact; the separate
+no-preference/focus cases retain the default-collapsed contract.
 
 ## Current accepted release — 2026-10-30
 

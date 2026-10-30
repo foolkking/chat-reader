@@ -26,6 +26,9 @@ the capacity job because of account billing/spending limits (zero steps, no
 v2 measurements). No rerun or alternate compute bypass is attempted until
 the user restores Actions capacity. Full Web/capacity and target screenshots
 remain unaccepted; the earlier failed capacity evidence remains a failure.
+Static follow-up also makes the workspace Sidebar DOM-persistence fixture's
+expanded preference explicit before navigation; its identity/document-count
+assertions remain. No fresh CI result is claimed for these test-only corrections.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

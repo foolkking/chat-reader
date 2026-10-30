@@ -524,6 +524,9 @@ test("conversation rows remain visibly actionable when custom sorting is disable
 });
 
 test("workspace soft navigation preserves the same Sidebar DOM instance", async ({ page }) => {
+  // This flow interacts with expanded project links after entering a Reader.
+  // Make that preference explicit; the no-preference Reader defaults collapsed.
+  await page.addInitScript(() => localStorage.setItem("chat-reader:reader-sidebar-expanded", "true"));
   await page.context().addCookies([{
     name: "chat_reader_session",
     value: "persistent-workspace-shell-test-session",
