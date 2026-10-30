@@ -151,6 +151,16 @@ production ownership isolation is unchanged, and the 47-count assertion stays.
 Web repeated the already-corrected query-policy adapter failures. API full,
 capacity comparison and image acceptance remain unverified for this checkpoint.
 
+Runs four/five first read **03:54:06 +08**, after both thresholds. Their
+reading UX script gate now passes **1,889/1,889**; preceding Web checks pass.
+Focused browser/security had 44 passes and one old exact-three-gate assertion:
+the workflow correctly has four prerequisites after adding capacity comparison.
+The security assertion now requires all four successes, rather than dropping
+the existing checks. The new project-privacy fixture also violated the existing
+one-project-per-conversation constraint; it now uses two owned conversations
+with separate owned/foreign links and still requires no foreign projection.
+Neither correction changes application authorization, schema or release gates.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset

@@ -74,7 +74,7 @@ def test_catalog_preserves_owner_project_and_scalar_estimate_parity(bundle_state
         db.flush()
         own_id = own.id
         db.add_all([ProjectConversation(conversation_id=info["sources"][0], project_id=own.id),
-            ProjectConversation(conversation_id=info["sources"][0], project_id=foreign.id)])
+            ProjectConversation(conversation_id=info["sources"][1], project_id=foreign.id)])
         update_files(db, info["sources"][0], OwnershipScope(info["owners"][0]), base_generation=0,
             members={"current": b"# Synthetic catalog", "index": b'{"chapters":[]}'})
         db.commit()
@@ -84,6 +84,7 @@ def test_catalog_preserves_owner_project_and_scalar_estimate_parity(bundle_state
         assert {row.id for row in catalog.conversations} == set(info["sources"][:2])
         assert {row.id: row.estimated_bytes for row in catalog.conversations} == expected
         assert {row.id for row in catalog.projects} == {own_id}
+        assert next(row for row in catalog.conversations if row.id == info["sources"][1]).project_id is None
         assert "PRIVATE FOREIGN PROJECT" not in catalog.model_dump_json()
 
 
