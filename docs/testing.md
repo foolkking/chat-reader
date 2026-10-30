@@ -40,6 +40,19 @@ read boundaries and require one coherent read, current-session survival and
 other-session revocation. This fix is not locally executed for CI debugging;
 the existing full API and real SMTP/browser gates must certify the new source.
 
+CI `41020776603` passed the coherent-authentication API and settings gates.
+After registering the comparison feature's test owner, `41026649429` passed
+Web and API but settings returned 461 passes / two failures. Notebook save
+can silently stop when a read fence changes while local draft storage drains;
+both fences now retain the draft and explain the unfulfilled save. No write
+is replayed when reads recover. Cleanup's old raw IndexedDB inspection could
+recreate a database deleted after listing, then throw outside its promise.
+It now aborts creation and rejects blocked, failed or unsettled reads, closing
+late connections. Deterministic helper regressions and retained synthetic
+failure traces improve diagnosis; cleanup assertions/timeouts are unchanged.
+The old evidence does not identify the exact timeout stage, so cleanup is not
+claimed fixed before fresh CI.
+
 ## Fifth full CI and accepted deployment — 2026-10-30
 
 Exact `0d1efacaa8145dff0c8c70ceda82460af5883854` passed all five jobs in

@@ -96,15 +96,19 @@ export function NotebookView({ notebook, conflicts, annotations, repository, onS
       } finally { writing.current = false; }
     })();
   };
+  const reportSaveBlocked = () => setError(zh
+    ? "笔记未保存，当前笔记或冲突核对尚未就绪。草稿已保留，请待核对完成后重试。"
+    : "Notebook not saved. The notebook or conflict check is not ready. Your draft is retained; retry after checking finishes.");
   const save = async (baseOverride?: NotebookRead) => {
     const value = draftRef.current;
-    if (!value || busyRef.current || !canSave()) return;
+    if (!value || busyRef.current) return;
+    if (!canSave()) { reportSaveBlocked(); return; }
     busyRef.current = true; setBusy(true); setError("");
     try {
       // A durable draft has no pending work to wait for. An idle await would
       // let an unrelated background read revoke this already-ready save.
       if (writing.current) await writes.current;
-      if (!canSave()) return;
+      if (!canSave()) { reportSaveBlocked(); return; }
       const saved = await repository.saveNotebook(baseOverride ?? value.base, value.blocks, value.title || null);
       const next = { base: saved, title: saved.title ?? "", blocks: saved.blocks };
       onSaved(saved); draftRef.current = next; setDraft(next); setLatest(null);

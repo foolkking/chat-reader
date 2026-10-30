@@ -2,7 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { settingsAdmin } from "./settings-test-helper";
 import { readLocal } from "./settings-offline-helper";
 
-test.use({ trace: "off", actionTimeout: 20_000 });
+test.use({ trace: "retain-on-failure", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL, auth and worker");
 type CleanupFixtureWindow = Window & {
   restoreCleanup?: () => void;
@@ -120,13 +120,17 @@ for (const failure of ["database", "cache", "blocked"] as const) test(`signout c
     expect(await page.evaluate((name) => caches.has(name), seed.asset)).toBe(false);
     expect(await page.evaluate(() => caches.has("synthetic-other-account-cache"))).toBe(true);
     if (staleTab) {
-      expect((await context.request.post(`${baseURL}/api/auth/login`, { headers: { Origin: baseURL! }, data: { email: seed.email, password: seed.password } })).status()).toBe(200);
-      await page.goto(`${baseURL}/library?conversationId=${seed.id}`);
-      await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
-      await expect.poll(async () => (await readLocal(page, seed.userId)).conversations.length).toBe(1);
-      await staleTab.getByRole("button", { name: "Retry local cleanup", exact: true }).click();
-      await expect(staleTab.getByRole("region", { name: "Signout cleanup", exact: true })).toHaveCount(0);
-      expect((await readLocal(page, seed.userId)).conversations).toHaveLength(1);
+      await test.step("download a fresh copy after the completed cleanup", async () => {
+        expect((await context.request.post(`${baseURL}/api/auth/login`, { headers: { Origin: baseURL! }, data: { email: seed.email, password: seed.password } })).status()).toBe(200);
+        await page.goto(`${baseURL}/library?conversationId=${seed.id}`);
+        await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
+        await expect.poll(async () => (await readLocal(page, seed.userId)).conversations.length).toBe(1);
+      });
+      await test.step("an older tab cannot delete the newly downloaded copy", async () => {
+        await staleTab!.getByRole("button", { name: "Retry local cleanup", exact: true }).click();
+        await expect(staleTab!.getByRole("region", { name: "Signout cleanup", exact: true })).toHaveCount(0);
+        expect((await readLocal(page, seed.userId)).conversations).toHaveLength(1);
+      });
     }
   } finally { await context.close(); await admin.dispose(); }
 });

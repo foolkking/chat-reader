@@ -21,7 +21,15 @@ change recovery gate. The adapter dependency correction is committed in
 `6dc884d`. API logs show the email change committed before returning 401;
 authentication's separate credential-row reads can cross that commit under
 READ COMMITTED. A single joined snapshot and deterministic PostgreSQL
-interleaving regressions are now pending fresh full CI. Production is unchanged.
+interleaving regressions passed API and settings in CI `41020776603`.
+CI `41026649429` then passed Web and API, but settings had 461 passes and two
+failures: notebook save feedback and database cleanup recovery. The notebook's
+read fence now reports a blocked save instead of silently returning, without
+allowing the write or replaying it. Local-data test inspection now aborts
+accidental database creation and settles blocked/failed transactions; retained
+failure traces and named cleanup stages are enabled. These follow-up changes
+still require fresh full CI; the precise cleanup timeout phase was not recorded
+by the old trace-off fixture. Production is unchanged.
 
 **Current production accepted — 2026-10-30:**
 Exact source **`0d1efacaa8145dff0c8c70ceda82460af5883854`** passed all five

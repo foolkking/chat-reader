@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
 import { randomUUID } from "node:crypto";
 
-test.use({ trace: "off", actionTimeout: 20_000 });
+test.use({ trace: "retain-on-failure", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL, authentication and worker");
 
 for (const [width, locale] of [[375, "zh-CN"], [1440, "en-US"]] as const) {

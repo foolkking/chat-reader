@@ -355,3 +355,19 @@ The exact `76d277d` source passed API and settings, but `web-quality` found the
 new `features/compare` directory missing from the explicit test-owner inventory.
 It is now registered against `web-opportunity-features.spec.ts`; no browser
 assertion was removed and the run did not enter artifact or deployment gates.
+
+### 设置门禁后续：笔记反馈与本机检查悬挂
+
+完整运行 `41020776603` 的 API／settings 通过。`842b8dc` 的运行
+`41026649429` 于 **08:28:17Z** 派发、**09:18:23Z** 首次读取，
+**09:25:49Z** 完成：Web／API 通过，settings **461 passed／2 failed**，
+没有构建可发布制品或变更生产。
+
+笔记在等待本机草稿写入后可能遇到读核对暂不可用，原安全 fence 静默返回；
+现在保留禁止写入的边界，明确提示未保存及重试，不因核对恢复自动提交。
+退出清理用例的旧 raw IndexedDB 检查在 listing/open 之间发生删除时可能新建
+空库，再因缺少 store 在异步回调抛出而悬挂；改为拒绝创建、阻塞／事务失败／
+未结束均有界失败、关闭迟到连接。新增确定性辅助检查回归，并为这两个 synthetic
+用例保留失败 trace、为清理末段加命名步骤；不删除断言、不增加重试或放宽超时。
+旧失败证据缺少具体悬挂阶段，因此该辅助修复不是生产清理故障已解决的证据，
+须由新完整 CI 验证。此轮 CI 调试不运行本地门禁，生产仍 `0d1efac`／0056。

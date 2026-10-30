@@ -11,6 +11,10 @@
 `system/AUTHENTICATION_CONTRACT.md` owns the pending coherent credential-read
 contract; testing and the execution record own the failed settings gate and
 deterministic PostgreSQL regression evidence, not a claimed production fix.
+The later Web/API-green, settings-red run `41026649429` and its bounded
+notebook-feedback / local-inspection follow-up are owned by testing and the
+execution record; the old trace-off cleanup timeout remains unlocalized until
+fresh CI evidence. No production acceptance is inferred.
 
 ## 两轮 Web 功能发布验收 — 2026-10-30
 

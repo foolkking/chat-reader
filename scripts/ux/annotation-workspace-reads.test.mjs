@@ -352,8 +352,10 @@ test("a notebook save waiting for draft storage still rechecks readiness without
     f.allow(false); pending.resolve(2); await setImmediate();
     assert.equal(f.calls.writes, 0);
     assert.equal(find(f.render(), item => item.type === "input").props.value, "retained pending draft");
+    assert.match(text(find(f.render(), item => item.props?.role === "alert")), /Notebook not saved.*check is not ready/);
     f.allow(true); f.render(); await setImmediate();
     assert.equal(f.calls.writes, 0, "restored reads do not replay the blocked write");
+    assert.match(text(f.render()), /Notebook not saved/, "read recovery must not erase unfulfilled save feedback");
     button(f.render(), "Save notebook").onClick(); await setImmediate();
     assert.equal(f.calls.writes, 1);
   } finally { pending.resolve(2); f.r.dispose(); }
@@ -448,6 +450,7 @@ test("a deletion confirmation that outlives its conversation cannot delete or re
 test("unknown conflict reads preserve the notebook draft and block saving without auto-retry", async () => {
   const f = notebookFixture(); try { f.render(); f.r.flush(); await setImmediate(); let tree = f.render();
     assert.equal(button(tree, "Save notebook").disabled, true); button(tree, "Save notebook").onClick(); await setImmediate(); assert.equal(f.calls.writes, 0);
+    assert.match(text(find(f.render(), item => item.props?.role === "alert")), /Notebook not saved.*check is not ready/);
     assert.equal(find(tree, item => item.type === "input").props.value, "edited");
     f.allow(true); tree = f.render(); await setImmediate(); assert.equal(f.calls.writes, 0);
     button(tree, "Save notebook").onClick(); await setImmediate(); assert.deepEqual(f.calls, { writes: 1, published: 1, removed: 1 });
