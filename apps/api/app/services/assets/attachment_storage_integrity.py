@@ -48,6 +48,10 @@ class AttachmentStorageAudit:
     def issue_counts(self) -> dict[str, int]:
         return dict(sorted(Counter(issue.code for issue in self.issues).items()))
 
+    @property
+    def orphan_classification_safe(self) -> bool:
+        return self.complete and all(issue.code == "ORPHAN_ASSET_FILE" for issue in self.issues)
+
 
 def audit_local_attachment_storage(
     db: Session,
@@ -153,6 +157,7 @@ def audit_local_attachment_storage(
         try:
             path = _resolve_storage_key(root, storage_key)
         except ValueError:
+            complete = objects_complete = False
             issues.append(AttachmentStorageIssue(
                 "INVALID_STORAGE_KEY",
                 asset_object_id=asset_id,
@@ -223,6 +228,7 @@ def audit_local_attachment_storage(
 
     scanned_file_count = 0
     if not root.is_dir():
+        complete = False
         issues.append(AttachmentStorageIssue("ASSET_ROOT_MISSING"))
     elif objects_complete:
         try:
@@ -243,14 +249,17 @@ def audit_local_attachment_storage(
                     break
                 storage_key = relative.as_posix()
                 if candidate.is_symlink():
+                    complete = False
                     issues.append(AttachmentStorageIssue("UNSAFE_FILESYSTEM_ENTRY", storage_key=storage_key))
                     continue
                 try:
                     resolved = candidate.resolve()
                 except OSError:
+                    complete = False
                     issues.append(AttachmentStorageIssue("FILESYSTEM_ENTRY_CHANGED", storage_key=storage_key))
                     continue
                 if not resolved.is_relative_to(root):
+                    complete = False
                     issues.append(AttachmentStorageIssue("UNSAFE_FILESYSTEM_ENTRY", storage_key=storage_key))
                 elif resolved not in known_paths:
                     issues.append(AttachmentStorageIssue(
@@ -262,6 +271,10 @@ def audit_local_attachment_storage(
             complete = False
             issues.append(AttachmentStorageIssue("FILESYSTEM_SCAN_ERROR"))
 
+    if not complete:
+        # A partial/unsafe reference or filesystem view cannot produce actionable
+        # orphan candidates, even if some candidates were encountered earlier.
+        issues = [issue for issue in issues if issue.code != "ORPHAN_ASSET_FILE"]
     return AttachmentStorageAudit(
         complete=complete,
         scanned_asset_object_count=len(object_rows),
@@ -278,14 +291,17 @@ def _resolve_storage_key(root: Path, storage_key: str) -> Path:
     if not storage_key or "\\" in storage_key or ":" in storage_key or Path(storage_key).is_absolute():
         raise ValueError("Invalid asset storage key.")
     key = PurePosixPath(storage_key)
-    if key.is_absolute() or any(part in {"", ".", ".."} for part in key.parts):
+    if not key.parts or key.is_absolute() or key.as_posix() != storage_key or any(part in {"", ".", ".."} for part in key.parts):
         raise ValueError("Invalid asset storage key.")
     path = root
     for part in key.parts:
         path = path / part
         if path.is_symlink():
             raise ValueError("Invalid asset storage key.")
-    path = path.resolve()
+    try:
+        path = path.resolve()
+    except (OSError, RuntimeError) as exc:
+        raise ValueError("Invalid asset storage key.") from exc
     if not path.is_relative_to(root):
         raise ValueError("Invalid asset storage key.")
     return path

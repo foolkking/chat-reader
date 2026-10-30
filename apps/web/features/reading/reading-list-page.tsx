@@ -34,7 +34,7 @@ export function ReadingListPage() {
   const [results, setResults] = useState<ItemResult[]>([]);
   const [confirm, setConfirm] = useState<ReadingListSummaryItem[] | null>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { setConfirm(null); setNotice(null); setResults([]); }, [scope]);
+  useEffect(() => { setSelection({ scope, ids: [] }); setConfirm(null); setNotice(null); setResults([]); }, [scope]);
   useCollectionScroll(rootRef, scope, Boolean(query.data));
 
   async function refresh() {

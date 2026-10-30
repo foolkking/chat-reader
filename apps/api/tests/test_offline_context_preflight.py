@@ -25,7 +25,7 @@ def test_context_preflight_reports_owned_source_before_body_packaging(bundle_sta
     content = b"# Synthetic Current"
     digest = hashlib.sha256(content).hexdigest()
     key = "context/objects/preflight"
-    physical = get_asset_store().resolve_key(key)
+    physical = get_asset_store().resolve_key(key, must_exist=False)
     physical.parent.mkdir(parents=True, exist_ok=True)
     physical.write_bytes(content)
     with info["factory"]() as db:

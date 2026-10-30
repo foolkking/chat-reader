@@ -1,5 +1,24 @@
 # 数据与持久化
 
+## 共享对象审计 — 2026-10-31（候选源码，待 CI）
+
+local asset storage 的引用集合包括 `AssetObject`、`ContextMemberObject`
+和 `SkillFileObject`，不是只有附件。审计逐项核验 storage key、存在性、
+大小和可选 SHA256；不能把整个 `context` 或 `skills` 目录排除后称作完整。
+引用扫描截断、非法路径、符号链接或目录遍历失败会令覆盖不完整，并撤回
+本次 `ORPHAN_ASSET_FILE` 分类。`orphan_classification_safe` 只说明完整分类
+且没有其他完整性问题，不是删除授权；命令本身始终只读。
+
+离线更新先检查本次 changed scope 的 Context 和所选附件，再写正文；最终读取/
+流式 SHA256 检查仍保留。任务仅返回有界错误码及 owner 范围的受影响对话，
+不返回物理路径。依赖缺失时保留旧本机副本，不伪造成功或静默省略 Context。
+相同内容的 Context 重试也必须验证物理对象，缺失不能作为已成功的幂等重试。
+包 v1/v2/v3、Dexie v2、canonical 元数据和迁移链不变。
+
+生产仅完成 12 个 Context 文件的无覆盖恢复及既有业务读取；应用仍为
+`127eae5`。修复前五组件备份不是独立的修复后恢复点，原保留件及独立副本
+必须保留。完整包和候选源码验收状态见 `PROJECT_STATE.md`。
+
 ## 累计功能补齐 — 2026-10-30（已发布）
 
 生产已随 `127eae5` 升级 `0056 → 0057 → 0058`，单一 head 为 0058；

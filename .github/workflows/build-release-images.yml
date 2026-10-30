@@ -52,6 +52,8 @@ jobs:
           tests/test_attachment_storage_integrity.py
           tests/test_offline_context_preflight.py
           tests/test_offline_catalog_query_budget.py
+          tests/test_offline_context_recovery.py
+          tests/test_collection_summaries.py
       - name: Release C observability and cleanup safety suite
         run: >-
           cd apps/api && pytest -q

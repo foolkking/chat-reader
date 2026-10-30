@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 import uuid
+import pytest
 
 from app.core.database import get_db
 from app.main import app
@@ -77,7 +78,8 @@ def test_local_attachment_storage_audit_reports_both_sides_without_touching_stag
 
         report = audit_local_attachment_storage(db, root)
 
-        assert report.complete is True
+        assert report.complete is False  # The unsafe metadata path makes reference coverage incomplete.
+        assert not report.orphan_classification_safe
         assert report.issue_counts == {
             "ACTIVE_ATTACHMENT_WITHOUT_ASSET_OBJECT": 1,
             "ACTIVE_ATTACHMENT_WITH_UNAVAILABLE_ASSET": 1,
@@ -85,7 +87,6 @@ def test_local_attachment_storage_audit_reports_both_sides_without_touching_stag
             "ASSET_SIZE_MISMATCH": 1,
             "INVALID_STORAGE_KEY": 1,
             "MISSING_ASSET_FILE": 1,
-            "ORPHAN_ASSET_FILE": 1,
         }
         assert ignored.is_file()
         assert orphan.is_file()
@@ -124,6 +125,61 @@ def test_local_attachment_storage_sha_check_is_explicit_and_limits_fail_closed(c
         truncated = audit_local_attachment_storage(db, root, max_records=1, max_files=1)
         assert truncated.complete is False
         assert truncated.clean is False
+    finally:
+        db.close()
+        generator.close()
+
+
+def test_only_complete_reference_scans_can_classify_orphans(client, tmp_path):
+    db, generator = _database()
+    root = tmp_path / "assets"
+    try:
+        _write(root / "objects/unreferenced", b"synthetic orphan")
+        report = audit_local_attachment_storage(db, root)
+        assert report.complete and report.orphan_classification_safe
+        assert report.issue_counts == {"ORPHAN_ASSET_FILE": 1}
+        _write(root / "objects/second", b"another synthetic orphan")
+        truncated = audit_local_attachment_storage(db, root, max_files=1)
+        assert not truncated.complete and not truncated.orphan_classification_safe
+        assert "ORPHAN_ASSET_FILE" not in truncated.issue_counts
+    finally:
+        db.close()
+        generator.close()
+
+
+@pytest.mark.parametrize("key", ["../outside", "C:/outside", "objects//alias", "objects/./alias", "."])
+def test_unsafe_reference_keys_disable_orphan_candidates(client, tmp_path, key):
+    db, generator = _database()
+    root = tmp_path / "assets"
+    try:
+        _write(root / "objects/unreferenced", b"must not classify from an unsafe scan")
+        db.add(ContextMemberObject(storage_key=key, sha256="a" * 64, byte_size=1))
+        db.commit()
+        report = audit_local_attachment_storage(db, root)
+        assert not report.complete and not report.orphan_classification_safe
+        assert report.issue_counts == {"INVALID_STORAGE_KEY": 1}
+    finally:
+        db.close()
+        generator.close()
+
+
+def test_symlinked_reference_components_are_never_followed(client, tmp_path):
+    db, generator = _database()
+    root = tmp_path / "assets"
+    outside = tmp_path / "outside"
+    _write(outside / "member", b"synthetic outside")
+    root.mkdir()
+    try:
+        try:
+            (root / "context").symlink_to(outside, target_is_directory=True)
+        except OSError:
+            pytest.skip("symlink creation is not available on this host")
+        db.add(ContextMemberObject(storage_key="context/member", sha256="a" * 64, byte_size=17))
+        db.commit()
+        report = audit_local_attachment_storage(db, root, verify_sha256=True)
+        assert not report.complete and not report.orphan_classification_safe
+        assert report.issue_counts == {"INVALID_STORAGE_KEY": 1}
+        assert (outside / "member").read_bytes() == b"synthetic outside"
     finally:
         db.close()
         generator.close()

@@ -8,6 +8,9 @@
 集合摘要及旧接口兼容；执行记录明确 12 个文件的无覆盖恢复与前置备份限制。
 `reading-performance.yml` 负责同一隔离 runner 的先基线、后候选测量，
 `build-release-images.yml` 调用它；尚无本轮 CI／性能通过声明。
+DATA_AND_STORAGE／deployment 另记录候选共享对象引用集合、
+`orphan_classification_safe` 的非删除授权语义及不完整扫描撤回分类规则；
+执行记录保留第一次失败与聚合改写前的实测基线，不把源码改动当成性能证据。
 
 ## 累计 24 项补齐发布 — 2026-10-30
 

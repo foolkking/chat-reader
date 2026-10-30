@@ -49,6 +49,7 @@ def main() -> int:
         "storage_backend": "local",
         "complete": report.complete,
         "clean": report.clean,
+        "orphan_classification_safe": report.orphan_classification_safe,
         "scanned_asset_object_count": report.scanned_asset_object_count,
         "scanned_context_object_count": report.scanned_context_object_count,
         "scanned_skill_object_count": report.scanned_skill_object_count,

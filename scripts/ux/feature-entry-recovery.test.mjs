@@ -104,7 +104,10 @@ for (const collection of ["saved-search", "export-preset", "offline-checklist"])
       await f.click("Check current state");
       assert.equal(f.writes.length, 1);
       assert.match(text(f.render().panel), /current value differs/i);
+      const stale = f.render();
       f.accountChanged();
+      await assert.rejects(stale.save({ ...entry(collection), id: "old-account-must-not-write" }));
+      assert.equal(f.writes.length, 1);
       assert.equal(f.render().blocked, false);
       assert.equal(f.render().panel, null);
       assert.equal(f.callbacks.length, 0);

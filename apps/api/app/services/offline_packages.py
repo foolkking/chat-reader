@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any, BinaryIO, Callable, Iterable
 from zipfile import ZIP_DEFLATED, ZipFile
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, selectinload, with_loader_criteria
 
 from app.core.config import get_settings
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
@@ -74,6 +75,10 @@ def build_catalog(
 ) -> OfflineCatalogResponse:
     conversations = (
         db.query(Conversation)
+        .options(
+            selectinload(Conversation.project_links).joinedload(ProjectConversation.project),
+            with_loader_criteria(Project, ownership_scope.predicate(Project), include_aliases=True),
+        )
         .filter(
             Conversation.deleted_at.is_(None),
             Conversation.status == "active",
@@ -83,10 +88,11 @@ def build_catalog(
         .all()
     )
     items: list[OfflineCatalogConversation] = []
+    estimates = estimate_catalog_bytes(db, conversations)
     project_rows: dict[uuid.UUID, tuple[Project, list[uuid.UUID], int]] = {}
     for conversation in conversations:
         project_id, project_name = _conversation_project(conversation)
-        estimate = estimate_conversation_bytes(db, conversation)
+        estimate = estimates[conversation.id]
         items.append(
             OfflineCatalogConversation(
                 id=conversation.id,
@@ -105,7 +111,8 @@ def build_catalog(
             if existing is None:
                 project_rows[relation.project.id] = (relation.project, [conversation.id], estimate)
             else:
-                project_rows[relation.project.id] = (existing[0], [*existing[1], conversation.id], existing[2] + estimate)
+                existing[1].append(conversation.id)
+                project_rows[relation.project.id] = (existing[0], existing[1], existing[2] + estimate)
     projects = [
         OfflineCatalogProject(
             id=project.id,
@@ -126,6 +133,46 @@ def build_catalog(
     )
 
 
+def estimate_catalog_bytes(db: Session, conversations: list[Conversation]) -> dict[uuid.UUID, int]:
+    """Five grouped scalar projections; never materialize message text/bodies."""
+    from app.models.context_continuation import ContinuationState, ContinuationRevision, ContextMemberObject
+    ids = [row.id for row in conversations]
+    if not ids:
+        return {}
+    body = dict(db.query(Message.conversation_id, func.sum(Message.char_count)).filter(
+        Message.conversation_id.in_(ids), Message.is_deleted.is_(False),
+    ).group_by(Message.conversation_id).all())
+    headings = dict(db.query(Heading.conversation_id, func.count(Heading.id)).filter(
+        Heading.conversation_id.in_(ids),
+    ).group_by(Heading.conversation_id).all())
+    annotations = dict(db.query(ConversationAnnotation.conversation_id, func.count(ConversationAnnotation.id)).filter(
+        ConversationAnnotation.conversation_id.in_(ids), ConversationAnnotation.is_deleted.is_(False),
+    ).group_by(ConversationAnnotation.conversation_id).all())
+    # Distinct byte sizes collapse unrelated equal-sized assets. Deduplicate the
+    # real object identity per conversation before summing its physical bytes.
+    assets = db.query(Message.conversation_id.label("cid"), AssetObject.id, AssetObject.byte_size).select_from(Message).join(
+        MessageVersionAttachment, Message.current_version_id == MessageVersionAttachment.message_version_id,
+    ).join(Attachment, Attachment.id == MessageVersionAttachment.attachment_id).join(
+        AssetObject, AssetObject.id == Attachment.asset_object_id,
+    ).filter(Message.conversation_id.in_(ids), Message.is_deleted.is_(False),
+        AssetObject.status == "available", AssetObject.scan_status.in_(allowed_scan_statuses())).distinct().subquery()
+    attachment_bytes = dict(db.query(assets.c.cid, func.sum(assets.c.byte_size)).group_by(assets.c.cid).all())
+    def members(column):
+        return db.query(ContinuationState.conversation_id.label("cid"), column.label("digest")).join(
+            ContinuationRevision, ContinuationRevision.id == ContinuationState.adopted_revision_id,
+        ).filter(ContinuationState.conversation_id.in_(ids),
+            ContinuationRevision.conversation_id == ContinuationState.conversation_id, column.is_not(None))
+    refs = members(ContinuationRevision.current_sha256).union(members(ContinuationRevision.index_sha256)).subquery()
+    context_bytes = dict(db.query(refs.c.cid, func.sum(ContextMemberObject.byte_size)).select_from(refs).join(
+        ContextMemberObject, ContextMemberObject.sha256 == refs.c.digest,
+    ).group_by(refs.c.cid).all())
+    return {row.id: max(2_048, int(
+        int(body.get(row.id) or 0) * 1.25 + row.message_count * 180
+        + int(headings.get(row.id) or 0) * 180 + int(annotations.get(row.id) or 0) * 650
+        + int(attachment_bytes.get(row.id) or 0) + int(context_bytes.get(row.id) or 0) + 1_500
+    )) for row in conversations}
+
+
 def estimate_conversation_bytes(db: Session, conversation: Conversation) -> int:
     # The estimate intentionally includes compression overhead and annotation metadata.
     body = sum(
@@ -141,9 +188,9 @@ def estimate_conversation_bytes(db: Session, conversation: Conversation) -> int:
         ConversationAnnotation.is_deleted.is_(False),
     ).count() * 650
     attachment_bytes = sum(
-        int(row[0] or 0)
+        int(row[1] or 0)
         for row in (
-            db.query(AssetObject.byte_size)
+            db.query(AssetObject.id, AssetObject.byte_size)
             .join(Attachment, Attachment.asset_object_id == AssetObject.id)
             .join(MessageVersionAttachment, MessageVersionAttachment.attachment_id == Attachment.id)
             .join(Message, Message.current_version_id == MessageVersionAttachment.message_version_id)
@@ -420,6 +467,7 @@ def _write_package_payload(
     _write_json_key(output, "conversations", first=first_field)
     output.write(b"[")
     total = max(len(conversations), 1)
+    tag_mapping = _offline_tag_mapping(db, [row.id for row in conversations], subject_key)
     for index, conversation in enumerate(conversations, start=1):
         if index > 1:
             output.write(b",")
@@ -437,6 +485,7 @@ def _write_package_payload(
             conversation,
             subject_key=subject_key,
             asset_mode=str(package_metadata.get("asset_mode") or "none"),
+            tags=tag_mapping.get(conversation.id, []),
             progress_callback=report_conversation_phase,
         )
         _report(progress_callback, "packaging_conversations", min(92, round(index * 90 / total)), index, total)
@@ -451,6 +500,7 @@ def _write_conversation_payload(
     subject_key: str,
     asset_mode: str = "none",
     progress_callback: ConversationProgressCallback | None = None,
+    tags: list[str] | None = None,
 ) -> None:
     message_query = (
         db.query(Message)
@@ -497,7 +547,7 @@ def _write_conversation_payload(
         "project_name": project_name,
         "project_context": _project_context(db, conversation.id),
         "continuation": offline_continuation(db, conversation.id),
-        "tags": _offline_conversation_tags(db, conversation.id, subject_key),
+        "tags": tags if tags is not None else _offline_conversation_tags(db, conversation.id, subject_key),
     }
 
     output.write(b"{")
@@ -584,16 +634,26 @@ def _write_conversation_payload(
 
 def _offline_conversation_tags(db: Session, conversation_id: uuid.UUID, subject_key: str) -> list[str]:
     """Carry account-owned tag names with a package without changing v1/v2/v3 shape."""
-    result: list[str] = []
+    return _offline_tag_mapping(db, [conversation_id], subject_key).get(conversation_id, [])
+
+
+def _offline_tag_mapping(db: Session, conversation_ids: list[uuid.UUID], subject_key: str) -> dict[uuid.UUID, list[str]]:
+    selected = {str(value): value for value in conversation_ids}
+    result: dict[uuid.UUID, set[str]] = defaultdict(set)
+    if not selected:
+        return {}
     for row in db.query(UserFeatureEntry).filter(
         UserFeatureEntry.subject_key == subject_key,
         UserFeatureEntry.collection == "conversation-tag",
     ).all():
         value = row.value if isinstance(row.value, dict) else {}
         ids = value.get("conversation_ids") if isinstance(value.get("conversation_ids"), list) else []
-        if str(conversation_id) in {str(item) for item in ids} and isinstance(value.get("name"), str):
-            result.append(value["name"])
-    return sorted(set(result), key=str.casefold)
+        if not isinstance(value.get("name"), str):
+            continue
+        for item in ids:
+            if str(item) in selected:
+                result[selected[str(item)]].add(value["name"])
+    return {cid: sorted(names, key=str.casefold) for cid, names in result.items()}
 
 
 def _write_message_batch(

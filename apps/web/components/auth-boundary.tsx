@@ -50,16 +50,19 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
     let controller: AbortController | null = null;
     let expiryTimer: number | undefined;
 
+    // History navigation updates the real URL before React commits pathname
+    // and unmount cleanup. A late private request must not own that interval.
+    const ownsRoute = () => active && window.location.pathname === currentPath;
     const destination = () => window.location.pathname + window.location.search + window.location.hash;
     const invalidate = async (offline: boolean) => {
-      if (!active || redirecting) return;
+      if (!ownsRoute() || redirecting) return;
       redirecting = true;
       controller?.abort();
       window.clearTimeout(expiryTimer);
       setState(offline ? "offline-locked" : "checking");
       lockBrowserAuthenticationState();
       queryClient.clear();
-      if (!active) return;
+      if (!ownsRoute()) return;
       if (offline) redirecting = false;
       else window.location.replace(loginLocation(destination()));
     };
@@ -68,14 +71,14 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
       window.clearTimeout(expiryTimer);
       if (!Number.isFinite(expiresAt)) return;
       expiryTimer = window.setTimeout(() => {
-        if (!active) return;
+        if (!ownsRoute()) return;
         setState("checking");
         void verify();
       }, Math.max(0, Math.min(expiresAt - Date.now(), 2_147_483_647)));
     };
 
     const verify = async () => {
-      if (!active || verifying || redirecting) return;
+      if (!ownsRoute() || verifying || redirecting) return;
       verifying = true;
       controller = new AbortController();
       const signal = controller.signal;
@@ -83,7 +86,7 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
       // Cover response bodies and storage as well as the HTTP connection.
       const deadline = window.setTimeout(() => {
         controller?.abort();
-        if (active && !redirecting) setState(stage === "storage" ? "storage-error" : "unavailable");
+        if (ownsRoute() && !redirecting) setState(stage === "storage" ? "storage-error" : "unavailable");
       }, 15_000);
       try {
         const previousUserId = getCurrentOfflineRuntimeUserId();
@@ -94,7 +97,7 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
           }
           stage = "storage";
           const context = await activateOfflineLeaseContext(signal);
-          if (!active || signal.aborted) return;
+          if (!ownsRoute() || signal.aborted) return;
           if (!hasCurrentOfflineLease()) {
             await invalidate(true);
             return;
@@ -106,7 +109,7 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
           scheduleExpiry(offlineLeaseExpiresAt());
         } else {
           const session = await readAuthSession(signal);
-          if (!active || signal.aborted) return;
+          if (!ownsRoute() || signal.aborted) return;
           if (!session.authenticated) {
             await invalidate(false);
             return;
@@ -114,7 +117,7 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
           if (previousUserId && previousUserId !== (session.user_id ?? session.principal_id)) setState("checking");
           stage = "storage";
           const context = await bindAuthenticatedOfflineContext(session, signal);
-          if (!active || signal.aborted) return;
+          if (!ownsRoute() || signal.aborted) return;
           if (previousUserId && previousUserId !== context.userId) {
             window.location.replace(destination());
             return;
@@ -123,7 +126,7 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
         }
         setState("granted");
       } catch (cause) {
-        if (!active || signal.aborted) return;
+        if (!ownsRoute() || signal.aborted) return;
         if (cause instanceof SignoutCleanupPendingError) { suspendBrowserOfflineContext(); queryClient.clear(); window.location.replace("/login?reauth=1"); }
         else if (cause instanceof AuthRequestError && cause.status === 401) await invalidate(false);
         else if (stage === "session" && hasLockedOfflineAccount()) setState("offline-locked");
@@ -139,12 +142,13 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
     const accessLocked = () => { void invalidate(!navigator.onLine); };
     const recheck = () => { void verify(); };
     const cleanupRequired = () => {
+      if (!ownsRoute()) return;
       redirecting = true;
       controller?.abort(); window.clearTimeout(expiryTimer);
       suspendBrowserOfflineContext(); queryClient.clear(); setState("signout-cleanup");
     };
     const storageChanged = (event: StorageEvent) => {
-      if (redirecting) return;
+      if (!ownsRoute() || redirecting) return;
       if (event.key !== AUTH_OFFLINE_IDENTITY_STORAGE_KEY && event.key !== null) return;
       // Hide the old account immediately, even with no network to revalidate.
       controller?.abort();

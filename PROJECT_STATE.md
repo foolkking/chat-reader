@@ -5,10 +5,12 @@ Last updated: 2026-10-31. This is the current snapshot, not a release history.
 ## Release and active work
 
 **2026-10-31 active implementation — not yet verified or deployed:**
-The approved reading/reliability plan starts with reference-aware asset audits,
-offline dependency preflight and Context retry integrity. Reading-list/inbox
-projections, focus navigation and measured performance follow. Local gates are
-not run. The application revision/schema remain unchanged; 12 missing Context
+Reference-aware audits, offline preflight, collection projections, focus/edge
+navigation and explicit unknown-write recovery are implemented in candidate
+source. First CI found a fixture setup error and a real stale-auth pathname
+race; fixes and grouped catalog queries are awaiting fresh CI. The measured
+47/470 synthetic baseline is 283/2,821 SQL, not production latency.
+Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.
 This is file-read recovery, not full offline-package acceptance. See the

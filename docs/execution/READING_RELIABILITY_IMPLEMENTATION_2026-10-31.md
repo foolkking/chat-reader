@@ -66,10 +66,44 @@ accepted. No backup, volume, import or preserved user file was deleted.
 
 ## Remaining batches
 
-Query aggregation follows measured baseline evidence. CI browser/restore/
+Query aggregation now follows the measured baseline below. CI browser/restore/
 performance acceptance, full offline generation and any application deployment
 remain outstanding. No local gate, CI success or performance improvement is
 claimed here. The user's existing tsbuildinfo stays excluded.
+
+## First CI read and measured catalog baseline
+
+Run `41098242354`, source `43a714f`, dispatched 01:22:18 +08;
+first read 02:12:21 +08 respected the 50-minute threshold. Not accepted:
+the new API fixture called `resolve_key` before creating a simulated file
+without `must_exist=False`; all four cases stopped at fixture setup. Web's
+single-owner auth gate exposed an existing pathname commit race: a late
+private check redirected a URL already changed to a public Share. Source
+fixes preserve the existing assertions and fence side effects with the actual
+browser pathname, not only delayed React cleanup.
+
+The same failed API step still completed its independent synthetic catalog
+characterization: 47 conversations = **283 SQL / 50.18 ms**; 470 =
+**2,821 SQL / 413.90 ms**. These are disposable SQLite CI workload measurements,
+not production PostgreSQL latency or throughput. Baseline acquisition precedes
+aggregation changes. The candidate uses five grouped scalar projections plus
+eager project loading, deduplicates equal-sized assets by object identity and
+loads tag membership once per package. A <=8-query budget and scalar/reference
+parity regression are authored; improved measurements are not yet claimed.
+
+Second source batch `7b2e0bf`, run `41104369714`, dispatched 02:08:59 +08;
+do not read success/status before 02:58:59 +08 unless the user reports failure.
+Its baseline/candidate Reader capacity workflow is an additional required
+comparison, not a substitute for the full existing gates. Added a synthetic
+47-conversation/six-pair repair-and-package regression and actual business
+read/export/offline checks after isolated Context archive restoration, including
+the migrated PostgreSQL fixture. These are authored, not yet passed.
+
+The third source batch additionally makes unsafe/truncated audit walks withdraw
+all orphan classifications, tests symlink boundaries, fences stale feature-entry
+callbacks before requests, and tests desktop edge hover/selection/scrollbar
+behavior. These strengthen the original gates; no assertion or capacity budget
+is relaxed. Application deployment is not part of this source checkpoint.
 
 ## Incident correction
 

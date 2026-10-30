@@ -14,6 +14,7 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.heading import Heading
 from app.models.project_conversation import ProjectConversation
+from app.models.project import Project
 from app.schemas.annotation import (
     AnnotationCreate,
     AnnotationAnchorStatus,
@@ -113,6 +114,7 @@ def list_annotation_inbox(
 def annotation_inbox_summary(db, *, ownership_scope, subject_key, anchor_status,
                              annotation_type, q, project_id, conversation_id, sort, limit, offset):
     a = ConversationAnnotation
+    title = func.coalesce(func.nullif(Conversation.display_title, ""), Conversation.title)
     base = db.query(a.id).join(Conversation, Conversation.id == a.conversation_id).filter(
         a.subject_key == subject_key, a.is_deleted.is_(False),
         Conversation.deleted_at.is_(None), ownership_scope.predicate(Conversation),
@@ -126,19 +128,22 @@ def annotation_inbox_summary(db, *, ownership_scope, subject_key, anchor_status,
     if conversation_id:
         base = base.filter(a.conversation_id == conversation_id)
     if project_id:
-        base = base.filter(db.query(ProjectConversation.conversation_id).filter(
+        base = base.filter(db.query(ProjectConversation.conversation_id).join(
+            Project, Project.id == ProjectConversation.project_id,
+        ).filter(
             ProjectConversation.conversation_id == a.conversation_id,
             ProjectConversation.project_id == project_id,
+            ownership_scope.predicate(Project),
         ).exists())
     if q.strip():
         from sqlalchemy import or_
         needle = q.strip().lower()
         base = base.filter(or_(*(func.lower(func.coalesce(column, "")).contains(needle, autoescape=True)
-            for column in (Conversation.display_title, Conversation.title, a.quote, a.comment_markdown))))
+            for column in (title, a.quote, a.comment_markdown))))
     total = int(base.with_entities(func.count(a.id)).scalar() or 0)
     ordered = a.created_at if sort == "created" else a.updated_at
     rows = base.with_entities(
-        a.id, a.conversation_id, func.coalesce(Conversation.display_title, Conversation.title).label("conversation_title"),
+        a.id, a.conversation_id, title.label("conversation_title"),
         a.message_id, a.message_version_id, a.start_block_index, a.annotation_type, a.anchor_status,
         a.revision, a.created_at, a.updated_at,
         func.substr(func.coalesce(a.quote, ""), 1, 240).label("quote_preview"),

@@ -28,7 +28,7 @@ function fixture(sourceKey = "remote", withGeometry = false) {
     requestAnimationFrame: callback => { const id = ++frameId; frames.set(id, callback); return id; },
     cancelAnimationFrame: id => { frames.delete(id); },
   };
-  let cursor = 0, options, tree;
+  let cursor = 0, options, tree, auxiliary = { visible: true, overlay: false };
   let state = { data: { pages: [page(0, items.slice(0, 200))], pageParams: [0] },
     isSuccess: true, isError: false, isFetching: false, hasNextPage: true, isFetchNextPageError: false };
   let props = { conversationId: "synthetic-conversation", sourceKey, activeMessageId: "synthetic-message",
@@ -51,7 +51,7 @@ function fixture(sourceKey = "remote", withGeometry = false) {
       } },
   };
   const mocks = {
-    "../../components/reader-auxiliary-visibility": { useReaderAuxiliaryVisibility: () => ({ visible: true, overlay: false }) },
+    "../../components/reader-auxiliary-visibility": { useReaderAuxiliaryVisibility: () => auxiliary },
     react, "react/jsx-runtime": require("react/jsx-runtime"),
     "@tanstack/react-query": { useInfiniteQuery: input => { options = input; return {
       ...state, refetch: () => { calls.refetch++; }, fetchNextPage: () => { calls.next++; },
@@ -88,11 +88,24 @@ function fixture(sourceKey = "remote", withGeometry = false) {
     state(value) { state = { ...state, ...value }; return render(); },
     scope(value) { props = { ...props, sourceKey: value }; return render(); },
     activeBlock(value) { props = { ...props, activeBlockId: value }; return render(); },
+    visibility(value) { auxiliary = value; return render(); },
     list() { return nodes(tree).find(node => node.type?.name === "TocButtonList")?.props; },
     retry() { const retry = nodes(tree).find(node => node.type === "button" && node.props.children === "retry"); assert.ok(retry); retry.props.onClick(); },
     dispose() { for (const hook of hooks) hook.cleanup?.(); },
   };
 }
+
+for (const source of ["remote", "offline:1:v7", "share:synthetic-capability"]) test(`${source}: hidden TOC disables reads and overlay reuse keeps its canonical query identity`, () => {
+  const f = fixture(source);
+  try {
+    const key = f.options.queryKey;
+    f.visibility({ visible: false, overlay: false });
+    assert.equal(f.options.enabled, false);
+    f.visibility({ visible: true, overlay: true });
+    assert.equal(f.options.enabled, true);
+    assert.deepEqual(f.options.queryKey, key);
+  } finally { f.dispose(); }
+});
 
 for (const source of ["remote", "offline:1:v7", "share:synthetic-capability"]) test(`${source}: heading 201 becomes addressable and active after loading its page`, async () => {
   const f = fixture(source);

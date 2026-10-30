@@ -76,6 +76,23 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
   await page.waitForTimeout(400);
   expect(reads).toHaveLength(initial);
   const index = page.getByRole("button", { name: "Dialogue index", exact: true }).filter({ visible: true });
+  if (width === 1440) {
+    await page.mouse.move(700, 240);
+    await page.mouse.down();
+    await page.mouse.move(6, 350);
+    await page.waitForTimeout(240);
+    await expect(page.locator('.reader-index-column[data-focus-panel="open"]')).toHaveCount(0);
+    expect(reads).toHaveLength(initial);
+    await page.mouse.up();
+    await page.mouse.move(700, 240);
+    await index.hover();
+    await expect(page.locator('.reader-index-column[data-focus-panel="open"]')).toBeVisible();
+    await page.mouse.move(700, 300);
+    await expect(page.locator(".reader-index-column")).toBeHidden();
+    await page.mouse.move(1439, 300); // Scrollbar margin is not the right edge trigger.
+    await page.waitForTimeout(240);
+    expect(reads.some(path => path.endsWith("/toc"))).toBe(false);
+  }
   await index.focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "Dialogue index", exact: true })).toBeVisible();

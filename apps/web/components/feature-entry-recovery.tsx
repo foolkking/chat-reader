@@ -32,6 +32,7 @@ export function useFeatureEntryRecovery<T>(collection: UserFeatureCollection, zh
   onSaved: (entry: UserFeatureEntry<T>) => void, onRemoved: (entry: UserFeatureEntry<T>) => void,
   onContinue: (intended: UserFeatureEntry<T>, current: UserFeatureEntry<T> | null) => void) {
   const queryClient = useQueryClient();
+  const renderGeneration = authenticationGeneration();
   const snapshot = useCallback(() => currentAttempt(collection), [collection]);
   const attempt = useSyncExternalStore(subscribe, snapshot, () => null);
   useEffect(() => {
@@ -48,7 +49,10 @@ export function useFeatureEntryRecovery<T>(collection: UserFeatureCollection, zh
   }
   function clear(owned: Attempt) { if (owns(owned)) { attempts.delete(collection); publish(); } }
   async function send(kind: Attempt["kind"], entry: UserFeatureEntry<T>, retry?: Attempt) {
+    if (renderGeneration !== authenticationGeneration()) throw new Error("FEATURE_ACCOUNT_CHANGED");
     if (!retry && currentAttempt(collection)) throw new Error("FEATURE_RESULT_REQUIRES_CHECK");
+    if (retry && (!owns(retry) || currentAttempt(collection)?.phase !== "absent"
+      || kind !== "save" || retry.entry.revision !== 0)) throw new Error("FEATURE_RETRY_REQUIRES_CHECK");
     const owned: Attempt = retry ?? { kind, entry, generation: authenticationGeneration(), token: {}, phase: "writing" };
     attempts.set(collection, { ...owned, phase: "writing" }); publish();
     try {
@@ -67,6 +71,7 @@ export function useFeatureEntryRecovery<T>(collection: UserFeatureCollection, zh
     }
   }
   async function check(owned: Attempt) {
+    if (!owns(owned)) return;
     replace(owned, { phase: "checking" });
     try {
       const rows = await getUserFeatureEntries<T>(collection);

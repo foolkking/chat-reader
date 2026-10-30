@@ -119,6 +119,38 @@ def test_system_context_restore(archive_db, configuration_target, tmp_path, monk
     row = configuration_target.get(ContinuationRevision, selected)
     obj = configuration_target.get(ContextMemberObject, row.current_sha256)
     assert get_asset_store().resolve_key(obj.storage_key).read_bytes() == b'# second snapshot'
+    # Metadata/file existence alone is insufficient: exercise the actual restored
+    # business read, export and Offline Reader serialization in the fresh target.
+    import uuid
+    from app.models.background_job import BackgroundJob
+    from app.models.conversation import Conversation
+    from app.services.offline_continuation import offline_continuation
+    from app.services.offline_packages import build_offline_package
+    from app.services.exporting.context_package import create_context_package
+    from app.services.ownership import OwnershipScope
+    target = configuration_target
+    restored_conversation = target.get(Conversation, source_id)
+    owner = restored_conversation.owner_user_id
+    assert offline_continuation(target, source_id)["members"]["current"]["text"] == "# second snapshot"
+    export = create_context_package(target, conversation_id=source_id, job_id=uuid.uuid4(),
+        scope_kind="full_conversation", start_message_id=None, output_directory=tmp_path / "restored-exports",
+        record_artifact=False, subject_key=str(owner), ownership_scope=OwnershipScope(owner))
+    with zipfile.ZipFile(export.storage_uri) as archive:
+        assert archive.read("continuation/current.md") == b"# second snapshot"
+        assert archive.read("conversation.canjsonl")
+    monkeypatch.setenv("OFFLINE_STORAGE_DIR", str(tmp_path / "restored-offline"))
+    get_settings.cache_clear()
+    offline_job = BackgroundJob(owner_user_id=owner, job_type="offline_package", status="processing", phase="packaging")
+    target.add(offline_job)
+    target.commit()
+    package = build_offline_package(target, job_id=offline_job.id, package_id=uuid.uuid4(),
+        scope="conversation", conversation_id=source_id, project_id=None, include_assets="none",
+        subject_key=str(owner), ownership_scope=OwnershipScope(owner))
+    target.commit()
+    with zipfile.ZipFile(package.storage_uri) as archive:
+        payload = json.loads(archive.read("package.json"))
+        assert payload["conversations"][0]["messages"]
+        assert payload["conversations"][0]["continuation"]["members"]["current"]["text"] == "# second snapshot"
 
 
 def test_pre_context_extension_archive_remains_readable(archive_db, tmp_path):

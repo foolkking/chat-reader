@@ -1927,6 +1927,12 @@ storage key、活动 Attachment 缺少可用 AssetObject、对象目录无主文
 `quarantine`、`temp` 和 `s3-cache`。S3 backend 返回 not-applicable，不能
 被记录为 local filesystem PASS。
 
+2026-10-31 候选审计还纳入 `ContextMemberObject` / `SkillFileObject`；
+发布前必须使用包含这些引用的版本，不能依赖旧附件专用审计隔离文件。
+`orphan_classification_safe=false` 或 `complete=false` 时不得把结果用于
+孤立对象处置；非法引用、符号链接及扫描失败均 fail closed。即使为 true，
+也只表示分类完整，不自动授权删除。原保留件与独立副本不在清理范围。
+
 数据库备份脚本：
 
 ```bash

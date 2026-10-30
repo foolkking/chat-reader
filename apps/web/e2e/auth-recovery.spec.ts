@@ -168,6 +168,7 @@ test("leaving a pending private check cannot redirect a public page", async ({ p
   await page.route("**/api/auth/session", (route) => { release = () => route.fulfill({ json: { ...session, authenticated: false } }); });
   await page.goto("/");
   await expect(page.getByText(checking)).toBeVisible();
+  await expect.poll(() => Boolean(release)).toBe(true);
   await page.evaluate(() => window.history.pushState(null, "", "/share/synthetic-public-share"));
   await release?.().catch(() => undefined);
   await expect(page).toHaveURL(/\/share\/synthetic-public-share$/);
