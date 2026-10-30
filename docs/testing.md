@@ -60,6 +60,9 @@ effect can close it after a visibility check. Apply that same state transition
 in layout and wait for the actual applied destination before opening settings.
 Deterministic tests execute the real effect and preserve no-query behavior;
 the original first-copy/rebuild/content assertions and timeouts are unchanged.
+Readiness starts false for both cached no-query HTML and deep-link hydration,
+then records the applied request in layout; it is not derived from the URL on
+the initial render. This avoids introducing an attribute hydration mismatch.
 
 ## Fifth full CI and accepted deployment — 2026-10-30
 

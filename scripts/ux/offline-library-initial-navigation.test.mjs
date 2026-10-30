@@ -20,12 +20,12 @@ const callback = ts.transpileModule(`exports.apply = ${call.arguments[0].getText
 
 test("cached library HTML applies a deep link in layout, before an interactive sidebar can disappear", () => {
   assert.equal(call.expression.getText(ast), "useLayoutEffect");
-  let selectedId = null, mobileOpen = true;
+  let selectedId = null, mobileOpen = true, appliedRequestedId;
   const requestedId = "synthetic-requested-conversation", exports = {};
-  new Function("exports", "requestedId", "setSelectedId", "setMobileOpen", callback)(
-    exports, requestedId, value => { selectedId = value; }, value => { mobileOpen = value; },
+  new Function("exports", "requestedId", "setSelectedId", "setMobileOpen", "setAppliedRequestedId", callback)(
+    exports, requestedId, value => { selectedId = value; }, value => { mobileOpen = value; }, value => { appliedRequestedId = value; },
   );
-  const isReady = () => new Function("requestedId", "selectedId", `return ${ready}`)(requestedId, selectedId);
+  const isReady = () => new Function("requestedId", "appliedRequestedId", `return ${ready}`)(requestedId, appliedRequestedId);
   assert.equal(isReady(), false, "the cached, unselected hydration tree is not yet the requested destination");
   exports.apply();
   assert.equal(selectedId, requestedId);
@@ -35,10 +35,19 @@ test("cached library HTML applies a deep link in layout, before an interactive s
 
 test("opening /library without a deep link preserves the initial mobile catalog", () => {
   const writes = [], exports = {};
-  new Function("exports", "requestedId", "setSelectedId", "setMobileOpen", callback)(
-    exports, null, value => writes.push(value), value => writes.push(value),
+  let appliedRequestedId;
+  new Function("exports", "requestedId", "setSelectedId", "setMobileOpen", "setAppliedRequestedId", callback)(
+    exports, null, value => writes.push(value), value => writes.push(value), value => { appliedRequestedId = value; },
   );
   exports.apply();
   assert.deepEqual(writes, []);
-  assert.equal(new Function("requestedId", "selectedId", `return ${ready}`)(null, null), true);
+  assert.equal(new Function("requestedId", "appliedRequestedId", `return ${ready}`)(null, appliedRequestedId), true);
+});
+
+test("the cached no-query HTML and a deep-link hydration have the same initial readiness value", () => {
+  const evaluate = new Function("requestedId", "appliedRequestedId", `return ${ready}`);
+  assert.equal(evaluate(null, undefined), false);
+  assert.equal(evaluate("synthetic-deep-link", undefined), false);
+  assert.equal(evaluate("synthetic-new-destination", "synthetic-previous-destination"), false);
+  assert.match(source, /const \[appliedRequestedId, setAppliedRequestedId\] = useState<string \| null>\(\)/);
 });

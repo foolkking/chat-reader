@@ -54,6 +54,7 @@ export function LibraryShell() {
   const [conversations, setConversations] = useState<OfflineConversationRecord[]>([]);
   const requestedId = searchParams?.get("conversationId") ?? null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [appliedRequestedId, setAppliedRequestedId] = useState<string | null>();
   const [mobileOpen, setMobileOpen] = useState(!selectedId);
   // Cached HTML was rendered online. Match it during hydration, then read the
   // device state; otherwise an offline cold start regenerates the whole tree.
@@ -114,6 +115,7 @@ export function LibraryShell() {
     // first interactive paint. A passive effect could close a sidebar whose
     // Settings control had already become visible to the user.
     if (requestedId) { setSelectedId(requestedId); setMobileOpen(false); }
+    setAppliedRequestedId(requestedId);
   }, [requestedId]);
 
   // A cached Library navigation can complete without replaying the global
@@ -625,7 +627,7 @@ export function LibraryShell() {
   );
 
   return (
-    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary" data-library-navigation-ready={String(!requestedId || selectedId === requestedId)}>
+    <main className="flex h-screen w-screen overflow-hidden bg-page text-primary" data-library-navigation-ready={String(appliedRequestedId === requestedId)}>
       {!readerFocusMode ? <ReaderSidebarFrame
         desktopExpanded={desktopSidebarExpanded}
         onDesktopExpand={() => setLibrarySidebarExpanded(true)}
