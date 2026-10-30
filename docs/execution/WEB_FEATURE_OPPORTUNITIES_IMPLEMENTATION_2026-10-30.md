@@ -11,7 +11,8 @@ CI 或生产验收的替代；下面单独记录实际提交及失败过程。
 最终 Web lint/typecheck/build、UX Node 1,856 条、Playwright 15 条及 API
 专项 21＋2 条通过。全 API 为 5,724 通过／192 条件跳过／2 条租约测试时钟失败；
 已改为每测试创建时钟并定向通过，不把此前失败全量算作成功。
-完整 PostgreSQL／PWA／精确源码 CI 和生产验收未完成。
+第四轮精确源码完整 CI 已通过，但实际部署验收失败并恢复旧应用；
+当前 schema 已为 0056。详见末尾实际回执，不把 CI 通过等同于生产验收。
 
 | ID | 内容 | 当前状态 |
 | --- | --- | --- |
@@ -210,23 +211,52 @@ Release H Source Editor／mutation browser gate 有四条既有合并恢复用�
 精确后续 CI 仍须执行完整 API/PostgreSQL、settings、PWA 与制品门禁；生产没有停止、
 迁移或修改。
 
-## 第三轮完整 CI 与焦点合同断言修正
+## 第四轮 CI、实际迁移与失败恢复
 
-完整 CI **`40973535996`** 针对精确 SHA
-`75177a0e5c994f02fdaa20f0e542949fc2138a5b`，于 **2026-10-30 07:29:57 +08:00**
-派发、**08:20:03 +08:00** 首次读取，超过 50 分钟门槛。API 与 settings
-通过；Web 全部前置 gate 及普通 PWA 共 **170 项通过**后，仅
-`task-center-dismissal.spec.ts` 一项失败。构建镜像与独立制品检查未运行，
-不能发布。
+精确 `a8ee7c4e7aca42671e8e628bc5c9c0608dde747b` 的完整运行
+**40980409615** 于 **2026-10-30 08:33:16 +08:00** 派发，
+**09:23:22** 首次读取，满足 50 分钟门槛；**09:36:09** 全部五项确认成功。
+API **5,924／3 跳过**，settings **463＋独立恢复 1**；Web UX **1,856**，
+adaptive/CSP/Context/focused/Share/mutation/cleanup/upload/Markdown/PDF/
+default-PWA/auth/negative 浏览器门禁依次 **9/4/36/45/2/110/6/18/31/13/171/18/19** 通过。
 
-失败断言要求点击排序菜单外后，焦点返回排序触发器。但
-`apps/web/components/sort-menu.tsx` 的既有设计明确让外部点击目标接管焦点，
-避免菜单关闭逻辑抢走它；只有 Escape 恢复触发器。故障属于测试与产品合同矛盾，
-没有证据表明排序组件行为错误。回归现在点击真实的侧栏全局搜索输入框，确认菜单
-关闭且搜索框保留焦点，再独立确认 Escape 返回触发器。单项 Playwright 在
-`APP_ENV=test` 通过 **1/1**，该 E2E 文件 ESLint 通过。
+官方 artifact **12947655749** 通过独立 ZIP／归档／OCI／嵌入源码核验：
+35 blobs、23 layers、346 个 API 源文件、精确 Web revision；
+ZIP SHA-256 `e1964fc8ae847c90e2f478fbc69975cd23f01aa607e921fc17fb5430827a5f93`，
+镜像归档 SHA-256 `af758820f936e5c3f103400e6f04197e08ce7b99b8a05285cedf58bcb3874f03`。
+首次真实制品容量预检失败，没有先停服务或降低余量。按用户授权逐项核实后，
+仅删除四组无容器引用的旧版本应用镜像
+`91e015e`、`8ca8e90`、`cfaa6ed`、`0f116fe`，释放 **1,202,248 KiB**；
+f8a6a06／b4effda／c7dc074 保护镜像和所有备份／资料／卷未删除。
 
-完整本地 E2E 文件尝试中前 21 项通过，12 个后续偏好持久化场景因本机没有运行
-`127.0.0.1:8000` API 而以连接拒绝失败；这不算产品缺陷，也不记为全文件通过。
-精确后续 CI 仍须执行完整 API/PostgreSQL、settings、PWA 与制品门禁；生产没有停止、
-迁移或修改。
+维护从 **09:59:26 +08:00** 开始。停写、只读附件检查、五组件备份
+**chat-reader-20261030T015946Z** 校验通过；0053→0054→0055→0056 升级、
+单 head/current 与停写 canonical 行数比较通过，当时三个附加表为空。
+新镜像 API/Web 健康，但独立验收发现 Web 启动日志错误关键词，严格阻断。
+自动恢复旧 API／worker／Web 和原指针，**10:11:24 +08:00** 确认恢复，
+维护 **11 分 58 秒**，不算成功发布或零停机。当前应用／直接回退为
+**f8a6a06／b4effda，schema 保留 20261030_0056**，未 downgrade。
+PostgreSQL 身份／启动时间和生产 env／Compose／Nginx 未变，无新增 OOM／重启。
+
+### 页面非法方法入口窄修
+
+原失败容器在自动重建前没有保存错误行，无法回溯断言唯一原因。
+只读失败窗口汇总显示公开页面有多次被拒绝 POST；在旧应用以完全合成
+`Next-Action: x`、`[]` 请求复现 **Server Reference ID 格式错误**及 400。
+这证明存在非业务 action 解码入口，不证明它是此前日志失败的唯一成因。
+额外隔离新 Web 复现因内存预检不足而在启动前停止，未降低资源余量。
+
+系统没有 Server Actions／页面 POST handler，写入均走 `/api/*`。
+现有 proxy 现在在认证重定向／action 解码前将非 GET/HEAD 页面方法返回空 405，
+含 `Allow: GET, HEAD`、`Cache-Control: no-store`，不发 session cookie；
+全部 API 方法、GET/HEAD、Share、离线和认证合同保留。没有错误日志白名单。
+实际 proxy 测试覆盖 production／两种 test 认证模式、五种非法方法、带／不带
+cookie、API 转发及既有页面登录跳转；挂载 HTTP 用例进入原 default-PWA 门禁。
+
+本地最终 lint／typecheck／单 worker 生产 build 通过，UX **1,863/1,863**
+（含新增 proxy **7/7**），挂载 HTTP **1/1** 通过；原 buildinfo SHA-256
+`210FF4B7E3E63D0CD5301321AE8CC4EA095F21DA14692C6A4A4B59D05120F5D7` 未变并排除提交。
+下一次必须针对新提交重新完整 CI、派发后等满 50 分钟才读取结果。
+后续部署以已存在的 0056 为基线，不重复升级、不假设附加表为空，仍创建新停写备份；
+恢复重建前需保存脱敏日志分类和散列证据。生产认证 UI、原用户下载网络 trace、
+物理剪贴板／目标表格软件、持续负载及独立备份恢复演练仍未声称完成。

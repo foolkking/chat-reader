@@ -1,5 +1,17 @@
 # Authentication and account contract
 
+## Page-method boundary — 2026-10-30 source
+
+This app has no Server Actions or page form POST handlers. The existing Next
+proxy rejects non-GET/HEAD methods on matched non-API paths with an empty 405,
+`Allow: GET, HEAD` and `Cache-Control: no-store`, before authentication redirects
+or action decoding. It issues no cookie and does not depend on `Next-Action`
+header contents. All `/api/*` methods retain their existing routing, session,
+origin and authorization checks. GET/HEAD page, Share and offline behavior is
+unchanged; this is not a new authentication grant or a log-error allowlist.
+Actual-proxy policy tests cover production and both test auth modes, while a
+mounted HTTP regression joins the existing full PWA gate.
+
 ## Explicit image-copy capabilities — 2026-10-22 source
 
 Only exact GET/HEAD `/api/public-images/{43-character-url-safe-token}` adds a

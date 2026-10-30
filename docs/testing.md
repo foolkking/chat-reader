@@ -1,5 +1,26 @@
 # Testing
 
+## Fourth full CI and failed deployment — 2026-10-30
+
+Exact `a8ee7c4e7aca42671e8e628bc5c9c0608dde747b` passed all five jobs in
+`40980409615`. Dispatch was **08:33:16 +08:00**; first result read was
+**09:23:22**, after 50 minutes; the complete five-job check was **09:36:09**.
+API passed **5,924 / three skipped**; settings **463 plus one independent
+restore**. Web passed **1,856 UX**, and adaptive/CSP/Context/focused/Share/
+mutation/cleanup/upload/Markdown/PDF/default PWA/auth/negative browser gates
+passed **9/4/36/45/2/110/6/18/31/13/171/18/19** respectively.
+These are CI results, not authenticated production UI acceptance.
+
+Official artifact `12947655749` passed independent archive/OCI/source checks,
+but production replacement failed the strict Web startup-error gate.
+Automatic application recovery completed **10:11:24 +08:00**; schema remains
+0056 and the old apps are healthy. Original failing container error lines were
+not saved, so a later synthetic Server Reference ID reproduction is evidence
+of an unnecessary page-action surface, not proof of the sole original cause.
+The repair passes lint/typecheck/build, **1,863 UX** (including seven actual-proxy
+policy tests) and **one mounted HTTP page-method case**;
+no existing zero-error, authentication, API or full-release gate is waived.
+
 ## Two-round Web features — 2026-10-30 local integration
 
 The [implementation record](execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)

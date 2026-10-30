@@ -1,5 +1,13 @@
 # Markdown 文档台账
 
+## 第四轮 CI 与失败部署恢复 — 2026-10-30
+
+| 文档 | 当前职责 |
+| --- | --- |
+| `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 第四轮五项成功、独立制品、四组旧镜像清理、停写备份、0056 升级、Web 日志失败与自动恢复；去除重复第三轮章节，不把候选或修复假设当作验收。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前应用 f8a6a06／直接回退 b4effda，但数据库已为 0056；下一次新鲜 CI／50 分钟／停写备份，不重复升级或自动降级。 |
+| `testing.md`、`system/AUTHENTICATION_CONTRACT.md` | 精确 CI 证据和页面 GET/HEAD／API 写入边界；保留原失败日志缺失、生产认证 UI 与物理设备未验收的限制。 |
+
 ## 两轮 Web 功能候选实施 — 2026-10-30（进行中）
 
 | 文档 | 当前职责 |

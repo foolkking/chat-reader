@@ -4,6 +4,15 @@ const SESSION_COOKIE_NAME = "chat_reader_session";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  // Pages have no Server Actions or form POST handlers: all mutations use the
+  // same-origin API. Reject unsupported page methods before auth redirects or
+  // Next's action decoder, including requests carrying a forged Next-Action.
+  if (!pathname.startsWith("/api/") && request.method !== "GET" && request.method !== "HEAD") {
+    return new NextResponse(null, {
+      status: 405,
+      headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+    });
+  }
   // Legacy integration/PWA suites run with APP_ENV=test and an explicitly
   // disabled auth provider; production and auth-enabled tests remain gated.
   const authEnabled = process.env.APP_ENV !== "test" || process.env.AUTH_ENABLED === "true";

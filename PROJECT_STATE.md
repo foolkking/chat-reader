@@ -4,7 +4,32 @@ Last updated: 2026-10-30. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Search and Reader recovery — deployed and accepted 2026-10-29.**
+**Current production after failed replacement — 2026-10-30:**
+application/current/direct rollback is **f8a6a06 / f8a6a06 / b4effda**,
+but database schema is now **20261030_0056**, not 0053. Full CI
+**40980409615** passed all five jobs for **a8ee7c4**, after the required
+50-minute wait. Its independently verified official artifact was deployed,
+but the strict Web startup-log gate failed. Automatic recovery restored the
+old applications and markers at **10:11:24 +08:00**, without downgrading.
+Maintenance began at **09:59:26 +08:00** (11m58s). Services recovered healthy;
+PostgreSQL identity/start time, production configuration and canonical
+stopped-writer row counts were unchanged. The verified five-component backup
+**chat-reader-20261030T015946Z** and protected rollback images are retained.
+This is a failed deployment, not feature acceptance.
+
+The original failed Web container's error lines were not retained before
+recreation. A synthetic page POST reproduces a Server Reference ID error on
+the old application too; rejected page POSTs occurred in the failure window,
+but this does not establish the unique cause. A page-method boundary now
+rejects non-GET/HEAD requests before action decoding; all `/api/*` methods and
+existing page authentication remain unchanged. Lint/typecheck/build, **1,863 UX**
+(including seven actual-proxy tests) and **one mounted HTTP regression** pass;
+a fresh full CI/wait/deployment is pending.
+There are still **19 bounded implemented candidates and five unimplemented
+contract gaps**, not 24 delivered features. See the
+[implementation/recovery record](docs/execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md).
+
+**Search and Reader recovery — historical accepted release, 2026-10-29.**
 Exact **`f8a6a060ddcaf6bd3a6ce14ece78403c70ffc713`** passed all five jobs in
 full CI **`40738934749`**, attempt 1. The complete source/run/attempt/job
 verification at **02:50:36 Beijing** was after the 50-minute gate.
