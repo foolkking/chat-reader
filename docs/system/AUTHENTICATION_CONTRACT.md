@@ -1,6 +1,6 @@
 # Authentication and account contract
 
-## Coherent credential checks — 2026-10-30 follow-up (pending CI/release)
+## Coherent credential checks — 2026-10-30 released in 127eae5
 
 Session, principal and user credential versions are loaded in one joined SQL
 statement, refreshing cached ORM identities. Under PostgreSQL READ COMMITTED,
@@ -9,6 +9,9 @@ falsely reject or revoke the deliberately retained session. An in-flight read
 may observe the coherent pre-commit snapshot; the next read must observe the
 new versions/revocations. All existing token, expiry, status, role and version
 checks remain; this does not retry mutations or relax authentication.
+Full CI `41041436271` passed deterministic PostgreSQL interleavings and the
+existing real SMTP/browser recovery gate; production acceptance is recorded
+in the release log, not inferred from the earlier failed runs.
 
 ## Page-method boundary — 2026-10-30 source
 

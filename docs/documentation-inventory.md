@@ -1,37 +1,30 @@
 # Markdown 文档台账
 
-## 累计功能补齐 — 2026-10-30（待发布）
+## 累计 24 项补齐发布 — 2026-10-30
 
-`PROJECT_STATE.md`／`index.md`／execution 入口区分新源码与 `0d1efac` 生产；
-执行记录负责 24 项状态、回归和新发布回执；`system/DATA_AND_STORAGE.md` 负责
-0057/0058、标签和冻结生命周期；`api-reference.md` 负责新增入口；
-`system/USER_FLOWS.md` 与 PWA 合同负责对照／基线／离线标签；testing 与部署
-文档维护验收和回退边界。旧的 19／5 结论仅属于前次已发布检查点。
+`PROJECT_STATE.md`／`index.md`／execution 入口维护当前 `127eae5`／0058、
+直接回退 `0d1efac`；执行记录拥有 CI `41041436271`、官方制品 `12974040048`、
+旧镜像及镜像归档精确清理、新停写五组件备份、生产和独立复核回执。
+`system/DATA_AND_STORAGE.md` 负责 0057/0058、标签／基线／冻结生命周期，
+`api-reference.md` 负责已发布接口，USER_FLOWS／PWA 合同负责交互与兼容性。
+AUTHENTICATION_CONTRACT 记录已发布的单快照凭据检查；testing 保留确定性交错、
+笔记反馈、本机检查和手机导航回归证据。部署文档明确 frozen 存在时旧镜像必须
+拒绝回退并前向恢复；不把 live 写入默认值误写成 frozen 读取兼容。
+旧 19／5、未部署及失败轮次仅作为历史检查点，不覆盖本次验收结果。
 
-`system/AUTHENTICATION_CONTRACT.md` owns the pending coherent credential-read
-contract; testing and the execution record own the failed settings gate and
-deterministic PostgreSQL regression evidence, not a claimed production fix.
-The later Web/API-green, settings-red run `41026649429` and its bounded
-notebook-feedback / local-inspection follow-up are owned by testing and the
-execution record; the old trace-off cleanup timeout remains unlocalized until
-fresh CI evidence. No production acceptance is inferred.
-Testing and the execution record also own the later `41034600829`
-mobile-navigation failure and its cached-hydration/layout boundary correction;
-the preceding notebook and cleanup cases passed that run.
-
-## 两轮 Web 功能发布验收 — 2026-10-30
+## 当前文档职责 — 2026-10-30
 
 | 文档 | 当前职责 |
 | --- | --- |
-| `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 24 项逐项处置、19 项已发布有界功能、5 项未实施合同缺口、离线租约修复、CI `40992509041`、制品、停写备份、部署和独立复核。 |
-| `PROJECT_STATE.md`、`index.md`、`execution/README.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前生产 `0d1efac`／直接回退 `f8a6a06`／较旧保护集 `b4effda`，schema `0056`；保留历史失败替换但不当作当前状态。 |
+| `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 24 项有界功能发布、离线租约保护、CI `41041436271`、制品、新备份、清理边界、部署和独立复核。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前生产 `127eae5`／直接回退 `0d1efac`，保留 `f8a6a06`／`b4effda`，schema `0058`；明确 frozen 的旧代码回退限制。 |
 | `testing.md` | 最终 CI 五项门禁、测试计数、此前失败修复及未声称的真实设备／认证 UI／负载边界。 |
-| `system/DATA_AND_STORAGE.md`、`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 已发布的 0054→0056 数据生命周期、离线短租约和 v1/v2/v3、Dexie v2 兼容合同。 |
+| `system/DATA_AND_STORAGE.md`、`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 已发布至 0058 的基线／冻结生命周期、账户标签、离线短租约及 v1/v2/v3、Dexie v2 兼容合同。 |
 
-## 两轮 Web 功能候选实施 — 2026-10-30（已发布）
+## 历史两轮 Web 功能候选实施 — 2026-10-30
 
-19 项有界功能已随 `0d1efac` 发布；WEB-05/08/11/21/22 仍需产品或数据
-合同，不计入已交付。执行记录保留完整证据和未完成边界。
+当时 19 项有界功能随 `0d1efac` 发布，WEB-05/08/11/21/22 尚需合同，
+未计入该历史版本交付；后续补齐状态以上方当前回执为准。
 
 ## Web 功能候选第二轮 — 2026-10-30（仅审查）
 

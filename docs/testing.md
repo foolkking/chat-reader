@@ -1,6 +1,27 @@
 # Testing
 
-## Completion follow-up — 2026-10-30 (not released)
+## Current accepted release — 2026-10-30
+
+Exact `127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5` passed all five jobs in
+full CI `41041436271`, attempt 1. Dispatch **10:31:58Z**, first result read
+**11:22:04Z**, final green **11:28:27Z**; the 50-minute gate was respected.
+API: **5,937 passed / 3 skipped**. Settings: **463 plus independent restore 1**.
+Web: **1,875/1,875 UX**, feature browsers 9, default PWA 174 and all other
+required browser/security gates passed. No failure gate, assertion or timeout
+was weakened. Notebook/cleanup/mobile CI debugging ran no local gates.
+The earlier inventory-only correction did run one local inventory regression;
+the initial feature implementation's local checks remain recorded below.
+
+Official artifact `12974040048` independently passed 35 blobs, 23 layers,
+351 embedded API files, compiled Web revision and forbidden-path checks.
+Production acceptance at **11:52:12Z** and independent recheck **11:53:11Z**
+passed health, exact images, HTTPS/privacy/denials, 50 page-method probes,
+unchanged PostgreSQL/config/canonical migration counts and zero new OOM/errors.
+The new five-component backup was independently rehashed, not restore-drilled.
+Authenticated production UI, physical clipboard, sustained load and the
+original offline-download network trace remain unclaimed.
+
+## Historical completion follow-up — 2026-10-30 (pre-release checkpoints)
 
 New focused API tests cover no-side-effect scoped previews, frozen source edits
 and deletes, snapshot locator/scope/revoke/expiry/reclamation, unsupported options

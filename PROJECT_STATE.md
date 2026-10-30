@@ -4,41 +4,39 @@ Last updated: 2026-10-30. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**Active completion follow-up — 2026-10-30, not yet released:**
-WEB-05/08/11/21/22 now have bounded source implementations: no-side-effect
-visitor preview, independent read-only comparison, account tags and offline
-name snapshots, explicit message-identity baselines and text-only frozen shares.
-Source head is `20261030_0058`; production remains `0d1efac` at `0056` until
-fresh exact-source CI, artifact acceptance, backup, migration and deployment pass.
-These new server records are not portable `.cr` data. See
-[data contracts](docs/system/DATA_AND_STORAGE.md) and the
-[implementation record](docs/execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md).
-The older 19-delivered/5-missing statements below describe the accepted release,
-not this follow-up worktree.
+**Current production accepted — 2026-10-30, all 24 bounded features:**
+Exact application source **`127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5`**
+passed all five jobs in full CI **`41041436271`**, attempt 1. Dispatch was
+**10:31:58Z**; first read **11:22:04Z** respected the 50-minute gate, and
+all jobs were green by **11:28:27Z**. API passed **5,937 / 3 skipped**,
+settings **463 plus one independent restore**, Web **1,875/1,875 UX** and all
+required browser gates. Official artifact **`12974040048`** passed independent
+35-blob / 23-layer / 351-API-source-file and compiled Web revision checks.
 
-Follow-up CI `41014403002` failed both the mounted Web adapter and the email
-change recovery gate. The adapter dependency correction is committed in
-`6dc884d`. API logs show the email change committed before returning 401;
-authentication's separate credential-row reads can cross that commit under
-READ COMMITTED. A single joined snapshot and deterministic PostgreSQL
-interleaving regressions passed API and settings in CI `41020776603`.
-CI `41026649429` then passed Web and API, but settings had 461 passes and two
-failures: notebook save feedback and database cleanup recovery. The notebook's
-read fence now reports a blocked save instead of silently returning, without
-allowing the write or replaying it. Local-data test inspection now aborts
-accidental database creation and settles blocked/failed transactions; retained
-failure traces and named cleanup stages are enabled. These follow-up changes
-still require fresh full CI; the precise cleanup timeout phase was not recorded
-by the old trace-off fixture. Production is unchanged.
+Production accepted at **11:52:12Z** after maintenance **11:41:59–11:52:12Z**;
+independent runtime and five-component backup recheck passed at **11:53:11Z**.
+Current/direct rollback are **`127eae5` / `0d1efac`**; `f8a6a06` and
+`b4effda` images and archives are also preserved. Schema is the single
+**`20261030_0058`** head, upgraded from 0056. The new stopped-writer backup is
+**`chat-reader-20261030T114218Z`**. Only two verified obsolete image sets and
+their image archives were removed for capacity; no backups, volumes or user
+data were deleted. PostgreSQL, production env/Compose/Nginx and canonical
+stopped-writer counts remained unchanged. Health, HTTPS/privacy/denial and
+50 page-method checks passed, startup error keywords/new OOM were zero.
 
-Next run `41034600829` passed Web/API and both previous settings failures;
-settings was 462 passed / one mobile offline-recovery failure at opening
-Settings after reload. Library deep links previously closed the initial
-sidebar in a passive effect, after Settings could appear interactive. Selection
-now applies in layout while preserving the cached initial hydration tree;
-the browser gate waits for the applied destination. Fresh full CI is required.
+WEB-05/08/11/21/22 now complete the bounded 24-item release: visitor preview,
+independent comparison, tags/offline names, explicit seen-message baselines,
+and text-only frozen shares. These server records are not portable `.cr`
+data; frozen attachments/annotations/notebooks/export remain unsupported.
+Old-image rollback must refuse if frozen Share rows exist: old code would
+misinterpret them as live; keep writers stopped and use forward recovery.
+Authenticated production UI, physical clipboard, sustained load, the original
+download network trace and an isolated restore drill remain unclaimed. See
+[contracts](docs/system/DATA_AND_STORAGE.md) and the
+[release record](docs/execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md).
+Older 19-delivered/5-missing or pending-CI statements below are historical.
 
-**Current production accepted — 2026-10-30:**
+**Previous accepted production — historical 19-feature checkpoint:**
 Exact source **`0d1efacaa8145dff0c8c70ceda82460af5883854`** passed all five
 jobs in full CI **`40992509041`**, attempt 1. Dispatch was
 **2026-10-30 02:34:47Z**; the first permitted read was **03:24:47Z**

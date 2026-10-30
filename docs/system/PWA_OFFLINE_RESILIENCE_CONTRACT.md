@@ -1,6 +1,6 @@
 # PWA and Offline Resilience Contract
 
-## Account tag snapshots — 2026-10-30 source follow-up
+## Account tag snapshots — 2026-10-30 released in 127eae5
 
 New v3 packages may contain optional conversation `tags: string[]`. They are
 read-only account-owned name snapshots, not another tag editor or authority.
@@ -8,6 +8,12 @@ Tag membership/rename/delete increments affected offline revisions. Import is
 atomic with the package; v1/v2/v3 remain readable, missing tags do not erase an
 existing local snapshot, and deleting the offline conversation removes its tag
 settings. Dexie stays at version 2. No `.cr` shape or old local data is replaced.
+
+Cached `/library` HTML and deep-link hydration both start with navigation
+readiness false. Layout applies the requested selection before interactive
+paint and then records readiness; a later destination invalidates it again.
+This avoids closing an already-interactive initial sidebar or deriving a
+different first-render attribute from the cached page's missing query.
 
 ## Offline transfer and reading views — 2026-10-30 released
 

@@ -1,6 +1,6 @@
 # API 参考
 
-## 累计功能补齐 — 2026-10-30（待发布，源码 head 0058）
+## 累计功能补齐 — 2026-10-30（已发布，生产 head 0058）
 
 | Method/path | Contract |
 | --- | --- |
@@ -16,10 +16,10 @@
 PATCH 为 `FROZEN_SHARE_RECLAIMED`（409），不可复活。见
 [数据生命周期](system/DATA_AND_STORAGE.md)。下方 0056 是前次发布检查点。
 
-## 两轮 Web 功能 — 2026-10-30（本地待发布）
+## 两轮 Web 功能 — 2026-10-30（0056 首批已发布接口）
 
 所有入口沿用同源 owner 认证，不创建新的公开能力；当前生产状态以
-`PROJECT_STATE.md` 为准。新表需升级至单一 head `20261030_0056`。
+`PROJECT_STATE.md` 为准。首批附加表始于 0056，当前单一 head 为 `20261030_0058`。
 
 | Method/path | Contract |
 | --- | --- |
