@@ -8,6 +8,7 @@ const FEATURE_TEST_OWNERS: Record<string, string> = {
   annotations: "annotation-workspace.spec.ts / shared reader-location contracts",
   attachments: "attachment-preview-policy.spec.ts",
   auth: "account-access-settings.spec.ts and auth-gate.spec.ts",
+  compare: "web-opportunity-features.spec.ts / read-only comparison browser contract",
   conversations: "reader-location-failure.spec.ts",
   editing: "source-editor-mutation.spec.ts",
   exporting: "context-package.spec.ts / export API coverage",

@@ -5116,3 +5116,10 @@ then searches retained documents in a new offline page. Cache Storage is kept
 intact. A separate injected worker-error case verifies the visible failure and
 real worker/IndexedDB retry. The final PWA negative suite also exercises account
 cache isolation and an independent browser/Service Worker restart.
+
+## Follow-up CI inventory correction — 2026-10-30
+
+The `76d277d` run passed API and settings, but its Default PWA inventory found
+that the new `features/compare` directory lacked an explicit browser test owner.
+It is now registered against `web-opportunity-features.spec.ts`; the comparison
+browser contract remains active. The run did not produce an accepted artifact.

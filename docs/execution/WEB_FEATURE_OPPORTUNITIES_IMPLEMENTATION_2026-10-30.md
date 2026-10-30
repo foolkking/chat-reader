@@ -348,3 +348,10 @@ READ COMMITTED 下可能跨过原子凭据更新，混用旧／新版本并误�
 修复改为单条 joined SELECT 并刷新 ORM identity，保留全部 token／状态／到期／
 版本验证；新增真实 PostgreSQL 确定性交错测试，不靠 sleep 或重试制造通过。
 此修复须新精确提交的完整 CI 与原 SMTP／浏览器用例验收；未运行本地调试测试。
+
+### Default PWA inventory correction
+
+The exact `76d277d` source passed API and settings, but `web-quality` found the
+new `features/compare` directory missing from the explicit test-owner inventory.
+It is now registered against `web-opportunity-features.spec.ts`; no browser
+assertion was removed and the run did not enter artifact or deployment gates.
