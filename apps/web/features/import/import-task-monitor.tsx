@@ -517,6 +517,13 @@ function TaskResultActions({ task, conversationId, compact, zh }: { task: Backgr
   const importIds = task.job_type === "import" ? conversationIds : [];
   return (
     <div className={`mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 ${compact ? "text-[11px]" : "text-xs"}`} data-testid={`task-result-${task.job_type}`}>
+      {task.status === "failed" && task.job_type === "offline_package" && task.result.offline_failure ? <div className="w-full space-y-1">
+        <p>{zh ? `预检发现 ${task.result.offline_failure.affected_count} 项文件依赖不可用；请先修复再重试。` : `Preflight found ${task.result.offline_failure.affected_count} unavailable dependencies. Repair before retrying.`}</p>
+        {task.result.offline_failure.affected.slice(0, 20).map((item, index) => <Link key={item.conversation_id}
+          className="mr-3 inline-flex min-h-11 items-center text-accent underline" href={`/conversations/${encodeURIComponent(item.conversation_id)}`}>
+          {zh ? `查看受影响对话 ${index + 1}` : `Review affected conversation ${index + 1}`}
+        </Link>)}
+      </div> : null}
       {(task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? <button ref={archiveTrigger} type="button" className="min-h-11 font-medium text-accent underline underline-offset-2" onClick={() => setArchiveOpen(true)}>{task.status === "failed" || task.status === "cancelled" ? (zh ? "处理归档问题" : "Review archive problem") : task.job_type.endsWith("_archive_preflight") ? (zh ? "查看预检并恢复" : "Review preview & restore") : (zh ? "查看归档详情" : "View archive details")}</button> : null}
       {archiveOpen ? <SettingsFocusedDialog category={task.job_type.startsWith("system_archive_") ? "admin-system" : "data"} initialArchiveTaskId={task.job_id} onClose={() => setArchiveOpen(false)} restoreFocus={() => archiveTrigger.current} /> : null}
       {task.status === "committed" ? <>
@@ -557,6 +564,7 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
       cleaning_messages: "Cleaning message content", cleaning_skill_files: "Removing unused Skill files",
       rebuilding_index: "Rebuilding contents and search", packaging_messages: "Preparing conversation messages",
       packaging_headings: "Preparing table of contents", packaging_search: "Preparing offline search index",
+      checking_dependencies: "Checking required files",
       packaging_annotations: "Preparing annotations", packaging_metadata: "Preparing reading state and notes",
       packaging_attachments: "Preparing attachment index", packaging_conversations: "Preparing offline conversations",
       packaging_assets: "Writing offline attachments", validating_package: "Checking offline copy",
@@ -591,6 +599,7 @@ function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
     packaging_headings: "整理章节目录",
     packaging_search: "整理离线搜索索引",
     packaging_annotations: "整理批注",
+    checking_dependencies: "检查必要文件",
     packaging_metadata: "整理阅读状态与笔记",
     packaging_attachments: "整理附件索引",
     packaging_conversations: "整理离线对话",

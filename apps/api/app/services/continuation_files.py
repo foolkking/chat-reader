@@ -2,10 +2,10 @@
 import hashlib
 import json
 import uuid
-from app.models.context_continuation import ContinuationRevision, ContinuationState, ContinuationCandidate
+from app.models.context_continuation import ContextMemberObject, ContinuationRevision, ContinuationState, ContinuationCandidate
 from app.services.conversation_revision import bump_offline_revision
 from app.models.import_record import utc_now
-from app.services.continuation_candidates import ContinuationError, owned_conversation, checked_members, _store_member
+from app.services.continuation_candidates import ContinuationError, owned_conversation, checked_members, _store_member, read_object
 
 
 def update_files(db, conversation_id, scope, *, members, base_generation):
@@ -22,6 +22,12 @@ def update_files(db, conversation_id, scope, *, members, base_generation):
     provided = {name: hashlib.sha256(data).hexdigest() for name, data in members.items()}
     # Exact retries are harmless even when the response to the first write was lost.
     if previous and all(getattr(previous, name + "_sha256") == digest for name, digest in provided.items()):
+        # Matching database hashes do not prove the referenced files still exist.
+        # Do not acknowledge an exact retry while its adopted pair is unreadable.
+        for name in ("current", "index"):
+            digest = getattr(previous, name + "_sha256")
+            if digest is not None:
+                read_object(db.get(ContextMemberObject, digest))
         return previous, state
     if base_generation != state.generation:
         raise ContinuationError("CONTEXT_BASE_CHANGED", 409)

@@ -1,5 +1,11 @@
 # Markdown 文档台账
 
+## 阅读与离线可靠性 — 2026-10-31（实施中）
+
+`execution/READING_RELIABILITY_IMPLEMENTATION_2026-10-31.md` 跟踪批准的分批
+目标，区分源码、CI、生产文件恢复与发布证据。当前合同入口保持旧生产状态，
+不把本轮尚未验收的实现记成已发布。
+
 ## 累计 24 项补齐发布 — 2026-10-30
 
 `PROJECT_STATE.md`／`index.md`／execution 入口维护当前 `127eae5`／0058、

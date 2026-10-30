@@ -760,6 +760,12 @@ export type BackgroundTaskRead = {
   export_format?: string | null;
   offline_target?: OfflineDownloadTarget | null;
   result: {
+    offline_failure?: {
+      code: string;
+      phase: string;
+      affected_count: number;
+      affected: Array<{ conversation_id: string; code?: string }>;
+    };
     conversation_ids?: string[];
       conversation_id?: string;
       source_conversation_ids?: string[];
@@ -1373,6 +1379,35 @@ export type AnnotationInboxResponse = {
   limit: number;
   offset: number;
   total: number;
+  has_more: boolean;
+};
+
+export type AnnotationInboxSummaryItem = Pick<AnnotationRead,
+  "id" | "conversation_id" | "message_id" | "message_version_id" | "start_block_index" |
+  "annotation_type" | "anchor_status" | "revision" | "created_at" | "updated_at"> & {
+  conversation_title: string;
+  quote_preview: string;
+  comment_preview: string;
+  quote_truncated: boolean;
+  comment_truncated: boolean;
+};
+export type AnnotationInboxSummaryResponse = Omit<AnnotationInboxResponse, "items"> & {
+  items: AnnotationInboxSummaryItem[];
+};
+export type ReadingListSummaryItem = {
+  entry: UserFeatureEntry<ReadingListValue>;
+  title: string | null;
+  projects: Array<{ id: string; name: string }>;
+  available: boolean;
+  resume_available: boolean;
+  last_read_at: string | null;
+};
+export type ReadingListSummaryResponse = {
+  items: ReadingListSummaryItem[];
+  counts: Record<"all" | "unread" | "read", number>;
+  total: number;
+  limit: number;
+  offset: number;
   has_more: boolean;
 };
 

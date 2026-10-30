@@ -46,6 +46,12 @@ jobs:
         run: |
           python tools/context-skills/build.py --output apps/web/public/skills --check
           python -m pytest tools/context-skills/tests -q
+      - name: Offline reference regression and synthetic catalog characterization
+        run: >-
+          cd apps/api && pytest -q -s
+          tests/test_attachment_storage_integrity.py
+          tests/test_offline_context_preflight.py
+          tests/test_offline_catalog_query_budget.py
       - name: Release C observability and cleanup safety suite
         run: >-
           cd apps/api && pytest -q

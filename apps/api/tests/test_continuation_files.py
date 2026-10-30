@@ -80,3 +80,19 @@ def test_partial_snapshot_absent_member_is_not_storage_failure(client):
     missing = client.get(member_path + 'index')
     assert missing.status_code == 404
     assert 'CONTEXT_MEMBER_NOT_FOUND' in missing.text
+
+
+def test_exact_upload_retry_does_not_acknowledge_missing_physical_member(client):
+    from app.models.context_continuation import ContextMemberObject
+    from app.services.assets.asset_store import get_asset_store
+    path = root(client)
+    payload = {'current': ('current.md', b'# Synthetic exact retry')}
+    saved = client.put(path + '/files', data={'base_generation': 0}, files=payload)
+    assert saved.status_code == 200
+    with database() as db:
+        revision = db.get(ContinuationRevision, uuid.UUID(saved.json()['revision_id']))
+        obj = db.get(ContextMemberObject, revision.current_sha256)
+        get_asset_store().resolve_key(obj.storage_key).unlink()
+    retried = client.put(path + '/files', data={'base_generation': 0}, files=payload)
+    assert retried.status_code == 409
+    assert 'CONTEXT_MEMBER_UNAVAILABLE' in retried.text

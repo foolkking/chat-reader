@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.models.attachment import AssetObject, Attachment
 from app.models.conversation import Conversation
+from app.models.context_continuation import ContextMemberObject
+from app.models.skill_bundle import SkillFileObject
 
 
 _TECHNICAL_DIRECTORIES = frozenset({"quarantine", "temp", "s3-cache"})
@@ -35,6 +37,8 @@ class AttachmentStorageAudit:
     scanned_file_count: int
     sha256_verified_count: int
     issues: tuple[AttachmentStorageIssue, ...]
+    scanned_context_object_count: int = 0
+    scanned_skill_object_count: int = 0
 
     @property
     def clean(self) -> bool:
@@ -131,7 +135,19 @@ def audit_local_attachment_storage(
 
     known_paths: set[Path] = set()
     sha256_verified_count = 0
-    for asset_id, backend, storage_key, expected_size, expected_sha256, status, deleted_at in object_rows:
+    # These namespaces share the asset volume. They are canonical references,
+    # not directories that can be excluded from an otherwise attachment-only scan.
+    derived_rows = []
+    derived_counts = {}
+    for kind, model in (("CONTEXT", ContextMemberObject), ("SKILL", SkillFileObject)):
+        rows = db.query(model.storage_key, model.byte_size, model.sha256).order_by(model.sha256).limit(max_records + 1).all()
+        if len(rows) > max_records:
+            complete = objects_complete = False
+            rows = rows[:max_records]
+        derived_counts[kind] = len(rows)
+        derived_rows.extend((kind, (None, "local", key, size, digest, "available", None)) for key, size, digest in rows)
+    for kind, row in [*(("ASSET", row) for row in object_rows), *derived_rows]:
+        asset_id, backend, storage_key, expected_size, expected_sha256, status, deleted_at = row
         if backend != "local":
             continue
         try:
@@ -161,7 +177,7 @@ def audit_local_attachment_storage(
             continue
         if not path.is_file():
             issues.append(AttachmentStorageIssue(
-                "MISSING_ASSET_FILE",
+                f"MISSING_{kind}_FILE",
                 asset_object_id=asset_id,
                 storage_key=storage_key,
                 expected_bytes=expected_size,
@@ -178,7 +194,7 @@ def audit_local_attachment_storage(
             continue
         if actual_size != expected_size:
             issues.append(AttachmentStorageIssue(
-                "ASSET_SIZE_MISMATCH",
+                f"{kind}_SIZE_MISMATCH",
                 asset_object_id=asset_id,
                 storage_key=storage_key,
                 expected_bytes=expected_size,
@@ -198,7 +214,7 @@ def audit_local_attachment_storage(
             sha256_verified_count += 1
             if actual_sha256 != expected_sha256:
                 issues.append(AttachmentStorageIssue(
-                    "ASSET_SHA256_MISMATCH",
+                    f"{kind}_SHA256_MISMATCH",
                     asset_object_id=asset_id,
                     storage_key=storage_key,
                     expected_bytes=expected_size,
@@ -253,16 +269,23 @@ def audit_local_attachment_storage(
         scanned_file_count=scanned_file_count,
         sha256_verified_count=sha256_verified_count,
         issues=tuple(issues),
+        scanned_context_object_count=derived_counts["CONTEXT"],
+        scanned_skill_object_count=derived_counts["SKILL"],
     )
 
 
 def _resolve_storage_key(root: Path, storage_key: str) -> Path:
-    if not storage_key or "\\" in storage_key or Path(storage_key).is_absolute():
+    if not storage_key or "\\" in storage_key or ":" in storage_key or Path(storage_key).is_absolute():
         raise ValueError("Invalid asset storage key.")
     key = PurePosixPath(storage_key)
     if key.is_absolute() or any(part in {"", ".", ".."} for part in key.parts):
         raise ValueError("Invalid asset storage key.")
-    path = (root / Path(*key.parts)).resolve()
+    path = root
+    for part in key.parts:
+        path = path / part
+        if path.is_symlink():
+            raise ValueError("Invalid asset storage key.")
+    path = path.resolve()
     if not path.is_relative_to(root):
         raise ValueError("Invalid asset storage key.")
     return path

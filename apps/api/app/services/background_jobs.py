@@ -1444,6 +1444,10 @@ def process_background_job(
                 job.status = "cancelled" if cancelled else "failed"
                 job.phase = "cancelled" if cancelled else "failed"
                 job.error_message = None if cancelled else "DELETION_FAILED" if job.job_type == "user_account_delete" else archive_job_error(exc) if job.job_type in {*PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES} else _safe_error(exc)
+                if not cancelled and job.job_type == "offline_package":
+                    from app.services.offline_continuation import OfflineDependencyError
+                    if isinstance(exc, OfflineDependencyError):
+                        job.result = {"offline_failure": exc.failure}
                 job.heartbeat_at = now
                 job.completed_at = now
                 if job.job_type in SYSTEM_JOB_TYPES:
@@ -1531,13 +1535,14 @@ def _safe_error(exc: Exception) -> str:
     from app.services.assets.scanner import AssetScanError
     from app.services.continuation_candidates import ContinuationError
     from app.services.uploads import UploadLimitError
+    from app.services.offline_continuation import OfflineDependencyError
 
     # These domain errors are explicitly authored for user-facing validation.
     # Library, database and OS exceptions may embed SQL, content or storage paths.
     if isinstance(exc, (
         MessageEditError, OfflinePackageError, ContextPackageError, ExportError,
         CrArchiveError, AttachmentDownloadError, AssetDerivativeError, AssetScanError,
-        AdaptiveImportError, UploadLimitError, ContinuationError,
+        AdaptiveImportError, UploadLimitError, ContinuationError, OfflineDependencyError,
     )):
         return (str(exc).strip() or "TASK_FAILED")[:2000]
     # Older worker branches use plain ValueError for these static conditions.

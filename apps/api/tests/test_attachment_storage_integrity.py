@@ -11,6 +11,8 @@ from app.core.database import get_db
 from app.main import app
 from app.models.attachment import AssetObject, Attachment
 from app.models.conversation import Conversation
+from app.models.context_continuation import ContextMemberObject
+from app.models.skill_bundle import SkillFileObject
 from app.services.assets.attachment_storage_integrity import audit_local_attachment_storage
 from scripts import verify_attachment_storage
 from test_import_preview_api import client  # noqa: F401
@@ -173,6 +175,46 @@ def test_attachment_storage_cli_is_aggregate_by_default_and_fails_on_missing_fil
 def _database():
     generator = app.dependency_overrides[get_db]()
     return next(generator), generator
+
+
+def test_context_and_skill_references_are_not_attachment_orphans(client, tmp_path):
+    db, generator = _database()
+    root = tmp_path / "assets"
+    try:
+        for model, namespace in ((ContextMemberObject, "context"), (SkillFileObject, "skills")):
+            content = f"synthetic {namespace}".encode()
+            key = f"{namespace}/objects/member"
+            _write(root / key, content)
+            db.add(model(storage_key=key, byte_size=len(content), sha256=hashlib.sha256(content).hexdigest()))
+        db.commit()
+        report = audit_local_attachment_storage(db, root, verify_sha256=True)
+        assert report.clean
+        assert report.scanned_context_object_count == report.scanned_skill_object_count == 1
+        assert report.sha256_verified_count == 2
+        (root / "context/objects/member").unlink()
+        assert audit_local_attachment_storage(db, root).issue_counts == {"MISSING_CONTEXT_FILE": 1}
+    finally:
+        db.close()
+        generator.close()
+
+
+def test_derived_reference_limit_disables_orphan_classification(client, tmp_path):
+    db, generator = _database()
+    root = tmp_path / "assets"
+    try:
+        for index in range(2):
+            content = f"synthetic {index}".encode()
+            key = f"context/objects/{index}"
+            _write(root / key, content)
+            db.add(ContextMemberObject(storage_key=key, byte_size=len(content), sha256=hashlib.sha256(content).hexdigest()))
+        db.commit()
+        report = audit_local_attachment_storage(db, root, max_records=1)
+        assert not report.complete
+        assert not report.clean
+        assert "ORPHAN_ASSET_FILE" not in report.issue_counts
+    finally:
+        db.close()
+        generator.close()
 
 
 def _conversation() -> Conversation:

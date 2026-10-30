@@ -4,6 +4,13 @@ Last updated: 2026-10-30. This is the current snapshot, not a release history.
 
 ## Release and active work
 
+**2026-10-31 active implementation — not yet verified or deployed:**
+The approved reading/reliability plan starts with reference-aware asset audits,
+offline dependency preflight and Context retry integrity. Reading-list/inbox
+projections, focus navigation and measured performance follow. Local gates are
+not run; existing production remains unchanged. See the
+[implementation record](docs/execution/READING_RELIABILITY_IMPLEMENTATION_2026-10-31.md).
+
 **Current production accepted — 2026-10-30, all 24 bounded features:**
 Exact application source **`127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5`**
 passed all five jobs in full CI **`41041436271`**, attempt 1. Dispatch was

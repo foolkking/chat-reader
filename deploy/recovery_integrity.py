@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.models.message_version import MessageVersion
 from app.services.editing.transient_upload_references import find_transient_upload_references
+from app.services.assets.attachment_storage_integrity import _resolve_storage_key
 
 
 TABLES = (
@@ -29,16 +31,31 @@ TABLES = (
     "shares",
     "worker_runtime_states",
     "background_jobs",
+    "context_member_objects",
+    "continuation_revisions",
+    "continuation_states",
+    "skill_file_objects",
+    "skill_bundle_members",
 )
 
 
-def _check_file(path: Path, *, byte_size: int, result: dict[str, int]) -> None:
-    if not path.is_file():
+def _check_file(path: Path, *, byte_size: int, result: dict[str, int], sha256: str | None = None) -> None:
+    try:
+        if path.is_symlink() or not path.is_file():
+            result["missing"] += 1
+            return
+        if path.stat().st_size != byte_size:
+            result["size_mismatch"] += 1
+            return
+        if sha256 is not None:
+            digest = hashlib.sha256()
+            with path.open("rb") as source:
+                while chunk := source.read(1024 * 1024):
+                    digest.update(chunk)
+            if digest.hexdigest() != sha256:
+                result["hash_mismatch"] += 1
+    except OSError:
         result["missing"] += 1
-        return
-    if path.stat().st_size != byte_size:
-        result["size_mismatch"] += 1
-        return
 
 
 def _storage_usage(root: Path) -> dict[str, int]:
@@ -58,7 +75,7 @@ def audit(snapshot: dict) -> dict:
         "rows": {},
         "storage": {},
         "relations": {},
-        "files": {"checked": 0, "missing": 0, "size_mismatch": 0},
+        "files": {"checked": 0, "missing": 0, "size_mismatch": 0, "hash_mismatch": 0},
     }
     with SessionLocal() as db:
         for table in TABLES:
@@ -155,7 +172,27 @@ def audit(snapshot: dict) -> dict:
             text("select storage_key,byte_size from asset_objects where status='available'")
         ):
             report["files"]["checked"] += 1
-            _check_file(roots["assets"] / storage_key, byte_size=byte_size, result=report["files"])
+            try:
+                path = _resolve_storage_key(roots["assets"], storage_key)
+            except ValueError:
+                report["files"]["missing"] += 1
+                continue
+            _check_file(path, byte_size=byte_size, result=report["files"])
+        for table in ("context_member_objects", "skill_file_objects"):
+            for storage_key, byte_size, digest in db.execute(text(f"select storage_key,byte_size,sha256 from {table}")):
+                report["files"]["checked"] += 1
+                try:
+                    path = _resolve_storage_key(roots["assets"], storage_key)
+                except ValueError:
+                    report["files"]["missing"] += 1
+                    continue
+                _check_file(path, byte_size=byte_size, sha256=digest, result=report["files"])
+        for name, statement in {
+            "dangling_context_revision": "select count(*) from continuation_states s left join continuation_revisions r on r.id=s.adopted_revision_id where s.adopted_revision_id is not null and (r.id is null or r.conversation_id<>s.conversation_id)",
+            "dangling_context_member": "select count(*) from continuation_revisions r where (r.current_sha256 is not null and not exists (select 1 from context_member_objects o where o.sha256=r.current_sha256)) or (r.index_sha256 is not null and not exists (select 1 from context_member_objects o where o.sha256=r.index_sha256))",
+            "dangling_skill_member": "select count(*) from skill_bundle_members m left join skill_file_objects o on o.sha256=m.object_sha256 where o.sha256 is null",
+        }.items():
+            report["relations"][name] = int(db.execute(text(statement)).scalar_one())
         for import_id, safe_filename, byte_size in db.execute(
             text("select import_id,safe_filename,byte_size from source_artifacts")
         ):
@@ -193,7 +230,7 @@ def audit(snapshot: dict) -> dict:
         value for key, value in report["relations"].items() if key.startswith("dangling_")
     )
     report["canonical_missing_required_file_count"] = (
-        report["files"]["missing"] + report["files"]["size_mismatch"]
+        report["files"]["missing"] + report["files"]["size_mismatch"] + report["files"]["hash_mismatch"]
     )
     return report
 

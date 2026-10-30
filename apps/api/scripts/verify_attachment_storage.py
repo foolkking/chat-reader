@@ -50,6 +50,8 @@ def main() -> int:
         "complete": report.complete,
         "clean": report.clean,
         "scanned_asset_object_count": report.scanned_asset_object_count,
+        "scanned_context_object_count": report.scanned_context_object_count,
+        "scanned_skill_object_count": report.scanned_skill_object_count,
         "scanned_active_attachment_count": report.scanned_active_attachment_count,
         "scanned_file_count": report.scanned_file_count,
         "sha256_verified_count": report.sha256_verified_count,

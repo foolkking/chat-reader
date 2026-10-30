@@ -39,6 +39,7 @@ from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 from app.services.exporting.export_service import _source_refs_by_message
 from app.services.exporting.context_package import _project_context
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
+from app.services.offline_continuation import OfflineDependencyError, offline_continuation
 
 ProgressCallback = Callable[[str, int, int, int], None]
 ConversationProgressCallback = Callable[[str, int, int], None]
@@ -261,6 +262,32 @@ def _build_offline_package(
     )
     base_revisions = known_revisions or {}
     conversations = changed_conversations(selected_conversations, base_revisions)
+    # Fail before serializing bodies, but retain final byte checks below: the
+    # filesystem does not participate in the database's repeatable-read snapshot.
+    affected = []
+    failure_code = None
+    for index, conversation in enumerate(conversations):
+        _report(progress_callback, "checking_dependencies", 0, index, len(conversations))
+        try:
+            offline_continuation(db, conversation.id)
+        except OfflineDependencyError as exc:
+            failure_code = failure_code or str(exc)
+            affected.append({"conversation_id": str(conversation.id), "code": str(exc)})
+    if affected:
+        raise OfflineDependencyError(failure_code, affected=affected, affected_count=len(affected))
+    assets = _offline_asset_objects(db, conversations, include_assets)
+    for index, asset in enumerate(assets):
+        _report(progress_callback, "checking_dependencies", 0, index, len(assets))
+        try:
+            path = get_asset_store().resolve_key(asset.storage_key)
+            if not path.is_file():
+                raise OSError()
+            if path.stat().st_size != asset.byte_size:
+                raise OfflineDependencyError("OFFLINE_ASSET_INTEGRITY", affected_count=1)
+            with path.open("rb") as source:
+                source.read(1)
+        except (OSError, ValueError) as exc:
+            raise OfflineDependencyError("OFFLINE_ASSET_IO", affected_count=1) from exc
     catalog = build_catalog(db, ownership_scope)
     total = max(len(conversations), 1)
     package_metadata = {
@@ -294,7 +321,6 @@ def _build_offline_package(
                     subject_key=subject_key,
                     progress_callback=progress_callback,
                 )
-            assets = _offline_asset_objects(db, conversations, include_assets)
             _report(progress_callback, "packaging_assets", 92, 0, len(assets))
             for index, asset in enumerate(assets, start=1):
                 _write_verified_asset(archive, asset, progress_callback, index, len(assets))

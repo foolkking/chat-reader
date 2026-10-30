@@ -1,16 +1,19 @@
 /** Persist only recognized failure categories, never raw server exception text. */
 export function offlineGenerationFailureCode(message: string | null | undefined): string {
+  if (message === "OFFLINE_CONTEXT_UNAVAILABLE" || message === "OFFLINE_CONTEXT_INTEGRITY") return message;
   if (message === "OFFLINE_ASSET_INTEGRITY" || message === "Offline attachment integrity check failed. Retry after repairing the attachment.") return "OFFLINE_ASSET_INTEGRITY";
   if (message === "OFFLINE_ASSET_IO" || message === "Offline attachment could not be packaged. Check attachment availability and server storage, then retry.") return "OFFLINE_ASSET_IO";
   return "GENERATION";
 }
 
 export function offlineFailureNeedsRebuild(code: string | null): boolean {
-  return ["GONE", "GENERATION", "MALFORMED", "OFFLINE_ASSET_INTEGRITY", "OFFLINE_ASSET_IO"].includes(code ?? "");
+  return ["GONE", "GENERATION", "MALFORMED", "OFFLINE_ASSET_INTEGRITY", "OFFLINE_ASSET_IO", "OFFLINE_CONTEXT_UNAVAILABLE", "OFFLINE_CONTEXT_INTEGRITY"].includes(code ?? "");
 }
 
 export function offlineDownloadFailureMessage(code: string | null, zh: boolean, hasExistingCopies: boolean): string {
   const retained = hasExistingCopies ? (zh ? "现有副本已保留。" : " Existing copies are retained.") : "";
+  if (code === "OFFLINE_CONTEXT_UNAVAILABLE") return (zh ? "对话的 Current / Index 文件缺失或无法读取。请先联系管理员恢复文件，再重新生成离线包。" : "Saved Current / Index files are missing or unreadable. Ask your administrator to restore them before rebuilding.") + retained;
+  if (code === "OFFLINE_CONTEXT_INTEGRITY") return (zh ? "对话的 Current / Index 文件校验失败。请先修复文件，再重新生成离线包。" : "Saved Current / Index files failed verification. Repair them before rebuilding.") + retained;
   if (code === "QUOTA") return (zh ? "浏览器空间不足，请释放空间后重试。" : "Browser storage is full. Free space and retry.") + retained;
   if (code === "MALFORMED") return (zh ? "离线包不完整或已损坏，重试将重新生成。" : "The offline package is incomplete or damaged. Retry to rebuild.") + retained;
   if (code === "STORAGE_WRITE") return (zh ? "浏览器未能完成写入，请检查本机空间后重试。" : "The browser could not finish writing. Check local storage and retry.") + retained;
