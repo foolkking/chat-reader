@@ -8,7 +8,13 @@ export async function openSettingsNoiseReview(page: Page, scanId: string): Promi
   const center = page.getByTestId("task-center-panel");
   // Closing a nested review returns to its still-open Task Center.
   if (!(await center.isVisible())) {
-    await page.locator('[data-testid="task-summary-button"]:visible').click();
+    const summary = page.getByTestId("task-summary-button").filter({ visible: true }).first();
+    const openSidebar = page.getByRole("button", { name: /^(Open sidebar|打开侧栏)$/ }).filter({ visible: true }).first();
+    // A Reader now starts with the project sidebar collapsed. Reveal the real
+    // Task Center entry instead of depending on the old expanded default.
+    await expect(summary.or(openSidebar).first()).toBeVisible({ timeout: 15_000 });
+    if (!(await summary.isVisible())) await openSidebar.click();
+    await summary.click();
   }
   await expect(center).toBeVisible();
   await center.locator(`[data-cleanup-scan-id="${scanId}"]`)

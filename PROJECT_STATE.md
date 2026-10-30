@@ -18,6 +18,14 @@ catalog transport failure and Reader capacity block acceptance. Follow-up
 source preserves budgets, separates diagnostic trace overhead from measurement,
 reuses covered index windows and retries only transient catalog reads once,
 with account fences. Fresh full CI is still required.
+Follow-up `1b74ba9`, run `41128941676`, first read **06:00:46 +08** after
+creation at 05:10:00 +08: full API and settings **463 plus restore 1** passed,
+Web **1,899 UX / 110 mutation** passed. Cleanup's two old expanded-sidebar
+assumptions are corrected in source, not reverified. GitHub refused to start
+the capacity job because of account billing/spending limits (zero steps, no
+v2 measurements). No rerun or alternate compute bypass is attempted until
+the user restores Actions capacity. Full Web/capacity and target screenshots
+remain unaccepted; the earlier failed capacity evidence remains a failure.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

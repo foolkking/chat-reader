@@ -43,6 +43,15 @@ transient pre-admission catalog 500 as well as its existing worker failure,
 retaining exactly-one-admission, no false retained-copy and explicit rebuild
 assertions. Package admission itself is never automatically replayed.
 
+Follow-up run `41128941676` passed API and settings **463 plus restore 1**.
+Web passed **1,899 UX / 110 mutation** before cleanup's shared test launcher
+waited for a Task summary inside the now-collapsed desktop sidebar. Its source
+fix explicitly reveals the sidebar; all cleanup mutation/range assertions
+remain. The capacity job had **zero steps**: GitHub rejected job startup for
+account billing/spending limits, not a measured v2 pass/failure. No local or
+alternate-runner workaround is used. A fresh full exact-source CI and target
+visual review remain required after Actions capacity is restored.
+
 ## Current accepted release — 2026-10-30
 
 Exact `127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5` passed all five jobs in

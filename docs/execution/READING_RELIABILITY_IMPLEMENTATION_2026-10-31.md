@@ -211,6 +211,45 @@ are authored. Same-runner baseline/candidate v2 must establish the result;
 both phase failures still fail the gate. No local gate ran and no application
 deployment occurred.
 
+Follow-up source **`1b74ba9cc8e0ac8d31c06e4db341b099d825e67a`** was pushed
+and full CI **`41128941676`** dispatched at **05:09:57 +08**. Its first
+result/status read is deferred until **06:00:15 +08** (a conservative
+50-minute boundary after dispatch), absent a user-reported failure. No result
+is inferred from dispatch; only verification-driven fixes may follow.
+
+### Eighth CI — passed recovery, remaining launcher and external capacity block
+
+GitHub creation time is **05:10:00 +08**; first status read **06:00:46 +08**
+respected the full 50-minute boundary. Exact source remains `1b74ba9`.
+Full API succeeded; settings passed **463 plus independent restore one**,
+including the new transient-catalog first-copy cases. Web lint/typecheck/build,
+**1,899 UX**, preceding browser gates and **110 mutation** cases passed.
+
+Cleanup then had four passes / two failures, both in
+`openSettingsNoiseReview`. Their snapshots show an intact Reader and visible
+Open sidebar rail; the helper still awaited a Task summary inside the hidden
+desktop sidebar. Source now waits for a real visible entry or opener, explicitly
+opens that sidebar if necessary and uses the original Task summary/review flow.
+No cleanup selection, refined-range, rule, confirmation or source-preservation
+assertion is removed. This correction is not executed locally or reverified.
+
+Performance job `124325380653` has **zero steps** and no log/measurement
+artifact. Its authoritative check annotation states that the job was not
+started because recent account payments failed or the spending limit needs
+increasing. This is an external Actions billing/capacity block, not a v2
+measurement result. The earlier v1 failures remain failures. No paid setting,
+spending limit, runner substitution, gate bypass or local test is attempted.
+
+Next required work, after the user restores GitHub Actions capacity:
+
+1. Dispatch the corrected exact source in the full workflow, observe a
+   fresh 50-minute first-read boundary and retain all four prerequisites.
+2. Complete default-PWA/negative/auth and v2 baseline/candidate gates; inspect
+   the target 375/1440px collection/focus screenshots rather than unrelated UI.
+3. Record actual pass/failure and measurement deltas without cross-protocol
+   speedup claims. App deployment, full production 47-conversation download
+   and a new coherent post-repair backup remain unclaimed.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset
