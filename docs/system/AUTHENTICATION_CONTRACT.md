@@ -1,5 +1,15 @@
 # Authentication and account contract
 
+## Coherent credential checks — 2026-10-30 follow-up (pending CI/release)
+
+Session, principal and user credential versions are loaded in one joined SQL
+statement, refreshing cached ORM identities. Under PostgreSQL READ COMMITTED,
+separate reads can otherwise straddle an email/password credential commit and
+falsely reject or revoke the deliberately retained session. An in-flight read
+may observe the coherent pre-commit snapshot; the next read must observe the
+new versions/revocations. All existing token, expiry, status, role and version
+checks remain; this does not retry mutations or relax authentication.
+
 ## Page-method boundary — 2026-10-30 source
 
 This app has no Server Actions or page form POST handlers. The existing Next

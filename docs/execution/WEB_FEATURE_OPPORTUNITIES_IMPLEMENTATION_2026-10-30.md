@@ -337,3 +337,14 @@ WEB-05/08/11/21/22 的有界实现已补齐；当前单一 schema head 为 0058�
 不删除或弱化既有 Escape／焦点／触摸／同节点断言。用户在 50 分钟截止前
 明确反馈失败后立即诊断；此轮不冒充已满足等待门槛或已通过。后续针对新提交
 重新完整 CI，仍按派发后 50 分钟门槛检查；生产未变。
+
+### 同轮设置门禁：提交后的会话 401
+
+旧轮完整结果于 **07:24:04Z** 读取：settings **462 passed／1 failed**，
+镜像与制品门禁未获准运行，不算发布。失败在真实邮箱修改的丢响应恢复；
+脱敏 API 事件先记录 `email_changed`，随后同一确认入口返回 401。
+`authenticate_session` 对 session／principal／user 分三次读取，在 PostgreSQL
+READ COMMITTED 下可能跨过原子凭据更新，混用旧／新版本并误拒绝或撤销保留会话。
+修复改为单条 joined SELECT 并刷新 ORM identity，保留全部 token／状态／到期／
+版本验证；新增真实 PostgreSQL 确定性交错测试，不靠 sleep 或重试制造通过。
+此修复须新精确提交的完整 CI 与原 SMTP／浏览器用例验收；未运行本地调试测试。

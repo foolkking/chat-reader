@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import pytest
+from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -101,3 +102,51 @@ def test_email_change_and_password_reset_serialize(isolated_schema):
         assert user.credential_version == user.principal.credential_version == 2
         if results[0]: assert db.get(PasswordResetGrant, reset_id).revoked_at is not None
         else: assert db.get(EmailVerificationGrant, grant_id).used_at is None
+
+
+@pytest.mark.parametrize("old_split_read", [1, 2])
+def test_session_authentication_cannot_mix_email_change_versions(isolated_schema, old_split_read):
+    """Commit between the old session/principal/user reads, without timing sleeps."""
+    engine, migrate = isolated_schema
+    migrate("head")
+    uid, sid, other, cookie, token, _ = setup_account(
+        engine, "snapshot-old@example.test", "snapshot-new@example.test",
+    )
+    reads = []
+    committed = []
+    with engine.connect() as connection:
+        def commit_during_read(conn, cursor, statement, parameters, context, executemany):
+            sql = statement.lstrip().lower()
+            if not sql.startswith("select") or not any(
+                table in sql for table in ("auth_sessions", "auth_principals", "users")
+            ):
+                return
+            reads.append(sql)
+            # The joined query already has a coherent result at this point.
+            # Old code instead commits after its first/second separate SELECT.
+            joined = "join auth_principals" in sql and "join users" in sql
+            if committed or not (joined or len(reads) == old_split_read):
+                return
+            with Session(engine) as writer:
+                authentication = authenticate_session(writer, cookie, get_settings(), touch=False)
+                assert authentication is not None
+                confirm_email_change(writer, get_settings(), authentication, token)
+                writer.commit()
+            committed.append(True)
+
+        event.listen(connection, "after_cursor_execute", commit_during_read)
+        try:
+            with Session(bind=connection) as reader:
+                authentication = authenticate_session(reader, cookie, get_settings(), touch=False)
+                assert authentication is not None
+                assert authentication.context.user_id == uid
+                assert authentication.session.revoked_at is None
+        finally:
+            event.remove(connection, "after_cursor_execute", commit_during_read)
+    assert committed == [True]
+    assert len(reads) == 1, "Version checks must share one SQL statement snapshot"
+    with Session(engine) as db:
+        assert db.get(User, uid).normalized_email == "snapshot-new@example.test"
+        assert db.get(AuthSession, sid).revoked_at is None
+        assert db.get(AuthSession, other).revoked_at is not None
+        assert authenticate_session(db, cookie, get_settings(), touch=False) is not None

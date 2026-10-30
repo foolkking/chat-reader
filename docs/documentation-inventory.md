@@ -8,6 +8,10 @@
 `system/USER_FLOWS.md` 与 PWA 合同负责对照／基线／离线标签；testing 与部署
 文档维护验收和回退边界。旧的 19／5 结论仅属于前次已发布检查点。
 
+`system/AUTHENTICATION_CONTRACT.md` owns the pending coherent credential-read
+contract; testing and the execution record own the failed settings gate and
+deterministic PostgreSQL regression evidence, not a claimed production fix.
+
 ## 两轮 Web 功能发布验收 — 2026-10-30
 
 | 文档 | 当前职责 |

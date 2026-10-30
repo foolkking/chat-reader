@@ -11,7 +11,7 @@ from typing import Protocol
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHash, VerifyMismatchError, VerificationError
 from sqlalchemy import func, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import Settings
 from app.models.auth import AuthLoginThrottle, AuthPrincipal, AuthSession
@@ -271,13 +271,22 @@ def authenticate_session(
         digest = token_digest(token, settings)
     except (UnicodeEncodeError, AuthConfigurationError):
         return None
-    session = db.query(AuthSession).filter(AuthSession.token_digest == digest).one_or_none()
+    # A credential change advances all three rows atomically. Separate SELECTs
+    # under READ COMMITTED can straddle that commit and falsely revoke the
+    # retained session. Load one statement snapshot, refreshing any cached rows.
+    session = (
+        db.query(AuthSession)
+        .options(joinedload(AuthSession.principal).joinedload(AuthPrincipal.user))
+        .populate_existing()
+        .filter(AuthSession.token_digest == digest)
+        .one_or_none()
+    )
     if session is None or session.revoked_at is not None:
         return None
-    principal = db.get(AuthPrincipal, session.principal_id)
+    principal = session.principal
     if principal is None or session.credential_version != principal.credential_version:
         return None
-    user = db.get(User, principal.user_id) if principal.user_id is not None else None
+    user = principal.user
     if (user is None and (principal.user_id is not None or principal.id != OWNER_PRINCIPAL_ID)) or (
         user is not None and (not user.can_login or session.credential_version != user.credential_version)
     ):

@@ -16,6 +16,13 @@ These new server records are not portable `.cr` data. See
 The older 19-delivered/5-missing statements below describe the accepted release,
 not this follow-up worktree.
 
+Follow-up CI `41014403002` failed both the mounted Web adapter and the email
+change recovery gate. The adapter dependency correction is committed in
+`6dc884d`. API logs show the email change committed before returning 401;
+authentication's separate credential-row reads can cross that commit under
+READ COMMITTED. A single joined snapshot and deterministic PostgreSQL
+interleaving regressions are now pending fresh full CI. Production is unchanged.
+
 **Current production accepted — 2026-10-30:**
 Exact source **`0d1efacaa8145dff0c8c70ceda82460af5883854`** passed all five
 jobs in full CI **`40992509041`**, attempt 1. Dispatch was

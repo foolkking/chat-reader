@@ -30,6 +30,16 @@ test-adapter correction, not a passing CI receipt. The user reported the failure
 before the 50-minute deadline and requested continuation, so failure diagnosis
 was read early; subsequent dispatches still retain the 50-minute gate.
 
+The same run also failed settings email-change recovery (462 passed, 1 failed):
+the API logged `email_changed` and then returned 401 for that confirmation.
+Session/principal/user were read separately and could straddle a credential
+commit, falsely rejecting or revoking the retained session. A joined,
+identity-refreshing snapshot preserves all security checks. Two deterministic
+PostgreSQL event-barrier cases commit a real email change at the former split
+read boundaries and require one coherent read, current-session survival and
+other-session revocation. This fix is not locally executed for CI debugging;
+the existing full API and real SMTP/browser gates must certify the new source.
+
 ## Fifth full CI and accepted deployment — 2026-10-30
 
 Exact `0d1efacaa8145dff0c8c70ceda82460af5883854` passed all five jobs in
