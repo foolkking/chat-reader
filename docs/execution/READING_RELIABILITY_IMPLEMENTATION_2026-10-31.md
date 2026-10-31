@@ -382,6 +382,31 @@ accepted**: these CI failures, final-source visual acceptance, later
 authentication/negative-PWA gates, full production package generation/download,
 a coherent post-repair backup and release artifact/deployment gates remain.
 
+### Ninth full CI — failure diagnosis and narrow test-contract repair
+
+Full run `41196506431`, dispatched **2026-10-31 19:21:15 +08** on exact source
+`b3aef7328eb8361afde52baa31cc9dca98c47598`, completed **20:03:20 +08**.
+API and reading-performance comparison passed; settings recorded **358 passed /
+105 failed**; Web's source-contract suite recorded **58/59**. Image build and
+artifact inspection were skipped because required quality jobs failed.
+
+Settings evidence divides the failures into **32** navigation-helper timeouts
+and **73** synthetic administrator login responses of HTTP 429. The helper
+assumed a collapsed rail when the accessible tree showed an already-expanded
+sidebar. Failed browser-worker setup then repeatedly re-created the in-memory
+admin session and encountered the unchanged application login limiter. The
+repair chooses the localized `Tasks` button by accessible role first, opens
+the mobile drawer with its own trigger, and uses the desktop rail opener only
+when needed. The API login limit is not weakened.
+
+Web's only failure is a stale static contract assertion expecting
+`exit "$failed"`; the current workflow intentionally gates candidate
+assertions while preserving the historical baseline result as diagnostic.
+The contract now checks the exact `candidate_failed` assignment and exit path,
+without dropping CI prerequisites or changing capacity thresholds.
+These repairs await a new full CI on their committed source. No local gate was
+run, and the failed run is not relabeled or treated as release acceptance.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset

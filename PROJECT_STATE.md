@@ -63,6 +63,17 @@ hit-testing, close/focus return and 320px reflow. Full runs `41193214379`
 and `41193860389` were cancelled before acceptance because their SHAs lacked
 these later corrections. Complete final-source CI is dispatched from existing
 `master`; no branch is created.
+Full run `41196506431` on `b3aef73` completed with API and candidate capacity
+comparison successful, settings **358/463** and Web source-contract **58/59**;
+release image build/inspection were skipped because required quality jobs failed.
+Settings evidence splits the 105 failures into 32 sidebar-entry locator timeouts
+and 73 synthetic-admin logins rejected with HTTP 429 during repeated test setup;
+the application's login limit is intentional and unchanged. Web's single failure
+asserted the old performance-result variable after the candidate-only gate-policy
+change. The current source follow-up uses the accessible Tasks action, handles the
+mobile drawer and collapsed desktop rail separately, and updates the contract
+test to assert candidate-only gating while preserving baseline evidence. It
+awaits a fresh exact-SHA CI; no local gates or deployment are claimed.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

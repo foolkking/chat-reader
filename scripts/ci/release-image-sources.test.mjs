@@ -113,8 +113,9 @@ test("reading capacity comparison is additive and required before release images
   assert.match(comparison, /baseline=43a714f2c13f6e6573eb02916c8ff8f78dd2d82e/);
   assert.match(comparison, /candidate="\$\{\{ github\.sha \}\}"/);
   assert.match(comparison, /cp "\$RUNNER_TEMP\/reading-comparison\/harness\.ts" apps\/web\/e2e\/reader-capacity\.spec\.ts/);
-  assert.match(comparison, /failed=1/);
-  assert.match(comparison, /exit "\$failed"/);
+  assert.match(comparison, /candidate_failed=0/);
+  assert.match(comparison, /if \[ "\$phase" = candidate \]; then candidate_failed=1; fi/);
+  assert.match(comparison, /exit "\$candidate_failed"/);
   assert.doesNotMatch(comparison, /continue-on-error/);
 });
 

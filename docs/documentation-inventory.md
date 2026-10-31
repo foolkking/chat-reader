@@ -7,8 +7,8 @@
 不把本轮尚未验收的实现记成已发布。`api-reference.md` 记录两个新增只读
 集合摘要及旧接口兼容；执行记录明确 12 个文件的无覆盖恢复与前置备份限制。
 `reading-performance.yml` 负责同一隔离 runner 的先基线、后候选测量，
-`build-release-images.yml` 调用它；run `41128941676` attempt 3 的基线和候选
-容量均为 9/9 通过，合成目录查询数从 283/2,821 降至 7/7。该结果不是生产
+`build-release-images.yml` 调用它；run `41196506431` 的候选容量比较通过，
+历史基线仍作为诊断保留；合成目录查询数的既有 283/2,821 到 7/7 对照不代表生产
 PostgreSQL 延迟或发布验收。
 DATA_AND_STORAGE／deployment 另记录候选共享对象引用集合、
 `orphan_classification_safe` 的非删除授权语义及不完整扫描撤回分类规则；
@@ -16,7 +16,7 @@ DATA_AND_STORAGE／deployment 另记录候选共享对象引用集合、
 testing 负责新增隔离比较门禁、原性能预算、恢复／摘要／浏览器覆盖边界；
 候选必须满足原预算；不可变基线全量运行且保留失败，但不阻断独立通过的候选。
 基础设施／构建／缺少测量证据仍失败，具体见 `system/PERFORMANCE_CAPACITY_CONTRACT.md`。
-第七次 CI 的完整 API 通过不覆盖 Web／settings／capacity 失败；testing 和执行
+完整 API 与候选容量通过不覆盖 Web／settings 失败；testing 和执行
 记录明确 v1 trace 干扰、v2 相同双侧协议及不能跨协议宣称产品提速的边界。
 USER_FLOWS 另记录索引窗口覆盖复用、目录只读一次重试和账户隔离，不改变离线写入语义。
 run `41128941676` attempt 3 的 API／设置／性能门禁通过，Web 清理门禁
