@@ -19,16 +19,19 @@ source preserves budgets, separates diagnostic trace overhead from measurement,
 reuses covered index windows and retries only transient catalog reads once,
 with account fences. Fresh full CI is still required.
 Follow-up `1b74ba9`, run `41128941676`, first read **06:00:46 +08** after
-creation at 05:10:00 +08: full API and settings **463 plus restore 1** passed,
-Web **1,899 UX / 110 mutation** passed. Cleanup's two old expanded-sidebar
-assumptions are corrected in source, not reverified. GitHub refused to start
-the capacity job because of account billing/spending limits (zero steps, no
-v2 measurements). No rerun or alternate compute bypass is attempted until
-the user restores Actions capacity. Full Web/capacity and target screenshots
-remain unaccepted; the earlier failed capacity evidence remains a failure.
-Static follow-up also makes the workspace Sidebar DOM-persistence fixture's
-expanded preference explicit before navigation; its identity/document-count
-assertions remain. No fresh CI result is claimed for these test-only corrections.
+creation at 05:10:00 +08. Attempt 3 passed full API (**5,966 / three skipped**),
+settings (**463 plus independent restore 1**), Web **1,899 UX / 110 mutation**,
+and same-runner performance baseline/candidate (**9/9 each**). Synthetic
+catalog queries were **283/2,821 -> 7/7** for 47/470 rows; this is not production
+PostgreSQL latency. Web still failed the cleanup browser gate (**4/6**) because
+its helper expected the old expanded-sidebar default. Attempt 1's capacity job
+was blocked by account billing, but attempt 3 did run and pass; release image
+build/inspection stayed skipped because Web failed.
+Current source commits `978080e` and `09f820c` fix the collapsed-sidebar cleanup
+helper and make the soft-navigation preference explicit while preserving
+same-node/document-count assertions. Neither fix has a fresh CI receipt. Target
+collection/focus screenshots, later PWA/auth gates, full offline-package
+download, a coherent post-repair backup and release acceptance remain pending.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

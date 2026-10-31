@@ -217,49 +217,74 @@ result/status read is deferred until **06:00:15 +08** (a conservative
 50-minute boundary after dispatch), absent a user-reported failure. No result
 is inferred from dispatch; only verification-driven fixes may follow.
 
-### Eighth CI — passed recovery, remaining launcher and external capacity block
+### Eighth CI — attempt 3 passes API/settings/performance; Web cleanup fails
 
-GitHub creation time is **05:10:00 +08**; first status read **06:00:46 +08**
-respected the full 50-minute boundary. Exact source remains `1b74ba9`.
-Full API succeeded; settings passed **463 plus independent restore one**,
-including the new transient-catalog first-copy cases. Web lint/typecheck/build,
-**1,899 UX**, preceding browser gates and **110 mutation** cases passed.
+GitHub creation time is **05:10:00 +08**; attempt 1 first status read
+**06:00:46 +08** respected the full 50-minute boundary. Attempt 1 ran on exact
+source `1b74ba9`: full API and settings (**463 plus independent restore one**)
+passed; Web lint/typecheck/build, **1,899 UX**, preceding browser gates and
+**110 mutation** cases passed.
 
-Cleanup then had four passes / two failures, both in
+The cleanup gate had four passes / two failures, both in
 `openSettingsNoiseReview`. Their snapshots show an intact Reader and visible
 Open sidebar rail; the helper still awaited a Task summary inside the hidden
-desktop sidebar. Source now waits for a real visible entry or opener, explicitly
-opens that sidebar if necessary and uses the original Task summary/review flow.
-No cleanup selection, refined-range, rule, confirmation or source-preservation
-assertion is removed. This correction is not executed locally or reverified.
+desktop sidebar. The later source fix waits for a real visible entry or opener,
+explicitly opens that sidebar if necessary and uses the original Task
+summary/review flow. No cleanup selection, refined-range, rule, confirmation or
+source-preservation assertion is removed.
 
-Performance job `124325380653` has **zero steps** and no log/measurement
-artifact. Its authoritative check annotation states that the job was not
-started because recent account payments failed or the spending limit needs
-increasing. This is an external Actions billing/capacity block, not a v2
-measurement result. The earlier v1 failures remain failures. No paid setting,
-spending limit, runner substitution, gate bypass or local test is attempted.
+Attempt 1 performance job `124325380653` had **zero steps**; its check
+annotation says account payments failed or the spending limit needs
+increasing. Attempt 2 also had zero-step jobs. These are preserved as failed
+attempts. Attempt 3 later ran the same-runner v2 comparison successfully:
+baseline and candidate each passed **9/9** Reader capacity cases, and the
+synthetic catalog query counts were baseline **283/2,821** versus candidate
+**7/7** at 47/470 conversations. Its single-run SQLite timings were baseline
+96.78/820.29 ms and candidate 24.56/35.02 ms; these characterize only that
+isolated synthetic workload and are not production PostgreSQL latency claims.
+The current full run still concludes failure because Web cleanup failed.
 
-Next required work, after the user restores GitHub Actions capacity:
+Attempt 3 also passed full API (**5,966 / three skipped**) and settings
+(**463 plus independent restore one**). It ran on the same `1b74ba9` source,
+so it does not verify the later test corrections. `build-images` and
+`inspect-release-artifact` were skipped because Web failed.
 
-1. Dispatch the corrected exact source in the full workflow, observe a
-   fresh 50-minute first-read boundary and retain all four prerequisites.
-2. Complete default-PWA/negative/auth and v2 baseline/candidate gates; inspect
-   the target 375/1440px collection/focus screenshots rather than unrelated UI.
-3. Record actual pass/failure and measurement deltas without cross-protocol
-   speedup claims. App deployment, full production 47-conversation download
-   and a new coherent post-repair backup remain unclaimed.
+### Latest source-only CI corrections and plan audit
 
-At **06:09:54 +08**, read-only reinspection still finds run `41128941676`
-as the latest full workflow on this branch; its terminal capacity check still
-has zero steps and the billing/spending-limit annotation. There is no live
-process/job to wait on, and no new dispatch is attempted. Static review of the
-unreached browser gates found one additional old-default fixture assumption:
-the workspace soft-navigation test interacts with expanded project links
-after entering a Reader without setting an expanded preference. It now sets
-that real preference before navigation. Same Sidebar identity and exactly one
-document request remain required; default-collapsed/focus coverage is separate.
-This is source progress, not an executed or passing browser receipt.
+Commits `978080e` and `09f820c` are on the current branch (`09f820c`) but have
+no CI receipt. The first fixes both cleanup failures by opening the collapsed
+Reader sidebar before using the existing Task Center flow; the second makes
+the workspace soft-navigation test's expanded preference explicit while
+keeping the Sidebar identity and one-document-request assertions. They do not
+relax product or release assertions.
+
+| Approved scope | Source status | Latest acceptance / remaining |
+| --- | --- | --- |
+| Shared-storage audit, Context/Skill references, offline preflight/recovery | Implemented; 12 preserved files restored without overwrite. | Attempt 3 API passed, including isolated restore/read/export/package checks. A production-sized 47-conversation package download and a new coherent post-repair five-component backup remain outstanding. |
+| Reading list, annotation inbox, example-entry removal | Implemented; legacy APIs and `/example` compatibility retained. | API suite passed. Dedicated browser/screenshot evidence is not present in the latest artifact; later full-PWA gate was not reached. |
+| Collapsed project sidebar, body-first focus and edge navigation | Implemented; browser fixtures cover default, saved preference and focus cases. | Some focused browser checks passed, but no target 375/1440 collection/focus screenshot review exists; current source-only fixture fixes await CI. |
+| Reader recovery, keyboard guards and account-fenced unknown writes | Implemented with regression coverage. | API, UX/mutation and focused browser subsets passed; later default-PWA/auth gates remain unverified. |
+| System/catalog/index performance | Grouped catalog query and index-window reuse implemented; v2 harness keeps existing budgets. | Attempt 3 baseline/candidate capacity both passed 9/9; catalog shape 283/2,821 -> 7/7. Synthetic results only; no production latency claim. |
+| Full release acceptance | Not complete. | Latest attempt 3 failed Web cleanup on old SHA; both current fixes need a new full exact-source CI. Image build, independent artifact inspection and production deployment have not happened for this batch. |
+
+Therefore, all approved source work has a candidate implementation, but the
+plan is **not fully accepted or released**. The exact offline incident is not
+uniquely attributable from the user's screenshot: shared Context/Skill
+references and missing Context backing files were confirmed, and CI also
+reproduced a transient pre-admission catalog failure. The one-retry read policy
+addresses that transient path without replaying package writes. Actual full
+package generation/download, new source CI, target screenshots, a coherent
+post-repair backup and release gates remain required.
+
+Next required work:
+
+1. Run the full workflow against the corrected exact source; retain all four
+   release prerequisites and the established first-read boundary.
+2. Complete default-PWA/negative/auth gates and inspect the target 375/1440px
+   collection/focus screenshots, not unrelated UI.
+3. Record actual pass/failure and measurements without production-latency or
+   cross-protocol speedup claims. Deployment, full production package download
+   and a new coherent post-repair backup remain separately outstanding.
 
 ## Incident correction
 

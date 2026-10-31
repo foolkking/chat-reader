@@ -14,8 +14,9 @@ runs plus warm revisit, across plain/math/mixed bodies. Both phases are
 collected if a capacity assertion fails, but either failure fails the gate;
 images require this gate in addition to the existing API/Web/settings gates.
 Frame p95 34 ms, maximum long task 150 ms, total long tasks 250 ms and stricter
-far-target mounted-DOM budgets are unchanged. No measured improvement or
-capacity pass is claimed before its artifact exists.
+far-target mounted-DOM budgets are unchanged. The attempt-3 artifact and its
+bounded interpretation are recorded below; source changes alone are not treated
+as measurements.
 
 Run `41119273117` passed the full API (5,966 / three skipped), but failed Web,
 settings (462 / one failure) and capacity. Its version-1 capacity receipt is
@@ -43,18 +44,29 @@ transient pre-admission catalog 500 as well as its existing worker failure,
 retaining exactly-one-admission, no false retained-copy and explicit rebuild
 assertions. Package admission itself is never automatically replayed.
 
-Follow-up run `41128941676` passed API and settings **463 plus restore 1**.
-Web passed **1,899 UX / 110 mutation** before cleanup's shared test launcher
-waited for a Task summary inside the now-collapsed desktop sidebar. Its source
-fix explicitly reveals the sidebar; all cleanup mutation/range assertions
-remain. The capacity job had **zero steps**: GitHub rejected job startup for
-account billing/spending limits, not a measured v2 pass/failure. No local or
-alternate-runner workaround is used. A fresh full exact-source CI and target
-visual review remain required after Actions capacity is restored.
-The workspace soft-navigation DOM-persistence case explicitly selects the
-expanded Reader sidebar preference, because its subsequent steps use project
-links. Same-node and single-document assertions stay intact; the separate
-no-preference/focus cases retain the default-collapsed contract.
+Run `41128941676` attempt 1 was first read at **06:00:46 +08** after dispatch
+at 05:10 +08. API/settings passed, Web cleanup failed **4/6** because the
+shared helper waited for a Task summary hidden in the default-collapsed Reader
+sidebar; the performance job was not started due to account billing/spending
+limits. Attempt 2 had zero steps. Attempt 3 completed the full API
+(**5,966 / three skipped**), settings (**463 plus independent restore 1**),
+Web **1,899 UX / 110 mutation**, and the performance comparison. Both v2
+capacity phases passed **9/9**; catalog SQL counts were baseline **283/2,821**
+and candidate **7/7** for 47/470 synthetic conversations. The synthetic
+SQLite timings are retained in the implementation record and are not production
+PostgreSQL latency. The Web cleanup gate still failed **4/6** on the same old
+helper; later PWA/auth gates did not run, and image/artifact jobs were skipped.
+
+`978080e` changes the shared helper to explicitly reveal the actual sidebar
+before opening Task Center, preserving the existing cleanup review and
+mutation/range assertions. `09f820c` sets an explicit expanded preference only
+for the workspace soft-navigation test, preserving same-node and
+single-document assertions; default-collapsed coverage remains separate.
+These commits have no CI receipt yet. The latest available browser artifact
+contains no target reading-list, annotation-inbox or focus-edge screenshots:
+those visual checks and later PWA/auth gates remain unverified. Full production
+47-conversation offline generation/download and a coherent post-repair backup
+also remain outstanding. No local gate or alternate-runner workaround was used.
 
 ## Current accepted release — 2026-10-30
 

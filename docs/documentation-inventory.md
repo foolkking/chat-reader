@@ -7,7 +7,9 @@
 不把本轮尚未验收的实现记成已发布。`api-reference.md` 记录两个新增只读
 集合摘要及旧接口兼容；执行记录明确 12 个文件的无覆盖恢复与前置备份限制。
 `reading-performance.yml` 负责同一隔离 runner 的先基线、后候选测量，
-`build-release-images.yml` 调用它；尚无本轮 CI／性能通过声明。
+`build-release-images.yml` 调用它；run `41128941676` attempt 3 的基线和候选
+容量均为 9/9 通过，合成目录查询数从 283/2,821 降至 7/7。该结果不是生产
+PostgreSQL 延迟或发布验收。
 DATA_AND_STORAGE／deployment 另记录候选共享对象引用集合、
 `orphan_classification_safe` 的非删除授权语义及不完整扫描撤回分类规则；
 执行记录保留第一次失败与聚合改写前的实测基线，不把源码改动当成性能证据。
@@ -16,10 +18,11 @@ testing 负责新增隔离比较门禁、原性能预算、恢复／摘要／浏
 第七次 CI 的完整 API 通过不覆盖 Web／settings／capacity 失败；testing 和执行
 记录明确 v1 trace 干扰、v2 相同双侧协议及不能跨协议宣称产品提速的边界。
 USER_FLOWS 另记录索引窗口覆盖复用、目录只读一次重试和账户隔离，不改变离线写入语义。
-后续 CI 的 API／设置通过、Web 旧启动器修正及 GitHub 账单／额度导致性能 job 零步骤
-分别记录；没有 v2 性能通过、目标截图验收或绕过 Actions 限制的声明。
-静态后续复核只显式化 Sidebar DOM 保留用例所需的展开偏好，不削弱节点／文档请求断言；
-该用例与默认折叠／专注用例的验证范围在 testing 中分开说明，仍待新的完整 CI。
+run `41128941676` attempt 3 的 API／设置／性能门禁通过，Web 清理门禁
+4/6 并失败，故镜像构建／制品检查跳过。提交 `978080e` 修复旧侧栏启动器，
+`09f820c` 显式化 Sidebar DOM 保留用例偏好；均待新 CI。其余 PWA/auth 门禁、
+待读／批注／专注目标截图、完整离线包下载及发布仍未验收。attempt 1 曾因
+GitHub 账单／额度未启动性能 job；attempt 3 后来成功，不再将前者误写为当前状态。
 
 ## 累计 24 项补齐发布 — 2026-10-30
 
