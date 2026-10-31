@@ -65,30 +65,49 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     imports, module, module.exports, document, window, ResizeObserver,
     () => ({ scrollPaddingTop: `${paddingTop}px` }),
   );
+  async function drain(task, onFrame) {
+    let settled = false;
+    task.then(() => { settled = true; }, () => { settled = true; });
+    for (let index = 0; index < 100 && !settled; index += 1) {
+      await Promise.resolve();
+      now += 20;
+      onFrame(++frameCount);
+      const pending = [...frames.values()];
+      frames.clear();
+      for (const action of pending) action(now);
+    }
+    assert.equal(settled, true, "The bounded navigation must resolve.");
+    assert.equal(frames.size, 0);
+    assert.ok(observers.every(observer => observer.disconnected), "Navigation observers must be released.");
+    return task;
+  }
   return {
     root, target, writes, rangeRect,
     cancel: () => { current = false; },
     grow: size => { root.scrollHeight = size; for (const observer of observers) observer.action(); },
+    move: delta => { position = Math.min(Math.max(0, root.scrollHeight - height), Math.max(0, position + delta)); },
+    shift: delta => {
+      contentTop += delta;
+      root.scrollHeight += delta;
+      position = Math.min(position, Math.max(0, root.scrollHeight - height));
+      for (const observer of observers) observer.action();
+    },
+    restore({ followScroll = true, ...options } = {}, onFrame = () => {}, beforeStart = () => {}) {
+      const anchor = { targetId: target.id, offset: target.getBoundingClientRect().top - rootTop };
+      const capturedScrollTop = root.scrollTop;
+      beforeStart();
+      return drain(module.exports.restoreScrollAnchor({
+        root, anchor, tokenIsCurrent: () => current,
+        ...(followScroll ? { scrollTopAtCapture: capturedScrollTop } : {}), ...options,
+      }), onFrame);
+    },
     async run(options = {}, onFrame = () => {}) {
       const task = module.exports.navigateMountedTarget({
         root: windowScroll ? null : root, targetId: target.id,
         offset: 120, timeoutMs: 600, tokenIsCurrent: () => current,
         ...(range ? { characterOffset: 2, endCharacterOffset: 8 } : {}), ...options,
       });
-      let settled = false;
-      task.then(() => { settled = true; }, () => { settled = true; });
-      for (let index = 0; index < 100 && !settled; index += 1) {
-        await Promise.resolve();
-        now += 20;
-        onFrame(++frameCount);
-        const pending = [...frames.values()];
-        frames.clear();
-        for (const action of pending) action(now);
-      }
-      assert.equal(settled, true, "The bounded navigation must resolve.");
-      assert.equal(frames.size, 0);
-      assert.ok(observers.every(observer => observer.disconnected), "Navigation observers must be released.");
-      return task;
+      return drain(task, onFrame);
     },
   };
 }
@@ -175,4 +194,51 @@ test("an absent text Range remains a disclosed fallback at the visible endpoint"
 test("retired navigation cannot become a successful endpoint alignment", async () => {
   const f = fixture({ extent: 400, contentTop: 32 });
   assert.equal((await f.run({}, frame => { if (frame === 5) f.cancel(); })).reason, "cancelled");
+});
+
+test("edge compensation follows continuing scroll instead of replaying its old viewport offset", async () => {
+  const f = fixture({ extent: 5000 });
+  f.root.scrollTop = 480;
+  assert.equal(await f.restore({}, frame => { if (frame <= 8) f.move(120); }), true);
+  assert.equal(f.root.scrollTop, 1440);
+  assert.deepEqual(f.writes, [480], "Pure scroll movement requires no compensating write.");
+});
+
+test("edge compensation removes layout displacement without removing intervening scroll", async () => {
+  const f = fixture({ extent: 5000 });
+  f.root.scrollTop = 480;
+  assert.equal(await f.restore({}, frame => {
+    if (frame <= 8) f.move(120);
+    if (frame === 4) f.shift(200);
+  }), true);
+  assert.equal(f.root.scrollTop, 1640);
+  assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, -840);
+  assert.equal(f.writes.length, 2, "Only the initial setup and real layout change write scrollTop.");
+});
+
+test("trim compensation excludes native scroll clamping and still follows later input", async () => {
+  const f = fixture({ extent: 4000, contentTop: 3000 });
+  f.root.scrollTop = 2900;
+  assert.equal(await f.restore({}, frame => {
+    if (frame === 4) f.move(120);
+  }, () => f.shift(-2500)), true);
+  assert.equal(f.root.scrollTop, 520);
+  assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, -20);
+});
+
+test("non-edge restoration retains its fixed exact viewport anchor", async () => {
+  const f = fixture({ extent: 5000 });
+  f.root.scrollTop = 480;
+  assert.equal(await f.restore({ followScroll: false }, frame => { if (frame === 2) f.move(120); }), true);
+  assert.equal(f.root.scrollTop, 480);
+});
+
+test("retired edge compensation stops without consuming a later scroll", async () => {
+  const f = fixture({ extent: 5000 });
+  f.root.scrollTop = 480;
+  assert.equal(await f.restore({}, frame => {
+    if (frame === 2) { f.cancel(); f.move(120); }
+  }), false);
+  assert.equal(f.root.scrollTop, 600);
+  assert.deepEqual(f.writes, [480]);
 });

@@ -1013,6 +1013,7 @@ export function ConversationReader({
         return;
       }
       const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+      const anchorScrollTop = root.scrollTop;
       if (anchor) {
         anchorLease = await acquireScrollAnchorLease(anchor, transitionIsCurrent);
         if (!anchorLease) {
@@ -1036,19 +1037,32 @@ export function ConversationReader({
         ? await restoreScrollAnchor({
           root,
           anchor,
+          scrollTopAtCapture: anchorScrollTop,
           tokenIsCurrent: transitionIsCurrent,
         })
         : false;
       if (anchor && restored && transitionIsCurrent()) {
-        const protectedMessageId = messageIdForScrollAnchor(anchor);
+        const trimAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+        const trimScrollTop = root.scrollTop;
+        const protectedMessageId = trimAnchor ? messageIdForScrollAnchor(trimAnchor) : null;
         const trimmed = trimLoadedTurnWindow(loadedWindowRef.current, "previous", protectedMessageId);
-        if (trimmed !== loadedWindowRef.current) {
-          setReaderEdgeStage(root, "previous:trimming");
-          applyLoadedWindow(trimmed);
-          syncTurnAnchorRefs(trimmed, previousTurnAnchorRef, nextTurnAnchorRef);
-          if (protectedMessageId) await waitForMountedMessage(protectedMessageId, transitionIsCurrent);
-          notifyReaderWindowLayoutChanged();
-          await restoreScrollAnchor({ root, anchor, tokenIsCurrent: transitionIsCurrent });
+        if (trimAnchor && trimmed !== loadedWindowRef.current) {
+          const trimLease = await acquireScrollAnchorLease(trimAnchor, transitionIsCurrent);
+          if (!trimLease) throw new Error("The previous-window trim anchor could not be pinned.");
+          try {
+            if (!transitionIsCurrent()) {
+              setReaderEdgeStage(root, "previous:cancelled");
+              return;
+            }
+            setReaderEdgeStage(root, "previous:trimming");
+            applyLoadedWindow(trimmed);
+            syncTurnAnchorRefs(trimmed, previousTurnAnchorRef, nextTurnAnchorRef);
+            if (protectedMessageId) await waitForMountedMessage(protectedMessageId, transitionIsCurrent);
+            notifyReaderWindowLayoutChanged();
+            await restoreScrollAnchor({ root, anchor: trimAnchor, scrollTopAtCapture: trimScrollTop, tokenIsCurrent: transitionIsCurrent });
+          } finally {
+            trimLease.release();
+          }
         }
       }
       setReaderEdgeStage(root, "previous:settled");
@@ -1087,6 +1101,7 @@ export function ConversationReader({
         return;
       }
       const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+      const anchorScrollTop = root.scrollTop;
       if (anchor) {
         anchorLease = await acquireScrollAnchorLease(anchor, transitionIsCurrent);
         if (!anchorLease) {
@@ -1110,19 +1125,32 @@ export function ConversationReader({
         ? await restoreScrollAnchor({
           root,
           anchor,
+          scrollTopAtCapture: anchorScrollTop,
           tokenIsCurrent: transitionIsCurrent,
         })
         : false;
       if (anchor && restored && transitionIsCurrent()) {
-        const protectedMessageId = messageIdForScrollAnchor(anchor);
+        const trimAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+        const trimScrollTop = root.scrollTop;
+        const protectedMessageId = trimAnchor ? messageIdForScrollAnchor(trimAnchor) : null;
         const trimmed = trimLoadedTurnWindow(loadedWindowRef.current, "next", protectedMessageId);
-        if (trimmed !== loadedWindowRef.current) {
-          setReaderEdgeStage(root, "next:trimming");
-          applyLoadedWindow(trimmed);
-          syncTurnAnchorRefs(trimmed, previousTurnAnchorRef, nextTurnAnchorRef);
-          if (protectedMessageId) await waitForMountedMessage(protectedMessageId, transitionIsCurrent);
-          notifyReaderWindowLayoutChanged();
-          await restoreScrollAnchor({ root, anchor, tokenIsCurrent: transitionIsCurrent });
+        if (trimAnchor && trimmed !== loadedWindowRef.current) {
+          const trimLease = await acquireScrollAnchorLease(trimAnchor, transitionIsCurrent);
+          if (!trimLease) throw new Error("The next-window trim anchor could not be pinned.");
+          try {
+            if (!transitionIsCurrent()) {
+              setReaderEdgeStage(root, "next:cancelled");
+              return;
+            }
+            setReaderEdgeStage(root, "next:trimming");
+            applyLoadedWindow(trimmed);
+            syncTurnAnchorRefs(trimmed, previousTurnAnchorRef, nextTurnAnchorRef);
+            if (protectedMessageId) await waitForMountedMessage(protectedMessageId, transitionIsCurrent);
+            notifyReaderWindowLayoutChanged();
+            await restoreScrollAnchor({ root, anchor: trimAnchor, scrollTopAtCapture: trimScrollTop, tokenIsCurrent: transitionIsCurrent });
+          } finally {
+            trimLease.release();
+          }
         }
       }
       setReaderEdgeStage(root, "next:settled");

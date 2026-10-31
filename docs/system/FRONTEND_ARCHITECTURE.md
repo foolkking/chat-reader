@@ -1,5 +1,23 @@
 # 前端架构
 
+## Reader edge compensation — 2026-11-01 candidate, not yet verified
+
+Canonical online/offline Reader edge merge/trim passes a captured scrollTop
+to `restoreScrollAnchor`. Unlike exact target restoration, this opt-in mode
+follows subsequent scroll displacement while correcting only the true DOM
+anchor's layout displacement; native scroll clamping after removal is not
+counted as user input. Trim captures and leases the current reading anchor
+again, so a completed merge does not restore the old viewport offset after
+the reader has advanced. Existing direction/generation ownership, bounded
+complete-turn windows and final lease release remain. Scroll events do not
+become user-intent events. Exact target, preference and saved-position restores
+without the option keep their existing fixed-offset behavior.
+
+CI `41210129359` reproduces the old same-direction wheel freeze in candidate
+and baseline. The repair and controlled utility regressions await fresh CI;
+no runtime or production acceptance is implied. Share's separate edge loaders
+are not changed by this candidate.
+
 ## Release recovery follow-up — 2026-10-16
 
 Confirmed cleanup choices release the write lease before independent metadata

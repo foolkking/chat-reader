@@ -8,17 +8,27 @@ export async function openSettingsNoiseReview(page: Page, scanId: string): Promi
   const center = page.getByTestId("task-center-panel");
   // Closing a nested review returns to its still-open Task Center.
   if (!(await center.isVisible())) {
+    if (new URL(page.url()).pathname.startsWith("/conversations/")) {
+      await expect(page.getByTestId("reader-scroll-root")).toBeVisible();
+    }
     if ((page.viewportSize()?.width ?? 1280) < 768) {
-      const header = page.getByTestId("mobile-page-header").filter({ visible: true }).last();
+      // Collection pages and the loaded Reader have different header owners.
+      const header = page.locator('[data-testid="mobile-page-header"], [data-testid="mobile-reader-header"]')
+        .filter({ visible: true });
       const mobileSidebar = header.getByTestId("mobile-sidebar-button").filter({ visible: true });
-      await expect(mobileSidebar).toBeVisible({ timeout: 15_000 });
+      await expect(mobileSidebar).toHaveCount(1, { timeout: 15_000 });
       await mobileSidebar.click();
+    } else {
+      const sidebar = page.locator("aside[data-reader-primary-sidebar]:visible");
+      const tasks = sidebar.getByTestId("sidebar-tasks-button");
+      const expand = sidebar.getByRole("button", { name: "Open sidebar", exact: true });
+      // Wait for one real state; an early missing Tasks button is not proof
+      // that the rail is collapsed. Direct Reader loads do start collapsed.
+      await expect(tasks.or(expand)).toHaveCount(1, { timeout: 15_000 });
+      if (await expand.isVisible()) await expand.click();
     }
 
-    // The settings scenarios enter through `/`, where the desktop sidebar is
-    // already expanded. Wait for hydration instead of treating its initially
-    // absent Tasks button as evidence that the collapsed rail must be opened.
-    const sidebar = page.locator("[data-reader-primary-sidebar]:visible").last();
+    const sidebar = page.locator("aside[data-reader-primary-sidebar]:visible");
     const tasks = sidebar.getByTestId("sidebar-tasks-button");
     await expect(tasks).toBeVisible({ timeout: 15_000 });
     await tasks.click();

@@ -19,6 +19,8 @@ type NavigateMountedTargetOptions = {
 type RestoreScrollAnchorOptions = {
   root: HTMLElement | null;
   anchor: ScrollAnchorSnapshot;
+  /** Edge-layout compensation follows intervening scroll, not a fixed viewport offset. */
+  scrollTopAtCapture?: number;
   tokenIsCurrent?: () => boolean;
   minimumMs?: number;
   settleMs?: number;
@@ -194,6 +196,7 @@ export function captureScrollAnchor(
 export async function restoreScrollAnchor({
   root,
   anchor,
+  scrollTopAtCapture,
   tokenIsCurrent = () => true,
   minimumMs = 320,
   settleMs = 120,
@@ -207,6 +210,8 @@ export async function restoreScrollAnchor({
   let lastChangeAt = startedAt;
   let frame = 0;
   let stopped = false;
+  let previousScrollTop = scrollTopAtCapture;
+  let expectedOffset = anchor.offset;
   const observedLayout = target.closest<HTMLElement>(".reader-content-inner") ?? target.parentElement;
 
   return new Promise((resolve) => {
@@ -224,12 +229,21 @@ export async function restoreScrollAnchor({
         return;
       }
       const rootTop = root?.getBoundingClientRect().top ?? 0;
-      const delta = target.getBoundingClientRect().top - (rootTop + anchor.offset);
+      if (root && previousScrollTop !== undefined) {
+        // The Reader disables native overflow anchoring. Follow wheel/touch/
+        // keyboard movement while compensating only for the target's layout
+        // displacement. Removing earlier turns can clamp scrollTop itself;
+        // that clamp is not user movement and must not be counted twice.
+        const clampedPrevious = Math.min(previousScrollTop, Math.max(0, root.scrollHeight - root.clientHeight));
+        expectedOffset -= root.scrollTop - clampedPrevious;
+      }
+      const delta = target.getBoundingClientRect().top - (rootTop + expectedOffset);
       if (Math.abs(delta) > 0.5) {
         if (root) root.scrollTop += delta;
         else window.scrollBy({ top: delta, behavior: "auto" });
         lastChangeAt = window.performance.now();
       }
+      if (root && previousScrollTop !== undefined) previousScrollTop = root.scrollTop;
       const now = window.performance.now();
       if (now - startedAt >= minimumMs && now - lastChangeAt >= settleMs) {
         finish(true);

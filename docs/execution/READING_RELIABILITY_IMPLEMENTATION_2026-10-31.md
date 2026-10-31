@@ -440,6 +440,46 @@ These narrow test-only fixes are pending a fresh full CI on the exact committed
 source. No local lint, typecheck, build, browser, or service gate was run.
 No image, deployment, offline-package acceptance, or release is claimed.
 
+### Eleventh full CI — Reader helper coverage and genuine edge-scroll defect
+
+Full run `41210129359`, exact source
+`e662412ac314aa61d88b7af62eb15aa662e579d5`, completed on 2026-10-31.
+API and settings passed. Web cleanup recorded **three passes / three failures**;
+all three failures occur before opening the review, at the shared test helper.
+The 375px snapshot has the loaded Reader's own mobile header, not
+`mobile-page-header`; both desktop snapshots have the default collapsed rail
+and a real `Open sidebar` button, not an expanded sidebar's Tasks control.
+The follow-up helper waits for loaded Reader content on Reader routes, scopes
+mobile triggers to either actual header owner, and waits for Tasks **or** the
+rail opener before deciding which desktop state is present. Existing settings
+home-page coverage and cleanup mutation/range assertions remain intact.
+
+Capacity baseline and candidate both recorded **8/9**. The plain-398 first
+cold run reverses **720 -> 600** at `next:mounted` and remains at 600 for the
+remaining samples. Navigation is null and layout/surface compensation flags
+are false. This is the previously localized inherited edge-anchor defect now
+reproduced in candidate, not a noisy frame/task-budget exceedance. Neither
+failed phase is relabeled as passing.
+
+On 2026-11-01 the shared restoration utility gained an opt-in captured
+scrollTop for canonical Reader edge compensation. It subtracts intervening
+scroll movement from the expected viewport offset and writes only for DOM
+layout displacement, excluding native extent clamping after removal.
+Non-edge exact navigation/restoration callers retain their fixed-offset
+behavior. Both previous/next loaders capture and lease a fresh true DOM
+anchor before trimming, rather than replaying the older merge-time offset.
+Generation/direction fences, lease cleanup, turn limits, package/Dexie formats,
+and saved reading positions are unchanged. The immutable Share/baseline source
+and all capacity sampling assertions/thresholds remain unchanged.
+
+Five controlled actual-utility regressions cover continuing scroll, mixed
+layout/input, trim clamping, unchanged exact restoration and retirement.
+They model geometry/RAF and are **not** browser acceptance. No local test,
+lint, typecheck, build, browser or service gate ran. A fresh exact-source
+isolated CI is required; subsequent Web gates, image inspection, full
+production offline package, final-source visual checks and release remain
+unaccepted.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset

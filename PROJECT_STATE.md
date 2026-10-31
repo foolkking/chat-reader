@@ -1,24 +1,25 @@
 # Project State
 
-Last updated: 2026-10-31. This is the current snapshot, not a release history.
+Last updated: 2026-11-01. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**2026-10-31 active implementation — not yet verified or deployed:**
-The latest full CI, run `41204822858` on exact
-`13572d300eac9efd750b4c2619fb97abf5020d16`, completed with API and
-performance comparison passing, settings **365/463**, and default PWA **179
-passed / one failed / one timed out / 760 conditional skips**. Release image
-build and artifact inspection were skipped. The retained evidence identifies
-three test-navigation defects: a settings helper treated an initial
-pre-hydration visibility miss as a collapsed desktop rail; a mobile Task
-Center test selected an ambiguous sidebar trigger outside the active header;
-and a tablet Reader test selected the hidden desktop index row instead of the
-visible navigation-sheet row. The 66 HTTP 429 admin-login errors are consistent
-with repeated browser-worker restarts after helper failures; the application
-login limiter remains unchanged. Narrow test-only corrections are in progress
-and require a fresh exact-source full CI. No local gates or deployment are
-claimed.
+**2026-11-01 active implementation — not yet verified or deployed:**
+Latest full CI `41210129359`, exact source
+`e662412ac314aa61d88b7af62eb15aa662e579d5`, passed API and settings but failed
+Web cleanup **3/6** and candidate capacity **8/9** (baseline also **8/9**).
+Later Web gates, image build and artifact inspection did not run. Cleanup
+evidence shows the shared helper assuming the collection-page header and
+expanded desktop sidebar on direct Reader visits. It now waits for the loaded
+Reader and selects the actual header/sidebar state. Capacity telemetry shows
+plain-398 first-cold input **720 -> 600** at `next:mounted`, followed by a
+stall: edge restoration repeatedly enforced an old viewport offset during
+continuing wheel input. Candidate source now follows intervening scroll while
+compensating layout displacement, excludes native extent clamping, and captures
+and pins a fresh true DOM anchor before trimming. Exact target restoration and
+all existing capacity assertions/budgets remain unchanged. Controlled utility
+regressions are authored, not locally run; new exact-source CI is required.
+No local gates, accepted release, or deployment are claimed.
 Reference-aware audits, offline preflight, collection projections, focus/edge
 navigation and explicit unknown-write recovery are implemented in candidate
 source. First CI found a fixture setup error and a real stale-auth pathname

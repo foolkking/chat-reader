@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+## Reader CI 修复接续 — 2026-11-01（未验收）
+
+`PROJECT_STATE.md`／`index.md` 跟踪最新 `41210129359` 的 API／设置通过、
+Web 清理与候选容量失败；原 10-31 execution 追加第十一次完整 CI 证据，
+不覆盖旧失败。`system/FRONTEND_ARCHITECTURE.md` 记录候选边缘补偿的
+scrollTop／真实 DOM 锚点和裁剪 lease 语义，精确导航及 Share 边缘路径不变；
+`testing.md` 记录新增受控 utility 回归与原浏览器／性能门禁保留。
+修复尚需新精确源码 CI；不把源码、已通过的 API／设置或旧 9/9 当成发布验收。
+
 ## 阅读与离线可靠性 — 2026-10-31（实施中）
 
 `execution/READING_RELIABILITY_IMPLEMENTATION_2026-10-31.md` 跟踪批准的分批

@@ -1,5 +1,21 @@
 # Testing
 
+## Reader edge follow-up — 2026-11-01 (candidate, CI only)
+
+Full run `41210129359` on `e662412` passed API/settings but failed cleanup
+**3/6** and candidate capacity **8/9**, with baseline **8/9**. The three cleanup
+errors are at the shared helper's collection-header/expanded-sidebar
+assumptions during direct Reader visits. Plain-398 cold telemetry confirms
+**720 -> 600** at `next:mounted` and a subsequent stall during wheel input.
+New source distinguishes the actual helper entry states and compensates
+edge-layout displacement without locking subsequent user scroll. Five
+actual-utility adapter regressions in `reader-navigation-alignment.test.mjs`
+cover input, layout, native extent clamping, exact-restore compatibility and
+retirement. Geometry/RAF doubles are not browser evidence; all existing
+capacity and Reader/PWA assertions and numeric limits are retained.
+No local gate ran. New exact-source full CI, final-source visual acceptance,
+production package generation/download and release gates remain required.
+
 ## Reading reliability — 2026-10-31 (candidate, CI only)
 
 No local gates run for this batch. First CI `41098242354` was read after the
