@@ -98,8 +98,20 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
   }
   await index.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("region", { name: "Dialogue index", exact: true })).toBeVisible();
+  const indexRegion = page.getByRole("region", { name: "Dialogue index", exact: true });
+  await expect(indexRegion).toBeVisible();
   await expect.poll(() => reads.some(path => path.endsWith("/dialogue-index"))).toBe(true);
+  const indexRow = indexRegion.locator('button[title^="U1 ·"]');
+  await expect(indexRow).toBeInViewport();
+  // Visibility alone allowed an empty desktop aside to cover the mobile sheet.
+  // Trial uses the real hit target without navigating/replacing the body anchor.
+  await indexRow.click({ trial: true });
+  if (width === 375) {
+    await expect(page.locator(".reader-index-column")).toBeHidden();
+    await expect(page.locator(".reader-toc-column")).toBeHidden();
+    await expect(page.getByRole("dialog", { name: "Dialogue index", exact: true })
+      .getByRole("button", { name: "Close navigation", exact: true })).toBeVisible();
+  }
   await expect(article).toHaveAttribute("data-synthetic-identity", "retained");
   const after = await article.boundingBox();
   expect(after?.x).toBeCloseTo(before!.x, 0);
@@ -118,7 +130,10 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
     expect(panelBox!.height - headerBox!.height).toBeGreaterThan(100);
     await page.screenshot({ path: testInfo.outputPath("focus-toc-desktop.png") });
   }
-  await page.keyboard.press("Escape");
+  if (width === 375) {
+    await page.getByRole("dialog", { name: "Section contents", exact: true })
+      .getByRole("button", { name: "Close navigation", exact: true }).click();
+  } else await page.keyboard.press("Escape");
   await expect(toc).toBeFocused();
   const help = page.locator('summary[aria-label="Reading keyboard help"]').filter({ visible: true });
   await help.click();

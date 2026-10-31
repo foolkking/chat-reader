@@ -26,7 +26,8 @@ Web 清理 6/6，但设置 27 个移动端失败、默认 PWA 两个定位超时
 补恢复就绪和回退诊断；独立 run `41192399714` 已在现有 master 派发。
 `execution/ux-audit-reading-reliability-ci-2026-10-31.md` 与相邻
 `evidence/reading-reliability-ci-2026-10-31/` 保留合成截图上的关键词挤压、
-小范围布局修复和待验证边界；不把截图存在当作最终视觉验收。
+空桌面目录遮挡手机专注抽屉、小范围修复和待验证边界；
+testing 新增真实目录行命中和手机关闭／焦点回归，不把截图存在当作最终视觉验收。
 其余 PWA/auth 门禁、完整离线包下载及发布仍未验收。attempt 1 曾因
 GitHub 账单／额度未启动性能 job；attempt 3 后来成功，不再将前者误写为当前状态。
 

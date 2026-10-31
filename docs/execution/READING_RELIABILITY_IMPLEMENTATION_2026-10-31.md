@@ -332,6 +332,22 @@ form a full narrow-screen row; its regression checks >=160px input width,
 editing/submission, URL state and no horizontal overflow at both widths.
 This is pending fresh CI and final-source screenshot review.
 
+Full workflow `41193214379` was dispatched at **18:33:09 +08** on
+`0f5c78a4ed5b52f85754ab890c5112d1116fb46c`; its conservative first-read
+boundary is **19:23:09 +08**, absent a user-reported failure. This workflow
+includes the mobile keyword correction, not the further focus correction below.
+
+The retained 375px focus-index screenshot also shows a genuine implementation
+gap: compact mode moves index content into a mobile sheet but leaves the empty
+desktop aside marked open. Its z-index 75 covers the real z-index 51 sheet.
+The scoped audit now retains this second synthetic screenshot. Follow-up source
+keeps both desktop asides closed in compact mode and reuses the navigation
+header/close action inside the existing sheet. The browser regression adds an
+actual row hit-test, hidden-desktop assertions and mobile close/focus recovery,
+retaining the canonical-body identity/coordinate and hidden-read assertions.
+No new panel, token, breakpoint, dependency or navigation API is introduced.
+It needs a later exact-source CI and screenshots.
+
 All approved scope still has source implementations. **The plan is not fully
 accepted**: these CI failures, final-source visual acceptance, later
 authentication/negative-PWA gates, full production package generation/download,

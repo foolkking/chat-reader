@@ -100,23 +100,23 @@ export function ResponsiveReaderFrame({ index, content, toc, focusMode = false }
       });
     }}><ListTree className="h-4 w-4" aria-hidden="true" /></button>;
   const navigation = (node: React.ReactNode, visible: boolean) => <ReaderAuxiliaryVisibility.Provider value={{ visible, overlay: focusMode }}>{node}</ReaderAuxiliaryVisibility.Provider>;
-  const panelHeader = (side: "index" | "toc") => focusMode ? <header className="flex shrink-0 items-center justify-between border-b border-ui px-3 py-2"><h2 className="text-sm font-semibold">{title(side)}</h2><button type="button" className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-subtle" aria-label={zh ? "关闭目录" : "Close navigation"} onClick={close}><X className="h-4 w-4" /></button></header> : null;
+  const panelHeader = (side: "index" | "toc") => focusMode ? <header className={`flex shrink-0 items-center justify-between ${compact ? "" : "border-b border-ui px-3 py-2"}`}><h2 className="text-sm font-semibold">{title(side)}</h2><button type="button" className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-subtle" aria-label={zh ? "关闭目录" : "Close navigation"} onClick={close}><X className="h-4 w-4" /></button></header> : null;
   return <div ref={frameRef} className="reader-frame min-h-full w-full py-[clamp(1rem,2vw,2rem)]"
     data-reader-width={readerWidthMode} data-reader-density={readerDensityMode} data-section-toc={sectionTocMode}
     data-toc-activity={sectionTocMode === "rail" ? tocActivity : "visible"} data-focus-mode={focusMode ? "on" : "off"}
     style={{ "--reader-toc-width": `${tocSize.size}px`, "--reader-font-size": `${readerFontSizePx}px` } as CSSProperties}>
-    <aside ref={indexRef} id={`${id}-index`} data-reader-auxiliary data-focus-panel={activePanel === "index" ? "open" : "closed"}
+    <aside ref={indexRef} id={`${id}-index`} data-reader-auxiliary data-focus-panel={!compact && activePanel === "index" ? "open" : "closed"}
       className="reader-index-column" onPointerEnter={cancelTimer} onPointerLeave={leave}>
       {panelHeader("index")}{!(focusMode && compact) ? navigation(index, focusMode ? activePanel === "index" : columns.index) : null}
     </aside>
-    <aside ref={tocRef} id={`${id}-toc`} data-reader-auxiliary data-focus-panel={activePanel === "toc" ? "open" : "closed"}
+    <aside ref={tocRef} id={`${id}-toc`} data-reader-auxiliary data-focus-panel={!compact && activePanel === "toc" ? "open" : "closed"}
       className="reader-toc-column min-w-0" onPointerEnter={cancelTimer} onPointerLeave={leave}>
       {panelHeader("toc")}{!(focusMode && compact) ? navigation(toc, focusMode ? activePanel === "toc" : columns.toc && (sectionTocMode !== "rail" || tocActivity === "visible")) : null}
       {!focusMode && sectionTocMode === "visible" ? <ResizeHandle side="left" label={zh ? "调整章节目录宽度" : "Resize section contents"} onPointerDown={event => tocSize.startResize(event, { direction: -1 })} onDoubleClick={tocSize.resetSize} /> : null}
     </aside>
     <div className="reader-layout-grid"><div className="reader-content-column min-w-0">{content}</div></div>
     {focusMode ? <>{trigger("index")}{trigger("toc")}</> : null}
-    <MobileReaderSheet open={focusMode && compact && activePanel !== null} onOpenChange={open => { if (!open) close(); }} title={title(activePanel ?? "index")} restoreFocus={() => openerRef.current}>
+    <MobileReaderSheet open={focusMode && compact && activePanel !== null} onOpenChange={open => { if (!open) close(); }} title={title(activePanel ?? "index")} header={panelHeader(activePanel ?? "index")} restoreFocus={() => openerRef.current}>
       {compact && activePanel ? <div className="flex min-h-0 flex-1 flex-col" id={`${id}-sheet-${activePanel}`} data-reader-auxiliary>{navigation(activePanel === "index" ? index : toc, true)}</div> : null}
     </MobileReaderSheet>
   </div>;

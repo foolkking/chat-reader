@@ -45,6 +45,12 @@ keyword input, now corrected in candidate source with a narrow-screen width
 and submit regression. Target screenshots are available, but final-source visual
 review, later PWA/auth gates, full offline-package download, a coherent
 post-repair backup and release acceptance remain pending.
+Full workflow `41193214379` was dispatched on `0f5c78a` at 18:33:09 +08.
+Further inspection of its predecessor's 375px focus screenshot reveals an empty
+desktop aside covering the real mobile sheet. Candidate source now keeps that
+aside closed on mobile and reuses the visible close header in the sheet; the
+browser regression requires a hit-testable index row and close/focus recovery.
+This follow-up is not covered by the already dispatched `0f5c78a` workflow.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

@@ -85,7 +85,12 @@ The latest artifact now includes reading-list, 375/1440 annotation and focus
 screenshots. Its mobile inbox screenshot shows a real squeezed keyword field;
 the follow-up shared layout gives search its own narrow-screen row and tests
 actual editing/submission plus a readable input width. Screenshot existence is
-not final-source visual acceptance. Later auth/negative gates, full production
+not final-source visual acceptance. Inspection also catches an empty desktop
+aside covering the real 375px focus sheet; its follow-up keeps desktop panels
+closed in compact mode, adds the sheet's visible close header and requires
+real index-row hit testing plus close/focus recovery. The full workflow
+`41193214379` dispatched at 18:33:09 +08 covers `0f5c78a`, before that focus
+correction, and is not a final-source receipt. Later auth/negative gates, full production
 47-conversation offline generation/download and a coherent post-repair backup
 remain outstanding. No local gate or alternate-runner workaround was used.
 
