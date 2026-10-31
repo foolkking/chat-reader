@@ -120,26 +120,43 @@ async function measureReader(page: Page, conversationId: string, run: number) {
     if (Number.isFinite(length)) requests.bytes += length;
   };
   page.on("response", onResponse);
+  const readingPositionRead = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === `/api/conversations/${conversationId}/reading-position`
+      && response.request().method() === "GET";
+  }, { timeout: 120_000 });
   const navigationStartedAt = Date.now();
   await page.goto(`/conversations/${conversationId}`);
   const root = page.locator("[data-reader-scroll-root='true']");
   await expect(root).toBeVisible();
   await expect.poll(() => root.locator("article[data-message-id]").count(), { timeout: 120_000 }).toBeGreaterThan(0);
   const navigationElapsedMs = Date.now() - navigationStartedAt;
+  const positionPayload = await (await readingPositionRead).json() as { position?: unknown | null };
+  const restoredReadingPosition = positionPayload.position != null;
+  if (restoredReadingPosition) {
+    // Each cold pass uses the same synthetic conversation. Real wheel input
+    // persists its last position, so the next page load must finish restoring
+    // that saved anchor before the benchmark deliberately resets to the top.
+    // Otherwise a late, legitimate restore is miscounted as the user's wheel
+    // moving backwards.
+    await expect(root).toHaveAttribute("data-navigation-stage", /^(settled|settled:fallback)$/, { timeout: 120_000 });
+  }
   await root.evaluate((element) => { element.scrollTop = 0; });
   await page.waitForTimeout(150);
   const telemetry = await runWheelTelemetry(page, root);
   const probe = await page.evaluate(() => (window as typeof window & { __chatReaderPerfProbe?: Record<string, number> }).__chatReaderPerfProbe ?? {});
   page.off("response", onResponse);
-  return { run, navigationElapsedMs, ...telemetry, ...requests, probe };
+  return { run, navigationElapsedMs, restoredReadingPosition, ...telemetry, ...requests, probe };
 }
 
 async function measureWarmRevisit(page: Page, conversationId: string) {
   const root = page.locator("[data-reader-scroll-root='true']");
   await root.evaluate((element) => { element.scrollTop = Math.min(element.scrollHeight, 1200); });
   await page.waitForTimeout(300);
+  await waitForReaderEdgeIdle(root);
   await root.evaluate((element) => { element.scrollTop = 0; });
   await page.waitForTimeout(300);
+  await waitForReaderEdgeIdle(root);
   const before = await page.evaluate(() => (window as typeof window & { __chatReaderPerfProbe?: Record<string, number> }).__chatReaderPerfProbe ?? {});
   const telemetry = await runWheelTelemetry(page, root, 12);
   const after = await page.evaluate(() => (window as typeof window & { __chatReaderPerfProbe?: Record<string, number> }).__chatReaderPerfProbe ?? {});
@@ -171,6 +188,18 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     }
   });
   const samples: number[] = [];
+  const scrollReversals: Array<{
+    step: number;
+    from: number;
+    to: number;
+    scrollHeight: number;
+    edgeStage: string | null;
+    navigationStage: string | null;
+    layoutCompensating: boolean;
+    surfaceCompensating: boolean;
+    visibleMessageId: string | null;
+    visibleMessageTop: number | null;
+  }> = [];
   let mountedMessagesMax = 0;
   let mountedBlocksMax = 0;
   for (let step = 0; step < steps; step += 1) {
@@ -178,10 +207,40 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     await page.waitForTimeout(34);
     const sample = await root.evaluate((element) => ({
       scrollTop: element.scrollTop,
+      scrollHeight: element.scrollHeight,
       messages: element.querySelectorAll("article[data-message-id]").length,
       blocks: element.querySelectorAll("[data-block-index]").length,
       horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
+      edgeStage: element.dataset.readerEdgeStage ?? null,
+      navigationStage: element.dataset.navigationStage ?? null,
+      layoutCompensating: element.dataset.readerLayoutCompensating === "true",
+      surfaceCompensating: element.dataset.readerSurfaceCompensating === "true",
+      visibleMessage: (() => {
+        const rootRect = element.getBoundingClientRect();
+        const article = Array.from(element.querySelectorAll<HTMLElement>("article[data-message-id]")).find((candidate) => {
+          const rect = candidate.getBoundingClientRect();
+          return rect.bottom > rootRect.top && rect.top < rootRect.bottom;
+        });
+        return {
+          id: article?.dataset.messageId ?? null,
+          top: article ? Math.round(article.getBoundingClientRect().top - rootRect.top) : null,
+        };
+      })(),
     }));
+    if (samples.length && sample.scrollTop + 2 < samples[samples.length - 1]!) {
+      scrollReversals.push({
+        step,
+        from: samples[samples.length - 1]!,
+        to: sample.scrollTop,
+        scrollHeight: sample.scrollHeight,
+        edgeStage: sample.edgeStage,
+        navigationStage: sample.navigationStage,
+        layoutCompensating: sample.layoutCompensating,
+        surfaceCompensating: sample.surfaceCompensating,
+        visibleMessageId: sample.visibleMessage.id,
+        visibleMessageTop: sample.visibleMessage.top,
+      });
+    }
     samples.push(sample.scrollTop);
     mountedMessagesMax = Math.max(mountedMessagesMax, sample.messages);
     mountedBlocksMax = Math.max(mountedBlocksMax, sample.blocks);
@@ -215,10 +274,18 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     mountedBlocksMax,
     scrollMonotonic: samples.every((value, index) => index === 0 || value + 2 >= samples[index - 1]!),
     scrollSamples: samples,
+    scrollReversals,
     pageHorizontalOverflow: false,
     p95FrameInterval: frames[Math.max(0, Math.ceil(frames.length * 0.95) - 1)] ?? null,
     longestTask: value.longTasks.length ? Math.max(...value.longTasks) : 0,
     longTaskTotal: value.longTasks.reduce((sum, item) => sum + item, 0),
     ...memory,
   };
+}
+
+async function waitForReaderEdgeIdle(root: ReturnType<Page["locator"]>): Promise<void> {
+  await expect.poll(async () => {
+    const stage = await root.getAttribute("data-reader-edge-stage");
+    return stage === null || /:(settled|failed|cancelled|mount-cancelled)(?::|$)/.test(stage);
+  }, { timeout: 120_000 }).toBe(true);
 }

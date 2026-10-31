@@ -230,15 +230,15 @@ for (const width of [375, 1440]) {
     await page.screenshot({ path: testInfo.outputPath(`annotation-inbox-${width}.png`) });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     for (const type of ["highlight", "underline", "strikethrough", "comment", "bookmark"]) {
-      await page.getByLabel("Type", { exact: true }).selectOption(type);
+      await page.getByRole("combobox", { name: "Type", exact: true }).selectOption(type);
       await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(1);
       await expect(page).toHaveURL(new RegExp(`annotation_type=${type}`));
     }
-    await page.getByLabel("Type", { exact: true }).selectOption("");
+    await page.getByRole("combobox", { name: "Type", exact: true }).selectOption("");
     await page.getByRole("button", { name: "Review anchor problems", exact: true }).click();
     await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(2);
-    await page.getByLabel("Project", { exact: true }).selectOption("synthetic-review-project");
-    await page.getByLabel("Sort", { exact: true }).selectOption("created");
+    await page.getByRole("combobox", { name: "Project", exact: true }).selectOption("synthetic-review-project");
+    await page.getByRole("combobox", { name: "Sort", exact: true }).selectOption("created");
     await expect(page).toHaveURL(/project_id=synthetic-review-project/);
     await expect(page).toHaveURL(/sort=created/);
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
