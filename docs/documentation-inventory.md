@@ -14,7 +14,8 @@ DATA_AND_STORAGE／deployment 另记录候选共享对象引用集合、
 `orphan_classification_safe` 的非删除授权语义及不完整扫描撤回分类规则；
 执行记录保留第一次失败与聚合改写前的实测基线，不把源码改动当成性能证据。
 testing 负责新增隔离比较门禁、原性能预算、恢复／摘要／浏览器覆盖边界；
-比较通过是镜像构建前置条件，失败时仍保存两侧测量而不忽略失败。
+候选必须满足原预算；不可变基线全量运行且保留失败，但不阻断独立通过的候选。
+基础设施／构建／缺少测量证据仍失败，具体见 `system/PERFORMANCE_CAPACITY_CONTRACT.md`。
 第七次 CI 的完整 API 通过不覆盖 Web／settings／capacity 失败；testing 和执行
 记录明确 v1 trace 干扰、v2 相同双侧协议及不能跨协议宣称产品提速的边界。
 USER_FLOWS 另记录索引窗口覆盖复用、目录只读一次重试和账户隔离，不改变离线写入语义。

@@ -45,12 +45,24 @@ keyword input, now corrected in candidate source with a narrow-screen width
 and submit regression. Target screenshots are available, but final-source visual
 review, later PWA/auth gates, full offline-package download, a coherent
 post-repair backup and release acceptance remain pending.
-Full workflow `41193214379` was dispatched on `0f5c78a` at 18:33:09 +08.
-Further inspection of its predecessor's 375px focus screenshot reveals an empty
-desktop aside covering the real mobile sheet. Candidate source now keeps that
-aside closed on mobile and reuses the visible close header in the sheet; the
-browser regression requires a hit-testable index row and close/focus recovery.
-This follow-up is not covered by the already dispatched `0f5c78a` workflow.
+Standalone run `41192399714` first read at **19:11:08 +08** after the 50-minute
+boundary: immutable baseline **8/9**, candidate `0bd8de6` **9/9**. The only
+baseline failure is a continuous-scroll reversal during `next:mounted`
+(2760 -> 2640, followed by seven samples stalled at 2640); the identical
+candidate passed. The raw assertion and candidate capacity budgets are
+unchanged. The comparison contract retains both results, requires every
+candidate assertion, and treats the immutable historical baseline as
+diagnostic. Infrastructure/build/evidence failures remain blocking; baseline
+failures remain visible in artifacts and are not relabeled.
+
+Inspection of 375px screenshots also found mobile desktop-panel occlusion and
+a clipped keyboard-help panel. Candidate source closes desktop asides in
+compact focus, adds a visible close header to the existing mobile sheet, and
+centers the help panel within the viewport. Regression coverage includes
+hit-testing, close/focus return and 320px reflow. Full runs `41193214379`
+and `41193860389` were cancelled before acceptance because their SHAs lacked
+these later corrections. Complete final-source CI is dispatched from existing
+`master`; no branch is created.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

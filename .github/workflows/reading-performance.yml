@@ -64,7 +64,7 @@ jobs:
             bash scripts/ci/postgres-service.sh stop
           }
           trap 'cleanup || true' EXIT
-          failed=0
+          candidate_failed=0
           for phase in baseline candidate; do
             ref="$baseline"; if [ "$phase" = candidate ]; then ref="$candidate"; fi
             git checkout --detach "$ref"
@@ -93,20 +93,20 @@ jobs:
             done
             test "$ready" = 1
             printf 'phase=%s\nsource=%s\nrunner=%s\n' "$phase" "$ref" "$RUNNER_NAME" > "$RUNNER_TEMP/reading-comparison/$phase-source.txt"
-            # Collect both sides even when an unchanged capacity assertion
-            # fails; either failure still fails the entire comparison gate.
+            # Preserve both results with unchanged assertions and thresholds.
+            # The immutable baseline is diagnostic; candidate results gate release.
             if pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts; then
               printf 'passed\n' > "$RUNNER_TEMP/reading-comparison/$phase-result.txt"
             else
-              failed=1
               printf 'failed\n' > "$RUNNER_TEMP/reading-comparison/$phase-result.txt"
+              if [ "$phase" = candidate ]; then candidate_failed=1; fi
             fi
             cp -a "apps/web/test-results/reader-capacity-$phase" "$RUNNER_TEMP/reading-comparison/$phase"
             cleanup
             # The copied harness is a tracked file on both revisions.
             git restore -- apps/web/e2e/reader-capacity.spec.ts
           done
-          exit "$failed"
+          exit "$candidate_failed"
       - name: Preserve comparison measurements
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

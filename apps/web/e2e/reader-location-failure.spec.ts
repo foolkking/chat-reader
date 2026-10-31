@@ -56,7 +56,7 @@ test.beforeEach(async ({ context, page }) => {
   await page.route("**/api/**", mockReaderApi);
 });
 
-for (const width of [375, 1440]) test(`focus edge navigation preserves the body and fetches only revealed navigation at ${width}px`, async ({ page }, testInfo) => {
+for (const width of [320, 375, 1440]) test(`focus edge navigation preserves the body and fetches only revealed navigation at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 900 });
   await page.route("**/api/preferences", route => json(route, {
     theme_mode: width === 375 ? "light" : "dark", locale_mode: "en-US",
@@ -106,7 +106,7 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
   // Visibility alone allowed an empty desktop aside to cover the mobile sheet.
   // Trial uses the real hit target without navigating/replacing the body anchor.
   await indexRow.click({ trial: true });
-  if (width === 375) {
+  if (width < 768) {
     await expect(page.locator(".reader-index-column")).toBeHidden();
     await expect(page.locator(".reader-toc-column")).toBeHidden();
     await expect(page.getByRole("dialog", { name: "Dialogue index", exact: true })
@@ -130,7 +130,7 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
     expect(panelBox!.height - headerBox!.height).toBeGreaterThan(100);
     await page.screenshot({ path: testInfo.outputPath("focus-toc-desktop.png") });
   }
-  if (width === 375) {
+  if (width < 768) {
     await page.getByRole("dialog", { name: "Section contents", exact: true })
       .getByRole("button", { name: "Close navigation", exact: true }).click();
   } else await page.keyboard.press("Escape");
@@ -139,6 +139,15 @@ for (const width of [375, 1440]) test(`focus edge navigation preserves the body 
   await help.click();
   const helpPanel = page.getByRole("heading", { name: "Reading keyboard help", exact: true }).filter({ visible: true });
   await expect(helpPanel).toBeInViewport();
+  if (width < 768) {
+    const helpBounds = await helpPanel.locator("..").boundingBox();
+    const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
+    expect(helpBounds).not.toBeNull();
+    expect(helpBounds!.x).toBeGreaterThanOrEqual(8);
+    expect(helpBounds!.y).toBeGreaterThanOrEqual(8);
+    expect(helpBounds!.x + helpBounds!.width).toBeLessThanOrEqual(viewport.width - 8);
+    expect(helpBounds!.y + helpBounds!.height).toBeLessThanOrEqual(viewport.height - 8);
+  }
   await page.screenshot({ path: testInfo.outputPath(`focus-help-${width}.png`) });
   await page.keyboard.press("Escape");
   await expect(help).toBeFocused();

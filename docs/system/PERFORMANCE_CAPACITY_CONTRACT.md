@@ -55,6 +55,18 @@ separate first-window capacity gate without weakening that history:
 The first-window bound is not substituted for the stricter settled far-target
 bound in `reader-restoration.spec.ts`.
 
+## Same-runner release gate
+
+The candidate must pass every listed Reader assertion and unchanged budget.
+The immutable historical baseline runs on the same runner with the same
+measurement harness; its exact pass/failure result and telemetry are retained
+as comparison evidence but do not veto a candidate that independently passes.
+This keeps a pre-existing baseline correctness defect from preventing a
+verified candidate repair from reaching artifact checks. Baseline checkout,
+service startup, build, missing evidence or other harness/infrastructure
+failures still fail the comparison workflow. Neither phase is skipped, and a
+baseline assertion failure is not relabeled as a pass.
+
 ## Cache interpretation
 
 The browser probe is installed only by Playwright and counts Rich Markdown

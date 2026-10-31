@@ -348,6 +348,35 @@ retaining the canonical-body identity/coordinate and hidden-read assertions.
 No new panel, token, breakpoint, dependency or navigation API is introduced.
 It needs a later exact-source CI and screenshots.
 
+### Diagnostic read and final CI follow-up
+
+First read of `41192399714` at **19:11:08 +08** respected its 50-minute
+boundary. Candidate `0bd8de6` passes **9/9**; immutable baseline passes **8/9**.
+The only failing mixed-398 cold run reverses **2760 -> 2640** during
+`next:mounted`, followed by seven samples at 2640, with navigation null and
+layout/surface compensation false. The old edge-restoration loop holds the
+captured viewport offset throughout same-direction wheel input; unlike an
+initial saved-position restore, new input does not retire its token. This
+localizes the inherited behavior, not a frame/task-budget failure.
+
+The same-runner gate policy now requires all unchanged candidate assertions
+and budgets while preserving every baseline result as diagnostic evidence.
+Neither phase nor baseline application source is skipped or rewritten. Build,
+service, checkout, missing-evidence and other harness failures still fail the
+job; only a completed historical baseline's assertion result is non-blocking.
+This is an explicit contract change from the earlier execution record,
+not a claim that its previously failing runs passed.
+
+Screenshots further show the 375px keyboard-help panel clipped at the left
+edge. The existing mobile controls now span the safe viewport width and center
+the bounded-width help panel; the regression checks all four panel edges at
+320/375px, plus the existing 1440px case. No font reduction or token changes.
+The detailed screenshot audit retains all three before-images.
+
+Full runs `41193214379` (`0f5c78a`) and `41193860389` (`6469890`) were
+cancelled before acceptance because their source lacked these final corrections.
+No result or green state is claimed for either cancelled run.
+
 All approved scope still has source implementations. **The plan is not fully
 accepted**: these CI failures, final-source visual acceptance, later
 authentication/negative-PWA gates, full production package generation/download,
