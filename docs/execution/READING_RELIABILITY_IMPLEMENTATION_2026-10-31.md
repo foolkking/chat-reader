@@ -407,6 +407,39 @@ without dropping CI prerequisites or changing capacity thresholds.
 These repairs await a new full CI on their committed source. No local gate was
 run, and the failed run is not relabeled or treated as release acceptance.
 
+### Tenth full CI — test navigation failures and evidence-backed correction
+
+Full run `41204822858` on exact source
+`13572d300eac9efd750b4c2619fb97abf5020d16` completed on 2026-10-31. API and
+reading-performance comparison passed. Settings recorded **365 passed / 98
+failed**; default PWA recorded **179 passed / one failed / one timed out / 760
+conditional skips**. Release image build and artifact inspection were skipped.
+
+Settings error contexts split into **32** `Open sidebar` visibility failures
+and **66** synthetic-admin login responses of HTTP 429. The accessibility
+snapshot shows the desktop sidebar already expanded with its Tasks control.
+The helper had sampled `isVisible()` once during page hydration; a transient
+false result sent desktop cases to wait for a collapsed-rail button that cannot
+exist while expanded. Repeated worker restarts then reset the helper's
+worker-local admin storage state, consistent with the later 429s. The helper
+now opens the sidebar only for compact viewports, scopes that action to the
+active mobile page header, and waits for the Tasks control in the visible
+primary sidebar. The application limiter and authentication assertions remain
+unchanged.
+
+The two default-PWA failures are also selector-contract issues confirmed by
+retained evidence. The mobile Task Center test used a page-wide test ID that
+matched both an active-header trigger and a second DOM match; it now scopes to
+the visible current header. At 1000px the Reader navigation sheet and hidden
+desktop index rail both retain the same row title; `.last()` selected the
+hidden rail row. The regression now requires the single visible row before
+clicking it, preserving the folded-turn expansion and settled-navigation
+assertions. No forced clicks, timeouts, product gates, or login limits changed.
+
+These narrow test-only fixes are pending a fresh full CI on the exact committed
+source. No local lint, typecheck, build, browser, or service gate was run.
+No image, deployment, offline-package acceptance, or release is claimed.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset

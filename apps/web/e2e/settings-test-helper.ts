@@ -8,19 +8,18 @@ export async function openSettingsNoiseReview(page: Page, scanId: string): Promi
   const center = page.getByTestId("task-center-panel");
   // Closing a nested review returns to its still-open Task Center.
   if (!(await center.isVisible())) {
-    const tasks = page.getByRole("button", { name: /^(Tasks|任务)$/ }).first();
-    if (!(await tasks.isVisible())) {
-      const mobileSidebar = page.getByTestId("mobile-sidebar-button");
-      if (await mobileSidebar.isVisible()) {
-        await mobileSidebar.click();
-      } else {
-        const openSidebar = page.getByRole("button", { name: /^(Open sidebar|打开侧栏)$/ }).first();
-        // Desktop Reader pages can start with only the collapsed rail. Open
-        // that rail before choosing Tasks; mobile uses its own drawer trigger.
-        await expect(openSidebar).toBeVisible({ timeout: 15_000 });
-        await openSidebar.click();
-      }
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      const header = page.getByTestId("mobile-page-header").filter({ visible: true }).last();
+      const mobileSidebar = header.getByTestId("mobile-sidebar-button").filter({ visible: true });
+      await expect(mobileSidebar).toBeVisible({ timeout: 15_000 });
+      await mobileSidebar.click();
     }
+
+    // The settings scenarios enter through `/`, where the desktop sidebar is
+    // already expanded. Wait for hydration instead of treating its initially
+    // absent Tasks button as evidence that the collapsed rail must be opened.
+    const sidebar = page.locator("[data-reader-primary-sidebar]:visible").last();
+    const tasks = sidebar.getByTestId("sidebar-tasks-button");
     await expect(tasks).toBeVisible({ timeout: 15_000 });
     await tasks.click();
   }

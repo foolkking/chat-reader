@@ -402,7 +402,11 @@ test("folded turns keep stable anchors mounted and navigation expands before loc
   await expect(anchor).toHaveCount(1);
 
   await page.getByRole("button", { name: "Reader navigation" }).click();
-  await page.locator('button[title^="U1 ·"]').last().click();
+  // At tablet widths the hidden desktop rail remains mounted after the
+  // navigation sheet opens. Target its one visible row, not the hidden copy.
+  const navigationEntry = page.locator('button[title^="U1 ·"]').filter({ visible: true });
+  await expect(navigationEntry).toHaveCount(1);
+  await navigationEntry.click();
   await expect(foldButton).toHaveAttribute("aria-expanded", "true");
   await expect(body).toBeVisible();
   await expect(reader).toHaveAttribute("data-navigation-stage", /^(settled|settled:fallback)$/, { timeout: 15_000 });

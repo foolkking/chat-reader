@@ -5,6 +5,11 @@ test.use({ serviceWorkers: "block" });
 
 const taskId = "11111111-1111-4111-8111-111111111111";
 
+function visibleMobileSidebarTrigger(page: Page): Locator {
+  return page.getByTestId("mobile-page-header").filter({ visible: true }).last()
+    .getByTestId("mobile-sidebar-button").filter({ visible: true });
+}
+
 const activeTask = {
   job_id: taskId,
   job_type: "conversation_merge",
@@ -799,7 +804,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"] as
     await page.goto("/search");
     await page.reload();
     const launcher = page.getByTestId("sidebar-tasks-button").filter({ visible: true });
-    if (width < 768 && !(await launcher.isVisible())) await page.getByTestId("mobile-sidebar-button").click();
+    if (width < 768 && !(await launcher.isVisible())) await visibleMobileSidebarTrigger(page).click();
     await launcher.click();
     const tasks = page.getByTestId("task-center-panel");
     await expect(tasks.getByTestId("task-adaptive_import_analysis-queued")).toBeVisible();
@@ -826,7 +831,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"] as
     await page.getByTestId("commit-import-button").click();
     await expect(page.getByTestId("import-completion-summary")).toBeVisible();
     await page.getByTestId("import-dialog-close").click();
-    if (width < 768 && !(await launcher.isVisible())) await page.getByTestId("mobile-sidebar-button").click();
+    if (width < 768 && !(await launcher.isVisible())) await visibleMobileSidebarTrigger(page).click();
     await launcher.click();
     await expect(tasks.getByTestId("task-adaptive_import_analysis-committed")).toBeVisible();
     await tasks.getByRole("button", { name: zh ? "查看分析结果并继续导入" : "Review analysis & continue importing", exact: true }).click();
