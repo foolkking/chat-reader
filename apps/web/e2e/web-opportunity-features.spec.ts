@@ -243,6 +243,15 @@ for (const width of [375, 1440]) {
     await expect(page).toHaveURL(/sort=created/);
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
     await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(5);
+    const keywords = page.getByRole("searchbox", { name: "Keywords", exact: true });
+    const keywordBounds = await keywords.boundingBox();
+    expect(keywordBounds?.width, "the visible keyword editor must not collapse beside metadata filters").toBeGreaterThanOrEqual(160);
+    await keywords.fill("retained comment");
+    await keywords.press("Enter");
+    await expect(page).toHaveURL(/q=retained(?:\+|%20)comment/);
+    await expect(keywords).toHaveValue("retained comment");
+    await page.screenshot({ path: testInfo.outputPath(`annotation-inbox-filtered-${width}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(writes).toEqual([]);
     expect(fullReads).toEqual([]);
   });

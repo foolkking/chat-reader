@@ -27,11 +27,24 @@ PostgreSQL latency. Web still failed the cleanup browser gate (**4/6**) because
 its helper expected the old expanded-sidebar default. Attempt 1's capacity job
 was blocked by account billing, but attempt 3 did run and pass; release image
 build/inspection stayed skipped because Web failed.
-Current source commits `978080e` and `09f820c` fix the collapsed-sidebar cleanup
-helper and make the soft-navigation preference explicit while preserving
-same-node/document-count assertions. Neither fix has a fresh CI receipt. Target
-collection/focus screenshots, later PWA/auth gates, full offline-package
-download, a coherent post-repair backup and release acceptance remain pending.
+Run `41183167236` on `53d0e22` verifies those two earlier fixture corrections:
+Web cleanup now passes **6/6**, and the soft-navigation assertion passes.
+The full run nevertheless fails: API passes, settings has **436 passes / 27
+mobile failures**, default PWA has **178 passes / two timeouts / 760 conditional
+skips**, and capacity has baseline **6/9** and candidate **8/9**. The mobile
+helper clicks a floating summary obscured by the drawer; the inbox tests do
+not resolve their exact label locator despite an accessible Type combobox.
+Capacity logs show 120px reversals in both revisions, not a timing-budget
+failure; their precise cause is still under investigation.
+Follow-up `0bd8de6` uses the actual sidebar Tasks entry, role-based combobox
+locators and bounded restoration readiness/scroll diagnostics. Existing `master`
+was fast-forwarded and pushed without creating a branch, per the user.
+Standalone CI `41192399714` was dispatched on that exact SHA; dispatch alone
+is not acceptance. A retained 375px CI inbox screenshot also exposes a squeezed
+keyword input, now corrected in candidate source with a narrow-screen width
+and submit regression. Target screenshots are available, but final-source visual
+review, later PWA/auth gates, full offline-package download, a coherent
+post-repair backup and release acceptance remain pending.
 Local gates are not run. The application revision/schema remain unchanged; 12 missing Context
 files were independently hash/size-checked and restored without overwrite after
 a stopped-writer five-component backup. Preserved source copies remain intact.

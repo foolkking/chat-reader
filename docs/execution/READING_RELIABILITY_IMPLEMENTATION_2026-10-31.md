@@ -249,7 +249,7 @@ Attempt 3 also passed full API (**5,966 / three skipped**) and settings
 so it does not verify the later test corrections. `build-images` and
 `inspect-release-artifact` were skipped because Web failed.
 
-### Latest source-only CI corrections and plan audit
+### Source-only CI corrections and plan audit before run 41183167236
 
 Commits `978080e` and `09f820c` are on the current branch (`09f820c`) but have
 no CI receipt. The first fixes both cleanup failures by opening the collapsed
@@ -285,6 +285,57 @@ Next required work:
 3. Record actual pass/failure and measurements without production-latency or
    cross-protocol speedup claims. Deployment, full production package download
    and a new coherent post-repair backup remain separately outstanding.
+
+### Ninth CI — three independent failure families
+
+Full run `41183167236`, exact source `53d0e226f3837df84ae4b4cc813e357e4e62c485`,
+concluded failure on 2026-10-31. API passed. Web cleanup now passes **6/6**,
+confirming that the old collapsed-desktop entry problem is resolved; the
+soft-navigation preference case also passes. Default PWA records **178 passes /
+two timed out / 760 conditional skips**, both timeouts at the inbox's exact
+`getByLabel("Type")`. Its snapshots contain the real accessible
+`combobox "Type"`; subsequent filters now use that explicit role/name, retaining
+all five types, attention/project/sort/reset and no-write assertions.
+
+Settings records **436 passes / 27 failures**. The failed 375px helper tries
+to click the visible floating Task summary after opening a modal sidebar;
+the sidebar's Settings button intercepts it. The corrected helper uses the
+real `sidebar-tasks-button` inside the sidebar, which closes the drawer and
+opens the existing Task Center. There is no force-click, removed product
+assertion, increased test timeout or ignored failure.
+
+Capacity baseline/candidate are **6/9 / 8/9**. Logs retain exact 120px
+reversals: baseline plain-10k run 2 `840 -> 720`, mixed-10k run 1
+`2880 -> 2760`, and both plain-398 warm revisits `1200 -> 1080`.
+Their frame/task thresholds do not cause these failures. The old protocol
+reset the root before saved-position restoration was known complete and used
+fixed warm-up delays despite possible edge restoration. These are verified
+harness readiness gaps; they do **not** establish the unique cause of every
+reversal. Follow-up source waits on actual restore/edge state and retains the
+raw monotonic assertion, adding bounded navigation/edge/layout context when it
+fails. Do not silently discard reversed samples or loosen the 2px tolerance.
+Catalog measurements still show baseline **283/2,821**, candidate **7/7**
+queries; no browser-performance or production-latency acceptance is inferred.
+
+`0bd8de647ad2dae6cc7b6b392c84ca59bed5e7d9` contains those test corrections.
+Per the user's branch instruction, existing master was fast-forwarded to this
+history and pushed to existing origin/master; no branch was created and no
+deployment occurred. Standalone performance run `41192399714` was dispatched
+at **18:21:08 +08** against that exact SHA. It is a diagnostic run, not a
+release receipt. No local tests, lint, typecheck, build, browser or service ran.
+
+The latest Web artifact now contains the requested collection/focus screenshots.
+Visual inspection of the 375px inbox catches a genuine narrow keyword editor.
+The [scoped screenshot review](ux-audit-reading-reliability-ci-2026-10-31.md)
+retains synthetic evidence before editing. Follow-up layout gives the keyword
+form a full narrow-screen row; its regression checks >=160px input width,
+editing/submission, URL state and no horizontal overflow at both widths.
+This is pending fresh CI and final-source screenshot review.
+
+All approved scope still has source implementations. **The plan is not fully
+accepted**: these CI failures, final-source visual acceptance, later
+authentication/negative-PWA gates, full production package generation/download,
+a coherent post-repair backup and release artifact/deployment gates remain.
 
 ## Incident correction
 

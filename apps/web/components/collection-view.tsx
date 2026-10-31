@@ -65,7 +65,7 @@ export function CollectionFilters({ q, projectId, zh, update, children, disabled
   const projects = useQuery({ queryKey: ["projects", "search-filter"],
     queryFn: ({ signal }) => getProjects({ sort: "custom", direction: "asc" }, signal), staleTime: 60_000 });
   return <div className="flex flex-wrap items-end gap-3 border-b border-ui pb-4">
-    <form className="flex min-w-0 flex-1 items-end gap-2" onSubmit={event => { event.preventDefault(); update({ q: draft.trim() }); }}>
+    <form className="flex min-w-0 basis-full items-end gap-2 sm:basis-64 sm:flex-1" onSubmit={event => { event.preventDefault(); update({ q: draft.trim() }); }}>
       <label className="min-w-0 flex-1 text-xs text-secondary">{zh ? "关键词" : "Keywords"}
         <input className={`${collectionControlClass} mt-1 w-full`} value={draft} maxLength={200} disabled={disabled}
           onChange={event => setDraft(event.target.value)} type="search" />

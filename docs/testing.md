@@ -62,11 +62,32 @@ before opening Task Center, preserving the existing cleanup review and
 mutation/range assertions. `09f820c` sets an explicit expanded preference only
 for the workspace soft-navigation test, preserving same-node and
 single-document assertions; default-collapsed coverage remains separate.
-These commits have no CI receipt yet. The latest available browser artifact
-contains no target reading-list, annotation-inbox or focus-edge screenshots:
-those visual checks and later PWA/auth gates remain unverified. Full production
+Run `41183167236` on `53d0e22` subsequently passed Web cleanup **6/6** and
+soft-navigation, but failed the full run. API passed; settings had **436
+passes / 27 mobile failures** at the shared helper, whose floating summary
+was obscured by the mobile drawer. Default PWA had **178 passes / two timed
+out / 760 conditional skips**: the annotation Type combobox existed in its
+snapshot, but the exact `getByLabel` did not resolve it. Capacity baseline
+passed **6/9**, candidate **8/9**; failures were 120px scroll reversals, not
+performance thresholds. Both failures remain failures; the prior 9/9 receipt
+does not override them.
+
+`0bd8de6` chooses the actual sidebar Tasks entry (opening mobile/desktop
+navigation only if needed), locates inbox filters by accessible combobox role,
+waits for an existing saved-position restore before an intentional benchmark
+reset, and records bounded reversal context. Warm setup waits for an existing
+edge transition to finish. The actual 30-wheel timing window and every numeric
+budget/assertion remain unchanged. This is a diagnostic correction, not proof
+that all reversal causes are fixed. Standalone run `41192399714` was dispatched
+on this exact SHA on the existing master.
+
+The latest artifact now includes reading-list, 375/1440 annotation and focus
+screenshots. Its mobile inbox screenshot shows a real squeezed keyword field;
+the follow-up shared layout gives search its own narrow-screen row and tests
+actual editing/submission plus a readable input width. Screenshot existence is
+not final-source visual acceptance. Later auth/negative gates, full production
 47-conversation offline generation/download and a coherent post-repair backup
-also remain outstanding. No local gate or alternate-runner workaround was used.
+remain outstanding. No local gate or alternate-runner workaround was used.
 
 ## Current accepted release — 2026-10-30
 
