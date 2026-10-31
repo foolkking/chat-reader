@@ -9,14 +9,14 @@ Reader-aware correction passed in the next Web gate.
 
 Full run `41218457967` on `d9a9781` passed API/Web/settings, baseline capacity
 **9/9**, but candidate capacity **0/9**. Traces expose trim-time jumps across
-plain/math/mixed; the first dynamic-scroll compensation is withdrawn. Current
-source fences original fixed-anchor restoration and trim with the captured real
-Reader scroll-intent sequence, leaving the merged capped window intact if new
-input supersedes stale work. New source/utility checks are authored but not run
-locally; they do not replace browser evidence. Capacity thresholds and all
-other assertions remain unchanged. Fresh exact-source full CI, final-source
-visual acceptance, offline production package generation/download and release
-gates remain required.
+plain/math/mixed; the first dynamic-scroll compensation was withdrawn. Run
+`41223452383` on `ba46fb4` then passed API, settings and capacity, but Web
+recorded **1,900/1,901** due to a controlled utility fixture counting its own
+simulated-user scroll write as an anchor write. The test now snapshots the
+counter after that input and checks only for subsequent stale-anchor writes.
+No product/capacity assertion or threshold was weakened. No local gate ran;
+fresh exact-source full CI, final-source visual acceptance, offline package
+generation/download and release gates remain required.
 
 ## Reading reliability — 2026-10-31 (candidate, CI only)
 

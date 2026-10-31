@@ -5,19 +5,16 @@ Last updated: 2026-11-01. This is the current snapshot, not a release history.
 ## Release and active work
 
 **2026-11-01 active implementation — not yet verified or deployed:**
-Latest full CI `41218457967`, exact source
-`d9a978125f76d49360be6b1172f2062ced765665`, passed API, Web and settings but
-failed candidate capacity **0/9**; immutable baseline passed **9/9**. Image
-build and artifact inspection were skipped. The previous cleanup failures are
-fixed by the committed Reader-aware test helper. Capacity evidence identified
-a regression in the first scroll-compensation repair: trimming windows caused
-large reversals in plain, math and mixed profiles. That algorithm has been
-withdrawn. Current source keeps fixed true-DOM-anchor restoration but fences
-both restoration and trimming by the real scroll-intent sequence; new input
-retires stale compensation and leaves the bounded merged window intact.
-Existing capacity assertions and numeric budgets are unchanged. Source
-regressions are authored, not run locally; fresh full CI is required. No local
-gates, accepted release, or deployment are claimed.
+Latest full CI `41223452383`, exact source
+`ba46fb43b9f41c48535e50a3c5d0561c5b3e2526`, passed API, settings and capacity,
+but Web failed one controlled navigation-alignment utility assertion (**1,900
+passed / 1 failed**); image build and artifact inspection were skipped. The
+failure is test bookkeeping: its simulated user scroll itself increments the
+recorded `scrollTop` writes, while the assertion expected no writes at all.
+The assertion now snapshots after the simulated input and checks that the
+retired anchor performs no subsequent write. The preceding fixed-anchor /
+scroll-intent correction passed the capacity job. Fresh full CI is required;
+no local gates, accepted release, or deployment are claimed.
 Reference-aware audits, offline preflight, collection projections, focus/edge
 navigation and explicit unknown-write recovery are implemented in candidate
 source. First CI found a fixture setup error and a real stale-auth pathname

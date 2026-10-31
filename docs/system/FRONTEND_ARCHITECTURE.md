@@ -14,8 +14,10 @@ unchanged; Share edge loaders are separate.
 
 Full CI `41218457967` caught the prior dynamic-offset attempt: immutable
 baseline **9/9**, candidate **0/9**, with trim-time reversals across all three
-profiles. That attempt is withdrawn. The intent-sequence correction awaits
-fresh full CI; no runtime or production acceptance is implied.
+profiles; that attempt is withdrawn. The corrected intent-sequence source
+passed capacity in `41223452383`; the run still failed Web on one test-fixture
+write-count assertion, corrected afterward. Fresh full CI is required; no
+runtime or production acceptance is implied.
 
 ## Release recovery follow-up — 2026-10-16
 

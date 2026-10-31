@@ -208,13 +208,19 @@ test("Reader edge restore and trim both retire when a new scroll intent arrives"
 
 test("retired Reader edge restoration cannot overwrite a later user scroll", async () => {
   const f = fixture({ extent: 5000 });
+  let userScrollWriteCount = 0;
   const task = f.restore({}, frame => {
     if (frame === 2) {
       f.cancel();
       f.root.scrollTop = 120;
+      userScrollWriteCount = f.writes.length;
     }
   });
   assert.equal(await task, false);
   assert.equal(f.root.scrollTop, 120);
-  assert.deepEqual(f.writes, [], "A retired anchor must not write over the later scroll.");
+  assert.deepEqual(
+    f.writes.slice(userScrollWriteCount),
+    [],
+    "A retired anchor must not write over the later scroll.",
+  );
 });

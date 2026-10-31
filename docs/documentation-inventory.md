@@ -2,11 +2,11 @@
 
 ## Reader CI 修复接续 — 2026-11-01（未验收）
 
-`PROJECT_STATE.md`／`index.md` 跟踪最新 `41218457967`：API、Web、settings
-通过，但 baseline **9/9**、候选容量 **0/9**，不可发布。执行记录追加此失败
-证据并撤回首轮动态 scrollTop 修复；`system/FRONTEND_ARCHITECTURE.md`
-说明当前固定 DOM 锚点加真实 scroll-intent 代次隔离，Share／精确导航不变；
-`testing.md` 记录门禁边界和待复验回归。修复尚需新精确源码 CI，未部署。
+`PROJECT_STATE.md`／`index.md` 跟踪最新 `41223452383`：API/settings/capacity
+通过，Web **1,900/1,901**，唯一失败是新 utility 夹具把用户模拟写入计为锚点写回。
+执行记录保留第十二次容量回归及第十三次 Web 证据；当前固定 DOM 锚点／真实
+scroll-intent 代次隔离不改 Share／精确导航。`testing.md` 明确门禁和待复验边界；
+计数断言修正后仍需精确源码完整 CI，未部署。
 
 ## 阅读与离线可靠性 — 2026-10-31（实施中）
 

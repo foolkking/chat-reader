@@ -488,6 +488,25 @@ local tests, lint, typecheck, build, browser or service gate ran. A fresh
 exact-source full CI is required; production package generation, final-source
 visual review and release remain unaccepted.
 
+### Thirteenth full CI — capacity passes; controlled utility assertion corrected
+
+Full run `41223452383` on exact source
+`ba46fb43b9f41c48535e50a3c5d0561c5b3e2526` completed with API, settings and
+reading-performance comparison passing. Web's ordinary-user recovery step
+recorded **1,900 passed / one failed**; later Web gates, image build and
+artifact inspection were skipped.
+
+The sole failing assertion is in the new controlled utility fixture, not the
+Reader behavior: assigning `root.scrollTop = 120` to model the user's input
+invokes the fixture's write-recording setter, then the test incorrectly expects
+the entire write log to be empty. The actual result shows exactly that one
+expected simulated-input write and no later restoration write. The correction
+records the write count immediately after simulated input and asserts there
+are no additional writes. No product assertion, capacity threshold, timeout or
+release prerequisite was changed. API, settings and capacity receipts are
+focused evidence only; a fresh full CI remains required. The source correction
+has not been locally run. No image/artifact/deployment acceptance is claimed.
+
 ## Incident correction
 
 The earlier attachment-only orphan conclusion was incomplete: shared asset
