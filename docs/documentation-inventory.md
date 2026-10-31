@@ -2,12 +2,11 @@
 
 ## Reader CI 修复接续 — 2026-11-01（未验收）
 
-`PROJECT_STATE.md`／`index.md` 跟踪最新 `41210129359` 的 API／设置通过、
-Web 清理与候选容量失败；原 10-31 execution 追加第十一次完整 CI 证据，
-不覆盖旧失败。`system/FRONTEND_ARCHITECTURE.md` 记录候选边缘补偿的
-scrollTop／真实 DOM 锚点和裁剪 lease 语义，精确导航及 Share 边缘路径不变；
-`testing.md` 记录新增受控 utility 回归与原浏览器／性能门禁保留。
-修复尚需新精确源码 CI；不把源码、已通过的 API／设置或旧 9/9 当成发布验收。
+`PROJECT_STATE.md`／`index.md` 跟踪最新 `41218457967`：API、Web、settings
+通过，但 baseline **9/9**、候选容量 **0/9**，不可发布。执行记录追加此失败
+证据并撤回首轮动态 scrollTop 修复；`system/FRONTEND_ARCHITECTURE.md`
+说明当前固定 DOM 锚点加真实 scroll-intent 代次隔离，Share／精确导航不变；
+`testing.md` 记录门禁边界和待复验回归。修复尚需新精确源码 CI，未部署。
 
 ## 阅读与离线可靠性 — 2026-10-31（实施中）
 

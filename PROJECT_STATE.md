@@ -5,21 +5,19 @@ Last updated: 2026-11-01. This is the current snapshot, not a release history.
 ## Release and active work
 
 **2026-11-01 active implementation — not yet verified or deployed:**
-Latest full CI `41210129359`, exact source
-`e662412ac314aa61d88b7af62eb15aa662e579d5`, passed API and settings but failed
-Web cleanup **3/6** and candidate capacity **8/9** (baseline also **8/9**).
-Later Web gates, image build and artifact inspection did not run. Cleanup
-evidence shows the shared helper assuming the collection-page header and
-expanded desktop sidebar on direct Reader visits. It now waits for the loaded
-Reader and selects the actual header/sidebar state. Capacity telemetry shows
-plain-398 first-cold input **720 -> 600** at `next:mounted`, followed by a
-stall: edge restoration repeatedly enforced an old viewport offset during
-continuing wheel input. Candidate source now follows intervening scroll while
-compensating layout displacement, excludes native extent clamping, and captures
-and pins a fresh true DOM anchor before trimming. Exact target restoration and
-all existing capacity assertions/budgets remain unchanged. Controlled utility
-regressions are authored, not locally run; new exact-source CI is required.
-No local gates, accepted release, or deployment are claimed.
+Latest full CI `41218457967`, exact source
+`d9a978125f76d49360be6b1172f2062ced765665`, passed API, Web and settings but
+failed candidate capacity **0/9**; immutable baseline passed **9/9**. Image
+build and artifact inspection were skipped. The previous cleanup failures are
+fixed by the committed Reader-aware test helper. Capacity evidence identified
+a regression in the first scroll-compensation repair: trimming windows caused
+large reversals in plain, math and mixed profiles. That algorithm has been
+withdrawn. Current source keeps fixed true-DOM-anchor restoration but fences
+both restoration and trimming by the real scroll-intent sequence; new input
+retires stale compensation and leaves the bounded merged window intact.
+Existing capacity assertions and numeric budgets are unchanged. Source
+regressions are authored, not run locally; fresh full CI is required. No local
+gates, accepted release, or deployment are claimed.
 Reference-aware audits, offline preflight, collection projections, focus/edge
 navigation and explicit unknown-write recovery are implemented in candidate
 source. First CI found a fixture setup error and a real stale-auth pathname

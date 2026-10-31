@@ -461,24 +461,32 @@ are false. This is the previously localized inherited edge-anchor defect now
 reproduced in candidate, not a noisy frame/task-budget exceedance. Neither
 failed phase is relabeled as passing.
 
-On 2026-11-01 the shared restoration utility gained an opt-in captured
-scrollTop for canonical Reader edge compensation. It subtracts intervening
-scroll movement from the expected viewport offset and writes only for DOM
-layout displacement, excluding native extent clamping after removal.
-Non-edge exact navigation/restoration callers retain their fixed-offset
-behavior. Both previous/next loaders capture and lease a fresh true DOM
-anchor before trimming, rather than replaying the older merge-time offset.
-Generation/direction fences, lease cleanup, turn limits, package/Dexie formats,
-and saved reading positions are unchanged. The immutable Share/baseline source
-and all capacity sampling assertions/thresholds remain unchanged.
+The initial fix, committed as `d9a9781`, tried to track changing scrollTop
+during layout compensation. The next exact-source full run **41218457967**
+passed API, Web and settings, but baseline capacity passed **9/9** while the
+candidate passed **0/9**; image/artifact jobs were skipped. Candidate traces
+show large reversals during `next:trimming` in plain, math and mixed profiles.
+This is a regression in the attempted fix, not a threshold or environment-only
+failure. The failed run is retained as failed.
 
-Five controlled actual-utility regressions cover continuing scroll, mixed
-layout/input, trim clamping, unchanged exact restoration and retirement.
-They model geometry/RAF and are **not** browser acceptance. No local test,
-lint, typecheck, build, browser or service gate ran. A fresh exact-source
-isolated CI is required; subsequent Web gates, image inspection, full
-production offline package, final-source visual checks and release remain
-unaccepted.
+The follow-up withdraws dynamic scrollTop compensation and restores the
+utility's original fixed true-DOM-anchor semantics. Each Reader previous/next
+edge restoration snapshots the existing scroll-intent sequence. New wheel,
+touch, keyboard or scrollbar intent retires stale compensation; trimming is
+admitted only while that captured sequence remains current, including after
+anchor-lease acquisition and mounted-message waiting. Superseded work keeps
+the merged window rather than pulling the Reader to an old position. Existing
+120-message cap, complete-turn loading, settled-window trim policy, Share
+callers, exact navigation, saved positions and all capacity assertions/budgets
+remain unchanged. The shared test-helper correction is covered by the passing
+Web gate.
+
+Source regressions cover both edge callbacks' restoration/trim fences; a
+controlled utility regression verifies a retired anchor cannot overwrite a
+later scroll. They are not browser acceptance and were not run locally. No
+local tests, lint, typecheck, build, browser or service gate ran. A fresh
+exact-source full CI is required; production package generation, final-source
+visual review and release remain unaccepted.
 
 ## Incident correction
 

@@ -6,6 +6,11 @@ import { test } from "node:test";
 const appRequire = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = appRequire("typescript");
 const source = readFileSync(new URL("../../apps/web/features/conversations/reader-navigation.ts", import.meta.url), "utf8");
+const readerSource = readFileSync(new URL("../../apps/web/features/conversations/conversation-reader.tsx", import.meta.url), "utf8");
+const readerAst = ts.createSourceFile("conversation-reader.tsx", readerSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const reader = readerAst.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ConversationReader");
+const readerDeclarations = new Map(reader.body.statements.filter(ts.isVariableStatement)
+  .flatMap(node => [...node.declarationList.declarations].map(item => [item.name.getText(readerAst), item])));
 const compiled = ts.transpileModule(source, { fileName: "reader-navigation.ts", compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
 } }).outputText;
@@ -85,20 +90,11 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     root, target, writes, rangeRect,
     cancel: () => { current = false; },
     grow: size => { root.scrollHeight = size; for (const observer of observers) observer.action(); },
-    move: delta => { position = Math.min(Math.max(0, root.scrollHeight - height), Math.max(0, position + delta)); },
-    shift: delta => {
-      contentTop += delta;
-      root.scrollHeight += delta;
-      position = Math.min(position, Math.max(0, root.scrollHeight - height));
-      for (const observer of observers) observer.action();
-    },
-    restore({ followScroll = true, ...options } = {}, onFrame = () => {}, beforeStart = () => {}) {
+    restore(options = {}, onFrame = () => {}) {
       const anchor = { targetId: target.id, offset: target.getBoundingClientRect().top - rootTop };
-      const capturedScrollTop = root.scrollTop;
-      beforeStart();
+      const { tokenIsCurrent = () => current, ...restoreOptions } = options;
       return drain(module.exports.restoreScrollAnchor({
-        root, anchor, tokenIsCurrent: () => current,
-        ...(followScroll ? { scrollTopAtCapture: capturedScrollTop } : {}), ...options,
+        root, anchor, tokenIsCurrent, ...restoreOptions,
       }), onFrame);
     },
     async run(options = {}, onFrame = () => {}) {
@@ -196,49 +192,29 @@ test("retired navigation cannot become a successful endpoint alignment", async (
   assert.equal((await f.run({}, frame => { if (frame === 5) f.cancel(); })).reason, "cancelled");
 });
 
-test("edge compensation follows continuing scroll instead of replaying its old viewport offset", async () => {
-  const f = fixture({ extent: 5000 });
-  f.root.scrollTop = 480;
-  assert.equal(await f.restore({}, frame => { if (frame <= 8) f.move(120); }), true);
-  assert.equal(f.root.scrollTop, 1440);
-  assert.deepEqual(f.writes, [480], "Pure scroll movement requires no compensating write.");
+test("Reader edge restore and trim both retire when a new scroll intent arrives", () => {
+  for (const name of ["loadPreviousWindow", "loadNextWindow"]) {
+    const declaration = readerDeclarations.get(name);
+    assert.ok(declaration, `${name} must remain a Reader callback`);
+    const callback = declaration.initializer.arguments[0].getText(readerAst);
+    assert.match(callback, /const scrollIntentAtAnchor = scrollIntentSequenceRef\.current/);
+    assert.match(callback, /scrollIntentSequenceRef\.current === scrollIntentAtAnchor/);
+    assert.match(callback, /tokenIsCurrent: restoreIsCurrent/);
+    assert.match(callback, /const trimIntent = scrollIntentSequenceRef\.current/);
+    assert.match(callback, /scrollIntentSequenceRef\.current === trimIntent/);
+    assert.match(callback, /tokenIsCurrent: trimIsCurrent/);
+  }
 });
 
-test("edge compensation removes layout displacement without removing intervening scroll", async () => {
+test("retired Reader edge restoration cannot overwrite a later user scroll", async () => {
   const f = fixture({ extent: 5000 });
-  f.root.scrollTop = 480;
-  assert.equal(await f.restore({}, frame => {
-    if (frame <= 8) f.move(120);
-    if (frame === 4) f.shift(200);
-  }), true);
-  assert.equal(f.root.scrollTop, 1640);
-  assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, -840);
-  assert.equal(f.writes.length, 2, "Only the initial setup and real layout change write scrollTop.");
-});
-
-test("trim compensation excludes native scroll clamping and still follows later input", async () => {
-  const f = fixture({ extent: 4000, contentTop: 3000 });
-  f.root.scrollTop = 2900;
-  assert.equal(await f.restore({}, frame => {
-    if (frame === 4) f.move(120);
-  }, () => f.shift(-2500)), true);
-  assert.equal(f.root.scrollTop, 520);
-  assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, -20);
-});
-
-test("non-edge restoration retains its fixed exact viewport anchor", async () => {
-  const f = fixture({ extent: 5000 });
-  f.root.scrollTop = 480;
-  assert.equal(await f.restore({ followScroll: false }, frame => { if (frame === 2) f.move(120); }), true);
-  assert.equal(f.root.scrollTop, 480);
-});
-
-test("retired edge compensation stops without consuming a later scroll", async () => {
-  const f = fixture({ extent: 5000 });
-  f.root.scrollTop = 480;
-  assert.equal(await f.restore({}, frame => {
-    if (frame === 2) { f.cancel(); f.move(120); }
-  }), false);
-  assert.equal(f.root.scrollTop, 600);
-  assert.deepEqual(f.writes, [480]);
+  const task = f.restore({}, frame => {
+    if (frame === 2) {
+      f.cancel();
+      f.root.scrollTop = 120;
+    }
+  });
+  assert.equal(await task, false);
+  assert.equal(f.root.scrollTop, 120);
+  assert.deepEqual(f.writes, [], "A retired anchor must not write over the later scroll.");
 });
