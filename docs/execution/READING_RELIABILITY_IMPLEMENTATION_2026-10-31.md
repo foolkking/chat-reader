@@ -1,5 +1,22 @@
 # Reading reliability implementation — 2026-10-31
 
+## Final CI and production acceptance — 2026-11-01
+
+Exact source `4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df` passed all six jobs
+in full CI `41228079428`, including same-runner reading comparison. Production
+accepted at **03:34:15Z**, independently rechecked at **03:37:26Z**. Runtime /
+direct rollback are `4b4f34f` / `127eae5`; schema remains the single 0058 head,
+with no upgrade/downgrade. Candidate storage audit covered 358 attachment and
+12 Context objects, all 370 SHA-256 checks passed with zero issues.
+New stopped-writer backup `chat-reader-20261101T032819Z` passed independent
+reverification. The original preserved Context copies remain intact.
+Cleanup, the first safe rollback caused by the old auditor, actual maintenance,
+artifact and runtime receipts are in the
+[release record](DEPLOYMENT_PREPARATION_2026-11-01.md).
+Production authenticated UI, the user-side full 47-conversation download,
+sustained load and an isolated restore drill remain unclaimed. The dated
+source-only / failed-CI paragraphs below retain their historical meaning.
+
 ## Authority and verification boundary
 
 The user approved the merged plan: offline recovery first, reading-list and
@@ -7,8 +24,9 @@ annotation-inbox improvements, collapsible project navigation, body-first focus
 with edge navigation, and measured performance work. No Web search or local
 test/lint/build/server/browser gates. CI owns executable acceptance.
 
-Production acceptance remains the existing 2026-10-30 release until separately
-verified. The pre-existing `apps/web/tsconfig.tsbuildinfo` is excluded.
+At implementation start, production remained the existing 2026-10-30 release;
+the later acceptance is recorded above. The pre-existing
+`apps/web/tsconfig.tsbuildinfo` remains excluded.
 
 ## Batch 1 — source implementation, not yet verified
 

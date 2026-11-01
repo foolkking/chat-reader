@@ -1,0 +1,41 @@
+{
+  "commit": "4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df",
+  "run_id": 41228079428,
+  "run_attempt": 1,
+  "status": "completed",
+  "conclusion": "success",
+  "created_at": "2026-10-31T18:10:23Z",
+  "checked_at": "2026-11-01T03:29:12.028836+00:00",
+  "jobs": [
+    {
+      "name": "web-quality",
+      "id": 124616336048,
+      "conclusion": "success"
+    },
+    {
+      "name": "api-quality",
+      "id": 124616336229,
+      "conclusion": "success"
+    },
+    {
+      "name": "settings-quality",
+      "id": 124616336273,
+      "conclusion": "success"
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "id": 124623152569,
+      "conclusion": "success"
+    },
+    {
+      "name": "build-images",
+      "id": 124626152611,
+      "conclusion": "success"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "id": 124626944234,
+      "conclusion": "success"
+    }
+  ]
+}

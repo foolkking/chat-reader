@@ -4,7 +4,33 @@ Last updated: 2026-11-01. This is the current snapshot, not a release history.
 
 ## Release and active work
 
-**2026-11-01 active implementation — not yet verified or deployed:**
+**Current production accepted — 2026-11-01 reading/offline reliability:**
+Exact source `4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df` passed all six jobs,
+including reading performance comparison, in full CI `41228079428`, attempt 1;
+its official artifact archive SHA-256 is
+`edce9000d2876230f7752a1c5b878ec59c1af74d52b0a7b6e0a4f755b709a368`.
+Production accepted at **03:34:15Z / 11:34:15 +08**, independently rechecked
+at **03:37:26Z**. Current/direct rollback are **`4b4f34f` / `127eae5`**;
+`0d1efac` images are also retained. Schema remains `20261030_0058`, verified
+without upgrade/downgrade. Safe cleanup verified 20
+backups and retained the latest two (`20261030T172811Z`, `20261030T114218Z`),
+removed the 18 older verified backups, and removed only unreferenced
+`f8a6a06`/`b4effda` image tags and their image archives. Volumes, user imports,
+production configuration, current/rollback images, and retained recovery points
+remain intact. Cleanup reclaimed about **7.66 GiB**; after release and the new
+verified stopped-writer backup `chat-reader-20261101T032819Z`, free space is
+**10,103,924 KiB / 9.64 GiB**, with three recovery points retained.
+First maintenance was safely rolled back after the old audit misclassified
+12 restored Context files. The candidate audit then verified 358 attachment
+objects plus 12 Context objects, **370 SHA-256 / zero issues**. Actual accepted
+maintenance was **03:27:52–03:34:15Z**, not zero downtime. PostgreSQL identity,
+production configuration, Nginx, canonical stopped-writer counts and OOM counter
+remained unchanged. Health, exact images, HTTPS/privacy/denial, startup logs and
+new backup revalidation passed. Production authenticated UI, a user-side full
+47-conversation download and isolated restore drill remain unclaimed.
+See [release and cleanup evidence](docs/execution/DEPLOYMENT_PREPARATION_2026-11-01.md).
+
+**Earlier Reader CI checkpoints (superseded by the accepted release above):**
 Latest full CI `41223452383`, exact source
 `ba46fb43b9f41c48535e50a3c5d0561c5b3e2526`, passed API, settings and capacity,
 but Web failed one controlled navigation-alignment utility assertion (**1,900
@@ -13,8 +39,9 @@ failure is test bookkeeping: its simulated user scroll itself increments the
 recorded `scrollTop` writes, while the assertion expected no writes at all.
 The assertion now snapshots after the simulated input and checks that the
 retired anchor performs no subsequent write. The preceding fixed-anchor /
-scroll-intent correction passed the capacity job. Fresh full CI is required;
-no local gates, accepted release, or deployment are claimed.
+scroll-intent correction passed the capacity job. This earlier run was not
+release evidence; its follow-up is summarized below and the passing exact
+candidate is recorded above.
 Reference-aware audits, offline preflight, collection projections, focus/edge
 navigation and explicit unknown-write recovery are implemented in candidate
 source. First CI found a fixture setup error and a real stale-auth pathname
@@ -27,7 +54,7 @@ repair/read/export/package restoration. Web placement readiness, one settings
 catalog transport failure and Reader capacity block acceptance. Follow-up
 source preserves budgets, separates diagnostic trace overhead from measurement,
 reuses covered index windows and retries only transient catalog reads once,
-with account fences. Fresh full CI is still required.
+with account fences. That checkpoint still required a fresh full CI.
 Follow-up `1b74ba9`, run `41128941676`, first read **06:00:46 +08** after
 creation at 05:10:00 +08. Attempt 3 passed full API (**5,966 / three skipped**),
 settings (**463 plus independent restore 1**), Web **1,899 UX / 110 mutation**,
@@ -90,7 +117,7 @@ a stopped-writer five-component backup. Preserved source copies remain intact.
 This is file-read recovery, not full offline-package acceptance. See the
 [implementation record](docs/execution/READING_RELIABILITY_IMPLEMENTATION_2026-10-31.md).
 
-**Current production accepted — 2026-10-30, all 24 bounded features:**
+**Previous accepted production — 2026-10-30, all 24 bounded features:**
 Exact application source **`127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5`**
 passed all five jobs in full CI **`41041436271`**, attempt 1. Dispatch was
 **10:31:58Z**; first read **11:22:04Z** respected the 50-minute gate, and
@@ -99,10 +126,12 @@ settings **463 plus one independent restore**, Web **1,875/1,875 UX** and all
 required browser gates. Official artifact **`12974040048`** passed independent
 35-blob / 23-layer / 351-API-source-file and compiled Web revision checks.
 
-Production accepted at **11:52:12Z** after maintenance **11:41:59–11:52:12Z**;
+At the 2026-10-30 acceptance checkpoint, production was accepted at **11:52:12Z**
+after maintenance **11:41:59–11:52:12Z**;
 independent runtime and five-component backup recheck passed at **11:53:11Z**.
 Current/direct rollback are **`127eae5` / `0d1efac`**; `f8a6a06` and
-`b4effda` images and archives are also preserved. Schema is the single
+`b4effda` were then preserved, and were subsequently removed during the
+2026-11-01 capacity cleanup recorded above. Schema is the single
 **`20261030_0058`** head, upgraded from 0056. The new stopped-writer backup is
 **`chat-reader-20261030T114218Z`**. Only two verified obsolete image sets and
 their image archives were removed for capacity; no backups, volumes or user

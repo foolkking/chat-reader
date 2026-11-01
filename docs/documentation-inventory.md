@@ -1,12 +1,26 @@
 # Markdown 文档台账
 
-## Reader CI 修复接续 — 2026-11-01（未验收）
+## 发布准备与空间清理 — 2026-11-01
 
-`PROJECT_STATE.md`／`index.md` 跟踪最新 `41223452383`：API/settings/capacity
+`PROJECT_STATE.md`、`index.md`、`deployment.md` 与
+`system/DEPLOYMENT_AND_ENVIRONMENT.md` 说明 CI `41228079428` 全部六项通过且已
+发布；生产为 `4b4f34f`／直接回退 `127eae5`、schema 0058。新增
+`execution/DEPLOYMENT_PREPARATION_2026-11-01.md` 记录精确备份留存、旧镜像清理、
+容量预检、旧审计器误分类后的首轮恢复、第二轮停写备份和正式发布回执。
+`evidence/release-2026-11-01/` 保留脱敏运行／备份独立复核与 CI 复核。
+旧 `f8a6a06`／`b4effda` 镜像已清理；两个旧恢复点和新停写备份均保留。
+`testing.md` 与可靠性实施记录区分最终精确 CI 和历史失败；
+`DATA_AND_STORAGE.md`／`USER_FLOWS.md` 将已验收的共享引用、集合与专注合同
+标记为随 `4b4f34f` 发布，保留真实客户端／恢复演练未验收边界。
+
+## Reader CI 修复接续 — 2026-11-01（历史失败检查点）
+
+`PROJECT_STATE.md`／`index.md` 以本页上方的发布准备记录为当前状态。较早 run
+`41223452383`：API/settings/capacity
 通过，Web **1,900/1,901**，唯一失败是新 utility 夹具把用户模拟写入计为锚点写回。
 执行记录保留第十二次容量回归及第十三次 Web 证据；当前固定 DOM 锚点／真实
 scroll-intent 代次隔离不改 Share／精确导航。`testing.md` 明确门禁和待复验边界；
-计数断言修正后仍需精确源码完整 CI，未部署。
+计数断言随后修正，新的完整精确 CI 和发布通过状态见 2026-11-01 发布记录。
 
 ## 阅读与离线可靠性 — 2026-10-31（实施中）
 
@@ -57,7 +71,7 @@ AUTHENTICATION_CONTRACT 记录已发布的单快照凭据检查；testing 保留
 | 文档 | 当前职责 |
 | --- | --- |
 | `execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md` | 24 项有界功能发布、离线租约保护、CI `41041436271`、制品、新备份、清理边界、部署和独立复核。 |
-| `PROJECT_STATE.md`、`index.md`、`execution/README.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前生产 `127eae5`／直接回退 `0d1efac`，保留 `f8a6a06`／`b4effda`，schema `0058`；明确 frozen 的旧代码回退限制。 |
+| `PROJECT_STATE.md`、`index.md`、`execution/README.md`、`deployment.md`、`system/DEPLOYMENT_AND_ENVIRONMENT.md` | 当前生产为 `4b4f34f`／直接回退 `127eae5`，schema `0058`；2026-11-01 后 `f8a6a06`／`b4effda` 已清理，并明确跨越 frozen 引入版本的回退限制。 |
 | `testing.md` | 最终 CI 五项门禁、测试计数、此前失败修复及未声称的真实设备／认证 UI／负载边界。 |
 | `system/DATA_AND_STORAGE.md`、`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` | 已发布至 0058 的基线／冻结生命周期、账户标签、离线短租约及 v1/v2/v3、Dexie v2 兼容合同。 |
 

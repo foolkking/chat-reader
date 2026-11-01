@@ -1,6 +1,6 @@
 # 数据与持久化
 
-## 共享对象审计 — 2026-10-31（候选源码，待 CI）
+## 共享对象审计 — 2026-11-01（4b4f34f 已发布）
 
 local asset storage 的引用集合包括 `AssetObject`、`ContextMemberObject`
 和 `SkillFileObject`，不是只有附件。审计逐项核验 storage key、存在性、
@@ -15,9 +15,11 @@ local asset storage 的引用集合包括 `AssetObject`、`ContextMemberObject`
 相同内容的 Context 重试也必须验证物理对象，缺失不能作为已成功的幂等重试。
 包 v1/v2/v3、Dexie v2、canonical 元数据和迁移链不变。
 
-生产仅完成 12 个 Context 文件的无覆盖恢复及既有业务读取；应用仍为
-`127eae5`。修复前五组件备份不是独立的修复后恢复点，原保留件及独立副本
-必须保留。完整包和候选源码验收状态见 `PROJECT_STATE.md`。
+生产 12 个 Context 文件的无覆盖恢复后，精确 `4b4f34f` 已通过完整 CI 与发布。
+新版只读审计核验 358 个附件对象、12 个 Context 对象，370 项哈希均通过且零问题。
+新停写五组件备份 `chat-reader-20261101T032819Z` 已校验并独立复核；修复前备份
+仍不等于独立修复后恢复点，原保留件和独立副本继续保留。用户侧完整离线包下载、
+隔离恢复演练仍未宣称完成，见 `PROJECT_STATE.md` 和本轮发布记录。
 
 ## 累计功能补齐 — 2026-10-30（已发布）
 

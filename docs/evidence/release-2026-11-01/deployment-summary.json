@@ -1,0 +1,41 @@
+{
+  "authenticated_production_ui": "not_run",
+  "available_kib": 10103924,
+  "backup": "chat-reader-20261101T032819Z",
+  "backup_reverification": "passed",
+  "checked_at": "2026-11-01T03:37:26.449621Z",
+  "commit": "4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df",
+  "current": "4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df",
+  "http": {
+    "anonymous_copy_plan": 401,
+    "anonymous_image_display": 401,
+    "anonymous_new_messages": 401,
+    "anonymous_tags": 401,
+    "http_https_redirect": 301,
+    "https_health": 200,
+    "https_login": 200,
+    "local_api_health": 200,
+    "local_web_health": 200,
+    "missing_image_capability": 404,
+    "page_method_denials_without_cookie_or_redirect": 50,
+    "public_diagnostics": 404,
+    "unauthenticated_capabilities": 401
+  },
+  "isolated_restore_drill": "not_run",
+  "maintenance_end": "2026-11-01T03:34:15Z",
+  "maintenance_start": "2026-11-01T03:27:52Z",
+  "new_kernel_oom_lines": 0,
+  "nginx_unchanged": true,
+  "oom_counter_unchanged": true,
+  "postgres_unchanged": true,
+  "production_configs_unchanged": true,
+  "retained_backup_count": 3,
+  "rollback": "127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5",
+  "schema": "20261030_0058",
+  "startup_error_keyword_lines": {
+    "api": 0,
+    "import-worker": 0,
+    "web": 0
+  },
+  "status": "passed"
+}

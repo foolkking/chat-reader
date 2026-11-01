@@ -1,5 +1,18 @@
 # Testing
 
+## Exact-source release acceptance — 2026-11-01
+
+Full CI `41228079428` on exact `4b4f34f`, attempt 1, passed all six jobs:
+API, Web, settings, reading-performance comparison, image build and independent
+artifact inspection. No local application gates ran. Production acceptance at
+**03:34:15Z** and independent **03:37:26Z** runtime/backup recheck passed.
+Candidate audit verified **358 attachment + 12 Context objects / 370 hashes /
+zero issues**. PostgreSQL/configuration/schema 0058 and OOM counter stayed
+unchanged. These receipts do not constitute authenticated production UI,
+user-side 47-conversation package-download, sustained-load or isolated-restore
+acceptance. See the [release record](execution/DEPLOYMENT_PREPARATION_2026-11-01.md).
+The failures below are earlier checkpoints, not the current CI result.
+
 ## Reader edge follow-up — 2026-11-01 (candidate, CI only)
 
 Full run `41210129359` on `e662412` passed API/settings but failed cleanup
