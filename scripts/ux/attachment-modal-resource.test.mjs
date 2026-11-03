@@ -17,15 +17,15 @@ const noop = () => {};
 
 // Execute the production component with hook/JSX doubles. This proves props and
 // event ownership, not native inert, focus trapping, pointer routing or scroll.
-function sheet(viewerOpen, props = {}) {
+function sheet(viewerOpen, props = {}, document = { activeElement: null, body: {} }) {
   const exports = {};
   const react = { useEffect: noop, useRef: value => ({ current: value }), useState: value => [value, noop] };
-  new Function("exports", "require", compile(read("components/mobile-reader-sheet.tsx")))(exports, name => {
+  new Function("exports", "require", "document", compile(read("components/mobile-reader-sheet.tsx")))(exports, name => {
     if (name === "react") return react;
     if (name === "vaul") return { Drawer };
     if (name.endsWith("attachment-viewer-state")) return { useAttachmentViewerOpen: () => viewerOpen };
     return appRequire(name);
-  });
+  }, document);
   return exports.MobileReaderSheet({ open: true, title: "Synthetic files", onOpenChange: noop, children: "retained files", ...props });
 }
 
@@ -92,6 +92,44 @@ test("a drawer unmount cannot restore focus behind the still-open Viewer", () =>
   assert.equal(restored, 0); assert.equal(prevented, 1);
   find(sheet(false, props), Drawer.Content).props.onCloseAutoFocus({ preventDefault: noop });
   assert.equal(restored, 1);
+});
+
+test("a delayed drawer close cannot steal focus from a newer navigation trigger", () => {
+  let restored = 0, prevented = 0;
+  const opener = { isConnected: true, focus: () => { restored++; } };
+  const document = { body: {}, activeElement: opener };
+  const content = find(sheet(false, { restoreFocus: () => opener }, document), Drawer.Content);
+  // The frame already restored the old opener. Before Radix's deferred close
+  // callback, the user focuses the opposite edge trigger.
+  const nextTrigger = { isConnected: true };
+  document.activeElement = nextTrigger;
+  content.props.onCloseAutoFocus({ preventDefault: () => { prevented++; } });
+  assert.equal(document.activeElement, nextTrigger);
+  assert.equal(restored, 0);
+  assert.equal(prevented, 1);
+});
+
+test("a closing drawer also cancels default restoration after another surface takes focus", () => {
+  let prevented = 0;
+  const document = { body: {}, activeElement: { isConnected: true } };
+  find(sheet(false, {}, document), Drawer.Content).props.onCloseAutoFocus({ preventDefault: () => { prevented++; } });
+  assert.equal(prevented, 1);
+});
+
+test("drawer close still restores the opener when focus is unowned or remains inside its content", () => {
+  for (const owner of ["body", "content", "disconnected"]) {
+    let restored = 0, prevented = 0;
+    const document = { body: { isConnected: true }, activeElement: null };
+    const child = { isConnected: owner !== "disconnected" };
+    document.activeElement = owner === "body" ? document.body : child;
+    const content = find(sheet(false, {
+      restoreFocus: () => ({ isConnected: true, focus: () => { restored++; } }),
+    }, document), Drawer.Content);
+    content.props.ref.current = { contains: element => owner === "content" && element === child };
+    content.props.onCloseAutoFocus({ preventDefault: () => { prevented++; } });
+    assert.equal(restored, 1, owner);
+    assert.equal(prevented, 1, owner);
+  }
 });
 
 test("a closed mobile sheet still mounts no modal content", () => {

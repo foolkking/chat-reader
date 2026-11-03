@@ -82,6 +82,24 @@ creating the non-accessible copy is not proven by the failure snapshot; no
 date-loss or product repair is claimed. Later Web gates remain unverified,
 release-image jobs were skipped, and this fixture-only repair awaits fresh CI.
 
+Run `41626975020` on `96a65cf` passed Source Editor/mutation **110/110** and
+all ten Web gates before default PWA, including focused online/security
+**45/45**, Share **2/2**, source-editor cleanup **6/6**, upload atomicity
+**18/18**, image viewer **31/31** and PDF **13/13**. Default PWA then had
+**183 passed / 4 failed / 760 flag-skipped**. Two failures expose a delayed
+mobile-sheet close restoring the old opener after focus has moved to the
+opposite edge; the shared sheet now preserves a newer connected focus owner.
+One exposes shared collection filters composing async replacements from stale
+render params; Favorites and Annotation inbox now compose from the current URL
+using native history replacement, retaining filter/page-reset semantics and
+ignoring callbacks from another route. The last failure is an unscoped error
+locator also matching Next's route announcer; it now targets the annotation
+failure and its Retry action. Seven collection-hook and three sheet-focus
+source cases are authored, with stronger existing browser assertions; none has
+run locally. API and reading-performance passed, settings was still running at
+inspection, and auth/negative-PWA gates remain unverified. Fresh exact-source
+CI is required; no release image or deployment is accepted.
+
 Earlier local evidence, before the CI-driven follow-ups: **1,946/1,946 UX
 source tests**, **134/134 focused API tests**, Web lint, nonincremental
 typecheck and Python compilation passed. These receipts do not cover the
@@ -90,8 +108,8 @@ The full API suite has not been rerun on this candidate; its earlier failed
 checkpoint remains in the implementation/testing records. Browser/visual,
 performance R4/P1/P2, PostgreSQL concurrency, Web build/PWA and complete
 exact-source CI remain unaccepted pending the repaired GitHub Actions run.
-By the user's 2026-11-03 request, commit `e0c0f58` was pushed directly to the
-existing `master` and submitted as run `41620114844`; its Web quality gate
+By the user's 2026-11-03 request, commit `96a65cf` was pushed directly to the
+existing `master` and submitted as run `41626975020`; its Web quality gate
 failed as recorded above. This follow-up is being committed on `master` for a
 new exact-source full CI plus release-artifact checks; no deployment is started.
 Production remains at `4b4f34f` until independently verified deployment.

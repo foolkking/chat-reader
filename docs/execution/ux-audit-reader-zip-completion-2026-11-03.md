@@ -347,3 +347,42 @@ Reader 恢复夹具已通过。Source Editor/mutation 仍为 **109 passed / 1 fa
 后续七个 Web gate 仍未验证，release image/artifact jobs skipped。
 修正提交现有 `master` 后派发新的精确源码完整 CI；按用户要求不等待结果、
 不部署，也不纳入已有的本机 `tsconfig.tsbuildinfo` 修改。
+
+### 第七轮 CI 阻塞 — 2026-11-03
+
+精确提交 `96a65cf8c3b14779cec2d41ef0bc9af201a9ba15` 的 run
+`41626975020` 已通过 Source Editor/mutation **110/110**，包括上一轮搜索
+日期/历史用例。前十个 Web gate 均通过：cleanup **6/6**、upload atomicity
+**18/18**、image viewer **31/31**、PDF **13/13** 也首次在本批完整路径验证。
+失败推进至 default-PWA：**183 passed / 4 failed / 760 flag-skipped**。
+API 与 reading-performance passed；检查时 settings 仍在运行，后续 auth/
+negative-PWA 未执行，不宣称全量通过或有可部署制品。
+
+1. **320/375px 专注目录切换，两项失败：产品回焦竞争。**
+   CI trace 记录 Escape 关闭索引、索引触发器恢复焦点后，测试立即 focus 章节
+   触发器并 Enter，结果却重新打开索引；没有发出 `/toc` 请求。
+   本机安装的 Radix FocusScope 源码明确用 `setTimeout(..., 0)` 延迟卸载回焦，
+   与 frame 的同步回焦重复；旧 sheet 可以抢走已经交给新控件的焦点。
+   现在共享 MobileReaderSheet 发现外部已连接焦点拥有者时，取消自身及默认
+   回焦；body/失效节点/仍属关闭内容时仍按既有合同恢复 opener。Viewer 优先
+   拦截规则保留。不是给测试增加等待或去掉 `/toc` 请求、正文身份/几何检查。
+2. **1440px 批注项目与排序连续筛选，一项失败：产品丢条件。**
+   CI 报错中的最终 URL 保留 attention 与 sort，却丢失刚选择的 project_id。
+   `useCollectionView` 每次从 render 的 searchText 创建参数，再异步
+   router.replace；上一导航未完成时，第二次编辑基于旧参数覆盖第一次。
+   修正复用已有搜索页的原生 History 集成，从当前同步 URL 合成条件，
+   以 replaceState 保持原有历史替换语义；分页与过滤重置边界不变。
+   这个共享修正同时覆盖收藏。旧 route 回调不得把已离开的页面重新导航回来。
+   现有 375/1440px 夹具在双编辑期间阻挡可选 RSC 导航，并增加完整 URL、
+   下拉值与 summary API 范围校验，不等待第一导航完成来掩盖竞态。
+3. **批注失败后页码钳制，一项失败：测试 alert 歧义。**
+   真正失败提示与 Next.js route announcer 都具有 alert role。
+   现在按批注失败文本限定唯一错误面板，在该面板点击 Retry，检查错误退出；
+   失败期间不钳制、成功后回首页且保留 query/type 的断言全部保留。
+
+新增七个 collection hooks 源码用例，覆盖两个入口同 render 连续编辑、
+清除/分页、历史恢复/旧 route 拒绝及失败到成功的页界恢复；在现有 sheet
+测试增加三个回焦归属用例。只编写、不在本机执行；新测试不是已通过证据。
+本轮只做静态复核和 `git diff --check`，不改变 timeout/skip/retry/CI 门禁。
+保留既有 `tsconfig.tsbuildinfo` 修改，不纳入提交；现有 `master` 提交后
+派发完整精确源码 CI，不等待结果、不部署。

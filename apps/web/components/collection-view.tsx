@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getProjects } from "../lib/api";
 import { authenticationGeneration } from "../lib/offline-access";
@@ -16,7 +16,6 @@ let positionGeneration = -1;
 export function useCollectionView(pageSize: number) {
   const search = useSearchParams();
   const pathname = usePathname();
-  const router = useRouter();
   const searchText = search?.toString() ?? "";
   const params = new URLSearchParams(searchText);
   const raw = Number(params.get("offset") ?? 0);
@@ -26,13 +25,17 @@ export function useCollectionView(pageSize: number) {
   const scope = `${pathname}?${params}`;
   const rootRef = useRef<HTMLElement>(null);
   const update = useCallback((changes: Record<string, string>) => {
-    const next = new URLSearchParams(searchText);
+    if (window.location.pathname !== pathname) return;
+    // Compose rapid edits from the current URL, not an older router render.
+    // Native replacement keeps Next's search params in sync without an RSC
+    // navigation that can overwrite another filter or add a dead history page.
+    const next = new URLSearchParams(window.location.search);
     next.delete("offset");
     for (const [key, value] of Object.entries(changes)) {
       if (value) next.set(key, value); else next.delete(key);
     }
-    router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
-  }, [pathname, router, searchText]);
+    window.history.replaceState(null, "", `${pathname}${next.size ? `?${next}` : ""}`);
+  }, [pathname]);
   return { params, offset, scope, rootRef, update };
 }
 

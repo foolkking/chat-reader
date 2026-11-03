@@ -211,11 +211,14 @@ test("an out-of-range annotation inbox page clamps only after a successful curre
     return route.fulfill({ json: [] });
   });
   await page.goto("/annotations?q=Synthetic&annotation_type=comment&offset=50");
-  await expect(page.getByRole("alert")).toContainText("Could not load annotations");
+  const failure = page.getByRole("alert").filter({ hasText: "Could not load annotations" });
+  await expect(failure).toBeVisible();
+  await expect(failure).toContainText("Retry; existing annotations have not been deleted.");
   expect(offsets.every(offset => offset === 50)).toBe(true);
   await expect(page).toHaveURL(/offset=50/);
   fail = false;
-  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await failure.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(failure).toHaveCount(0);
   await expect(page).not.toHaveURL(/offset=50/);
   expect(page.url()).toContain("q=Synthetic");
   expect(page.url()).toContain("annotation_type=comment");
@@ -254,6 +257,7 @@ for (const width of [375, 1440]) {
   test(`annotation inbox separates previews, filters every type and keeps orphan links review-only at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     const writes: string[] = [], fullReads: string[] = [];
+    const summaryReads: URLSearchParams[] = [];
     const timestamp = "2026-10-31T00:00:00Z";
     const items = ["highlight", "underline", "strikethrough", "comment", "bookmark"].map((kind, index) => ({
       id: `synthetic-annotation-${index}`, conversation_id: "synthetic-inbox-conversation",
@@ -271,6 +275,7 @@ for (const width of [375, 1440]) {
       if (path === "/api/annotations/inbox" || /\/api\/annotations\/synthetic/.test(path)) fullReads.push(path);
       let payload: unknown = [];
       if (path === "/api/annotations/inbox/summary") {
+        summaryReads.push(url.searchParams);
         const type = url.searchParams.get("annotation_type"), status = url.searchParams.get("anchor_status");
         const selected = items.filter(item => (!type || item.annotation_type === type)
           && (!status || (status === "attention" ? ["orphaned", "needs_review"].includes(item.anchor_status) : item.anchor_status === status)));
@@ -301,10 +306,29 @@ for (const width of [375, 1440]) {
     await page.getByRole("combobox", { name: "Type", exact: true }).selectOption("");
     await page.getByRole("button", { name: "Review anchor problems", exact: true }).click();
     await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(2);
-    await page.getByRole("combobox", { name: "Project", exact: true }).selectOption("synthetic-review-project");
-    await page.getByRole("combobox", { name: "Sort", exact: true }).selectOption("created");
+    let releaseNavigation = () => {};
+    const navigationBarrier = new Promise<void>((resolve) => { releaseNavigation = resolve; });
+    // Keep a server navigation from settling between the two edits. Native
+    // filter updates need no RSC response and must compose from the current URL.
+    await page.route((url) => url.pathname === "/annotations", async (route) => {
+      if (route.request().headers().rsc === "1") await navigationBarrier;
+      await route.continue();
+    });
+    try {
+      await page.getByRole("combobox", { name: "Project", exact: true }).selectOption("synthetic-review-project");
+      await page.getByRole("combobox", { name: "Sort", exact: true }).selectOption("created");
+    } finally {
+      releaseNavigation();
+    }
     await expect(page).toHaveURL(/project_id=synthetic-review-project/);
     await expect(page).toHaveURL(/sort=created/);
+    expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({
+      anchor_status: "attention", project_id: "synthetic-review-project", sort: "created",
+    });
+    await expect(page.getByRole("combobox", { name: "Project", exact: true })).toHaveValue("synthetic-review-project");
+    await expect(page.getByRole("combobox", { name: "Sort", exact: true })).toHaveValue("created");
+    await expect.poll(() => summaryReads.some(params => params.get("project_id") === "synthetic-review-project"
+      && params.get("sort") === "created" && params.get("anchor_status") === "attention")).toBe(true);
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
     await expect(page.locator('[data-testid^="annotation-inbox-item-"]')).toHaveCount(5);
     const keywords = page.getByRole("searchbox", { name: "Keywords", exact: true });

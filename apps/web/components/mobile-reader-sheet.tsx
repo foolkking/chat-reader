@@ -69,6 +69,14 @@ export function MobileReaderSheet({
           }}
           onCloseAutoFocus={(event) => {
             if (viewerOpen) { event.preventDefault(); return; }
+            // Radix defers this callback after unmount. A newer interaction
+            // may already own focus; never return it to the closing sheet's
+            // opener and redirect the user's next Enter to the wrong control.
+            const focused = document.activeElement;
+            if (focused?.isConnected && focused !== document.body && !contentRef.current?.contains(focused)) {
+              event.preventDefault();
+              return;
+            }
             const target = restoreFocus?.();
             if (!target?.isConnected) return;
             event.preventDefault();

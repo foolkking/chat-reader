@@ -27,6 +27,39 @@ below remains historical and failed.
 
 ### Latest exact-source CI failure — 2026-11-03
 
+Run `41626975020` on `96a65cf` passed Source Editor/mutation **110/110**,
+including the corrected search-history test. Ten Web gates passed, with
+cleanup **6/6**, upload atomicity **18/18**, image viewer **31/31** and
+maintained PDF **13/13** now verified on that source. Default PWA failed
+**4** cases, with **183 passed / 760 flag-skipped**; auth and negative PWA
+were not reached. API and reading-performance passed; settings was still
+running at inspection. This is not full-CI or release acceptance.
+
+The current repairs address two product races and one test selector:
+
+- Mobile focus-edge tests at 320/375px: Radix defers close autofocus after
+  unmount. The frame restores the index opener immediately, then the delayed
+  callback can steal focus from the section trigger, reopening the index on
+  Enter. The sheet now cancels old restoration when another connected control
+  owns focus; unowned/closing-content focus still returns to the opener.
+  Existing body identity, geometry, focus-return and lazy-read checks remain;
+  expanded-state and section-sheet assertions are added.
+- Annotation filters at 1440px: the shared collection hook based each async
+  replacement on stale rendered params. It now composes from the synchronous
+  current URL and uses native history replacement, also protecting Favorites.
+  Filter changes still reset offset, explicit paging retains filters, no new
+  history entry is appended, and a departed route cannot be revived by an old
+  callback. The 375/1440px browser fixture holds optional RSC navigation while
+  editing both controls and checks URL, selected values and summary API scope.
+- Annotation failure recovery: its alert locator now identifies the product
+  failure rather than also matching Next's route announcer. The retry,
+  no-premature-clamp and retained-query assertions remain.
+
+`scripts/ux/collection-filter-history.test.mjs` adds seven actual-hook cases;
+`scripts/ux/attachment-modal-resource.test.mjs` adds three focus-ownership
+cases. They are authored, not locally run. Only static inspection and
+`git diff --check` are used; no timeout, skip, retry or gate is relaxed.
+
 Run `41620114844` on `e0c0f58` passed focused online/security **45/45**, Share
 focus **2/2**, API, settings and reading-performance comparison. The prior
 375px mobile recovery failure passed, but Source Editor/mutation again had

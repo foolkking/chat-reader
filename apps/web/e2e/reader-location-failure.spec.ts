@@ -122,6 +122,11 @@ for (const width of [320, 375, 1440]) test(`focus edge navigation preserves the 
   const toc = page.getByRole("button", { name: "Section contents", exact: true }).filter({ visible: true });
   await toc.focus();
   await page.keyboard.press("Enter");
+  // A mobile modal hides its underlying triggers from role queries. Inspect
+  // only their DOM state here; keyboard interaction still uses accessible roles.
+  await expect(page.locator(".reader-focus-edge-toc")).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(".reader-focus-edge-index")).toHaveAttribute("aria-expanded", "false");
+  if (width < 768) await expect(page.getByRole("dialog", { name: "Section contents", exact: true })).toBeVisible();
   await expect.poll(() => reads.some(path => path.endsWith("/toc"))).toBe(true);
   if (width === 1440) {
     const panel = page.locator('.reader-toc-column[data-focus-panel="open"]');
