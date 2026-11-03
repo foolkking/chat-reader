@@ -251,3 +251,26 @@ GitHub Actions 结果仍待确认。失败 run 不产生可部署镜像，不部
 只有 `headers()`，没有 `allHeaders()`。性能比较未得到候选测量结果，不能视为
 性能回归或通过。现已改用受支持的 `headers()`；不运行本地 CI，等待新一轮完整
 GitHub Actions。当前仍无新镜像、无部署。
+
+### 第三轮 CI 阻塞 — 2026-11-03
+
+完整 run `41584161914` 对应精确 SHA `8d1b8d29037e83685a9aaa4594ddfb7f767bd3ae`。
+API、settings、reading-performance comparison 通过；Web focused online/security
+为 **42/45**，失败 gate 阻止 release image build 与 artifact inspection。
+
+三项失败分别处理如下：
+
+1. 富 Markdown 浏览器测试改为检查 callout summary 可见且文本精确为
+   “展开提示”；移除对 plain Markdown 标题必须嵌套 `<strong>` 的错误结构假设，
+   不改变渲染。
+2. Reader 在拖动期间有意暂停 IntersectionObserver 加载。释放时原来只查缓存
+   visibility ref，可能漏掉拖动期间尚未回调的边缘哨兵。现在按拖动起止位置确定
+   方向，并在释放时重新读取 root/sentinel 几何，在现有 45% 预取范围内调用既有
+   加载 action；拖动期间仍不扩展窗口，既有加载与窗口状态 guard 不变。
+3. Source Editor 合同测试原来匹配已移除的旧选择器。复核真实组件后，浮动编辑器
+   本身没有 `data-testid="floating-source-workspace"` 或 dialog role，其内部
+   `data-source-editor-shell="true"` 才是稳定边界。快捷键目标筛选现保护这个 shell
+   以及 ARIA textbox，并让合同测试验证当前 helper 和调用点。
+
+这些跟进修改尚未执行本地测试/CI；必须以后续精确 SHA 的完整 GitHub Actions
+通过才能接受。失败 run 不产生可部署镜像，不部署。

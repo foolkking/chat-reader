@@ -588,6 +588,7 @@ export function ConversationReader({
   const navigationInProgressRef = useRef(false);
   const pointerDraggingRef = useRef(false);
   const pointerDragMovedRef = useRef(false);
+  const pointerDragStartScrollTopRef = useRef(0);
   const pointerScrollTopRef = useRef(0);
   const geometryAnchorRef = useRef<{
     anchor: NonNullable<ReturnType<typeof captureScrollAnchor>>;
@@ -840,6 +841,7 @@ export function ConversationReader({
     const markPointerDown = () => {
       pointerDraggingRef.current = true;
       pointerDragMovedRef.current = false;
+      pointerDragStartScrollTopRef.current = root.scrollTop;
       pointerScrollTopRef.current = root.scrollTop;
       root.dataset.readerPointerDragging = "true";
       // A native scrollbar-thumb drag can jump tens of thousands of pixels in
@@ -854,9 +856,24 @@ export function ConversationReader({
       pointerDragMovedRef.current = false;
       delete root.dataset.readerPointerDragging;
       if (!moved || edgeTransitionRef.current || loadingPreviousRef.current || loadingNextRef.current) return;
-      if (scrollDirectionRef.current === "up" && previousSentinelVisibleRef.current) {
+      const dragDelta = root.scrollTop - pointerDragStartScrollTopRef.current;
+      const direction = dragDelta === 0
+        ? scrollDirectionRef.current
+        : dragDelta < 0 ? "up" : "down";
+      // IntersectionObserver callbacks are intentionally ignored while the
+      // thumb is moving. Re-check the final geometry on release instead of
+      // relying on a possibly stale visibility ref.
+      const rootRect = root.getBoundingClientRect();
+      const observerMargin = root.clientHeight * 0.45;
+      const isNearEdge = (sentinel: HTMLElement | null) => {
+        if (!sentinel) return false;
+        const sentinelRect = sentinel.getBoundingClientRect();
+        return sentinelRect.bottom > rootRect.top - observerMargin
+          && sentinelRect.top < rootRect.bottom + observerMargin;
+      };
+      if (direction === "up" && isNearEdge(loadPreviousSentinelRef.current)) {
         loadPreviousActionRef.current();
-      } else if (scrollDirectionRef.current === "down" && nextSentinelVisibleRef.current) {
+      } else if (direction === "down" && isNearEdge(loadMoreSentinelRef.current)) {
         loadNextActionRef.current();
       }
     };
@@ -3762,7 +3779,7 @@ function normalizeHeadingLevel(value: unknown): number {
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && Boolean(target.closest("[role='dialog'], input, textarea, select, button, [contenteditable='true']"));
+  return target instanceof HTMLElement && Boolean(target.closest("[data-source-editor-shell='true'], [role='dialog'], input, textarea, select, button, [contenteditable='true'], [role='textbox']"));
 }
 
 async function waitForMountedMessage(

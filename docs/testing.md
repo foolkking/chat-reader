@@ -23,6 +23,21 @@ concurrency, real-device performance, complete CI or deployment receipt.
 The full API suite was not rerun on this candidate; the earlier checkpoint
 below remains historical and failed.
 
+### Latest exact-source CI failure — 2026-11-03
+
+Run `41584161914` on `8d1b8d2` passed API, settings and reading-performance
+comparison. Web focused online/security failed **3/45** (42 passed); release
+image build and artifact inspection were skipped. One failure was a stale
+rich-Markdown assertion requiring `<strong>` around a plain callout summary;
+another expected an obsolete source-editor selector. The third revealed that
+Reader pointer-release edge loading relied on a potentially stale
+IntersectionObserver ref while observation was intentionally deferred during
+a drag. The working-tree follow-up asserts the rendered summary semantically,
+checks the current editable-target guard while protecting the actual source
+editor shell/textboxes, and freshly checks sentinel geometry on pointer
+release. These edits have not been locally tested; a new exact-source full CI
+result is required.
+
 ## Prior Reader/rich Markdown/Adaptive ZIP checkpoint — 2026-11-03
 
 Local source evidence for this uncommitted candidate:

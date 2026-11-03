@@ -132,7 +132,8 @@ test("source cursor location is a one-shot request and cannot replay after a dir
   expect(editForm).toContain("const [editorDocument, setEditorDocument] = useState(initialText)");
   expect(editForm).toContain("value={editorDocument}");
   expect(editForm).not.toContain("value={text}");
-  expect(reader).toContain("[data-testid='floating-source-workspace'], input, textarea, select, [contenteditable='true'], [role='textbox']");
+  expect(reader).toContain("[data-source-editor-shell='true'], [role='dialog'], input, textarea, select, button, [contenteditable='true'], [role='textbox']");
+  expect(reader).toContain("isEditableTarget(event.target)");
 });
 
 test("Reader performance evidence separates first content, locator resolution, and target mount without object data", () => {

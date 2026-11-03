@@ -35,6 +35,18 @@ typecheck and the performance comparison's build; API passed, but no
 performance result was measured. This compatibility call is corrected and
 awaits another full CI run.
 
+Run `41584161914` on `8d1b8d2` passed API, settings and reading-performance
+comparison, but Web focused online/security failed **3/45**; release image
+build/inspection were skipped. Two failures were stale assertions (a plain
+callout title was incorrectly required to contain `<strong>`, and the
+source-editor contract expected a removed selector). The third exposed a
+Reader edge-load gap: pointer-release logic trusted an
+IntersectionObserver visibility ref that may not refresh during a deferred
+scrollbar drag. Follow-up code now checks final sentinel geometry on release
+and protects the actual floating source-editor shell and ARIA textboxes from
+Reader shortcuts. This follow-up has not been locally tested; the next
+exact-source CI is required. No image from the failed run is deployable.
+
 Current local evidence: **1,946/1,946 UX source tests**, **134/134 focused API
 tests**, Web lint, nonincremental typecheck and Python compilation passed.
 The full API suite has not been rerun on this candidate; its earlier failed

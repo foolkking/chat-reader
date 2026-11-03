@@ -132,8 +132,9 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
     await expect(assistant.locator('a[href="https://example.org/autolink"]')).toHaveCount(1);
     await expect(assistant.locator("mark")).toHaveText("重点内容");
     await expect(assistant.locator(".reader-rich-callout")).toHaveCount(1);
-    await expect(assistant.locator(".reader-rich-callout > summary")).toContainText("展开提示");
-    await expect(assistant.locator(".reader-rich-callout > summary strong")).toHaveText("展开提示");
+    const calloutSummary = assistant.locator(".reader-rich-callout > summary");
+    await expect(calloutSummary).toBeVisible();
+    await expect(calloutSummary).toHaveText("展开提示");
     await expect(assistant.locator('.reader-rich-callout a[href="https://example.com/callout"]')).toHaveCount(1);
     await expect(assistant.locator(".reader-rich-callout .katex")).toHaveCount(1);
     await expect(assistant.locator(".reader-rich-callout")).toContainText("第二行保留原有格式");
