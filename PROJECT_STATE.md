@@ -28,6 +28,13 @@ ZIP. No production download or package-compatibility behavior was relaxed.
 These test corrections await a fresh exact-source GitHub Actions run; no
 deployment is accepted from the failed run.
 
+The follow-up run `41580801427` exposed a compile-time mistake in that test
+repair: the locked Playwright `APIResponse` exposes `headers()`, not
+`allHeaders()`. The same TypeScript error blocked settings setup, Web
+typecheck and the performance comparison's build; API passed, but no
+performance result was measured. This compatibility call is corrected and
+awaits another full CI run.
+
 Current local evidence: **1,946/1,946 UX source tests**, **134/134 focused API
 tests**, Web lint, nonincremental typecheck and Python compilation passed.
 The full API suite has not been rerun on this candidate; its earlier failed

@@ -111,7 +111,7 @@ for (const legacy of [false, true]) test(`${legacy ? "legacy optional-member com
     }
     members["package.json"] = strToU8(JSON.stringify(payload));
     const body = Buffer.from(zipSync(members));
-    const headers = await response.allHeaders();
+    const headers = response.headers();
     // The transformed archive has a different length and representation from
     // the fetched response. Do not retain stale transport metadata.
     delete headers["content-encoding"];

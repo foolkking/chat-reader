@@ -242,3 +242,12 @@ Reader 抽取式 harness 未带入新几何 ref/layout event，离线搜索走�
 
 上述均为浏览器测试夹具修正，不增加本机 CI 执行；新的完整 exact-source
 GitHub Actions 结果仍待确认。失败 run 不产生可部署镜像，不部署。
+
+### 第二轮 CI 阻塞 — 2026-11-03
+
+修复提交 `f9d65d384f814bc79bfb49b3db859ed844ae6178` 的 run
+`41580801427` 在 API gate 通过后，设置构建、Web typecheck 和性能比较
+构建均被一个共同 TypeScript 错误阻断：锁定版本的 Playwright `APIResponse`
+只有 `headers()`，没有 `allHeaders()`。性能比较未得到候选测量结果，不能视为
+性能回归或通过。现已改用受支持的 `headers()`；不运行本地 CI，等待新一轮完整
+GitHub Actions。当前仍无新镜像、无部署。
