@@ -1,4 +1,5 @@
 import uuid
+import zipfile
 from contextlib import closing
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.conversation import Conversation
-from app.models.attachment import Attachment, MessageVersionAttachment
+from app.models.attachment import AssetObject, Attachment, MessageVersionAttachment
 from app.models.annotation import ConversationAnnotation, ConversationNotebook
 from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
@@ -21,6 +22,15 @@ from app.models.render_block import RenderBlock
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.services.canonical.block_builder import build_basic_render_blocks
+from app.services.adaptive_import.archive_sources import archive_member_stream
+from app.services.adaptive_import.contracts import AdaptiveImportError
+from app.services.assets.asset_store import get_asset_store
+from app.services.assets.scanner import (
+    AssetScanError,
+    detect_mime_type,
+    scan_attachment,
+    scan_status_allows_use,
+)
 from app.services.database.bulk_insert import insert_rows
 from app.services.import_pipeline.canonical_draft import (
     BLOCK_BUILDER_VERSION,
@@ -44,6 +54,7 @@ from app.services.projects.project_service import add_conversation_to_project, e
 from app.services.search.search_indexer import rebuild_search_documents_for_conversation
 from app.services.toc.toc_builder import rebuild_headings_for_conversation
 from app.services.exporting.cr_archive import CrArchiveError, import_cr_archive
+from app.services.exporting.archive_transaction import track_archive_object
 
 
 class CommitImportError(ValueError):
@@ -787,21 +798,98 @@ def _persist_canjson_attachments(
         if isinstance(raw.get("asset_object"), dict):
             metadata = {**metadata, "asset_object": raw["asset_object"]}
         original_filename = Path(str(raw.get("original_filename") or raw.get("display_name") or "attachment.bin")).name
+        archive_attachment = bool(metadata.get("archive_artifact_id") and metadata.get("archive_member_id"))
+        asset: AssetObject | None = None
+        detected_mime = _optional_text(raw.get("detected_mime_type"))
+        scan_status = "not_available"
+        if archive_attachment:
+            store = get_asset_store()
+            archive = source = None
+            staged = None
+            try:
+                archive, source, _ = archive_member_stream(import_record, raw)
+                staged = store.stage(
+                    source,
+                    max_bytes=min(
+                        get_settings().bundle_max_object_bytes,
+                        get_settings().max_attachment_file_size_mb * 1024 * 1024,
+                    ),
+                    quarantine=True,
+                )
+                detected_mime, detected_extension = detect_mime_type(staged.path, original_filename)
+                scan = scan_attachment(staged.path)
+                scan_status = scan.status
+                if not scan.allowed_by_policy:
+                    raise CommitImportError("A ZIP attachment was rejected by the configured scanner.")
+                asset = (
+                    db.query(AssetObject)
+                    .filter(
+                        AssetObject.sha256 == staged.sha256,
+                        AssetObject.byte_size == staged.byte_size,
+                    )
+                    .one_or_none()
+                )
+                if asset is None:
+                    storage_key = store.object_key()
+                    staged_sha256 = staged.sha256
+                    staged_byte_size = staged.byte_size
+                    store.promote(staged.path, storage_key)
+                    track_archive_object(db, store, storage_key)
+                    staged = None
+                    asset = AssetObject(
+                        id=uuid.uuid4(),
+                        sha256=staged_sha256,
+                        byte_size=staged_byte_size,
+                        detected_mime_type=detected_mime,
+                        detected_extension=detected_extension,
+                        storage_backend=store.backend,
+                        storage_key=storage_key,
+                        scan_status=scan_status,
+                        status="available",
+                    )
+                    db.add(asset)
+                    db.flush()
+                else:
+                    staged.path.unlink(missing_ok=True)
+                    staged = None
+                    if asset.status != "available" or not scan_status_allows_use(asset.scan_status):
+                        raise CommitImportError("A matching ZIP attachment object is unavailable.")
+                    detected_mime = asset.detected_mime_type
+                    scan_status = asset.scan_status
+            except CommitImportError:
+                raise
+            except (
+                AdaptiveImportError,
+                AssetScanError,
+                OSError,
+                ValueError,
+                KeyError,
+                RuntimeError,
+                zipfile.BadZipFile,
+            ) as exc:
+                raise CommitImportError("A ZIP attachment could not be safely persisted.") from exc
+            finally:
+                if staged is not None:
+                    staged.path.unlink(missing_ok=True)
+                if source is not None:
+                    source.close()
+                if archive is not None:
+                    archive.close()
         db.add(Attachment(
             id=attachment_id,
             conversation_id=conversation.id,
-            asset_object_id=None,
+            asset_object_id=asset.id if asset else None,
             import_id=import_record.id,
             original_filename=original_filename[:500] or "attachment.bin",
             display_name=str(raw.get("display_name") or original_filename or "Attachment")[:500],
             declared_mime_type=_optional_text(raw.get("declared_mime_type")),
-            detected_mime_type=_optional_text(raw.get("detected_mime_type")),
-            status="missing",
-            scan_status="not_available",
-            source_type="canjson",
+            detected_mime_type=detected_mime,
+            status="available" if asset else "missing",
+            scan_status=scan_status,
+            source_type="adaptive_zip" if archive_attachment else "canjson",
             source_attachment_id=source_id,
             metadata_=metadata,
-            resolution_status="unresolved",
+            resolution_status="resolved" if asset else "unresolved",
         ))
     return mapping
 
@@ -855,7 +943,7 @@ def _rewrite_asset_markdown(markdown: str, replacements: dict[str, str]) -> str:
             continue
         if fence is None:
             for source_id, target_id in replacements.items():
-                line = line.replace(f"cr-asset://{source_id})", f"cr-asset://{target_id})")
+                line = line.replace(f"cr-asset://{source_id}", f"cr-asset://{target_id}")
         lines.append(line)
     return "".join(lines)
 

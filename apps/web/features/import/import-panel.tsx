@@ -454,8 +454,8 @@ export function ImportPanel({
         <p className="mt-3 text-sm font-medium text-primary">{tr("拖放文件到这里")}</p>
         <p className="my-2 text-xs text-secondary">{tr("或")}</p></> : null}
         <label className={`btn-secondary inline-flex min-h-11 focus-within:ring-2 focus-within:ring-[var(--focus)] items-center justify-center px-4 text-sm font-medium ${busy ? "cursor-wait opacity-50" : "cursor-pointer"}`}>
-          {mode === "adaptive" ? tr("选择 JSON / Markdown 文件") : tr("选择 .cr 归档")}
-          <input ref={fileInputRef} disabled={busy} data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm" : ".cr"} onChange={(event) => { const selected = Array.from(event.currentTarget.files ?? []); if (selected.length) chooseFiles(selected); }} />
+          {mode === "adaptive" ? tr("选择 JSON / Markdown / ZIP 文件") : tr("选择 .cr 归档")}
+          <input ref={fileInputRef} disabled={busy} data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,.zip" : ".cr"} onChange={(event) => { const selected = Array.from(event.currentTarget.files ?? []); if (selected.length) chooseFiles(selected); }} />
         </label>
         {files.length ? <p className="mt-3 break-all text-sm text-secondary">{inputMethod === "files" ? selectedLabel : tr("已保留 {0} 个文件选项", files.length)}</p> : null}
       </div>}
@@ -572,7 +572,7 @@ function validateFiles(files: File[], mode: ImportMode, tr: ImportCopy): string 
   if (extensions.includes(".cr")) return tr("请在设置的数据与备份中恢复 .cr 归档。");
   if (files.some((file) => file.name.toLowerCase().endsWith(".context.zip"))) return tr("请打开目标对话，在批注旁的上下文面板中更新 Current / Index。");
   if (files.some((file) => file.name.toLowerCase() === "skill.md")) return tr("这是 Skill 文件，请在设置的 Skill 管理中上传。");
-  if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"].includes(extension))) return tr("仅支持 JSON、Markdown 或文本源文件。");
+  if (extensions.some((extension) => ![".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm", ".zip"].includes(extension))) return tr("仅支持 JSON、Markdown、ZIP 或文本源文件。");
   if (files.length > 500) return tr("一次最多分析 500 个文件。");
   return null;
 }

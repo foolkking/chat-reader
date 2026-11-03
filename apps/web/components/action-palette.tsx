@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, BookmarkPlus, Clock3, Command, CopyCheck, Files, Highlighter, Library, Search, Upload, X } from "lucide-react";
+import { Archive, Star, Clock3, Command, CopyCheck, Files, Highlighter, Library, Search, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useImportDialog } from "./import-dialog-provider";
@@ -52,7 +52,7 @@ export function ActionPalette() {
       { id: "import", label: t("importData"), keywords: "import 导入", icon: Upload, run: () => { setOpen(false); openImportDialog(); } },
       { id: "library", label: t("offlineLibrary"), keywords: "offline library 离线 资料库", icon: Library, run: () => navigate("/library") },
       { id: "recent", label: t("recent"), keywords: "recent 最近", icon: Clock3, run: () => navigate("/recent") },
-      { id: "reading-list", label: zh ? "待读清单" : "Reading list", keywords: "reading list unread read 待读 已读", icon: BookmarkPlus, run: () => navigate("/reading-list") },
+      { id: "reading-list", label: zh ? "收藏" : "Favorites", keywords: "favorites starred reading list 收藏 星标 已读", icon: Star, run: () => navigate("/reading-list") },
       { id: "annotation-inbox", label: zh ? "批注收件箱" : "Annotation inbox", keywords: "annotations highlights notes 批注 高亮 笔记", icon: Highlighter, run: () => navigate("/annotations") },
       { id: "file-directory", label: zh ? "文件目录" : "File directory", keywords: "files attachments directory 文件 附件 目录", icon: Files, run: () => navigate("/files") },
       { id: "duplicate-review", label: zh ? "重复项审查" : "Duplicate review", keywords: "duplicates exact review 重复 相同 审查", icon: CopyCheck, run: () => navigate("/duplicates") },

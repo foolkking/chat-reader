@@ -10,7 +10,7 @@ import {
   searchConversations,
 } from "./api";
 import { readSyncedReadingPosition, saveLocalReadingPosition } from "./reading-position-sync";
-import { offlineDb, type OfflineMessageRecord, type OfflineSearchDocument } from "./offline-db";
+import { getOfflineAttachment, offlineDb, type OfflineMessageRecord, type OfflineSearchDocument } from "./offline-db";
 import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
 import { searchOfflinePage } from "./offline-search";
 import { findOpeningThinkingSummary } from "../features/conversations/thinking-summary";
@@ -243,9 +243,9 @@ export const offlineReaderDataSource: ReaderDataSource = {
     return { conversation_id: conversationId, items, message_count: all.length, turn_count: conversation?.turn_count ?? 0, limit, offset, total: all.length, has_previous: offset > 0, has_more: offset + items.length < all.length };
   },
   async getMessageBlocks(messageId, options = {}) {
-    const blocks = await getOfflineMessageBlocks(messageId);
+    const blocks = await getOfflineMessageBlocks(messageId, false);
     const start = options.start ?? 0;
-    return blocks.filter((block) => block.block_index >= start).slice(0, options.limit ?? 50);
+    return hydrateOfflineBlockAttachments(blocks.filter((block) => block.block_index >= start).slice(0, options.limit ?? 50));
   },
   async getToc(conversationId, options = {}) {
     let items = await offlineDb.headings.where("conversation_id").equals(conversationId).sortBy("heading_index");
@@ -322,7 +322,7 @@ export async function resolveOfflineSearchResult(
   const requestedBlockIndex = metadataNumber(item.metadata, "block_index") ?? metadataNumber(item.metadata, "start_block_index");
   const bodyDocument = ["message", "heading", "code"].includes(item.document_type);
   const blocks = message && bodyDocument
-    ? (await getOfflineMessageBlocks(message.id))
+    ? (await getOfflineMessageBlocks(message.id, false))
       .filter((block) => item.document_type === "message" || requestedBlockIndex === null || block.block_index === requestedBlockIndex)
     : [];
   const candidates = bodyDocument && (item.document_type === "message" || requestedBlockIndex !== null)
@@ -394,13 +394,71 @@ async function getOfflineConversationMessages(conversationId: string): Promise<O
   return fallback;
 }
 
-async function getOfflineMessageBlocks(messageId: string): Promise<RenderBlockRead[]> {
+async function getOfflineMessageBlocks(messageId: string, includeAttachments = true): Promise<RenderBlockRead[]> {
   const id = String(messageId);
   const indexed = await offlineDb.blocks.where("message_id").equals(id).sortBy("block_index");
-  if (indexed.length > 0) return indexed;
-  return (await offlineDb.blocks.toArray())
+  const blocks = indexed.length > 0
+    ? indexed
+    : (await offlineDb.blocks.toArray())
     .filter((block) => String(block.message_id) === id)
     .sort((left, right) => left.block_index - right.block_index);
+  // Search and locator projection only need canonical text and coordinates.
+  // Do not read media blobs or retain object URLs for these metadata paths.
+  return includeAttachments ? hydrateOfflineBlockAttachments(blocks) : blocks;
+}
+
+async function hydrateOfflineBlockAttachments(blocks: RenderBlockRead[]): Promise<RenderBlockRead[]> {
+  const attachmentIds = new Set<string>();
+  for (const block of blocks) {
+    const data = block.data ?? {};
+    const attachmentId = typeof data.attachmentId === "string" ? data.attachmentId : null;
+    if (attachmentId) attachmentIds.add(attachmentId);
+    if (Array.isArray(data.attachmentOccurrences)) {
+      for (const item of data.attachmentOccurrences) {
+        if (!item || typeof item !== "object") continue;
+        const value = (item as Record<string, unknown>).attachmentId;
+        if (typeof value === "string") attachmentIds.add(value);
+      }
+    }
+  }
+  if (!attachmentIds.size) return blocks;
+  const reads = await Promise.all(Array.from(attachmentIds, async (attachmentId) => {
+    try {
+      return [attachmentId, await getOfflineAttachment(attachmentId)] as const;
+    } catch {
+      return [attachmentId, null] as const;
+    }
+  }));
+  const byId = new Map(reads);
+  return blocks.map((block) => {
+    const data = block.data ?? {};
+    const occurrences = Array.isArray(data.attachmentOccurrences)
+      ? data.attachmentOccurrences.map((item) => {
+        if (!item || typeof item !== "object") return item;
+        const raw = item as Record<string, unknown>;
+        const attachmentId = typeof raw.attachmentId === "string" ? raw.attachmentId : null;
+        const attachment = attachmentId ? byId.get(attachmentId) : null;
+        if (!attachment) return item;
+        return {
+          ...raw,
+          contentUrl: attachment.content_url,
+          downloadUrl: attachment.download_url,
+          mimeType: attachment.detected_mime_type,
+        };
+      })
+      : data.attachmentOccurrences;
+    const attachmentId = typeof data.attachmentId === "string" ? data.attachmentId : null;
+    const attachment = attachmentId ? byId.get(attachmentId) : null;
+    if (!occurrences && !attachment) return block;
+    return {
+      ...block,
+      data: {
+        ...data,
+        ...(occurrences ? { attachmentOccurrences: occurrences } : {}),
+        ...(attachment ? { attachment } : {}),
+      },
+    };
+  });
 }
 
 const LEADING_TIMESTAMP_RE = /^\s*\d{4}[-/]\d{1,2}[-/]\d{1,2}[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?\s*$/;
@@ -517,7 +575,7 @@ async function resolveOfflineLocator(
   const currentVersionId = message.current_version?.id ?? null;
   const remapped = Boolean(target.messageVersionId && target.messageVersionId !== currentVersionId);
   const versionId = currentVersionId ?? target.messageVersionId ?? null;
-  const blocks = await getOfflineMessageBlocks(message.id);
+  const blocks = await getOfflineMessageBlocks(message.id, false);
   let block = target.renderBlockId ? blocks.find((item) => item.id === target.renderBlockId) : undefined;
   if (!block && target.blockIndex !== undefined) block = blocks.find((item) => item.block_index === target.blockIndex);
   if (target.occurrenceKey) {

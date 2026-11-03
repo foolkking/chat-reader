@@ -1,8 +1,9 @@
 "use client";
 
 import { importErrorMessage, useImportCopy, type ImportCopy, type ImportErrorAction } from "./import-workspace-copy";
-import { useMutation } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import {
+  Archive,
   ArrowLeft,
   Braces,
   CheckCircle2,
@@ -13,6 +14,7 @@ import {
   FolderCog,
   Layers3,
   LoaderCircle,
+  Save,
   RotateCcw,
   Settings2,
   ShieldAlert,
@@ -21,12 +23,17 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   excludeAdaptiveImportGroup,
+  getAdaptiveImportArchive,
   reanalyzeAdaptiveImportSession,
   replaceAdaptiveImportArtifact,
   resolveAdaptiveImportGroups,
   selectAdaptiveFamilyProfile,
+  updateAdaptiveImportArchive,
 } from "../../lib/api";
 import type {
+  AdaptiveArchiveCatalog,
+  AdaptiveArchiveMember,
+  AdaptiveArchiveSummary,
   AdaptiveImportDiagnostic,
   AdaptiveImportFamily,
   AdaptiveImportGroup,
@@ -41,6 +48,8 @@ type SessionActionControls = {
   apply: (token: number, session: AdaptiveImportSession) => boolean;
   finish: (token: number) => void;
 };
+
+type ImportEditState = { dirty: boolean; busy: boolean };
 
 function useAdaptiveSessionAction<TVariables>(
   mutationFn: (variables: TVariables) => Promise<AdaptiveImportSession>,
@@ -79,6 +88,21 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
   const [groupingOpen, setGroupingOpen] = useState(false);
   const [sessionActionBusy, setSessionActionBusy] = useState(false);
+  const [mappingState, setMappingState] = useState<ImportEditState>({ dirty: false, busy: false });
+  const [archiveStates, setArchiveStates] = useState<Record<string, ImportEditState>>({});
+  const onArchiveStateChange = useCallback((artifactId: string, state: ImportEditState) => {
+    setArchiveStates(current => {
+      if (current[artifactId]?.dirty === state.dirty && current[artifactId]?.busy === state.busy) return current;
+      return { ...current, [artifactId]: state };
+    });
+  }, []);
+  const archiveDirty = session.archives?.some(archive => archiveStates[archive.artifact_id]?.dirty) ?? false;
+  const archiveBusy = session.archives?.some(archive => archiveStates[archive.artifact_id]?.busy) ?? false;
+  const overviewActionBusy = sessionActionBusy || importing || archiveDirty || archiveBusy;
+  useEffect(() => {
+    onMappingStateChange?.({ dirty: mappingState.dirty || archiveDirty, busy: mappingState.busy || archiveBusy || sessionActionBusy });
+  }, [archiveBusy, archiveDirty, mappingState, onMappingStateChange, sessionActionBusy]);
+  useEffect(() => () => { onMappingStateChange?.({ dirty: false, busy: false }); }, [onMappingStateChange]);
   const sessionActionRef = useRef<{ nextToken: number; activeToken: number | null }>({ nextToken: 0, activeToken: null });
   const currentImportIdRef = useRef(session.import_id);
   currentImportIdRef.current = session.import_id;
@@ -117,7 +141,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   if (activeFamily) {
     return (
       <MappingWorkspace
-        onMappingStateChange={onMappingStateChange}
+        onMappingStateChange={setMappingState}
         session={session}
         family={activeFamily}
         sessionAction={sessionActions}
@@ -144,7 +168,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
     <section className="space-y-5" aria-labelledby="adaptive-import-title">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-ui pb-4">
         <div>
-          <button type="button" disabled={importing || sessionActionBusy} onClick={onBack} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" disabled={overviewActionBusy} onClick={onBack} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
             <ArrowLeft className="h-3.5 w-3.5" />{tr("重新选择文件")}</button>
           <h3 id="adaptive-import-title" className="text-lg font-semibold text-primary">{tr("导入概览")}</h3>
           <p className="mt-1 text-sm text-secondary">{tr("发现 {0} 个对话，识别出 {1} 种格式", session.group_count, session.family_count)}</p>
@@ -161,7 +185,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
               <p className="mt-1 text-xs leading-5 text-secondary">{tr("其他已识别格式仍可继续设置。替换、排除或重新组合这些文件后，系统会自动重新分析。")}</p>
             </div>
           </div>
-          <button type="button" disabled={sessionActionBusy} onClick={() => setGroupingOpen(true)} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" disabled={overviewActionBusy} onClick={() => setGroupingOpen(true)} className="btn-secondary inline-flex min-h-9 items-center gap-2 px-3 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50">
             <FolderCog className="h-4 w-4" />{tr("调整文件组合")}</button>
         </div>
       ) : null}
@@ -171,11 +195,13 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         <StatusSummary icon={<Settings2 className="h-3.5 w-3.5" />} label={tr("可设置格式")} count={mappableCount} tone="warning" />
         <StatusSummary icon={<ShieldAlert className="h-3.5 w-3.5" />} label={tr("暂不可映射")} count={notMappableCount} tone="danger" />
       </div>
-      <FamilySection title={tr("已支持 · 可直接导入")} families={supportedFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
-      <FamilySection title={tr("可设置格式 · 需要确认一次")} families={mappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
-      <FamilySection title={tr("暂不可映射 · 需要先转换")} families={notMappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onConfigure={() => undefined} />
+      {archiveDirty ? <p role="status" className="text-sm text-[var(--warning)]">{tr("请先保存或放弃 ZIP 分类选择，再进行其他操作。")}</p> : null}
+      {session.archives?.length ? <ArchiveLedger session={session} archives={session.archives} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy || importing} onStateChange={onArchiveStateChange} /> : null}
+      <FamilySection title={tr("已支持 · 可直接导入")} families={supportedFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
+      <FamilySection title={tr("可设置格式 · 需要确认一次")} families={mappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onConfigure={(id) => setActiveFamilyId(id)} />
+      <FamilySection title={tr("暂不可映射 · 需要先转换")} families={notMappableFamilies} session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onConfigure={() => undefined} />
 
-      {session.state === "BLOCKED" ? <LegacyBlockedRecovery session={session} sessionAction={sessionActions} sessionActionBusy={sessionActionBusy} onRegroup={() => setGroupingOpen(true)} /> : null}
+      {session.state === "BLOCKED" ? <LegacyBlockedRecovery session={session} sessionAction={sessionActions} sessionActionBusy={overviewActionBusy} onRegroup={() => setGroupingOpen(true)} /> : null}
       {error ? <ErrorLine message={error} action="commit" onRetry={onRetryImport} retrying={retryingImport} /> : null}
       {statusError ? <ErrorLine message={statusError} onRetry={onRetryStatus} retrying={statusRetrying} /> : null}
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4">
@@ -188,11 +214,11 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
                 : tr("正在整理导入计划。")}
           </p>
           {!invalidCount && session.state !== "READY" ? (
-            <button type="button" disabled={sessionActionBusy} onClick={() => setGroupingOpen(true)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" disabled={overviewActionBusy} onClick={() => setGroupingOpen(true)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
               <FolderCog className="h-3.5 w-3.5" />{tr("调整文件组合")}</button>
           ) : null}
         </div>
-        <button type="button" data-testid="commit-import-button" disabled={!session.can_import || importing || sessionActionBusy} onClick={onImport} className="btn-primary min-h-10 px-5 text-sm font-medium">
+        <button type="button" data-testid="commit-import-button" disabled={!session.can_import || overviewActionBusy} onClick={onImport} className="btn-primary min-h-10 px-5 text-sm font-medium">
           {importing ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在导入")}</> : tr("导入 {0} 个对话", session.conversation_count || session.group_count)}
         </button>
       </footer>
@@ -203,6 +229,276 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
 function StatusSummary({ icon, label, count, tone }: { icon: ReactNode; label: string; count: number; tone: "success" | "warning" | "danger" }) {
   const styles = tone === "success" ? "bg-[var(--accent-soft)] text-accent" : tone === "danger" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : "bg-[var(--warning-soft)] text-[var(--warning)]";
   return <span className={`inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 font-semibold ${styles}`}>{icon}{label} {count}</span>;
+}
+
+function ArchiveLedger({
+  session,
+  archives,
+  sessionAction,
+  sessionActionBusy,
+  onStateChange,
+}: {
+  session: AdaptiveImportSession;
+  archives: AdaptiveArchiveSummary[];
+  sessionAction: SessionActionControls;
+  sessionActionBusy: boolean;
+  onStateChange: (artifactId: string, state: ImportEditState) => void;
+}) {
+  const tr = useImportCopy();
+  return (
+    <section aria-labelledby="adaptive-archive-ledger-title" className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Archive className="h-4 w-4 text-accent" aria-hidden="true" />
+        <h4 id="adaptive-archive-ledger-title" className="text-sm font-semibold text-primary">{tr("ZIP 内容")}</h4>
+        <span className="text-xs text-secondary">{tr("可在导入前确认文档、附件和排除项")}</span>
+      </div>
+      <div className="divide-y divide-ui border-y border-ui">
+        {archives.map((archive) => (
+          <ArchiveLedgerRow
+            key={archive.artifact_id}
+            archive={archive}
+            session={session}
+            sessionAction={sessionAction}
+            sessionActionBusy={sessionActionBusy}
+            onStateChange={onStateChange}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ArchiveLedgerRow({
+  archive,
+  session,
+  sessionAction,
+  sessionActionBusy,
+  onStateChange,
+}: {
+  archive: AdaptiveArchiveSummary;
+  session: AdaptiveImportSession;
+  sessionAction: SessionActionControls;
+  sessionActionBusy: boolean;
+  onStateChange: (artifactId: string, state: ImportEditState) => void;
+}) {
+  const tr = useImportCopy();
+  const [open, setOpen] = useState(false);
+  const [draftState, setDraftState] = useState<ArchiveClassificationDraft>({ version: null, members: {} });
+  const draft = draftState.members;
+  const archiveQuery = useInfiniteQuery({
+    queryKey: ["adaptive-import-archive", session.import_id, archive.artifact_id, archive.classification_version],
+    initialPageParam: 0,
+    enabled: open,
+    queryFn: ({ pageParam, signal }) => getAdaptiveImportArchive(session.import_id, archive.artifact_id, pageParam, 500, signal),
+    getNextPageParam: (last) => last.has_more ? last.offset + last.limit : undefined,
+  });
+  const { catalog, mixedVersions } = useMemo(
+    () => mergeArchiveCatalogPages(archiveQuery.data?.pages ?? []),
+    [archiveQuery.data?.pages],
+  );
+  const staleDraft = draftState.version !== null && catalog !== null && draftState.version !== catalog.classification_version;
+  const dirtyChanges = useMemo(() => {
+    if (!catalog) return [];
+    return catalog.members.flatMap((member) => {
+      const value = draft[member.member_id];
+      if (!value || value.use === member.use && sameStringArray(value.ownerDocumentIds, member.owner_document_ids)) return [];
+      return [{
+        memberId: member.member_id,
+        use: value.use,
+        ownerDocumentIds: value.ownerDocumentIds,
+      }];
+    });
+  }, [catalog, draft]);
+  const saveMutation = useAdaptiveSessionAction(
+    (changes: Array<{ memberId: string; use: string; ownerDocumentIds: string[] }>) => updateAdaptiveImportArchive(
+      session.import_id,
+      archive.artifact_id,
+      catalog?.classification_version ?? archive.classification_version,
+      changes,
+    ),
+    sessionAction,
+    () => {
+      setDraftState({ version: null, members: {} });
+      void archiveQuery.refetch();
+    },
+  );
+  const conversationMembers = catalog?.members.filter((member) => (draft[member.member_id]?.use ?? member.use) === "conversation") ?? [];
+  const statusTone = archive.blocking_issue_count > 0 ? "text-[var(--danger)]" : archive.issue_count > 0 ? "text-[var(--warning)]" : "text-secondary";
+  const dirty = mixedVersions || staleDraft || dirtyChanges.length > 0 || (!catalog && Object.keys(draft).length > 0);
+  useEffect(() => {
+    onStateChange(archive.artifact_id, { dirty, busy: saveMutation.isPending });
+  }, [archive.artifact_id, dirty, onStateChange, saveMutation.isPending]);
+  useEffect(() => () => {
+    onStateChange(archive.artifact_id, { dirty: false, busy: false });
+  }, [archive.artifact_id, onStateChange]);
+
+  return (
+    <article className="py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="min-w-0 flex-1 text-left"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-medium text-primary" title={archive.filename}>{archive.filename}</span>
+            <span className="shrink-0 text-xs text-secondary">{formatBytes(archive.byte_size)}</span>
+          </span>
+          <span className={`mt-1 block text-xs ${statusTone}`}>
+            {archive.document_count} {tr("个文档")} · {archive.attachment_count} {tr("个附件")} · {archive.excluded_count} {tr("项排除")}
+            {archive.issue_count ? ` · ${archive.issue_count} ${tr("条提示")}` : ""}
+          </span>
+        </button>
+        <button type="button" className="btn-secondary min-h-9 px-3 text-xs" onClick={() => setOpen((value) => !value)} aria-label={tr("查看 ZIP 内容")}>
+          {open ? tr("收起内容") : tr("查看内容")}
+        </button>
+      </div>
+      {dirty ? <p className="mt-2 text-xs text-[var(--warning)]">{tr("ZIP 分类尚未保存")}</p> : null}
+      {open ? (
+        <div className="mt-3 space-y-3 border-l-2 border-ui pl-3">
+          {archiveQuery.isPending ? <p role="status" className="text-xs text-secondary">{tr("正在读取 ZIP 内容…")}</p> : null}
+          {archiveQuery.isError ? <ErrorLine message={archiveQuery.error} action="mutation" onRetry={() => { void archiveQuery.refetch(); }} retrying={archiveQuery.isFetching} /> : null}
+          {catalog ? (
+            <>
+              {mixedVersions || staleDraft ? <div role="alert" className="space-y-2 text-xs text-[var(--warning)]">
+                <p>{tr("ZIP 内容已变化，未保存的选择已保留。请重新读取并核对后再保存。")}</p>
+                <button type="button" className="min-h-9 underline" disabled={archiveQuery.isFetching} onClick={() => { void archiveQuery.refetch(); }}>{tr("重新读取 ZIP 内容")}</button>
+                {staleDraft ? <button type="button" className="ml-3 min-h-9 underline" onClick={() => setDraftState({ version: null, members: {} })}>{tr("放弃旧选择，使用最新分类")}</button> : null}
+              </div> : null}
+              {catalog.issues.length ? <div className="space-y-1 border-l-2 border-[var(--warning)] pl-3 text-xs text-secondary">
+                {catalog.issues.map((issue) => <p key={`${issue.code}-${issue.message}`}><strong className="text-primary">{issue.code}</strong> · {issue.message}</p>)}
+              </div> : null}
+              <div className="divide-y divide-ui border-y border-ui">
+                {catalog.members.map((member) => (
+                  <ArchiveMemberRow
+                    key={member.member_id}
+                    member={member}
+                    draft={draft[member.member_id] ?? { use: member.use, ownerDocumentIds: member.owner_document_ids }}
+                    conversationMembers={conversationMembers}
+                    disabled={sessionActionBusy || saveMutation.isPending || mixedVersions || staleDraft}
+                    onChange={(value) => setDraftState((current) => editArchiveClassificationDraft(current, catalog.classification_version, member.member_id, value))}
+                  />
+                ))}
+              </div>
+              {catalog.has_more && !mixedVersions ? (
+                <button type="button" className="text-xs font-medium text-accent underline" disabled={archiveQuery.isFetchingNextPage} onClick={() => { void archiveQuery.fetchNextPage(); }}>
+                  {archiveQuery.isFetchingNextPage ? tr("正在读取…") : tr("读取其余 {0} 项", catalog.member_count - catalog.members.length)}
+                </button>
+              ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-secondary">{tr("只保存发生变化的分类；资源文件仍从原 ZIP 安全读取。")}</p>
+                {!staleDraft && Object.keys(draft).length > 0 ? <button type="button" className="min-h-9 text-xs underline" disabled={sessionActionBusy || saveMutation.isPending} onClick={() => setDraftState({ version: null, members: {} })}>{tr("放弃 ZIP 分类选择")}</button> : null}
+                <button
+                  type="button"
+                  className="btn-primary inline-flex min-h-9 items-center gap-2 px-3 text-xs"
+                  disabled={!dirtyChanges.length || sessionActionBusy || saveMutation.isPending || mixedVersions || staleDraft}
+                  onClick={() => saveMutation.run(dirtyChanges)}
+                >
+                  {saveMutation.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  {tr("保存 ZIP 分类")}
+                </button>
+              </div>
+              {saveMutation.isError ? <ErrorLine message={saveMutation.error} action="mutation" /> : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+type ArchiveClassificationDraft = {
+  version: number | null;
+  members: Record<string, { use: string; ownerDocumentIds: string[] }>;
+};
+
+function editArchiveClassificationDraft(
+  current: ArchiveClassificationDraft,
+  version: number,
+  memberId: string,
+  value: { use: string; ownerDocumentIds: string[] },
+): ArchiveClassificationDraft {
+  // A newer catalog cannot silently rebase an old user's selection.
+  if (current.version !== null && current.version !== version) return current;
+  return { version, members: { ...current.members, [memberId]: value } };
+}
+
+function mergeArchiveCatalogPages(pages: AdaptiveArchiveCatalog[]): { catalog: AdaptiveArchiveCatalog | null; mixedVersions: boolean } {
+  const first = pages[0];
+  if (!first) return { catalog: null, mixedVersions: false };
+  const mixedVersions = pages.some(page => page.classification_version !== first.classification_version);
+  const consistent = pages.filter(page => page.classification_version === first.classification_version);
+  const members = consistent.flatMap(page => page.members);
+  const last = consistent.at(-1) ?? first;
+  return {
+    catalog: { ...first, members, offset: 0, limit: members.length, has_more: last.has_more },
+    mixedVersions,
+  };
+}
+
+function ArchiveMemberRow({
+  member,
+  draft,
+  conversationMembers,
+  disabled,
+  onChange,
+}: {
+  member: AdaptiveArchiveMember;
+  draft: { use: string; ownerDocumentIds: string[] };
+  conversationMembers: AdaptiveArchiveMember[];
+  disabled: boolean;
+  onChange: (value: { use: string; ownerDocumentIds: string[] }) => void;
+}) {
+  const tr = useImportCopy();
+  const markdown = member.kind === "markdown";
+  return (
+    <div className="grid gap-2 py-3 lg:grid-cols-[minmax(0,1fr)_8rem_minmax(10rem,14rem)] lg:items-center">
+      <div className="min-w-0">
+        <p className="truncate text-sm text-primary" title={member.path}>{member.path}</p>
+        <p className="text-xs text-secondary">
+          {formatBytes(member.byte_size)} · {member.reference_count} {tr("次引用")}
+          {member.manifest_kind ? ` · ${member.manifest_kind}` : ""}
+        </p>
+      </div>
+      <label className="text-xs text-secondary">
+        <span className="sr-only">{tr("分类")}</span>
+        <select
+          value={draft.use}
+          disabled={disabled}
+          onChange={(event) => onChange({
+            use: event.currentTarget.value,
+            ownerDocumentIds: event.currentTarget.value === "attachment" ? draft.ownerDocumentIds : [],
+          })}
+          className="min-h-9 w-full rounded-md border border-ui bg-surface px-2 text-xs text-primary"
+        >
+          {markdown ? <option value="conversation">{tr("导入为对话")}</option> : null}
+          <option value="attachment">{tr("导入为附件")}</option>
+          <option value="excluded">{tr("排除")}</option>
+        </select>
+      </label>
+      <label className="text-xs text-secondary">
+        <span className="mb-1 block">{tr("附件归属对话")}</span>
+        <select
+          multiple
+          value={draft.ownerDocumentIds}
+          disabled={disabled || draft.use !== "attachment" || !conversationMembers.length}
+          onChange={(event) => onChange({
+            use: draft.use,
+            ownerDocumentIds: Array.from(event.currentTarget.selectedOptions, (option) => option.value),
+          })}
+          className="min-h-9 w-full rounded-md border border-ui bg-surface px-2 py-1 text-xs text-primary disabled:opacity-60"
+          aria-label={tr("附件归属对话")}
+        >
+          {conversationMembers.map((conversation) => <option key={conversation.member_id} value={conversation.member_id}>{conversation.path}</option>)}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+function sameStringArray(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 function FamilySection({ title, families, session, sessionAction, sessionActionBusy, onConfigure }: { title: string; families: AdaptiveImportFamily[]; session: AdaptiveImportSession; sessionAction: SessionActionControls; sessionActionBusy: boolean; onConfigure: (id: string) => void }) {
@@ -358,7 +654,7 @@ function ReplaceFileButton({ artifactId, filename, disabled, pending, onSelect }
         ref={inputRef}
         type="file"
         data-testid={`replace-import-file-${artifactId}`}
-        accept=".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,application/json,text/markdown,text/plain,text/html"
+        accept=".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,.zip,application/zip,application/json,text/markdown,text/plain,text/html"
         className="hidden"
         disabled={disabled}
         onChange={(event) => {

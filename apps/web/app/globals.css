@@ -81,6 +81,7 @@
   --space-toc-rail: 0.125rem;
   --color-semantic-warning: #a15c00;
   --color-semantic-warning-soft: #fff7e6;
+  --color-semantic-favorite: #d69e00;
   --color-semantic-error: var(--danger);
   --color-semantic-error-soft: var(--danger-soft);
   --color-semantic-offline: #52606d;
@@ -158,6 +159,7 @@ html[data-theme="dark"] {
   --shadow-medium: 0 6px 20px rgb(0 0 0 / 0.44), 0 2px 5px rgb(0 0 0 / 0.28);
   --color-semantic-warning: #f4bd61;
   --color-semantic-warning-soft: #3a301d;
+  --color-semantic-favorite: #ffd45a;
   --color-semantic-error: var(--danger);
   --color-semantic-error-soft: var(--danger-soft);
   --color-semantic-offline: #b8c0c7;
@@ -241,7 +243,21 @@ html[data-theme="dark"] .border-\[\#d9d9d7\],
 html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !important; }
 
 .reader-prose > :where(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6) { max-width: var(--reader-text-measure, 88ch); }
-.reader-rich-block { max-width: none; width: 100%; }
+.reader-rich-block,
+.reader-rich-html-block { max-width: none; width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.reader-rich-html-block > :where(div, section) { min-width: 0; }
+.reader-rich-image { display: block; max-height: min(70vh, 40rem); }
+.reader-rich-media { display: block; }
+.reader-rich-image-fallback { min-height: 2.25rem; }
+.reader-rich-details { min-width: 0; }
+.reader-rich-details > summary { outline: none; }
+.reader-rich-details > summary:focus-visible { border-radius: 0.375rem; outline: 2px solid var(--focus); outline-offset: 2px; }
+.reader-rich-callout { min-width: 0; max-width: min(100%, var(--reader-text-measure, 88ch)); overflow-wrap: anywhere; }
+.reader-rich-callout > summary { min-height: 2rem; }
+.reader-rich-callout > summary::marker { color: currentColor; }
+.reader-rich-callout > * + * { margin-block-start: var(--reader-block-gap, 0.5em); }
+.reader-rich-callout :where(p, ul, ol) { margin-block: 0; }
+.reader-prose mark { border-radius: 0.2em; background: var(--mark-bg); color: var(--mark-text); padding-inline: 0.12em; }
 
 ::highlight(annotation-yellow), ::highlight(annotation-highlight-yellow) { background: var(--annotation-yellow-highlight); }
 ::highlight(annotation-green), ::highlight(annotation-highlight-green) { background: var(--annotation-green-highlight); }
@@ -846,6 +862,17 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 
 .aui-chat-markdown tbody tr:nth-child(even) { background: var(--table-stripe); }
 .aui-chat-markdown tbody tr:hover { background: var(--table-hover); }
+
+.aui-chat-markdown .reader-rich-html-block,
+.aui-chat-markdown .reader-rich-details {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.aui-chat-markdown .reader-rich-html-block > * {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .aui-chat-markdown .katex-display {
   max-width: 100%;

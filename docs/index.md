@@ -1,5 +1,32 @@
 # 文档导航
 
+## 当前源码候选：Reader、富 Markdown 与 ZIP 导入 — 2026-11-03（未发布）
+
+[本轮完成度复审](execution/ux-audit-reader-zip-completion-2026-11-03.md)发现并修正
+9 类缺口，涉及阅读几何、HTML/重复附件、ZIP 安全与草稿/事务恢复、离线搜索资源成本。
+当前 1,946 项 UX 源码测试和 134 项 API 专项通过；性能/浏览器/PostgreSQL 并发、
+全量 API 与完整 CI 仍须独立验收，不再把此前“源码完成”当作计划全部验收。
+按 2026-11-03 用户授权，本批在现有 `master` 提交并运行精确源码完整 CI；
+只有 CI 与发布制品核验通过才部署，生产当前仍为 `4b4f34f`。
+
+[本轮实施记录](execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md)覆盖前一轮 Reader
+计划收尾、Obsidian/安全富 HTML 组合、正文几何/空白恢复以及 Adaptive Import
+专用/通用 Markdown ZIP。当前已运行源码级回归、API 测试和 lint；Web 浏览器视觉、
+性能基准仍未验收；完整 CI 与部署按上述门槛推进。[Adaptive ZIP 合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)
+明确 ZIP 安全限制、成员分类、附件持久化与 `.cr`/离线兼容边界。
+[联合 Reader 计划](execution/READER_FAVORITES_DESIGN_2026-11-02.md)和
+[富内容设计](execution/READER_RICH_CONTENT_DESIGN_2026-11-02.md)保留详细需求与验收边界；
+[11 月 2 日完成度复审](execution/ux-audit-plan-completion-2026-11-02.md)是历史审查快照，
+其当时未完成项由本轮后续源码接续。
+
+## 当前阻塞：全量离线包导入 — 2026-11-01（源码与本机验证完成，未发布）
+
+[诊断与实施记录](execution/OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md)记录服务端
+47 对话包生成成功、散列及全部 ZIP CRC 通过，但单个 JSON 超过 Chromium/V8
+字符串上限。源码已改为逐对话可恢复下载、限制单包导入预算，并迁移旧失败批次；
+本机真实浏览器 PWA 矩阵 28/28 通过，含大于现网最大单对话的合成导入。
+CI、部署与真实 47 对话完整更新验收仍待完成，不以此前发布健康通过宣称生产问题已解决。
+
 ## 当前生产与安全清理 — 2026-11-01（已验收）
 
 精确源码 `4b4f34f` 的完整 CI `41228079428` 六项全部通过，官方制品独立核验，

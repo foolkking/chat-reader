@@ -66,7 +66,7 @@ function fixture(collection) {
 const entry = collection => ({ id: "synthetic-stable-identity", collection, revision: 0,
   value: { name: "Synthetic retained draft" }, created_at: "", updated_at: "" });
 
-for (const collection of ["saved-search", "export-preset", "offline-checklist"]) {
+for (const collection of ["saved-search", "export-preset", "offline-checklist", "reading-list"]) {
   test(`${collection}: response loss survives reopening and is confirmed without replay`, async () => {
     const f = fixture(collection);
     try {

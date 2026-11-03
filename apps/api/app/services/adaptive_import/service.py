@@ -5,6 +5,7 @@ import logging
 import shutil
 import uuid
 from collections import defaultdict
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,16 @@ from app.models.import_record import ImportRecord
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import SourceProfile
 from app.services.adaptive_import.analysis import analyze_documents, default_mapping, normalized_stem
+from app.services.adaptive_import.archive_sources import (
+    ARCHIVE_DOCUMENT_SOURCE_TYPE,
+    ARCHIVE_SOURCE_TYPE,
+    archive_enrichment_for_artifact,
+    archive_reference_matches,
+    archive_catalog,
+    prepare_archive_sources,
+    restore_archive_catalog,
+    update_archive_classification,
+)
 from app.services.adaptive_import.contracts import AdaptiveImportError, AnalysisResult, SourceDocument
 from app.services.task_errors import public_task_error
 from app.services.adaptive_import.normalization import normalize_group, validate_drafts
@@ -32,6 +43,11 @@ from app.services.adaptive_import.profiles import (
     normalize_builtin,
 )
 from app.services.import_pipeline.draft_store import attach_import_draft
+from app.services.import_pipeline.canonical_draft import (
+    CanonicalDraftConversation,
+    CanonicalDraftMessage,
+)
+from app.services.canonical.block_builder import build_basic_render_blocks
 from app.services.storage.local_storage import save_import_file, save_import_file_stream
 from app.services.uploads import UploadLimitError
 
@@ -62,7 +78,7 @@ def begin_session(
     owner_user_id: uuid.UUID | None = None,
 ) -> ImportRecord:
     if file_count < 1:
-        raise AdaptiveImportError("FILES_REQUIRED", "Choose at least one JSON or Markdown file.", layer="file")
+        raise AdaptiveImportError("FILES_REQUIRED", "Choose at least one JSON, Markdown, or ZIP source file.", layer="file")
     if file_count > MAX_ADAPTIVE_FILES:
         raise AdaptiveImportError("FILE_COUNT_LIMIT", f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once.", layer="file")
     record = ImportRecord(
@@ -93,7 +109,7 @@ def add_session_source(db: Session, record: ImportRecord, filename: str, content
     max_bytes = settings.max_import_file_size_mb * 1024 * 1024
     total_limit = settings.max_adaptive_import_total_mb * 1024 * 1024
     extension = _extension(filename)
-    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"}:
+    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm", ".zip"}:
         raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
     if not content:
         raise AdaptiveImportError("FILE_EMPTY", f"{filename} is empty.", layer="file")
@@ -108,9 +124,11 @@ def add_session_source(db: Session, record: ImportRecord, filename: str, content
     digest = hashlib.sha256(content).hexdigest()
     stored = save_import_file(record.id, filename, content)
     db.add(SourceArtifact(
-        id=uuid.uuid4(), import_id=record.id, source_type="adaptive_source", source_profile=SourceProfile.unknown.value,
+        id=uuid.uuid4(), import_id=record.id,
+        source_type=ARCHIVE_SOURCE_TYPE if extension == ".zip" else "adaptive_source",
+        source_profile=SourceProfile.unknown.value,
         filename=filename, safe_filename=stored.safe_filename, sha256=digest, byte_size=len(content),
-        mime_guess="application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
+        mime_guess="application/zip" if extension == ".zip" else "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
         file_extension=extension, raw_storage_uri=stored.raw_storage_uri, parsed_summary={},
     ))
     record.total_bytes += len(content)
@@ -127,7 +145,7 @@ def add_session_source_stream(
 ) -> None:
     settings = get_settings()
     extension = _extension(filename)
-    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"}:
+    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm", ".zip"}:
         raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
     stored, digest = save_import_file_stream(
         record.id,
@@ -146,9 +164,11 @@ def add_session_source_stream(
             layer="file",
         )
     db.add(SourceArtifact(
-        id=uuid.uuid4(), import_id=record.id, source_type="adaptive_source", source_profile=SourceProfile.unknown.value,
+        id=uuid.uuid4(), import_id=record.id,
+        source_type=ARCHIVE_SOURCE_TYPE if extension == ".zip" else "adaptive_source",
+        source_profile=SourceProfile.unknown.value,
         filename=filename, safe_filename=stored.safe_filename, sha256=digest, byte_size=stored.byte_size,
-        mime_guess="application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
+        mime_guess="application/zip" if extension == ".zip" else "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
         file_extension=extension, raw_storage_uri=stored.raw_storage_uri, parsed_summary={},
     ))
     record.total_bytes += stored.byte_size
@@ -193,7 +213,8 @@ def queue_session_analysis(db: Session, record: ImportRecord) -> BackgroundJob:
 
 
 def finalize_session(db: Session, record: ImportRecord) -> ImportRecord:
-    record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
+    _refresh_source_fingerprint(record)
+    prepare_archive_sources(db, record)
     _build_initial_groups(db, record)
     analyze_session(db, record)
     db.commit()
@@ -208,7 +229,10 @@ def analyze_initial_session(
     progress_callback=None,
 ) -> None:
     """Build source groups and analyze a staged session in the background."""
-    record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
+    record.source_fingerprint = ",".join(
+        sorted(artifact.sha256 for artifact in record.artifacts if artifact.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE)
+    )
+    prepare_archive_sources(db, record)
     _build_initial_groups(db, record)
     analyze_session(db, record, progress_callback=progress_callback)
 
@@ -301,6 +325,16 @@ def analyze_session(
             admitted_revision_ids=tuple(uuid.UUID(value) for value in admitted),
         )
         del documents
+        if repair_profile is None and _family_is_dedicated_archive(record, family_groups):
+            from app.services.adaptive_import.contracts import MatchResult
+            match = MatchResult(
+                status="COMPATIBLE",
+                profile_key="builtin:conversation-zip-markdown-v1",
+                profile_id=None,
+                revision_id=None,
+                profile_name="Conversation export ZIP",
+                evidence={"reason": "validated_conversation_export_zip"},
+            )
         if repair_profile is not None:
             current_revision = next((item for profile, item in sorted(available_revisions(db, record.owner_user_id, include_disabled=True), key=lambda pair: pair[1].revision, reverse=True) if profile.id == repair_profile.id), None)
             if current_revision is None:
@@ -360,7 +394,7 @@ def analyze_session(
 
 def resolve_grouping(db: Session, record: ImportRecord, groups: list[dict[str, Any]]) -> None:
     _require_session_state(record, RECOVERABLE_SESSION_STATES)
-    artifact_ids = {str(artifact.id) for artifact in record.artifacts}
+    artifact_ids = {str(artifact.id) for artifact in _groupable_artifacts(record)}
     submitted = [str(item) for group in groups for item in group.get("artifact_ids", [])]
     if set(submitted) != artifact_ids or len(submitted) != len(set(submitted)):
         raise AdaptiveImportError("GROUPING_INCOMPLETE", "Every source file must appear in exactly one group.", layer="grouping")
@@ -388,6 +422,43 @@ def reanalyze_session(db: Session, record: ImportRecord) -> None:
     analyze_session(db, record)
 
 
+def reclassify_archive(
+    db: Session,
+    record: ImportRecord,
+    artifact: SourceArtifact,
+    *,
+    expected_version: int,
+    changes: list[dict[str, Any]],
+) -> list[Path]:
+    _require_session_state(record, RECOVERABLE_SESSION_STATES)
+    if artifact.source_type != ARCHIVE_SOURCE_TYPE:
+        raise AdaptiveImportError("ARCHIVE_NOT_FOUND", "The ZIP source was not found.", layer="archive")
+    previous_catalog = archive_catalog(record, artifact.id)
+    root = _session_root(record.id)
+    before_paths = {path.resolve() for path in root.iterdir() if path.is_file()}
+    try:
+        stale_paths = update_archive_classification(
+            db,
+            record,
+            artifact,
+            expected_version=expected_version,
+            changes=changes,
+        )
+        db.query(ImportInputGroup).filter(ImportInputGroup.import_id == record.id).delete(synchronize_session=False)
+        db.query(ImportStructureFamily).filter(ImportStructureFamily.import_id == record.id).delete(synchronize_session=False)
+        db.flush()
+        db.expire(record, ["input_groups", "structure_families", "artifacts"])
+        _build_initial_groups(db, record)
+        _refresh_source_fingerprint(record)
+        analyze_session(db, record)
+        return stale_paths
+    except Exception:
+        after_paths = {path.resolve() for path in root.iterdir() if path.is_file()}
+        remove_source_paths([path for path in after_paths - before_paths])
+        restore_archive_catalog(record.id, artifact.id, previous_catalog)
+        raise
+
+
 def replace_session_artifact(
     db: Session,
     record: ImportRecord,
@@ -395,13 +466,13 @@ def replace_session_artifact(
     *,
     filename: str,
     content: bytes,
-) -> tuple[Path, Path]:
+) -> tuple[list[Path], Path]:
     _require_session_state(record, RECOVERABLE_SESSION_STATES)
     settings = get_settings()
     max_bytes = settings.max_import_file_size_mb * 1024 * 1024
     total_limit = settings.max_adaptive_import_total_mb * 1024 * 1024
     extension = _extension(filename)
-    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm"}:
+    if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm", ".zip"}:
         raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
     if not content:
         raise AdaptiveImportError("FILE_EMPTY", f"{filename} is empty.", layer="file")
@@ -416,6 +487,13 @@ def replace_session_artifact(
         )
 
     old_path = _source_path(record, artifact)
+    was_archive = artifact.source_type == ARCHIVE_SOURCE_TYPE
+    old_derived = [
+        item
+        for item in record.artifacts
+        if item.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
+        and str((item.parsed_summary or {}).get("archive_artifact_id")) == str(artifact.id)
+    ]
     stored = save_import_file(record.id, filename, content)
     new_path = _session_root(record.id) / stored.safe_filename
     try:
@@ -423,33 +501,51 @@ def replace_session_artifact(
         artifact.safe_filename = stored.safe_filename
         artifact.sha256 = hashlib.sha256(content).hexdigest()
         artifact.byte_size = len(content)
-        artifact.mime_guess = "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain"
+        artifact.mime_guess = "application/zip" if extension == ".zip" else "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain"
         artifact.file_extension = extension
         artifact.raw_storage_uri = stored.raw_storage_uri
-        artifact.parsed_summary = {}
+        # Preserve the revision across ZIP -> text -> ZIP replacement too.
+        # Member UUIDs intentionally keep their path identity, but an old
+        # classification must never be accepted against replacement bytes.
+        artifact.parsed_summary = {
+            "classification_version": int((artifact.parsed_summary or {}).get("classification_version") or 0),
+        }
+        artifact.source_type = ARCHIVE_SOURCE_TYPE if extension == ".zip" else "adaptive_source"
         record.total_bytes = projected_total
 
-        artifacts_by_id = {str(item.id): item for item in record.artifacts}
-        for group in record.input_groups:
-            if str(artifact.id) not in group.artifact_ids:
-                continue
-            group_artifacts = [artifacts_by_id[item_id] for item_id in group.artifact_ids if item_id in artifacts_by_id]
-            mode = _mode_for_artifacts(group_artifacts)
-            group.mode = mode or "UNKNOWN"
-            group.display_name = " + ".join(item.filename for item in group_artifacts)
-            group.grouping_status = "RESOLVED" if mode else "AMBIGUOUS"
-            group.profile_resolution = {}
-            group.diagnostics = [] if mode else [{
-                "code": "GROUP_AMBIGUOUS",
-                "layer": "grouping",
-                "blocking": True,
-                "message": "This replacement no longer forms one JSON/Markdown conversation group.",
-                "action": "open_group_resolver",
-                "group_id": str(group.id),
-            }]
+        stale_paths: list[Path] = [old_path, *[_source_path(record, item) for item in old_derived]]
+        if was_archive or extension == ".zip":
+            db.query(ImportInputGroup).filter(ImportInputGroup.import_id == record.id).delete(synchronize_session=False)
+            db.query(ImportStructureFamily).filter(ImportStructureFamily.import_id == record.id).delete(synchronize_session=False)
+            for item in old_derived:
+                db.delete(item)
+            db.flush()
+            db.expire(record, ["input_groups", "structure_families", "artifacts"])
+            if extension == ".zip":
+                stale_paths.extend(prepare_archive_sources(db, record))
+            _build_initial_groups(db, record)
+        else:
+            artifacts_by_id = {str(item.id): item for item in record.artifacts}
+            for group in record.input_groups:
+                if str(artifact.id) not in group.artifact_ids:
+                    continue
+                group_artifacts = [artifacts_by_id[item_id] for item_id in group.artifact_ids if item_id in artifacts_by_id]
+                mode = _mode_for_artifacts(group_artifacts)
+                group.mode = mode or "UNKNOWN"
+                group.display_name = " + ".join(item.filename for item in group_artifacts)
+                group.grouping_status = "RESOLVED" if mode else "AMBIGUOUS"
+                group.profile_resolution = {}
+                group.diagnostics = [] if mode else [{
+                    "code": "GROUP_AMBIGUOUS",
+                    "layer": "grouping",
+                    "blocking": True,
+                    "message": "This replacement no longer forms one JSON/Markdown conversation group.",
+                    "action": "open_group_resolver",
+                    "group_id": str(group.id),
+                }]
         _refresh_source_fingerprint(record)
         analyze_session(db, record)
-        return old_path, new_path
+        return stale_paths, new_path
     except Exception:
         _remove_source_path(new_path)
         raise
@@ -472,6 +568,13 @@ def remove_input_group(db: Session, record: ImportRecord, group: ImportInputGrou
             layer="grouping",
         )
     artifacts = [item for item in record.artifacts if str(item.id) in artifact_ids]
+    if any(item.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE for item in artifacts):
+        raise AdaptiveImportError(
+            "ARCHIVE_CLASSIFICATION_REQUIRED",
+            "Change included conversations from the ZIP contents preview instead of deleting its generated group.",
+            layer="archive",
+            action="review_archive",
+        )
     paths = [_source_path(record, item) for item in artifacts]
     record.file_count -= len(artifacts)
     record.total_bytes -= sum(item.byte_size for item in artifacts)
@@ -586,6 +689,16 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "conversation_count": int((record.draft_summary or {}).get("conversation_count") or 0),
         "message_count": int((record.draft_summary or {}).get("message_count") or 0),
         "can_import": record.session_state == "READY" and bool(record.draft_storage_uri),
+        "archives": [
+            {
+                "artifact_id": str(artifact.id),
+                "filename": artifact.filename,
+                "byte_size": artifact.byte_size,
+                **(artifact.parsed_summary or {}),
+            }
+            for artifact in sorted(record.artifacts, key=lambda item: (item.filename.casefold(), str(item.id)))
+            if artifact.source_type == ARCHIVE_SOURCE_TYPE
+        ],
         "groups": [
             {
                 "id": str(group.id), "mode": group.mode, "display_name": group.display_name,
@@ -718,7 +831,7 @@ def _canceled_session_transaction_ended(db: Session, transaction) -> None:
 
 
 def _build_initial_groups(db: Session, record: ImportRecord) -> None:
-    artifacts = list(record.artifacts)
+    artifacts = _groupable_artifacts(record)
     json_artifacts = [item for item in artifacts if (item.file_extension or "").casefold() in {".json", ".jsonl", ".gz"}]
     markdown_artifacts = [item for item in artifacts if (item.file_extension or "").casefold() in {".md", ".markdown"}]
     if len(artifacts) == 2 and len(json_artifacts) == 1 and len(markdown_artifacts) == 1:
@@ -900,20 +1013,20 @@ def _prepare_plan(db: Session, record: ImportRecord) -> None:
 
     def iter_drafts():
         for family in record.structure_families:
-            if family.matched_profile_key:
-                draft_groups = (
-                    normalize_builtin(family.matched_profile_key, _group_documents(record, group))
-                    for group in family.groups
+            revision = (
+                db.get(ImportProfileRevision, family.matched_revision_id)
+                if not family.matched_profile_key and family.matched_revision_id
+                else None
+            )
+            mapping = revision.mapping_spec if revision else family.mapping_draft
+            for group in family.groups:
+                documents = _group_documents(record, group)
+                drafts = (
+                    normalize_builtin(family.matched_profile_key, documents)
+                    if family.matched_profile_key
+                    else normalize_group(documents, mapping, family.display_name)
                 )
-            else:
-                revision = db.get(ImportProfileRevision, family.matched_revision_id) if family.matched_revision_id else None
-                mapping = revision.mapping_spec if revision else family.mapping_draft
-                draft_groups = (
-                    normalize_group(_group_documents(record, group), mapping, family.display_name)
-                    for group in family.groups
-                )
-
-            for drafts in draft_groups:
+                drafts = _enrich_archive_drafts(record, group, drafts)
                 # A group contains one file or one JSON/Markdown pair (a file
                 # can itself contain several conversations). Validate and
                 # write it before loading the next group, rather than retaining
@@ -1045,7 +1158,147 @@ def _clear_import_plan(record: ImportRecord) -> None:
 
 
 def _refresh_source_fingerprint(record: ImportRecord) -> None:
-    record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
+    record.source_fingerprint = ",".join(
+        sorted(
+            artifact.sha256
+            for artifact in record.artifacts
+            if artifact.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE
+        )
+    )
+
+
+def _groupable_artifacts(record: ImportRecord) -> list[SourceArtifact]:
+    return [
+        artifact
+        for artifact in record.artifacts
+        if artifact.source_type != ARCHIVE_SOURCE_TYPE
+    ]
+
+
+def _family_is_dedicated_archive(
+    record: ImportRecord,
+    groups: list[ImportInputGroup],
+) -> bool:
+    artifacts = {str(item.id): item for item in record.artifacts}
+    if not groups:
+        return False
+    for group in groups:
+        group_artifacts = [artifacts.get(str(item)) for item in group.artifact_ids]
+        if len(group_artifacts) != 1 or group_artifacts[0] is None:
+            return False
+        artifact = group_artifacts[0]
+        if (
+            artifact.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE
+            or (artifact.parsed_summary or {}).get("archive_kind") != "conversation_export"
+        ):
+            return False
+    return True
+
+
+def _enrich_archive_drafts(
+    record: ImportRecord,
+    group: ImportInputGroup,
+    drafts: list[CanonicalDraftConversation],
+) -> list[CanonicalDraftConversation]:
+    artifacts = {str(item.id): item for item in record.artifacts}
+    source = next(
+        (
+            artifacts.get(str(artifact_id))
+            for artifact_id in group.artifact_ids
+            if artifacts.get(str(artifact_id)) is not None
+            and artifacts[str(artifact_id)].source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
+        ),
+        None,
+    )
+    if source is None:
+        return drafts
+
+    result: list[CanonicalDraftConversation] = []
+    for draft_index, draft in enumerate(drafts):
+        attachment_records = archive_enrichment_for_artifact(record, source)
+        messages: list[CanonicalDraftMessage] = []
+        refs: list[dict[str, Any]] = []
+        member_id = str((source.parsed_summary or {}).get("archive_member_id") or source.id)
+        owned_ids = {str(item["id"]) for item in attachment_records}
+        for message_index, message in enumerate(draft.messages):
+            source_message_id = message.source_message_id or f"archive:{member_id}:message:{message_index + 1}"
+            source_version_id = message.source_current_version_id or f"{source_message_id}:version:1"
+            messages.append(replace(
+                message,
+                source_message_id=source_message_id,
+                source_current_version_id=source_version_id,
+            ))
+            blocks = build_basic_render_blocks(message.display_text)
+            per_block_counts: dict[tuple[int, str], int] = defaultdict(int)
+            block_occurrences: list[tuple[int, str, bool]] = []
+            for block_index, block in enumerate(blocks):
+                if block.block_type == "code":
+                    continue
+                block_attachment_id = str(block.data.get("attachmentId") or "")
+                if block_attachment_id in owned_ids:
+                    block_occurrences.append((block_index, block_attachment_id, block.block_type == "image"))
+                    continue
+                block_text = str(block.data.get("text") or block.data.get("title") or "")
+                for reference in archive_reference_matches(block_text):
+                    target = reference.group("target")
+                    source_id = target.removeprefix("cr-asset://")
+                    if target == source_id or source_id not in owned_ids:
+                        continue
+                    image = reference.group("prefix").startswith("![") or reference.group("prefix").lower().startswith("src")
+                    block_occurrences.append((block_index, source_id, image))
+            for display_order, (block_index, attachment_source_id, image) in enumerate(block_occurrences):
+                key = (block_index if block_index is not None else -1, attachment_source_id)
+                occurrence_index = per_block_counts[key]
+                per_block_counts[key] += 1
+                refs.append({
+                    "record_type": "attachment_ref",
+                    "attachment_id": attachment_source_id,
+                    "message_id": source_message_id,
+                    "message_version_id": source_version_id,
+                    "occurrence_key": f"{member_id}:{message_index}:{block_index}:{attachment_source_id}:{occurrence_index}",
+                    "placement": "inline",
+                    "relation_type": "inline" if image else "file",
+                    "display_order": display_order,
+                    "block_index": block_index,
+                    "display_mode": "inline" if image else "card",
+                })
+        warnings = list(draft.warnings)
+        archive_id = (source.parsed_summary or {}).get("archive_artifact_id")
+        if archive_id:
+            catalog = archive_catalog(record, uuid.UUID(str(archive_id)))
+            warnings.extend(
+                str(item.get("message"))
+                for item in catalog.get("issues") or []
+                if isinstance(item, dict)
+                and str(item.get("severity") or "").casefold() == "warning"
+                and item.get("message")
+            )
+        result.append(replace(
+            draft,
+            source_type="adaptive_archive",
+            source_profile="conversation-zip-markdown-v1",
+            messages=messages,
+            warnings=warnings,
+            attachments=[*draft.attachments, *attachment_records, *refs],
+            source_refs=[
+                *draft.source_refs,
+                *[
+                    {
+                        "message_id": message.source_message_id,
+                        "source_message_id": message.source_message_id,
+                        "source_index": index,
+                        "source_type": "adaptive_archive",
+                        "source_profile": "conversation-zip-markdown-v1",
+                        "source_metadata": {
+                            "archive_member_id": member_id,
+                            "conversation_index": draft_index,
+                        },
+                    }
+                    for index, message in enumerate(messages)
+                ],
+            ],
+        ))
+    return result
 
 
 def _session_root(import_id: uuid.UUID) -> Path:

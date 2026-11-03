@@ -1,5 +1,66 @@
 # PWA and Offline Resilience Contract
 
+## Reader attachment projections — 2026-11-03 source candidate, not released
+
+Offline search and locator resolution read canonical block text/coordinates
+without fetching media blobs or creating object URLs. A paged block read slices
+its requested page before hydrating attachment occurrences; it deduplicates
+attachment IDs within that projection and does not write hydrated URLs back
+into Dexie. Complete-turn Reader semantics, account/access fences, v1/v2/v3
+package reads and Dexie v2 remain unchanged. Source regressions are recorded
+in the [completion audit](../execution/ux-audit-reader-zip-completion-2026-11-03.md);
+browser/PWA and real-device performance acceptance remain user-owned.
+
+## Large offline refreshes — 2026-11-01 baseline locally verified; source follow-up pending user validation
+
+An all/project refresh freezes its changed conversation IDs and processes one
+conversation package at a time. Each child uses a persisted idempotency key;
+after a child package passes existing integrity/schema/quota checks and commits
+through the existing atomic import transaction, the parent cursor and known
+revision advance. Resume continues at that cursor. A crash after the child
+commit but before cursor persistence may safely re-import that same child;
+it does not mark the remaining conversations complete. This is per-conversation
+atomicity and resumability, not rollback of the entire multi-conversation batch.
+Old full-package records are converted on new-download reuse, direct retry,
+or active-record resume; any
+possibly admitted legacy server task retains a separate cancellation intent
+under its old idempotency key.
+
+An unavailable target is not an ordinary retryable error. The generic retry
+action remains disabled, while the explicit scope-review action is allowed to
+continue only after its confirmed target list still matches a fresh catalog
+plan. Confirmation then creates a fresh resumable child list and idempotency
+receipts from the current plan while retaining already committed local copies.
+This prevents a review button from silently skipping a deleted or inaccessible
+conversation, or from re-queuing a newly included target without a receipt.
+Account ownership is rechecked across catalog reads and the confirmation
+dialog. If the reviewed plan becomes empty or changes before admission, the
+action reports that outcome explicitly; it does not mark unavailable targets
+complete or discard existing local copies.
+An already-empty review stops before displaying confirmation: no currently
+available conversation needs updating. It does not imply that every original
+target remains available, and does not restart or mark the old batch complete.
+
+Before buffering or expanding a child archive, the browser enforces current
+limits of 512 MiB compressed, 256 MiB per ZIP entry and 512 MiB total expanded.
+Over-limit packages receive terminal `CAPACITY`, preserve the previous local
+copy and do not offer a futile retry/rebuild. The existing v1/v2/v3 package
+readers, Dexie v2 and per-conversation import transaction remain in place.
+These fixed budgets bound allocations but do not constitute streaming import
+or prove safe processing of every unusually large single conversation; a
+chunked/versioned protocol remains future work if such a child exceeds limits.
+
+The PWA regressions cover 47 small synthetic child packages, mid-batch network
+retry with committed progress retained, three legacy-record recovery entrances,
+an actual JSON larger than the observed production maximum conversation,
+oversized-response/entry rejection and mismatched-child protection. The large
+synthetic case imports 18 messages and 18 blocks through real browser
+decompression, JSON parsing and IndexedDB writes. The original production
+archive and real attachment/Reader behavior are not replayed. Local browser
+verification passed all 28 PWA negative cases with headless Edge; CI and
+deployment acceptance are pending. See
+[`OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md`](../execution/OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md).
+
 ## Account tag snapshots — 2026-10-30 released in 127eae5
 
 New v3 packages may contain optional conversation `tags: string[]`. They are

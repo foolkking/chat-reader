@@ -1,9 +1,10 @@
-import { offlineGenerationFailureCode, offlineFailureNeedsRebuild } from "./offline-download-errors";
+import { offlineFailureCanRetry, offlineGenerationFailureCode, offlineFailureNeedsRebuild } from "./offline-download-errors";
 export { offlineDownloadFailureMessage } from "./offline-download-errors";
 import { ApiRequestError, cancelTask, getOfflineCatalog, getTask, queueOfflinePackage } from "./api";
 import { liveQuery } from "dexie";
 import { assertOfflineAccess, captureOfflineAccess, notifyAuthenticationFailure, authenticationGeneration } from "./offline-access";
 import { importOfflinePackage, inspectOfflineCopyAssets, offlineDb, OfflinePackageImportError } from "./offline-db";
+import { planOfflineConversationDownloads } from "./offline-download-plan";
 
 export type OfflineAssetMode = "none" | "small" | "all";
 export type OfflineDownload = {
@@ -15,6 +16,10 @@ export type OfflineDownload = {
   admissionStarted?: boolean;
   attemptRevision?: number;
   serverCancellation?: "pending" | "failed";
+  targetConversationIds?: string[];
+  conversationIdempotencyKeys?: Record<string, string>;
+  currentConversationId?: string;
+  conversationCursor?: number;
 };
 export const OFFLINE_DOWNLOAD_CHANGED_EVENT = "chat-reader:offline-downloads";
 const PREFIX = "offline-download:";
@@ -44,22 +49,78 @@ export async function enqueueOfflineDownload(input: { scope: OfflineDownload["sc
   const catalog = await getOfflineCatalog();
   const knownRevisions = await usableOfflineRevisions(input.assetMode);
   assertOfflineAccess(access);
+  const targetConversationIds = planOfflineConversationDownloads(catalog, input.scope, input.scopeId, knownRevisions);
   const label = input.scope === "conversation" ? catalog.conversations.find((item) => item.id === input.scopeId)?.display_title
     : input.scope === "project" ? catalog.projects.find((item) => item.id === input.scopeId)?.name : "";
   const result = await db.transaction("rw", db.settings, async () => {
     const existing = (await listOfflineDownloads(db)).find((item) => (ACTIVE.has(item.state) || item.state === "failed" && ["NETWORK", "DOWNLOAD"].includes(item.error ?? "")) && !item.cancelRequested && item.scope === input.scope && item.scopeId === input.scopeId && item.assetMode === input.assetMode);
     if (existing) {
-      if (existing.state === "failed") { existing.state = "queued"; existing.error = null; existing.attemptRevision = (existing.attemptRevision ?? 0) + 1; await db.settings.put({ key: PREFIX + existing.id, value: existing }); }
+      if (existing.state === "failed") {
+        if (existing.targetConversationIds === undefined) {
+          return partitionLegacyDownload(db, existing, targetConversationIds, knownRevisions);
+        }
+        return patch(db, existing.id, { state: "queued", error: null, attemptRevision: (existing.attemptRevision ?? 0) + 1 });
+      }
       return existing;
     }
     const now = new Date().toISOString();
     const record: OfflineDownload = { ...input, label: label ?? "", id: crypto.randomUUID(), idempotencyKey: crypto.randomUUID(),
-      state: "queued", progress: 0, jobId: null, packageId: null, knownRevisions, cancelRequested: false, error: null, createdAt: now, updatedAt: now };
+      state: "queued", progress: 0, jobId: null, packageId: null, knownRevisions, cancelRequested: false, error: null,
+      targetConversationIds, conversationIdempotencyKeys: Object.fromEntries(targetConversationIds.map(id => [id, crypto.randomUUID()])),
+      conversationCursor: 0, createdAt: now, updatedAt: now };
     await db.settings.put({ key: PREFIX + record.id, value: record });
     return record;
   });
   changed();
   return result;
+}
+
+export async function inspectOfflineDownloadRetryScope(id: string): Promise<{
+  targetConversationIds: string[];
+  previousTargetCount: number;
+  currentScopeCount: number;
+  unavailableCount: number;
+  newlyIncludedCount: number;
+}> {
+  const access = captureOfflineAccess(), db = offlineDb;
+  const record = (await db.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
+  if (!record || record.error !== "UNAVAILABLE_TARGET" || record.targetConversationIds === undefined) {
+    throw new Error("OFFLINE_RETRY_REVIEW_UNAVAILABLE");
+  }
+  const catalog = await getOfflineCatalog();
+  const knownRevisions = await usableOfflineRevisions(record.assetMode);
+  assertOfflineAccess(access);
+  const currentScopeIds = catalogScopeConversationIds(catalog, record.scope, record.scopeId);
+  const originalIds = new Set(record.targetConversationIds);
+  const targetConversationIds = planOfflineConversationDownloads(catalog, record.scope, record.scopeId, knownRevisions);
+  return {
+    targetConversationIds,
+    previousTargetCount: record.targetConversationIds.length,
+    currentScopeCount: currentScopeIds.length,
+    unavailableCount: record.targetConversationIds.filter(conversationId => !currentScopeIds.includes(conversationId)).length,
+    newlyIncludedCount: currentScopeIds.filter(conversationId => !originalIds.has(conversationId)).length,
+  };
+}
+
+export async function retryOfflineDownloadWithReview(
+  id: string,
+  confirmScope: (review: Awaited<ReturnType<typeof inspectOfflineDownloadRetryScope>>) => Promise<boolean>,
+): Promise<void> {
+  const access = captureOfflineAccess();
+  const record = (await offlineDb.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
+  assertOfflineAccess(access);
+  if (record?.error !== "UNAVAILABLE_TARGET") {
+    await retryOfflineDownload(id);
+    return;
+  }
+  const review = await inspectOfflineDownloadRetryScope(id);
+  assertOfflineAccess(access);
+  // There is nothing to authorize: do not ask for a confirmation that can
+  // only fail, and do not reset the previous batch or its usable copies.
+  if (!review.targetConversationIds.length) throw new Error("OFFLINE_TARGET_SCOPE_EMPTY");
+  if (!await confirmScope(review)) return;
+  assertOfflineAccess(access);
+  await retryOfflineDownload(id, { confirmedTargetIds: review.targetConversationIds });
 }
 
 export async function cancelOfflineDownload(id: string): Promise<void> {
@@ -72,16 +133,52 @@ export async function cancelOfflineDownload(id: string): Promise<void> {
   changed();
 }
 
-export async function retryOfflineDownload(id: string): Promise<void> {
-  const db = offlineDb, record = (await db.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
-  if (!record || !["failed", "cancelled"].includes(record.state)) return;
-  const rebuild = record.state === "cancelled" || offlineFailureNeedsRebuild(record.error);
+export async function retryOfflineDownload(
+  id: string,
+  options: { confirmedTargetIds?: string[] } = {},
+): Promise<void> {
+  const access = captureOfflineAccess(), db = offlineDb, record = (await db.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
+  const needsTargetReview = record?.error === "UNAVAILABLE_TARGET";
+  if (!record || !["failed", "cancelled"].includes(record.state)
+    || record.targetConversationIds !== undefined && !offlineFailureCanRetry(record.error) && !needsTargetReview) return;
+  const legacy = record.targetConversationIds === undefined;
+  if (needsTargetReview && !options.confirmedTargetIds) return;
+  const catalog = legacy || needsTargetReview ? await getOfflineCatalog() : undefined;
+  const rebuild = legacy || needsTargetReview || record.state === "cancelled" || offlineFailureNeedsRebuild(record.error);
   const knownRevisions = rebuild ? await usableOfflineRevisions(record.assetMode) : record.knownRevisions;
+  assertOfflineAccess(access);
+  const targetConversationIds = needsTargetReview && catalog
+    ? planOfflineConversationDownloads(catalog, record.scope, record.scopeId, knownRevisions)
+    : record.targetConversationIds ?? [];
+  if (needsTargetReview && targetConversationIds.length === 0) {
+    throw new Error("OFFLINE_TARGET_SCOPE_EMPTY");
+  }
+  const conversationIdempotencyKeys = rebuild
+    ? Object.fromEntries(targetConversationIds.map(conversationId => [conversationId, crypto.randomUUID()]))
+    : record.conversationIdempotencyKeys;
   await db.transaction("rw", db.settings, async () => {
     const current = (await db.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
     if (!current || !["failed", "cancelled"].includes(current.state) || current.idempotencyKey !== record.idempotencyKey || (current.attemptRevision ?? 0) !== (record.attemptRevision ?? 0)) return;
+    if (catalog && current.targetConversationIds === undefined) {
+      await partitionLegacyDownload(db, current,
+        planOfflineConversationDownloads(catalog, current.scope, current.scopeId, knownRevisions), knownRevisions);
+      return;
+    }
+    if (needsTargetReview) {
+      const latestPlan = planOfflineConversationDownloads(
+        catalog!,
+        current.scope,
+        current.scopeId,
+        knownRevisions,
+      );
+      if (JSON.stringify(latestPlan) !== JSON.stringify(options.confirmedTargetIds)) {
+        throw new Error("OFFLINE_TARGET_SCOPE_CHANGED");
+      }
+    }
     await patch(db, id, { state: "queued", progress: 0, error: null, cancelRequested: false, attemptRevision: (current.attemptRevision ?? 0) + 1,
-      ...(rebuild ? { jobId: null, packageId: null, admissionStarted: false, idempotencyKey: crypto.randomUUID(), knownRevisions } : {}) });
+      ...(rebuild ? { jobId: null, packageId: null, admissionStarted: false, currentConversationId: undefined,
+        idempotencyKey: crypto.randomUUID(), conversationIdempotencyKeys, knownRevisions,
+        targetConversationIds, conversationCursor: 0 } : {}) });
   });
   changed();
 }
@@ -139,43 +236,143 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
   };
   try {
     await check();
-    if (record.packageId && await db.packages.get(record.packageId)) {
-      await patch(db, record.id, { state: "completed", progress: 100 });
-      return;
-    }
-    if (!record.jobId) {
-      record = await patch(db, record.id, { admissionStarted: true });
-      const queued = await queueOfflinePackage(packageInput(record), record.idempotencyKey, requestSignal(signal));
-      assertOfflineAccess(access);
-      record = await patch(db, record.id, { jobId: queued.job_id, packageId: queued.package_id, state: "generating", progress: 1 });
-    }
-    while (true) {
-      await check();
-      const task = await getTask(record.jobId!, requestSignal(signal));
-      await check();
-      if (task.status === "cancelled") { await patch(db, record.id, { state: "cancelled" }); return; }
-      if (task.status === "failed") throw new DownloadFailure(offlineGenerationFailureCode(task.error_message));
-      if (task.status === "committed") {
-        const packageId = String(task.result.package_id ?? record.packageId);
-        await patch(db, record.id, { packageId, state: "downloading", progress: 90 });
-        const generation = authenticationGeneration();
-        const response = await fetch(`/api/offline/packages/${encodeURIComponent(packageId)}/download`, { credentials: "same-origin", cache: "no-store", signal });
-        if (response.status === 401) notifyAuthenticationFailure(generation);
-        if (response.status === 404) throw new DownloadFailure("GONE");
-        if (!response.ok) throw new DownloadFailure("NETWORK");
-        await check();
-        await importOfflinePackage(packageId, response, { signal, onWriting: () => { void patch(db, record.id, { state: "writing", progress: 95 }).catch(() => undefined); } });
-        // A committed package wins a cancellation arriving after its commit.
-        await patch(db, record.id, { state: "completed", progress: 100, error: null });
+    if (record.targetConversationIds === undefined) {
+      if (record.packageId && await db.packages.get(record.packageId)) {
+        await patch(db, record.id, { state: "completed", progress: 100 });
         return;
       }
-      await patch(db, record.id, { state: "generating", progress: Math.min(89, Math.max(1, task.progress * 0.89)) });
-      await pause(signal);
+      const catalog = await getOfflineCatalog();
+      const knownRevisions = await usableOfflineRevisions(record.assetMode);
+      await check();
+      record = await db.transaction("rw", db.settings, async () => {
+        const current = (await db.settings.get(PREFIX + record.id))?.value as OfflineDownload;
+        if (current.cancelRequested) throw new DOMException("Cancelled", "AbortError");
+        return partitionLegacyDownload(db, current,
+          planOfflineConversationDownloads(catalog, current.scope, current.scopeId, knownRevisions), knownRevisions);
+      });
+    }
+    if (record.targetConversationIds) {
+      const targetConversationIds = record.targetConversationIds;
+      const catalog = await getOfflineCatalog();
+      await check();
+      const catalogById = new Map(catalog.conversations.map(conversation => [conversation.id, conversation]));
+      const total = targetConversationIds.length;
+      const savedCursor = record.conversationCursor ?? 0;
+      let cursor = Number.isSafeInteger(savedCursor) ? Math.max(0, Math.min(savedCursor, total)) : 0;
+      while (cursor < total) {
+        await check();
+        const conversationId = targetConversationIds[cursor];
+        const catalogConversation = catalogById.get(conversationId);
+        if (!catalogConversation) throw new DownloadFailure("UNAVAILABLE_TARGET");
+        if (record.knownRevisions[conversationId] === catalogConversation.revision) {
+          cursor += 1;
+          record = await patch(db, record.id, {
+            conversationCursor: cursor,
+            progress: Math.floor(cursor / Math.max(total, 1) * 100),
+            ...(record.currentConversationId === conversationId
+              ? { jobId: null, packageId: null, currentConversationId: undefined, admissionStarted: false }
+              : {}),
+          });
+          continue;
+        }
+
+        if (record.currentConversationId && record.currentConversationId !== conversationId) {
+          throw new OfflinePackageImportError("STORAGE_WRITE", "Offline download continuation did not match its pending conversation.");
+        }
+        const childIdempotencyKey = record.conversationIdempotencyKeys?.[conversationId];
+        if (!childIdempotencyKey) {
+          throw new OfflinePackageImportError("STORAGE_WRITE", "Offline download continuation is missing its retry receipt.");
+        }
+        if (!record.currentConversationId) {
+          record = await patch(db, record.id, { currentConversationId: conversationId, admissionStarted: true });
+        }
+        if (!record.jobId) {
+          let queued: Awaited<ReturnType<typeof queueOfflinePackage>>;
+          try {
+            queued = await queueOfflinePackage({
+              scope: "conversation",
+              conversation_id: conversationId,
+              include_assets: record.assetMode,
+              known_revisions: record.knownRevisions[conversationId] === undefined
+                ? {}
+                : { [conversationId]: record.knownRevisions[conversationId] },
+            }, childIdempotencyKey, requestSignal(signal));
+          } catch (error) {
+            if (error instanceof ApiRequestError && [403, 404].includes(error.status)) {
+              throw new DownloadFailure("UNAVAILABLE_TARGET");
+            }
+            throw error;
+          }
+          assertOfflineAccess(access);
+          record = await patch(db, record.id, {
+            jobId: queued.job_id,
+            packageId: queued.package_id,
+            state: "generating",
+          });
+        }
+
+        while (true) {
+          await check();
+          const task = await getTask(record.jobId!, requestSignal(signal));
+          await check();
+          if (task.status === "cancelled") {
+            await patch(db, record.id, { state: "cancelled" });
+            return;
+          }
+          if (task.status === "failed") throw new DownloadFailure(offlineGenerationFailureCode(task.error_message));
+          const partProgress = task.status === "committed" ? 0.95 : Math.min(0.9, Math.max(0, task.progress / 100 * 0.9));
+          const overallProgress = Math.min(99, Math.floor((cursor + partProgress) / Math.max(total, 1) * 100));
+          if (task.status === "committed") {
+            const packageId = String(task.result.package_id ?? record.packageId);
+            record = await patch(db, record.id, { packageId, state: "downloading", progress: overallProgress });
+            const generation = authenticationGeneration();
+            const response = await fetch(`/api/offline/packages/${encodeURIComponent(packageId)}/download`, {
+              credentials: "same-origin", cache: "no-store", signal,
+            });
+            if (response.status === 401) notifyAuthenticationFailure(generation);
+            if ([403, 404].includes(response.status)) throw new DownloadFailure("EXPIRED_ARTIFACT");
+            if (!response.ok) throw new DownloadFailure("NETWORK");
+            await check();
+            await importOfflinePackage(packageId, response, {
+              signal,
+              expectedConversationId: conversationId,
+              onWriting: async () => {
+                const writingProgress = Math.min(99, Math.floor((cursor + 0.98) / Math.max(total, 1) * 100));
+                record = await patch(db, record.id, { state: "writing", progress: writingProgress });
+              },
+            });
+            const importedConversation = await db.conversations.get(conversationId);
+            const knownRevisions = importedConversation
+              ? { ...record.knownRevisions, [conversationId]: importedConversation.offline_revision }
+              : record.knownRevisions;
+            cursor += 1;
+            record = await patch(db, record.id, {
+              knownRevisions,
+              conversationCursor: cursor,
+              jobId: null,
+              packageId: null,
+              currentConversationId: undefined,
+              admissionStarted: false,
+              state: "downloading",
+              progress: Math.floor(cursor / Math.max(total, 1) * 100),
+            });
+            break;
+          }
+          record = await patch(db, record.id, { state: "generating", progress: overallProgress });
+          await pause(signal);
+        }
+      }
+      await patch(db, record.id, { state: "completed", progress: 100, error: null });
+      return;
     }
   } catch (error) {
     assertOfflineAccess(access);
     record = (await db.settings.get(PREFIX + record.id))?.value as OfflineDownload;
-    if (record.packageId && await db.packages.get(record.packageId)) await patch(db, record.id, { state: "completed", progress: 100, error: null });
+    const partitionedComplete = record.targetConversationIds !== undefined
+      && (record.conversationCursor ?? 0) >= record.targetConversationIds.length;
+    if (partitionedComplete || record.targetConversationIds === undefined && record.packageId && await db.packages.get(record.packageId)) {
+      await patch(db, record.id, { state: "completed", progress: 100, error: null });
+    }
     else if (record.cancelRequested) {
       // We still hold the browser writer lock: no import can publish after
       // this terminal state. Keep remote intent separate so a user retry cannot
@@ -189,15 +386,72 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
     } else if (parentSignal.aborted) {
       return; // Navigation/network loss retains resumable state.
     } else {
-      const code = error instanceof DownloadFailure ? error.code : error instanceof OfflinePackageImportError ? error.code : error instanceof ApiRequestError && error.status === 404 ? "GONE" : "NETWORK";
+      const code = error instanceof DownloadFailure ? error.code : error instanceof OfflinePackageImportError ? error.code : error instanceof ApiRequestError && error.status === 404 ? "EXPIRED_ARTIFACT" : "NETWORK";
       await patch(db, record.id, { state: "failed", error: code });
     }
   } finally { cancellation.unsubscribe(); controllers.delete(initial.id); changed(); }
 }
 
+async function partitionLegacyDownload(
+  db: typeof offlineDb,
+  record: OfflineDownload,
+  targetConversationIds: string[],
+  knownRevisions: Record<string, number>,
+): Promise<OfflineDownload> {
+  const remote = Boolean(record.jobId || record.admissionStarted);
+  if (remote) {
+    await db.settings.put({
+      key: CANCELLATION_PREFIX + record.idempotencyKey,
+      value: { download: record, attempts: 0, retryAt: 0 } satisfies PendingCancellation,
+    });
+  }
+  return patch(db, record.id, {
+    state: "queued", progress: 0, error: null, cancelRequested: false,
+    attemptRevision: (record.attemptRevision ?? 0) + 1,
+    idempotencyKey: crypto.randomUUID(), knownRevisions, targetConversationIds,
+    conversationIdempotencyKeys: Object.fromEntries(targetConversationIds.map(id => [id, crypto.randomUUID()])),
+    conversationCursor: 0, currentConversationId: undefined,
+    jobId: null, packageId: null, admissionStarted: false,
+    serverCancellation: record.serverCancellation === "failed" ? "failed" : remote ? "pending" : record.serverCancellation,
+  });
+}
+
+function catalogScopeConversationIds(
+  catalog: Awaited<ReturnType<typeof getOfflineCatalog>>,
+  scope: OfflineDownload["scope"],
+  scopeId: string | undefined,
+): string[] {
+  if (scope === "conversation") {
+    return scopeId && catalog.conversations.some(conversation => conversation.id === scopeId) ? [scopeId] : [];
+  }
+  if (scope === "project") {
+    const selected = new Set(catalog.projects.find(project => project.id === scopeId)?.conversation_ids ?? []);
+    return catalog.conversations.filter(conversation => selected.has(conversation.id)).map(conversation => conversation.id);
+  }
+  return catalog.conversations.map(conversation => conversation.id);
+}
+
 function packageInput(record: OfflineDownload) {
   return { scope: record.scope, conversation_id: record.scope === "conversation" ? record.scopeId : undefined,
     project_id: record.scope === "project" ? record.scopeId : undefined, include_assets: record.assetMode, known_revisions: record.knownRevisions };
+}
+
+function activePackageAdmission(record: OfflineDownload): { input: ReturnType<typeof packageInput>; idempotencyKey: string } {
+  const conversationId = record.currentConversationId;
+  const childKey = conversationId ? record.conversationIdempotencyKeys?.[conversationId] : undefined;
+  if (!conversationId || !childKey) return { input: packageInput(record), idempotencyKey: record.idempotencyKey };
+  return {
+    input: {
+      scope: "conversation",
+      conversation_id: conversationId,
+      project_id: undefined,
+      include_assets: record.assetMode,
+      known_revisions: record.knownRevisions[conversationId] === undefined
+        ? {}
+        : { [conversationId]: record.knownRevisions[conversationId] },
+    },
+    idempotencyKey: childKey,
+  };
 }
 
 function requestSignal(signal: AbortSignal) { return AbortSignal.any([signal, AbortSignal.timeout(15_000)]); }
@@ -211,7 +465,8 @@ async function resumeServerCancellation(db: typeof offlineDb, access: number, si
     assertOfflineAccess(access);
     // Reuse the original admission key, never the key of a later retry.
     if (!pending.download.jobId) {
-      const queued = await queueOfflinePackage(packageInput(pending.download), pending.download.idempotencyKey, requestSignal(signal));
+      const admission = activePackageAdmission(pending.download);
+      const queued = await queueOfflinePackage(admission.input, admission.idempotencyKey, requestSignal(signal));
       assertOfflineAccess(access);
       pending.download.jobId = queued.job_id;
       await db.settings.put({ key: row.key, value: pending });
@@ -270,6 +525,19 @@ async function patch(db: typeof offlineDb, id: string, changes: Partial<OfflineD
   });
 }
 function changed() { window.dispatchEvent(new Event(OFFLINE_DOWNLOAD_CHANGED_EVENT)); }
+
+// The negative-matrix browser suite drives the same persistent queue and
+// admission path as the UI; this seam is absent from normal production builds.
+if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS === "1") {
+  if (window.__chatReaderPwaNegativeTest) {
+    Object.assign(window.__chatReaderPwaNegativeTest, {
+      enqueueOfflineDownload,
+      retryOfflineDownload,
+      resumeOfflineDownloads,
+    });
+  }
+}
+
 function pause(signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     const abort = () => { clearTimeout(timer); reject(new DOMException("Paused", "AbortError")); };

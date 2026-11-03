@@ -120,6 +120,25 @@ export function useFeatureEntryRecovery<T>(collection: UserFeatureCollection, zh
     errorText: (error: unknown) => error instanceof ApiRequestError && error.status >= 400 && error.status < 500 && ![408, 409, 429].includes(error.status)
       ? (zh ? "请求已被拒绝；草稿仍保留，请检查输入或权限。" : "Request rejected. Your draft is retained; check the input or permissions.")
       : (zh ? "结果未确认；原请求已保留，请先只读核对。" : "Result unconfirmed. The original request is retained; check the current state first."),
+    // Compact controls can project the same recovery owner without mounting
+    // the editor-oriented request/value panel or creating a second write path.
+    phase: attempt?.phase ?? null,
+    pendingEntry: (attempt?.entry as UserFeatureEntry<T> | undefined) ?? null,
+    canRetryOriginalCreate: attempt?.phase === "absent" && attempt.kind === "save" && attempt.entry.revision === 0,
+    checkCurrentState: () => attempt && !waiting ? check(attempt) : Promise.resolve(),
+    acceptCheckedState: () => {
+      if (!attempt || !owns(attempt) || !["matches", "different", "absent"].includes(attempt.phase)) return;
+      if (attempt.phase === "matches") {
+        if (attempt.kind === "save" && attempt.current) onSaved(attempt.current as UserFeatureEntry<T>);
+        else if (attempt.kind === "remove") onRemoved(attempt.entry as UserFeatureEntry<T>);
+      } else {
+        onContinue(attempt.entry as UserFeatureEntry<T>, (attempt.current ?? null) as UserFeatureEntry<T> | null);
+      }
+      clear(attempt);
+    },
+    retryOriginalCreate: () => attempt?.phase === "absent" && attempt.kind === "save" && attempt.entry.revision === 0
+      ? send("save", attempt.entry as UserFeatureEntry<T>, attempt).then(() => undefined)
+      : Promise.resolve(),
     blocked: Boolean(attempt), panel,
   };
 }

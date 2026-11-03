@@ -416,6 +416,32 @@ def test_processing_cancel_only_updates_the_job_until_worker_acknowledges(client
     assert not path.exists()
 
 
+@pytest.mark.parametrize("operation", ["poll", "cancel", "commit"])
+def test_active_analysis_requests_do_not_acquire_the_workers_record_lock(client, monkeypatch, operation):
+    queued = queue(client, count=1)
+    claim(queued)
+    original_refresh = Session.refresh
+
+    def guard_refresh(db, instance, *args, **kwargs):
+        assert not (isinstance(instance, ImportRecord) and kwargs.get("with_for_update")), (
+            "Progress, cancellation and premature commit must not wait on the analysis worker."
+        )
+        return original_refresh(db, instance, *args, **kwargs)
+
+    monkeypatch.setattr(Session, "refresh", guard_refresh)
+    endpoint = f"/api/adaptive-import/sessions/{queued['import_id']}"
+    if operation == "poll":
+        response = client.get(endpoint)
+        assert response.status_code == 200
+        assert response.json()["state"] == "ANALYZING"
+    elif operation == "cancel":
+        assert client.delete(endpoint).status_code == 204
+    else:
+        response = client.post(f"/api/imports/{queued['import_id']}/commit")
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "SESSION_STATE_INVALID"
+
+
 def test_stale_recovery_requeues_analysis_and_exhaustion_does_not_leave_analyzing_forever(client):
     queued = queue(client)
     job_id, factory = claim(queued)

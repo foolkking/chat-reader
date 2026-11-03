@@ -3,7 +3,7 @@ import { releaseExportScope } from "../../lib/export-usage";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Bell, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitBranch, GitCompareArrows, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, Tag, X } from "lucide-react";
 import {
   ApiRequestError,
@@ -15,7 +15,7 @@ import {
 import { remoteReaderDataSource, type ReaderDataSource, type ReaderTargetContext } from "../../lib/reader-data-source";
 import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
 import { getCurrentOfflineRuntimeUserId } from "../../lib/auth-client";
-import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput, TocResponse } from "../../lib/types";
+import type { AttachmentRead, BackgroundTaskRead, ConversationDetail, DialogueIndexResponse, LoadedMessageWindow, MessageListItem, NavigateTarget, NavigationResult, ReadingPositionInput, ReaderUtilityPanel, RenderBlockRead, ScrollAnchorSnapshot, ScrollDirection, TocItem, TocRefreshInput, TocResponse } from "../../lib/types";
 import { ContinuationWorkspace } from "../exporting/continuation-workspace";
 import type { ContinuationViewState } from "../exporting/continuation-index";
 import { ExportPanel, type ExportPanelState } from "../exporting/export-panel";
@@ -26,6 +26,8 @@ import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc, resolveActiveHeadingId } from "../toc/conversation-toc";
 import { ResponsiveReaderFrame } from "../../components/responsive-reader-frame";
 import { ReaderKeyboardHelp } from "../../components/reader-keyboard-help";
+import { resolveKeyboardMessage, type ReaderMessageShortcut } from "./reader-keyboard-navigation";
+import { readReaderBlockLayoutMetrics } from "./reader-block-layout";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MessageItem } from "./message-item";
 import { MessageInsertDialog } from "./message-insert-dialog";
@@ -59,7 +61,7 @@ import { ResizableDockPanel } from "../../components/resizable-pane";
 import { ReaderUtilityDrawer } from "../../components/reader-utility-drawer";
 import { MobilePageHeader } from "../../components/mobile-page-header";
 import { useWorkspaceShell } from "../../components/workspace-shell";
-import { acquireReaderBlockLease, notifyReaderMessageLayoutChanged, notifyReaderWindowLayoutChanged, type ReaderBlockLease } from "./block-virtualization";
+import { acquireReaderBlockLease, notifyReaderMessageLayoutChanged, notifyReaderWindowLayoutChanged, READER_WINDOW_LAYOUT_EVENT, type ReaderBlockLease } from "./block-virtualization";
 import { SourceEditorWorkspace, type SourceEditorTarget } from "../editing/source-editor-workspace";
 import { normalizedMessageBlocks, sourceOffsetForBlock } from "../editing/message-source-position";
 import { tocNavigationTarget } from "./reader-locator-target";
@@ -587,6 +589,12 @@ export function ConversationReader({
   const pointerDraggingRef = useRef(false);
   const pointerDragMovedRef = useRef(false);
   const pointerScrollTopRef = useRef(0);
+  const geometryAnchorRef = useRef<{
+    anchor: NonNullable<ReturnType<typeof captureScrollAnchor>>;
+    intent: number;
+    capturedAt: number;
+  } | null>(null);
+  const geometryTransitionRef = useRef(0);
   const activeMessageIdRef = useRef<string | null>(null);
   const activeBlockIdRef = useRef<string | null>(null);
 
@@ -631,6 +639,7 @@ export function ConversationReader({
     queryFn: () => dataSource.getConversation(conversationId),
     ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
   });
+  const readerSourceKey = readerCacheIdentity(dataSource, conversationQuery.data);
   useEffect(() => {
     if (!workspace.embedded) return;
     if (conversationQuery.data?.id === conversationId) {
@@ -786,6 +795,8 @@ export function ConversationReader({
     const root = scrollContainerRef.current;
     userScrollIntentRef.current = true;
     scrollIntentSequenceRef.current += 1;
+    geometryTransitionRef.current += 1;
+    if (root) delete root.dataset.readerGeometryCompensating;
     lastReaderUserIntentAtRef.current = Date.now();
     preferenceStableAnchorRef.current = null;
     setPendingTargetMessageId(null);
@@ -849,20 +860,12 @@ export function ConversationReader({
         loadNextActionRef.current();
       }
     };
-    const markKeyboardIntent = (event: KeyboardEvent) => {
-      const target = event.target instanceof Element ? event.target : null;
-      if (target?.closest("[role='dialog'], [data-testid='floating-source-workspace'], input, textarea, select, [contenteditable='true'], [role='textbox']")) return;
-      const key = event.key.toLowerCase();
-      if (!["arrowup", "arrowdown", "pageup", "pagedown", "home", "end", " ", "j", "k"].includes(key)) return;
-      markReaderScrollIntent(["arrowup", "pageup", "home", "k"].includes(key) ? "up" : "down");
-    };
     root.addEventListener("wheel", markWheelIntent, { passive: true });
     root.addEventListener("touchstart", markTouchStart, { passive: true });
     root.addEventListener("touchmove", markTouchMove, { passive: true });
     root.addEventListener("pointerdown", markPointerDown, { passive: true });
     window.addEventListener("pointerup", markPointerUp, { passive: true });
     window.addEventListener("pointercancel", markPointerUp, { passive: true });
-    window.addEventListener("keydown", markKeyboardIntent);
     return () => {
       root.removeEventListener("wheel", markWheelIntent);
       root.removeEventListener("touchstart", markTouchStart);
@@ -870,7 +873,6 @@ export function ConversationReader({
       root.removeEventListener("pointerdown", markPointerDown);
       window.removeEventListener("pointerup", markPointerUp);
       window.removeEventListener("pointercancel", markPointerUp);
-      window.removeEventListener("keydown", markKeyboardIntent);
       delete root.dataset.readerPointerDragging;
     };
   }, [readerSurfaceAvailable, markReaderScrollIntent]);
@@ -914,6 +916,8 @@ export function ConversationReader({
     scrollIntentSequenceRef.current += 1;
     setInitialPaintReady(false);
     lastPersistedIntentRef.current = scrollIntentSequenceRef.current;
+    geometryAnchorRef.current = null;
+    geometryTransitionRef.current += 1;
     latestStablePositionRef.current = null;
     setReadingSaveError(false);
     firstContentStartedAtRef.current = window.performance.now();
@@ -1191,11 +1195,11 @@ export function ConversationReader({
   loadNextActionRef.current = () => { void loadNextWindow(); };
 
   const navigateToTarget = useCallback(
-    async (target: NavigateTarget, options?: { restorePosition?: boolean }): Promise<NavigationResult> => {
+    async (target: NavigateTarget, options?: { restorePosition?: boolean; isCurrent?: () => boolean }): Promise<NavigationResult> => {
       const { messageId, blockIndex, characterOffset, endCharacterOffset, quote, prefix, suffix, alignmentOffset, allowMessageFallback } = target;
       const blockId = blockIndex === undefined ? null : `block-${messageId}-${blockIndex}`;
       const messageIdDom = `message-${messageId}`;
-      if (!ownsReaderReadRecovery(recentOwner)) {
+      if (!ownsReaderReadRecovery(recentOwner) || options?.isCurrent?.() === false) {
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
       }
       const currentWindow = loadedWindowRef.current;
@@ -1209,7 +1213,7 @@ export function ConversationReader({
         await new Promise<void>((resolve) => {
           window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
         });
-        if (!ownsReaderReadRecovery(recentOwner)) {
+        if (!ownsReaderReadRecovery(recentOwner) || options?.isCurrent?.() === false) {
           return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
         }
       }
@@ -1237,7 +1241,7 @@ export function ConversationReader({
       const resolvedAlignmentOffset = alignmentOffset ?? (targetFirst ? ACTIVE_READING_OFFSET : 12);
       const token = navigationTokenRef.current + 1;
       navigationTokenRef.current = token;
-      const tokenIsCurrent = () => navigationTokenRef.current === token && ownsReaderReadRecovery(recentOwner);
+      const tokenIsCurrent = () => navigationTokenRef.current === token && ownsReaderReadRecovery(recentOwner) && options?.isCurrent?.() !== false;
       lastNavigationTargetRef.current = target;
       navigationInProgressRef.current = true;
       // Every explicit choice, including a dialogue-index/message jump, replaces
@@ -1733,38 +1737,183 @@ export function ConversationReader({
 
   useEffect(() => applySearchHighlight(searchHighlight), [searchHighlight]);
 
+  type KeyboardNavigationFeedback = {
+    kind: "error" | "edge" | "pending";
+    edge?: "first" | "last";
+    key: ReaderMessageShortcut;
+    requestId?: number;
+  };
+  const keyboardNavigationRequestRef = useRef(0);
+  const keyboardNavigationPendingRef = useRef<{ key: ReaderMessageShortcut; requestId: number } | null>(null);
+  const [keyboardNavigationFeedback, setKeyboardNavigationFeedback] = useState<KeyboardNavigationFeedback | null>(null);
+  const cancelKeyboardNavigation = useCallback(() => {
+    if (!keyboardNavigationPendingRef.current) return;
+    keyboardNavigationRequestRef.current += 1;
+    keyboardNavigationPendingRef.current = null;
+    setKeyboardNavigationFeedback(null);
+  }, []);
   useEffect(() => {
+    setKeyboardNavigationFeedback(null);
+    // A new control/selection/scroll intent retires the read even if the tool
+    // is opened and closed again before its delayed index response arrives.
+    const cancel = () => cancelKeyboardNavigation();
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") cancel(); };
+    document.addEventListener("pointerdown", cancel, true);
+    document.addEventListener("focusin", cancel);
+    document.addEventListener("wheel", cancel, { passive: true, capture: true });
+    document.addEventListener("touchstart", cancel, { passive: true, capture: true });
+    window.addEventListener("keydown", escape);
+    return () => {
+      keyboardNavigationRequestRef.current += 1;
+      keyboardNavigationPendingRef.current = null;
+      document.removeEventListener("pointerdown", cancel, true);
+      document.removeEventListener("focusin", cancel);
+      document.removeEventListener("wheel", cancel, true);
+      document.removeEventListener("touchstart", cancel, true);
+      window.removeEventListener("keydown", escape);
+    };
+  }, [cancelKeyboardNavigation, recentOwner]);
+  useEffect(() => {
+    if (utilityPanel !== null) cancelKeyboardNavigation();
+  }, [cancelKeyboardNavigation, utilityPanel]);
+  useEffect(() => {
+    if (keyboardNavigationFeedback?.kind !== "edge") return;
+    const timer = window.setTimeout(() => setKeyboardNavigationFeedback(current => current === keyboardNavigationFeedback ? null : current), 3000);
+    return () => window.clearTimeout(timer);
+  }, [keyboardNavigationFeedback]);
+  const navigateKeyboardMessage = useCallback(async (key: ReaderMessageShortcut, requestId: number) => {
+    const root = scrollContainerRef.current;
+    if (!root) return;
+    const intent = scrollIntentSequenceRef.current;
+    const isRequestCurrent = () => requestId === keyboardNavigationRequestRef.current
+      && ownsReaderReadRecovery(recentOwner);
+    const isResolutionCurrent = () => isRequestCurrent() && intent === scrollIntentSequenceRef.current;
+    const current = resolveActiveReadingTarget(root, ACTIVE_READING_OFFSET)?.messageId ?? activeMessageIdRef.current;
+    const localIndex = messages.findIndex(message => message.id === current);
+    const localNextIndex = localIndex + (key === "j" ? 1 : key === "k" ? -1 : 0);
+    const navigateLocalMessage = async (messageId: string) => {
+      keyboardNavigationPendingRef.current = { key, requestId };
+      try {
+        const result = await navigateToTarget({ messageId, source: "message-action" }, { isCurrent: isRequestCurrent });
+        if (isRequestCurrent() && !result.ok && result.reason !== "cancelled") {
+          setKeyboardNavigationFeedback({ kind: "error", key });
+        }
+      } catch {
+        if (isRequestCurrent()) setKeyboardNavigationFeedback({ kind: "error", key });
+      } finally {
+        if (keyboardNavigationPendingRef.current?.requestId === requestId) keyboardNavigationPendingRef.current = null;
+      }
+    };
+    if (current && localIndex >= 0) {
+      if (key === "home" && messages.length > 0 && !loadedWindow.hasPrevious) {
+        await navigateLocalMessage(messages[0]!.id);
+        return;
+      }
+      if (key === "end" && messages.length > 0 && !loadedWindow.hasMore) {
+        await navigateLocalMessage(messages.at(-1)!.id);
+        return;
+      }
+      if ((key === "j" || key === "k") && messages[localNextIndex]) {
+        await navigateLocalMessage(messages[localNextIndex]!.id);
+        return;
+      }
+      if ((key === "j" || key === "k")
+        && (key === "k" && !loadedWindow.hasPrevious || key === "j" && !loadedWindow.hasMore)) {
+        setKeyboardNavigationFeedback({ kind: "edge", edge: key === "k" ? "first" : "last", key });
+        return;
+      }
+    }
+    keyboardNavigationPendingRef.current = { key, requestId };
+    setKeyboardNavigationFeedback({ kind: "pending", key, requestId });
+    try {
+      const cachedPages = queryClient.getQueriesData<DialogueIndexResponse>({
+        queryKey: ["conversation-index", readerSourceKey, conversationId],
+      }).flatMap(([queryKey, page]) => {
+        const state = queryClient.getQueryState(queryKey);
+        return page?.conversation_id === conversationId && state && !state.isInvalidated && state.status === "success" && Date.now() - state.dataUpdatedAt < 60_000
+          ? [page] : [];
+      });
+      const messageId = await resolveKeyboardMessage(key, current,
+        options => queryClient.fetchQuery({
+          queryKey: ["conversation-index", readerSourceKey, conversationId, "shortcut", options],
+          queryFn: () => dataSource.getDialogueIndex(conversationId, options),
+          staleTime: 60_000,
+          ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
+        }), cachedPages);
+      if (!isResolutionCurrent()) return;
+      if (!messageId) {
+        setKeyboardNavigationFeedback({
+          kind: "edge",
+          edge: !current || key === "k" || key === "home" ? "first" : "last",
+          key,
+        });
+        return;
+      }
+      const result = await navigateToTarget({ messageId, source: "message-action" }, { isCurrent: isRequestCurrent });
+      // navigateToTarget intentionally advances the scroll-intent generation
+      // for an explicit jump. Do not compare against the pre-navigation intent
+      // when publishing a real navigation error; user scroll cancellation is
+      // already represented by the NavigationResult reason.
+      if (isRequestCurrent() && !result.ok && result.reason !== "cancelled") {
+        void queryClient.invalidateQueries({ queryKey: ["conversation-index", readerSourceKey, conversationId], refetchType: "none" });
+        setKeyboardNavigationFeedback({ kind: "error", key });
+      }
+    } catch {
+      if (isResolutionCurrent()) setKeyboardNavigationFeedback({ kind: "error", key });
+    } finally {
+      if (keyboardNavigationPendingRef.current?.requestId === requestId) keyboardNavigationPendingRef.current = null;
+      if (isRequestCurrent()) setKeyboardNavigationFeedback(current => current?.kind === "pending" && current.requestId === requestId ? null : current);
+    }
+  }, [conversationId, dataSource, loadedWindow.hasMore, loadedWindow.hasPrevious, messages, navigateToTarget, queryClient, readerQueryNetworkMode, readerSourceKey, recentOwner]);
+  useEffect(() => {
+    if (!readerSurfaceAvailable) return;
     const handleReadingShortcut = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const messageJump = ["home", "end", "j", "k"].includes(key);
+      const target = event.target instanceof Element ? event.target : null;
+      const messageLetter = key === "j" || key === "k";
+      const auxiliary = target?.closest("[data-reader-auxiliary]");
+      const closedHelp = messageLetter && auxiliary?.matches("details:not([open])");
+      const focusedAction = target?.closest('button, a[href], summary, [role="button"], [role="checkbox"], [role="slider"], [role="tab"]');
       if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || utilityPanel !== null
         || isEditableTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey
         || document.querySelector('[role="dialog"][aria-modal="true"]')
-        || (event.target instanceof Element && event.target.closest('[data-reader-auxiliary], [role="dialog"], input, select, button, a[href]'))) return;
+        || document.querySelector('details[data-reader-auxiliary][open]')
+        || document.querySelector(".reader-favorite-status")
+        || auxiliary && !closedHelp
+        || target?.closest('[role="dialog"], [role="menu"], [role="listbox"], [role="combobox"], nav, aside, input, select, audio, video')
+        || focusedAction && !(closedHelp && focusedAction.matches("summary"))) return;
       const root = scrollContainerRef.current;
       if (!root) return;
+      if (!["arrowdown", "arrowup", " ", "pagedown", "pageup", "home", "end", "j", "k"].includes(key)) return;
+      if (window.getSelection()?.isCollapsed === false) return;
+      // A same-direction key repeat may not invalidate the in-flight target
+      // by advancing scroll intent. Opposite/edge input still wins immediately.
+      if (event.repeat && messageJump && keyboardNavigationPendingRef.current?.key === key) {
+        event.preventDefault();
+        return;
+      }
+      event.preventDefault();
+      cancelKeyboardNavigation();
+      markReaderScrollIntent(["arrowup", "pageup", "home", "k"].includes(key) || (key === " " && event.shiftKey) ? "up" : "down");
+      setKeyboardNavigationFeedback(null);
       const page = Math.max(120, root.clientHeight * 0.88);
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches || event.repeat ? "instant" : "smooth";
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault();
-        root.scrollBy({ top: event.key === "ArrowDown" ? 56 : -56, behavior: "smooth" });
+        const body = root.querySelector<HTMLElement>(".reader-message-body") ?? root;
+        const step = readReaderBlockLayoutMetrics(body).lineHeight * 3;
+        root.scrollBy({ top: event.key === "ArrowDown" ? step : -step, behavior });
       } else if (event.key === " " || event.key === "PageDown" || event.key === "PageUp") {
-        event.preventDefault();
         const up = event.shiftKey || event.key === "PageUp";
-        root.scrollBy({ top: up ? -page : page, behavior: "smooth" });
-      } else if (event.key === "Home" || event.key === "End") {
-        event.preventDefault();
-        root.scrollTo({ top: event.key === "Home" ? 0 : root.scrollHeight, behavior: "smooth" });
-      } else if (event.key.toLowerCase() === "j" || event.key.toLowerCase() === "k") {
-        const current = messages.findIndex((message) => message.id === activeMessageId);
-        const next = event.key.toLowerCase() === "j" ? current + 1 : current - 1;
-        const target = messages[next];
-        if (target) {
-          event.preventDefault();
-          void navigateToTarget({ messageId: target.id, source: "message-action" });
-        }
+        root.scrollBy({ top: up ? -page : page, behavior });
+      } else if (messageJump) {
+        const requestId = ++keyboardNavigationRequestRef.current;
+        void navigateKeyboardMessage(key as ReaderMessageShortcut, requestId);
       }
     };
     window.addEventListener("keydown", handleReadingShortcut);
     return () => window.removeEventListener("keydown", handleReadingShortcut);
-  }, [activeMessageId, messages, navigateToTarget, utilityPanel]);
+  }, [cancelKeyboardNavigation, markReaderScrollIntent, navigateKeyboardMessage, readerSurfaceAvailable, utilityPanel]);
 
   const refreshActiveMessageFromLayout = useCallback(() => {
     const root = scrollContainerRef.current;
@@ -1969,6 +2118,56 @@ export function ConversationReader({
     let persistTimer: number | null = null;
     let lastSampleAt = 0;
     let lastScrollAt = 0;
+    let initialGeometryAnchorFrame = 0;
+
+    const captureGeometryAnchor = () => {
+      const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
+      if (anchor) {
+        geometryAnchorRef.current = {
+          anchor,
+          intent: scrollIntentSequenceRef.current,
+          capturedAt: window.performance.now(),
+        };
+      }
+    };
+    const restoreGeometryAnchor = () => {
+      const saved = geometryAnchorRef.current;
+      if (
+        !saved
+        || saved.intent !== scrollIntentSequenceRef.current
+        || root.dataset.readerPointerDragging === "true"
+        || root.dataset.readerLayoutCompensating === "true"
+        || root.dataset.readerSurfaceCompensating === "true"
+        || root.dataset.readerGeometryCompensating === "true"
+        || navigationInProgressRef.current
+        || restoreInProgressRef.current
+        || edgeTransitionRef.current !== null
+        || Date.now() - lastReaderUserIntentAtRef.current < 120
+      ) {
+        return;
+      }
+      const token = ++geometryTransitionRef.current;
+      root.dataset.readerGeometryCompensating = "true";
+      void restoreScrollAnchor({
+        root,
+        anchor: saved.anchor,
+        tokenIsCurrent: () => (
+          geometryTransitionRef.current === token
+          && scrollIntentSequenceRef.current === saved.intent
+          && !navigationInProgressRef.current
+          && !restoreInProgressRef.current
+          && edgeTransitionRef.current === null
+          && root.dataset.readerPointerDragging !== "true"
+        ),
+        minimumMs: 80,
+        settleMs: 80,
+        timeoutMs: 650,
+      }).finally(() => {
+        if (geometryTransitionRef.current === token) {
+          delete root.dataset.readerGeometryCompensating;
+        }
+      });
+    };
 
     const runActiveSample = () => {
       sampleFrame = 0;
@@ -1994,6 +2193,8 @@ export function ConversationReader({
         navigationInProgressRef.current ||
         edgeTransitionRef.current !== null ||
         root.dataset.readerLayoutCompensating === "true" ||
+        root.dataset.readerGeometryCompensating === "true" ||
+        root.dataset.readerSurfaceCompensating === "true" ||
         scrollIntentSequenceRef.current <= lastPersistedIntentRef.current
       ) {
         return;
@@ -2047,14 +2248,25 @@ export function ConversationReader({
         markReaderScrollIntent(current < pointerScrollTopRef.current ? "up" : "down");
       }
       pointerScrollTopRef.current = current;
+      if (
+        !navigationInProgressRef.current
+        && !restoreInProgressRef.current
+        && edgeTransitionRef.current === null
+        && root.dataset.readerGeometryCompensating !== "true"
+        && root.dataset.readerLayoutCompensating !== "true"
+        && root.dataset.readerSurfaceCompensating !== "true"
+      ) captureGeometryAnchor();
       scheduleActiveSample();
       schedulePersist();
     };
     const onClick = () => scheduleActiveSample(true);
+    const onReaderWindowLayout = () => restoreGeometryAnchor();
 
     pointerScrollTopRef.current = root.scrollTop;
+    initialGeometryAnchorFrame = window.requestAnimationFrame(captureGeometryAnchor);
     root.addEventListener("scroll", onScroll, { passive: true });
     root.addEventListener("click", onClick, { passive: true });
+    window.addEventListener(READER_WINDOW_LAYOUT_EVENT, onReaderWindowLayout);
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("pagehide", onPageHide);
     scheduleActiveSample(true);
@@ -2062,10 +2274,14 @@ export function ConversationReader({
       if (sampleFrame) window.cancelAnimationFrame(sampleFrame);
       if (sampleTimer !== null) window.clearTimeout(sampleTimer);
       if (persistTimer !== null) window.clearTimeout(persistTimer);
+      if (initialGeometryAnchorFrame) window.cancelAnimationFrame(initialGeometryAnchorFrame);
       root.removeEventListener("scroll", onScroll);
       root.removeEventListener("click", onClick);
+      window.removeEventListener(READER_WINDOW_LAYOUT_EVENT, onReaderWindowLayout);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("pagehide", onPageHide);
+      geometryTransitionRef.current += 1;
+      delete root.dataset.readerGeometryCompensating;
     };
   }, [conversationId, dataSource, readerSurfaceAvailable, markReaderScrollIntent, refreshActiveMessageFromLayout]);
 
@@ -2807,7 +3023,6 @@ export function ConversationReader({
   if (!conversation) {
     return <ReaderState title={t("conversationUnavailable")} detail={t("noConversationPayload")} />;
   }
-  const readerSourceKey = readerCacheIdentity(dataSource, conversation);
 
   const navigateSearchQueue = (index: number) => {
     const href = searchReadingQueue?.hrefs[index];
@@ -2923,7 +3138,6 @@ export function ConversationReader({
   const desktopPrimaryActionIds = new Set(["edit-source", "search", "annotations", "continuation", "focus-mode"]);
   const desktopPrimaryActions = headerActions.filter((action) => desktopPrimaryActionIds.has(action.id));
   const desktopSecondaryActions = headerActions.filter((action) => !desktopPrimaryActionIds.has(action.id));
-  const mobileHeaderActions: ReaderHeaderAction[] = headerActions.filter((action) => action.id !== "edit-source");
 
   const navigationTabs = (
     <div className="flex items-center gap-2">
@@ -3004,6 +3218,27 @@ export function ConversationReader({
       <ArrowLeft className="h-4 w-4" />{compact ? <span className="sr-only">{returnToReadingLabel}</span> : <span>{resolvedLocale === "zh-CN" ? "返回阅读" : "Return"}</span>}
     </button>
   ) : null;
+  const mobileHeaderActions: ReaderHeaderAction[] = [
+    {
+      id: "reader-navigation",
+      label: t("readerNavigation"),
+      icon: ListTree,
+      onSelect: () => { void openNavigation("dialogue"); },
+    },
+    ...(canManageCanonical ? [{
+      id: "edit-source",
+      label: resolvedLocale === "zh-CN" ? "编辑 Markdown 源码" : "Edit Markdown source",
+      icon: Pencil,
+      onSelect: () => openSourceEditor(),
+    } as ReaderHeaderAction] : []),
+    ...(tocReturnPoint ? [{
+      id: "return-to-reading",
+      label: returnToReadingLabel,
+      icon: ArrowLeft,
+      onSelect: () => { void returnToTocOrigin(); },
+    } as ReaderHeaderAction] : []),
+    ...headerActions.filter((action) => action.id !== "search" && action.id !== "edit-source"),
+  ];
 
   const navigationTargetIsAttachment = Boolean(lastNavigationTargetRef.current?.attachmentId);
   const navigationFailureMessage = navigationFailureCopyV2(navigationFailureReason, resolvedLocale, navigationTargetIsAttachment);
@@ -3033,15 +3268,14 @@ export function ConversationReader({
                   <span>{loadedLabel}</span>
                 </div>
             </div> : <div className="flex-1" />}
-            {focusMode ? <div className="flex items-center gap-2"><ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton()}<button type="button" onClick={toggleFocusMode} className="inline-flex h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
+            {focusMode ? <div className="flex items-center gap-2"><button type="button" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle" aria-label={t("search")} title={t("search")}><Search className="h-[1.125rem] w-[1.125rem]" /></button>{dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}<ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton()}<button type="button" onClick={toggleFocusMode} className="inline-flex h-11 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
               <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
               <ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />
               {returnToReadingButton()}
-              {dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} /> : null}
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
                 {desktopPrimaryActions.map((action) => {
                   const Icon = action.icon;
-                  return <button key={action.id} type="button" onClick={action.onSelect} disabled={action.disabled} data-reader-header-action={action.id} aria-pressed={action.id === "continuation" ? continuationOpen : action.id === "edit-source" ? Boolean(sourceEditorTarget) : undefined} className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ui hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 ${action.id === "edit-source" && sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={action.label} title={action.label}><Icon className="h-[1.125rem] w-[1.125rem]" /></button>;
+                  return <Fragment key={action.id}><button type="button" onClick={action.onSelect} disabled={action.disabled} data-reader-header-action={action.id} aria-pressed={action.id === "continuation" ? continuationOpen : action.id === "edit-source" ? Boolean(sourceEditorTarget) : undefined} className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ui hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 ${action.id === "edit-source" && sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={action.label} title={action.label}><Icon className="h-[1.125rem] w-[1.125rem]" /></button>{action.id === "search" && dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}</Fragment>;
                 })}
               </div>
               <ReaderHeaderActionRail
@@ -3053,7 +3287,7 @@ export function ConversationReader({
               />
             </div>}
           </div>
-          {focusMode ? <div data-reader-focus-controls className="flex min-h-14 items-center justify-end gap-2 px-[3vw] py-2 md:hidden"><ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton(true)}<button type="button" onClick={toggleFocusMode} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ui bg-surface text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" /></button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
+          {focusMode ? <div data-reader-focus-controls className="flex min-h-14 items-center justify-center gap-2 px-[3vw] py-2 md:hidden"><button type="button" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary" aria-label={t("search")} title={t("search")}><Search className="h-5 w-5" /></button>{dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}<ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton(true)}<button type="button" onClick={toggleFocusMode} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ui bg-surface text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" /></button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
             <MobileSidebarTrigger
               onOpen={() => isOffline ? onOpenLibrary?.() : workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
             />
@@ -3061,22 +3295,9 @@ export function ConversationReader({
               <h1 className="truncate text-[15px] font-semibold text-primary">{conversation.display_title || conversation.title}</h1>
               <p className="truncate text-xs text-secondary">{loadedLabel}</p>
             </div>
-            {!mobileActionsExpanded ? (
-              <button
-                type="button"
-                data-reader-navigation-trigger="true"
-                onClick={(event) => void openNavigation("dialogue", event.currentTarget)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary"
-                aria-label={t("readerNavigation")}
-                title={t("readerNavigation")}
-              >
-                <ListTree className="h-5 w-5" />
-              </button>
-            ) : null}
-            {!mobileActionsExpanded ? returnToReadingButton(true) : null}
+            {!mobileActionsExpanded ? <button type="button" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary" aria-label={t("search")} title={t("search")}><Search className="h-5 w-5" /></button> : null}
             {dataSource.mode === "remote" && !mobileActionsExpanded ? <ReadingListButton conversationId={conversation.id} compact /> : null}
-            {canManageCanonical && !mobileActionsExpanded ? <button type="button" onClick={() => openSourceEditor()} aria-pressed={Boolean(sourceEditorTarget)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui ${sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"} title={resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source"}><Pencil className="h-5 w-5" /></button> : null}
-            <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
+            <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
           {tocReturnError ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert" data-testid="reader-return-to-toc-origin-error">
@@ -3131,6 +3352,37 @@ export function ConversationReader({
           ) : null}
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
+
+        {keyboardNavigationFeedback ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-4 z-30 flex justify-center px-4" aria-live="polite" role="status" data-testid="reader-keyboard-feedback">
+            <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-lg border border-ui bg-raised px-3 py-2 text-sm text-primary shadow-md">
+              <span>{keyboardNavigationFeedback.kind === "error"
+                ? (resolvedLocale === "zh-CN" ? "快捷键导航失败，请重试。" : "Keyboard navigation failed. Try again.")
+                : keyboardNavigationFeedback.kind === "pending"
+                  ? (resolvedLocale === "zh-CN" ? "正在定位消息…" : "Locating message…")
+                  : keyboardNavigationFeedback.edge === "first"
+                  ? (resolvedLocale === "zh-CN" ? "已经是第一条消息。" : "Already at the first message.")
+                  : (resolvedLocale === "zh-CN" ? "已经是最后一条消息。" : "Already at the last message.")}</span>
+              {keyboardNavigationFeedback.kind === "error" ? (
+                <button
+                  type="button"
+                  className="min-h-11 shrink-0 rounded-md border border-ui px-3 text-xs font-medium hover:bg-subtle"
+                  onClick={() => {
+                    const feedback = keyboardNavigationFeedback;
+                    const requestId = ++keyboardNavigationRequestRef.current;
+                    setKeyboardNavigationFeedback(null);
+                    void navigateKeyboardMessage(feedback.key, requestId);
+                  }}
+                >
+                  {resolvedLocale === "zh-CN" ? "重试" : "Retry"}
+                </button>
+              ) : null}
+              <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => { cancelKeyboardNavigation(); setKeyboardNavigationFeedback(null); }} aria-label={t("close")}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {conversationReadNotice}
         <ReadingPositionSyncStatus conversationId={conversationId} storageError={readingSaveError} onRetryStorage={async () => {

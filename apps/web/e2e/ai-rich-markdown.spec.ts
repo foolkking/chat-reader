@@ -58,6 +58,16 @@ x^2
 
 https://example.org/autolink
 
+==重点内容==
+
+> [!TIP]+ 展开提示
+> 这是一段可展开的 Obsidian callout，包含 **加粗**、[正文链接](https://example.com/callout) 和公式 $x^2$。
+> 第二行保留原有格式，不展平为纯文本。
+
+<div style="display:flex;gap:14px;align-items:flex-start;margin:10px 0"><a href="https://example.com/card"><img src="assets/card.png" alt="静态卡片图片" width="160" height="120" style="border-radius:8px;flex:none"/></a><div><strong>安全富文本卡片</strong><br/>图片加载失败时仍保留替代内容。</div></div>
+
+<details><summary>原生折叠块</summary><p>折叠内容仍在正文阅读树中。</p></details>
+
 <script>window.__richMarkdownXss = true</script>`;
 
 const INVALID_MATH = String.raw`\[
@@ -100,8 +110,8 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
     await page.goto(`/conversations/${conversationId}`);
     const assistant = page.locator("article[data-message-id]").last();
     await expect(assistant.locator(".katex-display")).toHaveCount(2);
-    await expect(assistant.locator(".katex")).toHaveCount(4);
-    await expect(assistant.locator(".katex-mathml math")).toHaveCount(4);
+    await expect(assistant.locator(".katex")).toHaveCount(5);
+    await expect(assistant.locator(".katex-mathml math")).toHaveCount(5);
     await expect(assistant.locator(".katex-html").first()).toBeVisible();
     await expect(assistant.locator('[data-math-error="true"]')).toHaveCount(0);
     await expect(assistant).toContainText("The price is $20. USD $20 and $5 and $10.");
@@ -120,6 +130,18 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
     await expect(fencedCode.locator("code > span").first()).toBeVisible();
     await expect(assistant.locator('a[href^="javascript:"]')).toHaveCount(0);
     await expect(assistant.locator('a[href="https://example.org/autolink"]')).toHaveCount(1);
+    await expect(assistant.locator("mark")).toHaveText("重点内容");
+    await expect(assistant.locator(".reader-rich-callout")).toHaveCount(1);
+    await expect(assistant.locator(".reader-rich-callout > summary")).toContainText("展开提示");
+    await expect(assistant.locator(".reader-rich-callout > summary strong")).toHaveText("展开提示");
+    await expect(assistant.locator('.reader-rich-callout a[href="https://example.com/callout"]')).toHaveCount(1);
+    await expect(assistant.locator(".reader-rich-callout .katex")).toHaveCount(1);
+    await expect(assistant.locator(".reader-rich-callout")).toContainText("第二行保留原有格式");
+    await expect(assistant.locator(".reader-rich-details")).toHaveCount(1);
+    await expect(assistant.locator(".reader-rich-html-block")).toHaveCount(1);
+    await expect(assistant.locator(".reader-rich-image-fallback")).toHaveCount(1);
+    await expect(assistant.locator(".reader-rich-image-fallback a")).toHaveCount(0);
+    await expect(assistant.locator('.reader-rich-html-block a[href="https://example.com/card"]')).toHaveCount(1);
     expect(await page.evaluate(() => (window as typeof window & { __richMarkdownXss?: boolean }).__richMarkdownXss)).not.toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     await page.screenshot({ path: `${evidenceDir}/ai-rich-markdown-desktop-1440x900.png`, fullPage: false, animations: "disabled" });

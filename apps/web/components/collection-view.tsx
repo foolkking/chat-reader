@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getProjects } from "../lib/api";
 import { authenticationGeneration } from "../lib/offline-access";
 
@@ -17,22 +17,38 @@ export function useCollectionView(pageSize: number) {
   const search = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
-  const params = new URLSearchParams(search?.toString());
+  const searchText = search?.toString() ?? "";
+  const params = new URLSearchParams(searchText);
   const raw = Number(params.get("offset") ?? 0);
   const offset = Number.isSafeInteger(raw) && raw > 0 ? raw : 0;
   params.set("offset", String(offset));
   params.set("limit", String(pageSize));
   const scope = `${pathname}?${params}`;
   const rootRef = useRef<HTMLElement>(null);
-  function update(changes: Record<string, string>) {
-    const next = new URLSearchParams(search?.toString());
+  const update = useCallback((changes: Record<string, string>) => {
+    const next = new URLSearchParams(searchText);
     next.delete("offset");
     for (const [key, value] of Object.entries(changes)) {
       if (value) next.set(key, value); else next.delete(key);
     }
     router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
-  }
+  }, [pathname, router, searchText]);
   return { params, offset, scope, rootRef, update };
+}
+
+export function useCollectionPageBounds(
+  offset: number, pageSize: number, total: number | undefined, ready: boolean,
+  update: (changes: Record<string, string>) => void,
+) {
+  const lastOffset = total !== undefined && Number.isSafeInteger(total) && total >= 0
+    ? Math.max(0, Math.ceil(total / pageSize) - 1) * pageSize : null;
+  const outOfBounds = ready && lastOffset !== null && offset > lastOffset;
+  useEffect(() => {
+    // Never interpret a pending/failed read as an empty collection. Replacing
+    // only offset retains the active filters and does not add a dead history page.
+    if (outOfBounds) update({ offset: lastOffset ? String(lastOffset) : "" });
+  }, [lastOffset, outOfBounds, update]);
+  return outOfBounds;
 }
 
 export function useCollectionScroll(rootRef: React.RefObject<HTMLElement | null>, scope: string, ready: boolean) {

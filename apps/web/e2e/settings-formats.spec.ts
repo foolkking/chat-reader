@@ -54,7 +54,7 @@ test.describe("learned format ownership and publication", () => {
         await expect(a.getByRole("heading", { name: locale === "zh-CN" ? "设置新的导入格式" : "Learn a new import format", exact: true })).toBeVisible();
         if (locale === "en-US") expect(/[\u4e00-\u9fff]/.test(await a.getByRole("dialog", { name: "Import data", exact: true }).innerText()), "English mapping has no untranslated interface text").toBe(false);
         await a.getByTestId("import-dialog-close").click();
-        const discard = a.getByRole("dialog", { name: locale === "zh-CN" ? "放弃未保存的映射？" : "Discard unsaved mapping?", exact: true });
+        const discard = a.getByRole("dialog", { name: locale === "zh-CN" ? "放弃未保存的导入设置？" : "Discard unsaved import settings?", exact: true });
         await expect(discard).toBeVisible();
         await discard.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
         await expect(a.getByLabel(locale === "zh-CN" ? "保存为导入格式" : "Format name")).toHaveValue("Synthetic personal format");

@@ -375,7 +375,8 @@ and must be tested at the corresponding API/UI level.
 ### Adaptive Import
 
 ```text
-JSON/Markdown SourceFile[] -> Analyzer -> InputGroup[] -> StructureFamily[]
+JSON/Markdown SourceFile[] (candidate also accepts validated ZIP sources)
+-> Analyzer -> InputGroup[] -> StructureFamily[]
 -> Built-in/Learned ImportProfileRevision or Mapping
 -> CanonicalConversationDraft[] -> full-family validation
 -> imports + source artifact + ImportDraft
@@ -386,6 +387,19 @@ JSON/Markdown SourceFile[] -> Analyzer -> InputGroup[] -> StructureFamily[]
 ```
 
 Session、Group、Family、Profile/Revision 与 Mapping/validation 合同见 [Adaptive Import Contract](ADAPTIVE_IMPORT_CONTRACT.md)。CanJSON v1/v2、Chat Reader Native 与 Prompt/Response Markdown 通过 Built-in Profile 使用同一上层 resolution contract。Learned Profile 仅保存无正文 signature、selector、role 字典、relation、noise 与受控 transform。
+
+Source candidate (2026-11-03) additionally accepts the bounded conversation
+export ZIP and generic Markdown ZIP shapes. ZIP member preview/classification,
+local-resource identity, attachment storage and rollback are specified in the
+[Adaptive Import ZIP Contract](ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md). It reuses
+the canonical attachment pipeline, adds no migration, and is not evidence of a
+deployed API until the user completes CI and release checks.
+The completion review adds monotonic replacement classification versions,
+real-block occurrence binding, code-example/path protection, and recoverable
+catalog/canonical-draft snapshots. Editable-session locking excludes progress
+polling and preserves job-first analysis cancellation; post-commit response
+failure does not delete committed source bytes. See the
+[review receipt](../execution/ux-audit-reader-zip-completion-2026-11-03.md).
 
 来源解析错误保持在 `InputGroup/INVALID Family`，不会阻塞同 session 中其他 Family 的 Mapping。未提交 session 可通过 reanalyze、artifact replacement、Group exclusion 或 regrouping 恢复；恢复操作重建 Family/ImportPlan，最终 commit 仍要求所有保留 Group 都处于可验证的 EXACT/COMPATIBLE 路径。替换与排除遵循数据库提交后再清理旧临时源文件的边界。
 

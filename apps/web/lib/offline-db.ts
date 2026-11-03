@@ -220,6 +220,7 @@ export type OfflineStorageContext = {
 let activeOfflineContext: OfflineStorageContext = legacyOfflineStorageContext(null);
 export let offlineDb = new OfflineLibraryDatabase(activeOfflineContext.databaseName);
 const attachmentObjectUrls = new Set<string>();
+const attachmentObjectUrlsByKey = new Map<string, string>();
 
 export function lockProtectedOfflineData(notify = true): void {
   abortProtectedTransactions();
@@ -232,6 +233,7 @@ export function lockProtectedOfflineData(notify = true): void {
   offlineDb.close();
   for (const url of attachmentObjectUrls) URL.revokeObjectURL(url);
   attachmentObjectUrls.clear();
+  attachmentObjectUrlsByKey.clear();
 }
 
 export function getActiveOfflineStorageContext(): OfflineStorageContext {
@@ -395,7 +397,7 @@ type OfflinePackagePayload = {
   conversations: PackageConversation[];
 };
 
-export type OfflinePackageImportErrorCode = "DOWNLOAD" | "QUOTA" | "MALFORMED" | "STORAGE_WRITE";
+export type OfflinePackageImportErrorCode = "DOWNLOAD" | "QUOTA" | "CAPACITY" | "MALFORMED" | "STORAGE_WRITE";
 
 export class OfflinePackageImportError extends Error {
   constructor(
@@ -459,6 +461,60 @@ const OFFLINE_STORAGE_FIXED_RESERVE_BYTES = 1024 * 1024;
 const OFFLINE_JSON_INDEXED_DB_MULTIPLIER = 2.25;
 const OFFLINE_ASSET_CACHE_MULTIPLIER = 1.05;
 const OFFLINE_INDEX_BYTES_PER_RECORD = 384;
+// Production has an individual 215,581,606-byte conversation JSON and a
+// 307,061,465-byte maximum per-conversation attachment set. Their conservative
+// sum fits 512 MiB; never admit the old combined 895 MB metadata entry.
+const MAX_OFFLINE_ARCHIVE_COMPRESSED_BYTES = 512 * 1024 * 1024;
+const MAX_OFFLINE_ARCHIVE_ENTRY_BYTES = 256 * 1024 * 1024;
+const MAX_OFFLINE_ARCHIVE_EXPANDED_BYTES = 512 * 1024 * 1024;
+
+async function readOfflineArchiveBounded(response: Response, signal?: AbortSignal): Promise<Uint8Array> {
+  const declaredBytes = Number(response.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredBytes) && declaredBytes > MAX_OFFLINE_ARCHIVE_COMPRESSED_BYTES) {
+    throw new OfflinePackageImportError("CAPACITY", "Offline package exceeds the safe per-conversation browser import limit.");
+  }
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > MAX_OFFLINE_ARCHIVE_COMPRESSED_BYTES) {
+      throw new OfflinePackageImportError("CAPACITY", "Offline package exceeds the safe per-conversation browser import limit.");
+    }
+    return bytes;
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      signal?.throwIfAborted();
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_OFFLINE_ARCHIVE_COMPRESSED_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new OfflinePackageImportError("CAPACITY", "Offline package exceeds the safe per-conversation browser import limit.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (declaredBytes > 0 && totalBytes !== declaredBytes) {
+    throw new OfflinePackageImportError("MALFORMED", "Offline package download was truncated.");
+  }
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+function isBrowserCapacityError(cause: unknown): boolean {
+  if (cause instanceof RangeError) return true;
+  if (!(cause instanceof Error)) return false;
+  return /out of memory|allocation failed|invalid string length|array buffer allocation/i.test(cause.message);
+}
 
 async function bulkPutChunked<T>(table: BulkPutTable<T>, items: T[], chunkSize = 100): Promise<void> {
   for (let offset = 0; offset < items.length; offset += chunkSize) {
@@ -508,23 +564,44 @@ function estimateOfflineStorageBytes(
   );
 }
 
-export async function importOfflinePackage(packageId: string, response: Response, options: { signal?: AbortSignal; onWriting?: () => void } = {}): Promise<OfflinePackageMeta> {
+export async function importOfflinePackage(packageId: string, response: Response, options: { signal?: AbortSignal; onWriting?: () => void | Promise<void>; expectedConversationId?: string } = {}): Promise<OfflinePackageMeta> {
   options.signal?.throwIfAborted();
   const access = captureOfflineAccess();
   const db = offlineDb;
   const context = getActiveOfflineStorageContext();
   if (!response.ok) throw new OfflinePackageImportError("DOWNLOAD", `Offline package download failed (${response.status}).`);
   const declaredBytes = Number(response.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredBytes) && declaredBytes > MAX_OFFLINE_ARCHIVE_COMPRESSED_BYTES) {
+    throw new OfflinePackageImportError("CAPACITY", "Offline package exceeds the safe per-conversation browser import limit.");
+  }
   const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
   if (declaredBytes > 0 && estimate?.quota !== undefined && estimate?.usage !== undefined && declaredBytes > estimate.quota - estimate.usage) {
     throw new OfflinePackageImportError("QUOTA", "Browser storage quota is too small for this offline package.");
   }
-  const compressed = new Uint8Array(await response.arrayBuffer());
+  const compressed = await readOfflineArchiveBounded(response, options.signal);
   options.signal?.throwIfAborted();
   let entries: ReturnType<typeof unzipSync>;
+  let expandedBytes = 0;
+  const entryNames = new Set<string>();
   try {
-    entries = unzipSync(compressed);
+    entries = unzipSync(compressed, { filter: (entry) => {
+      if (!Number.isSafeInteger(entry.originalSize) || entry.originalSize < 0
+          || entry.originalSize > MAX_OFFLINE_ARCHIVE_ENTRY_BYTES
+          || expandedBytes + entry.originalSize > MAX_OFFLINE_ARCHIVE_EXPANDED_BYTES) {
+        throw new OfflinePackageImportError("CAPACITY", "Offline package expands beyond the safe browser import limit.");
+      }
+      if (entryNames.has(entry.name)) {
+        throw new OfflinePackageImportError("MALFORMED", "Offline package contains duplicate archive entries.");
+      }
+      entryNames.add(entry.name);
+      expandedBytes += entry.originalSize;
+      return true;
+    } });
   } catch (cause) {
+    if (cause instanceof OfflinePackageImportError) throw cause;
+    if (isBrowserCapacityError(cause)) {
+      throw new OfflinePackageImportError("CAPACITY", "The browser cannot safely expand this offline package.", { cause });
+    }
     throw new OfflinePackageImportError("MALFORMED", "Offline package archive could not be read.", { cause });
   }
   const packageEntry = entries["package.json"];
@@ -533,12 +610,18 @@ export async function importOfflinePackage(packageId: string, response: Response
   try {
     payload = JSON.parse(strFromU8(packageEntry)) as OfflinePackagePayload;
   } catch (cause) {
+    if (isBrowserCapacityError(cause)) {
+      throw new OfflinePackageImportError("CAPACITY", "The browser cannot safely read this offline package.", { cause });
+    }
     throw new OfflinePackageImportError("MALFORMED", "Offline package metadata could not be read.", { cause });
   }
   if (payload.format !== "chat-reader-offline-package" || ![1, 2, 3].includes(payload.version)) {
     throw new OfflinePackageImportError("MALFORMED", "Unsupported offline package version.");
   }
   if (!Array.isArray(payload.conversations)) throw new OfflinePackageImportError("MALFORMED", "Offline package does not contain a valid conversation list.");
+  if (options.expectedConversationId && (payload.conversations.length !== 1 || payload.conversations[0]?.id !== options.expectedConversationId)) {
+    throw new OfflinePackageImportError("MALFORMED", "Offline package does not match the selected conversation.");
+  }
   validateOfflinePackageStoreShape(payload);
   for (const conversation of payload.conversations) {
     try { conversation.continuation = await readOfflineContinuation(conversation.continuation); }
@@ -578,7 +661,7 @@ export async function importOfflinePackage(packageId: string, response: Response
     : [];
 
   try {
-    options.onWriting?.();
+    await options.onWriting?.();
     if (payload.version === 3) {
       for (const conversation of payload.conversations) {
         for (const attachment of conversation.attachments ?? []) {
@@ -874,8 +957,13 @@ export async function getOfflineAttachment(attachmentId: string): Promise<Attach
   const cached = await readVerifiedCachedAttachment(record);
   const blob = cached ? await cached.blob() : null;
   assertOfflineAccess(access);
-  const url = blob ? URL.createObjectURL(blob) : null;
-  if (url) attachmentObjectUrls.add(url);
+  const cacheKey = `${record.id}:${record.sha256}:${blob ? "available" : "missing"}`;
+  let url = blob ? attachmentObjectUrlsByKey.get(cacheKey) ?? null : null;
+  if (blob && !url) {
+    url = URL.createObjectURL(blob);
+    attachmentObjectUrlsByKey.set(cacheKey, url);
+    attachmentObjectUrls.add(url);
+  }
   return offlineAttachmentRead(record, url, Boolean(cached));
 }
 
@@ -969,7 +1057,13 @@ async function clearOfflineAttachmentCacheUnlocked(conversationIds: string[], re
 export function releaseOfflineAttachmentUrls(attachment?: AttachmentRead | null): void {
   const urls = new Set([attachment?.content_url, attachment?.download_url]);
   urls.forEach((url) => {
-    if (url?.startsWith("blob:")) { URL.revokeObjectURL(url); attachmentObjectUrls.delete(url); }
+    if (url?.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+      attachmentObjectUrls.delete(url);
+      for (const [key, value] of attachmentObjectUrlsByKey) {
+        if (value === url) attachmentObjectUrlsByKey.delete(key);
+      }
+    }
   });
 }
 
@@ -981,6 +1075,10 @@ declare global {
       activateProtectedOfflineData: typeof activateProtectedOfflineData;
       clearProtectedOfflineData: typeof clearProtectedOfflineData;
       getActiveOfflineStorageContext: typeof getActiveOfflineStorageContext;
+      offlineAccessReady: () => boolean;
+      enqueueOfflineDownload?: (input: { scope: "conversation" | "project" | "all"; scopeId?: string; assetMode: "none" | "small" | "all" }) => Promise<unknown>;
+      retryOfflineDownload?: (id: string) => Promise<void>;
+      resumeOfflineDownloads?: (signal: AbortSignal) => Promise<void>;
     };
   }
 }
@@ -994,6 +1092,9 @@ if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_PWA_NEGATIVE_TESTS 
     activateProtectedOfflineData,
     clearProtectedOfflineData,
     getActiveOfflineStorageContext,
+    offlineAccessReady: () => {
+      try { captureOfflineAccess(); return true; } catch { return false; }
+    },
   };
 }
 

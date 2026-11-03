@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getAnnotationInboxSummary } from "../../lib/api";
 import type { AnnotationInboxSummaryItem, AnnotationType } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
-import { CollectionFilters, CollectionPagination, collectionControlClass, useCollectionScroll, useCollectionView } from "../../components/collection-view";
+import { CollectionFilters, CollectionPagination, collectionControlClass, useCollectionPageBounds, useCollectionScroll, useCollectionView } from "../../components/collection-view";
 import { formatActivityTime } from "../../lib/activity-time";
 
 const statuses = { "": ["全部状态", "All statuses"], attention: ["待复核", "Needs attention"], valid: ["有效", "Valid"], remapped: ["已重定位", "Remapped"], orphaned: ["已失联", "Orphaned"], needs_review: ["需要复核", "Needs review"] };
@@ -17,7 +17,8 @@ export function AnnotationInboxPage() {
   const { params, offset, scope, update, rootRef } = useCollectionView(50);
   const inbox = useQuery({ queryKey: ["annotation-inbox-summary", scope], queryFn: ({ signal }) => getAnnotationInboxSummary(params, signal), staleTime: 15_000 });
   const items = inbox.data?.items ?? [];
-  useCollectionScroll(rootRef, scope, Boolean(inbox.data));
+  const outOfBounds = useCollectionPageBounds(offset, 50, inbox.data?.total, inbox.isSuccess && !inbox.isFetching, update);
+  useCollectionScroll(rootRef, scope, Boolean(inbox.data) && !outOfBounds);
   const filtered = Boolean(params.get("q") || params.get("project_id") || params.get("conversation_id") || params.get("anchor_status") || params.get("annotation_type"));
   return <section ref={rootRef} className="space-y-4" aria-busy={inbox.isFetching}>
     <CollectionFilters q={params.get("q") ?? ""} projectId={params.get("project_id") ?? ""} zh={zh} update={update}>

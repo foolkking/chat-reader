@@ -1,6 +1,6 @@
 # AI Rich Markdown Renderer Contract
 
-Last synchronized: 2026-10-25
+Last synchronized: 2026-11-03
 
 ## Purpose and canonical source
 
@@ -10,15 +10,47 @@ Chat Reader renders modern AI conversation Markdown through one semantic core. P
 canonical Markdown source (unchanged)
 -> bounded display-only compatibility projection where recognized
 -> react-markdown / unified parser
--> remark-gfm + frozen AI soft breaks + remark-math
+-> remark-gfm + source-position-aware callouts + frozen AI soft breaks + remark-math
 -> AI math compatibility AST transform
--> unsupported HTML nodes become inert visible source
+-> bounded safe-HTML and highlight AST projections
 -> sanitized HAST
 -> KaTeX semantic renderer
 -> safe React components
 ```
 
-`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v7` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical. This display-policy version is separate from the import parser version.
+Supported static HTML is allowlisted and projected into inert HAST nodes;
+unsupported or malformed HTML remains visible as inert text/code. Every path,
+including generated callouts and HTML, still passes through sanitization.
+The HTML projection merges adjacent HTML AST fragments and intervening
+whitespace-only nodes within the same Markdown parent before parsing. This
+supports common exporter cards whose balanced elements are split into several
+HTML nodes, including a block card followed by Markdown prose, without treating
+arbitrary Markdown/code as HTML. It does not merge across unrelated Markdown
+blocks, code, or parents. Each merged fragment still must pass the bounded
+balanced-tag/attribute/style allowlist; unsupported or malformed markup stays
+visible and inert. ZIP-local resource identity is handled only by Adaptive
+Import's explicit archive-member mapping; ordinary raw HTML does not guess
+relative paths. Callouts run before text-splitting transforms; source ranges
+are derived from raw source lines or omitted when not provable. Exact
+navigation reveals supported disclosure ancestors, including those of a
+matched text Range, without expanding unrelated cards in the same block.
+
+`remark-safe-html.ts` supports safe `details`/`summary` composition, including
+contiguous HTML fragments. Obsidian `![[wikilinks]]`, Bases, Dataview, Canvas,
+community plugins, macros and arbitrary JS remain out of scope. These require
+source-specific parsing or resource contracts and must not be represented as
+supported merely because they resemble Markdown.
+
+`RICH_MARKDOWN_RENDERER_VERSION = ai-rich-markdown-v13` identifies the parser/render policy. A future parsed-result cache must include source hash, MessageVersion identity and this version. Generated HTML is never canonical. This display-policy version is separate from the import parser version.
+
+Attachment occurrence resolution traverses both ordinary Markdown nodes and
+the allowlisted HTML projection before sanitization. Links/images/audio/video
+retain authorized occurrence identity and real DOM anchors, including fallback
+states. Offline blob sources are recovered only from the trusted attachment
+context; blob protocols and source-provided identity attributes are not
+globally allowlisted. Repeated resources use their ordered block occurrences.
+The [completion audit](../execution/ux-audit-reader-zip-completion-2026-11-03.md)
+records shared-renderer tests and the outstanding browser/geometry gates.
 
 ## Shared consumers
 
@@ -29,7 +61,8 @@ GFM/math/sanitization configuration for all cells, including plain text. It does
 not bypass the shared parser with a separately constructed table. Its stable cell components expose actual
 table cells for editing; post-sanitization application-owned coordinates do not
 authorize source HTML. Links become inert styled text and images inert alt text
-in this editing surface, so a cell click cannot navigate or load a remote image.
+in this editing surface; audio/video also become inert text rather than mounting
+players or requesting metadata. A cell click cannot navigate or play media.
 Normal Reader links/images retain their existing policy. Both normal and editable
 table cells retain the parser's GFM left/center/right alignment style; no parser
 version, canonical data or export contract changes.
@@ -259,11 +292,22 @@ Reader headings use the same sanitized KaTeX subtree as paragraphs. A presentati
 
 ## HTML, links and images
 
-- Raw user HTML is inert and visible as literal source: an AST transform handles
-  its HTML nodes before HAST; `skipHtml` and the sanitizer remain enabled.
+- A bounded Markdown-AST transform renders only an inert HTML subset: text,
+  semantics, lists, details, cards, tables, links, images and local audio/video.
+  Scripts, event attributes, arbitrary classes/IDs, frames, dangerous URLs and
+  external media are rejected before HAST; rejected or malformed input remains
+  visible as inert text/code. The output still passes through
+  `rehype-sanitize`, and canonical Markdown is unchanged.
+- Obsidian `> [!TYPE]` callouts, `+`/`-` folding markers and `==highlight==`
+  are projected at AST level. Callout titles and bodies keep their original
+  inline Markdown nodes, link targets, math, tasks and source positions; they
+  are not flattened and reparsed as plain text. Native safe
+  `<details><summary>…</summary>…</details>` remains supported.
 - Links allow existing safe anchors/paths and approved `http`, `https`, and `mailto` schemes. External links use `noopener noreferrer`.
 - `javascript:`, `vbscript:` and unsafe `data:` targets are not executable links.
-- Remote Markdown images are not auto-loaded. The renderer shows an inert placeholder and explicit safe link where allowed.
+- Remote Markdown images/media are not auto-loaded. Same-origin images reserve
+  a trusted width/height ratio when present; failed resources retain inert
+  fallback content and a safe open action where allowed.
 - Attachment-backed images continue through the Attachment Renderer contract; this phase does not change attachment identity or Viewer architecture.
 
 ## Performance and offline assets
@@ -426,11 +470,13 @@ Search and exports continue using canonical Markdown/searchable text. KaTeX span
 
 ## Supported and deferred syntax
 
-Supported now: four math delimiters, common KaTeX aligned/matrix/cases environments, GFM tables/tasks/strike/autolinks, footnotes, fenced/inline code, headings, blockquotes, the frozen existing single-newline visual-break policy and the bounded rich-text reading fallback above.
+Supported now: four math delimiters, common KaTeX aligned/matrix/cases environments, GFM tables/tasks/strike/autolinks, footnotes, fenced/inline code, headings, blockquotes, the frozen existing single-newline visual-break policy, bounded safe HTML/details/media, Obsidian callouts and inline highlights, and the bounded rich-text reading fallback above.
 
 Deferred by design: MathJax fallback, AsciiMath, `mhchem`, executable raw HTML,
-new callout syntax, new diagram runtimes and reconstruction of missing diagram
-meaning. Unsupported KaTeX commands use the bounded local fallback.
+wikilinks/attachment-name resolution, Bases, Dataview, Canvas, community plugins,
+new diagram runtimes and reconstruction of missing diagram meaning. Unsupported
+KaTeX commands use the bounded local fallback. Real merged HTML tables and
+external media remain unsupported.
 
 ## Regression evidence
 

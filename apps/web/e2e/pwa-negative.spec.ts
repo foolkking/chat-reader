@@ -350,6 +350,356 @@ test.describe("Release E PWA negative matrix", () => {
     expect(batchSizes.at(-1)).toBe(48);
   });
 
+  test.describe("bounded offline package refresh", () => {
+  // These cases mock API responses through page routes; bypass the previously
+  // registered Library worker so its fetch handler cannot swallow fixtures.
+  test.use({ serviceWorkers: "block" });
+
+  for (const networkFailure of [false, true]) {
+  test(`PWA-NEG-027 all-scope updates download and commit one conversation package at a time (${networkFailure ? "resume" : "normal"})`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await prepareAuthenticatedOfflinePage(page);
+    const conversations = Array.from({ length: 47 }, (_, index) => {
+      const suffix = String(index + 1).padStart(12, "0");
+      return {
+        id: `00000000-0000-4000-8000-${suffix}`,
+        display_title: `Synthetic conversation ${index + 1}`,
+        project_id: null,
+        project_name: null,
+        revision: 1,
+        estimated_bytes: 1024,
+        updated_at: "2026-08-15T00:00:00.000Z",
+      };
+    });
+    const packages = new Map<string, Buffer>();
+    const jobs = new Map<string, string>();
+    const admissions: Array<{ body: Record<string, unknown>; idempotencyKey: string | undefined }> = [];
+    let failDownloadOnce = networkFailure;
+    for (const conversation of conversations) {
+      packages.set(conversation.id, Buffer.from(createConversationPackage(conversation.id)));
+    }
+
+    await page.route("**/api/offline/catalog", route => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ revision: "synthetic-catalog", generated_at: "2026-08-15T00:00:00.000Z",
+        estimated_bytes: conversations.length * 1024, conversations, projects: [] }),
+    }));
+    await page.route("**/api/offline/packages", async route => {
+      const body = JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>;
+      const conversationId = String(body.conversation_id ?? "");
+      const conversation = conversations.find(item => item.id === conversationId);
+      if (body.scope !== "conversation" || !conversation) {
+        await route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ detail: "Expected one selected conversation." }) });
+        return;
+      }
+      const jobId = `10000000-0000-4000-8000-${conversationId.slice(-12)}`;
+      const packageId = `20000000-0000-4000-8000-${conversationId.slice(-12)}`;
+      jobs.set(jobId, packageId);
+      admissions.push({ body, idempotencyKey: route.request().headers()["idempotency-key"] });
+      await route.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({
+        package_id: packageId, job_id: jobId, status: "queued", scope: "conversation",
+        estimated_bytes: 1024, catalog_revision: "synthetic-catalog",
+      }) });
+    });
+    await page.route("**/api/tasks/*", async route => {
+      const jobId = new URL(route.request().url()).pathname.split("/").at(-1) ?? "";
+      const packageId = jobs.get(jobId);
+      if (!packageId) {
+        await route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ detail: "Synthetic task not found." }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+        job_id: jobId, job_type: "offline_package", status: "committed", phase: "completed",
+        progress: 100, processed_items: 1, total_items: 1, label: null,
+        result: { package_id: packageId }, error_message: null,
+      }) });
+    });
+    await page.route("**/api/offline/packages/*/download", async route => {
+      const packageId = new URL(route.request().url()).pathname.split("/").at(-2) ?? "";
+      const conversation = conversations.find(item => `20000000-0000-4000-8000-${item.id.slice(-12)}` === packageId);
+      if (conversation?.id === conversations[20].id && failDownloadOnce) {
+        failDownloadOnce = false;
+        await route.fulfill({ status: 503, body: "Synthetic mid-batch network interruption" });
+        return;
+      }
+      const archive = conversation ? packages.get(conversation.id) : undefined;
+      if (!archive) {
+        await route.fulfill({ status: 404, body: "missing synthetic package" });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: "application/zip", body: archive });
+    });
+
+    await page.goto("/library");
+    await expect.poll(() => page.evaluate(() => Boolean(
+      window.__chatReaderPwaNegativeTest?.enqueueOfflineDownload
+      && window.__chatReaderPwaNegativeTest.resumeOfflineDownloads,
+    ))).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.__chatReaderPwaNegativeTest?.offlineAccessReady() ?? false)).toBe(true);
+    const result = await page.evaluate(async (networkFailure) => {
+      const bridge = window.__chatReaderPwaNegativeTest;
+      if (!bridge?.enqueueOfflineDownload || !bridge.retryOfflineDownload || !bridge.resumeOfflineDownloads) throw new Error("Offline download test bridge unavailable.");
+      const record = await bridge.enqueueOfflineDownload({ scope: "all", assetMode: "none" }) as { id: string };
+      const databaseName = bridge.getActiveOfflineStorageContext().databaseName;
+      let beforeRetry: { conversations: number; cursor: unknown } | null = null;
+      const deadline = Date.now() + 90_000;
+      while (Date.now() < deadline) {
+        await bridge.resumeOfflineDownloads(new AbortController().signal);
+        const database = await new Promise<IDBDatabase>((resolve, reject) => {
+          const request = indexedDB.open(databaseName);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => resolve(request.result);
+        });
+        const state = await new Promise<{ conversations: number; messages: number; packages: number; download: Record<string, unknown> | null }>((resolve, reject) => {
+          const transaction = database.transaction(["conversations", "messages", "packages", "settings"], "readonly");
+          const conversationsRequest = transaction.objectStore("conversations").count();
+          const messagesRequest = transaction.objectStore("messages").count();
+          const packagesRequest = transaction.objectStore("packages").count();
+          const settingsRequest = transaction.objectStore("settings").getAll();
+          transaction.onerror = () => { database.close(); reject(transaction.error); };
+          transaction.oncomplete = () => {
+            const download = (settingsRequest.result as Array<{ key: string; value: Record<string, unknown> }>)
+              .find(row => row.key === `offline-download:${record.id}`)?.value ?? null;
+            database.close();
+            resolve({ conversations: conversationsRequest.result, messages: messagesRequest.result,
+              packages: packagesRequest.result, download });
+          };
+        });
+        if (state.download?.state === "failed") {
+          if (!networkFailure || beforeRetry) throw new Error(`Synthetic batch failed: ${String(state.download.error)}`);
+          beforeRetry = { conversations: state.conversations, cursor: state.download.conversationCursor };
+          await bridge.retryOfflineDownload(record.id);
+        }
+        if (state.download?.state === "completed") return { ...state, beforeRetry };
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      throw new Error("Synthetic 47-conversation update did not complete.");
+    }, networkFailure);
+
+    expect(admissions).toHaveLength(47);
+    expect(admissions.every(item => item.body.scope === "conversation")).toBe(true);
+    expect(new Set(admissions.map(item => item.idempotencyKey)).size).toBe(47);
+    expect(result.conversations).toBe(47);
+    expect(result.messages).toBe(47);
+    expect(result.packages).toBe(47);
+    expect(result.download).toMatchObject({ state: "completed", progress: 100, conversationCursor: 47 });
+    expect(result.beforeRetry).toEqual(networkFailure ? { conversations: 20, cursor: 20 } : null);
+  });
+  }
+
+  test("PWA-NEG-028 oversized archives fail before buffering and retain existing data", async ({ page }) => {
+    await prepareAuthenticatedOfflinePage(page);
+    const storage = await seedMinimalOfflineFixture(page, { waitForShell: false, useActiveStorageContext: true });
+    const before = await readFixtureState(page, storage);
+    const result = await page.evaluate(async () => {
+      const bridge = window.__chatReaderPwaNegativeTest;
+      if (!bridge) throw new Error("PWA negative test bridge is not enabled.");
+      let bodyRead = false;
+      const body = new ReadableStream<Uint8Array>({ pull(controller) {
+        bodyRead = true;
+        controller.enqueue(new Uint8Array([0]));
+        controller.close();
+      } }, { highWaterMark: 0 });
+      try {
+        await bridge.importOfflinePackage("oversized-package", new Response(body, {
+          headers: { "Content-Length": String(512 * 1024 * 1024 + 1) },
+        }));
+        return { ok: true, bodyRead };
+      } catch (error) {
+        return {
+          ok: false,
+          code: error instanceof Error && "code" in error ? String(error.code) : null,
+          bodyRead,
+        };
+      }
+    });
+    expect(result).toEqual({ ok: false, code: "CAPACITY", bodyRead: false });
+    expect(await readFixtureState(page, storage)).toEqual(before);
+  });
+
+  for (const recovery of ["enqueue", "retry", "resume"] as const) {
+  test(`PWA-NEG-029 retrying a legacy failed batch migrates it to resumable conversation jobs (${recovery})`, async ({ page }) => {
+    await prepareAuthenticatedOfflinePage(page);
+    const conversations = Array.from({ length: 2 }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${String(index + 101).padStart(12, "0")}`,
+      display_title: `Legacy retry ${index + 1}`,
+      project_id: null,
+      project_name: null,
+      revision: 1,
+      estimated_bytes: 1024,
+      updated_at: "2026-08-15T00:00:00.000Z",
+    }));
+    await page.route("**/api/offline/catalog", route => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ revision: "legacy-retry-catalog", generated_at: "2026-08-15T00:00:00.000Z",
+        estimated_bytes: 2048, conversations, projects: [] }),
+    }));
+    await page.route("**/api/offline/packages", route => route.fulfill({ status: 503, body: "Synthetic admission pause" }));
+    await page.goto("/library");
+    await expect.poll(() => page.evaluate(() => Boolean(window.__chatReaderPwaNegativeTest?.enqueueOfflineDownload))).toBe(true);
+    await expect.poll(() => page.evaluate(() => window.__chatReaderPwaNegativeTest?.offlineAccessReady() ?? false)).toBe(true);
+
+    const result = await page.evaluate(async (recovery) => {
+      const bridge = window.__chatReaderPwaNegativeTest;
+      if (!bridge?.enqueueOfflineDownload || !bridge.retryOfflineDownload || !bridge.resumeOfflineDownloads) throw new Error("Offline download test bridge unavailable.");
+      const databaseName = bridge.getActiveOfflineStorageContext().databaseName;
+      Object.defineProperty(navigator, "onLine", { configurable: true, get: () => false });
+      const id = "legacy-failed-all-scope";
+      const oldIdempotencyKey = "legacy-full-package-key";
+      const now = "2026-08-15T00:00:00.000Z";
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction("settings", "readwrite");
+        transaction.objectStore("settings").put({
+          key: `offline-download:${id}`,
+          value: {
+            id, scope: "all", label: "All", assetMode: "none", state: recovery === "resume" ? "queued" : "failed", progress: 0,
+            jobId: "30000000-0000-4000-8000-000000000001", packageId: "40000000-0000-4000-8000-000000000001",
+            idempotencyKey: oldIdempotencyKey, knownRevisions: {}, cancelRequested: false, error: recovery === "retry" ? "MALFORMED" : "DOWNLOAD",
+            createdAt: now, updatedAt: now, admissionStarted: true,
+          },
+        });
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+      });
+
+      if (recovery === "enqueue") await bridge.enqueueOfflineDownload({ scope: "all", assetMode: "none" });
+      else if (recovery === "retry") await bridge.retryOfflineDownload(id);
+      else {
+        Object.defineProperty(navigator, "onLine", { configurable: true, get: () => true });
+        await bridge.resumeOfflineDownloads(new AbortController().signal);
+      }
+      const checkDb = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(databaseName);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+      const rows = await new Promise<Array<{ key: string; value: Record<string, unknown> }>>((resolve, reject) => {
+        const transaction = checkDb.transaction("settings", "readonly");
+        const request = transaction.objectStore("settings").getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        transaction.oncomplete = () => checkDb.close();
+      });
+      const retried = rows.find(row => row.key === `offline-download:${id}`)?.value as {
+        id: string; state: string; jobId: string | null; progress: number; idempotencyKey: string;
+        targetConversationIds?: string[]; conversationIdempotencyKeys?: Record<string, string>;
+        conversationCursor?: number; serverCancellation?: string;
+      };
+      const cancellation = rows.find(row => row.key === `offline-cancellation:${oldIdempotencyKey}`)?.value as { download?: { jobId?: string } } | undefined;
+      return { retried, cancellationJobId: cancellation?.download?.jobId ?? null };
+    }, recovery);
+
+    expect(result.retried).toMatchObject({
+      id: "legacy-failed-all-scope", state: recovery === "resume" ? "failed" : "queued", jobId: null, progress: 0,
+      targetConversationIds: conversations.map(item => item.id), conversationCursor: 0,
+      serverCancellation: "pending",
+    });
+    expect(result.retried.idempotencyKey).not.toBe("legacy-full-package-key");
+    expect(new Set(Object.values(result.retried.conversationIdempotencyKeys ?? {})).size).toBe(2);
+    expect(result.cancellationJobId).toBe("30000000-0000-4000-8000-000000000001");
+  });
+  }
+
+  test("PWA-NEG-030 a single conversation larger than the production maximum imports completely", async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+    await prepareAuthenticatedOfflinePage(page);
+    const fixture = createLargeConversationPackage();
+    expect(fixture.jsonBytes).toBeGreaterThan(215_581_606);
+    expect(fixture.jsonBytes).toBeLessThan(256 * 1024 * 1024);
+    await page.route("**/offline-regression-large-package", route => route.fulfill({
+      status: 200,
+      contentType: "application/zip",
+      body: Buffer.from(fixture.archive),
+    }));
+    await page.goto("/library");
+    await expect.poll(() => page.evaluate(() => window.__chatReaderPwaNegativeTest?.offlineAccessReady() ?? false)).toBe(true);
+    const importStarted = Date.now();
+    const imported = await page.evaluate(async () => {
+      const bridge = window.__chatReaderPwaNegativeTest;
+      if (!bridge) throw new Error("Offline import test bridge unavailable.");
+      const response = await fetch("/offline-regression-large-package");
+      await bridge.importOfflinePackage("large-conversation-package", response);
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(bridge.getActiveOfflineStorageContext().databaseName);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      });
+      return new Promise<{ messages: number; blocks: number; conversationCount: number; packageCount: number; textChars: number }>((resolve, reject) => {
+        const transaction = database.transaction(["conversations", "messages", "blocks", "packages"], "readonly");
+        const conversations = transaction.objectStore("conversations").count();
+        const messages = transaction.objectStore("messages").count();
+        const blocks = transaction.objectStore("blocks").count();
+        const packages = transaction.objectStore("packages").count();
+        const first = transaction.objectStore("messages").get("large-message-0");
+        transaction.onerror = () => { database.close(); reject(transaction.error); };
+        transaction.oncomplete = () => {
+          database.close();
+          resolve({ messages: messages.result, blocks: blocks.result,
+            conversationCount: conversations.result, packageCount: packages.result,
+            textChars: first.result.current_version.plain_text.length });
+        };
+      });
+    });
+    expect(imported).toEqual({
+      messages: 18, blocks: 18, conversationCount: 1, packageCount: 1, textChars: 3 * 1024 * 1024,
+    });
+    await testInfo.attach("large-offline-import-metrics.json", {
+      contentType: "application/json",
+      body: JSON.stringify({
+        json_bytes: fixture.jsonBytes,
+        archive_bytes: fixture.archive.byteLength,
+        import_elapsed_ms: Date.now() - importStarted,
+        stored_messages: imported.messages,
+        stored_blocks: imported.blocks,
+        synthetic: true,
+      }),
+    });
+  });
+
+  test("PWA-NEG-031 an oversized ZIP entry is rejected before decompression and leaves old data intact", async ({ page }) => {
+    await prepareAuthenticatedOfflinePage(page);
+    const storage = await seedMinimalOfflineFixture(page, { waitForShell: false, useActiveStorageContext: true });
+    const before = await readFixtureState(page, storage);
+    const archive = Buffer.from(createConversationPackage("oversized-entry"));
+    const centralDirectory = archive.lastIndexOf(Buffer.from([0x50, 0x4b, 0x01, 0x02]));
+    expect(centralDirectory).toBeGreaterThan(0);
+    // The central directory advertises a ZIP bomb without allocating its
+    // uncompressed body. The production unzip filter must reject its budget.
+    archive.writeUInt32LE(256 * 1024 * 1024 + 1, centralDirectory + 24);
+    const result = await importWithFault(page, Array.from(archive), "oversized-zip-entry", null);
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe("CAPACITY");
+    expect(await readFixtureState(page, storage)).toEqual(before);
+  });
+
+  test("PWA-NEG-032 a child package cannot replace an unrelated conversation", async ({ page }) => {
+    await prepareAuthenticatedOfflinePage(page);
+    const storage = await seedMinimalOfflineFixture(page, { waitForShell: false, useActiveStorageContext: true });
+    const before = await readFixtureState(page, storage);
+    const result = await page.evaluate(async bytes => {
+      const bridge = window.__chatReaderPwaNegativeTest;
+      if (!bridge) throw new Error("Offline import test bridge unavailable.");
+      try {
+        await bridge.importOfflinePackage("wrong-conversation-package", new Response(new Uint8Array(bytes)), {
+          expectedConversationId: "offline-negative",
+        });
+        return { ok: true, code: null };
+      } catch (error) {
+        return { ok: false, code: error instanceof Error && "code" in error ? String(error.code) : null };
+      }
+    }, Array.from(createConversationPackage("unrelated-conversation")));
+    expect(result).toEqual({ ok: false, code: "MALFORMED" });
+    expect(await readFixtureState(page, storage)).toEqual(before);
+  });
+  });
+
   test("PWA-NEG-024 legacy v1 package imports into a readable Reader", async ({ page, context }) => {
     await context.addCookies([
       { name: "chat_reader_session", value: "offline-v1-test-session", domain: "127.0.0.1", path: "/" },
@@ -559,14 +909,27 @@ async function sendShellMessage(page: Page, message: Record<string, unknown>): P
   }, message);
 }
 
-async function seedMinimalOfflineFixture(page: Page, options: { waitForShell?: boolean } = {}): Promise<void> {
+async function seedMinimalOfflineFixture(
+  page: Page,
+  options: { waitForShell?: boolean; useActiveStorageContext?: boolean } = {},
+): Promise<{ databaseName: string; assetCacheName: string }> {
   await page.goto("/library");
   if (options.waitForShell !== false) await waitForActiveRecord(page);
+  if (options.useActiveStorageContext) {
+    await expect.poll(() => page.evaluate(() => window.__chatReaderPwaNegativeTest?.offlineAccessReady() ?? false)).toBe(true);
+  }
+  const storage = options.useActiveStorageContext
+    ? await page.evaluate(() => window.__chatReaderPwaNegativeTest?.getActiveOfflineStorageContext())
+    : undefined;
+  const names = {
+    databaseName: storage?.databaseName ?? DATABASE,
+    assetCacheName: storage?.assetCacheName ?? "chat-reader-offline-assets-v1",
+  };
   await expect.poll(() => page.evaluate(async (databaseName) => {
     const databases = await indexedDB.databases();
     return databases.some((database) => database.name === databaseName);
-  }, DATABASE)).toBe(true);
-  await page.evaluate(({ databaseName, attachmentId, attachmentUrl }) => new Promise<void>((resolve, reject) => {
+  }, names.databaseName)).toBe(true);
+  await page.evaluate(({ databaseName, attachmentId, attachmentUrl, assetCacheName }) => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open(databaseName);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
@@ -584,7 +947,7 @@ async function seedMinimalOfflineFixture(page: Page, options: { waitForShell?: b
         transaction.objectStore("attachments").put({ id: "22222222-2222-4222-8222-222222222222", conversation_id: "offline-negative", message_id: null, message_version_id: null, display_name: "missing-image.png", original_filename: "missing-image.png", declared_mime_type: "image/png", detected_mime_type: "image/png", byte_size: 9, sha256: "b".repeat(64), content_path: "assets/missing-image.png", status: "available", scan_status: "unscanned", resolution_status: "resolved", occurrences: [] });
         transaction.objectStore("attachments").put({ id: "33333333-3333-4333-8333-333333333333", conversation_id: "offline-negative", message_id: null, message_version_id: null, display_name: "missing-document.pdf", original_filename: "missing-document.pdf", declared_mime_type: "application/pdf", detected_mime_type: "application/pdf", byte_size: 16, sha256: "c".repeat(64), content_path: "assets/missing-document.pdf", status: "available", scan_status: "unscanned", resolution_status: "resolved", occurrences: [] });
         transaction.oncomplete = async () => {
-          const cache = await caches.open("chat-reader-offline-assets-v1");
+          const cache = await caches.open(assetCacheName);
           await cache.put(attachmentUrl, new Response(bytes, { headers: { "Content-Type": "text/plain" } }));
           database.close();
           resolve();
@@ -594,7 +957,56 @@ async function seedMinimalOfflineFixture(page: Page, options: { waitForShell?: b
       }).catch(reject);
     };
     request.onerror = () => reject(request.error);
-  }), { databaseName: DATABASE, attachmentId: ATTACHMENT_ID, attachmentUrl: ATTACHMENT_URL });
+  }), { databaseName: names.databaseName, attachmentId: ATTACHMENT_ID, attachmentUrl: ATTACHMENT_URL, assetCacheName: names.assetCacheName });
+  return names;
+}
+
+async function prepareAuthenticatedOfflinePage(page: Page): Promise<void> {
+  await page.context().addCookies([
+    { name: "chat_reader_session", value: "offline-download-regression-session", url: "http://127.0.0.1:3107", httpOnly: true },
+    { name: "chat_reader_session_present", value: "1", url: "http://127.0.0.1:3107" },
+  ]);
+  await page.route("**/api/auth/session", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      authenticated: true,
+      principal_id: "offline-download-regression-owner",
+      user_id: "00000000-0000-4000-8000-0000000000aa",
+      inactivity_expires_at: "2099-01-01T00:00:00Z",
+      auth_mode: "multi_account",
+      registration_mode: "CLOSED",
+      password_reset_available: false,
+    }),
+  }));
+  await page.route("**/api/auth/setup/status", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ setup_required: false, registration_mode: "CLOSED" }),
+  }));
+  await page.route("**/api/preferences", route => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      theme_mode: "light",
+      locale_mode: "en-US",
+      reader_width_mode: "standard",
+      reader_density_mode: "comfortable",
+      reader_font_size_px: 17,
+      section_toc_mode: "visible",
+      conversation_sort_mode: "recent_read",
+      conversation_sort_direction: "desc",
+      project_sort_mode: "custom",
+      project_sort_direction: "asc",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    }),
+  }));
+  await page.route("**/api/offline/catalog", route => route.fulfill({
+    json: { revision: "empty-offline-regression-catalog", generated_at: "2026-08-15T00:00:00.000Z",
+      estimated_bytes: 0, conversations: [], projects: [] },
+  }));
+  await page.route("**/api/conversations/*/reading-position", route => route.fulfill({ status: 404, json: { detail: "No remote fixture position" } }));
 }
 
 async function openOfflineFiles(page: Page): Promise<void> {
@@ -705,6 +1117,92 @@ function createLegacyPackage(version: 1 | 2, emptyMessages = false): number[] {
   return Array.from(zipSync({ "package.json": strToU8(JSON.stringify(payload)) }));
 }
 
+function createConversationPackage(conversationId: string): Uint8Array {
+  const messageId = `message-${conversationId}`;
+  const text = `Synthetic offline message for ${conversationId}`;
+  const payload = {
+    format: "chat-reader-offline-package",
+    version: 3,
+    update_mode: "conversation-delta",
+    catalog_revision: `catalog-${conversationId}`,
+    scope: "conversation",
+    scope_id: conversationId,
+    asset_mode: "none",
+    conversations: [{
+      id: conversationId,
+      title: `Synthetic conversation ${conversationId.slice(-4)}`,
+      display_title: `Synthetic conversation ${conversationId.slice(-4)}`,
+      message_count: 1,
+      turn_count: 1,
+      offline_revision: 1,
+      updated_at: "2026-08-15T00:00:00.000Z",
+      messages: [{
+        id: messageId,
+        conversation_id: conversationId,
+        role: "user",
+        order_key: "000001",
+        turn_index: 1,
+        created_at: "2026-08-15T00:00:00.000Z",
+        current_version: { id: `version-${conversationId}`, version_number: 1, plain_text: text, display_text: text },
+        render_blocks: [],
+        block_count: 0,
+        char_count: text.length,
+        is_heavy: false,
+      }],
+      headings: [],
+      search_documents: [],
+      annotations: [],
+      notebook: null,
+      reading_position: null,
+      attachments: [],
+    }],
+  };
+  return zipSync({ "package.json": strToU8(JSON.stringify(payload)) });
+}
+
+function createLargeConversationPackage(): { archive: Uint8Array; jsonBytes: number } {
+  const text = "x".repeat(3 * 1024 * 1024);
+  const payload = {
+    format: "chat-reader-offline-package",
+    version: 3,
+    update_mode: "conversation-delta",
+    catalog_revision: "synthetic-large-catalog",
+    scope: "conversation",
+    scope_id: "large-conversation",
+    asset_mode: "none",
+    conversations: [{
+      id: "large-conversation",
+      title: "Synthetic large conversation",
+      display_title: "Synthetic large conversation",
+      message_count: 18,
+      turn_count: 18,
+      offline_revision: 1,
+      updated_at: "2026-08-15T00:00:00.000Z",
+      messages: Array.from({ length: 18 }, (_, index) => ({
+        id: `large-message-${index}`,
+        conversation_id: "large-conversation",
+        role: "user",
+        order_key: String(index + 1).padStart(6, "0"),
+        turn_index: index + 1,
+        created_at: "2026-08-15T00:00:00.000Z",
+        current_version: { id: `large-version-${index}`, version_number: 1, plain_text: text, display_text: text },
+        render_blocks: [{ id: `large-block-${index}`, block_index: 0, block_type: "paragraph", plain_text: text, data: { text } }],
+        block_count: 1,
+        char_count: text.length,
+        is_heavy: true,
+      })),
+      headings: [],
+      search_documents: [],
+      annotations: [],
+      notebook: null,
+      reading_position: null,
+      attachments: [],
+    }],
+  };
+  const bytes = strToU8(JSON.stringify(payload));
+  return { archive: zipSync({ "package.json": bytes }, { level: 1 }), jsonBytes: bytes.byteLength };
+}
+
 function createMalformedV2StorePackage(): number[] {
   const payload = {
     format: "chat-reader-offline-package",
@@ -774,8 +1272,14 @@ async function importWithFault(page: Page, bytes: number[], packageId: string, f
   }, { bytes, packageId, fault });
 }
 
-async function readFixtureState(page: Page): Promise<{ revision: number; assetText: string | null; packageCount: number }> {
-  return page.evaluate(async ({ databaseName, attachmentUrl }) => new Promise((resolve, reject) => {
+async function readFixtureState(
+  page: Page,
+  storage: { databaseName: string; assetCacheName: string } = {
+    databaseName: DATABASE,
+    assetCacheName: "chat-reader-offline-assets-v1",
+  },
+): Promise<{ revision: number; assetText: string | null; packageCount: number }> {
+  return page.evaluate(async ({ databaseName, attachmentUrl, assetCacheName }) => new Promise((resolve, reject) => {
     const request = indexedDB.open(databaseName);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
@@ -789,7 +1293,7 @@ async function readFixtureState(page: Page): Promise<{ revision: number; assetTe
         new Promise<number>((done) => { packageRequest.onsuccess = () => done(packageRequest.result); packageRequest.onerror = () => done(0); }),
         new Promise<Record<string, unknown> | undefined>((done) => { attachmentRequest.onsuccess = () => done(attachmentRequest.result); attachmentRequest.onerror = () => done(undefined); }),
       ]).then(async ([conversation, packageCount, attachment]) => {
-        const cache = await caches.open("chat-reader-offline-assets-v1");
+        const cache = await caches.open(assetCacheName);
         const sha256 = typeof attachment?.sha256 === "string" ? attachment.sha256.toLowerCase() : null;
         const response = (sha256 ? await cache.match(`${attachmentUrl}/${encodeURIComponent(sha256)}`) : undefined)
           ?? await cache.match(attachmentUrl);
@@ -798,7 +1302,7 @@ async function readFixtureState(page: Page): Promise<{ revision: number; assetTe
         resolve({ revision: Number(conversation?.offline_revision ?? 0), assetText, packageCount });
       }).catch(reject);
     };
-  }), { databaseName: DATABASE, attachmentUrl: ATTACHMENT_URL });
+  }), { databaseName: storage.databaseName, assetCacheName: storage.assetCacheName, attachmentUrl: ATTACHMENT_URL });
 }
 
 async function readConversationContent(page: Page, conversationId: string): Promise<{ messageCount: number; storedMessages: number; text: string | null }> {

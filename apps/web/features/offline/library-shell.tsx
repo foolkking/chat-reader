@@ -1,7 +1,7 @@
 "use client";
 
 import { liveQuery } from "dexie";
-import { enqueueOfflineDownload, listOfflineDownloads, offlineDownloadFailureMessage, retryOfflineDownload, usableOfflineRevisions, type OfflineDownload } from "../../lib/offline-downloads";
+import { enqueueOfflineDownload, listOfflineDownloads, offlineDownloadFailureMessage, retryOfflineDownloadWithReview, usableOfflineRevisions, type OfflineDownload } from "../../lib/offline-downloads";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Download, FolderTree, HardDrive, Library, LoaderCircle, PanelLeftClose, RefreshCw, Search, Trash2, Wifi, WifiOff, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -9,6 +9,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { ConversationReader } from "../conversations/conversation-reader";
 import { ApiRequestError, getOfflineCatalog } from "../../lib/api";
 import { OfflinePackageImportError, OfflinePendingChangesError, OfflineDownloadInProgressError, offlineDb, removeOfflineConversations, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
+import { offlineFailureCanRetry } from "../../lib/offline-download-errors";
 import { offlineReaderDataSource, resolveOfflineSearchResult } from "../../lib/reader-data-source";
 import { matchesLibrarySearchTarget, searchResultHref, type SearchResultReplay } from "../search/search-result-target";
 import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
@@ -21,6 +22,7 @@ import { ReaderSidebarFrame } from "../../components/reader-sidebar-frame";
 import { SidebarPreferences } from "../../components/sidebar-preferences";
 import { usePreferences } from "../../components/preferences-provider";
 import { MobilePageHeader } from "../../components/mobile-page-header";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 type DownloadState = { key: string; progress: number; label: string } | null;
 type DownloadRequest = { scope: "conversation" | "project" | "all"; id?: string };
@@ -49,6 +51,7 @@ export function LibraryShell() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const { confirm } = useInteractionDialog();
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const [conversations, setConversations] = useState<OfflineConversationRecord[]>([]);
@@ -428,9 +431,19 @@ export function LibraryShell() {
     if (!downloadFailure) return;
     setRetryingDownload(true);
     setError(null);
-    void retryOfflineDownload(downloadFailure.id).catch(reason => setError(offlineDownloadErrorMessage(reason, zh)))
+    void retryOfflineDownloadWithReview(downloadFailure.id, review => confirm({
+      title: zh ? "重新核对离线下载范围？" : "Review the offline download scope?",
+      description: zh
+        ? `原计划包含 ${review.previousTargetCount} 个待更新对话。当前范围有 ${review.currentScopeCount} 个对话，其中 ${review.unavailableCount} 个原目标已不可用、${review.newlyIncludedCount} 个为新加入范围；确认后仅下载当前需要更新的项目，已完成副本会保留。`
+        : `The previous batch had ${review.previousTargetCount} conversations to update. The current scope contains ${review.currentScopeCount}; ${review.unavailableCount} previous targets are unavailable and ${review.newlyIncludedCount} are newly in scope. Confirm to download only items that need updating; completed copies are retained.`,
+      confirmLabel: zh ? "确认新范围" : "Confirm new scope",
+    })).catch(reason => setError(reason instanceof Error && reason.message === "OFFLINE_TARGET_SCOPE_EMPTY"
+      ? (zh ? "当前可用范围没有需要更新的对话；旧离线副本仍保留，不会重启空批次。" : "No available conversations in this scope need updating. Existing offline copies are retained; no empty batch was restarted.")
+      : reason instanceof Error && reason.message === "OFFLINE_TARGET_SCOPE_CHANGED"
+        ? (zh ? "下载范围在确认时发生变化，请重新核对后再试。" : "The download scope changed during review. Check it again before retrying.")
+        : offlineDownloadErrorMessage(reason, zh)))
       .finally(() => setRetryingDownload(false));
-  }, [downloadFailure, failedDownload, retryingDownload, startDownload, zh]);
+  }, [confirm, downloadFailure, failedDownload, retryingDownload, startDownload, zh]);
 
   useEffect(() => {
     const catalog = catalogQuery.data;
@@ -610,7 +623,7 @@ export function LibraryShell() {
       {!requestedFailureMessage && !download ? <p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "下载后即可在这里离线阅读。" : "Download this conversation to read it here offline."}</p> : null}
       {download ? <p role="status" className="mt-4 flex items-center gap-2 text-sm text-secondary"><LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" />{online ? download.label : (zh ? "已暂停，联网后继续" : "Paused; resumes when online")}</p> : null}
       {requestedFailureMessage ? <p role="status" className="mt-4 max-w-sm rounded-md bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{requestedFailureMessage}</p> : null}
-      <button type="button" disabled={!online || Boolean(download) || retryingDownload} onClick={() => requestedFailure ? retryDownload() : startDownload({ scope: "conversation", id: requestedCatalogConversation.id })} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{requestedFailure ? (zh ? "重试离线下载" : "Retry offline download") : (zh ? "下载离线副本" : "Download offline copy")}</button>
+      {(!requestedFailure || offlineFailureCanRetry(downloadFailure?.error ?? null) || downloadFailure?.error === "UNAVAILABLE_TARGET") ? <button type="button" disabled={!online || Boolean(download) || retryingDownload} onClick={() => requestedFailure ? retryDownload() : startDownload({ scope: "conversation", id: requestedCatalogConversation.id })} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{requestedFailure ? (downloadFailure?.error === "UNAVAILABLE_TARGET" ? (zh ? "重新核对范围" : "Review download scope") : (zh ? "重试离线下载" : "Retry offline download")) : (zh ? "下载离线副本" : "Download offline copy")}</button> : null}
       <button type="button" onClick={openLibrary} className={`mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary ${desktopSidebarExpanded ? "md:hidden" : ""}`}>{zh ? "打开资料库" : "Open library"}</button>
     </div>
   ) : !localReadReady ? (

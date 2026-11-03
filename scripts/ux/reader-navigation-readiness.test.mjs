@@ -16,7 +16,7 @@ const selected = reader.body.statements.filter(node => {
   if (ts.isVariableStatement(node)) return node.declarationList.declarations.some(item => callbacks.has(item.name.getText(ast)));
   if (!ts.isExpressionStatement(node) || !ts.isCallExpression(node.expression) || node.expression.expression.getText(ast) !== "useEffect") return false;
   const text = node.getText(ast);
-  return text.includes("const markWheelIntent =") || text.includes("setInitialPaintReady(true)")
+  return text.includes("const markWheelIntent =") || text.includes("const handleReadingShortcut =") || text.includes("setInitialPaintReady(true)")
     || text.includes("if (!windowQuery.isSuccess || initialWindowAppliedRef.current)")
     || text.includes("messagesRef.current = messages;") || text.includes("const restoreToken = readingRestoreTokenRef.current + 1;")
     || text.includes("const persist = () =>") || text.includes('"first-content",');
@@ -24,7 +24,7 @@ const selected = reader.body.statements.filter(node => {
 assert.equal(selected.filter(node => node.getText(ast).includes("const persist = () =>")).length, 1);
 assert.equal(selected.filter(node => node.getText(ast).includes("setInitialPaintReady(true)")).length, 1);
 assert.equal(selected.filter(node => node.getText(ast).includes("const restoreToken = readingRestoreTokenRef.current + 1;")).length, 1);
-assert.equal(selected.length, 11, "four actual callbacks and seven effects, no rewritten state machine");
+assert.equal(selected.length, 12, "four actual callbacks and eight effects, including the separate keyboard listener");
 const deriveNames = ["conversationReadUnavailable", "retainReaderOnReadError", "readerSurfaceAvailable"];
 const derived = deriveNames.filter(name => declarations.has(name)).map(name => "const " + declarations.get(name).getText(ast) + ";");
 const helpers = ast.statements.filter(node => ts.isFunctionDeclaration(node) && [
@@ -45,6 +45,7 @@ const loadModule = (code, imports = appRequire, document) => {
   const module = { exports: {} }; new Function("require", "module", "exports", "document", code)(imports, module, module.exports, document); return module.exports;
 };
 const windowHelpers = loadModule(moduleCode("reader-window"));
+const virtualHelpers = loadModule(moduleCode("block-virtualization"));
 const turnFoldingHelpers = loadModule(moduleCode("reader-turn-folding"));
 const searchTargetHelpers = loadModule(compile(readFileSync(
   new URL("../../apps/web/features/search/search-result-target.ts", import.meta.url), "utf8",
@@ -60,6 +61,7 @@ const refDefaults = {
   tocReturnPointRef: null, collapsedTurnKeysRef: new Set(),
   edgeTransitionRef: null, loadingPreviousRef: false, loadingNextRef: false, previousSentinelVisibleRef: false,
   nextSentinelVisibleRef: false, firstContentReportedRef: false, firstContentStartedAtRef: 0,
+  geometryAnchorRef: null, geometryTransitionRef: 0,
 };
 const inputNames = [...Object.keys(refDefaults), "loadedWindowRef", "scrollContainerRef", "messagesRef", "resolvedLocatorKeysRef",
   "loadPreviousActionRef", "loadNextActionRef", "recentOwner", "recentOwnerRef", "conversationId", "dataSource", "conversationQuery",
@@ -221,6 +223,10 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     captureScrollAnchor: scope => { const target = active.resolveActiveReadingTarget(scope, 120);
       return target ? { targetId: target.blockId ?? "message-" + target.messageId, offset: 120 } : null; },
     acquireReaderBlockLease: async () => ({ release() {} }), notifyReaderWindowLayoutChanged: () => {},
+    READER_WINDOW_LAYOUT_EVENT: virtualHelpers.READER_WINDOW_LAYOUT_EVENT,
+    // Keyboard listener lifecycle is real here; target resolution has its
+    // own executable keyboard-navigation suite.
+    utilityPanel: null, cancelKeyboardNavigation: () => {}, navigateKeyboardMessage: async () => {},
     reportReaderPerformance: (...args) => reports.push(args), resolveTextAnchorRange: () => null, firstVisibleRangeRect: () => null,
   };
   new Function(...Object.keys(dependencies), compiled)(...Object.values(dependencies));
@@ -435,5 +441,22 @@ test("a deliberate index navigation can persist its settled real target without 
     await f.navigate(); await f.frame(); await f.advance(1200);
     assert.equal(f.saves.length, 1); assert.equal(f.saves[0].payload.message_id, f.firstTarget.messageId);
     assert.equal(f.state.userScrollIntentRef.current, false, "navigation intent is not relabelled as a wheel gesture");
+  } finally { f.dispose(); }
+});
+
+test("real input retires a pending geometry lease and releases its compensation flag", async () => {
+  const f = fixture();
+  try {
+    await f.setInitial(); await f.frame();
+    const release = f.hold("settle");
+    f.window.emit(virtualHelpers.READER_WINDOW_LAYOUT_EVENT);
+    assert.equal(f.root.dataset.readerGeometryCompensating, "true");
+    const token = f.state.geometryTransitionRef.current;
+    f.userWheel(60);
+    assert.ok(f.state.geometryTransitionRef.current > token);
+    assert.equal(f.root.dataset.readerGeometryCompensating, undefined);
+    release(); await f.flush();
+    assert.equal(f.root.dataset.readerGeometryCompensating, undefined);
+    assert.equal(f.saves.length, 0, "layout compensation itself must not persist a position");
   } finally { f.dispose(); }
 });

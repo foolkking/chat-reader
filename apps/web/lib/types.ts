@@ -662,6 +662,59 @@ export type AdaptiveImportFamily = {
   };
 };
 
+export type AdaptiveArchiveIssue = {
+  code: string;
+  severity: "warning" | "error" | string;
+  message: string;
+};
+
+export type AdaptiveArchiveMember = {
+  member_id: string;
+  path: string;
+  zip_path: string;
+  extension: string;
+  byte_size: number;
+  compressed_size: number;
+  crc: number;
+  kind: "markdown" | "file" | string;
+  use: "conversation" | "attachment" | "excluded" | string;
+  owner_document_ids: string[];
+  referenced_by: string[];
+  reference_count: number;
+  manifest_kind?: string | null;
+  width?: number | null;
+  height?: number | null;
+};
+
+export type AdaptiveArchiveSummary = {
+  artifact_id: string;
+  filename: string;
+  byte_size: number;
+  archive_kind: "conversation_export" | "markdown_zip" | string;
+  wrapper_prefix?: string | null;
+  classification_version: number;
+  document_count: number;
+  attachment_count: number;
+  excluded_count: number;
+  unreferenced_count: number;
+  issue_count: number;
+  blocking_issue_count: number;
+};
+
+export type AdaptiveArchiveCatalog = Omit<AdaptiveArchiveSummary, "filename" | "byte_size"> & {
+  version: number;
+  artifact_id: string;
+  archive_kind: "conversation_export" | "markdown_zip" | string;
+  wrapper_prefix?: string | null;
+  issues: AdaptiveArchiveIssue[];
+  manifest_message_count: number;
+  members: AdaptiveArchiveMember[];
+  member_count: number;
+  offset: number;
+  limit: number;
+  has_more: boolean;
+};
+
 export type AdaptiveImportSession = {
   import_id: string;
   target_project_id?: string | null;
@@ -680,6 +733,7 @@ export type AdaptiveImportSession = {
   can_import: boolean;
   groups: AdaptiveImportGroup[];
   families: AdaptiveImportFamily[];
+  archives?: AdaptiveArchiveSummary[];
   warnings: string[];
   analysis_summary: Record<string, unknown>;
 };

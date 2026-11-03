@@ -19,7 +19,7 @@ const compiled = ts.transpileModule(source, { fileName: "reader-navigation.ts", 
 // This is not mounted DOM or browser geometry evidence; CI's Reader/PWA cases
 // retain their exact target, fallback, transient pulse and replay assertions.
 function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight = 80,
-  rangeInset, paddingTop = 0, windowScroll = false, stuck = false } = {}) {
+  rangeInset, paddingTop = 0, windowScroll = false, stuck = false, foldedRange = false } = {}) {
   let now = 0, nextFrame = 0, frameCount = 0, current = true, position = 0;
   const frames = new Map(), observers = [], writes = [];
   const rootTop = windowScroll ? 0 : 80;
@@ -40,7 +40,14 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     getBoundingClientRect: () => rect(rootTop + contentTop - position, targetHeight),
   };
   const rangeRect = () => rect(rootTop + contentTop + (rangeInset ?? 0) - position, 20);
-  const range = rangeInset === undefined ? null : { getBoundingClientRect: rangeRect };
+  const outerDisclosure = { open: false, parentElement: null };
+  const innerDisclosure = { open: false, parentElement: { closest: () => outerDisclosure } };
+  const unrelatedDisclosure = { open: false };
+  const range = rangeInset === undefined ? null : {
+    getBoundingClientRect: rangeRect,
+    ...(foldedRange ? { startContainer: { parentElement: { closest: () => innerDisclosure } },
+      endContainer: { parentElement: { closest: () => innerDisclosure } } } : {}),
+  };
   const document = {
     scrollingElement: root,
     getElementById: id => id === target.id ? target : null,
@@ -87,7 +94,7 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     return task;
   }
   return {
-    root, target, writes, rangeRect,
+    root, target, writes, rangeRect, outerDisclosure, innerDisclosure, unrelatedDisclosure,
     cancel: () => { current = false; },
     grow: size => { root.scrollHeight = size; for (const observer of observers) observer.action(); },
     restore(options = {}, onFrame = () => {}) {
@@ -115,6 +122,14 @@ test("an interior target still reaches the reading line, not a merely visible po
   assert.equal(result.fallback, false);
   assert.equal(f.root.scrollTop, 480);
   assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, 120);
+});
+
+test("exact text navigation reveals nested rich disclosures without expanding unrelated cards", async () => {
+  const f = fixture({ rangeInset: 30, foldedRange: true });
+  assert.equal((await f.run()).ok, true);
+  assert.equal(f.outerDisclosure.open, true);
+  assert.equal(f.innerDisclosure.open, true);
+  assert.equal(f.unrelatedDisclosure.open, false);
 });
 
 for (const windowScroll of [false, true]) {

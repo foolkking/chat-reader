@@ -34,6 +34,7 @@ class BuiltinProfile:
 
 BUILTINS = (
     BuiltinProfile("builtin:single-assistant-markdown-v1", "Single Markdown message", "MARKDOWN", "Markdown without reliable message boundaries, preserved as one assistant message."),
+    BuiltinProfile("builtin:conversation-zip-markdown-v1", "Conversation export ZIP", "MARKDOWN", "Markdown transcript selected from a validated conversation export ZIP."),
     BuiltinProfile("builtin:chatgpt-markdown-transcript-v1", "ChatGPT Markdown Transcript Profile v1", "MARKDOWN", "Normalizer transcript interchange."),
     BuiltinProfile("builtin:chat-reader-exporter", "Chat Reader Native JSON / Markdown", "JSON_MARKDOWN", "Chat Reader exporter JSON with optional Markdown body."),
     BuiltinProfile("builtin:chat-reader-markdown-v2", "Chat Reader Native Markdown Export v2", "MARKDOWN", "Chat Reader canonical Markdown export, version 2."),
@@ -139,6 +140,12 @@ def normalize_builtin(key: str, documents: list[SourceDocument]):
         title = _markdown_title(text) or markdown_doc.filename.rsplit(".", 1)[0]
         message = _draft_message("assistant", text, 0, None, None, source_markdown_index=0)
         return [_draft_conversation(title, [message], "Single Markdown message", source_type="adaptive_markdown")]
+    if key == "builtin:conversation-zip-markdown-v1" and markdown_doc:
+        from app.services.adaptive_import.analysis import analyze_markdown
+        from app.services.adaptive_import.normalization import normalize_group
+        analysis = analyze_markdown(markdown_doc.content)
+        mapping = default_mapping(analysis)
+        return normalize_group(documents, mapping, "Conversation export ZIP")
     if key == "builtin:chatgpt-markdown-transcript-v1" and markdown_doc:
         from app.services.import_pipeline.transcript_markdown import parse_transcript
         from app.services.import_pipeline.exporter_json_parser import extract_conversation_id

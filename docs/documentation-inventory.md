@@ -1,5 +1,61 @@
 # Markdown 文档台账
 
+## Reader/ZIP 完成度再审 — 2026-11-03（当前源码候选）
+
+新增 `execution/ux-audit-reader-zip-completion-2026-11-03.md`，记录九类缺口、
+先审后修的证据、计划完成度矩阵、实际源码修正、扩大回归的失败与最终回执。
+同步 PROJECT_STATE、index/execution 入口、testing、两份 Reader 计划、
+Adaptive ZIP/富 Markdown/PWA/Backend 合同与 API reference。渲染策略为 v13；
+新增明确替换后响应未确认语义，但没有 migration、离线包或 Dexie 变更。
+原实施记录和旧全量 API 失败结果保留为历史，不能替代当前候选验收。
+
+## Reader、富 Markdown 与 Adaptive ZIP — 2026-11-03（源码候选）
+
+新增 `execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md` 和
+`system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md`；同步 `PROJECT_STATE.md`、
+`docs/index.md`、execution 入口、API reference、Backend/API、Reader 两份设计、
+富 Markdown 合同及 testing 状态。旧 11 月 2 日“部分实施”文字保留为历史审查快照，
+不再作为当前源代码结论。契约记录专用/通用 ZIP、成员分页/分类、阻塞错误、
+附件真实存储与 occurrence、排除引用惰性化、安全/兼容和无 migration 边界。
+本轮没有提交、部署、CI 或线上验收；性能数值与浏览器视觉门禁不以源码/单测通过代替。
+
+## Reader 收藏、键盘、几何与富内容接续 — 2026-11-02（部分实施，待用户验证）
+
+新增 `execution/ux-audit-plan-completion-2026-11-02.md`：逐项完成度、源码证据、
+修补记录与未完成的覆盖恢复/变化前锚点、分片 HTML、性能测量。
+同步 PROJECT_STATE、两份设计、index/execution 入口和富内容系统合同，
+撤回“计划范围源码全部实施”的表述。源码修补覆盖收藏恢复、集合分页、
+精确折叠定位、键盘异步退役、HTML AST 类型、callout 源位置（策略 v11）、
+表格惰性媒体和离线空范围确认；新增回归规格未执行，未提交或部署。
+
+`execution/READER_FAVORITES_DESIGN_2026-11-02.md` 保留离线恢复、收藏、帮助、
+侧栏/收件箱、阅读几何和系统性能的联合计划；离线失败分类与收藏入口已经进入候选源码，
+但 Web 测试、CI、线上核验和部署由用户执行。`execution/READER_RICH_CONTENT_DESIGN_2026-11-02.md`
+定义当前正文渲染范围：GFM/公式/Mermaid/脚注/任务列表沿用，新增有界安全 HTML、
+Obsidian callout 折叠、`==高亮==`、原生 details 和同源受控音视频；不允许脚本、
+事件属性、外部媒体、iframe 或猜测相对附件身份。实现文件为
+`apps/web/features/rich-markdown/remark-safe-html.ts`、
+`remark-reader-highlight.ts`、`rich-markdown-config.ts`、
+`remark-reader-callouts.ts`、`features/conversations/markdown-renderer.tsx`、
+`assistant-message-renderer.tsx`、`reader-keyboard-navigation.ts` 和
+`lib/offline-download-plan.ts`。源码回归规格分别位于
+`scripts/ux/reader-keyboard-navigation.test.mjs`、
+`scripts/ux/offline-download-plan.test.mjs` 与
+`scripts/ux/offline-download-retry-review.test.mjs`；均待用户执行验证。
+当前状态不能被历史 CI/生产回执替代。
+
+## 全量离线包容量诊断与修复 — 2026-11-01
+
+`PROJECT_STATE.md`、`index.md` 和 execution 入口将完整离线导入从未验收边界
+更新为已确认的客户端容量阻塞及源码修复待验收状态。新增
+`execution/OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md` 与
+`evidence/offline-large-package-2026-11-01/summary.json`，只保存脱敏字节、
+计数、状态和来源；明确 ZIP 校验、合成浏览器测试与真实端到端证明不同。
+同目录 `remediation-verification.json` 记录后续只读容量统计、
+28/28 本机 PWA 验证、226,500,459 字节合成导入及未发布边界。
+当前修复状态及版本／存储兼容边界以执行记录与
+`system/PWA_OFFLINE_RESILIENCE_CONTRACT.md` 为准，不改写发布历史回执。
+
 ## 发布准备与空间清理 — 2026-11-01
 
 `PROJECT_STATE.md`、`index.md`、`deployment.md` 与
@@ -209,7 +265,7 @@ AUTHENTICATION_CONTRACT 记录已发布的单快照凭据检查；testing 保留
 
 | 文档 | 当前职责 |
 | --- | --- |
-| `system/AI_RICH_MARKDOWN_CONTRACT.md` | v7 可见安全降级、完整候选识别、嵌套代码保护、Mermaid 文字替代及挂载子树解析复用；共享只读呈现的当前真值。 |
+| `system/AI_RICH_MARKDOWN_CONTRACT.md` | v10 有界安全 HTML/本地媒体、原 AST 保真 callout/高亮/details、可见安全降级、嵌套代码保护、Mermaid 文字替代及挂载子树解析复用；共享只读呈现的当前真值。 |
 | `system/BACKEND_AND_API.md` | exporter parser v6 的 `say` 类型边界、Markdown parser v5 配对合同和有界映射预览元数据。 |
 | `execution/CHATGPT_READING_REMAINING_2026-10-25.md` | 本次有界续办的实施、真实本地三链、性能测量、门禁结果及仍需源样本的八项；不覆盖原审查。 |
 | `execution/ux-audit-chatgpt-reading-2026-10-25.md` | 原 20 项优化候选、实施 2 项/暂缓 18 项的历史检查点、四项不计数的撤回调查与原验证边界。 |

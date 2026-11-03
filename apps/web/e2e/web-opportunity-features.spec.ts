@@ -158,6 +158,70 @@ test("reading list pages its summary, clears page selection and makes no per-row
   expect(details).toEqual([]);
 });
 
+test("removing the final favorite on the final page retains filters and the operation receipt", async ({ page }) => {
+  const entries = Array.from({ length: 21 }, (_, index) => ({
+    id: `synthetic-clamp-${index}`, collection: "reading-list", revision: 1,
+    value: { conversation_id: `synthetic-clamp-conversation-${index}`, state: "unread" },
+    created_at: "2026-11-02T00:00:00Z", updated_at: "2026-11-02T00:00:00Z",
+  }));
+  const deletes: string[] = [];
+  await page.route("**/api/**", async route => {
+    const url = new URL(route.request().url()), path = url.pathname;
+    if (route.request().method() === "DELETE") {
+      const id = path.split("/").at(-1)!;
+      deletes.push(id);
+      const index = entries.findIndex(entry => entry.id === id);
+      if (index >= 0) entries.splice(index, 1);
+      return route.fulfill({ status: 204 });
+    }
+    if (path === "/api/reading-list") {
+      const offset = Number(url.searchParams.get("offset") ?? 0);
+      return route.fulfill({ json: {
+        items: entries.slice(offset, offset + 20).map(entry => ({
+          entry, title: `Synthetic ${entry.id}`, available: true, projects: [], resume_available: false, last_read_at: null,
+        })),
+        total: entries.length, limit: 20, offset, has_more: offset + 20 < entries.length,
+        counts: { all: entries.length, unread: entries.length, read: 0 },
+      } });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/reading-list?q=Synthetic&state=unread&sort=added_asc&offset=20");
+  const rows = page.locator('[data-testid^="reading-list-item-"]');
+  await expect(rows).toHaveCount(1);
+  await rows.first().getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(rows).toHaveCount(20);
+  await expect(page).not.toHaveURL(/offset=20/);
+  for (const part of ["q=Synthetic", "state=unread", "sort=added_asc"]) expect(page.url()).toContain(part);
+  await expect(page.getByText("Save acknowledged", { exact: true })).toBeVisible();
+  expect(deletes).toEqual(["synthetic-clamp-20"]);
+});
+
+test("an out-of-range annotation inbox page clamps only after a successful current read", async ({ page }) => {
+  let fail = true;
+  const offsets: number[] = [];
+  await page.route("**/api/**", async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/annotations/inbox/summary") {
+      const offset = Number(url.searchParams.get("offset") ?? 0);
+      offsets.push(offset);
+      if (fail) return route.fulfill({ status: 503, json: { detail: "Synthetic unavailable" } });
+      return route.fulfill({ json: { items: [], total: 0, limit: 50, offset, has_more: false } });
+    }
+    return route.fulfill({ json: [] });
+  });
+  await page.goto("/annotations?q=Synthetic&annotation_type=comment&offset=50");
+  await expect(page.getByRole("alert")).toContainText("Could not load annotations");
+  expect(offsets.every(offset => offset === 50)).toBe(true);
+  await expect(page).toHaveURL(/offset=50/);
+  fail = false;
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page).not.toHaveURL(/offset=50/);
+  expect(page.url()).toContain("q=Synthetic");
+  expect(page.url()).toContain("annotation_type=comment");
+  await expect.poll(() => offsets.includes(0)).toBe(true);
+});
+
 test("lost saved-search response is confirmed read-only without creating a second identity", async ({ page }) => {
   const entries: unknown[] = [], identities: string[] = [];
   await page.route("**/api/**", async route => {

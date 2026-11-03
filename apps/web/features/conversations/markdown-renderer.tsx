@@ -11,7 +11,7 @@ import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
 import type { Components } from "react-markdown";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { BundledLanguage, ThemedToken } from "shiki";
 import {
   RICH_MARKDOWN_RENDERER_VERSION,
@@ -44,10 +44,22 @@ export type MarkdownTaskItem = {
 export type MarkdownAttachmentOccurrence = {
   attachmentId: string;
   occurrenceKey: string;
+  contentUrl?: string | null;
+  downloadUrl?: string | null;
+  mimeType?: string | null;
+  alt?: string | null;
+  caption?: string | null;
 };
 
 const EMPTY_TASK_ITEMS: MarkdownTaskItem[] = [];
 const EMPTY_ATTACHMENT_OCCURRENCES: MarkdownAttachmentOccurrence[] = [];
+const MarkdownLinkContext = createContext(false);
+type MarkdownAttachmentContextValue = {
+  byId: Map<string, MarkdownAttachmentOccurrence>;
+  byKey: Map<string, MarkdownAttachmentOccurrence>;
+};
+const EMPTY_ATTACHMENT_CONTEXT: MarkdownAttachmentContextValue = { byId: new Map(), byKey: new Map() };
+const MarkdownAttachmentContext = createContext<MarkdownAttachmentContextValue>(EMPTY_ATTACHMENT_CONTEXT);
 
 type RichMarkdownPerformanceProbe = {
   markdownRenderTotal?: number;
@@ -154,18 +166,32 @@ const markdownComponents: Components & {
   a({ href, children, node: _node, ...props }) {
     return <SafeMarkdownLink href={href} {...props}>{children}</SafeMarkdownLink>;
   },
+  div({ children, node, ...props }) {
+    const style = safeRichHtmlStyle(node);
+    const callout = node?.properties?.dataReaderCallout;
+    if (typeof callout === "string") {
+      return <div {...markdownSourcePositionAttributes(node)} className={`markdown-callout reader-rich-callout border-l-4 px-4 py-3 ${calloutClassName(callout)}`}>{children}</div>;
+    }
+    return <div {...props} {...markdownSourcePositionAttributes(node)} className={`reader-rich-html-block ${props.className ?? ""}`} style={{ ...props.style, ...style }}>{children}</div>;
+  },
+  span({ children, node, ...props }) {
+    return <span {...props} style={{ ...props.style, ...safeRichHtmlStyle(node) }}>{children}</span>;
+  },
+  section({ children, node, ...props }) {
+    return <section {...props} style={{ ...props.style, ...safeRichHtmlStyle(node) }}>{children}</section>;
+  },
+  details({ children, open, node }) {
+    const callout = node?.properties?.dataReaderCallout;
+    if (typeof callout === "string") {
+      return <details {...markdownSourcePositionAttributes(node)} open={open} className={`markdown-callout reader-rich-callout rounded-lg border-l-4 px-4 py-3 ${calloutClassName(callout)}`}>{children}</details>;
+    }
+    return <details {...markdownSourcePositionAttributes(node)} open={open} className="reader-rich-details rounded-lg border border-ui bg-surface px-3 py-2">{children}</details>;
+  },
+  summary({ children, node }) {
+    return <summary {...markdownSourcePositionAttributes(node)} className="min-h-11 cursor-pointer select-none py-2 font-semibold marker:text-current">{children}</summary>;
+  },
   blockquote({ node, children }) {
     const sourcePosition = markdownSourcePositionAttributes(node);
-    const rawText = collectNodeText(node);
-    const callout = parseCallout(rawText);
-    if (callout) {
-      return (
-        <div {...sourcePosition} className={`markdown-callout border-l-4 px-4 py-3 ${calloutClassName(callout.type)}`}>
-          <div className="mb-2 text-xs font-semibold uppercase tracking-normal">{callout.label}</div>
-          <AssistantMarkdownPart text={callout.body} className="text-[0.9em]" />
-        </div>
-      );
-    }
     return (
       <blockquote {...sourcePosition} className="border-l-2 border-[var(--quote-border)] py-0.5 pl-4 text-[var(--quote-text)]">
         {children}
@@ -199,19 +225,17 @@ const markdownComponents: Components & {
   hr({ node }) {
     return <hr {...markdownSourcePositionAttributes(node)} className="border-ui" />;
   },
-  img({ alt, src }) {
-    const safeSrc = typeof src === "string" && isSafeHref(src) ? src : undefined;
-    return (
-      <span className="inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-[0.75em] text-secondary">
-        图片附件
-        {alt ? <span className="truncate">{alt}</span> : null}
-        {safeSrc ? (
-          <a href={safeSrc} target="_blank" rel="noreferrer" className="text-[var(--link)] underline">
-            打开
-          </a>
-        ) : null}
-      </span>
-    );
+  img({ alt, src, width, height, node }) {
+    const source = markdownResourceSource(src);
+    return <SafeMarkdownImage key={source} alt={alt} src={source} width={width} height={height} node={node} />;
+  },
+  audio({ src, node }) {
+    const source = markdownResourceSource(src);
+    return <SafeMarkdownMedia key={source} kind="audio" src={source} node={node} />;
+  },
+  video({ src, width, height, node }) {
+    const source = markdownResourceSource(src);
+    return <SafeMarkdownMedia key={source} kind="video" src={source} width={width} height={height} node={node} />;
   },
   input({ checked, type }) {
     if (type !== "checkbox") {
@@ -234,6 +258,9 @@ const markdownComponents: Components & {
     return <ol {...markdownSourcePositionAttributes(node)} start={start} className="list-decimal pl-[1.625em]">{children}</ol>;
   },
   p({ children, node }) {
+    if (node?.properties?.dataReaderCalloutTitle) {
+      return <p {...markdownSourcePositionAttributes(node)} className="font-semibold">{children}</p>;
+    }
     return <p {...markdownSourcePositionAttributes(node)} className="break-words">{children}</p>;
   },
   pre({ children, node }) {
@@ -308,6 +335,8 @@ const editableTablePreviewComponents: Components = {
   // Clicking a cell edits its source; it must not also navigate a link.
   a({ children }) { return <span className="text-[var(--link)] underline">{children}</span>; },
   img({ alt }) { return <span className="text-secondary">{alt || "Image"}</span>; },
+  audio() { return <span className="text-secondary">Audio</span>; },
+  video() { return <span className="text-secondary">Video</span>; },
 };
 
 type TablePreviewNode = {
@@ -360,6 +389,7 @@ export const MarkdownTablePreview = memo(function MarkdownTablePreview({ text, r
         remarkPlugins={richMarkdownRemarkPlugins()}
         rehypePlugins={[...scopedRichMarkdownRehypePlugins(scopeId), rehypeTablePreviewCoordinates]}
         remarkRehypeOptions={richMarkdownRehypeOptions(scopeId)}
+        urlTransform={readerMarkdownUrlTransform}
         skipHtml
       >{renderText}</ReactMarkdown>
     );
@@ -447,13 +477,14 @@ export function InlineHeadingMarkdown({ text, richTextProfile }: { text: string;
   const inlineText = projectChatGptRichText(text, richTextProfile).text.replace(/\s*\r?\n\s*/g, " ").trim();
   recordRichMarkdownPerformance(inlineText);
   return (
-    <ReactMarkdown
-      components={inlineMarkdownComponents}
-      rehypePlugins={scopedRichMarkdownRehypePlugins("inline-heading")}
-      remarkPlugins={richMarkdownRemarkPlugins()}
-      remarkRehypeOptions={richMarkdownRehypeOptions("inline-heading")}
-      skipHtml
-    >
+      <ReactMarkdown
+        components={inlineMarkdownComponents}
+        rehypePlugins={scopedRichMarkdownRehypePlugins("inline-heading")}
+        remarkPlugins={richMarkdownRemarkPlugins()}
+        remarkRehypeOptions={richMarkdownRehypeOptions("inline-heading")}
+        urlTransform={readerMarkdownUrlTransform}
+        skipHtml
+      >
       {inlineText}
     </ReactMarkdown>
   );
@@ -528,6 +559,16 @@ export function AssistantMarkdownPart({
     () => attachmentOccurrences.length > 0 ? remarkAttachmentOccurrences(attachmentOccurrences) : null,
     [attachmentOccurrences, text],
   );
+  const attachmentContext = useMemo<MarkdownAttachmentContextValue>(() => {
+    const byId = new Map<string, MarkdownAttachmentOccurrence>();
+    const byKey = new Map<string, MarkdownAttachmentOccurrence>();
+    for (const occurrence of attachmentOccurrences) {
+      const id = occurrence.attachmentId.toLowerCase();
+      if (!byId.has(id)) byId.set(id, occurrence);
+      byKey.set(occurrence.occurrenceKey, occurrence);
+    }
+    return { byId, byKey };
+  }, [attachmentOccurrences]);
   const sourcePositionPlugin = useMemo(
     () => projection.sourcePosition ? remarkRichTextSourcePositions(projection) : null,
     [projection],
@@ -535,6 +576,7 @@ export function AssistantMarkdownPart({
   const plugins = useMemo(() => richMarkdownRemarkPlugins([
     ...(taskPlugin ? [taskPlugin] : []),
     ...(attachmentPlugin ? [attachmentPlugin] : []),
+    remarkExcludedArchiveReferences,
     ...(sourcePositionPlugin ? [sourcePositionPlugin] : []),
   ]), [attachmentPlugin, sourcePositionPlugin, taskPlugin, text]);
   const rehypePlugins = useMemo(() => scopedRichMarkdownRehypePlugins(resolvedScopeId), [resolvedScopeId]);
@@ -556,6 +598,7 @@ export function AssistantMarkdownPart({
       components={interactiveComponents}
       componentsByLanguage={componentsByLanguage}
       preprocess={preprocess}
+      urlTransform={readerMarkdownUrlTransform}
       skipHtml
     />
   ), [componentsByLanguage, interactiveComponents, plugins, preprocess, rehypeOptions, rehypePlugins]);
@@ -565,25 +608,30 @@ export function AssistantMarkdownPart({
   recordRichMarkdownPerformance(text);
   if (onTaskToggle && taskItems.length > 0) {
     return (
-      <div className={`reader-prose ${className}`}>
-        <ReactMarkdown
-          components={interactiveComponents as Components}
-          remarkPlugins={plugins}
-          rehypePlugins={rehypePlugins}
-          remarkRehypeOptions={rehypeOptions}
-          skipHtml
-        >
-          {renderText}
-        </ReactMarkdown>
-      </div>
+      <MarkdownAttachmentContext.Provider value={attachmentContext}>
+        <div className={`reader-prose ${className}`}>
+          <ReactMarkdown
+            components={interactiveComponents as Components}
+            remarkPlugins={plugins}
+            rehypePlugins={rehypePlugins}
+            remarkRehypeOptions={rehypeOptions}
+            urlTransform={readerMarkdownUrlTransform}
+            skipHtml
+          >
+            {renderText}
+          </ReactMarkdown>
+        </div>
+      </MarkdownAttachmentContext.Provider>
     );
   }
   return (
-    <div className={className}>
-      <TextMessagePartProvider text={text}>
-        {renderedMarkdown}
-      </TextMessagePartProvider>
-    </div>
+    <MarkdownAttachmentContext.Provider value={attachmentContext}>
+      <div className={className}>
+        <TextMessagePartProvider text={text}>
+          {renderedMarkdown}
+        </TextMessagePartProvider>
+      </div>
+    </MarkdownAttachmentContext.Provider>
   );
 }
 
@@ -655,13 +703,26 @@ function CanonicalPartRenderer({
 
 type MarkdownAstNode = {
   type?: string;
+  value?: string;
+  url?: string;
+  alt?: string;
   checked?: boolean | null;
-  data?: { hProperties?: Record<string, unknown> };
+  data?: {
+    hProperties?: Record<string, unknown>;
+    hName?: string;
+    hChildren?: SafeHtmlAttachmentNode[];
+  };
   children?: MarkdownAstNode[];
   position?: {
     start?: { offset?: number };
     end?: { offset?: number };
   };
+};
+
+type SafeHtmlAttachmentNode = {
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: SafeHtmlAttachmentNode[];
 };
 
 function remarkTaskKeys(taskItems: MarkdownTaskItem[]) {
@@ -690,34 +751,65 @@ function remarkAttachmentOccurrences(occurrences: MarkdownAttachmentOccurrence[]
     list.push(occurrence);
     byAttachment.set(key, list);
   }
-  const cursors = new Map<string, number>();
   return () => (tree: MarkdownAstNode) => {
+    const cursors = new Map<string, number>();
+    const resolve = (url: string, media: boolean, properties: Record<string, unknown>) => {
+      const match = /^cr-asset:\/\/([0-9a-f-]{16,})$/i.exec(url.trim());
+      if (!match) return url;
+      const key = match[1].toLowerCase();
+      const cursor = cursors.get(key) ?? 0;
+      const occurrence = byAttachment.get(key)?.[cursor];
+      if (!occurrence) return url;
+      cursors.set(key, cursor + 1);
+      properties.dataAttachmentId = occurrence.attachmentId;
+      properties.dataOccurrenceKey = occurrence.occurrenceKey;
+      return (media ? occurrence.contentUrl ?? occurrence.downloadUrl : occurrence.downloadUrl ?? occurrence.contentUrl) || url;
+    };
+    const walkHtml = (node: SafeHtmlAttachmentNode) => {
+      const key = node.tagName === "a" ? "href" : ["img", "audio", "video"].includes(node.tagName ?? "") ? "src" : null;
+      if (key && typeof node.properties?.[key] === "string") {
+        node.properties[key] = resolve(node.properties[key], key === "src", node.properties);
+      }
+      node.children?.forEach(walkHtml);
+    };
     const walk = (node: MarkdownAstNode) => {
-      if (node.type === "link") {
-        const url = typeof (node as MarkdownAstNode & { url?: unknown }).url === "string"
-          ? (node as MarkdownAstNode & { url: string }).url
-          : "";
-        const match = /^cr-asset:\/\/([0-9a-f-]{16,})$/i.exec(url.trim());
-        if (match) {
-          const key = match[1].toLowerCase();
-          const candidates = byAttachment.get(key) ?? [];
-          const cursor = cursors.get(key) ?? 0;
-          const occurrence = candidates[cursor];
-          if (occurrence) {
-            cursors.set(key, cursor + 1);
-            node.data = node.data ?? {};
-            node.data.hProperties = {
-              ...(node.data.hProperties ?? {}),
-              "data-attachment-id": occurrence.attachmentId,
-              "data-occurrence-key": occurrence.occurrenceKey,
-            };
-          }
+      if (node.type === "link" || node.type === "image") {
+        node.data ??= {};
+        node.data.hProperties ??= {};
+        node.url = resolve(node.url ?? "", node.type === "image", node.data.hProperties);
+      } else if (node.type === "safeHtml" && node.data) {
+        node.data.hProperties ??= {};
+        walkHtml({ tagName: node.data.hName, properties: node.data.hProperties, children: node.data.hChildren });
+      }
+      node.children?.forEach(walk);
+    };
+    walk(tree);
+  };
+}
+
+function remarkExcludedArchiveReferences() {
+  return (tree: MarkdownAstNode) => {
+    const walk = (node: MarkdownAstNode) => {
+      if (node.type === "link" || node.type === "image") {
+        const url = node.url ?? "";
+        if (/^cr-archive-member:\/\/[0-9a-f-]{16,}$/i.test(url.trim())) {
+          const label = node.type === "image" ? node.alt : markdownNodeText(node);
+          node.type = "text";
+          node.value = typeof label === "string" && label.trim() ? label : "Excluded archive resource";
+          node.url = undefined;
+          node.data = undefined;
+          node.children = undefined;
         }
       }
       node.children?.forEach(walk);
     };
     walk(tree);
   };
+}
+
+function markdownNodeText(node: MarkdownAstNode): string {
+  if (typeof node.value === "string") return node.value;
+  return node.children?.map(markdownNodeText).join("") ?? "";
 }
 
 function createTaskAwareComponents(
@@ -861,11 +953,184 @@ function EmptyCodeHeader(_: CodeHeaderProps) {
   return null;
 }
 
+type MarkdownElementNode = { properties?: Record<string, unknown> };
+
+function markdownResourceSource(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function readerMarkdownUrlTransform(url: string, key: string): string {
+  // react-markdown intentionally strips unknown protocols before the
+  // component layer.  Keep only our opaque, UUID-shaped asset reference long
+  // enough for the attachment context to resolve it to a same-origin or blob
+  // URL; every other URL keeps the library's default safety transform.
+  if (key !== "href" && key !== "src") return defaultUrlTransform(url);
+  if (/^cr-asset:\/\/[0-9a-f-]{16,}$/i.test(url.trim())) return url;
+  return defaultUrlTransform(url);
+}
+
+function safeRichHtmlStyle(node: MarkdownElementNode | null | undefined): CSSProperties {
+  const properties = node?.properties;
+  if (!properties) return {};
+  const style: CSSProperties = {};
+  const display = properties.dataReaderDisplay;
+  if (display === "flex" || display === "grid") style.display = display;
+  const gap = safeRichHtmlDimension(properties.dataReaderGap, 64);
+  if (gap) style.gap = gap;
+  const align = properties.dataReaderAlign;
+  if (align === "flex-start" || align === "center" || align === "flex-end" || align === "stretch") style.alignItems = align;
+  const justify = properties.dataReaderJustify;
+  if (justify === "flex-start" || justify === "center" || justify === "flex-end" || justify === "space-between" || justify === "space-around") style.justifyContent = justify;
+  const margin = safeRichHtmlDimension(properties.dataReaderMargin, 64);
+  if (margin) style.marginBlock = margin;
+  const radius = safeRichHtmlDimension(properties.dataReaderRadius, 24);
+  if (radius) style.borderRadius = radius;
+  const flex = properties.dataReaderFlex;
+  if (flex === "none" || flex === "1" || flex === "1 1 auto" || flex === "0 0 auto") style.flex = flex;
+  const width = safeRichHtmlDimension(properties.dataReaderWidth, 640);
+  if (width) style.width = width;
+  const maxWidth = safeRichHtmlDimension(properties.dataReaderMaxWidth, 640);
+  if (maxWidth) style.maxWidth = maxWidth;
+  return style;
+}
+
+function safeRichHtmlDimension(value: unknown, max: number): string | undefined {
+  if (typeof value !== "string" || !/^\d+(?:\.\d+)?(?:px|rem|em)$/.test(value)) return undefined;
+  const amount = Number.parseFloat(value);
+  if (!Number.isFinite(amount) || amount < 0 || amount > max) return undefined;
+  // A bound expressed as 64 units is not a 64px bound when the unit is rem/em.
+  return value.endsWith("px") ? value : `min(${max}px, ${value})`;
+}
+
+function SafeMarkdownImage({ alt, src, width, height, node }: {
+  alt?: string;
+  src?: string;
+  width?: number | string;
+  height?: number | string;
+  node?: MarkdownElementNode | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
+  const insideLink = useContext(MarkdownLinkContext);
+  const attachmentContext = useContext(MarkdownAttachmentContext);
+  const attachment = resolveAttachmentFromContext(attachmentContext, src, node);
+  const resolvedSrc = attachment?.contentUrl ?? attachment?.downloadUrl ?? src;
+  const safeSrc = typeof resolvedSrc === "string"
+    && (isSafeLocalMediaSource(resolvedSrc) || (attachment !== null && isSafeAttachmentMediaSource(resolvedSrc)))
+    ? resolvedSrc
+    : undefined;
+  const resolvedAlt = alt ?? attachment?.alt ?? attachment?.caption ?? undefined;
+  const occurrenceAnchor = attachment ? {
+    id: `attachment-occurrence-${attachment.occurrenceKey}`,
+    "data-attachment-id": attachment.attachmentId,
+    "data-occurrence-key": attachment.occurrenceKey,
+  } : {};
+  const safeWidth = boundedImageDimension(width);
+  const safeHeight = boundedImageDimension(height);
+  const ratio = safeWidth && safeHeight ? `${safeWidth} / ${safeHeight}` : undefined;
+  const style: CSSProperties = {
+    ...safeRichHtmlStyle(node),
+    ...(ratio ? { aspectRatio: ratio } : {}),
+    ...(safeWidth ? { width: safeRichHtmlStyle(node).width ?? safeWidth } : {}),
+    maxWidth: "100%",
+    maxHeight: "min(70vh, 40rem)",
+  };
+  if (!safeSrc || failed) {
+    return <span {...occurrenceAnchor} className="reader-rich-image-fallback inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-[0.75em] text-secondary" role={resolvedAlt ? "img" : undefined} aria-label={resolvedAlt || undefined} style={style}>
+      <span className="min-w-0 truncate">{resolvedAlt || (zh ? "图片附件" : "Image attachment")}</span>
+      {!insideLink && typeof resolvedSrc === "string" && (isSafeHref(resolvedSrc) || (attachment !== null && isSafeAttachmentMediaSource(resolvedSrc))) ? <a href={resolvedSrc} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[var(--link)] underline">{zh ? "打开图片" : "Open image"}</a> : null}
+    </span>;
+  }
+  return <img
+    {...occurrenceAnchor}
+    src={safeSrc}
+    alt={resolvedAlt ?? ""}
+    width={safeWidth}
+    height={safeHeight}
+    loading="lazy"
+    decoding="async"
+    className="reader-rich-image h-auto max-w-full rounded-lg object-contain"
+    style={style}
+    onError={() => setFailed(true)}
+  />;
+}
+
+function SafeMarkdownMedia({ kind, src, width, height, node }: {
+  kind: "audio" | "video";
+  src?: string;
+  width?: number | string;
+  height?: number | string;
+  node?: MarkdownElementNode | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
+  const insideLink = useContext(MarkdownLinkContext);
+  const attachmentContext = useContext(MarkdownAttachmentContext);
+  const attachment = resolveAttachmentFromContext(attachmentContext, src, node);
+  const occurrenceAnchor = attachment ? {
+    id: `attachment-occurrence-${attachment.occurrenceKey}`,
+    "data-attachment-id": attachment.attachmentId,
+    "data-occurrence-key": attachment.occurrenceKey,
+  } : {};
+  const resolvedSrc = attachment?.contentUrl ?? attachment?.downloadUrl ?? src;
+  const safeSrc = typeof resolvedSrc === "string"
+    && (isSafeLocalMediaSource(resolvedSrc) || (attachment !== null && isSafeAttachmentMediaSource(resolvedSrc)))
+    ? resolvedSrc
+    : undefined;
+  const safeWidth = boundedImageDimension(width);
+  const safeHeight = boundedImageDimension(height);
+  const ratio = safeWidth && safeHeight ? `${safeWidth} / ${safeHeight}` : undefined;
+  const style: CSSProperties = {
+    ...safeRichHtmlStyle(node),
+    ...(ratio ? { aspectRatio: ratio } : {}),
+    ...(safeWidth ? { width: safeRichHtmlStyle(node).width ?? safeWidth } : {}),
+    maxWidth: "100%",
+    ...(kind === "video" ? { maxHeight: "70vh" } : {}),
+  };
+  if (!safeSrc || failed) {
+    return (
+      <span {...occurrenceAnchor} className="reader-rich-image-fallback inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-[0.75em] text-secondary" role="status" style={style}>
+        <span>{kind === "audio" ? (zh ? "音频附件" : "Audio attachment") : (zh ? "视频附件" : "Video attachment")}</span>
+        {!insideLink && safeSrc ? <a href={safeSrc} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[var(--link)] underline">{zh ? "打开媒体" : "Open media"}</a> : null}
+      </span>
+    );
+  }
+  if (kind === "audio") {
+    return <audio {...occurrenceAnchor} src={safeSrc} controls preload="metadata" className="reader-rich-media max-w-full" style={style} onError={() => setFailed(true)} />;
+  }
+  return <video {...occurrenceAnchor} src={safeSrc} controls preload="metadata" playsInline width={safeWidth} height={safeHeight} className="reader-rich-media max-h-[70vh] max-w-full rounded-lg object-contain" style={style} onError={() => setFailed(true)} />;
+}
+
+function boundedImageDimension(value: number | string | undefined): number | undefined {
+  const number = typeof value === "number" ? value : typeof value === "string" && /^\d{1,5}$/.test(value) ? Number(value) : NaN;
+  return Number.isInteger(number) && number > 0 && number <= 4096 ? number : undefined;
+}
+
+function isSafeLocalMediaSource(src: string): boolean {
+  return src.startsWith("/") && !src.startsWith("//") && !src.includes("\\")
+    && !/^(?:javascript|data|vbscript):/i.test(src)
+    && !hasUnsafeLocalPathEncoding(src)
+    && !src.split(/[/?#]/).includes("..");
+}
+
+function isSafeAttachmentMediaSource(src: string): boolean {
+  return /^blob:[A-Za-z0-9._~:/?#\x5B\x5D@!$&'()*+,;=%-]+$/.test(src)
+    || isSafeLocalMediaSource(src);
+}
+
 function SafeMarkdownLink({ href, children, ...props }: { href?: string; children: ReactNode } & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href" | "children">) {
-  const safeHref = typeof href === "string" && isSafeHref(href) ? href : undefined;
+  const attachmentContext = useContext(MarkdownAttachmentContext);
+  const dataProps = props as AnchorHTMLAttributes<HTMLAnchorElement> & Record<string, unknown>;
+  const attachment = resolveAttachmentFromContext(attachmentContext, href, dataProps);
+  const resolvedHref = attachment?.downloadUrl ?? attachment?.contentUrl ?? href;
+  const safeHref = typeof resolvedHref === "string"
+    && (isSafeHref(resolvedHref) || (attachment !== null && isSafeAttachmentMediaSource(resolvedHref)))
+    ? resolvedHref
+    : undefined;
   const parsedAttachmentId = typeof href === "string" ? attachmentIdFromHref(href) : null;
   if (!safeHref) {
-    const dataProps = props as AnchorHTMLAttributes<HTMLAnchorElement> & Record<string, unknown>;
     const occurrenceKey = typeof dataProps["data-occurrence-key"] === "string" ? dataProps["data-occurrence-key"] : null;
     const attachmentId = typeof dataProps["data-attachment-id"] === "string" ? dataProps["data-attachment-id"] : parsedAttachmentId;
     return (
@@ -878,7 +1143,6 @@ function SafeMarkdownLink({ href, children, ...props }: { href?: string; childre
     );
   }
   const local = safeHref.startsWith("#") || safeHref.startsWith("/");
-  const dataProps = props as AnchorHTMLAttributes<HTMLAnchorElement> & Record<string, unknown>;
   const occurrenceKey = typeof dataProps["data-occurrence-key"] === "string" ? dataProps["data-occurrence-key"] : null;
   const attachmentId = typeof dataProps["data-attachment-id"] === "string" ? dataProps["data-attachment-id"] : parsedAttachmentId;
   return (
@@ -892,7 +1156,7 @@ function SafeMarkdownLink({ href, children, ...props }: { href?: string; childre
       rel={local ? undefined : "noopener noreferrer"}
       className="font-medium text-[var(--link)] underline decoration-[var(--link-decoration)] underline-offset-2 hover:text-[var(--link-hover)]"
     >
-      {children}
+      <MarkdownLinkContext.Provider value={true}>{children}</MarkdownLinkContext.Provider>
     </a>
   );
 }
@@ -900,6 +1164,31 @@ function SafeMarkdownLink({ href, children, ...props }: { href?: string; childre
 function attachmentIdFromHref(href: string): string | null {
   const match = /^cr-asset:\/\/([0-9a-f-]{16,})$/i.exec(href.trim());
   return match?.[1] ?? null;
+}
+
+function resolveAttachmentFromContext(
+  context: MarkdownAttachmentContextValue,
+  source: string | undefined,
+  nodeOrProps: MarkdownElementNode | Record<string, unknown> | null | undefined,
+): MarkdownAttachmentOccurrence | null {
+  let properties: Record<string, unknown> | undefined;
+  if (nodeOrProps && typeof nodeOrProps === "object" && "properties" in nodeOrProps) {
+    const candidate = (nodeOrProps as { properties?: unknown }).properties;
+    if (candidate && typeof candidate === "object") {
+      properties = candidate as Record<string, unknown>;
+    }
+  } else if (nodeOrProps && typeof nodeOrProps === "object") {
+    properties = nodeOrProps as Record<string, unknown>;
+  }
+  const occurrenceKey = properties?.["data-occurrence-key"] ?? properties?.dataOccurrenceKey;
+  if (typeof occurrenceKey === "string") {
+    const occurrence = context.byKey.get(occurrenceKey);
+    if (occurrence) return occurrence;
+  }
+  // The sanitizer may remove an opaque/blob URL. Only the trusted occurrence
+  // context can restore it; untrusted HTML cannot supply these data keys.
+  const attachmentId = typeof source === "string" ? attachmentIdFromHref(source) : null;
+  return attachmentId ? context.byId.get(attachmentId.toLowerCase()) ?? null : null;
 }
 
 function MermaidCodeHeader(_: CodeHeaderProps) {
@@ -1193,62 +1482,17 @@ function stripQuote(line: string): string {
   return stripped;
 }
 
-function parseCallout(text: string): { type: string; label: string; body: string } | null {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const marker = lines[0]?.trim().match(/^\[!(NOTE|TIP|INFO|WARNING|IMPORTANT|CAUTION|DANGER|QUESTION|TODO)\]\s*(.*)$/i);
-  if (!marker) {
-    return null;
-  }
-  const type = marker[1]?.toLowerCase() ?? "note";
-  const customTitle = marker[2]?.trim();
-  return {
-    type,
-    label: customTitle || calloutLabel(type),
-    body: lines.slice(1).join("\n").trim(),
-  };
-}
-
-function calloutLabel(type: string): string {
-  const labels: Record<string, string> = {
-    caution: "Caution",
-    danger: "Danger",
-    important: "Important",
-    info: "Info",
-    note: "Note",
-    question: "Question",
-    tip: "Tip",
-    todo: "Todo",
-    warning: "Warning",
-  };
-  return labels[type] ?? "Note";
-}
-
 function calloutClassName(type: string): string {
-  if (type === "warning" || type === "caution" || type === "danger") {
+  if (type === "warning" || type === "caution" || type === "danger" || type === "failure" || type === "bug") {
     return "border-[var(--callout-warning-border)] bg-[var(--callout-warning-bg)] text-[var(--callout-warning-text)]";
   }
-  if (type === "tip" || type === "todo") {
+  if (type === "tip" || type === "todo" || type === "success" || type === "example") {
     return "border-[var(--callout-tip-border)] bg-[var(--callout-tip-bg)] text-[var(--callout-tip-text)]";
   }
   if (type === "important") {
     return "border-[var(--callout-important-border)] bg-[var(--callout-important-bg)] text-[var(--callout-important-text)]";
   }
   return "border-[var(--callout-note-border)] bg-[var(--callout-note-bg)] text-[var(--callout-note-text)]";
-}
-
-function collectNodeText(node: unknown): string {
-  if (!node || typeof node !== "object") {
-    return "";
-  }
-  const value = "value" in node ? (node as { value?: unknown }).value : undefined;
-  if (typeof value === "string") {
-    return value;
-  }
-  const children = "children" in node ? (node as { children?: unknown }).children : undefined;
-  if (!Array.isArray(children)) {
-    return "";
-  }
-  return children.map((child) => collectNodeText(child)).join("");
 }
 
 function hastContainsCheckbox(node: unknown): boolean {
@@ -1277,5 +1521,15 @@ function normalizeLanguage(language: string): BundledLanguage | null {
 }
 
 function isSafeHref(href: string): boolean {
-  return /^(https?:|mailto:|#|\/(?!\/))/i.test(href);
+  const trimmed = href.trim();
+  if (trimmed.includes("\\")) return false;
+  if (/^\/(?!\/)/.test(trimmed)) {
+    const path = trimmed.split(/[?#]/, 1)[0] ?? "";
+    return !path.split("/").some((segment) => segment === "..") && !hasUnsafeLocalPathEncoding(path);
+  }
+  return /^(https?:|mailto:|#)/i.test(trimmed);
+}
+
+function hasUnsafeLocalPathEncoding(value: string): boolean {
+  return /%(?:2e|2f|5c)/i.test(value);
 }

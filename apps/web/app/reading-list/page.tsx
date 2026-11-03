@@ -15,8 +15,8 @@ export default function ReadingListRoute() {
   const content = (
     <section className="flex min-w-0 flex-1 flex-col">
       <MobilePageHeader
-        title={zh ? "待读清单" : "Reading list"}
-        description={zh ? "稍后处理的对话和手动阅读状态" : "Conversations you want to revisit"}
+        title={zh ? "收藏" : "Favorites"}
+        description={zh ? "收藏的对话，随时回来继续阅读" : "Conversations you want to revisit"}
         onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
         className="md:px-6"
       />
@@ -28,5 +28,5 @@ export default function ReadingListRoute() {
     </section>
   );
   if (workspace.embedded) return content;
-  return <main className="flex h-screen w-screen overflow-hidden bg-[#f7f7f8] text-[#111827]"><ProjectSidebar mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />{content}</main>;
+  return <main className="flex h-screen w-screen overflow-hidden bg-page text-primary"><ProjectSidebar mobileOpenSignal={mobileSidebarOpenSignal} showMobileTrigger={false} />{content}</main>;
 }

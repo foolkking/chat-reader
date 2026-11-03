@@ -313,6 +313,17 @@ def _block_read(
     links = occurrence or []
     if links:
         occurrence = links[0]
+        attachment_reads = {
+            link.attachment_id: (
+                attachment_read(
+                    link.attachment,
+                    content_prefix=attachment_content_prefix,
+                ).model_dump(mode="json")
+                if link.attachment is not None and link.attachment.deleted_at is None
+                else None
+            )
+            for link in links
+        }
         data.update({
             "messageVersionId": str(occurrence.message_version_id),
             "occurrenceKey": occurrence.occurrence_key,
@@ -335,6 +346,15 @@ def _block_read(
                     "alt": link.alt_text,
                     "caption": link.caption,
                     "relationType": link.relation_type,
+                    "contentUrl": (
+                        attachment_reads[link.attachment_id] or {}
+                    ).get("content_url"),
+                    "downloadUrl": (
+                        attachment_reads[link.attachment_id] or {}
+                    ).get("download_url"),
+                    "mimeType": (
+                        attachment_reads[link.attachment_id] or {}
+                    ).get("detected_mime_type"),
                 }
                 for link in links
             ],
@@ -342,11 +362,8 @@ def _block_read(
         # The Reader has already loaded this relation for the complete-turn
         # response. Supplying the same safe attachment representation prevents
         # every inline block from immediately issuing a duplicate detail request.
-        if occurrence.attachment is not None and occurrence.attachment.deleted_at is None:
-            data["attachment"] = attachment_read(
-                occurrence.attachment,
-                content_prefix=attachment_content_prefix,
-            ).model_dump(mode="json")
+        if attachment_reads.get(occurrence.attachment_id):
+            data["attachment"] = attachment_reads[occurrence.attachment_id]
     return RenderBlockRead(
         id=block.id,
         block_index=block.block_index,

@@ -7,9 +7,12 @@ type AcquireBlockLease = (blockIndex: number) => Promise<ReaderBlockLease | null
 
 const blockMountRegistry = new Map<string, AcquireBlockLease>();
 export const READER_WINDOW_LAYOUT_EVENT = "chat-reader:reader-window-layout";
+let pendingWindowLayoutFrame: number | null = null;
 
 export function notifyReaderWindowLayoutChanged(): void {
-  window.requestAnimationFrame(() => {
+  if (pendingWindowLayoutFrame !== null) return;
+  pendingWindowLayoutFrame = window.requestAnimationFrame(() => {
+    pendingWindowLayoutFrame = null;
     window.dispatchEvent(new Event(READER_WINDOW_LAYOUT_EVENT));
   });
 }

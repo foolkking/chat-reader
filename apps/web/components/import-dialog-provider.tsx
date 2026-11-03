@@ -46,7 +46,7 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
     const operation = ++transition.current;
     const generation = authenticationGeneration();
     const zh = t("settings") === "设置";
-    if (state.dirty && !(await confirm({ title: zh ? "放弃未保存的映射？" : "Discard unsaved mapping?", description: zh ? "字段映射尚未保存，导入会话和原始文件仍会保留。" : "The field mapping has not been saved. The import session and source files will remain available.", confirmLabel: zh ? "放弃更改" : "Discard changes", danger: true }))) return false;
+    if (state.dirty && !(await confirm({ title: zh ? "放弃未保存的导入设置？" : "Discard unsaved import settings?", description: zh ? "尚未保存的格式映射或 ZIP 分类选择将被放弃；导入会话和原始文件仍会保留。" : "Unsaved format mappings or ZIP classifications will be discarded. The import session and source files will remain available.", confirmLabel: zh ? "放弃更改" : "Discard changes", danger: true }))) return false;
     return mounted.current && operation === transition.current && generation === authenticationGeneration()
       && mappingRef.current === state && !mappingRef.current.busy;
   }, [confirm, t]);

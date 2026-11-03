@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-01",
+  "source": "uncommitted_worktree_on_master",
+  "production_follow_up": {
+    "method": "read_only_bounded_existing_archive_scan_and_current_attachment_metadata",
+    "archive_conversations": 47,
+    "conversation_json_bytes": {
+      "minimum": 41503,
+      "median": 2291946,
+      "p95": 83146475,
+      "maximum": 215581606,
+      "total": 895462065,
+      "count_above_128_mib": 2
+    },
+    "current_attachment_metadata": {
+      "conversations_with_assets": 24,
+      "maximum_conversation_asset_bytes": 307061465,
+      "maximum_single_asset_bytes": 52550582,
+      "same_historical_snapshot_as_archive": false
+    },
+    "scan": {
+      "address_space_limit_bytes": 201326592,
+      "cpu_limit_seconds": 120,
+      "read_chunk_bytes": 1048576,
+      "elapsed_seconds": 50.71,
+      "peak_rss_kib": 74708,
+      "conversation_bodies_downloaded_or_persisted": false
+    },
+    "production_writes": false,
+    "production_restarts": false,
+    "post_check_api_web_postgres_healthy": true,
+    "post_check_worker_running": true
+  },
+  "source_limits_bytes": {
+    "compressed_archive": 536870912,
+    "single_expanded_entry": 268435456,
+    "total_expanded_archive": 536870912
+  },
+  "local_verification": {
+    "web_lint": "passed",
+    "web_typecheck": "passed",
+    "web_build": "passed",
+    "ux_script_tests": {
+      "passed": 1904,
+      "failed": 0
+    },
+    "pwa_negative_matrix": {
+      "browser": "local_headless_microsoft_edge",
+      "build": "production_optimized_test_environment_with_negative_test_seam",
+      "api_backend_running": false,
+      "started_at_utc": "2026-11-01T10:45:33.285Z",
+      "completed_at_utc": "2026-11-01T10:46:36.179Z",
+      "duration_ms": 65633,
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0
+    },
+    "large_synthetic_conversation": {
+      "json_bytes": 226500459,
+      "size_source": "deterministic_18_message_fixture_used_by_passing_browser_import",
+      "stored_messages": 18,
+      "stored_blocks": 18,
+      "first_message_plain_text_characters": 3145728,
+      "real_decompression_json_parse_and_indexeddb_writes": true,
+      "equivalent_to_real_user_data_or_device_memory": false
+    },
+    "pre_existing_tsbuildinfo_preserved": true
+  },
+  "boundaries": {
+    "full_real_47_conversation_browser_refresh_accepted": false,
+    "api_worker_integration_tested": false,
+    "ci_dispatched": false,
+    "committed": false,
+    "deployed": false,
+    "fully_streaming_json_import": false,
+    "arbitrarily_large_single_conversation_supported": false
+  }
+}

@@ -1,10 +1,13 @@
-import rehypeSanitize from "rehype-sanitize";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { Options } from "react-markdown";
 import { remarkAiMathCompatibility } from "./remark-ai-math-compatibility";
+import { remarkReaderHighlight } from "./remark-reader-highlight";
+import { remarkReaderCallouts } from "./remark-reader-callouts";
 import rehypeKatex from "rehype-katex";
+import { remarkSafeHtml } from "./remark-safe-html";
 
 type HastNode = {
   type?: string;
@@ -14,20 +17,67 @@ type HastNode = {
   children?: HastNode[];
 };
 
-export const RICH_MARKDOWN_RENDERER_VERSION = "ai-rich-markdown-v7";
+export const RICH_MARKDOWN_RENDERER_VERSION = "ai-rich-markdown-v13";
 
 const BASE_REMARK_PLUGINS: NonNullable<Options["remarkPlugins"]> = [
   remarkGfm,
+  // Preserve source coordinates before soft-break/highlight transforms split
+  // text nodes. The extracted callout body still receives every later plugin.
+  remarkReaderCallouts,
   // Existing Chat Reader conversations intentionally preserve a single source
   // newline as a visual break. This is the frozen AI soft-break profile.
   remarkBreaks,
   [remarkMath, { singleDollarTextMath: true }],
   remarkAiMathCompatibility,
-  remarkLiteralHtml,
+  remarkReaderHighlight,
+  remarkSafeHtml,
 ];
 
+const RICH_MARKDOWN_SANITIZE_SCHEMA = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), "audio", "dd", "dl", "dt", "figcaption", "figure", "mark", "small", "u", "video"],
+  attributes: {
+    ...defaultSchema.attributes,
+    div: [
+      ...(defaultSchema.attributes?.div ?? []),
+      "dataReaderDisplay", "dataReaderGap", "dataReaderAlign", "dataReaderJustify", "dataReaderMargin",
+      "dataReaderRadius", "dataReaderFlex", "dataReaderWidth", "dataReaderMaxWidth", "dataReaderHtmlFragment",
+      "dataReaderCallout",
+    ],
+    span: [
+      ...(defaultSchema.attributes?.span ?? []),
+      "dataReaderDisplay", "dataReaderGap", "dataReaderAlign", "dataReaderJustify", "dataReaderMargin",
+      "dataReaderRadius", "dataReaderFlex", "dataReaderWidth", "dataReaderMaxWidth",
+    ],
+    section: [
+      ...(defaultSchema.attributes?.section ?? []),
+      "dataReaderDisplay", "dataReaderGap", "dataReaderAlign", "dataReaderJustify", "dataReaderMargin",
+      "dataReaderRadius", "dataReaderFlex", "dataReaderWidth", "dataReaderMaxWidth",
+    ],
+    audio: [...(defaultSchema.attributes?.audio ?? []), "src", "controls", "preload", "dataAttachmentId", "dataOccurrenceKey"],
+    details: [...(defaultSchema.attributes?.details ?? []), "open", "dataReaderCallout"],
+    p: [...(defaultSchema.attributes?.p ?? []), "dataReaderCalloutTitle"],
+    a: [...(defaultSchema.attributes?.a ?? []), "dataAttachmentId", "dataOccurrenceKey"],
+    mark: [...(defaultSchema.attributes?.mark ?? [])],
+    img: [
+      ...(defaultSchema.attributes?.img ?? []),
+      "alt", "width", "height",
+      "dataAttachmentId", "dataOccurrenceKey",
+      "dataReaderDisplay", "dataReaderGap", "dataReaderAlign", "dataReaderJustify", "dataReaderMargin",
+      "dataReaderRadius", "dataReaderFlex", "dataReaderWidth", "dataReaderMaxWidth",
+    ],
+    video: [
+      ...(defaultSchema.attributes?.video ?? []),
+      "src", "controls", "preload", "playsInline", "width", "height",
+      "dataAttachmentId", "dataOccurrenceKey",
+      "dataReaderDisplay", "dataReaderGap", "dataReaderAlign", "dataReaderJustify", "dataReaderMargin",
+      "dataReaderRadius", "dataReaderFlex", "dataReaderWidth", "dataReaderMaxWidth",
+    ],
+  },
+};
+
 const BASE_REHYPE_PLUGINS: NonNullable<Options["rehypePlugins"]> = [
-  rehypeSanitize,
+  [rehypeSanitize, RICH_MARKDOWN_SANITIZE_SCHEMA],
   [rehypeKatex, {
     output: "htmlAndMathml",
     trust: false,
@@ -76,27 +126,6 @@ function rehypeMathErrorFallback() {
         { type: "text", value: latex },
       ];
     });
-  };
-}
-
-/** Preserve unsupported HTML as source, never as executable HAST. This also
- * covers malformed/over-budget rich layouts that deliberately fail closed.
- * Use parser nodes, not a second HTML parser or a tag-stripping regex. */
-function remarkLiteralHtml() {
-  return (tree: HastNode) => {
-    const visit = (parent: HastNode) => {
-      parent.children?.forEach((node) => {
-        if (node.type !== "html") {
-          visit(node);
-          return;
-        }
-        // Inline tags remain inline text. A flow HTML node becomes a plain
-        // code block so its complete multiline source stays legible.
-        const phrasing = ["paragraph", "heading", "tableCell", "link", "emphasis", "strong", "delete"].includes(parent.type ?? "");
-        node.type = phrasing ? "text" : "code";
-      });
-    };
-    visit(tree);
   };
 }
 

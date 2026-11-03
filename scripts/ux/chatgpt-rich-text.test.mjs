@@ -130,7 +130,6 @@ test("unknown or rejected HTML remains visible, literal and non-executable", () 
     "<unrecognized>\nSynthetic retained body\n</unrecognized>",
     "<box><row><text>Synthetic retained body</row></text></box>",
     "<box><text>Synthetic retained body</text>",
-    '<section onclick="synthetic()">Synthetic retained body</section>',
     "<script>Synthetic retained body</script>",
   ]) {
     assert.equal(project(source).text, source);
@@ -139,6 +138,54 @@ test("unknown or rejected HTML remains visible, literal and non-executable", () 
     assert.match(html, /&lt;/);
     assert.doesNotMatch(html, /<(?:unrecognized|box|section|script)\b/);
   }
+});
+
+test("allowlisted HTML drops event handlers without rejecting safe content", () => {
+  const html = render('<section onclick="synthetic()">Synthetic retained body</section>');
+  assert.match(html, /<section>Synthetic retained body<\/section>/);
+  assert.doesNotMatch(html, /onclick|synthetic\(\)|<script/i);
+});
+
+test("Obsidian folded callouts preserve parsed title and body semantics", () => {
+  const source = [
+    "> [!TIP]+ **Folded title**",
+    "> Keep **body emphasis**, [the link](https://example.invalid/callout), and $x^2$.",
+    "> The next source line also remains readable.",
+  ].join("\n");
+  const html = render(source);
+  assert.match(html, /<details\b[^>]*data-reader-callout="tip"[^>]*open/);
+  assert.match(html, /<summary[^>]*><strong>Folded title<\/strong><\/summary>/);
+  assert.match(html, /<strong>body emphasis<\/strong>/);
+  assert.match(html, /href="https:\/\/example\.invalid\/callout"/);
+  assert.match(html, /class="katex"/);
+  assert.match(html, /The next source line also remains readable/);
+  assert.doesNotMatch(html, /<script\b|onclick=/i);
+});
+
+const callouts = (await load("../../apps/web/features/rich-markdown/remark-reader-callouts.ts")).module;
+for (const newline of ["\n", "\r\n"]) test(`callout source ranges do not borrow the following emphasis position (${JSON.stringify(newline)})`, () => {
+  const source = `> [!note]- Title${newline}> Body before **bold**`;
+  const point = offset => {
+    const before = source.slice(0, offset);
+    const lines = before.split(/\r?\n/);
+    return { offset, line: lines.length, column: lines.at(-1).length + 1 };
+  };
+  const position = (start, end) => ({ start: point(start), end: point(end) });
+  const bold = source.indexOf("**bold**");
+  const tree = { type: "root", children: [{
+    type: "blockquote", position: position(0, source.length), children: [{
+      type: "paragraph", position: position(2, source.length), children: [
+        { type: "text", value: `[!note]- Title${newline}Body before `, position: position(2, bold) },
+        { type: "strong", position: position(bold, source.length), children: [{ type: "text", value: "bold" }] },
+      ],
+    }],
+  }] };
+  callouts.remarkReaderCallouts()(tree, { value: source });
+  const [title, body] = tree.children[0].children;
+  assert.equal(source.slice(title.position.start.offset, title.position.end.offset), "Title");
+  assert.equal(source.slice(body.position.start.offset, body.position.end.offset), "Body before **bold**");
+  assert.equal(body.children[0].position.start.offset, source.indexOf("Body"));
+  assert.equal(body.children[0].position.end.offset, bold);
 });
 
 test("over-budget HTML displays complete source without relaxing recovery budgets", () => {
@@ -401,7 +448,10 @@ function compileComponent(relative, stubs) {
   const exports = {};
   new Function("require", "exports", js)(name => {
     if (Object.hasOwn(stubs, name)) return stubs[name];
-    if (name === "react-markdown") return { default: ReactMarkdown };
+  if (name === "react-markdown") return {
+    default: ReactMarkdown,
+    defaultUrlTransform: url => url,
+  };
     if (name === "react" || name === "react/jsx-runtime") return appRequire(name);
     throw new Error("Unstubbed component import: " + name);
   }, exports);
@@ -600,6 +650,15 @@ test("GFM alignment survives both the Reader and editable table presentations", 
     assert.equal((html.match(/style="text-align:right"/g) ?? []).length, 2);
   }
 });
+test("editable table previews do not mount playback controls or request media", () => {
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownTablePreview, {
+    text: '<table><tr><th>Media</th></tr><tr><td><audio src="/synthetic.mp3"></audio><video src="/synthetic.mp4"></video></td></tr></table>',
+    renderCell: (_row, _column, content) => React.createElement("button", { type: "button" }, content),
+  }));
+  assert.match(html, /Audio/);
+  assert.match(html, /Video/);
+  assert.doesNotMatch(html, /<(?:audio|video|source)\b|src=|controls=/i);
+});
 test("table preview retains GFM cell content for Unicode spacing, autolinks and inline syntax", () => {
   const cells = html => [...html.matchAll(/<(th|td)\b([^>]*)>([\s\S]*?)<\/\1>/g)]
     .map(([, tag, attributes, content]) => ({ tag, attributes, content }));
@@ -689,6 +748,10 @@ const assistant = compileComponent("../../apps/web/features/conversations/assist
   "../attachments/attachment-block": { embeddedAttachment: () => null },
   "../attachments/attachment-inline-layout": { AttachmentInlineGroup: () => null },
   "./reader-block-layout": { DEFAULT_READER_BLOCK_LAYOUT_METRICS: {}, estimateReaderBlockSize: () => 100, readerBlockLayoutSignature: () => "synthetic-layout" },
+  "./reader-virtual-geometry": {
+    inspectReaderViewportCoverage: () => ({ visibleItemCount: 1, leadingGap: 0, trailingGap: 0, internalGap: 0, missingIndexes: [], needsRecovery: false }),
+    inspectReaderViewportUnion: () => ({ visibleIntervalCount: 1, internalGap: 0, needsRecovery: false }),
+  },
   "../rich-markdown/remark-ai-math-compatibility": math,
   "../rich-markdown/chatgpt-rich-text-compatibility": compatibility,
 });
@@ -717,6 +780,68 @@ test("actual shared safe-link/image components stay inert for projected untruste
   const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, { text: source, isAssistant: false }));
   assert.doesNotMatch(html, /<img\b|href="javascript:|<script\b/);
   assert.match(html, /Synthetic focus/);
+});
+test("attachment occurrences resolve cr-asset links to bounded same-origin URLs", () => {
+  const attachmentId = "01234567-89ab-cdef-0123-456789abcdef";
+  const contentUrl = `/api/attachments/${attachmentId}/content`;
+  const source = `![Archive note](cr-asset://${attachmentId})\n\n[Download note](cr-asset://${attachmentId})`;
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+    text: source,
+    isAssistant: false,
+    attachmentOccurrences: [
+      { attachmentId, occurrenceKey: "image-occurrence", contentUrl, mimeType: "text/plain", alt: "Archive note" },
+      { attachmentId, occurrenceKey: "link-occurrence", downloadUrl: `${contentUrl}?download=1`, mimeType: "text/plain" },
+    ],
+  }));
+  assert.match(html, new RegExp(`<img[^>]+src="${contentUrl.replaceAll("/", "\\/")}"`));
+  assert.match(html, new RegExp(`<a[^>]+href="${contentUrl.replaceAll("/", "\\/")}\\?download=1"`));
+  assert.match(html, /data-attachment-id="01234567-89ab-cdef-0123-456789abcdef"/);
+  assert.match(html, /data-occurrence-key="image-occurrence"/);
+  assert.match(html, /data-occurrence-key="link-occurrence"/);
+  assert.doesNotMatch(html, /cr-asset:\/\//);
+});
+test("excluded archive references stay visible but cannot navigate or load", () => {
+  const memberId = "01234567-89ab-cdef-0123-456789abcdef";
+  const source = `![Omitted image](cr-archive-member://${memberId})\n\n[Omitted file](cr-archive-member://${memberId})`;
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+    text: source,
+    isAssistant: false,
+  }));
+  assert.match(html, /Omitted image/);
+  assert.match(html, /Omitted file/);
+  assert.doesNotMatch(html, /<img\b|<a\b|cr-archive-member:\/\//);
+});
+for (const offline of [false, true]) {
+  test(`HTML card attachment occurrences survive sanitize (${offline ? "offline blob" : "same-origin"})`, () => {
+    const attachmentId = "01234567-89ab-cdef-0123-456789abcdef";
+    const contentUrl = offline ? "blob:https://example.invalid/synthetic-image" : `/api/attachments/${attachmentId}/content`;
+    const source = `<div><a href="cr-asset://${attachmentId}"><img src="cr-asset://${attachmentId}" alt="Synthetic card" width="160" height="120" /></a><audio src="cr-asset://${attachmentId}"></audio></div>`;
+    const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+      text: source, isAssistant: false,
+      attachmentOccurrences: [
+        { attachmentId, occurrenceKey: "card-link", contentUrl },
+        { attachmentId, occurrenceKey: "card-image", contentUrl },
+        { attachmentId, occurrenceKey: "card-audio", contentUrl },
+      ],
+    }));
+    assert.ok(html.includes(`src="${contentUrl}"`), html);
+    assert.ok(html.includes(`href="${contentUrl}"`), html);
+    assert.match(html, /data-occurrence-key="card-link"/);
+    assert.match(html, /data-occurrence-key="card-image"/);
+    assert.match(html, /id="attachment-occurrence-card-audio"/);
+    assert.match(html, /data-occurrence-key="card-audio"/);
+    assert.match(html, /<audio[^>]*controls/);
+    assert.doesNotMatch(html, /cr-asset:\/\//);
+  });
+}
+test("HTML card cannot invent attachment authority from a source data attribute", () => {
+  const id = "01234567-89ab-cdef-0123-456789abcdef";
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, {
+    text: `<div><img src="cr-asset://${id}" data-occurrence-key="forged" alt="Unresolved" /></div>`,
+    isAssistant: false,
+  }));
+  assert.match(html, /Unresolved/);
+  assert.doesNotMatch(html, /<img\b|src=|data-occurrence-key="forged"/);
 });
 test("leading thinking disclosure inherits the same full-message rich-text profile", () => {
   const thought = String.raw`分析 \*\*Synthetic reasoning\*\*` + "\n思考 1s";

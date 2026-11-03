@@ -199,6 +199,12 @@ test("Reader shortcuts respect consumed keys, IME, editable controls and modal o
     return { normal, ime, legacyIme, controls, behindModal, consumedScrollCalls: byCalls };
   });
   expect(outcomes).toEqual({ normal: true, ime: false, legacyIme: false, controls: [false, false, false, false, false, false], behindModal: false, consumedScrollCalls: 0 });
+  const help = page.locator('summary[aria-label="Reading keyboard help"]').filter({ visible: true });
+  await help.click();
+  await page.keyboard.press("Escape");
+  await expect(help).toBeFocused();
+  await page.keyboard.press("j");
+  await expect(page.getByTestId("reader-keyboard-feedback")).toContainText("Already at the last message.");
 });
 
 test("stale block fallback preserves Reader content and reports no false exact pulse", async ({ page }) => {
@@ -357,11 +363,16 @@ test("search-hit reading advances between safe targets and exit clears its sessi
   await expect.poll(() => page.evaluate((key) => window.sessionStorage.getItem(key), queueKey)).toBeNull();
 });
 
-test("adding to reading list starts unread and only the next explicit action marks it read", async ({ page }) => {
+test("favorite toggle adds and removes the entry without changing read state", async ({ page }) => {
   const entries: UserFeatureEntry<ReadingListValue>[] = [];
   const writes: ReadingListValue[] = [];
   await page.route("**/api/user-feature-entries/reading-list**", async (route) => {
     if (route.request().method() === "GET") return json(route, entries);
+    if (route.request().method() === "DELETE") {
+      entries.splice(0, entries.length);
+      await route.fulfill({ status: 204 });
+      return;
+    }
     const payload = route.request().postDataJSON() as { expected_revision: number; value: ReadingListValue };
     writes.push(payload.value);
     const saved: UserFeatureEntry<ReadingListValue> = {
@@ -374,13 +385,145 @@ test("adding to reading list starts unread and only the next explicit action mar
   });
   await page.goto(`/conversations/${conversationId}`);
   const control = page.getByTestId("reading-list-toggle").filter({ visible: true });
-  await expect(control).toHaveAttribute("aria-label", "Add to reading list");
+  await expect(control).toHaveAttribute("aria-label", "Add to favorites");
   await control.click();
-  await expect(control).toHaveAttribute("aria-label", "Mark read");
+  await expect(control).toHaveAttribute("aria-label", "Remove from favorites");
   expect(writes).toEqual([{ conversation_id: conversationId, state: "unread" }]);
   await control.click();
-  await expect(control).toHaveAttribute("aria-label", "Mark unread");
-  expect(writes.map((value) => value.state)).toEqual(["unread", "read"]);
+  await expect(control).toHaveAttribute("aria-label", "Add to favorites");
+  expect(writes.map((value) => value.state)).toEqual(["unread"]);
+});
+
+test("favorite response loss requires a read-only check and never submits a replacement UUID", async ({ page }) => {
+  const entries: UserFeatureEntry<ReadingListValue>[] = [];
+  const submittedIds: string[] = [];
+  await page.route("**/api/user-feature-entries/reading-list**", async (route) => {
+    if (route.request().method() === "GET") return json(route, entries);
+    if (route.request().method() === "PUT") {
+      const payload = route.request().postDataJSON() as { expected_revision: number; value: ReadingListValue };
+      const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+      submittedIds.push(id);
+      entries.splice(0, entries.length, {
+        id, collection: "reading-list", revision: payload.expected_revision + 1,
+        value: payload.value, created_at: "2026-10-30T00:00:00Z", updated_at: "2026-10-30T00:00:00Z",
+      });
+      await route.abort("failed");
+      return;
+    }
+    await route.fulfill({ status: 204 });
+  });
+  await page.goto(`/conversations/${conversationId}`);
+  const control = page.getByTestId("reading-list-toggle").filter({ visible: true });
+  await expect(control).toHaveAttribute("aria-label", "Add to favorites");
+  await control.focus();
+  await page.keyboard.press("Enter");
+  await expect(control).toHaveAttribute("aria-label", "Check favorite status");
+  const panel = page.getByRole("region", { name: "Favorite status and recovery" });
+  await expect(panel).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(panel.getByRole("button", { name: "Close favorite notice" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(panel.getByRole("button", { name: "Check current state", exact: true })).toBeFocused();
+  expect(submittedIds).toHaveLength(1);
+  await page.keyboard.press("Enter");
+  await expect(panel).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(panel.getByRole("button", { name: "Keep checked state", exact: true })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(panel).toHaveCount(0);
+  await expect(control).toBeFocused();
+  await expect(control).toHaveAttribute("aria-label", "Remove from favorites");
+  expect(submittedIds).toHaveLength(1);
+});
+
+for (const rejected of [false, true]) test(`original favorite retry ${rejected ? "shows a definite rejection" : "clears the stale notice after success"}`, async ({ page }) => {
+  const entries: UserFeatureEntry<ReadingListValue>[] = [];
+  const submittedIds: string[] = [];
+  await page.route("**/api/user-feature-entries/reading-list**", async route => {
+    if (route.request().method() === "GET") return json(route, entries);
+    const id = new URL(route.request().url()).pathname.split("/").at(-1)!;
+    submittedIds.push(id);
+    if (submittedIds.length === 1) return route.abort("failed");
+    if (rejected) return route.fulfill({ status: 403, json: { detail: "Synthetic rejection" } });
+    const payload = route.request().postDataJSON() as { expected_revision: number; value: ReadingListValue };
+    const entry: UserFeatureEntry<ReadingListValue> = {
+      id, collection: "reading-list", revision: 1, value: payload.value,
+      created_at: "2026-11-02T00:00:00Z", updated_at: "2026-11-02T00:00:00Z",
+    };
+    entries.push(entry);
+    return json(route, entry);
+  });
+  await page.goto(`/conversations/${conversationId}`);
+  const control = page.getByTestId("reading-list-toggle").filter({ visible: true });
+  await expect(control).toHaveAttribute("aria-label", "Add to favorites");
+  await control.click();
+  const panel = page.getByRole("region", { name: "Favorite status and recovery" });
+  await panel.getByRole("button", { name: "Check current state", exact: true }).click();
+  await panel.getByRole("button", { name: "Retry original request", exact: true }).click();
+  await expect.poll(() => submittedIds.length).toBe(2);
+  expect(submittedIds[1]).toBe(submittedIds[0]);
+  if (rejected) {
+    await expect(panel).toContainText("The favorite request was rejected.");
+    await expect(panel).not.toContainText("status is unconfirmed");
+  } else {
+    await expect(panel).toHaveCount(0);
+    await expect(control).toHaveAttribute("aria-label", "Remove from favorites");
+    await expect(control).toBeFocused();
+  }
+});
+
+test("opening and closing help retires a delayed keyboard index request", async ({ page }) => {
+  const nextMessageId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2";
+  await page.route(`**/api/conversations/${conversationId}/reader-turn*`, route => json(route, {
+    ...readerTurnFixture(`${preservedText}\n\n${"Synthetic long first message.\n\n".repeat(100)}`), total_messages: 2, next_anchor_message_id: nextMessageId,
+  }));
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let started = false;
+  await page.route(`**/api/conversations/${conversationId}/dialogue-index*`, async route => {
+    if (!new URL(route.request().url()).searchParams.has("anchor_message_id")) return json(route, {
+      conversation_id: conversationId, total: 2, message_count: 2, turn_count: 2, offset: 0, limit: 1,
+      has_previous: false, has_more: true,
+      items: [{ message_id: messageId, role: "user", ordinal: 1, role_number: 1, order_key: "000001", preview: "Synthetic index", turn_index: 0 }],
+    });
+    started = true;
+    await gate;
+    return json(route, {
+      conversation_id: conversationId, total: 2, message_count: 2, turn_count: 2, offset: 0, limit: 3,
+      has_previous: false, has_more: false,
+      items: [messageId, nextMessageId].map((id, index) => ({
+        message_id: id, role: "user", ordinal: index + 1, role_number: index + 1,
+        order_key: `00000${index + 1}`, preview: "Synthetic index", turn_index: index,
+      })),
+    });
+  });
+  const attempts: string[] = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.searchParams.get("anchor_message_id") === nextMessageId) attempts.push(url.pathname);
+  });
+  await page.goto(`/conversations/${conversationId}`);
+  const root = page.getByTestId("reader-scroll-root");
+  await expect(root.locator(`#message-${messageId}`)).toBeVisible();
+  let lateResponse: ReturnType<typeof page.waitForResponse> | undefined;
+  try {
+    // Dispatch at the body without opening a different tool first.
+    await root.dispatchEvent("keydown", { key: "j", bubbles: true, cancelable: true });
+    await expect.poll(() => started).toBe(true);
+    attempts.length = 0; // Initial neighbour loading is not a late shortcut.
+    lateResponse = page.waitForResponse(response => response.url().includes("/dialogue-index") && new URL(response.url()).searchParams.has("anchor_message_id"));
+    await expect(page.getByTestId("reader-keyboard-feedback")).toContainText("Locating message");
+    await page.locator('summary[aria-label="Reading keyboard help"]').filter({ visible: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("reader-keyboard-feedback")).toHaveCount(0);
+  } finally { release(); }
+  await expect(root.locator(`#message-${messageId}`)).toBeVisible();
+  // Observe the late response, not only the moment before it was released.
+  await lateResponse;
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await expect(page.getByTestId("reader-keyboard-feedback")).toHaveCount(0);
+  expect(attempts).toEqual([]);
 });
 
 test("folded turns keep stable anchors mounted and navigation expands before locating", async ({ page }) => {

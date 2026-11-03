@@ -1,8 +1,82 @@
 # Project State
 
-Last updated: 2026-11-01. This is the current snapshot, not a release history.
+Last updated: 2026-11-03. This is the current source snapshot, not a release history.
 
 ## Release and active work
+
+**Current source-only candidate — Reader/ZIP completion review (2026-11-03):**
+The joint Reader/Favorites/offline/rich-content and Adaptive ZIP implementation
+has been reviewed against the approved plan. Nine source gaps are repaired:
+message-clipped virtual-gap recovery without clearing size caches; geometry/
+keyboard ownership; safe-HTML attachment identity; repeated-resource real-block
+binding; manifest path validation; code-example preservation and scanner
+allocation control; version-bound ZIP drafts and leave/import guards;
+replacement revisions and catalog/draft/file exception recovery; and
+metadata-only offline search/locator reads. Renderer policy is v13.
+No migration, Share URL, `.cr`, offline package v1/v2/v3, Dexie v2 or
+canonical complete-turn contract is changed.
+
+Current local evidence: **1,946/1,946 UX source tests**, **134/134 focused API
+tests**, Web lint, nonincremental typecheck and Python compilation passed.
+The full API suite has not been rerun on this candidate; its earlier failed
+checkpoint remains in the implementation/testing records. Browser/visual,
+performance R4/P1/P2, PostgreSQL concurrency, Web build/PWA and complete
+exact-source CI remain unaccepted pending the current GitHub Actions run.
+By the user's 2026-11-03 request, this candidate is being committed on the
+existing `master`, submitted to CI, and may be deployed only after the exact
+commit's full CI and release-artifact checks succeed. Production remains at
+`4b4f34f` until that deployment is independently verified.
+See the [completion audit and current receipts](docs/execution/ux-audit-reader-zip-completion-2026-11-03.md),
+[prior implementation record](docs/execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md)
+and [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md).
+
+**Historical completion audit — 2026-11-02:** that snapshot correctly called
+the joint Reader plan partial at that time. Its findings and repair history
+remain in the [dated audit](docs/execution/ux-audit-plan-completion-2026-11-02.md);
+do not treat its old “remaining implementation” list as the current source
+state or as runtime/browser acceptance.
+
+**Prior source-only checkpoint — Reader favorites, recovery, geometry and rich Markdown (2026-11-02):**
+The uncommitted candidate preserves the existing `master` worktree and keeps the
+reading-list route/API identity, Share URLs, `.cr`, offline package v1/v2/v3,
+Dexie v2 and canonical complete-turn semantics unchanged. It separates expired
+offline artifacts from unavailable targets and requires scope review before
+continuing an unavailable-target batch; it also implements the Reader star
+favorite entry, keyboard-help/navigation corrections, virtualized geometry
+reconciliation, and bounded safe HTML/Obsidian callouts/highlights/details with
+same-origin image and media fallbacks. A source audit additionally fixed the
+offline library's missing unavailable-target review action, the unavailable
+target review retry guard and target-list rebuild, keyboard navigation error
+feedback after its own intent advance, nested image fallback links, and
+encoded/double-encoded local-path traversal checks. Favorite writes retain the
+original create identity through read-only recovery; keyboard shortcuts remain
+native for ordinary controls and can use the closed help trigger without
+stealing button behavior. Callout bodies preserve nested Markdown nodes rather
+than flattening links/math/tasks, and an empty or changed offline retry scope
+now receives specific non-success feedback. The virtualized Reader also rebases
+mounted message coordinates after container-height changes without clearing
+row measurements or writing scrollTop; the shared layout notification is
+coalesced to one frame. No migration or API contract change was introduced.
+Web tests, CI, online verification and deployment are intentionally
+not run or claimed by this task; the user owns those gates. See the
+[joint design](docs/execution/READER_FAVORITES_DESIGN_2026-11-02.md) and
+[rich-content design](docs/execution/READER_RICH_CONTENT_DESIGN_2026-11-02.md).
+
+**Open production blocker — large offline package import, remediation in progress (2026-11-01):**
+Read-only inspection of the latest 47-conversation package on `4b4f34f`
+confirmed that its 895,465,881-byte JSON requires 770,638,298 UTF-16 units,
+exceeding the 536,870,888 single-string limit of the Chromium/V8 import path.
+The source now queues changed conversations as resumable single-conversation
+packages, bounds archive/entry/expanded sizes, classifies terminal capacity
+failures without offering futile retries, and upgrades old failed full-batch
+records on retry. Each conversation import remains individually atomic; a
+multi-conversation operation is deliberately resumable rather than all-or-none.
+Web lint, typecheck, build and 1,904 script regressions have passed. Synthetic
+browser regressions include a larger-than-observed single-conversation JSON;
+the complete local PWA negative matrix passed 28/28 using headless Edge.
+CI, commit, deployment and the real
+47-conversation production refresh remain unaccepted. See the
+[diagnosis and implementation status](docs/execution/OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md).
 
 **Current production accepted — 2026-11-01 reading/offline reliability:**
 Exact source `4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df` passed all six jobs,

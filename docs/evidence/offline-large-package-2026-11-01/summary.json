@@ -1,0 +1,66 @@
+{
+  "observed_at_utc": "2026-11-01T08:58:26Z",
+  "source_revision": "4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df",
+  "method": "read_only_production_metadata_and_bounded_archive_inspection",
+  "recent_all_scope_generations": [
+    {
+      "completed_at_utc": "2026-11-01T08:23:53.424519Z",
+      "status": "committed",
+      "processed_items": 47,
+      "total_items": 47,
+      "download_response_status": 200
+    },
+    {
+      "completed_at_utc": "2026-11-01T08:47:24.853536Z",
+      "status": "committed",
+      "processed_items": 47,
+      "total_items": 47,
+      "download_response_status": 200
+    }
+  ],
+  "archive": {
+    "byte_size": 629010860,
+    "database_byte_size_matches": true,
+    "sha256_matches_database": true,
+    "entries": 342,
+    "duplicate_entries": 0,
+    "all_entries_crc_pass": true,
+    "package_json_compressed_bytes": 169940688,
+    "package_json_uncompressed_bytes": 895465881,
+    "package_json_utf8_valid": true,
+    "package_json_unicode_codepoints": 770637452,
+    "package_json_utf16_code_units": 770638298,
+    "total_uncompressed_bytes": 1372394255,
+    "remaining_entries": 341,
+    "remaining_uncompressed_bytes": 476928374,
+    "package_json_zip64": true
+  },
+  "string_limit_reference": {
+    "source": "production_web_node_buffer_constants",
+    "node_version": "v22.13.1",
+    "max_string_length": 536870888,
+    "package_json_exceeds_limit": true,
+    "user_browser_version_verified": false
+  },
+  "inspection": {
+    "read_chunk_bytes": 1048576,
+    "address_space_limit_bytes": 134217728,
+    "cpu_limit_seconds": 90,
+    "nice_increment": 19,
+    "elapsed_seconds": 10.9,
+    "peak_rss_kib": 32720,
+    "application_tests_run": false
+  },
+  "boundaries": {
+    "json_semantics_fully_validated": false,
+    "browser_received_bytes_verified": false,
+    "browser_exception_stack_captured": false,
+    "browser_end_to_end_import_verified": false,
+    "application_modified": false,
+    "production_writes_performed": false,
+    "production_containers_restarted": false,
+    "user_data_deleted": false,
+    "ci_dispatched": false,
+    "new_fix_deployed": false
+  }
+}

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from contextlib import nullcontext
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
@@ -17,6 +19,12 @@ from app.models.import_record import ImportRecord
 from app.models.project import Project
 from app.models.source_artifact import SourceArtifact
 from app.services.adaptive_import.contracts import AdaptiveImportError
+from app.services.adaptive_import.archive_sources import (
+    ARCHIVE_SOURCE_TYPE,
+    archive_catalog,
+    archive_file_recovery,
+    remove_archive_sidecar,
+)
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, publish_revision, related_profile_ids, revision_payload, visible_profile
 from app.services.administration import require_root_admin, record_admin_audit, request_id_from
 from app.services.adaptive_import.service import (
@@ -27,6 +35,7 @@ from app.services.adaptive_import.service import (
     check_family_health,
     list_profiles,
     preview_family_mapping,
+    reclassify_archive,
     reanalyze_session,
     remove_input_group,
     remove_source_paths,
@@ -85,6 +94,17 @@ class ImportDestinationRequest(BaseModel):
     target_project_id: uuid.UUID | None = None
 
 
+class ArchiveMemberChange(BaseModel):
+    member_id: uuid.UUID
+    use: str
+    owner_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=500)
+
+
+class ArchiveClassificationRequest(BaseModel):
+    expected_version: int = Field(ge=1)
+    changes: list[ArchiveMemberChange] = Field(min_length=1, max_length=5000)
+
+
 @router.post("/api/adaptive-import/sessions", status_code=status.HTTP_201_CREATED)
 def create_adaptive_import_session(
     files: list[UploadFile] = File(...),
@@ -94,7 +114,7 @@ def create_adaptive_import_session(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
     if not files:
-        raise HTTPException(status_code=400, detail={"code": "FILES_REQUIRED", "message": "Choose at least one JSON or Markdown file."})
+        raise HTTPException(status_code=400, detail={"code": "FILES_REQUIRED", "message": "Choose at least one JSON, Markdown, or ZIP source file."})
     if len(files) > MAX_ADAPTIVE_FILES:
         raise HTTPException(status_code=422, detail={"code": "FILE_COUNT_LIMIT", "message": f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once."})
     if not get_feature_policy(db).allow_user_import:
@@ -193,7 +213,7 @@ def get_adaptive_import_session(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
-    record = _record(import_id, db, ownership_scope)
+    record = _record(import_id, db, ownership_scope, lock=False)
     result = session_payload(record)
     task_id = result.get("analysis_task_id")
     if task_id and record.session_state in {"ANALYZING", "COLLECTING"}:
@@ -211,7 +231,9 @@ def cancel_adaptive_import_session(
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> None:
-    record = _record(import_id, db, ownership_scope)
+    # Keep analysis cancellation job-first; the worker owns the record lock
+    # while parsing and must still be able to observe this cancellation.
+    record = _record(import_id, db, ownership_scope, lock=False)
     try:
         task_id = (record.analysis_summary or {}).get("analysis_task_id")
         job = None
@@ -351,31 +373,45 @@ def replace_adaptive_import_artifact(
     if not get_feature_policy(db).allow_user_import:
         raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
     new_path = None
+    mutation_committed = False
+    # Keep the route testable with the minimal source artifact shape used by
+    # the responsiveness harness; the real ownership lookup always returns a
+    # full SourceArtifact.
+    was_archive = getattr(artifact, "source_type", None) == ARCHIVE_SOURCE_TYPE
+    replacement_is_archive = (Path(file.filename or "replacement").suffix.casefold() == ".zip")
     try:
         max_bytes = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
-        sizes = [artifact.byte_size for artifact in record.artifacts if artifact.id != artifact_id]
+        sizes = [
+            int(getattr(item, "byte_size", 0) or 0)
+            for item in record.artifacts
+            if item.id != artifact_id
+        ]
         sizes.append(upload_size(file))
-        with bounded_analysis_admission_sync(sizes):
-            content = read_upload_bounded_sync(file, max_bytes)
-            old_path, new_path = replace_session_artifact(
-                db,
-                record,
-                artifact,
-                filename=file.filename or "replacement",
-                content=content,
-            )
-        db.commit()
+        with archive_file_recovery(record) if was_archive or replacement_is_archive else nullcontext():
+            with bounded_analysis_admission_sync(sizes):
+                content = read_upload_bounded_sync(file, max_bytes)
+                old_paths, new_path = replace_session_artifact(
+                    db,
+                    record,
+                    artifact,
+                    filename=file.filename or "replacement",
+                    content=content,
+                )
+            db.commit()
+            mutation_committed = True
         db.refresh(record)
-        remove_source_paths([old_path])
+        remove_source_paths(old_paths)
+        if was_archive and not replacement_is_archive:
+            remove_archive_sidecar(import_id, artifact_id)
         return session_payload(record)
     except AdaptiveImportError as exc:
         db.rollback()
-        if new_path is not None:
+        if new_path is not None and not mutation_committed:
             remove_source_paths([new_path])
         raise _http_error(exc) from exc
     except UploadLimitError as exc:
         db.rollback()
-        if new_path is not None:
+        if new_path is not None and not mutation_committed:
             remove_source_paths([new_path])
         raise HTTPException(
             status_code=exc.status_code,
@@ -384,11 +420,90 @@ def replace_adaptive_import_artifact(
         ) from exc
     except SQLAlchemyError as exc:
         db.rollback()
-        if new_path is not None:
+        if new_path is not None and not mutation_committed:
             remove_source_paths([new_path])
         raise HTTPException(
             status_code=500,
-            detail={"code": "SOURCE_REPLACEMENT_FAILED", "message": "The replacement could not be saved."},
+            detail={
+                "code": "SOURCE_REPLACEMENT_RESPONSE_UNCONFIRMED" if mutation_committed else "SOURCE_REPLACEMENT_FAILED",
+                "message": "The replacement was saved, but the response could not be read. Refresh the session before retrying."
+                if mutation_committed else "The replacement could not be saved.",
+            },
+        ) from exc
+
+
+@router.get("/api/adaptive-import/sessions/{import_id}/archives/{artifact_id}")
+def get_adaptive_import_archive(
+    import_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
+    try:
+        catalog = archive_catalog(record, artifact_id)
+        members = [item for item in catalog.get("members") or [] if isinstance(item, dict)]
+        return {
+            key: value
+            for key, value in catalog.items()
+            if key != "members"
+        } | {
+            "members": members[offset:offset + limit],
+            "member_count": len(members),
+            "offset": offset,
+            "limit": limit,
+            "has_more": offset + limit < len(members),
+        }
+    except AdaptiveImportError as exc:
+        raise _http_error(exc) from exc
+
+
+@router.put("/api/adaptive-import/sessions/{import_id}/archives/{artifact_id}")
+def update_adaptive_import_archive(
+    import_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    payload: ArchiveClassificationRequest,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
+    artifact = _artifact(import_id, artifact_id, db)
+    if not get_feature_policy(db).allow_user_import:
+        raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
+    removed_paths: list[Path] = []
+    mutation_committed = False
+    try:
+        with archive_file_recovery(record):
+            with bounded_analysis_admission_sync(_analysis_sizes(record)):
+                removed_paths = reclassify_archive(
+                    db,
+                    record,
+                    artifact,
+                    expected_version=payload.expected_version,
+                    changes=[item.model_dump(mode="json") for item in payload.changes],
+                )
+            db.commit()
+            mutation_committed = True
+        db.refresh(record)
+        remove_source_paths(removed_paths)
+        return session_payload(record)
+    except AdaptiveImportError as exc:
+        db.rollback()
+        raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "code": "ARCHIVE_CLASSIFICATION_RESPONSE_UNCONFIRMED" if mutation_committed else "ARCHIVE_CLASSIFICATION_FAILED",
+                "message": "The selection was saved, but the response could not be read. Refresh the ZIP preview before retrying."
+                if mutation_committed else "The ZIP contents selection could not be saved.",
+            },
         ) from exc
 
 
@@ -646,10 +761,17 @@ def _record(
     import_id: uuid.UUID,
     db: Session,
     ownership_scope: OwnershipScope,
+    *,
+    lock: bool = True,
 ) -> ImportRecord:
     record = get_owned(db, ImportRecord, import_id, ownership_scope)
     if record is None or record.source_profile != "adaptive_json_markdown":
         raise HTTPException(status_code=404, detail="Adaptive import session not found.")
+    # Serialize editable-session operations and catalog reads, not progress or
+    # active worker cancellation. In-flight sessions remain ineligible for
+    # edits; do not wait for a long analysis just to reject that edit.
+    if lock and record.session_state not in {"COLLECTING", "ANALYZING"} and record.status not in {"queued", "processing"}:
+        db.refresh(record, with_for_update=True)
     return record
 
 
@@ -680,10 +802,20 @@ def _group(import_id: uuid.UUID, group_id: uuid.UUID, db: Session) -> ImportInpu
 
 
 def _http_error(exc: AdaptiveImportError) -> HTTPException:
-    status_code = 413 if exc.code in {"FILE_TOO_LARGE", "SESSION_TOO_LARGE"} else 409 if exc.code in {
+    status_code = 413 if exc.code in {
+        "FILE_TOO_LARGE",
+        "SESSION_TOO_LARGE",
+        "ZIP_ENTRY_LIMIT",
+        "ZIP_MEMBER_TOO_LARGE",
+        "ZIP_EXPANDED_LIMIT",
+        "ZIP_COMPRESSION_UNSAFE",
+        "ZIP_PATH_DEPTH_LIMIT",
+    } else 409 if exc.code in {
         "SESSION_STATE_INVALID",
         "SESSION_WOULD_BE_EMPTY",
         "GROUP_ARTIFACT_SHARED",
+        "ARCHIVE_CLASSIFICATION_STALE",
+        "ARCHIVE_CLASSIFICATION_REQUIRED",
     } else 422
     return HTTPException(status_code=status_code, detail={"code": exc.code, "message": str(exc), "diagnostic": exc.diagnostic()})
 

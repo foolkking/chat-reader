@@ -439,6 +439,13 @@ def commit_import(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> CommitImportResponse:
     import_record = _get_import_or_404(import_id, db, ownership_scope)
+    if (
+        import_record.source_profile == "adaptive_json_markdown"
+        and import_record.session_state not in {"COLLECTING", "ANALYZING"}
+        and import_record.status not in {"queued", "processing", "committed"}
+    ):
+        # Serialize canonical queueing with ZIP classification/replacement.
+        db.refresh(import_record, with_for_update=True)
     if import_record.status == "committed":
         response.status_code = status.HTTP_200_OK
         return _commit_response(import_record, db)

@@ -45,6 +45,7 @@ import type {
   ImportFormatHealth,
   ImportFormatProfile,
   ImportFormatRevision,
+  AdaptiveArchiveCatalog,
   NotebookRead,
   MessageEditResponse,
   MessageDeleteResponse,
@@ -1643,6 +1644,40 @@ export async function replaceAdaptiveImportArtifact(
   return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/artifacts/${artifactId}`, {
     method: "PUT",
     body: formData,
+  });
+}
+
+export async function getAdaptiveImportArchive(
+  importId: string,
+  artifactId: string,
+  offset = 0,
+  limit = 100,
+  signal?: AbortSignal,
+): Promise<AdaptiveArchiveCatalog> {
+  const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+  return fetchJson<AdaptiveArchiveCatalog>(
+    `/api/adaptive-import/sessions/${importId}/archives/${artifactId}?${params.toString()}`,
+    { signal },
+  );
+}
+
+export async function updateAdaptiveImportArchive(
+  importId: string,
+  artifactId: string,
+  expectedVersion: number,
+  changes: Array<{ memberId: string; use: string; ownerDocumentIds: string[] }>,
+): Promise<AdaptiveImportSession> {
+  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/archives/${artifactId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      expected_version: expectedVersion,
+      changes: changes.map((change) => ({
+        member_id: change.memberId,
+        use: change.use,
+        owner_document_ids: change.ownerDocumentIds,
+      })),
+    }),
   });
 }
 

@@ -712,6 +712,8 @@ Adaptive JSON / Markdown：
 | PUT | `/api/adaptive-import/sessions/{id}/groups` | 在任意未提交可恢复状态确认或调整 InputGroup；每个来源必须且只能出现一次 |
 | POST | `/api/adaptive-import/sessions/{id}/reanalyze` | 使用当前 Analyzer 恢复并重建未提交 session 的 Family/Profile resolution |
 | PUT | `/api/adaptive-import/sessions/{id}/artifacts/{artifact}` | 原位替换一个 session 临时来源，保留 Group 身份并自动重新分析 |
+| GET | `/api/adaptive-import/sessions/{id}/archives/{artifact}?offset=0&limit=100` | 读取 ZIP 摘要和成员分页（每页最多 500）；仅 ZIP source artifact 有效 |
+| PUT | `/api/adaptive-import/sessions/{id}/archives/{artifact}` | 用 `expected_version` 乐观并发版本保存成员 conversation/attachment/excluded 分类及附件所属 Markdown 文档 |
 | DELETE | `/api/adaptive-import/sessions/{id}/groups/{group}` | 从本次导入排除一个 Conversation Group；拒绝删除最后一个 Group |
 | POST | `/api/adaptive-import/sessions/{id}/families/{family}/mapping/preview` | 对完整 Family normalization/validation，并返回 canonical sample |
 | POST | `/api/adaptive-import/sessions/{id}/families/{family}/mapping` | 保存 VERIFIED Learned Profile/Revision 并重建 ImportPlan |
@@ -720,7 +722,15 @@ Adaptive JSON / Markdown：
 | PATCH/DELETE | `/api/import-formats/{profile}` | 重命名、启停或删除 Learned Profile；Built-in 拒绝修改 |
 | GET | `/api/import-formats/{profile}/revisions` | 查看不可变历史 revision |
 
-产品导入只有 Adaptive JSON / Markdown 与 `.cr` archive 两类入口。CanJSON v1/v2 与原生 Chat Reader 格式是 Built-in Profile；单 Markdown 是正式 source mode。Import Profile 不保存正文，匹配结果会解释 hard requirements、semantic guards、compatibility 与 drift。READY 后仍使用现有 `/api/imports/{id}/commit` durable commit contract。
+产品导入只有 Adaptive JSON / Markdown 与 `.cr` archive 两类入口。CanJSON v1/v2 与原生 Chat Reader 格式是 Built-in Profile；单 Markdown 是正式 source mode。Adaptive Import 另接受受限的 conversation-export/generic Markdown ZIP；ZIP 成员预览、分类、路径安全、附件身份和边界见 [Adaptive Import ZIP Contract](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)。该 ZIP 功能目前是本地源码候选，不代表已发布。Import Profile 不保存正文，匹配结果会解释 hard requirements、semantic guards、compatibility 与 drift。READY 后仍使用现有 `/api/imports/{id}/commit` durable commit contract。
+
+ZIP 替换的 `classification_version` 单调递增；旧预览提交返回
+`ARCHIVE_CLASSIFICATION_STALE`（409）。可编辑会话的分类/替换/读取目录与 canonical
+入队串行，但状态轮询和分析中的取消不等待 worker 的 ImportRecord 锁。
+数据库已确认提交、仅响应读取失败时返回 500
+`SOURCE_REPLACEMENT_RESPONSE_UNCONFIRMED` 或
+`ARCHIVE_CLASSIFICATION_RESPONSE_UNCONFIRMED`；必须先重新读取会话/目录，
+不能假设没有保存并盲目重试，已经提交的新源文件不会因此被删除。
 
 已随 50f6de4 发布（2026-10-19）：gzip 来源识别/CanJSON 解析在累计展开超过
 压缩大小与重型阈值的较大值后，按展开量复查内存余量；不是只看上传大小。

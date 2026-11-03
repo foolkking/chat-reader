@@ -87,11 +87,7 @@ export async function navigateMountedTarget({
   }
   // A folded summary keeps real block anchors. An explicit navigation target
   // must reveal its ancestors before measuring; this is not a user scroll.
-  let disclosure = target.closest<HTMLDetailsElement>("details.reader-thinking");
-  while (disclosure) {
-    disclosure.open = true;
-    disclosure = disclosure.parentElement?.closest<HTMLDetailsElement>("details.reader-thinking") ?? null;
-  }
+  revealReaderDisclosures(target);
   // Exact mounted targets can align before every remote image in the message
   // has decoded. Waiting up to five seconds here made ordinary attachment and
   // citation jumps feel stalled; keep a short guard for local targets and a
@@ -472,5 +468,20 @@ function textAnchorRect(target: HTMLElement, options: { characterOffset?: number
     startOffset: options.characterOffset,
     endOffset: options.endCharacterOffset,
   });
-  return range ? firstVisibleRangeRect(range) : null;
+  if (!range) return null;
+  // A block anchor may contain several disclosures. Reveal only those owning
+  // the actual quote/offset range, not every folded card in the whole block.
+  revealReaderDisclosures(range.startContainer);
+  revealReaderDisclosures(range.endContainer);
+  return firstVisibleRangeRect(range);
+}
+
+function revealReaderDisclosures(node: Node | null | undefined): void {
+  const selector = "details.reader-thinking, details.reader-rich-callout, details.reader-rich-details";
+  const element = node && "closest" in node ? node as Element : node?.parentElement;
+  let disclosure = element?.closest<HTMLDetailsElement>(selector);
+  while (disclosure) {
+    if (!disclosure.open) disclosure.open = true;
+    disclosure = disclosure.parentElement?.closest<HTMLDetailsElement>(selector) ?? null;
+  }
 }

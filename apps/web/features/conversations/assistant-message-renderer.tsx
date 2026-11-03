@@ -6,7 +6,7 @@ import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { BlockRenderer } from "./block-renderer";
 import { extractMarkdownTaskItems, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
 import { useTranslations } from "../../components/preferences-provider";
-import { READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLease } from "./block-virtualization";
+import { notifyReaderWindowLayoutChanged, READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLease } from "./block-virtualization";
 import { registerRenderedBlock } from "./rendered-block-registry";
 import type { AttachmentViewerItem } from "../attachments/attachment-viewer";
 import { embeddedAttachment } from "../attachments/attachment-block";
@@ -18,6 +18,7 @@ import {
   readerBlockLayoutSignature,
   type ReaderBlockLayoutMetrics,
 } from "./reader-block-layout";
+import { inspectReaderViewportCoverage, inspectReaderViewportUnion, type ReaderVirtualItemGeometry } from "./reader-virtual-geometry";
 import { extractChatGptBareBracketMath, isChatGptBareBracketMath, normalizeChatGptMathBody } from "../rich-markdown/remark-ai-math-compatibility";
 import { detectChatGptRichText, withChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
 import { findLeadingThinkingBlocks } from "./thinking-summary";
@@ -292,6 +293,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
     if (root?.dataset.navigationStage?.startsWith("aligning:")) return false;
     if (root?.dataset.readerLayoutCompensating === "true") return false;
     if (root?.dataset.readerSurfaceCompensating === "true") return false;
+    if (root?.dataset.readerGeometryCompensating === "true") return false;
 
     return shouldAdjustMeasuredRow(item, instance);
   };
@@ -310,7 +312,14 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   useSelectionBlockPinning(containerRef, blocks, indexByBlock, setSelectionPinnedIndexes);
   const virtualItems = virtualizer.getVirtualItems();
   const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
-  useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
+  useVisibleVirtualGapRecovery(
+    containerRef,
+    virtualItems,
+    "element",
+    scrollMargin,
+    setScrollMargin,
+    virtualizer.measureElement,
+  );
   useLayoutEffect(() => {
     if (virtualItems.length > 0 || blocks.length === 0) return;
     const frame = window.requestAnimationFrame(() => virtualizer.measure());
@@ -329,14 +338,14 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
         if (!block) return null;
         return (
           <Fragment key={String(item.key)}>
-            {gapBefore > 0 ? <div aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
+            {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
             <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={blocks[item.index + 1] ? blockGapVariable(block, blocks[item.index + 1] ?? null) : null}>
               <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
             </VirtualBlockRow>
           </Fragment>
         );
       })}
-      {virtualFlow.gapAfter > 0 ? <div aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
+      {virtualFlow.gapAfter > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
       {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
   );
@@ -375,6 +384,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     if (root?.dataset.navigationStage?.startsWith("aligning:")) return false;
     if (root?.dataset.readerLayoutCompensating === "true") return false;
     if (root?.dataset.readerSurfaceCompensating === "true") return false;
+    if (root?.dataset.readerGeometryCompensating === "true") return false;
     return shouldAdjustMeasuredRow(item, instance);
   };
 
@@ -392,7 +402,14 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
   useSelectionBlockPinning(containerRef, blocks, indexByBlock, setSelectionPinnedIndexes);
   const virtualItems = virtualizer.getVirtualItems();
   const virtualFlow = buildVirtualFlow(virtualItems, scrollMargin, virtualizer.getTotalSize());
-  useVisibleVirtualGapRecovery(containerRef, virtualItems, setScrollMargin);
+  useVisibleVirtualGapRecovery(
+    containerRef,
+    virtualItems,
+    "window",
+    scrollMargin,
+    setScrollMargin,
+    virtualizer.measureElement,
+  );
   useLayoutEffect(() => {
     if (virtualItems.length > 0 || blocks.length === 0) return;
     const frame = window.requestAnimationFrame(() => virtualizer.measure());
@@ -411,14 +428,14 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
         if (!block) return null;
         return (
           <Fragment key={String(item.key)}>
-            {gapBefore > 0 ? <div aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
+            {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
             <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={blocks[item.index + 1] ? blockGapVariable(block, blocks[item.index + 1] ?? null) : null}>
               <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
             </VirtualBlockRow>
           </Fragment>
         );
       })}
-      {virtualFlow.gapAfter > 0 ? <div aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
+      {virtualFlow.gapAfter > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
       {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
   );
@@ -442,39 +459,116 @@ type VirtualizedBlocksProps = {
  * the viewport while every rendered virtual row is placed far above or below
  * it, which looks like an indefinitely blank Reader.
  *
- * Keep the normal wheel path measurement-free. Only when a virtual range has
- * changed *and* its message intersects the scroll viewport but none of its
- * mounted rows do, read the real offset and repair the coordinate system. A
- * pointer-down layout notification normally prevents the gap; this guard also
- * covers Home/End, accessibility tooling and programmatic scroll jumps.
+ * Keep the normal wheel path measurement-free. When a virtual range changes,
+ * reconcile the message's absolute offset against the real scroll root rather
+ * than waiting for a pointer-down or a mounted row to become fully invisible.
+ * This covers partial blank bands as well as the all-rows-outside-viewport case
+ * without clearing measured row heights or writing scrollTop.
  */
 function useVisibleVirtualGapRecovery(
   containerRef: React.RefObject<HTMLDivElement | null>,
   virtualItems: VirtualFlowItem[],
+  mode: "element" | "window",
+  scrollMargin: number,
   setScrollMargin: React.Dispatch<React.SetStateAction<number>>,
+  measureElement: (element: Element | null) => void,
 ) {
   const firstIndex = virtualItems[0]?.index ?? -1;
   const lastIndex = virtualItems.at(-1)?.index ?? -1;
+  const lastRecoveryRef = useRef<{ signature: string; at: number } | null>(null);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
     const root = container?.closest<HTMLElement>('[data-reader-scroll-root="true"]');
-    if (!container || !root) return;
+    if (!container) return;
 
-    const rootRect = root.getBoundingClientRect();
+    const rootRect = root?.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
-    if (containerRect.bottom <= rootRect.top || containerRect.top >= rootRect.bottom) return;
+    const viewportTop = mode === "window" ? 0 : rootRect?.top ?? 0;
+    const viewportBottom = mode === "window" ? window.innerHeight : rootRect?.bottom ?? 0;
+    if (containerRect.bottom <= viewportTop || containerRect.top >= viewportBottom) return;
 
-    const rows = container.querySelectorAll<HTMLElement>(":scope > [data-index]");
-    for (const row of rows) {
-      const rowRect = row.getBoundingClientRect();
-      if (rowRect.bottom > rootRect.top && rowRect.top < rootRect.bottom) return;
+    const actualScrollMargin = mode === "window"
+      ? containerRect.top + window.scrollY
+      : root
+        ? root.scrollTop + containerRect.top - (rootRect?.top ?? 0)
+        : Number.NaN;
+    if (!Number.isFinite(actualScrollMargin)) return;
+    // Range coordinates still belong to the previous render. Let the margin
+    // update settle before interpreting that old range as missing content.
+    if (Math.abs(scrollMargin - actualScrollMargin) > 0.5) {
+      setScrollMargin(actualScrollMargin);
+      return;
     }
 
-    const actualScrollMargin = root.scrollTop + containerRect.top - rootRect.top;
-    if (!Number.isFinite(actualScrollMargin)) return;
-    setScrollMargin((current) => Math.abs(current - actualScrollMargin) > 0.5 ? actualScrollMargin : current);
-  }, [containerRef, firstIndex, lastIndex, setScrollMargin, virtualItems.length]);
+    const scrollOffset = mode === "window" ? window.scrollY : root?.scrollTop ?? 0;
+    const viewportSize = mode === "window" ? window.innerHeight : root?.clientHeight ?? 0;
+    if (!Number.isFinite(viewportSize) || viewportSize <= 0) return;
+    const visibleTop = Math.max(viewportTop, containerRect.top);
+    const visibleBottom = Math.min(viewportBottom, containerRect.bottom);
+    const geometries: ReaderVirtualItemGeometry[] = virtualItems.map((item) => ({
+      index: item.index,
+      start: item.start,
+      end: item.end,
+      mounted: Boolean(container.querySelector<HTMLElement>(`:scope > [data-index="${item.index}"]`)),
+    }));
+    const coverage = inspectReaderViewportCoverage(
+      geometries,
+      scrollOffset + visibleTop - viewportTop,
+      scrollOffset + visibleBottom - viewportTop,
+      Math.max(12, Math.min(24, viewportSize * 0.02)),
+    );
+
+    const mountedIntervals = Array.from(
+      container.querySelectorAll<HTMLElement>(":scope > [data-index]"),
+    ).map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { start: rect.top, end: rect.bottom };
+    });
+    const union = inspectReaderViewportUnion(
+      mountedIntervals,
+      visibleTop,
+      visibleBottom,
+      Math.max(32, Math.min(96, viewportSize * 0.12)),
+    );
+    const needsRecovery = coverage.needsRecovery || union.needsRecovery;
+    if (!needsRecovery) {
+      delete container.dataset.readerVirtualRecovery;
+      return;
+    }
+
+    container.dataset.readerVirtualRecovery = coverage.missingIndexes.length > 0
+      ? "missing-range"
+      : union.needsRecovery
+        ? "internal-gap"
+        : "viewport-coverage";
+    const now = window.performance.now();
+    const signature = [
+      firstIndex,
+      lastIndex,
+      Math.round(scrollOffset / 16),
+      coverage.missingIndexes.join(","),
+      Math.round(Math.max(coverage.internalGap, union.internalGap)),
+    ].join(":");
+    const previous = lastRecoveryRef.current;
+    if (previous && now - previous.at < 240) return;
+    lastRecoveryRef.current = { signature, at: now };
+
+    // Re-measure only mounted rows. TanStack's measure() clears all known row
+    // sizes, so it must not be used for a coordinate/coverage repair. The
+    // margin update and changed row measurements already recompute the range.
+    container.querySelectorAll<HTMLElement>(':scope > [data-index]').forEach((row) => measureElement(row));
+  }, [
+    containerRef,
+    firstIndex,
+    lastIndex,
+    measureElement,
+    mode,
+    scrollMargin,
+    setScrollMargin,
+    virtualItems,
+    virtualItems.length,
+  ]);
 }
 
 function useAdaptiveReaderOverscan(
@@ -668,6 +762,7 @@ function useVirtualLayoutMeasurements(
     let layoutSignature = readerBlockLayoutSignature(layoutMetrics);
     let pendingForceReset = false;
     let observedWidth = layoutMetrics.contentWidth;
+    let observedHeight = container.getBoundingClientRect().height;
 
     const measureMountedRows = () => {
       remeasureFrame = 0;
@@ -733,12 +828,26 @@ function useVirtualLayoutMeasurements(
     const frameElement = container.closest<HTMLElement>(".reader-frame");
     const widthTarget = container.closest<HTMLElement>(".reader-content-inner") ?? frameElement ?? container;
     const resizeObserver = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? widthTarget.getBoundingClientRect().width;
-      if (Math.abs(width - observedWidth) <= 0.5) return;
+      const widthEntry = entries.find((entry) => entry.target === widthTarget);
+      const heightEntry = entries.find((entry) => entry.target === container);
+      const width = widthEntry?.contentRect.width ?? widthTarget.getBoundingClientRect().width;
+      const height = heightEntry?.contentRect.height ?? container.getBoundingClientRect().height;
+      const widthChanged = Math.abs(width - observedWidth) > 0.5;
+      const heightChanged = Math.abs(height - observedHeight) > 0.5;
+      if (!widthChanged && !heightChanged) return;
       observedWidth = width;
-      schedule(true);
+      observedHeight = height;
+      if (heightChanged) {
+        // A late image, details block, or media fallback can move every
+        // following message in document space. Rebase all mounted message
+        // virtualizers on the next frame; TanStack still owns row-height
+        // measurement and no scrollTop is written here.
+        notifyReaderWindowLayoutChanged();
+      }
+      schedule(widthChanged);
     });
     resizeObserver.observe(widthTarget);
+    if (widthTarget !== container) resizeObserver.observe(container);
     const preferenceObserver = new MutationObserver(() => schedule());
     if (frameElement) {
       preferenceObserver.observe(frameElement, {

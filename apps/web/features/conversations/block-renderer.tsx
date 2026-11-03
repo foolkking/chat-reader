@@ -108,6 +108,13 @@ function readAttachmentOccurrences(value: unknown): MarkdownAttachmentOccurrence
     if (!item || typeof item !== "object") return [];
     const attachmentId = readString((item as Record<string, unknown>).attachmentId);
     const occurrenceKey = readString((item as Record<string, unknown>).occurrenceKey);
-    return attachmentId && occurrenceKey ? [{ attachmentId, occurrenceKey }] : [];
+    const contentUrl = readString((item as Record<string, unknown>).contentUrl);
+    const downloadUrl = readString((item as Record<string, unknown>).downloadUrl);
+    const mimeType = readString((item as Record<string, unknown>).mimeType);
+    const alt = readString((item as Record<string, unknown>).alt);
+    const caption = readString((item as Record<string, unknown>).caption);
+    return attachmentId && occurrenceKey
+      ? [{ attachmentId, occurrenceKey, contentUrl, downloadUrl, mimeType, alt, caption }]
+      : [];
   });
 }

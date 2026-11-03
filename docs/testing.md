@@ -1,5 +1,60 @@
 # Testing
 
+## Reader/ZIP completion review — 2026-11-03 current source candidate
+
+- All `scripts/ux/*.test.mjs`: **1,946 passed / 0 failed**.
+- Focused API modules (Adaptive Import, responsiveness, analysis queue, import
+  queue, three canonical persistence modules, attachment reference rewriter
+  and renderer contract): **134 passed / 0 failed**.
+- Web lint, nonincremental typecheck and changed-Python compilation passed.
+- Exact commands, scope, fault-injection coverage and intermediate failures:
+  [completion audit](execution/ux-audit-reader-zip-completion-2026-11-03.md).
+
+The first expanded UX run found 34 failures: extracted Reader harnesses lacked
+new geometry/event dependencies and offline search unexpectedly hydrated
+attachments. Updating the harness to execute the separate keyboard effect also
+caught a listener that stayed registered after the Reader became unavailable;
+the product guard was repaired, not the assertion removed. The final count
+includes five added state/lifecycle/resource-projection cases. No prior failure
+is reclassified as a pass without a rerun.
+
+This is local source/API evidence, not a Web build, browser/PWA, PostgreSQL
+concurrency, real-device performance, complete CI or deployment receipt.
+The full API suite was not rerun on this candidate; the earlier checkpoint
+below remains historical and failed.
+
+## Prior Reader/rich Markdown/Adaptive ZIP checkpoint — 2026-11-03
+
+Local source evidence for this uncommitted candidate:
+
+- Adaptive Import API module: **45 passed / 0 failed**.
+- Focused responsiveness repair: **13 passed / 0 failed**.
+- Combined Reader, geometry, keyboard/navigation and rich Markdown scripts:
+  **125 passed / 0 failed**.
+- Web lint and nonincremental Web typecheck passed.
+- Python bytecode compilation and `git diff --check` passed.
+
+The full API command was run with the repository configuration. Its first
+complete run reached **5,772 passed, 197 skipped, 2 failed, 2 warnings**. Both
+failures were the existing responsiveness harness's `adaptive-replace` cases:
+the ZIP route accessed fields that the test's minimal fake artifact does not
+provide, before the harness could start its patched operation. The route now
+uses the same optional-field compatibility boundary as the existing path, and
+the focused responsiveness file passed **13/13** after the repair. The full
+API suite was not rerun after this narrow test-harness compatibility fix; the
+initial two failures remain recorded as failures, not relabeled as a full-suite
+pass.
+
+An earlier attempt to append pytest arguments directly to `pnpm run test:api`
+was invalid because pnpm passed them as positional test paths; it collected no
+tests and is not a product failure.
+
+No Web browser/PWA visual run, performance baseline, Web build, CI, online test,
+commit or deployment is claimed. User-owned browser/online/CI/deployment gates
+remain outstanding. The 125 script cases include shared Markdown attachment
+occurrence resolution, excluded archive-reference safety, rich-content/noise
+protection, reader navigation alignment, and visible virtual-gap detection.
+
 ## Exact-source release acceptance — 2026-11-01
 
 Full CI `41228079428` on exact `4b4f34f`, attempt 1, passed all six jobs:

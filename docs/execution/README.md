@@ -1,5 +1,27 @@
 # 执行与发布记录索引
 
+## Reader、富 Markdown 与 Adaptive ZIP — 2026-11-03（源码候选，未发布）
+
+[完成度复审与修正回执](ux-audit-reader-zip-completion-2026-11-03.md)是最新候选证据：
+9 类源码缺口已修正，1,946 项 UX 脚本、134 项 API 专项和 lint/typecheck 通过。
+保留全量 API、性能、浏览器/PostgreSQL 并发和发布门禁，不以旧回执拼接验收。
+
+[实施与验证记录](READER_ZIP_IMPLEMENTATION_2026-11-03.md)接续 11 月 2 日 Reader
+计划，完成安全 HTML 分片/折叠、虚拟阅读空白检测和变化前锚点、Adaptive Import
+conversation-export/Markdown ZIP 及可恢复附件持久化。API 与专项 Reader/rich
+Markdown 回归、Web lint 本地通过；精确最终测试计数以该记录为准。
+浏览器视觉/性能、Web build/PWA、CI、线上核验与部署由用户完成，本记录不构成发布验收。
+[Adaptive ZIP 数据/API 合同](../system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)明确无
+migration、不变更 `.cr`、Share、Dexie v2 和离线包 v1/v2/v3。
+[11 月 2 日完成度复审](ux-audit-plan-completion-2026-11-02.md)保留实施前历史快照。
+
+## 全量离线包客户端容量阻塞 — 2026-11-01（源码与本机验证完成，未发布）
+
+[记录](OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md)记录服务端 47 对话包的
+只读字节／CRC／字符串长度核验，以及逐对话可恢复导入、容量边界和旧失败记录迁移的源码修复。
+本机 Edge PWA 矩阵 28/28、1,904 项脚本及 Web lint/typecheck/build 通过；
+CI、提交、部署和真实数据完整更新仍待验收。
+
 ## 2026-11-01 发布与安全清理（已验收）
 
 [发布记录](DEPLOYMENT_PREPARATION_2026-11-01.md)记录精确 CI `41228079428`、

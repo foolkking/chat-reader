@@ -44,7 +44,7 @@ async function search(documents, blocks = [block], indexedBlocks = blocks, { sto
       toArray: async () => blocks,
     },
   };
-  new Function("exports", "searchOfflinePage", "offlineDb", "findSearchTextMatches", "captureOfflineAccess", "assertOfflineAccess", compiled)(
+  new Function("exports", "searchOfflinePage", "offlineDb", "findSearchTextMatches", "captureOfflineAccess", "assertOfflineAccess", "hydrateOfflineBlockAttachments", compiled)(
     exports, async (query, limit, offset, scope) => {
       assert.equal(query, "needle");
       assert.equal(limit, 50);
@@ -52,6 +52,7 @@ async function search(documents, blocks = [block], indexedBlocks = blocks, { sto
       assert.deepEqual(scope, { conversationId: document.conversation_id, documentType: undefined, role: undefined, contentOnly: true });
       return { items: documents, total: documents.length, offset, has_more: false, total_is_exact: true };
     }, offlineDb, matcherExports.findSearchTextMatches, () => 1, assertAccess,
+    () => { throw Error("Text search must not hydrate media or create object URLs."); },
   );
   return exports.source.searchConversation(document.conversation_id, { query: "needle" });
 }
@@ -65,6 +66,14 @@ test("offline search preserves indexed version and raw code-point match ranges",
   for (const match of item.matches) {
     assert.equal(Array.from(text).slice(match.match_start, match.match_end).join(""), match.quote);
   }
+});
+
+test("offline text search uses the same canonical ranges without hydrating inline attachments", async () => {
+  const inlineBlock = { ...block, data: {
+    attachmentOccurrences: [{ attachmentId: "synthetic-media", occurrenceKey: "synthetic-occurrence" }],
+  } };
+  const result = await search([document], [inlineBlock]);
+  assert.deepEqual(result.items[0].matches.map(match => [match.match_start, match.match_end]), [[6, 12], [14, 20]]);
 });
 
 test("legacy offline body without blocks stays searchable without inventing a block offset", async () => {
@@ -125,4 +134,30 @@ test("projection does not publish a result after its captured offline access is 
   await assert.rejects(search([document], [block], [block], {
     assertAccess: () => { throw Error("Synthetic retired access"); },
   }), /retired access/);
+});
+
+test("offline block pagination hydrates only selected blocks and deduplicates inline assets", async () => {
+  const getPage = declaration.initializer.properties.find(node => node.name?.getText(ast) === "getMessageBlocks");
+  const hydrate = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "hydrateOfflineBlockAttachments");
+  assert.ok(getPage && hydrate);
+  const pageCode = compile(`exports.source = { ${getPage.getText(ast)} }; ${readBlocks.getText(ast)} ${hydrate.getText(ast)}`);
+  const blocks = [0, 1, 2].map(index => ({
+    ...block, block_index: index, data: {
+      attachmentId: `asset-${index}`,
+      attachmentOccurrences: [
+        { attachmentId: `asset-${index}`, occurrenceKey: `link-${index}` },
+        { attachmentId: `asset-${index}`, occurrenceKey: `image-${index}` },
+      ],
+    },
+  }));
+  const before = structuredClone(blocks), reads = [], exports = {};
+  new Function("exports", "offlineDb", "getOfflineAttachment", pageCode)(
+    exports, { blocks: { where: () => ({ equals: () => ({ sortBy: async () => blocks }) }) } },
+    async id => { reads.push(id); return { content_url: `blob:synthetic/${id}`, download_url: `blob:synthetic/${id}`, detected_mime_type: "image/png" }; },
+  );
+  const result = await exports.source.getMessageBlocks(message.id, { start: 1, limit: 1 });
+  assert.deepEqual(reads, ["asset-1"]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].data.attachmentOccurrences[1].contentUrl, "blob:synthetic/asset-1");
+  assert.deepEqual(blocks, before, "hydration is a read projection, never an offline canonical write");
 });
