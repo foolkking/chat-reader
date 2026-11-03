@@ -860,6 +860,11 @@ export function ConversationReader({
       const direction = dragDelta === 0
         ? scrollDirectionRef.current
         : dragDelta < 0 ? "up" : "down";
+      if (!direction) return;
+      // The last scroll event during a drag can be a layout correction. Commit
+      // the direction of the completed gesture before the edge request so the
+      // transition guard does not mistake stale direction state for a reversal.
+      markReaderScrollIntent(direction);
       // IntersectionObserver callbacks are intentionally ignored while the
       // thumb is moving. Re-check the final geometry on release instead of
       // relying on a possibly stale visibility ref.
@@ -891,6 +896,8 @@ export function ConversationReader({
       window.removeEventListener("pointerup", markPointerUp);
       window.removeEventListener("pointercancel", markPointerUp);
       delete root.dataset.readerPointerDragging;
+      pointerDraggingRef.current = false;
+      pointerDragMovedRef.current = false;
     };
   }, [readerSurfaceAvailable, markReaderScrollIntent]);
 
@@ -2260,7 +2267,13 @@ export function ConversationReader({
         // to the ordinary wheel path.
         notifyReaderWindowLayoutChanged();
       }
-      if (pointerDraggingRef.current && scrollDelta > 1) {
+      if (
+        pointerDraggingRef.current
+        && scrollDelta > 1
+        && root.dataset.readerGeometryCompensating !== "true"
+        && root.dataset.readerLayoutCompensating !== "true"
+        && root.dataset.readerSurfaceCompensating !== "true"
+      ) {
         pointerDragMovedRef.current = true;
         markReaderScrollIntent(current < pointerScrollTopRef.current ? "up" : "down");
       }

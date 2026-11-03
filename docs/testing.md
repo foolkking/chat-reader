@@ -1,12 +1,14 @@
 # Testing
 
-## Reader/ZIP completion review — 2026-11-03 current source candidate
+## Reader/ZIP completion review — 2026-11-03 pre-CI follow-up checkpoint
 
 - All `scripts/ux/*.test.mjs`: **1,946 passed / 0 failed**.
 - Focused API modules (Adaptive Import, responsiveness, analysis queue, import
   queue, three canonical persistence modules, attachment reference rewriter
   and renderer contract): **134 passed / 0 failed**.
 - Web lint, nonincremental typecheck and changed-Python compilation passed.
+- These receipts predate the later CI-driven fixes documented below and do
+  not verify the current working tree.
 - Exact commands, scope, fault-injection coverage and intermediate failures:
   [completion audit](execution/ux-audit-reader-zip-completion-2026-11-03.md).
 
@@ -25,18 +27,26 @@ below remains historical and failed.
 
 ### Latest exact-source CI failure — 2026-11-03
 
+Run `41598513621` on `bcbdda1` passed API, settings and reading-performance
+comparison, but failed Web focused online/security **2/45** (43 passed);
+release-image steps were skipped. The Reader drag test
+confirmed pointer release starts the next-window request, but the transition
+then cancels because the prior direction remains active. The rich-Markdown
+card contains two legitimate nested safe HTML divs, while its wrapper-count
+assertion expected one. The follow-up commits the
+completed drag's net-displacement direction before edge loading, excludes
+marked layout-compensation scrolls from user intent, and targets the card by
+its contained link and accessible image/fallback. The existing drag regression
+additionally checks the settled direction; its request, settlement and
+single-load checks remain.
+These edits have not been locally tested; no full-CI acceptance is claimed.
+
 Run `41584161914` on `8d1b8d2` passed API, settings and reading-performance
 comparison. Web focused online/security failed **3/45** (42 passed); release
-image build and artifact inspection were skipped. One failure was a stale
-rich-Markdown assertion requiring `<strong>` around a plain callout summary;
-another expected an obsolete source-editor selector. The third revealed that
-Reader pointer-release edge loading relied on a potentially stale
-IntersectionObserver ref while observation was intentionally deferred during
-a drag. The working-tree follow-up asserts the rendered summary semantically,
-checks the current editable-target guard while protecting the actual source
-editor shell/textboxes, and freshly checks sentinel geometry on pointer
-release. These edits have not been locally tested; a new exact-source full CI
-result is required.
+image build and artifact inspection were skipped. Earlier failures were stale
+callout-summary markup and source-editor-selector assertions plus the initial
+missed edge request after pointer release. Those were corrected in `bcbdda1`,
+but that run revealed the follow-on direction cancellation described above.
 
 ## Prior Reader/rich Markdown/Adaptive ZIP checkpoint — 2026-11-03
 

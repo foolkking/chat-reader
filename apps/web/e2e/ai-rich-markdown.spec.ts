@@ -139,7 +139,9 @@ test("AI Rich Markdown renders semantic math, GFM, footnotes, and safe code", as
     await expect(assistant.locator(".reader-rich-callout .katex")).toHaveCount(1);
     await expect(assistant.locator(".reader-rich-callout")).toContainText("第二行保留原有格式");
     await expect(assistant.locator(".reader-rich-details")).toHaveCount(1);
-    await expect(assistant.locator(".reader-rich-html-block")).toHaveCount(1);
+    const safeHtmlCard = assistant.locator('.reader-rich-html-block:has(a[href="https://example.com/card"])');
+    await expect(safeHtmlCard).toHaveCount(1);
+    await expect(safeHtmlCard.getByRole("img", { name: "静态卡片图片", exact: true })).toHaveCount(1);
     await expect(assistant.locator(".reader-rich-image-fallback")).toHaveCount(1);
     await expect(assistant.locator(".reader-rich-image-fallback a")).toHaveCount(0);
     await expect(assistant.locator('.reader-rich-html-block a[href="https://example.com/card"]')).toHaveCount(1);

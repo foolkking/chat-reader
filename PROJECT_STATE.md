@@ -44,19 +44,32 @@ Reader edge-load gap: pointer-release logic trusted an
 IntersectionObserver visibility ref that may not refresh during a deferred
 scrollbar drag. Follow-up code now checks final sentinel geometry on release
 and protects the actual floating source-editor shell and ARIA textboxes from
-Reader shortcuts. This follow-up has not been locally tested; the next
-exact-source CI is required. No image from the failed run is deployable.
+Reader shortcuts. Its exact-source follow-up run `41598513621` passed API,
+settings and reading-performance comparison, but failed Web focused
+online/security **2/45** (43 passed); release-image steps were skipped. The
+Reader test confirmed release triggers the request, but the transition then
+cancels because an earlier direction survives the completed drag. The
+rich-Markdown card contains two nested HTML divs, while its assertion counted
+all wrappers as one. The current repair commits the completed gesture's
+net-displacement direction before fetch, excludes marked
+layout-compensation scrolls from drag intent, and asserts the specific card by
+its contained link and accessible image/fallback. The drag regression
+additionally checks the settled direction. There is no full-CI acceptance or
+deployable image.
 
-Current local evidence: **1,946/1,946 UX source tests**, **134/134 focused API
-tests**, Web lint, nonincremental typecheck and Python compilation passed.
+Earlier local evidence, before the CI-driven follow-ups: **1,946/1,946 UX
+source tests**, **134/134 focused API tests**, Web lint, nonincremental
+typecheck and Python compilation passed. These receipts do not cover the
+subsequent commits or current working-tree repair.
 The full API suite has not been rerun on this candidate; its earlier failed
 checkpoint remains in the implementation/testing records. Browser/visual,
 performance R4/P1/P2, PostgreSQL concurrency, Web build/PWA and complete
 exact-source CI remain unaccepted pending the repaired GitHub Actions run.
-By the user's 2026-11-03 request, this candidate is being committed on the
-existing `master`, submitted to CI, and may be deployed only after the exact
-commit's full CI and release-artifact checks succeed. Production remains at
-`4b4f34f` until that deployment is independently verified.
+By the user's 2026-11-03 request, commit `bcbdda1` was pushed directly to the
+existing `master` and submitted as run `41598513621`; its Web quality gate
+failed as recorded above. This follow-up is being committed on `master` for a
+new exact-source full CI plus release-artifact checks; no deployment is started.
+Production remains at `4b4f34f` until independently verified deployment.
 See the [completion audit and current receipts](docs/execution/ux-audit-reader-zip-completion-2026-11-03.md),
 [prior implementation record](docs/execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md)
 and [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md).

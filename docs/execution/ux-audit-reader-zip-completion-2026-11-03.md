@@ -274,3 +274,29 @@ API、settings、reading-performance comparison 通过；Web focused online/secu
 
 这些跟进修改尚未执行本地测试/CI；必须以后续精确 SHA 的完整 GitHub Actions
 通过才能接受。失败 run 不产生可部署镜像，不部署。
+
+### 第四轮 CI 阻塞 — 2026-11-03
+
+精确提交 `bcbdda16bf69464311863ceb4dd5f6aca0248cc1` 的 run
+`41598513621` 中，API passed；Web focused online/security **43/45**，
+settings 与 reading-performance comparison passed，release image/artifact
+steps skipped，完整 CI 终态为 failure。
+
+失败一：Reader drag 测试已看到 pointer-release 后产生一次 next-window 请求，
+但状态变为 `next:cancelled:direction`。证据快照显示方向在加载转换中变成 up；
+release handler 根据拖动起止滚动位置选择 down，却未将该完成手势同步回
+`scrollDirectionRef`，因此加载 guard 仍读取旧方向。修复保留拖动起止净位移
+方向，在启动边缘加载前用该方向提交一次用户 intent。拖动期间的
+布局/几何补偿 scroll 事件不再伪装为用户方向变化；现有加载状态和
+complete-turn/window generation guard 保留。既有拖动回归新增 settled direction
+断言，原有请求、settlement 和单次加载断言不变。
+
+失败二：AI Rich Markdown 卡片包含外层布局与内层文本两个嵌套 `<div>`，
+两者都会被 renderer 标记为 safe HTML block。测试却把总 wrapper 数硬编码为 1。
+现在改为查找含卡片目标链接的 HTML block，并验证其中图片的可访问名称；
+后者同时适配原生图片与加载失败后的 `role="img"` 替代内容，不错误要求保留
+已被替代的 `<img>`。原生 details、fallback 与禁止嵌套链接的断言保留，无安全
+策略或 renderer 行为放宽。
+
+本轮修正没有运行本地 CI；必须等待新的精确 SHA 完整 GitHub Actions 与 release
+artifact checks 才能接受。当前无可部署镜像、未部署。

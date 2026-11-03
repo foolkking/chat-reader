@@ -177,6 +177,7 @@ test("scrollbar pointer drag defers edge-window growth until pointer release", a
   await expect(scrollRoot).not.toHaveAttribute("data-reader-pointer-dragging", "true");
   await expect.poll(() => edgeRequests, { timeout: 5_000 }).toBeGreaterThan(0);
   await expect(scrollRoot).toHaveAttribute("data-reader-edge-stage", "next:settled");
+  await expect(scrollRoot).toHaveAttribute("data-reader-intent-direction", "down");
   await expect(scrollRoot).toHaveAttribute("data-test-next-loading-count", "1");
   await scrollRoot.evaluate((root) => {
     (root as HTMLElement & { __readerEdgeTestObserver?: MutationObserver }).__readerEdgeTestObserver?.disconnect();
