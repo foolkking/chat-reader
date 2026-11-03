@@ -214,8 +214,13 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       await expect(error).toBeVisible();
       const originalRoot = await reader.elementHandle(); expect(originalRoot).not.toBeNull();
       const previousInitialReads = initialReads;
-      if (width < 768) await page.getByRole("button", { name: zh ? "阅读导航" : "Reader navigation", exact: true }).click();
-      else await page.locator(".dialogue-index-rail").getByRole("button").first().click();
+      if (width < 768) {
+        await page.locator("[data-reader-mobile-more-actions='true']").click();
+        const tools = page.getByRole("dialog", { name: zh ? "阅读工具" : "Reader tools", exact: true });
+        await expect(tools).toBeVisible();
+        await tools.getByRole("button", { name: zh ? "阅读导航" : "Reader navigation", exact: true }).click();
+        await expect(tools).toBeHidden();
+      } else await page.locator(".dialogue-index-rail").getByRole("button").first().click();
       const index = page.getByRole("region", { name: zh ? "对话索引" : "Dialogue index", exact: true }).filter({ visible: true });
       await index.getByRole("button").filter({ hasText: created.conversation.title + " synthetic answer" }).click();
       await expect(reader.locator('article[data-message-id="' + created.messages[1].id + '"]')).toContainText(created.conversation.title + " synthetic answer");

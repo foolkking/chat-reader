@@ -300,3 +300,24 @@ complete-turn/window generation guard 保留。既有拖动回归新增 settled 
 
 本轮修正没有运行本地 CI；必须等待新的精确 SHA 完整 GitHub Actions 与 release
 artifact checks 才能接受。当前无可部署镜像、未部署。
+
+### 第五轮 CI 阻塞 — 2026-11-03
+
+精确提交 `9621b6e9821b9f96c55254fbce59ecc70c8f45f4` 的 run
+`41613950618` 中，上一轮 focused online/security 已 **45/45**，Share focus
+**2/2**，API 与 reading-performance comparison passed。新的 Web 失败位于
+后续 Source Editor/mutation gate：**109 passed / 1 failed**；后续七个 Web gate
+未验证，不能宣称完整 CI 通过。
+
+375px 的首屏正文故障后索引恢复夹具仍直接查找“阅读导航”，但当前移动端入口位于
+“更多 → 阅读工具 → 阅读导航”；失败快照中只有“更多”，不存在独立导航按钮。
+现在通过实际工具 sheet 选择导航，并检查工具 sheet 被替换。原有定位读取、旧错误
+退出、同一 Reader DOM、首次内容标记、请求计数和阅读位置保存断言全部保留。
+
+同类静态复核发现后续 default-PWA 的离线 Reader 375px 夹具也直接查找导航按钮。
+该夹具复用已有 `openReaderHeaderAction`，把章节操作限定到导航 sheet，并按
+`navigateFromNavigationSheet` 的现有成功合同断言自动关闭，不再点击已消失的关闭键。
+这是源码复核发现的同类夹具缺口，不是该失败 run 已运行或通过的测试。
+
+本轮仅修改浏览器测试与证据记录，不改产品、接口、超时、skip、retry 或发布门禁；
+不运行本地 CI。提交现有 `master` 后触发新的精确源码 CI，不等待结果、不部署。

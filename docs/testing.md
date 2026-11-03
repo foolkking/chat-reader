@@ -27,6 +27,22 @@ below remains historical and failed.
 
 ### Latest exact-source CI failure — 2026-11-03
 
+Run `41613950618` on `9621b6e` passed focused online/security **45/45** and
+Share focus **2/2**; API and reading-performance comparison also passed.
+The next Source Editor/mutation gate had **109 passed / 1 failed**. Its 375px
+initial-body recovery test waited for a standalone Reader navigation button,
+but current mobile navigation is an action inside More → Reader tools.
+The follow-up opens the real tools sheet and selects its navigation action,
+checking that the tools sheet is replaced. All existing recovery, DOM identity,
+request-count and position-persistence checks remain unchanged.
+
+A same-cause static review also updates the later default-PWA offline fixture
+to use its existing header-action helper, scope TOC actions to the navigation
+sheet and assert automatic dismissal after successful location. These fixtures
+are authored, not locally executed; later Web gates remain unverified until
+the next exact-source CI. No timeout, skip, retry or release-gate relaxation is
+introduced.
+
 Run `41598513621` on `bcbdda1` passed API, settings and reading-performance
 comparison, but failed Web focused online/security **2/45** (43 passed);
 release-image steps were skipped. The Reader drag test

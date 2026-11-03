@@ -646,15 +646,15 @@ test("keeps the offline Reader, TOC, and files reachable at 375px", async ({ bro
   await page.goto("/library?conversationId=offline-fixture");
 
   await expect(page.locator("#block-offline-message-20-1")).toBeVisible();
-  const navigationButton = page.getByRole("button", { name: /阅读导航|Reader navigation/ }).first();
-  await navigationButton.click();
-  await expect(page.getByRole("button", { name: /章节|Sections/ }).first()).toBeVisible();
-  await page.getByRole("button", { name: /章节|Sections/ }).first().click();
-  const sectionButton = page.getByRole("button", { name: "Section 20", exact: true }).first();
+  await openReaderHeaderAction(page, /阅读导航|Reader navigation/);
+  const navigation = page.getByRole("dialog", { name: /^(阅读导航|Reader navigation)$/ });
+  await expect(navigation).toBeVisible();
+  await navigation.getByRole("button", { name: /^(章节|Sections)$/ }).click();
+  const sectionButton = navigation.getByRole("button", { name: "Section 20", exact: true });
   await expect(sectionButton).toBeVisible();
   await sectionButton.click();
   await expect(page.locator("#block-offline-message-20-1")).toBeVisible();
-  await page.getByRole("button", { name: /关闭|Close/ }).first().click();
+  await expect(navigation).toBeHidden();
 
   await openReaderHeaderAction(page, /当前对话文件|Conversation files/);
   await expect(page.getByTestId("offline-conversation-files-panel")).toBeVisible();
