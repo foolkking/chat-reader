@@ -25,6 +25,7 @@ from app.services.adaptive_import.archive_sources import (
     archive_file_recovery,
     remove_archive_sidecar,
 )
+from app.services.adaptive_import.memory_budget import import_analysis_admission
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, publish_revision, related_profile_ids, revision_payload, visible_profile
 from app.services.administration import require_root_admin, record_admin_audit, request_id_from
 from app.services.adaptive_import.service import (
@@ -52,7 +53,6 @@ from app.services.ownership import OwnershipScope, get_owned, ownership_scope_fr
 from app.services.feature_policies import effective_import_size_mb, get_feature_policy
 from app.services.uploads import (
     UploadLimitError,
-    bounded_analysis_admission_sync,
     bounded_upload_staging_sync,
     read_upload_bounded_sync,
     upload_size,
@@ -288,7 +288,7 @@ def update_adaptive_import_groups(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     try:
-        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+        with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
             resolve_grouping(db, record, [item.model_dump(mode="json") for item in payload.groups])
         db.commit()
         db.refresh(record)
@@ -309,7 +309,7 @@ def reanalyze_adaptive_import_session(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     try:
-        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+        with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
             reanalyze_session(db, record)
         db.commit()
         db.refresh(record)
@@ -388,7 +388,13 @@ def replace_adaptive_import_artifact(
         ]
         sizes.append(upload_size(file))
         with archive_file_recovery(record) if was_archive or replacement_is_archive else nullcontext():
-            with bounded_analysis_admission_sync(sizes):
+            with import_analysis_admission(
+                db,
+                record,
+                stage="analysis",
+                sizes=sizes,
+                replacement=(artifact_id, file),
+            ):
                 content = read_upload_bounded_sync(file, max_bytes)
                 old_paths, new_path = replace_session_artifact(
                     db,
@@ -476,7 +482,7 @@ def update_adaptive_import_archive(
     mutation_committed = False
     try:
         with archive_file_recovery(record):
-            with bounded_analysis_admission_sync(_analysis_sizes(record)):
+            with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
                 removed_paths = reclassify_archive(
                     db,
                     record,
@@ -517,7 +523,7 @@ def exclude_adaptive_import_group(
     record = _record(import_id, db, ownership_scope)
     group = _group(import_id, group_id, db)
     try:
-        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             removed_paths = remove_input_group(db, record, group)
         db.commit()
         db.refresh(record)
@@ -542,7 +548,7 @@ def save_family_mapping(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             verify_family_mapping(
                 db, record, family, mapping_spec=payload.mapping_spec, profile_name=payload.profile_name.strip()
             )
@@ -569,7 +575,7 @@ def check_format_health(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             result = check_family_health(db, record, family)
         db.commit()
         return result
@@ -592,7 +598,7 @@ def preview_family_mapping_route(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             return preview_family_mapping(
                 record,
                 family,
@@ -617,7 +623,7 @@ def choose_family_profile(
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
     try:
-        with bounded_analysis_admission_sync(_analysis_sizes(record)):
+        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             select_profile_revision(db, record, family, payload.revision_id)
         db.commit()
         db.refresh(record)

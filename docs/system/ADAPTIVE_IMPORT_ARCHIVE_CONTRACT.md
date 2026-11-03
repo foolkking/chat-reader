@@ -1,6 +1,8 @@
 # Adaptive Import ZIP Contract
 
-Status: source candidate implemented 2026-11-03; not CI/production accepted.
+Status: core ZIP support accepted with production source `3b839dc` on
+2026-11-04. The bounded-memory extension below is a new source candidate;
+its exact-source CI and production acceptance are pending.
 This contract extends the existing Adaptive Import session. It does not replace
 `.cr` personal restore, system archives, or the canonical import commit.
 
@@ -74,6 +76,41 @@ conversation. Unreferenced files are never silently attached. A valid archive
 can still be reviewed, corrected, or replaced using the normal Adaptive Import
 recovery flow.
 
+## Bounded small-ZIP memory policy
+
+`IMPORT_SMALL_ZIP_ENABLED=true` (default) grants a lower reserve only after
+owned source bytes pass a bounded EOCD/central-directory preflight and the
+existing ZIP safety validation. ZIP64 and multi-volume sources do not qualify.
+Limits are: archive/expanded bytes each 32 MiB; 256 entries; 256 KiB central
+directory, manifest and single selected Markdown document; 128 attachments
+of at most 16 MiB each; one conversation, 256 messages, 2,048 render blocks,
+1,024 actual references and a 1-MiB canonical draft. Manifest-declared Markdown
+attachments in dedicated exports are not additional selected documents.
+
+Admission requires 128 MiB reserve plus 64 MiB workspace (192 MiB effective
+headroom); the existing host/cgroup minimum probe remains authoritative.
+Unknown headroom or RSS does not grant qualification. Checkpoints stop work
+below the 128-MiB reserve or above 64 MiB process-RSS growth. These are live
+checks, not a memory reservation. Exceeding a limit aborts rather than truncates.
+Ineligible, disabled or stale proofs use unchanged standard admission
+(512 MiB plus the input working-set estimate by default), never a tiny-ZIP
+bypass. Every ZIP mutation forces a real admission check.
+
+Analysis, grouping/mapping, reanalysis, classification, replacement and commit
+share this policy and the existing semaphore. A nonblocking PostgreSQL
+transaction advisory lock also serializes admitted parsers across API and
+worker processes; contention is retryable. Commit binds the proof to actual
+archive, selected-document and draft hashes, source fingerprint, classification
+revision and bounded counts. Replacement cannot inherit old eligibility.
+Streaming/CRC/MIME/scanning, source preservation and canonical rollback remain
+mandatory; no schema or portable-file format changes.
+
+Session/task reads may add `failure: {code, stage, retryable}` from existing
+JSON fields. Only known codes/stages are projected; wrapped exceptions and
+legacy known memory messages retain their safe reason. Memory, queue and
+budget failures do not imply archive damage or an automatic retry. Explicit
+retry reuses the original analysis job and retained files.
+
 ## Resource identity and Reader rendering
 
 Markdown links/images and recognized `src`/`href` attributes are resolved only
@@ -132,6 +169,10 @@ dedicated conversation ZIP commit, repeated real-block occurrences, transaction
 fault recovery and post-commit response failure. The
 [completion audit](../execution/ux-audit-reader-zip-completion-2026-11-03.md)
 owns the current results; earlier implementation counts remain historical.
-PostgreSQL concurrency and Web/browser visual
-acceptance, CI, online tests and deployment remain user-owned and are not
-implied by passing local tests.
+The core ZIP release was accepted separately; do not reuse that receipt for the
+new bounded-memory source. Its CI additionally runs the normal exact-image
+worker under a real 320-MiB/no-extra-swap Linux limit, verifies analysis,
+canonical commit and all 14 synthetic assets, and requires workspace peak
+growth ≤64 MiB with no OOM/restarts. The report is included in, and independently
+checked from, the official release artifact. Full candidate CI/production
+acceptance and real user-file retry are separate gates.

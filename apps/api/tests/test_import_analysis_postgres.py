@@ -20,6 +20,7 @@ from app.services.adaptive_import import service
 from app.services.background_jobs import claim_next_job, process_background_job
 from app.services.ownership import OwnershipScope
 from test_import_profile_postgres import isolated_schema as _isolated_schema
+from test_import_analysis_queue import small_conversation_zip
 
 isolated_schema = _isolated_schema
 pytestmark = pytest.mark.skipif(
@@ -30,12 +31,16 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.mark.parametrize("via_tasks", [False, True])
 @pytest.mark.parametrize("pause_at", ["before_parse", "before_publish"])
+@pytest.mark.parametrize("bounded_zip", [False, True])
 def test_cancellation_during_analysis_rolls_back_before_removing_sources(
-    isolated_schema, tmp_path, monkeypatch, via_tasks, pause_at,
+    isolated_schema, tmp_path, monkeypatch, via_tasks, pause_at, bounded_zip,
 ):
     engine, migrate = isolated_schema
     migrate("head")
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "imports"))
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setattr("app.services.uploads.available_memory_bytes",
+                        lambda: (224 * 1024**2) if bounded_zip else (16 * 1024**3))
     get_settings.cache_clear()
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     with factory() as db:
@@ -44,8 +49,9 @@ def test_cancellation_during_analysis_rolls_back_before_removing_sources(
         db.flush()
         record = service.begin_session(db, 1, owner_user_id=owner.id)
         service.add_session_source_stream(
-            db, record, "synthetic.json",
-            BytesIO(b'{"metadata":{"powered_by":"ChatGPT Exporter"},'
+            db, record, "synthetic.zip" if bounded_zip else "synthetic.json",
+            BytesIO(small_conversation_zip() if bounded_zip else
+                    b'{"metadata":{"powered_by":"ChatGPT Exporter"},'
                     b'"messages":[{"role":"Prompt","say":"Synthetic input."}]}'),
             max_file_bytes=1024 * 1024,
         )
@@ -98,7 +104,7 @@ def test_cancellation_during_analysis_rolls_back_before_removing_sources(
                 # Cancel must update only BackgroundJob and return immediately.
                 executor.submit(cancel).result(timeout=7)
                 assert root.exists()
-                assert (root / "synthetic.json").is_file()
+                assert (root / ("synthetic.zip" if bounded_zip else "synthetic.json")).is_file()
                 with factory() as db:
                     assert db.get(BackgroundJob, job_id).status == "cancelling"
                     assert db.get(ImportRecord, import_id).session_state == "ANALYZING"
@@ -115,4 +121,44 @@ def test_cancellation_during_analysis_rolls_back_before_removing_sources(
     finally:
         release.set()
         event.remove(engine, "before_cursor_execute", before_publish)
+        get_settings.cache_clear()
+
+
+def test_bounded_and_standard_parsers_share_a_transaction_scoped_postgres_lane(
+    isolated_schema, tmp_path, monkeypatch,
+):
+    from app.services.adaptive_import.memory_budget import import_analysis_admission, current_budget
+    from app.services.uploads import UploadLimitError, bounded_analysis_admission_sync
+    engine, migrate = isolated_schema
+    migrate("head")
+    monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "imports"))
+    monkeypatch.setenv("UPLOAD_MAX_ACTIVE_ANALYSIS", "2")
+    monkeypatch.setattr("app.services.uploads.available_memory_bytes", lambda: 224 * 1024**2)
+    get_settings.cache_clear()
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    try:
+        with factory() as first, factory() as other:
+            owner = User(role="ADMIN", status="ACTIVE")
+            first.add(owner)
+            first.flush()
+            record = service.begin_session(first, 1, owner_user_id=owner.id)
+            service.add_session_source_stream(first, record, "synthetic.zip", BytesIO(small_conversation_zip()),
+                                             max_file_bytes=1024**2)
+            first.commit()
+            with import_analysis_admission(first, record, force_memory_check=True):
+                assert current_budget() is not None
+                # The local semaphore has a second slot, so this assertion
+                # reaches the PostgreSQL transaction lane rather than timing
+                # out on the in-process slot.
+                with pytest.raises(UploadLimitError) as error:
+                    with bounded_analysis_admission_sync([1], db=other, force_memory_check=True,
+                                                         required_memory_bytes=1):
+                        pytest.fail("Another database session entered the held lane.")
+                assert error.value.code == "UPLOAD_QUEUE_FULL"
+            first.rollback()
+            with bounded_analysis_admission_sync([1], db=other, force_memory_check=True,
+                                                 required_memory_bytes=1):
+                assert other.scalar(text("SELECT 1")) == 1
+            other.rollback()
+    finally:
         get_settings.cache_clear()

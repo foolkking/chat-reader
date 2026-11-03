@@ -1,42 +1,44 @@
 # 文档导航
 
-## 当前源码候选：Reader、富 Markdown 与 ZIP 导入 — 2026-11-03（未发布）
+## 小内存 ZIP 导入恢复 — 2026-11-04（源码候选，未部署）
 
-[本轮完成度复审](execution/ux-audit-reader-zip-completion-2026-11-03.md)发现并修正
-9 类缺口，涉及阅读几何、HTML/重复附件、ZIP 安全与草稿/事务恢复、离线搜索资源成本。
-当前 1,946 项 UX 源码测试和 134 项 API 专项通过；性能/浏览器/PostgreSQL 并发、
-全量 API 与完整 CI 仍须独立验收，不再把此前“源码完成”当作计划全部验收。
-按 2026-11-03 用户授权，本批在现有 `master` 提交并运行精确源码完整 CI；
-只有 CI 与发布制品核验通过才部署，生产当前仍为 `4b4f34f`。
+[原因、实施及验证边界](execution/SMALL_ZIP_MEMORY_2026-11-04.md)记录解析前
+内存准入失败、有界 192 MiB 路径、原任务重试、真实 320 MiB worker CI 门禁。
+没有全局降低保留量，没有 migration；完整 CI 和本轮部署尚未验收。
 
-[本轮实施记录](execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md)覆盖前一轮 Reader
-计划收尾、Obsidian/安全富 HTML 组合、正文几何/空白恢复以及 Adaptive Import
-专用/通用 Markdown ZIP。当前已运行源码级回归、API 测试和 lint；Web 浏览器视觉、
-性能基准仍未验收；完整 CI 与部署按上述门槛推进。[Adaptive ZIP 合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)
-明确 ZIP 安全限制、成员分类、附件持久化与 `.cr`/离线兼容边界。
-[联合 Reader 计划](execution/READER_FAVORITES_DESIGN_2026-11-02.md)和
-[富内容设计](execution/READER_RICH_CONTENT_DESIGN_2026-11-02.md)保留详细需求与验收边界；
-[11 月 2 日完成度复审](execution/ux-audit-plan-completion-2026-11-02.md)是历史审查快照，
-其当时未完成项由本轮后续源码接续。
+## 当前生产：Reader、富 Markdown 与 Adaptive ZIP — 2026-11-04（已部署）
 
-## 当前阻塞：全量离线包导入 — 2026-11-01（源码与本机验证完成，未发布）
+精确源码 `3b839dc1adfac431b6c44c2e1928a9be946cb42f` 的完整 CI
+`41633888061` 六项全部通过，官方制品 `13232957284` 独立检查通过。
+生产于 **2026-11-03 16:04:43Z / 2026-11-04 00:04:43 +08:00** 接受，
+**16:08:12Z / 00:08:12 +08:00** 独立复核通过；当前／直接回退为
+`3b839dc`／`4b4f34f`，schema 0058 未变。新停写五组件备份
+`chat-reader-20261103T155702Z` 已复验。真实认证 UI、用户侧完整 47 对话离线更新、
+持续负载和隔离恢复演练未声称通过。
+
+[发布与生产回执](execution/READER_ZIP_RELEASE_2026-11-04.md)；
+[完成度复审](execution/ux-audit-reader-zip-completion-2026-11-03.md)涵盖
+Reader/Favorites/键盘/几何、富 Markdown 与 ZIP 导入的组合缺口和计划处置；
+[实施记录](execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md)与
+[Adaptive ZIP 合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)说明数据、兼容和安全边界。
+
+## 发布后待验证：全量离线包用户侧更新 — 2026-11-04
 
 [诊断与实施记录](execution/OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md)记录服务端
-47 对话包生成成功、散列及全部 ZIP CRC 通过，但单个 JSON 超过 Chromium/V8
-字符串上限。源码已改为逐对话可恢复下载、限制单包导入预算，并迁移旧失败批次；
-本机真实浏览器 PWA 矩阵 28/28 通过，含大于现网最大单对话的合成导入。
-CI、部署与真实 47 对话完整更新验收仍待完成，不以此前发布健康通过宣称生产问题已解决。
+47 对话包生成成功及原客户端单 JSON 字符串上限问题。逐对话可恢复下载、单包预算和旧失败
+批次迁移已随 `3b839dc` 发布，并通过完整精确源码 CI；此前本机 PWA 矩阵为 28/28。
+部署后真实 47 对话下载／更新尚未复测，因此只保留这项用户侧验收，不把 CI/health 视为
+真实数据端到端成功。
 
-## 当前生产与安全清理 — 2026-11-01（已验收）
+## 前一生产检查点与安全清理 — 2026-11-01（历史，已验收）
 
 精确源码 `4b4f34f` 的完整 CI `41228079428` 六项全部通过，官方制品独立核验，
-**03:34:15Z** 生产接受、**03:37:26Z** 独立复核通过。当前／直接回退为
+**03:34:15Z** 生产接受、**03:37:26Z** 独立复核通过。该检查点当时当前／直接回退为
 `4b4f34f`／`127eae5`，schema 0058 不变。安全清理释放约 7.66 GiB；
 新停写备份完成后仍余 **9.64 GiB**，保留 3 个恢复点。新版审计核验 358 个附件
 和 12 个 Context 对象、370 项哈希，零问题。详见
-[发布与清理记录](execution/DEPLOYMENT_PREPARATION_2026-11-01.md)。
-
-## 阅读与离线可靠性 — 2026-11-01（已发布，客户端人工边界保留）
+[历史发布与清理记录](execution/DEPLOYMENT_PREPARATION_2026-11-01.md)。
+## 前一批阅读与离线可靠性 — 2026-11-01（已发布，客户端人工边界保留）
 
 [实施记录](execution/READING_RELIABILITY_IMPLEMENTATION_2026-10-31.md)跟踪
 共享存储引用、离线预检、待读／批注、专注目录和性能优化。

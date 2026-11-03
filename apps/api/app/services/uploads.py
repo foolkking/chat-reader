@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import threading
 import time
 from contextlib import asynccontextmanager, contextmanager
 from typing import AsyncIterator, Iterable, Iterator
 
 from fastapi import UploadFile
+from sqlalchemy import text
 
 from app.core.config import Settings, get_settings
 from app.core.memory import available_memory_bytes
@@ -27,6 +29,9 @@ _queue_lock = threading.Lock()
 _slot_lock = threading.Lock()
 _queued_heavy_requests = 0
 _MIB = 1024 * 1024
+_ANALYSIS_LOCK_KEY = int.from_bytes(
+    hashlib.sha256(b"bounded-small-import:1").digest()[:8], "big", signed=True,
+)
 
 
 def configure_multipart_parser(settings: Settings | None = None) -> None:
@@ -139,25 +144,30 @@ async def bounded_analysis_admission(sizes: Iterable[int]) -> AsyncIterator[None
 
 
 @contextmanager
-def bounded_upload_analysis_sync(files: Iterable[UploadFile]) -> Iterator[None]:
+def bounded_upload_analysis_sync(files: Iterable[UploadFile], *, db=None) -> Iterator[None]:
     """Synchronous admission guard for FastAPI thread-pool upload routes."""
-    with bounded_analysis_admission_sync(upload_size(upload) for upload in files):
+    with bounded_analysis_admission_sync((upload_size(upload) for upload in files), db=db):
         yield
 
 
 @contextmanager
 def bounded_analysis_admission_sync(
     sizes: Iterable[int], *, force_memory_check: bool = False,
+    required_memory_bytes: int | None = None,
+    db=None,
 ) -> Iterator[None]:
     """Synchronous admission; persistent worker analysis also checks small batches."""
     settings = get_settings()
     size_values = [max(0, int(size)) for size in sizes]
     threshold = settings.upload_heavy_threshold_mb * 1024 * 1024
     is_heavy = max(size_values, default=0) > threshold or sum(size_values) > threshold
-    if not is_heavy and not force_memory_check:
+    if not is_heavy and not force_memory_check and required_memory_bytes is None:
         yield
         return
-    required_memory = _required_analysis_memory_bytes(size_values, settings)
+    required_memory = (
+        _required_analysis_memory_bytes(size_values, settings)
+        if required_memory_bytes is None else max(1, required_memory_bytes)
+    )
 
     global _queued_heavy_requests
     with _queue_lock:
@@ -177,14 +187,33 @@ def bounded_analysis_admission_sync(
                 status_code=429,
             )
         try:
-            if not _memory_is_available(required_memory):
-                raise _memory_pressure_error()
-            yield
+            with _database_analysis_lane(db):
+                if not _memory_is_available(required_memory):
+                    raise _memory_pressure_error()
+                yield
         finally:
             semaphore.release()
     finally:
         with _queue_lock:
             _queued_heavy_requests = max(0, _queued_heavy_requests - 1)
+
+
+@contextmanager
+def _database_analysis_lane(db) -> Iterator[None]:
+    """Serialize admitted parsers without waiting while holding source locks."""
+    if db is None or db.get_bind().dialect.name != "postgresql":
+        yield
+        return
+    if not db.scalar(
+        text("SELECT pg_try_advisory_xact_lock(:key)"),
+        {"key": _ANALYSIS_LOCK_KEY},
+    ):
+        raise UploadLimitError(
+            "UPLOAD_QUEUE_FULL",
+            "The server is processing another import. Try again shortly.",
+            status_code=429,
+        )
+    yield
 
 
 @contextmanager

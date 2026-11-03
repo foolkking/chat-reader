@@ -193,6 +193,25 @@ test("canonical commit failure is not mislabelled as initial analysis failure", 
   } finally { f.dispose(); }
 });
 
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: reopening a memory failure offers original-task retry without reupload or corruption claims`, async () => {
+  const failed = { ...session("FAILED", "analysis_failed"), failure: {
+    code: "UPLOAD_MEMORY_PRESSURE", stage: "admission", retryable: true,
+  }, error_message: "/private/synthetic-source" };
+  const f = fixture({ locale, resumeImportId: "synthetic-import", initialRead: async () => failed });
+  try {
+    await f.settle();
+    assert.match(text(f.tree()), locale === "zh-CN" ? /可用内存不足/ : /not enough available memory/);
+    assert.match(text(f.tree()), locale === "zh-CN" ? /无需重新上传/ : /without uploading again/);
+    assert.doesNotMatch(text(f.tree()), /private|文件损坏|damaged|自动重试|will retry automatically/);
+    const retry = find(f.tree(), node => node.type === "button" && /^(重试分析|Retry analysis)$/.test(text(node)));
+    assert.ok(retry);
+    retry.props.onClick(); await f.settle();
+    assert.deepEqual(f.calls.filter(row => row[0] === "retry"), [["retry", "synthetic-analysis"]]);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
+    assert.equal(f.storage.get("chat-reader:adaptive-import-session"), "synthetic-import");
+  } finally { f.dispose(); }
+});
+
 test("explicit cancellation resets this pane; closing/unmounting alone does not", async () => {
   const f = fixture();
   try {

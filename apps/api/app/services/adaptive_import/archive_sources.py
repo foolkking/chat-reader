@@ -151,7 +151,9 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                 member["use"] = "conversation"
 
         missing_references: set[str] = set()
+        visible_messages = 0
         for document in documents:
+            _small_import_checkpoint()
             raw = _read_member_bytes(archive, effective[document["path"]], settings.bundle_max_object_bytes)
             try:
                 text = raw.decode("utf-8-sig")
@@ -162,9 +164,12 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                     layer="archive",
                     pointer=document["member_id"],
                 ) from exc
+            if dedicated and document["path"] == primary_path:
+                visible_messages = _visible_role_heading_count(text)
             references, missing = _document_references(text, document["path"], set(by_path))
             missing_references.update(missing)
             for reference in references:
+                _small_import_checkpoint()
                 target = by_path[reference]
                 target["reference_count"] += 1
                 if document["member_id"] not in target["referenced_by"]:
@@ -176,8 +181,6 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
 
         issues: list[dict[str, Any]] = []
         if dedicated and manifest_messages:
-            raw = _read_member_bytes(archive, effective[primary_path], settings.bundle_max_object_bytes)
-            visible_messages = _visible_role_heading_count(raw.decode("utf-8-sig"))
             if visible_messages and visible_messages != manifest_messages:
                 issues.append({
                     "code": "MANIFEST_MESSAGE_COUNT_MISMATCH",
@@ -219,6 +222,8 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
             "manifest_message_count": manifest_messages,
         }
         _refresh_catalog_summary(catalog)
+        from app.services.adaptive_import.memory_budget import validate_catalog_budget
+        validate_catalog_budget(catalog)
         return catalog
 
 
@@ -384,6 +389,9 @@ def archive_member_stream(record: ImportRecord, attachment: dict[str, Any]):
     except (KeyError, OSError, RuntimeError, zipfile.BadZipFile) as exc:
         archive.close()
         raise AdaptiveImportError("ARCHIVE_MEMBER_NOT_FOUND", "The ZIP attachment is unavailable.", layer="archive") from exc
+    from app.services.adaptive_import.memory_budget import BudgetedArchiveStream, current_budget
+    if current_budget() is not None:
+        source = BudgetedArchiveStream(source)
     return archive, source, member
 
 
@@ -432,6 +440,8 @@ def _replace_materialized_documents(
     archive_artifact: SourceArtifact,
     catalog: dict[str, Any],
 ) -> list[Path]:
+    from app.services.adaptive_import.memory_budget import validate_catalog_budget
+    validate_catalog_budget(catalog)
     old = [
         artifact for artifact in record.artifacts
         if artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
@@ -453,6 +463,7 @@ def _replace_materialized_documents(
                 or f"v{catalog.get('classification_version', 1)}"
             )[:12]
             for member in importable:
+                _small_import_checkpoint()
                 raw = _read_member_bytes(
                     archive,
                     archive.getinfo(str(member["zip_path"])),
@@ -635,12 +646,16 @@ def archive_reference_matches(text: str):
         hide_inline(cursor, end)
     hidden = _merge_source_ranges([*hidden, *inline_hidden])
     index = 0
+    matched_count = 0
     for match in _REFERENCE_RE.finditer(text):
         start, end = match.span("target")
         while index < len(hidden) and hidden[index][1] <= start:
             index += 1
         if index < len(hidden) and hidden[index][0] < end:
             continue
+        matched_count += 1
+        from app.services.adaptive_import.memory_budget import MAX_REFERENCES, enforce_limit
+        enforce_limit(matched_count, MAX_REFERENCES)
         yield match
 
 
@@ -702,7 +717,9 @@ def _validated_members(archive: zipfile.ZipFile) -> tuple[list[zipfile.ZipInfo],
     expanded = 0
     names: set[str] = set()
     files: list[zipfile.ZipInfo] = []
-    for info in infos:
+    for member_index, info in enumerate(infos):
+        if member_index % 16 == 0:
+            _small_import_checkpoint()
         path = PurePosixPath(info.filename)
         if (
             not info.filename
@@ -777,6 +794,7 @@ def _read_member_bytes(archive: zipfile.ZipFile, info: zipfile.ZipInfo, max_byte
             chunks: list[bytes] = []
             size = 0
             while chunk := source.read(1024 * 1024):
+                _small_import_checkpoint()
                 size += len(chunk)
                 if size > max_bytes:
                     raise AdaptiveImportError("ZIP_MEMBER_TOO_LARGE", "A ZIP member exceeds the configured object limit.", layer="archive")
@@ -784,6 +802,12 @@ def _read_member_bytes(archive: zipfile.ZipFile, info: zipfile.ZipInfo, max_byte
             return b"".join(chunks)
     except zipfile.BadZipFile as exc:
         raise AdaptiveImportError("ZIP_CRC_INVALID", "A ZIP member failed integrity validation.", layer="archive") from exc
+
+
+def _small_import_checkpoint() -> None:
+    from app.services.adaptive_import.memory_budget import checkpoint
+
+    checkpoint()
 
 
 def _visible_role_heading_count(text: str) -> int:

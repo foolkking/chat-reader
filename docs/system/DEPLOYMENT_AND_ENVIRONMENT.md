@@ -1,20 +1,28 @@
 # 部署与运行环境
 
-## 当前生产与清理 — 2026-11-01
+## 当前生产 — Reader、富 Markdown 与 Adaptive ZIP — 2026-11-04
 
-精确 `4b4f34f` 的完整 CI `41228079428` 六项成功、官方精确制品独立核验，
-**03:34:15Z** 部署接受、**03:37:26Z** 独立复核。当前／直接回退为
-`4b4f34f`／`127eae5`，另保留 `0d1efac` 镜像，schema 单一 head
-`20261030_0058` 未变，无 upgrade/downgrade。20 份备份验证后保留最新两份、
-清理较旧 18 份；只删除无引用的 `f8a6a06`、`b4effda` 镜像及对应归档，
-释放约 7.66 GiB。新停写五组件备份后仍余 **9.64 GiB**，当前保留三份备份。
+精确 `3b839dc` 的完整 CI `41633888061` 六项成功，官方制品
+`13232957284` 独立检查通过；生产 **2026-11-03 16:04:43Z /
+2026-11-04 00:04:43 +08:00** 接受，**16:08:12Z / 00:08:12 +08:00**
+独立复核。当前／直接回退为 **`3b839dc`／`4b4f34f`**，schema 单一 head
+`20261030_0058` 未变，无 upgrade/downgrade。
 
-只停应用；新版审计核验 358 附件＋12 Context、370 哈希零问题，
-创建／校验 `chat-reader-20261101T032819Z`，以 `--no-build --no-deps` 替换。
-PostgreSQL 身份／启动时间、生产 env／Compose／Nginx、canonical 停写行数和
-OOM 计数均未变，健康／权限／隐私／日志通过。旧版审计误分类导致首轮自动恢复，
-第二轮实际维护为 6 分 23 秒，不是零停机；详见
-[发布与清理记录](../execution/DEPLOYMENT_PREPARATION_2026-11-01.md)。
+停写审计检查 338 个活动附件、359 个 asset 对象和 12 个 Context，共 371
+个文件散列、零问题。校验五组件备份 `chat-reader-20261103T155702Z`；
+使用 `--no-build --no-deps` 替换 API/worker/Web。维护 **7 分 56 秒**，
+非零停机。PostgreSQL、生产配置、Compose、Nginx、canonical 停写行数及 OOM
+计数均未变；健康、worker 心跳、精确镜像、HTTPS／权限／隐私、日志、备份复验
+通过。保留五份备份，无用户数据、volume、备份或旧镜像清理；可用空间
+**7,156,904 KiB**。生产认证 UI、真实 47 对话用户侧下载、持续负载和隔离恢复
+演练仍未验收。详见
+[发布记录](../execution/READER_ZIP_RELEASE_2026-11-04.md)。
+
+## Previous accepted production — 2026-11-01
+
+前一 `4b4f34f` 版本的完整验收、旧版 Context 审计误分类后的自动恢复和
+2026-11-01 安全清理仍由[历史发布记录](../execution/DEPLOYMENT_PREPARATION_2026-11-01.md)
+保存；其“当前生产”措辞仅代表该历史检查点。
 
 ## 历史生产与回退边界 — 2026-10-30
 
@@ -557,6 +565,7 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 | `PUBLIC_WEB_BASE_URL` | API | Share 等公开 URL base |
 | `MAX_IMPORT_FILE_SIZE_MB` | API | 导入大小上限 |
 | `UPLOAD_HEAVY_THRESHOLD_MB`, `UPLOAD_MAX_ACTIVE_ANALYSIS`, `UPLOAD_QUEUE_MAX_SIZE`, `UPLOAD_MEMORY_RESERVE_MB`, `UPLOAD_ANALYSIS_MEMORY_FACTOR`, `UPLOAD_QUEUE_WAIT_SECONDS` | API | 重型分析串行准入、输入工作集估算、内存保留与队列 |
+| `IMPORT_SMALL_ZIP_ENABLED` | API/worker | 默认 `true`；仅对满足 [ZIP 有界合同](ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#bounded-small-zip-memory-policy) 的单正文归档使用 192 MiB 准入，128 MiB 保留、64 MiB 工作集上限；`false` 回到标准准入。不是全局降低保留量或增加容器内存。 |
 | `MULTIPART_SPOOL_MAX_SIZE_KB` | API | multipart 单文件内存 spool 阈值；超过后使用任务临时目录，默认 64 KiB |
 | `IMPORT/EXPORT/OFFLINE/ASSET_STORAGE_DIR` | API/worker | artifact and attachment roots |
 | `ATTACHMENT_SCANNER`, `ALLOW_UNSCANNED_ATTACHMENTS` | API/worker | `disabled|clamav|remote` provider 与未扫描对象使用策略 |

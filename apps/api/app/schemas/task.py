@@ -12,6 +12,12 @@ class OfflineDownloadTarget(BaseModel):
     include_assets: Literal["none", "small", "all"] = "all"
 
 
+class ImportFailureRead(BaseModel):
+    code: str
+    stage: str
+    retryable: bool
+
+
 class BackgroundTaskRead(BaseModel):
     job_id: UUID
     job_type: str
@@ -26,6 +32,7 @@ class BackgroundTaskRead(BaseModel):
     offline_target: OfflineDownloadTarget | None = None
     result: dict = Field(default_factory=dict)
     error_message: str | None = None
+    failure: ImportFailureRead | None = None
     queued_at: datetime | None = None
     started_at: datetime | None = None
     heartbeat_at: datetime | None = None

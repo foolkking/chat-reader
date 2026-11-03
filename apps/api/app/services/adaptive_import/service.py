@@ -32,8 +32,9 @@ from app.services.adaptive_import.archive_sources import (
     restore_archive_catalog,
     update_archive_classification,
 )
+from app.services.adaptive_import.memory_budget import small_zip_receipt
 from app.services.adaptive_import.contracts import AdaptiveImportError, AnalysisResult, SourceDocument
-from app.services.task_errors import public_task_error
+from app.services.task_errors import public_import_failure, public_task_error
 from app.services.adaptive_import.normalization import normalize_group, validate_drafts
 from app.services.adaptive_import.profiles import (
     BUILTINS,
@@ -248,7 +249,10 @@ def analyze_session(
     # successful canonical commit is still required for a permanent grant.
     admitted = set((record.analysis_summary or {}).get("admitted_format_revisions", []))
     admitted.update(str(family.matched_revision_id) for family in record.structure_families if family.matched_revision_id)
-    record.analysis_summary = {**(record.analysis_summary or {}), "admitted_format_revisions": sorted(admitted)}
+    summary = {**(record.analysis_summary or {}), "admitted_format_revisions": sorted(admitted)}
+    summary.pop("failure", None)
+    summary.pop("small_zip_profile", None)
+    record.analysis_summary = summary
     _clear_import_plan(record)
     record.session_state = "ANALYZING"
     record.status = "analyzing"
@@ -677,6 +681,11 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "progress": record.progress,
         "error_message": public_task_error(record.error_message, fallback="IMPORT_FAILED"),
         "analysis_task_id": (record.analysis_summary or {}).get("analysis_task_id"),
+        "failure": public_import_failure(
+            (record.analysis_summary or {}).get("failure"),
+            error_message=record.error_message,
+            stage="commit" if record.phase == "failed" else "analysis",
+        ),
         "target_project_id": (
             (record.analysis_summary or {}).get("commit_options", {}).get("project_id")
             if "project_id" in (record.analysis_summary or {}).get("commit_options", {})
@@ -1006,6 +1015,17 @@ def _update_session_state(db: Session, record: ImportRecord) -> None:
         record.phase = "input_recovery" if "INVALID" in statuses else "profile_resolution"
         record.progress = 45 if "INVALID" in statuses else 55
     record.analysis_summary = _summary(record)
+    try:
+        receipt = small_zip_receipt(record)
+    except UploadLimitError:
+        raise
+    except (OSError, ValueError, KeyError):
+        receipt = None
+    if receipt is not None:
+        record.analysis_summary = {
+            **record.analysis_summary,
+            "small_zip_profile": receipt,
+        }
 
 
 def _prepare_plan(db: Session, record: ImportRecord) -> None:
@@ -1093,6 +1113,7 @@ def _summary(record: ImportRecord) -> dict[str, Any]:
         **({"analysis_task_id": record.analysis_summary["analysis_task_id"]} if (record.analysis_summary or {}).get("analysis_task_id") else {}),
         **({"target_project_id": record.analysis_summary["target_project_id"]} if "target_project_id" in (record.analysis_summary or {}) else {}),
         **({"commit_options": record.analysis_summary["commit_options"]} if (record.analysis_summary or {}).get("commit_options") else {}),
+        **({"failure": record.analysis_summary["failure"]} if (record.analysis_summary or {}).get("failure") else {}),
         "admitted_format_revisions": (record.analysis_summary or {}).get("admitted_format_revisions", []),
         "group_count": len(record.input_groups), "family_count": len(record.structure_families),
         "resolution_counts": statuses, "ready": record.session_state == "READY",
@@ -1215,11 +1236,18 @@ def _enrich_archive_drafts(
 
     result: list[CanonicalDraftConversation] = []
     for draft_index, draft in enumerate(drafts):
+        from app.services.adaptive_import.memory_budget import (
+            MAX_BLOCKS, MAX_MESSAGES, checkpoint, enforce_limit,
+        )
+        enforce_limit(len(drafts), 1)
+        enforce_limit(len(draft.messages), MAX_MESSAGES)
+        checkpoint()
         attachment_records = archive_enrichment_for_artifact(record, source)
         messages: list[CanonicalDraftMessage] = []
         refs: list[dict[str, Any]] = []
         member_id = str((source.parsed_summary or {}).get("archive_member_id") or source.id)
         owned_ids = {str(item["id"]) for item in attachment_records}
+        total_blocks = 0
         for message_index, message in enumerate(draft.messages):
             source_message_id = message.source_message_id or f"archive:{member_id}:message:{message_index + 1}"
             source_version_id = message.source_current_version_id or f"{source_message_id}:version:1"
@@ -1229,6 +1257,9 @@ def _enrich_archive_drafts(
                 source_current_version_id=source_version_id,
             ))
             blocks = build_basic_render_blocks(message.display_text)
+            total_blocks += len(blocks)
+            enforce_limit(total_blocks, MAX_BLOCKS)
+            checkpoint()
             per_block_counts: dict[tuple[int, str], int] = defaultdict(int)
             block_occurrences: list[tuple[int, str, bool]] = []
             for block_index, block in enumerate(blocks):

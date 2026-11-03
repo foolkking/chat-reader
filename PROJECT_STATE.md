@@ -1,121 +1,54 @@
 # Project State
 
-Last updated: 2026-11-03. This is the current source snapshot, not a release history.
+Last updated: 2026-11-04. This is the current source snapshot, not a release history.
 
 ## Release and active work
 
-**Current source-only candidate — Reader/ZIP completion review (2026-11-03):**
-The joint Reader/Favorites/offline/rich-content and Adaptive ZIP implementation
-has been reviewed against the approved plan. Nine source gaps are repaired:
-message-clipped virtual-gap recovery without clearing size caches; geometry/
-keyboard ownership; safe-HTML attachment identity; repeated-resource real-block
-binding; manifest path validation; code-example preservation and scanner
-allocation control; version-bound ZIP drafts and leave/import guards;
-replacement revisions and catalog/draft/file exception recovery; and
-metadata-only offline search/locator reads. Renderer policy is v13.
-No migration, Share URL, `.cr`, offline package v1/v2/v3, Dexie v2 or
-canonical complete-turn contract is changed.
+**Source candidate — bounded small-ZIP memory recovery (2026-11-04):**
+The reported ZIP failed before parsing on the standard 512-MiB-plus-input
+admission estimate, not on archive integrity. A bounded single-document ZIP
+policy now requires 192 MiB effective free memory, retains a 128-MiB reserve
+and limits workspace growth to 64 MiB; all other imports retain standard
+admission. Structured failure/retry contracts and a real exact-image
+320-MiB/no-extra-swap worker CI gate are added. Full exact-source CI and
+production acceptance are pending; current production below is unchanged.
+See the [implementation and validation boundaries](docs/execution/SMALL_ZIP_MEMORY_2026-11-04.md).
 
-The first exact-source CI run, `41572783373` on `9db9fd3`, failed only in
-settings browser tests (457/463) and the Web context gate (35/36); API and
-reading-performance jobs passed, and release image jobs were skipped. The six
-settings failures expected a new package for already-current local revisions,
-so the planner correctly skipped work the fixtures were waiting to intercept.
-The legacy optional-member fixture also rewrote a ZIP body while retaining
-stale response metadata. Test fixtures now make a real server content revision
-before expecting refresh work and provide matching headers for the transformed
-ZIP. No production download or package-compatibility behavior was relaxed.
-These test corrections await a fresh exact-source GitHub Actions run; no
-deployment is accepted from the failed run.
+**Current production — Reader, rich Markdown and Adaptive ZIP (2026-11-04):**
+Exact source `3b839dc1adfac431b6c44c2e1928a9be946cb42f` passed all six jobs in
+full CI `41633888061`, including reading-performance comparison and independent
+release-artifact inspection. Official artifact `13232957284` has SHA-256
+`6b6ba4c080da4e316bf1f12d353a574723a5bfd871413e4432ebf9c15a6250a`.
+Production accepted at **2026-11-03 16:04:43Z / 2026-11-04 00:04:43 +08** and
+independently rechecked at **16:08:12Z / 00:08:12 +08**. Current/direct rollback
+are **`3b839dc` / `4b4f34f`**. Schema remains single head `20261030_0058`;
+only current/head verification ran, with no migration or downgrade.
 
-The follow-up run `41580801427` exposed a compile-time mistake in that test
-repair: the locked Playwright `APIResponse` exposes `headers()`, not
-`allHeaders()`. The same TypeScript error blocked settings setup, Web
-typecheck and the performance comparison's build; API passed, but no
-performance result was measured. This compatibility call is corrected and
-awaits another full CI run.
+Stopped-writer audit verified 338 active attachments, 359 asset objects and
+12 Context objects (**371 file hashes, zero issues**), then created and
+reverified backup `chat-reader-20261103T155702Z`. API/Web/PostgreSQL health,
+`alive_idle` worker, exact image identities, HTTPS/privacy/denial probes,
+unchanged production env/Compose/Nginx/PostgreSQL/canonical row counts and zero
+new OOM/startup error keywords passed. Maintenance was **15:56:47–16:04:43Z**
+(7m56s, planned application downtime). Five backups remain; no backup, volume,
+user data or unrelated image cleanup occurred. Authenticated production UI,
+actual user-side 47-conversation offline download, sustained load and isolated
+restore drill remain unverified. See the [release record](docs/execution/READER_ZIP_RELEASE_2026-11-04.md).
 
-Run `41584161914` on `8d1b8d2` passed API, settings and reading-performance
-comparison, but Web focused online/security failed **3/45**; release image
-build/inspection were skipped. Two failures were stale assertions (a plain
-callout title was incorrectly required to contain `<strong>`, and the
-source-editor contract expected a removed selector). The third exposed a
-Reader edge-load gap: pointer-release logic trusted an
-IntersectionObserver visibility ref that may not refresh during a deferred
-scrollbar drag. Follow-up code now checks final sentinel geometry on release
-and protects the actual floating source-editor shell and ARIA textboxes from
-Reader shortcuts. Its exact-source follow-up run `41598513621` passed API,
-settings and reading-performance comparison, but failed Web focused
-online/security **2/45** (43 passed); release-image steps were skipped. The
-Reader test confirmed release triggers the request, but the transition then
-cancels because an earlier direction survives the completed drag. The
-rich-Markdown card contains two nested HTML divs, while its assertion counted
-all wrappers as one. The current repair commits the completed gesture's
-net-displacement direction before fetch, excludes marked
-layout-compensation scrolls from drag intent, and asserts the specific card by
-its contained link and accessible image/fallback. The drag regression
-additionally checks the settled direction. There is no full-CI acceptance or
-deployable image.
-
-Run `41613950618` on `9621b6e` passed focused online/security **45/45**, Share
-focus **2/2**, API and reading-performance comparison. Web then failed the
-Source Editor/mutation gate **1/110** (109 passed): the 375px recovery fixture
-looked for a standalone Reader navigation button, while the current mobile
-entry is More → Reader tools → Reader navigation. The follow-up changes only
-browser fixtures to use that real route and checks that tools yield to
-navigation. The later offline/mobile fixture uses the existing header-action
-helper and checks successful TOC navigation closes its sheet automatically.
-Recovery, same-Reader DOM, request-count, autosave and offline target assertions
-remain; no product behavior or release gate is relaxed. Later Web gates were
-not verified by this failed run, and this follow-up has not been locally tested.
-
-Run `41620114844` on `e0c0f58` passed focused online/security **45/45**, Share
-focus **2/2**, API, settings and reading-performance comparison. The corrected
-mobile recovery case passed. Source Editor/mutation again had **109 passed /
-1 failed**, now in rapid search-filter history after reload: the unscoped
-date-label locator matched two controls with the correct date, while the
-accessibility snapshot exposed only one date pair. The fixture now follows
-the single visible search-filter panel, explicitly checks its uniqueness and
-retains date, focus, filter, URL and Back/Forward assertions. The adjacent
-pagination/date-focus fixture uses the same scope. The precise lifecycle
-creating the non-accessible copy is not proven by the failure snapshot; no
-date-loss or product repair is claimed. Later Web gates remain unverified,
-release-image jobs were skipped, and this fixture-only repair awaits fresh CI.
-
-Run `41626975020` on `96a65cf` passed Source Editor/mutation **110/110** and
-all ten Web gates before default PWA, including focused online/security
-**45/45**, Share **2/2**, source-editor cleanup **6/6**, upload atomicity
-**18/18**, image viewer **31/31** and PDF **13/13**. Default PWA then had
-**183 passed / 4 failed / 760 flag-skipped**. Two failures expose a delayed
-mobile-sheet close restoring the old opener after focus has moved to the
-opposite edge; the shared sheet now preserves a newer connected focus owner.
-One exposes shared collection filters composing async replacements from stale
-render params; Favorites and Annotation inbox now compose from the current URL
-using native history replacement, retaining filter/page-reset semantics and
-ignoring callbacks from another route. The last failure is an unscoped error
-locator also matching Next's route announcer; it now targets the annotation
-failure and its Retry action. Seven collection-hook and three sheet-focus
-source cases are authored, with stronger existing browser assertions; none has
-run locally. API and reading-performance passed, settings was still running at
-inspection, and auth/negative-PWA gates remain unverified. Fresh exact-source
-CI is required; no release image or deployment is accepted.
-
-Earlier local evidence, before the CI-driven follow-ups: **1,946/1,946 UX
-source tests**, **134/134 focused API tests**, Web lint, nonincremental
-typecheck and Python compilation passed. These receipts do not cover the
-subsequent commits or current working-tree repair.
-The full API suite has not been rerun on this candidate; its earlier failed
-checkpoint remains in the implementation/testing records. Browser/visual,
-performance R4/P1/P2, PostgreSQL concurrency, Web build/PWA and complete
-exact-source CI remain unaccepted pending the repaired GitHub Actions run.
-By the user's 2026-11-03 request, commit `96a65cf` was pushed directly to the
-existing `master` and submitted as run `41626975020`; its Web quality gate
-failed as recorded above. This follow-up is being committed on `master` for a
-new exact-source full CI plus release-artifact checks; no deployment is started.
-Production remains at `4b4f34f` until independently verified deployment.
-See the [completion audit and current receipts](docs/execution/ux-audit-reader-zip-completion-2026-11-03.md),
-[prior implementation record](docs/execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md)
+The deployed scope closes the prior Reader/Favorites/keyboard/help/reading
+geometry, rich Markdown and Adaptive ZIP source plan; exact plan completion and
+pre-release CI failures remain in the [completion audit](docs/execution/ux-audit-reader-zip-completion-2026-11-03.md),
+[implementation record](docs/execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md)
 and [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md).
+Renderer policy is v13. No migration, Share URL, `.cr`, offline package
+v1/v2/v3, Dexie v2 or canonical complete-turn contract changed.
+
+**Post-deployment user verification pending — large offline package import:**
+the bounded per-conversation recovery implementation is now in the deployed
+source and passed this exact-source CI. The real user-side 47-conversation
+download/update has not been repeated after deployment, so that end-to-end
+outcome is not claimed. See the
+[diagnosis and implementation status](docs/execution/OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md).
 
 **Historical completion audit — 2026-11-02:** that snapshot correctly called
 the joint Reader plan partial at that time. Its findings and repair history
@@ -123,8 +56,9 @@ remain in the [dated audit](docs/execution/ux-audit-plan-completion-2026-11-02.m
 do not treat its old “remaining implementation” list as the current source
 state or as runtime/browser acceptance.
 
-**Prior source-only checkpoint — Reader favorites, recovery, geometry and rich Markdown (2026-11-02):**
-The uncommitted candidate preserves the existing `master` worktree and keeps the
+**Historical pre-release source-only checkpoint — Reader favorites, recovery, geometry and rich Markdown (2026-11-02):**
+Before the release recorded above, this uncommitted candidate preserved the
+existing `master` worktree and kept the
 reading-list route/API identity, Share URLs, `.cr`, offline package v1/v2/v3,
 Dexie v2 and canonical complete-turn semantics unchanged. It separates expired
 offline artifacts from unavailable targets and requires scope review before
@@ -144,34 +78,20 @@ now receives specific non-success feedback. The virtualized Reader also rebases
 mounted message coordinates after container-height changes without clearing
 row measurements or writing scrollTop; the shared layout notification is
 coalesced to one frame. No migration or API contract change was introduced.
-Web tests, CI, online verification and deployment are intentionally
-not run or claimed by this task; the user owns those gates. See the
+At that checkpoint Web tests, CI, online verification and deployment had not
+run; the subsequent accepted release and its verification are recorded above.
+See the
 [joint design](docs/execution/READER_FAVORITES_DESIGN_2026-11-02.md) and
 [rich-content design](docs/execution/READER_RICH_CONTENT_DESIGN_2026-11-02.md).
 
-**Open production blocker — large offline package import, remediation in progress (2026-11-01):**
-Read-only inspection of the latest 47-conversation package on `4b4f34f`
-confirmed that its 895,465,881-byte JSON requires 770,638,298 UTF-16 units,
-exceeding the 536,870,888 single-string limit of the Chromium/V8 import path.
-The source now queues changed conversations as resumable single-conversation
-packages, bounds archive/entry/expanded sizes, classifies terminal capacity
-failures without offering futile retries, and upgrades old failed full-batch
-records on retry. Each conversation import remains individually atomic; a
-multi-conversation operation is deliberately resumable rather than all-or-none.
-Web lint, typecheck, build and 1,904 script regressions have passed. Synthetic
-browser regressions include a larger-than-observed single-conversation JSON;
-the complete local PWA negative matrix passed 28/28 using headless Edge.
-CI, commit, deployment and the real
-47-conversation production refresh remain unaccepted. See the
-[diagnosis and implementation status](docs/execution/OFFLINE_LARGE_PACKAGE_DIAGNOSIS_2026-11-01.md).
-
-**Current production accepted — 2026-11-01 reading/offline reliability:**
+**Historical production checkpoint — 2026-11-01 reading/offline reliability:**
 Exact source `4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df` passed all six jobs,
 including reading performance comparison, in full CI `41228079428`, attempt 1;
 its official artifact archive SHA-256 is
 `edce9000d2876230f7752a1c5b878ec59c1af74d52b0a7b6e0a4f755b709a368`.
 Production accepted at **03:34:15Z / 11:34:15 +08**, independently rechecked
-at **03:37:26Z**. Current/direct rollback are **`4b4f34f` / `127eae5`**;
+at **03:37:26Z**. At that checkpoint, current/direct rollback were
+**`4b4f34f` / `127eae5`**;
 `0d1efac` images are also retained. Schema remains `20261030_0058`, verified
 without upgrade/downgrade. Safe cleanup verified 20
 backups and retained the latest two (`20261030T172811Z`, `20261030T114218Z`),

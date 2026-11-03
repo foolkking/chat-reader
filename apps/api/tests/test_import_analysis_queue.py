@@ -1,7 +1,9 @@
 """First-pass imports are persistent worker tasks, not long-running uploads."""
 import hashlib
+import io
 import json
 import uuid
+import zipfile
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
@@ -54,6 +56,30 @@ def queue(client, *, count=2) -> dict:
     assert result["families"] == []
     assert result["analysis_task_id"]
     return result
+
+
+def small_conversation_zip() -> bytes:
+    assets = [f"assets/pic-{index}.png" for index in range(14)]
+    body = "\n".join(f"![pic-{index}]({assets[index]})" for index in range(13))
+    transcript = (
+        "# Synthetic conversation\n\n"
+        "## User\nFirst question\n\n"
+        f"## Assistant\n{body}\n\n"
+        "## User\nFollow-up\n\n"
+        "## Assistant\nFinal answer\n"
+    ).encode()
+    manifest = json.dumps({
+        "version": "1",
+        "assets": [{"path": path, "kind": "image"} for path in assets],
+        "messages": [{"id": f"message-{index}"} for index in range(5)],
+    }).encode()
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("conversation.md", transcript)
+        archive.writestr("manifest.json", manifest)
+        for index, path in enumerate(assets):
+            archive.writestr(path, b"\x89PNG\r\n\x1a\nsynthetic-" + str(index).encode())
+    return buffer.getvalue()
 
 
 @contextmanager
@@ -233,6 +259,42 @@ def test_even_small_queued_analysis_does_not_start_under_low_host_headroom(clien
     stored = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
     assert stored["state"] == "FAILED"
     assert stored["phase"] == "analysis_failed"
+
+
+def test_small_conversation_zip_completes_analysis_and_commit_at_224_mib_headroom(
+    client, monkeypatch,
+):
+    from app.models.attachment import Attachment, MessageVersionAttachment
+    from app.models.conversation import Conversation
+
+    monkeypatch.setattr("app.services.uploads.available_memory_bytes", lambda: 224 * 1024 * 1024)
+    response = client.post("/api/adaptive-import/sessions", files=[
+        ("files", ("conversation.zip", small_conversation_zip(), "application/zip")),
+    ])
+    assert response.status_code == 201, response.text
+    queued = response.json()
+    job_id, factory = claim(queued)
+    process_background_job(job_id, session_factory=factory)
+
+    ready = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
+    assert ready["state"] == "READY"
+    profile = ready["analysis_summary"]["small_zip_profile"]
+    assert profile["kind"] == "small_conversation_zip_v1"
+    assert profile["conversation_count"] == 1
+    assert profile["message_count"] == 4
+    assert profile["attachment_count"] == 14
+    assert profile["reference_count"] == 13
+    assert profile["block_count"] <= 2048
+
+    committed = client.post(f"/api/imports/{queued['import_id']}/commit")
+    assert committed.status_code == 200, committed.text
+    conversation_id = committed.json()["conversation_ids"][0]
+    with database() as db:
+        assert db.query(Conversation).filter_by(id=uuid.UUID(conversation_id)).count() == 1
+        assert db.query(Attachment).filter_by(conversation_id=uuid.UUID(conversation_id)).count() == 14
+        assert db.query(MessageVersionAttachment).join(Attachment).filter(
+            Attachment.conversation_id == uuid.UUID(conversation_id),
+        ).count() == 13
 
 
 @pytest.mark.parametrize("error_type", [RuntimeError, ValueError, SQLAlchemyError])

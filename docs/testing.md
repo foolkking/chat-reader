@@ -1,5 +1,35 @@
 # Testing
 
+## Small-ZIP bounded memory candidate — 2026-11-04
+
+The current work adds `test_small_zip_memory_budget.py`, PostgreSQL
+transaction-lane/cancellation coverage, actual-component bilingual recovery
+tests and mounted browser recovery at 375/768/1440px. A separate release gate
+runs the exact application worker under real Linux **320 MiB memory /
+320 MiB memory+swap** (no additional swap), without mocking admission sensors.
+It performs queued analysis and canonical commit of a shape-matching synthetic
+ZIP, verifies 1 conversation / 4 messages / 14 assets / 13 occurrences, and
+requires ≤64 MiB workspace peak growth with no OOM/kill/restart. The
+`small-zip-memory.json` report is part of the official artifact and checked
+independently. Local component tests are not a substitute for that runtime gate.
+Exact candidate CI/deployment acceptance is still pending; the prior release
+receipt below is not acceptance of this change.
+
+## Current exact-source CI and production acceptance — 2026-11-04
+
+Full CI `41633888061`, attempt 1, ran against exact source
+`3b839dc1adfac431b6c44c2e1928a9be946cb42f`. All six jobs passed:
+API, Web, settings, reading-performance comparison, image build and independent
+release-artifact inspection. Official artifact `13232957284` was independently
+checked; its archive SHA-256 is
+`6b6ba4c080da4e316bf1f12d353a574723a5bfd871413e4432ebf9c15a6250a`.
+Production acceptance and independent runtime/backup recheck passed on
+2026-11-03 16:04:43Z and 16:08:12Z respectively. This does not claim an
+authenticated production UI run, real user-side 47-conversation offline
+download/update, sustained load or isolated restore drill. See the
+[release record](execution/READER_ZIP_RELEASE_2026-11-04.md) and
+[CI receipt](evidence/release-2026-11-04/ci-recheck.json).
+
 ## Reader/ZIP completion review — 2026-11-03 pre-CI follow-up checkpoint
 
 - All `scripts/ux/*.test.mjs`: **1,946 passed / 0 failed**.

@@ -24,6 +24,9 @@ const english: Record<string, string> = {
   "正在后台分析文件": "Analyzing files in the background",
   "这批 {0} 个文件已保存在服务器。你可以关闭此窗口继续阅读，在任务中心查看进度和结果。": "This batch of {0} files is saved on the server. You can close this window, keep reading, and check progress and results in Tasks.",
   "首轮分析失败，尚未导入对话。源文件仍保留，可在任务中心重试或重新选择文件。": "Initial analysis failed; conversations have not been imported. Source files are retained. Retry in Tasks or choose different files.",
+  "服务器当时可用内存不足以安全分析这个 ZIP。文件仍保存在服务器，尚未导入；可以直接重试，或稍后再试。": "There was not enough available memory to safely analyze this ZIP. The file is still saved on the server and has not been imported. Retry now or try again later.",
+  "这个 ZIP 超出了小内存安全处理范围。文件仍保存在服务器，尚未导入；请稍后重试，或缩小归档后重试。": "This ZIP exceeded the safe low-memory processing budget. The file is still saved on the server and has not been imported. Retry later or use a smaller archive.",
+  "服务器可用内存不足，导入已安全停止，本次更改未提交。源文件和导入草稿仍保留，可稍后重试，无需重新上传。": "Not enough memory is available. Import stopped safely and these changes were not committed. Source files and the import draft are retained. Retry later without uploading again.",
   "导入分析": "Import analysis",
   "查看后台任务": "View background tasks",
   "正在提交重试…": "Queuing retry…",
@@ -138,6 +141,48 @@ export type ImportCopy = (key: string, ...values: Array<string | number>) => str
 
 export type ImportErrorAction = "read" | "mutation" | "commit";
 
+export function importFailureMessage(
+  failure: unknown,
+  legacyError: string | null | undefined,
+  stage: "analysis" | "commit",
+  zh: boolean,
+): string | null {
+  const value = failure !== null && typeof failure === "object"
+    ? failure as Record<string, unknown>
+    : null;
+  const code = typeof value?.code === "string" ? value.code : (
+    legacyError === "UPLOAD_MEMORY_PRESSURE" || legacyError === "There is not enough memory headroom to safely analyze this upload. Reduce the file size or split the batch, then retry."
+      || legacyError === "The server cannot safely commit this import under current memory pressure. Retry when other work finishes, or split the source into smaller conversations."
+      ? "UPLOAD_MEMORY_PRESSURE" : ""
+  );
+  if (code === "UPLOAD_MEMORY_PRESSURE") {
+    return stage === "commit"
+      ? zh ? "服务器可用内存不足，导入已安全停止，本次更改未提交。源文件和导入草稿仍保留，可稍后重试，无需重新上传。" : "Not enough memory is available. Import stopped safely and these changes were not committed. Source files and the import draft are retained. Retry later without uploading again."
+      : zh ? "服务器当时可用内存不足，文件分析已安全停止，尚未导入对话。源文件仍保留，可直接重试或稍后再试，无需重新上传。" : "There was not enough available memory. Analysis stopped safely and no conversations were imported. Source files are retained. Retry now or later without uploading again.";
+  }
+  if (code === "SMALL_IMPORT_BUDGET_EXCEEDED") {
+    return zh ? "这个 ZIP 超出了小内存安全处理范围，本次导入未完成。源文件仍保留，请稍后重试，或缩小归档后重试。"
+      : "This ZIP exceeded the safe low-memory processing budget and import did not finish. Source files are retained. Retry later or use a smaller archive.";
+  }
+  if (code === "UPLOAD_QUEUE_FULL" || code === "UPLOAD_QUEUE_TIMEOUT") {
+    return zh ? "服务器正在处理另一个导入任务，本次分析尚未完成。源文件仍保留，请稍后重试，无需重新上传。"
+      : "The server is processing another import. This analysis did not finish, but source files are retained. Retry later without uploading again.";
+  }
+  if (["MANIFEST_ASSET_MISSING", "MARKDOWN_RESOURCE_MISSING"].includes(code)) {
+    return zh ? "ZIP 中缺少正文或清单引用的附件，尚未导入对话。源文件仍保留，请补齐资源后替换文件。"
+      : "The ZIP is missing resources referenced by its Markdown or manifest. No conversations were imported. Source files are retained. Add the missing resources and replace the file.";
+  }
+  if (["ZIP_INVALID", "ZIP_CRC_INVALID"].includes(code)) {
+    return zh ? "ZIP 文件损坏或完整性校验失败，尚未导入对话。源文件仍保留，请重新导出后替换文件。"
+      : "The ZIP is damaged or failed integrity validation. No conversations were imported. Source files are retained. Export it again and replace the file.";
+  }
+  if (["ZIP_PATH_UNSAFE", "ZIP_PATH_DUPLICATE", "MANIFEST_ASSET_PATH_INVALID", "ZIP_MEMBER_UNSUPPORTED"].includes(code)) {
+    return zh ? "ZIP 包含不安全或不支持的资源路径，尚未导入对话。请重新导出标准 ZIP 后替换文件。"
+      : "The ZIP contains unsafe or unsupported resource paths. No conversations were imported. Export a standard ZIP and replace the file.";
+  }
+  return null;
+}
+
 const importCodeCopy: Record<string, string> = {
   IMPORT_DISABLED: "管理员已关闭导入功能。",
   IMPORT_TOTAL_SIZE_LIMIT: "本批文件合计超过当前导入总容量限制，请分批导入。",
@@ -149,6 +194,7 @@ const importCodeCopy: Record<string, string> = {
   SOURCE_REPLACEMENT_FAILED: "替换文件未能保存，原文件仍保留，请稍后重试。",
   UPLOAD_STAGING_BUSY: "服务器正在处理另一个大文件，请稍后重试。",
   UPLOAD_MEMORY_PRESSURE: "服务器当前可用内存不足以安全分析所选文件。请减小单个文件或拆分批次后重试。",
+  SMALL_IMPORT_BUDGET_EXCEEDED: "这个 ZIP 超出了小内存安全处理范围。文件仍保存在服务器，尚未导入；请稍后重试，或缩小归档后重试。",
   UPLOAD_QUEUE_FULL: "服务器的导入分析队列已满，请稍后重试。",
   UPLOAD_QUEUE_TIMEOUT: "服务器仍在分析其他大文件，本次尚未开始。请稍后重试。",
   SESSION_TOO_LARGE: "替换后的文件会超过本次导入总容量限制。",
@@ -180,6 +226,12 @@ const diagnosticCodes = new Set([
 ]);
 
 export function importErrorMessage(error: unknown, tr: ImportCopy, action: ImportErrorAction = "read"): string {
+  const code = typeof error === "string" ? error : isApiRequestError(error) ? error.code : null;
+  if (action === "commit" && ["UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED"].includes(code ?? "")) {
+    return tr(code === "UPLOAD_MEMORY_PRESSURE"
+      ? "服务器可用内存不足，导入已安全停止，本次更改未提交。源文件和导入草稿仍保留，可稍后重试，无需重新上传。"
+      : "这个 ZIP 超出了小内存安全处理范围。文件仍保存在服务器，尚未导入；请稍后重试，或缩小归档后重试。");
+  }
   if (typeof error === "string") {
     if (importCodeCopy[error]) return tr(importCodeCopy[error]);
     if (action !== "read") {

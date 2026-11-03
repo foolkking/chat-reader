@@ -36,8 +36,9 @@ from app.services.import_queue import (
     conversation_ids_for_import,
     primary_filename,
     queue_import,
+    _safe_error as safe_import_error,
 )
-from app.services.task_errors import public_task_error
+from app.services.task_errors import import_failure_from_exception, public_task_error
 from app.services.import_pipeline.canonical_draft import CanonicalDraftConversation, preview_markdown, preview_text
 from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import ExporterJsonParseError, parse_exporter_json
@@ -114,7 +115,7 @@ def preview_import(
     duplicate_conversation_id: uuid.UUID | None = None
     preview_saved = False
 
-    analysis_guard = bounded_upload_analysis_sync(files)
+    analysis_guard = bounded_upload_analysis_sync(files, db=db)
     try:
         analysis_guard.__enter__()
     except UploadLimitError as exc:
@@ -550,6 +551,24 @@ def commit_import(
         db.commit()
     except CommitImportError as exc:
         db.rollback()
+        failure = import_failure_from_exception(exc, stage="commit")
+        if failure["code"] != "TASK_FAILED":
+            failed_record = db.get(ImportRecord, import_id)
+            failed_record.status = "failed"
+            failed_record.phase = "failed"
+            failed_record.session_state = "FAILED"
+            failed_record.error_message = safe_import_error(exc)
+            failed_record.analysis_summary = {
+                **(failed_record.analysis_summary or {}),
+                "failure": failure,
+            }
+            failed_record.completed_at = datetime.now(timezone.utc)
+            db.commit()
+            raise HTTPException(
+                status_code=429 if failure["retryable"] else 400,
+                detail={"code": failure["code"], "failure": failure},
+                headers={"Retry-After": "15"} if failure["retryable"] else None,
+            ) from exc
         message = str(exc)
         status_code = status.HTTP_404_NOT_FOUND if "not found" in message.lower() else status.HTTP_400_BAD_REQUEST
         raise HTTPException(status_code=status_code, detail=message) from exc

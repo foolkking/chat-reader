@@ -3,6 +3,43 @@ from pathlib import PurePosixPath
 import sys
 
 
+def process_resident_memory_bytes() -> int | None:
+    """Current RSS, not a historical peak or virtual address-space size."""
+    if sys.platform.startswith("linux"):
+        try:
+            with open("/proc/self/status", encoding="ascii") as handle:
+                for line in handle:
+                    if line.startswith("VmRSS:"):
+                        return int(line.split()[1]) * 1024
+        except (OSError, ValueError, IndexError):
+            return None
+    elif sys.platform == "win32":
+        import ctypes
+        from ctypes import wintypes
+
+        class Counters(ctypes.Structure):
+            _fields_ = [
+                ("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                *[(name, ctypes.c_size_t) for name in (
+                    "PeakWorkingSetSize", "WorkingSetSize", "QuotaPeakPagedPoolUsage",
+                    "QuotaPagedPoolUsage", "QuotaPeakNonPagedPoolUsage",
+                    "QuotaNonPagedPoolUsage", "PagefileUsage", "PeakPagefileUsage",
+                )],
+            ]
+        counters = Counters()
+        counters.cb = ctypes.sizeof(counters)
+        try:
+            kernel = ctypes.windll.kernel32
+            kernel.GetCurrentProcess.restype = wintypes.HANDLE
+            probe = ctypes.windll.psapi.GetProcessMemoryInfo
+            probe.argtypes = [wintypes.HANDLE, ctypes.POINTER(Counters), wintypes.DWORD]
+            if probe(kernel.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
+                return int(counters.WorkingSetSize)
+        except (AttributeError, OSError):
+            return None
+    return None
+
+
 def available_memory_bytes() -> int | None:
     if sys.platform.startswith("linux"):
         host_available = _linux_host_available_bytes()

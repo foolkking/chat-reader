@@ -1147,7 +1147,7 @@ def process_background_job(
             elif job.job_type == "adaptive_import_analysis":
                 from app.models.import_record import ImportRecord
                 from app.services.adaptive_import.service import analyze_initial_session
-                from app.services.uploads import bounded_analysis_admission_sync
+                from app.services.adaptive_import.memory_budget import import_analysis_admission
 
                 import_id = uuid.UUID(str(payload["import_id"]))
                 import_record = db.get(ImportRecord, import_id)
@@ -1177,7 +1177,10 @@ def process_background_job(
                     import_record.heartbeat_at = datetime.now(timezone.utc)
                     report("analyzing", progress, processed, total)
 
-                with bounded_analysis_admission_sync(source_sizes, force_memory_check=True):
+                with import_analysis_admission(
+                    db, import_record, stage="analysis",
+                    sizes=source_sizes, force_memory_check=True,
+                ):
                     analyze_initial_session(
                         db,
                         import_record,
@@ -1197,6 +1200,9 @@ def process_background_job(
                     "conversation_count": int((import_record.draft_summary or {}).get("conversation_count") or 0),
                     "message_count": int((import_record.draft_summary or {}).get("message_count") or 0),
                 }
+                analysis_failure = (import_record.analysis_summary or {}).get("failure")
+                if isinstance(analysis_failure, dict):
+                    job_result["failure"] = analysis_failure
                 processed_items = len(import_record.input_groups)
                 report("publishing", 99, processed_items, max(processed_items, 1), job_result)
             elif job.job_type == "conversation_derived_rebuild":
@@ -1444,6 +1450,12 @@ def process_background_job(
                 job.status = "cancelled" if cancelled else "failed"
                 job.phase = "cancelled" if cancelled else "failed"
                 job.error_message = None if cancelled else "DELETION_FAILED" if job.job_type == "user_account_delete" else archive_job_error(exc) if job.job_type in {*PERSONAL_JOB_TYPES, *SYSTEM_JOB_TYPES} else _safe_error(exc)
+                if not cancelled and job.job_type == "adaptive_import_analysis":
+                    from app.services.task_errors import import_failure_from_exception
+                    job.result = {
+                        **(job.result or {}),
+                        "failure": import_failure_from_exception(exc, stage="analysis"),
+                    }
                 if not cancelled and job.job_type == "offline_package":
                     from app.services.offline_continuation import OfflineDependencyError
                     if isinstance(exc, OfflineDependencyError):
@@ -1499,6 +1511,9 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
         analysis_record.heartbeat_at = None
         analysis_record.completed_at = None
         analysis_record.error_message = None
+        analysis_summary = dict(analysis_record.analysis_summary or {})
+        analysis_summary.pop("failure", None)
+        analysis_record.analysis_summary = analysis_summary
     if job.job_type in SYSTEM_JOB_TYPES and (db := object_session(job)) is not None:
         sync_system_archive_record(db, job, status="QUEUED")
     if job.job_type == "user_account_delete" and (db := object_session(job)) is not None:
@@ -1594,3 +1609,9 @@ def _sync_adaptive_import_record_after_job(
         record.phase = "analysis_failed"
         record.session_state = "FAILED"
         record.error_message = job.error_message
+        failure = (job.result or {}).get("failure")
+        if isinstance(failure, dict):
+            record.analysis_summary = {
+                **(record.analysis_summary or {}),
+                "failure": failure,
+            }

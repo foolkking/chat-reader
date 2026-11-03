@@ -22,6 +22,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestCli
     monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 16 * 1024**3)
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "storage" / "imports"))
     monkeypatch.setenv("EXPORT_STORAGE_DIR", str(tmp_path / "storage" / "exports"))
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "storage" / "assets"))
     monkeypatch.setenv("IMPORT_COMMIT_INLINE", "true")
     get_settings.cache_clear()
 
@@ -202,8 +203,11 @@ def test_synthetic_client_still_rejects_unadmitted_commits_and_preserves_retry(
     with monkeypatch.context() as patch:
         patch.setattr(uploads, "available_memory_bytes", pressured)
         rejected = client.post(f"/api/imports/{import_id}/commit")
-    assert rejected.status_code == 400, rejected.text
-    assert "memory pressure" in rejected.json()["detail"]
+    assert rejected.status_code == 429, rejected.text
+    assert rejected.json()["detail"] == {
+        "code": "UPLOAD_MEMORY_PRESSURE",
+        "failure": {"code": "UPLOAD_MEMORY_PRESSURE", "stage": "commit", "retryable": True},
+    }
     assert probes, "Synthetic headroom must not bypass the real admission path."
     assert client.get("/api/conversations").json() == []
     assert {path.name: path.read_bytes() for path in root.iterdir()} == before

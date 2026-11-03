@@ -154,11 +154,12 @@ def test_persistence_failure_releases_admission_even_when_traceback_is_retained(
     preview = client.post("/api/imports/preview",
         files={"files": ("synthetic.json", source(), "application/json")})
     assert preview.status_code == 200, preview.text
-    active, retained_errors = [], []
+    active, retained_errors, admissions = [], [], []
 
     @contextmanager
     def admitted(*_, **__):
         assert not active
+        admissions.append(True)
         active.append(True)
         try:
             yield
@@ -171,10 +172,12 @@ def test_persistence_failure_releases_admission_even_when_traceback_is_retained(
         raise error
 
     monkeypatch.setattr(draft_store, "bounded_analysis_admission_sync", admitted)
+    monkeypatch.setattr(uploads, "bounded_analysis_admission_sync", admitted)
     monkeypatch.setattr(persistence, "_persist_conversation", fail_persistence)
     response = client.post(f"/api/imports/{preview.json()['import_id']}/commit")
     assert response.status_code == 400, response.text
     assert retained_errors[0].__traceback__ is not None
+    assert admissions, "The actual persistence admission path must be exercised."
     assert active == [], "A retained exception must not retain the admission slot."
     assert client.get("/api/conversations").json() == []
 
@@ -198,7 +201,8 @@ def test_commit_memory_failure_is_visible_retryable_and_preserves_sources(client
         patch.setattr(uploads, "available_memory_bytes", lambda: available)
         assert process_import(claimed, session_factory=factory) is None
     failed = client.get(f"/api/tasks/{import_id}").json()
-    assert failed["status"] == "failed" and "memory pressure" in failed["error_message"]
+    assert failed["status"] == "failed" and failed["error_message"] == "UPLOAD_MEMORY_PRESSURE"
+    assert failed["failure"] == {"code": "UPLOAD_MEMORY_PRESSURE", "stage": "commit", "retryable": True}
     assert client.get("/api/conversations").json() == []
     assert {path.name: path.read_bytes() for path in root.iterdir()} == before
     retry = client.post(f"/api/tasks/{import_id}/retry")

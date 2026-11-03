@@ -1,6 +1,23 @@
 # Markdown 文档台账
 
-## Reader/ZIP 完成度再审 — 2026-11-03（当前源码候选）
+## 小内存 ZIP 导入恢复 — 2026-11-04
+
+新增 `execution/SMALL_ZIP_MEMORY_2026-11-04.md`，同步 PROJECT_STATE、
+index/execution 入口、Adaptive ZIP 合同、API reference、环境配置和 testing。
+记录默认启用、可关闭的有界轻量策略及结构化 failure 合同；不新增 migration。
+精确源码 CI／真实 Linux 限内存运行／部署仍待实际回执，不能复用上一轮发布证据。
+
+## Reader、富 Markdown 与 Adaptive ZIP 发布 — 2026-11-04
+
+新增 `execution/READER_ZIP_RELEASE_2026-11-04.md` 与
+`evidence/release-2026-11-04/{ci-recheck,deployment-summary}.json`。
+`PROJECT_STATE.md`、`index.md`、`testing.md`、`deployment.md`、
+`system/DEPLOYMENT_AND_ENVIRONMENT.md` 和 execution 入口已更新为当前
+`3b839dc`／直接回退 `4b4f34f`、完整 CI `41633888061` 六项通过、
+部署验收及备份复验。0058 未变；用户侧完整离线下载／更新、认证 UI 和独立恢复演练
+仍保持未验收。11 月 3 日先前 CI 失败及自动安全恢复历史不改写，见发布记录。
+
+## Reader/ZIP 完成度再审 — 2026-11-03（发布前源码审查快照）
 
 新增 `execution/ux-audit-reader-zip-completion-2026-11-03.md`，记录九类缺口、
 先审后修的证据、计划完成度矩阵、实际源码修正、扩大回归的失败与最终回执。
@@ -9,7 +26,7 @@ Adaptive ZIP/富 Markdown/PWA/Backend 合同与 API reference。渲染策略为 
 新增明确替换后响应未确认语义，但没有 migration、离线包或 Dexie 变更。
 原实施记录和旧全量 API 失败结果保留为历史，不能替代当前候选验收。
 
-## Reader、富 Markdown 与 Adaptive ZIP — 2026-11-03（源码候选）
+## Reader、富 Markdown 与 Adaptive ZIP — 2026-11-03（部署前源码记录）
 
 新增 `execution/READER_ZIP_IMPLEMENTATION_2026-11-03.md` 和
 `system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md`；同步 `PROJECT_STATE.md`、
@@ -17,7 +34,8 @@ Adaptive ZIP/富 Markdown/PWA/Backend 合同与 API reference。渲染策略为 
 富 Markdown 合同及 testing 状态。旧 11 月 2 日“部分实施”文字保留为历史审查快照，
 不再作为当前源代码结论。契约记录专用/通用 ZIP、成员分页/分类、阻塞错误、
 附件真实存储与 occurrence、排除引用惰性化、安全/兼容和无 migration 边界。
-本轮没有提交、部署、CI 或线上验收；性能数值与浏览器视觉门禁不以源码/单测通过代替。
+本段记录实施时的源码候选状态；后续精确 CI 与生产验收见本台账顶部
+2026-11-04 发布记录。性能数值与浏览器视觉门禁不以源码/单测通过代替。
 
 ## Reader 收藏、键盘、几何与富内容接续 — 2026-11-02（部分实施，待用户验证）
 

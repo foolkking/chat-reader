@@ -431,10 +431,13 @@ test("favorite response loss requires a read-only check and never submits a repl
   await expect(panel.getByRole("button", { name: "Check current state", exact: true })).toBeFocused();
   expect(submittedIds).toHaveLength(1);
   await page.keyboard.press("Enter");
+  await expect(panel).toContainText("Checked. Favorite status matches the original action.");
+  const keepChecked = panel.getByRole("button", { name: "Keep checked state", exact: true });
+  await expect(keepChecked).toBeVisible();
   await expect(panel).toBeFocused();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
-  await expect(panel.getByRole("button", { name: "Keep checked state", exact: true })).toBeFocused();
+  await expect(keepChecked).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(panel).toHaveCount(0);
   await expect(control).toBeFocused();

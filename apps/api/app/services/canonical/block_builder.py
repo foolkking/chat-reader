@@ -35,7 +35,16 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
     if not display_text.strip():
         return []
 
-    blocks: list[RenderBlockDraft] = []
+    from app.services.adaptive_import.memory_budget import MAX_BLOCKS, checkpoint, current_budget, enforce_limit
+
+    class BoundedBlocks(list):
+        def append(self, block) -> None:
+            enforce_limit(len(self) + 1, MAX_BLOCKS)
+            if len(self) % 64 == 0:
+                checkpoint()
+            super().append(block)
+
+    blocks: list[RenderBlockDraft] = BoundedBlocks() if current_budget() is not None else []
     paragraph_lines: list[tuple[str, int]] = []
     code_lines: list[str] = []
     in_code = False

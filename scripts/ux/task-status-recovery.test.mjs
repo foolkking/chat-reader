@@ -20,9 +20,15 @@ function find(node, predicate) {
   return predicate(node) ? node : find(node.props?.children, predicate);
 }
 const source = readFileSync(new URL("../../apps/web/features/import/import-task-monitor.tsx", import.meta.url), "utf8");
-const compiled = ts.transpileModule(source, { compilerOptions: {
+const compiled = ts.transpileModule(source + "\nexport { taskFailureMessage };", { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
 } }).outputText;
+const copyModule = { exports: {} };
+const copyCode = ts.transpileModule(readFileSync(new URL("../../apps/web/features/import/import-workspace-copy.ts", import.meta.url), "utf8"), {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+}).outputText;
+new Function("require", "exports", copyCode)(name => name === "../../components/preferences-provider"
+  ? { usePreferences: () => ({ resolvedLocale: "en-US" }) } : require(name), copyModule.exports);
 
 // Actual monitor, installed query cache/result lifecycle. Hook scheduling,
 // transport, timers, DOM and unrelated children are controlled doubles; no
@@ -54,6 +60,7 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
   };
   const mocks = {
     react,
+    "./import-workspace-copy": copyModule.exports,
     "@tanstack/react-query": { useQueryClient: () => client, useMutation: () => ({ isPending: false, mutate: noop }),
       useQuery: options => {
         const key = options.queryKey[0];
@@ -95,12 +102,29 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
   };
   render(); flush();
   return { client, reads, writes, timers, events, observers, render, flush, retry,
+    failureText: value => module.exports.taskFailureMessage(value, locale === "zh-CN"),
     setList: value => { list = value; }, setListError: value => { listError = value; }, setScanError: value => { scanError = value; },
     setFinalRead: fn => { finalRead = fn; }, changeAccount: () => { generation++; },
     async refresh(kind = "active-tasks") { await observers.get(kind).observer.refetch(); render(); flush(); await setImmediate(); return render(); },
     dispose() { disposed = true; for (const h of hooks) h.cleanup?.(); for (const { observer, stop } of observers.values()) { stop(); observer.destroy(); } client.clear(); },
     writesAfterDispose: () => writesAfterDispose,
   };
+}
+
+for (const locale of ["en-US", "zh-CN"]) for (const jobType of ["adaptive_import_analysis", "import"]) {
+  test(`${locale}: ${jobType} preserves structured memory failure without leaking legacy details`, () => {
+    const f = fixture({ locale });
+    try {
+      const row = { ...task(undefined, "failed"), job_type: jobType,
+        error_message: "/private/path?credential=synthetic",
+        failure: { code: "UPLOAD_MEMORY_PRESSURE", stage: jobType === "import" ? "commit" : "admission", retryable: true } };
+      const message = f.failureText(row);
+      assert.match(message, locale === "en-US" ? /not enough.*memory/i : /可用内存不足/);
+      assert.match(message, locale === "en-US" ? /without uploading again/ : /无需重新上传/);
+      assert.doesNotMatch(message, /private|credential|damaged|损坏|自动重试|still running/);
+      assert.equal(message, f.failureText({ ...row, failure: undefined, result: { failure: row.failure } }));
+    } finally { f.dispose(); }
+  });
 }
 
 test("a failed final GET never appends a stale task to the query-owned list", async () => {

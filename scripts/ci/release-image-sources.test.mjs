@@ -104,6 +104,21 @@ test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable",
   assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv -o faulthandler_timeout=120(?:\n|$)/);
 });
 
+test("release requires a real constrained worker, no swap and independently checked evidence", () => {
+  const build = job("build-images"), inspector = job("inspect-release-artifact");
+  assert.match(build, /run: python3 scripts\/ci\/small-import-memory-gate\.py/);
+  assert.ok(build.indexOf("Build API and worker image") < build.indexOf("small-import-memory-gate.py"));
+  assert.ok(build.indexOf("small-import-memory-gate.py") < build.indexOf("Package images and provenance"));
+  const gate = read("scripts/ci/small-import-memory-gate.py");
+  assert.match(gate, /"--memory=320m", "--memory-swap=320m"/);
+  assert.match(gate, /"app\.workers\.import_worker"/);
+  assert.match(gate, /delta > 64 \* MIB/);
+  assert.doesNotMatch(gate, /monkeypatch\.|patch\.object|docker system prune|docker volume prune/);
+  assert.match(inspector, /\.real_sensor == true/);
+  assert.match(inspector, /\.verified_asset_hashes == 14/);
+  assert.match(inspector, /\.workspace_peak_delta_bytes <= 67108864/);
+});
+
 test("reading capacity comparison is additive and required before release images", () => {
   assert.match(job("reading-performance-comparison"), /uses: \.\/\.github\/workflows\/reading-performance\.yml/);
   assert.match(job("build-images"), /needs: \[api-quality, web-quality, settings-quality, reading-performance-comparison\]/);

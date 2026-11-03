@@ -18,6 +18,7 @@ from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.services.content_cleanup import queue_import_scan
 from app.services.ownership import OwnershipScope
 from app.core.observability import structured_event
+from app.services.task_errors import import_failure_from_exception
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,9 @@ def queue_import(record: ImportRecord, db: Session) -> ImportRecord:
     record.heartbeat_at = None
     record.completed_at = None
     record.error_message = None
+    summary = dict(record.analysis_summary or {})
+    summary.pop("failure", None)
+    record.analysis_summary = summary
     db.flush()
     structured_event(logger, logging.INFO, "import_queued", import_id=str(record.id))
     return record
@@ -183,6 +187,10 @@ def process_import(
                 record.phase = "failed"
                 record.session_state = "FAILED"
                 record.error_message = _safe_error(exc)
+                record.analysis_summary = {
+                    **(record.analysis_summary or {}),
+                    "failure": import_failure_from_exception(exc, stage="commit"),
+                }
                 record.heartbeat_at = datetime.now(timezone.utc)
                 record.completed_at = datetime.now(timezone.utc)
                 db.commit()
@@ -255,6 +263,9 @@ def _safe_error(exc: Exception) -> str:
     # Durable ImportRecord errors are returned directly by Task Center and
     # import-status APIs. Keep only authored draft diagnostics; CommitImportError
     # may wrap an arbitrary persistence exception and echo its text.
+    failure = import_failure_from_exception(exc, stage="commit")
+    if failure["code"] != "TASK_FAILED":
+        return str(failure["code"])
     if isinstance(exc, ImportDraftError):
         return (str(exc).strip() or "IMPORT_FAILED")[:2000]
     if isinstance(exc, CommitImportError):

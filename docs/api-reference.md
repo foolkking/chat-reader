@@ -655,6 +655,15 @@ Canonical-import failures keep authored draft/memory diagnostics where safe;
 wrapped commit or unexpected exceptions are stored as
 `IMPORT_COMMIT_FAILED` or `IMPORT_FAILED`, not raw persistence details.
 
+Adaptive analysis sessions and analysis/canonical-import task reads may add
+optional `failure: {code, stage, retryable}`. Known memory/queue/budget causes
+survive exception wrappers; unknown details remain private. Existing tasks with
+known legacy memory messages remain readable. Explicit analysis retry keeps the
+same job and retained source, without reupload or automatic infinite retry.
+The bounded single-document ZIP policy is specified in the
+[ZIP contract](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md#bounded-small-zip-memory-policy).
+No migration is required.
+
 Public task projections also guard records written by older workers: only a
 finite set of established recovery codes/messages and bounded numeric draft/
 retry diagnostics are returned. Unknown error text becomes `TASK_FAILED`

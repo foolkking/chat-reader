@@ -108,6 +108,9 @@ def _normalize_markdown(document: SourceDocument, spec: dict[str, Any], profile_
     boundary = (spec.get("messages") or {}).get("boundary") or {}
     role_mapping = {str(key).casefold(): value for key, value in (spec.get("role_mapping") or {}).items()}
     sections, preamble = _markdown_sections(text, boundary, allowed_labels=set(role_mapping))
+    from app.services.adaptive_import.memory_budget import MAX_MESSAGES, checkpoint, enforce_limit
+    enforce_limit(len(sections), MAX_MESSAGES)
+    checkpoint()
     messages: list[CanonicalDraftMessage] = []
     for source_index, section in enumerate(sections):
         role = role_mapping.get(section["label"].casefold())

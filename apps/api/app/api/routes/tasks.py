@@ -18,7 +18,7 @@ from app.services.background_jobs import (
 )
 from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_for_import, primary_filename, retry_import_manually
 from app.services.task_retention import TERMINAL_IMPORT_STATUSES, TERMINAL_JOB_STATUSES, terminal_result_cutoff
-from app.services.task_errors import ARCHIVE_FAILURE_MESSAGE, public_task_error
+from app.services.task_errors import ARCHIVE_FAILURE_MESSAGE, public_import_failure, public_task_error
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
@@ -229,6 +229,11 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         export_format=_task_export_format(job.job_type, payload),
         offline_target=_offline_download_target(job.job_type, payload),
         result=result,
+        failure=(
+            public_import_failure(
+                result.get("failure"), error_message=job.error_message,
+            ) if job.job_type == "adaptive_import_analysis" and job.status == "failed" else None
+        ),
         error_message=public_task_error(
             job.error_message,
             fallback=ARCHIVE_FAILURE_MESSAGE if job.job_type.startswith(("personal_archive_", "system_archive_")) else "TASK_FAILED",
@@ -311,6 +316,12 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
         source_label=primary_filename(record),
         result={"conversation_ids": [str(value) for value in conversation_ids]},
         error_message=public_task_error(record.error_message, fallback="IMPORT_FAILED"),
+        failure=(
+            public_import_failure(
+                (record.analysis_summary or {}).get("failure"),
+                error_message=record.error_message, stage="commit",
+            ) if record.status == "failed" else None
+        ),
         queued_at=record.queued_at,
         started_at=record.started_at,
         heartbeat_at=record.heartbeat_at,

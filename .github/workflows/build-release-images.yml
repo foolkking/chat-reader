@@ -606,6 +606,28 @@ jobs:
           docker tag chat-reader-api:${GITHUB_SHA} chat-reader-import-worker:${GITHUB_SHA}
           docker tag chat-reader-api:${GITHUB_SHA} chat-reader-migrate:${GITHUB_SHA}
 
+      - name: Start disposable PostgreSQL for the real memory gate
+        id: small_zip_postgres
+        timeout-minutes: 10
+        run: bash scripts/ci/postgres-service.sh start
+
+      - name: Verify real 320 MiB worker ZIP analysis and commit without swap
+        timeout-minutes: 10
+        run: python3 scripts/ci/small-import-memory-gate.py
+
+      - name: Stop memory-gate PostgreSQL
+        if: ${{ always() && steps.small_zip_postgres.outcome == 'success' }}
+        run: bash scripts/ci/postgres-service.sh stop
+
+      - name: Preserve real memory-gate evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: small-zip-memory-${{ github.sha }}-${{ github.run_attempt }}
+          path: small-zip-memory.json
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Build Web image
         run: |
           docker build \
@@ -653,6 +675,7 @@ jobs:
             chat-reader-images.tar.gz
             release-manifest.json
             image-inspection.json
+            small-zip-memory.json
             deploy/nginx-internal-diagnostics.location.conf
           if-no-files-found: error
           retention-days: 3
@@ -686,6 +709,14 @@ jobs:
           test -s chat-reader-images.tar.gz
           test -s release-manifest.json
           test -s image-inspection.json
+          test -s small-zip-memory.json
+          jq -e --arg sha "$GITHUB_SHA" \
+            '.revision == $sha and .passed == true and .real_sensor == true
+              and .memory_limit_bytes == 335544320 and .memory_swap_limit_bytes == 335544320
+              and .workspace_peak_delta_bytes <= 67108864 and .oom == 0 and .oom_kill == 0 and .restarts == 0
+              and .conversation_count == 1 and .message_count == 4
+              and .attachment_count == 14 and .reference_count == 13 and .verified_asset_hashes == 14' \
+            small-zip-memory.json >/dev/null
           jq -e --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" \
             --arg attempt "$ARTIFACT_PRODUCER_ATTEMPT" \
             '.schema_version == 2 and .commit == $sha and .workflow_run_id == $run

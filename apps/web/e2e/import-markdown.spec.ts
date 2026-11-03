@@ -7,6 +7,66 @@ const runImportFlow = process.env.E2E_IMPORT_FLOW === "1";
 
 test.skip(!runImportFlow, "E2E_IMPORT_FLOW=1 is required");
 
+// Mounted UI/transport recovery, not a claim that mocked HTTP tests measure
+// memory. The separate exact-image Linux worker gate exercises real admission.
+for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "zh-CN"]] as const) {
+  test(`${width}px: retained memory failure reopens and retries the same analysis without reupload`, async ({ page, baseURL }) => {
+    await settingsAppearance(page.request, baseURL!, locale);
+    await page.setViewportSize({ width, height: 900 });
+    const importId = crypto.randomUUID(), taskId = crypto.randomUUID();
+    const state = {
+      import_id: importId, analysis_task_id: taskId, state: "FAILED", status: "failed",
+      phase: "analysis_failed", progress: 5, file_count: 1, total_bytes: 1488526,
+      group_count: 0, family_count: 0, conversation_count: 0, message_count: 0,
+      can_import: false, groups: [], families: [], warnings: [], archives: [], analysis_summary: {},
+      error_message: "UPLOAD_MEMORY_PRESSURE",
+      failure: { code: "UPLOAD_MEMORY_PRESSURE", stage: "admission", retryable: true },
+    };
+    let uploads = 0, retries = 0;
+    await page.route("**/api/adaptive-import/sessions", route => {
+      uploads += 1;
+      return route.fulfill({ status: 201, json: state });
+    });
+    await page.route(`**/api/adaptive-import/sessions/${importId}`, route => route.fulfill({ json: state }));
+    await page.route(`**/api/tasks/${taskId}/retry`, async route => {
+      expect(route.request().method()).toBe("POST");
+      retries += 1;
+      state.state = "ANALYZING"; state.status = "analyzing"; state.phase = "queued";
+      await route.fulfill({ json: { job_id: taskId, job_type: "adaptive_import_analysis", status: "queued" } });
+    });
+    const openImport = async () => {
+      if (width < 768) {
+        await page.getByTestId("mobile-sidebar-button").filter({ visible: true }).click();
+      }
+      const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
+      const importButton = sidebar.getByTestId("sidebar-import-button");
+      await expect(importButton).toBeVisible();
+      await importButton.click();
+    };
+    await page.goto("/");
+    await openImport();
+    await page.getByTestId("import-file-input").setInputFiles({
+      name: "synthetic-memory.zip", mimeType: "application/zip", buffer: Buffer.from("synthetic transport fixture"),
+    });
+    await page.getByTestId("preview-import-button").click();
+    const panel = page.getByTestId("import-analysis-status");
+    await expect(panel.getByRole("alert")).toContainText(locale === "zh-CN" ? "可用内存不足" : "not enough available memory");
+    await expect(panel.getByRole("alert")).toContainText(locale === "zh-CN" ? "无需重新上传" : "without uploading again");
+    await expect(panel.getByRole("alert")).not.toContainText(/损坏|damaged|自动重试|will retry automatically/);
+    await page.getByTestId("import-dialog-close").click();
+    await page.reload();
+    await openImport();
+    await expect(panel.getByRole("alert")).toContainText(locale === "zh-CN" ? "可用内存不足" : "not enough available memory");
+    const retry = panel.getByRole("button", { name: /^(重试分析|Retry analysis)$/ });
+    await expect(retry).toBeInViewport();
+    expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await retry.click();
+    await expect(panel.getByRole("heading")).toContainText(/已加入后台分析队列|Queued for background analysis/);
+    expect(uploads).toBe(1); expect(retries).toBe(1);
+    await expect(page.getByTestId("import-file-input")).toHaveCount(0);
+  });
+}
+
 test("file drops capture the current unclassified or project destination", async ({ page }) => {
   const projectResponse = await page.request.post("/api/projects", {
     data: { name: `Drop import ${crypto.randomUUID().slice(0, 8)}` },

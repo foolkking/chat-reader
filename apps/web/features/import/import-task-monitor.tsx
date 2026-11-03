@@ -1,4 +1,6 @@
 "use client";
+
+import { importFailureMessage } from "./import-workspace-copy";
 import { offlineDownloadFailureMessage, offlineGenerationFailureCode } from "../../lib/offline-download-errors";
 import { batchExportError } from "../../lib/batch-export-errors";
 import { archiveUploadRecovery } from "../../lib/archive-recovery";
@@ -463,6 +465,13 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
 
 function taskFailureMessage(task: BackgroundTaskRead, zh: boolean): string {
   const raw = task.error_message ?? "";
+  if (task.job_type === "adaptive_import_analysis" || task.job_type === "import") {
+    const importFailure = importFailureMessage(
+      task.failure ?? task.result.failure, raw,
+      task.job_type === "import" ? "commit" : "analysis", zh,
+    );
+    if (importFailure) return importFailure;
+  }
   const accountDelete = task.job_type === "user_account_delete";
   const accountDeleted = accountDelete && task.result.account_deleted === true;
   if (accountDelete) {
@@ -499,7 +508,6 @@ function taskFailureMessage(task: BackgroundTaskRead, zh: boolean): string {
   }
   if (task.job_type === "content_noise_scan") return zh ? "噪声扫描未完成，未应用清理。请重新扫描。" : "The noise scan did not finish; no cleanup was applied. Scan again.";
   if (task.job_type === "adaptive_import_analysis") {
-    if (/memory headroom|UPLOAD_MEMORY_PRESSURE/i.test(raw)) return zh ? "当前可用内存不足，分析已安全停止，源文件仍保留。请稍后重试或减少文件批次。" : "Not enough memory is available. Analysis stopped safely and source files are retained. Retry later or use a smaller batch.";
     return zh ? "文件分析未完成，尚未导入对话。源文件仍保留，可重试或打开导入分析。" : "File analysis did not finish; conversations have not been imported. Source files are retained. Retry or open the import analysis.";
   }
   if (task.job_type === "conversation_auto_clean") return zh ? "对话清理未完成，请重新打开对话核对后重试。" : "Conversation cleanup did not finish. Reopen the conversation, review it, and retry.";

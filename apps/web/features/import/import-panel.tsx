@@ -1,6 +1,6 @@
 "use client";
 
-import { importErrorMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
+import { importErrorMessage, importFailureMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud } from "lucide-react";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy
 import { readAccountCapabilities } from "../../lib/auth-client";
 import { authenticationGeneration } from "../../lib/offline-access";
 import { SupportLimitAction } from "../../components/support-limit-action";
+import { usePreferences } from "../../components/preferences-provider";
 import { ImportPreviewCard } from "./import-preview-card";
 import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
 import { FormatConversionGuide } from "./format-conversion-guide";
@@ -48,6 +49,8 @@ export function ImportPanel({
   onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
 } = {}) {
   const tr = useImportCopy();
+  const { resolvedLocale } = usePreferences();
+  const zh = resolvedLocale === "zh-CN";
   const queryClient = useQueryClient();
   const mounted = useRef(true);
   const generation = useRef(authenticationGeneration());
@@ -255,7 +258,7 @@ export function ImportPanel({
     onSuccess: task => {
       if (!current()) return;
       setSession(previous => previous?.analysis_task_id === task.job_id
-        ? { ...previous, state: "ANALYZING", phase: "queued", progress: 0, error_message: null }
+        ? { ...previous, state: "ANALYZING", phase: "queued", progress: 0, error_message: null, failure: null }
         : previous);
       void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
       void queryClient.invalidateQueries({ queryKey: ["adaptive-import-analysis", session?.import_id] });
@@ -340,6 +343,12 @@ export function ImportPanel({
   if (session) {
     const analysisPending = ["COLLECTING", "ANALYZING", "CANCELING"].includes(session.state);
     const analysisFailed = session.state === "FAILED" && session.phase === "analysis_failed";
+    const failure = typeof session.analysis_summary?.failure === "object" && session.analysis_summary.failure !== null
+      ? session.analysis_summary.failure as Record<string, unknown>
+      : null;
+    const failureMessage = importFailureMessage(
+      session.failure ?? failure, session.error_message, "analysis", zh,
+    );
     if (analysisPending || analysisFailed || session.state === "CANCELED") {
       return (
         <section className="space-y-4" aria-labelledby="import-analysis-title" data-testid="import-analysis-status">
@@ -361,7 +370,8 @@ export function ImportPanel({
           {analysisPending ? <div role="progressbar" aria-label={tr("导入分析")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, session.progress ?? 0))} className="h-1 overflow-hidden rounded-full bg-subtle">
             <div className="h-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, session.progress ?? 0))}%` }} />
           </div> : null}
-          {analysisFailed ? <p role="alert" className="text-sm text-[var(--danger)]">{tr("首轮分析失败，尚未导入对话。源文件仍保留，可在任务中心重试或重新选择文件。")}</p> : null}
+          {analysisFailed ? <p role="alert" className="text-sm text-[var(--danger)]">{failureMessage
+            ?? tr("首轮分析失败，尚未导入对话。源文件仍保留，可在任务中心重试或重新选择文件。")}</p> : null}
           {analysisSessionQuery.error ? <ErrorLine message={analysisSessionQuery.error} onRetry={() => { void analysisSessionQuery.refetch(); }} retrying={analysisSessionQuery.isFetching} /> : null}
           {cancelMutation.error || retryAnalysisMutation.error ? <ErrorLine message={cancelMutation.error ?? retryAnalysisMutation.error} /> : null}
           <div className="flex flex-wrap gap-2">

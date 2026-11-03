@@ -14,6 +14,7 @@ _SAFE_PERSISTED_ERROR_CODES = {
     "IMPORT_FAILED",
     "IMPORT_COMMIT_FAILED",
     "UPLOAD_MEMORY_PRESSURE",
+    "SMALL_IMPORT_BUDGET_EXCEEDED",
     "DELETION_FAILED",
     "CONTEXT_RETURN_FAILED",
     "CONTEXT_VALIDATION_RETIRED",
@@ -142,6 +143,72 @@ _SAFE_NUMERIC_MESSAGES = (
     re.compile(r"Worker stopped before completing [1-9][0-9]{0,2} times; automatic retries stopped\."),
     re.compile(r"Automatic recovery stopped after [1-9][0-9]{0,2} attempts\. The import can be retried manually\."),
 )
+
+_SAFE_IMPORT_FAILURE_CODES = {
+    "UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED",
+    "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT", "ZIP_INVALID", "ZIP_ENTRY_LIMIT",
+    "ZIP_MEMBER_TOO_LARGE", "ZIP_EXPANDED_LIMIT", "ZIP_COMPRESSION_UNSAFE",
+    "ZIP_PATH_UNSAFE", "ZIP_PATH_DUPLICATE", "ZIP_CRC_INVALID", "ZIP_MARKDOWN_REQUIRED",
+    "MARKDOWN_ENCODING_INVALID", "MARKDOWN_EMPTY", "MARKDOWN_FENCE_UNCLOSED",
+    "NO_MESSAGE_STRUCTURE", "DOCUMENT_NOT_TRANSCRIPT", "IMPORT_PLAN_INVALID",
+    "MANIFEST_ASSET_MISSING", "MANIFEST_ASSET_PATH_INVALID", "MARKDOWN_RESOURCE_MISSING",
+    "ZIP_PATH_DEPTH_LIMIT", "ZIP_MEMBER_UNSUPPORTED", "SOURCE_MISSING",
+}
+_SAFE_IMPORT_FAILURE_STAGES = {
+    "admission", "archive", "analysis", "normalization", "mapping", "validation",
+    "grouping", "file", "commit",
+}
+
+
+def adaptive_import_failure(code: str | None, stage: str | None, retryable: bool) -> dict[str, object]:
+    """Project internal task failures onto stable, non-sensitive UI metadata."""
+    safe_code = code if isinstance(code, str) and code in _SAFE_IMPORT_FAILURE_CODES else "TASK_FAILED"
+    safe_stage = stage if isinstance(stage, str) and stage in _SAFE_IMPORT_FAILURE_STAGES else "analysis"
+    return {
+        "code": safe_code,
+        "stage": safe_stage,
+        "retryable": bool(retryable and safe_code != "TASK_FAILED"),
+    }
+
+
+def import_failure_from_exception(exc: Exception, *, stage: str) -> dict[str, object]:
+    """Retain a safe reason across draft/persistence wrappers, never their text."""
+    current = exc
+    seen: set[int] = set()
+    for _ in range(12):
+        if id(current) in seen:
+            break
+        seen.add(id(current))
+        code = getattr(current, "code", None)
+        if isinstance(code, str) and code in _SAFE_IMPORT_FAILURE_CODES:
+            return adaptive_import_failure(
+                code,
+                getattr(current, "stage", None) or (
+                    "commit" if stage == "commit" else getattr(current, "layer", None) or "admission"
+                ),
+                code in {"UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED", "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT"},
+            )
+        cause = current.__cause__ or current.__context__
+        if not isinstance(cause, Exception):
+            break
+        current = cause
+    return adaptive_import_failure("TASK_FAILED", stage, False)
+
+
+def public_import_failure(value, *, error_message: str | None = None, stage="analysis") -> dict | None:
+    if isinstance(value, dict) and isinstance(value.get("code"), str):
+        return adaptive_import_failure(
+            value["code"], value.get("stage"), value.get("retryable") is True,
+        )
+    # Legacy tasks retained this authored message, but no machine-readable code.
+    safe_message = public_task_error(error_message)
+    if safe_message in {
+        "UPLOAD_MEMORY_PRESSURE",
+        "There is not enough memory headroom to safely analyze this upload. Reduce the file size or split the batch, then retry.",
+        "The server cannot safely commit this import under current memory pressure. Retry when other work finishes, or split the source into smaller conversations.",
+    }:
+        return adaptive_import_failure("UPLOAD_MEMORY_PRESSURE", stage, True)
+    return None
 
 
 def public_task_error(value: str | None, *, fallback: str = "TASK_FAILED") -> str | None:

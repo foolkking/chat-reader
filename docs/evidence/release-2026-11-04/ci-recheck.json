@@ -1,0 +1,53 @@
+{
+  "run_id": 41633888061,
+  "run_attempt": 1,
+  "workflow": "Build release images",
+  "source_sha": "3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+  "status": "completed",
+  "conclusion": "success",
+  "created_at": "2026-11-03T12:13:22Z",
+  "completed_at": "2026-11-03T13:06:06Z",
+  "jobs": [
+    {
+      "name": "api-quality",
+      "id": 125910051798,
+      "conclusion": "success"
+    },
+    {
+      "name": "web-quality",
+      "id": 125910051650,
+      "conclusion": "success"
+    },
+    {
+      "name": "settings-quality",
+      "id": 125910051744,
+      "conclusion": "success"
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "id": 125923374629,
+      "conclusion": "success"
+    },
+    {
+      "name": "build-images",
+      "id": 125933381441,
+      "conclusion": "success"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "id": 125935017499,
+      "conclusion": "success"
+    }
+  ],
+  "deployable_artifact": {
+    "id": 13232957284,
+    "name": "chat-reader-images-3b839dc1adfac431b6c44c2e1928a9be946cb42f-1",
+    "archive": "chat-reader-images.tar.gz",
+    "sha256": "6b6ba4c080da4e316bf1f12d353a574723a5bfd871413e4432ebf9c15a6250a",
+    "api_image": "sha256:d97cd455f54c68a0dc8c1cbe417e9c84e02de2fc72e4fbee2f4b5ee0e0c51d9d",
+    "web_image": "sha256:ea47a3deaaac0105fbf2e67dac63041aeabc1058fb4ee742ffc8a2f5557b6877",
+    "independent_archive_and_manifest_check": "passed",
+    "workflow_artifact_inspection": "passed"
+  },
+  "verification_basis": "Run, attempt, exact source SHA, all six jobs and artifact metadata were read from GitHub Actions using the existing local credential; archive SHA-256, release manifest and OCI index were rechecked locally."
+}

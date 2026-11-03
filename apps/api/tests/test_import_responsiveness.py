@@ -111,10 +111,10 @@ def test_stored_source_admission_pressure_is_retryable(monkeypatch, action):
     monkeypatch.setattr(adaptive_imports, "_family", lambda *_: SimpleNamespace())
     monkeypatch.setattr(adaptive_imports, "_group", lambda *_: SimpleNamespace())
 
-    def rejected(_):
+    def rejected(_, **_options):
         raise UploadLimitError("UPLOAD_MEMORY_PRESSURE", "Synthetic memory pressure.", status_code=429)
 
-    monkeypatch.setattr(adaptive_imports, "bounded_analysis_admission_sync", rejected)
+    monkeypatch.setattr("app.services.uploads.bounded_analysis_admission_sync", rejected)
     if action == "exclude":
         path = f"/api/adaptive-import/sessions/{import_id}/groups/{uuid.uuid4()}"
         method, payload = "DELETE", None

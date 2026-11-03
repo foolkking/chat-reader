@@ -50,8 +50,17 @@ def write_import_draft(
     try:
         with temporary.open("xb") as handle:
             for conversation in conversations:
+                from app.services.adaptive_import.memory_budget import (
+                    MAX_DRAFT_BYTES, MAX_MESSAGES, checkpoint, enforce_limit,
+                )
+                enforce_limit(conversation_count + 1, 1)
+                enforce_limit(len(conversation.messages), MAX_MESSAGES)
+                checkpoint()
+                record_bytes = 0
                 for chunk in encoder.iterencode(conversation):
                     encoded = chunk.encode("utf-8")
+                    record_bytes += len(encoded)
+                    enforce_limit(record_bytes + 1, MAX_DRAFT_BYTES)
                     handle.write(encoded)
                     digest.update(encoded)
                 handle.write(b"\n")
@@ -81,7 +90,7 @@ def read_import_draft(record: ImportRecord) -> list[CanonicalDraftConversation]:
     return list(iter_import_draft(record))
 
 
-def iter_import_draft(record: ImportRecord):
+def iter_import_draft(record: ImportRecord, *, db=None):
     if not record.draft_storage_uri or not record.draft_sha256:
         raise ImportDraftError("Import preview has no durable canonical draft.")
     root = Path(get_settings().import_storage_dir).resolve()
@@ -101,7 +110,9 @@ def iter_import_draft(record: ImportRecord):
     actual_messages = 0
     max_line_bytes = max(1, get_settings().max_import_file_size_mb * 1024 * 1024 * 2)
 
-    with path.open("rb") as handle, closing(_admitted_draft_lines(handle, max_line_bytes)) as lines:
+    with path.open("rb") as handle, closing(
+        _admitted_draft_lines(handle, max_line_bytes, record=record, db=db)
+    ) as lines:
         for line_number, raw_line in enumerate(lines, start=1):
             if not raw_line.strip():
                 continue
@@ -129,7 +140,7 @@ def iter_import_draft(record: ImportRecord):
         raise ImportDraftError("Import draft message count does not match preview.")
 
 
-def _admitted_draft_lines(handle, max_line_bytes: int):
+def _admitted_draft_lines(handle, max_line_bytes: int, *, record=None, db=None):
     """Measure one record in bounded reads before materializing/parsing it.
 
     Preview and commit may run hours apart under different memory pressure.
@@ -155,7 +166,17 @@ def _admitted_draft_lines(handle, max_line_bytes: int):
         line_number += 1
         handle.seek(start)
         try:
-            with bounded_analysis_admission_sync([size], force_memory_check=True):
+            if record is not None and db is not None:
+                from app.services.adaptive_import.memory_budget import import_analysis_admission
+
+                admission = import_analysis_admission(
+                    db, record, stage="commit", sizes=[size], force_memory_check=True,
+                )
+            else:
+                admission = bounded_analysis_admission_sync([size], force_memory_check=True)
+            with admission:
+                from app.services.adaptive_import.memory_budget import MAX_DRAFT_BYTES, enforce_limit
+                enforce_limit(size, MAX_DRAFT_BYTES)
                 yield handle.read(size)
         except UploadLimitError as exc:
             raise ImportDraftError(

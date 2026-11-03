@@ -1,0 +1,64 @@
+{
+  "status": "passed",
+  "checked_at": "2026-11-03T16:08:12.993709Z",
+  "commit": "3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+  "current": "3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+  "rollback": "4b4f34fb32eacd7c7a600e7362a8e7b58d6dd5df",
+  "schema": "20261030_0058",
+  "schema_operation": "verify_current_only_no_upgrade_or_downgrade",
+  "maintenance_start": "2026-11-03T15:56:47Z",
+  "maintenance_end": "2026-11-03T16:04:43Z",
+  "backup": "chat-reader-20261103T155702Z",
+  "backup_reverification": "passed",
+  "retained_backup_count": 5,
+  "available_kib": 7156904,
+  "attachment_audit": {
+    "read_only": true,
+    "complete": true,
+    "clean": true,
+    "active_attachments": 338,
+    "asset_objects": 359,
+    "context_objects": 12,
+    "files_and_sha256_verified": 371,
+    "issue_count": 0
+  },
+  "runtime": {
+    "api": "healthy",
+    "web": "healthy",
+    "postgres": "healthy",
+    "worker_heartbeat": "alive_idle",
+    "exact_application_revision": true,
+    "application_restarts": 0,
+    "application_startup_error_keyword_lines": {
+      "api": 0,
+      "import-worker": 0,
+      "web": 0
+    },
+    "new_kernel_oom_lines": 0,
+    "oom_counter_unchanged": true
+  },
+  "preservation": {
+    "postgres_unchanged": true,
+    "production_env_compose_unchanged": true,
+    "nginx_unchanged": true,
+    "canonical_row_counts_unchanged": true,
+    "no_migration": true,
+    "no_backup_or_user_data_cleanup": true
+  },
+  "http": {
+    "local_api_health": 200,
+    "local_web_health": 200,
+    "https_health": 200,
+    "https_login": 200,
+    "http_https_redirect": 301,
+    "unauthenticated_capabilities": 401,
+    "anonymous_private_route_probes": 401,
+    "public_diagnostics": 404,
+    "missing_image_capability": 404,
+    "public_invalid_page_method_probes": 25
+  },
+  "authenticated_production_ui": "not_run",
+  "user_side_47_conversation_offline_download": "not_run",
+  "sustained_load": "not_run",
+  "isolated_restore_drill": "not_run"
+}

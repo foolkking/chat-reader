@@ -213,7 +213,7 @@ def commit_import_preview(
             raise CommitImportError("No supported canonical conversation could be built from this import.")
 
         def persistable_iterator():
-            with closing(iter_import_draft(import_record)) as drafts:
+            with closing(iter_import_draft(import_record, db=db)) as drafts:
                 for draft in drafts:
                     converted = _from_exporter_draft(draft)
                     del draft
@@ -785,8 +785,11 @@ def _persist_canjson_attachments(
     conversation: Conversation,
     draft: PersistableConversation,
 ) -> dict[str, uuid.UUID]:
+    from app.services.adaptive_import.memory_budget import checkpoint
+
     mapping: dict[str, uuid.UUID] = {}
     for raw in draft.attachments:
+        checkpoint()
         if not isinstance(raw, dict) or raw.get("record_type") != "attachment":
             continue
         source_id = str(raw.get("id") or "").strip()
@@ -816,8 +819,10 @@ def _persist_canjson_attachments(
                     ),
                     quarantine=True,
                 )
+                checkpoint()
                 detected_mime, detected_extension = detect_mime_type(staged.path, original_filename)
                 scan = scan_attachment(staged.path)
+                checkpoint()
                 scan_status = scan.status
                 if not scan.allowed_by_policy:
                     raise CommitImportError("A ZIP attachment was rejected by the configured scanner.")
