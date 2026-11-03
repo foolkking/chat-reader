@@ -321,3 +321,29 @@ artifact checks 才能接受。当前无可部署镜像、未部署。
 
 本轮仅修改浏览器测试与证据记录，不改产品、接口、超时、skip、retry 或发布门禁；
 不运行本地 CI。提交现有 `master` 后触发新的精确源码 CI，不等待结果、不部署。
+
+### 第六轮 CI 阻塞 — 2026-11-03
+
+精确提交 `e0c0f581f334af9810c59944c54aefabb71bb242` 的 run
+`41620114844` 中，focused online/security **45/45**、Share focus **2/2**，
+API、settings 与 reading-performance comparison passed。上一轮 375px
+Reader 恢复夹具已通过。Source Editor/mutation 仍为 **109 passed / 1 failed**，
+但失败已经变为搜索日期快速编辑与历史恢复，不是移动导航。
+
+失败发生在前进/后退后刷新并打开筛选时：全页面的 `getByLabel("From")`
+严格匹配到两个 date input，两者都保留预期日期；错误可访问性快照只有一组
+可访问的日期控件。现有 SearchWorkspace 源码也只声明一组日期字段。
+因此此次失败是全局 label 选择器包含非可访问副本的歧义，不是日期丢失。
+证据未提供该测试的 trace，无法仅凭快照确认副本由哪一个框架生命周期生成；
+不将推测写成产品根因或宣称修复了用户日期问题。
+
+修正：将日期与其他筛选校验限定到当前可见的 `global-search-filters` 面板，
+在初次进入、刷新后、清除筛选再后退时明确校验只有一个可见面板。
+不使用 `.first()` 任取控件；两个可见面板仍会触发唯一性失败。
+同文件相邻的分页/日期焦点用例同步采用这个范围。快速编辑的双日期值、
+焦点、完整 URL、逐次前进/后退、刷新后角色/类型/状态以及清除筛选断言保留。
+
+本轮仅静态检查与 `git diff --check`，不运行本地测试、构建或 CI。
+后续七个 Web gate 仍未验证，release image/artifact jobs skipped。
+修正提交现有 `master` 后派发新的精确源码完整 CI；按用户要求不等待结果、
+不部署，也不纳入已有的本机 `tsconfig.tsbuildinfo` 修改。

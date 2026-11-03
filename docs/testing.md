@@ -27,6 +27,25 @@ below remains historical and failed.
 
 ### Latest exact-source CI failure — 2026-11-03
 
+Run `41620114844` on `e0c0f58` passed focused online/security **45/45**, Share
+focus **2/2**, API, settings and reading-performance comparison. The prior
+375px mobile recovery failure passed, but Source Editor/mutation again had
+**109 passed / 1 failed**: rapid search-filter history failed after reload
+because `getByLabel("From")` matched two controls, both with the expected date.
+The accessibility snapshot exposed only one date pair; no date loss was
+observed, and the exact duplicate-DOM lifecycle is not established by this
+snapshot alone.
+
+The fixture now scopes dates and other filter checks to the single visible
+`global-search-filters` panel, explicitly asserting uniqueness at entry,
+reload and return from clearing filters. Its date values, focus, full query,
+Back/Forward, filter preservation and Clear filters assertions all remain.
+The adjacent pagination/date-focus fixture uses the same active-panel scope.
+No `.first()`, timeout increase, skip or retry hides multiple visible panels.
+This is a test-locator repair, not a product behavior change. It has not been
+locally executed; later Web gates remain unverified and release-image jobs
+were skipped. A new exact-source full CI is required.
+
 Run `41613950618` on `9621b6e` passed focused online/security **45/45** and
 Share focus **2/2**; API and reading-performance comparison also passed.
 The next Source Editor/mutation gate had **109 passed / 1 failed**. Its 375px

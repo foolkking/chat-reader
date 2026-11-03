@@ -172,12 +172,14 @@ test("search pagination resets with filters while date controls retain focus", a
     await expect(page.locator('a[data-search-index]')).toHaveCount(60);
     await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: /^Filters/ }).click();
-    await page.getByRole("combobox", { name: "Role", exact: true }).selectOption("user");
+    const filters = page.locator("#global-search-filters").filter({ visible: true });
+    await expect(filters).toHaveCount(1);
+    await filters.getByRole("combobox", { name: "Role", exact: true }).selectOption("user");
     await expect(page.locator('a[data-search-index]')).toHaveCount(30);
-    const from = page.getByLabel("From", { exact: true });
+    const from = filters.getByLabel("From", { exact: true });
     await from.focus(); await from.fill("2099-01-01");
     await expect(from).toBeFocused();
-    await page.getByLabel("To", { exact: true }).fill("2020-01-01");
+    await filters.getByLabel("To", { exact: true }).fill("2020-01-01");
     await expect(page.getByRole("alert").filter({ hasText: "From must be on or before To." })).toBeVisible();
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
     await expect(page.locator('a[data-search-index]')).toHaveCount(50);
@@ -195,14 +197,18 @@ test("rapid search filters preserve both dates, other filters and browser histor
     await page.goto(`/search?q=${key}&document_type=message&role=user&status_scope=all`);
     await expect(page.locator('a[data-search-index]')).toHaveCount(1);
     await page.getByRole("button", { name: /^Filters/ }).click();
+    // Label locators also match hidden copies during reload. Follow the single
+    // visible panel instead of choosing an arbitrary matching date control.
+    const filters = page.locator("#global-search-filters").filter({ visible: true });
+    await expect(filters).toHaveCount(1);
     // Hold optional RSC navigations until both user edits have happened. This
     // reproduces a slow navigation deterministically without delaying API reads.
     await page.route((url) => url.pathname === "/search", async (route) => {
       if (route.request().headers().rsc === "1") await navigationBarrier;
       await route.continue();
     });
-    const from = page.getByLabel("From", { exact: true });
-    const to = page.getByLabel("To", { exact: true });
+    const from = filters.getByLabel("From", { exact: true });
+    const to = filters.getByLabel("To", { exact: true });
     await from.fill("2099-01-01");
     await to.fill("2020-01-01");
     releaseNavigation();
@@ -228,16 +234,18 @@ test("rapid search filters preserve both dates, other filters and browser histor
     await expect(to).toHaveValue("2020-01-01");
     await page.reload();
     await page.getByRole("button", { name: /^Filters/ }).click();
+    await expect(filters).toHaveCount(1);
     await expect(from).toHaveValue("2099-01-01");
     await expect(to).toHaveValue("2020-01-01");
-    await expect(page.getByRole("combobox", { name: "Role", exact: true })).toHaveValue("user");
-    await expect(page.getByRole("combobox", { name: "Content type", exact: true })).toHaveValue("message");
-    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("all");
+    await expect(filters.getByRole("combobox", { name: "Role", exact: true })).toHaveValue("user");
+    await expect(filters.getByRole("combobox", { name: "Content type", exact: true })).toHaveValue("message");
+    await expect(filters.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("all");
     await page.getByRole("button", { name: "Clear filters", exact: true }).click();
     await expect(page).toHaveURL((url) => url.search === `?q=${key}`);
     await expect(page.getByRole("textbox", { name: "Search", exact: true })).toHaveValue(key);
     await page.goBack();
     await expect(page).toHaveURL(invalidRangeUrl);
+    await expect(filters).toHaveCount(1);
     await expect(from).toHaveValue("2099-01-01");
     await expect(to).toHaveValue("2020-01-01");
   } finally {

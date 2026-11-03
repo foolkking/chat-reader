@@ -69,6 +69,19 @@ Recovery, same-Reader DOM, request-count, autosave and offline target assertions
 remain; no product behavior or release gate is relaxed. Later Web gates were
 not verified by this failed run, and this follow-up has not been locally tested.
 
+Run `41620114844` on `e0c0f58` passed focused online/security **45/45**, Share
+focus **2/2**, API, settings and reading-performance comparison. The corrected
+mobile recovery case passed. Source Editor/mutation again had **109 passed /
+1 failed**, now in rapid search-filter history after reload: the unscoped
+date-label locator matched two controls with the correct date, while the
+accessibility snapshot exposed only one date pair. The fixture now follows
+the single visible search-filter panel, explicitly checks its uniqueness and
+retains date, focus, filter, URL and Back/Forward assertions. The adjacent
+pagination/date-focus fixture uses the same scope. The precise lifecycle
+creating the non-accessible copy is not proven by the failure snapshot; no
+date-loss or product repair is claimed. Later Web gates remain unverified,
+release-image jobs were skipped, and this fixture-only repair awaits fresh CI.
+
 Earlier local evidence, before the CI-driven follow-ups: **1,946/1,946 UX
 source tests**, **134/134 focused API tests**, Web lint, nonincremental
 typecheck and Python compilation passed. These receipts do not cover the
@@ -77,8 +90,8 @@ The full API suite has not been rerun on this candidate; its earlier failed
 checkpoint remains in the implementation/testing records. Browser/visual,
 performance R4/P1/P2, PostgreSQL concurrency, Web build/PWA and complete
 exact-source CI remain unaccepted pending the repaired GitHub Actions run.
-By the user's 2026-11-03 request, commit `9621b6e` was pushed directly to the
-existing `master` and submitted as run `41613950618`; its Web quality gate
+By the user's 2026-11-03 request, commit `e0c0f58` was pushed directly to the
+existing `master` and submitted as run `41620114844`; its Web quality gate
 failed as recorded above. This follow-up is being committed on `master` for a
 new exact-source full CI plus release-artifact checks; no deployment is started.
 Production remains at `4b4f34f` until independently verified deployment.
