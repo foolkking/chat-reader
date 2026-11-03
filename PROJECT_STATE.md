@@ -16,12 +16,24 @@ metadata-only offline search/locator reads. Renderer policy is v13.
 No migration, Share URL, `.cr`, offline package v1/v2/v3, Dexie v2 or
 canonical complete-turn contract is changed.
 
+The first exact-source CI run, `41572783373` on `9db9fd3`, failed only in
+settings browser tests (457/463) and the Web context gate (35/36); API and
+reading-performance jobs passed, and release image jobs were skipped. The six
+settings failures expected a new package for already-current local revisions,
+so the planner correctly skipped work the fixtures were waiting to intercept.
+The legacy optional-member fixture also rewrote a ZIP body while retaining
+stale response metadata. Test fixtures now make a real server content revision
+before expecting refresh work and provide matching headers for the transformed
+ZIP. No production download or package-compatibility behavior was relaxed.
+These test corrections await a fresh exact-source GitHub Actions run; no
+deployment is accepted from the failed run.
+
 Current local evidence: **1,946/1,946 UX source tests**, **134/134 focused API
 tests**, Web lint, nonincremental typecheck and Python compilation passed.
 The full API suite has not been rerun on this candidate; its earlier failed
 checkpoint remains in the implementation/testing records. Browser/visual,
 performance R4/P1/P2, PostgreSQL concurrency, Web build/PWA and complete
-exact-source CI remain unaccepted pending the current GitHub Actions run.
+exact-source CI remain unaccepted pending the repaired GitHub Actions run.
 By the user's 2026-11-03 request, this candidate is being committed on the
 existing `master`, submitted to CI, and may be deployed only after the exact
 commit's full CI and release-artifact checks succeed. Production remains at

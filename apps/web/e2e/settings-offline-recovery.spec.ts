@@ -118,6 +118,11 @@ for (const [code, locale, width] of [["OFFLINE_ASSET_INTEGRITY", "zh-CN", 375], 
       await expect.poll(async () => (await downloads(page, userId))[0]?.state).toBe("completed");
       const original = await storedMessages(page, userId);
       expect(original).toHaveLength(2);
+      const revised = await context.request.patch(`${baseURL}/api/conversations/${conversationId}`, {
+        headers: { Origin: baseURL! },
+        data: { description_markdown: "Synthetic server revision for offline recovery" },
+      });
+      expect(revised.status()).toBe(200);
       let injectFailure = true;
       // Fault-inject only the failed-task response. Admission, rebuild, ZIP
       // download and IndexedDB writes remain real; worker failures are covered
@@ -366,6 +371,11 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       expect((await readLocal(page, userId)).conversations).toHaveLength(1);
       const original = await storedMessages(page, userId);
       expect(original).toHaveLength(2);
+      const revised = await context.request.patch(`${baseURL}/api/conversations/${conversationId}`, {
+        headers: { Origin: baseURL! },
+        data: { description_markdown: "Synthetic server revision for offline cancellation" },
+      });
+      expect(revised.status()).toBe(200);
       await page.unroute("**/api/offline/packages/*/download");
       const gate = new Promise<void>(resolve => { release = resolve; });
       let held = false;

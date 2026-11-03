@@ -267,13 +267,14 @@ test("reading-only conflict survives package update and can be exported before c
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("button", { name: /Offline & sync/ }).click();
     const center = page.getByRole("dialog", { name: "Offline & sync", exact: true });
-    // Dropping this one copy's advertised base forces the real worker/package
-    // pipeline to carry a different server position into the local importer.
-    let packages = 0;
-    await page.route("**/api/offline/packages", async (route) => {
-      const data = route.request().postDataJSON();
-      await route.continue({ postData: JSON.stringify({ ...data, known_revisions: {} }) });
+    // A real content revision makes the update produce a package while the
+    // independent server reading-position revision remains unchanged.
+    const revised = await context.request.patch(`${baseURL}/api/conversations/${id}`, {
+      headers: { Origin: baseURL! },
+      data: { description_markdown: "Synthetic content revision for reading recovery" },
     });
+    expect(revised.status()).toBe(200);
+    let packages = 0;
     page.on("response", (response) => { if (response.url().includes("/offline/packages/") && response.url().endsWith("/download") && response.ok()) packages += 1; });
     await center.getByRole("button", { name: "Check and update", exact: true }).click();
     await expect.poll(() => packages).toBeGreaterThan(0);

@@ -110,7 +110,16 @@ for (const legacy of [false, true]) test(`${legacy ? "legacy optional-member com
       for (const message of conversation.messages) delete message.annotation_versions;
     }
     members["package.json"] = strToU8(JSON.stringify(payload));
-    await route.fulfill({ response, body: Buffer.from(zipSync(members)) });
+    const body = Buffer.from(zipSync(members));
+    const headers = await response.allHeaders();
+    // The transformed archive has a different length and representation from
+    // the fetched response. Do not retain stale transport metadata.
+    delete headers["content-encoding"];
+    delete headers["content-range"];
+    delete headers["etag"];
+    delete headers["content-md5"];
+    headers["content-length"] = String(body.byteLength);
+    await route.fulfill({ response, body, headers });
   });
   await page.goto(`/library?conversationId=${id}`);
   await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
