@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { removeSyntheticAccount, settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { removeSyntheticAccount, settingsAdmin, settingsAppearance, settingsSignIn } from "./settings-test-helper";
 import { readLocal } from "./settings-offline-helper";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
@@ -214,7 +214,7 @@ test("request reply conflict preserves input; notification links cannot cross ac
   const context = await browser.newContext({ baseURL: base, extraHTTPHeaders: { Origin: base }, viewport: { width: 1440, height: 900 }, locale: "en-US" });
   const ids: string[] = [];
   try {
-    const register = async (suffix: string) => { const result = await context.request.post("/api/auth/register", { data: { email: `support-boundary-${suffix}-${Date.now()}@example.test`, password: "synthetic boundary passphrase", confirm_password: "synthetic boundary passphrase" } }); expect(result.status()).toBe(201); ids.push((await result.json()).user_id); await settingsAppearance(context.request, base, "en-US"); };
+    const register = async (suffix: string) => { const email = `support-boundary-${suffix}-${Date.now()}@example.test`; const result = await context.request.post("/api/auth/register", { data: { email, password: "synthetic boundary passphrase", confirm_password: "synthetic boundary passphrase" } }); expect(result.status()).toBe(201); ids.push((await result.json()).user_id); await settingsAppearance(context.request, base, "en-US"); return email; };
     await register("a");
     const created = await context.request.post("/api/me/requests", { headers: { "Idempotency-Key": crypto.randomUUID() }, data: { kind: "QUESTION", title: "Synthetic private boundary", body: "Synthetic first body" } });
     expect(created.status()).toBe(201); const original = await created.json();
@@ -238,7 +238,10 @@ test("request reply conflict preserves input; notification links cannot cross ac
     expect((await readLocal(page, ids[0])).settings.some(row => row.key.startsWith("support-draft:"))).toBe(true);
     await page.clock.setFixedTime(new Date()); await context.setOffline(false);
     await page.goto(`${base}/login?reauth=1`); await context.clearCookies();
-    await register("b"); await page.goto(`${base}/#support-request=${original.id}`);
+    const otherEmail = await register("b");
+    await settingsSignIn(page, base, otherEmail, "synthetic boundary passphrase");
+    // Opening a notification consumes its hash after selecting the request.
+    await page.goto(`${base}/#support-request=${original.id}`);
     await expect(page.getByRole("region", { name: "Requests and help" }).getByRole("alert")).toContainText("unavailable to this account");
     await expect(page.getByText("Synthetic private boundary")).toHaveCount(0);
     expect((await (await context.request.get("/api/me/requests")).json()).total).toBe(0);

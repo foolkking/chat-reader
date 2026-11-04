@@ -12,6 +12,8 @@ import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
+from postgres_backup_tools import backup_clients
+
 SCRIPT = Path(__file__).resolve().parents[3] / "deploy" / "backup_housekeeping.py"
 spec = importlib.util.spec_from_file_location("backup_housekeeping", SCRIPT)
 housekeeping = importlib.util.module_from_spec(spec)
@@ -27,30 +29,8 @@ def snapshots(tmp_path):
     admin = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT")
     with admin.connect() as db:
         major = int(db.scalar(text("SHOW server_version_num"))) // 10000
-        # A newer pg_dump can emit settings unsupported by an older server.
-        # Prefer the exact server-major client; in GitHub Actions use the
-        # already-pinned disposable PostgreSQL container's own client binaries.
-        matching = Path(os.environ.get("PG_BIN", f"/usr/lib/postgresql/{major}/bin"))
-        suffix = ".exe" if os.name == "nt" else ""
-        pg_dump = matching / f"pg_dump{suffix}"
-        pg_restore = matching / f"pg_restore{suffix}"
-        if pg_dump.is_file() and pg_restore.is_file():
-            version = subprocess.check_output([str(pg_dump), "--version"], text=True)
-            assert f"(PostgreSQL) {major}." in version, version
-            pg_dump = [str(pg_dump)]
-            pg_restore = [str(pg_restore)]
-        else:
-            run_id = os.environ.get("GITHUB_RUN_ID")
-            attempt = os.environ.get("GITHUB_RUN_ATTEMPT", "1")
-            job = os.environ.get("GITHUB_JOB")
-            assert run_id and attempt and job, (
-                f"PostgreSQL {major} integration requires matching tools at {matching}"
-            )
-            container = f"chat-reader-ci-postgres-{run_id}-{attempt}-{job}"
-            password = url.password or ""
-            client = ["docker", "exec", "-i", "-e", f"PGPASSWORD={password}", container]
-            pg_dump = [*client, "pg_dump"]
-            pg_restore = [*client, "pg_restore"]
+        clients, flags = backup_clients(url, major)
+        pg_dump, pg_restore = clients["pg_dump"], clients["pg_restore"]
         for name in (source, target):
             db.execute(text(f'CREATE DATABASE "{name}"'))
     engine = create_engine(url.set(database=source))
@@ -58,7 +38,6 @@ def snapshots(tmp_path):
         db.execute(text("CREATE TABLE synthetic_state (id integer primary key, body text not null)"))
         db.execute(text("INSERT INTO synthetic_state VALUES (1, 'Synthetic recovery bytes')"))
     engine.dispose()
-    flags = ["-h", url.host, "-p", str(url.port or 5432), "-U", url.username]
     env = {**os.environ, "PGPASSWORD": url.password or ""}
     dump = subprocess.check_output([*pg_dump, *flags, "-d", source, "-Fc"], env=env)
     toc = subprocess.check_output([*pg_restore, "--list"], input=dump)

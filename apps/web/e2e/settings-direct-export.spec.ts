@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { settingsAdmin, settingsAppearance, settingsSignIn } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000, extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated authenticated PostgreSQL");
@@ -163,15 +163,13 @@ test("a revoked account cannot receive previously prepared bytes", async ({ page
       await page.getByTestId("direct-export-download").getByRole("button", { name: /下载文件|Download file/ }).click();
       await held.ready;
       expect((await context.request.post("/api/auth/logout")).status()).toBe(204);
-      // Focus causes a real server session recheck, with no fabricated auth result.
-      await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-      await expect(page).toHaveURL(/\/login/);
+      // An explicit switch does not rely on the deduplicated focus check.
+      await page.goto("/login?reauth=1");
       await expect(page.locator("#login-password")).toBeVisible();
       expect((await context.request.get(`/api/conversations/${id}/exports/markdown`)).status()).toBe(401);
       const otherEmail = `direct-other-${crypto.randomUUID()}@example.test`;
       expect((await context.request.post("/api/auth/register", { data: { email: otherEmail, password, confirm_password: password } })).status()).toBe(201);
-      expect((await context.request.post("/api/auth/login", { data: { email: otherEmail, password } })).status()).toBe(200);
-      await page.goto("/");
+      await settingsSignIn(page, baseURL!, otherEmail, password);
       await expect(page.getByTestId("sidebar-tasks-button")).toBeVisible();
       held.release(); await held.done;
       expect((await context.request.get(`/api/conversations/${id}/exports/markdown`)).status()).toBe(404);

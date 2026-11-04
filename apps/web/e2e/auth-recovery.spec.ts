@@ -112,6 +112,22 @@ test("focus and route navigation within the freshness window do not repeat sessi
   expect(checks).toBe(1);
 });
 
+test("durable signout cleanup takes precedence over a retained local lock on cold Library startup", async ({ page }) => {
+  let checks = 0;
+  await page.route("**/api/auth/session", route => { checks++; return route.fulfill({ json: session }); });
+  await page.addInitScript((id) => {
+    localStorage.setItem("chat-reader:offline-active-user-v1", id);
+    localStorage.setItem("chat-reader:offline-locked-users-v1", JSON.stringify([id]));
+    localStorage.setItem(`chat-reader:pending-signout-cleanup:${encodeURIComponent(id)}`,
+      JSON.stringify({ legacy: false, cleanupId: "synthetic-retained-cleanup" }));
+  }, userId);
+  await page.goto("/library");
+  await expect(page.getByRole("region", { name: "Signout cleanup", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry local cleanup", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in required", exact: true })).toHaveCount(0);
+  expect(checks).toBe(0);
+});
+
 test("a late successful probe cannot undo an explicit local lock", async ({ page }) => {
   await page.goto("/library");
   await expect(page.getByRole("button", { name: /Enable long-term|启用长期/ })).toBeVisible();

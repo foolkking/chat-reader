@@ -7,7 +7,7 @@ import { DEVICE_TRUST_KEY } from "../lib/offline-device-trust";
 import { pauseServerSession, serverSession, SERVER_SESSION_CHANGED } from "../lib/server-session";
 import { OfflineWriteBarrier } from "./offline-write-barrier";
 import { configureOfflineAccess, OFFLINE_ACCESS_LOCKED_EVENT } from "../lib/offline-access";
-import { SIGNOUT_CLEANUP_EVENT, SignoutCleanupPendingError } from "../lib/signout-cleanup";
+import { pendingSignoutCleanups, SIGNOUT_CLEANUP_EVENT, SignoutCleanupPendingError } from "../lib/signout-cleanup";
 import { SignoutCleanupRecovery } from "./signout-cleanup-recovery";
 import {
   AUTH_UNAUTHORIZED_EVENT,
@@ -81,6 +81,12 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
     };
     const verify = async (force = false) => {
       if (!ownsRoute() || verifying) return;
+      // A durable signout cleanup owns recovery even after a reload. Showing
+      // only the local-lock screen would hide its retry and strand retained data.
+      if (pendingSignoutCleanups().length) {
+        cleanupRequired();
+        return;
+      }
       if (hasLockedOfflineAccount()) {
         ready.current = false; setState("offline-locked");
         pauseServerSession("sign-in-required");
@@ -158,6 +164,7 @@ function PrivateAuthBoundary({ children, currentPath }: { children: React.ReactN
     const cleanupRequired = () => {
       if (!ownsRoute()) return;
       controller?.abort(); clearTimeout(expiryTimer);
+      pauseServerSession("sign-in-required");
       ready.current = false;
       suspendBrowserOfflineContext(); queryClient.clear(); setState("signout-cleanup");
     };

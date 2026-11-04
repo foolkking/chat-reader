@@ -119,3 +119,57 @@ the master commit. The dispatch handoff must record the exact SHA/run and a
 not-before time at least 50 minutes after dispatch. Never substitute another
 branch, older successful run or a partial job result for acceptance. CI acceptance
 and any subsequent fixes remain pending; nothing in this receipt authorizes deployment.
+
+### First exact-source CI diagnosis
+
+Submitted master `309f2ee2662819c0f3b9aa41b49acb6bc94573f7`,
+run `41905294676`. Created **2026-11-04 20:18:09Z**; first result read
+**2026-11-04 21:09:42Z**, over 50 minutes later. Web quality passed.
+API quality stopped before migration/tests: the Ubuntu 26.04 runner could not
+resolve `postgresql-client-16` from its default repositories. This is not a
+passing full-API result; dependent release gates did not run.
+
+Correction removes that host-package dependency, not the restore checks. Both
+actual recovery suites now share matching-major client selection: explicit
+local `PG_BIN`, otherwise the already-owned pinned CI PostgreSQL container.
+Dump/restore use binary streams and the internal port; bad identity, missing
+explicit tools and a wrong major fail closed. Focused local verification and
+the next exact-source run are recorded separately when complete.
+
+The already-failed superseded run was cancelled after the first 50-minute
+check to finalize its settings evidence, not to count cancellation as acceptance.
+Its partial 463-case matrix recorded six failures. Five depended on the former
+focus/credential behavior; fixtures now switch accounts through the real password
+form, retain cross-account API denials/late-byte checks, and do not expect every
+focus to bypass the five-minute deduplication window.
+
+The sixth was a product defect: a persisted signout-cleanup marker on cold
+Library startup was hidden by the early local-lock screen. Recovery now checks
+the durable cleanup first, pauses online operations and displays the existing
+retry surface without reopening private data. A new browser regression checks
+the cleanup/local-lock precedence and zero session queries before recovery.
+
+PostgreSQL backup client/unit/real-restore checks: **13 passed, 18.34 s**.
+CI/security Node contracts: **72 passed**. A combined Windows run of all Node
+groups hit the existing 10-second Git-Bash harness timeout under concurrent
+browser load (2,046 passed / one timeout); the isolated CI/security rerun passed
+without changing the timeout or assertions. UX/PWA and browser final receipts
+follow separately; this does not establish exact-source Linux acceptance.
+
+Final pre-resubmission verification:
+
+| Check | Observed result |
+| --- | --- |
+| Six recorded settings failures and cleanup variants | 10 passed, 57.2 s; includes the unchanged four real-storage cleanup tests and the new cold-start precedence regression |
+| Complete auth-recovery browser suite | 20 passed, 1.3 min |
+| Isolated UX/PWA Node regressions | 1,975 passed; no timeout or assertion changes |
+| Web lint, typecheck and production build | Passed after the CI corrections |
+
+The account-switch fixtures submit the real password form; they do not remove
+the retained account locks or bypass the server session. Direct-export and
+late-batch regressions still require denial of another account's source/task
+and reject delayed private bytes. The final review found no reason to weaken
+the existing signout-storage failure tests. Their source is unchanged.
+The original unrelated build-info is again restored byte-for-byte and excluded.
+The failed first run is not accepted; the corrected master requires a new
+complete exact-source CI, with a new 50-minute first-check gate.

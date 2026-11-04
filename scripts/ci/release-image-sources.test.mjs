@@ -104,6 +104,16 @@ test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable",
   assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv --capture=tee-sys -o faulthandler_timeout=120(?:\n|$)/);
 });
 
+test("restore checks reuse matching clients from the owned pinned database, not runner apt packages", () => {
+  assert.doesNotMatch(job("api-quality"), /apt-get install[^\n]*postgresql-client/);
+  const clients = read("apps/api/tests/postgres_backup_tools.py");
+  assert.match(clients, /chat-reader-ci-postgres-\{run\}-\{attempt\}-\{job\}/);
+  assert.match(clients, /"docker", "exec", "-i"/);
+  for (const path of ["test_backup_housekeeping.py", "test_backup_restore_drill_postgres.py"]) {
+    assert.match(read(`apps/api/tests/${path}`), /from postgres_backup_tools import backup_clients/);
+  }
+});
+
 test("release requires a real constrained worker, no swap and independently checked evidence", () => {
   const build = job("build-images"), inspector = job("inspect-release-artifact");
   assert.match(build, /run: python3 scripts\/ci\/small-import-memory-gate\.py/);

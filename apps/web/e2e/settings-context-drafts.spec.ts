@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
-import { removeSyntheticAccount, settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { removeSyntheticAccount, settingsAdmin, settingsAppearance, settingsSignIn } from "./settings-test-helper";
 import { readLocal } from "./settings-offline-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
@@ -117,6 +117,7 @@ test("expired Continuation cache and drafts stay locked, survive another account
 
     await context.clearCookies(); await context.setOffline(false); await page.clock.setFixedTime(new Date());
     const b = await register(context, baseURL!, "b"); users.push(b.userId);
+    await settingsSignIn(page, baseURL!, b.email, password);
     const otherId = await createConversation(context.request, "Synthetic owner B continuation");
     const textB = "# Private owner B draft";
     await editDraft(page, otherId, textB);
@@ -131,9 +132,8 @@ test("expired Continuation cache and drafts stay locked, survive another account
     } });
     expect(foreignSave.status()).toBe(404);
     const beforeB = await drafts(page, b.userId);
-    expect((await context.request.post("/api/auth/login", { data: { email: a.email, password } })).status()).toBe(200);
     page.once("dialog", dialog => dialog.accept());
-    await page.goto(`/conversations/${id}?continuation=current`);
+    await settingsSignIn(page, baseURL!, a.email, password, `/conversations/${id}?continuation=current`);
     await page.getByRole("button", { name: "Resume draft", exact: true }).click();
     await expect(page.getByRole("textbox", { name: "Edit current" })).toHaveValue(textA);
     await expect(page.getByText(textB, { exact: true })).toHaveCount(0);

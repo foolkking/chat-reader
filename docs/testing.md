@@ -5514,3 +5514,10 @@ Execution counts and unresolved runs belong in
 [the dated receipt](execution/COMPREHENSIVE_OPTIMIZATION_2026-11-05.md).
 Production acceptance, user ZIP success and real-device large-library capacity
 are separate from synthetic/local/CI verification.
+
+PostgreSQL recovery suites share `tests/postgres_backup_tools.py`: explicit
+matching-major `PG_BIN` clients locally, or the exact job-owned pinned database
+container in CI. The container path streams custom dumps over stdin/stdout and
+uses its internal port, not the host-mapped port. Missing clients/invalid job
+identity/wrong major fail the tests; the tests are never skipped to work around
+runner package availability.

@@ -4,6 +4,16 @@ import { expect, type APIRequest, type APIRequestContext, type Page } from "@pla
 // across viewport cases rather than repeatedly exercising the login rate limit.
 let adminState: Awaited<ReturnType<APIRequestContext["storageState"]>> | undefined;
 
+export async function settingsSignIn(page: Page, baseURL: string, email: string, password: string, destination = "/"): Promise<void> {
+  // Real credentials, not an out-of-band cookie, select a new account or unlock
+  // retained local data. This must not clear another account's local lock.
+  await page.goto(`${baseURL}/login?reauth=1&return_to=${encodeURIComponent(destination)}`);
+  await page.locator("#login-email").fill(email);
+  await page.locator("#login-password").fill(password);
+  await page.getByRole("button", { name: /^(Sign in|登录)$/ }).click();
+  await expect(page).toHaveURL(`${baseURL}${destination}`);
+}
+
 export async function openSettingsNoiseReview(page: Page, scanId: string): Promise<void> {
   const center = page.getByTestId("task-center-panel");
   // Closing a nested review returns to its still-open Task Center.

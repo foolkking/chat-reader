@@ -29,6 +29,8 @@ to unlock a retained lock; a background valid-cookie check cannot unlock it.
 Offline locking is not a successful server logout. Explicit logout still reviews
 pending work and performs its confirmed, recoverable cleanup. Account namespaces,
 cross-tab fencing and stale-response epochs remain mandatory.
+On cold startup, recorded signout cleanup takes precedence over the ordinary
+local-lock screen so its retry remains reachable without reopening private data.
 
 Anyone with access to the browser profile may read its authorized local copies.
 An offline device cannot immediately learn remote revocation. Local permission
@@ -104,6 +106,9 @@ data and copies/verifies assets between random loopback-only disposable database
 It checks current/historical versions and account-scoped favorites. This is not
 a production backup restore, nor merely a checksum check. `PG_BIN` can select a
 matching client directory; CI uses PostgreSQL 16 clients for its 16 server.
+When the runner has no matching host clients, both restore suites use the already
+owned pinned PostgreSQL container's clients, with binary dump/restore streams and
+the container's internal port. No Ubuntu-specific package installation is needed.
 
 Synthetic search/decompression/Blob characterization is recorded in the dated
 execution receipt. No percentage performance claim or real-library capacity

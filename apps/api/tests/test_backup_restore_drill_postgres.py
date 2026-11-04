@@ -1,7 +1,6 @@
 """An actual pg_dump/pg_restore drill, never a production database restore."""
 import hashlib
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import uuid
@@ -16,6 +15,7 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.models.user_feature_entry import UserFeatureEntry
 from app.models.user_preference import UserPreference
+from postgres_backup_tools import backup_clients
 from test_import_profile_postgres import isolated_schema  # noqa: F401
 from test_system_archive_integrity import seed_archive_source
 
@@ -57,23 +57,23 @@ def test_stopped_writer_database_and_asset_backup_really_restores(isolated_schem
     env = {**os.environ, "PGHOST": engine.url.host, "PGPORT": str(engine.url.port or 5432),
         "PGUSER": engine.url.username or "", "PGPASSWORD": engine.url.password or ""}
 
-    def run(tool, *args):
-        matching_linux = Path(f"/usr/lib/postgresql/{server_major}/bin")
-        directory = os.environ.get("PG_BIN") or (str(matching_linux) if matching_linux.is_dir() else None)
-        binary = str(Path(directory) / tool) if directory else shutil.which(tool)
-        assert binary, f"{tool} is required for the disposable restore drill"
-        result = subprocess.run([binary, *args], env=env, capture_output=True, text=True, timeout=120)
-        assert result.returncode == 0, result.stderr
+    clients, flags = backup_clients(engine.url, server_major)
+
+    def run(tool, *args, input=None):
+        result = subprocess.run([*clients[tool], *flags, *args], input=input,
+                                env=env, capture_output=True, timeout=120)
+        assert result.returncode == 0, result.stderr.decode(errors="replace")
+        return result.stdout
 
     created = False
     try:
-        run("pg_dump", "--format=custom", "--no-owner", "--no-acl",
-            "--file", str(dump), "--dbname", engine.url.database)
+        dump.write_bytes(run("pg_dump", "--format=custom", "--no-owner", "--no-acl",
+                             "--dbname", engine.url.database))
         with admin.connect() as db:
             db.execute(sa.text(f'CREATE DATABASE "{target_name}"'))
             created = True
         run("pg_restore", "--exit-on-error", "--single-transaction", "--no-owner", "--no-acl",
-            "--dbname", target_name, str(dump))
+            "--dbname", target_name, input=dump.read_bytes())
         shutil.copytree(backup / "assets", restored_assets)
         with Session(target) as db:
             assert db.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == "20261105_0059"

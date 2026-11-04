@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
-import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { settingsAdmin, settingsAppearance, settingsSignIn } from "./settings-test-helper";
 import { exportFixture } from "./export-retention-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000, extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
@@ -62,13 +62,13 @@ test("late batch submission cannot open or populate another account's tasks", as
     await page.getByTestId("selection-toolbar").getByRole("button", { name: "Export", exact: true }).click();
     await ready;
     expect((await context.request.post("/api/auth/logout")).status()).toBe(204);
-    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-    await expect(page).toHaveURL(/\/login/);
+    // A fresh focus is deliberately deduplicated. Explicit account switching
+    // goes through the password page instead of expecting a background redirect.
+    await page.goto("/login?reauth=1");
     await expect(page.locator("#login-password")).toBeVisible();
     const other = `batch-other-${crypto.randomUUID()}@example.test`;
     expect((await context.request.post("/api/auth/register", { data: { email: other, password, confirm_password: password } })).status()).toBe(201);
-    expect((await context.request.post("/api/auth/login", { data: { email: other, password } })).status()).toBe(200);
-    await page.goto("/");
+    await settingsSignIn(page, baseURL!, other, password);
     await expect(page.getByTestId("sidebar-tasks-button")).toBeVisible();
     release(); await finished;
     expect((await context.request.get(`/api/tasks/${jobId}`)).status()).toBe(404);

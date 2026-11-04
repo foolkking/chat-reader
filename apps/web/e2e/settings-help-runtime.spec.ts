@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { diagnosticReport } from "../lib/help-diagnostics";
-import { removeSyntheticAccount, settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { removeSyntheticAccount, settingsAdmin, settingsAppearance, settingsSignIn } from "./settings-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated authenticated PostgreSQL settings fixture");
@@ -114,7 +114,7 @@ test("help cache stays account-scoped and disappears behind expired authorizatio
   const userIds: string[] = [];
   try {
     const password = "synthetic help isolation passphrase";
-    const register = async (suffix: string) => { const response = await context.request.post("/api/auth/register", { data: { email: `help-${suffix}-${Date.now()}@example.test`, password, confirm_password: password } }); expect(response.status()).toBe(201); const id = (await response.json()).user_id; userIds.push(id); return id; };
+    const register = async (suffix: string) => { const email = `help-${suffix}-${Date.now()}@example.test`; const response = await context.request.post("/api/auth/register", { data: { email, password, confirm_password: password } }); expect(response.status()).toBe(201); const id = (await response.json()).user_id; userIds.push(id); return { id, email }; };
     await register("a");
     expect((await context.request.get("/api/admin/runtime-status")).status()).toBe(404);
     await settingsAppearance(context.request, base, "en-US");
@@ -130,7 +130,8 @@ test("help cache stays account-scoped and disappears behind expired authorizatio
     // Leave A's private boundary before switching cookies, as the sign-in link does.
     // Otherwise its reconnect check races B's out-of-band fixture registration.
     await page.goto(`${base}/login?reauth=1`); await context.clearCookies();
-    await register("b");
+    const other = await register("b");
+    await settingsSignIn(page, base, other.email, password);
     await settingsAppearance(context.request, base, "en-US");
     // Force this new account's first capabilities request to fail; it cannot inherit A's snapshot.
     await page.route("**/api/auth/capabilities", (route) => route.abort("failed"));

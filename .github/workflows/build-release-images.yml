@@ -39,10 +39,6 @@ jobs:
           python -m pip install --no-deps --no-build-isolation -e "apps/api[test]"
       - name: Prepare API test services
         run: |
-          if [ ! -x /usr/lib/postgresql/16/bin/pg_dump ]; then
-            sudo apt-get update
-            sudo apt-get install -y postgresql-client-16
-          fi
           mkdir -p "$IMPORT_STORAGE_DIR" "$EXPORT_STORAGE_DIR" "$OFFLINE_STORAGE_DIR" "$ASSET_STORAGE_DIR"
           cd apps/api
           python -m alembic upgrade head
