@@ -662,6 +662,10 @@ def test_message_save_occurrence_contract_detach_and_lightweight_rebuild(
     assert detached.status_code == 200, detached.text
     assert client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"] == []
     assert client.get(f"/api/attachments/{attachment_id}/content").status_code == 200
+    # Detach preserves historical owner access but cannot put a removed file
+    # back into the current conversation's bulk-download selection.
+    assert client.post(f"/api/conversations/{conversation_id}/attachment-downloads",
+        json={"attachment_ids": [attachment_id]}).status_code == 422
 
     override = app.dependency_overrides[get_db]
     generator = override()

@@ -31,6 +31,7 @@ from app.services.auth import (
     SESSION_PRESENCE_COOKIE_NAME,
     LoginThrottled,
     authenticate_session,
+    session_rejection_reason,
     change_password,
     describe_user_agent,
     issue_session,
@@ -94,6 +95,7 @@ class AuthSessionRead(BaseModel):
     principal_id: str | None = None
     user_id: str | None = None
     inactivity_expires_at: str | None = None
+    failure_reason: str | None = None
     auth_mode: str = "single_password"
     email: str | None = None
     display_name: str | None = None
@@ -159,6 +161,7 @@ def _read_session(request: Request, response: Response, db: Session) -> AuthSess
         _clear_cookie(response)
         return AuthSessionRead(
             authenticated=False,
+            failure_reason=session_rejection_reason(db, token, settings),
             registration_mode=registration_mode(db, settings),
             password_reset_available=_password_reset_available(db, settings),
         )
@@ -495,7 +498,11 @@ def finish_email_change(input: EmailVerificationConfirmInput, request: Request, 
 @router.get("/me", response_model=AuthSessionRead)
 def me(request: Request, response: Response, db: Session = Depends(get_db)) -> AuthSessionRead:
     settings = get_settings()
-    authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), settings)
+    # Only a read-only route may reuse middleware's already verified snapshot.
+    # Internal calls after credential mutations must re-read the transaction.
+    authentication = getattr(request.state, "session_authentication", None) if request.method == "GET" else None
+    if authentication is None:
+        authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), settings, touch=False)
     if authentication is None:
         raise HTTPException(status_code=401, detail="Authentication required.")
     user = authentication.session.principal.user
@@ -583,7 +590,9 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)) 
 @router.get("/sessions", response_model=list[DeviceSessionRead])
 def list_sessions(request: Request, db: Session = Depends(get_db)) -> list[DeviceSessionRead]:
     settings = get_settings()
-    authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), settings, touch=False)
+    authentication = getattr(request.state, "session_authentication", None)
+    if authentication is None:
+        authentication = authenticate_session(db, request.cookies.get(SESSION_COOKIE_NAME), settings, touch=False)
     if authentication is None:
         raise HTTPException(status_code=401, detail="Authentication required.")
     rows = (

@@ -40,7 +40,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const preferences = await loadInitialPreferences();
+  const preferences = initialPreferences();
   const requestHeaders = await headers();
   const initialLocale = resolveLocale(preferences.locale_mode, requestHeaders.get("accept-language") ?? "");
   const initialTheme = preferences.theme_mode === "dark" ? "dark" : "light";
@@ -61,7 +61,7 @@ export default async function RootLayout({
   );
 }
 
-async function loadInitialPreferences(): Promise<UserPreferenceRead> {
+function initialPreferences(): UserPreferenceRead {
   const fallback: UserPreferenceRead = {
     theme_mode: "light",
     locale_mode: "auto",
@@ -76,11 +76,7 @@ async function loadInitialPreferences(): Promise<UserPreferenceRead> {
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),
   };
-  try {
-    const apiUrl = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
-    const response = await fetch(`${apiUrl}/api/preferences`, { cache: "no-store", signal: AbortSignal.timeout(5_000) });
-    return response.ok ? await response.json() as UserPreferenceRead : fallback;
-  } catch {
-    return fallback;
-  }
+  // Account preferences initialize in the verified client namespace. A root
+  // server fetch without a cookie can only fail and delays the offline shell.
+  return fallback;
 }

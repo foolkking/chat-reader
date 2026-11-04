@@ -11,6 +11,7 @@ from app.models.background_job import BackgroundJob
 from app.services.background_jobs import process_background_job
 from test_attachment_upload_api import _conversation_with_message, _create_session, _upload
 from test_import_preview_api import client  # noqa: F401
+import pytest
 
 
 def _promote(client, conversation_id: str, name: str, body: bytes, mime: str = "text/plain") -> dict:
@@ -100,3 +101,28 @@ def test_batch_download_streams_distinct_business_attachments(client, tmp_path: 
         assert len(names) == 2
         assert len({name.casefold() for name in names}) == 2
         assert all(archive.read(name) == b"same bytes" for name in names)
+    assert client.get(job.result["download_url"]).status_code == 200
+    db_override.refresh(asset)
+    asset.scan_status = "infected"
+    db_override.commit()
+    assert client.get(job.result["download_url"]).status_code == 423
+
+
+def test_batch_cannot_publish_after_scan_policy_changes(client, tmp_path, monkeypatch):
+    from app.services.exporting.attachment_download import create_attachment_download, AttachmentDownloadError
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("EXPORT_STORAGE_DIR", str(tmp_path / "exports"))
+    get_settings.cache_clear()
+    conversation_id, _ = _conversation_with_message(client)
+    attachment = _promote(client, conversation_id, "policy.txt", b"Synthetic safe input")
+    db = next(app.dependency_overrides[get_db]())
+    asset = db.get(AssetObject, uuid.UUID(attachment["asset_object"]["id"]))
+    def change_policy(*args):
+        asset.scan_status = "infected"
+        db.commit()
+    with pytest.raises(AttachmentDownloadError):
+        create_attachment_download(db, conversation_id=uuid.UUID(conversation_id),
+            attachment_ids=[uuid.UUID(attachment["id"])], job_id=uuid.uuid4(), progress_callback=change_policy)
+    assert not list((tmp_path / "exports").rglob("*.zip"))
+    assert client.post(f"/api/conversations/{conversation_id}/attachment-downloads",
+        json={"attachment_ids": [attachment["id"]]}).status_code == 423

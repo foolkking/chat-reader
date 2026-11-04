@@ -1,0 +1,99 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-04",
+  "commit": "be58b12b191e9f0fa4010f8ed4293781fec01157",
+  "ci": {
+    "run_id": "41737744696",
+    "attempt": 1,
+    "job_count": 6,
+    "all_jobs_passed": true,
+    "created_at": "2026-11-03T23:15:54Z",
+    "result_read_after_gate_at": "2026-11-04T00:05:54Z",
+    "read_gate_minutes": 50,
+    "artifact_id": "13282163237",
+    "artifact_zip_sha256": "8503d136eeed056b51d7d6b1b69f7f4f3c1f440d52342e3668ffb3cd5d83808b",
+    "image_archive_sha256": "c801088021ec5cc0064362a5f39e00e4cb5d14095c2155466d1e2023206e969b"
+  },
+  "images": {
+    "api": {
+      "oci_index": "sha256:7d1533392fc2617b32d36d8ed50fff53c7a4954e6652d7a48b7ff505a0ab2d0c",
+      "linux_amd64_manifest": "sha256:32c78b87788db793d65da83332796a4f28f8da7d7054a98a3cd71c4dc9a9309b",
+      "docker_config_id": "sha256:ff8ea4d608e88472a83ebf35627a6bbb0a1c20d7d15192b1686718ddd2710ddb",
+      "source_revision_verified": true
+    },
+    "web": {
+      "oci_index": "sha256:1f47961434e65d351a69a9fc1e61d9cf1b7e45b8e12583c11cc3680ab6b0f63c",
+      "linux_amd64_manifest": "sha256:261a7666b053772e63db619ba3d94ad7a711b9922afaf2bed43d8714d13b03b4",
+      "docker_config_id": "sha256:7904dee611b40cab19805680936e59039e83ca2b632a2edfbd2bcf845d0b6799",
+      "source_revision_verified": true
+    },
+    "digest_layers_verified": true
+  },
+  "production": {
+    "current_revision": "be58b12b191e9f0fa4010f8ed4293781fec01157",
+    "direct_rollback_revision": "3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+    "api": "healthy",
+    "web": "healthy",
+    "postgres": "healthy",
+    "worker_heartbeat": "alive_idle",
+    "application_restarts": 0,
+    "schema": "20261030_0058",
+    "migration": "none",
+    "postgres_container_recreated": false,
+    "production_env_compose_nginx_changed": false,
+    "new_oom_count": 0,
+    "existing_oom_counter": 487
+  },
+  "backups": {
+    "removed_older_count": 4,
+    "verified_retained_count": 2,
+    "retained": [
+      "chat-reader-20261104T004004Z",
+      "chat-reader-20261103T155702Z"
+    ],
+    "unlinked_bytes": 2926529217,
+    "readonly_housekeeping_report": {
+      "verified": 2,
+      "candidates": 0,
+      "held": 0,
+      "retained": 2
+    }
+  },
+  "images_cleanup": {
+    "removed_old_revision_count": 3,
+    "removed_image_tags": 12,
+    "removed_revisions": [
+      "0d1efac",
+      "127eae5",
+      "4b4f34f"
+    ],
+    "retained_current_and_rollback_tags": 8,
+    "global_prune": false
+  },
+  "storage": {
+    "available_kib_before_cleanup": 5609448,
+    "available_kib_latest_check": 9385372,
+    "disk_used_percent_latest_check": 77
+  },
+  "post_restart_aggregate_changes": {
+    "baseline_at": "2026-11-04T00:40:00Z",
+    "observed_through": "2026-11-04T01:40:06Z",
+    "imports_created": 0,
+    "messages_created": 0,
+    "conversations_delta": 1,
+    "attachments_delta": 14,
+    "asset_objects_delta": 14,
+    "message_versions_delta": 4,
+    "source_artifacts_delta": 1,
+    "offline_package_artifacts_delta": 46,
+    "database_restore_or_rollback_attempted": false,
+    "attribution": "writes after services resumed; not attributed solely to deployment or background jobs"
+  },
+  "unverified": {
+    "original_user_zip_retry_and_canonical_import": true,
+    "authenticated_production_ui": true,
+    "user_side_47_conversation_offline_update": true,
+    "sustained_load": true,
+    "isolated_restore_drill": true
+  }
+}

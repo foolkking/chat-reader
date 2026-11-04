@@ -53,12 +53,13 @@ export type UserFeatureCollection = "saved-search" | "export-preset" | "reading-
 export type SavedSearchValue = {
   name: string;
   q: string;
-  document_type: "all" | "conversation" | "message" | "heading" | "code" | "annotation" | "attachment";
+  document_type: "all" | "conversation" | "message" | "heading" | "code" | "annotation" | "attachment" | "notebook" | "description";
   role: "all" | "user" | "assistant";
   project_id: string | null;
   status_scope: "active" | "archived" | "all";
   date_from: string | null;
   date_to: string | null;
+  tag_id?: string | null;
 };
 export type ExportPresetValue = {
   name: string;
@@ -1430,6 +1431,10 @@ export type SharePreviewResponse = {
   has_more_messages: boolean;
   capabilities: Record<string, boolean>;
   description_markdown: string | null;
+  notebook_scope?: "none" | "entire_notebook";
+  notebook_block_count?: number;
+  notebook_preview?: string[];
+  notebook_preview_truncated?: boolean;
 };
 
 export type AnnotationInboxItem = AnnotationRead & {

@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
-import { ApiRequestError, createShare, getConversationShares, previewShare, revokeShare, updateShare } from "../../lib/api";
-import type { SharePreviewResponse, ShareRead } from "../../lib/types";
+import { useEffect, useId, useRef, useState } from "react";
+import { ApiRequestError, createShare, findShareCreation, getConversationShares, previewShare, revokeShare, updateShare } from "../../lib/api";
+import type { ShareCreateInput, SharePreviewResponse, ShareRead } from "../../lib/types";
+import { authenticationGeneration } from "../../lib/offline-access";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
 
@@ -44,6 +45,11 @@ export function SharePanel({
   const [isCreating, setIsCreating] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [preview, setPreview] = useState<SharePreviewResponse | null>(null);
+  const intent = useRef<{ key: string; payload: ShareCreateInput } | null>(null);
+  const submitLock = useRef(false), mounted = useRef(true);
+  const [unknownCreation, setUnknownCreation] = useState(false);
+  const [retryOriginal, setRetryOriginal] = useState(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const sharesQuery = useQuery({
     queryKey: ["shares", conversationId],
     queryFn: () => getConversationShares(conversationId),
@@ -59,9 +65,10 @@ export function SharePanel({
   }
 
   async function submit() {
+    if (submitLock.current || unknownCreation) return;
     setError(null);
     setExpiryError(null);
-    if (expiryMode === "custom") {
+    if (!intent.current && expiryMode === "custom") {
       const validation = validateFutureExpiry(expiresAt);
       if (!validation.ok) {
         setExpiryError(zh ? validation.zh : validation.en);
@@ -69,17 +76,19 @@ export function SharePanel({
         return;
       }
     }
-    if (passwordProtected && sharePassword.length < 12) {
+    if (!intent.current && passwordProtected && sharePassword.length < 12) {
       setError(zh ? "分享密码至少需要 12 个字符。" : "Share passwords must be at least 12 characters.");
       return;
     }
-    if (passwordProtected && sharePassword !== sharePasswordConfirm) {
+    if (!intent.current && passwordProtected && sharePassword !== sharePasswordConfirm) {
       setError(zh ? "两次输入的分享密码不一致。" : "Share password confirmation does not match.");
       return;
     }
     setIsCreating(true);
+    submitLock.current = true;
+    const generation = authenticationGeneration();
     try {
-      const response = await createShare(conversationId, {
+      intent.current ??= { key: crypto.randomUUID(), payload: {
         title: title.trim() || null,
         description: description.trim() || null,
         scope: useSelection ? "selected_messages" : "conversation",
@@ -95,14 +104,41 @@ export function SharePanel({
         theme: shareTheme,
         locale: shareLocale,
         share_password: passwordProtected ? sharePassword : null,
-      });
+      }};
+      const response = await createShare(conversationId, intent.current.payload, intent.current.key);
+      if (!mounted.current || generation !== authenticationGeneration()) return;
+      intent.current = null; setRetryOriginal(false);
       setCreatedUrl(response.share_url);
       if (!await refreshShares()) setError(shareRefreshError(zh, "create"));
     } catch (failure) {
+      if (!mounted.current || generation !== authenticationGeneration()) return;
+      if (!(failure instanceof ApiRequestError) || failure.status >= 500) setUnknownCreation(true);
+      else { intent.current = null; setRetryOriginal(false); }
       setError(shareWriteError(failure, zh, "create"));
     } finally {
-      setIsCreating(false);
+      submitLock.current = false;
+      if (mounted.current) setIsCreating(false);
     }
+  }
+
+  async function checkCreation() {
+    if (!intent.current || submitLock.current) return;
+    submitLock.current = true; setIsCreating(true);
+    const generation = authenticationGeneration();
+    try {
+      const result = await findShareCreation(conversationId, intent.current.key);
+      if (!mounted.current || generation !== authenticationGeneration()) return;
+      setUnknownCreation(false);
+      if (result) {
+        setCreatedUrl(result.share_url); intent.current = null; setRetryOriginal(false);
+        setError(null); await refreshShares();
+      } else {
+        setRetryOriginal(true);
+        setError(zh ? "暂未找到本次创建结果。可使用原选项和同一请求标识安全重试。" : "No result found. Retry the original options with the same request key.");
+      }
+    } catch {
+      if (mounted.current && generation === authenticationGeneration()) setError(zh ? "核对失败，尚未重新创建链接。" : "Could not check the result. No creation was retried.");
+    } finally { submitLock.current = false; if (mounted.current) setIsCreating(false); }
   }
 
   async function previewCurrentShare(anchorMessageId?: string) {
@@ -227,9 +263,11 @@ export function SharePanel({
           <legend className="px-1 text-xs font-semibold text-secondary">{zh ? "私人内容（默认不分享）" : "Private content (not shared by default)"}</legend>
           <PrivacyToggle label={zh ? "包含对话说明" : "Include description"} checked={includeDescription} onChange={setIncludeDescription} />
           <PrivacyToggle label={zh ? "包含批注" : "Include annotations"} checked={includeAnnotations} disabled={contentMode === "frozen"} onChange={setIncludeAnnotations} />
-          <PrivacyToggle label={zh ? "包含精选笔记" : "Include notes"} checked={includeNotebook} disabled={contentMode === "frozen"} onChange={setIncludeNotebook} />
+          <PrivacyToggle label={zh ? "包含整本精选笔记" : "Include the entire notebook"} checked={includeNotebook} disabled={contentMode === "frozen"} onChange={setIncludeNotebook} />
+          {includeNotebook && useSelection ? <p className="text-xs text-secondary">{zh ? "消息只分享所选部分；笔记仍分享整本，不按消息范围裁剪。请先预览。" : "Only selected messages are shared, but the entire notebook is included. Preview first."}</p> : null}
         </fieldset> : null}
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
+        {unknownCreation ? <button type="button" disabled={isCreating} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => void checkCreation()}>{zh ? "核对本次创建结果（不重试）" : "Check creation result (read only)"}</button> : null}
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => void previewCurrentShare()} disabled={isPreviewing || isCreating || (useSelection && selectedMessageIds.length === 0)} className="rounded-lg border border-ui px-3 py-2 text-sm font-medium text-primary disabled:opacity-45">
             {isPreviewing ? (zh ? "正在预览…" : "Previewing…") : (zh ? "预览访客视角" : "Preview visitor view")}
@@ -238,10 +276,10 @@ export function SharePanel({
             type="button"
             data-testid="create-share-button"
             onClick={submit}
-            disabled={isCreating || isPreviewing || (useSelection && selectedMessageIds.length === 0)}
+            disabled={isCreating || isPreviewing || unknownCreation || (useSelection && selectedMessageIds.length === 0)}
             className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-45"
           >
-            {isCreating ? t("creating") : t("createShare")}
+            {isCreating ? t("creating") : retryOriginal ? (zh ? "按原选项重试" : "Retry original options") : t("createShare")}
           </button>
         </div>
         {preview ? <SharePreviewCard preview={preview} zh={zh} onNavigate={(messageId) => void previewCurrentShare(messageId)} busy={isPreviewing} /> : null}
@@ -540,6 +578,11 @@ function SharePreviewCard({ preview, zh, onNavigate, busy }: { preview: SharePre
     {preview.message_count > 0 ? (zh ? " · 按完整轮次抽样核对" : " · inspect one complete turn at a time") : ""}
     </p>
     {preview.description_markdown ? <p className="mt-2 whitespace-pre-wrap text-xs text-secondary">{preview.description_markdown}</p> : null}
+    {preview.notebook_scope === "entire_notebook" ? <details className="mt-3 text-xs">
+      <summary className="min-h-10 cursor-pointer">{zh ? `包含整本笔记 · ${preview.notebook_block_count ?? 0} 项` : `Entire notebook included · ${preview.notebook_block_count ?? 0} blocks`}</summary>
+      {preview.notebook_preview?.map((value, index) => <p key={index} className="my-2 whitespace-pre-wrap break-words">{value}</p>)}
+      {preview.notebook_preview_truncated ? <p>{zh ? "此处为有界预览，实际分享整本笔记。" : "This preview is bounded; the entire notebook will be shared."}</p> : null}
+    </details> : null}
     {turn ? <div className="mt-2 grid gap-2">{turn.items.map(item => <article key={item.id} className="rounded-md border border-ui bg-surface p-2"><p className="text-[11px] uppercase text-secondary">{item.role}</p><p className="mt-1 line-clamp-6 whitespace-pre-wrap text-xs text-primary">{item.current_version?.display_text || ""}</p></article>)}</div> : <p className="mt-2 text-xs text-secondary">{zh ? "当前范围没有可展示的消息。" : "There are no messages in the selected scope."}</p>}
     {preview.toc?.items.length ? <p className="mt-2 text-xs text-secondary">{zh ? `目录包含 ${preview.toc.items.length} 项` : `${preview.toc.items.length} contents items included`}</p> : null}
     {turn ? <div className="mt-3 flex items-center justify-between gap-2">

@@ -1,6 +1,6 @@
 # API 参考
 
-## 阅读集合摘要 — 2026-10-31（源码实施，待 CI）
+## 阅读集合与批注收件箱摘要 — 2026-10-31（已发布）
 
 | Method/path | Contract |
 | --- | --- |
@@ -9,6 +9,10 @@
 
 两者均 no-store，现有配置 CAS 写入与完整批注接口不变，不新增 migration。
 失联批注只打开复核工作区，不把旧坐标声称为有效精确定位。
+
+此接口集合已随 `4b4f34f` 生产版本发布，当前 `be58b12` 继续使用；
+运行态和完整 CI 证据以 [当前发布记录](execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
+及 [项目状态](../PROJECT_STATE.md) 为准。
 
 ## 累计功能补齐 — 2026-10-30（已发布，生产 head 0058）
 
@@ -1394,3 +1398,20 @@ generation. History restoration and conflict resolution use the same direct PUT
 with an explicit base; there is no force-write endpoint. The pending-edits recovery
 ZIP includes these local drafts as actual Markdown/JSON members. That ZIP is a
 manual recovery artifact, separate from `.context.zip` and `.cr`.
+## 2026-11-05 candidate additions
+
+See [current cross-module contract](system/COMPREHENSIVE_OPTIMIZATION_CONTRACT.md).
+No production rollout is implied.
+
+- `GET /api/auth/session`: additive `failure_reason`; remains check-only.
+- Private responses: `X-Chat-Reader-User`, `X-Chat-Reader-Session-Expires`;
+  rejected sessions add `X-Chat-Reader-Auth-Reason`. These do not replace cookies.
+- `GET /api/adaptive-import/sessions?limit=20&offset=0`: owner-scoped pending
+  decisions, availability/expiry, bounded pages; no mutation on resume.
+- `GET /api/search`: adds `notebook`/`description` document types, `tag_id`,
+  `duplicate_of`; existing query/filter/ranking semantics remain.
+- Share POST accepts optional `Idempotency-Key`; read-only
+  `GET /api/conversations/{id}/share-creations/{key}` recovers a creation receipt.
+  Preview reports whole-notebook scope and bounded preview/truncation.
+- Archive previews declare `personal_collections_included` and `excluded_data`;
+  `.cr` optional `user_features_version:1` retains old format readers.

@@ -80,7 +80,7 @@ export function sanitizeSearchReturnHref(value: unknown): string | null {
   try {
     const url = new URL(value, "https://chat-reader.invalid");
     if (url.origin !== "https://chat-reader.invalid" || url.pathname !== "/search" || url.hash) return null;
-    const allowed = new Set(["q", "document_type", "role", "project_id", "status_scope", "date_from", "date_to"]);
+    const allowed = new Set(["q", "document_type", "role", "project_id", "status_scope", "date_from", "date_to", "tag_id"]);
     const seen = new Set<string>();
     for (const [key, item] of url.searchParams) {
       if (!allowed.has(key) || item.length > 512 || seen.has(key)) return null;

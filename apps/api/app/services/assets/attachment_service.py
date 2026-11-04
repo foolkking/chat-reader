@@ -70,6 +70,11 @@ def get_share_attachment(db: Session, share: Share, attachment_id: uuid.UUID) ->
 
 
 def attachment_content(attachment: Attachment) -> AttachmentContent:
+    # Detaching removes the file from the conversation's current file list,
+    # not from retained message versions. Historical owner reads remain valid;
+    # batch admission and public links still require an active attachment.
+    if attachment.deleted_at is not None or attachment.status not in {"available", "detached"}:
+        raise AttachmentAccessError("Attachment content is not available.", 423)
     asset = attachment.asset_object
     if attachment.resolution_status != "resolved" or asset is None:
         raise AttachmentAccessError("Attachment content is unresolved.", 409)
@@ -85,7 +90,9 @@ def attachment_content(attachment: Attachment) -> AttachmentContent:
 def attachment_read(attachment: Attachment, *, content_prefix: str = "/api/attachments") -> AttachmentRead:
     asset = attachment.asset_object
     content_available = bool(
-        attachment.resolution_status == "resolved"
+        attachment.deleted_at is None
+        and attachment.status in {"available", "detached"}
+        and attachment.resolution_status == "resolved"
         and asset is not None
         and asset.status == "available"
         and scan_status_allows_use(asset.scan_status)

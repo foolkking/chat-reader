@@ -930,7 +930,7 @@ async function removeOfflineConversationsUnlocked(conversationIds: string[], rev
         db.readingPositions.bulkDelete(conversationIds),
         db.attachments.where("conversation_id").anyOf(conversationIds).delete(),
         db.outbox.where("conversation_id").anyOf(conversationIds).delete(),
-        db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("annotation-comment-draft:") || row.key.startsWith("continuation-draft:") || row.key.startsWith("reading-sync:"))
+        db.settings.filter((row) => (row.key.startsWith("sync-conflict:") || row.key.startsWith("notebook-draft:") || row.key.startsWith("source-editor-draft:") || row.key.startsWith("annotation-comment-draft:") || row.key.startsWith("continuation-draft:") || row.key.startsWith("reading-sync:"))
           && conversationIds.includes((row.value as { conversation_id: string }).conversation_id)).delete(),
         db.settings.filter((row) => row.key.startsWith("conversation-tags:")
           && conversationIds.includes(row.key.slice("conversation-tags:".length))).delete(),
@@ -955,11 +955,12 @@ export async function getOfflineAttachment(attachmentId: string): Promise<Attach
   const record = await offlineDb.attachments.get(attachmentId);
   if (!record) throw new Error("Offline attachment metadata was not found.");
   const cached = await readVerifiedCachedAttachment(record);
-  const blob = cached ? await cached.blob() : null;
   assertOfflineAccess(access);
-  const cacheKey = `${record.id}:${record.sha256}:${blob ? "available" : "missing"}`;
-  let url = blob ? attachmentObjectUrlsByKey.get(cacheKey) ?? null : null;
-  if (blob && !url) {
+  const cacheKey = `${record.id}:${record.sha256}:${cached ? "available" : "missing"}`;
+  let url = cached ? attachmentObjectUrlsByKey.get(cacheKey) ?? null : null;
+  if (cached && !url) {
+    const blob = await cached.blob();
+    assertOfflineAccess(access);
     url = URL.createObjectURL(blob);
     attachmentObjectUrlsByKey.set(cacheKey, url);
     attachmentObjectUrls.add(url);
@@ -1171,7 +1172,7 @@ export async function countOfflinePendingChanges(conversationIds: string[], db =
   const operations = await db.outbox.where("conversation_id").anyOf(conversationIds).count();
   const conflicts = await db.settings.where("key").startsWith("sync-conflict:")
     .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
-  const drafts = await db.settings.filter((item) => item.key.startsWith("notebook-draft:") || item.key.startsWith("annotation-comment-draft:") || item.key.startsWith("continuation-draft:"))
+  const drafts = await db.settings.filter((item) => item.key.startsWith("notebook-draft:") || item.key.startsWith("source-editor-draft:") || item.key.startsWith("annotation-comment-draft:") || item.key.startsWith("continuation-draft:"))
     .filter((item) => ids.has((item.value as { conversation_id: string }).conversation_id)).count();
   return operations + conflicts + drafts;
 }

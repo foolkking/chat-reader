@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.models.attachment import AssetObject, Attachment
 from app.models.conversation import Conversation
 from app.models.export_artifact import ExportArtifact
-from app.services.assets.asset_store import get_asset_store
+from app.services.assets.attachment_service import attachment_content, AttachmentAccessError
 from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 
 MAX_ATTACHMENTS = 500
@@ -41,6 +41,7 @@ def validate_attachment_download(db: Session, *, conversation_id: uuid.UUID, att
             Attachment.deleted_at.is_(None),
             Attachment.resolution_status == "resolved",
             AssetObject.status == "available",
+            AssetObject.deleted_at.is_(None),
         )
         .all()
     )
@@ -54,9 +55,9 @@ def validate_attachment_download(db: Session, *, conversation_id: uuid.UUID, att
     for attachment_id in attachment_ids:
         attachment, asset = by_id[attachment_id]
         try:
-            path = get_asset_store().resolve_key(asset.storage_key)
-        except (ValueError, FileNotFoundError) as exc:
-            raise AttachmentDownloadError("An attachment object is missing.") from exc
+            path = attachment_content(attachment).path
+        except AttachmentAccessError as exc:
+            raise AttachmentDownloadError(str(exc), exc.status_code) from exc
         result.append((attachment, asset, path))
     return result
 
@@ -76,9 +77,17 @@ def create_attachment_download(db: Session, *, conversation_id: uuid.UUID, attac
     try:
         with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True, compresslevel=6) as archive:
             for index, ((attachment, _asset, path), entry_name) in enumerate(zip(rows, names, strict=True), start=1):
+                # Recheck after admission and at each read. A blocked object
+                # must never leak through a ZIP even when policy changed.
+                db.refresh(_asset)
+                db.refresh(attachment)
+                path = attachment_content(attachment).path
                 archive.write(path, entry_name)
                 if progress_callback:
                     progress_callback("assets", min(98, int(index * 98 / len(rows))), index, len(rows))
+        # A policy/deletion change during compression also prevents publishing.
+        db.expire_all()
+        validate_attachment_download(db, conversation_id=conversation_id, attachment_ids=attachment_ids)
         published = publish_zip_artifact(
             temporary, destination, category="export", artifact_id=artifact_id, required_entries=(names[0],)
         )

@@ -136,6 +136,7 @@ export function ConversationReader({
   const requestedFilesOpen = searchParams?.get("files") === "open";
   const requestedAnnotationId = searchParams?.get("annotationId") ?? null;
   const requestedAnnotationsOpen = searchParams?.get("annotations") === "open";
+  const [descriptionDismissed, setDescriptionDismissed] = useState<string | null>(null);
   const searchReplayKey = libraryMode && searchReplay && matchesLibrarySearchTarget(searchReplay.href, searchParams?.toString() ?? "")
     ? searchReplay.sequence : 0;
   const [loadedWindow, setLoadedWindow] = useState<LoadedMessageWindow>(() => emptyLoadedWindow());
@@ -3383,6 +3384,10 @@ export function ConversationReader({
           {showOfflineGuide && !isOffline && !focusMode ? <div className="reader-header-auxiliary relative flex flex-col gap-1 border-t border-ui bg-[var(--accent-soft)] px-[3vw] py-2 pr-12 text-xs text-primary md:flex-row md:items-center md:gap-2 md:pr-[3vw]"><div className="flex min-w-0 flex-1 items-start gap-2"><Download className="mt-0.5 h-4 w-4 shrink-0 text-accent" /><span className="min-w-0">{t("offlineGuide")}</span></div><button type="button" onClick={() => router.push(buildReaderUrl("/library", currentReaderLocation()))} className="ml-6 shrink-0 self-start font-semibold text-accent md:ml-0 md:self-auto">{t("prepareOffline")}</button><button type="button" onClick={() => { window.localStorage.setItem("chat-reader:offline-guide-dismissed", "true"); setShowOfflineGuide(false); }} className="absolute right-[3vw] top-2 flex h-7 w-7 shrink-0 items-center justify-center text-secondary md:static md:h-auto md:w-auto" aria-label={t("dismiss")}><X className="h-4 w-4" /></button></div> : null}
         </header>
 
+        {searchParams?.get("description") === "open" && descriptionDismissed !== conversationId ? <section aria-label={resolvedLocale === "zh-CN" ? "对话简介" : "Conversation description"} className="mx-4 my-2 max-h-48 overflow-auto rounded-lg border border-ui bg-subtle p-3">
+          <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">{resolvedLocale === "zh-CN" ? "对话简介" : "Conversation description"}</h2><button type="button" className="min-h-11 px-3 text-sm text-secondary" onClick={() => setDescriptionDismissed(conversationId)}>{resolvedLocale === "zh-CN" ? "关闭" : "Close"}</button></div>
+          <p className="whitespace-pre-wrap break-words text-sm leading-6">{conversation.description_markdown || (resolvedLocale === "zh-CN" ? "简介已移除。" : "The description has been removed.")}</p>
+        </section> : null}
         {keyboardNavigationFeedback ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-4 z-30 flex justify-center px-4" aria-live="polite" role="status" data-testid="reader-keyboard-feedback">
             <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-lg border border-ui bg-raised px-3 py-2 text-sm text-primary shadow-md">
@@ -3697,6 +3702,7 @@ export function ConversationReader({
         messages={messages}
         activeMessageId={activeMessageId}
         initialAnnotationId={searchAnnotationId}
+        requestedView={searchParams?.get("annotation_view") === "notebook" ? "notebook" : undefined}
         searchReplayKey={searchReplayKey}
         repository={annotationRepository}
         open={annotationsOpen && !focusMode && !sourceEditorTarget}

@@ -48,7 +48,7 @@ function fixture(locale = "en-US") {
   const module = { exports: {} };
   const deps = { usePreferences: () => ({ resolvedLocale: locale }), usableOfflineRevisions: mode => {
     const d = deferred(); requests.push({ ...d, mode }); return d.promise;
-  }, OfflineShellIndicator: "OfflineShellIndicator", SearchResultList: "SearchResultList", ProjectRows: "ProjectRows",
+  }, OfflineDeviceControls: "OfflineDeviceControls", OfflineShellIndicator: "OfflineShellIndicator", SearchResultList: "SearchResultList", ProjectRows: "ProjectRows",
   ConversationRows: "ConversationRows", SidebarPreferences: "SidebarPreferences" };
   new Function("require", "exports", ...Object.keys(deps), compiled)(name => name === "react" ? react : require(name), module.exports, ...Object.values(deps));
   const render = () => { cursor = 0; return tree = module.exports.LibrarySidebar(props); };

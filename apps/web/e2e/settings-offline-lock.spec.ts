@@ -46,16 +46,24 @@ test("expired library retains local edits, blocks another account, and restores 
     await context.clearCookies(); // The real session would also have expired after the simulated 49 hours.
     await context.setOffline(false);
     await page.clock.setFixedTime(new Date());
+    const signIn = async (email: string, destination: string) => {
+      await page.goto(`${baseURL}/login?reauth=1&return_to=${encodeURIComponent(destination)}`);
+      await page.locator("#login-email").fill(email);
+      await page.locator("#login-password").fill(password);
+      await page.getByRole("button", { name: /^(Sign in|登录)$/ }).click();
+      await expect(page).toHaveURL(`${baseURL}${destination}`);
+    };
     // A different real account must neither claim nor sync A's pending edits.
     expect((await context.request.post(`${baseURL}/api/auth/register`, { headers, data: { email: emailB, password, confirm_password: password } })).status()).toBe(201);
-    await page.goto(`${baseURL}/library`);
+    await signIn(emailB, "/library");
     await expect(page.getByText("Synthetic offline answer", { exact: true })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => localStorage.getItem("chat-reader:offline-active-user-v1")).catch(() => userId)).not.toBe(userId);
     expect(await readLocal(page, userId)).toEqual(before);
     expect((await context.request.get(`${baseURL}/api/conversations/${conversationId}`)).status()).toBe(404);
-    expect((await context.request.post(`${baseURL}/api/auth/login`, { headers, data: { email: emailA, password } })).status()).toBe(200);
     await page.clock.setFixedTime(new Date());
-    await page.goto(`${baseURL}/library?conversationId=${conversationId}&annotations=open`);
+    // Unlocking a retained local lock requires the actual password form, not a
+    // background valid-cookie response or an out-of-band APIRequestContext.
+    await signIn(emailA, `/library?conversationId=${conversationId}&annotations=open`);
     await expect(page.getByText("Synthetic offline answer", { exact: true }).first()).toBeVisible();
     await expect.poll(async () => (await readLocal(page, userId)).outbox.length).toBe(0);
     const serverNote = await (await context.request.get(`${baseURL}/api/conversations/${conversationId}/notebook`)).json();

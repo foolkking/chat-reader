@@ -46,6 +46,7 @@ from app.services.adaptive_import.service import (
     resolve_grouping,
     select_profile_revision,
     session_payload,
+    session_sources_available,
     update_profile,
     verify_family_mapping,
 )
@@ -103,6 +104,37 @@ class ArchiveMemberChange(BaseModel):
 class ArchiveClassificationRequest(BaseModel):
     expected_version: int = Field(ge=1)
     changes: list[ArchiveMemberChange] = Field(min_length=1, max_length=5000)
+
+
+@router.get("/api/adaptive-import/sessions")
+def list_unfinished_sessions(
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+):
+    """Pending decisions are not terminal notifications and must remain discoverable."""
+    query = db.query(ImportRecord).filter(
+        ownership_scope.predicate(ImportRecord),
+        ImportRecord.session_state.in_(("READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING")),
+        ImportRecord.status.notin_(("committed", "cancelled")),
+    )
+    rows = query.order_by(ImportRecord.updated_at.desc(), ImportRecord.id).offset(offset).limit(limit + 1).all()
+    now = datetime.now(timezone.utc)
+    items = []
+    for row in rows[:limit]:
+        expiry = row.draft_expires_at
+        if expiry and expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=timezone.utc)
+        items.append({
+            "import_id": str(row.id), "state": row.session_state,
+            "title": row.detected_title or row.json_filename or row.md_filename or "Import",
+            "updated_at": row.updated_at.isoformat(),
+            "expires_at": expiry.isoformat() if expiry else None,
+            "source_available": session_sources_available(row, db.query(SourceArtifact).filter(SourceArtifact.import_id == row.id).all())
+                and (expiry is None or expiry > now),
+        })
+    return {"items": items, "has_more": len(rows) > limit, "offset": offset, "limit": limit}
 
 
 @router.post("/api/adaptive-import/sessions", status_code=status.HTTP_201_CREATED)

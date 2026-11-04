@@ -5,6 +5,8 @@ import { liveQuery } from "dexie";
 import { assertOfflineAccess, captureOfflineAccess, notifyAuthenticationFailure, authenticationGeneration } from "./offline-access";
 import { importOfflinePackage, inspectOfflineCopyAssets, offlineDb, OfflinePackageImportError } from "./offline-db";
 import { planOfflineConversationDownloads } from "./offline-download-plan";
+import { canUseServer } from "./server-session";
+import { offlineAuthenticationRequired } from "./offline-access";
 
 export type OfflineAssetMode = "none" | "small" | "all";
 export type OfflineDownload = {
@@ -192,7 +194,7 @@ export async function resumeOfflineDownloads(signal: AbortSignal): Promise<void>
     const records = await listOfflineDownloads(db);
     // Cancellation must not wait for a connection or another queued download.
     const record = records.find((item) => ACTIVE.has(item.state) && item.cancelRequested)
-      ?? (navigator.onLine ? records.reverse().find((item) => ACTIVE.has(item.state)) : undefined);
+      ?? (navigator.onLine && (!offlineAuthenticationRequired() || canUseServer()) ? records.reverse().find((item) => ACTIVE.has(item.state)) : undefined);
     if (record) await runDownload(db, record, access, signal);
   };
   if (navigator.locks) await navigator.locks.request(`chat-reader:downloads:${db.name}`, { ifAvailable: true }, async (lock) => { if (lock) await work(); });
@@ -201,7 +203,7 @@ export async function resumeOfflineDownloads(signal: AbortSignal): Promise<void>
 
 /** Remote acknowledgements cannot delay local cancellation or cleanup. */
 export async function resumeOfflineServerCancellations(signal: AbortSignal): Promise<void> {
-  if (!navigator.onLine || signal.aborted) return;
+  if (!navigator.onLine || signal.aborted || offlineAuthenticationRequired() && !canUseServer()) return;
   const access = captureOfflineAccess(), db = offlineDb;
   const cancel = () => resumeServerCancellation(db, access, signal);
   if (navigator.locks) await navigator.locks.request(`chat-reader:download-cancellations:${db.name}`, { ifAvailable: true }, async lock => { if (lock) await cancel(); });

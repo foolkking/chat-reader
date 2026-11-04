@@ -37,7 +37,8 @@ jobs:
       - name: Install identical locked harness dependencies
         run: |
           pnpm install --frozen-lockfile --ignore-scripts
-          python -m pip install -e apps/api
+          python -m pip install --require-hashes -r apps/api/requirements-test.lock -r apps/api/requirements-build.lock
+          python -m pip install --no-deps --no-build-isolation -e "apps/api[test]"
           pnpm --filter web exec playwright install --with-deps chromium
           mkdir -p "$RUNNER_TEMP/reading-comparison"
           cp apps/web/e2e/reader-capacity.spec.ts "$RUNNER_TEMP/reading-comparison/harness.ts"

@@ -1,4 +1,5 @@
 import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
+import { observeSessionResponse, serverSession } from "./server-session";
 import { archiveRequestSignal } from "./archive-task-state";
 import type {
   CommitImportResponse,
@@ -187,7 +188,7 @@ export function uploadAttachmentItem(
     request.addEventListener("load", () => {
       let payload: unknown;
       try { payload = request.responseText ? JSON.parse(request.responseText) : null; } catch { payload = null; }
-      if (request.status === 401) notifyAuthenticationFailure(requestGeneration);
+      if (request.status === 401) notifyAuthenticationFailure(requestGeneration, request.getResponseHeader("X-Chat-Reader-Auth-Reason"));
       if (request.status >= 200 && request.status < 300) resolve(payload as AttachmentUploadItemRead);
       else reject(new Error(readApiError(payload, request.status)));
     });
@@ -1131,6 +1132,8 @@ export async function searchConversations(input: {
   statusScope?: "active" | "archived" | "all";
   dateFrom?: string;
   dateTo?: string;
+  tagId?: string;
+  duplicateOf?: string;
   signal?: AbortSignal;
 }): Promise<SearchResponse> {
   const params = new URLSearchParams({
@@ -1153,6 +1156,8 @@ export async function searchConversations(input: {
   if (input.statusScope) params.set("status_scope", input.statusScope);
   if (input.dateFrom) params.set("date_from", input.dateFrom);
   if (input.dateTo) params.set("date_to", input.dateTo);
+  if (input.tagId) params.set("tag_id", input.tagId);
+  if (input.duplicateOf) params.set("duplicate_of", input.duplicateOf);
   return fetchJson<SearchResponse>(`/api/search?${params.toString()}`, { signal: input.signal });
 }
 
@@ -1265,10 +1270,11 @@ export async function restoreSystemArchive(file: File): Promise<{ status: string
 export async function createShare(
   conversationId: string,
   input: ShareCreateInput,
+  requestKey?: string,
 ): Promise<ShareCreateResponse> {
   const share = await fetchJson<ShareCreateResponse>(
     `/api/conversations/${conversationId}/shares`,
-    jsonRequest("POST", input),
+    { ...jsonRequest("POST", input), headers: { "Content-Type": "application/json", ...(requestKey ? { "Idempotency-Key": requestKey } : {}) } },
   );
   return normalizeShareUrl(share);
 }
@@ -1647,6 +1653,19 @@ export async function replaceAdaptiveImportArtifact(
   });
 }
 
+export async function findShareCreation(conversationId: string, key: string): Promise<ShareCreateResponse | null> {
+  const result = await fetchJson<ShareCreateResponse | null>(`/api/conversations/${encodeURIComponent(conversationId)}/share-creations/${encodeURIComponent(key)}`);
+  return result ? normalizeShareUrl(result) : null;
+}
+
+export type UnfinishedImport = {
+  import_id: string; state: string; title: string; updated_at: string;
+  expires_at: string | null; source_available: boolean;
+};
+export function getUnfinishedImports(offset = 0, signal?: AbortSignal): Promise<{ items: UnfinishedImport[]; has_more: boolean }> {
+  return fetchJson(`/api/adaptive-import/sessions?limit=20&offset=${offset}`, { signal, headers: { "X-Chat-Reader-Background": "1" } });
+}
+
 export async function getAdaptiveImportArchive(
   importId: string,
   artifactId: string,
@@ -1913,6 +1932,11 @@ function jsonRequest(method: string, body: unknown): RequestInit {
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const requestGeneration = authenticationGeneration();
+  const session = serverSession();
+  const privatePath = !path.startsWith("/api/shared/") && !path.startsWith("/api/auth/") && path !== "/api/health";
+  if (privatePath && (session.status === "sign-in-required" || session.status === "unavailable")) {
+    throw new ApiRequestError("Server access is paused. Your local data is retained.", session.status === "sign-in-required" ? 401 : 503, path);
+  }
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -1929,6 +1953,7 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   } catch {
     throw new Error("CONNECTION_FAILED");
   }
+  if (requestGeneration === authenticationGeneration()) observeSessionResponse(response, session.userId);
 
   if (!response.ok) {
     if (
@@ -1937,7 +1962,7 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
       !path.startsWith("/api/shared/") &&
       !path.startsWith("/api/auth/")
     ) {
-      notifyAuthenticationFailure(requestGeneration);
+      notifyAuthenticationFailure(requestGeneration, response.headers.get("X-Chat-Reader-Auth-Reason"));
     }
     throw await getApiRequestError(response, path);
   }
@@ -2040,6 +2065,12 @@ function normalizeShareUrl<T extends ShareRead>(share: T): T {
 export type ContinuationRevisionRead = {
   id: string; protocol_revision: string; declared_trust: string; created_at: string; members: Record<string, boolean>;
 };
+export function queueAttachmentDownload(conversationId: string, attachmentIds: string[], requestKey: string) {
+  return fetchJson<BackgroundTaskRead>(`/api/conversations/${encodeURIComponent(conversationId)}/attachment-downloads`, {
+    method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey },
+    body: JSON.stringify({ attachment_ids: attachmentIds }),
+  });
+}
 const continuationPath = (id: string) => `/api/conversations/${encodeURIComponent(id)}/continuation`;
 export const continuationApi = {
   guidance: (id: string) => fetchJson<{ coverage: "none" | "declared" | "unknown"; index_digest: string | null; unindexed_messages: number | null; unindexed_characters: number | null; suggest_maintenance: boolean; message_threshold: number; character_threshold: number; source_revision: number }>(`${continuationPath(id)}/guidance`),

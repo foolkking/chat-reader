@@ -1323,6 +1323,33 @@ def process_background_job(
             elif job.job_type == "context_validation":
                 # Queued jobs from the superseded workflow must not create receipts.
                 raise ValueError("CONTEXT_VALIDATION_RETIRED")
+            elif job.job_type == "personal_search_backfill":
+                from app.services.search.personal_content_indexer import sync_personal_content
+                after = None
+                processed_items = 0
+                while True:
+                    candidates = db.query(Conversation.id).filter(Conversation.deleted_at.is_(None))
+                    if after is not None:
+                        candidates = candidates.filter(Conversation.id > after)
+                    ids = [row[0] for row in candidates.order_by(Conversation.id).limit(100)]
+                    if not ids:
+                        break
+                    for conversation_id in ids:
+                        conversation = db.query(Conversation).filter_by(id=conversation_id).with_for_update().first()
+                        if conversation is not None:
+                            sync_personal_content(db, conversation)
+                        processed_items += 1
+                        db.commit()
+                    after = ids[-1]
+                    report("indexing", 50, processed_items, processed_items)
+                job_result = {"indexed_conversations": processed_items}
+            elif job.job_type == "conversation_delete_cleanup":
+                conversation_id = uuid.UUID(payload["conversation_id"])
+                scope = OwnershipScope(job.owner_user_id, include_legacy_unowned=job.owner_user_id is None)
+                if get_owned(db, Conversation, conversation_id, scope) is not None:
+                    delete_conversation_record(db, conversation_id, scope)
+                job_result = {"deleted": True}
+                processed_items = 1
             elif job.job_type == "context_object_cleanup":
                 from app.services.context_cleanup import cleanup_context_objects
                 job_result = cleanup_context_objects(db, payload.get("keys", []), progress=report)

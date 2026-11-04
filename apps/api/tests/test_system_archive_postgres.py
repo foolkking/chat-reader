@@ -19,6 +19,8 @@ from app.models.message_version import MessageVersion
 from app.models.project import Project
 from app.models.reading_position import ReadingPosition
 from app.models.user import User
+from app.models.user_preference import UserPreference
+from app.models.user_feature_entry import UserFeatureEntry
 from app.services.access import consume_password_reset, create_password_reset_grant
 from app.services.assets.asset_store import get_asset_store
 from app.services.auth import hash_password, verify_password
@@ -41,6 +43,10 @@ def test_system_v5_restores_new_account_ownership_and_requires_password_reset(ar
         ConversationNotebook(subject_key=str(users[0].id), conversation_id=conversations[0].id, title="Synthetic notebook"),
         ReadingPosition(subject_key=str(users[0].id), conversation_id=conversations[0].id),
     ])
+    archive_db.add(UserPreference(subject_key=str(users[0].id)))
+    archive_db.flush()
+    archive_db.add(UserFeatureEntry(subject_key=str(users[0].id), collection="reading-list",
+        value={"conversation_id": str(conversations[0].id), "state": "read"}))
     archive_db.commit()
     artifact = create_system_archive(archive_db, job_id=job.id, include_archived=True)
     archive_db.commit()
@@ -74,6 +80,8 @@ def test_system_v5_restores_new_account_ownership_and_requires_password_reset(ar
         assert all(row.owner_user_id in {root_id, restored_user.id} for row in db.query(Project))
         for model in (ConversationAnnotation, ConversationNotebook, ReadingPosition):
             assert db.query(model).one().subject_key == str(restored_user.id)
+        assert db.query(UserFeatureEntry).one().subject_key == str(restored_user.id)
+        assert db.query(UserFeatureEntry).one().value["conversation_id"] == str(conversations[0].id)
         assert db.query(AuthSession).count() == 0
         new_principal = db.query(AuthPrincipal).filter(AuthPrincipal.user_id == restored_user.id).one()
         assert not verify_password(new_principal.password_hash, original_password)

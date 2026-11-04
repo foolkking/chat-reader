@@ -1,5 +1,14 @@
 # 事实证据索引
 
+## 当前发布与知识收尾 — 2026-11-04
+
+[小内存 ZIP 脱敏发布汇总](release-2026-11-04/small-zip-deployment-summary.json)
+与[发布回执](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)绑定精确 CI、
+OCI/config 哈希链、运行版本、备份及已授权清理；原用户 ZIP 尚待显式重试。
+[知识收尾](../execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md)记录文档/规则/工作区
+审计、清场预览、汇报后授权的本地安全清理和保全核验；
+本轮没有新增发布或生产删除，官方制品与测试证据仍保留。
+
 ## 图片展示比例 — 2026-10-23（已部署）
 
 [发布证据](image-display-scale-release-2026-10-23.json)绑定精确源码、每次 CI 的

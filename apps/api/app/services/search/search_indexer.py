@@ -15,6 +15,7 @@ from app.services.database.bulk_insert import insert_rows
 from app.services.assets.asset_store import get_asset_store
 from app.services.toc.toc_builder import rebuild_headings_for_all, rebuild_headings_for_conversation
 from app.services.search.annotation_indexer import sync_annotations_for_conversation
+from app.services.search.personal_content_indexer import sync_personal_content
 
 _MAX_DOCUMENT_TEXT_CHARS = 2 * 1024 * 1024
 _BODY_READ_BATCH_SIZE = 8
@@ -63,6 +64,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
                 "search_text": conversation_text,
                 "source_type": conversation.source_type,
                 "source_profile": conversation.source_profile,
+                "created_at": conversation.created_at or conversation.imported_at,
                 "metadata_": {},
             }
         )
@@ -236,6 +238,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
 
     db.flush()
     sync_annotations_for_conversation(db, conversation.id)
+    sync_personal_content(db, conversation)
     _refresh_postgres_tsv(db, conversation.id)
     return SearchIndexResult(conversation_count=1, indexed_count=indexed_count, heading_count=0)
 

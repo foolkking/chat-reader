@@ -28,6 +28,9 @@ function syncHarness(locks) {
   };
   const scope = {
     navigator, offlineDb: db,
+    offlineAuthenticationRequired: () => true,
+    canUseServer: userId => userId === "synthetic-owner",
+    getActiveOfflineStorageContext: () => ({ userId: "synthetic-owner" }),
     captureOfflineAccess: () => 1,
     assertOfflineAccess: () => { if (accessFailure) throw new Error("synthetic access retired"); },
     flushBatch: async (_db, _access, ids) => {
@@ -97,6 +100,7 @@ test("global offline manager invokes the scope-aware flush with zero arguments a
   };
   new Function("require", "exports", "navigator", "window", compile(read("components/offline-sync-manager.tsx")))(name => {
     if (name === "react") return { useEffect: effect => { cleanup = effect(); } };
+    if (name === "../lib/server-session") return { SERVER_SESSION_CHANGED: "synthetic-session-changed" };
     if (name === "../lib/annotation-repository") return {
       flushAnnotationOutbox: async (...args) => { calls.push(args); return { synced: 0, conflicts: 0 }; },
     };
@@ -105,7 +109,7 @@ test("global offline manager invokes the scope-aware flush with zero arguments a
   exports.OfflineSyncManager();
   await tick();
   assert.deepEqual(calls, [[]]);
-  assert.equal(listeners.size, 2);
+  assert.equal(listeners.size, 3);
   cleanup();
   assert.equal(listeners.size, 0);
 });

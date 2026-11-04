@@ -23,12 +23,14 @@ function fixture(row = false) {
   let cursor = 0, tree;
   const hook = init => hooks[cursor++] ?? (hooks[cursor - 1] = init());
   const react = {
+    useEffect: fn => fn(),
     useState: init => { const state = hook(() => ({ value: typeof init === "function" ? init() : init }));
       return [state.value, value => { state.value = typeof value === "function" ? value(state.value) : value; }]; },
     useRef: value => hook(() => ({ current: value })), useId: () => "synthetic-expiry-error",
   };
   const api = {};
   const stubs = {
+    "../../lib/offline-access": { authenticationGeneration: () => 1 },
     react, "react/jsx-runtime": require("react/jsx-runtime"),
     "@tanstack/react-query": { useQuery: () => ({ data: [], refetch: async () => ({ isError: false }) }) },
     "../../lib/api": { ApiRequestError: class extends Error {},

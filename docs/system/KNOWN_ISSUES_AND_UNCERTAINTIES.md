@@ -1,26 +1,33 @@
 # 已知风险与不确定性
 
-## Current verification boundaries — 2026-10-29
+## Current verification boundaries — 2026-11-04
 
 Use [Project State](../../PROJECT_STATE.md) and the
-[current release record](../execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md)
-for exact source/CI/artifact/backup and production acceptance. Runtime/direct
-rollback is `f8a6a06`/`b4effda`, schema `20261022_0053`; all five exact-source CI
-jobs, independent artifact acceptance and the stopped-writer deployment/
-operational recheck passed. No local application suites/build/browser/services/
-database validated this release. Earlier uncommitted/no-deployment statements
-below describe their own checkpoints, not the current runtime.
+[current release record](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
+for exact source/CI/artifact/backup, production acceptance and authorized
+storage cleanup. Runtime/direct rollback is `be58b12`/`3b839dc`, schema
+`20261030_0058`; all six exact-source CI jobs, independent artifact acceptance
+and the deployment/runtime recheck passed. Earlier uncommitted/no-deployment
+statements below describe their own checkpoints, not the current runtime.
 
 - CI and health/privacy checks do not establish authenticated production UI,
   physical clipboard, screen-reader behavior or sustained-load acceptance.
+- The original user ZIP was not silently retried by deployment; its production
+  retry and canonical import outcome remain pending explicit user action.
 - Same-runtime failed-delete intent is not crash/forced-reload durable.
   Bounded Office previews are not full-fidelity or hostile-document certification.
 - Noise protection remains bounded recognition with the limitations below;
   a passing corpus is not exhaustive Markdown/AI-adapter parity or an
   unmeasured performance guarantee.
-- The new five-component backup is verified, not restore-drill accepted.
+- The retained two-point five-component backup set is verified, not
+  restore-drill accepted.
   Server-local points may share hardlinks; independent off-site recovery and
   scheduled backups remain unconfigured. Future releases need fresh capacity.
+
+<a id="current-verification-boundaries--2026-10-29"></a>
+
+The former 2026-10-29 boundary anchor is retained for old incoming links;
+use the 2026-11-04 scope above for current release acceptance and remaining debt.
 
 ## Historical local verification checkpoint — 2026-10-14
 
@@ -49,7 +56,7 @@ below likewise do not define current debt or deployment state.
 
 This stable heading retains the original local-only noise-review checkpoint.
 Its uncommitted/acceptance-limit statements are historical; read the
-[2026-10-29 boundaries](#current-verification-boundaries--2026-10-29) above for
+[2026-11-04 boundaries](#current-verification-boundaries--2026-11-04) above for
 later CI and production acceptance. The semantic limitations below remain;
 SHA-pinned source contracts alone are not a fresh remote CI result.
 
@@ -140,12 +147,18 @@ conditional future work. None is an active defect in the deployed snapshot.
 Historical RA/RB rows below retain their original checkpoint meaning. Later
 Release evidence closes active-unreferenced visibility, delete/undo, Share
 focus, exact narrow reflow, production chooser, PWA negative paths and `.cr v4`
-round trip. They are not current debt. The current count is
-`CURRENT_VERIFICATION_DEBT_COUNT = 0`; unknown/unclassified records are zero.
+round trip. At that historical Release K reconciliation the recorded count was
+`CURRENT_VERIFICATION_DEBT_COUNT = 0`; this is not the current project-wide
+verification count. The current pending scope is listed at the top of this page.
+
+## Historical risk table (superseded where noted)
+
+Rows below retain older issue identities for traceability. They are not a
+second current backlog; current status corrections are explicit.
 
 | ID | 风险/不确定性 | 影响 | 当前控制/验证方式 |
 | --- | --- | --- | --- |
-| KI-001 | 工作树多账户 migration 尚未发布 | 生产仍运行历史单 owner snapshot；工作树账号能力尚未获得生产数据迁移证据 | `20260901_0030`、聚焦 API 测试和源码隔离已完成；生产备份/migration/认证浏览器验收仍为 `NOT_VERIFIED` |
+| KI-001 | 历史多账户 migration 发布缺口已关闭 | 0030 已部署，当前 schema 为 0058；不是生产仍为单 owner | 认证生产 UI 仍待单独验收，不与数据库迁移缺口混写；当前 release 见页首 |
 | KI-002 | 单个阅读轮次可包含极大正文 | 完整正文数据仍占内存，动态 block 测量也有成本 | >160 blocks 或 >50000 chars 时虚拟化 DOM；直达 URL、批注、下滑刷新 fixture 持续回归 |
 | KI-003 | 有效生产 Share 访客页未在文档中保存可复用 token | 生产访客视觉/范围无法由文档直接重放 | 使用隔离测试 token 复验，绝不记录真实 token |
 | KI-004 | 浏览器 quota、持久化许可和 cache eviction 因设备而异 | 离线更新/冷启动可能失败 | Release E adds deterministic Chromium quota/cache/IndexedDB negative coverage, explicit unavailable states and old-package preservation. Real device/browser eviction variance remains an operational compatibility risk. |
@@ -155,8 +168,8 @@ round trip. They are not current debt. The current count is
 | KI-008 | 生产 OpenAPI 未经同源 `/api/openapi.json` 暴露 | 外部调试和 schema 发现不便 | 受控环境用 `app.openapi()`；不将 404 解释为 API 缺失 |
 | KI-009 | 单个超大 conversation 的 preview/commit 仍会形成完整 Draft 对象 | 峰值 Python 内存仍随单 conversation 增长 | CanJSON 逐行解析和 Draft 流式落盘已降低重复峰值；10,000-message 压测仍需持续记录 |
 | KI-010 | 流式导出事件在响应完全消费前写入 | 客户端中断下载时审计事件仍可能显示已导出 | 当前视为“请求已开始”事件；若需严格完成语义，应在异步 artifact 任务中记录完成事件 |
-| KI-011 | King 单用户部署主动关闭附件恶意软件扫描和内容安全审查 | `scanner_disabled`/`unscanned` 文件没有经过安全检测 | 这是用户接受的部署策略；UI 明确显示“未扫描”，附件功能正常使用，数据完整性校验继续执行 |
-| KI-012 | Office/OCR/CAD/复杂压缩包预览未实现 | 用户只能下载原文件，无法站内查看复杂内容 | 明确 `NOT_IMPLEMENTED`，不在主服务器运行重型转换；基础上传、插入、Range 和浏览器预览不受阻 |
+| KI-011 | 轻量生产部署关闭附件恶意软件扫描和内容安全审查 | `scanner_disabled`/`unscanned` 文件没有经过安全检测 | 这是用户接受的部署策略；UI 明确显示“未扫描”，附件功能正常使用，数据完整性校验继续执行 |
+| KI-012 | 早期一概无 Office/ZIP 预览的描述已被取代 | 部分 Office/OpenDocument 与 ZIP 已有有界只读预览；并非任意保真支持 | OCR/CAD/3D 等仍未实现或下载降级；现行格式与边界见附件合同 |
 | KI-013 | King 原机 Web 构建会触发 OOM | PostgreSQL checkpointer 可能被杀并进入 WAL 恢复 | 禁止在 King 编译 Next 镜像；改用 CI/独立 Linux 构建机和 registry 或 `docker save/load`。本轮恢复后 dump 已校验 |
 | KI-014 | 2026-08-08 附件呈现与任务清单已部署，但请求的 Chrome 扩展验收连接不可用 | 服务健康和路由检查不能替代生产 CSS、最终 DOM 与真实交互体验 | 应用继续运行已发布镜像；Chrome 扩展恢复连接后验证有界 Viewer、附件正文策略和任务 checkbox，再将该项关闭 |
 | KI-015 | 2026-08-09 统一 Attachment Viewer 合同仅完成本地自动化验证 | 真实多格式文件的视觉、codec、PDF worker、长 Markdown 与移动端体验尚不能标为生产 PASS | 使用外部 Linux 镜像部署后，在隔离测试对话执行 Chrome 逐类型验收；默认矩阵跳过项保持 `PARTIAL_PASS` |

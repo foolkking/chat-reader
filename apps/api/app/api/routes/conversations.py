@@ -477,6 +477,26 @@ def update_conversation(
 
     if event_payload:
         _add_conversation_event(db, conversation.id, "conversation_renamed", event_payload)
+    from app.services.search.personal_content_indexer import sync_personal_content
+    sync_personal_content(db, conversation)
+    if event_payload:
+        # Renames must update title-only results without rebuilding message bodies.
+        from app.models.search_document import SearchDocument
+        db.query(SearchDocument).filter(
+            SearchDocument.conversation_id == conversation.id, SearchDocument.document_type != "attachment",
+        ).update(
+            {SearchDocument.title: conversation.display_title}, synchronize_session=False,
+        )
+        title_text = " ".join(value for value in (conversation.title, conversation.display_title, conversation.first_user_message, conversation.summary) if value)
+        db.query(SearchDocument).filter(
+            SearchDocument.conversation_id == conversation.id, SearchDocument.document_type == "conversation",
+        ).update({SearchDocument.plain_text: title_text, SearchDocument.search_text: title_text}, synchronize_session=False)
+        if db.get_bind().dialect.name == "postgresql":
+            from sqlalchemy import text
+            db.execute(text(
+                "UPDATE search_documents SET search_tsv = to_tsvector('simple', coalesce(search_text, '')) "
+                "WHERE conversation_id = :id AND document_type = 'conversation'"
+            ), {"id": conversation.id})
     db.commit()
     return _conversation_detail(conversation)
 

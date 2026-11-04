@@ -108,6 +108,8 @@ class PersonalArchive:
         self.table_models = context_table_models(self.table_models, self.manifest)
         from app.services.exporting.archive_support import support_table_models
         self.table_models = support_table_models(self.table_models, self.manifest)
+        from app.services.exporting.archive_user_features import feature_table_models
+        self.table_models = feature_table_models(self.table_models, self.manifest)
         _validate_canonical_entries(archive, self.manifest, table_names=self.table_models, heartbeat=heartbeat)
         declared = sorted(self.manifest["canonical_entries"], key=lambda row: row["path"])
         self.content_digest = hashlib.sha256(json.dumps({
@@ -169,6 +171,8 @@ class PersonalArchive:
             for item in value: self._embedded(item)
 
     def _validate_references(self):
+        from app.services.exporting.archive_user_features import validate_features
+        validate_features(self)
         attachment_ids = {uuid.UUID(value) for value in self.ids["attachments"]}
         for name, model in self.table_models.items():
             for row in self.rows(name):
@@ -245,7 +249,9 @@ class PersonalArchive:
         return {"content_digest": self.content_digest, "counts": self.counts, "projects": projects,
                 "conversations": conversations, "preview_limit": 50, "missing_assets": len(missing_ids) + unbacked,
                 "missing_attachments": missing_attachments,
-                "include_preferences_default": False, "restore_mode": "additive"}
+                "include_preferences_default": False, "restore_mode": "additive",
+                "personal_collections_included": "user_features" in self.table_models,
+                "excluded_data": ["server_sessions", "passwords", "device_trust", "browser_drafts", "share_links"]}
 
 
 @contextmanager

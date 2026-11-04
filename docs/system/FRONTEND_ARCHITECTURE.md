@@ -1,6 +1,14 @@
 # 前端架构
 
-## Reader edge input ownership — 2026-11-01 candidate, not yet verified
+现役状态校准：2026-11-04。当前 `be58b12` 已包含 Reader 几何/输入恢复、
+收藏、键盘与富内容修正；完整精确源码 CI 已通过。下方 dated candidate/local
+叙述保留失败与检查点证据，不能重新解释成当前源码未发布；真实设备和认证 UI
+仍待单独验收。参见 [Project State](../../PROJECT_STATE.md) 与
+[Reader 发布记录](../execution/READER_ZIP_RELEASE_2026-11-04.md)。
+
+<a id="reader-edge-input-ownership--2026-11-01-candidate-not-yet-verified"></a>
+
+## Reader edge input ownership — historical 2026-11-01 candidate
 
 Canonical online/offline Reader edge restoration snapshots the existing real
 scroll-intent sequence. New wheel, touch, keyboard or scrollbar intent retires

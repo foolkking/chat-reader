@@ -1,11 +1,18 @@
 # Next LTS Migration Contract
 
-Last updated: 2026-10-01
+Last synchronized: 2026-11-04
 
-Current status: Next 16.3.6 is locally patched; final CI is pending. Release F established the Next 16
-boundary; the current maintenance baseline is Next 16.3.6. The original Release
-F artifact, backup, runtime identity and production acceptance remain historical
-evidence below.
+Current pinned versions are **Next 16.4.1**, **React/react-dom 19.2.8** in
+`apps/web/package.json` and `pnpm-lock.yaml`. Web CI and image runtime use
+**Node 22.13.1** in the workflow and Dockerfile. These versions are included in
+current source `be58b12`; exact CI and runtime acceptance are owned by
+[Project State](../../PROJECT_STATE.md) and the
+[release receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md).
+This closeout did not perform a fresh registry/security-latest review.
+
+Release F established the Next 16 boundary. The stages, version/provenance tables,
+old backup/rollback references and original acceptance below are **historical
+Release F checkpoints**, not the current dependency versions or deployment plan.
 
 Release F moves the Web app from unsupported Next 14 to stable Next 16. It is a framework migration only; Reader, Share, Viewer, Import, Export, cr v4, Offline package v2, Dexie v1, PDF.js and CSP enforcement contracts remain unchanged.
 
@@ -18,7 +25,7 @@ Release F moves the Web app from unsupported Next 14 to stable Next 16. It is a 
 
 The F1 checkpoint is retained as migration evidence only. Production must not deploy a Next 15 candidate unless an operator explicitly approves a separate exception.
 
-## Final Versions
+## Final Versions (historical maintenance checkpoint)
 
 | Package | Version | Source |
 | --- | --- | --- |
@@ -35,7 +42,7 @@ CI and the Web build/runtime images together to Node 22.13.1 because
 not change. Release F's closed evidence remains historical, while the Release
 G runtime requires its own final CI and production proof.
 
-## Provenance
+## Provenance (historical maintenance checkpoint)
 
 | Package | Tarball | Integrity |
 | --- | --- | --- |
@@ -43,7 +50,9 @@ G runtime requires its own final CI and production proof.
 | react 19.2.8 | https://registry.npmjs.org/react/-/react-19.2.8.tgz | sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw== |
 | react-dom 19.2.8 | https://registry.npmjs.org/react-dom/-/react-dom-19.2.8.tgz | sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ== |
 
-The lockfile contains the same integrity values. Release builds must continue to use locked installs and the official npm audit source.
+Those integrity values describe that checkpoint, not the current Next 16.4.1
+lock entry. Release builds must continue to use locked installs and the official
+npm audit source.
 
 ## Build And Bundler
 

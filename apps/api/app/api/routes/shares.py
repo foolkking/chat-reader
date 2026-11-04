@@ -1,7 +1,7 @@
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -16,6 +16,7 @@ from app.schemas.toc import TocResponse
 from app.services.sharing.share_service import (
     ShareError,
     create_share,
+    find_share_creation,
     get_shared_dialogue_index,
     get_shared_conversation_by_token,
     get_shared_message_blocks,
@@ -111,15 +112,28 @@ def create_conversation_share(
     conversation_id: uuid.UUID,
     payload: ShareCreate,
     request: Request,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", max_length=128),
     db: Session = Depends(get_db),
 ) -> ShareCreateResponse:
     try:
-        result = create_share(db, conversation_id, payload, ownership_scope_from_request(request))
+        result = create_share(db, conversation_id, payload, ownership_scope_from_request(request), idempotency_key=idempotency_key)
         db.commit()
         return share_create_response(result)
     except ShareError as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)} if exc.code else str(exc)) from exc
+
+
+@router.get("/api/conversations/{conversation_id}/share-creations/{creation_key}", response_model=ShareCreateResponse | None)
+def get_share_creation(conversation_id: uuid.UUID, creation_key: str, request: Request,
+                       db: Session = Depends(get_db)):
+    try:
+        if not 1 <= len(creation_key) <= 128:
+            raise ShareError("Invalid creation key.", 422)
+        result = find_share_creation(db, conversation_id, creation_key, ownership_scope_from_request(request))
+        return share_create_response(result) if result else None
+    except ShareError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
 
 @router.get("/api/conversations/{conversation_id}/shares", response_model=list[ShareRead])

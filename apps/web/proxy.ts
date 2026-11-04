@@ -32,6 +32,8 @@ function isPublicPath(pathname: string): boolean {
   return /^\/(?:login|register|account-upgrade|password-reset|reset-password|verify-email)(?:\/|$)/i.test(pathname)
     || /^\/share\/[^/]+\/?$/i.test(pathname)
     || pathname === "/health"
+    // The shell contains no private records. Local access is independently gated.
+    || pathname === "/library" || pathname.startsWith("/library/")
     || pathname.startsWith("/api/")
     || pathname.startsWith("/_next/")
     || pathname.startsWith("/icons/")

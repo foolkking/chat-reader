@@ -25,7 +25,8 @@ test("successful conversation/message read commits ready before optional search 
   const reload = between("const reloadLocal = useCallback", "  const retryLocalRead");
   assert.match(reload, /if \(!libraryMountedRef\.current\) return Promise\.resolve\(\);/);
   assert.match(reload, /const fallback = await offlineDb\.conversations\.toArray\(\)/);
-  assert.match(reload, /const localMessages = await offlineDb\.messages\.toArray\(\)/);
+  assert.match(reload, /await offlineDb\.messages\.each\(/);
+  assert.doesNotMatch(reload, /offlineDb\.messages\.toArray\(/);
   assert.match(reload, /localListCommitted = true/);
   assert.match(reload, /phase: "ready", refreshing: false, refreshError: false/);
   assert.match(reload, /await reloadSearchIndex\(\)/);

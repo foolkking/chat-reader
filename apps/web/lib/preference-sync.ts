@@ -93,7 +93,7 @@ function mergeServer(state: PreferenceSyncState, fresh: UserPreferenceRead): voi
 
 const running = new WeakMap<typeof offlineDb, Promise<void>>();
 export function flushPreferenceSync(options: { refresh?: boolean; retry?: boolean } = {}): Promise<void> {
-  if (!navigator.onLine) return Promise.resolve();
+  if (!navigator.onLine || (offlineAuthenticationRequired() && !canUseServer(getActiveOfflineStorageContext().userId))) return Promise.resolve();
   const db = offlineDb, access = captureOfflineAccess();
   const previous = running.get(db); if (previous) return previous;
   const run = async () => {
@@ -164,3 +164,5 @@ export async function resolvePreferenceConflict(key: PreferenceField, choice: "l
   });
   notify();
 }
+import { canUseServer } from "./server-session";
+import { offlineAuthenticationRequired } from "./offline-access";

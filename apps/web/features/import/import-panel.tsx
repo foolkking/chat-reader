@@ -17,6 +17,8 @@ import { AdaptiveImportWorkspace } from "./adaptive-import-workspace";
 import { FormatConversionGuide } from "./format-conversion-guide";
 import { ImportNoiseReview } from "./import-noise-review";
 import { createPastedTranscriptFile, pastedTranscriptByteLength } from "./pasted-transcript";
+import { getUnfinishedImports } from "../../lib/api";
+import { getActiveOfflineStorageContext } from "../../lib/offline-db";
 
 type ImportMode = "adaptive" | "archive";
 type ImportSessionRestoreState = {
@@ -26,7 +28,9 @@ type ImportSessionRestoreState = {
 const ACTIVE_SESSION_KEY = "chat-reader:adaptive-import-session";
 
 function sessionStorageKey(repairProfileId?: string | null): string {
-  return repairProfileId ? `${ACTIVE_SESSION_KEY}:repair:${repairProfileId}` : ACTIVE_SESSION_KEY;
+  const userId = getActiveOfflineStorageContext().userId;
+  const base = userId ? `${ACTIVE_SESSION_KEY}:account:${userId}` : ACTIVE_SESSION_KEY;
+  return repairProfileId ? `${base}:repair:${repairProfileId}` : base;
 }
 
 export function ImportPanel({
@@ -75,6 +79,13 @@ export function ImportPanel({
   const [targetProjectId, setTargetProjectId] = useState<string | null>(initialProjectId);
   const [sessionRestore, setSessionRestore] = useState<ImportSessionRestoreState>({ phase: "idle", error: null });
   const [sessionRestoreRetry, setSessionRestoreRetry] = useState(0);
+  const [unfinishedOffset, setUnfinishedOffset] = useState(0);
+  const unfinished = useQuery({
+    queryKey: ["unfinished-imports", generation.current, unfinishedOffset],
+    queryFn: ({ signal }) => getUnfinishedImports(unfinishedOffset, signal),
+    enabled: !session && mode === "adaptive",
+    retry: false,
+  });
   const [pendingImportId, setPendingImportId] = useState<string | null>(null);
   const [commitResult, setCommitResult] = useState<CommitImportResponse | null>(null);
   const [terminalImportError, setTerminalImportError] = useState<string | null>(null);
@@ -424,6 +435,14 @@ export function ImportPanel({
 
   return (
     <section className="space-y-5">
+      {mode === "adaptive" ? <section className="space-y-2 border-b border-ui pb-3" aria-label={zh ? "待完成导入" : "Unfinished imports"}>
+        <h3 className="text-sm font-semibold text-primary">{zh ? "待完成导入" : "Unfinished imports"}</h3>
+        {unfinished.isPending ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取…" : "Loading…"}</p> : unfinished.error ? <ErrorLine message={unfinished.error} onRetry={() => void unfinished.refetch()} /> : unfinished.data?.items?.length ? <ul className="divide-y divide-[var(--border)]">{unfinished.data.items.map(item => <li key={item.import_id} className="flex items-center gap-3 py-2">
+          <div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{item.title}</p><p className="text-xs text-secondary">{item.state} · {new Date(item.updated_at).toLocaleString()}{!item.source_available ? (zh ? " · 来源已不可用，请重新选择文件" : " · Source unavailable; select files again") : ""}</p></div>
+          <button type="button" disabled={!item.source_available || sessionRestore.phase === "loading"} className="btn-secondary min-h-10 px-3 text-sm disabled:opacity-50" onClick={() => { resumeSessionRef.current = item.import_id; setSessionRestoreRetry(value => value + 1); }}>{zh ? "继续处理" : "Resume"}</button>
+        </li>)}</ul> : <p className="text-sm text-secondary">{zh ? "没有待完成的导入。" : "No unfinished imports."}</p>}
+        <div className="flex gap-3">{unfinishedOffset > 0 ? <button type="button" className="min-h-10 text-sm text-accent" onClick={() => setUnfinishedOffset(value => Math.max(0, value - 20))}>{zh ? "上一页" : "Previous"}</button> : null}{unfinished.data?.has_more ? <button type="button" className="min-h-10 text-sm text-accent" onClick={() => setUnfinishedOffset(value => value + 20)}>{zh ? "下一页" : "Next"}</button> : null}</div>
+      </section> : null}
       {sessionRestore.phase === "loading" ? <p role="status" className="text-sm text-secondary">{tr("正在恢复已保存的导入会话…")}</p> : null}
       {sessionRestore.phase === "error" ? <ErrorLine message={sessionRestore.error} onRetry={() => { setSessionRestore({ phase: "loading", error: null }); setSessionRestoreRetry((attempt) => attempt + 1); }} /> : null}
       {repairProfileId ? <p className="text-sm leading-6 text-secondary">{tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。")}</p> : null}

@@ -73,6 +73,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead } = {
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
     "../../lib/api": api, "../../lib/offline-access": { authenticationGeneration: () => generation },
     "../../lib/auth-client": { readAccountCapabilities: noop },
+    "../../lib/offline-db": { getActiveOfflineStorageContext: () => ({ userId: null }) },
     "../../components/support-limit-action": { SupportLimitAction: "SupportLimitAction" },
     "./import-preview-card": { ImportPreviewCard: "ImportPreviewCard" },
     "./adaptive-import-workspace": { AdaptiveImportWorkspace: "AdaptiveImportWorkspace" },

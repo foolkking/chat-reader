@@ -65,8 +65,22 @@ def write_entry(
     schema = _ensure_collection(collection)
     parsed = schema.model_validate(value)
     normalized_value = parsed.model_dump(mode="json")
+    if collection == "saved-search":
+        lock_feature_collection(db, subject_key, "conversation-tag")
     _lock_entry(db, subject_key, collection, entry_id)
     get_or_create_preferences(db, subject_key)
+    if collection == "reading-list":
+        source = db.scalar(select(Conversation).where(
+            Conversation.id == parsed.conversation_id,
+            ownership_scope.predicate(Conversation),
+            Conversation.deleted_at.is_(None),
+        ).with_for_update())
+        if source is None:
+            raise UserFeatureEntryConflict("The selected conversation is unavailable.")
+    if collection == "saved-search" and parsed.tag_id:
+        tag = db.get(UserFeatureEntry, parsed.tag_id)
+        if tag is None or tag.subject_key != subject_key or tag.collection != "conversation-tag":
+            raise UserFeatureEntryConflict("The selected tag is unavailable.")
     if collection == "conversation-tag":
         conversation_ids = set(parsed.conversation_ids)
         if conversation_ids:
@@ -165,6 +179,14 @@ def delete_entry(
     if expected_revision != row.revision:
         raise UserFeatureEntryConflict("The saved entry changed. Reload it before deleting.")
     if collection == "conversation-tag":
+        lock_feature_collection(db, subject_key, "saved-search")
+        for search in db.scalars(select(UserFeatureEntry).where(
+            UserFeatureEntry.subject_key == subject_key,
+            UserFeatureEntry.collection == "saved-search",
+            UserFeatureEntry.value["tag_id"].as_string() == str(entry_id),
+        ).with_for_update()):
+            search.value = {**search.value, "tag_id": None}
+            search.revision += 1
         _invalidate_tag_packages(db, row.value, None, ownership_scope)
     db.delete(row)
     db.flush()
@@ -207,6 +229,11 @@ def _invalidate_tag_packages(db: Session, previous: dict | None, current: dict |
 
 
 def _lock_entry(db: Session, subject_key: str, collection: str, entry_id: uuid.UUID) -> None:
+    lock_feature_collection(db, subject_key, collection)
+
+
+def lock_feature_collection(db: Session, subject_key: str, collection: str) -> None:
+    """Acquire before conversation rows (tag writes use this same lock order)."""
     if db.get_bind().dialect.name != "postgresql":
         return
     # Serialize collection membership as well as revisions: two tabs may add

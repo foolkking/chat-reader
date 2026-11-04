@@ -56,6 +56,7 @@ Index("idx_shares_expires_at", Share.expires_at)
 Index("idx_shares_revoked_at", Share.revoked_at)
 Index("idx_shares_created_at", Share.created_at)
 Index("idx_shares_last_accessed_at", Share.last_accessed_at)
+Index("uq_shares_creation_intent", Share.conversation_id, Share.metadata_["creation_key"].as_string(), unique=True)
 
 
 class ShareUnlockSession(Base):

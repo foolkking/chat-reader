@@ -8,6 +8,8 @@ from app.models.annotation import ConversationAnnotation
 from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.user import User
+from app.models.user_feature_entry import UserFeatureEntry
+from app.services.preferences import get_or_create_preferences
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, LEGACY_SUBJECT_KEY
 from app.services.reading_list import reading_list_summary
 from test_attachment_storage_integrity import _conversation, _database
@@ -27,6 +29,14 @@ def test_reading_list_projection_pages_counts_and_hides_foreign_metadata(client)
         db.add_all(conversations)
         db.commit()
         for index, conversation in enumerate(conversations):
+            if conversation.owner_user_id == foreign_owner:
+                # A legacy stale reference remains readable as unavailable;
+                # new writes may no longer create foreign/deleted references.
+                get_or_create_preferences(db, LEGACY_SUBJECT_KEY)
+                db.add(UserFeatureEntry(subject_key=LEGACY_SUBJECT_KEY, collection="reading-list",
+                    value={"conversation_id": str(conversation.id), "state": "unread"}))
+                db.commit()
+                continue
             response = client.put(f"/api/user-feature-entries/reading-list/{uuid.uuid4()}", json={
                 "expected_revision": 0,
                 "value": {"conversation_id": str(conversation.id), "state": "read" if index == 0 else "unread"},

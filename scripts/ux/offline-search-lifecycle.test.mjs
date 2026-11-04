@@ -54,7 +54,10 @@ function fixture({ allowed = true } = {}) {
   const setTimer = fn => { const id = ++timerId; timers.set(id, fn); return id; };
   const clearTimer = id => timers.delete(id);
   const setter = key => value => { state[key] = typeof value === "function" ? value(state[key]) : value; };
-  const table = (name, values) => ({ toArray: async () => {
+  const table = (name, values) => ({ each: async fn => {
+    calls.reads.push(name);
+    for (const value of values()) fn(structuredClone(value));
+  }, toArray: async () => {
     calls.reads.push(name);
     return structuredClone(values());
   } });
@@ -72,7 +75,7 @@ function fixture({ allowed = true } = {}) {
   };
   const bindings = {
     exports: {}, useCallback: fn => fn, offlineDb: db,
-    queryClient: {}, invalidateReaderSearch: () => {},
+    queryClient: { invalidateQueries: async () => {} }, invalidateReaderSearch: () => {},
     searchReloadSequenceRef: { current: 0 }, searchReloadQueueRef: { current: Promise.resolve() },
     searchWatchFailedRef: { current: false }, libraryMountedRef: { current: false },
     reloadSequenceRef: { current: 0 }, reloadQueueRef: { current: Promise.resolve() },

@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.models.user import User
 from app.models.user_feature_entry import UserFeatureEntry
+from app.models.conversation import Conversation
+from app.services.ownership import OwnershipScope
 from app.services.user_feature_entries import UserFeatureEntryConflict, write_entry
 from test_import_profile_postgres import isolated_schema  # noqa: F401
 
@@ -24,16 +26,20 @@ def test_different_entry_ids_cannot_add_one_conversation_twice(isolated_schema):
     with Session(engine) as db:
         owner = User(normalized_email=f"reading-{uuid.uuid4()}@example.test")
         db.add(owner)
-        db.commit()
+        db.flush()
+        conversation = Conversation(owner_user_id=owner.id, title="Synthetic", display_title="Synthetic",
+            source_type="manual", source_profile="test", parser_version="test")
+        db.add(conversation); db.commit()
         subject = str(owner.id)
-    value = {"conversation_id": str(uuid.uuid4()), "state": "unread"}
+        owner_id, conversation_id = owner.id, conversation.id
+    value = {"conversation_id": str(conversation_id), "state": "unread"}
     barrier = Barrier(2)
 
     def add(_):
         with Session(engine) as db:
             barrier.wait(timeout=10)
             try:
-                write_entry(db, subject, "reading-list", uuid.uuid4(), 0, value)
+                write_entry(db, subject, "reading-list", uuid.uuid4(), 0, value, OwnershipScope(owner_id))
                 db.commit()
                 return "saved"
             except UserFeatureEntryConflict:

@@ -1,21 +1,29 @@
 # Testing
 
-## Small-ZIP bounded memory candidate — 2026-11-04
+Only the top exact-source section and [Project State](../PROJECT_STATE.md)
+describe the current release. Dated results below retain their original
+checkpoint scope; a historical candidate/failure is neither a new work order
+nor a substitute for current authenticated-browser/user-data acceptance.
 
-The current work adds `test_small_zip_memory_budget.py`, PostgreSQL
-transaction-lane/cancellation coverage, actual-component bilingual recovery
-tests and mounted browser recovery at 375/768/1440px. A separate release gate
-runs the exact application worker under real Linux **320 MiB memory /
-320 MiB memory+swap** (no additional swap), without mocking admission sensors.
-It performs queued analysis and canonical commit of a shape-matching synthetic
-ZIP, verifies 1 conversation / 4 messages / 14 assets / 13 occurrences, and
-requires ≤64 MiB workspace peak growth with no OOM/kill/restart. The
-`small-zip-memory.json` report is part of the official artifact and checked
-independently. Local component tests are not a substitute for that runtime gate.
-Exact candidate CI/deployment acceptance is still pending; the prior release
-receipt below is not acceptance of this change.
+## Current exact-source CI and production — small-ZIP memory recovery — 2026-11-04
 
-## Current exact-source CI and production acceptance — 2026-11-04
+Exact source `be58b12b191e9f0fa4010f8ed4293781fec01157` passed all six jobs in
+full CI `41737744696`, attempt 1. The result was read at
+2026-11-04 00:05:54Z after the 50-minute gate. Official artifact
+`13282163237` SHA-256:
+`8503d136eeed056b51d7d6b1b69f7f4f3c1f440d52342e3668ffb3cd5d83808b`.
+The exact API image passed the real Linux **320 MiB memory / 320 MiB
+memory+swap** worker gate without additional swap or mocked admission sensors.
+The synthetic archive analysis/commit checked counts and attachment hashes,
+with ≤64 MiB workspace growth and no OOM/kill/restart. Independent inspection
+validated the published artifact.
+
+Production `be58b12` is live; direct rollback is `3b839dc`, and schema head
+remains `20261030_0058` with no migration. This does not establish that the
+user's original ZIP was retried successfully. See the
+[release and cleanup record](execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md).
+
+## Previous production checkpoint — Reader, rich Markdown and Adaptive ZIP — 2026-11-04
 
 Full CI `41633888061`, attempt 1, ran against exact source
 `3b839dc1adfac431b6c44c2e1928a9be946cb42f`. All six jobs passed:
@@ -23,7 +31,7 @@ API, Web, settings, reading-performance comparison, image build and independent
 release-artifact inspection. Official artifact `13232957284` was independently
 checked; its archive SHA-256 is
 `6b6ba4c080da4e316bf1f12d353a574723a5bfd871413e4432ebf9c15a6250a`.
-Production acceptance and independent runtime/backup recheck passed on
+At that checkpoint, production acceptance and independent runtime/backup recheck passed on
 2026-11-03 16:04:43Z and 16:08:12Z respectively. This does not claim an
 authenticated production UI run, real user-side 47-conversation offline
 download/update, sustained load or isolated restore drill. See the
@@ -320,7 +328,9 @@ fluid width. Regression assertions require all four panel edges within the
 viewport at both 320px and 375px. Final-source screenshots and full CI are
 required for acceptance.
 
-## Current accepted release — 2026-10-30
+<a id="current-accepted-release--2026-10-30"></a>
+
+## Historical accepted release — 2026-10-30
 
 Exact `127eae589ae3f9703d9a3dbf9bbf04a4f2a178d5` passed all five jobs in
 full CI `41041436271`, attempt 1. Dispatch **10:31:58Z**, first result read
@@ -3491,7 +3501,9 @@ started; real layout/focus acceptance remains NOT_VERIFIED. This batch is exclud
 from CI 37812290017 and remains uncommitted. See the
 [verification ledger](execution/ux-audit-project-recovery-2026-10-09.md#verification-ledger).
 
-## Current release verification — 2026-10-08
+<a id="current-release-verification--2026-10-08"></a>
+
+## Historical release verification — 2026-10-08
 
 The [release record](execution/OPTIMIZATION_RELEASE_2026-10-08.md) owns exact-source
 CI and every failed attempt. Accepted source `30a0d32` / 37773748374 passes all
@@ -5488,3 +5500,17 @@ The `76d277d` run passed API and settings, but its Default PWA inventory found
 that the new `features/compare` directory lacked an explicit browser test owner.
 It is now registered against `web-opportunity-features.spec.ts`; the comparison
 browser contract remains active. The run did not produce an accepted artifact.
+## Comprehensive candidate verification — 2026-11-05
+
+New focused suites: `test_optimization_{auth,workflows,archives}.py`,
+`test_optimization_migration_postgres.py`, actual
+`test_backup_restore_drill_postgres.py`, search materialization characterization,
+`auth-recovery.spec.ts`, and `scripts/ux/offline-resource-bounds.test.mjs`.
+The API full suite now owns previously duplicated offline-reference/catalog and
+cleanup subsets; `--capture=tee-sys` preserves measurement output. No tests or
+independent auth/PWA/Reader/Share/migration/image gates are removed.
+
+Execution counts and unresolved runs belong in
+[the dated receipt](execution/COMPREHENSIVE_OPTIMIZATION_2026-11-05.md).
+Production acceptance, user ZIP success and real-device large-library capacity
+are separate from synthetic/local/CI verification.

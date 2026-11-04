@@ -5,12 +5,15 @@ import {
   getActiveOfflineStorageContext,
   readPersistedOfflineUserId,
   type OfflineStorageContext,
+  offlineDb,
 } from "./offline-db";
 import {
   disableOfflineShellAfterIdentityFailure,
   persistOfflineShellIdentity,
 } from "./offline-shell";
-import { authorizeOfflineAccess } from "./offline-access";
+import { authorizeOfflineAccess, authenticationGeneration, notifyAuthenticationFailure, captureOfflineAccess, assertOfflineAccess } from "./offline-access";
+import { deviceTrusted, setDeviceTrusted } from "./offline-device-trust";
+import { observeSessionResponse, pauseServerSession, serverSession, setServerSession } from "./server-session";
 import { resetOfflineSearch } from "./offline-search";
 import { freezeOfflineWrites } from "./offline-write-guard";
 import { OfflinePendingChangedError, readOfflinePending } from "./offline-pending";
@@ -30,6 +33,7 @@ export type AuthSessionState = {
   principal_id: string | null;
   user_id: string | null;
   inactivity_expires_at: string | null;
+  failure_reason?: string | null;
   auth_mode: "single_password" | "multi_account" | "pending_approval" | "pending_verification";
   email: string | null;
   display_name: string | null;
@@ -55,11 +59,36 @@ export class AuthRequestError extends Error {
   }
 }
 
-export async function readAuthSession(signal?: AbortSignal): Promise<AuthSessionState> {
-  const session = await authRequest<AuthSessionState>("/api/auth/session", { signal });
-  if (typeof session?.authenticated !== "boolean" || (session.authenticated && !session.user_id && !session.principal_id)) {
-    throw new AuthRequestError("Invalid authentication response.", 502);
+let sessionRead: Promise<AuthSessionState> | null = null;
+let sessionSnapshot: AuthSessionState | null = null;
+let sessionReadAt = 0;
+let sessionVersion = 0;
+export function forgetAuthSession(): void {
+  sessionVersion += 1; sessionRead = null; sessionSnapshot = null; sessionReadAt = 0;
+}
+export async function readAuthSession(signal?: AbortSignal, maxAge = 0): Promise<AuthSessionState> {
+  signal?.throwIfAborted();
+  if (serverSession().status === "verified" && sessionSnapshot?.authenticated && Date.now() - sessionReadAt < maxAge
+    && Date.parse(sessionSnapshot.inactivity_expires_at ?? "") > Date.now()) {
+    const current = serverSession();
+    return current.status === "verified" && current.userId === (sessionSnapshot.user_id ?? sessionSnapshot.principal_id)
+      && current.expiresAt > Date.parse(sessionSnapshot.inactivity_expires_at ?? "")
+      ? { ...sessionSnapshot, inactivity_expires_at: new Date(current.expiresAt).toISOString() } : sessionSnapshot;
   }
+  if (!sessionRead) {
+    const version = sessionVersion;
+    const request = authRequest<AuthSessionState>("/api/auth/session").then((session) => {
+      if (typeof session?.authenticated !== "boolean" || (session.authenticated && !session.user_id && !session.principal_id)) {
+        throw new AuthRequestError("Invalid authentication response.", 502);
+      }
+      if (version === sessionVersion) { sessionSnapshot = session; sessionReadAt = Date.now(); }
+      return session;
+    });
+    sessionRead = request;
+    void request.finally(() => { if (sessionRead === request) sessionRead = null; }).catch(() => undefined);
+  }
+  const session = await sessionRead;
+  signal?.throwIfAborted();
   return session;
 }
 
@@ -70,7 +99,16 @@ export async function readAuthSetup(): Promise<AuthSetupState> {
 export async function loginWithPassword(email: string, password: string): Promise<AuthSessionState> {
   // The private boundary initializes local storage after navigation. A local
   // cache failure must not turn an accepted password into a failed login.
-  return authMutation<AuthSessionState>("/api/auth/login", { email, password });
+  forgetAuthSession();
+  const session = await authMutation<AuthSessionState>("/api/auth/login", { email, password });
+  if (session.authenticated) {
+    const userId = resolveSessionUserId(session);
+    writeLockedOfflineUsers(lockedOfflineUsers().filter(id => id !== userId));
+    // Explicit credentials can select B while A remains locally locked.
+    // Do not clear A's lock or open either database until the boundary verifies.
+    rememberOfflineLease(session.inactivity_expires_at, userId);
+  }
+  return session;
 }
 
 export async function registerAccount(input: {
@@ -85,6 +123,7 @@ export async function registerAccount(input: {
     confirm_password: input.confirmPassword,
     invitation_token: input.invitationToken || undefined,
   });
+  if (session.authenticated) rememberOfflineLease(session.inactivity_expires_at, resolveSessionUserId(session));
   return session;
 }
 
@@ -167,8 +206,21 @@ export type AccountCapabilities = {
   email_delivery_available: boolean;
 };
 
-export function readAccountCapabilities(signal?: AbortSignal): Promise<AccountCapabilities> {
-  return authRequest<AccountCapabilities>("/api/auth/capabilities", { signal });
+let capabilitiesRead: { generation: number; request: Promise<AccountCapabilities> } | null = null;
+export async function readAccountCapabilities(signal?: AbortSignal): Promise<AccountCapabilities> {
+  signal?.throwIfAborted();
+  const generation = authenticationGeneration();
+  if (!capabilitiesRead || capabilitiesRead.generation !== generation) {
+    const request = authRequest<AccountCapabilities>("/api/auth/capabilities");
+    capabilitiesRead = { generation, request };
+    void request.finally(() => {
+      if (capabilitiesRead?.request === request) capabilitiesRead = null;
+    }).catch(() => undefined);
+  }
+  const result = await capabilitiesRead.request;
+  signal?.throwIfAborted();
+  if (generation !== authenticationGeneration()) throw new DOMException("Account changed", "AbortError");
+  return result;
 }
 
 export type AppInfo = { api_version: string; revision: string | null };
@@ -245,6 +297,8 @@ export function rememberOfflineLease(expiresAt: string | null, userId?: string |
 }
 
 export function hasCurrentOfflineLease(now = Date.now()): boolean {
+  const userId = readOfflineLeaseUserId();
+  if (userId && deviceTrusted(userId) && !lockedOfflineUsers().includes(userId)) return true;
   const value = readLocalStorage(OFFLINE_LEASE_KEY);
   return hasSessionPresenceMarker()
     && value !== null
@@ -265,6 +319,7 @@ export function readOfflineLeaseUserId(): string | null {
 }
 
 export function offlineLeaseExpiresAt(): number {
+  if (deviceTrusted(readOfflineLeaseUserId())) return Infinity;
   return Date.parse(readLocalStorage(OFFLINE_LEASE_KEY) ?? "");
 }
 
@@ -286,7 +341,7 @@ export function getCurrentOfflineRuntimeUserId(): string | null {
 }
 
 export function hasLockedOfflineAccount(): boolean {
-  const userId = getCurrentOfflineRuntimeUserId() ?? readPersistedOfflineUserId();
+  const userId = readOfflineLeaseUserId() ?? readPersistedOfflineUserId() ?? getCurrentOfflineRuntimeUserId();
   return Boolean(userId && lockedOfflineUsers().includes(userId));
 }
 
@@ -297,9 +352,14 @@ function hasSessionPresenceMarker(): boolean {
 let clearingAuthentication: Promise<void> | null = null;
 
 export function lockBrowserAuthenticationState(notify = true): void {
+  forgetAuthSession();
+  pauseServerSession("sign-in-required");
   const storedUserId = readOfflineLeaseUserId();
   const userId = getActiveOfflineStorageContext().userId ?? storedUserId ?? readPersistedOfflineUserId();
-  if (userId) writeLockedOfflineUsers([...new Set([...lockedOfflineUsers(), userId])]);
+  if (userId) {
+    writeLockedOfflineUsers([...new Set([...lockedOfflineUsers(), userId])]);
+    try { setDeviceTrusted(userId, false); } catch { /* The persisted lock still prevents access. */ }
+  }
   // Another tab may already have verified B while this tab still holds A.
   // Lock A's runtime without erasing B's newly established shared lease.
   if (!storedUserId || storedUserId === userId) {
@@ -351,6 +411,7 @@ export async function bindAuthenticatedOfflineContext(session: AuthSessionState,
     const priorUser = readPersistedOfflineUserId();
     if (priorUser && !localStorage.getItem("chat-reader:legacy-preferences-owner-v1")) localStorage.setItem("chat-reader:legacy-preferences-owner-v1", priorUser);
   } catch { /* Unbound legacy preferences are not automatically uploaded. */ }
+  const previousRuntimeUser = getCurrentOfflineRuntimeUserId();
   const context = await activateProtectedOfflineData(userId, {
     openDatabase: false,
     claimLegacy: session.principal_id === "owner",
@@ -358,7 +419,7 @@ export async function bindAuthenticatedOfflineContext(session: AuthSessionState,
   });
   signal?.throwIfAborted();
   try {
-    await persistOfflineShellIdentity(context, signal);
+    if (previousRuntimeUser !== userId) await persistOfflineShellIdentity(context, signal);
   } catch {
     signal?.throwIfAborted();
     // Authentication must not be reported as failed after the server has
@@ -372,14 +433,54 @@ export async function bindAuthenticatedOfflineContext(session: AuthSessionState,
   writeLockedOfflineUsers(lockedOfflineUsers().filter((id) => id !== userId));
   rememberOfflineLease(session.inactivity_expires_at, userId);
   const expiresAt = Date.parse(session.inactivity_expires_at ?? "");
-  authorizeOfflineAccess(userId, expiresAt, () => {
+  authorizeOfflineAccess(userId, deviceTrusted(userId) ? Infinity : expiresAt, () => {
+    if (deviceTrusted(userId)) return hasCurrentOfflineLease() && readOfflineLeaseUserId() === userId;
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) return false;
     const storedUser = readOfflineLeaseUserId();
     // Online authentication can work when localStorage is unavailable. Offline
     // reads always require the persisted, account-bound server lease.
     return navigator.onLine ? (!storedUser || storedUser === userId) : hasCurrentOfflineLease() && storedUser === userId;
   });
+  // Resume the same durable operation IDs, not new writes after login.
+  try {
+    const db = offlineDb, access = captureOfflineAccess();
+    await db.outbox.filter(row => row.last_error === "AUTH").modify({ last_error: null, attempts: 0, retry_after: 0 });
+    await db.transaction("rw", db.settings, async () => {
+      signal?.throwIfAborted();
+      assertOfflineAccess(access);
+      const row = await db.settings.get("account-preferences:v1");
+      assertOfflineAccess(access);
+      const value = row?.value as { error?: string; attempts: number; retryAfter?: number } | undefined;
+      if (row && value?.error === "AUTH") {
+        delete value.error; delete value.retryAfter; value.attempts = 0;
+        // Preserve any in-flight operation identifier for idempotent recovery.
+        await db.settings.put({ ...row, value });
+      }
+    });
+  } catch { /* Storage availability must not turn a valid login into failure. */ }
+  signal?.throwIfAborted();
+  setServerSession({ status: "verified", userId, expiresAt, checkedAt: Date.now() });
   return context;
+}
+
+export function refreshAuthenticatedOfflineLease(): void {
+  const current = serverSession(), userId = getCurrentOfflineRuntimeUserId();
+  if (!userId || current.status !== "verified" || current.userId !== userId || current.expiresAt <= Date.now()) return;
+  rememberOfflineLease(new Date(current.expiresAt).toISOString(), userId);
+  authorizeOfflineAccess(userId, deviceTrusted(userId) ? Infinity : current.expiresAt, () =>
+    deviceTrusted(userId) ? hasCurrentOfflineLease() && readOfflineLeaseUserId() === userId
+      : (serverSession().userId === userId && serverSession().expiresAt > Date.now()
+        && (navigator.onLine || hasCurrentOfflineLease()) && !lockedOfflineUsers().includes(userId)));
+}
+
+export function trustCurrentDevice(): void {
+  const userId = getCurrentOfflineRuntimeUserId();
+  if (!userId || serverSession().userId !== userId || serverSession().status !== "verified"
+    || serverSession().expiresAt <= Date.now() || hasLockedOfflineAccount()) {
+    throw new AuthRequestError("Verify this account online before trusting this browser.", 401);
+  }
+  setDeviceTrusted(userId, true);
+  authorizeOfflineAccess(userId, Infinity, () => hasCurrentOfflineLease() && readOfflineLeaseUserId() === userId);
 }
 
 export function safeReturnPath(pathname: string): string {
@@ -413,6 +514,7 @@ async function authMutation<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function authRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const generation = authenticationGeneration(), requestUser = serverSession().userId;
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS);
   const signal = init.signal ? AbortSignal.any([controller.signal, init.signal]) : controller.signal;
@@ -424,7 +526,11 @@ async function authRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
       credentials: "same-origin",
       headers: { Accept: "application/json", ...init.headers },
     });
+    if (generation === authenticationGeneration()) observeSessionResponse(response, requestUser);
     if (!response.ok) {
+      if (response.status === 401 && !["/api/auth/login", "/api/auth/register"].includes(path)) {
+        notifyAuthenticationFailure(generation, response.headers.get("X-Chat-Reader-Auth-Reason"));
+      }
       let detail = "Authentication request failed.";
       try {
         const payload = await response.json() as { detail?: unknown };

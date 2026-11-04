@@ -96,7 +96,8 @@ for (const scenario of ["new edit during snapshot", "snapshot failure after serv
       } else {
         expect((await admin.patch(`/api/admin/access/users/${userId}/status`, { data: { status: "DISABLED" } })).status()).toBe(200);
         await context.setOffline(false);
-        await expect(page.locator("#login-password")).toBeVisible();
+        await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible();
+        await expect(page.getByText("Synthetic sync answer", { exact: true })).toHaveCount(0);
         expect(await readLocal(page, userId)).toEqual(before);
         await context.setOffline(true);
         await page.goto(`${baseURL}/library`);
@@ -104,8 +105,14 @@ for (const scenario of ["new edit during snapshot", "snapshot failure after serv
         expect((await readLocal(page, userId)).outbox).toEqual(before.outbox);
         await context.setOffline(false);
         expect((await admin.patch(`/api/admin/access/users/${userId}/status`, { data: { status: "ACTIVE" } })).status()).toBe(200);
-        expect((await context.request.post(`${baseURL}/api/auth/login`, { headers, data: { email, password } })).status()).toBe(200);
-        await page.goto(`${baseURL}/library?conversationId=${conversationId}`);
+        // An explicit local lock is not cleared by a background session probe.
+        // Restore through the real password form, then sync the retained intent.
+        const destination = `/library?conversationId=${conversationId}`;
+        await page.goto(`${baseURL}/login?reauth=1&return_to=${encodeURIComponent(destination)}`);
+        await page.locator("#login-email").fill(email);
+        await page.locator("#login-password").fill(password);
+        await page.getByRole("button", { name: /^(Sign in|登录)$/ }).click();
+        await expect(page).toHaveURL(`${baseURL}${destination}`);
         await expect(page.getByText("Synthetic sync answer", { exact: true }).first()).toBeVisible();
         await expect.poll(async () => (await readLocal(page, userId)).outbox.length).toBe(0);
         expect((await (await context.request.get(`${baseURL}/api/conversations/${conversationId}/notebook`)).json()).title).toBe("Synthetic first draft");

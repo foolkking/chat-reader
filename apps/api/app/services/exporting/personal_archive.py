@@ -114,6 +114,8 @@ def _personal_queries(db: Session, owner_user_id: uuid.UUID, *, include_archived
                 skill_file_objects=db.query(SkillFileObject).filter(SkillFileObject.sha256.in_(members.with_entities(SkillBundleMember.object_sha256))).order_by(SkillFileObject.sha256))
     from app.services.exporting.archive_context import context_queries
     rows.update(context_queries(db, rows['conversations']))
+    from app.services.exporting.archive_user_features import feature_queries
+    rows.update(feature_queries(db, rows["conversations"], [subject]))
     return rows
 
 
@@ -135,8 +137,16 @@ def _create_personal_archive(db: Session, *, snapshot: Session, job_id: uuid.UUI
     profile_revision_ids = {str(row[0]) for row in rows["profile_revisions"].with_entities(ImportProfileRevision.id)}
     rule_revision_ids = {str(row[0]) for row in rows["rule_revisions"].with_entities(ContentCleanupRuleRevision.id)}
     skill_ids = {str(row[0]) for row in rows["skills"].with_entities(UserSkill.id)}
+    from app.models.conversation import Conversation
+    from app.models.project import Project
+    conversation_ids = {str(row[0]) for row in rows["conversations"].with_entities(Conversation.id)}
+    project_ids = {str(row[0]) for row in rows["projects"].with_entities(Project.id)}
 
     def payload_transform(name, payload):
+        from app.services.exporting.archive_user_features import portable_feature_payload
+        payload = portable_feature_payload(name, payload, conversation_ids, project_ids)
+        if payload is None:
+            return None
         from app.services.exporting.archive_support import portable_support_payload
         payload = portable_support_payload(name, payload)
         if name == "support_messages" and payload.get("author_user_id") != str(owner_user_id):
@@ -168,6 +178,6 @@ def _create_personal_archive(db: Session, *, snapshot: Session, job_id: uuid.UUI
         db, rows=rows, job_id=job_id, include_archived=include_archived,
         archive_format=PERSONAL_ARCHIVE_FORMAT, archive_version=PERSONAL_ARCHIVE_VERSION,
         scope_type="personal", restore_mode="additive", progress_callback=progress_callback,
-        payload_transform=payload_transform, manifest_metadata={"skill_bundle_version": 1, "context_files_version": 1, "support_requests_version": 1},
+        payload_transform=payload_transform, manifest_metadata={"skill_bundle_version": 1, "context_files_version": 1, "support_requests_version": 1, "user_features_version": 1},
         archive_validator=inspect_personal_archive,
     )

@@ -85,7 +85,8 @@ def test_saved_search_and_export_preset_schemas_reject_invalid_or_private_defaul
 
 
 def test_reading_list_rejects_duplicate_conversation_without_overwriting_state(client: TestClient) -> None:
-    value = {"conversation_id": str(uuid.uuid4()), "state": "unread"}
+    from test_my_shares import conversation
+    value = {"conversation_id": conversation(client, "Synthetic favorite")["id"], "state": "unread"}
     original = client.put(
         f"/api/user-feature-entries/reading-list/{ENTRY_ID}",
         json={"expected_revision": 0, "value": value},

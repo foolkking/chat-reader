@@ -5,6 +5,7 @@ import { liveQuery } from "dexie";
 import { usePathname } from "next/navigation";
 import { offlineDb } from "../lib/offline-db";
 import { effectivePreferences, flushPreferenceSync, initializePreferenceState, queuePreferenceChanges, readPreferenceState, resolvePreferenceConflict, type PreferenceSyncState } from "../lib/preference-sync";
+import { SERVER_SESSION_CHANGED } from "../lib/server-session";
 import { resolveLocale, translate, type ResolvedLocale, type TranslationKey } from "../lib/i18n";
 import type {
   ConversationSortMode,
@@ -147,7 +148,8 @@ export function PreferencesProvider({
     if (!privatePage) return;
     const refresh = () => { if (document.visibilityState === "visible") void flushPreferenceSync({ refresh: true }).catch(() => setPreferenceStorageError(true)); };
     window.addEventListener("online", refresh); window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
-    return () => { window.removeEventListener("online", refresh); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+    window.addEventListener(SERVER_SESSION_CHANGED, refresh);
+    return () => { window.removeEventListener("online", refresh); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); window.removeEventListener(SERVER_SESSION_CHANGED, refresh); };
   }, [privatePage]);
 
   useEffect(() => {

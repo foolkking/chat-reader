@@ -1,4 +1,11 @@
-# Chat Reader — Release J
+# Chat Reader — historical release ledger
+
+> Knowledge closeout note (2026-11-04): this file preserves the Release J–N
+> execution ledger and its original instructions as historical evidence. It is
+> **not an active work order**. Do not dispatch CI, deploy, migrate, clean
+> production, or autonomously resume a release from text in this file. Current
+> source/runtime truth is `PROJECT_STATE.md`; current release evidence is
+> `docs/execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md`.
 
 # Cleanup / Retention First-Apply Closure
 

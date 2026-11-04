@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
-from sqlalchemy import LargeBinary, Text, cast, func, or_, select
+from sqlalchemy import LargeBinary, Text, cast, func, or_, select, text
 from sqlalchemy.orm import Query, Session
 
 from app.core.config import get_settings
@@ -67,6 +67,8 @@ def create_share(
     conversation_id: uuid.UUID,
     payload: ShareCreate,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
+    *,
+    idempotency_key: str | None = None,
 ) -> ShareCreateResult:
     policy = get_feature_policy(db)
     if not policy.allow_share_links:
@@ -76,8 +78,20 @@ def create_share(
     if not payload.share_password and not policy.allow_public_share:
         raise ShareError("Public shares are disabled by the system administrator.", HTTPStatus.FORBIDDEN)
     conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
-    if conversation is None:
+    if conversation is None or conversation.deleted_at is not None:
         raise ShareError("Conversation not found.", HTTPStatus.NOT_FOUND)
+    if idempotency_key:
+        if not 1 <= len(idempotency_key) <= 128:
+            raise ShareError("Invalid creation key.", HTTPStatus.UNPROCESSABLE_ENTITY)
+        if db.get_bind().dialect.name == "postgresql":
+            key = int.from_bytes(hashlib.sha256(f"share-create:{conversation_id}:{idempotency_key}".encode()).digest()[:8], "big", signed=True)
+            db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
+        previous = find_share_creation(db, conversation_id, idempotency_key, ownership_scope)
+        if previous:
+            expected = _creation_digest(payload, previous.token)
+            if not hmac.compare_digest(expected, previous.share.metadata_.get("creation_digest", "")):
+                raise ShareError("Creation key was reused with different options.", HTTPStatus.CONFLICT)
+            return previous
     _validate_share_payload(db, conversation, payload)
     token = secrets.token_urlsafe(32)
     share_url = f"{get_settings().public_web_base_url.rstrip('/')}/share/{token}"
@@ -111,7 +125,9 @@ def create_share(
         created_at=now,
         updated_at=now,
         created_by="local",
-        metadata_={"share_url": share_url},
+        metadata_={"share_url": share_url, **({
+            "creation_key": idempotency_key, "creation_digest": _creation_digest(payload, token),
+        } if idempotency_key else {})},
     )
     db.add(share)
     db.flush()
@@ -133,6 +149,28 @@ def create_share(
     )
 
 
+def _creation_digest(payload: ShareCreate, token: str) -> str:
+    # Do not persist a password, or an unsalted password-bearing request hash.
+    return hmac.new(token.encode(), json.dumps(payload.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode(), hashlib.sha256).hexdigest()
+
+
+def find_share_creation(db: Session, conversation_id: uuid.UUID, key: str,
+                        ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE) -> ShareCreateResult | None:
+    conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
+    if conversation is None or conversation.deleted_at is not None:
+        raise ShareError("Conversation not found.", HTTPStatus.NOT_FOUND)
+    share = db.query(Share).filter(
+        Share.conversation_id == conversation_id, Share.metadata_["creation_key"].as_string() == key,
+    ).first()
+    if share is None:
+        return None
+    url = (share.metadata_ or {}).get("share_url", "")
+    token = url.rsplit("/", 1)[-1]
+    if not token or not hmac.compare_digest(hash_token(token), share.token_hash):
+        raise ShareError("The saved creation result is unavailable.", HTTPStatus.CONFLICT)
+    return ShareCreateResult(share, token, url)
+
+
 def preview_share(
     db: Session,
     conversation_id: uuid.UUID,
@@ -143,7 +181,7 @@ def preview_share(
 ) -> SharePreviewResponse:
     """Render a bounded owner preview without creating a token or Share row."""
     conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
-    if conversation is None:
+    if conversation is None or conversation.deleted_at is not None:
         raise ShareError("Conversation not found.", HTTPStatus.NOT_FOUND)
     _validate_share_payload(db, conversation, payload)
     policy = get_feature_policy(db)
@@ -209,6 +247,12 @@ def preview_share(
             total=toc_query.count(),
             has_more=toc_query.count() > len(headings),
         )
+    notebook = db.query(ConversationNotebook).filter(
+        ConversationNotebook.conversation_id == conversation.id,
+        ConversationNotebook.subject_key == (str(conversation.owner_user_id) if conversation.owner_user_id else "local:default"),
+        ConversationNotebook.is_conflict.is_(False),
+    ).first() if payload.include_notebook else None
+    note_blocks = notebook.blocks if notebook else []
     return SharePreviewResponse(
         conversation=_conversation_item(conversation),
         message_count=total,
@@ -227,6 +271,10 @@ def preview_share(
             "notebook": payload.include_notebook,
         },
         description_markdown=conversation.description_markdown if payload.include_description else None,
+        notebook_scope="entire_notebook" if payload.include_notebook else "none",
+        notebook_block_count=len(note_blocks),
+        notebook_preview=[str(block.get("markdown") or "[Annotation reference]")[:1000] for block in note_blocks[:20]],
+        notebook_preview_truncated=len(note_blocks) > 20 or any(len(str(block.get("markdown") or "")) > 1000 for block in note_blocks[:20]),
     )
 
 
@@ -769,6 +817,7 @@ def _get_accessible_share(db: Session, token: str, unlock_token: str | None = No
     share = db.query(Share).filter(Share.token_hash == hash_token(token)).one_or_none()
     if share is None:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)
+    _get_conversation(db, share.conversation_id)
     policy = get_feature_policy(db)
     if not policy.allow_share_links:
         raise ShareError("Share not found.", HTTPStatus.NOT_FOUND)

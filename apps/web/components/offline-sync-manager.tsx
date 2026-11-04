@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { flushAnnotationOutbox } from "../lib/annotation-repository";
+import { SERVER_SESSION_CHANGED } from "../lib/server-session";
 
 export function OfflineSyncManager() {
   useEffect(() => {
@@ -32,11 +33,13 @@ export function OfflineSyncManager() {
     flush();
     window.addEventListener("online", flush);
     window.addEventListener("chat-reader:outbox", flush);
+    window.addEventListener(SERVER_SESSION_CHANGED, flush);
     return () => {
       active = false;
       clearTimeout(timer);
       window.removeEventListener("online", flush);
       window.removeEventListener("chat-reader:outbox", flush);
+      window.removeEventListener(SERVER_SESSION_CHANGED, flush);
     };
   }, []);
   return null;

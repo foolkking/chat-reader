@@ -291,10 +291,12 @@ def authenticate_session(
         user is not None and (not user.can_login or session.credential_version != user.credential_version)
     ):
         session.revoked_at = now
+        session.revocation_reason = "account_restricted" if user is not None and not user.can_login else "credentials_changed"
         db.commit()
         return None
     if now - _utc(session.last_activity_at) >= timedelta(seconds=settings.auth_inactivity_timeout_seconds):
         session.revoked_at = now
+        session.revocation_reason = "expired"
         db.commit()
         return None
 
@@ -317,6 +319,35 @@ def authenticate_session(
     )
 
 
+def session_rejection_reason(db: Session, token: str | None, settings: Settings) -> str:
+    """Classify a rejected opaque cookie without disclosing account identity."""
+    if not token:
+        return "missing_session"
+    if not 32 <= len(token) <= 256:
+        return "invalid_session"
+    try:
+        digest = token_digest(token, settings)
+    except (UnicodeEncodeError, AuthConfigurationError):
+        return "invalid_session"
+    session = db.query(AuthSession).filter(AuthSession.token_digest == digest).one_or_none()
+    if session is None:
+        return "invalid_session"
+    # Expiry recorded before a later account revocation must not mask that event.
+    principal = session.principal
+    if principal is None:
+        return "revoked"
+    user = principal.user
+    if user is not None and not user.can_login:
+        return "account_restricted"
+    if session.credential_version != principal.credential_version or (
+        user is not None and session.credential_version != user.credential_version
+    ):
+        return "credentials_changed"
+    if session.revoked_at is not None:
+        return session.revocation_reason or "revoked"
+    return "invalid_session"
+
+
 def revoke_session(db: Session, token: str | None, settings: Settings, *, now: datetime | None = None) -> None:
     if token is None:
         return
@@ -327,6 +358,7 @@ def revoke_session(db: Session, token: str | None, settings: Settings, *, now: d
     session = db.query(AuthSession).filter(AuthSession.token_digest == digest).one_or_none()
     if session is not None and session.revoked_at is None:
         session.revoked_at = now or utc_now()
+        session.revocation_reason = "revoked"
         db.commit()
 
 

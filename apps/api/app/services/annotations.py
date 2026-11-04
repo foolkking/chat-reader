@@ -311,6 +311,8 @@ def put_notebook(
     notebook.updated_at = utc_now()
     _touch_conversation(_conversation(db, conversation_id))
     db.flush()
+    from app.services.search.personal_content_indexer import sync_personal_content
+    sync_personal_content(db, _conversation(db, conversation_id))
     return notebook
 
 
@@ -597,6 +599,8 @@ def _sync_notebook(
         db.add(current)
         _touch_conversation(_conversation(db, operation.conversation_id))
         db.flush()
+        from app.services.search.personal_content_indexer import sync_personal_content
+        sync_personal_content(db, _conversation(db, operation.conversation_id))
         return _sync_result(operation, current.id, "applied", current.revision)
     if current.revision != operation.base_revision:
         conflict = _clone_notebook_from_payload(db, current, payload)
@@ -607,6 +611,8 @@ def _sync_notebook(
     current.updated_at = utc_now()
     _touch_conversation(_conversation(db, operation.conversation_id))
     db.flush()
+    from app.services.search.personal_content_indexer import sync_personal_content
+    sync_personal_content(db, _conversation(db, operation.conversation_id))
     return _sync_result(operation, current.id, "applied", current.revision)
 
 

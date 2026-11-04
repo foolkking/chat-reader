@@ -166,6 +166,7 @@ async function cacheRequiredAsset(cache, asset) {
   const response = await fetchWithTimeout(request, 15_000);
   if (!response.ok) throw new Error(`Failed to cache ${url.pathname}: HTTP ${response.status}`);
   if (asset === "/library") {
+    if (response.redirected || new URL(response.url).pathname !== "/library") throw new Error("Refusing a redirected offline shell.");
     const contentType = response.headers.get("Content-Type") || "";
     if (!contentType.includes("text/html")) throw new Error("The offline library shell is not HTML.");
     await cache.put("/library", response);
@@ -216,6 +217,13 @@ async function readActiveRecord() {
 }
 
 async function libraryNavigation(request) {
+  // A complete local shell is sufficient to start; it never grants private API
+  // access. Do not wait through network retries or replace it with login HTML.
+  const ready = await inspectActiveShell().catch(() => null);
+  if (ready?.ready) {
+    const cached = await matchActive("/library");
+    if (cached) return cached;
+  }
   let lastResponse = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {

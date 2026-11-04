@@ -1,22 +1,28 @@
 # 部署与运行环境
 
-## 当前生产 — Reader、富 Markdown 与 Adaptive ZIP — 2026-11-04
+## 当前生产 — 小内存 ZIP 导入恢复 — 2026-11-04
 
-精确 `3b839dc` 的完整 CI `41633888061` 六项成功，官方制品
-`13232957284` 独立检查通过；生产 **2026-11-03 16:04:43Z /
-2026-11-04 00:04:43 +08:00** 接受，**16:08:12Z / 00:08:12 +08:00**
-独立复核。当前／直接回退为 **`3b839dc`／`4b4f34f`**，schema 单一 head
-`20261030_0058` 未变，无 upgrade/downgrade。
+精确 `be58b12` 的完整 CI `41737744696` 六项成功，官方制品
+`13282163237` 独立检查通过；当前／直接回退为 **`be58b12`／`3b839dc`**，
+schema 单一 head `20261030_0058` 未变，无 upgrade/downgrade。API、Web、
+PostgreSQL 均 healthy，worker 心跳 `alive_idle`。
 
-停写审计检查 338 个活动附件、359 个 asset 对象和 12 个 Context，共 371
-个文件散列、零问题。校验五组件备份 `chat-reader-20261103T155702Z`；
-使用 `--no-build --no-deps` 替换 API/worker/Web。维护 **7 分 56 秒**，
-非零停机。PostgreSQL、生产配置、Compose、Nginx、canonical 停写行数及 OOM
-计数均未变；健康、worker 心跳、精确镜像、HTTPS／权限／隐私、日志、备份复验
-通过。保留五份备份，无用户数据、volume、备份或旧镜像清理；可用空间
-**7,156,904 KiB**。生产认证 UI、真实 47 对话用户侧下载、持续负载和隔离恢复
-演练仍未验收。详见
-[发布记录](../execution/READER_ZIP_RELEASE_2026-11-04.md)。
+当前发布使用独立核验的精确 CI 镜像；OCI index → linux/amd64 manifest →
+image config 哈希链与源码 revision 一致。PostgreSQL 容器未重建，现有环境、
+Compose 与 Nginx 未改，健康／HTTPS／匿名拒绝边界通过。
+
+用户授权的安全清理仅移除四份旧备份和三个旧 revision 的 12 个无引用应用镜像
+标签；保留最新两份备份、新当前版本和直接回退版本。备份解除链接
+2,926,529,217 bytes；剩余可用空间 **9,385,372 KiB**。没有删除 volume、
+用户资料或数据库。部署后恢复写入时观察到聚合数据计数变化；这些写入未回滚，
+且原用户 ZIP 尚未重新导入验收。生产认证 UI、真实 47 对话离线更新、持续负载
+和隔离恢复演练仍未验收。详见
+[当前发布与清理记录](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)。
+
+## 前一生产检查点 — Reader、富 Markdown 与 Adaptive ZIP — 2026-11-04
+
+`3b839dc` 的完整验收由[历史发布记录](../execution/READER_ZIP_RELEASE_2026-11-04.md)
+保存；该记录的“当前生产”只代表该历史检查点。
 
 ## Previous accepted production — 2026-11-01
 
@@ -64,13 +70,22 @@ PostgreSQL 重启。剩余未验收边界是认证生产 UI、物理剪贴板、
 v1/v2/v3 或 Dexie v2 格式。每次未来发布仍需精确制品、容量、停写五组件
 备份和独立验收，不能复用本轮回执。
 
-## 待发布源码 migration — 2026-10-29
+<a id="待发布源码-migration--2026-10-29"></a>
+
+## 历史待发布源码 migration — 2026-10-29
+
+以下为迁移前检查点；当前已至 0058，不得按本段重复执行旧发布。
 
 工作区有 0054 拆分幂等回执迁移，生产仍为 0053；未运行 CI、Alembic、
 备份或部署。应用镜像回退可保留额外表；0054→0053 会丢弃防重复回执，
 不是无损操作。完整兼容与授权边界见[部署记录](../deployment.md#下一批源码迁移--2026-10-29未部署)。
 
-## Current production — 2026-10-29
+<a id="current-production--2026-10-29"></a>
+
+## Historical production — 2026-10-29
+
+The following runtime/rollback and capacity values describe that checkpoint,
+not the current image/backup protection set or a fresh deployment authorization.
 
 Runtime/direct rollback is **f8a6a06 / b4effda**, both at
 **20261022_0053**. Exact source
@@ -105,7 +120,7 @@ No local application tests/build/browser/services/database validated this
 release. Authenticated production UI, physical clipboard, sustained load and
 an isolated restore drill for this backup were not exercised. Server-local
 hardlinked backup points are not independent physical/off-site copies.
-See the [current release record](../execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md).
+See that [historical release record](../execution/SEARCH_RECOVERY_RELEASE_2026-10-28.md).
 
 ## Previous accepted production — 2026-10-27
 
@@ -614,7 +629,9 @@ The 2026-08-09 Adaptive Viewer rollout used GitHub Actions run `31294947752` for
 - 生产 OpenAPI 不通过 `/api/openapi.json` 暴露是当前代理边界，不表示业务 API 缺失。
 - 仓库 `deploy/nginx-chat-reader.conf` 是示例；真实 TLS/证书配置位于仓库外。
 
-## 最后生产证据
+<a id="最后生产证据"></a>
+
+## 早期生产证据（历史）
 
 2026-07-29 的执行档案记录 production migration `20260728_0016`、Web 离线 TOC 补丁和服务健康。该记录不能替代下一次部署前的只读检查。详见 [执行档案](../execution/README.md)。
 Release A freezes three runtime invariants: production requires a non-default `ATTACHMENT_CURSOR_SECRET`; Alembic preserves percent-encoded database URLs; and deployable images can only be produced after the repository quality gate succeeds. Security-header and provenance details are in [Release Safety Baseline](RELEASE_SAFETY_BASELINE.md).

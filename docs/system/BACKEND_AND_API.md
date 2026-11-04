@@ -1,8 +1,12 @@
 # 后端与 API
 
-## 两轮 Web 功能合同 — 2026-10-30（待发布）
+现役状态同步：2026-11-04；运行态以 [Project State](../../PROJECT_STATE.md)
+和[当前发布回执](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)为准。
+下方带日期的 local/源码检查点保留其原验证含义，不是当前未发布清单。
 
-新增接口与限制见 [API 参考](../api-reference.md#两轮-web-功能--2026-10-30本地待发布)：
+## 两轮 Web 功能合同 — 2026-10-30（已发布）
+
+新增接口与限制见 [API 参考](../api-reference.md#累计功能补齐--2026-10-30已发布生产-head-0058)：
 配置条目依附现有 subject preferences、严格类型值与 CAS revision，集合成员写锁防止
 不同随机 entry ID 重复加入待读及并发越过容量。私人批注收件箱、文件目录和精确
 重复候选均在数据库层按当前 owner 过滤，不由前端遍历对话拉取全集。
@@ -12,7 +16,7 @@
 的时间窗。响应每 15 秒延长 90 秒有效期，成功／异常／取消时释放；不使用 pathsend。
 提交后旧文件清理及全局回收候选排除有效租约。它保护可重放的清理竞态，不代表
 已证明没有请求状态／网络 trace 的原始用户故障原因。包格式、权限和校验均不降低。
-0054→0055→0056 及回退边界见 [数据合同](DATA_AND_STORAGE.md)。
+0054→0058 及回退边界见 [数据合同](DATA_AND_STORAGE.md)；不得自动 downgrade。
 
 ## Adaptive Import initial-analysis task (deployed 2026-10-19)
 
@@ -30,7 +34,7 @@ commit endpoint rejects a session until its initial analysis is reviewable.
 This uses the existing `BackgroundJob` schema and adds no migration. Other
 adaptive replacement, reanalysis and mapping routes remain bounded synchronous
 FastAPI handlers executed in the thread pool. This task first shipped in
-`f3b331a`; current production is `3fbf79d/20261022_0053`. The
+`f3b331a`; `3fbf79d/20261022_0053` was a later historical checkpoint. The
 [original release report](../execution/OOM_RELEASE_2026-10-19.md) records its
 exact CI, limits and runtime evidence; `PROJECT_STATE.md` owns the current
 runtime snapshot. See the
@@ -466,8 +470,9 @@ lookahead 之前共同筛选。2026-10-28 CI 修复撤回复合标签路径：�
 将规范化请求摘要、结果 ID/标题/计数与复制事务原子提交；相同请求返回同一结果，
 相同 key 的不同载荷返回结构化 409。权限在回执读取前再次核验；硬删除来源时回执级联删除。
 旧 `/split-workspace` 路径继续兼容但无键调用没有幂等保证。客户端只在同一已确认
-计划上安全重试；当前源码新增 migration `20261029_0054`，生产仍为 `0053`，
-尚未迁移或发布。当前部署和回退边界见[部署记录](../deployment.md#下一批源码迁移--2026-10-29未部署)。
+计划上安全重试。该回执表始于 migration `20261029_0054`，已随历史发布应用；
+当前源码和生产为单一 head `20261030_0058`。现行发布与回退边界见
+[部署记录](../deployment.md)；旧“0053/未发布”仅是 2026-10-29 前置检查点。
 
 ### Share
 

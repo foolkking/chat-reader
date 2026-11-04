@@ -1,20 +1,51 @@
 # Markdown 文档台账
 
+## 综合优化候选 — 2026-11-05
+
+新增 `system/COMPREHENSIVE_OPTIMIZATION_CONTRACT.md` 作为认证/本机许可、
+删除/附件安全、搜索、导入恢复、归档扩展、正文草稿及依赖/恢复演练的当前合同；
+新增 `execution/COMPREHENSIVE_OPTIMIZATION_2026-11-05.md` 记录实施、审查、
+实测与 CI。同步状态入口、认证/PWA/归档合同、API、开发/测试/部署说明。
+单一候选 migration 0059，生产仍是 0058；不改写上一轮发布和原资料验收边界。
+
+## 现役入口与知识收尾 — 2026-11-04
+
+根 `PROJECT_STATE.md` 与 `docs/index.md` 改为紧凑现役快照/任务路由；
+原文及旧链接保留在 `archive/PROJECT_STATE-history-2026-11-04.md`、
+`archive/documentation-index-history-2026-11-04.md`，附原始 SHA-256。
+新增 `execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md` 记录代码/运行态/文档/规则/
+记忆/工作区六面结果、未验收边界、只读清理预览，以及汇报后用户确认的
+本地旧分支/可再生缓存清理和保全复核；发布制品、测试证据及未提交修改保留。
+同步 README、product、architecture、testing、deployment、system 入口及身份、
+功能、前后端、流程、Next 版本、风险与维护合同；旧 TASKS/results/优化账本明确历史用途。
+根 AGENTS 与 Next 生成规则不改；数据/fixture/产品 Skill 不归档或清理。
+本台账其余带日期条目是维护历史，不定义当前发布或自动执行授权。
+
+## 小内存 ZIP 导入恢复 — 2026-11-04（已部署与清理）
+
+新增 `execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md` 与
+`evidence/release-2026-11-04/small-zip-deployment-summary.json`，记录精确 CI
+`41737744696`、制品 OCI 哈希链、生产当前／回退版本、无 migration、备份复验与
+经授权的旧备份／镜像清理。同步 PROJECT_STATE、index、deployment 入口、
+system 部署事实和 execution 索引。原用户 ZIP 尚未由用户重新提交验收；部署后
+聚合数据变化明确记录，没有声称数据计数完全不变。
+
 ## 小内存 ZIP 导入恢复 — 2026-11-04
 
 新增 `execution/SMALL_ZIP_MEMORY_2026-11-04.md`，同步 PROJECT_STATE、
 index/execution 入口、Adaptive ZIP 合同、API reference、环境配置和 testing。
 记录默认启用、可关闭的有界轻量策略及结构化 failure 合同；不新增 migration。
-精确源码 CI／真实 Linux 限内存运行／部署仍待实际回执，不能复用上一轮发布证据。
+原记录现由后续发布回执补齐精确 CI／限内存运行／部署结果；实际 ZIP 导入仍待用户侧重试。
 
 ## Reader、富 Markdown 与 Adaptive ZIP 发布 — 2026-11-04
 
 新增 `execution/READER_ZIP_RELEASE_2026-11-04.md` 与
 `evidence/release-2026-11-04/{ci-recheck,deployment-summary}.json`。
 `PROJECT_STATE.md`、`index.md`、`testing.md`、`deployment.md`、
-`system/DEPLOYMENT_AND_ENVIRONMENT.md` 和 execution 入口已更新为当前
+`system/DEPLOYMENT_AND_ENVIRONMENT.md` 和 execution 入口最初记录了
 `3b839dc`／直接回退 `4b4f34f`、完整 CI `41633888061` 六项通过、
-部署验收及备份复验。0058 未变；用户侧完整离线下载／更新、认证 UI 和独立恢复演练
+部署验收及备份复验。随后已成为 `be58b12` 的回退点；历史回执不改写。0058 未变；
+用户侧完整离线下载／更新、认证 UI 和独立恢复演练
 仍保持未验收。11 月 3 日先前 CI 失败及自动安全恢复历史不改写，见发布记录。
 
 ## Reader/ZIP 完成度再审 — 2026-11-03（发布前源码审查快照）

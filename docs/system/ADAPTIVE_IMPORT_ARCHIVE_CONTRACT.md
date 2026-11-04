@@ -1,8 +1,11 @@
 # Adaptive Import ZIP Contract
 
-Status: core ZIP support accepted with production source `3b839dc` on
-2026-11-04. The bounded-memory extension below is a new source candidate;
-its exact-source CI and production acceptance are pending.
+Status: core ZIP support shipped with `3b839dc`; the bounded-memory extension
+shipped in production source `be58b12` on 2026-11-04 after exact-source CI
+`41737744696` passed. Production schema remains `20261030_0058`; no migration
+or portable archive format changed. The original user ZIP still requires an
+explicit retry to verify its individual import outcome; see the
+[release receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md).
 This contract extends the existing Adaptive Import session. It does not replace
 `.cr` personal restore, system archives, or the canonical import commit.
 

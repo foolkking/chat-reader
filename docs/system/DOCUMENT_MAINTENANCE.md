@@ -1,6 +1,6 @@
 # 文档维护规则
 
-最后核验：2026-08-24
+规则复核：2026-11-04
 
 完整文件分类见 [Markdown 文档台账](../documentation-inventory.md)。
 
@@ -11,6 +11,9 @@
 3. 根 README/AGENTS 只做入口和规则，不复制架构历史。
 4. `planning/`、`execution/`、`evidence/` 按日期封存；可加索引说明，不回写旧结论伪装当前事实。
 5. `apps/api/storage/imports/**/*.md` 和 `examples/**/*.md` 是数据/fixture，不属于文档系统。
+6. 发布时替换当前快照，不再向 `PROJECT_STATE.md` / `docs/index.md` 逐批追加流水账。
+   唯一历史证据留在 dated execution/evidence；压缩前需要保留的原叙述可带 hash 归档。
+   `TASKS.md` / `results.md` 等旧账本不能被当成新任务授权。
 
 ## 事实等级
 

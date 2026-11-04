@@ -1,28 +1,28 @@
 # 产品说明
 
+Last synchronized: 2026-11-04. Implementation scope is not authenticated
+production-browser acceptance; see [Project State](../PROJECT_STATE.md).
+
 ## Current Reader and merge behavior
 
 - Source editing is a persistent Markdown workspace, not a replacement for the rendered message. The desktop panel is left anchored and large; the main reader temporarily makes room. Mobile uses a full-width surface.
-- Top-level actions are `Edit -> Search -> Annotations -> Focus -> More`; open workspace actions toggle closed. Share/export/merge/split remain in `More`. Share and Offline Reader remain read-only.
+- Desktop Reader actions include Edit, Search, a conversation favorite star immediately after Search, Annotations and Focus; secondary actions remain in More. Open workspace actions toggle closed. Mobile/focus layouts retain adapted controls. Share and Offline Reader do not expose owner content-management actions.
 - Merge is non-destructive and canonical: it copies complete message version history, blocks, source refs, annotations and conflict copies, while excluding notebooks. Long merges are cancellable and use bounded batches with a three-attempt stale retry limit.
 
 ## Current access boundary
 
-Release N protects private business content and direct owner artifact
-downloads with one owner password and server-side per-device sessions. An
-explicit Share URL is a separately scoped public-by-link capability and may
-use an independent Share password. A
-trusted browser remains signed in for 48 hours of sliding inactivity; logout
-and owner-password changes revoke sessions. The reserved principal/session
-boundary is not a multi-user feature. Historical notes below that describe an
-unauthenticated deployment are superseded by
+Production has one deployment-provisioned administrator plus isolated user
+accounts, email/password login and server-side per-device sessions with a
+48-hour sliding inactivity timeout. Private business data and owner artifact
+downloads require the authenticated account; ownership comes from the server
+session, not a client-supplied ID. Explicit Share URLs are separately scoped
+public-by-link capabilities with optional independent Share passwords.
+Registration/invitation policy and administrator access follow
 [`AUTHENTICATION_CONTRACT.md`](system/AUTHENTICATION_CONTRACT.md).
-
-最后核验：2026-08-05
 
 ## 定位
 
-Chat Reader 是单资料拥有者使用的 AI 对话资料库，不是在线聊天客户端。它通过确定性的 Adaptive Import 学习用户确认过的 JSON / Markdown 结构，并转换为稳定 canonical 数据，帮助用户长期阅读、检索、批注、整理、分享和备份。
+Chat Reader 是账户间隔离的私人 AI 对话资料库，不是在线聊天客户端或协作式团队工作区。它通过确定性的 Adaptive Import 学习用户确认过的 JSON / Markdown 结构，并转换为稳定 canonical 数据，帮助用户长期阅读、检索、批注、整理、分享和备份。
 
 ## 主要工作流
 
@@ -35,7 +35,7 @@ Chat Reader 是单资料拥有者使用的 AI 对话资料库，不是在线聊�
 
 ## 导入与数据
 
-- 产品导入只有 Adaptive JSON / Markdown 与 `.cr` 归档两类入口。前者支持单 JSON、单 Markdown、JSON + Markdown 与批量来源；Chat Reader Native、CanJSON v1/v2 和 Prompt/Response Markdown 是 Built-in Profile。
+- 产品导入有 Adaptive JSON / Markdown / ZIP 与 `.cr` 归档两类入口。前者支持单文件、JSON + Markdown 配对、批量及受限归档来源；ZIP 先分类和预览，不是任意压缩包或完整 Obsidian vault 导入。Chat Reader Native、CanJSON v1/v2 和 Prompt/Response Markdown 是 Built-in Profile。详见 [Archive Import 合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)。
 - 未知 Structure Family 只需 Mapping 一次；全 Family 验证成功后保存 Learned Profile。后续兼容来源自动匹配；required structure 或 role 语义漂移时创建新 Revision，旧 Revision 保留兼容能力。
 - 来源先规范化为 `CanonicalConversationDraft`，再进入现有 ImportDraft/canonical persistence；不会生成中间转换文件让用户下载后重新上传。
 - `.cr` 继续走独立归档恢复。`.crbundle` 用户入口、解析 route 和转换结果流程已删除；普通附件及 `.cr` 中的附件关系不受影响。
@@ -46,13 +46,14 @@ Chat Reader 是单资料拥有者使用的 AI 对话资料库，不是在线聊�
 - Reader 以完整 user-led turn 为加载单位，稳定 DOM 最多 3 轮；超长消息不会先显示截断正文或“立即展开”占位。
 - 极长消息（`block_count > 160` 或 `char_count > 50000`）仅虚拟化已完整加载的 blocks，overscan 为 8；导航目标固定挂载到事务结束。
 - 远距离导航按 quote、character offset、block、message 依次降级，并在图片、字体和布局稳定后复校。
-- 支持 GFM、代码高亮、KaTeX、Mermaid、callout、表格、任务列表、引用和安全链接。
+- 支持 GFM、代码高亮、KaTeX、Mermaid、Obsidian callout/highlight、表格、任务列表、引用和安全链接，以及 allowlist 内的静态 HTML 卡片、details/summary 折叠与媒体降级。均经过有界解析和 sanitization；不执行脚本，不承诺全部 Obsidian 插件语义，见[富 Markdown 合同](system/AI_RICH_MARKDOWN_CONTRACT.md)。
 - 桌面保留对话索引与章节 TOC；移动端通过阅读导航 Sheet 使用同一数据。
 - 正文宽度、Markdown 垂直间距和 15-22px 字号可独立设置；专注模式可只保留正文。
 
 ## 组织与编辑
 
 - 侧栏同时显示可折叠 Project 与未归类对话；一个可见会话最多归属一个 Project。
+- 对话收藏以搜索右侧五角星操作，兼容已有 `reading-list` 路由和数据；收藏清单保留手动已读/未读及筛选。账户标签独立于 Project；私人批注收件箱复用原批注与锚点，不创建第二份笔记。
 - 桌面支持拖放移动、Shift 范围选择、键盘选择和上下文批量工具栏；移动端保留单项管理。
 - 归档会话保留 Project 关系，取消归档后返回原归属；删除是不可恢复的事务性硬删除，不提供 Trash。
 - 消息信息栏在正文上方提供收藏、选择、Markdown 源码编辑和 ChatGPT 风格的单消息版本切换，不遮挡 Markdown。桌面顶栏常驻编辑、搜索、批注和专注，详细操作进入更多；移动端常驻导航、编辑和更多。
@@ -74,7 +75,7 @@ Chat Reader 是单资料拥有者使用的 AI 对话资料库，不是在线聊�
 - Share 默认是“任何拥有链接的人”可读的 public-by-link capability；创建时可选择独立的 Share 密码。Share 密码与 owner 密码分开哈希，解锁只签发 Share 范围的 HttpOnly credential，不创建 owner session。token、scope、过期、撤销、private include flags 和 `allow_export` 由每个公开接口重新校验。
 - 对话导出默认选择“交给 AI”，输出一个 `.context.zip`；附件文件独立选择，已保存 Current/Index 可随整段对话携带。CanJSON、Markdown 仍用于通用交换和阅读。Current/Index 在对话内批注旁的工作区直接查看、编辑或拖入更新，最近三次保存可恢复；`.context.zip` 回传不导入正文。应用恢复仍使用设置内的 `.cr`，个人新增恢复和系统空实例恢复见 [数据归档合同](system/DATA_ARCHIVE_CONTRACT.md)。
 - 需要携带二进制附件时可导出 `Markdown + 附件` 或 `CanJSON + 附件` Bundle；物理对象按 SHA-256 内容寻址。简介、批注、笔记和来源引用作为折叠的二级内容选项，不增加新的顶级格式。
-- 当前单用户部署主动关闭附件恶意软件扫描和内容安全审查；附件以 `scanner_disabled`/`unscanned` 状态正常使用，中文 UI 显示“未扫描”，不显示 clean/safe 或“已通过扫描”。这不代表文件经过安全检测。正文附件只采用 rich、compact、file-card、fallback 四种层级；连续图片/文件会分组。Viewer 的遮罩属于全页面，但实际内容窗口按类型受限：图片/视频为深色舞台，音频为紧凑面板，Markdown/文本/表格/PDF 为文档工作区。SVG 始终通过 `<img>` 显示。
+- 已核验的轻量生产部署关闭附件恶意软件扫描和内容安全审查；附件以 `scanner_disabled`/`unscanned` 状态正常使用，中文 UI 显示“未扫描”，不显示 clean/safe 或“已通过扫描”。这不代表文件经过安全检测。正文附件只采用 rich、compact、file-card、fallback 四种层级；连续图片/文件会分组。Viewer 的遮罩属于全页面，但实际内容窗口按类型受限：图片/视频为深色舞台，音频为紧凑面板，Markdown/文本/表格/PDF 为文档工作区。SVG 始终通过 `<img>` 显示。
 - 在线 Owner Reader 的 GFM 任务 checkbox 可点击并立即保存；第一次切换从 v1 创建 v2，后续在 v2+ 覆盖当前消息版本。Share、Offline 和附件 Markdown 保持只读。
 - `/library` 是独立 PWA scope。首次需在线准备壳并下载资料，之后可离线阅读、搜索和编辑批注/精选笔记；离线附件可选择仅 metadata、小附件或全部附件。
 - 离线更新提交本地 conversation revisions，服务端 v3 package 只传输新增或变化的 conversation；浏览器仍兼容 v1/v2 包。
@@ -82,10 +83,10 @@ Chat Reader 是单资料拥有者使用的 AI 对话资料库，不是在线聊�
 
 ## 当前限制
 
-- 固定 owner 主体，没有多用户、租户隔离或应用内管理员。
+- 支持隔离账户与单管理员，不提供协作工作区、企业租户管理或多人同时编辑。
 - 不提供在线 AI 回答、streaming、重新生成或分支切换 UI。
 - 没有完整消息/轮次虚拟列表；极长消息 blocks 会虚拟化 DOM，但该轮完整正文数据仍进入内存。
-- 不提供标签、全局笔记中心或语义搜索。普通附件上传、左侧对话文件管理工作区、已有附件拖入源码、消息插入和基础预览已经实现；King 扫描器关闭时附件显示“未扫描/scanner_disabled”。消息保存不重新上传或扫描已提升的文件，Reader 只局部替换受影响消息。
-- 附件文件名和受限 `text_extract` 派生文本进入现有全文搜索；复杂 Office/OCR/CAD/压缩包预览为 `NOT_IMPLEMENTED`，只提供受控下载，不阻塞基础附件链路。
+- 私人批注收件箱不是独立全局笔记系统；不提供语义搜索。标签等新增账户配置尚无 `.cr` 可移植承诺。普通附件上传、文件管理、源码引用、消息插入和基础预览已实现；保存消息不重新上传或扫描已提升文件。
+- 附件文件名和受限 `text_extract` 派生文本进入现有搜索。DOC/DOCX/ODT、XLSX/ODS、PPTX/ODP 和 ZIP 有有界只读预览；并非所有 Office 格式或完整保真预览。OCR/CAD/3D/EPUB 等仍未实现或仅下载降级，见[附件合同](system/ATTACHMENT_RENDERER_CONTRACT.md)。
 - 浏览器离线数据受配额、持久化授权和清除站点数据影响。
-- 应用本身不构成公网访问控制；部署方必须提供 HTTPS、认证/网络限制和备份。
+- 应用提供账户和 Share 访问控制，不能替代 HTTPS、反向代理安全配置及备份；生产认证 UI、真实离线大包更新和恢复演练的待验收边界以 [Project State](../PROJECT_STATE.md) 为准。

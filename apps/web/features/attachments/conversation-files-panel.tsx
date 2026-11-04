@@ -39,6 +39,8 @@ import {
   getAttachmentUploadSession,
   getCapabilities,
   getConversationAttachments,
+  queueAttachmentDownload,
+  getTask,
   updateConversationAttachment,
   uploadAttachmentItem,
 } from "../../lib/api";
@@ -50,6 +52,7 @@ import { attachmentExtension } from "./preview-adapter-registry";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { attachmentOccurrenceTarget } from "./attachment-location";
 import { useAttachmentSearchActivation, useAttachmentSearchTarget } from "./use-attachment-search-target";
+import { ExportArtifactDelivery } from "../exporting/export-artifact-delivery";
 
 type Placement = "inline" | "after_message";
 type FileFilter = "all" | "used" | "unused" | "missing";
@@ -101,6 +104,14 @@ function ConversationFilesWorkspace({
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [downloadJobId, setDownloadJobId] = useState<string | null>(null);
+  const downloadIntent = useRef<{ selection: string; key: string } | null>(null);
+  const downloadTask = useQuery({
+    queryKey: ["task", downloadJobId],
+    queryFn: () => getTask(downloadJobId!),
+    enabled: Boolean(downloadJobId),
+    refetchInterval: query => ["committed", "failed", "cancelled"].includes(query.state.data?.status ?? "") ? false : 1500,
+  });
   const [uploadQueue, setUploadQueue] = useState<UploadEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -425,13 +436,27 @@ function ConversationFilesWorkspace({
     return allFiles.filter((item) => selected.has(item.id));
   }
 
-  function downloadSelection() {
-    for (const attachment of selectedFiles()) {
-      if (!attachment.download_url) continue;
-      const link = document.createElement("a");
-      link.href = attachment.download_url;
-      link.download = attachment.display_name;
-      link.click();
+  async function downloadSelection() {
+    if (actionLock.current || !selected.size) return;
+    actionLock.current = true; setActionBusy(true); setError(null);
+    const generation = authenticationGeneration();
+    const ids = [...selected].sort();
+    const selection = JSON.stringify(ids);
+    if (downloadIntent.current?.selection !== selection) downloadIntent.current = { selection, key: crypto.randomUUID() };
+    try {
+      const task = await queueAttachmentDownload(conversationId, ids, downloadIntent.current.key);
+      if (!mounted.current || generation !== authenticationGeneration()) return;
+      setDownloadJobId(task.job_id);
+      queryClient.setQueryData(["task", task.job_id], task);
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
+      setNotice(zh ? "正在打包，可在任务中心查看进度。" : "Preparing ZIP. Progress is also available in Tasks.");
+      downloadIntent.current = null;
+    } catch {
+      if (mounted.current && generation === authenticationGeneration())
+        setError(zh ? "未能确认打包结果。重试会使用同一请求，不会重复创建任务；不可用的附件请移出选择。" : "Could not confirm the ZIP request. Retry safely with the same request; remove unavailable attachments.");
+    } finally {
+      actionLock.current = false;
+      if (mounted.current) setActionBusy(false);
     }
   }
 
@@ -488,6 +513,11 @@ function ConversationFilesWorkspace({
       aria-label={zh ? "当前对话文件" : "Conversation files"}
       data-testid="conversation-files-panel"
     >
+      {downloadJobId ? <div className="border-b border-ui p-3" aria-live="polite">
+        {downloadTask.data?.result.artifact_id ? <ExportArtifactDelivery artifactId={downloadTask.data.result.artifact_id} scope={`attachments:${conversationId}`} onRegenerated={task => setDownloadJobId(task.job_id)} label={zh ? "下载附件 ZIP" : "Download attachments ZIP"} />
+          : <p className="text-sm text-secondary">{downloadTask.data?.status === "failed" ? (zh ? "附件打包失败，请在任务中心查看原因。" : "ZIP creation failed. Check Tasks for details.") : downloadTask.error ? (zh ? "进度暂不可用，任务仍在服务器保留。" : "Progress unavailable. The server retains the task.") : `${zh ? "附件打包" : "Preparing ZIP"} · ${downloadTask.data?.progress ?? 0}%`}</p>}
+        <button type="button" className="min-h-10 text-sm text-accent" onClick={() => window.dispatchEvent(new Event("chat-reader:open-task-center"))}>{zh ? "查看任务中心" : "Open Tasks"}</button>
+      </div> : null}
       <fieldset disabled={actionBusy} className="shrink-0 space-y-2 border-b border-ui p-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold">

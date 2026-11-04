@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml ./
+COPY pyproject.toml requirements-runtime.lock requirements-build.lock ./
 COPY app ./app
 COPY scripts ./scripts
 COPY alembic ./alembic
@@ -19,7 +19,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip && pip install .
+RUN pip install --require-hashes -r requirements-runtime.lock -r requirements-build.lock \
+    && pip install --no-deps --no-build-isolation .
 
 RUN addgroup --system chatreader \
     && adduser --system --ingroup chatreader chatreader \

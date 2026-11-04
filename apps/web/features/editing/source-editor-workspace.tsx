@@ -385,6 +385,7 @@ export function SourceEditorWorkspace({
             onAttachmentInsertionApplied={() => { setLocalAttachmentInsertion(null); onAttachmentInsertionApplied?.(); }}
             onOpenAttachmentPicker={() => { setEditorToolsOpen(false); setAttachmentPickerOpen(true); }}
             messageId={message.id}
+            conversationId={message.conversation_id}
             versionNumber={versionNumber}
             onCursorOffsetChange={(offset) => { cursorOffsetRef.current = offset; }}
             onSelectionChange={setSourceSelection}

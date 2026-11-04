@@ -71,8 +71,8 @@ export function offlineAuthenticationRequired(): boolean { return required; }
 // access. A late 401 from the old account must not invalidate a new identity.
 export function authenticationGeneration(): number { return generation; }
 
-export function notifyAuthenticationFailure(requestGeneration: number): void {
+export function notifyAuthenticationFailure(requestGeneration: number, reason?: string | null): void {
   if (generation === requestGeneration && typeof window !== "undefined") {
-    window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    window.dispatchEvent(new CustomEvent(AUTH_UNAUTHORIZED_EVENT, { detail: { reason } }));
   }
 }

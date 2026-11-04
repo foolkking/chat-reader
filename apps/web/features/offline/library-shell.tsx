@@ -23,6 +23,10 @@ import { SidebarPreferences } from "../../components/sidebar-preferences";
 import { usePreferences } from "../../components/preferences-provider";
 import { MobilePageHeader } from "../../components/mobile-page-header";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
+import { useServerSession } from "../../lib/server-session";
+import { offlineAuthenticationRequired } from "../../lib/offline-access";
+import { trustCurrentDevice, getCurrentOfflineRuntimeUserId, lockBrowserAuthenticationState } from "../../lib/auth-client";
+import { deviceTrusted } from "../../lib/offline-device-trust";
 
 type DownloadState = { key: string; progress: number; label: string } | null;
 type DownloadRequest = { scope: "conversation" | "project" | "all"; id?: string };
@@ -48,6 +52,7 @@ const APP_TITLE = "chat-reader";
 const LAST_LIBRARY_CONVERSATION_KEY = "chat-reader:last-library-conversation";
 
 export function LibraryShell() {
+  const server = useServerSession();
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -133,7 +138,7 @@ export function LibraryShell() {
   const catalogQuery = useQuery({
     queryKey: ["offline-catalog"],
     queryFn: getOfflineCatalog,
-    enabled: online,
+    enabled: online && (!offlineAuthenticationRequired() || server.status === "verified"),
     retry: 1,
   });
   const requestedCatalogConversation = selectedId && !selectedConversation
@@ -280,15 +285,16 @@ export function LibraryShell() {
       // lightweight header from the canonical local message table so a valid
       // package never presents as “0/0 messages”. This is read-only metadata
       // repair and does not rewrite message content.
-      const localMessages = await offlineDb.messages.toArray();
       const messageStats = new Map<string, { count: number; turns: Set<number> }>();
-      for (const message of localMessages) {
+      // Iterate one record at a time; never retain all message bodies merely
+      // to reconcile the Library header.
+      await offlineDb.messages.each((message) => {
         const id = String(message.conversation_id);
         const stats = messageStats.get(id) ?? { count: 0, turns: new Set<number>() };
         stats.count += 1;
         if (typeof message.turn_index === "number") stats.turns.add(message.turn_index);
         messageStats.set(id, stats);
-      }
+      });
       const reconciled = fallback.map((conversation) => {
         const stats = messageStats.get(String(conversation.id));
         if (!stats || stats.count === 0) return conversation;
@@ -300,6 +306,14 @@ export function LibraryShell() {
       });
       if (!libraryMountedRef.current || sequence !== reloadSequenceRef.current) return;
       setConversations(reconciled);
+      for (const conversation of reconciled) {
+        const key = ["conversation", "offline", conversation.id];
+        const previous = queryClient.getQueryData<OfflineConversationRecord>(key);
+        if (previous && previous.offline_revision !== conversation.offline_revision) {
+          void queryClient.invalidateQueries({ queryKey: key, exact: true });
+          invalidateReaderSearch(queryClient, { conversationId: conversation.id, mode: "offline" });
+        }
+      }
       localListCommitted = true;
       const readyLocalRead: OfflineLibraryReadState = { phase: "ready", refreshing: false, refreshError: false };
       localReadRef.current = readyLocalRead;
@@ -327,7 +341,7 @@ export function LibraryShell() {
     });
     reloadQueueRef.current = guardedRun.catch(() => undefined);
     return guardedRun;
-  }, [reloadSearchIndex]);
+  }, [queryClient, reloadSearchIndex]);
 
   useEffect(() => { void reloadLocal().catch(() => setSearchFailed(true)); }, [reloadLocal]);
   const retryLocalRead = useCallback(() => {
@@ -395,7 +409,7 @@ export function LibraryShell() {
         scopes.add(key);
         return item.state === "failed";
       })[0] ?? null);
-      const completed = records.filter((item) => item.state === "completed").map((item) => item.id).join("|");
+      const completed = records.map((item) => `${item.id}:${item.conversationCursor ?? 0}:${item.state === "completed"}`).join("|");
       if (completed !== completedDownloadsRef.current) {
         completedDownloadsRef.current = completed;
         void reloadLocal().catch(() => undefined);
@@ -615,7 +629,7 @@ export function LibraryShell() {
     />
   );
   const readerContent = selectedId && selectedConversation ? (
-    <ConversationReader key={`${selectedId}:${selectedConversation.offline_revision}:${searchParams?.get("messageId") ?? ""}:${searchParams?.get("blockIndex") ?? ""}:${searchParams?.get("characterOffset") ?? ""}`} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={openLibrary} onFocusModeChange={setReaderFocusMode} onPrepareSearchRetry={reloadLocal} searchReplay={searchReplay} />
+    <ConversationReader key={selectedId} conversationId={selectedId} dataSource={offlineReaderDataSource} libraryMode onOpenLibrary={openLibrary} onFocusModeChange={setReaderFocusMode} onPrepareSearchRetry={reloadLocal} searchReplay={searchReplay} />
   ) : requestedCatalogConversation ? (
     <div className="flex h-full flex-col items-center justify-center overflow-y-auto px-6 py-6 text-center" aria-label={zh ? "离线下载" : "Offline download"}>
       <Library className="h-10 w-10 shrink-0 text-accent" />
@@ -741,6 +755,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
     <div className="shrink-0 space-y-3 border-b border-ui p-3">
       <label className="flex min-h-10 items-center gap-2 rounded-md border border-ui bg-surface px-3"><Search className="h-4 w-4 text-secondary" /><input value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索本地正文、代码与批注" : "Search offline text, code, and annotations"} /></label>
       <OfflineShellIndicator status={offlineShellStatus} online={online} onRetry={onRetryShell} />
+      <OfflineDeviceControls />
       {downloadStatusError ? <div role="alert" className="space-y-2 rounded-md bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger)]"><p>{zh ? "无法读取下载状态。下载可能仍在继续，请重试读取状态。" : "Could not read download status. A download may still be running; retry the status read."}</p><button type="button" onClick={onRetryDownloadStatus} className="inline-flex min-h-9 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium"><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试状态读取" : "Retry status read"}</button></div> : null}
       {localRead.phase === "error" ? <div role="alert" className="space-y-2 rounded-md bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger)]"><p>{zh ? "无法读取本地离线资料。现有副本未被删除，请重试。" : "Could not read local offline copies. Existing copies were not deleted; retry the read."}</p><button type="button" onClick={onRetryLocalRead} disabled={localRead.refreshing} className="inline-flex min-h-9 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试读取" : "Retry local read"}</button></div> : null}
       {localRead.phase === "ready" && localRead.refreshError ? <div role="status" className="space-y-1 rounded-md bg-subtle px-3 py-2 text-xs text-secondary"><p>{zh ? "本地资料刷新失败，仍显示上次已读取的副本。" : "Local refresh failed; showing the last successfully read copies."}</p><button type="button" onClick={onRetryLocalRead} disabled={localRead.refreshing} className="inline-flex min-h-9 items-center gap-1 rounded border border-ui px-2 font-medium disabled:opacity-50"><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试读取" : "Retry local read"}</button></div> : null}
@@ -768,6 +783,31 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
     </div>
     <footer className="shrink-0 border-t border-ui px-3 py-3 text-xs text-secondary"><SidebarPreferences libraryMode onlineHref={onlineHref} /><div className="px-1 pt-2"><p className="flex items-center gap-2"><HardDrive className="h-4 w-4" />{storage?.usage !== null && storage?.usage !== undefined ? `${formatBytes(storage.usage)} / ${formatBytes(storage.quota ?? 0)}` : (zh ? "浏览器本地存储" : "Browser storage")}</p><p className="mt-1">{storage?.persisted ? (zh ? "已启用持久化存储" : "Persistent storage enabled") : (zh ? "存储可能被浏览器清理；清除站点数据会删除本地资料" : "The browser may clear this data; clearing site data removes offline copies")}</p>{online && selectedId ? <a href={`/conversations/${selectedId}`} className="mt-2 inline-flex font-medium text-accent hover:underline">{zh ? "前往服务器创建 .cr 备份" : "Create a .cr backup online"}</a> : null}</div></footer>
   </div>;
+}
+
+function OfflineDeviceControls() {
+  const zh = usePreferences().resolvedLocale === "zh-CN";
+  const { confirm } = useInteractionDialog();
+  const server = useServerSession();
+  const [revision, refresh] = useState(0);
+  const [error, setError] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { setHydrated(true); }, []);
+  const userId = getCurrentOfflineRuntimeUserId();
+  const trusted = deviceTrusted(userId);
+  // Device authorization exists only in this browser, never in cached HTML.
+  // Keep SSR and the first hydration render identical, including auth-off CI.
+  if (!hydrated || !offlineAuthenticationRequired()) return null;
+  return <section className="space-y-1 border-b border-ui pb-2 text-xs text-secondary" data-trust-revision={revision}>
+    <p>{trusted ? (zh ? "可信设备：登录过期不影响本机阅读" : "Trusted browser: online expiry does not lock local copies") : (zh ? "启用可信设备后，可长期离线阅读" : "Trust this browser for long-term offline reading")}</p>
+    {trusted ? <button type="button" className="min-h-10 text-accent" onClick={async () => {
+      if (await confirm({ title: zh ? "锁定本机资料？" : "Lock local copies?", description: zh ? "未同步修改会保留。解锁需要联网登录；此操作不等于已注销服务器会话。" : "Unsynced edits are retained. Unlocking requires online sign-in. This does not sign out the server session.", confirmLabel: zh ? "锁定本机资料" : "Lock local copies" })) lockBrowserAuthenticationState();
+    }}>{zh ? "锁定本机资料" : "Lock local copies"}</button> : <button type="button" disabled={server.status !== "verified"} className="min-h-10 text-accent disabled:opacity-50" onClick={async () => {
+      if (!await confirm({ title: zh ? "信任此浏览器？" : "Trust this browser?", description: zh ? "已下载资料可长期离线访问。能使用此浏览器的人也可能读取副本；离线时无法即时获知远程撤销。仅在私人设备启用。" : "Downloaded copies stay readable offline. Anyone using this browser may read them; remote revocations cannot be detected offline. Use only on a private device.", confirmLabel: zh ? "信任并启用" : "Trust and enable" })) return;
+      try { trustCurrentDevice(); setError(false); refresh(value => value + 1); } catch { setError(true); }
+    }}>{zh ? "启用长期离线阅读" : "Enable long-term offline reading"}</button>}
+    {error ? <p role="alert">{zh ? "无法保存本机许可，请检查浏览器存储设置。" : "Could not save device permission. Check browser storage settings."}</p> : null}
+  </section>;
 }
 
 function OfflineShellIndicator({ status, online, onRetry }: { status: OfflineShellStatus; online: boolean; onRetry: () => void }) {

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import urlsplit
 import re
+from datetime import timedelta
 
 from fastapi import Request
 from sqlalchemy.exc import SQLAlchemyError
@@ -11,7 +12,7 @@ from starlette.responses import JSONResponse, Response
 
 from app.core.config import Settings, get_settings
 from app.core.database import SessionLocal
-from app.services.auth import SESSION_COOKIE_NAME, SESSION_PRESENCE_COOKIE_NAME, SessionAuthentication, authenticate_session
+from app.services.auth import SESSION_COOKIE_NAME, SESSION_PRESENCE_COOKIE_NAME, SessionAuthentication, authenticate_session, session_rejection_reason
 
 PUBLIC_PATHS = frozenset({
     "/health", "/api/health", "/api/auth/login", "/api/auth/register",
@@ -51,18 +52,27 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
         token = request.cookies.get(SESSION_COOKIE_NAME)
         try:
-            authentication = await run_in_threadpool(_authenticate_request, token, settings)
+            authentication = await run_in_threadpool(
+                _authenticate_request, token, settings,
+                not _passive_request(request),
+            )
         except SQLAlchemyError:
             return _json_error(503, "Authentication service unavailable.")
 
         if authentication is None:
             response = _json_error(401, "Authentication required.")
+            try:
+                reason = await run_in_threadpool(_rejection_reason, token, settings)
+            except SQLAlchemyError:
+                return _json_error(503, "Authentication service unavailable.")
+            response.headers["X-Chat-Reader-Auth-Reason"] = reason
             if token:
                 response.delete_cookie(SESSION_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure, samesite="lax")
             response.delete_cookie(SESSION_PRESENCE_COOKIE_NAME, path="/", secure=settings.auth_cookie_secure, samesite="lax")
             return response
 
         request.state.auth = authentication.context
+        request.state.session_authentication = authentication
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         response.headers["Pragma"] = "no-cache"
@@ -91,14 +101,35 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 samesite="lax",
                 path="/",
             )
+        if not route_sets_session:
+            response.headers["X-Chat-Reader-User"] = str(authentication.context.user_id or authentication.context.principal_id)
+            response.headers["X-Chat-Reader-Session-Expires"] = (
+                authentication.session.last_activity_at + timedelta(seconds=settings.auth_inactivity_timeout_seconds)
+            ).isoformat()
         return response
 
 
-def _authenticate_request(token: str | None, settings: Settings) -> SessionAuthentication | None:
+def _authenticate_request(token: str | None, settings: Settings, touch: bool = True) -> SessionAuthentication | None:
     # Synchronous PostgreSQL I/O must not block the ASGI event loop, including
     # public login/session and health requests behind another request's query.
     with SessionLocal() as db:
-        return authenticate_session(db, token, settings)
+        return authenticate_session(db, token, settings, touch=touch)
+
+
+def _rejection_reason(token: str | None, settings: Settings) -> str:
+    with SessionLocal() as db:
+        return session_rejection_reason(db, token, settings)
+
+
+def _passive_request(request: Request) -> bool:
+    if request.method not in {"GET", "HEAD"}:
+        return False
+    path = request.url.path
+    return (
+        request.headers.get("X-Chat-Reader-Background") == "1"
+        or path in {"/api/tasks/active", "/api/imports/active", "/api/content-cleanup/scans/pending", "/api/offline/catalog"}
+        or bool(re.fullmatch(r"/api/(?:tasks/[^/]+|imports/[^/]+/status|adaptive-import/sessions/[^/]+)", path))
+    )
 
 
 def _same_origin(request: Request, public_web_base_url: str) -> bool:

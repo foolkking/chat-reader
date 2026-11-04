@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { OFFLINE_DOWNLOAD_CHANGED_EVENT, resumeOfflineDownloads, resumeOfflineServerCancellations } from "../lib/offline-downloads";
+import { canUseServer, SERVER_SESSION_CHANGED } from "../lib/server-session";
+import { offlineAuthenticationRequired } from "../lib/offline-access";
 
 export function OfflineDownloadManager() {
   const path = usePathname();
@@ -21,7 +23,7 @@ export function OfflineDownloadManager() {
         running = true;
         void Promise.resolve().then(() => resumeOfflineDownloads(signal)).catch(() => undefined).finally(() => { running = false; });
       }
-      if (navigator.onLine && !cancelling) {
+      if (navigator.onLine && (!offlineAuthenticationRequired() || canUseServer()) && !cancelling) {
         cancelling = true;
         void Promise.resolve().then(() => resumeOfflineServerCancellations(signal)).catch(() => undefined).finally(() => { cancelling = false; });
       }
@@ -32,7 +34,8 @@ export function OfflineDownloadManager() {
     window.addEventListener(OFFLINE_DOWNLOAD_CHANGED_EVENT, run);
     window.addEventListener("online", run);
     window.addEventListener("offline", offline);
-    return () => { active = false; controller.abort(); clearInterval(timer); window.removeEventListener(OFFLINE_DOWNLOAD_CHANGED_EVENT, run); window.removeEventListener("online", run); window.removeEventListener("offline", offline); };
+    window.addEventListener(SERVER_SESSION_CHANGED, run);
+    return () => { active = false; controller.abort(); clearInterval(timer); window.removeEventListener(OFFLINE_DOWNLOAD_CHANGED_EVENT, run); window.removeEventListener("online", run); window.removeEventListener("offline", offline); window.removeEventListener(SERVER_SESSION_CHANGED, run); };
   }, [publicPage]);
   return null;
 }

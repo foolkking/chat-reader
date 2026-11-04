@@ -142,3 +142,22 @@ Windows 构建不能只依赖外层 shell 退出码；还须确认日志包含�
 ## 文档同步
 
 变更路由、环境变量、migration、Reader 数据合同、离线协议或部署拓扑时，同步更新 [Project State](../PROJECT_STATE.md)、对应专题文档和 [Markdown 台账](documentation-inventory.md)。
+## Dependency and temporary-work update — 2026-11-05
+
+API installation now uses hash-checked locks rather than resolving ranges:
+
+```powershell
+python -m pip install --require-hashes -r apps/api/requirements-test.lock -r apps/api/requirements-build.lock
+python -m pip install --no-deps --no-build-isolation -e "apps/api[test]"
+```
+
+Runtime images use `requirements-runtime.lock` plus the build lock; `pytest` is
+test-only. To update, compile universal/hash locks with uv from `pyproject.toml`
+(test extra for the test lock) and the exact build-system requirements, then
+review the diff and execute Python 3.11 CI. Do not automatically upgrade all
+ranges to troubleshoot an unrelated failure.
+
+Follow AGENTS for process-local TEMP/TMP and test `--basetemp`. For the real
+disposable PostgreSQL restore drill, set `SETTINGS_POSTGRES_INTEGRATION=1` and
+`PG_BIN` to a matching PostgreSQL client directory; it rejects non-loopback or
+non-generated source databases.

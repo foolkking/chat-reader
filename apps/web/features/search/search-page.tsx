@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { archiveConversation, getProjects, searchConversations } from "../../lib/api";
-import type { SearchResultItem } from "../../lib/types";
+import { archiveConversation, getProjects, getUserFeatureEntries, searchConversations } from "../../lib/api";
+import type { SearchResultItem, SavedSearchValue, ConversationTagValue } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { ProjectSidebar } from "../projects/project-sidebar";
 import { SearchBox } from "./search-box";
@@ -38,7 +38,9 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const statusScope = params?.get("status_scope") ?? "active";
   const dateFrom = params?.get("date_from") ?? "";
   const dateTo = params?.get("date_to") ?? "";
-  const scope = JSON.stringify([query, documentType, role, projectId, statusScope, dateFrom, dateTo]);
+  const tagId = params?.get("tag_id") ?? "";
+  const scope = JSON.stringify([query, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId]);
+  const tags = useQuery({ queryKey: ["user-feature-entries", "conversation-tag"], queryFn: ({ signal }) => getUserFeatureEntries<ConversationTagValue>("conversation-tag", signal) });
   const [paging, setPaging] = useState({ scope, offset: 0 });
   const offset = paging.scope === scope ? paging.offset : 0;
   const [collection, setCollection] = useState<{ scope: string; items: SearchResultItem[] }>({ scope, items: [] });
@@ -54,11 +56,11 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const activeIndex = selection.scope === scope
     ? orderedItems.findIndex((item) => item.document_id === selection.documentId) : -1;
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
-  const filterCount = [statusScope !== "active", documentType !== "all", role !== "all", projectId !== "all", Boolean(dateFrom), Boolean(dateTo)].filter(Boolean).length;
+  const filterCount = [statusScope !== "active", documentType !== "all", role !== "all", projectId !== "all", Boolean(dateFrom), Boolean(dateTo), Boolean(tagId)].filter(Boolean).length;
   const result = useQuery({
-    queryKey: ["search", query, documentType, role, projectId, statusScope, dateFrom, dateTo, offset],
+    queryKey: ["search", query, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId, offset],
     queryFn: () => searchConversations({
-      q: query,
+      q: query, tagId: tagId || undefined,
       limit: PAGE_SIZE,
       offset,
       documentType: documentType === "all" ? undefined : documentType,
@@ -117,7 +119,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
         : "The browser could not keep this temporary reading queue. Search results were not changed; try again.");
     }
   };
-  const clearFilters = () => update({ status_scope: "active", document_type: "all", role: "all", project_id: "all", date_from: "", date_to: "" });
+  const clearFilters = () => update({ status_scope: "active", document_type: "all", role: "all", project_id: "all", date_from: "", date_to: "", tag_id: "" });
   const selectIndex = (index: number) => setSelection({ scope, documentId: orderedItems[index]?.document_id ?? null });
   const toggleConversationSelection = (conversationId: string, checked: boolean) => {
     setConversationSelection((current) => {
@@ -167,11 +169,11 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
         <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
           <SearchBox initialQuery={query} onSearch={(value) => { if (value === query) void result.refetch(); else update({ q: value }); }} hasResults={items.length > 0} onMoveSelection={moveSelection} onOpenSelection={openSelected} />
           <SavedSearchesPanel
-            current={{ q: query, document_type: documentType as "all" | "conversation" | "message" | "heading" | "code" | "annotation" | "attachment", role: role as "all" | "user" | "assistant", project_id: projectId === "all" ? null : projectId, status_scope: statusScope as "active" | "archived" | "all", date_from: dateFrom || null, date_to: dateTo || null }}
+            current={{ q: query, document_type: documentType as SavedSearchValue["document_type"], role: role as "all" | "user" | "assistant", project_id: projectId === "all" ? null : projectId, status_scope: statusScope as "active" | "archived" | "all", date_from: dateFrom || null, date_to: dateTo || null, tag_id: tagId || null }}
             onApply={(saved) => {
               update({
                 q: saved.q,
-                document_type: saved.document_type,
+                document_type: saved.document_type, tag_id: saved.tag_id ?? "",
                 role: saved.role,
                 project_id: saved.project_id ?? "",
                 status_scope: saved.status_scope,
@@ -200,7 +202,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
           {batchNotice ? <p role="status" className="text-xs text-secondary">{batchNotice}</p> : null}
           <div id="global-search-filters" hidden={!filtersOpen} className={filtersOpen ? "grid gap-3 border-y border-ui py-4 sm:grid-cols-2 lg:grid-cols-4" : "hidden"}>
             <Filter label={zh ? "范围" : "Status"} value={statusScope} onChange={(value) => update({ status_scope: value })} options={[["active", zh ? "未归档" : "Active"], ["archived", zh ? "已归档" : "Archived"], ["all", zh ? "全部" : "All"]]} />
-             <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"], ["annotation", zh ? "批注" : "Annotations"], ["attachment", zh ? "附件" : "Attachments"]]} />
+             <Filter label={zh ? "内容类型" : "Content type"} value={documentType} onChange={(value) => update({ document_type: value })} options={[["all", zh ? "全部" : "All"], ["conversation", zh ? "标题" : "Titles"], ["message", zh ? "消息正文" : "Messages"], ["heading", zh ? "章节" : "Sections"], ["code", zh ? "代码块" : "Code"], ["annotation", zh ? "批注" : "Annotations"], ["notebook", zh ? "笔记" : "Notebooks"], ["description", zh ? "简介" : "Descriptions"], ["attachment", zh ? "附件" : "Attachments"]]} />
             <Filter label={zh ? "角色" : "Role"} value={role} onChange={(value) => update({ role: value })} options={[["all", zh ? "全部" : "All"], ["user", zh ? "用户" : "User"], ["assistant", "ChatGPT"]]} />
             <div>
               <Filter label={zh ? "项目" : "Project"} value={projectId} onChange={(value) => update({ project_id: value })} options={[["all", zh ? "全部项目" : "All projects"], ...projectOptions]} />
@@ -210,6 +212,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
                 <button type="button" disabled={projects.isFetching} onClick={() => void projects.refetch()} className="min-h-10 underline disabled:opacity-60">{zh ? "重试项目" : "Retry projects"}</button>
               </div> : null}
             </div>
+            <Filter label={zh ? "标签" : "Tag"} value={tagId} onChange={value => update({ tag_id: value })} options={[["", zh ? "全部标签" : "All tags"], ...(tags.data ?? []).map(item => [item.id, item.value.name] as [string, string])]} />
             <label className="text-xs font-medium text-secondary">{zh ? "开始日期" : "From"}<input type="date" value={dateFrom} onChange={(event) => update({ date_from: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
             <label className="text-xs font-medium text-secondary">{zh ? "结束日期" : "To"}<input type="date" value={dateTo} onChange={(event) => update({ date_to: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
 

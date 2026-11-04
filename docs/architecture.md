@@ -1,6 +1,7 @@
 # 系统架构
 
-最后核验：2026-08-05
+现役边界同步：2026-11-04。当前部署及验收限制见 [Project State](../PROJECT_STATE.md)；
+带日期的旧认证叙述仅为历史，不得覆盖现行多账户合同。
 
 ## 总览
 
@@ -17,17 +18,18 @@ flowchart LR
   Q --> X
 ```
 
-## 当前工作树认证与 owner 边界（2026-09-01）
+## 现行认证与 owner 边界
 
-当前工作树把原有单 owner 会话边界扩展为一个部署管理员和 `USER` 账号。API
+系统已把原有单 owner 会话边界扩展为一个部署管理员和隔离的 `USER` 账号。API
 从会话取得 owner UUID，并将 conversations、projects、attachments、annotations、
 exports、offline packages、tasks、skills 与 cleanup rules 限定到该 owner。Share
-仍是 token-scoped，Offline 仍是本地只读边界。`20260901_0030_multi_account_users.py`
-存在于源码但尚未应用到生产；下方旧单用户段落保留为发布历史。
+仍是 token-scoped；Offline 允许本地批注/精选笔记/位置写入，不允许 canonical
+内容管理。多账户 migration 0030 已在历史发布时应用，当前 schema 为单一
+`20261030_0058`；原单用户阶段不再是待部署工作。
 
 ## Historical authentication boundary
 
-The browser and FastAPI now enforce a default-deny single-owner session
+The earlier Release N browser and FastAPI enforced a default-deny single-owner session
 boundary for private business routes. Coarse health, the minimal
 login/session allowlist and the explicit token-scoped `/share/{token}` public
 capability surface are exceptions. Share data is still authorized by its
@@ -104,12 +106,12 @@ raw artifact 存在受控 storage 中，只用于追踪和诊断。reader 和 sh
 - TOC 支持 `message_id/offset/limit/max_level/role/q/message range`，reader 首屏不再读取整个 conversation TOC。
 - 远距离导航直接读取目标完整轮次；正文不会先显示截断 preview，也没有按 20 blocks 继续追加的阅读路径。
 - 导航按 quote、character offset、block、message 降级，等待图片解码和 ResizeObserver 静默期，再把目标校正到阅读线 24px 误差内。
-- Reader 使用稳定正文列与覆盖式索引面板；`reader_width_mode` 由 `user_preferences` 按 `local:default` 跨浏览器保存。
+- Reader 使用稳定正文列与覆盖式索引面板；`reader_width_mode` 由 `user_preferences` 按当前会话用户保存，`local:default` 仅为 legacy 开发/测试兼容。
 - 当前方案不是完整消息虚拟列表；完整轮次窗口限制消息 DOM。极长消息使用动态测量的 block 虚拟化，目标 index 在导航稳定前固定进 range；message-window/blocks API 仅保留给兼容调用和其他功能。
 
 ## Markdown 安全
 
-renderer 使用 React 组件和受控 Markdown pipeline，禁止 raw HTML 执行，不使用 `dangerouslySetInnerHTML` 渲染导入内容。链接限制协议，未知外部图片不会直接热加载。Mermaid 在客户端初始化，失败时回退为代码内容。Shiki 使用缓存的 `github-light` highlighter；代码、表格、公式和图表只允许在自身容器横向滚动。
+renderer 使用 React 组件和受控 Markdown pipeline；策略 v13 将 allowlist 静态 HTML/cards/details/media 投影为惰性节点，再统一 sanitization，禁止任意 HTML/脚本执行，不使用 `dangerouslySetInnerHTML` 渲染导入内容。链接限制协议，未知外部图片不会直接热加载。Mermaid 在客户端初始化，失败时回退为代码内容。代码、表格、公式和图表只允许在自身容器横向滚动。详见[富 Markdown 合同](system/AI_RICH_MARKDOWN_CONTRACT.md)。
 
 ## Project 可见性
 
@@ -137,7 +139,7 @@ PostgreSQL `search_documents` 同时支持全文排名和基于 `pg_trgm` GIN �
 
 Share bootstrap 只返回分享和会话元数据。正文主路径使用 token 约束的 `reader-turn` 一次读取完整轮次；对话索引、TOC、message-window 和 block-range 接口用于索引或兼容路径。每个接口都重新执行 token、expiry、revoke、scope 与 include flags 校验，避免分享链接越权读取未选择消息或私人内容。主阅读器的阅读位置按服务端确认的账户身份保存；Share 访客位置仅保存在浏览器本地。
 
-Share 只保存 token hash；公开 token 仅在创建时返回。访问接口提供只读 canonical 数据并记录访问次数。
+Share 只保存 token hash；公开 token 仅在创建时返回。live 分享提供受限 canonical 读取；frozen 分享读取有界文字快照，仍受密码/到期/撤销约束，不支持永久附件冻结。访问记录与权限边界不因快照放宽。
 
 Markdown v2 以 YAML front matter 和隐藏 message markers 流式输出，默认不生成全量 TOC。CanJSON v2 以 manifest/message/optional records/end 的 JSONL 流式输出，正文只保存在 `content_markdown`；CanJSON v1 仅保留兼容导入和 Legacy 导出。
 
@@ -151,7 +153,7 @@ Markdown v2 以 YAML front matter 和隐藏 message markers 流式输出，默�
 
 - `AssetStore` 支持本地文件和可选 S3-compatible backend；原始名称只作 metadata，storage key 是内部随机值。
 - `AttachmentScanner` 支持 Disabled、ClamAV 和 Remote provider。King 使用 DisabledScanner，所有对象保留 `scanner_disabled`，允许使用不等于已安全扫描。
-- HTML/SVG/XML 等主动内容不以内联同源方式执行；PDF/音视频使用鉴权 Range，Office/OCR/CAD/复杂压缩包预览未实现并下载降级。
+- HTML/SVG/XML 等主动内容不以内联同源方式执行；PDF/音视频使用鉴权 Range。部分 Office/OpenDocument 和 ZIP 有有界只读预览；OCR/CAD/3D 等未实现或下载降级，完整范围见[附件合同](system/ATTACHMENT_RENDERER_CONTRACT.md)。
 
 ## 偏好与界面状态
 
@@ -159,4 +161,4 @@ Markdown v2 以 YAML front matter 和隐藏 message markers 流式输出，默�
 
 ## 部署边界
 
-production compose 将 PostgreSQL 和 API 置于内部 Docker network，只暴露 Web。Nginx/Caddy 应作为公网入口负责 TLS、请求体限制和访问控制。当前应用本身没有用户认证，不能仅依靠不可猜测 URL 保护全部数据。
+production compose 将 PostgreSQL 和 API 置于内部 Docker network，只暴露 Web。Nginx/Caddy 应作为公网入口负责 TLS 和请求体限制。应用自身负责账户/owner/Share 授权，不能仅依靠不可猜测 URL 保护全部数据。生产构建在 CI 完成；发布前仍需 fresh preflight、停写备份和精确镜像验收。

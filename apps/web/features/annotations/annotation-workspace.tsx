@@ -73,11 +73,12 @@ function useScopedState<T>(scopeKey: number, initial: T) {
   return [state.scopeKey === scopeKey ? state.value : initial, update] as const;
 }
 
-export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, searchReplayKey = 0, repository, open, onOpenChange, onNavigate }: {
+export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, requestedView, searchReplayKey = 0, repository, open, onOpenChange, onNavigate }: {
   conversationId: string;
   messages: MessageListItem[];
   activeMessageId: string | null;
   initialAnnotationId?: string | null;
+  requestedView?: "notebook";
   searchReplayKey?: number;
   repository: AnnotationRepository;
   open: boolean;
@@ -327,6 +328,11 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     const mode = params.get("annotation_mode");
     if (mode === "single" || mode === "continuous") setReviewMode(mode);
   }, []);
+
+  useEffect(() => {
+    // A search can change the target while the Reader is already mounted.
+    if (requestedView === "notebook") setView("notebook");
+  }, [requestedView, searchReplayKey, scopeKey]);
 
   useEffect(() => {
     if (!open) return;

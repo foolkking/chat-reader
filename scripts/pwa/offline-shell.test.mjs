@@ -31,6 +31,7 @@ async function workerFixture() {
   const stores = new Map();
   const fetched = [];
   const failures = new Set();
+  const redirected = new Set();
   const key = (value) => new URL(typeof value === "string" ? value : value.url, origin).href;
   const caches = {
     keys: async () => [...stores.keys()],
@@ -51,10 +52,15 @@ async function workerFixture() {
     fetch: async (request) => {
       const pathname = new URL(request.url).pathname;
       fetched.push(pathname);
-      return new Response(`synthetic:${pathname}`, {
+      const response = new Response(`synthetic:${pathname}`, {
         status: failures.has(pathname) ? 503 : 200,
         headers: { "Content-Type": pathname === "/library" ? "text/html" : "application/octet-stream" },
       });
+      Object.defineProperties(response, {
+        url: { value: redirected.has(pathname) ? `${origin}/login` : request.url },
+        redirected: { value: redirected.has(pathname) },
+      });
+      return response;
     },
   });
   vm.runInContext(readFileSync(new URL("../../apps/web/public/library-sw.js", import.meta.url), "utf8"), context);
@@ -65,7 +71,8 @@ async function workerFixture() {
   const untouched = await caches.open("chat-reader-offline-assets-v1--other-account");
   await untouched.put("/untouched", new Response("other-account"));
   return {
-    shell, metadata, untouched, fetched, failures,
+    shell, metadata, untouched, fetched, failures, redirected,
+    navigate: () => context.libraryNavigation(new Request(`${origin}/library`)),
     status: () => context.inspectActiveShell(),
     prepare: async () => {
       const messages = [];
@@ -80,6 +87,21 @@ test("complete same-revision shells do not fetch or replace existing bytes", asy
   assert.equal((await fixture.prepare()).status.ready, true);
   assert.deepEqual(fixture.fetched, []);
   assert.equal(await (await fixture.shell.match(script)).text(), `original:${script}`);
+});
+
+test("a complete cached Library starts without waiting for the server", async () => {
+  const fixture = await workerFixture();
+  fixture.failures.add("/library");
+  assert.equal(await (await fixture.navigate()).text(), "original:/library");
+  assert.deepEqual(fixture.fetched, []);
+});
+
+test("a redirected login response cannot replace the Library shell", async () => {
+  const fixture = await workerFixture();
+  await fixture.shell.delete("/library");
+  fixture.redirected.add("/library");
+  assert.equal((await fixture.prepare()).ok, false);
+  assert.equal(await fixture.shell.match("/library"), undefined);
 });
 
 test("same-revision optional misses are repaired without refetching the complete shell", async () => {

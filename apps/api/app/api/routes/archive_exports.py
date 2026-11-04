@@ -160,6 +160,7 @@ def download_archive(
 ) -> FileResponse:
     artifact = owned_export(db, artifact_id, ownership_scope, lock=True)
     require_available(artifact)
+    _check_attachment_batch_sources(db, artifact)
     export_root = Path(get_settings().export_storage_dir).resolve()
     path = Path(artifact.storage_uri).resolve()
     if not path.is_relative_to(export_root) or not validate_final_artifact(path, expected_size=artifact.byte_size):
@@ -187,9 +188,27 @@ class ExportUsage(BaseModel):
 def reserve_download(artifact_id: uuid.UUID, payload: ExportUsage, db: Session = Depends(get_db),
                      ownership_scope: OwnershipScope = Depends(ownership_scope_from_request)):
     artifact = owned_export(db, artifact_id, ownership_scope, lock=True)
+    _check_attachment_batch_sources(db, artifact)
     lease_id = claim_download(db, artifact, payload.session_id)
     db.commit()
     return {"download_url": f"/api/exports/{artifact.id}/download?claim={lease_id}"}
+
+
+def _check_attachment_batch_sources(db: Session, artifact) -> None:
+    """A retained ZIP must not bypass a later scan block or source deletion."""
+    if artifact.format != "attachment-batch-zip":
+        return
+    from app.models.background_job import BackgroundJob
+    from app.services.exporting.attachment_download import validate_attachment_download, AttachmentDownloadError
+    original = db.get(BackgroundJob, artifact.job_id)
+    try:
+        payload = original.payload if original is not None else {}
+        validate_attachment_download(db, conversation_id=uuid.UUID(payload["conversation_id"]),
+            attachment_ids=[uuid.UUID(value) for value in payload["attachment_ids"]])
+    except AttachmentDownloadError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(409, "Export sources are unavailable. Review the original selection.") from exc
 
 
 @router.get("/api/exports/{artifact_id}")

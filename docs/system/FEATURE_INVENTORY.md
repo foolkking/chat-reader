@@ -1,20 +1,26 @@
 # 功能清单
 
-## 两轮 Web 扩展 — 2026-10-30（本地实现，未发布）
+最后同步：2026-11-04。当前代码/合同是能力依据；CI、部署及尚未完成的用户侧
+验收见 [Project State](../../PROJECT_STATE.md)，不以“已实现”冒充交互验收。
 
-本节优先于下方历史清单的“未提供”描述，但不是生产验收。逐项状态见
-[实施记录](../execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)。
+## Web 扩展与 Reader（已随当前源码发布）
+
+两轮 24 项有界功能已随 `127eae5` 发布；随后 Reader、收藏、富 Markdown 与
+ZIP 随 `3b839dc` 发布，当前 `be58b12` 保留这些能力并增加小内存 ZIP 恢复。
+各轮失败、检查点和人工验收限制仍在[实施记录](../execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)
+及[Reader 发布记录](../execution/READER_ZIP_RELEASE_2026-11-04.md)，不再将其标成本地未发布。
 
 | 领域 | 本次有界能力 |
 | --- | --- |
 | 查找与整理 | 命名保存搜索、私人批注收件箱、文件目录、精确 hash 重复候选、已加载结果明确勾选后批量归档 |
-| 阅读 | 待读／手动已读、只读版本差异、会话内完整轮次折叠、分页 split／merge 来源、最多 100 个搜索命中连续阅读并返回原条件 |
-| 复用与入口 | 私有来源引用、TSV／CSV 表格导出、粘贴导入、命名导出预设、离线常备清单、快速操作、批量标题修整、无写入合成示例 |
+| 阅读 | 收藏／手动已读、只读版本差异、会话内完整轮次折叠、分页 split／merge 来源、最多 100 个搜索命中连续阅读并返回原条件 |
+| 复用与入口 | 私有来源引用、TSV／CSV 表格导出、粘贴导入、命名导出预设、离线常备清单、快速操作、批量标题修整；合成示例入口已移除 |
+| 补齐的五项合同 | 受限访客预览、独立双对话只读对照、账户多标签、显式新增消息基线、有界文字冻结分享；具体排除项见数据合同 |
 | 打印 | canonical 分页阅读稿，最多 2,000 消息并明确超限；不是直接 PDF 生成或任意内容保真承诺 |
 | 离线下载可靠性 | 跨 ASGI 响应的短租约，避免有效下载被旧产物清理竞争；不改包格式和本机数据 |
 
-尚未实现：分享前服务器访客投影、独立双 Reader、多标签、真正的“上次已读后
-新增”基线、冻结分享。它们需要新合同，不得用占位入口算作已交付。
+标签/基线/冻结快照尚无 `.cr` 便携承诺；冻结分享不支持附件、批注、笔记或访客
+导出。完整边界见[数据与存储](DATA_AND_STORAGE.md)，不是任意永久快照能力。
 
 ## Current account features (deployed, 2026-09-02)
 
@@ -30,14 +36,12 @@ Authenticated production browser acceptance remains `NOT VERIFIED` until the
 operator runs the Web flow; the historical rows below are not the current
 implementation authority.
 
-最后核验：2026-09-02
-
 ## 导入与后台任务
 
 | 能力 | 状态 | 当前语义 |
 | --- | --- | --- |
-| 两种导入入口 | 已确认 | Adaptive JSON/Markdown 与独立 `.cr` 归档；`.crbundle` 产品入口已删除 |
-| Adaptive Import | 已确认 | 单 JSON、单 Markdown、配对和批量；Session/Group/Family、Built-in/Learned Profile、Revision、drift、Mapping 与直接导入 |
+| 两种导入入口 | 已确认 | Adaptive JSON/Markdown/ZIP 与独立 `.cr` 归档；`.crbundle` 产品入口已删除 |
+| Adaptive Import | 已确认 | 单 JSON、单 Markdown、配对、批量与有界 ZIP；Session/Group/Family、Built-in/Learned Profile、Revision、drift、Mapping 与显式提交；ZIP 安全和小内存资格见 [Archive Import](ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md) |
 | Profile 安全匹配 | 已确认 | hard requirements、无正文 signature、semantic guards、unknown role 阻断、全 Family validation |
 | preview -> ImportDraft -> commit | 已确认 | preview 写受控 JSONL/digest metadata；commit 校验路径、统计和到期并读取同一 Draft，幂等排队 |
 | CanJSON v2 | 已确认 | JSONL 流式导入/导出；正文一次；支持 gzip、selected、可选 versions/annotations/notebooks/source refs |
@@ -76,7 +80,8 @@ implementation authority.
 | 连续上下阅读 | 已确认 | 相邻轮次预取、prepend/trim 真实锚点补偿 |
 | 阅读位置 | 已确认 | v2 block/version/order/ratio/字符偏移；按 block id -> index/message -> order -> ratio 恢复，兼容 v1 |
 | 双 TOC | 已确认 | 对话索引跨消息；章节 TOC 绑定消息/heading |
-| Markdown | 已确认 | GFM、Shiki、KaTeX、Mermaid、callout、表格、引用；在线 Owner 的任务列表可立即切换，Share/Offline/附件预览只读 |
+| Markdown | 已确认 | GFM、Shiki、KaTeX、Mermaid、Obsidian callout/highlight、安全 HTML/details/media；策略 v13，不执行脚本或承诺全部插件。在线 Owner 任务列表可立即切换，Share/Offline/附件预览只读 |
+| 收藏与快捷键帮助 | 已确认（源码/自动化） | 搜索右侧星标、收藏变黄；保留 `reading-list` API/数据；帮助外部点击/Escape 关闭、方向键约三行、Home/End 消息边界及 J/K；真实设备体验仍待验证 |
 | 阅读偏好 | 已确认 | 宽度、Markdown 间距、15-22px 字号、主题、语言、默认专注 |
 | 专注模式 | 已确认 | 临时隐藏侧栏、TOC、提示和工具，退出恢复锚点/面板 |
 
@@ -116,4 +121,4 @@ implementation authority.
 
 ## 明确不包含
 
-明确不包含：未经 Adapter 标准化的 OpenAI 官方图/ZIP 导入、回答分支切换、团队协作、标签、日历、语义/向量搜索、HTML/PDF 导出和完整消息虚拟列表。账号、管理员和权限边界以[身份专题](USER_ROLES_AND_PERMISSIONS.md)与[管理专题](ADMINISTRATION_CONTRACT.md)为准；不是“没有账号系统”。DOC（提取正文）、DOCX/ODT、XLSX/ODS、PPTX/ODP 和 ZIP 具有浏览器内有界只读预览，并保留原文件下载；XLS/PPT、其他未支持压缩格式、OCR、CAD、3D、图表/工程格式和 EPUB 仍为未实现或下载降级，不应与已支持格式混写。2026-10-28 的截断提示等源码增强尚未运行验收，详见[附件合同](ATTACHMENT_RENDERER_CONTRACT.md)。
+明确不包含：绕过格式/安全约束的任意归档或完整 Obsidian vault 导入、回答分支切换、团队协作、日历、语义/向量搜索、直接 HTML/PDF 导出和完整消息虚拟列表；有界打印稿不是 PDF 生成器。账号、管理员和权限边界以[身份专题](USER_ROLES_AND_PERMISSIONS.md)与[管理专题](ADMINISTRATION_CONTRACT.md)为准。DOC（提取正文）、DOCX/ODT、XLSX/ODS、PPTX/ODP 和 ZIP 具有浏览器内有界只读预览，并保留原文件下载；XLS/PPT、其他未支持压缩格式、OCR、CAD、3D、图表/工程格式和 EPUB 仍为未实现或下载降级，不应与已支持格式混写。自动化回归不等于全部格式真实设备验收，详见[附件合同](ATTACHMENT_RENDERER_CONTRACT.md)。

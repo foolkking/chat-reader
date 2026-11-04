@@ -1348,6 +1348,16 @@ def _source_path(record: ImportRecord, artifact: SourceArtifact) -> Path:
     return path
 
 
+def session_sources_available(record: ImportRecord, artifacts: list[SourceArtifact]) -> bool:
+    """Cheap existence check only; reopening still validates every source."""
+    if not artifacts:
+        return False
+    try:
+        return all(_source_path(record, artifact).is_file() for artifact in artifacts)
+    except (AdaptiveImportError, OSError):
+        return False
+
+
 def _remove_source_path(path: Path) -> None:
     root = Path(get_settings().import_storage_dir).resolve()
     resolved = path.resolve()

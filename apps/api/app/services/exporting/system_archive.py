@@ -127,12 +127,16 @@ def create_system_archive(
         rows.update(configuration_queries(snapshot))
         from app.services.exporting.archive_context import context_queries
         rows.update(context_queries(snapshot, rows['conversations']))
+        from app.services.exporting.archive_user_features import feature_queries, portable_feature_payload
+        rows.update(feature_queries(snapshot, rows["conversations"]))
+        conversation_ids = {str(row[0]) for row in rows["conversations"].with_entities(Conversation.id)}
+        project_ids = {str(row[0]) for row in rows["projects"].with_entities(Project.id)}
         return _create_data_archive(
             db, rows=rows, job_id=job_id, include_archived=include_archived,
             archive_format=SYSTEM_ARCHIVE_FORMAT, archive_version=SYSTEM_ARCHIVE_VERSION,
             scope_type="system", restore_mode="empty_instance_only", progress_callback=progress_callback,
-            payload_transform=lambda name, payload: ({key: value for key, value in payload.items() if key in IDENTITY_FIELDS} if name == "users" else portable_support_payload(name, payload)),
-            manifest_metadata={"configuration_version": CONFIGURATION_VERSION, "skill_bundle_version": 1, "context_files_version": 1, "support_requests_version": 1},
+            payload_transform=lambda name, payload: ({key: value for key, value in payload.items() if key in IDENTITY_FIELDS} if name == "users" else portable_feature_payload(name, portable_support_payload(name, payload), conversation_ids, project_ids)),
+            manifest_metadata={"configuration_version": CONFIGURATION_VERSION, "skill_bundle_version": 1, "context_files_version": 1, "support_requests_version": 1, "user_features_version": 1},
             archive_validator=inspect_system_archive,
         )
 
@@ -267,6 +271,8 @@ def _create_data_archive(
                                     unbacked_attachments += 1
                         if payload_transform:
                             payload = payload_transform(name, payload)
+                        if payload is None:
+                            continue
                         encoded = (json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
                         _export_limit(len(encoded) > settings.canjson_max_line_bytes, "CANJSON_MAX_LINE_BYTES")
                         expanded += len(encoded)
@@ -369,6 +375,7 @@ def _create_data_archive(
 
 
 def require_empty_system_instance(db: Session) -> None:
+    from app.services.exporting.archive_user_features import MODELS as FEATURE_MODELS
     occupied_models = (
         Conversation,
         Message,
@@ -382,7 +389,7 @@ def require_empty_system_instance(db: Session) -> None:
         ReadingPosition,
         ProjectConversation,
     )
-    if any(db.query(model).first() is not None for model in occupied_models):
+    if any(db.query(model).first() is not None for model in (*occupied_models, *FEATURE_MODELS.values())):
         raise SystemArchiveError("System archives can only be restored into an empty instance.", 409)
     if db.query(Project.id).filter(Project.is_default.is_(False)).first() is not None:
         raise SystemArchiveError("System archives can only be restored into an empty instance.", 409)
@@ -404,6 +411,8 @@ def restore_system_archive(
                 raise SystemArchiveError("Archive changed since preview. Preview it again.", 409)
             if db.get_bind().dialect.name == "postgresql":
                 tables = {model.__tablename__ for model in TABLE_MODELS.values()}
+                from app.services.exporting.archive_user_features import MODELS as FEATURE_MODELS
+                tables.update(model.__tablename__ for model in FEATURE_MODELS.values())
                 from app.services.exporting.archive_context import CONTEXT_TABLES
                 tables.update(model.__tablename__ for model in CONTEXT_TABLES.values())
                 if checked.has_configuration:
@@ -515,6 +524,8 @@ def restore_system_archive(
                 restore_system_configuration(db, checked, mapping)
             from app.services.exporting.archive_context import restore_context
             restore_context(db, checked, lambda name, source: uuid.UUID(source) if source is not None else None)
+            from app.services.exporting.archive_user_features import restore_system_features
+            restore_system_features(db, checked, owned)
             db.flush()
 
             for index, payload in enumerate(records["conversations"], start=1):

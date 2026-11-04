@@ -42,6 +42,7 @@ function editFixture(text, baselineText = "Synthetic original", { authoritative 
   const saved = [], updates = {}, scope = { text, baselineText, reason: "  Synthetic reason  ", attachmentDrafts: drafts,
     editorViewRef: { current: { state: { doc: { toString: () => authoritative } } } }, saveRequestRef: { current: 0 },
     editorRevisionRef: { current: 9 }, zh: false, removedActions: {},
+    draft: { acknowledge: async value => { updates.acknowledgedDraft = value; } },
     findTransientUploadReferences: () => [], removedAttachmentIds: () => [], isRevisionConflictMessage, editorErrorFeedback,
     t: key => key, onDirtyChange: value => { updates.dirty = value; },
     onSave: async (...args) => { saved.push(args); if (fail) throw new Error("Synthetic offline"); return canonical === undefined ? undefined : { canonicalText: canonical }; },

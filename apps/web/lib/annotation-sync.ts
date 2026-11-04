@@ -1,8 +1,10 @@
 import { ApiRequestError, getConversationAnnotations, getConversationNotebook, getConversationNotebookConflicts, syncConversationAnnotations } from "./api";
 import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
-import { clearOfflineAnnotationSearch, offlineDb, syncOfflineAnnotationSearch, type OfflineOutboxRecord } from "./offline-db";
+import { clearOfflineAnnotationSearch, offlineDb, getActiveOfflineStorageContext, syncOfflineAnnotationSearch, type OfflineOutboxRecord } from "./offline-db";
 import type { AnnotationRead, NotebookRead } from "./types";
 import { flushReadingPositionBatch } from "./reading-position-sync";
+import { canUseServer } from "./server-session";
+import { offlineAuthenticationRequired } from "./offline-access";
 
 export const OFFLINE_SYNC_CHANGED_EVENT = "chat-reader:sync-changed";
 export const OFFLINE_SYNC_MAX_ATTEMPTS = 5;
@@ -18,6 +20,7 @@ function normalizeConversationIds(conversationIds?: readonly string[]): string[]
 
 export function flushAnnotationOutbox(conversationIds?: readonly string[]): Promise<SyncResult> {
   if (!navigator.onLine) return Promise.resolve({ synced: 0, conflicts: 0 });
+  if (offlineAuthenticationRequired() && !canUseServer(getActiveOfflineStorageContext().userId)) return Promise.resolve({ synced: 0, conflicts: 0 });
   const db = offlineDb;
   const scope = normalizeConversationIds(conversationIds);
   const scopeKey = scope?.join(",") ?? "*";

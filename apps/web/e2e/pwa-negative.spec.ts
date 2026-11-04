@@ -279,6 +279,12 @@ test.describe("Release E PWA negative matrix", () => {
       // Drive the SSR locale fallback through the browser request language
       // instead of requiring a private preference session.
       await page.context().setExtraHTTPHeaders({ "Accept-Language": locale });
+      // Keep this offline-only fixture independent of a previous browser
+      // suite's server preference. An explicit account locale correctly wins
+      // over Accept-Language when the API is running with auth disabled.
+      await page.route("**/api/preferences", route => route.fulfill({
+        status: 401, json: { detail: "Synthetic fixture has no online preference session." },
+      }));
       await seedMinimalOfflineFixture(page);
       await openOfflineFiles(page);
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
@@ -537,6 +543,11 @@ test.describe("Release E PWA negative matrix", () => {
         estimated_bytes: 2048, conversations, projects: [] }),
     }));
     await page.route("**/api/offline/packages", route => route.fulfill({ status: 503, body: "Synthetic admission pause" }));
+    // This case inspects retained cancellation intent. A real background
+    // cancel of the synthetic non-existent task would receive 404 and correctly
+    // acknowledge it before the assertion, making the fixture timing-dependent.
+    await page.route("**/api/tasks/30000000-0000-4000-8000-000000000001/cancel",
+      route => route.fulfill({ status: 503, body: "Synthetic cancellation pause" }));
     await page.goto("/library");
     await expect.poll(() => page.evaluate(() => Boolean(window.__chatReaderPwaNegativeTest?.enqueueOfflineDownload))).toBe(true);
     await expect.poll(() => page.evaluate(() => window.__chatReaderPwaNegativeTest?.offlineAccessReady() ?? false)).toBe(true);

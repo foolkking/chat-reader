@@ -73,6 +73,10 @@ class SharePreviewResponse(BaseModel):
     has_more_messages: bool = False
     capabilities: dict[str, bool] = Field(default_factory=dict)
     description_markdown: str | None = None
+    notebook_scope: Literal["none", "entire_notebook"] = "none"
+    notebook_block_count: int = 0
+    notebook_preview: list[str] = Field(default_factory=list)
+    notebook_preview_truncated: bool = False
 
 
 class ShareUpdate(BaseModel):

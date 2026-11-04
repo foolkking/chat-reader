@@ -14,6 +14,8 @@ from app.services.assets.asset_store import get_asset_store
 from app.services.assets.lifecycle import asset_object_has_live_references
 from app.services.ownership import OwnershipScope, get_owned
 from app.services.context_cleanup import detach_conversation_context, queue_context_cleanup
+from app.models.user_feature_entry import UserFeatureEntry
+from app.services.user_feature_entries import lock_feature_collection
 
 
 def delete_conversation_record(
@@ -27,7 +29,7 @@ def delete_conversation_record(
         if ownership_scope is not None
         else db.get(Conversation, conversation_id)
     )
-    if conversation is None or conversation.deleted_at is not None:
+    if conversation is None:
         raise LookupError("Conversation not found.")
     asset_ids = {
         row[0]
@@ -71,6 +73,22 @@ def delete_conversation_record(
     # no user-visible request waits on derived/index cleanup.
     conversation.status = "deleted"
     conversation.deleted_at = now
+    # A crash after publishing the tombstone must leave resumable work in the
+    # same transaction. Duplicate wakeups are harmless; one locks the row.
+    cleanup_job = db.query(BackgroundJob).filter(
+        BackgroundJob.job_type == "conversation_delete_cleanup",
+        BackgroundJob.payload["conversation_id"].as_string() == str(conversation_id),
+        BackgroundJob.status.in_(("queued", "processing")),
+    ).first()
+    if cleanup_job is None:
+        cleanup_job = BackgroundJob(
+            owner_user_id=conversation.owner_user_id,
+            job_type="conversation_delete_cleanup", status="queued", phase="queued",
+            total_items=1, payload={"conversation_id": str(conversation_id)}, result={},
+        )
+        db.add(cleanup_job)
+    db.flush()
+    cleanup_id = cleanup_job.id
     db.commit()
 
     # Start the destructive cascade from a clean transaction so stale ORM
@@ -84,7 +102,22 @@ def delete_conversation_record(
     if conversation is None:
         return
     # Serialize with direct member updates before dropping their reference graph.
+    subject = str(conversation.owner_user_id) if conversation.owner_user_id else "local:default"
+    for collection in ("conversation-tag", "reading-list"):
+        lock_feature_collection(db, subject, collection)
     db.refresh(conversation, with_for_update=True)
+    entries = db.query(UserFeatureEntry).filter(
+        UserFeatureEntry.subject_key == subject,
+        UserFeatureEntry.collection.in_(("conversation-tag", "reading-list")),
+    ).order_by(UserFeatureEntry.id).with_for_update().all()
+    for entry in entries:
+        value = entry.value or {}
+        if entry.collection == "reading-list" and value.get("conversation_id") == str(conversation_id):
+            db.delete(entry)
+        elif entry.collection == "conversation-tag" and str(conversation_id) in value.get("conversation_ids", []):
+            entry.value = {**value, "conversation_ids": [item for item in value["conversation_ids"] if item != str(conversation_id)]}
+            entry.revision += 1
+            entry.updated_at = now
     context_keys = detach_conversation_context(db, conversation.id)
     queue_context_cleanup(db, context_keys, owner_user_id=conversation.owner_user_id)
     db.delete(conversation)
@@ -98,6 +131,15 @@ def delete_conversation_record(
             removable_keys.append(asset.storage_key)
             db.delete(asset)
     db.commit()
+    if cleanup_id:
+        done = db.get(BackgroundJob, cleanup_id)
+        if done is not None and done.status == "queued":
+            done.status = "committed"
+            done.phase = "completed"
+            done.progress = 100
+            done.processed_items = 1
+            done.completed_at = now
+            db.commit()
     for storage_key in removable_keys:
         try:
             get_asset_store().delete_key(storage_key)

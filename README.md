@@ -10,16 +10,16 @@ Share password. The deployed account boundary and remaining verification debt
 are recorded in [`PROJECT_STATE.md`](PROJECT_STATE.md).
 See [`docs/system/AUTHENTICATION_CONTRACT.md`](docs/system/AUTHENTICATION_CONTRACT.md).
 
-Chat Reader 是面向 AI 对话内容的长期阅读与管理系统。Adaptive Import 能确定性识别内置或用户学习过的 JSON / Markdown 格式；陌生结构只需 Mapping 一次，之后会成为可复用的导入格式。完整恢复继续使用 `.cr`。
+Chat Reader 是面向 AI 对话内容的长期阅读与管理系统。Adaptive Import 能确定性识别内置或用户学习过的 JSON / Markdown 格式，并支持有界 ZIP 来源分析；陌生结构只需 Mapping 一次，之后会成为可复用的导入格式。完整恢复继续使用 `.cr`。
 
 ## 核心能力
 
-- 两类导入入口：Adaptive JSON / Markdown（单文件、配对或批量）和 `.cr` 归档恢复；CanJSON v1/v2 与 Chat Reader 原生格式作为 Built-in Profile 自动识别。
+- 两类导入入口：Adaptive JSON / Markdown / ZIP（单文件、配对或批量，有预览与限制）和 `.cr` 归档恢复；CanJSON v1/v2 与 Chat Reader 原生格式作为 Built-in Profile 自动识别。
 - 对话级附件支持普通上传、当前对话文件、版本 occurrence、Reader/Share/Offline 和基础预览；轻量部署可明确使用 disabled scanner。
 - 以完整对话轮次加载长正文，支持远距离定位、连续滚动和稳定阅读位置恢复。
-- GFM、Shiki、KaTeX、Mermaid、callout、代码复制及安全链接渲染。
-- Project 与未归类对话管理、归档、批量选择、拆分/合并和版本恢复。
-- 全局/当前对话搜索、批注与精选笔记、只读 Share，以及 Markdown v2、CanJSON v2、`.cr` 三类职责明确的导出。
+- GFM、Shiki、KaTeX、Mermaid、Obsidian callout/highlight、有界安全 HTML/折叠块、代码复制及安全链接渲染；不执行任意 HTML 或脚本。
+- Project 与未归类对话管理、收藏、标签、归档、批量选择、拆分/合并和版本恢复。
+- 全局/当前对话搜索、保存搜索、私人批注收件箱与精选笔记、只读 Share，以及 Markdown v2、CanJSON v2、`.cr` 三类职责明确的导出。
 - `/library` 独立 PWA：按 conversation revision 增量更新，支持离线阅读、搜索及批注同步。
 
 ## 技术栈
@@ -72,4 +72,4 @@ corepack pnpm run dev:web
 - [生产部署](docs/deployment.md)
 - [故障排查](docs/troubleshooting.md)
 
-当前支持相互隔离的用户账户，不提供协作式多用户工作区、在线 AI 生成、完整消息/轮次虚拟列表、HTML/PDF 导出、标签系统或语义搜索。极长消息仅在 blocks 层动态虚拟化；公网部署必须由反向代理提供 HTTPS。
+当前支持相互隔离的用户账户，不提供协作式多用户工作区、在线 AI 生成、完整消息/轮次虚拟列表、直接 HTML/PDF 导出或语义搜索；有界打印稿不等于 PDF 生成。极长消息仅在 blocks 层动态虚拟化；公网部署必须由反向代理提供 HTTPS。完整能力及未验收边界见[功能清单](docs/system/FEATURE_INVENTORY.md)与[当前状态](PROJECT_STATE.md)。

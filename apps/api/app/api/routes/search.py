@@ -20,7 +20,7 @@ from app.services.ownership import get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
-DOCUMENT_TYPES = {"conversation", "message", "heading", "code", "annotation", "attachment"}
+DOCUMENT_TYPES = {"conversation", "message", "heading", "code", "annotation", "attachment", "notebook", "description"}
 ROLES = {"user", "assistant", "system", "tool", "note"}
 
 
@@ -37,6 +37,8 @@ def search_documents(
     status_scope: str = Query(default="active", pattern="^(active|archived|all)$"),
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    tag_id: uuid.UUID | None = None,
+    duplicate_of: uuid.UUID | None = None,
     db: Session = Depends(get_db),
 ) -> SearchResponse:
     if document_type is not None and document_type not in DOCUMENT_TYPES:
@@ -56,6 +58,8 @@ def search_documents(
             status_scope=status_scope,
             date_from=date_from,
             date_to=date_to,
+            tag_id=tag_id,
+            duplicate_of=duplicate_of,
             ownership_scope=ownership_scope_from_request(request),
         )
     except SearchServiceError as exc:

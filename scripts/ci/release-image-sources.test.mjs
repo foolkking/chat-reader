@@ -101,7 +101,7 @@ test("both pinned bases are prepared before building without retrying applicatio
 test("the complete API suite stays PostgreSQL-enabled, bounded and diagnosable", () => {
   assert.match(job("api-quality"), /- name: API full suite\n        timeout-minutes: 45\n/);
   assert.match(job("api-quality"), /SETTINGS_POSTGRES_INTEGRATION: "1"/);
-  assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv -o faulthandler_timeout=120(?:\n|$)/);
+  assert.match(job("api-quality"), /run: cd apps\/api && pytest -vv --capture=tee-sys -o faulthandler_timeout=120(?:\n|$)/);
 });
 
 test("release requires a real constrained worker, no swap and independently checked evidence", () => {

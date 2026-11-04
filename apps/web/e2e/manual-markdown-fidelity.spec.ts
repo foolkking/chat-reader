@@ -34,6 +34,55 @@ async function openMessageActions(message: Locator) {
   }
 }
 
+test("source drafts survive reload and require explicit recovery without submitting", async ({ page, baseURL, manualConversation }) => {
+  await settingsAppearance(page.request, baseURL!, "en-US");
+  const created = await page.request.post("/api/conversations", { headers: { Origin: baseURL! },
+    data: { title: "Synthetic draft recovery", messages: [
+      { role: "user", content_markdown: "Synthetic question" },
+      { role: "assistant", content_markdown: "Synthetic original source" },
+    ] } });
+  expect(created.status(), await created.text()).toBe(201);
+  const value = await created.json();
+  manualConversation.id = value.conversation.id;
+  const messageId = value.messages[1].id;
+  const open = async () => {
+    const message = page.locator(`article[data-message-id="${messageId}"]`);
+    await openMessageActions(message);
+    await message.getByRole("button", { name: /Edit Markdown source/ }).click();
+    return page.getByTestId("source-editor-codemirror").locator(".cm-content");
+  };
+  await page.goto(`/conversations/${manualConversation.id}`);
+  let editor = await open();
+  await editor.fill("Synthetic recovered draft");
+  await expect.poll(() => page.evaluate(async (messageId) => {
+    const databases = await indexedDB.databases();
+    for (const item of databases.filter(item => item.name?.startsWith("chat-reader-offline-library"))) {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open(item.name!);
+        request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+      });
+      try {
+        const rows = await new Promise<Array<{ key: string; value: { text?: string } }>>((resolve, reject) => {
+          const request = db.transaction("settings").objectStore("settings").getAll();
+          request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+        });
+        if (rows.some(row => row.key.startsWith(`source-editor-draft:${messageId}:`) && row.value.text === "Synthetic recovered draft")) return true;
+      } finally { db.close(); }
+    }
+    return false;
+  }, messageId)).toBe(true);
+  await page.reload();
+  editor = await open();
+  await expect(editor).toHaveText("Synthetic original source");
+  await expect(page.getByText("An unsaved local draft is available.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^Restore to editor$/ }).click();
+  await expect(editor).toHaveText("Synthetic recovered draft");
+  await expectSource(page.request, messageId, "Synthetic original source");
+  await page.getByTestId("source-editor-create-version").click();
+  await expect.poll(async () => (await (await page.request.get(`/api/messages/${messageId}`)).json()).current_version.display_text).toBe("Synthetic recovered draft");
+  await page.locator("button[data-source-editor-close='true']").click();
+});
+
 for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) {
   test(`${width}px ${locale}: create, whitespace-only edit and single/pair insertion preserve exact source`, async ({ page, baseURL, manualConversation }, info) => {
     test.setTimeout(180_000);

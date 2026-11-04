@@ -30,10 +30,13 @@ def snapshots(tmp_path):
         # A newer pg_dump can emit settings unsupported by an older server.
         # Prefer the exact server-major client; in GitHub Actions use the
         # already-pinned disposable PostgreSQL container's own client binaries.
-        matching = Path(f"/usr/lib/postgresql/{major}/bin")
-        pg_dump = matching / "pg_dump"
-        pg_restore = matching / "pg_restore"
+        matching = Path(os.environ.get("PG_BIN", f"/usr/lib/postgresql/{major}/bin"))
+        suffix = ".exe" if os.name == "nt" else ""
+        pg_dump = matching / f"pg_dump{suffix}"
+        pg_restore = matching / f"pg_restore{suffix}"
         if pg_dump.is_file() and pg_restore.is_file():
+            version = subprocess.check_output([str(pg_dump), "--version"], text=True)
+            assert f"(PostgreSQL) {major}." in version, version
             pg_dump = [str(pg_dump)]
             pg_restore = [str(pg_restore)]
         else:

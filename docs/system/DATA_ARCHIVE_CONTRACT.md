@@ -1,5 +1,14 @@
 # Data archive contract
 
+## Current additive extension — 2026-11-05 candidate
+
+Optional `user_features_version:1` adds collections and reading baselines to
+personal v1/system v5 archives without changing their existing format numbers.
+Old archives remain accepted. Ownership/reference validation, remapping and
+deduplication are described in the [current contract](COMPREHENSIVE_OPTIMIZATION_CONTRACT.md).
+Browser drafts, local permission, sessions/credentials and Share links are excluded.
+The dated no-portability limitations below are superseded for these declared tables.
+
 Archive baseline is included in the release referenced by `PROJECT_STATE.md`.
 The recovery changes below are local work dated 2026-10-07, not yet released.
 

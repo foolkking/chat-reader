@@ -1,4 +1,9 @@
 -- Database Schema Draft for Chat Archive Reader
+-- Historical partial reference, NOT an executable current schema.
+-- Canonical: Alembic + app/models. Candidate head 20261105_0059 adds
+-- auth_sessions.revocation_reason VARCHAR(40) NULL and the unique index
+-- uq_shares_creation_intent ON shares(conversation_id, (metadata ->> 'creation_key')).
+-- The same migration repairs only derived title dates and queues note indexing.
 
 CREATE TABLE projects (
   id UUID PRIMARY KEY,

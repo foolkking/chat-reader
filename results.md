@@ -1,4 +1,11 @@
-# Implementation Results
+# Implementation Results — historical ledger
+
+> Knowledge closeout note (2026-11-04): this file contains dated Release A–N
+> results and is retained for provenance. It is not the current production
+> source of truth and must not trigger a new CI, deployment, migration, or
+> cleanup action. Use `PROJECT_STATE.md` and
+> `docs/execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md` for the current
+> `be58b12` release.
 
 ## Adaptive JSON / Markdown import - deployed
 

@@ -39,6 +39,8 @@ class AuthSession(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # NULL on historical revocations means unknown, never natural expiry.
+    revocation_reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
     principal = relationship("AuthPrincipal")
 

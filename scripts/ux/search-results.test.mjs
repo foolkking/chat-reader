@@ -15,6 +15,9 @@ const target = {}, matcher = {};
 new Function("exports", compile("features/search/search-result-target.ts"))(target);
 new Function("exports", compile("lib/search-text-matches.ts"))(matcher);
 const stubs = {
+  react: require("react"),
+  "@tanstack/react-query": { useQuery: () => ({ data: undefined }) },
+  "../../lib/api": { searchConversations: async () => { throw Error("No query before expansion"); } },
   "react/jsx-runtime": jsx,
   "lucide-react": { Check: () => null },
   "next/link": { default: props => jsx.jsx("a", props) },

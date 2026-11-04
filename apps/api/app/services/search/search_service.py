@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import case, func, literal, or_
+from sqlalchemy import String, and_, case, cast, func, literal, or_
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -12,6 +12,7 @@ from app.models.project import Project
 from app.models.project_conversation import ProjectConversation
 from app.models.render_block import RenderBlock
 from app.models.search_document import SearchDocument
+from app.models.user_feature_entry import UserFeatureEntry
 from app.schemas.search import SearchMatch
 from app.services.ownership import LEGACY_OWNERSHIP_SCOPE, OwnershipScope, get_owned
 
@@ -69,6 +70,8 @@ def search(
     status_scope: str = "active",
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    tag_id: uuid.UUID | None = None,
+    duplicate_of: uuid.UUID | None = None,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> SearchResultPage:
     normalized_query = query.strip()
@@ -197,50 +200,63 @@ def search(
             base_query = base_query.filter(SearchDocument.created_at <= date_to)
         ordered_query = base_query.order_by(rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc(), SearchDocument.id.asc())
 
-    rows = ordered_query.with_entities(
+    if tag_id is not None:
+        subject = str(ownership_scope.owner_user_id) if ownership_scope.owner_user_id else "local:default"
+        tag = db.query(UserFeatureEntry).filter(
+            UserFeatureEntry.id == tag_id, UserFeatureEntry.subject_key == subject,
+            UserFeatureEntry.collection == "conversation-tag",
+        ).first()
+        if tag is None:
+            raise SearchServiceError("Tag not found.")
+        ordered_query = ordered_query.filter(SearchDocument.conversation_id.in_(
+            [uuid.UUID(value) for value in (tag.value or {}).get("conversation_ids", [])]
+        ))
+    ordered_query = ordered_query.outerjoin(Message, Message.id == SearchDocument.message_id)
+    if duplicate_of is not None:
+        source = db.query(Message.content_hash).join(
+            SearchDocument, SearchDocument.message_id == Message.id,
+        ).join(Conversation, Conversation.id == SearchDocument.conversation_id).filter(
+            SearchDocument.id == duplicate_of, SearchDocument.document_type == "message",
+            ownership_scope.predicate(Conversation), Conversation.deleted_at.is_(None),
+        ).first()
+        if source is None or not source.content_hash:
+            raise SearchServiceError("Duplicate source not found.")
+        ordered_query = ordered_query.filter(
+            SearchDocument.document_type == "message", Message.content_hash == source.content_hash,
+        )
+    # Group metadata in SQL; only page bodies enter Python. The representative
+    # uses exactly the existing rank/date/order/id tie-breaks.
+    folded = and_(
+        literal(conversation_id is None and duplicate_of is None),
+        SearchDocument.document_type == "message",
+        Message.content_hash.is_not(None), Message.content_hash != "",
+    )
+    group_key = case((folded, Message.content_hash), else_=cast(SearchDocument.id, String))
+    ordering = [rank_expr.desc(), SearchDocument.created_at.desc(), SearchDocument.order_key.asc(), SearchDocument.id.asc()]
+    ranked = ordered_query.order_by(None).with_entities(
         SearchDocument.id.label("document_id"),
         SearchDocument.document_type,
         SearchDocument.conversation_id,
         SearchDocument.message_id,
-        Message.content_hash.label("content_hash"),
         Conversation.display_title.label("conversation_title"),
         rank_expr.label("rank"),
-    ).outerjoin(Message, Message.id == SearchDocument.message_id).all()
-    grouped_rows: list[tuple[uuid.UUID, str, uuid.UUID, uuid.UUID | None, str, float, int]] = []
-    group_positions: dict[tuple[str, str], int] = {}
-    group_conversations: list[set[uuid.UUID]] = []
-    for row in rows:
-        content_hash = row.content_hash
-        # Global/project search folds copies across conversations. Within one
-        # conversation every distinct message must keep its own navigable target.
-        key = (
-            ("message", content_hash)
-            if conversation_id is None and row.document_type == "message" and content_hash
-            else (row.document_type, str(row.document_id))
-        )
-        existing_position = group_positions.get(key)
-        if existing_position is None:
-            group_positions[key] = len(grouped_rows)
-            grouped_rows.append(
-                (
-                    row.document_id,
-                    row.document_type,
-                    row.conversation_id,
-                    row.message_id,
-                    row.conversation_title,
-                    float(row.rank or 0),
-                    1,
-                )
-            )
-            group_conversations.append({row.conversation_id})
-            continue
-        conversations = group_conversations[existing_position]
-        conversations.add(row.conversation_id)
-        current = grouped_rows[existing_position]
-        grouped_rows[existing_position] = (*current[:6], len(conversations))
-
-    total = len(grouped_rows)
-    page_rows = grouped_rows[offset : offset + limit]
+        SearchDocument.created_at, SearchDocument.order_key, group_key.label("group_key"),
+        func.row_number().over(partition_by=[SearchDocument.document_type, group_key], order_by=ordering).label("position"),
+    ).subquery()
+    counts = db.query(
+        ranked.c.document_type, ranked.c.group_key,
+        func.count(func.distinct(ranked.c.conversation_id)).label("occurrences"),
+    ).group_by(ranked.c.document_type, ranked.c.group_key).subquery()
+    representatives = db.query(ranked).filter(ranked.c.position == 1)
+    total = representatives.count()
+    page_rows = representatives.join(counts, and_(
+        counts.c.document_type == ranked.c.document_type, counts.c.group_key == ranked.c.group_key,
+    )).with_entities(
+        ranked.c.document_id, ranked.c.document_type, ranked.c.conversation_id, ranked.c.message_id,
+        ranked.c.conversation_title, ranked.c.rank, counts.c.occurrences,
+    ).order_by(
+        ranked.c.rank.desc(), ranked.c.created_at.desc(), ranked.c.order_key.asc(), ranked.c.document_id.asc(),
+    ).offset(offset).limit(limit).all()
     documents = {
         document.id: document
         for document in db.query(SearchDocument)

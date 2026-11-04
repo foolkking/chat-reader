@@ -84,6 +84,11 @@ export function searchResultHref(item: SearchResultItem, destination: "conversat
     params.set("annotations", "open");
     if (item.annotation_id) params.set("annotationId", item.annotation_id);
   }
+  if (item.document_type === "notebook") {
+    params.set("annotations", "open");
+    params.set("annotation_view", "notebook");
+  }
+  if (item.document_type === "description") params.set("description", "open");
   if (destination === "library") {
     params.set("conversationId", item.conversation_id);
     return `/library?${params}`;

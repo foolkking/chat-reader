@@ -13,7 +13,7 @@ FeatureCollection = Literal[
     "offline-checklist",
     "conversation-tag",
 ]
-SearchDocumentType = Literal["all", "conversation", "message", "heading", "code", "annotation", "attachment"]
+SearchDocumentType = Literal["all", "conversation", "message", "heading", "code", "annotation", "attachment", "notebook", "description"]
 SearchRole = Literal["all", "user", "assistant"]
 SearchStatusScope = Literal["active", "archived", "all"]
 ExportFormat = Literal["context", "canjson", "markdown"]
@@ -32,6 +32,7 @@ class SavedSearchValue(BaseModel):
     status_scope: SearchStatusScope = "active"
     date_from: date | None = None
     date_to: date | None = None
+    tag_id: uuid.UUID | None = None
 
     @field_validator("name", "q", mode="before")
     @classmethod

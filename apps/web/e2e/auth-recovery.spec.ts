@@ -23,6 +23,7 @@ test.beforeEach(async ({ page, context, baseURL }) => {
     const pathname = new URL(route.request().url()).pathname;
     if (pathname === "/api/auth/session") return route.fulfill({ json: session });
     if (pathname === "/api/auth/setup/status") return route.fulfill({ json: { setup_required: false, registration_mode: "CLOSED" } });
+    if (pathname === "/api/offline/catalog") return route.fulfill({ json: { conversations: [], projects: [], catalog_revision: "synthetic" } });
     if (pathname === "/api/preferences") return route.fulfill({ json: {
       theme_mode: "light", locale_mode: "en-US", reader_width_mode: "standard",
       reader_density_mode: "comfortable", reader_font_size_px: 17, section_toc_mode: "visible",
@@ -33,6 +34,128 @@ test.beforeEach(async ({ page, context, baseURL }) => {
     if (["/api/conversations", "/api/projects", "/api/recent-items", "/api/tasks/active", "/api/content-cleanup/scans/pending"].includes(pathname)) return route.fulfill({ json: [] });
     return route.fulfill({ json: {} });
   });
+});
+
+test("trusted Library cold startup survives a missing cookie and an unavailable server", async ({ page, context }) => {
+  await page.addInitScript((id) => {
+    localStorage.setItem("chat-reader:offline-active-user-v1", id);
+    localStorage.setItem("chat-reader:authenticated-offline-user", id);
+    localStorage.setItem("chat-reader:authenticated-offline-until", "2020-01-01T00:00:00Z");
+    localStorage.setItem("chat-reader:trusted-offline-devices-v1", JSON.stringify([{ userId: id, confirmedAt: "2020-01-01T00:00:00Z" }]));
+    Object.defineProperty(navigator, "onLine", { configurable: true, get: () => true });
+  }, userId);
+  await context.clearCookies();
+  await page.route("**/api/auth/session", route => route.fulfill({ status: 503, json: {} }));
+  await page.goto("/library");
+  await expect(page.getByRole("button", { name: /Lock local|锁定本机/ })).toBeVisible();
+  await page.evaluate(async (id) => {
+    const namespace = Array.from(new TextEncoder().encode(id), byte => byte.toString(16).padStart(2, "0")).join("");
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(`chat-reader-offline-library--user-${namespace}`);
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const tx = database.transaction(["conversations", "messages"], "readwrite");
+        tx.objectStore("conversations").put({ id: "synthetic-trusted-copy", title: "Synthetic trusted copy",
+          display_title: "Synthetic trusted copy", source_type: "manual", source_profile: "test",
+          message_count: 1, turn_count: 1, status: "active", offline_revision: 1,
+          downloaded_at: "2020-01-01T00:00:00Z", imported_at: "2020-01-01T00:00:00Z" });
+        tx.objectStore("messages").put({ id: "synthetic-trusted-message", conversation_id: "synthetic-trusted-copy",
+          role: "assistant", turn_index: 1, order_key: "a", ordinal: 1, block_count: 0, char_count: 35,
+          current_version: { id: "synthetic-trusted-version", version_number: 1,
+            plain_text: "Synthetic long-term offline content", display_text: "Synthetic long-term offline content" } });
+        tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error);
+      });
+    } finally { database.close(); }
+  }, userId);
+  await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("button", { name: /Lock local|锁定本机/ })).toBeVisible();
+  await expect(page).toHaveURL(/\/library$/);
+  await page.getByRole("button", { name: /^Synthetic trusted copy No summary Downloaded$/ }).click();
+  await expect(page.locator("article").getByText("Synthetic long-term offline content", { exact: true })).toBeVisible();
+  // With the shell served by this fixture, an aborted session transport must
+  // still retain downloaded content across a cold refresh.
+  await page.route("**/api/auth/session", route => route.abort("internetdisconnected"));
+  await page.reload();
+  await expect(page.locator("article").getByText("Synthetic long-term offline content", { exact: true })).toBeVisible();
+});
+
+test("trusted Library keeps local access on natural expiry but locks on explicit revocation", async ({ page }) => {
+  await page.addInitScript((id) => {
+    localStorage.setItem("chat-reader:offline-active-user-v1", id);
+    localStorage.setItem("chat-reader:authenticated-offline-user", id);
+    localStorage.setItem("chat-reader:trusted-offline-devices-v1", JSON.stringify([{ userId: id, confirmedAt: "2020-01-01T00:00:00Z" }]));
+  }, userId);
+  await page.route("**/api/auth/session", route => route.fulfill({ json: { ...session, authenticated: false, failure_reason: "expired" } }));
+  await page.goto("/library");
+  await expect(page.getByRole("button", { name: /Lock local|锁定本机/ })).toBeVisible();
+  await page.route("**/api/auth/session", route => route.fulfill({ json: { ...session, authenticated: false, failure_reason: "revoked" } }));
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("chat-reader:trusted-offline-devices-v1") ?? "[]"))).toEqual([]);
+});
+
+test("focus and route navigation within the freshness window do not repeat session checks", async ({ page }) => {
+  let checks = 0;
+  await page.route("**/api/auth/session", route => { checks++; return route.fulfill({ json: session }); });
+  await page.goto("/");
+  await expect(page.getByText(ready)).toBeVisible();
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("focus"));
+    window.history.pushState(null, "", "/?synthetic=route");
+    window.dispatchEvent(new Event("focus"));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.getByText(ready)).toBeVisible();
+  expect(checks).toBe(1);
+});
+
+test("a late successful probe cannot undo an explicit local lock", async ({ page }) => {
+  await page.goto("/library");
+  await expect(page.getByRole("button", { name: /Enable long-term|启用长期/ })).toBeVisible();
+  let release: (() => Promise<void>) | undefined;
+  await page.route("**/api/auth/session", route => { release = () => route.fulfill({ json: session }); });
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("chat-reader:offline-access-locked")));
+  await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible();
+  await release!();
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible();
+  await page.route("**/api/auth/session", route => route.fulfill({ json: session }));
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /Sign in required|需要重新登录/ })).toBeVisible();
+});
+
+test("device trust requires confirmation and hidden tabs do not run expiry probes", async ({ page }) => {
+  await page.clock.install();
+  let checks = 0;
+  await page.route("**/api/auth/session", route => {
+    checks += 1;
+    return route.fulfill({ json: { ...session, inactivity_expires_at: new Date(Date.now() + 60_000).toISOString() } });
+  });
+  await page.goto("/library");
+  const trust = page.getByRole("button", { name: /^Enable long-term offline reading$/ });
+  await expect(trust).toBeEnabled();
+  expect(await page.evaluate(() => localStorage.getItem("chat-reader:trusted-offline-devices-v1"))).toBeNull();
+  await trust.click();
+  await page.getByRole("dialog").getByRole("button", { name: /^Trust and enable$/ }).click();
+  await expect(page.getByRole("button", { name: /^Lock local copies$/ })).toBeVisible();
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.clock.fastForward(6 * 60_000);
+  expect(checks).toBe(1);
+  await page.route("**/api/auth/session", route => { checks += 1; return route.fulfill({ json: session }); });
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => checks).toBe(2);
+  await expect(page.getByRole("button", { name: /^Lock local copies$/ })).toBeVisible();
 });
 
 test("a failed post-login check is recoverable without another password submission", async ({ page }) => {
@@ -114,7 +237,7 @@ test("a regular account cannot claim the previous owner's legacy offline storage
   expect(identity.namespace).toMatch(/^user-/);
 });
 
-test("unavailable localStorage does not prevent online login or logout", async ({ page }) => {
+test("unavailable localStorage preserves online content on expiry and exposes explicit sign-in", async ({ page }) => {
   await page.addInitScript(() => {
     for (const method of ["getItem", "setItem", "removeItem"] as const) {
       Storage.prototype[method] = () => { throw new DOMException("Storage disabled", "SecurityError"); };
@@ -124,6 +247,9 @@ test("unavailable localStorage does not prevent online login or logout", async (
   await expect(page.getByText(ready)).toBeVisible();
   await page.route("**/api/auth/session", (route) => route.fulfill({ json: { ...session, authenticated: false } }));
   await page.evaluate(() => window.dispatchEvent(new Event("chat-reader:auth-unauthorized")));
+  await expect(page.getByText(ready)).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /Sign in again|需要重新登录/ })).toBeVisible();
+  await page.getByRole("link", { name: /^Sign in$|^重新登录$/ }).click();
   await expect(page).toHaveURL(/\/login(?:\?|$)/);
 });
 

@@ -1,5 +1,15 @@
 # PWA and Offline Resilience Contract
 
+## Current candidate — 2026-11-05
+
+Explicit trusted-browser access is independent of online expiry, while account
+isolation, deliberate lock/logout and known security revocations remain enforced.
+Cached shell startup is local-first and rejects login redirects as replacements.
+Per-conversation download completion updates visible lists without changing Reader
+identity. See [current contract](COMPREHENSIVE_OPTIMIZATION_CONTRACT.md); earlier
+expiry-lock sections apply only to legacy unupgraded permission. Dexie v2 and
+offline package v1/v2/v3 compatibility are unchanged.
+
 ## Reader attachment projections — 2026-11-03 source candidate, not released
 
 Offline search and locator resolution read canonical block text/coordinates

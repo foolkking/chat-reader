@@ -1,29 +1,38 @@
 # 生产部署
 
-## 当前生产：Reader、富 Markdown 与 Adaptive ZIP — 2026-11-04
+现役发布只取本页顶部与 [Project State](../PROJECT_STATE.md) 的版本指针。
+下方带日期的已部署/未部署/准备状态均为历史检查点，不是新的执行授权；
+下一次发布仍需独立精确源码 CI、容量预检、停写备份及验收。
 
-精确源码 `3b839dc1adfac431b6c44c2e1928a9be946cb42f` 的完整 CI
-`41633888061` 六项全部通过，官方制品 `13232957284` 归档 SHA-256 为
-`6b6ba4c080da4e316bf1f12d353a574723a5bfd871413e4432ebf9c15a6250a`。
-**2026-11-03 16:04:43Z / 2026-11-04 00:04:43 +08:00** 生产接受，
-**16:08:12Z / 00:08:12 +08:00** 独立复核通过。当前／直接回退为
-`3b839dc`／`4b4f34f`。数据库单一 head 保持 0058；仅检查 current/head，
-没有 upgrade 或 downgrade。
+## 当前生产：小内存 ZIP 导入恢复 — 2026-11-04
 
-停写只读审计检查 338 个活动附件、359 个 asset 对象、12 个 Context，
-共 371 个文件散列、零问题。停写五组件备份
-`chat-reader-20261103T155702Z` 通过创建、完整性验证和部署后复验。
-实际维护 **15:56:47–16:04:43Z（7 分 56 秒）**，不是零停机。
-API/Web/PostgreSQL healthy、worker `alive_idle`、精确镜像、HTTPS／拒绝／隐私、
-canonical 停写行数、生产配置／Nginx／PostgreSQL 未变、零新增 OOM 与应用启动
-错误关键词均通过。保留五份备份，无备份、volume、用户资料或旧镜像清理；
-剩余可用空间 **7,156,904 KiB（约 6.82 GiB）**。
+精确源码 `be58b12b191e9f0fa4010f8ed4293781fec01157` 的完整 CI
+`41737744696` 六项全部通过，且在 50 分钟读取门槛后确认。官方制品
+`13282163237` SHA-256 为
+`8503d136eeed056b51d7d6b1b69f7f4f3c1f440d52342e3668ffb3cd5d83808b`。
+生产当前／直接回退为 `be58b12`／`3b839dc`；API、Web、PostgreSQL healthy，
+worker `alive_idle`。数据库单一 head 保持 `20261030_0058`，没有 upgrade
+或 downgrade。CI OCI digest 已沿 linux/amd64 manifest 和 config 完整核对，
+服务器 Docker image ID 的不同表示不是镜像不匹配。
 
-生产认证 UI、真实用户侧 47 对话离线完整更新、持续负载和独立恢复演练未验收。
-完整发布过程、部署探针失败后的安全自动恢复和最终复核见
-[本轮发布记录](execution/READER_ZIP_RELEASE_2026-11-04.md)。
+备份保留最新两份：`chat-reader-20261104T004004Z`、
+`chat-reader-20261103T155702Z`。经授权删除四份更旧备份，并清理三个过期
+revision 的 12 个无容器引用应用镜像标签；当前和直接回退标签保留。
+备份解除链接 **2,926,529,217 bytes**，发布清理后检查时可用空间 **9,385,372 KiB**
+（磁盘使用率 77%）。没有删除 volume、用户资料或数据库，也没有全局镜像 prune。
 
-## 上一生产检查点：阅读／离线可靠性与安全清理 — 2026-11-01（历史）
+部署后服务恢复写入，聚合数据计数有变化；没有执行数据恢复或回滚，也未把变化
+误报成完全不变。已观测到新 import/message 数为零；其他会话、附件、版本及离线
+产物计数变化详见[本轮发布记录](execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)。
+原始用户 ZIP 未被静默重试，尚待用户显式重试确认。认证生产 UI、用户侧 47 对话
+离线完整更新、持续负载和隔离恢复演练仍未验收。
+
+## 上一生产检查点：Reader、富 Markdown 与 Adaptive ZIP — 2026-11-04（历史）
+
+`3b839dc` 的验收过程与当时数据边界见
+[上一轮发布记录](execution/READER_ZIP_RELEASE_2026-11-04.md)。
+
+## 更早生产检查点：阅读／离线可靠性与安全清理 — 2026-11-01（历史）
 
 前一精确版本 `4b4f34f` 已于 2026-11-01 接受；安全清理释放约 7.66 GiB，
 schema 0058 未变。其完整备份、旧版 Context 审计误分类后的恢复及独立复核见
@@ -79,7 +88,12 @@ API、worker 和 Web。当前／直接回退／较旧保护镜像为
 清理竞态，但没有把无网络 trace 的原始故障归因写成确定结论。完整逐项处置
 见[执行记录](execution/WEB_FEATURE_OPPORTUNITIES_IMPLEMENTATION_2026-10-30.md)。
 
-## 下一批源码迁移 — 2026-10-29（未部署）
+<a id="下一批源码迁移--2026-10-29未部署"></a>
+
+## 历史迁移前检查点 — 2026-10-29
+
+0054 此后已发布，当前为 0058。保留以下迁移前语义与旧链接，不得重复执行或
+将当时“未部署”解释为当前状态。
 
 当前接受的生产版本仍为 `f8a6a06`／直接回退 `b4effda`，schema
 `20261022_0053`。工作区新增 migration `20261029_0054`，只新增
@@ -98,7 +112,9 @@ API、worker 和 Web。当前／直接回退／较旧保护镜像为
 后立刻删表。若确有数据维护需求，须先核对没有待确认请求、完成独立备份并获单独授权；
 downgrade 不删 canonical conversation/message，但会永久移除回执。
 
-## 当前生产：搜索与阅读恢复发布 — 2026-10-29
+<a id="当前生产搜索与阅读恢复发布--2026-10-29"></a>
+
+## 历史生产：搜索与阅读恢复发布 — 2026-10-29
 
 用户授权将已完成的搜索正确性／离线召回／生命周期、阅读恢复和完整性修复
 作为一批提交部署。沿用无本地测试／构建／浏览器／服务约束；最新指令取消
@@ -275,7 +291,12 @@ PostgreSQL，不覆盖 `.env.production`，不改导入资料。回退旧应用�
 环境/用户导入数据、不重启 PostgreSQL。当前这里只是发布准备，不是部署成功。
 详见[本轮记录](execution/TABLE_TOOL_RELEASE_2026-10-21.md)。
 
-## 本地运维脚本加固 — 2026-10-21，尚未部署
+<a id="本地运维脚本加固--2026-10-21尚未部署"></a>
+
+## 历史运维脚本检查点 — 2026-10-21
+
+本段保留当时的本地验证边界；后续实际 Docker/停写备份证据见各轮发布回执，
+不再是现行“尚未部署”结论。
 
 `backup.sh` 与 `preflight_release_space.sh` 现共享同目录
 `backup_volume_reader.sh`。仅复用当前 Compose 项目现存 API 容器（包括已停止的
@@ -292,7 +313,9 @@ PostgreSQL，不覆盖 `.env.production`，不改导入资料。回退旧应用�
 验证仍待后续明确授权，未在本轮操作生产。详见
 [修复与证据](execution/OPS_BACKUP_READERS_2026-10-21.md)。
 
-## 当前 OOM 续查发布 — 2026-10-19，已部署并验收
+<a id="当前-oom-续查发布--2026-10-19已部署并验收"></a>
+
+## 历史 OOM 续查发布 — 2026-10-19，已部署并验收
 
 生产当前为 **50f6de4b2e72ad33bd4d351ada6f95c0b3583898 / 20261017_0052**。
 CI **39231559224** attempt 1 五项通过，运行镜像摘要与原始 manifest 一致。
@@ -2268,3 +2291,17 @@ downgrade/schema parity pass; disposable PostgreSQL concurrency/FK acceptance is
 added but remains unexecuted locally. Context return/adoption, lifecycle cleanup
 and archive integration are unfinished, so this checkpoint is not deployable.
 Production remains on 0042. Do not deploy merely because the local migration exists.
+## Pending candidate migration — 2026-11-05
+
+No deployment is authorized by this implementation/CI task. Production remains
+the release described at the top of this page. The candidate has one new head `20261105_0059`:
+nullable session rejection reason, Share creation-intent uniqueness, metadata-only
+title-date repair and a bounded worker private-search backfill. Deploy only after
+exact-source CI and separate authorization, with the normal stopped-writer backup.
+Run `alembic upgrade head` and existing migration-state checks; let the existing
+single worker finish the derived backfill before declaring old note search complete.
+Downgrade removes the new column/index and queued migration job, not user data;
+do not undo populated index dates or restore raw content dates.
+
+Use the checked-in Python runtime/build locks in the image. The synthetic local
+restore drill is not permission to restore production or replace its `.env`.

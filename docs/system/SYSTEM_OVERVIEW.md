@@ -1,25 +1,29 @@
 # 系统概览
 
-## Current implementation (working tree, 2026-09-01)
+## Current implementation and production boundary — 2026-11-04
 
-Chat Reader is moving from the deployed single-owner release to a private
-multi-account archive. One deployment-provisioned `ADMIN` owns the migrated
-legacy archive; registered accounts are `USER` and are isolated by
-server-derived `owner_user_id`. Authentication, account access, invitations,
-password reset and user-scoped Offline/Skill data are implemented behind
-`20260901_0030`, which remains pending deployment and real PostgreSQL upgrade.
-Public Share and Offline Reader keep their existing separate boundaries.
+Chat Reader is a private multi-account archive. One deployment-provisioned
+`ADMIN` owns the migrated legacy archive; registered accounts are `USER` and
+are isolated by server-derived `owner_user_id`. Authentication, account
+access, invitations, password reset and user-scoped Offline/Skill data are
+implemented in the current source and are deployed under schema
+`20261030_0058`. Public Share and Offline Reader keep their existing separate
+boundaries. Current production source is `be58b12`; the direct rollback is
+`3b839dc`.
 
-## Current deployed access boundary (2026-08-17)
+## Current deployed access boundary — 2026-11-04
 
-Release N is deployed. A single owner password and server-side, per-device
-sessions protect every business API and page, including Share and artifact
-downloads. Public health remains coarse; protected diagnostics remains on its
-separate SSH plus loopback operator boundary. The historical unauthenticated
-description below is retained as a pre-Release-N snapshot and is superseded by
+Server-side, per-device sessions protect private business APIs, pages and owner
+artifact downloads. Explicit public Share paths instead validate their own
+token/password/scope capability on every request. Public health remains coarse; protected
+diagnostics remains on its separate SSH plus loopback operator boundary.
+Anonymous private capability checks remain denied. See
 [`AUTHENTICATION_CONTRACT.md`](AUTHENTICATION_CONTRACT.md).
 
-最后核验：2026-07-30
+Current runtime and remaining user-side verification debt are recorded in
+[`PROJECT_STATE.md`](../../PROJECT_STATE.md) and the
+[current release receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md).
+最后核验：2026-11-04
 
 ## 定位与边界
 
@@ -53,7 +57,7 @@ Browser
 
 ## 主要场景
 
-1. preview 兼容 JSON（可选 Markdown 校验）或 `.cr`，再异步导入 canonical 数据。
+1. preview Adaptive JSON/Markdown/ZIP 或 `.cr`，显式提交后异步导入 canonical 数据。
 2. 在 Project、未归类、归档或搜索结果中找到会话。
 3. 以完整轮次阅读长正文并恢复稳定位置。
 4. 编辑/恢复版本、拆分/合并、批量移动或归档。
@@ -62,13 +66,13 @@ Browser
 
 ## 部署状态
 
-源码 Compose 包含 `postgres`、`migrate`、`api`、`import-worker`、`web`，并提供可选 `scanner` profile；King 不启用该 profile。源码 Alembic 单一 head 为 `20260816_0022`；`worker_runtime_states` 只保存单 worker operational heartbeat/state，不包含业务 payload。
+源码 Compose 包含 `postgres`、`migrate`、`api`、`import-worker`、`web`，并提供可选 `scanner` profile；已核验的轻量生产部署不启用该 profile。源码 Alembic 单一 head 为 `20261030_0058`；`worker_runtime_states` 只保存单 worker operational heartbeat/state，不包含业务 payload。
 
-最后一份生产发布证据记录于 2026-07-29：生产 migration 为 `20260728_0016`，API/Web/PostgreSQL healthy，worker running，并完成离线 TOC 补丁后的 Chrome 复验。该结论是时间点快照；当前线上状态需重新检查。详见 [execution/DEPLOYMENT_CHECKLIST.md](../execution/DEPLOYMENT_CHECKLIST.md)。
+2026-11-04 的精确生产／回退、CI、备份和有限线上探针见[当前发布回执](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)。只读收尾复查确认版本指针、三个服务健康、worker heartbeat 与 HTTPS health/login；这不替代认证 UI 或原 ZIP/离线大包用户验收。早期部署检查点仍在 execution 历史中。
 
 ## 安全边界
 
-- 应用管理 API 没有账号鉴权，公网必须由反向代理/VPN/访问网关保护。
+- 私有管理 API 使用账户鉴权和 owner 隔离；管理员审计能力单独授权。公网仍必须由反向代理提供 HTTPS。
 - Share token 只存 hash；每个公开接口校验 token、expiry、revoke、scope 和 include flags。
-- raw import artifact 不进入 Reader 渲染；导入 Markdown 禁止执行 raw HTML。
+- raw import artifact 不直接进入 Reader 渲染；canonical Markdown 可投影有界 allowlist 静态 HTML，统一经过 sanitization，禁止脚本、任意属性和可执行文档注入。
 - 生产证据不得包含真实正文或可访问 token。

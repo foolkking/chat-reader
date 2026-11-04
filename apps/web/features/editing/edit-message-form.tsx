@@ -32,6 +32,8 @@ import {
 import { selectSourcePreviewAnchor, sourceAlignedPreviewScrollTop } from "./source-preview-scroll";
 import { applyMarkdownTableAction, type MarkdownTableSourceContext } from "./markdown-table-tools";
 import { TableToolDialog } from "./markdown-table-dialog";
+import { useSourceDraft } from "./use-source-draft";
+import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), { ssr: false });
 
@@ -66,6 +68,7 @@ export function EditMessageForm({
   formId = "source-editor-form",
   initialText,
   messageId,
+  conversationId,
   initialCursorOffset = 0,
   requestedCursorOffset,
   pendingAttachmentInsertion,
@@ -93,6 +96,7 @@ export function EditMessageForm({
   formId?: string;
   initialText: string;
   messageId?: string;
+  conversationId?: string;
   initialCursorOffset?: number;
   requestedCursorOffset?: number;
   pendingAttachmentInsertion?: { referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null;
@@ -134,6 +138,8 @@ export function EditMessageForm({
   const [editorDocument, setEditorDocument] = useState(initialText);
   const [text, setText] = useState(initialText);
   const [baselineText, setBaselineText] = useState(initialText);
+  const draft = useSourceDraft(conversationId, messageId, versionNumber, text, baselineText);
+  const draftDialog = useInteractionDialog();
   const [reason, setReason] = useState("");
   const [showReason, setShowReason] = useState(false);
   const [showClosePrompt, setShowClosePrompt] = useState(false);
@@ -833,6 +839,8 @@ export function EditMessageForm({
       );
       if (requestToken !== saveRequestRef.current) return;
       const canonicalText = saved?.canonicalText ?? authoritativeSource;
+      // A confirmed server write remains successful even if local cleanup fails.
+      void draft.acknowledge(authoritativeSource).catch(() => undefined);
       setBaselineText(canonicalText);
       setEditorDocument(canonicalText);
       setText(canonicalText);
@@ -890,6 +898,25 @@ export function EditMessageForm({
 
   return (
     <form id={formId} className="relative flex h-full min-h-0 flex-col bg-surface" onSubmit={(event) => { event.preventDefault(); if (!tableTool) void submit("create_version"); }}>
+      {draft.candidate ? <div className="flex flex-wrap items-center gap-3 border-b border-ui bg-subtle px-4 py-2 text-sm" role="status">
+        <span>{zh ? (draft.candidate.value.base_version === versionNumber ? "发现本机未保存草稿。" : "发现旧版本草稿；当前正文已有更新，请比较后保存。") : (draft.candidate.value.base_version === versionNumber ? "An unsaved local draft is available." : "This draft is based on an older version. Compare before saving.")}</span>
+        <button type="button" className="min-h-10 text-accent" onClick={async () => {
+          const recovered = draft.candidate;
+          if (!recovered) return;
+          if ((!isUnchanged || recovered.value.base_version !== versionNumber) && !await draftDialog.confirm({
+            title: zh ? "将此草稿载入编辑器？" : "Load this draft into the editor?",
+            description: zh ? "这会替换编辑器中的文字，但不会提交。请与右侧预览及当前正文比较，检查附件引用后手动保存。" : "This replaces editor text without submitting. Compare with current content, review attachment references, then save manually.",
+            confirmLabel: zh ? "载入草稿" : "Load draft",
+          })) return;
+          setEditorDocument(recovered.value.text); setText(recovered.value.text);
+          // Keep the source copy until a new edit has safely persisted.
+        }}>{zh ? "恢复到编辑器" : "Restore to editor"}</button>
+        <button type="button" className="min-h-10 text-secondary" onClick={async () => {
+          if (draft.candidate && await draftDialog.confirm({ title: zh ? "删除这份本机草稿？" : "Delete this local draft?", danger: true }))
+            await draft.remove(draft.candidate.key, draft.candidate.value.revision).catch(() => undefined);
+        }}>{zh ? "删除草稿" : "Delete draft"}</button>
+      </div> : null}
+      {draft.status === "error" ? <p role="alert" className="px-4 py-2 text-sm text-[var(--danger)]">{zh ? "本机草稿保存不可用，请勿关闭页面；可以先复制文字。" : "Local draft saving is unavailable. Keep this page open or copy your text."}</p> : null}
       <input
         id={`${formId}-attachment-input`}
         type="file"
@@ -1121,7 +1148,15 @@ export function EditMessageForm({
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button type="button" onClick={() => setShowClosePrompt(false)} className="min-h-10 rounded-lg border border-ui bg-surface px-4 text-sm font-medium text-primary hover:bg-subtle">{zh ? "\u7ee7\u7eed\u7f16\u8f91" : "Continue editing"}</button>
               {hasAttachmentWork ? <button type="button" onClick={() => void closeWithAttachments(true)} className="min-h-10 rounded-lg px-4 text-sm font-medium text-secondary hover:bg-subtle">{zh ? "\u4fdd\u7559\u6587\u4ef6\u5e76\u5173\u95ed" : "Keep files and close"}</button> : null}
-              <button type="button" onClick={() => hasAttachmentWork ? void closeWithAttachments(false) : void onCancel(true)} className="min-h-10 rounded-lg px-4 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">{zh ? "\u653e\u5f03" : "Discard"}</button>
+              <button type="button" onClick={async () => {
+                try {
+                  await draft.acknowledge(editorViewRef.current?.state.doc.toString() ?? text);
+                  if (hasAttachmentWork) await closeWithAttachments(false);
+                  else await onCancel(true);
+                } catch {
+                  setError(zh ? "未能移除本机草稿，修改仍保留，请重试。" : "Could not remove the local draft. Your changes are retained; please retry.");
+                }
+              }} className="min-h-10 rounded-lg px-4 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">{zh ? "\u653e\u5f03" : "Discard"}</button>
               <button type="button" disabled={isSaving || hasUnresolvedAttachment} onClick={() => void submit("create_version")} className="min-h-10 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50">{zh ? "\u4fdd\u5b58\u4e3a\u65b0\u7248\u672c" : "Save as new version"}</button>
             </div>
           </div>
