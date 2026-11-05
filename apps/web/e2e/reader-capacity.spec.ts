@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const enabled = process.env.E2E_READER_CAPACITY === "1";
@@ -30,8 +32,14 @@ for (const profile of profiles) {
         measurement: { version: 2, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34 },
         runs, warm,
       };
-      await testInfo.attach(`reader-capacity-${profile}-${messages}.json`, {
-        body: Buffer.from(JSON.stringify(payload, null, 2)),
+      // The list/gate reporters do not materialize body-only attachments.
+      // Persist the unfiltered runs in the uploaded output directory too.
+      const measurementName = `reader-capacity-${profile}-${messages}.json`;
+      const measurementPath = testInfo.outputPath(measurementName);
+      await mkdir(dirname(measurementPath), { recursive: true });
+      await writeFile(measurementPath, JSON.stringify(payload, null, 2));
+      await testInfo.attach(measurementName, {
+        path: measurementPath,
         contentType: "application/json",
       });
       console.info(`[reader-capacity] ${JSON.stringify(payload)}`);

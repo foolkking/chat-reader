@@ -320,3 +320,51 @@ only; the new regressions are **not locally executed**. No test gate, action
 timeout, retry/skip policy, dependency, migration or deployment changes.
 Submission archives the old handoff and assigns the new exact source/run a
 fresh first-check boundary at least 50 minutes after identity verification.
+
+## CI follow-up: non-task blocks avoid unrelated task-handler invalidation
+
+Run **`41998961573`, attempt 1**, exact source
+`be72cedd71ee11b62d35f5a3d945711e9f618b31`, was first read at
+**2026-11-05 09:51:26.531Z**, after **09:51:26.195Z**. API, Web and settings
+passed. The exact-source Web summary reports **13/13 gates PASS**, including
+mutation **118/118**, focused **45/45**, and Context **36/36**. The original
+conditional test routing is unchanged; this is not a claim of zero conditional
+skips in the default umbrella run.
+
+The same-runner capacity job `127161334958` failed **8 passed / 1 failed**:
+plain 10,000 messages, cold run index 1, longest task **197 ms** and cumulative
+long tasks **314 ms**, against unchanged **150 / 250 ms** limits. That sample
+retained monotonic wheel positions, 34 messages/51 blocks, no horizontal
+overflow and 16.8-ms frame p95. The other two cold samples had no long task;
+image/artifact inspection was skipped. No previous success replaces this run.
+
+The probe reports 1,431 Markdown invocations in the failing cold run and 408
+additional invocations on its warm revisit. Source review localizes an avoidable
+invalidation chain: Reader host updates render MessageItem, which recreates the
+task handler; BlockSlot passes that handler through even when its block has no
+tasks. The existing BlockElement/BlockRenderer comparators consequently invalidate
+ordinary prose and the newly allocated attachment inputs invalidate Markdown.
+The old numeric telemetry is not a CPU profile and cannot establish whether
+that particular 197-ms task was parsing, GC, layout or runner scheduling.
+
+The bounded correction removes task callback/pending-state props at the existing
+BlockSlot boundary only when the block has no task items. Current task handlers,
+pending/checked state, task addition/removal, changed source/identity/highlights,
+canonical block anchors and render data remain live. There is no new cache,
+callback-ignoring comparator, changed window size, navigation or storage model.
+Five deterministic regressions execute the actual slot/element bodies and memo
+comparators, including 100 irrelevant callback updates and retained task updates.
+They establish invalidation behavior, not browser CPU timing.
+
+The capacity harness also writes the existing full measurement JSON into its
+uploaded output path before assertions. The former body-only attachments were
+absent from the downloaded artifact because only list/gate reporters run there;
+the log still supplied the measurements above. Baseline and candidate use the
+same harness. No threshold, fixture, wheel workload, repetition, trace policy,
+retry/skip rule or workflow gate is relaxed.
+
+Only static source review, syntax parsing and diff/preservation checks run
+locally. The new exact-source CI must provide the after measurement and every
+required job/artifact gate; the source fix alone is not performance acceptance.
+The next dispatch receives its own identity-verified 50-minute boundary. No
+local API/Web/worker/application test, production action or deployment.

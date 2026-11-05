@@ -165,6 +165,10 @@ Current candidate source, 2026-11-05; exact-source CI acceptance and limits are 
   including a different field in the surviving form after cancelling a nested
   confirmation. Unowned focus still returns to the connected opener/fallback;
   a remaining top modal keeps keyboard ownership over the page underneath.
+- Reader blocks without task items do not inherit task callbacks/pending-state
+  invalidations from their message host. Task-bearing blocks retain current
+  handlers and checked/pending updates; source, scope and navigation highlights
+  still invalidate the existing memo boundary. No new parsed-content cache.
 - Private search backfill persists each item cursor with its index transaction.
   A worker turn handles at most 100 conversations or yields after a two-second
   check at an item boundary. A single expensive item can exceed that time.

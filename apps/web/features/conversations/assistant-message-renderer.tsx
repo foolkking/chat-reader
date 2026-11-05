@@ -930,9 +930,13 @@ const BlockSlot = memo(function BlockSlot({ messageId, block, previousBlock, has
   pendingTaskKeys?: ReadonlySet<string>;
   onTaskToggle?: (taskKey: string, checked: boolean) => void;
 }) {
+  // A parent render can replace task handlers without changing this block.
+  // Non-task prose must not invalidate its Markdown subtree for controls it
+  // does not render. Task-bearing blocks still receive every live update.
+  const interactiveTasks = Boolean(taskItems?.length);
   return (
     <div className="reader-block-slot" style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, block)) : undefined}>
-      <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={taskItems} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+      <BlockElement messageId={messageId} block={block} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={taskItems} pendingTaskKeys={interactiveTasks ? pendingTaskKeys : undefined} onTaskToggle={interactiveTasks ? onTaskToggle : undefined} />
     </div>
   );
 }, (previous, next) => previous.messageId === next.messageId

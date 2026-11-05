@@ -18,6 +18,9 @@ not authorize production stress testing.
   the repository.
 - Three browser cold runs are reported with median and worst values. Warm
   revisit is measured separately.
+- Each capacity case also writes its complete unfiltered measurement JSON to
+  the uploaded test-output directory before assertions. A body-only Playwright
+  attachment is not durable evidence with only the list/gate reporters.
 - API and worker RSS are sampled from Linux `/proc` every 50 ms. This is a
   combined process working-set measurement, not a user-device memory promise.
 - System archive restore runs in a fresh isolated PostgreSQL database.
