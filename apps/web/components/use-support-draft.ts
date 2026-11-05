@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { captureOfflineAccess, assertOfflineAccess } from "../lib/offline-access";
 import { readSupportDraft, removeSupportDraft, writeSupportDraft, type SupportDraft } from "../lib/support-drafts";
 
@@ -30,7 +30,10 @@ export function useSupportDraft(key: string, initial: SupportDraft, onDirtyChang
     failure.current = null; setError(null); setReady(true);
   }, [key, captureDraftAccess]);
   useEffect(() => { void reload().catch(e => { if (mounted.current) setError(e); }); }, [reload]);
-  useEffect(() => { onDirtyChange?.(saving || Boolean(error)); }, [saving, error, onDirtyChange]);
+  // The host's close guard must agree with the committed "saved" status before
+  // paint/input. A passive effect can prompt to discard a supposedly saved
+  // draft (or miss protection for a newly pending write).
+  useLayoutEffect(() => { onDirtyChange?.(saving || Boolean(error)); }, [saving, error, onDirtyChange]);
   const persist = useCallback(async (next: SupportDraft) => {
     const access = captureDraftAccess();
     value.current = next; setDraft(next); pending.current++; setSaving(true);

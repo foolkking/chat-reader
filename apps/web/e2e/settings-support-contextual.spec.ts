@@ -1,5 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { removeSyntheticAccount, settingsAdmin, settingsAppearance } from "./settings-test-helper";
+import { readLocal } from "./settings-offline-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated authenticated PostgreSQL and worker");
@@ -24,11 +25,13 @@ async function approve(admin: APIRequestContext, user: APIRequestContext) {
   return request;
 }
 
-test("import limit request preserves selected bytes and never uploads until the user continues", async ({ browser, playwright, baseURL }) => {
+test("import limit request preserves selected bytes and never uploads until the user continues", async ({ browser, playwright, baseURL }, info) => {
   test.setTimeout(180_000);
   const base = baseURL!, admin = await settingsAdmin(playwright.request, base);
   const policy = await (await admin.get("/api/admin/features")).json();
   const context = await browser.newContext({ baseURL: base, extraHTTPHeaders: { Origin: base }, viewport: { width: 375, height: 900 } });
+  await context.tracing.start({ screenshots: true, snapshots: true });
+  let failed = false;
   let userId = "";
   try {
     expect((await admin.put("/api/admin/features", { data: { maximum_import_size_mb: 1 } })).status()).toBe(200);
@@ -48,7 +51,11 @@ test("import limit request preserves selected bytes and never uploads until the 
     await page.getByLabel("Import per file (MiB)", { exact: false }).fill("4");
     await page.getByLabel("Title", { exact: true }).fill("Earlier saved request");
     await expect(page.getByText("Draft saved on this device", { exact: true })).toBeVisible();
+    expect((await readLocal(page, userId)).settings.find(row => row.key === "support-draft:new")?.value)
+      .toMatchObject({ title: "Earlier saved request", importLimit: "4" });
     await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Requests and help", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("dialog", { name: "Discard unsaved changes?", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Request a higher limit", exact: true }).click();
     await expect(page.getByLabel("Import per file (MiB)", { exact: false })).toHaveValue("4");
     await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Earlier saved request");
@@ -75,7 +82,15 @@ test("import limit request preserves selected bytes and never uploads until the 
     await page.getByTestId("preview-import-button").click();
     expect((await preview).ok()).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  } finally { await context.close(); if (userId) await removeSyntheticAccount(admin, userId); await admin.put("/api/admin/features", { data: policy }); await admin.dispose(); }
+  } catch (error) { failed = true; throw error; }
+  finally {
+    if (failed || info.status !== info.expectedStatus) {
+      const tracePath = info.outputPath("support-draft-close-trace.zip");
+      await context.tracing.stop({ path: tracePath });
+      await info.attach("support-draft-close-trace", { path: tracePath, contentType: "application/zip" });
+    } else await context.tracing.stop();
+    await context.close(); if (userId) await removeSyntheticAccount(admin, userId); await admin.put("/api/admin/features", { data: policy }); await admin.dispose();
+  }
 });
 
 for (const project of [false, true]) {

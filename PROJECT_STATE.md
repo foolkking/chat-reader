@@ -8,13 +8,13 @@ Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 | Boundary | Verified snapshot |
 | --- | --- |
-| Source / branch | Existing `master`; recovery/consistency source `be72ced` has a non-task Reader render-invalidation CI follow-up, not the deployed release |
+| Source / branch | Existing `master`; recovery/consistency source `1faec64` has a support-draft close-guard CI follow-up, not the deployed release |
 | Accepted source CI | `41918053083`, exact `46cb51845c100ba9a6e613de0e604405db0729c4`, all six required jobs passed; this does not cover the recovery/consistency follow-up |
 | Production / direct rollback | `be58b12` / `3b839dc`; release pointers independently rechecked **2026-11-04 05:52Z** |
 | Deployed-source CI | `41737744696`, attempt 1, all six jobs passed; result read after the requested 50-minute gate; not candidate CI |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
 | Database | Candidate single head `20261105_0059`; production remains `20261030_0058` |
-| Verification / delivery | Candidate CI `41998961573` passed API/Web/settings (all 13 Web gates; mutation 118/118), but Reader capacity failed 8/9 with a 197 ms long task (150 ms budget); non-task blocks no longer inherit irrelevant changing task handlers. New exact-source performance/full CI is pending, with no local application tests or deployment |
+| Verification / delivery | Candidate CI `42008141724` passed API/Web/performance (capacity 9/9), but settings failed 462/463: saved draft status could precede its host close-guard update. Commit-phase publication is statically repaired; new exact-source full CI is pending, with no local application tests or deployment |
 
 The current release adds a bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,

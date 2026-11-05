@@ -368,3 +368,41 @@ locally. The new exact-source CI must provide the after measurement and every
 required job/artifact gate; the source fix alone is not performance acceptance.
 The next dispatch receives its own identity-verified 50-minute boundary. No
 local API/Web/worker/application test, production action or deployment.
+
+## CI follow-up: saved support drafts and close guards share a commit
+
+Run **`42008141724`, attempt 1**, source
+`1faec643b9e1d5793364e3650adbebf85dd11ff7`, was first read at
+**2026-11-05 10:58:10.834Z**, after **10:58:10.535Z**. API/Web/performance
+passed. Capacity candidate passed **9/9**; the persisted plain-10k measurements
+record 69 Markdown invocations in each cold run, zero warm-revisit delta, zero
+long tasks and 16.7/16.8/16.7-ms frame p95. The preceding run had 1,431
+invocations in its failed cold sample and 408 warm delta. Those run-to-run
+observations support reduced invalidation, not a universal latency claim;
+each workflow retains its own same-runner historical baseline.
+
+Settings job `127180029622` failed **462 passed / 1 failed**. The contextual
+import-limit flow saw “Draft saved on this device”, pressed Escape, then found
+the expected return control blocked by an unsaved-changes confirmation.
+Its snapshot/logs identify the incorrect dialog, but no trace was captured.
+`useSupportDraft` publishes `saving=false` in a rendered status before its
+passive effect updates the parent's dirty flag. Escape can therefore see a
+stale close guard despite the completed local write.
+
+The dirty-state callback now runs in the layout phase of that same commit,
+before paint/input. Saving and error states still protect pending/failed writes;
+the storage queue, version checks, exact retry payload and account fences are
+unchanged. Five deterministic actual-hook regressions hold passive effects and
+storage completion: pending protection, committed-save release, queued revisions,
+failed save/explicit retry, and a replaced host callback.
+
+The browser flow additionally reads its actual account-scoped draft row, requires
+closing the request dialog without a discard prompt, and retains all selected-file,
+request/approval, focus-return and explicit-only-upload assertions. Its own
+context now retains a failure-only trace. There is no added sleep, forced click,
+confirmation bypass or increased action timeout.
+
+New cases remain **authored, not locally executed**. Static parsing/review and
+diff/preservation checks precede the new commit; full exact-source CI remains the
+acceptance authority under another fresh 50-minute dispatch boundary. The image
+jobs skipped in the failed run do not count as accepted. No deployment.

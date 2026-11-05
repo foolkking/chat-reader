@@ -169,6 +169,9 @@ Current candidate source, 2026-11-05; exact-source CI acceptance and limits are 
   invalidations from their message host. Task-bearing blocks retain current
   handlers and checked/pending updates; source, scope and navigation highlights
   still invalidate the existing memo boundary. No new parsed-content cache.
+- Support draft saving/error state updates the host close guard in the same
+  layout commit as the status text, before paint/input. A saved local draft
+  must not still prompt to discard; queued or failed writes remain protected.
 - Private search backfill persists each item cursor with its index transaction.
   A worker turn handles at most 100 conversations or yields after a two-second
   check at an item boundary. A single expensive item can exceed that time.
