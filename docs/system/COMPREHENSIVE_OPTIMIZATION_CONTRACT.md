@@ -117,7 +117,7 @@ capacity limits stay enforced; streaming package redesign is not introduced.
 
 ## Recovery consistency follow-up
 
-Current uncommitted source, 2026-11-05; acceptance and limits are recorded in
+Current candidate source, 2026-11-05; exact-source CI acceptance and limits are recorded in
 [the implementation receipt](../execution/RECOVERY_CONSISTENCY_2026-11-05.md).
 
 - Source drafts coalesce dependency changes for 300 ms; close/pagehide/hidden

@@ -1,11 +1,13 @@
 import { expect, test as base, type Page } from "@playwright/test";
-import type { BackgroundTaskRead, ConversationCreateResponse, ConversationDetail, ProjectConversationRead, ProjectRead, ReadingPositionInput, ReadingPositionRead, RecentItemRead, SearchResultItem } from "../lib/types";
+import type { BackgroundTaskRead, ConversationCreateResponse, ConversationDetail, ProjectConversationRead, ProjectRead, ReadingPositionInput, ReadingPositionRead, RecentItemRead, SearchResponse, SearchResultItem } from "../lib/types";
 
 const test = base.extend<{ readerPlacementTrace: void }>({
   readerPlacementTrace: [async ({ context }, use, info) => {
-    // Keep the large recovery matrix untraced; capture only this timing-sensitive
-    // flow and retain its trace only on failure. Trace options are worker-scoped.
-    if (!info.title.endsWith("px: sidebar placement acknowledges before held reads and preserves the Reader")) {
+    // Keep the large recovery matrix untraced; retain diagnostics only for these
+    // timing-sensitive flows on failure. Trace options are worker-scoped.
+    if (!info.title.endsWith("px: sidebar placement acknowledges before held reads and preserves the Reader")
+      && !info.title.endsWith("px: sidebar rename confirms the live Reader before held refreshes finish")
+      && !info.title.startsWith("mixed-type search pagination retains the selected document and actual Enter destination")) {
       await use(); return;
     }
     await context.tracing.start({ screenshots: true, snapshots: true });
@@ -275,8 +277,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       });
       await page.goto(path.replace("/api", ""));
       await expect(page.locator("[data-reader-main-section]").getByRole("heading", { name: created.conversation.title, exact: true }).filter({ visible: true })).toBeVisible();
-      const expand = page.getByRole("button", { name: zh ? "打开侧栏" : "Open sidebar", exact: true }).filter({ visible: true });
-      if (width >= 768 && await expand.count()) await expand.click();
+      const expand = page.getByTestId("mobile-reader-header").getByTestId("mobile-sidebar-button");
+      if (width >= 768) await openReaderSidebar(page);
       const reader = page.getByTestId("reader-scroll-root");
       const article = reader.locator('article[data-message-id="' + created.messages[1].id + '"]');
       await expect(article).toContainText("Synthetic reading paragraph 1");
@@ -294,7 +296,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       }
       const scrollBefore = await reader.evaluate(element => element.scrollTop);
       await expect.poll(() => recentPosts).toBe(1);
-      if (width < 768 && await expand.count()) await expand.click();
+      if (width < 768) await openReaderSidebar(page);
       const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
       await sidebar.getByRole("button", { name: (zh ? "管理 " : "Manage ") + created.conversation.title, exact: true }).click();
       await page.getByRole("menuitem", { name: zh ? "重命名对话" : "Rename conversation", exact: true }).click();
@@ -437,9 +439,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         await expect(title).toBeVisible();
         await expect.poll(() => recordedRevision).toBe(created.conversation.offline_revision);
         if (outcome === "lost") await expect.poll(() => recentFailures).toBe(1);
-        const expand = page.getByRole("button", { name: zh ? "打开侧栏" : "Open sidebar", exact: true }).filter({ visible: true });
-        if (await expand.count()) await expand.click();
-        const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
+        const sidebar = await openReaderSidebar(page);
         await sidebar.getByRole("button", { name: (zh ? "管理 " : "Manage ") + created.conversation.title, exact: true }).click();
         await page.getByRole("menuitem", { name: zh ? "重命名对话" : "Rename conversation", exact: true }).click();
         const editor = page.getByRole("dialog", { name: zh ? "重命名对话" : "Rename conversation", exact: true });
@@ -623,7 +623,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       });
       await scroll.hover(); await page.mouse.wheel(0, 500);
       await expect.poll(() => scroll.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
-      const expand = page.getByRole("button", { name: zh ? "打开侧栏" : "Open sidebar", exact: true }).filter({ visible: true });
+      const expand = page.getByTestId("mobile-reader-header").getByTestId("mobile-sidebar-button");
       if (width < 768) {
         const downPosition = await scroll.evaluate(element => element.scrollTop);
         await page.mouse.wheel(0, -80);
@@ -631,8 +631,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
         await expect(expand).toBeInViewport();
       }
       const scrollBefore = await scroll.evaluate(element => element.scrollTop);
-      if (await expand.count()) await expand.click();
-      const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
+      const sidebar = await openReaderSidebar(page);
       const row = sidebar.getByTestId("conversation-row-" + fixture.conversation.conversation.id);
       // The active project is already expanded. Opening the default-collapsed
       // sidebar can precede its asynchronous conversation response; a missing
@@ -859,9 +858,11 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       });
       await page.goto(path.replace("/api", ""));
       await expect(page.locator("[data-reader-main-section]").getByRole("heading", { name: created.conversation.title, exact: true }).filter({ visible: true })).toBeVisible();
-      const expand = page.getByRole("button", { name: zh ? "打开侧栏" : "Open sidebar", exact: true }).filter({ visible: true });
-      if (await expand.count()) await expand.click();
-      const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
+      const reader = page.getByTestId("reader-scroll-root");
+      await expect(reader.locator("article[data-message-id]")).toHaveCount(created.messages.length);
+      const originalReader = await reader.elementHandle();
+      expect(originalReader).not.toBeNull();
+      const sidebar = await openReaderSidebar(page);
       await sidebar.getByRole("button", { name: (zh ? "管理 " : "Manage ") + created.conversation.title, exact: true }).click();
       await page.getByRole("menuitem", { name: zh ? "重命名对话" : "Rename conversation", exact: true }).click();
       const editor = page.getByRole("dialog", { name: zh ? "重命名对话" : "Rename conversation", exact: true });
@@ -878,6 +879,8 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
       await expect(page).toHaveTitle(/Synthetic acknowledged rename/);
       const opener = sidebar.getByRole("button", { name: (zh ? "管理 " : "Manage ") + "Synthetic acknowledged rename", exact: true });
       await expect(opener).toBeFocused();
+      expect(await originalReader!.evaluate(element => element.isConnected)).toBe(true);
+      await expect(reader.locator("article[data-message-id]")).toHaveCount(created.messages.length);
       await page.screenshot({ path: info.outputPath("metadata-reader-acknowledged-" + width + ".png") });
       expect(writes).toEqual([{ title: "Synthetic acknowledged rename", display_title: "Synthetic acknowledged rename" }]);
       expect(await Promise.all(created.messages.map(async message => (await page.request.get("/api/messages/" + message.id)).json()))).toEqual(messages);
@@ -1034,6 +1037,23 @@ async function localReadingSnapshot(page: Page, id: string) {
       };
     });
   }, { conversationId: id, allowUnownedLegacy });
+}
+
+async function openReaderSidebar(page: Page) {
+  const sidebar = page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true });
+  if (page.viewportSize()!.width < 768) {
+    // The title can render before the localized opener. A one-shot count must
+    // not silently skip the required click; wait for the actual mobile control.
+    await page.getByTestId("mobile-reader-header").getByTestId("mobile-sidebar-button").click();
+  } else {
+    const expand = sidebar.getByRole("button", { name: "Open sidebar", exact: true });
+    const tasks = sidebar.getByTestId("sidebar-tasks-button");
+    await expect(expand.or(tasks)).toHaveCount(1);
+    if (await expand.isVisible()) await expand.click();
+  }
+  await expect(sidebar).toHaveCount(1);
+  await expect(sidebar.getByTestId("sidebar-tasks-button")).toBeVisible();
+  return sidebar;
 }
 
 async function closeMobileSidebar(page: Page) {
@@ -1920,9 +1940,11 @@ test("a batch with zero confirmed archives offers no empty undo", async ({ page 
   }
 });
 
-test("mixed-type search pagination retains the selected document and actual Enter destination", async ({ page }, info) => {
+for (const continuation of ["explicit", "legacy"] as const) {
+test(`mixed-type search pagination retains the selected document and actual Enter destination (${continuation} continuation)`, async ({ page }, info) => {
   await preferences(page, false);
   const created: ConversationCreateResponse[] = [];
+  const offsets: number[] = [];
   try {
     created.push(await createConversation(page, "Synthetic selected message"));
     created.push(await createConversation(page, "Synthetic later annotation"));
@@ -1936,7 +1958,16 @@ test("mixed-type search pagination retains the selected document and actual Ente
       const url = new URL(route.request().url());
       if (url.searchParams.get("q") !== "SyntheticGrouped") return route.continue();
       const offset = Number(url.searchParams.get("offset") ?? 0);
-      return route.fulfill({ json: { query: "SyntheticGrouped", items: [items[offset ? 1 : 0]], total: 2, limit: 50, offset } });
+      offsets.push(offset);
+      expect(url.searchParams.get("limit")).toBe("50");
+      expect([0, 1]).toContain(offset);
+      // This fixture returns one-item pages. Its advertised limit must match
+      // that page boundary; total=2/limit=50 incorrectly described a final page.
+      const response: SearchResponse = {
+        query: "SyntheticGrouped", items: items.slice(offset, offset + 1), total: items.length, limit: 1, offset,
+        ...(continuation === "explicit" ? { has_more: offset + 1 < items.length } : {}),
+      };
+      return route.fulfill({ json: response });
     });
     await page.goto("/search?q=SyntheticGrouped");
     await expect(page.locator("a[data-search-index]")).toHaveCount(1);
@@ -1948,6 +1979,8 @@ test("mixed-type search pagination retains the selected document and actual Ente
     await page.getByRole("button", { name: "Load more", exact: true }).click();
     await page.mouse.move(0, 0);
     await expect(page.locator("a[data-search-index]")).toHaveCount(2);
+    expect(offsets).toEqual([0, 1]);
+    await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
     await expect(selected).toHaveAttribute("href", destination!);
     await expect(selected).toHaveAttribute("data-search-index", "1");
     await page.screenshot({ path: info.outputPath("search-stable-selection.png") });
@@ -1959,6 +1992,7 @@ test("mixed-type search pagination retains the selected document and actual Ente
     for (const item of created) expect((await page.request.delete(`/api/conversations/${item.conversation.id}`)).ok()).toBe(true);
   }
 });
+}
 
 for (const [width, zh] of [[375, true], [1440, false]] as const) {
   test(`${width}px: recent initial and background failures keep recovery, cached anchors and named progress`, async ({ page }, info) => {

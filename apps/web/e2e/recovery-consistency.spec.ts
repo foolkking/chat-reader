@@ -91,11 +91,12 @@ test("same-query search restarts the first page rather than keeping stale earlie
   await expect(page.getByRole("link", { name: /Synthetic old first page/ }).first()).toBeVisible();
   await page.getByRole("button", { name: "Load more", exact: true }).click();
   await expect(page.getByRole("link", { name: /Synthetic old second page/ }).first()).toBeVisible();
-  expect(offsets).toContain(50);
+  expect(offsets).toEqual([0, 50]);
+  await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
   generation++;
   await page.getByRole("textbox", { name: "Search", exact: true }).press("Enter");
   await expect(page.getByRole("link", { name: /Synthetic fresh first page/ }).first()).toBeVisible();
-  expect(offsets.at(-1)).toBe(0);
+  expect(offsets).toEqual([0, 50, 0]);
   await expect(page.getByRole("link", { name: /Synthetic old (first|second) page/ })).toHaveCount(0);
 });
 

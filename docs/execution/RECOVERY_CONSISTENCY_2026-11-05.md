@@ -175,3 +175,45 @@ review and `git diff --check`; browser/runtime verification belongs to the next
 exact-source full CI. No skipped-test allowance, timeout increase, retry increase,
 workflow-gate change, dependency change, migration or deployment is introduced.
 The original buildinfo hash and prior untracked audit artifacts remain unchanged.
+
+## CI follow-up: awaited sidebar entry and coherent pagination fixtures
+
+The user explicitly reported the new `web-quality` failure, allowing immediate
+inspection of **run `41965280758`, attempt 1**, exact source
+`0c3ee4eb81a4cebcfd5a31be326bf6194d817364`, Web job `127040756283`.
+The handoff's normal first-check threshold was not reused for another run.
+Context files/export/recovery now passed **36/36**, including the preceding
+guidance-persistence repair. The UX script gate passed **1,990/1,990**.
+Source Editor/mutation had **115 passed / 2 failed**; later Web gates did not
+execute. API and reading-performance comparison passed at inspection; settings
+was still running. This failed candidate is not full-CI acceptance.
+
+Exact failure logs and the uploaded Playwright snapshots identify:
+
+- The 375px sidebar-rename fixture waited for Manage inside a drawer that was
+  never open in the failure snapshot. Its one-shot localized-opener `count()`
+  could silently skip the necessary click before that control was available.
+  The snapshot does not prove which initial-render/locale ordering occurred.
+  Reader sidebar entry now awaits the actual mobile header control; desktop
+  entry first waits for either the real rail opener or expanded Tasks control.
+  The same unsafe pattern in sibling Reader-recovery fixtures is removed.
+  Exactly one visible sidebar and its Tasks control are required. Rename also
+  verifies that the original Reader DOM and complete message count survive
+  acknowledgement while refresh reads remain held.
+- The mixed-type search fixture returned one item but declared `limit: 50`,
+  `total: 2`, and omitted `has_more`. Under server-offset pagination that
+  describes the last page, so the absent Load more button was correct. The
+  fixture now declares its actual one-item page boundary and runs both explicit
+  `has_more` and legacy omitted-field variants. Both require offsets `[0, 1]`,
+  no final-page Load more, stable selected document after regrouping, and the
+  actual Enter destination. The sparse-page same-query regression separately
+  requires offsets `[0, 50, 0]`, preventing unique-item-count pagination.
+
+Failure-only traces are retained for the two affected flows as well as the
+existing sidebar-placement flow. No production behavior, workflow gate,
+timeout, retry count, skip policy, dependency or migration is changed.
+Regressions are authored and statically reviewed, **not locally executed**;
+the next exact-source full CI owns runtime acceptance. No local API/Web/worker,
+production operation, original ZIP replay or deployment is authorized.
+The task handoff is archived and replaced on submission, with the next first
+result check at least 50 minutes after verifying the new dispatch identity.
