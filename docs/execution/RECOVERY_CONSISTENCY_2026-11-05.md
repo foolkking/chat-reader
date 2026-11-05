@@ -476,3 +476,38 @@ no application test is executed. The bounded fix is in the identifiable desktop
 `chat-reader-skill-harness-fix9-20261105` batch. The exception applies only to
 the reported run: the next dispatch gets a fresh identity-verified minimum
 50-minute first-check boundary. No deployment or production action.
+
+## CI follow-up: history input restoration is not search-result readiness
+
+Run **`42033978054`, attempt 1**, exact source
+`72cee6f5b44ca8b6a289dbbdda17bfa0b37df137`, was first read at
+**2026-11-05 14:04:29.434Z**, after **14:04:29.145Z**. API/performance
+passed and settings was still running; its final success was read at
+14:09:19.585Z. Web Node **2019/2019**, Context **36/36** (including all
+Skill flows) and focused **45/45** passed. Mutation failed **117/118** in
+job `127267220092`; image/inspection jobs skipped.
+
+The search-history flow restored its input text on Back, immediately pressed
+ArrowDown, and later found result 0 without `aria-current`. Its old trace was
+off. Source review identifies an insufficient precondition: SearchBox restores
+the input synchronously from popstate, separately from the query/collection's
+render. It intentionally ignores Arrow keys when there are no current results
+or the input differs from the committed query. Waiting for the text alone does
+not establish a selectable result set; the old snapshot cannot prove the exact
+transient state at keydown.
+
+The browser flow now requires the traversed query/scope URL, all three synthetic
+results (title and two messages), exact conversation href, matching message text,
+no active Searching status, and input focus before testing both ordered Arrow
+steps and Enter destination. Existing rapid traversal, unsubmitted-draft,
+failure/retry and filter assertions remain. Three deterministic cases execute
+actual SearchBox handlers across empty-results, stale-query and restored
+keyboard-intent boundaries. No queued implicit selection is introduced.
+The history flow joins failure-only tracing.
+
+This is a test readiness correction, not a production behavior change or a
+relaxed keyboard assertion. No fixed sleep, retry, skip, increased timeout or
+test-gate change. Local work remains static parsing/review and preservation
+checks only; the new cases are not locally executed. Batch
+`chat-reader-search-history-fix10-20261105` owns evidence and the new dispatch's
+fresh minimum 50-minute boundary. Full exact-source CI remains required.

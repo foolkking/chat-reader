@@ -8,13 +8,13 @@ Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 | Boundary | Verified snapshot |
 | --- | --- |
-| Source / branch | Existing `master`; recovery/consistency source `6b6b7a0` has a Skill regression-adapter CI correction, not the deployed release |
+| Source / branch | Existing `master`; recovery/consistency source `72cee6f` has a search-history readiness CI follow-up, not the deployed release |
 | Accepted source CI | `41918053083`, exact `46cb51845c100ba9a6e613de0e604405db0729c4`, all six required jobs passed; this does not cover the recovery/consistency follow-up |
 | Production / direct rollback | `be58b12` / `3b839dc`; release pointers independently rechecked **2026-11-04 05:52Z** |
 | Deployed-source CI | `41737744696`, attempt 1, all six jobs passed; result read after the requested 50-minute gate; not candidate CI |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
 | Database | Candidate single head `20261105_0059`; production remains `20261030_0058` |
-| Verification / delivery | User-reported candidate CI `42029217379` failed Web's Node gate (2009 passed / 8 failed): the new JSX test walker restarted at its root on undefined leaf children. The adapter is corrected with two direct traversal regressions; actual Skill browser acceptance and full exact-source CI remain pending. No local application tests or deployment |
+| Verification / delivery | Candidate CI `42033978054` passed API/settings/performance, Web Node 2019/2019, Context 36/36 and focused 45/45; mutation failed 117/118 after a history-return key preceded result readiness. The browser flow now requires restored result identity/count before testing keyboard order, with three readiness regressions and failure traces. Full exact-source CI remains pending; no local application tests or deployment |
 
 The current release adds a bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,

@@ -2,7 +2,8 @@ import { expect, test as base, type Page } from "@playwright/test";
 
 const test = base.extend<{ draftFocusTrace: void }>({
   draftFocusTrace: [async ({ context }, use, info) => {
-    if (!info.title.endsWith("protect drafts, reachable project settings and persisted appearance")) {
+    if (!info.title.endsWith("protect drafts, reachable project settings and persisted appearance")
+      && info.title !== "search scope, submit, history, stale results, keyboard ordering and failure recovery") {
       await use(); return;
     }
     await context.tracing.start({ screenshots: true, snapshots: true });
@@ -10,9 +11,9 @@ const test = base.extend<{ draftFocusTrace: void }>({
     try { await use(); } catch (error) { failed = true; throw error; }
     finally {
       if (failed || info.status !== info.expectedStatus) {
-        const tracePath = info.outputPath("draft-focus-trace.zip");
+        const tracePath = info.outputPath("interaction-recovery-trace.zip");
         await context.tracing.stop({ path: tracePath });
-        await info.attach("draft-focus-trace", { path: tracePath, contentType: "application/zip" });
+        await info.attach("interaction-recovery-trace", { path: tracePath, contentType: "application/zip" });
       } else await context.tracing.stop();
     }
   }, { auto: true, timeout: 30_000 }],
@@ -154,7 +155,16 @@ test("search scope, submit, history, stale results, keyboard ordering and failur
     await input.fill(key + "NEW"); await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(key + "NEW"));
     await page.goBack(); await expect(input).toHaveValue(key);
-    await input.focus(); await page.keyboard.press("ArrowDown");
+    // popstate restores the draft before the query/collection render is ready.
+    // Keyboard ordering belongs to the restored results, not merely its input.
+    await expect(page).toHaveURL(url => url.searchParams.get("q") === key && url.searchParams.get("status_scope") === "all");
+    const restoredResults = page.locator('a[data-search-index]');
+    await expect(restoredResults).toHaveCount(3); // This fixture has a title and two messages.
+    await expect(restoredResults.first()).toHaveAttribute("href", `/conversations/${id}`);
+    await expect(restoredResults.nth(1)).toContainText(key);
+    await expect(page.getByRole("status").filter({ hasText: /^Searching…$/ })).toHaveCount(0);
+    await input.focus(); await expect(input).toBeFocused();
+    await page.keyboard.press("ArrowDown");
     await expect(page.locator('a[data-search-index="0"]')).toHaveAttribute("aria-current", "true");
     await page.keyboard.press("ArrowDown");
     await expect(page.locator('a[data-search-index="1"]')).toHaveAttribute("aria-current", "true");
