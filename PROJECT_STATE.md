@@ -8,13 +8,13 @@ Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 | Boundary | Verified snapshot |
 | --- | --- |
-| Source / branch | Existing `master`; recovery/consistency candidate is based on `46cb518`, authorized for commit and exact-source CI, not the deployed release |
+| Source / branch | Existing `master`; recovery/consistency source `7842863` has a focused guidance-persistence CI follow-up, not the deployed release |
 | Accepted source CI | `41918053083`, exact `46cb51845c100ba9a6e613de0e604405db0729c4`, all six required jobs passed; this does not cover the recovery/consistency follow-up |
 | Production / direct rollback | `be58b12` / `3b839dc`; release pointers independently rechecked **2026-11-04 05:52Z** |
 | Deployed-source CI | `41737744696`, attempt 1, all six jobs passed; result read after the requested 50-minute gate; not candidate CI |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
 | Database | Candidate single head `20261105_0059`; production remains `20261030_0058` |
-| Verification / delivery | Current batch has local API/PostgreSQL/static/build verification; browser acceptance is pending because local Web startup was policy-blocked; user authorized commit/push and CI on 2026-11-05, but not deployment |
+| Verification / delivery | Candidate CI `41962480064` failed Web Context guidance (35 passed / 1 failed); its persistence follow-up is statically reviewed and awaits new exact-source CI, with no local application tests or deployment |
 
 The current release adds a bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,

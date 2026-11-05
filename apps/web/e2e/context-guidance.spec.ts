@@ -18,6 +18,41 @@ async function openAction(page: Page, width: number, name: RegExp) {
   }
 }
 
+async function readMaintenanceDismissal(page: Page, conversationId: string) {
+  return page.evaluate(async id => {
+    const userId = localStorage.getItem("chat-reader:offline-active-user-v1");
+    const namespace = Array.from(new TextEncoder().encode(userId ?? ""), byte => byte.toString(16).padStart(2, "0")).join("");
+    const name = !userId || localStorage.getItem("chat-reader:offline-legacy-owner-v1") === userId
+      ? "chat-reader-offline-library" : `chat-reader-offline-library--user-${namespace}`;
+    if (!(await indexedDB.databases()).some(database => database.name === name)) return null;
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(name);
+      let settled = false;
+      const fail = (error: unknown) => { settled = true; reject(error); };
+      request.onupgradeneeded = () => {
+        request.transaction?.abort();
+        fail(new Error("Guidance database disappeared during inspection"));
+      };
+      request.onblocked = () => fail(new Error("Guidance database inspection was blocked"));
+      request.onerror = () => fail(request.error);
+      request.onsuccess = () => {
+        if (settled) { request.result.close(); return; }
+        settled = true;
+        resolve(request.result);
+      };
+    });
+    try {
+      return await new Promise<{ muted?: boolean } | null>((resolve, reject) => {
+        const tx = db.transaction("settings", "readonly");
+        const request = tx.objectStore("settings").get(`guidance:maintenance:${id}`);
+        tx.oncomplete = () => resolve(request.result?.value ?? null);
+        tx.onabort = () => reject(tx.error ?? new Error("Guidance inspection was aborted"));
+        tx.onerror = () => reject(tx.error);
+      });
+    } finally { db.close(); }
+  }, conversationId);
+}
+
 for (const width of [375, 768, 1440]) {
   test(`${width}px: optional first guide, real maintenance ZIP and uncovered-range reminder`, async ({ page, context, baseURL }, info) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:3107" });
@@ -97,13 +132,21 @@ for (const width of [375, 768, 1440]) {
     await expect(hint).toContainText("105");
     if (width === 768) {
       await hint.getByRole("button", { name: /此对话不再提示|Don't remind for this conversation/ }).click();
+      await expect(hint).toHaveCount(0);
+      // The UI completion must follow IndexedDB commit, not just optimistic
+      // cache state. Inspect once rather than polling away a premature dismissal.
+      expect(await readMaintenanceDismissal(page, id)).toMatchObject({ muted: true });
       await page.reload();
       await openAction(page, width, /^(导出|Export)$/);
       await expect(hint).toHaveCount(0);
+      expect(await readMaintenanceDismissal(page, id)).toMatchObject({ muted: true });
       await page.reload();
       await openAction(page, width, /^(接续|Continuation)$/);
       await page.getByRole("button", { name: /如何使用 Current|How to use Current/ }).click();
-      await page.getByRole("button", { name: /恢复此对话的维护提示|Restore maintenance suggestions for this conversation/ }).click();
+      const restore = page.getByRole("button", { name: /恢复此对话的维护提示|Restore maintenance suggestions for this conversation/ });
+      await restore.click();
+      await expect(restore).toHaveCount(0);
+      expect(await readMaintenanceDismissal(page, id)).toMatchObject({ muted: false });
       await page.getByRole("button", { name: /关闭接续|Close continuation$/ }).click();
       await openAction(page, width, /^(导出|Export)$/);
       await expect(hint).toContainText("105");

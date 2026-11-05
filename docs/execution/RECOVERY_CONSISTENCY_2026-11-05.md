@@ -132,3 +132,46 @@ result check must wait at least 50 minutes after dispatch identity verification;
 if a required gate fails, diagnose that exact run and resubmit fixes without
 weakening gates. The previously paused CI monitor should follow this new handoff,
 not the accepted base run. No deployment is authorized.
+
+## CI follow-up: guidance persistence before refresh
+
+The user explicitly reported `web-quality` failed, so its result was inspected
+on 2026-11-05 before the original scheduled first-check time. Exact source
+`784286317f500f77ad75ae993266018414c91a25`, run `41962480064`, Web job
+`127031825765`: lint, TypeScript, build and the earlier Web gates passed.
+The Context-files gate had **35 passed / 1 failed**. Later Web gates were skipped;
+other jobs were still running at the initial inspection. This is not full CI
+acceptance, and the accepted base run does not cover this source.
+
+The 768px guidance test timed out looking for the restore-maintenance action.
+Its failure snapshot shows the guide open with that action absent. Source review
+identified a concrete persistence race: the hint and query cache were dismissed
+before the IndexedDB read-write transaction completed, while the fixture
+immediately reloaded. Its subsequent negative hint assertion could also pass
+while the setting was still loading. The snapshot does not by itself prove the
+exact IndexedDB abort ordering; that gate had tracing disabled.
+
+The bounded fix:
+- publish the setting only after transaction settlement and cancel any older
+  setting query before publishing;
+- retain account-epoch checks across both asynchronous boundaries;
+- hide a maintenance hint only after its save settles, while opening Current
+  remains immediate;
+- retain session-only dismissal if device storage fails, returning
+  `persisted: false` rather than claiming durability;
+- inspect the active account's actual IndexedDB row after UI completion, after
+  reload and after restoring reminders. The assertion reads once, not a polling
+  workaround for early completion, and does not create a missing database.
+
+Nine deterministic regressions execute the production hook/component with a
+controlled transaction-commit barrier and the real QueryClient cancellation:
+commit acknowledgement, late reads, storage failure, account changes, delayed
+dismissal and immediate Current navigation. They are included by the existing
+`scripts/ux/*.test.mjs` CI gate. The existing browser mute/reload/restore flow,
+real package checks, viewports, timeouts and assertions remain.
+
+These new tests are **authored, not locally executed**. This repair uses static
+review and `git diff --check`; browser/runtime verification belongs to the next
+exact-source full CI. No skipped-test allowance, timeout increase, retry increase,
+workflow-gate change, dependency change, migration or deployment is introduced.
+The original buildinfo hash and prior untracked audit artifacts remain unchanged.
