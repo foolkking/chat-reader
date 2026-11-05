@@ -4,7 +4,24 @@
 下方带日期的已部署/未部署/准备状态均为历史检查点，不是新的执行授权；
 下一次发布仍需独立精确源码 CI、容量预检、停写备份及验收。
 
-## 当前生产：小内存 ZIP 导入恢复 — 2026-11-04
+## 当前生产：综合优化与恢复一致性 — 2026-11-06
+
+精确源码 **`67e63364f794d2b6d820eb8502ead9010c76f4bd`** 的完整 CI
+**`42043078359`** 六项与全部制品门禁通过。用户随后独立授权部署；
+维护窗口为 **2026-11-06 00:04:37–00:12:00 +08:00**。
+新五组件备份 **`chat-reader-20261105T160504Z`** 验证后升级
+**0058→0059**，仅以 `--no-build --no-deps --pull never` 替换三个应用服务。
+52/52 私有搜索回填已提交；健康、精确镜像、HTTPS/拒绝/隐私、日志/OOM
+及独立复核通过。生产/保留回退镜像为 **`67e6336`/`be58b12`**。
+
+PostgreSQL 身份/启动时间、现有 env/Compose/Nginx 和停写期间 canonical
+行数未变。未生产构建、清理备份/旧镜像/用户资料或重传原始 ZIP。
+`be58b12` 不识别新回填 job；失败后不得自动 downgrade 或启动旧 worker。
+回退前停写并重新审查 schema/job/data 兼容，必要时前向修复。
+原用户 ZIP、真实 47 对话离线更新和认证生产 UI 仍待用户侧验收。
+完整证据见[本轮发布回执](execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)。
+
+## 上一生产：小内存 ZIP 导入恢复 — 2026-11-04（历史）
 
 精确源码 `be58b12b191e9f0fa4010f8ed4293781fec01157` 的完整 CI
 `41737744696` 六项全部通过，且在 50 分钟读取门槛后确认。官方制品
@@ -2291,15 +2308,16 @@ downgrade/schema parity pass; disposable PostgreSQL concurrency/FK acceptance is
 added but remains unexecuted locally. Context return/adoption, lifecycle cleanup
 and archive integration are unfinished, so this checkpoint is not deployable.
 Production remains on 0042. Do not deploy merely because the local migration exists.
-## Pending candidate migration — 2026-11-05
+## Migration 0059 — implemented 2026-11-05, deployed 2026-11-06
 
-No deployment is authorized by this implementation/CI task. Production remains
-the release described at the top of this page. The candidate has one new head `20261105_0059`:
+The original implementation/CI task did not authorize deployment. A later explicit
+user request authorized the release recorded at the top of this page. Production
+now has the single head `20261105_0059`:
 nullable session rejection reason, Share creation-intent uniqueness, metadata-only
-title-date repair and a bounded worker private-search backfill. Deploy only after
-exact-source CI and separate authorization, with the normal stopped-writer backup.
-Run `alembic upgrade head` and existing migration-state checks; let the existing
-single worker finish the derived backfill before declaring old note search complete.
+title-date repair and a bounded worker private-search backfill. Exact-source CI,
+stopped-writer backup, `alembic upgrade head` and migration-state checks passed;
+the existing single worker committed the derived backfill, 52/52. This is not
+authenticated production search-UI acceptance.
 Downgrade removes the new column/index and queued migration job, not user data;
 do not undo populated index dates or restore raw content dates.
 

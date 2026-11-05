@@ -1,6 +1,9 @@
 # Data archive contract
 
-## Current additive extension — 2026-11-05 candidate
+## Current additive extension — implemented 2026-11-05, deployed 2026-11-06
+
+Released in exact `67e6336` after complete CI `42043078359`; see the
+[release receipt](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md).
 
 Optional `user_features_version:1` adds collections and reading baselines to
 personal v1/system v5 archives without changing their existing format numbers.
@@ -15,7 +18,8 @@ collections; no data is silently skipped. Full behavior:
 [recovery consistency](COMPREHENSIVE_OPTIMIZATION_CONTRACT.md#recovery-consistency-follow-up).
 
 Archive baseline is included in the release referenced by `PROJECT_STATE.md`.
-The recovery changes below are local work dated 2026-10-07, not yet released.
+The recovery paragraphs below retain their local-work checkpoint of 2026-10-07;
+their former unreleased labels do not override the current release above.
 
 ## Task status and interrupted refresh (local, 2026-10-07)
 

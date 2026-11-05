@@ -1,6 +1,9 @@
 # Consolidated optimization contract
 
-Source candidate: 2026-11-05. This is not a deployment receipt.
+Implemented 2026-11-05; deployed in `67e6336` on 2026-11-06 after exact CI
+`42043078359`. This is the behavior contract, not authenticated production UI
+acceptance; operational proof lives in the
+[release receipt](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md).
 
 ## Authentication and local reading
 

@@ -5,7 +5,27 @@ describe the current release. Dated results below retain their original
 checkpoint scope; a historical candidate/failure is neither a new work order
 nor a substitute for current authenticated-browser/user-data acceptance.
 
-## Current exact-source CI and production — small-ZIP memory recovery — 2026-11-04
+## Current exact-source CI and production — recovery consistency — 2026-11-06
+
+Exact application source `67e63364f794d2b6d820eb8502ead9010c76f4bd` passed
+all six jobs in run `42043078359`, attempt 1. First read was
+2026-11-05 15:04:42.366Z, after its 15:04:42.075Z boundary; final success
+was read at 15:10:30.896Z. API: 6065 passed, 3 unchanged optional skips.
+Web: 2022/2022 Node cases and 13/13 required machine gates; settings: 463
+plus isolated restore 1; performance: baseline/candidate 9/9 on the same runner.
+All required jobs/gates passed without skip/budget/timeout relaxation.
+The exact-image real 320 MiB worker gate verified 14 asset hashes, workspace
+growth 57,237,504 bytes and zero OOM/failcnt/restart.
+
+Official artifact `13427291594` and all required evidence were independently
+downloaded/hash-checked. Production was separately authorized and accepted with
+schema 0059 and 52/52 derived backfill; see the
+[release receipt](execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md).
+No local application tests or services were run during these CI repairs/deployment.
+Production authenticated UI, real user ZIP/offline updates and backup restore
+remain separate unverified boundaries.
+
+## Previous exact-source CI — small-ZIP memory recovery — 2026-11-04
 
 Exact source `be58b12b191e9f0fa4010f8ed4293781fec01157` passed all six jobs in
 full CI `41737744696`, attempt 1. The result was read at

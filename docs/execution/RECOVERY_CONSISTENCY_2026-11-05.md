@@ -1,5 +1,22 @@
 # Recovery consistency implementation — 2026-11-05
 
+## Final disposition
+
+Exact `67e63364f794d2b6d820eb8502ead9010c76f4bd` passed all six jobs and
+all required artifact gates in CI `42043078359`, attempt 1. First result read:
+2026-11-05 15:04:42.366Z, after 15:04:42.075Z; final green read 15:10:30.896Z.
+API 6065 passed/3 optional skips; Web Node 2022/2022 and 13/13 machine gates;
+settings 463 plus isolated restore 1; performance baseline/candidate 9/9;
+exact-image real 320 MiB worker and independent artifact inspection passed.
+No gate, budget, timeout, retry or skip relaxation was used.
+
+The user subsequently requested deployment explicitly. It was accepted on
+2026-11-06 00:12:00 +08:00, then independently rechecked. Production is
+`67e6336`, schema 0059; the stopped-writer backup and 52/52 derived backfill
+are verified. [Release receipt](RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)
+owns the deployment evidence and remaining user-side acceptance.
+Earlier no-deployment/pending statements below retain their checkpoint scope.
+
 ## Scope and preservation
 
 Approved follow-up to the two-round project audit; existing `master`, base

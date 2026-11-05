@@ -1,6 +1,13 @@
 # 事实证据索引
 
-## 当前发布与知识收尾 — 2026-11-04
+## 当前发布 — 恢复一致性 — 2026-11-06
+
+[脱敏汇总](release-2026-11-06/recovery-deployment-summary.json)与
+[发布回执](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)
+绑定精确 `67e6336`、CI `42043078359`、制品、停写备份、0059/52 项回填
+和运行态独立复核；不含用户内容、凭据或原始应用日志。
+
+## 上一发布与知识收尾 — 2026-11-04（历史）
 
 [小内存 ZIP 脱敏发布汇总](release-2026-11-04/small-zip-deployment-summary.json)
 与[发布回执](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)绑定精确 CI、

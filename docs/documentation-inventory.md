@@ -1,5 +1,17 @@
 # Markdown 文档台账
 
+## 恢复一致性 CI 与部署回执 — 2026-11-06
+
+以 Next.js/FastAPI/PostgreSQL monorepo 的现有文档结构做有界状态同步，
+不重构目录或改写历史过程。更新 `PROJECT_STATE.md`、导航、部署/测试入口、
+运行环境、功能/认证/PWA/归档/整合合同和风险页：精确 `67e6336` 完整
+CI `42043078359` 通过并经后续单独授权部署，0059/52 项回填及独立复核通过。
+新增 `execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md` 与脱敏 JSON，
+实施记录仅追加最终处置，保留失败和当时授权边界。
+未改 AGENTS、应用/测试源码、原审查/evidence 或 build-info，未清理资料。
+文档回执提交不替换实际发布源码/CI 身份；认证生产 UI、真实 ZIP/离线
+更新和生产备份恢复仍为未验收，不以健康检查消除这些边界。
+
 ## 恢复一致性实施 — 2026-11-05
 
 更新 `PROJECT_STATE.md`、`index.md` 和 `system/FEATURE_INVENTORY.md`，分清

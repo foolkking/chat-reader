@@ -1,6 +1,6 @@
 # Project State
 
-Last synchronized: **2026-11-05**. Current facts and verification boundaries only;
+Last synchronized: **2026-11-06**. Current facts and verification boundaries only;
 dated implementation, CI failures and release narratives belong in execution records.
 Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
@@ -8,25 +8,28 @@ Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 | Boundary | Verified snapshot |
 | --- | --- |
-| Source / branch | Existing `master`; recovery/consistency source `72cee6f` has a search-history readiness CI follow-up, not the deployed release |
-| Accepted source CI | `41918053083`, exact `46cb51845c100ba9a6e613de0e604405db0729c4`, all six required jobs passed; this does not cover the recovery/consistency follow-up |
-| Production / direct rollback | `be58b12` / `3b839dc`; release pointers independently rechecked **2026-11-04 05:52Z** |
-| Deployed-source CI | `41737744696`, attempt 1, all six jobs passed; result read after the requested 50-minute gate; not candidate CI |
+| Source / branch | Existing `master`; deployed application source `67e63364f794d2b6d820eb8502ead9010c76f4bd`; subsequent documentation-only receipts are not new application releases |
+| Accepted / deployed-source CI | `42043078359`, attempt 1, exact `67e6336`; all six jobs and required artifacts passed after the 50-minute first-read gate |
+| Production / retained rollback images | `67e6336` / `be58b12`; accepted **2026-11-05 16:12:00Z** (**2026-11-06 00:12:00 +08:00**) and independently rechecked; older `3b839dc` also retained |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
-| Database | Candidate single head `20261105_0059`; production remains `20261030_0058` |
-| Verification / delivery | Candidate CI `42033978054` passed API/settings/performance, Web Node 2019/2019, Context 36/36 and focused 45/45; mutation failed 117/118 after a history-return key preceded result readiness. The browser flow now requires restored result identity/count before testing keyboard order, with three readiness regressions and failure traces. Full exact-source CI remains pending; no local application tests or deployment |
+| Database | Production single head `20261105_0059`; upgraded from 0058 after validated stopped-writer backup; private-search backfill committed, 52/52 |
+| Verification / delivery | API 6065 passed / 3 optional skipped; Web Node 2022/2022 and 13/13 gates; settings 463 plus isolated restore 1; performance baseline/candidate 9/9; exact-image 320 MiB memory gate passed. No local application tests, production build, data cleanup or raw ZIP replay |
 
-The current release adds a bounded small-ZIP memory path and structured failure/retry
+The current release ships the consolidated authentication/offline and recovery
+consistency work, preserving the bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,
 a 128 MiB reserve and a 64 MiB workspace-growth budget; other imports keep standard
 admission. Real exact-image 320 MiB worker CI is not proof of success on user data.
-[Release receipt](docs/execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md) owns official
+[Release receipt](docs/execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md) owns official
 artifact hashes, OCI/config identity, stopped-writer backup, deployment and cleanup
 evidence. [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)
 owns qualification and compatibility details.
 
-Two verified backup points and current/direct-rollback image tags remain after the
-previously authorized cleanup. Capacity and aggregate data counts are time-point
+The new five-component backup `chat-reader-20261105T160504Z` and the two previously
+retained backup points remain; this deployment did no cleanup. Rollback image tags
+are retained, not blanket compatibility approval for new 0059 jobs/data. Stop writers
+and review compatibility before rollback; never automatically downgrade or run the
+old worker against pending `personal_search_backfill`. Capacity and aggregate data counts are time-point
 observations, not invariants. Writers resumed after deployment; do not claim all
 canonical row counts stayed unchanged or restore data to make them match.
 Production environment/Compose/Nginx and PostgreSQL were not replaced.
@@ -74,7 +77,7 @@ Detailed behavior and limits live in [product](docs/product.md),
 [Context](docs/system/CONTEXT_PACKAGE_CONTRACT.md) and
 [data/storage](docs/system/DATA_AND_STORAGE.md).
 
-Candidate implementation, measurements, review and CI receipts:
+Implementation, measurements, review and CI receipts:
 [comprehensive optimization](docs/execution/COMPREHENSIVE_OPTIMIZATION_2026-11-05.md),
 [recovery/consistency follow-up](docs/execution/RECOVERY_CONSISTENCY_2026-11-05.md).
 Current cross-module behavior:
@@ -116,8 +119,11 @@ cleanup are complete. Only the merged local branch and reviewed regenerable
 caches/empty directory were removed; no remote branch or production data changed.
 The subsequent 2026-11-05 request explicitly authorizes the consolidated
 optimization, completion review, commit/push on existing master and exact-source
-CI. Check each submitted run only after the requested 50-minute wait; fix and
-resubmit until green. It does not authorize deployment or broader cleanup.
+CI. Each submitted run obeyed its fresh minimum 50-minute first-read boundary,
+except explicit user-reported failure diagnoses. Exact `67e6336` is fully green.
+The later explicit deployment request authorized the accepted release above;
+deployment and independent recheck are complete, and this CI recheck is stopped.
+It did not authorize broader cleanup or replaying the user's source ZIP.
 The unrelated `apps/web/tsconfig.tsbuildinfo` modification and release/test
 evidence remain preserved.
 [Closeout receipt](docs/execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md) records checks,

@@ -1,6 +1,6 @@
 # Authentication and account contract
 
-## Current candidate rule — 2026-11-05
+## Current rule — implemented 2026-11-05, deployed 2026-11-06
 
 The approved product rule now separates server sessions from explicit trusted
 device access. Natural expiry/missing cookies and service outages no longer lock
@@ -8,10 +8,11 @@ trusted local copies or replace an already opened page. Explicit security
 revocation/local lock still fence data; legacy unupgraded authorization keeps its
 old protection. See [current consolidated contract](COMPREHENSIVE_OPTIMIZATION_CONTRACT.md).
 This supersedes blanket expiry/401-lock descriptions in the dated sections below.
-Candidate schema is `20261105_0059`; production facts below remain the prior release.
+Production schema is `20261105_0059`; exact CI and deployment are recorded in
+the [release receipt](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md).
 
-Runtime status synchronized: 2026-11-04. The multi-account contract is deployed
-in current source `be58b12`, schema `20261030_0058`. Earlier dated working-tree
+Runtime status synchronized: 2026-11-06. The multi-account contract is deployed
+in current source `67e6336`, schema `20261105_0059`. Earlier dated working-tree
 or local verification labels below retain their checkpoint meaning, not a new
 unshipped account migration. Current release and authenticated-browser limits
 are owned by [Project State](../../PROJECT_STATE.md).

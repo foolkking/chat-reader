@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "application_source": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+  "branch": "master",
+  "documentation_only_receipt_does_not_change_application_source": true,
+  "ci": {
+    "commit": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+    "run_id": 42043078359,
+    "producer_attempt": 1,
+    "conclusion": "success",
+    "checked_at": "2026-11-05T15:48:13.9611150+00:00",
+    "not_before": "2026-11-05T15:04:42.0757433+00:00",
+    "jobs": [
+      {
+        "name": "api-quality",
+        "id": 127298707578,
+        "conclusion": "success"
+      },
+      {
+        "name": "web-quality",
+        "id": 127298707788,
+        "conclusion": "success"
+      },
+      {
+        "name": "settings-quality",
+        "id": 127298707836,
+        "conclusion": "success"
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "id": 127315414651,
+        "conclusion": "success"
+      },
+      {
+        "name": "build-images",
+        "id": 127325966584,
+        "conclusion": "success"
+      },
+      {
+        "name": "inspect-release-artifact",
+        "id": 127327973667,
+        "conclusion": "success"
+      }
+    ],
+    "deployment_authorized": true,
+    "authorization": "User: ci通过，现在部署; continued 2026-11-05",
+    "artifact_id": 13427291594
+  },
+  "artifact": {
+    "status": "passed",
+    "commit": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+    "run_id": 42043078359,
+    "run_attempt": 1,
+    "images": {
+      "api": "sha256:b2b356bcaed85342a152da6a456052adfd9e56340bdfa7e738e13cf18d6dd3ff",
+      "web": "sha256:3a4428daa4ada423ab48bb38af4c5990ca050a26145f6e0d19cd2a4a1d415f66"
+    },
+    "chains": {
+      "api": {
+        "digest_chain": [
+          "sha256:b2b356bcaed85342a152da6a456052adfd9e56340bdfa7e738e13cf18d6dd3ff",
+          "sha256:a07d1af15b90073c3264bef97b9accc7b27fe5a7ac81d0c0524c7f5fc1e58f4a",
+          "sha256:95e34fb7ca0059fab9e1586963fc080709b4de20afe137901abf43c79d3ec95f"
+        ],
+        "config_id": "sha256:95e34fb7ca0059fab9e1586963fc080709b4de20afe137901abf43c79d3ec95f",
+        "platform": "linux/amd64"
+      },
+      "web": {
+        "digest_chain": [
+          "sha256:3a4428daa4ada423ab48bb38af4c5990ca050a26145f6e0d19cd2a4a1d415f66",
+          "sha256:0a0d2ac55675ac6a8d4011cfc34a1498559b3edd7a7fe3d0560252cd75be397e",
+          "sha256:4bc1deb7f9ea2a96dd4cc5abf7f463e1071ed17ee0b8d38c63d880d16f674042"
+        ],
+        "config_id": "sha256:4bc1deb7f9ea2a96dd4cc5abf7f463e1071ed17ee0b8d38c63d880d16f674042",
+        "platform": "linux/amd64"
+      }
+    },
+    "archive_sha256": "1600e2a8fa57093c999982f663905d91fb188263111a898bb758e413620be3da",
+    "artifact_id": 13427291594,
+    "artifact_zip_sha256": "1bf83063657b0ee9347d8d3e4d7bdcb1067c96ecf5b46b88a2517682323cb7e1",
+    "forbidden_paths_present": false,
+    "verified_blob_count": 35,
+    "web_gates": 13,
+    "settings_gates": 2,
+    "capacity_cases": 9,
+    "real_memory_gate": {
+      "revision": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+      "passed": true,
+      "real_sensor": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "attachment_count": 14,
+      "conversation_count": 1,
+      "message_count": 4,
+      "reference_count": 13,
+      "verified_asset_hashes": 14,
+      "archive_bytes": 1456292,
+      "entries": 18,
+      "baseline_bytes": 86433792,
+      "peak_bytes": 143671296,
+      "workspace_peak_delta_bytes": 57237504,
+      "oom": 0,
+      "oom_kill": 0,
+      "failcnt_delta": 0,
+      "restarts": 0
+    },
+    "note": "Archive/config inspection only; no images loaded or application code executed locally."
+  },
+  "deployment": {
+    "maintenance_started_at_utc": "2026-11-05T16:04:37Z",
+    "maintenance_ended_at_utc": "2026-11-05T16:12:00Z",
+    "accepted_at_utc": "2026-11-05T16:11:59.773531Z",
+    "independent_recheck_at_utc": "2026-11-05T16:16:51.754294Z",
+    "current": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+    "rollback_images": "be58b12b191e9f0fa4010f8ed4293781fec01157",
+    "older_retained": "3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+    "schema": "20261105_0059",
+    "migration": {
+      "after": "20261105_0059",
+      "backfill_at_migration": {
+        "has_error": false,
+        "present": true,
+        "processed": 0,
+        "progress": 0,
+        "status": "queued",
+        "total": 0
+      },
+      "before": "20261030_0058",
+      "canonical_row_counts_unchanged_while_stopped": true,
+      "operation": "alembic_upgrade_head",
+      "status": "passed"
+    },
+    "backfill": {
+      "job": {
+        "has_error": false,
+        "present": true,
+        "processed": 52,
+        "progress": 100,
+        "status": "committed",
+        "total": 52
+      },
+      "scope": "migration job completion, not authenticated search UI acceptance",
+      "status": "passed"
+    },
+    "backup": "chat-reader-20261105T160504Z",
+    "backup_component_checksums_toc_and_tar_verified": true,
+    "retained_backup_points": [
+      "chat-reader-20261105T160504Z",
+      "chat-reader-20261104T004004Z",
+      "chat-reader-20261103T155702Z"
+    ],
+    "all_twelve_role_tags_retained": true,
+    "attachment_audit": {
+      "applicable": true,
+      "clean": true,
+      "complete": true,
+      "issue_count": 0,
+      "issue_counts": {},
+      "orphan_classification_safe": true,
+      "read_only": true,
+      "scanned_active_attachment_count": 352,
+      "scanned_asset_object_count": 373,
+      "scanned_context_object_count": 12,
+      "scanned_file_count": 385,
+      "scanned_skill_object_count": 0,
+      "sha256_verified_count": 385,
+      "storage_backend": "local"
+    },
+    "runtime": {
+      "api": {
+        "health": "healthy",
+        "image": "sha256:95e34fb7ca0059fab9e1586963fc080709b4de20afe137901abf43c79d3ec95f",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+        "status": "running"
+      },
+      "import-worker": {
+        "health": null,
+        "image": "sha256:95e34fb7ca0059fab9e1586963fc080709b4de20afe137901abf43c79d3ec95f",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+        "status": "running"
+      },
+      "postgres": {
+        "health": "healthy",
+        "image": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "",
+        "status": "running"
+      },
+      "web": {
+        "health": "healthy",
+        "image": "sha256:4bc1deb7f9ea2a96dd4cc5abf7f463e1071ed17ee0b8d38c63d880d16f674042",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+        "status": "running"
+      }
+    },
+    "http": {
+      "anonymous_copy_plan": 401,
+      "anonymous_image_display": 401,
+      "anonymous_new_messages": 401,
+      "anonymous_tags": 401,
+      "http_https_redirect": 301,
+      "https_health": 200,
+      "https_login": 200,
+      "local_api_health": 200,
+      "local_web_health": 200,
+      "missing_image_capability": 404,
+      "page_method_denials_without_cookie_or_redirect": 50,
+      "public_diagnostics": 404,
+      "security_headers": "passed",
+      "unauthenticated_capabilities": 401
+    },
+    "postgres_identity_start_restarts_unchanged": true,
+    "production_env_compose_nginx_unchanged": true,
+    "canonical_counts_unchanged_while_stopped": true,
+    "canonical_counts_after_resume": "not_compared_to_stopped_baseline",
+    "new_host_oom_kills": 0,
+    "new_kernel_oom_events": 0,
+    "startup_errors": {
+      "api": 0,
+      "import-worker": 0,
+      "web": 0
+    },
+    "available_disk_kib_at_runtime_recheck": 6585652,
+    "scanner_disabled": true,
+    "cleanup_performed": false,
+    "original_source_zip_replayed": false,
+    "local_application_tests_or_services_started": false,
+    "rollback_policy": "Retained images only; fresh stopped-writer schema/job/data compatibility review required; no automatic downgrade or old worker for pending personal_search_backfill"
+  },
+  "not_verified": [
+    "authenticated production UI",
+    "original user ZIP retry",
+    "real 47-conversation offline update",
+    "physical clipboard/screen reader/device behavior",
+    "sustained load",
+    "production backup restore and off-site recovery"
+  ]
+}

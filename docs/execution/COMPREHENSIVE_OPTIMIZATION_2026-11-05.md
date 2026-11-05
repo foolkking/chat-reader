@@ -1,5 +1,11 @@
 # Comprehensive optimization — 2026-11-05
 
+Final disposition: the consolidated work and recovery follow-up shipped in
+exact `67e6336`, after complete CI `42043078359` and a subsequent explicit
+deployment request. [Release receipt](RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)
+records the 2026-11-06 acceptance, 0059 migration and remaining user-side limits.
+The authorization and verification statements below describe their earlier checkpoints.
+
 Authorized scope: implement the consolidated authentication/offline and two-round
 review plan, then review and fix findings. The subsequent user request authorizes
 commit/push and exact-source CI on existing master, waiting at least 50 minutes

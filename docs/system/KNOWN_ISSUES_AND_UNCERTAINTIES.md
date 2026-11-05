@@ -1,12 +1,12 @@
 # 已知风险与不确定性
 
-## Current verification boundaries — 2026-11-04
+## Current verification boundaries — 2026-11-06
 
 Use [Project State](../../PROJECT_STATE.md) and the
-[current release record](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
-for exact source/CI/artifact/backup, production acceptance and authorized
-storage cleanup. Runtime/direct rollback is `be58b12`/`3b839dc`, schema
-`20261030_0058`; all six exact-source CI jobs, independent artifact acceptance
+[current release record](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)
+for exact source/CI/artifact/backup and production acceptance; this deployment
+did no cleanup. Runtime/retained rollback images are `67e6336`/`be58b12`, schema
+`20261105_0059`; all six exact-source CI jobs, independent artifact acceptance
 and the deployment/runtime recheck passed. Earlier uncommitted/no-deployment
 statements below describe their own checkpoints, not the current runtime.
 
@@ -19,15 +19,18 @@ statements below describe their own checkpoints, not the current runtime.
 - Noise protection remains bounded recognition with the limitations below;
   a passing corpus is not exhaustive Markdown/AI-adapter parity or an
   unmeasured performance guarantee.
-- The retained two-point five-component backup set is verified, not
+- The new stopped-writer backup and two previously retained five-component points are verified, not
   restore-drill accepted.
   Server-local points may share hardlinks; independent off-site recovery and
   scheduled backups remain unconfigured. Future releases need fresh capacity.
+- Old images are retained, not unconditional 0059 rollback approval. Stop writers
+  and check new job/data compatibility; never automatically downgrade or let the
+  old worker claim an unknown `personal_search_backfill` job.
 
 <a id="current-verification-boundaries--2026-10-29"></a>
 
 The former 2026-10-29 boundary anchor is retained for old incoming links;
-use the 2026-11-04 scope above for current release acceptance and remaining debt.
+use the 2026-11-06 scope above for current release acceptance and remaining debt.
 
 ## Historical local verification checkpoint — 2026-10-14
 
@@ -158,7 +161,7 @@ second current backlog; current status corrections are explicit.
 
 | ID | 风险/不确定性 | 影响 | 当前控制/验证方式 |
 | --- | --- | --- | --- |
-| KI-001 | 历史多账户 migration 发布缺口已关闭 | 0030 已部署，当前 schema 为 0058；不是生产仍为单 owner | 认证生产 UI 仍待单独验收，不与数据库迁移缺口混写；当前 release 见页首 |
+| KI-001 | 历史多账户 migration 发布缺口已关闭 | 0030 已部署，当前 schema 为 0059；不是生产仍为单 owner | 认证生产 UI 仍待单独验收，不与数据库迁移缺口混写；当前 release 见页首 |
 | KI-002 | 单个阅读轮次可包含极大正文 | 完整正文数据仍占内存，动态 block 测量也有成本 | >160 blocks 或 >50000 chars 时虚拟化 DOM；直达 URL、批注、下滑刷新 fixture 持续回归 |
 | KI-003 | 有效生产 Share 访客页未在文档中保存可复用 token | 生产访客视觉/范围无法由文档直接重放 | 使用隔离测试 token 复验，绝不记录真实 token |
 | KI-004 | 浏览器 quota、持久化许可和 cache eviction 因设备而异 | 离线更新/冷启动可能失败 | Release E adds deterministic Chromium quota/cache/IndexedDB negative coverage, explicit unavailable states and old-package preservation. Real device/browser eviction variance remains an operational compatibility risk. |

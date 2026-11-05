@@ -1,6 +1,10 @@
 # PWA and Offline Resilience Contract
 
-## Current candidate — 2026-11-05
+## Current contract — implemented 2026-11-05, deployed 2026-11-06
+
+Exact `67e6336` passed complete CI `42043078359` and was separately deployed.
+This does not establish the user's real 47-conversation update or physical-device
+acceptance; see [release boundaries](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md).
 
 Explicit trusted-browser access is independent of online expiry, while account
 isolation, deliberate lock/logout and known security revocations remain enforced.
