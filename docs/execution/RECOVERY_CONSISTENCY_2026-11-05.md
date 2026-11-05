@@ -451,3 +451,28 @@ Evidence lives in the identifiable desktop batch
 batch/run. Static syntax/source review and preservation checks only are local.
 The new dispatch must pass every exact-source gate after its own identity-verified
 50-minute boundary. No local application processes, user ZIP replay or deployment.
+
+## CI follow-up: regression-adapter leaf traversal correction
+
+The user explicitly reported current Web failure before run **`42029217379`**'s
+13:31:13.260Z first-check boundary. Under the authorized failure exception,
+the exact source `6b6b7a0da5b959e81943f72faa3a7231ba85d85d`, attempt 1, was
+checked at **2026-11-05 13:09:40.934Z**. Web job `127251055315` failed its
+Node UX suite: **2009 passed / 8 failed**, all eight new Skill cases reporting
+`Maximum call stack size exceeded` in the JSX adapter. API/settings were still
+running; no partial/old success is acceptance.
+
+This failure is in the newly authored test harness, not evidence of a new
+production upload failure. Its recursive `nodes(node = tree)` treated an
+undefined leaf child as an omitted argument and restarted at the whole root.
+The walker now takes an explicit root only at call sites; recursive missing
+children terminate. Two direct regressions cover absent-child termination and
+retaining later siblings around nested empty/primitive children. All eight
+product-behavior cases remain, without skip or assertion relaxation.
+
+Static review also checked the observer reset/pending/completion flow and
+compiled-handler wiring. Syntax parsing and file-preservation checks are local;
+no application test is executed. The bounded fix is in the identifiable desktop
+`chat-reader-skill-harness-fix9-20261105` batch. The exception applies only to
+the reported run: the next dispatch gets a fresh identity-verified minimum
+50-minute first-check boundary. No deployment or production action.

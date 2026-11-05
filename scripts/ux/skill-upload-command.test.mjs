@@ -13,6 +13,11 @@ const compiled = ts.transpileModule(source, { fileName: "skill-settings.tsx", co
 const text = node => node == null || typeof node === "boolean" ? ""
   : typeof node !== "object" ? String(node) : Array.isArray(node) ? node.map(text).join("") : text(node.props?.children);
 const noop = () => {};
+function nodes(node) {
+  if (!node || typeof node !== "object") return [];
+  if (Array.isArray(node)) return node.flatMap(child => nodes(child));
+  return [node, ...nodes(node.props?.children)];
+}
 class ApiRequestError extends Error {
   constructor(message, status, path) { super(message); this.status = status; this.path = path; }
 }
@@ -69,24 +74,19 @@ function fixture() {
     if (name.startsWith(".")) throw new Error(`Unexpected Skill dependency: ${name}`);
     return require(name);
   }, module.exports);
-  function nodes(node = tree) {
-    if (!node || typeof node !== "object") return [];
-    if (Array.isArray(node)) return node.flatMap(child => nodes(child));
-    return [node, ...nodes(node.props?.children)];
-  }
   const render = (flushPassive = true) => {
     stateIndex = refIndex = mutationIndex = 0; passive = []; layout = [];
     tree = module.exports.SkillSettings({ focused: true, onDirtyChange: value => dirty.push(value) });
-    for (const node of nodes()) if (node.type === "input" && node.props.type === "file") node.props.ref.current = fileElement;
+    for (const node of nodes(tree)) if (node.type === "input" && node.props.type === "file") node.props.ref.current = fileElement;
     for (const effect of layout) effect();
     if (flushPassive) for (const effect of passive) effect();
   };
   const button = label => {
-    const node = nodes().find(node => node.type === "button" && text(node) === label);
+    const node = nodes(tree).find(node => node.type === "button" && text(node) === label);
     assert.ok(node, `Missing Skill button ${label}`); return node.props;
   };
-  const nameInput = () => nodes().find(node => node.type === "input" && !node.props.type).props;
-  const fileInput = () => nodes().find(node => node.type === "input" && node.props.type === "file").props;
+  const nameInput = () => nodes(tree).find(node => node.type === "input" && !node.props.type).props;
+  const fileInput = () => nodes(tree).find(node => node.type === "input" && node.props.type === "file").props;
   const setName = (value, flushPassive = true) => {
     nameInput().onChange({ target: { value } }); render(flushPassive);
   };
@@ -102,6 +102,19 @@ function fixture() {
     dispose: () => client.clear(),
   };
 }
+
+test("the JSX adapter terminates at absent children and never restarts at the root", () => {
+  const leaf = { type: "input", props: { value: "Synthetic" } };
+  assert.deepEqual(nodes(undefined), []);
+  assert.deepEqual(nodes(null), []);
+  assert.deepEqual(nodes(leaf), [leaf]);
+});
+
+test("the JSX adapter retains siblings around empty and primitive children", () => {
+  const first = { type: "input", props: {} }, second = { type: "button", props: { children: "Save" } };
+  const root = { type: "section", props: { children: [first, undefined, false, [null, "text", second]] } };
+  assert.deepEqual(nodes(root), [root, first, second]);
+});
 
 test("name-first upload carries the visible name and file before mutation option effects", async () => {
   const f = fixture(), file = { name: "browser-skill.zip" };
