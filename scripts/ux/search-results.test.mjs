@@ -47,3 +47,44 @@ test("global result ordering and rendered groups include the attachment in the k
   assert.match(html, /data-search-index="1" aria-current="true"/);
   assert.match(html, /<mark[^>]*>needle<\/mark>/);
 });
+
+function walk(node) {
+  if (Array.isArray(node)) return node.flatMap(walk);
+  if (!node || typeof node !== "object" || !node.props) return [];
+  return [node, ...walk(node.props.children)];
+}
+
+test("a newly grouped row under a stationary pointer cannot replace the selected document", () => {
+  const message = { document_id: "synthetic-message-document", document_type: "message",
+    conversation_id: "synthetic-message-conversation", conversation_title: "Synthetic message",
+    message_id: "synthetic-message", snippet: "Synthetic", occurrence_count: 1 };
+  const annotation = { ...message, document_id: "synthetic-annotation-document", document_type: "annotation",
+    conversation_id: "synthetic-annotation-conversation", conversation_title: "Synthetic annotation" };
+  let selectedId = message.document_id;
+  const changes = [];
+  const render = items => exports.SearchResults({
+    items, query: "synthetic", activeIndex: items.findIndex(item => item.document_id === selectedId),
+    onActiveIndexChange(index) { changes.push(index); selectedId = items[index].document_id; },
+  });
+  render([message]);
+  const items = exports.orderSearchResults([message, annotation]);
+  let tree = render(items);
+  const row = walk(tree).find(node => node.type === "div" && node.props.onMouseMove);
+  assert.ok(row);
+  assert.equal(row.props.onMouseEnter, undefined, "layout-driven boundary entry must not claim pointer intent");
+  row.props.onMouseMove({ movementX: 0, movementY: 0 });
+  assert.deepEqual(changes, []);
+  assert.equal(selectedId, message.document_id);
+  const selectedLink = walk(tree).find(node => node.props["aria-current"] === "true");
+  assert.equal(selectedLink.props["data-search-index"], 1);
+  assert.equal(selectedLink.props.href, target.searchResultHref(message));
+
+  row.props.onMouseMove({ movementX: 1, movementY: 0 });
+  assert.equal(selectedId, annotation.document_id, "real horizontal movement still selects the hovered result");
+  assert.deepEqual(changes, [0]);
+  tree = render(items);
+  const rows = walk(tree).filter(node => node.type === "div" && node.props.onMouseMove);
+  rows[1].props.onMouseMove({ movementX: 0, movementY: -1 });
+  assert.equal(selectedId, message.document_id, "real vertical movement still selects the hovered result");
+  assert.deepEqual(changes, [0, 1]);
+});

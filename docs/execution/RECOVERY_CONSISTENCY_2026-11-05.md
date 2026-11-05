@@ -248,3 +248,37 @@ behavior, timeout, retry, skip or workflow gate is changed. Static review and
 syntax/diff checks are local; no local application test/process runs. The next
 exact-source dispatch receives a fresh identity-verified 50-minute first-read
 boundary and must pass all jobs/artifact gates before acceptance. No deployment.
+
+## CI follow-up: preserve search selection beneath a stationary pointer
+
+Run **`41976927392`, attempt 1**, source
+`82d637ddfde21eaa13820fc42eda0f59a455631f`, was first read at
+**2026-11-05 06:44:29.240Z**, after **06:44:28.942Z**. API, settings and
+performance passed; focused Web passed **45/45**, including the repaired
+annotation interaction. Mutation had **117 passed / 1 failed**; the sidebar
+rename and explicit pagination variant passed, but legacy pagination changed
+the selected message into the newly prepended annotation. Later gates and
+images/artifact inspection remain unaccepted.
+
+The exact failed Web job `127077827630` supplies a failure-only trace.
+It shows Load more clicked at `(784,590)`, a new annotation group inserted
+under that position, and the selected href changing to that annotation while
+the fixture moved the pointer away. The component selected on `mouseenter`,
+which also arises when layout changes beneath an unmoved pointer. Stable
+document identity in the parent cannot prevent that handler from overwriting
+the user's prior selection.
+
+Search result rows now change the active candidate on real mouse movement,
+not boundary entry or zero-displacement movement. Normal link clicks and batch
+selection are unchanged. A production-component regression covers regrouping,
+zero movement and real horizontal/vertical movement. Both browser pagination
+variants hold the second response, place the real pointer over the existing
+result, then insert the new group beneath it without moving the pointer.
+They require the original selected document, verify that the inserted link
+actually occupies that point, then check a real one-pixel move can select it
+and keyboard navigation/Enter still reaches the original message.
+
+The previous offset/final-page, mixed-type grouping and destination assertions
+are retained. No workflow, timeout, retry or skip change; no local application
+tests/processes or deployment. These additions await the next exact-source
+full CI under a fresh 50-minute identity-verified result-read boundary.

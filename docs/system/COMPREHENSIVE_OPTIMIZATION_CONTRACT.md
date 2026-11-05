@@ -156,6 +156,8 @@ Current candidate source, 2026-11-05; exact-source CI acceptance and limits are 
   pages replace their members/snippets; next offset is the server offset+limit,
   not the unique visible count. Tag selection remains represented during failed
   metadata reads, with read-only retry. This is not a server snapshot cursor.
+  Result regrouping under a stationary mouse does not replace the document
+  selected for keyboard navigation; real mouse movement can select another row.
 - Tags reuse the collection recovery owner: retained create UUID, read-only check,
   explicit same-identity retry and manual conflict review. Search/saved-search
   caches invalidate on confirmed writes; unknown writes are not auto-replayed.

@@ -35,7 +35,11 @@ export function SearchResults({
   return <div className="space-y-4">{groups.map((group) => <section key={group.type} aria-labelledby={`search-group-${group.type}`}><h2 id={`search-group-${group.type}`} className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-secondary">{groupLabel(group.type, resolvedLocale)}</h2><div className="overflow-hidden rounded-xl border border-ui bg-surface">{group.items.map(({ item, index }) => {
     const canSelectConversation = Boolean(item.conversation_id && onConversationSelectionChange);
     const selected = Boolean(item.conversation_id && selectedConversationIds?.has(item.conversation_id));
-    return <div key={item.document_id} onMouseEnter={() => onActiveIndexChange?.(index)} className={`flex flex-wrap gap-3 border-b border-ui px-5 py-4 last:border-0 hover:bg-subtle ${activeIndex === index ? "bg-subtle" : ""}`}>
+    return <div key={item.document_id} onMouseMove={(event) => {
+      // Pagination can insert/reorder a row beneath a stationary pointer.
+      // Boundary events are not a new selection intent; actual movement is.
+      if (event.movementX !== 0 || event.movementY !== 0) onActiveIndexChange?.(index);
+    }} className={`flex flex-wrap gap-3 border-b border-ui px-5 py-4 last:border-0 hover:bg-subtle ${activeIndex === index ? "bg-subtle" : ""}`}>
       {canSelectConversation ? (
         <button
           type="button"

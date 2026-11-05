@@ -1945,6 +1945,8 @@ test(`mixed-type search pagination retains the selected document and actual Ente
   await preferences(page, false);
   const created: ConversationCreateResponse[] = [];
   const offsets: number[] = [];
+  let releaseNextPage: () => void = () => {};
+  const nextPageGate = new Promise<void>(resolve => { releaseNextPage = resolve; });
   try {
     created.push(await createConversation(page, "Synthetic selected message"));
     created.push(await createConversation(page, "Synthetic later annotation"));
@@ -1954,13 +1956,14 @@ test(`mixed-type search pagination retains the selected document and actual Ente
       message_id: item.messages[0].id, role: "user", order_key: null, block_index: 0,
       snippet: "Synthetic grouped pagination", rank: 1, source_profile: null, occurrence_count: 1,
     }));
-    await page.route("**/api/search?*", (route) => {
+    await page.route("**/api/search?*", async (route) => {
       const url = new URL(route.request().url());
       if (url.searchParams.get("q") !== "SyntheticGrouped") return route.continue();
       const offset = Number(url.searchParams.get("offset") ?? 0);
       offsets.push(offset);
       expect(url.searchParams.get("limit")).toBe("50");
       expect([0, 1]).toContain(offset);
+      if (offset === 1) await nextPageGate;
       // This fixture returns one-item pages. Its advertised limit must match
       // that page boundary; total=2/limit=50 incorrectly described a final page.
       const response: SearchResponse = {
@@ -1977,17 +1980,29 @@ test(`mixed-type search pagination retains the selected document and actual Ente
     const selected = page.locator('a[data-search-index][aria-current="true"]');
     const destination = await selected.getAttribute("href");
     await page.getByRole("button", { name: "Load more", exact: true }).click();
-    await page.mouse.move(0, 0);
+    await expect.poll(() => offsets).toEqual([0, 1]);
+    const selectedBox = await selected.boundingBox();
+    expect(selectedBox).not.toBeNull();
+    const stationaryPoint = { x: selectedBox!.x + selectedBox!.width / 2, y: selectedBox!.y + selectedBox!.height - 4 };
+    await page.mouse.move(stationaryPoint.x, stationaryPoint.y);
+    releaseNextPage();
     await expect(page.locator("a[data-search-index]")).toHaveCount(2);
     expect(offsets).toEqual([0, 1]);
     await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
+    const inserted = page.locator('a[data-search-index="0"]');
+    expect(await inserted.evaluate((link, point) => link.contains(document.elementFromPoint(point.x, point.y)), stationaryPoint)).toBe(true);
     await expect(selected).toHaveAttribute("href", destination!);
     await expect(selected).toHaveAttribute("data-search-index", "1");
     await page.screenshot({ path: info.outputPath("search-stable-selection.png") });
+    await page.mouse.move(stationaryPoint.x + 1, stationaryPoint.y);
+    await expect(selected).toHaveAttribute("href", (await inserted.getAttribute("href"))!);
     await input.focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(selected).toHaveAttribute("href", destination!);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL((url) => url.pathname + url.search === destination);
   } finally {
+    releaseNextPage();
     await page.unrouteAll({ behavior: "wait" });
     for (const item of created) expect((await page.request.delete(`/api/conversations/${item.conversation.id}`)).ok()).toBe(true);
   }
