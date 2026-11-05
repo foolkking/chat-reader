@@ -217,3 +217,34 @@ the next exact-source full CI owns runtime acceptance. No local API/Web/worker,
 production operation, original ZIP replay or deployment is authorized.
 The task handoff is archived and replaced on submission, with the next first
 result check at least 50 minutes after verifying the new dispatch identity.
+
+## CI follow-up: settle repeated annotation navigation before point sampling
+
+Run **`41970074135`, attempt 1**, source
+`0451733a2177551e469df502451f07aba784e52b`, was first read at
+**2026-11-05 05:45:49.590Z**, after its **05:45:49.287Z** boundary.
+API, settings and reading-performance comparison passed. Web job `127056001685`
+failed focused online/security **44 passed / 1 failed**; image and artifact
+inspection jobs were skipped. Context passed again; the preceding mutation
+fixture repairs were **not reached** and are not accepted by this run.
+
+The uploaded Playwright trace, not a guessed delay, identifies the failure:
+the first annotation navigation settled, but clicking the same annotation again
+started another local alignment without a new `reader-turn` request. The
+fixture only checked that the block remained visible before sampling pointer
+coordinates. Trace snapshots show `aligning` through the outside dismissal,
+then `resolved` by the failed second text click. Both clicks used the same
+coordinates while the locating banner disappeared and the text moved.
+
+The fixture now requires the real `settled` stage and the existing **24px**
+reading-line geometry bound after repeated navigation and before reopening the
+actions menu. The quote-range point must hit the actual target block; no forced
+click or synthetic application event is used. Outside-dismiss focus, Escape
+source-anchor focus and the still-open workspace assertions remain; zero extra
+locator requests is also checked after the entire interaction.
+
+Only the fixture and current/history documentation change. No production
+behavior, timeout, retry, skip or workflow gate is changed. Static review and
+syntax/diff checks are local; no local application test/process runs. The next
+exact-source dispatch receives a fresh identity-verified 50-minute first-read
+boundary and must pass all jobs/artifact gates before acceptance. No deployment.

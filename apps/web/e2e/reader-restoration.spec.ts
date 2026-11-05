@@ -496,6 +496,11 @@ test("annotation actions dismiss outside or with Escape and restore the source a
   });
   await page.getByText(annotationQuote, { exact: true }).click();
   await expect(targetBlock).toBeVisible();
+  // Reusing a mounted target avoids a fetch, not its local alignment lifecycle.
+  // A second locate temporarily shows the locating banner; sampling its text
+  // coordinates before settlement races the banner's removal and final scroll.
+  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  await expect.poll(() => readingRangeError(targetBlock)).toBeLessThanOrEqual(24);
   expect(repeatedLocatorRequests).toHaveLength(0);
   const point = await annotationTextPoint(targetBlock, annotationQuote);
 
@@ -509,6 +514,8 @@ test("annotation actions dismiss outside or with Escape and restore the source a
   await expect(annotationSearch).toBeFocused();
   await expect(workspace).toBeVisible();
 
+  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  await expect.poll(() => readingRangeError(targetBlock)).toBeLessThanOrEqual(24);
   const escapePoint = await annotationTextPoint(targetBlock, annotationQuote);
   await page.mouse.click(escapePoint.x, escapePoint.y);
   await expect(menu).toBeVisible();
@@ -516,6 +523,7 @@ test("annotation actions dismiss outside or with Escape and restore the source a
   await expect(menu).toHaveCount(0);
   await expect(targetBlock).toBeFocused();
   await expect(workspace).toBeVisible();
+  expect(repeatedLocatorRequests).toHaveLength(0);
 });
 
 test("failed annotation location preserves the current reader content", async ({ page }) => {
@@ -841,7 +849,11 @@ async function annotationTextPoint(block: Locator, quote: string): Promise<{ x: 
     range.setStart(node, Math.max(0, start));
     range.setEnd(node, Math.min(text.length, start + expectedQuote.length));
     const rect = range.getClientRects()[0] ?? range.getBoundingClientRect();
-    return { x: rect.left + Math.max(2, Math.min(rect.width / 2, 12)), y: rect.top + Math.max(2, rect.height / 2) };
+    const x = rect.left + Math.max(2, Math.min(rect.width / 2, 12));
+    const y = rect.top + Math.max(2, rect.height / 2);
+    const hit = document.elementFromPoint(x, y);
+    if (!hit || !element.contains(hit)) throw new Error("Annotation text point is outside the target block or obscured");
+    return { x, y };
   }, quote);
 }
 
