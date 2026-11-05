@@ -1,5 +1,15 @@
 # Markdown 文档台账
 
+## 恢复一致性实施 — 2026-11-05
+
+更新 `PROJECT_STATE.md`、`index.md` 和 `system/FEATURE_INVENTORY.md`，分清
+生产 `be58b12`、已通过精确 CI 的源码 `46cb518`、当前未提交批次；
+更正旧集合不可归档、全部版本不可变、删除立即物理执行与搜索类型不全的描述。
+沿用 `COMPREHENSIVE_OPTIMIZATION_CONTRACT.md` 集中维护本批行为，API/归档/
+测试说明只保留必要接口与导航，不再新建平行架构合同。
+新增 `execution/RECOVERY_CONSISTENCY_2026-11-05.md` 记录审查项映射、
+合成测量、验证失败修正与未完成浏览器门禁。原审查/evidence 和用户资料不改写。
+
 ## 综合优化候选 — 2026-11-05
 
 新增 `system/COMPREHENSIVE_OPTIMIZATION_CONTRACT.md` 作为认证/本机许可、

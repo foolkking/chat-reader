@@ -739,6 +739,10 @@ export type AdaptiveImportSession = {
   conversation_count: number;
   message_count: number;
   can_import: boolean;
+  updated_at?: string;
+  source_status?: "available" | "missing";
+  draft_status?: "ready" | "expired" | "missing";
+  allowed_actions?: Array<"resume" | "rebuild_preview">;
   groups: AdaptiveImportGroup[];
   families: AdaptiveImportFamily[];
   archives?: AdaptiveArchiveSummary[];
@@ -852,6 +856,8 @@ export type BackgroundTaskRead = {
     missing_attachments?: number;
     preferences_imported?: boolean;
     already_restored?: boolean;
+    can_restore?: boolean;
+    collection_capacity?: Array<{ collection: string; current: number; incoming: number; limit: number }>;
   } & Record<string, unknown>;
   error_message: string | null;
   queued_at: string | null;

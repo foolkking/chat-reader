@@ -5521,3 +5521,27 @@ container in CI. The container path streams custom dumps over stdin/stdout and
 uses its internal port, not the host-mapped port. Missing clients/invalid job
 identity/wrong major fail the tests; the tests are never skipped to work around
 runner package availability.
+
+## Recovery consistency follow-up — 2026-11-05
+
+`test_recovery_consistency.py` covers retained sources/expired previews, explicit
+mapping-preserving worker rebuild, capacity admission before asset work, exception
+classification, payload-bound download keys and checkpointed backfill turns.
+`test_recovery_consistency_postgres.py` exercises actual concurrent same-key and
+different-payload enqueue plus collection-capacity races in disposable databases.
+The existing API full-suite gate discovers both; PostgreSQL cases require
+`SETTINGS_POSTGRES_INTEGRATION=1`.
+
+`scripts/ux/recovery-consistency.test.mjs` executes the draft hook with controlled
+React/storage adapters, search-page projection and the real in-memory Share intent
+store. Existing offline-search navigation/projection, collection recovery and
+Share expiry suites cover changed contracts; these are not browser acceptance.
+The source-editor-mutation browser gate additionally owns
+`e2e/recovery-consistency.spec.ts` (375/1440 px Share response loss/reopen, preview
+invalidation and same-query pagination), alongside the existing real IndexedDB
+draft-reload case in `manual-markdown-fidelity.spec.ts`.
+
+Local browser acceptance is pending: starting the Web test server was blocked by
+execution policy. Do not remove/relax gates or equate compilation/test discovery
+with execution. Counts and measurement boundaries belong in
+[the receipt](execution/RECOVERY_CONSISTENCY_2026-11-05.md).

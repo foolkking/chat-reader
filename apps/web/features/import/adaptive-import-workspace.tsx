@@ -25,6 +25,8 @@ import {
   excludeAdaptiveImportGroup,
   getAdaptiveImportArchive,
   reanalyzeAdaptiveImportSession,
+  rebuildAdaptiveImportPreview,
+  getAdaptiveImportSession,
   replaceAdaptiveImportArtifact,
   resolveAdaptiveImportGroups,
   selectAdaptiveFamilyProfile,
@@ -128,6 +130,9 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
     apply: applySessionAction,
     finish: finishSessionAction,
   }), [applySessionAction, beginSessionAction, finishSessionAction]);
+  const rebuildPreview = useAdaptiveSessionAction(
+    () => rebuildAdaptiveImportPreview(session.import_id, session.updated_at!), sessionActions);
+  const refreshSession = useAdaptiveSessionAction(() => getAdaptiveImportSession(session.import_id), sessionActions);
   const activeFamily = session.families.find((family) => family.id === activeFamilyId) ?? null;
   const supportedFamilies = session.families.filter((family) => family.handling_class === "SUPPORTED");
   const mappableFamilies = session.families.filter((family) => family.handling_class === "MAPPABLE");
@@ -166,6 +171,13 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   }
   return (
     <section className="space-y-5" aria-labelledby="adaptive-import-title">
+      {session.source_status === "missing" || (session.state === "READY" && session.draft_status !== undefined && session.draft_status !== "ready") ? <div role="status" className="space-y-2 border-b border-ui pb-3 text-sm text-secondary">
+        <p>{tr(session.source_status === "missing" ? "源文件不可用，已保存的配置仍可查看。请选择原文件后继续处理。" : "原文件仍保留，导入预览已过期或缺失。重新生成预览会保留分组和映射，不会提交导入。")}</p>
+        {session.allowed_actions?.includes("rebuild_preview") && session.updated_at ? <button type="button" disabled={overviewActionBusy} className="btn-secondary min-h-11 px-3" onClick={() => rebuildPreview.run(undefined)}>{tr("重新生成预览")}</button> : null}
+        <button type="button" disabled={overviewActionBusy} className="btn-secondary min-h-11 px-3" onClick={() => refreshSession.run(undefined)}>{tr("刷新会话状态")}</button>
+        {rebuildPreview.error ? <ErrorLine message={rebuildPreview.error} action="mutation" /> : null}
+        {refreshSession.error ? <ErrorLine message={refreshSession.error} /> : null}
+      </div> : null}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-ui pb-4">
         <div>
           <button type="button" disabled={overviewActionBusy} onClick={onBack} className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
@@ -208,7 +220,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
         <div>
           <p className="text-sm text-secondary">
             {session.state === "READY"
-              ? tr("准备导入 {0} 个对话、{1} 条消息。", session.conversation_count, session.message_count)
+              ? session.can_import ? tr("准备导入 {0} 个对话、{1} 条消息。", session.conversation_count, session.message_count) : tr("请先重新生成预览，再确认导入。")
               : pendingCount
                 ? tr("还有 {0} 个对话需要设置或修复。已完成的处理会保留。", pendingCount)
                 : tr("正在整理导入计划。")}

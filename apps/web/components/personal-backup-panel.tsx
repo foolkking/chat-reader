@@ -124,7 +124,7 @@ export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId,
     });
   }
   async function restore() {
-    if (!preview || !available(preview)) return;
+    if (!preview || !available(preview) || preview.result.can_restore === false) return;
     await perform(async () => { const task = await confirmPersonalArchiveRestore(preview.job_id, String(preview.result.content_digest), includePreferences); acceptTask(task, true); });
   }
   async function discard(task: BackgroundTaskRead) {
@@ -185,7 +185,7 @@ export function DataBackupPanel({ focused = false, onDirtyChange, initialTaskId,
           <ArchivePreview task={preview} zh={zh} />
           {confirmed ? <button type="button" className={button} onClick={() => openTask(confirmed)}>{zh ? "查看已确认的恢复任务" : "View the confirmed restore task"}</button> : available(preview) ? <>
             <label className="flex min-h-11 items-start gap-3 rounded-lg bg-subtle p-3 text-sm text-primary"><input type="checkbox" checked={includePreferences} disabled={busy} onChange={(event) => setIncludePreferences(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-[var(--accent)]" /><span>{zh ? "同时导入账户偏好" : "Also import account preferences"}<span className="mt-1 block text-xs leading-5 text-secondary">{zh ? "默认保留当前主题、语言和阅读设置。勾选后使用归档中的偏好。" : "Current appearance and reading settings are kept by default. Select this to use the archived preferences."}</span></span></label>
-            <div className="sticky bottom-0 grid gap-2 border-t border-ui bg-raised pb-1 pt-3"><p className="text-xs leading-5 text-secondary">{zh ? "确认后新增导入；同一份归档重复提交不会重复创建。" : "Confirm to add these materials. Submitting the same archive again will not create duplicates."}</p><button type="button" disabled={busy || !online} onClick={() => void restore()} className="btn-primary min-h-11 px-4 text-sm">{busy ? (zh ? "正在提交恢复…" : "Submitting restore…") : (zh ? "确认新增恢复" : "Restore these materials")}</button></div>
+            <div className="sticky bottom-0 grid gap-2 border-t border-ui bg-raised pb-1 pt-3"><p className="text-xs leading-5 text-secondary">{zh ? "确认后新增导入；同一份归档重复提交不会重复创建。" : "Confirm to add these materials. Submitting the same archive again will not create duplicates."}</p><button type="button" disabled={busy || !online || preview.result.can_restore === false} onClick={() => void restore()} className="btn-primary min-h-11 px-4 text-sm">{busy ? (zh ? "正在提交恢复…" : "Submitting restore…") : (zh ? "确认新增恢复" : "Restore these materials")}</button></div>
           </> : <><p role="status" className="text-sm text-secondary">{zh ? "预检已过期或上传文件已移除，请重新上传。" : "The preview expired or its upload was removed. Upload the file again."}</p><button type="button" disabled={busy || !online} className="btn-primary min-h-11 px-4 text-sm" onClick={replaceUpload}>{archiveUploadRecoveryLabel("upload", zh)}</button></>}
         </> : null}
         {selected.status === "committed" && selected.job_type === "personal_archive_restore" ? <>

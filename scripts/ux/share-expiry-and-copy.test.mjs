@@ -20,26 +20,39 @@ const future = "2098-12-15T12:30";
 // native datetime controls, focus, timezone UI or physical clipboard behavior.
 function fixture(row = false) {
   const hooks = [], calls = [];
-  let cursor = 0, tree;
+  let cursor = 0, tree, previewTransport = async () => ({ message_count: 0, turn_count: 0 });
   const hook = init => hooks[cursor++] ?? (hooks[cursor - 1] = init());
   const react = {
-    useEffect: fn => fn(),
+    useEffect: (fn, deps) => {
+      const state = hook(() => ({}));
+      if (!state.deps || deps.some((value, index) => !Object.is(value, state.deps[index]))) {
+        state.cleanup?.(); state.deps = deps; state.cleanup = fn();
+      }
+    },
+    useCallback: fn => fn,
+    useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
     useState: init => { const state = hook(() => ({ value: typeof init === "function" ? init() : init }));
       return [state.value, value => { state.value = typeof value === "function" ? value(state.value) : value; }]; },
     useRef: value => hook(() => ({ current: value })), useId: () => "synthetic-expiry-error",
   };
   const api = {};
   const stubs = {
-    "../../lib/offline-access": { authenticationGeneration: () => 1 },
+    "../../lib/offline-access": { authenticationGeneration: () => 1, AUTH_GENERATION_CHANGED_EVENT: "synthetic-auth-epoch" },
     react, "react/jsx-runtime": require("react/jsx-runtime"),
     "@tanstack/react-query": { useQuery: () => ({ data: [], refetch: async () => ({ isError: false }) }) },
     "../../lib/api": { ApiRequestError: class extends Error {},
       createShare: async (_id, input) => { calls.push(input); return { share_url: "https://synthetic.invalid/share/example" }; },
+      previewShare: (...args) => previewTransport(...args),
       updateShare: async (_id, input) => { calls.push(input); }, revokeShare: async () => {} },
     "../../components/preferences-provider": {
       usePreferences: () => ({ resolvedLocale: "en-US", resolvedTheme: "light" }), useTranslations: () => key => key },
     "../../components/use-clipboard-copy": { useClipboardCopy: () => ({ state: "idle", copy: async () => {}, manualRef: { current: null } }) },
   };
+  const intents = {};
+  new Function("require", "exports", "window", compile(readFileSync(new URL("../../apps/web/features/sharing/share-creation-intent.ts", import.meta.url), "utf8")))(
+    name => { assert.ok(Object.hasOwn(stubs, name), name); return stubs[name]; }, intents, new EventTarget(),
+  );
+  stubs["./share-creation-intent"] = intents;
   new Function("require", "exports", compile(source + "\nexports.Row = ShareManagementRow; exports.validate = validateFutureExpiry;"))(name => {
     assert.ok(Object.hasOwn(stubs, name), name); return stubs[name];
   }, api);
@@ -56,6 +69,11 @@ function fixture(row = false) {
   };
   render();
   return { calls, render, button, api,
+    title(value) { walk(tree).find(node => node.props.placeholder === "Share title (optional)").props.onChange({ target: { value } }); render(); },
+    previewTransport(value) { previewTransport = value; },
+    preview() { return button("Preview visitor view").onClick(); },
+    previewCards() { return walk(tree).filter(node => typeof node.type === "function" && node.type.name === "SharePreviewCard"); },
+    text() { return text(tree); },
     choose(mode) { button(mode).onClick(); render(); },
     expiry(value) { walk(tree).find(node => node.props.type === "datetime-local").props.onChange({ target: { value } }); render(); },
     never(value) { walk(tree).find(node => node.type === "input" && node.props.type === "checkbox").props.onChange({ target: { checked: value } }); render(); },
@@ -73,6 +91,22 @@ test("custom blank, malformed, rollover and past expiry never send a create requ
   f.expiry(future); await f.submit();
   assert.equal(f.calls[0].expires_at, new Date(future).toISOString());
   assert.equal(f.error(), "");
+});
+
+test("Share preview is hidden on option change and late prior-option response is discarded", async () => {
+  const f = fixture();
+  f.preview(); await setImmediate(); f.render();
+  assert.equal(f.previewCards().length, 1);
+  f.title("Changed options");
+  assert.equal(f.previewCards().length, 0);
+  assert.match(f.text(), /Options or source changed/);
+  let finish;
+  f.previewTransport(() => new Promise(resolve => { finish = resolve; }));
+  f.preview(); f.render();
+  f.title("Changed while request is pending");
+  finish({ message_count: 2, turn_count: 1 });
+  await setImmediate(); f.render();
+  assert.equal(f.previewCards().length, 0);
 });
 
 test("only explicit Never maps to permanent; presets remain finite", async () => {

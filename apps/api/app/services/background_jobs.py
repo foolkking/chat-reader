@@ -281,18 +281,25 @@ def queue_attachment_download(
     if conversation is None or conversation.deleted_at is not None:
         raise MessageEditError("Conversation not found.", 404)
     validate_attachment_download(db, conversation_id=conversation_id, attachment_ids=attachment_ids)
+    attachment_ids = sorted(set(attachment_ids), key=str)
+    if db.get_bind().dialect.name == "postgresql":
+        raw = f"attachment-download:{ownership_scope.owner_user_id}:{idempotency_key}"
+        key = int.from_bytes(hashlib.sha256(raw.encode()).digest()[:8], "big", signed=True)
+        db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": key})
     existing = (
         db.query(BackgroundJob)
         .filter(
             ownership_scope.predicate(BackgroundJob),
             BackgroundJob.job_type == "attachment_batch_download",
             BackgroundJob.idempotency_key == idempotency_key,
-            BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
         )
         .order_by(BackgroundJob.created_at.desc())
         .first()
     )
     if existing is not None:
+        if (existing.payload.get("conversation_id") != str(conversation_id)
+                or sorted(set(existing.payload.get("attachment_ids", []))) != [str(value) for value in attachment_ids]):
+            raise MessageEditError("This download request was already used with different attachments.", 409)
         return existing
     job = BackgroundJob(
         id=uuid.uuid4(),
@@ -1146,7 +1153,7 @@ def process_background_job(
                 processed_items = int(result.get("processed", 0))
             elif job.job_type == "adaptive_import_analysis":
                 from app.models.import_record import ImportRecord
-                from app.services.adaptive_import.service import analyze_initial_session
+                from app.services.adaptive_import.service import analyze_initial_session, rebuild_session_preview
                 from app.services.adaptive_import.memory_budget import import_analysis_admission
 
                 import_id = uuid.UUID(str(payload["import_id"]))
@@ -1181,7 +1188,8 @@ def process_background_job(
                     db, import_record, stage="analysis",
                     sizes=source_sizes, force_memory_check=True,
                 ):
-                    analyze_initial_session(
+                    analyze = rebuild_session_preview if payload.get("rebuild_preview") else analyze_initial_session
+                    analyze(
                         db,
                         import_record,
                         progress_callback=report_analysis_progress,
@@ -1325,23 +1333,48 @@ def process_background_job(
                 raise ValueError("CONTEXT_VALIDATION_RETIRED")
             elif job.job_type == "personal_search_backfill":
                 from app.services.search.personal_content_indexer import sync_personal_content
-                after = None
-                processed_items = 0
-                while True:
-                    candidates = db.query(Conversation.id).filter(Conversation.deleted_at.is_(None))
-                    if after is not None:
-                        candidates = candidates.filter(Conversation.id > after)
-                    ids = [row[0] for row in candidates.order_by(Conversation.id).limit(100)]
-                    if not ids:
+                after = uuid.UUID(payload["after_conversation_id"]) if payload.get("after_conversation_id") else None
+                processed_items = int(payload.get("indexed_conversations", 0))
+                candidates = db.query(Conversation.id).filter(Conversation.deleted_at.is_(None))
+                if after is not None:
+                    candidates = candidates.filter(Conversation.id > after)
+                ids = [row[0] for row in candidates.order_by(Conversation.id).limit(100)]
+                deadline = time.monotonic() + 2
+                for conversation_id in ids:
+                    conversation = db.query(Conversation).filter_by(id=conversation_id).with_for_update().first()
+                    if conversation is not None:
+                        sync_personal_content(db, conversation)
+                    processed_items += 1
+                    after = conversation_id
+                    payload = {**payload, "after_conversation_id": str(after), "indexed_conversations": processed_items}
+                    # Index and checkpoint commit together, including a retry after
+                    # process death. Cursor movement is not inferred from progress.
+                    job.payload = payload
+                    job.processed_items = processed_items
+                    db.commit()
+                    if processed_items % 25 == 0:
+                        report("indexing", 50, processed_items, processed_items)
+                    if time.monotonic() >= deadline:
                         break
-                    for conversation_id in ids:
-                        conversation = db.query(Conversation).filter_by(id=conversation_id).with_for_update().first()
-                        if conversation is not None:
-                            sync_personal_content(db, conversation)
-                        processed_items += 1
-                        db.commit()
-                    after = ids[-1]
-                    report("indexing", 50, processed_items, processed_items)
+                more = after is not None and db.query(Conversation.id).filter(
+                    Conversation.deleted_at.is_(None), Conversation.id > after,
+                ).first() is not None
+                if more:
+                    # Cooperatively yield to queued user operations; retain the
+                    # one-worker architecture and reset attempts for the new chunk.
+                    now = datetime.now(timezone.utc)
+                    updated = db.query(BackgroundJob).filter(
+                        BackgroundJob.id == job.id, BackgroundJob.status == "processing",
+                    ).update({
+                        BackgroundJob.status: "queued", BackgroundJob.phase: "indexing",
+                        BackgroundJob.progress: 50, BackgroundJob.queued_at: now,
+                        BackgroundJob.started_at: None, BackgroundJob.heartbeat_at: now,
+                        BackgroundJob.attempt_count: 0, BackgroundJob.error_message: None,
+                    }, synchronize_session=False)
+                    if updated != 1:
+                        raise BackgroundJobCancelled("Background job state changed before requeue.")
+                    db.commit()
+                    return
                 job_result = {"indexed_conversations": processed_items}
             elif job.job_type == "conversation_delete_cleanup":
                 conversation_id = uuid.UUID(payload["conversation_id"])
@@ -1389,6 +1422,8 @@ def process_background_job(
                 # count messages, assets, then one package. Do not pair a stale
                 # in-memory message total with the final package total (e.g. 2/1).
                 committed_values.update(processed_items=1, total_items=1)
+            elif job.job_type == "personal_search_backfill":
+                committed_values["total_items"] = processed_items
             post_commit_cleanup: list[tuple[str, list[Path], Path]] = []
             if job.job_type == "context_return":
                 post_commit_cleanup.append(("export", [return_upload_path], Path(get_settings().export_storage_dir)))

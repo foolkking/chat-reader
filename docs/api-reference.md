@@ -1415,3 +1415,18 @@ No production rollout is implied.
   Preview reports whole-notebook scope and bounded preview/truncation.
 - Archive previews declare `personal_collections_included` and `excluded_data`;
   `.cr` optional `user_features_version:1` retains old format readers.
+
+### Recovery consistency additions (uncommitted, 2026-11-05)
+
+- Pending-import list/detail: `source_status`, `draft_status`, `can_import`,
+  `allowed_actions`; an expired draft can coexist with retained originals.
+- `POST /api/adaptive-import/sessions/{id}/rebuild-preview` with
+  `{ "expected_updated_at": "<observed session timestamp>" }`: 202 queues an
+  explicit mapping-preserving rebuild; 409 means refresh and review, not replay.
+  Existing ownership, import policy, source validation and worker admission apply.
+- Personal preflight task result: `personal_collection_counts`,
+  `collection_capacity` (`collection/current/incoming/limit`) and `can_restore`.
+  `PERSONAL_COLLECTION_CAPACITY` is a 409 business rejection, not corrupt input.
+- Attachment batch download: same key/normalized selection returns the original
+  job across statuses; a different conversation/selection is 409. Retry failed
+  tasks or regenerate expired artifacts through their existing explicit actions.

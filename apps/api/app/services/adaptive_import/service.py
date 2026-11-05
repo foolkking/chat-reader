@@ -176,7 +176,7 @@ def add_session_source_stream(
     db.flush()
 
 
-def queue_session_analysis(db: Session, record: ImportRecord) -> BackgroundJob:
+def queue_session_analysis(db: Session, record: ImportRecord, *, rebuild_preview: bool = False) -> BackgroundJob:
     """Queue first-pass structure analysis after source files are safely staged."""
     record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
     record.session_state = "ANALYZING"
@@ -200,6 +200,7 @@ def queue_session_analysis(db: Session, record: ImportRecord) -> BackgroundJob:
             "import_id": str(record.id),
             "title": "分析导入文件",
             "source_label": f"{record.file_count} 个文件 · {record.total_bytes / (1024 * 1024):.1f} MiB",
+            "rebuild_preview": rebuild_preview,
         },
         result={},
     )
@@ -697,7 +698,8 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "family_count": len(families),
         "conversation_count": int((record.draft_summary or {}).get("conversation_count") or 0),
         "message_count": int((record.draft_summary or {}).get("message_count") or 0),
-        "can_import": record.session_state == "READY" and bool(record.draft_storage_uri),
+        **session_recovery_status(record),
+        "updated_at": record.updated_at.isoformat() if record.updated_at else None,
         "archives": [
             {
                 "artifact_id": str(artifact.id),
@@ -1028,7 +1030,7 @@ def _update_session_state(db: Session, record: ImportRecord) -> None:
         }
 
 
-def _prepare_plan(db: Session, record: ImportRecord) -> None:
+def _prepare_plan(db: Session, record: ImportRecord, *, progress_callback=None) -> None:
     counters = {"conversation_count": 0, "message_count": 0}
 
     def iter_drafts():
@@ -1060,6 +1062,8 @@ def _prepare_plan(db: Session, record: ImportRecord) -> None:
                     yield draft
                     del draft
                 del drafts
+                if progress_callback:
+                    progress_callback(counters["conversation_count"], max(len(record.input_groups), counters["conversation_count"]))
 
     attach_import_draft(record, iter_drafts())
     record.session_state = "READY"
@@ -1068,6 +1072,17 @@ def _prepare_plan(db: Session, record: ImportRecord) -> None:
     record.progress = 70
     record.total_messages = counters["message_count"]
     record.alignment_status = "normalized"
+
+
+def rebuild_session_preview(db: Session, record: ImportRecord, *, progress_callback=None) -> None:
+    """Rebuild only the derived preview, preserving explicit grouping and mappings."""
+    if not record.structure_families or any(
+        family.resolution_status not in {"EXACT_MATCH", "COMPATIBLE"} for family in record.structure_families
+    ):
+        raise AdaptiveImportError("PREVIEW_REBUILD_UNAVAILABLE", "Resolve the saved mappings before rebuilding the preview.", layer="validation")
+    if not session_sources_available(record, record.artifacts):
+        raise AdaptiveImportError("SOURCE_MISSING", "The saved source files are unavailable.", layer="file")
+    _prepare_plan(db, record, progress_callback=progress_callback)
 
 
 def _analysis_for_family(record: ImportRecord, family: ImportStructureFamily) -> AnalysisResult:
@@ -1356,6 +1371,36 @@ def session_sources_available(record: ImportRecord, artifacts: list[SourceArtifa
         return all(_source_path(record, artifact).is_file() for artifact in artifacts)
     except (AdaptiveImportError, OSError):
         return False
+
+
+def session_recovery_status(record: ImportRecord, artifacts=None) -> dict[str, Any]:
+    sources = session_sources_available(record, record.artifacts if artifacts is None else artifacts)
+    expiry = record.draft_expires_at
+    if expiry is not None and expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    draft_status = "missing"
+    if record.draft_storage_uri:
+        if expiry is not None and expiry <= datetime.now(timezone.utc):
+            draft_status = "expired"
+        else:
+            try:
+                root = Path(get_settings().import_storage_dir).resolve()
+                stored = Path(record.draft_storage_uri)
+                path = stored.resolve() if stored.is_absolute() else (root / stored).resolve()
+                if path.is_relative_to(root) and path.is_file() and record.draft_sha256:
+                    draft_status = "ready"
+            except (OSError, ValueError):
+                pass
+    unfinished = record.session_state in {"READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING"}
+    can_rebuild = sources and draft_status != "ready" and record.session_state in {"READY", "FAILED"} and bool(record.structure_families) and all(
+        family.resolution_status in {"EXACT_MATCH", "COMPATIBLE"} for family in record.structure_families
+    )
+    return {
+        "source_available": sources, "source_status": "available" if sources else "missing",
+        "draft_status": draft_status,
+        "can_import": sources and record.session_state == "READY" and draft_status == "ready",
+        "allowed_actions": (["resume"] if unfinished else []) + (["rebuild_preview"] if can_rebuild else []),
+    }
 
 
 def _remove_source_path(path: Path) -> None:

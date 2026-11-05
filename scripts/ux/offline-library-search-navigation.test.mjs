@@ -213,18 +213,24 @@ test("a failed projection retains the result and can be retried explicitly", asy
   } finally { f.dispose(); }
 });
 
-test("description and notebook results preserve their old opening behavior and retire a pending body result", async () => {
-  const held = deferred(), f = fixture({ project: () => held.promise });
+test("description and notebook results open their exact panel and retire a pending body result", async () => {
+  const held = deferred(), f = fixture({ project: item => item.document_type === "message" ? held.promise
+    : Promise.resolve({ ...item, document_id: item.id, message_id: null, message_version_id: null, matches: [] }) });
   try {
     const description = { ...item("description"), document_type: "description", message_id: null, metadata: {} };
     f.change({ items: [A, description] });
     f.click(0); f.click(1);
+    await setImmediate();
     held.resolve(projected(A)); await setImmediate();
-    assert.deepEqual(f.calls.legacy, [[description.conversation_id, null, null, null]]);
-    assert.deepEqual(f.calls.routes, []);
+    assert.deepEqual(f.calls.legacy, []);
+    assert.equal(f.calls.routes.length, 1);
+    assert.equal(new URL(f.calls.routes[0], "https://synthetic.invalid").searchParams.get("description"), "open");
     const notebook = { ...description, id: "notebook", document_type: "notebook" };
     f.change({ items: [notebook] }); f.click(0);
-    assert.equal(f.calls.legacy.length, 2);
-    assert.equal(f.calls.projects.length, 1);
+    await setImmediate();
+    assert.equal(f.calls.legacy.length, 0);
+    assert.equal(f.calls.projects.length, 3);
+    assert.equal(f.calls.routes.length, 2);
+    assert.equal(new URL(f.calls.routes[1], "https://synthetic.invalid").searchParams.get("annotation_view"), "notebook");
   } finally { f.dispose(); }
 });

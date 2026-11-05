@@ -1,13 +1,15 @@
 """Versioned additive archive extension for personal collections and read baselines."""
 import uuid
+from collections import Counter
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 
+from app.models.archive_restore import ArchiveRestoreReceipt
 from app.models.reading_content_baseline import ReadingContentBaseline, ReadingContentBaselineMessage
 from app.models.user_feature_entry import UserFeatureEntry
 from app.services.exporting.system_archive import SystemArchiveError, _decode_payload
 from app.services.preferences import get_or_create_preferences
-from app.services.user_feature_entries import VALUE_SCHEMAS, write_entry
+from app.services.user_feature_entries import COLLECTION_LIMITS, VALUE_SCHEMAS, lock_feature_collection, write_entry
 from app.services.ownership import OwnershipScope
 
 MODELS = {
@@ -15,6 +17,45 @@ MODELS = {
     "reading_baselines": ReadingContentBaseline,
     "reading_baseline_messages": ReadingContentBaselineMessage,
 }
+
+
+def archive_collection_counts(archive):
+    if "user_features" not in archive.table_models:
+        return {}
+    return dict(Counter(row["collection"] for row in archive.rows("user_features")))
+
+
+def personal_collection_capacity(db, owner, incoming, digest, *, lock=False):
+    """Advisory preview; the worker repeats it under the collection write locks."""
+    collections = sorted(name for name, count in incoming.items() if name in COLLECTION_LIMITS and count > 0)
+    if lock:
+        # Tags must precede saved searches, matching tag removal's lock order.
+        lock_names = set(collections)
+        if "saved-search" in lock_names:
+            lock_names.add("conversation-tag")
+        for name in sorted(lock_names):
+            lock_feature_collection(db, str(owner), name)
+    restored = db.get(ArchiveRestoreReceipt, (owner, digest)) is not None if digest else False
+    current = dict(db.query(UserFeatureEntry.collection, func.count(UserFeatureEntry.id)).filter(
+        UserFeatureEntry.subject_key == str(owner),
+        UserFeatureEntry.collection.in_(collections),
+    ).group_by(UserFeatureEntry.collection).all()) if collections else {}
+    capacities = [
+        {"collection": name, "current": current.get(name, 0),
+         "incoming": 0 if restored else incoming[name], "limit": COLLECTION_LIMITS[name]}
+        for name in collections
+    ]
+    return {"collection_capacity": capacities, "can_restore": restored or all(
+        item["current"] + item["incoming"] <= item["limit"] for item in capacities
+    )}
+
+
+def require_collection_capacity(capacity):
+    if not capacity["can_restore"]:
+        raise SystemArchiveError(
+            "PERSONAL_COLLECTION_CAPACITY: Personal collections would exceed their limits. "
+            "Manage your existing collections, then refresh the preview. No data was restored.", 409,
+        )
 
 
 def feature_table_models(models, manifest):

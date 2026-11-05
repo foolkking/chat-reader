@@ -8,6 +8,11 @@ Old archives remain accepted. Ownership/reference validation, remapping and
 deduplication are described in the [current contract](COMPREHENSIVE_OPTIMIZATION_CONTRACT.md).
 Browser drafts, local permission, sessions/credentials and Share links are excluded.
 The dated no-portability limitations below are superseded for these declared tables.
+Current personal preview also reports per-collection current/incoming/limit and
+`can_restore`. Overflow preserves the upload, blocks confirmation and is rechecked
+under collection locks before worker asset work. Refresh after managing existing
+collections; no data is silently skipped. Full behavior:
+[recovery consistency](COMPREHENSIVE_OPTIMIZATION_CONTRACT.md#recovery-consistency-follow-up).
 
 Archive baseline is included in the release referenced by `PROJECT_STATE.md`.
 The recovery changes below are local work dated 2026-10-07, not yet released.

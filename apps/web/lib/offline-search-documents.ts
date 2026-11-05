@@ -9,11 +9,27 @@ export function buildOfflineSearchDocuments(
   conversations: OfflineConversationRecord[],
 ): OfflineSearchDocument[] {
   const titles = new Map(conversations.map((item) => [item.id, item.display_title]));
+  const descriptions = new Set(conversations.filter(item => item.description_markdown !== undefined).map(item => item.id));
+  const notebookIds = new Set(notebooks.map(item => JSON.stringify([item.conversation_id, item.id])));
+  const currentNotebooks = new Set(notebooks.filter(item => !item.is_conflict).map(item => item.conversation_id));
+  const legacyPersonal = new Set<string>();
   // Local annotation rows (including tombstones) are authoritative. Legacy
   // documents without a corresponding row remain searchable, not discarded.
   const annotationIds = new Set(annotations.map((item) => JSON.stringify([item.conversation_id, item.id])));
   const legacyAnnotations = new Set<string>();
   const retained = documents.filter((item) => {
+    if (item.document_type === "description" || item.document_type === "notebook") {
+      const notebookId = typeof item.metadata?.notebook_id === "string" ? item.metadata.notebook_id
+        : /^notebook:(.+)$/.exec(item.id)?.[1];
+      const replaced = item.document_type === "description" ? descriptions.has(item.conversation_id)
+        : (notebookId ? notebookIds.has(JSON.stringify([item.conversation_id, notebookId])) : false)
+          || (!item.metadata?.is_conflict && currentNotebooks.has(item.conversation_id));
+      const identity = JSON.stringify([item.document_type, item.conversation_id,
+        item.document_type === "notebook" && item.metadata?.is_conflict ? notebookId ?? item.id : "current"]);
+      if (replaced || legacyPersonal.has(identity)) return false;
+      legacyPersonal.add(identity);
+      return true;
+    }
     if (item.document_type !== "annotation") return true;
     const explicitId = item.metadata?.annotation_id;
     const id = typeof explicitId === "string" && explicitId
@@ -68,7 +84,7 @@ export function buildOfflineSearchDocuments(
       plain_text: item.blocks.filter((block) => block.type === "markdown").map((block) => block.markdown ?? "").join("\n"),
       order_key: null,
       turn_index: null,
-      metadata: { notebook_id: item.id },
+      metadata: { notebook_id: item.id, is_conflict: item.is_conflict ?? false },
     })),
   ];
 }

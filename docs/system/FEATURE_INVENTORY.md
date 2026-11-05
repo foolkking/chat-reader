@@ -1,9 +1,9 @@
 # 功能清单
 
-最后同步：2026-11-04。当前代码/合同是能力依据；CI、部署及尚未完成的用户侧
+最后同步：2026-11-05。当前代码/合同是能力依据；CI、部署及尚未完成的用户侧
 验收见 [Project State](../../PROJECT_STATE.md)，不以“已实现”冒充交互验收。
 
-## Web 扩展与 Reader（已随当前源码发布）
+## Web 扩展与 Reader（生产基线）
 
 两轮 24 项有界功能已随 `127eae5` 发布；随后 Reader、收藏、富 Markdown 与
 ZIP 随 `3b839dc` 发布，当前 `be58b12` 保留这些能力并增加小内存 ZIP 恢复。
@@ -19,8 +19,16 @@ ZIP 随 `3b839dc` 发布，当前 `be58b12` 保留这些能力并增加小内存
 | 打印 | canonical 分页阅读稿，最多 2,000 消息并明确超限；不是直接 PDF 生成或任意内容保真承诺 |
 | 离线下载可靠性 | 跨 ASGI 响应的短租约，避免有效下载被旧产物清理竞争；不改包格式和本机数据 |
 
-标签/基线/冻结快照尚无 `.cr` 便携承诺；冻结分享不支持附件、批注、笔记或访客
-导出。完整边界见[数据与存储](DATA_AND_STORAGE.md)，不是任意永久快照能力。
+生产基线的标签/基线尚无 `.cr` 便携承诺；当前候选已通过可选扩展包含收藏、
+标签、保存搜索及阅读基线，旧格式兼容，Share/冻结快照仍不便携。冻结分享不支持
+附件、批注、笔记或访客导出。完整边界见[归档](DATA_ARCHIVE_CONTRACT.md)。
+
+## 当前候选与未提交恢复批次
+
+`46cb518` 精确 CI 六项通过但未部署。其认证/长期离线、删除回收、私有搜索和
+归档扩展见[整合合同](COMPREHENSIVE_OPTIMIZATION_CONTRACT.md)。
+后续草稿、离线搜索、导入预览重建、归档容量、Share/标签恢复、搜索分页及
+索引回填让出仍为未提交源码；浏览器验收未完成，见[本轮回执](../execution/RECOVERY_CONSISTENCY_2026-11-05.md)。
 
 ## Current account features (deployed, 2026-09-02)
 
@@ -57,7 +65,7 @@ implementation authority.
 | --- | --- | --- |
 | Project + 未归类单层侧栏 | 已确认 | 同时显示；Project 内对话不在未归类重复 |
 | 移动与排序 | 已确认 | Project 容器固定为自定义拖放顺序且新建项追加到底部；Project 内/未分类 Conversation 保留独立排序、移动端 picker 与置顶 |
-| 归档/硬删除 | 已确认 | 归档可取消并保留归属；删除二次确认后立即物理执行，无 Trash/restore |
+| 归档/删除 | 当前源码 | 归档可取消并保留归属；确认删除后 tombstone 与可重试清理任务同事务落库，Share 立即失效；无 Trash/restore |
 | Linear 式批量选择 | 已确认 | hover checkbox、Shift 范围、X、Cmd/Ctrl+A、Esc、移动长按 |
 | 批量操作 | 已确认 | 顶部入口在选择模式中保持原宽并切换为“完成批量操作”；移动、归档/恢复、导出、合并和删除直接位于上下文工具栏，合并标题与顺序由独立 focused dialog 持有 |
 | 拆分与合并 | 已确认 | 消息原位版本化；会话变换非破坏式创建新会话 |
@@ -89,10 +97,10 @@ implementation authority.
 
 | 能力 | 状态 | 当前语义 |
 | --- | --- | --- |
-| 全局搜索 | 已确认 | conversation/message/heading/code/annotation；全文 + trigram substring |
+| 全局搜索 | 当前源码 | conversation/message/heading/code/annotation/attachment，加本人 notebook/description 与标签筛选；全文 + trigram substring |
 | 当前对话搜索 | 已确认 | 类型/角色筛选、计数、高亮、键盘导航和统一目标事务 |
-| 消息编辑/恢复 | 已确认 | 每次创建不可变 MessageVersion，重建派生 read models |
-| 重复结果折叠 | 已确认 | 相同 content hash 返回 occurrence count |
+| 消息编辑/恢复 | 当前源码 | 默认新建版本，也支持显式 replace-current；同 ID/版本号的内容仍可变化，草稿基线使用 hash；重建派生 read models |
+| 重复结果折叠 | 当前源码 | 相同 content hash 返回 occurrence count，其他出处分页展开 |
 
 ## 批注与精选笔记
 
@@ -115,7 +123,7 @@ implementation authority.
 | Library PWA | 已确认 | 独立 `/library` scope、原子 shell staging、离线冷启动 |
 | 增量数据更新 | 已确认 | `known_revisions` -> v3 conversation delta；未变化不传输/重写，读 v1/v2/v3 |
 | 对话附件 | 已确认（生产与自动化回归） | 四种正文策略、连续附件分组、类型化 Viewer、普通上传暂存、左侧对话文件管理工作区、已有附件拖入源码、版本 occurrence、Reader/Share/Offline 与 Range |
-| 附件导出 | 已确认（自动化；生产基线保持） | conversation export 排除 detached、CanJSON metadata-only、AI 承接包、Markdown 占位、隐藏文件名、可移植 Markdown ZIP；系统 `.cr v4` 保留历史 |
+| 附件导出 | 当前源码（不等于已部署） | conversation export 排除 detached、CanJSON metadata-only、AI 承接包、Markdown 占位、隐藏文件名、可移植 Markdown ZIP；系统 `.cr v5` 保留历史并读取旧格式；私有批量 ZIP 复核扫描/删除策略 |
 | 离线 Reader/搜索 | 已确认 | 在线同一 ReaderDataSource 语义；只覆盖已下载资料 |
 | 离线写入 | 已确认 | 仅批注/精选笔记和本地阅读位置；canonical 管理禁用 |
 

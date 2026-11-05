@@ -114,3 +114,53 @@ Synthetic search/decompression/Blob characterization is recorded in the dated
 execution receipt. No percentage performance claim or real-library capacity
 guarantee follows from those measurements. The existing per-conversation archive
 capacity limits stay enforced; streaming package redesign is not introduced.
+
+## Recovery consistency follow-up
+
+Current uncommitted source, 2026-11-05; acceptance and limits are recorded in
+[the implementation receipt](../execution/RECOVERY_CONSISTENCY_2026-11-05.md).
+
+- Source drafts coalesce dependency changes for 300 ms; close/pagehide/hidden
+  visibility flush the latest revision. Returning to the saved baseline retires
+  and removes the editor's own row. The first editing baseline includes version
+  ID **and content hash**, since replace-current can retain the ID/number.
+  Legacy/unknown bases require confirmation; bounded source/draft comparison is
+  read-only. Browser termination is not a guarantee of a completed final write.
+- Offline search projects the current notebook/description over stale package
+  index documents, including explicitly cleared text. Missing legacy fields are
+  not treated as deletions; conflict notebooks remain separate. Results open the
+  correct description/notebook panel without changing package or Dexie versions.
+- Pending imports separately expose source availability and derived draft state.
+  Expiry does not imply lost originals. A locked, owner-scoped explicit preview
+  rebuild accepts the observed `updated_at`, queues the existing analysis worker
+  with rebuild intent, and preserves grouping/mapping IDs. It does not commit an
+  import or automatically retry original sources. Missing sources retain a
+  viewable session; commit is disabled. Stale/duplicate rebuild admission is 409.
+- Personal archive preview includes incoming collection counts and current
+  account capacity. Detail/history reads recalculate capacity. Admission checks
+  it again, and restore locks the affected collections in tag-before-search order
+  before any asset work. Overflow is an actionable 409, not “malformed archive”;
+  there is no silent skip, limit increase, or selective restore in this batch.
+  Existing restore receipts still return idempotent success. Input parsing wraps
+  malformed-input exceptions, not exceptions thrown by the restore transaction.
+- Attachment download keys bind to the normalized conversation/selection,
+  serialized per owner/key with a PostgreSQL transaction advisory lock. Different
+  payloads conflict even for failed jobs; explicit task retry/regeneration remains
+  the recovery path. Existing availability/scanner checks still run.
+- Share creation intent lives outside the panel, fenced by account epoch.
+  Reopening in the same tab retains the original key and read-only result check;
+  passwords remain memory-only. Full-page reload/crash recovery is **not**
+  provided. Option/source changes invalidate preview, and late responses cannot
+  publish a preview for another fingerprint. Existing Share URLs are unchanged.
+- Explicit same-query search restarts page zero with a new generation. Refreshed
+  pages replace their members/snippets; next offset is the server offset+limit,
+  not the unique visible count. Tag selection remains represented during failed
+  metadata reads, with read-only retry. This is not a server snapshot cursor.
+- Tags reuse the collection recovery owner: retained create UUID, read-only check,
+  explicit same-identity retry and manual conflict review. Search/saved-search
+  caches invalidate on confirmed writes; unknown writes are not auto-replayed.
+- Private search backfill persists each item cursor with its index transaction.
+  A worker turn handles at most 100 conversations or yields after a two-second
+  check at an item boundary. A single expensive item can exceed that time.
+  Requeue preserves the cursor and yields to other queued jobs; no extra worker
+  concurrency or storage migration is introduced.

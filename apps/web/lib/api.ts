@@ -1661,7 +1661,15 @@ export async function findShareCreation(conversationId: string, key: string): Pr
 export type UnfinishedImport = {
   import_id: string; state: string; title: string; updated_at: string;
   expires_at: string | null; source_available: boolean;
+  source_status?: "available" | "missing";
+  draft_status?: "ready" | "expired" | "missing";
+  allowed_actions?: Array<"resume" | "rebuild_preview">;
 };
+export function rebuildAdaptiveImportPreview(importId: string, updatedAt: string): Promise<AdaptiveImportSession> {
+  return fetchJson(`/api/adaptive-import/sessions/${encodeURIComponent(importId)}/rebuild-preview`, {
+    method: "POST", body: JSON.stringify({ expected_updated_at: updatedAt }),
+  });
+}
 export function getUnfinishedImports(offset = 0, signal?: AbortSignal): Promise<{ items: UnfinishedImport[]; has_more: boolean }> {
   return fetchJson(`/api/adaptive-import/sessions?limit=20&offset=${offset}`, { signal, headers: { "X-Chat-Reader-Background": "1" } });
 }

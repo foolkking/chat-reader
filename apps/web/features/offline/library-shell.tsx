@@ -925,8 +925,7 @@ function SearchResultList({ items, query, conversations, onOpen, onOpenSearchRes
     if (!scope.active || scope.pendingId === item.id) return;
     const sequence = ++scope.sequence;
     const isCurrent = () => scope.active && scope.sequence === sequence;
-    // Description/notebook entries keep their existing conversation-level behavior.
-    if (!["message", "heading", "code", "attachment", "annotation"].includes(item.document_type)) {
+    if (!["message", "heading", "code", "attachment", "annotation", "notebook", "description"].includes(item.document_type)) {
       scope.pendingId = null;
       setNavigation(null);
       onOpen(item.conversation_id, item.message_id, metadataNumber(item.metadata, "block_index"), metadataNumber(item.metadata, "character_offset"));

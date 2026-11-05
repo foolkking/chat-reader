@@ -1,6 +1,6 @@
 # 文档导航
 
-入口整理：**2026-11-04**。先读 [Project State](../PROJECT_STATE.md) 和
+入口整理：**2026-11-05**。先读 [Project State](../PROJECT_STATE.md) 和
 [AGENTS](../AGENTS.md)，再进入任务专题。当前代码、配置与 migration 是真值；
 带日期的 planning/execution/evidence 只说明各自检查点，不能当成新工作指令。
 
@@ -11,6 +11,8 @@
 [小内存 ZIP 发布回执](execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md) 维护。
 原用户 ZIP 重试、真实 47 对话离线更新与认证生产 UI 仍待单独验收。
 11 月 5 日候选已通过隔离合成 PostgreSQL/附件备份恢复演练，不等于生产备份恢复。
+源码 `46cb518` 的 CI `41918053083` 六项通过；当前恢复一致性批次已获准提交，精确源码 CI 尚待验收，
+验证与浏览器阻塞见[本轮实施回执](execution/RECOVERY_CONSISTENCY_2026-11-05.md)。
 知识整理及汇报后获准的本地安全清场已完成，未重新发布；
 见[收尾回执](execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md)中的删除范围与保全核验。
 
@@ -49,6 +51,7 @@
 | 账户／管理员／Share | [认证](system/AUTHENTICATION_CONTRACT.md)、[权限](system/USER_ROLES_AND_PERMISSIONS.md)、[管理](system/ADMINISTRATION_CONTRACT.md) |
 | 离线/PWA | [离线韧性](system/PWA_OFFLINE_RESILIENCE_CONTRACT.md)、[任务与离线保留](system/RETENTION_CONTRACT.md) |
 | 本轮认证／离线／搜索／归档整合 | [当前行为合同](system/COMPREHENSIVE_OPTIMIZATION_CONTRACT.md)、[实施与验证](execution/COMPREHENSIVE_OPTIMIZATION_2026-11-05.md)；候选 0059 尚未部署 |
+| 恢复一致性／预览过期／容量／分页 | [当前行为合同](system/COMPREHENSIVE_OPTIMIZATION_CONTRACT.md#recovery-consistency-follow-up)、[本轮验证](execution/RECOVERY_CONSISTENCY_2026-11-05.md) |
 | 噪声与内容清理 | [内容清理](system/CONTENT_CLEANUP_CONTRACT.md)、[已知风险](system/KNOWN_ISSUES_AND_UNCERTAINTIES.md) |
 | 发布／依赖／浏览器安全 | [发布安全](system/RELEASE_SAFETY_BASELINE.md)、[Next 迁移与现行版本](system/NEXT_LTS_MIGRATION_CONTRACT.md)、[CSP](system/CSP_ENFORCEMENT_CONTRACT.md) |
 | 文件／运行诊断／安全清理 | [Artifact 生命周期](system/ARTIFACT_LIFECYCLE_CONTRACT.md)、[可观测性](system/OBSERVABILITY_CONTRACT.md)、[安全清理](system/CLEANUP_CONTRACT.md) |

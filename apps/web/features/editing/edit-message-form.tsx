@@ -32,7 +32,8 @@ import {
 import { selectSourcePreviewAnchor, sourceAlignedPreviewScrollTop } from "./source-preview-scroll";
 import { applyMarkdownTableAction, type MarkdownTableSourceContext } from "./markdown-table-tools";
 import { TableToolDialog } from "./markdown-table-dialog";
-import { useSourceDraft } from "./use-source-draft";
+import { draftMatchesSource, useSourceDraft } from "./use-source-draft";
+import { SourceDraftComparison } from "./source-draft-comparison";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 
 const CodeMirror = dynamic(() => import("@uiw/react-codemirror"), { ssr: false });
@@ -73,6 +74,8 @@ export function EditMessageForm({
   requestedCursorOffset,
   pendingAttachmentInsertion,
   versionNumber,
+  versionId,
+  contentHash,
   onCursorOffsetChange,
   onSelectionChange,
   onDirtyChange,
@@ -101,6 +104,8 @@ export function EditMessageForm({
   requestedCursorOffset?: number;
   pendingAttachmentInsertion?: { referenceUri: string; displayName: string; image: boolean; placement: "inline" | "after_message" } | null;
   versionNumber: number;
+  versionId?: string;
+  contentHash?: string;
   onCursorOffsetChange?: (offset: number) => void;
   onSelectionChange?: (selection: SourceTextSelection | null) => void;
   onDirtyChange?: (dirty: boolean) => void;
@@ -138,7 +143,8 @@ export function EditMessageForm({
   const [editorDocument, setEditorDocument] = useState(initialText);
   const [text, setText] = useState(initialText);
   const [baselineText, setBaselineText] = useState(initialText);
-  const draft = useSourceDraft(conversationId, messageId, versionNumber, text, baselineText);
+  const draft = useSourceDraft(conversationId, messageId, versionNumber, text, baselineText, versionId, contentHash);
+  const draftBaseMatches = draft.candidate ? draftMatchesSource(draft.candidate.value, versionId, contentHash) : false;
   const draftDialog = useInteractionDialog();
   const [reason, setReason] = useState("");
   const [showReason, setShowReason] = useState(false);
@@ -899,15 +905,16 @@ export function EditMessageForm({
   return (
     <form id={formId} className="relative flex h-full min-h-0 flex-col bg-surface" onSubmit={(event) => { event.preventDefault(); if (!tableTool) void submit("create_version"); }}>
       {draft.candidate ? <div className="flex flex-wrap items-center gap-3 border-b border-ui bg-subtle px-4 py-2 text-sm" role="status">
-        <span>{zh ? (draft.candidate.value.base_version === versionNumber ? "发现本机未保存草稿。" : "发现旧版本草稿；当前正文已有更新，请比较后保存。") : (draft.candidate.value.base_version === versionNumber ? "An unsaved local draft is available." : "This draft is based on an older version. Compare before saving.")}</span>
+        <span>{zh ? (draftBaseMatches ? "发现本机未保存草稿。" : "草稿基线已变化或尚未核对；请比较当前正文后再恢复。") : (draftBaseMatches ? "An unsaved local draft is available." : "The draft base changed or is unverified. Compare current source before restoring.")}</span>
         <button type="button" className="min-h-10 text-accent" onClick={async () => {
           const recovered = draft.candidate;
           if (!recovered) return;
-          if ((!isUnchanged || recovered.value.base_version !== versionNumber) && !await draftDialog.confirm({
+          if ((!isUnchanged || !draftBaseMatches) && !await draftDialog.confirm({
             title: zh ? "将此草稿载入编辑器？" : "Load this draft into the editor?",
-            description: zh ? "这会替换编辑器中的文字，但不会提交。请与右侧预览及当前正文比较，检查附件引用后手动保存。" : "This replaces editor text without submitting. Compare with current content, review attachment references, then save manually.",
+            description: zh ? "这会替换编辑器中的文字，但不会提交。请先比较当前正文与草稿，检查附件引用后手动保存。" : "This replaces editor text without submitting. Compare current source with the draft, review attachment references, then save manually.",
             confirmLabel: zh ? "载入草稿" : "Load draft",
           })) return;
+          draft.restoreBase(recovered.value);
           setEditorDocument(recovered.value.text); setText(recovered.value.text);
           // Keep the source copy until a new edit has safely persisted.
         }}>{zh ? "恢复到编辑器" : "Restore to editor"}</button>
@@ -915,6 +922,7 @@ export function EditMessageForm({
           if (draft.candidate && await draftDialog.confirm({ title: zh ? "删除这份本机草稿？" : "Delete this local draft?", danger: true }))
             await draft.remove(draft.candidate.key, draft.candidate.value.revision).catch(() => undefined);
         }}>{zh ? "删除草稿" : "Delete draft"}</button>
+        <SourceDraftComparison current={initialText} draft={draft.candidate.value.text} zh={zh} />
       </div> : null}
       {draft.status === "error" ? <p role="alert" className="px-4 py-2 text-sm text-[var(--danger)]">{zh ? "本机草稿保存不可用，请勿关闭页面；可以先复制文字。" : "Local draft saving is unavailable. Keep this page open or copy your text."}</p> : null}
       <input

@@ -238,6 +238,7 @@ class PersonalArchive:
                     seen.add(source); source = aliases[source]
 
     def preview(self):
+        from app.services.exporting.archive_user_features import archive_collection_counts
         projects, conversations = [], []
         for row in self.rows("projects"):
             if len(projects) < 50: projects.append({"name": row["name"], "archived": row.get("is_archived", False)})
@@ -251,17 +252,25 @@ class PersonalArchive:
                 "missing_attachments": missing_attachments,
                 "include_preferences_default": False, "restore_mode": "additive",
                 "personal_collections_included": "user_features" in self.table_models,
+                "personal_collection_counts": archive_collection_counts(self),
                 "excluded_data": ["server_sessions", "passwords", "device_trust", "browser_drafts", "share_links"]}
 
 
 @contextmanager
 def open_personal_archive(path: Path, *, heartbeat=None):
     try:
-        with zipfile.ZipFile(path) as archive:
-            yield PersonalArchive(archive, heartbeat=heartbeat)
+        archive = zipfile.ZipFile(path)
     except (zipfile.BadZipFile, KeyError, ValueError, TypeError, UnicodeError, RecursionError) as exc:
         if isinstance(exc, SystemArchiveError): raise
         raise SystemArchiveError("Personal archive is malformed or incomplete.") from exc
+    with archive:
+        try:
+            validated = PersonalArchive(archive, heartbeat=heartbeat)
+        except (zipfile.BadZipFile, KeyError, ValueError, TypeError, UnicodeError, RecursionError) as exc:
+            if isinstance(exc, SystemArchiveError): raise
+            raise SystemArchiveError("Personal archive is malformed or incomplete.") from exc
+        # Exceptions from the restore transaction are not input-format errors.
+        yield validated
 
 
 def inspect_personal_archive(path: Path, *, heartbeat=None):

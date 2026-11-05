@@ -5,6 +5,7 @@ const active = (task: BackgroundTaskRead) => ["queued", "processing", "cancellin
 export function archiveTaskLabel(task: BackgroundTaskRead, zh: boolean) { return task.job_type.endsWith("_archive_export") ? (task.job_type.startsWith("system_") ? (zh ? "系统数据备份" : "System backup") : (zh ? "个人数据备份" : "Personal backup")) : task.job_type.endsWith("_archive_preflight") ? (zh ? "归档内容预检" : "Archive preview") : (task.job_type.startsWith("system_") ? (zh ? "系统归档恢复" : "System restore") : (zh ? "个人归档恢复" : "Personal restore")); }
 export function archiveError(message: string, zh: boolean) {
   if (!zh) return message || "The archive operation failed. Refresh and retry.";
+  if (/PERSONAL_COLLECTION_CAPACITY/i.test(message)) return "恢复后个人集合将超过上限，尚未恢复任何数据。请先整理下方超限的集合，再刷新预检。";
   if (/ownership choices changed/i.test(message)) return "另一处操作已更改归属选择，清单已刷新。请重新核对后确认。";
   if (/archived email already exists/i.test(message)) return "归档中的邮箱已存在，请返回归属清单并明确选择已有账户。";
   if (/distinct target|merge.*configuration/i.test(message)) return "这份归档包含账户配置，每个来源账户需要独立的目标账户。请调整归属后重试。";
@@ -35,12 +36,24 @@ export function ArchivePreview({ task, zh }: { task: BackgroundTaskRead; zh: boo
   const labels = zh ? ["项目", "对话", "消息版本", "附件", "批注与笔记", "格式、规则与 Skill"] : ["Projects", "Conversations", "Message versions", "Attachments", "Annotations & notes", "Formats, rules & Skills"];
   const values = [counts.projects, counts.conversations, counts.message_versions, counts.attachments, Number(counts.annotations ?? 0) + Number(counts.notebooks ?? 0), Number(counts.profiles ?? counts.import_profiles ?? 0) + Number(counts.rules ?? counts.content_cleanup_rules ?? 0) + Number(counts.skills ?? (Number(counts.user_skills ?? 0) + Number(counts.system_skills ?? 0)))];
   const projects = (task.result.projects ?? []) as Array<{ name: string; archived: boolean }>, conversations = (task.result.conversations ?? []) as Array<{ title: string; archived: boolean }>;
+  const capacity = task.result.collection_capacity ?? [];
+  const collectionLabels: Record<string, string> = zh
+    ? { "saved-search": "保存搜索", "export-preset": "导出预设", "reading-list": "收藏", "offline-checklist": "离线清单", "conversation-tag": "标签" }
+    : { "saved-search": "Saved searches", "export-preset": "Export presets", "reading-list": "Favorites", "offline-checklist": "Offline checklists", "conversation-tag": "Tags" };
   return <div className="grid gap-3"><p className="text-sm leading-6 text-secondary">{zh ? "完整性校验已通过。请核对将新增的内容：" : "Integrity checks passed. Review the materials to be added:"}</p>
     <dl className="grid grid-cols-2 gap-x-5 gap-y-2 border-y border-ui py-3 text-sm">{labels.map((label, index) => <div key={label} className="flex justify-between gap-2"><dt className="text-secondary">{label}</dt><dd className="font-medium tabular-nums text-primary">{Number(values[index] ?? 0)}</dd></div>)}</dl>
     <p className="text-xs leading-5 text-secondary">{task.result.personal_collections_included
       ? (zh ? `另含 ${Number(counts.user_features ?? 0)} 项收藏／标签／保存搜索等个人设置，以及 ${Number(counts.reading_baselines ?? 0)} 份阅读基线。` : `Also includes ${Number(counts.user_features ?? 0)} favorites, tags and other personal settings, and ${Number(counts.reading_baselines ?? 0)} reading baselines.`)
       : (zh ? "旧格式未声明收藏、标签、保存搜索和阅读基线，不会凭空恢复这些数据。" : "This older format does not declare personal collections or reading baselines.")}</p>
     <p className="text-xs leading-5 text-secondary">{zh ? "不包含登录凭据、会话、本机离线许可、浏览器编辑草稿和 Share 链接。" : "Excludes credentials, sessions, device trust, browser editor drafts and Share links."}</p>
+    {capacity.length ? <div className="grid gap-2 rounded-lg border border-ui p-3 text-sm">
+      <p className="font-medium text-primary">{zh ? "个人集合容量（当前 + 新增 / 上限）" : "Collection capacity (current + incoming / limit)"}</p>
+      <dl className="grid gap-2">{capacity.map((item) => <div key={item.collection} className="flex flex-wrap justify-between gap-2">
+        <dt>{collectionLabels[item.collection] ?? item.collection}</dt>
+        <dd className="tabular-nums">{item.current} + {item.incoming} / {item.limit}{item.current + item.incoming > item.limit ? (zh ? " · 超限" : " · Over limit") : ""}</dd>
+      </div>)}</dl>
+      {task.result.can_restore === false ? <p role="status" className="text-[var(--warning)]">{zh ? "请先整理超限的集合，再刷新预检。当前数据和上传归档均保留，不会自动跳过其中的数据。" : "Manage the collections over their limits, then refresh this preview. Your data and upload are retained; nothing is silently skipped."}</p> : null}
+    </div> : null}
     {Number(task.result.missing_attachments) > 0 ? <p role="status" className="text-sm leading-6 text-[var(--warning)]">{zh ? `${task.result.missing_attachments} 个附件缺少文件，只能恢复其引用。` : `${task.result.missing_attachments} attachments have no file. Their references can be restored.`}</p> : null}
     <details className="text-sm text-secondary"><summary className="min-h-11 cursor-pointer py-3 font-medium text-primary">{zh ? "查看项目与对话清单" : "Review projects and conversations"}</summary><div className="max-h-52 overflow-y-auto border-t border-ui py-2"><p className="mb-2 text-xs">{zh ? "各显示前 50 项；恢复覆盖全部已校验内容。" : "Showing up to 50 of each. Restore includes all validated contents."}</p><ul className="grid gap-2">{projects.map((item, index) => <li key={`p-${index}`} className="break-words">{zh ? "项目 · " : "Project · "}{item.name}{item.archived ? (zh ? "（已归档）" : " (archived)") : ""}</li>)}{conversations.map((item, index) => <li key={`c-${index}`} className="break-words">{zh ? "对话 · " : "Conversation · "}{item.title}{item.archived ? (zh ? "（已归档）" : " (archived)") : ""}</li>)}</ul></div></details>
   </div>;

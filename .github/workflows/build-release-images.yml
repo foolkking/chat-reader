@@ -268,6 +268,7 @@ jobs:
           e2e/release-mutation-lifecycle.spec.ts
           e2e/ux-whole-site.spec.ts
           e2e/ux-recovery-followup.spec.ts
+          e2e/recovery-consistency.spec.ts
           e2e/manual-markdown-fidelity.spec.ts
 
       - name: Source Editor content cleanup browser gate

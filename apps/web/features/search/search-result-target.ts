@@ -18,7 +18,7 @@ export function matchesLibrarySearchTarget(href: string, currentQuery: string): 
   // opening annotations could retire a replay, or prevent a body hit replay.
   if (target.get("messageId") || target.get("attachmentId") || target.get("annotationId")) return true;
   // Legacy panel-only links still need to distinguish files from annotations.
-  return ["files", "annotations"].every((key) => target.get(key) === current.get(key));
+  return ["files", "annotations", "annotation_view", "description"].every((key) => target.get(key) === current.get(key));
 }
 
 /** Hydrate content-free search links only against an authorized current block. */

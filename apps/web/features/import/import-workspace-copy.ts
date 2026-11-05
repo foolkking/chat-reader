@@ -2,6 +2,14 @@ import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
 const english: Record<string, string> = {
+  "源文件不可用，已保存的配置仍可查看。请选择原文件后继续处理。": "Source files are unavailable. Saved configuration is still visible; choose the original files to continue.",
+  "原文件仍保留，导入预览已过期或缺失。重新生成预览会保留分组和映射，不会提交导入。": "Source files are retained, but the import preview expired or is missing. Rebuilding preserves grouping and mappings; it does not commit the import.",
+  "重新生成预览": "Rebuild preview",
+  "刷新会话状态": "Refresh session",
+  "请先重新生成预览，再确认导入。": "Rebuild the preview before confirming import.",
+  "会话状态已变化，请先刷新会话状态再决定是否重新生成预览。已保存的配置仍保留。": "The session changed. Refresh its state before deciding whether to rebuild the preview. Saved configuration is retained.",
+  "源文件不可用，已保存的分组和映射仍保留。": "Source files are unavailable. Saved grouping and mappings are retained.",
+  "请先完成已有映射，再重新生成预览。": "Complete the saved mappings before rebuilding the preview.",
   "展开其余 {0} 条提示": "Show the remaining {0} notices",
   "只读样本：最多 12 条消息，每条最多 2000 字符；不改变映射或正文。": "Read-only sample: up to 12 messages and 2000 characters each; mapping and source are unchanged.",
   "预览显示方式": "Preview display",
@@ -199,6 +207,9 @@ const importCodeCopy: Record<string, string> = {
   UPLOAD_QUEUE_TIMEOUT: "服务器仍在分析其他大文件，本次尚未开始。请稍后重试。",
   SESSION_TOO_LARGE: "替换后的文件会超过本次导入总容量限制。",
   SESSION_STATE_INVALID: "当前导入状态已变化，请返回概览后重试。",
+  PREVIEW_STATE_CHANGED: "会话状态已变化，请先刷新会话状态再决定是否重新生成预览。已保存的配置仍保留。",
+  PREVIEW_REBUILD_UNAVAILABLE: "请先完成已有映射，再重新生成预览。",
+  SOURCE_MISSING: "源文件不可用，已保存的分组和映射仍保留。",
   SESSION_WOULD_BE_EMPTY: "最后一项不能排除，请替换它的源文件或重新选择文件。",
   IMPORT_COMMIT_FAILED: "这次导入未完成，原始文件和导入会话仍保留。检查后可再次点击导入。",
   IMPORT_COMMIT_CANCELLED: "这次导入已取消，原始文件和导入会话仍保留。准备好后可再次点击导入。",

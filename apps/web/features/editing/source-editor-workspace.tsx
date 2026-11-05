@@ -387,6 +387,8 @@ export function SourceEditorWorkspace({
             messageId={message.id}
             conversationId={message.conversation_id}
             versionNumber={versionNumber}
+            versionId={message.current_version?.id}
+            contentHash={message.current_version?.content_hash}
             onCursorOffsetChange={(offset) => { cursorOffsetRef.current = offset; }}
             onSelectionChange={setSourceSelection}
             onDirtyChange={(dirty) => { setEditorDirty(dirty); onDirtyChange(dirty); }}

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { archiveConversation, getProjects, getUserFeatureEntries, searchConversations } from "../../lib/api";
 import type { SearchResultItem, SavedSearchValue, ConversationTagValue } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
@@ -16,6 +16,7 @@ import { SavedSearchesPanel } from "./saved-searches-panel";
 import { runBatchSelection, type BatchSelectionResult } from "../../lib/batch-selection";
 import { buildSearchReadingQueue, sanitizeSearchReturnHref, searchReadingQueueStorageKey, withSearchReadingQueue } from "./search-reading-queue";
 import { getCurrentOfflineRuntimeUserId } from "../../lib/auth-client";
+import { collectSearchPages } from "./search-pages";
 
 const PAGE_SIZE = 50;
 
@@ -39,12 +40,22 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const dateFrom = params?.get("date_from") ?? "";
   const dateTo = params?.get("date_to") ?? "";
   const tagId = params?.get("tag_id") ?? "";
-  const scope = JSON.stringify([query, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId]);
+  const [searchEpoch, setSearchEpoch] = useState(0);
+  const searchEpochRef = useRef(0);
+  const queryScope = JSON.stringify([query, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId]);
+  const scope = JSON.stringify([queryScope, searchEpoch]);
+  const currentScope = useRef(scope);
+  currentScope.current = scope;
+  const restartSearch = (remainingIds: string[] = []) => {
+    const next = ++searchEpochRef.current;
+    setSearchEpoch(next);
+    setConversationSelection({ scope: JSON.stringify([queryScope, next]), ids: remainingIds });
+  };
   const tags = useQuery({ queryKey: ["user-feature-entries", "conversation-tag"], queryFn: ({ signal }) => getUserFeatureEntries<ConversationTagValue>("conversation-tag", signal) });
   const [paging, setPaging] = useState({ scope, offset: 0 });
   const offset = paging.scope === scope ? paging.offset : 0;
-  const [collection, setCollection] = useState<{ scope: string; items: SearchResultItem[] }>({ scope, items: [] });
-  const items = collection.scope === scope ? collection.items : [];
+  const [collection, setCollection] = useState<{ scope: string; pages: Record<number, SearchResultItem[]> }>({ scope, pages: {} });
+  const items = useMemo(() => collection.scope === scope ? collectSearchPages(collection.pages) : [], [collection, scope]);
   const [selection, setSelection] = useState<{ scope: string; documentId: string | null }>({ scope, documentId: null });
   const [conversationSelection, setConversationSelection] = useState<{ scope: string; ids: string[] }>({ scope, ids: [] });
   const [batchBusy, setBatchBusy] = useState(false);
@@ -52,14 +63,17 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
   const resultsRef = useRef<HTMLDivElement>(null);
   const orderedItems = orderSearchResults(items);
   const readingQueueCandidate = buildSearchReadingQueue(orderedItems, searchResultHref);
-  const selectedConversationIds = new Set(conversationSelection.scope === scope ? conversationSelection.ids : []);
+  const loadedConversationIds = new Set(items.map(item => item.conversation_id));
+  const selectedConversationIds = new Set((conversationSelection.scope === scope ? conversationSelection.ids : [])
+    .filter(id => loadedConversationIds.has(id)));
   const activeIndex = selection.scope === scope
     ? orderedItems.findIndex((item) => item.document_id === selection.documentId) : -1;
   const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
   const filterCount = [statusScope !== "active", documentType !== "all", role !== "all", projectId !== "all", Boolean(dateFrom), Boolean(dateTo), Boolean(tagId)].filter(Boolean).length;
   const result = useQuery({
-    queryKey: ["search", query, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId, offset],
-    queryFn: () => searchConversations({
+    queryKey: ["search", query, documentType, role, projectId, statusScope, dateFrom, dateTo, tagId, searchEpoch, offset],
+    queryFn: ({ signal }) => searchConversations({
+      signal,
       q: query, tagId: tagId || undefined,
       limit: PAGE_SIZE,
       offset,
@@ -77,14 +91,14 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     setSelection((current) => current.scope !== scope || (current.documentId !== null && !items.some((item) => item.document_id === current.documentId))
       ? { scope, documentId: null } : current);
     setConversationSelection((current) => current.scope === scope ? current : { scope, ids: [] });
-    setBatchNotice(null);
   }, [items, scope]);
+  useEffect(() => setBatchNotice(null), [queryScope]);
   useEffect(() => {
     if (!result.data) return;
     setCollection((current) => {
-      const next = offset === 0 || current.scope !== scope ? [] : [...current.items];
-      for (const item of result.data.items) if (!next.some((existing) => existing.document_id === item.document_id)) next.push(item);
-      return { scope, items: next };
+      const pages = offset === 0 || current.scope !== scope ? {} : { ...current.pages };
+      // A refreshed page replaces its old members and snippets, not just new IDs.
+      return { scope, pages: { ...pages, [offset]: result.data.items } };
     });
   }, [offset, result.data, scope]);
   const update = (changes: Record<string, string>) => {
@@ -143,11 +157,9 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     setBatchNotice(null);
     try {
       const batch = await runBatchSelection(ids, archiveConversation, 4);
+      if (currentScope.current !== scope) return;
       applyBatchResult(batch);
-      if (batch.succeededIds.length && statusScope === "active") {
-        setCollection((current) => ({ scope: current.scope, items: current.items.filter((item) => !batch.succeededIds.includes(item.conversation_id)) }));
-      }
-      void result.refetch();
+      restartSearch([...batch.failedIds, ...batch.unconfirmedIds, ...batch.notStartedIds]);
     } finally {
       setBatchBusy(false);
     }
@@ -163,11 +175,13 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
     // Keep a URL's applied scope representable while its name is unavailable.
     projectOptions.unshift([projectId, zh ? "当前项目" : "Current project"]);
   }
+  const tagOptions: [string, string][] = (tags.data ?? []).map((item) => [item.id, item.value.name]);
+  if (tagId && !tagOptions.some(([id]) => id === tagId)) tagOptions.unshift([tagId, zh ? "当前标签" : "Current tag"]);
   const content = (
       <section className="flex min-w-0 flex-1 flex-col">
          <MobilePageHeader title={zh ? "搜索" : "Search"} description={zh ? "搜索对话、正文、章节、代码、批注和附件" : "Search conversations, messages, sections, code, annotations, and attachments"} onOpenSidebar={() => workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)} />
         <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto max-w-5xl space-y-5 px-[clamp(1rem,2vw,2rem)] py-8">
-          <SearchBox initialQuery={query} onSearch={(value) => { if (value === query) void result.refetch(); else update({ q: value }); }} hasResults={items.length > 0} onMoveSelection={moveSelection} onOpenSelection={openSelected} />
+          <SearchBox initialQuery={query} onSearch={(value) => { if (value === query) restartSearch(); else update({ q: value }); }} hasResults={items.length > 0} onMoveSelection={moveSelection} onOpenSelection={openSelected} />
           <SavedSearchesPanel
             current={{ q: query, document_type: documentType as SavedSearchValue["document_type"], role: role as "all" | "user" | "assistant", project_id: projectId === "all" ? null : projectId, status_scope: statusScope as "active" | "archived" | "all", date_from: dateFrom || null, date_to: dateTo || null, tag_id: tagId || null }}
             onApply={(saved) => {
@@ -212,7 +226,9 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
                 <button type="button" disabled={projects.isFetching} onClick={() => void projects.refetch()} className="min-h-10 underline disabled:opacity-60">{zh ? "重试项目" : "Retry projects"}</button>
               </div> : null}
             </div>
-            <Filter label={zh ? "标签" : "Tag"} value={tagId} onChange={value => update({ tag_id: value })} options={[["", zh ? "全部标签" : "All tags"], ...(tags.data ?? []).map(item => [item.id, item.value.name] as [string, string])]} />
+            <div><Filter label={zh ? "标签" : "Tag"} value={tagId} onChange={value => update({ tag_id: value })} options={[["", zh ? "全部标签" : "All tags"], ...tagOptions]} />
+              {tags.isError ? <div role="alert" className="text-xs text-[var(--danger)]"><p>{zh ? "标签读取失败，当前筛选已保留。" : "Tags could not be loaded. Your filter is retained."}</p><button type="button" disabled={tags.isFetching} onClick={() => void tags.refetch()} className="min-h-11 underline">{zh ? "重试标签" : "Retry tags"}</button></div> : null}
+            </div>
             <label className="text-xs font-medium text-secondary">{zh ? "开始日期" : "From"}<input type="date" value={dateFrom} onChange={(event) => update({ date_from: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
             <label className="text-xs font-medium text-secondary">{zh ? "结束日期" : "To"}<input type="date" value={dateTo} onChange={(event) => update({ date_to: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-ui bg-page px-3 text-sm text-primary" /></label>
 
@@ -223,7 +239,7 @@ function SearchWorkspace({ filtersOpen, setFiltersOpen }: { filtersOpen: boolean
           {query && !invalidDates && !result.isError && !result.isFetching && items.length === 0 ? <State text={zh ? "没有找到结果。请清除筛选或修改关键词。" : "No results. Clear filters or try another query."} /> : null}
           <p id="search-selection-status" role="status" className="sr-only">{activeIndex >= 0 && orderedItems[activeIndex] ? `${activeIndex + 1} / ${items.length}: ${orderedItems[activeIndex].conversation_title}` : ""}</p>
           <div ref={resultsRef}>{items.length ? <SearchResults items={orderedItems} query={query} activeIndex={activeIndex} onActiveIndexChange={selectIndex} selectedConversationIds={selectedConversationIds} onConversationSelectionChange={toggleConversationSelection} /> : null}</div>
-          {!result.isError && items.length < total ? <button type="button" onClick={() => setPaging({ scope, offset: items.length })} disabled={result.isFetching} className="mx-auto block min-h-10 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
+          {!result.isError && result.data && (result.data.has_more ?? result.data.offset + result.data.limit < total) ? <button type="button" onClick={() => setPaging({ scope, offset: result.data.offset + result.data.limit })} disabled={result.isFetching} className="mx-auto block min-h-11 rounded-lg border border-ui bg-surface px-5 text-sm font-medium text-primary hover:bg-subtle disabled:opacity-50">{result.isFetching ? (zh ? "正在加载…" : "Loading…") : (zh ? "加载更多" : "Load more")}</button> : null}
         </div></div>
       </section>
   );

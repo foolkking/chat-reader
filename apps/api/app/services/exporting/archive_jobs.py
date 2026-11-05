@@ -152,6 +152,10 @@ def queue_personal_restore(db: Session, *, owner, preview_id, expected_digest, i
         raise SystemArchiveError("Wait for a successful archive preview before confirming restore.", 409)
     if preview.result.get("content_digest") != expected_digest:
         raise SystemArchiveError("Archive changed since preview. Preview it again.", 409)
+    from app.services.exporting.archive_user_features import personal_collection_capacity, require_collection_capacity
+    require_collection_capacity(personal_collection_capacity(
+        db, owner, preview.result.get("personal_collection_counts", {}), expected_digest,
+    ))
     _upload(db, preview, lock=True)
     return _new_job(db, owner, "personal_archive_restore", key, {
         "parent_task_id": str(preview.id), "content_digest": expected_digest,
@@ -183,6 +187,11 @@ def discard_personal_upload(db, *, owner, preview_id):
 def archive_task_result(db, job):
     """Attach current artifact state for settings re-entry, without storage paths."""
     result = dict(job.result or {})
+    if job.job_type == "personal_archive_preflight" and job.status == "committed":
+        from app.services.exporting.archive_user_features import personal_collection_capacity
+        result.update(personal_collection_capacity(
+            db, job.owner_user_id, result.get("personal_collection_counts", {}), result.get("content_digest"),
+        ))
     if (job.payload or {}).get("parent_task_id"):
         result.setdefault("parent_task_id", job.payload["parent_task_id"])
     artifact = db.query(ExportArtifact).filter_by(job_id=job.id).one_or_none()
@@ -239,7 +248,10 @@ def process_personal_archive_job(db, job, report):
         raise SystemArchiveError("The uploaded archive changed. Upload it again.", 409)
     if job.job_type == "personal_archive_preflight":
         preview = inspect_personal_archive(path, heartbeat=heartbeat)
-        return {**preview, "expires_at": _utc(artifact.expires_at).isoformat()}
+        from app.services.exporting.archive_user_features import personal_collection_capacity
+        return {**preview, **personal_collection_capacity(
+            db, job.owner_user_id, preview["personal_collection_counts"], preview["content_digest"],
+        ), "expires_at": _utc(artifact.expires_at).isoformat()}
     result = restore_personal_archive(db, path, owner_user_id=job.owner_user_id,
         expected_digest=payload["content_digest"], include_preferences=bool(payload.get("include_preferences")),
         progress_callback=progress, heartbeat=heartbeat)

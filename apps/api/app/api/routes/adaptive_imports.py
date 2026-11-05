@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -46,7 +46,7 @@ from app.services.adaptive_import.service import (
     resolve_grouping,
     select_profile_revision,
     session_payload,
-    session_sources_available,
+    session_recovery_status,
     update_profile,
     verify_family_mapping,
 )
@@ -106,6 +106,10 @@ class ArchiveClassificationRequest(BaseModel):
     changes: list[ArchiveMemberChange] = Field(min_length=1, max_length=5000)
 
 
+class RebuildPreviewRequest(BaseModel):
+    expected_updated_at: datetime
+
+
 @router.get("/api/adaptive-import/sessions")
 def list_unfinished_sessions(
     limit: int = Query(default=20, ge=1, le=50),
@@ -119,8 +123,8 @@ def list_unfinished_sessions(
         ImportRecord.session_state.in_(("READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING")),
         ImportRecord.status.notin_(("committed", "cancelled")),
     )
-    rows = query.order_by(ImportRecord.updated_at.desc(), ImportRecord.id).offset(offset).limit(limit + 1).all()
-    now = datetime.now(timezone.utc)
+    rows = query.options(selectinload(ImportRecord.artifacts), selectinload(ImportRecord.structure_families)).order_by(
+        ImportRecord.updated_at.desc(), ImportRecord.id).offset(offset).limit(limit + 1).all()
     items = []
     for row in rows[:limit]:
         expiry = row.draft_expires_at
@@ -131,8 +135,7 @@ def list_unfinished_sessions(
             "title": row.detected_title or row.json_filename or row.md_filename or "Import",
             "updated_at": row.updated_at.isoformat(),
             "expires_at": expiry.isoformat() if expiry else None,
-            "source_available": session_sources_available(row, db.query(SourceArtifact).filter(SourceArtifact.import_id == row.id).all())
-                and (expiry is None or expiry > now),
+            **session_recovery_status(row),
         })
     return {"items": items, "has_more": len(rows) > limit, "offset": offset, "limit": limit}
 
@@ -255,6 +258,25 @@ def get_adaptive_import_session(
             if job.status == "cancelling":
                 result["state"] = "CANCELING"
     return result
+
+
+@router.post("/api/adaptive-import/sessions/{import_id}/rebuild-preview", status_code=202)
+def rebuild_adaptive_preview(
+    import_id: uuid.UUID, payload: RebuildPreviewRequest, db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
+    if not get_feature_policy(db).allow_user_import:
+        raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled."})
+    recovery = session_recovery_status(record)
+    expected = payload.expected_updated_at.replace(tzinfo=timezone.utc) if payload.expected_updated_at.tzinfo is None else payload.expected_updated_at
+    actual = record.updated_at.replace(tzinfo=timezone.utc) if record.updated_at.tzinfo is None else record.updated_at
+    if actual != expected or "rebuild_preview" not in recovery["allowed_actions"]:
+        raise HTTPException(status_code=409, detail={"code": "PREVIEW_STATE_CHANGED", "message": "Refresh this session before rebuilding its preview. Saved configuration is retained."})
+    queue_session_analysis(db, record, rebuild_preview=True)
+    db.commit()
+    db.refresh(record)
+    return session_payload(record)
 
 
 @router.delete("/api/adaptive-import/sessions/{import_id}", status_code=status.HTTP_204_NO_CONTENT)

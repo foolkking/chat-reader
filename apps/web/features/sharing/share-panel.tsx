@@ -3,23 +3,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState } from "react";
 import { ApiRequestError, createShare, findShareCreation, getConversationShares, previewShare, revokeShare, updateShare } from "../../lib/api";
-import type { ShareCreateInput, SharePreviewResponse, ShareRead } from "../../lib/types";
+import type { SharePreviewResponse, ShareRead } from "../../lib/types";
 import { authenticationGeneration } from "../../lib/offline-access";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
+import { beginShareIntent, currentShareIntent, updateShareIntent, useShareCreationIntent } from "./share-creation-intent";
 
 export function SharePanel({
   conversationId,
   selectedMessageIds,
   compact = false,
+  sourceRevision,
 }: {
   conversationId: string;
   selectedMessageIds: string[];
   compact?: boolean;
+  sourceRevision?: number;
 }) {
   const preferences = usePreferences();
   const t = useTranslations();
   const zh = preferences.resolvedLocale === "zh-CN";
+  const renderGeneration = authenticationGeneration();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -44,11 +48,17 @@ export function SharePanel({
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
-  const [preview, setPreview] = useState<SharePreviewResponse | null>(null);
-  const intent = useRef<{ key: string; payload: ShareCreateInput } | null>(null);
+  const [preview, setPreview] = useState<{ fingerprint: string; value: SharePreviewResponse } | null>(null);
+  const intent = useShareCreationIntent(conversationId);
+  const unresolved = intent && intent.phase !== "confirmed";
   const submitLock = useRef(false), mounted = useRef(true);
-  const [unknownCreation, setUnknownCreation] = useState(false);
-  const [retryOriginal, setRetryOriginal] = useState(false);
+  const unknownCreation = intent?.phase === "unknown" || intent?.phase === "writing" || intent?.phase === "checking";
+  const retryOriginal = intent?.phase === "absent";
+  const fingerprint = JSON.stringify([authenticationGeneration(), conversationId, sourceRevision, title, description, expiryMode, expiresAt,
+    useSelection, useSelection ? selectedMessageIds : [], includeToc, includeMetadata, includeDescription,
+    includeAnnotations, includeNotebook, allowExport, contentMode, passwordProtected, sharePassword, sharePasswordConfirm, shareTheme, shareLocale]);
+  const currentPreview = useRef({ fingerprint, sequence: 0 });
+  currentPreview.current.fingerprint = fingerprint;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const sharesQuery = useQuery({
     queryKey: ["shares", conversationId],
@@ -65,10 +75,12 @@ export function SharePanel({
   }
 
   async function submit() {
-    if (submitLock.current || unknownCreation) return;
+    if (renderGeneration !== authenticationGeneration()) return;
+    const retained = currentShareIntent(conversationId);
+    if (submitLock.current || (retained && !["absent", "confirmed"].includes(retained.phase))) return;
     setError(null);
     setExpiryError(null);
-    if (!intent.current && expiryMode === "custom") {
+    if (!retryOriginal && expiryMode === "custom") {
       const validation = validateFutureExpiry(expiresAt);
       if (!validation.ok) {
         setExpiryError(zh ? validation.zh : validation.en);
@@ -76,19 +88,20 @@ export function SharePanel({
         return;
       }
     }
-    if (!intent.current && passwordProtected && sharePassword.length < 12) {
+    if (!retryOriginal && passwordProtected && sharePassword.length < 12) {
       setError(zh ? "分享密码至少需要 12 个字符。" : "Share passwords must be at least 12 characters.");
       return;
     }
-    if (!intent.current && passwordProtected && sharePassword !== sharePasswordConfirm) {
+    if (!retryOriginal && passwordProtected && sharePassword !== sharePasswordConfirm) {
       setError(zh ? "两次输入的分享密码不一致。" : "Share password confirmation does not match.");
       return;
     }
     setIsCreating(true);
     submitLock.current = true;
     const generation = authenticationGeneration();
+    let owned = retained?.phase === "absent" ? retained : null;
     try {
-      intent.current ??= { key: crypto.randomUUID(), payload: {
+      owned ??= beginShareIntent(conversationId, {
         title: title.trim() || null,
         description: description.trim() || null,
         scope: useSelection ? "selected_messages" : "conversation",
@@ -104,16 +117,17 @@ export function SharePanel({
         theme: shareTheme,
         locale: shareLocale,
         share_password: passwordProtected ? sharePassword : null,
-      }};
-      const response = await createShare(conversationId, intent.current.payload, intent.current.key);
+      });
+      updateShareIntent(conversationId, owned, { phase: "writing" });
+      const response = await createShare(conversationId, owned.payload, owned.key);
+      updateShareIntent(conversationId, owned, { phase: "confirmed", url: response.share_url, payload: { ...owned.payload, share_password: null } });
       if (!mounted.current || generation !== authenticationGeneration()) return;
-      intent.current = null; setRetryOriginal(false);
       setCreatedUrl(response.share_url);
       if (!await refreshShares()) setError(shareRefreshError(zh, "create"));
     } catch (failure) {
+      if (owned) updateShareIntent(conversationId, owned,
+        !(failure instanceof ApiRequestError) || failure.status >= 500 || [408, 409, 429].includes(failure.status) ? { phase: "unknown" } : null);
       if (!mounted.current || generation !== authenticationGeneration()) return;
-      if (!(failure instanceof ApiRequestError) || failure.status >= 500) setUnknownCreation(true);
-      else { intent.current = null; setRetryOriginal(false); }
       setError(shareWriteError(failure, zh, "create"));
     } finally {
       submitLock.current = false;
@@ -122,26 +136,36 @@ export function SharePanel({
   }
 
   async function checkCreation() {
-    if (!intent.current || submitLock.current) return;
+    if (renderGeneration !== authenticationGeneration()) return;
+    const owned = currentShareIntent(conversationId);
+    if (!owned || ["writing", "checking"].includes(owned.phase) || submitLock.current) return;
+    updateShareIntent(conversationId, owned, { phase: "checking" });
     submitLock.current = true; setIsCreating(true);
     const generation = authenticationGeneration();
     try {
-      const result = await findShareCreation(conversationId, intent.current.key);
+      const result = await findShareCreation(conversationId, owned.key);
+      updateShareIntent(conversationId, owned, result
+        ? { phase: "confirmed", url: result.share_url, payload: { ...owned.payload, share_password: null } }
+        : { phase: "absent" });
       if (!mounted.current || generation !== authenticationGeneration()) return;
-      setUnknownCreation(false);
       if (result) {
-        setCreatedUrl(result.share_url); intent.current = null; setRetryOriginal(false);
+        setCreatedUrl(result.share_url);
         setError(null); await refreshShares();
       } else {
-        setRetryOriginal(true);
         setError(zh ? "暂未找到本次创建结果。可使用原选项和同一请求标识安全重试。" : "No result found. Retry the original options with the same request key.");
       }
     } catch {
+      updateShareIntent(conversationId, owned, { phase: "unknown" });
       if (mounted.current && generation === authenticationGeneration()) setError(zh ? "核对失败，尚未重新创建链接。" : "Could not check the result. No creation was retried.");
     } finally { submitLock.current = false; if (mounted.current) setIsCreating(false); }
   }
 
   async function previewCurrentShare(anchorMessageId?: string) {
+    if (unresolved || renderGeneration !== authenticationGeneration()) return;
+    const generation = authenticationGeneration();
+    const sequence = ++currentPreview.current.sequence;
+    const owns = () => mounted.current && generation === authenticationGeneration()
+      && currentPreview.current.sequence === sequence && currentPreview.current.fingerprint === fingerprint;
     setError(null);
     setExpiryError(null);
     if (expiryMode === "custom") {
@@ -179,17 +203,18 @@ export function SharePanel({
         locale: shareLocale,
         share_password: passwordProtected ? sharePassword : null,
       }, anchorMessageId);
-      setPreview(result);
+      if (owns()) setPreview({ fingerprint, value: result });
     } catch (failure) {
-      setError(shareWriteError(failure, zh, "preview"));
+      if (owns()) setError(shareWriteError(failure, zh, "preview"));
     } finally {
-      setIsPreviewing(false);
+      if (mounted.current && currentPreview.current.sequence === sequence) setIsPreviewing(false);
     }
   }
 
   return (
     <section className="min-w-0 overflow-x-hidden">
       <div className="grid gap-4">
+        <fieldset disabled={Boolean(unresolved)} hidden={Boolean(unresolved)} className={unresolved ? "hidden" : "grid min-w-0 gap-4"}>
         <div className={compact ? "hidden" : "grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3"}>
           <label className="text-sm text-secondary">{t("shareTheme")}<select value={shareTheme} onChange={(event) => setShareTheme(event.target.value as "light" | "dark")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="light">{t("light")}</option><option value="dark">{t("dark")}</option></select></label>
           <label className="text-sm text-secondary">{t("shareLanguage")}<select value={shareLocale} onChange={(event) => setShareLocale(event.target.value as "zh-CN" | "en-US")} className="mt-1 w-full rounded-lg border border-ui bg-surface px-3 py-2"><option value="zh-CN">{t("chinese")}</option><option value="en-US">{t("english")}</option></select></label>
@@ -266,44 +291,62 @@ export function SharePanel({
           <PrivacyToggle label={zh ? "包含整本精选笔记" : "Include the entire notebook"} checked={includeNotebook} disabled={contentMode === "frozen"} onChange={setIncludeNotebook} />
           {includeNotebook && useSelection ? <p className="text-xs text-secondary">{zh ? "消息只分享所选部分；笔记仍分享整本，不按消息范围裁剪。请先预览。" : "Only selected messages are shared, but the entire notebook is included. Preview first."}</p> : null}
         </fieldset> : null}
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        {unknownCreation ? <button type="button" disabled={isCreating} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => void checkCreation()}>{zh ? "核对本次创建结果（不重试）" : "Check creation result (read only)"}</button> : null}
+        </fieldset>
+        {error ? <p role="alert" className="text-sm text-[var(--danger)]">{error}</p> : null}
+        {unresolved ? <p role="status" className="text-sm text-secondary">{zh ? "本标签页保留了上一笔创建请求；先核对结果，再按原选项重试。关闭此面板不会另建链接，刷新页面会丢失暂存请求。" : "This tab retained the previous creation request. Check its result before retrying the original options. Closing this panel will not create another link; reloading the page loses the temporary request."}</p> : null}
+        {unresolved ? <details className="text-xs text-secondary"><summary className="min-h-11 cursor-pointer py-3">{zh ? "查看原请求范围" : "Review original request scope"}</summary>
+          <p>{intent.payload.title || (zh ? "未自定义标题" : "No custom title")}</p>
+          <p>{intent.payload.scope === "selected_messages" ? (zh ? `选中 ${intent.payload.selected_message_ids?.length ?? 0} 条消息` : `${intent.payload.selected_message_ids?.length ?? 0} selected messages`) : (zh ? "整个对话" : "Entire conversation")}</p>
+          <ul className="my-2 grid gap-1">{[
+            [zh ? "目录" : "Contents", intent.payload.include_toc],
+            [zh ? "元信息" : "Metadata", intent.payload.include_metadata],
+            [zh ? "说明" : "Description", intent.payload.include_description],
+            [zh ? "批注" : "Annotations", intent.payload.include_annotations],
+            [zh ? "整本笔记" : "Entire notebook", intent.payload.include_notebook],
+            [zh ? "允许访客导出" : "Visitor export", intent.payload.allow_export],
+          ].map(([label, included]) => <li key={String(label)}>{String(label)} · {included ? (zh ? "包含／允许" : "Included / allowed") : (zh ? "不包含／禁止" : "Excluded / disabled")}</li>)}</ul>
+          <p>{intent.payload.share_password ? (zh ? "访问需要密码" : "Access requires a password") : (zh ? "拥有链接即可访问" : "Anyone with the link can access")}</p>
+          <p>{intent.payload.expires_at ? (zh ? `到期：${new Date(intent.payload.expires_at).toLocaleString()}` : `Expires: ${new Date(intent.payload.expires_at).toLocaleString()}`) : (zh ? "不过期" : "Never expires")}</p>
+          <p>{zh ? "密码仅留在内存，不展示或写入本机存储。" : "Any password stays in memory and is never displayed or written to local storage."}</p>
+        </details> : null}
+        {unknownCreation ? <button type="button" disabled={isCreating || intent?.phase === "writing" || intent?.phase === "checking"} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => void checkCreation()}>{intent?.phase === "writing" ? (zh ? "正在等待创建结果…" : "Waiting for the creation result…") : intent?.phase === "checking" ? (zh ? "正在核对…" : "Checking…") : zh ? "核对本次创建结果（不重试）" : "Check creation result (read only)"}</button> : null}
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => void previewCurrentShare()} disabled={isPreviewing || isCreating || (useSelection && selectedMessageIds.length === 0)} className="rounded-lg border border-ui px-3 py-2 text-sm font-medium text-primary disabled:opacity-45">
+          <button type="button" onClick={() => void previewCurrentShare()} disabled={Boolean(unresolved) || isPreviewing || isCreating || (useSelection && selectedMessageIds.length === 0)} className="min-h-11 rounded-lg border border-ui px-3 py-2 text-sm font-medium text-primary disabled:opacity-45">
             {isPreviewing ? (zh ? "正在预览…" : "Previewing…") : (zh ? "预览访客视角" : "Preview visitor view")}
           </button>
           <button
             type="button"
             data-testid="create-share-button"
             onClick={submit}
-            disabled={isCreating || isPreviewing || unknownCreation || (useSelection && selectedMessageIds.length === 0)}
+            disabled={isCreating || isPreviewing || unknownCreation || (!retryOriginal && useSelection && selectedMessageIds.length === 0)}
             className="rounded-lg bg-[var(--text)] px-3 py-2 text-sm font-medium text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-45"
           >
             {isCreating ? t("creating") : retryOriginal ? (zh ? "按原选项重试" : "Retry original options") : t("createShare")}
           </button>
         </div>
-        {preview ? <SharePreviewCard preview={preview} zh={zh} onNavigate={(messageId) => void previewCurrentShare(messageId)} busy={isPreviewing} /> : null}
-        {createdUrl ? (
+        {preview && preview.fingerprint !== fingerprint ? <p role="status" className="text-sm text-secondary">{zh ? "选项或来源已变化，旧预览已失效，请重新预览。" : "Options or source changed. Preview again to review the current scope."}</p> : null}
+        {preview?.fingerprint === fingerprint ? <SharePreviewCard preview={preview.value} zh={zh} onNavigate={(messageId) => void previewCurrentShare(messageId)} busy={isPreviewing} /> : null}
+        {createdUrl || intent?.url ? (
           <div className="rounded-lg border border-ui bg-subtle p-3">
             <a
               data-testid="created-share-url"
-              href={createdUrl}
+              href={createdUrl ?? intent?.url}
               target="_blank"
               rel="noreferrer"
               className="break-all text-sm font-medium text-[#0f766e] hover:underline"
             >
-              {createdUrl}
+              {createdUrl ?? intent?.url}
             </a>
             <div className="mt-2 flex gap-2">
               <a
-                href={createdUrl}
+                href={createdUrl ?? intent?.url}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-lg border border-[#d1d5db] bg-white px-2.5 py-1.5 text-xs font-medium text-[#374151] hover:bg-[#f7f7f8]"
               >
                 {t("open")}
               </a>
-              <ShareUrlCopy key={createdUrl} value={createdUrl} zh={zh} />
+              <ShareUrlCopy key={createdUrl ?? intent?.url} value={(createdUrl ?? intent?.url)!} zh={zh} />
             </div>
           </div>
         ) : null}

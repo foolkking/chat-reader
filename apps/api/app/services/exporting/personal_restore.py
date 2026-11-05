@@ -42,6 +42,12 @@ def restore_personal_archive(db: Session, path: Path, *, owner_user_id: uuid.UUI
         previous = db.get(ArchiveRestoreReceipt, (owner_user_id, expected_digest), populate_existing=True)
         if previous:
             return {**previous.result, "already_restored": True}
+        from app.services.exporting.archive_user_features import (
+            archive_collection_counts, personal_collection_capacity, require_collection_capacity,
+        )
+        require_collection_capacity(personal_collection_capacity(
+            db, owner_user_id, archive_collection_counts(archive), expected_digest, lock=True,
+        ))
         if db.get_bind().dialect.name == "sqlite" and not db.connection().connection.driver_connection.in_transaction:
             # sqlite3 legacy transaction mode otherwise treats the SAVEPOINT
             # as the outer transaction and RELEASE would commit prematurely.

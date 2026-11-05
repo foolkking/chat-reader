@@ -11,6 +11,12 @@ const compiled = ts.transpileModule(source, {
 }).outputText;
 const exports = {};
 new Function("exports", compiled)(exports);
+test("library description and notebook destinations distinguish their panels", () => {
+  const notebook = "/library?conversationId=synthetic&annotations=open&annotation_view=notebook";
+  assert.equal(exports.matchesLibrarySearchTarget(notebook, "conversationId=synthetic&annotations=open&annotation_view=all"), false);
+  assert.equal(exports.matchesLibrarySearchTarget(notebook, "annotation_view=notebook&conversationId=synthetic&annotations=open"), true);
+  assert.equal(exports.matchesLibrarySearchTarget("/library?conversationId=synthetic&description=open", "conversationId=synthetic"), false);
+});
 const base = {
   document_id: "synthetic-document",
   document_type: "message",
