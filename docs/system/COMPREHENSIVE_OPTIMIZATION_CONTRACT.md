@@ -161,6 +161,10 @@ Current candidate source, 2026-11-05; exact-source CI acceptance and limits are 
 - Tags reuse the collection recovery owner: retained create UUID, read-only check,
   explicit same-identity retry and manual conflict review. Search/saved-search
   caches invalidate on confirmed writes; unknown writes are not auto-replayed.
+- Deferred modal-close focus restoration preserves a newer focused control,
+  including a different field in the surviving form after cancelling a nested
+  confirmation. Unowned focus still returns to the connected opener/fallback;
+  a remaining top modal keeps keyboard ownership over the page underneath.
 - Private search backfill persists each item cursor with its index transaction.
   A worker turn handles at most 100 conversations or yields after a two-second
   check at an item boundary. A single expensive item can exceed that time.

@@ -52,7 +52,7 @@ function fixture(overrides = {}) {
     addEventListener: (name, listener) => { assert.equal(name, "keydown"); listeners.add(listener); },
     removeEventListener: (name, listener) => { assert.equal(name, "keydown"); listeners.delete(listener); },
     querySelectorAll: () => document.modals,
-    querySelector: () => trigger,
+    querySelector: () => document.fallback ?? trigger,
   };
   class Element {
     constructor(id, parent = null) {
@@ -79,6 +79,8 @@ function fixture(overrides = {}) {
       document.activeElement = this; calls.focus.push({ id: this.id, options });
     }
   }
+  document.documentElement = new Element("synthetic-document");
+  document.body = new Element("synthetic-body", document.documentElement);
   const trigger = new Element("synthetic-navigation-trigger"), root = new Element("synthetic-navigation-dialog");
   const first = new Element("synthetic-first-control", root), middle = new Element("synthetic-middle-control", root),
     last = new Element("synthetic-last-control", root);
@@ -127,9 +129,10 @@ function fixture(overrides = {}) {
   render();
   return { state, calls, document, root, first, middle, last, trigger, listeners, render, key, flush,
     get options() { return options; }, get panel() { return current.panel; },
-    modal() {
+    element: (id, parent = null) => new Element(id, parent),
+    modal(zIndex = 100) {
       const modal = new Element("synthetic-newer-dialog");
-      modal.modal = true; modal.zIndex = 100;
+      modal.modal = true; modal.zIndex = zIndex;
       const control = new Element("synthetic-newer-control", modal);
       modal.children = [control]; document.modals.push(modal);
       return { modal, control };
@@ -264,5 +267,81 @@ test("delayed cleanup cannot restore behind a newly opened modal", () => {
     f.flush();
     assert.equal(f.document.activeElement, control);
     assert.equal(f.calls.focus.length, before);
+  } finally { f.dispose(); }
+});
+
+test("a cancelled nested modal cannot steal focus from another field in the surviving form", () => {
+  const f = fixture();
+  try {
+    // The trigger represents the first field; the closing root is the higher
+    // confirmation layer. Hold the actual hook's zero-delay restoration timer.
+    const { modal, control } = f.modal(40);
+    f.trigger.parentElement = modal;
+    modal.children = [f.trigger, control];
+    f.state.navigationOpen = false; f.render();
+    control.focus();
+    const before = f.calls.focus.length;
+    f.flush();
+    assert.equal(f.document.activeElement, control);
+    assert.equal(f.calls.focus.length, before, "Do not refocus the old first field");
+    assert.equal(f.listeners.size, 0);
+  } finally { f.dispose(); }
+});
+
+for (const owner of ["body", "document", "closing content", "disconnected"]) {
+  test(`nested cleanup still restores the original field when focus is ${owner}`, () => {
+    const f = fixture();
+    try {
+      const { modal, control } = f.modal(40);
+      f.trigger.parentElement = modal;
+      modal.children = [f.trigger, control];
+      f.state.navigationOpen = false; f.render();
+      if (owner === "body") f.document.activeElement = f.document.body;
+      else if (owner === "document") f.document.activeElement = f.document.documentElement;
+      else if (owner === "disconnected") {
+        const retired = f.element("synthetic-retired-control");
+        retired.isConnected = false; f.document.activeElement = retired;
+      }
+      f.flush();
+      assert.equal(f.document.activeElement, f.trigger);
+      assert.deepEqual(f.calls.focus.at(-1), { id: f.trigger.id, options: { preventScroll: true } });
+    } finally { f.dispose(); }
+  });
+}
+
+test("delayed cleanup preserves a newly focused page control when no modal remains", () => {
+  const f = fixture();
+  try {
+    f.state.navigationOpen = false; f.render();
+    const next = f.element("synthetic-next-page-control", f.document.body);
+    next.focus();
+    const before = f.calls.focus.length;
+    f.flush();
+    assert.equal(f.document.activeElement, next);
+    assert.equal(f.calls.focus.length, before);
+  } finally { f.dispose(); }
+});
+
+test("a newly focused page control cannot bypass the remaining top modal", () => {
+  const f = fixture();
+  try {
+    f.state.navigationOpen = false; f.render();
+    const { control } = f.modal();
+    f.trigger.focus();
+    f.flush();
+    assert.equal(f.document.activeElement, control);
+    assert.deepEqual(f.calls.focus.at(-1), { id: control.id, options: { preventScroll: true } });
+  } finally { f.dispose(); }
+});
+
+test("cleanup retains the page fallback when the old opener was removed", () => {
+  const f = fixture();
+  try {
+    f.state.navigationOpen = false; f.render();
+    f.trigger.isConnected = false;
+    f.document.activeElement = f.document.body;
+    f.document.fallback = f.element("synthetic-reader-fallback", f.document.body);
+    f.flush();
+    assert.equal(f.document.activeElement, f.document.fallback);
   } finally { f.dispose(); }
 });

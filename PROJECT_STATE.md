@@ -8,13 +8,13 @@ Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 | Boundary | Verified snapshot |
 | --- | --- |
-| Source / branch | Existing `master`; recovery/consistency source `82d637d` has a search pointer-intent CI follow-up, not the deployed release |
+| Source / branch | Existing `master`; recovery/consistency source `a16e2c9` has a deferred modal-focus CI follow-up, not the deployed release |
 | Accepted source CI | `41918053083`, exact `46cb51845c100ba9a6e613de0e604405db0729c4`, all six required jobs passed; this does not cover the recovery/consistency follow-up |
 | Production / direct rollback | `be58b12` / `3b839dc`; release pointers independently rechecked **2026-11-04 05:52Z** |
 | Deployed-source CI | `41737744696`, attempt 1, all six jobs passed; result read after the requested 50-minute gate; not candidate CI |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
 | Database | Candidate single head `20261105_0059`; production remains `20261030_0058` |
-| Verification / delivery | Candidate CI `41976927392` passed API/settings/performance and focused Web (45/45), but mutation failed (117 passed / 1 failed); search selection under a stationary pointer is statically repaired and awaits new exact-source CI, with no local application tests or deployment |
+| Verification / delivery | Candidate CI `41988369535` passed API/settings/performance and the search pointer regressions, but mutation failed (117 passed / 1 failed); delayed confirmation cleanup stealing another field's focus is statically repaired and awaits new exact-source CI, with no local application tests or deployment |
 
 The current release adds a bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,

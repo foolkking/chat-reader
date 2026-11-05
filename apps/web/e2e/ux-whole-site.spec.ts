@@ -1,4 +1,22 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test as base, type Page } from "@playwright/test";
+
+const test = base.extend<{ draftFocusTrace: void }>({
+  draftFocusTrace: [async ({ context }, use, info) => {
+    if (!info.title.endsWith("protect drafts, reachable project settings and persisted appearance")) {
+      await use(); return;
+    }
+    await context.tracing.start({ screenshots: true, snapshots: true });
+    let failed = false;
+    try { await use(); } catch (error) { failed = true; throw error; }
+    finally {
+      if (failed || info.status !== info.expectedStatus) {
+        const tracePath = info.outputPath("draft-focus-trace.zip");
+        await context.tracing.stop({ path: tracePath });
+        await info.attach("draft-focus-trace", { path: tracePath, contentType: "application/zip" });
+      } else await context.tracing.stop();
+    }
+  }, { auto: true, timeout: 30_000 }],
+});
 
 test.use({ trace: "off", actionTimeout: 20_000, serviceWorkers: "block", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
 test.skip(process.env.E2E_MUTATION_FLOW !== "1", "Requires an isolated API and worker");
@@ -38,6 +56,7 @@ for (const width of [375, 768, 1440]) for (const zh of [true, false]) {
       await assistantMessage.fill("Synthetic saved response");
       await expect(userMessage).toHaveValue("Synthetic draft remains available");
       await expect(assistantMessage).toHaveValue("Synthetic saved response");
+      await expect(assistantMessage).toBeFocused();
       let block = true;
       await page.route("**/api/conversations", async (route) => {
         if (route.request().method() === "POST" && block) await route.fulfill({ status: 503, json: { detail: "Synthetic save failure" } });

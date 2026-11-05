@@ -109,6 +109,13 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
         const topDialog = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'))
           .filter((item) => item.getClientRects().length > 0)
           .sort(compareModalLayers).at(-1);
+        // Closing a confirmation can finish before its deferred restoration.
+        // If another control already owns focus, preserve that newer intent
+        // (including a different field in the same surviving form).
+        const focused = document.activeElement;
+        if (focused instanceof HTMLElement && focused.isConnected
+          && focused !== document.body && focused !== document.documentElement
+          && !root?.contains(focused) && (!topDialog || topDialog.contains(focused))) return;
         // A newly opened modal owns focus. A closing sibling's delayed restore
         // must not send it back to the page underneath. Nested confirmations may
         // still restore their opener inside the remaining top modal.

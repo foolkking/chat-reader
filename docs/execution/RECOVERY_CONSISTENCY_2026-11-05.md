@@ -282,3 +282,41 @@ The previous offset/final-page, mixed-type grouping and destination assertions
 are retained. No workflow, timeout, retry or skip change; no local application
 tests/processes or deployment. These additions await the next exact-source
 full CI under a fresh 50-minute identity-verified result-read boundary.
+
+## CI follow-up: deferred confirmation cleanup respects newer field focus
+
+Run **`41988369535`, attempt 1**, source
+`a16e2c9ba34f0ab5c18cd18241c7008c58caab4a`, was first read at
+**2026-11-05 08:26:08.145Z**, after **08:26:07.792Z**. API, settings and
+performance passed. Both stationary-pointer pagination variants passed, but
+mutation remained **117 passed / 1 failed**. Image/artifact jobs were skipped;
+this failed run is not acceptance for the candidate.
+
+Web job `127114427107` and its uploaded failure snapshot show that, after
+cancelling the discard confirmation, filling the assistant field appended its
+text to the already-filled user field. Tracing was disabled for that flow, so
+the snapshot alone does not establish the exact scheduling order. Source review
+finds a concrete race: the shared dialog hook defers returning focus to the
+opener by a zero-delay timer. Its existing top-modal guard permits restoration
+to the first field even after another field in that same remaining form has
+taken focus. The two controlled text values and setters are otherwise separate.
+
+The hook now preserves connected focus outside the closing root when it belongs
+to the surviving top modal, or to the page if no modal remains. Body/document,
+disconnected and still-closing focus continue to restore the opener/fallback.
+The existing top-modal fence still prevents returning focus to the page beneath
+another dialog.
+
+Eight deterministic timer-barrier cases execute the actual shared hook through
+the existing Share focus harness: another field in the surviving form, four
+unowned/closing focus states, a newer page control, top-modal priority and a
+removed opener's fallback. These adapters are not mounted React or a browser.
+The existing six viewport/locale browser flows retain their exact field-value,
+failed-save, retry and persistence assertions, add the assistant-focus check,
+and retain failure-only traces. No wait is added before the problematic fill.
+
+Local verification is syntax parsing, static review and diff/preservation checks
+only; the new regressions are **not locally executed**. No test gate, action
+timeout, retry/skip policy, dependency, migration or deployment changes.
+Submission archives the old handoff and assigns the new exact source/run a
+fresh first-check boundary at least 50 minutes after identity verification.
