@@ -406,3 +406,48 @@ New cases remain **authored, not locally executed**. Static parsing/review and
 diff/preservation checks precede the new commit; full exact-source CI remains the
 acceptance authority under another fresh 50-minute dispatch boundary. The image
 jobs skipped in the failed run do not count as accepted. No deployment.
+
+## CI follow-up: Skill upload commands capture the submitted draft
+
+Run **`42018704204`, attempt 1**, exact source
+`95d175690b211113c2b7e6e859d33e9b9623afae`, was first successfully read at
+**2026-11-05 12:15:12.662Z**, after **12:14:39.634Z**. An earlier due-time
+lookup hit a TLS timeout, not a result. API/settings/performance passed.
+Web job `127215658155` failed Context **35 passed / 1 failed**: the 768px
+Chinese upload flow could not find its explicitly named Skill. The snapshot
+instead shows one personal `browser-skill` row and a cleared upload form;
+the API log records a successful POST and list refresh. Later Web gates and
+image/inspection jobs were not accepted.
+
+The API preserves the submitted name; the front end supplies the filename only
+when its captured name is blank. Its upload mutation previously closed over
+render state without variables, whereas the installed TanStack hook refreshes
+observer options in a passive effect. This is an independently identifiable
+stale-command boundary. The failed test had neither intermediate name assertions
+nor a trace, so the evidence cannot prove whether its particular name was lost
+during input or selected from an older mutation closure. Do not present that
+unobserved event ordering as established fact.
+
+The bounded repair passes category, scope, name and file from the current Save
+handler as one command. Validation/default-name behavior remains in the actual
+mutation; completion refresh uses that command's scope. Eight deterministic
+cases exercise compiled component handlers and the installed MutationObserver
+while holding option effects: name-first/file-first, replacing both fields,
+ZIP/Markdown blank-name fallback, failed upload with explicit corrected retry,
+pending acknowledgement and invalid-file retention. Controlled hooks/transport
+are not mounted React/browser evidence; these cases are authored but not locally
+executed.
+
+The existing six real-browser flows now assert the name before/after file
+selection, exact POST 201 response name/revision, and listed identity/name.
+They retain prefer/rename/replace/reopen, old/new ZIP bytes and responsive checks.
+The response ID is captured before assertions so cleanup targets only this
+synthetic fixture even on a name mismatch. The spec retains failure-only traces.
+No input rewrite, automatic retry, sleep, forced click, budget/timeout change or
+weakened assertion is used.
+
+Evidence lives in the identifiable desktop batch
+`chat-reader-skill-fix8-20261105`; the authoritative handoff points to the current
+batch/run. Static syntax/source review and preservation checks only are local.
+The new dispatch must pass every exact-source gate after its own identity-verified
+50-minute boundary. No local application processes, user ZIP replay or deployment.

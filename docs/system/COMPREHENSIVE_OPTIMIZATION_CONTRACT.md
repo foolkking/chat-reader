@@ -120,6 +120,10 @@ capacity limits stay enforced; streaming package redesign is not introduced.
 Current candidate source, 2026-11-05; exact-source CI acceptance and limits are recorded in
 [the implementation receipt](../execution/RECOVERY_CONSISTENCY_2026-11-05.md).
 
+- Personal Skill upload submits the current name/file/category together as
+  mutation variables, not a passive observer option's captured draft. Blank names
+  still default to the filename; rejected writes retain the selected file/name
+  until explicit retry or discard. No automatic upload is added.
 - Source drafts coalesce dependency changes for 300 ms; close/pagehide/hidden
   visibility flush the latest revision. Returning to the saved baseline retires
   and removes the editor's own row. The first editing baseline includes version

@@ -5,10 +5,17 @@ import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 test.use({ trace: "off", actionTimeout: 15_000 });
 test.skip(process.env.E2E_CONTEXT_BUNDLES !== "1", "Requires an isolated Context fixture API");
 test.beforeEach(async ({ page, playwright, baseURL }) => {
+  await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
   if (process.env.E2E_SETTINGS_MAILBOX !== "1") return;
   const admin = await settingsAdmin(playwright.request, baseURL!);
   await page.context().addCookies((await admin.storageState()).cookies);
   await admin.dispose();
+});
+test.afterEach(async ({ page }, testInfo) => {
+  const failed = testInfo.status !== testInfo.expectedStatus;
+  const path = failed ? testInfo.outputPath("skill-bundles-failure-trace.zip") : undefined;
+  await page.context().tracing.stop({ path });
+  if (path) await testInfo.attach("skill-bundles-failure-trace", { path, contentType: "application/zip" });
 });
 
 const bundle = (script: string) => Buffer.from(zipSync({
@@ -35,13 +42,24 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       const dialog = await openSkills(page, width);
       await expect(dialog.getByRole("button", { name: "English", exact: true })).toHaveCount(0);
       await dialog.getByRole("button", { name: /上传我的 Skill|Upload my Skill/, exact: true }).click();
-      await dialog.getByLabel(/Skill 名称|Skill name/, { exact: true }).fill(name);
+      const nameInput = dialog.getByLabel(/Skill 名称|Skill name/, { exact: true });
+      await nameInput.fill(name);
+      await expect(nameInput).toHaveValue(name);
       await dialog.getByLabel(/选择 Skill ZIP|Choose a Skill ZIP/).setInputFiles({ name: "browser-skill.zip", mimeType: "application/zip", buffer: bundle(script) });
+      await expect(nameInput).toHaveValue(name);
+      const createdPromise = page.waitForResponse(response =>
+        new URL(response.url()).pathname === "/api/skills" && response.request().method() === "POST");
       await dialog.getByRole("button", { name: /保存 Skill|Save Skill/, exact: true }).click();
+      const created = await createdPromise;
+      expect(created.status()).toBe(201);
+      const saved = await created.json();
+      id = saved.id; // Clean up this exact fixture even if its name assertion fails.
+      expect(saved.name).toBe(name);
+      expect(saved.bundle_revision).toBe(1);
       const row = dialog.locator("article").filter({ hasText: name });
       await expect(row).toBeVisible();
       const listing = await (await page.request.get("/api/skills?category=EXPORT_CONTEXT&locale=en")).json();
-      id = listing.find((item: { name: string }) => item.name === name).id;
+      expect(listing.find((item: { id: string }) => item.id === id)?.name).toBe(name);
       await row.getByRole("button", { name: /设为首选|Set as preferred/, exact: true }).click();
       await expect.poll(async () => (await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en")).json()).id).toBe(id);
       expect((await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=zh-CN")).json()).id).toBe(id);
