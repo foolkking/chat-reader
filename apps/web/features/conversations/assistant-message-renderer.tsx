@@ -323,6 +323,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
 
     return shouldAdjustMeasuredRow(item, instance);
   };
+  const measureRow = useReaderVirtualRowMeasurement(virtualizer);
 
   useVirtualLayoutMeasurements(
     containerRef,
@@ -332,7 +333,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
     setScrollMargin,
     setLayoutMetrics,
     virtualizer.measure,
-    virtualizer.measureElement,
+    measureRow,
   );
   useVirtualMessageRegistration(messageId, indexByBlock, setPinnedVirtualIndexes);
   useSelectionBlockPinning(containerRef, blocks, indexByBlock, setSelectionPinnedIndexes);
@@ -344,7 +345,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
     "element",
     scrollMargin,
     setScrollMargin,
-    virtualizer.measureElement,
+    measureRow,
   );
   useLayoutEffect(() => {
     if (virtualItems.length > 0 || blocks.length === 0) return;
@@ -366,7 +367,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
         return (
           <Fragment key={String(item.key)}>
             {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
-            <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
+            <VirtualBlockRow itemIndex={item.index} measureElement={measureRow} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
               {unit.kind === "attachment-group" ? <AttachmentBlockGroup messageId={messageId} blocks={unit.blocks} previousBlock={null} hasLeadingContent={false} /> : <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />}
             </VirtualBlockRow>
           </Fragment>
@@ -412,6 +413,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     if (root?.dataset.readerGeometryCompensating === "true") return false;
     return shouldAdjustMeasuredRow(item, instance);
   };
+  const measureRow = useReaderVirtualRowMeasurement(virtualizer);
 
   useVirtualLayoutMeasurements(
     containerRef,
@@ -421,7 +423,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     setScrollMargin,
     setLayoutMetrics,
     virtualizer.measure,
-    virtualizer.measureElement,
+    measureRow,
   );
   useVirtualMessageRegistration(messageId, indexByBlock, setPinnedVirtualIndexes);
   useSelectionBlockPinning(containerRef, blocks, indexByBlock, setSelectionPinnedIndexes);
@@ -433,7 +435,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
     "window",
     scrollMargin,
     setScrollMargin,
-    virtualizer.measureElement,
+    measureRow,
   );
   useLayoutEffect(() => {
     if (virtualItems.length > 0 || blocks.length === 0) return;
@@ -455,7 +457,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
         return (
           <Fragment key={String(item.key)}>
             {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
-            <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
+            <VirtualBlockRow itemIndex={item.index} measureElement={measureRow} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
               {unit.kind === "attachment-group" ? <AttachmentBlockGroup messageId={messageId} blocks={unit.blocks} previousBlock={null} hasLeadingContent={false} /> : <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />}
             </VirtualBlockRow>
           </Fragment>
@@ -927,6 +929,27 @@ function buildVirtualFlow(items: VirtualFlowItem[], scrollMargin: number, totalS
     rows,
     gapAfter: Math.max(0, totalSize - cursor),
   };
+}
+
+function useReaderVirtualRowMeasurement(virtualizer: {
+  isScrolling: boolean;
+  measureElement: (element: Element | null) => void;
+  resizeItem: (index: number, size: number) => void;
+}) {
+  return useCallback((element: Element | null) => {
+    virtualizer.measureElement(element);
+    // TanStack defers ref measurements while scrolling. These rows use
+    // natural flow, so an unmeasured newly mounted row already contributes
+    // its real height. If it leaves the range before the deferred RO callback,
+    // its spacer still uses the estimate: compensation toggles it in/out and
+    // repeatedly adds/removes that same height error. Cache the real mounted
+    // geometry in this commit; do not reset other rows or write scroll here.
+    if (!element?.isConnected || !virtualizer.isScrolling) return;
+    const index = Number(element.getAttribute("data-index"));
+    if (!Number.isInteger(index) || index < 0 || !element.hasAttribute("data-index")) return;
+    const height = element.getBoundingClientRect().height;
+    if (Number.isFinite(height) && height > 0) virtualizer.resizeItem(index, height);
+  }, [virtualizer]);
 }
 
 function VirtualBlockRow({ itemIndex, measureElement, gapAfter, children }: {

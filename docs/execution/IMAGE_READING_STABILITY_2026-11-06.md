@@ -210,3 +210,39 @@ API/settings/performance 通过，build/inspect 未执行，仍不是全门禁�
 本地仅 TypeScript（禁止 incremental）、lint、语法和静态差异检查。
 继续只在现有 master 提交派发，唯一交接重新计算至少 50 分钟门限；
 没有新安排，原回查仍暂停，本轮不部署。
+
+## 第六轮精确 CI：自然流虚拟行的异步测量空档
+
+源码 `18bfef7564aaab5cb79132d0edd2fe705be0bf7f`、run `42200992332`
+attempt 1，在 2026-11-06 11:03:38.395Z 首读（本次门限为
+11:03:38.094Z）。Node **2082/2082**，九项新回归全部执行；但 focused
+Reader 字体/间距用例再次出现 25px，focused **44/45**。后续新阅读门禁
+未执行，不能把上一轮 21/23 或其他成功替代本轮验收。Web job
+`127835970309` 失败；API/settings/performance 通过，镜像后续 job 跳过。
+
+精确 Web 制品 `13494448288`，12,603,248 bytes，SHA-256
+`feb0d86f4558e1172de718d90fbdabaa85ca294206da3e36a90e1e489b10884c`。
+合成 trace、3,684 帧 ownership 数据、虚拟行快照解析保存在
+`C:\Users\86182\Desktop\wkkk\chat-reader-images-reading-fix6-20261106`。
+
+这次新增连续观测明确了之前缺失的链路：Spacious 生效后，目标消息首个
+挂载行在 31/32 间反复切换，页面高在 137224/137199 之间、scrollTop 在
+49109/49134 之间交替。快照显示第 31 行是 heading 前的 paragraph，估算
+92px；真实自然流包含 heading gap，产生约 **25.28125px** 的高度差。
+布局所有权结束时再发生一次 -25.28125px 几何修正，最终留下 25px。
+不是原布局锁再次永久泄漏，也不是 Compare 精度修改导致的路径。
+
+安装的 TanStack 在 `isScrolling` 时跳过 ref 同步测量，等待下一 RAF 的
+ResizeObserver。自然流行已经贡献真实高度，却可能因补偿改变范围而在
+该回调前卸载；回到 spacer 时仍采用估算值，形成测量/补偿循环。
+修复在两个虚拟渲染器统一 row measurement adapter：保留原观察器注册/
+清理，滚动中的有效已连接行立即将真实高度写入该行 size cache；显式字体/
+栏宽重测也走同一 adapter。**不写滚动、不清空全页缓存、不改变虚拟阈值、
+overscan 或补偿等待时长**。
+
+七项新增回归使用实际安装的 TanStack core 和实际 Reader helper，覆盖
+25.28125px 估算差、快速挂卸、显式重测、idle/null/disconnected/零尺寸及
+element/window 接线。浏览器偏好证据追加逐行位置/高度，原 24px 断言及
+全部后续用例不变。新增测试仅编写和语法审查，实际执行留给下一轮完整 CI。
+本地仍仅静态检查；11 项原文件保全，现有 master，新交接/50 分钟门限，
+没有新安排或部署。
