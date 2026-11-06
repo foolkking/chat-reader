@@ -795,6 +795,7 @@ export function ConversationReader({
 
   const markReaderScrollIntent = useCallback((direction: ScrollDirection = null) => {
     const root = scrollContainerRef.current;
+    if (root?.dataset.readerViewerLocked === "true") return;
     userScrollIntentRef.current = true;
     scrollIntentSequenceRef.current += 1;
     geometryTransitionRef.current += 1;
@@ -2167,6 +2168,7 @@ export function ConversationReader({
         || root.dataset.readerLayoutCompensating === "true"
         || root.dataset.readerSurfaceCompensating === "true"
         || root.dataset.readerGeometryCompensating === "true"
+        || root.dataset.readerViewerLocked === "true"
         || navigationInProgressRef.current
         || restoreInProgressRef.current
         || edgeTransitionRef.current !== null
@@ -2186,6 +2188,7 @@ export function ConversationReader({
           && !restoreInProgressRef.current
           && edgeTransitionRef.current === null
           && root.dataset.readerPointerDragging !== "true"
+          && root.dataset.readerViewerLocked !== "true"
         ),
         minimumMs: 80,
         settleMs: 80,
@@ -2223,6 +2226,7 @@ export function ConversationReader({
         root.dataset.readerLayoutCompensating === "true" ||
         root.dataset.readerGeometryCompensating === "true" ||
         root.dataset.readerSurfaceCompensating === "true" ||
+        root.dataset.readerViewerLocked === "true" ||
         scrollIntentSequenceRef.current <= lastPersistedIntentRef.current
       ) {
         return;
@@ -2263,6 +2267,11 @@ export function ConversationReader({
     const onPageHide = () => sendCachedPosition();
     const onScroll = () => {
       const current = root.scrollTop;
+      if (root.dataset.readerViewerLocked === "true") {
+        pointerScrollTopRef.current = current;
+        scheduleActiveSample();
+        return;
+      }
       const scrollDelta = Math.abs(current - pointerScrollTopRef.current);
       if (scrollDelta > Math.max(1200, root.clientHeight * 1.5)) {
         // Home/End, accessibility tooling and scrollbar track jumps do not

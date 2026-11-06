@@ -83,7 +83,7 @@ function fixture() {
     if (!map.has(name)) map.set(name, new Set());
     map.get(name).add(callback);
   };
-  const emit = (map, name) => { for (const callback of [...(map.get(name) ?? [])]) callback(); };
+  const emit = (map, name, event) => { for (const callback of [...(map.get(name) ?? [])]) callback(event); };
   const window = {
     scrollY: 0, performance: { now: () => now },
     addEventListener: (name, callback) => add(events, name, callback),
@@ -124,10 +124,11 @@ function fixture() {
   render();
   return { state, calls, handlers, events, frames, timers, render, advance,
     scroll(delta = 10) { window.scrollY += delta; emit(events, "scroll"); },
-    compensate(active) {
-      if (active) document.documentElement.dataset.readerGeometryCompensating = "true";
-      else delete document.documentElement.dataset.readerGeometryCompensating;
+    compensate(active, owner = "readerGeometryCompensating") {
+      if (active) document.documentElement.dataset[owner] = "true";
+      else delete document.documentElement.dataset[owner];
     },
+    input(name, event = {}) { emit(events, name, event); },
     frame() {
       const callbacks = [...frames.values()]; frames.clear();
       for (const callback of callbacks) callback();
@@ -154,7 +155,8 @@ test("successful idle saving retains the exact key/bytes and cached unload does 
   } finally { f.dispose(); }
 });
 
-test("geometry correction refreshes layout without becoming user direction or persisted progress", () => {
+for (const owner of ["readerGeometryCompensating", "readerViewerLocked"]) {
+test(`${owner}: correction refreshes layout without becoming user direction or persisted progress`, () => {
   const f = fixture();
   try {
     // A correction can arrive during an existing reading session. It must not
@@ -162,7 +164,7 @@ test("geometry correction refreshes layout without becoming user direction or pe
     f.state.userScrollIntentRef.current = true;
     f.state.scrollDirectionRef.current = "down";
     const latest = f.state.latestStablePositionRef.current;
-    f.compensate(true);
+    f.compensate(true, owner);
     f.scroll(-36);
     f.frame();
     f.advance(2000);
@@ -179,7 +181,7 @@ test("geometry correction refreshes layout without becoming user direction or pe
 
     // Use the corrected coordinate as the baseline for the next actual scroll.
     // Comparing -16 to the old zero instead would falsely report upward input.
-    f.compensate(false);
+    f.compensate(false, owner);
     f.scroll(20);
     assert.equal(f.state.scrollDirectionRef.current, "down");
     f.advance(1000);
@@ -188,12 +190,12 @@ test("geometry correction refreshes layout without becoming user direction or pe
   } finally { f.dispose(); }
 });
 
-test("an already queued idle writer cannot capture or flush while geometry owns the scroller", () => {
+test(`${owner}: an already queued idle writer cannot capture or flush while another owner holds the scroller`, () => {
   const f = fixture();
   try {
     f.scroll();
     f.advance(500);
-    f.compensate(true);
+    f.compensate(true, owner);
     f.scroll(-4);
     f.advance(500);
     f.pagehide(); f.hide();
@@ -202,13 +204,44 @@ test("an already queued idle writer cannot capture or flush while geometry owns 
     assert.equal(f.state.positionStorageDisabledRef.current, null);
     assert.equal(f.state.storageKey, key);
 
-    f.compensate(false);
+    f.compensate(false, owner);
     f.advance(2000);
     assert.deepEqual(f.calls.writes, []);
     f.scroll();
     f.advance(1000);
     assert.deepEqual(f.calls.writes, [{ key, bytes: JSON.stringify(position) }]);
     assert.equal(f.calls.captures, 1);
+  } finally { f.dispose(); }
+});
+}
+
+test("Viewer controls never unlock Share navigation, load an edge or change user direction", () => {
+  const f = fixture();
+  try {
+    f.frame();
+    const refreshes = f.calls.refresh.length;
+    let edges = 0;
+    f.state.previousSentinelVisibleRef.current = true;
+    f.state.nextSentinelVisibleRef.current = true;
+    f.state.loadPreviousActionRef.current = () => edges++;
+    f.state.loadNextActionRef.current = () => edges++;
+    f.compensate(true, "readerViewerLocked");
+    for (const name of ["pointerdown", "touchstart", "click"]) f.input(name);
+    f.input("wheel", { deltaY: -40 });
+    f.input("keydown", { key: "ArrowDown" });
+    f.advance(500); f.frame();
+    assert.equal(edges, 0);
+    assert.equal(f.calls.refresh.length, refreshes);
+    assert.equal(f.state.userScrollIntentRef.current, false);
+    assert.equal(f.state.scrollIntentSequenceRef.current, 0);
+    assert.equal(f.state.navigationTokenRef.current, 0);
+    assert.equal(f.state.scrollDirectionRef.current, null);
+    f.compensate(false, "readerViewerLocked");
+    f.input("wheel", { deltaY: 40 }); f.frame();
+    assert.equal(edges, 1);
+    assert.equal(f.state.scrollIntentSequenceRef.current, 1);
+    assert.equal(f.state.scrollDirectionRef.current, "down");
+    assert.equal(f.calls.refresh.at(-1), true);
   } finally { f.dispose(); }
 });
 

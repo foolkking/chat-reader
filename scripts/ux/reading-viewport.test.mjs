@@ -78,3 +78,28 @@ test("explicit navigation owns its layout round and independent Compare scroller
   assert.equal(f.second.scrollTop, 0);
   release1(); release2();
 });
+
+test("Viewer owns only its scroller; modal input and its return cannot revive a stale geometry anchor", () => {
+  const f = fixture(), release1 = f.observeReadingViewport(f.content(f.root)), release2 = f.observeReadingViewport(f.content(f.second));
+  f.frame();
+  f.root.dataset.readerViewerLocked = "true";
+  for (const type of ["pointerdown", "wheel", "touchstart", "touchmove"]) f.root.dispatchEvent(new Event(type));
+  f.root.dispatchEvent(new f.KeyboardEvent("ArrowDown"));
+  assert.deepEqual(f.cancelled, []);
+  f.root.flowTop += 90; f.second.flowTop += 12; f.resize(); f.frame();
+  assert.equal(f.root.scrollTop, 0);
+  assert.equal(f.second.scrollTop, 12);
+  // The viewer restores its real occurrence before releasing ownership. The
+  // geometry owner must rebase, not repeat that correction against old data.
+  f.root.scrollTop = 90;
+  f.root.dispatchEvent(new Event("scroll"));
+  delete f.root.dataset.readerViewerLocked;
+  f.root.dispatchEvent(new Event("chat-reader:position-released")); f.frame();
+  assert.equal(f.root.scrollTop, 90);
+  assert.equal(f.corrections.filter(row => row.scroller === f.root).length, 0);
+  f.root.flowTop += 8; f.resize();
+  assert.equal(f.root.scrollTop, 98);
+  f.frame(); f.root.dispatchEvent(new Event("wheel"));
+  assert.deepEqual(f.cancelled, [f.root]);
+  release1(); release2();
+});

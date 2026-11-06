@@ -40,7 +40,7 @@
 
 - 本地仅静态 TypeScript/lint/语法/差异与保全审查；未运行应用测试。
 - 新 `reading-stability` 纳入完整 release workflow 与汇总，另有强制验收脚本：
-  所有新增用例实际通过且无 skip，16 个组合各有 stopped/down/up 全帧证据。
+  所有新增用例实际通过且无 skip，16 个组合各有 stopped/down/up/Viewer 全帧证据。
 - 固定框变化 ≤1px；无输入时锚点逐帧峰值 ≤2px、最终 ≤1px。
   连续阅读检查反向位移，并记录窗口高度和实际挂载/锚点。
 - 旧导航、字体/宽度/侧栏/滚动条、搜索/批注、容量、内存、安全、
@@ -68,3 +68,40 @@ Web lint、typecheck、production build 已通过；Node 回归为 **2033/2040**
 本地仍只做语法、静态检查和原文件保全，应用回归由下一轮完整精确 CI 执行。
 修复证据批次为 `C:\Users\86182\Desktop\wkkk\chat-reader-images-reading-fix1-20261106`；
 当前派发身份与新的至少 50 分钟门限仍只读唯一交接 JSON。
+
+## 第二轮精确 CI：新阅读门禁失败与修复
+
+源码 `6209ffbb497605308653d3125adac933dca10938`、run `42161647311`
+attempt 1 在 2026-11-06 05:36:37Z 回查（晚于该 run 的 05:07:54Z 门限）。
+API、settings、performance job 通过；Web job `127708486371` 失败，
+后续镜像构建/检查未执行。Web Node **2042/2042**，Context 36、focused 45、
+Share 2、mutation 118、cleanup 6、upload 18、Markdown 31 等前置专项通过；
+新的 `reading-stability` 为 **5 passed / 17 failed / 1 timedOut / 0 skipped**，
+其后门禁未执行，不能认定 Web 或完整 CI 通过。
+
+下载精确 Web 证据制品 `13478159720`，SHA-256
+`a465afc1a5bfd905917acc7bdbcd692e8938fbaec197c52fc5c21e1c5bc69f00`；
+失败日志、合成上下文、部分逐帧数据及核验回执位于
+`C:\Users\86182\Desktop\wkkk\chat-reader-images-reading-fix2-20261106`。
+
+| 证据和原因 | 处理 |
+| --- | --- |
+| 全新 Reader/Offline 没有定位事务，不发布 `navigationStage`；测试却一直等 settled | 以实际几何 owner 就绪及 fresh/settled 为前提；显式隐藏图片定位仍严格等待真实目标和 settled |
+| 普通长页包含远离视口、尚未请求的 lazy 图片；全篇 `img.complete` 不可能保证 | 对受控首组五张图片检查完整解码且 naturalWidth>0；另一个用例仍逐组滚动覆盖全部图片和宽度 |
+| 手机 Offline 状态在未打开的侧栏；桌面 shell 已就绪不等于包和附件下载完成 | 验证实际消息、六个原 SHA 缓存及字节数，再显式打开状态侧栏并离线；没有延长等待、跳过用例或拿在线缓存替代 |
+| Compare Sections 是当前消息范围，初始用户消息不是助手长文 | 从真实 Dialogue index 选择助手，再验证深目录真实虚拟块与另一滚动容器不变 |
+| 隐藏图片测试的 block limit=300 超过既有 API 上限 200，返回 422 | 使用既有合法上限，保持真实隐藏 occurrence/五个预览位断言，不改 API 限制 |
+| 375px 虚拟 Share 的 Viewer 返回发生 598px 偏移；此前 stopped/down/up 逐帧正常 | 修复窗口恢复错误使用 x/y（浏览器需要 left/top）、锁定晚于模态焦点，以及 Viewer/普通几何补偿和进度保存缺少所有权隔离 |
+
+Viewer 锁移到焦点前的 layout effect，保存来源容器与真实触发 occurrence，
+关闭时一次补偿实际位移；下一帧释放所有权并重新采锚。独立 Compare 不跨
+容器恢复；Reader/Share 不把 Viewer 控制输入或返回滚动记为阅读意图/进度。
+共享模态初始/兜底焦点禁止隐式滚动。新增实际源码的窗口坐标、锁生命周期、
+重开/嵌套、真实触发位置和 Compare 隔离回归，以及几何 owner、Share 保存与
+模态输入的覆盖。**这些代码缺陷与失败现象相关，但旧证据没有完整 Viewer
+逐帧链，不能声称已证明 598px 的唯一完整原因。**
+
+新门禁为全部 16 组合增加 Viewer 开关全帧峰值/最终位移断言和制品校验，
+强制 **64** 份轨迹；失败时也保留已有部分逐帧数据。23 个用例、所有旧门禁、
+预算、超时和零 skip 要求不变。本轮仍只做本地静态检查，新增回归须由下一次
+完整精确源码 CI 执行；未部署。新 SHA/run/至少 50 分钟门限以交接 JSON 为准。

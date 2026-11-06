@@ -181,6 +181,7 @@ test("opening the actual gated tablet hook focuses inside and wraps only Tab bou
   try {
     f.state.navigationOpen = true; f.render();
     assert.equal(f.document.activeElement, f.first);
+    assert.deepEqual(f.calls.focus.at(-1).options, { preventScroll: true });
     assert.equal(f.listeners.size, 1);
     f.middle.focus(); assert.equal(f.key("Tab").prevented, false);
     f.last.focus(); assert.equal(f.key("Tab").prevented, true);
@@ -343,5 +344,6 @@ test("cleanup retains the page fallback when the old opener was removed", () => 
     f.document.fallback = f.element("synthetic-reader-fallback", f.document.body);
     f.flush();
     assert.equal(f.document.activeElement, f.document.fallback);
+    assert.deepEqual(f.calls.focus.at(-1).options, { preventScroll: true });
   } finally { f.dispose(); }
 });

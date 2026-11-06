@@ -136,7 +136,7 @@ test("gallery next reads the latest selected item on every key press", () => {
 });
 for (const [label, event] of [["browser zoom", { key: "+", ctrlKey: true }], ["editable input", { key: "ArrowRight", target: { closest: () => ({}) } }], ["handled key", { key: "ArrowRight", defaultPrevented: true }]]) {
   test("viewer shortcut leaves " + label + " alone", () => {
-    const effect = find(node => ts.isCallExpression(node) && node.expression.getText(source) === "useEffect" && node.arguments[0]?.getText(source).includes("acquireViewerScrollLock();"));
+    const effect = find(node => ts.isCallExpression(node) && node.expression.getText(source) === "useEffect" && node.arguments[0]?.getText(source).includes("isViewerShortcut(event)"));
     let handler, actions = 0;
     const document = { addEventListener: (_, callback) => { handler = callback; }, removeEventListener: noop, querySelector: () => ({ click: () => { actions += 1; } }) };
     const scope = { ...policy, document, session: { items: [{ itemKey: "a" }, { itemKey: "b" }] },

@@ -22,7 +22,7 @@ function initialFocusable(root: HTMLElement): HTMLElement | null {
 
 function focusFallback() {
   const fallback = document.querySelector<HTMLElement>("[data-reader-focus-fallback], main button, main a");
-  fallback?.focus();
+  fallback?.focus({ preventScroll: true });
 }
 
 function modalLayers(element: HTMLElement): HTMLElement[] {
@@ -60,7 +60,7 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
     const root = rootRef.current;
     const preferred = initialFocusRef?.current;
     const first = root ? initialFocusable(root) : null;
-    (preferred?.isConnected ? preferred : first ?? root)?.focus();
+    (preferred?.isConnected ? preferred : first ?? root)?.focus({ preventScroll: true });
     const onKeyDown = (event: KeyboardEvent) => {
       // Candidate cancellation/selection belongs to the IME, and child controls
       // can already own Escape/Tab. Never turn either into a modal command.

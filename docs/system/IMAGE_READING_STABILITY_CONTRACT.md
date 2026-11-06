@@ -65,6 +65,14 @@ Reader geometry loop yield to the same owner. Wheel, touch, relevant keys and
 pointer actions invalidate an older position lease. Layout flags distinguish
 programmatic corrections from user intent and reading-position writes.
 
+Viewer captures its originating scroller and real trigger before modal focus.
+Window restoration uses `left/top`; element scrollers restore their own
+occurrence without touching the opposite Compare pane. Modal input/return
+events do not become reading intent or persistent progress. The Viewer owns
+that scroller through the return frame, then releases it for a fresh geometry
+anchor; there is no deferred loop restoring a stale scroll position. Initial
+and fallback modal focus use `preventScroll`.
+
 Ordinary and heavy messages share image display units and grid estimates.
 Measured row caches survive ordinary image/content resize; width/font/density
 changes may remeasure. Code tokenization retains the same inline newline/blank
@@ -83,8 +91,16 @@ Each stationary case records every animation-frame anchor, mounted count,
 scroll coordinate, frame dimensions and compensation source. Required peak
 anchor displacement ≤2 CSS px, final ≤1px, fixed image frame change ≤1px.
 Directional samples inspect both the real anchor and scroll coordinate, not
-only the final screenshot. `verify-reading-stability.mjs` rejects missing
-traces, missing cases, skipped cases and invalid evidence. Existing navigation,
+only the final screenshot. Each of the 16 matrix entries also retains a
+full-frame Viewer open/close trace with the same peak/final displacement
+limits (64 required traces total). A failed case retains any partial trace.
+Fresh Reader readiness does not invent a navigation transaction; Offline
+network isolation starts only after canonical messages and all source-bound
+fixture assets exist in its own package/cache. Lazy offscreen images are not
+misreported as broken because no request has begun; controlled visible images
+must decode successfully, not merely report `complete`.
+`verify-reading-stability.mjs` rejects missing traces, missing cases, skipped
+cases and invalid evidence. Existing navigation,
 capacity, memory, security, copy and offline gates remain required.
 
 See [execution record](../execution/IMAGE_READING_STABILITY_2026-11-06.md)

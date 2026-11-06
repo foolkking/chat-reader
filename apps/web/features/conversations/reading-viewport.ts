@@ -36,6 +36,7 @@ function createOwner(root: HTMLElement) {
   root.dataset.readerGeometryOwner = "viewport";
   const offset = () => windowMode ? window.scrollY : root.scrollTop;
   const busy = () => readerPositionBusy(scrollRoot)
+    || root.dataset.readerViewerLocked === "true"
     || root.dataset.navigationStage?.startsWith("aligning:")
     || root.dataset.readerPointerDragging === "true"
     || root.dataset.readerLayoutCompensating === "true"
@@ -109,6 +110,7 @@ function createOwner(root: HTMLElement) {
   const onScroll = () => { if (!writing) scheduleCapture(); };
   const onPositionReleased = () => { rebaseAfterExplicitPosition = true; scheduleCapture(); };
   const onIntent = (event: Event) => {
+    if (root.dataset.readerViewerLocked === "true") return;
     if (event instanceof KeyboardEvent) {
       if (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " ", "j", "k"].includes(event.key)
         || (event.target as HTMLElement | null)?.closest("input,textarea,select,[contenteditable=true]")) return;

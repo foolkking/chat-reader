@@ -632,6 +632,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     let pendingUnlock = false;
     const canPersist = () => active && Boolean(storageKey) && storageIsCurrent
       && navigationVisit.active && positionStorageDisabledRef.current !== navigationVisit
+      && document.documentElement.dataset.readerViewerLocked !== "true"
       && document.documentElement.dataset.readerGeometryCompensating !== "true";
     const writePosition = (position: PersistedSharePosition) => {
       if (!canPersist() || !storageKey) return;
@@ -663,12 +664,15 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       if (wait > 0) sampleTimer = window.setTimeout(queueFrame, wait);
       else queueFrame();
     };
-    const onManualIntent = () => scheduleRefresh(true);
+    const onManualIntent = () => {
+      if (document.documentElement.dataset.readerViewerLocked !== "true") scheduleRefresh(true);
+    };
     const onScroll = () => {
       if (!active || !navigationVisit.active) return;
       const current = window.scrollY;
       const delta = current - lastScrollTopRef.current;
-      if (document.documentElement.dataset.readerGeometryCompensating === "true") {
+      if (document.documentElement.dataset.readerGeometryCompensating === "true"
+        || document.documentElement.dataset.readerViewerLocked === "true") {
         lastScrollTopRef.current = current;
         scheduleRefresh(false);
         return;
@@ -709,12 +713,14 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       if (document.visibilityState === "hidden") persistCached();
     };
     const markScrollIntent = () => {
+      if (document.documentElement.dataset.readerViewerLocked === "true") return;
       userScrollIntentRef.current = true;
       scrollIntentSequenceRef.current += 1;
       navigationTokenRef.current += 1;
       onManualIntent();
     };
     const markWheelIntent = (event: WheelEvent) => {
+      if (document.documentElement.dataset.readerViewerLocked === "true") return;
       markScrollIntent();
       if (event.deltaY < 0) {
         scrollDirectionRef.current = "up";
@@ -725,6 +731,7 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       }
     };
     const markKeyboardIntent = (event: KeyboardEvent) => {
+      if (document.documentElement.dataset.readerViewerLocked === "true") return;
       if (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) return;
       markScrollIntent();
       if (["ArrowUp", "PageUp", "Home"].includes(event.key)) scrollDirectionRef.current = "up";

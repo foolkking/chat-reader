@@ -109,12 +109,35 @@ export function AttachmentViewerProvider({ children }: { children: ReactNode }) 
 
 let viewerScrollLockCount = 0;
 let viewerPreviousOverflow = "";
-let viewerScrollPosition: { x: number; y: number } | null = null;
+let viewerScrollPosition: { left: number; top: number } | null = null;
+let viewerReaderPosition: { root: HTMLElement; trigger: HTMLElement | null; offset: number | null; top: number; previousFlag?: string } | null = null;
+let viewerReleaseFrame = 0;
 
-function acquireViewerScrollLock() {
+function finishViewerScrollLock() {
+  if (viewerReleaseFrame) window.cancelAnimationFrame(viewerReleaseFrame);
+  viewerReleaseFrame = 0;
+  const position = viewerReaderPosition;
+  viewerReaderPosition = null;
+  viewerScrollPosition = null;
+  if (position) {
+    if (position.previousFlag === undefined) delete position.root.dataset.readerViewerLocked;
+    else position.root.dataset.readerViewerLocked = position.previousFlag;
+    position.root.dispatchEvent(new CustomEvent("chat-reader:position-released"));
+  }
+}
+
+function acquireViewerScrollLock(trigger: HTMLElement | null) {
   if (viewerScrollLockCount === 0) {
+    finishViewerScrollLock();
+    const root = trigger?.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? document.documentElement;
+    const rootTop = root === document.documentElement ? 0 : root.getBoundingClientRect().top;
+    viewerReaderPosition = { root, trigger, offset: trigger?.isConnected ? trigger.getBoundingClientRect().top - rootTop : null,
+      top: root.scrollTop, previousFlag: root.dataset.readerViewerLocked };
+    root.dataset.readerViewerLocked = "true";
     viewerPreviousOverflow = document.body.style.overflow;
-    viewerScrollPosition = { x: window.scrollX, y: window.scrollY };
+    // ScrollToOptions uses left/top, not x/y. A spread of x/y type-checks but
+    // the browser ignores it, leaving a virtualized Share at the wrong offset.
+    viewerScrollPosition = { left: window.scrollX, top: window.scrollY };
     document.body.style.overflow = "hidden";
   }
   viewerScrollLockCount += 1;
@@ -125,7 +148,21 @@ function releaseViewerScrollLock() {
   if (viewerScrollLockCount > 0) return;
   document.body.style.overflow = viewerPreviousOverflow;
   if (viewerScrollPosition) window.scrollTo({ ...viewerScrollPosition, behavior: "auto" });
-  viewerScrollPosition = null;
+  const position = viewerReaderPosition;
+  if (position) {
+    const { root, trigger, offset } = position;
+    root.dataset.readerLastScrollWriter = "viewer";
+    if (trigger?.isConnected && offset !== null) {
+      const delta = trigger.getBoundingClientRect().top - (root === document.documentElement ? 0 : root.getBoundingClientRect().top) - offset;
+      if (Math.abs(delta) > .5) {
+        if (root === document.documentElement) window.scrollBy({ top: delta, behavior: "auto" });
+        else root.scrollTop += delta;
+      }
+    } else if (root !== document.documentElement) root.scrollTop = position.top;
+  }
+  // Keep programmatic scroll events fenced until the next frame, then rebase
+  // the geometry owner. No timer loop or stale scrollTop restoration task.
+  viewerReleaseFrame = window.requestAnimationFrame(finishViewerScrollLock);
 }
 
 export function useAttachmentViewer(): ViewerContextValue {
@@ -169,6 +206,11 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const panelStyle = viewerPresentationStyle({ ...presentation, maximized, viewport, mediaDimensions, itemCount: session.items.length });
   const mobileFullscreen = isMobileViewerViewport(viewport);
 
+  useLayoutEffect(() => {
+    acquireViewerScrollLock(session.trigger);
+    return releaseViewerScrollLock;
+  }, [session.trigger]);
+
   useDialogFocus({
     open: true,
     rootRef: dialogRef,
@@ -206,7 +248,6 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   }, [activeKey, attachmentIdentity]);
 
   useEffect(() => {
-    acquireViewerScrollLock();
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isViewerShortcut(event) || !dialogRef.current?.contains(event.target as Node)) return;
       if (event.key === "ArrowLeft" && session.items.length > 1) {
@@ -226,7 +267,6 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      releaseViewerScrollLock();
     };
   }, [session.items]);
 

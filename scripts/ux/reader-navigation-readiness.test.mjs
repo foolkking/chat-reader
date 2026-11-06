@@ -460,3 +460,31 @@ test("real input retires a pending geometry lease and releases its compensation 
     assert.equal(f.saves.length, 0, "layout compensation itself must not persist a position");
   } finally { f.dispose(); }
 });
+
+for (const mode of ["remote", "offline"]) test(`${mode}: Viewer return cannot restore stale geometry or persist modal motion as reading progress`, async () => {
+  const f = fixture({ mode });
+  try {
+    await f.setInitial(); await f.frame();
+    f.userWheel(60);
+    await f.advance(500);
+    const intent = f.state.scrollIntentSequenceRef.current;
+    const settlements = f.settlements.length;
+    f.root.dataset.readerViewerLocked = "true";
+    f.programmaticScroll(72);
+    f.result().markReaderScrollIntent("up");
+    f.window.emit(virtualHelpers.READER_WINDOW_LAYOUT_EVENT);
+    await f.advance(700);
+    f.window.emit("pagehide");
+    assert.equal(f.state.scrollIntentSequenceRef.current, intent);
+    assert.equal(f.state.scrollDirectionRef.current, "down");
+    assert.equal(f.state.pointerScrollTopRef.current, 72);
+    assert.equal(f.settlements.length, settlements);
+    assert.equal(f.saves.length, 0);
+    delete f.root.dataset.readerViewerLocked;
+    await f.advance(1500);
+    assert.equal(f.saves.length, 0, "No stale queued save resumes when the modal closes.");
+    f.userWheel(40); await f.advance(1200);
+    assert.equal(f.state.scrollIntentSequenceRef.current, intent + 1);
+    assert.equal(f.saves.length, 1, "Subsequent actual reading still saves normally.");
+  } finally { f.dispose(); }
+});

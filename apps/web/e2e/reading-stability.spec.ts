@@ -102,6 +102,49 @@ async function frames(page: Page, count = 2) {
   }), count);
 }
 
+async function expectReaderReady(root: Locator) {
+  await expect(root).toHaveAttribute("data-reader-geometry-owner", "viewport");
+  // Fresh reading has no navigation transaction. Only an explicit target or a
+  // saved-position restore publishes navigationStage; never wait for a stage
+  // that that entry path cannot produce.
+  await expect.poll(async () => await root.getAttribute("data-navigation-stage") ?? "fresh")
+    .toMatch(/^(fresh|settled)$/);
+}
+
+async function expectOfflineCopyReady(page: Page, fixture: Fixture) {
+  // Shell readiness is not package readiness. Wait for the actual canonical
+  // message and all six source-bound cache entries before cutting the network.
+  await expect(page.locator(`#message-${fixture.messageId}`)).toBeVisible();
+  await expect.poll(() => page.evaluate(async ({ id, assets }) => {
+    const rows = await new Promise<{ id: string; sha256: string; byte_size: number }[]>((resolve, reject) => {
+      const opening = indexedDB.open("chat-reader-offline-library");
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result, tx = db.transaction("attachments");
+        const request = tx.objectStore("attachments").index("conversation_id").getAll(id);
+        tx.oncomplete = () => { db.close(); resolve(request.result); };
+        tx.onerror = () => { db.close(); reject(tx.error); };
+      };
+    });
+    const cache = await caches.open("chat-reader-offline-assets-v1");
+    const available = await Promise.all(assets.map(async id => {
+      const row = rows.find(row => row.id === id);
+      if (!row) return false;
+      const response = await cache.match(`https://offline.chat-reader.local/assets/${id}/${row.sha256}`);
+      return Boolean(response && (await response.blob()).size === row.byte_size);
+    }));
+    return available.filter(Boolean).length;
+  }, { id: fixture.id, assets: fixture.assets })).toBe(fixture.assets.length);
+  // The indicator lives in the library sidebar, which is closed on mobile.
+  // Open it explicitly, then close it before the reading measurement begins.
+  const status = page.locator("p:visible, span:visible", { hasText: /^(Offline ready|Existing offline version is available)/ }).first();
+  const open = page.getByRole("button", { name: "Open sidebar", exact: true }).filter({ visible: true });
+  const mobile = (page.viewportSize()?.width ?? 1440) < 768;
+  if (mobile || await open.isVisible()) await open.click();
+  await expect(status).toBeVisible();
+  if (mobile) await page.locator("aside:visible").getByRole("button", { name: "Close", exact: true }).click();
+}
+
 type Sample = { time: number; top: number; scroll: number; height: number; cells: number[][]; writer: string; mounted: number; measuredRows: number[][] };
 type Probe = { frames: Sample[]; corrections: { time: number; delta: number; applied: number }[] };
 async function startProbe(anchor: Locator) {
@@ -142,6 +185,17 @@ async function endProbe(page: Page, info: TestInfo, label: string): Promise<Prob
   return evidence;
 }
 
+test.afterEach(async ({ page }, info) => {
+  if (info.status === info.expectedStatus || page.isClosed()) return;
+  // A failing readiness/retry/Viewer assertion must not discard the partial
+  // frame history. Store only scalar geometry, never URLs or Share tokens.
+  const partial = await page.evaluate(() => {
+    const host = window as unknown as { readingProbe?: Probe; stopReadingProbe?: () => void };
+    host.stopReadingProbe?.(); return host.readingProbe ?? null;
+  }).catch(() => null);
+  if (partial) await writeFile(info.outputPath("failure-partial-frames.json"), JSON.stringify(partial));
+});
+
 for (const width of [375, 1440]) for (const long of [false, true]) for (const surface of ["reader", "share", "offline", "compare"] as const) {
   test(`${width}px ${long ? "virtual" : "normal"} ${surface}: stable frames, reading motion and Viewer return`, async ({ page, context }, info) => {
     test.setTimeout(180_000);
@@ -164,7 +218,7 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
       await page.goto(url, { waitUntil: "domcontentloaded" });
       if (surface === "offline") {
         await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
-        await expect(page.locator("p:visible, span:visible", { hasText: /^(Offline ready|Existing offline version is available)/ }).first()).toBeVisible();
+        await expectOfflineCopyReady(page, fixture);
         // Offline attachment reads must not borrow the owner's online query cache.
         await page.route("**/api/attachments/**", route => route.abort());
         await context.setOffline(true);
@@ -174,7 +228,7 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
       await expect(anchor).toBeAttached();
       if (long) await expect(article.locator('[data-virtualized-block-list="true"]')).toHaveCount(1);
       const root = surface === "share" ? page.locator("html") : article.locator('xpath=ancestor::*[@data-reader-scroll-root="true"][1]');
-      if (surface === "reader" || surface === "offline") await expect(root).toHaveAttribute("data-navigation-stage", "settled");
+      if (surface === "reader" || surface === "offline") await expectReaderReady(root);
       // A real reading action establishes the anchor; no old scrollTop restore.
       await anchor.scrollIntoViewIfNeeded();
       await frames(page, 4);
@@ -188,7 +242,13 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
         // move the anchor to the failed image above the reading line.
         await article.getByRole("button", { name: "Retry preview", exact: true }).first().evaluate((button: HTMLButtonElement) => button.click());
       }
-      await expect.poll(() => article.locator(".attachment-gallery-image").evaluateAll(images => images.every(image => (image as HTMLImageElement).complete))).toBe(true);
+      const loadingGroup = article.locator(".attachment-image-gallery").first();
+      await expect(loadingGroup.locator(".attachment-gallery-image")).toHaveCount(5);
+      // Images far below the viewport are intentionally lazy and need not have
+      // started a request. The five controlled images above this anchor must
+      // actually decode (complete alone also accepts a broken image).
+      await expect.poll(() => loadingGroup.locator(".attachment-gallery-image").evaluateAll(images =>
+        images.length === 5 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);
       await frames(page, 20);
       const stopped = await endProbe(page, info, "stopped");
       const first = stopped.frames[0];
@@ -218,14 +278,20 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
           expect((after.top - before.top) * direction).toBeLessThanOrEqual(2);
         }
       }
-      await article.locator(".attachment-gallery-more").first().scrollIntoViewIfNeeded();
+      const more = article.locator(".attachment-gallery-more").first();
+      await more.scrollIntoViewIfNeeded();
       await frames(page, 4);
-      const beforeViewer = await article.locator(".attachment-gallery-more").first().boundingBox();
-      await article.locator(".attachment-gallery-more").first().click();
+      await startProbe(more);
+      const beforeViewer = await more.boundingBox();
+      await more.click();
       await expect(page.getByTestId("attachment-viewer-shell")).toBeVisible();
+      await frames(page, 6);
       await page.keyboard.press("Escape");
       await expect(page.getByTestId("attachment-viewer-shell")).toHaveCount(0);
-      const afterViewer = await article.locator(".attachment-gallery-more").first().boundingBox();
+      await frames(page, 6);
+      const viewerFrames = await endProbe(page, info, "viewer");
+      const afterViewer = await more.boundingBox();
+      expect(Math.max(...viewerFrames.frames.map(frame => Math.abs(frame.top - viewerFrames.frames[0].top)))).toBeLessThanOrEqual(2);
       expect(Math.abs(afterViewer!.y - beforeViewer!.y)).toBeLessThanOrEqual(1);
       await page.screenshot({ path: info.outputPath("reading-return.png") });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -247,6 +313,12 @@ test("Compare deep navigation leases a real virtual block; URL and opposite scro
   const rightRoot = right.locator('[data-reader-scroll-root="true"]');
   await rightRoot.evaluate(node => { node.scrollTop = 240; });
   const rightTop = await rightRoot.evaluate(node => node.scrollTop);
+  // Sections belong to the selected message, not implicitly to the assistant
+  // when the current turn starts with a user message.
+  const dialogue = left.locator("summary").filter({ hasText: "Dialogue index" });
+  await dialogue.click();
+  await left.getByRole("button").filter({ hasText: /Synthetic geometry/ }).click();
+  await dialogue.click();
   await left.locator("summary").filter({ hasText: "Sections" }).click();
   await left.getByRole("button", { name: /Deep synthetic target/ }).click();
   const heading = left.locator('[data-block-type="heading"]').filter({ hasText: "Deep synthetic target" });
@@ -261,7 +333,7 @@ test("Compare deep navigation leases a real virtual block; URL and opposite scro
 
 test("all group sizes use lane-based 4:3 slots and preserve full images at every width", async ({ page }, info) => {
   await page.goto(`/conversations/${normal.id}`);
-  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  await expectReaderReady(page.getByTestId("reader-scroll-root"));
   const article = page.locator(`#message-${normal.messageId}`);
   const groups = article.locator('.attachment-image-gallery');
   await expect(groups).toHaveCount(6);
@@ -307,7 +379,7 @@ test("unknown baseline result checks are read-only; a new snapshot requires a se
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/conversations/${other.id}`);
-  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  await expectReaderReady(page.getByTestId("reader-scroll-root"));
   await page.locator('[data-reader-header-more-actions="true"]').click();
   await page.getByRole("button", { name: "New messages", exact: true }).click();
   await page.getByRole("button", { name: "Mark current server content as seen" }).click();
@@ -323,7 +395,7 @@ test("unknown baseline result checks are read-only; a new snapshot requires a se
 });
 
 test("a hidden image target occupies a real preview slot without expanding the group", async ({ page }) => {
-  const response = await page.request.get(`/api/messages/${heavy.messageId}/blocks?offset=0&limit=300`);
+  const response = await page.request.get(`/api/messages/${heavy.messageId}/blocks?offset=0&limit=200`);
   expect(response.ok()).toBe(true);
   const images = (await response.json() as { block_index: number; block_type: string }[]).filter(block => block.block_type === "image");
   expect(images.length).toBeGreaterThan(7);
@@ -342,7 +414,7 @@ test("explicit reading size updates online references but not an existing offlin
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/library?conversationId=${normal.id}`);
   await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
-  await expect(page.locator(`#message-${normal.messageId}`)).toBeVisible();
+  await expectOfflineCopyReady(page, normal);
   const snapshot = () => page.evaluate(async id => {
     const opening = indexedDB.open("chat-reader-offline-library");
     return new Promise<number>((resolve, reject) => {
@@ -356,7 +428,7 @@ test("explicit reading size updates online references but not an existing offlin
   }, normal.assets[1]);
   expect(await snapshot()).toBe(25);
   await page.goto(`/conversations/${normal.id}`);
-  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  await expectReaderReady(page.getByTestId("reader-scroll-root"));
   const image = page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"]`).first();
   await image.getByRole("button", { name: /Image display scale:/ }).click();
   await expect(image.getByText("Original pixels", { exact: true })).toBeVisible();
@@ -367,7 +439,7 @@ test("explicit reading size updates online references but not an existing offlin
   expect([selected.width, selected.height]).toEqual([640, 480]);
   await page.goto(`/library?conversationId=${normal.id}`);
   await expect(page.locator(`#message-${normal.messageId}`)).toBeVisible();
-  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  await expectReaderReady(page.getByTestId("reader-scroll-root"));
   expect(await snapshot(), "No silent offline mutation from an online save").toBe(25);
   await expect(page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"] img`).first()).toHaveAttribute("width", "400");
   // The regular revision-aware update is the only way to replace that snapshot.
@@ -377,7 +449,7 @@ test("explicit reading size updates online references but not an existing offlin
   if (await expandSidebar.isVisible()) await expandSidebar.click();
   await update.click();
   await expect.poll(snapshot).toBe(40);
-  await expect(page.locator("p:visible, span:visible", { hasText: /^(Offline ready|Existing offline version is available)/ }).first()).toBeVisible();
+  await expectOfflineCopyReady(page, normal);
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"] img`).first()).toHaveAttribute("width", "640");
@@ -439,7 +511,7 @@ test("scrollbar and keyboard intent retire restoration; subsequent font/lane cha
   const root = page.getByTestId("reader-scroll-root");
   const article = page.locator(`#message-${normal.messageId}`);
   const anchor = article.locator('[data-block-type="paragraph"]').filter({ hasText: /^Reading stability anchor\./ }).first();
-  await expect(root).toHaveAttribute("data-navigation-stage", "settled");
+  await expectReaderReady(root);
   await anchor.scrollIntoViewIfNeeded();
   await root.evaluate(node => {
     const rect = node.getBoundingClientRect();

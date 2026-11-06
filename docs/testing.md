@@ -10,7 +10,7 @@ nor a substitute for current authenticated-browser/user-data acceptance.
 New image/viewport candidate is pending separate exact-source verification.
 `reading-stability` adds a required browser matrix and
 `scripts/ci/verify-reading-stability.mjs` demands every case execute and all
-48 stopped/down/up frame traces exist. Peak/final drift and fixed-frame limits
+64 stopped/down/up/Viewer frame traces exist. Peak/final drift and fixed-frame limits
 are described in [the contract](system/IMAGE_READING_STABILITY_CONTRACT.md).
 No existing gate, timeout, memory/capacity budget or test requirement is relaxed.
 The accepted release results below do not validate this new candidate.
