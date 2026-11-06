@@ -38,11 +38,24 @@ function fixture() {
     measureElement: element => element.getBoundingClientRect().height,
   });
   virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
-  virtualizer.getMeasurements();
+  virtualizer.getVirtualItems();
   virtualizer.isScrolling = true;
   const measure = useReaderVirtualRowMeasurement(virtualizer);
+  const mountedItems = (first, end = 35) => {
+    const indexes = Array.from({ length: end - first }, (_, offset) => first + offset);
+    // The private single-lane measurement cache is a lazy Proxy over a sparse
+    // array. Array.slice checks property existence before indexed reads and
+    // therefore copies holes, not measurements. Match the renderer's public
+    // API: controlled mounted indexes, materialized by getVirtualItems().
+    virtualizer.setOptions({ ...virtualizer.options, rangeExtractor: () => indexes });
+    const items = virtualizer.getVirtualItems();
+    assert.deepEqual(items.map(item => item.index), indexes);
+    assert.equal(items.length, indexes.length);
+    for (const item of items) assert.ok([item.start, item.end, item.size].every(Number.isFinite));
+    return items;
+  };
   const targetTop = first => {
-    const items = virtualizer.getMeasurements().slice(first, 35);
+    const items = mountedItems(first);
     const flow = buildVirtualFlow(items, 0, virtualizer.getTotalSize());
     let top = 0;
     for (const { item, gapBefore } of flow.rows) {
@@ -52,7 +65,23 @@ function fixture() {
     }
     throw new Error("The real target must remain mounted.");
   };
-  return { virtualizer, writes, measure, targetTop };
+  return { virtualizer, writes, measure, mountedItems, targetTop };
+}
+
+for (const [first, end] of [[0, 4], [31, 35], [96, 100]]) {
+  test(`public virtual items materialize a complete natural-flow window ${first}..${end - 1}`, () => {
+    const f = fixture(), before = f.mountedItems(first, end);
+    assert.equal(before[0].start, first * 92);
+    f.measure(row(first));
+    const after = f.mountedItems(first, end);
+    assert.equal(after[0].size, 117.28125);
+    assert.equal(after[1].start - before[1].start, 25.28125);
+    const flow = buildVirtualFlow(after, 0, f.virtualizer.getTotalSize());
+    assert.equal(flow.rows.length, end - first, "No missing rows are filtered out to make the test pass.");
+    assert.equal(flow.rows[0].gapBefore, first * 92);
+    assert.equal(flow.gapAfter, (100 - end) * 92);
+    assert.equal(f.writes.length, 0);
+  });
 }
 
 test("scrolling natural-flow rows cache their geometry before the first possible unmount", () => {

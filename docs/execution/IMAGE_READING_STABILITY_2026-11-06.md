@@ -246,3 +246,32 @@ element/window 接线。浏览器偏好证据追加逐行位置/高度，原 24p
 全部后续用例不变。新增测试仅编写和语法审查，实际执行留给下一轮完整 CI。
 本地仍仅静态检查；11 项原文件保全，现有 master，新交接/50 分钟门限，
 没有新安排或部署。
+
+## 第七轮精确 CI：回归适配器误用惰性测量数组
+
+源码 `2f5847b568a82c50f1b24cb878c0cdd5f8b6ea66`、run `42210680532`
+attempt 1。用户再次明确报告 Web 失败，2026-11-06 12:14:23Z 提前诊断
+当前 Web job `127868294913`；本 run 原门限是 12:20:09Z，该例外不延续
+至新派发。停止了当前对话中等待旧门限的前台命令，没有创建任何安排。
+
+Web lint/typecheck/build 通过，Node **2087 passed / 2 failed**。
+新自然流测试五项通过，但两个范围切换用例在到达几何断言之前抛错：
+测试直接对 TanStack 私有 `getMeasurements()` 的惰性 Proxy 做 `slice`，
+`slice` 先检查稀疏数组属性是否存在，不触发 indexed getter，因此得到空洞，
+再传入真实 `buildVirtualFlow` 时读取 undefined.start。生产渲染器使用公开
+`getVirtualItems()`，不走这个错误路径。这是新增适配器实现遗漏，不能当成
+产品的 25px 抖动已验证或已修好；**14 个浏览器门禁尚未执行**。
+
+修复仅测试适配器：以受控 rangeExtractor 指定真实挂载索引，通过与产品相同
+的 `getVirtualItems()` 获得完整实测项；断言数量、索引和有限几何，不使用
+filter/虚构默认行掩盖空洞，保留原全部误差/无额外 scroll writer 断言。
+另加首部、中部、尾部三个公开 API 窗口回归，检查重测前后尺寸与 spacer
+一致性。静态盘点其他 `getMeasurements()` 使用仅在 PDF 回归中按索引读取，
+没有类似 slice 路径；产品源码和任何门禁预算未改动。
+
+精确制品 `13499530194`（1,696 bytes），SHA-256
+`a354c6e17633bbb09a50897ec916e30d54ba63cedd880492aa1f2b90092990ee`，
+汇总全部 NOT_VERIFIED，无浏览器证据。诊断授权、日志、制品与静态审查位于
+`C:\Users\86182\Desktop\wkkk\chat-reader-images-reading-fix7-20261106`。
+保留 11 项原文件哈希；未运行本地应用测试或服务。新提交仍须完整精确 CI，
+归档旧交接后重新计算身份核实后至少 50 分钟门限；无安排、无部署。
