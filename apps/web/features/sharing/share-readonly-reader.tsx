@@ -631,7 +631,8 @@ export function ShareReadonlyReader({ token }: { token: string }) {
     let lastScrollAt = 0;
     let pendingUnlock = false;
     const canPersist = () => active && Boolean(storageKey) && storageIsCurrent
-      && navigationVisit.active && positionStorageDisabledRef.current !== navigationVisit;
+      && navigationVisit.active && positionStorageDisabledRef.current !== navigationVisit
+      && document.documentElement.dataset.readerGeometryCompensating !== "true";
     const writePosition = (position: PersistedSharePosition) => {
       if (!canPersist() || !storageKey) return;
       try {
@@ -667,6 +668,11 @@ export function ShareReadonlyReader({ token }: { token: string }) {
       if (!active || !navigationVisit.active) return;
       const current = window.scrollY;
       const delta = current - lastScrollTopRef.current;
+      if (document.documentElement.dataset.readerGeometryCompensating === "true") {
+        lastScrollTopRef.current = current;
+        scheduleRefresh(false);
+        return;
+      }
       if (userScrollIntentRef.current && edgeTransitionRef.current === null && Math.abs(delta) > 1) {
         scrollDirectionRef.current = delta < 0 ? "up" : "down";
       }

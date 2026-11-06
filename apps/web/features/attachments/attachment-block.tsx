@@ -43,6 +43,8 @@ export type AttachmentBlockProps = {
   attachment?: AttachmentRead;
   inlinePresentation?: InlinePresentation;
   grouped?: boolean;
+  imageHint?: boolean;
+  singleImage?: boolean;
   galleryItemStyle?: CSSProperties;
   onImageRatio?: (ratio: number, naturalWidth: number) => void;
   onRuntimeChange?: (state: AttachmentRuntimeRenderState) => void;
@@ -83,6 +85,12 @@ export function AttachmentBlock(props: AttachmentBlockProps) {
     setRuntime(idle);
   }, [attachmentId, attachmentIdentity]);
 
+  if (props.inlinePresentation === "gallery" && !attachment) {
+    return <div className="attachment-gallery-item attachment-gallery-placeholder" data-testid="attachment-block">
+      {query.isPending ? <LoadingRow label={caption || alt || (zh ? "图片" : "Image")} zh={zh} />
+        : <UnavailableRow label={caption || alt || (zh ? "图片" : "Image")} zh={zh} onRetry={() => void query.refetch()} />}
+    </div>;
+  }
   if (!props.attachment && query.isPending) return wrapStandalone(<LoadingRow label={caption || alt || (zh ? "附件" : "Attachment")} zh={zh} />, "file-list", props.grouped);
   if (!attachment) {
     return wrapStandalone(
@@ -110,8 +118,9 @@ export function AttachmentBlock(props: AttachmentBlockProps) {
   }) : undefined;
 
   let content: ReactNode;
-  if (presentation === "gallery" && plan.inline === "media" && plan.viewerKind === "image" && attachment.content_url) {
-    content = <InlineImage attachment={attachment} props={props} onOpen={openViewer} onRuntime={updateRuntime} zh={zh} />;
+  if (presentation === "gallery") {
+    content = <InlineImage attachment={attachment} props={props} onOpen={openViewer} onRuntime={updateRuntime} zh={zh}
+      unavailable={plan.inline !== "media" || plan.viewerKind !== "image" || !attachment.content_url} />;
   } else if ((presentation === "reading" || presentation === "data") && plan.inline === "preview-panel" && ["markdown", "text", "code", "json", "table"].includes(plan.viewerKind ?? "")) {
     content = <InlineTextPreview attachment={attachment} kind={plan.viewerKind!} caption={caption} onOpen={openViewer} onRuntime={updateRuntime} presentation={presentation} locator={props} zh={zh} />;
   } else if (presentation === "audio-list" && plan.viewerKind === "audio" && attachment.content_url) {
@@ -134,12 +143,13 @@ function wrapStandalone(content: ReactNode, presentation: InlinePresentation, gr
   );
 }
 
-function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
+function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: {
   attachment: AttachmentRead;
   props: AttachmentBlockProps;
   onOpen?: () => void;
   onRuntime: (state: AttachmentRuntimeRenderState) => void;
   zh: boolean;
+  unavailable: boolean;
 }) {
   const { display } = useImageDisplay(attachment);
   const displayMode = normalizeImageDisplayMode(props.displayMode);
@@ -156,6 +166,11 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
       data-display-mode={displayMode}
     >
       <div className="attachment-gallery-media">
+        {unavailable ? <div className="attachment-gallery-failure" role="status">
+          <p>{zh ? "图片暂不可预览，原位置已保留。" : "Image preview unavailable. Its place is preserved."}</p>
+          <button type="button" className="min-h-11 underline" onClick={() => onRuntime({ status: "idle" })}>{zh ? "重试预览" : "Retry preview"}</button>
+          <DownloadButton attachment={attachment} zh={zh} />
+        </div> :
         <button type="button" onClick={onOpen} disabled={!onOpen} className="attachment-gallery-trigger" aria-label={`${zh ? "查看" : "View"} ${attachment.display_name}`}>
         <img
           src={attachment.content_url ?? undefined}
@@ -163,7 +178,9 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
           loading="lazy"
           decoding="async"
           className="attachment-gallery-image"
-          style={display ? { width: display.width, maxWidth: "100%", maxHeight: "none" } : { maxWidth }}
+          width={display?.width}
+          height={display?.height}
+          style={display ? { maxWidth: `min(100%, ${display.width}px)`, maxHeight: `min(100%, ${display.height}px)` } : { maxWidth }}
           onLoad={(event) => {
             const image = event.currentTarget;
             props.onImageRatio?.(image.naturalWidth / Math.max(1, image.naturalHeight), image.naturalWidth);
@@ -175,7 +192,7 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh }: {
           <span className="truncate">{attachment.display_name}</span>
           <span>{zh ? "查看" : "View"}</span>
         </span>
-        </button>
+        </button>}
         <ImageDisplayControls attachment={attachment} zh={zh} />
       </div>
       {visibleCaption ? <figcaption className="attachment-gallery-caption">{visibleCaption}</figcaption> : null}

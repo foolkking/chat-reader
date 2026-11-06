@@ -10,31 +10,30 @@ import { rasterizeCopySvg } from "../conversations/message-markdown-copy-prepare
 import { useAttachmentAccess } from "./attachment-access";
 import { ImageScaleSlider } from "./image-scale-slider";
 import { imageDisplayMenuPosition } from "./image-display-position";
+import { IMAGE_DISPLAY_CHANGED_EVENT, recommendedImagePercent, scaledImageDimensions, validatedImageDisplay } from "../../lib/image-display";
 
 export function storedImageDisplay(attachment: AttachmentRead): ImageDisplayRead | undefined {
-  const value = attachment.metadata?.image_display_v1 as ImageDisplayRead | undefined;
-  return value && value.source_sha256 === attachment.asset_object?.sha256
-    && Number.isInteger(value.scale_percent) && value.scale_percent >= 1 && value.scale_percent <= 100
-    && [value.width, value.height, value.original_width, value.original_height].every(n => Number.isInteger(n) && n > 0)
-    ? value : undefined;
+  return validatedImageDisplay(attachment.metadata?.image_display_v1, attachment.asset_object?.sha256) as ImageDisplayRead | undefined;
 }
 
 export function useImageDisplay(attachment: AttachmentRead) {
+  const access = useAttachmentAccess();
   const [generation, setGeneration] = useState(authenticationGeneration);
   useEffect(() => {
     const changed = () => setGeneration(authenticationGeneration());
     window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, changed);
     return () => window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, changed);
   }, []);
-  const queryKey = ["image-display", generation, attachment.id, attachment.asset_object?.sha256];
+  const queryKey = ["image-display", generation, access.kind, access.kind === "share" ? access.token : access.kind === "admin" ? access.userId : "", attachment.id, attachment.asset_object?.sha256];
   const query = useQuery<ImageDisplayRead>({ queryKey, queryFn: () => getImageDisplay(attachment.id), enabled: false });
-  return { display: query.data?.configured === false ? storedImageDisplay(attachment) : query.data ?? storedImageDisplay(attachment), generation, queryKey };
+  // Offline is a package snapshot, not the latest online selection for this ID.
+  return { display: access.kind !== "owner" || query.data?.configured === false ? storedImageDisplay(attachment) : query.data ?? storedImageDisplay(attachment), generation, queryKey };
 }
 
 export function ImageDisplayControls({ attachment, zh }: { attachment: AttachmentRead; zh: boolean }) {
   const access = useAttachmentAccess();
   const state = useImageDisplay(attachment);
-  if (access.kind !== "owner" || !attachment.asset_object) return null;
+  if (access.kind !== "owner" || access.readOnly || !attachment.asset_object) return null;
   return <SizeEditor key={`${attachment.id}:${attachment.asset_object.sha256}:${state.generation}`}
     attachment={attachment} zh={zh} generation={state.generation} />;
 }
@@ -144,12 +143,16 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
       // require reopening it. Do not move the image while a pointer is held.
       client.setQueryData(queryKey, value);
       void client.invalidateQueries({ queryKey: ["attachment"] });
+      window.dispatchEvent(new CustomEvent(IMAGE_DISPLAY_CHANGED_EVENT, { detail: { attachmentId: attachment.id, display: value, generation } }));
     } catch {
       if (isCurrent(controller)) setError(zh ? "保存失败，请重试。" : "Save failed. Try again.");
     } finally { writing.current = false; if (isCurrent(controller)) setBusy(false); }
   }
 
   const shownPercent = open && !error && draft !== null ? draft : current?.scale_percent ?? display?.scale_percent ?? 100;
+  const recommendation = current ? recommendedImagePercent(current.original_width, current.original_height) : null;
+  const recommendedSize = current && recommendation !== null ? scaledImageDimensions(current.original_width, current.original_height, recommendation) : null;
+  const draftSize = current ? scaledImageDimensions(current.original_width, current.original_height, shownPercent) : null;
 
   return <div ref={root} className="image-display-control" data-markdown-copy-ignore="true" data-image-display-controls>
     <button ref={trigger} type="button" aria-expanded={open} aria-controls={open ? panelId : undefined}
@@ -171,6 +174,19 @@ function SizeEditor({ attachment, zh, generation }: { attachment: AttachmentRead
         onCommit={percent => void save(percent)}
         onCancel={() => { setDraft(current.scale_percent); setOpen(false); trigger.current?.focus({ preventScroll: true }); }}
       /> : null}
+      {current && !error ? <div className="space-y-2 border-t border-ui pt-2 text-xs">
+        <dl className="grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 text-secondary">
+          <dt>{zh ? "原始像素" : "Original pixels"}</dt><dd>{current.original_width} × {current.original_height}</dd>
+          <dt>{zh ? "已保存" : "Saved pixels"}</dt><dd>{current.width} × {current.height}</dd>
+          <dt>{zh ? "当前选择" : "Selection"}</dt><dd>{draftSize?.width} × {draftSize?.height}</dd>
+          <dt>{zh ? "适读建议" : "Reading size"}</dt><dd>{recommendedSize ? `${recommendedSize.width} × ${recommendedSize.height}` : (zh ? "无安全建议" : "Unavailable")}</dd>
+        </dl>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={busy || recommendation === null} className="min-h-11 rounded-md border border-ui px-2 font-medium disabled:opacity-50" onClick={() => { if (recommendation !== null) void save(recommendation); }}>{zh ? "应用适读尺寸" : "Apply reading size"}</button>
+          <button type="button" disabled={busy} className="min-h-11 rounded-md px-2 underline disabled:opacity-50" onClick={() => void save(100)}>{zh ? "恢复 100%" : "Restore 100%"}</button>
+        </div>
+        <p className="text-secondary">{zh ? "保存也会更新此前复制的公开图片链接。图格仅预览；外部平台可能再次缩放。" : "Saving also updates previously copied public image links. Grids are previews; other apps may resize images."}</p>
+      </div> : null}
     </div> : null}
     {saved ? <span className="sr-only" role="status">{zh ? "比例已保存。" : "Image size saved."}</span> : null}
   </div>;

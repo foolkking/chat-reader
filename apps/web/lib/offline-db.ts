@@ -4,6 +4,7 @@ import { assertOfflineAccess, captureOfflineAccess, lockOfflineAccess } from "./
 import { assertOfflineWritable } from "./offline-write-guard";
 import { ingestReadingPosition } from "./reading-position-sync";
 import { readOfflineContinuation, type OfflineContinuation } from "./offline-continuation";
+import { validatedImageDisplay, type ImageDisplay } from "./image-display";
 import type {
   AnnotationRead,
   AnnotationSyncOperation,
@@ -71,6 +72,7 @@ type OfflinePackageMeta = {
 export type OfflineOutboxRecord = Omit<AnnotationSyncOperation, "entity_type"> & { entity_type: AnnotationSyncOperation["entity_type"] | "reading_position"; queued_at: string; attempts: number; last_error: string | null; submitted?: boolean; retry_after?: number };
 type OfflineSetting = { key: string; value: unknown };
 export type OfflineAttachmentRecord = {
+  image_display_v1?: ImageDisplay | null;
   id: string;
   conversation_id: string;
   message_id: string | null;
@@ -802,7 +804,10 @@ export async function importOfflinePackage(packageId: string, response: Response
         if (raw.notebook && !pendingNotebookConversations.has(raw.id)) await db.notebooks.put(raw.notebook);
         if (raw.reading_position) await ingestReadingPosition(raw.id, raw.reading_position, db);
         if (raw.attachments?.length) {
-          await bulkPutChunked(db.attachments, raw.attachments.map((attachment) => ({ ...attachment, conversation_id: raw.id })));
+          await bulkPutChunked(db.attachments, raw.attachments.map((attachment) => ({
+            ...attachment, conversation_id: raw.id,
+            image_display_v1: validatedImageDisplay(attachment.image_display_v1, attachment.sha256),
+          })));
         }
       }
       const localAnnotations = pendingAnnotations.filter((item): item is AnnotationRead => Boolean(item));
@@ -1124,7 +1129,7 @@ function offlineAttachmentRead(record: OfflineAttachmentRecord, contentUrl: stri
     scan_status: record.scan_status ?? "unscanned",
     source_type: "offline_package",
     source_attachment_id: record.id,
-    metadata: { offline_resource_available: cached },
+    metadata: { offline_resource_available: cached, image_display_v1: validatedImageDisplay(record.image_display_v1, record.sha256) },
     resolution_status: record.resolution_status === "missing"
       ? "missing"
       : cached

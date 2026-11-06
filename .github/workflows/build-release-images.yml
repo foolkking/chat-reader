@@ -307,6 +307,16 @@ jobs:
           e2e/attachment-reading.spec.ts
           e2e/message-markdown-copy.spec.ts
 
+      - name: Reading geometry, image snapshots and cross-module recovery
+        timeout-minutes: 25
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+          PLAYWRIGHT_GATE_ID: reading-stability
+          E2E_READING_STABILITY: "1"
+        run: |
+          pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reading-stability.spec.ts
+          node scripts/ci/verify-reading-stability.mjs
+
       - name: PDF.js maintained-line browser checks
         timeout-minutes: 20
         env:
@@ -390,7 +400,7 @@ jobs:
       - name: Build machine-readable browser gate summary
         if: always()
         env:
-          PLAYWRIGHT_EXPECTED_GATES: adaptive-import-recovery,csp-enforcement,context-files,focused-online-security,share-focus,source-editor-mutation,source-editor-cleanup,upload-token-atomicity,markdown-image-viewer,pdfjs-maintained-line,default-pwa,single-owner-auth,pwa-negative
+          PLAYWRIGHT_EXPECTED_GATES: adaptive-import-recovery,csp-enforcement,context-files,focused-online-security,share-focus,source-editor-mutation,source-editor-cleanup,upload-token-atomicity,markdown-image-viewer,reading-stability,pdfjs-maintained-line,default-pwa,single-owner-auth,pwa-negative
         run: >-
           node apps/web/e2e/gate-summary.mjs
           apps/web/test-results
@@ -408,6 +418,7 @@ jobs:
             ${{ runner.temp }}/web-build-standard.txt
             ${{ runner.temp }}/web-build-pwa-negative.txt
             ${{ runner.temp }}/pnpm-cache.txt
+            ${{ runner.temp }}/optimization-resource-measurement.json
             ${{ runner.temp }}/api.log
             ${{ runner.temp }}/worker.log
             ${{ runner.temp }}/attachment-modal-final/result.json

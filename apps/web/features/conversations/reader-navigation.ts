@@ -25,6 +25,25 @@ type RestoreScrollAnchorOptions = {
   timeoutMs?: number;
 };
 
+const positionOwners = new WeakMap<object, object>();
+function positionRoot(root: HTMLElement | null): object { return root ?? document.scrollingElement ?? document; }
+export function cancelReaderPosition(root: HTMLElement | null): void { positionOwners.delete(positionRoot(root)); }
+export function readerPositionBusy(root: HTMLElement | null): boolean { return positionOwners.has(positionRoot(root)); }
+function claimReaderPosition(root: HTMLElement | null) {
+  const key = positionRoot(root), owner = {};
+  positionOwners.set(key, owner);
+  const element = root ?? document.documentElement;
+  if (element?.dataset) element.dataset.readerLastScrollWriter = "navigation";
+  return {
+    current: () => positionOwners.get(key) === owner,
+    release: () => {
+      if (positionOwners.get(key) !== owner) return;
+      positionOwners.delete(key);
+      element?.dispatchEvent?.(new CustomEvent("chat-reader:position-released"));
+    },
+  };
+}
+
 export function resolveActiveBlockDomId(
   root: HTMLElement | null,
   messageId: string,
@@ -49,7 +68,14 @@ export function resolveActiveBlockDomId(
   return nearest?.id ?? null;
 }
 
-export async function navigateMountedTarget({
+export async function navigateMountedTarget(options: NavigateMountedTargetOptions): Promise<NavigationResult> {
+  const owner = claimReaderPosition(options.root);
+  try {
+    return await navigateMountedTargetImpl({ ...options, tokenIsCurrent: () => owner.current() && (options.tokenIsCurrent?.() ?? true) });
+  } finally { owner.release(); }
+}
+
+async function navigateMountedTargetImpl({
   root,
   targetId,
   fallbackId,
@@ -199,6 +225,7 @@ export async function restoreScrollAnchor({
     ?? (anchor.blockId ? document.querySelector<HTMLElement>(`[data-block-id="${anchor.blockId}"]`) : null)
     ?? (anchor.messageId ? document.querySelector<HTMLElement>(`article[data-message-id="${anchor.messageId}"]`) : null);
   if (!target || !tokenIsCurrent()) return false;
+  const owner = claimReaderPosition(root);
   const startedAt = window.performance.now();
   let lastChangeAt = startedAt;
   let frame = 0;
@@ -211,11 +238,12 @@ export async function restoreScrollAnchor({
       stopped = true;
       if (frame) window.cancelAnimationFrame(frame);
       observer.disconnect();
+      owner.release();
       resolve(restored);
     };
     const check = () => {
       frame = 0;
-      if (!tokenIsCurrent() || !target.isConnected) {
+      if (!owner.current() || !tokenIsCurrent() || !target.isConnected) {
         finish(false);
         return;
       }

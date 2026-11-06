@@ -6,6 +6,15 @@ export type ReaderBlockLease = {
 type AcquireBlockLease = (blockIndex: number) => Promise<ReaderBlockLease | null>;
 
 const blockMountRegistry = new Map<string, AcquireBlockLease>();
+const blockRevealRegistry = new Map<string, () => void>();
+export function registerReaderBlockReveal(messageId: string, blockIndex: number, reveal: () => void): () => void {
+  const key = `block-${messageId}-${blockIndex}`;
+  blockRevealRegistry.set(key, reveal);
+  return () => { if (blockRevealRegistry.get(key) === reveal) blockRevealRegistry.delete(key); };
+}
+export function revealReaderBlock(targetId: string): void {
+  blockRevealRegistry.get(targetId)?.();
+}
 export const READER_WINDOW_LAYOUT_EVENT = "chat-reader:reader-window-layout";
 let pendingWindowLayoutFrame: number | null = null;
 
@@ -45,6 +54,7 @@ export async function acquireReaderBlockLease(
   const deadline = window.performance.now() + timeoutMs;
 
   while (tokenIsCurrent() && window.performance.now() < deadline) {
+    revealReaderBlock(targetId);
     const acquire = blockMountRegistry.get(messageId);
     if (acquire) {
       const lease = await acquire(blockIndex);

@@ -7,6 +7,7 @@ from PIL import Image
 
 from app.models.attachment import AssetObject, Attachment
 from app.models.attachment_public_link import AttachmentPublicLink
+from app.models.conversation import Conversation
 from test_message_markdown_copy import client, auth_client, owner_login, database, seed, publish, upload_svg  # noqa: F401
 
 
@@ -25,6 +26,29 @@ def size(response):
     assert response.status_code == 200, response.text
     with Image.open(io.BytesIO(response.content)) as image:
         return image.size
+
+
+def test_display_revision_and_portable_snapshot_do_not_include_public_capabilities(client, monkeypatch, tmp_path):
+    from app.services.offline_packages import _offline_attachment_payloads
+    from app.services.assets.image_display import selected_display
+    case = seed(monkeypatch, tmp_path)
+    with database() as db:
+        row = db.get(Attachment, uuid.UUID(case["raster"]))
+        conversation_id = row.conversation_id
+        before = db.get(Conversation, conversation_id).offline_revision
+    assert save(client, case, 50).status_code == 200
+    with database() as db:
+        assert db.get(Conversation, conversation_id).offline_revision == before + 1
+        records = list(_offline_attachment_payloads(db, conversation_id, "all"))
+        portable = next(item for item in records if item["id"] == case["raster"])["image_display_v1"]
+        assert portable["width"] == 4 and portable["height"] == 3
+        assert set(portable) == {"source_sha256", "scale_percent", "original_width", "original_height", "width", "height"}
+        row = db.get(Attachment, uuid.UUID(case["raster"]))
+        row.metadata_ = {"image_display_v1": {**portable, "width": 100}}
+        assert selected_display(row) is None
+    assert save(client, case, 50, expected=50).status_code == 200
+    with database() as db:
+        assert db.get(Conversation, conversation_id).offline_revision == before + 1
 
 
 def test_size_follows_same_link_and_original_is_never_overwritten(client, monkeypatch, tmp_path):

@@ -8,6 +8,36 @@ from test_import_preview_api import client  # noqa: F401
 from test_offline_annotations_api import _message_context
 
 
+@pytest.mark.parametrize("choice", ["local", "server", "merge", "empty"])
+def test_notebook_resolution_updates_search_in_same_commit(client: TestClient, choice):
+    conversation_id, _, _ = _message_context(client)
+    path = f"/api/conversations/{conversation_id}/notebook"
+    initial = client.get(path).json()
+    server = {"title": "serverneedle", "blocks": []}
+    assert client.put(path, json={**server, "base_revision": initial["revision"]}).status_code == 200
+    current = client.get(path).json()
+    conflict = client.post("/api/annotations/sync", json={"operations": [{
+        "operation_id": str(uuid.uuid4()), "entity_type": "notebook", "entity_id": current["id"],
+        "action": "upsert", "conversation_id": conversation_id, "base_revision": initial["revision"],
+        "payload": {"title": "localneedle", "blocks": []},
+    }]}).json()["results"][0]
+    wanted = {"server": "serverneedle", "local": "localneedle", "merge": "mergedneedle", "empty": ""}[choice]
+    operation = {
+        "operation_id": str(uuid.uuid4()), "entity_type": "notebook", "entity_id": current["id"],
+        "action": "resolve", "conversation_id": conversation_id, "base_revision": current["revision"],
+        "payload": {"conflict_copy_id": conflict["conflict_copy_id"], "conflict_revision": 1,
+                    "choice": "merge" if choice == "empty" else choice, "notebook": {"title": wanted, "blocks": []}},
+    }
+    response = client.post("/api/annotations/sync", json={"operations": [operation]})
+    assert response.status_code == 200, response.text
+    replay = client.post("/api/annotations/sync", json={"operations": [operation]})
+    assert replay.json()["results"][0]["status"] == "duplicate"
+    assert client.get(path).json()["title"] == wanted
+    for needle in ["serverneedle", "localneedle", "mergedneedle"]:
+        result = client.get("/api/search", params={"q": needle, "document_type": "notebook"}).json()
+        assert bool(result["items"]) is (needle == wanted)
+
+
 @pytest.mark.parametrize("choice", ["local", "server", "merge", "delete"])
 def test_annotation_resolution_updates_canonical_and_removes_copy(client: TestClient, choice):
     conversation_id, message, version = _message_context(client)

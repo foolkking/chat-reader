@@ -3,7 +3,7 @@
 import { createContext, useContext } from "react";
 
 export type AttachmentAccess =
-  | { kind: "owner" }
+  | { kind: "owner"; readOnly?: boolean }
   | { kind: "share"; token: string }
   | { kind: "offline" }
   | { kind: "admin"; userId: string };

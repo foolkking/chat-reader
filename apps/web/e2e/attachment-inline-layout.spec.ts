@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { computeJustifiedRows } from "../features/attachments/attachment-inline-policy";
+import { imageGridGeometry } from "../lib/image-display";
 import { resolveInlinePresentation, type AttachmentRenderPlan, type AttachmentViewerKind } from "../features/attachments/preview-adapter-registry";
 import { parseDelimitedRows } from "../features/attachments/attachment-table-policy";
 import { normalizeVisibleCaption } from "../features/attachments/attachment-caption-policy";
@@ -36,18 +36,12 @@ test("RenderPlan resolves to the six frozen inline presentations", () => {
   expect(resolveInlinePresentation(plan(null, "file-row"))).toBe("file-list");
 });
 
-test("justified gallery keeps aspect ratios and caps the final row at 1.1 target height", () => {
-  const rows = computeJustifiedRows([
-    { key: "wide", ratio: 2, item: "wide" },
-    { key: "portrait", ratio: 0.75, item: "portrait" },
-    { key: "square", ratio: 1, item: "square" },
-    { key: "last", ratio: 1.4, item: "last" },
-    { key: "tail", ratio: 1, item: "tail" },
-  ], 880);
-  expect(rows.length).toBeGreaterThan(1);
-  expect(rows.at(-1)?.height).toBeLessThanOrEqual(220);
-  for (const row of rows) {
-    for (const item of row.items) expect(item.width).toBeGreaterThan(0);
+test("stable gallery estimates use actual lane width and six fixed preview slots", () => {
+  for (const count of [1, 2, 3, 6, 7, 200]) for (const width of [240, 319, 320, 639, 640, 880]) {
+    const grid = imageGridGeometry(count, width);
+    expect(grid.columns).toBe(Math.min(count, width < 320 ? 1 : width < 640 ? 2 : 3));
+    expect(grid.cellWidth * grid.columns + (grid.columns - 1) * 8).toBeCloseTo(width);
+    expect(grid.height).toBe(imageGridGeometry(Math.min(6, count), width).height);
   }
 });
 

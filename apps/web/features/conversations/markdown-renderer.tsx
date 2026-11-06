@@ -10,6 +10,7 @@ import { createContext, memo, useCallback, useContext, useEffect, useId, useMemo
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
+import type { ImageDisplay } from "../../lib/image-display";
 import type { Components } from "react-markdown";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { BundledLanguage, ThemedToken } from "shiki";
@@ -49,6 +50,7 @@ export type MarkdownAttachmentOccurrence = {
   mimeType?: string | null;
   alt?: string | null;
   caption?: string | null;
+  imageDisplay?: ImageDisplay;
 };
 
 const EMPTY_TASK_ITEMS: MarkdownTaskItem[] = [];
@@ -1026,15 +1028,16 @@ function SafeMarkdownImage({ alt, src, width, height, node }: {
     "data-attachment-id": attachment.attachmentId,
     "data-occurrence-key": attachment.occurrenceKey,
   } : {};
-  const safeWidth = boundedImageDimension(width);
-  const safeHeight = boundedImageDimension(height);
+  const safeWidth = attachment?.imageDisplay?.width ?? boundedImageDimension(width);
+  const safeHeight = attachment?.imageDisplay?.height ?? boundedImageDimension(height);
   const ratio = safeWidth && safeHeight ? `${safeWidth} / ${safeHeight}` : undefined;
   const style: CSSProperties = {
     ...safeRichHtmlStyle(node),
-    ...(ratio ? { aspectRatio: ratio } : {}),
-    ...(safeWidth ? { width: safeRichHtmlStyle(node).width ?? safeWidth } : {}),
+    aspectRatio: ratio ?? "4 / 3",
+    width: safeWidth ? safeRichHtmlStyle(node).width ?? safeWidth : "min(100%, 320px)",
     maxWidth: "100%",
-    maxHeight: "min(70vh, 40rem)",
+    maxHeight: "min(70svh, 40rem)",
+    objectFit: "scale-down",
   };
   if (!safeSrc || failed) {
     return <span {...occurrenceAnchor} className="reader-rich-image-fallback inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-[0.75em] text-secondary" role={resolvedAlt ? "img" : undefined} aria-label={resolvedAlt || undefined} style={style}>
@@ -1280,13 +1283,12 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
       <div className={`relative ${longCode && !expanded ? "max-h-[30rem] overflow-hidden" : ""}`}>
         <pre className={`max-w-full overflow-x-auto bg-[var(--code-bg)] p-4 text-[0.875em] leading-[1.65] text-primary ${wrapped ? "whitespace-pre-wrap break-words" : "whitespace-pre"}`}>
           <code>
-            {tokens && !failed
-              ? tokens.map((line, lineIndex) => (
-                  <span key={lineIndex} className="block min-h-6">
-                    {line.map((token, tokenIndex) => <span key={`${lineIndex}-${tokenIndex}`} style={{ color: token.color }}>{token.content}</span>)}
-                  </span>
-                ))
-              : code}
+            {code.split(/\r?\n/).map((line, lineIndex, lines) => <span key={lineIndex}>
+              {tokens && !failed && tokens[lineIndex]
+                ? tokens[lineIndex].map((token, tokenIndex) => <span key={tokenIndex} style={{ color: token.color }}>{token.content}</span>)
+                : line}
+              {lineIndex < lines.length - 1 ? "\n" : null}
+            </span>)}
           </code>
         </pre>
         {longCode && !expanded ? <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[var(--code-bg)] to-transparent" /> : null}

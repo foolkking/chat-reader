@@ -3,6 +3,7 @@ import type { RenderBlockRead } from "../../lib/types";
 import { InlineHeadingMarkdown, MarkdownRenderer, stripLeadingTimestamp, type MarkdownAttachmentOccurrence, type MarkdownTaskItem } from "./markdown-renderer";
 import { AttachmentBlock, embeddedAttachment } from "../attachments/attachment-block";
 import { readChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
+import { validatedImageDisplay } from "../../lib/image-display";
 
 export const BlockRenderer = memo(function BlockRenderer({
   block,
@@ -113,8 +114,10 @@ function readAttachmentOccurrences(value: unknown): MarkdownAttachmentOccurrence
     const mimeType = readString((item as Record<string, unknown>).mimeType);
     const alt = readString((item as Record<string, unknown>).alt);
     const caption = readString((item as Record<string, unknown>).caption);
+    const imageDisplay = validatedImageDisplay((item as Record<string, unknown>).imageDisplay,
+      readString((item as Record<string, unknown>).sourceSha256) ?? undefined);
     return attachmentId && occurrenceKey
-      ? [{ attachmentId, occurrenceKey, contentUrl, downloadUrl, mimeType, alt, caption }]
+      ? [{ attachmentId, occurrenceKey, contentUrl, downloadUrl, mimeType, alt, caption, imageDisplay }]
       : [];
   });
 }

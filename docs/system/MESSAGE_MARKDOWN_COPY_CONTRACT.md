@@ -136,12 +136,15 @@ The source-hash-bound `Attachment.metadata.image_display_v1` stores
 `source_sha256`, `scale_percent`, `original_width`, `original_height`, `width`
 and `height`. The existing derivative table stores `image_display_png` with an
 attachment-scoped generator version; there is **no migration** (head stays
-`20261022_0053`). Source replacement invalidates the selection. Saving checks
+`20261105_0059` in the current repository). Source replacement invalidates the selection. Saving checks
 both source hash and expected current percentage under an attachment row lock;
 a stale save returns 409 with a read-before-retry instruction.
 
 All inline references to **the same attachment** use the saved size, with a
-container-width cap. This is not a different setting for each occurrence.
+container/preview-height cap; multi-image 4:3 cells can further shrink it.
+The explicit 640×1600 reading-size suggestion, fixed preview frames and offline
+v3 snapshot/revision behavior are in the [image reading contract](IMAGE_READING_STABILITY_CONTRACT.md).
+This is not a different saved setting for each occurrence.
 The image retains its selected visual pixel size even below 44px; only its
 existing View trigger keeps a 44px minimum hit area for touch/keyboard access.
 Existing public-image URLs keep their identity and resolve the latest selected

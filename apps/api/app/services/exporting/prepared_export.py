@@ -65,6 +65,7 @@ def prepare_annotation_export(db: Session, conversation_id: UUID) -> StreamingEx
 
 
 def prepare_direct_export(db: Session, conversation_id: UUID, options: ExportOptions) -> StreamingExportResult:
+    from app.core.config import get_settings
     exporters = {
         "markdown": export_conversation_markdown_streaming,
         "markdown_v2": export_conversation_markdown_v2,
@@ -84,6 +85,8 @@ def prepare_direct_export(db: Session, conversation_id: UUID, options: ExportOpt
             chunks = iter([result.content.encode("utf-8")]) if isinstance(result.content, str) else iter(result.content)
             try:
                 for chunk in chunks:
+                    if stream.tell() + len(chunk) > get_settings().bundle_max_expanded_bytes:
+                        raise ExportError("Export exceeds the download size limit. Use a smaller selection.", 413)
                     stream.write(chunk)
             finally:
                 close = getattr(chunks, "close", None)

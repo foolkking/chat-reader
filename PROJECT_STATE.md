@@ -6,6 +6,14 @@ Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 ## Release and runtime
 
+**Current source work (2026-11-06, not yet accepted/deployed):** image presentation,
+reading viewport ownership and seven follow-up audit items are being implemented
+on existing master. New required `reading-stability` full-frame browser gate;
+old release CI below is **not** acceptance of this candidate.
+[Source contract](docs/system/IMAGE_READING_STABILITY_CONTRACT.md) /
+[implementation boundary](docs/execution/IMAGE_READING_STABILITY_2026-11-06.md).
+No migration or Dexie upgrade; production remains the snapshot below.
+
 | Boundary | Verified snapshot |
 | --- | --- |
 | Source / branch | Existing `master`; deployed application source `67e63364f794d2b6d820eb8502ead9010c76f4bd`; subsequent documentation-only receipts are not new application releases |

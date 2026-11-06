@@ -27,10 +27,9 @@ export function estimateReaderBlockSize(
 
   const text = renderedText ?? block.plain_text ?? blockText(block);
   const minimumGap = Math.max(12, Math.round(metrics.lineHeight * 0.48));
-  if (!text.trim()) return minimumGap;
-
   if (block.block_type === "image" || block.block_type === "mermaid") return 420;
   if (block.block_type === "attachment") return 68;
+  if (!text.trim()) return minimumGap;
 
   const mathShape = estimateMathShape(text);
   if (mathShape) {

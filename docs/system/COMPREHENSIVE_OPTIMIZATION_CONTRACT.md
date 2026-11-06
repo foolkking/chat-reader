@@ -5,6 +5,23 @@ Implemented 2026-11-05; deployed in `67e6336` on 2026-11-06 after exact CI
 acceptance; operational proof lives in the
 [release receipt](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md).
 
+## November 6 candidate additions (not deployed/accepted yet)
+
+The [image/viewport contract](IMAGE_READING_STABILITY_CONTRACT.md) owns preview
+geometry, saved/offline dimensions and single-scroller compensation. The
+[execution mapping](../execution/IMAGE_READING_STABILITY_2026-11-06.md) includes
+all seven follow-up audit items. Mixed annotation outbox batches now confirm
+independent conversations separately; 401 still stops the whole pass. Notebook
+conflict resolution updates owner-only search in the same transaction.
+Compare's right selection follows the URL, navigation leases actual virtual
+blocks, and panes retain independent read-only scrolling/retry.
+Uncertain baseline writes require read-only checking before an explicitly new
+snapshot; a displayed current time is not proof of an uncertain operation.
+Direct browser downloads have a 64MiB Blob fallback budget and bounded stream
+progress/cancellation. Server spool uses the existing archive expansion limit.
+Index full rebuild costs are measured first; no unmeasured incremental-index
+benefit is claimed. Existing capacity and memory budgets are unchanged.
+
 ## Authentication and local reading
 
 Server session, device permission and connectivity are separate. The shared

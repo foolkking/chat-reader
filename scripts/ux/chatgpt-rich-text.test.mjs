@@ -687,6 +687,7 @@ test("table preview retains GFM cell content for Unicode spacing, autolinks and 
   }
 });
 const blockRenderer = compileComponent("../../apps/web/features/conversations/block-renderer.tsx", {
+  "../../lib/image-display": compileComponent("../../apps/web/lib/image-display.ts", {}),
   "./markdown-renderer": renderer,
   "./thinking-summary": thinkingSummary,
   "../attachments/attachment-block": { AttachmentBlock: () => null, embeddedAttachment: () => null },
@@ -738,6 +739,9 @@ const virtualizer = ({ count, getItemKey }) => ({
   measure: () => {}, measureElement: () => {},
 });
 const assistant = compileComponent("../../apps/web/features/conversations/assistant-message-renderer.tsx", {
+  "../../lib/image-display": compileComponent("../../apps/web/lib/image-display.ts", {}),
+  "./reading-viewport": { observeReadingViewport: () => () => {} },
+  "../attachments/preview-adapter-registry": { resolveAttachmentCapability: () => ({ viewerKind: null }) },
   "@tanstack/react-virtual": { defaultRangeExtractor: () => [], useVirtualizer: virtualizer, useWindowVirtualizer: virtualizer },
   "../../components/preferences-provider": { useTranslations: () => key => key },
   "./block-renderer": blockRenderer,
@@ -746,7 +750,7 @@ const assistant = compileComponent("../../apps/web/features/conversations/assist
   "./block-virtualization": { registerVirtualMessage: () => () => {}, READER_WINDOW_LAYOUT_EVENT: "synthetic-layout" },
   "./rendered-block-registry": { registerRenderedBlock: () => () => {} },
   "../attachments/attachment-block": { embeddedAttachment: () => null },
-  "../attachments/attachment-inline-layout": { AttachmentInlineGroup: () => null },
+  "../attachments/attachment-inline-layout": { AttachmentInlineGroup: () => null, ImageFrameScope: ({ children }) => children },
   "./reader-block-layout": { DEFAULT_READER_BLOCK_LAYOUT_METRICS: {}, estimateReaderBlockSize: () => 100, readerBlockLayoutSignature: () => "synthetic-layout" },
   "./reader-virtual-geometry": {
     inspectReaderViewportCoverage: () => ({ visibleItemCount: 1, leadingGap: 0, trailingGap: 0, internalGap: 0, missingIndexes: [], needsRecovery: false }),

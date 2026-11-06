@@ -444,6 +444,8 @@ async function hydrateOfflineBlockAttachments(blocks: RenderBlockRead[]): Promis
           contentUrl: attachment.content_url,
           downloadUrl: attachment.download_url,
           mimeType: attachment.detected_mime_type,
+          imageDisplay: attachment.metadata?.image_display_v1,
+          sourceSha256: attachment.asset_object?.sha256,
         };
       })
       : data.attachmentOccurrences;

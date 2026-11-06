@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.annotation import AnnotationSyncReceipt, ConversationNotebook
@@ -159,3 +160,9 @@ def test_conflict_resolution_concurrent_retry_and_owner_isolation(isolated_schem
         assert note.revision == (2 if choice == "server" else 3)
         assert db.query(ConversationNotebook).count() == 1
         assert db.query(AnnotationSyncReceipt).count() == 2
+        expected = {"local": "Local", "server": "Server", "merge": "Merged"}[choice]
+        documents = db.execute(text(
+            "SELECT plain_text, search_tsv @@ plainto_tsquery('simple', :needle) AS matches "
+            "FROM search_documents WHERE conversation_id = :id AND document_type = 'notebook'"
+        ), {"id": conversation_id, "needle": expected}).all()
+        assert len(documents) == 1 and documents[0].plain_text == expected and documents[0].matches

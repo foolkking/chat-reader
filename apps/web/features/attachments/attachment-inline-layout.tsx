@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Grid2X2 } from "lucide-react";
 import { getAttachment } from "../../lib/api";
@@ -9,18 +9,23 @@ import type { AttachmentRead } from "../../lib/types";
 import { useAttachmentAccess } from "./attachment-access";
 import { AttachmentBlock, toViewerItem, type AttachmentBlockProps } from "./attachment-block";
 import { useAttachmentViewer, type AttachmentViewerItem } from "./attachment-viewer";
-import { computeJustifiedRows } from "./attachment-inline-policy";
+import { registerReaderBlockReveal } from "../conversations/block-virtualization";
+import { usePreferences } from "../../components/preferences-provider";
+import { IMAGE_DISPLAY_CHANGED_EVENT, validatedImageDisplay, type ImageDisplay } from "../../lib/image-display";
+import { authenticationGeneration } from "../../lib/offline-access";
+import { registerRenderedBlock } from "../conversations/rendered-block-registry";
 import {
   attachmentAssetIdentity,
   buildAttachmentRenderPlan,
   resolveInlinePresentation,
+  resolveAttachmentCapability,
   type AttachmentRuntimeRenderState,
   type InlinePresentation,
 } from "./preview-adapter-registry";
 
 export type AttachmentInlineGroupItem = Omit<AttachmentBlockProps,
   "attachment" | "inlinePresentation" | "grouped" | "galleryItems" | "galleryItemStyle" | "onImageRatio" | "onRuntimeChange"
-> & { itemKey: string; attachment?: AttachmentRead };
+> & { itemKey: string; attachment?: AttachmentRead; markdown?: string; blockId?: string };
 
 type ResolvedItem = {
   input: AttachmentInlineGroupItem;
@@ -36,6 +41,14 @@ type PresentationRun = {
   items: ResolvedItem[];
 };
 
+// Owned by a message, not by an individual virtual row. Late metadata must not
+// change an unknown frame merely because that row left and re-entered the DOM.
+const ImageFrames = createContext<Map<string, ImageDisplay | null> | null>(null);
+export function ImageFrameScope({ children }: { children: ReactNode }) {
+  const [frames] = useState(() => new Map<string, ImageDisplay | null>());
+  return <ImageFrames.Provider value={frames}>{children}</ImageFrames.Provider>;
+}
+
 export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupItem[] }) {
   const access = useAttachmentAccess();
   const shareToken = access.kind === "share" ? access.token : undefined;
@@ -45,6 +58,7 @@ export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupI
       queryFn: () => access.kind === "offline" ? getOfflineAttachment(item.attachmentId) : getAttachment(item.attachmentId, shareToken, access.kind === "admin" ? access.userId : undefined),
       staleTime: 5 * 60 * 1000,
       enabled: !item.attachment,
+      ...(access.kind === "offline" ? { networkMode: "always" as const } : {}),
     })),
   });
   const [runtimeByItem, setRuntimeByItem] = useState<Record<string, { assetIdentity: string; state: AttachmentRuntimeRenderState }>>({});
@@ -64,7 +78,10 @@ export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupI
       input,
       attachment,
       assetIdentity,
-      presentation: attachment ? resolveInlinePresentation(buildAttachmentRenderPlan(attachment, runtime)) : "file-list",
+      // A known image keeps its slot even when loading/decoding fails. The
+      // RenderPlan still controls what may be opened or downloaded inside it.
+      presentation: input.imageHint || (attachment && resolveAttachmentCapability(attachment).viewerKind === "image")
+        ? "gallery" : attachment ? resolveInlinePresentation(buildAttachmentRenderPlan(attachment, runtime)) : "file-list",
       runtime,
     };
   });
@@ -91,6 +108,13 @@ function PresentationGroup({ run, access, onRuntimeChange }: {
 }) {
   const viewer = useAttachmentViewer();
   const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (run.presentation === "gallery") return;
+    const releases = run.items.map(({ input }) => input.messageId && input.blockIndex !== undefined
+      ? registerReaderBlockReveal(input.messageId, input.blockIndex, () => setExpanded(true))
+      : () => undefined);
+    return () => releases.forEach(release => release());
+  }, [run]);
   const collapsible = run.presentation === "audio-list" || run.presentation === "file-list";
   const visibleItems = collapsible && !expanded ? run.items.slice(0, 5) : run.items;
   const hiddenCount = run.items.length - visibleItems.length;
@@ -99,7 +123,7 @@ function PresentationGroup({ run, access, onRuntimeChange }: {
     const galleryItems = run.items.map((item) => toViewerItem(item.input));
     return (
       <AttachmentLane presentation="gallery">
-        <JustifiedImageGallery
+        <StableImageGallery
           items={run.items}
           galleryItems={galleryItems}
           onRuntimeChange={onRuntimeChange}
@@ -131,15 +155,14 @@ function PresentationGroup({ run, access, onRuntimeChange }: {
         data-attachment-group={run.presentation}
       >
         {visibleItems.map((item) => (
-          <AttachmentBlock
-            key={item.input.itemKey}
+          <GalleryCell key={item.input.itemKey} item={item.input} gallery={false}><AttachmentBlock
             {...item.input}
             attachment={item.attachment}
             inlinePresentation={run.presentation}
             grouped
             runtimeState={item.runtime}
             onRuntimeChange={onRuntimeChange(item.input.itemKey, item.assetIdentity)}
-          />
+          /></GalleryCell>
         ))}
         {collapsible && run.items.length > 5 ? (
           <button type="button" className="attachment-group-expander" onClick={() => setExpanded((value) => !value)}>
@@ -163,80 +186,75 @@ function AttachmentLane({ presentation, children }: { presentation: InlinePresen
   );
 }
 
-function JustifiedImageGallery({ items, galleryItems, onRuntimeChange, onShowAll }: {
+function StableImageGallery({ items, galleryItems, onRuntimeChange, onShowAll }: {
   items: ResolvedItem[];
   galleryItems: AttachmentViewerItem[];
   onRuntimeChange: (itemKey: string, assetIdentity: string) => (state: AttachmentRuntimeRenderState) => void;
   onShowAll: (trigger: HTMLElement) => void;
 }) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState(720);
-  const [ratios, setRatios] = useState<Record<string, { assetIdentity: string; ratio: number }>>({});
+  const zh = usePreferences().resolvedLocale === "zh-CN";
+  const access = useAttachmentAccess();
+  const frames = useContext(ImageFrames);
+  const frameKey = `${access.kind}:${items[0]?.input.itemKey}`;
+  // Late metadata/decode does not resize an already mounted unknown frame.
+  // Only an explicit owner save changes that reading frame.
+  const [singleSize, setSingleSize] = useState(() => {
+    if (frames?.has(frameKey)) return frames.get(frameKey) ?? null;
+    const attachment = items[0]?.attachment;
+    const size = validatedImageDisplay(attachment?.metadata?.image_display_v1, attachment?.asset_object?.sha256) ?? null;
+    frames?.set(frameKey, size);
+    return size;
+  });
   useEffect(() => {
-    const element = rootRef.current;
-    if (!element) return;
-    const update = () => setWidth(Math.max(280, element.clientWidth));
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
+    if (access.kind !== "owner" || items.length !== 1) return;
+    const changed = (event: Event) => {
+      const detail = (event as CustomEvent<{ attachmentId: string; display: ImageDisplay; generation: number }>).detail;
+      if (detail?.generation !== authenticationGeneration() || detail.attachmentId !== items[0].input.attachmentId) return;
+      const value = validatedImageDisplay(detail.display, items[0].attachment?.asset_object?.sha256);
+      if (value) { frames?.set(frameKey, value); setSingleSize(value); }
+    };
+    window.addEventListener(IMAGE_DISPLAY_CHANGED_EVENT, changed);
+    return () => window.removeEventListener(IMAGE_DISPLAY_CHANGED_EVENT, changed);
+  }, [access.kind, items, frames, frameKey]);
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  useEffect(() => {
+    const releases = items.map(({ input }) => input.messageId && input.blockIndex !== undefined
+      ? registerReaderBlockReveal(input.messageId, input.blockIndex, () => setRevealedKey(input.itemKey))
+      : () => undefined);
+    return () => releases.forEach(release => release());
+  }, [items]);
   const hiddenCount = items.length > 6 ? items.length - 5 : 0;
-  const visible = hiddenCount > 0 ? items.slice(0, 5) : items;
-  const layoutItems = [
-    ...visible.map((item) => ({ key: item.input.itemKey, ratio: ratios[item.input.itemKey]?.assetIdentity === item.assetIdentity ? ratios[item.input.itemKey].ratio : 1.5, item })),
-    ...(hiddenCount > 0 ? [{ key: "__more__", ratio: 1.35, item: null }] : []),
-  ];
-  const rows = computeJustifiedRows(layoutItems, width);
+  const revealed = items.find(item => item.input.itemKey === revealedKey);
+  const visible = hiddenCount > 0
+    ? revealed && !items.slice(0, 5).includes(revealed) ? [...items.slice(0, 4), revealed] : items.slice(0, 5)
+    : items;
+  return <div className="attachment-image-gallery" data-gallery-count={Math.min(items.length, 6)} data-single-image={items.length === 1 ? "true" : undefined}
+    style={{
+      "--single-image-width": `${singleSize?.width ?? 320}px`,
+      "--single-image-ratio": (singleSize?.width ?? 4) / (singleSize?.height ?? 3),
+    } as CSSProperties}
+    data-testid="attachment-group" data-attachment-group="gallery">
+    {visible.map(resolved => <GalleryCell key={resolved.input.itemKey} item={resolved.input}>
+      <AttachmentBlock {...resolved.input} attachment={resolved.attachment} inlinePresentation="gallery"
+        grouped singleImage={items.length === 1} runtimeState={resolved.runtime} galleryItems={galleryItems}
+        onRuntimeChange={onRuntimeChange(resolved.input.itemKey, resolved.assetIdentity)} />
+    </GalleryCell>)}
+    {hiddenCount > 0 ? <button type="button" className="attachment-gallery-more" onClick={event => onShowAll(event.currentTarget)}
+      aria-label={zh ? `当前组还有 ${hiddenCount} 张图片，查看全部图片` : `${hiddenCount} more images. View all images`}>
+      <Grid2X2 className="h-6 w-6" /><strong>+{hiddenCount}</strong><span>{zh ? "查看全部图片" : "View all images"}</span>
+    </button> : null}
+  </div>;
+}
 
-  return (
-    <div ref={rootRef} className="attachment-image-gallery" data-testid="attachment-group" data-attachment-group="gallery">
-      {rows.map((row, rowIndex) => (
-        <div key={`gallery-row-${rowIndex}`} className="attachment-gallery-row">
-          {row.items.map((layoutItem) => {
-            const style = { "--attachment-gallery-item-width": `${layoutItem.width}px`, "--attachment-gallery-row-height": `${row.height}px` } as CSSProperties;
-            if (!layoutItem.item) {
-              return (
-                <button
-                  key="gallery-more"
-                  type="button"
-                  className="attachment-gallery-more"
-                  style={style}
-                  onClick={(event) => onShowAll(event.currentTarget)}
-                  aria-label={`当前组还有 ${hiddenCount} 张图片，查看全部图片`}
-                >
-                  <Grid2X2 className="h-6 w-6" />
-                  <strong>+{hiddenCount}</strong>
-                  <span>查看全部图片</span>
-                </button>
-              );
-            }
-            const resolved = layoutItem.item;
-            return (
-              <AttachmentBlock
-                key={resolved.input.itemKey}
-                {...resolved.input}
-                attachment={resolved.attachment}
-                inlinePresentation="gallery"
-                grouped
-                runtimeState={resolved.runtime}
-                galleryItems={galleryItems}
-                galleryItemStyle={style}
-                onImageRatio={(ratio) => setRatios((current) => {
-                  const existing = current[resolved.input.itemKey];
-                  return existing?.assetIdentity === resolved.assetIdentity && existing.ratio === ratio
-                    ? current
-                    : { ...current, [resolved.input.itemKey]: { assetIdentity: resolved.assetIdentity, ratio } };
-                })}
-                onRuntimeChange={onRuntimeChange(resolved.input.itemKey, resolved.assetIdentity)}
-              />
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  );
+function GalleryCell({ item, children, gallery = true }: { item: AttachmentInlineGroupItem; children: ReactNode; gallery?: boolean }) {
+  const register = useCallback((element: HTMLDivElement | null) => {
+    if (element && item.messageId && item.blockIndex !== undefined) {
+      return registerRenderedBlock(item.messageId, item.blockIndex, element, item.markdown ?? "");
+    }
+  }, [item.messageId, item.blockIndex, item.markdown]);
+  return <div ref={register} className={gallery ? "attachment-gallery-cell" : "min-w-0"}
+    id={item.messageId && item.blockIndex !== undefined ? `block-${item.messageId}-${item.blockIndex}` : undefined}
+    data-block-index={item.blockIndex} data-block-id={item.blockId} data-block-type={item.imageHint ? "image" : "attachment"} data-reader-copy-block="true">{children}</div>;
 }
 
 function partitionPresentationRuns(items: ResolvedItem[]): PresentationRun[] {

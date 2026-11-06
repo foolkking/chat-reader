@@ -355,6 +355,12 @@ def _block_read(
                     "mimeType": (
                         attachment_reads[link.attachment_id] or {}
                     ).get("detected_mime_type"),
+                    "imageDisplay": (
+                        (attachment_reads[link.attachment_id] or {}).get("metadata") or {}
+                    ).get("image_display_v1"),
+                    "sourceSha256": (
+                        (attachment_reads[link.attachment_id] or {}).get("asset_object") or {}
+                    ).get("sha256"),
                 }
                 for link in links
             ],

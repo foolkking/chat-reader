@@ -98,6 +98,50 @@ def test_legacy_markdown_download_spools_without_retaining_all_bodies(archive_db
     assert result.content.stream.closed
 
 
+def test_direct_export_limit_closes_spool_and_does_not_emit_success(archive_db, monkeypatch):
+    from tempfile import SpooledTemporaryFile
+    from app.services.exporting import prepared_export
+    conversation_id, _ = seed_export(archive_db, count=4)
+    streams, events = [], []
+    def spool(*args, **kwargs):
+        stream = SpooledTemporaryFile(*args, **kwargs)
+        streams.append(stream)
+        return stream
+    monkeypatch.setattr(prepared_export, "SpooledTemporaryFile", spool)
+    monkeypatch.setattr(prepared_export, "_write_export_event", lambda *args: events.append(args))
+    monkeypatch.setattr(get_settings(), "bundle_max_expanded_bytes", 256)
+    with pytest.raises(export_service.ExportError, match="download size limit") as failure:
+        prepare_direct_export(archive_db, conversation_id, ExportOptions(format="markdown", message_ids=[]))
+    assert failure.value.status_code == 413
+    assert len(streams) == 1 and streams[0].closed
+    assert events == []
+
+
+def test_direct_spool_preparation_transfer_and_early_close_measurement(archive_db):
+    import time
+    import tracemalloc
+    conversation_id, _ = seed_export(archive_db, count=40, versions=1, text_repeats=4096)
+    tracemalloc.start()
+    started = time.perf_counter()
+    try:
+        result = prepare_direct_export(archive_db, conversation_id, ExportOptions(format="markdown", message_ids=[]))
+        prepared_seconds = time.perf_counter() - started
+        size = result.content.size
+        assert size > 1024 * 1024
+        assert result.content.stream._rolled
+        first = next(result.content)
+        assert len(first) == 64 * 1024
+        result.content.close()  # same iterator cleanup used on disconnect
+        assert result.content.stream.closed
+        _, peak = tracemalloc.get_traced_memory()
+        assert peak < 16 * 1024 * 1024
+        print(json.dumps({"fixture": "synthetic-direct-export", "bytes": size,
+            "prepared_seconds": prepared_seconds, "traced_peak_bytes": peak,
+            "delivered_before_close": len(first), "closed": True}))
+    finally:
+        tracemalloc.stop()
+
+
 def test_offline_body_batches_are_released_before_the_next_batch(archive_db):
     conversation_id, _ = seed_export(archive_db)
     conversation = archive_db.get(Conversation, conversation_id)

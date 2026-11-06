@@ -1,5 +1,12 @@
 # Markdown 文档台账
 
+## 图片/阅读稳定性及七项追加审查 — 2026-11-06 候选
+
+新增 `system/IMAGE_READING_STABILITY_CONTRACT.md`，集中维护固定图格、
+保存/离线尺寸和单容器补偿边界；新增同日期 execution 映射，明确未完成精确
+CI、不得部署。同步状态/索引/测试、附件/复制/整合合同，旧发布回执保留。
+没有改写两份用户审查/evidence、AGENTS、原 build-info 或生产状态。
+
 ## 恢复一致性 CI 与部署回执 — 2026-11-06
 
 以 Next.js/FastAPI/PostgreSQL monorepo 的现有文档结构做有界状态同步，

@@ -1,0 +1,471 @@
+import { expect, test, type APIRequestContext, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { deflateSync } from "node:zlib";
+import { writeFile } from "node:fs/promises";
+import { settingsAppearance } from "./settings-test-helper";
+
+test.skip(process.env.E2E_READING_STABILITY !== "1", "Isolated synthetic reading-stability gate");
+test.use({ trace: "off", serviceWorkers: "allow", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
+
+// Real upload, canonical parse, package generation, Reader and browser layout.
+// Only image transport timing/failure is controlled; no component/test-only route.
+type Fixture = { id: string; messageId: string; assets: string[]; shareId: string; token: string };
+const fixtures: Fixture[] = [];
+let normal: Fixture, heavy: Fixture, other: Fixture;
+
+function png(width: number, height: number) {
+  const chunk = (name: string, data: Buffer) => {
+    const type = Buffer.from(name), crcBytes = Buffer.concat([type, data]);
+    let crc = 0xffffffff;
+    for (const byte of crcBytes) {
+      crc ^= byte;
+      for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+    const length = Buffer.alloc(4), checksum = Buffer.alloc(4);
+    length.writeUInt32BE(data.length); checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
+    return Buffer.concat([length, type, data, checksum]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width); header.writeUInt32BE(height, 4); header[8] = 8; header[9] = 2;
+  const pixels = Buffer.alloc((width * 3 + 1) * height, 110);
+  for (let row = 0; row < height; row++) pixels[row * (width * 3 + 1)] = 0;
+  return Buffer.concat([Buffer.from("89504e470d0a1a0a", "hex"), chunk("IHDR", header),
+    chunk("IDAT", deflateSync(pixels)), chunk("IEND", Buffer.alloc(0))]);
+}
+
+async function seed(request: APIRequestContext, long: boolean, label: string): Promise<Fixture> {
+  const created = await request.post("/api/conversations", { data: {
+    title: `Synthetic geometry ${label}`, messages: [
+      { role: "user", content_markdown: "Synthetic reading question" },
+      { role: "assistant", content_markdown: "Synthetic placeholder" },
+    ],
+  } });
+  expect(created.status()).toBe(201);
+  const made = await created.json(), id = made.conversation.id, message = made.messages[1];
+  const fixture: Fixture = { id, messageId: message.id, assets: [], shareId: "", token: "" };
+  fixtures.push(fixture);
+  for (const [index, [width, height]] of [[32, 24], [1600, 1200], [240, 4000], [2000, 120], [400, 800], [640, 1600]].entries()) {
+    const session = await request.post(`/api/conversations/${id}/attachment-upload-sessions`, { data: {} });
+    expect(session.status()).toBe(201);
+    const uploaded = await request.post(`/api/attachment-upload-sessions/${(await session.json()).id}/items`,
+      { multipart: { file: { name: `synthetic-${index}.png`, mimeType: "image/png", buffer: png(width, height) } } });
+    expect(uploaded.status()).toBe(201);
+    const finalized = await request.post(`/api/conversations/${id}/attachments`, { data: { upload_item_ids: [(await uploaded.json()).id] } });
+    expect(finalized.status()).toBe(201);
+    const asset = (await finalized.json()).items[0];
+    fixture.assets.push(asset.id);
+    // Both a known saved frame and an unknown legacy frame occur in each group.
+    if (index % 2) {
+      const display = await (await request.get(`/api/attachments/${asset.id}/image-display`)).json();
+      const save = await request.put(`/api/attachments/${asset.id}/image-display`, { data: {
+        source_sha256: display.source_sha256, scale_percent: index === 1 ? 25 : 50, expected_scale_percent: 100,
+      } });
+      expect(save.ok()).toBe(true);
+    }
+  }
+  const group = (count: number) => Array.from({ length: count }, (_, i) => `![Synthetic ${i}](cr-asset://${fixture.assets[i % 6]})`).join("\n\n");
+  const body = [
+    "# Synthetic geometry", group(7),
+    "```typescript\nconst synthetic = 1;\n\nconsole.log(synthetic);\n```",
+    "```mermaid\nflowchart LR\n  A[Start] --> B[Finish]\n```",
+    "Reading stability anchor. This real paragraph must stay at its reading position.",
+    ...[1, 2, 3, 6, 20].flatMap(count => [`## Group of ${count}`, group(count), "Synthetic interleaved prose."]),
+    ...Array.from({ length: long ? 220 : 22 }, (_, i) =>
+      `${i === 190 ? "## Deep synthetic target\n\n" : ""}Synthetic paragraph ${i}. ${"Reading text without private content. ".repeat(8)}`),
+  ].join("\n\n");
+  const patched = await request.patch(`/api/messages/${message.id}`, { data: { base_version_id: message.current_version.id, content_markdown: body } });
+  expect(patched.ok()).toBe(true);
+  const share = await request.post(`/api/conversations/${id}/shares`, { data: { scope: "conversation", include_toc: true, include_metadata: true } });
+  expect(share.ok()).toBe(true);
+  const shared = await share.json();
+  fixture.shareId = shared.id; fixture.token = shared.token;
+  return fixture;
+}
+
+test.beforeAll(async ({ request, baseURL }) => {
+  test.setTimeout(180_000);
+  await settingsAppearance(request, baseURL!, "en-US");
+  normal = await seed(request, false, "normal");
+  heavy = await seed(request, true, "virtual");
+  other = await seed(request, false, "independent");
+});
+test.afterAll(async ({ request }) => {
+  for (const fixture of fixtures) {
+    if (fixture.shareId) expect((await request.post(`/api/shares/${fixture.shareId}/revoke`)).ok()).toBe(true);
+    expect((await request.delete(`/api/conversations/${fixture.id}`)).ok()).toBe(true);
+  }
+});
+
+async function frames(page: Page, count = 2) {
+  await page.evaluate(count => new Promise<void>(resolve => {
+    const tick = () => --count <= 0 ? resolve() : requestAnimationFrame(tick);
+    requestAnimationFrame(tick);
+  }), count);
+}
+
+type Sample = { time: number; top: number; scroll: number; height: number; cells: number[][]; writer: string; mounted: number; measuredRows: number[][] };
+type Probe = { frames: Sample[]; corrections: { time: number; delta: number; applied: number }[] };
+async function startProbe(anchor: Locator) {
+  await anchor.evaluate(node => {
+    const target = node as HTMLElement;
+    const root = target.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? document.documentElement;
+    const state = { frames: [] as Sample[], corrections: [] as Probe["corrections"], stop: false };
+    const host = window as unknown as { readingProbe: typeof state; stopReadingProbe: () => void };
+    host.readingProbe = state;
+    const onCorrection = (event: Event) => state.corrections.push({ time: performance.now(), ...(event as CustomEvent).detail });
+    root.addEventListener("chat-reader:geometry-correction", onCorrection);
+    host.stopReadingProbe = () => { state.stop = true; root.removeEventListener("chat-reader:geometry-correction", onCorrection); };
+    const tick = () => {
+      if (state.stop) return;
+      state.frames.push({
+        time: performance.now(), top: target.getBoundingClientRect().top - (root === document.documentElement ? 0 : root.getBoundingClientRect().top),
+        scroll: root === document.documentElement ? scrollY : root.scrollTop,
+        height: root.scrollHeight, writer: root.dataset.readerLastScrollWriter ?? "none",
+        mounted: root.querySelectorAll("[data-block-index]").length,
+        measuredRows: Array.from(root.querySelectorAll<HTMLElement>('[data-virtualized-block-list="true"] > [data-index]'))
+          .map(row => [Number(row.dataset.index), row.getBoundingClientRect().height]),
+        cells: Array.from(root.querySelectorAll(".attachment-gallery-cell")).map(cell => {
+          const rect = cell.getBoundingClientRect(); return [rect.width, rect.height];
+        }),
+      });
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
+}
+async function endProbe(page: Page, info: TestInfo, label: string): Promise<Probe> {
+  const evidence = await page.evaluate(() => {
+    const host = window as unknown as { readingProbe: Probe; stopReadingProbe: () => void };
+    host.stopReadingProbe(); return host.readingProbe;
+  });
+  await writeFile(info.outputPath(`${label}-frames.json`), JSON.stringify(evidence));
+  expect(evidence.frames.length, "The gate must observe intermediate frames, not only the final screenshot").toBeGreaterThan(10);
+  return evidence;
+}
+
+for (const width of [375, 1440]) for (const long of [false, true]) for (const surface of ["reader", "share", "offline", "compare"] as const) {
+  test(`${width}px ${long ? "virtual" : "normal"} ${surface}: stable frames, reading motion and Viewer return`, async ({ page, context }, info) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width, height: 900 });
+    const fixture = long ? heavy : normal;
+    const release: (() => void)[] = [];
+    let hold = surface !== "offline", failed = false, imageRequests = 0, writes = 0;
+    page.on("request", request => { if (request.url().includes("/image-display") && request.method() === "PUT") writes++; });
+    if (hold) await page.route(/\/api\/.*attachments\/[^/]+\/content(?:\?|$)/, async route => {
+      imageRequests++;
+      if (hold) await new Promise<void>(resolve => release.push(resolve));
+      if (!failed && route.request().url().includes(fixture.assets[0])) {
+        failed = true; await route.fulfill({ status: 503, body: "Synthetic image failure" });
+      } else await route.continue();
+    });
+    try {
+      const url = surface === "reader" ? `/conversations/${fixture.id}`
+        : surface === "share" ? `/share/${fixture.token}`
+          : surface === "compare" ? `/compare?left=${fixture.id}&right=${other.id}` : `/library?conversationId=${fixture.id}`;
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      if (surface === "offline") {
+        await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
+        await expect(page.locator("p:visible, span:visible", { hasText: /^(Offline ready|Existing offline version is available)/ }).first()).toBeVisible();
+        // Offline attachment reads must not borrow the owner's online query cache.
+        await page.route("**/api/attachments/**", route => route.abort());
+        await context.setOffline(true);
+      }
+      const article = page.locator(`#message-${fixture.messageId}`).filter({ visible: true });
+      const anchor = article.locator('[data-block-type="paragraph"]').filter({ hasText: /^Reading stability anchor\./ }).first();
+      await expect(anchor).toBeAttached();
+      if (long) await expect(article.locator('[data-virtualized-block-list="true"]')).toHaveCount(1);
+      const root = surface === "share" ? page.locator("html") : article.locator('xpath=ancestor::*[@data-reader-scroll-root="true"][1]');
+      if (surface === "reader" || surface === "offline") await expect(root).toHaveAttribute("data-navigation-stage", "settled");
+      // A real reading action establishes the anchor; no old scrollTop restore.
+      await anchor.scrollIntoViewIfNeeded();
+      await frames(page, 4);
+      await startProbe(anchor);
+      hold = false;
+      for (const done of release.reverse()) { done(); await frames(page, 2); }
+      if (surface !== "offline") {
+        expect(imageRequests).toBeGreaterThan(0);
+        await expect(article.getByText("Image preview unavailable. Its place is preserved.").first()).toBeAttached();
+        // Invoke without scrolling the page: failure recovery must not itself
+        // move the anchor to the failed image above the reading line.
+        await article.getByRole("button", { name: "Retry preview", exact: true }).first().evaluate((button: HTMLButtonElement) => button.click());
+      }
+      await expect.poll(() => article.locator(".attachment-gallery-image").evaluateAll(images => images.every(image => (image as HTMLImageElement).complete))).toBe(true);
+      await frames(page, 20);
+      const stopped = await endProbe(page, info, "stopped");
+      const first = stopped.frames[0];
+      expect(Math.max(...stopped.frames.map(frame => Math.abs(frame.top - first.top))), "Peak shift, including transient up-and-back movement").toBeLessThanOrEqual(2);
+      expect(Math.abs(stopped.frames.at(-1)!.top - first.top)).toBeLessThanOrEqual(1);
+      for (const frame of stopped.frames) {
+        if (frame.cells.length !== first.cells.length) continue; // virtual mount count is separately recorded
+        for (let index = 0; index < frame.cells.length; index++) for (let axis = 0; axis < 2; axis++)
+          expect(Math.abs(frame.cells[index][axis] - first.cells[index][axis])).toBeLessThanOrEqual(1);
+      }
+      expect(writes, "Reading/decoding does not save a size").toBe(0);
+      if (surface !== "reader") await expect(article.getByRole("button", { name: /Image display scale:/ })).toHaveCount(0);
+
+      for (const direction of [1, -1]) {
+        await startProbe(anchor);
+        if (surface === "share") await page.mouse.move(width / 2, 450);
+        else await root.hover();
+        for (let step = 0; step < 8; step++) { await page.mouse.wheel(0, 45 * direction); await frames(page, 3); }
+        await frames(page, 8);
+        const moving = await endProbe(page, info, direction > 0 ? "down" : "up");
+        for (let i = 1; i < moving.frames.length; i++) {
+          const before = moving.frames[i - 1], after = moving.frames[i];
+          // Inspect the actual DOM anchor as well as scrollTop: a legitimate
+          // window trim changes both scroll coordinates and virtual geometry.
+          if (after.height === before.height && after.mounted === before.mounted)
+            expect((after.scroll - before.scroll) * direction).toBeGreaterThanOrEqual(-1);
+          expect((after.top - before.top) * direction).toBeLessThanOrEqual(2);
+        }
+      }
+      await article.locator(".attachment-gallery-more").first().scrollIntoViewIfNeeded();
+      await frames(page, 4);
+      const beforeViewer = await article.locator(".attachment-gallery-more").first().boundingBox();
+      await article.locator(".attachment-gallery-more").first().click();
+      await expect(page.getByTestId("attachment-viewer-shell")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("attachment-viewer-shell")).toHaveCount(0);
+      const afterViewer = await article.locator(".attachment-gallery-more").first().boundingBox();
+      expect(Math.abs(afterViewer!.y - beforeViewer!.y)).toBeLessThanOrEqual(1);
+      await page.screenshot({ path: info.outputPath("reading-return.png") });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(writes).toBe(0);
+    } finally {
+      hold = false; release.forEach(done => done());
+      await context.setOffline(false);
+      await page.unrouteAll({ behavior: "wait" });
+    }
+  });
+}
+
+test("Compare deep navigation leases a real virtual block; URL and opposite scroller remain independent", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/compare?left=${heavy.id}&right=${other.id}`);
+  const left = page.getByRole("region", { name: "Left conversation", exact: true });
+  const right = page.getByRole("region", { name: "Right conversation", exact: true });
+  await expect(left.locator("article").first()).toBeVisible();
+  const rightRoot = right.locator('[data-reader-scroll-root="true"]');
+  await rightRoot.evaluate(node => { node.scrollTop = 240; });
+  const rightTop = await rightRoot.evaluate(node => node.scrollTop);
+  await left.locator("summary").filter({ hasText: "Sections" }).click();
+  await left.getByRole("button", { name: /Deep synthetic target/ }).click();
+  const heading = left.locator('[data-block-type="heading"]').filter({ hasText: "Deep synthetic target" });
+  await expect(heading).toBeVisible();
+  await expect.poll(() => heading.evaluate(node => node.getBoundingClientRect().top
+    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top)).toBeLessThanOrEqual(26);
+  expect(await rightRoot.evaluate(node => node.scrollTop)).toBe(rightTop);
+  await page.evaluate(id => { const url = new URL(location.href); url.searchParams.set("right", id); history.pushState(null, "", url); }, normal.id);
+  await expect(page.getByRole("textbox", { name: "Comparison conversation ID" })).toHaveValue(normal.id);
+  await expect(right.getByRole("heading", { name: "Synthetic geometry normal" })).toBeVisible();
+});
+
+test("all group sizes use lane-based 4:3 slots and preserve full images at every width", async ({ page }, info) => {
+  await page.goto(`/conversations/${normal.id}`);
+  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  const article = page.locator(`#message-${normal.messageId}`);
+  const groups = article.locator('.attachment-image-gallery');
+  await expect(groups).toHaveCount(6);
+  const counts = [7, 1, 2, 3, 6, 20];
+  for (const width of [375, 800, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await frames(page, 4);
+    for (let index = 0; index < counts.length; index++) {
+      const group = groups.nth(index);
+      await group.scrollIntoViewIfNeeded();
+      const geometry = await group.evaluate(node => {
+        const cells = Array.from(node.querySelectorAll(".attachment-gallery-cell")).map(cell => {
+          const box = cell.getBoundingClientRect(); return { width: box.width, height: box.height };
+        });
+        return { width: node.getBoundingClientRect().width, columns: getComputedStyle(node).gridTemplateColumns.split(" ").length, cells };
+      });
+      const count = counts[index], visible = count > 6 ? 5 : count;
+      expect(geometry.cells).toHaveLength(visible);
+      expect(geometry.columns).toBe(count === 1 ? 1 : Math.min(count, geometry.width < 320 ? 1 : geometry.width < 640 ? 2 : 3));
+      if (count > 1) for (const cell of geometry.cells) expect(Math.abs(cell.height - cell.width * .75)).toBeLessThanOrEqual(1);
+      else expect(geometry.cells[0].width).toBeLessThanOrEqual(320);
+      await expect.poll(() => group.locator("img").evaluateAll(images => images.every(image => (image as HTMLImageElement).complete))).toBe(true);
+      for (const image of await group.locator("img").all()) {
+        expect(await image.evaluate(node => {
+          const image = node as HTMLImageElement, box = image.getBoundingClientRect();
+          return image.naturalWidth > 0 && box.width <= image.naturalWidth + 1 && box.height <= image.naturalHeight + 1
+            && getComputedStyle(image).objectFit === "scale-down";
+        })).toBe(true);
+      }
+    }
+    await page.screenshot({ path: info.outputPath(`groups-${width}.png`) });
+  }
+});
+
+test("unknown baseline result checks are read-only; a new snapshot requires a second explicit action", async ({ page }) => {
+  let writes = 0;
+  await page.route(`**/api/conversations/${other.id}/new-messages/baseline`, async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    writes++;
+    const response = await route.fetch();
+    expect(response.ok()).toBe(true);
+    if (writes === 1) await route.abort(); else await route.fulfill({ response });
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/conversations/${other.id}`);
+  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  await page.locator('[data-reader-header-more-actions="true"]').click();
+  await page.getByRole("button", { name: "New messages", exact: true }).click();
+  await page.getByRole("button", { name: "Mark current server content as seen" }).click();
+  const create = page.getByRole("button", { name: "Create a new server snapshot" });
+  await expect(create).toBeDisabled();
+  await page.getByRole("button", { name: "Check last result" }).click();
+  await expect(page.getByText(/time does not prove the last save succeeded/)).toBeVisible();
+  expect(writes).toBe(1);
+  await expect(create).toBeEnabled();
+  await create.click();
+  await expect(page.getByRole("status").filter({ hasText: /Save confirmed:/ })).toBeVisible();
+  expect(writes).toBe(2);
+});
+
+test("a hidden image target occupies a real preview slot without expanding the group", async ({ page }) => {
+  const response = await page.request.get(`/api/messages/${heavy.messageId}/blocks?offset=0&limit=300`);
+  expect(response.ok()).toBe(true);
+  const images = (await response.json() as { block_index: number; block_type: string }[]).filter(block => block.block_type === "image");
+  expect(images.length).toBeGreaterThan(7);
+  const target = images[6].block_index;
+  await page.goto(`/conversations/${heavy.id}?messageId=${heavy.messageId}&blockIndex=${target}`);
+  const block = page.locator(`#block-${heavy.messageId}-${target}`);
+  await expect(block).toBeVisible();
+  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  const group = block.locator('xpath=ancestor::*[contains(@class,"attachment-image-gallery")][1]');
+  await expect(group.locator(".attachment-gallery-cell")).toHaveCount(5);
+  await expect(group.locator(".attachment-gallery-more")).toHaveCount(1);
+});
+
+test("explicit reading size updates online references but not an existing offline snapshot", async ({ page, context }, info) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/library?conversationId=${normal.id}`);
+  await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
+  await expect(page.locator(`#message-${normal.messageId}`)).toBeVisible();
+  const snapshot = () => page.evaluate(async id => {
+    const opening = indexedDB.open("chat-reader-offline-library");
+    return new Promise<number>((resolve, reject) => {
+      opening.onerror = () => reject(opening.error);
+      opening.onsuccess = () => {
+        const db = opening.result, tx = db.transaction("attachments"), row = tx.objectStore("attachments").get(id);
+        tx.oncomplete = () => { db.close(); resolve(row.result.image_display_v1.scale_percent); };
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+  }, normal.assets[1]);
+  expect(await snapshot()).toBe(25);
+  await page.goto(`/conversations/${normal.id}`);
+  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  const image = page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"]`).first();
+  await image.getByRole("button", { name: /Image display scale:/ }).click();
+  await expect(image.getByText("Original pixels", { exact: true })).toBeVisible();
+  await image.getByRole("button", { name: "Apply reading size", exact: true }).click();
+  await expect(image.getByRole("status")).toHaveText("Image size saved.");
+  const selected = await (await page.request.get(`/api/attachments/${normal.assets[1]}/image-display`)).json();
+  expect(selected.scale_percent).toBe(40);
+  expect([selected.width, selected.height]).toEqual([640, 480]);
+  await page.goto(`/library?conversationId=${normal.id}`);
+  await expect(page.locator(`#message-${normal.messageId}`)).toBeVisible();
+  await expect(page.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
+  expect(await snapshot(), "No silent offline mutation from an online save").toBe(25);
+  await expect(page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"] img`).first()).toHaveAttribute("width", "400");
+  // The regular revision-aware update is the only way to replace that snapshot.
+  const update = page.getByRole("button", { name: "Update conversation", exact: true }).filter({ visible: true }).first();
+  const expandSidebar = page.getByRole("button", { name: "Open sidebar", exact: true }).filter({ visible: true });
+  await expect(update.or(expandSidebar)).toBeVisible();
+  if (await expandSidebar.isVisible()) await expandSidebar.click();
+  await update.click();
+  await expect.poll(snapshot).toBe(40);
+  await expect(page.locator("p:visible, span:visible", { hasText: /^(Offline ready|Existing offline version is available)/ }).first()).toBeVisible();
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"] img`).first()).toHaveAttribute("width", "640");
+  await page.screenshot({ path: info.outputPath("updated-offline-snapshot.png") });
+  await context.setOffline(false);
+  // Restore only this synthetic fixture for later cases.
+  expect((await page.request.put(`/api/attachments/${normal.assets[1]}/image-display`, { data: {
+    source_sha256: selected.source_sha256, scale_percent: 25, expected_scale_percent: 40,
+  } })).ok()).toBe(true);
+});
+
+test("NX-PERF-01 browser measurement: actual IndexedDB projection and worker rebuild on a small local edit", async ({ page }, info) => {
+  test.setTimeout(180_000);
+  await page.addInitScript(() => {
+    const measurements: { request: string; type: string; count: number; bytes: number; sent: number; completed?: number }[] = [];
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        this.addEventListener("message", event => {
+          const row = measurements.findLast(row => row.request === event.data.requestId);
+          if (row) row.completed = performance.now();
+        });
+      }
+      postMessage(message: { requestId: string; type: string; documents?: unknown[] }, options?: StructuredSerializeOptions | Transferable[]) {
+        if (message.type === "init") measurements.push({ request: message.requestId, type: message.type,
+          count: message.documents?.length ?? 0, bytes: new TextEncoder().encode(JSON.stringify(message.documents)).byteLength, sent: performance.now() });
+        if (Array.isArray(options)) super.postMessage(message, options);
+        else super.postMessage(message, options);
+      }
+    };
+    const tasks: number[] = [];
+    new PerformanceObserver(list => tasks.push(...list.getEntries().map(entry => entry.duration))).observe({ type: "longtask", buffered: true });
+    Object.assign(window, { searchMeasurements: measurements, searchLongTasks: tasks });
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/library?conversationId=${heavy.id}&annotations=open`);
+  await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
+  await expect(page.locator(`#message-${heavy.messageId}`)).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { searchMeasurements: { completed?: number }[] }).searchMeasurements.filter(row => row.completed).length)).toBeGreaterThan(0);
+  const before = await page.evaluate(() => (window as unknown as { searchMeasurements: unknown[] }).searchMeasurements.length);
+  await page.getByRole("button", { name: "Notes", exact: true }).click();
+  await page.getByRole("textbox", { name: "Notebook title", exact: true }).fill("syntheticlocaleditneedle");
+  await page.getByRole("textbox", { name: "Notebook title", exact: true }).press("Tab");
+  await expect.poll(() => page.evaluate(() => (window as unknown as { searchMeasurements: { completed?: number }[] }).searchMeasurements.filter(row => row.completed).length)).toBeGreaterThan(before);
+  const measured = await page.evaluate(() => {
+    const state = window as unknown as { searchMeasurements: { count: number; bytes: number; sent: number; completed?: number }[]; searchLongTasks: number[]; performance: Performance & { memory?: { usedJSHeapSize: number } } };
+    return { rebuilds: state.searchMeasurements.map(({ count, bytes, sent, completed }) => ({ count, bytes, duration: completed ? completed - sent : null })),
+      longTasks: state.searchLongTasks, heapUsed: state.performance.memory?.usedJSHeapSize ?? null };
+  });
+  await writeFile(info.outputPath("browser-search-resource-baseline.json"), JSON.stringify({ schema: 1, synthetic: true, fullRebuildRetained: true, ...measured }));
+  for (const row of measured.rebuilds) if (row.duration !== null) expect(row.duration).toBeLessThan(10_000);
+  expect(measured.rebuilds.at(-1)!.count).toBeGreaterThan(0);
+});
+
+test("scrollbar and keyboard intent retire restoration; subsequent font/lane changes keep a real text anchor", async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/conversations/${normal.id}`);
+  const root = page.getByTestId("reader-scroll-root");
+  const article = page.locator(`#message-${normal.messageId}`);
+  const anchor = article.locator('[data-block-type="paragraph"]').filter({ hasText: /^Reading stability anchor\./ }).first();
+  await expect(root).toHaveAttribute("data-navigation-stage", "settled");
+  await anchor.scrollIntoViewIfNeeded();
+  await root.evaluate(node => {
+    const rect = node.getBoundingClientRect();
+    node.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: rect.right - 1, clientY: rect.top + 40, pointerId: 1, pointerType: "mouse" }));
+    node.scrollTop += 160;
+  });
+  await frames(page, 4);
+  const duringDrag = await root.evaluate(node => node.scrollTop);
+  await root.evaluate(node => node.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1, pointerType: "mouse" })));
+  await frames(page, 4);
+  expect(Math.abs((await root.evaluate(node => node.scrollTop)) - duringDrag)).toBeLessThanOrEqual(1);
+  await root.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(() => root.evaluate(node => node.scrollTop)).toBeGreaterThan(duringDrag);
+  // Explicit layout changes are allowed to reflow, but cannot revive an older
+  // scrollTop restoration after the new reading position is established.
+  const frame = page.locator(".reader-frame").first();
+  await frame.evaluate(node => node.style.setProperty("--reader-font-size", "19px"));
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await frames(page, 8);
+  await anchor.scrollIntoViewIfNeeded();
+  await frames(page, 4);
+  await startProbe(anchor);
+  await frames(page, 20);
+  const evidence = await endProbe(page, info, "post-layout");
+  const first = evidence.frames[0].top;
+  expect(Math.max(...evidence.frames.map(frame => Math.abs(frame.top - first)))).toBeLessThanOrEqual(2);
+  expect(Math.abs(evidence.frames.at(-1)!.top - first)).toBeLessThanOrEqual(1);
+});

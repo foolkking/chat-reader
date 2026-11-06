@@ -505,6 +505,11 @@ def _resolve_conflict(db: Session, operation: SyncOperation, subject_key: str) -
         current.revision += 1
         current.updated_at = utc_now()
     db.delete(copy)
+    if operation.entity_type == "notebook":
+        # Canonical notebook and its owner-scoped search projection commit
+        # together, including server choice and an empty merged notebook.
+        from app.services.search.personal_content_indexer import sync_personal_content
+        sync_personal_content(db, _conversation(db, operation.conversation_id))
     _touch_conversation(_conversation(db, operation.conversation_id))
     db.flush()
     return _sync_result(operation, current.id, "applied", current.revision)

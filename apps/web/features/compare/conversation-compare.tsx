@@ -2,20 +2,23 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getConversation, getConversationReaderTurn, getConversations } from "../../lib/api";
 import { ConversationIndex } from "../toc/conversation-index";
 import { ConversationToc } from "../toc/conversation-toc";
 import { MessageItem } from "../conversations/message-item";
 import { usePreferences } from "../../components/preferences-provider";
+import { acquireReaderBlockLease, type ReaderBlockLease } from "../conversations/block-virtualization";
+import { cancelReaderPosition, navigateMountedTarget } from "../conversations/reader-navigation";
 
 export function ConversationCompare() {
   const params = useSearchParams();
   const router = useRouter();
   const leftId = params?.get("left") ?? "";
-  const initialRight = params?.get("right") ?? "";
-  const [rightId, setRightId] = useState(initialRight);
-  const [rightDraft, setRightDraft] = useState(initialRight);
+  const rightId = params?.get("right") ?? "";
+  const [draft, setDraft] = useState({ source: rightId, value: rightId });
+  const rightDraft = draft.source === rightId ? draft.value : rightId;
+  const setRightDraft = (value: string) => setDraft({ source: rightId, value });
   const [activeSide, setActiveSide] = useState<"left" | "right">("left");
   const [search, setSearch] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +43,6 @@ export function ConversationCompare() {
   function applyRightId(value: string) {
     const next = value.trim();
     if (!next || next === leftId) return;
-    setRightId(next);
     setRightDraft(next);
     const url = new URL(window.location.href);
     url.searchParams.set("right", next);
@@ -81,6 +83,10 @@ function ComparePane({ conversationId, label, zh }: { conversationId: string; la
   const conversation = useQuery({ queryKey: ["compare-conversation", conversationId], queryFn: ({ signal }) => getConversation(conversationId, signal) });
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [targetBlockId, setTargetBlockId] = useState<string | null>(null);
+  const [navigationError, setNavigationError] = useState(false);
+  const [navigationAttempt, setNavigationAttempt] = useState(0);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const navigationToken = useRef(0);
   const turn = useQuery({
     queryKey: ["compare-turn", conversationId, activeMessageId],
     queryFn: ({ signal }) => getConversationReaderTurn(conversationId, activeMessageId ?? undefined, signal),
@@ -88,16 +94,48 @@ function ComparePane({ conversationId, label, zh }: { conversationId: string; la
   });
 
   useEffect(() => {
-    if (!targetBlockId || !turn.data) return;
-    const frame = window.requestAnimationFrame(() => {
-      document.getElementById(targetBlockId)?.scrollIntoView({ block: "center", behavior: "auto" });
-      setTargetBlockId(null);
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [targetBlockId, turn.data]);
+    if (!targetBlockId || !turn.data || !activeMessageId || !turn.data.items.some(item => item.id === activeMessageId)) return;
+    const token = ++navigationToken.current;
+    const root = rootRef.current;
+    if (!root) return;
+    const current = () => navigationToken.current === token && root.isConnected;
+    let lease: ReaderBlockLease | null = null;
+    root.dataset.navigationStage = "aligning:compare";
+    void (async () => {
+      try {
+        const blockIndex = Number(targetBlockId.slice(targetBlockId.lastIndexOf("-") + 1));
+        lease = await acquireReaderBlockLease(activeMessageId, blockIndex, current);
+        if (!current()) return;
+        const target = document.getElementById(targetBlockId);
+        if (!lease || !target || !root.contains(target)) { setNavigationError(true); return; }
+        const result = await navigateMountedTarget({ root, targetId: lease.targetId, offset: 24, tokenIsCurrent: current });
+        if (!current()) return;
+        setNavigationError(!result.ok);
+        if (result.ok) setTargetBlockId(null);
+      } catch {
+        if (current()) setNavigationError(true);
+      } finally {
+        lease?.release();
+        if (current()) delete root.dataset.navigationStage;
+      }
+    })();
+    return () => {
+      navigationToken.current++;
+      lease?.release();
+      cancelReaderPosition(root);
+      delete root.dataset.navigationStage;
+    };
+  }, [targetBlockId, turn.data, activeMessageId, navigationAttempt]);
+
+  const cancelNavigation = () => {
+    navigationToken.current++;
+    cancelReaderPosition(rootRef.current);
+    setTargetBlockId(null);
+    setNavigationError(false);
+  };
 
   if (conversation.isPending) return <section className="min-h-0 bg-page p-4 text-sm text-secondary">{zh ? "正在加载…" : "Loading…"}</section>;
-  if (conversation.isError || !conversation.data) return <section className="min-h-0 bg-page p-4 text-sm text-[var(--danger)]">{label}: {zh ? "无法读取此对话。" : "This conversation could not be read."}</section>;
+  if (conversation.isError || !conversation.data) return <section className="min-h-0 bg-page p-4 text-sm text-[var(--danger)]" role="alert">{label}: {zh ? "无法读取此对话。" : "This conversation could not be read."}<button type="button" className="ml-2 min-h-11 underline" onClick={() => void conversation.refetch()}>{zh ? "重试本侧" : "Retry this side"}</button></section>;
   const title = conversation.data.display_title || conversation.data.title;
   const activeTurn = turn.data;
   return <section className="flex h-full min-h-0 min-w-0 flex-col bg-page" aria-label={label}>
@@ -105,24 +143,27 @@ function ComparePane({ conversationId, label, zh }: { conversationId: string; la
       <details className="relative min-w-0 flex-1">
         <summary className="min-h-9 cursor-pointer rounded-md border border-ui px-3 py-2 text-xs text-secondary">{zh ? "对话目录" : "Dialogue index"}</summary>
         <div className="absolute left-0 top-full z-10 mt-1 max-h-[55vh] w-[min(90vw,28rem)] overflow-y-auto rounded-lg border border-ui bg-surface p-2 shadow-xl">
-          <ConversationIndex conversationId={conversationId} sourceKey={`compare:${conversationId}`} mode="sheet" ready={conversation.isSuccess} onNavigate={item => setActiveMessageId(item.messageId)} />
+          <ConversationIndex conversationId={conversationId} sourceKey={`compare:${conversationId}`} mode="sheet" ready={conversation.isSuccess} onNavigate={item => { cancelNavigation(); setActiveMessageId(item.messageId); }} />
         </div>
       </details>
       <details className="relative min-w-0 flex-1">
         <summary className="min-h-9 cursor-pointer rounded-md border border-ui px-3 py-2 text-xs text-secondary">{zh ? "章节目录" : "Sections"}</summary>
         <div className="absolute right-0 top-full z-10 mt-1 max-h-[55vh] w-[min(90vw,28rem)] overflow-y-auto rounded-lg border border-ui bg-surface p-2 shadow-xl">
-          <ConversationToc conversationId={conversationId} sourceKey={`compare:${conversationId}`} activeMessageId={activeMessageId ?? activeTurn?.items[0]?.id} mode="sheet" ready={Boolean(activeTurn)} onNavigate={item => { setActiveMessageId(item.message_id); setTargetBlockId(`block-${item.message_id}-${item.block_index}`); }} />
+          <ConversationToc conversationId={conversationId} sourceKey={`compare:${conversationId}`} activeMessageId={activeMessageId ?? activeTurn?.items[0]?.id} mode="sheet" ready={Boolean(activeTurn)} onNavigate={item => { navigationToken.current++; setNavigationError(false); setActiveMessageId(item.message_id); setTargetBlockId(`block-${item.message_id}-${item.block_index}`); setNavigationAttempt(value => value + 1); }} />
         </div>
       </details>
     </div></header>
-    <div data-reader-scroll-root="true" className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5">
+    {navigationError ? <div role="alert" className="px-3 text-xs text-secondary">{zh ? "尚未定位到章节，正文仍保留。" : "The section could not be located. Content is preserved."}<button type="button" className="ml-2 min-h-11 underline" onClick={() => { setNavigationError(false); setNavigationAttempt(value => value + 1); }}>{zh ? "重试定位" : "Retry navigation"}</button></div> : null}
+    <div ref={rootRef} data-reader-scroll-root="true" onWheelCapture={cancelNavigation} onTouchStartCapture={cancelNavigation} onPointerDownCapture={cancelNavigation}
+      onKeyDownCapture={event => { if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) cancelNavigation(); }}
+      className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 [overflow-anchor:none]">
       {turn.isPending ? <p className="text-sm text-secondary">{zh ? "正在读取完整轮次…" : "Loading complete turn…"}</p>
         : turn.isError || !activeTurn ? <div role="alert" className="rounded-lg border border-ui bg-subtle p-3 text-sm text-secondary"><p>{zh ? "无法读取该轮次。" : "This turn could not be loaded."}</p><button type="button" onClick={() => void turn.refetch()} className="mt-2 min-h-9 text-accent">{zh ? "重试" : "Retry"}</button></div>
-          : <div className="mx-auto grid max-w-3xl gap-4">{activeTurn.items.map(message => <MessageItem key={`${conversationId}:${message.id}`} message={message} readOnly conversationTitle={title} highlightTargetId={targetBlockId} />)}</div>}
+          : <div className="mx-auto grid max-w-3xl gap-4">{activeTurn.items.map(message => <MessageItem key={`${conversationId}:${message.id}`} message={message} readOnly attachmentAccess={{ kind: "owner", readOnly: true }} conversationTitle={title} highlightTargetId={targetBlockId} />)}</div>}
     </div>
     <footer className="flex shrink-0 items-center justify-between border-t border-ui bg-surface px-3 py-2 text-xs text-secondary">
       <span>{activeTurn ? (zh ? `第 ${activeTurn.start_offset + 1}–${activeTurn.end_offset} 条／共 ${activeTurn.total_messages} 条` : `Messages ${activeTurn.start_offset + 1}–${activeTurn.end_offset} of ${activeTurn.total_messages}`) : (zh ? "完整轮次" : "Complete turn")}</span>
-      <div className="flex gap-2"><button type="button" disabled={!activeTurn?.previous_anchor_message_id || turn.isFetching} onClick={() => setActiveMessageId(activeTurn?.previous_anchor_message_id ?? null)} className="min-h-9 rounded border border-ui px-2 disabled:opacity-40">{zh ? "上一轮" : "Previous turn"}</button><button type="button" disabled={!activeTurn?.next_anchor_message_id || turn.isFetching} onClick={() => setActiveMessageId(activeTurn?.next_anchor_message_id ?? null)} className="min-h-9 rounded border border-ui px-2 disabled:opacity-40">{zh ? "下一轮" : "Next turn"}</button></div>
+      <div className="flex gap-2"><button type="button" disabled={!activeTurn?.previous_anchor_message_id || turn.isFetching} onClick={() => { cancelNavigation(); setActiveMessageId(activeTurn?.previous_anchor_message_id ?? null); }} className="min-h-9 rounded border border-ui px-2 disabled:opacity-40">{zh ? "上一轮" : "Previous turn"}</button><button type="button" disabled={!activeTurn?.next_anchor_message_id || turn.isFetching} onClick={() => { cancelNavigation(); setActiveMessageId(activeTurn?.next_anchor_message_id ?? null); }} className="min-h-9 rounded border border-ui px-2 disabled:opacity-40">{zh ? "下一轮" : "Next turn"}</button></div>
     </footer>
   </section>;
 }

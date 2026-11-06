@@ -186,9 +186,9 @@ Reader body -> Attachment Lane -> Attachment Group -> Semantic Renderer
 | `video` | VideoPreview | 43rem |
 | `file-list` | FileList | 38rem |
 
-Adjacent attachment blocks are queried using the same owner/share/offline access and Registry facts, then split whenever `InlinePresentation` changes. Ordinary body content always terminates a group. Runtime image/media failure can move an item into FileList without changing persistent capability.
+Adjacent attachment blocks use the same owner/share/offline access and static Registry facts. Ordinary body content terminates a group. A known image retains its gallery slot through load/failure/retry; the RenderPlan still governs allowed actions inside that slot. Non-image media may fall back to FileList.
 
-Gallery items have no permanent file header. Filename and View are progressively disclosed on hover/focus; original download remains in the Viewer. Rows preserve aspect ratios at an approximately 200px target, do not crop, and cap the final row at 220px before centring it. More than six images shows five images plus a dedicated `+N` Overview entry. TIFF joins Gallery only when the RenderPlan has a reliable visual preview; otherwise it remains a FileList row.
+Gallery items have no permanent file header. Filename and View are progressively disclosed on hover/focus; original download remains in the Viewer. Multiple images use fixed 4:3 cells, contain without upscaling, and select 1/2/3 columns from actual lane width (320/640px thresholds). More than six shows five plus a dedicated `+N` Overview entry. Single images and unknown-size placeholders, offline snapshots and geometry ownership follow the [image reading contract](IMAGE_READING_STABILITY_CONTRACT.md). This replaces load-driven justified rows without changing persistent capability or conversion safety.
 
 AudioList and FileList each own one subtle border/radius surface and row dividers. Rows do not have individual outer cards. Rich/Data previews keep one bounded preview surface with no vertical nested scroll; Code/Data may scroll horizontally. Metadata order is filename, friendly type, size and low-weight `未扫描`.
 

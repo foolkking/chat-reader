@@ -34,6 +34,11 @@ def selected_display(attachment: Attachment) -> dict | None:
         "scale_percent", "original_width", "original_height", "width", "height",
     )) or value["scale_percent"] > 100:
         return None
+    if any(value[k] > 1_000_000 for k in ("original_width", "original_height", "width", "height")):
+        return None
+    if any(value[k] != max(1, (value[f"original_{k}"] * value["scale_percent"] + 50) // 100)
+           for k in ("width", "height")):
+        return None
     return {k: value[k] for k in (
         "source_sha256", "scale_percent", "original_width", "original_height", "width", "height",
     )}
@@ -172,6 +177,12 @@ def save_display(db: Session, attachment_id, scope: OwnershipScope, source_sha25
                 raise
             raise AttachmentAccessError("Image could not be resized safely.", 422) from exc
     row.metadata_ = {**(row.metadata_ or {}), KEY: result}
+    if current != result:
+        from app.models.conversation import Conversation
+        from app.services.conversation_revision import bump_offline_revision
+        conversation = db.get(Conversation, row.conversation_id)
+        if conversation is not None:
+            bump_offline_revision(conversation)
     db.flush()
     return {**result, "configured": True}
 

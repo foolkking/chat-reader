@@ -36,6 +36,7 @@ from app.schemas.offline import (
 from app.services.annotations import annotation_read, notebook_read
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import allowed_scan_statuses
+from app.services.assets.image_display import selected_display
 from app.services.artifact_lifecycle import publish_zip_artifact, staging_path
 from app.services.exporting.export_service import _source_refs_by_message
 from app.services.exporting.context_package import _project_context
@@ -804,6 +805,7 @@ def _offline_attachment_payloads(db: Session, conversation_id: uuid.UUID, asset_
             } for link, message, block_id in links],
             "content_path": f"assets/objects/{asset.id}" if included and asset else None,
             "downloadable": downloadable,
+            "image_display_v1": selected_display(attachment),
         }
 
 

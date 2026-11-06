@@ -2156,6 +2156,9 @@ export function ConversationReader({
       }
     };
     const restoreGeometryAnchor = () => {
+      // Mounted messages install one scroller-wide pre-paint geometry owner.
+      // Do not run the older 650ms restore loop against the same mutation.
+      if (root.dataset.readerGeometryOwner === "viewport") return;
       const saved = geometryAnchorRef.current;
       if (
         !saved

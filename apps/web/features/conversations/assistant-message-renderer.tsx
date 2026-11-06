@@ -2,15 +2,16 @@
 
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { defaultRangeExtractor, useVirtualizer, useWindowVirtualizer } from "@tanstack/react-virtual";
+import { imageGridGeometry, validatedImageDisplay } from "../../lib/image-display";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { BlockRenderer } from "./block-renderer";
 import { extractMarkdownTaskItems, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
 import { useTranslations } from "../../components/preferences-provider";
-import { notifyReaderWindowLayoutChanged, READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, type ReaderBlockLease } from "./block-virtualization";
+import { notifyReaderWindowLayoutChanged, READER_WINDOW_LAYOUT_EVENT, registerVirtualMessage, revealReaderBlock, type ReaderBlockLease } from "./block-virtualization";
 import { registerRenderedBlock } from "./rendered-block-registry";
 import type { AttachmentViewerItem } from "../attachments/attachment-viewer";
 import { embeddedAttachment } from "../attachments/attachment-block";
-import { AttachmentInlineGroup, type AttachmentInlineGroupItem } from "../attachments/attachment-inline-layout";
+import { AttachmentInlineGroup, ImageFrameScope, type AttachmentInlineGroupItem } from "../attachments/attachment-inline-layout";
 import {
   DEFAULT_READER_BLOCK_LAYOUT_METRICS,
   estimateReaderBlockSize,
@@ -22,6 +23,8 @@ import { inspectReaderViewportCoverage, inspectReaderViewportUnion, type ReaderV
 import { extractChatGptBareBracketMath, isChatGptBareBracketMath, normalizeChatGptMathBody } from "../rich-markdown/remark-ai-math-compatibility";
 import { detectChatGptRichText, withChatGptRichTextProfile } from "../rich-markdown/chatgpt-rich-text-compatibility";
 import { findLeadingThinkingBlocks } from "./thinking-summary";
+import { observeReadingViewport } from "./reading-viewport";
+import { resolveAttachmentCapability } from "../attachments/preview-adapter-registry";
 
 export function AssistantMessageRenderer({
   message,
@@ -66,19 +69,23 @@ export function AssistantMessageRenderer({
   );
   const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
   const displayUnits = useMemo(() => groupAttachmentBlocks(semanticBlocks), [semanticBlocks]);
+  const flowRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    if (flowRef.current) return observeReadingViewport(flowRef.current);
+  }, [message.id, message.current_version?.id, blocks.length === 0]);
 
   if (blocks.length === 0) {
     return currentText.trim() ? (
-      <CopyableMarkdownBlock messageId={message.id} blockIndex={0} markdown={currentText}>
+      <div ref={flowRef}><CopyableMarkdownBlock messageId={message.id} blockIndex={0} markdown={currentText}>
         <MarkdownRenderer text={currentText} isAssistant={isAssistant} taskItems={applyTaskOverrides(allTasks, taskCheckedOverrides)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} scopeId={message.current_version?.id ?? message.id} />
-      </CopyableMarkdownBlock>
+      </CopyableMarkdownBlock></div>
     ) : (
       <p className="text-sm text-secondary">{t("noDisplayableContent")}</p>
     );
   }
 
   return (
-    <div className="reader-block-flow break-words">
+    <ImageFrameScope key={`${message.id}:${message.current_version?.id}`}><div ref={flowRef} className="reader-block-flow break-words">
       {leadingThinking ? (
         <div className="reader-block-slot">
           <ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} richTextProfile={richTextProfile ?? undefined}>
@@ -129,7 +136,7 @@ export function AssistantMessageRenderer({
         );
       })}
       {visibleBlocks.length === 0 ? null : null}
-    </div>
+    </div></ImageFrameScope>
   );
 }
 
@@ -221,7 +228,9 @@ function groupAttachmentBlocks(blocks: RenderBlockRead[]): DisplayUnit[] {
       continue;
     }
     const grouped: RenderBlockRead[] = [];
-    while (index < blocks.length && (blocks[index].block_type === "image" || blocks[index].block_type === "attachment")) {
+    const imageRun = isImageAttachment(block);
+    while (index < blocks.length && (blocks[index].block_type === "image" || blocks[index].block_type === "attachment")
+      && isImageAttachment(blocks[index]) === imageRun) {
       grouped.push(blocks[index]);
       index += 1;
     }
@@ -230,6 +239,12 @@ function groupAttachmentBlocks(blocks: RenderBlockRead[]): DisplayUnit[] {
     units.push({ kind: "attachment-group", blocks: grouped });
   }
   return units;
+}
+
+function isImageAttachment(block: RenderBlockRead): boolean {
+  if (block.block_type === "image") return true;
+  const attachment = embeddedAttachment(block.data.attachment, String(block.data.attachmentId ?? ""));
+  return Boolean(attachment && resolveAttachmentCapability(attachment).viewerKind === "image");
 }
 
 function AttachmentBlockGroup({
@@ -244,7 +259,6 @@ function AttachmentBlockGroup({
   hasLeadingContent: boolean;
 }) {
   const items = useMemo(() => blocks.map((block) => attachmentInlineItem(messageId, block)), [blocks, messageId]);
-  const markdown = useMemo(() => blocks.map(markdownForBlock).filter(Boolean).join("\n\n"), [blocks]);
   return (
     <div
       className="reader-block-slot"
@@ -252,11 +266,25 @@ function AttachmentBlockGroup({
       data-attachment-group="semantic"
       style={hasLeadingContent ? slotGapStyle(blockGapVariable(previousBlock, blocks[0] ?? null)) : undefined}
     >
-      <CopyableMarkdownBlock messageId={messageId} blockIndex={blocks[0]?.block_index ?? 0} markdown={markdown}>
-        <AttachmentInlineGroup items={items} />
-      </CopyableMarkdownBlock>
+      <AttachmentInlineGroup items={items} />
     </div>
   );
+}
+
+function estimateDisplayUnit(unit: DisplayUnit | undefined, metrics: ReaderBlockLayoutMetrics): number {
+  if (!unit) return metrics.lineHeight * 3.5;
+  if (unit.kind !== "attachment-group") return estimateReaderBlockSize(unit.blocks[0], metrics, stripLeadingTimestamp(unit.blocks[0]?.plain_text ?? ""));
+  if (unit.blocks.every(isImageAttachment)) {
+    if (unit.blocks.length > 1) return imageGridGeometry(unit.blocks.length, metrics.contentWidth).height;
+    const block = unit.blocks[0];
+    const attachment = embeddedAttachment(block.data.attachment, String(block.data.attachmentId ?? ""));
+    const size = validatedImageDisplay(attachment?.metadata?.image_display_v1, attachment?.asset_object?.sha256);
+    const ratio = size ? size.width / size.height : 4 / 3;
+    const maxHeight = Math.min(640, (typeof window === "undefined" ? 900 : window.innerHeight) * .7);
+    const width = Math.min(metrics.contentWidth, Math.max(76, size?.width ?? 320), Math.max(76, maxHeight * ratio));
+    return Math.max(44, Math.min(width / ratio, maxHeight));
+  }
+  return unit.blocks.reduce((height, block) => height + estimateReaderBlockSize(block, metrics), 0);
 }
 
 function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle }: VirtualizedBlocksProps) {
@@ -266,21 +294,18 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
   const overscan = useAdaptiveReaderOverscan(containerRef, "element");
-  const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
+  const units = useMemo(() => groupAttachmentBlocks(blocks), [blocks]);
+  const indexByBlock = useMemo(() => new Map(units.flatMap((unit, index) => unit.blocks.map(block => [block.block_index, index] as const))), [units]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
     const indexes = defaultRangeExtractor(range);
     const pinned = Array.from(new Set([...pinnedVirtualIndexes, ...selectionPinnedIndexes])).filter((index) => !indexes.includes(index));
     return pinned.length === 0 ? indexes : [...indexes, ...pinned].sort((left, right) => left - right);
   }, [pinnedVirtualIndexes, selectionPinnedIndexes]);
   const virtualizer = useVirtualizer({
-    count: blocks.length,
+    count: units.length,
     getScrollElement: () => containerRef.current?.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? null,
-    estimateSize: (index) => estimateReaderBlockSize(
-      blocks[index],
-      layoutMetrics,
-      stripLeadingTimestamp(blocks[index]?.plain_text ?? ""),
-    ),
-    getItemKey: (index) => blocks[index]?.id ?? `${messageId}-${blocks[index]?.block_index ?? index}`,
+    estimateSize: (index) => estimateDisplayUnit(units[index], layoutMetrics),
+    getItemKey: (index) => units[index]?.blocks[0]?.id ?? `${messageId}-${index}`,
     measureElement: (element) => element?.getBoundingClientRect().height ?? 0,
     overscan,
     scrollMargin,
@@ -290,6 +315,7 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
 
   virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => {
     const root = containerRef.current?.closest<HTMLElement>('[data-reader-scroll-root="true"]');
+    if ((root ?? document.documentElement).dataset.readerGeometryOwner === "viewport") return false;
     if (root?.dataset.navigationStage?.startsWith("aligning:")) return false;
     if (root?.dataset.readerLayoutCompensating === "true") return false;
     if (root?.dataset.readerSurfaceCompensating === "true") return false;
@@ -334,13 +360,14 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
       className="relative w-full"
     >
       {virtualFlow.rows.map(({ item, gapBefore }) => {
-        const block = blocks[item.index];
+        const unit = units[item.index];
+        const block = unit?.blocks[0];
         if (!block) return null;
         return (
           <Fragment key={String(item.key)}>
             {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
-            <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={blocks[item.index + 1] ? blockGapVariable(block, blocks[item.index + 1] ?? null) : null}>
-              <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+            <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
+              {unit.kind === "attachment-group" ? <AttachmentBlockGroup messageId={messageId} blocks={unit.blocks} previousBlock={null} hasLeadingContent={false} /> : <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />}
             </VirtualBlockRow>
           </Fragment>
         );
@@ -358,20 +385,17 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
   const overscan = useAdaptiveReaderOverscan(containerRef, "window");
-  const indexByBlock = useMemo(() => new Map(blocks.map((block, index) => [block.block_index, index])), [blocks]);
+  const units = useMemo(() => groupAttachmentBlocks(blocks), [blocks]);
+  const indexByBlock = useMemo(() => new Map(units.flatMap((unit, index) => unit.blocks.map(block => [block.block_index, index] as const))), [units]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
     const indexes = defaultRangeExtractor(range);
     const pinned = Array.from(new Set([...pinnedVirtualIndexes, ...selectionPinnedIndexes])).filter((index) => !indexes.includes(index));
     return pinned.length === 0 ? indexes : [...indexes, ...pinned].sort((left, right) => left - right);
   }, [pinnedVirtualIndexes, selectionPinnedIndexes]);
   const virtualizer = useWindowVirtualizer({
-    count: blocks.length,
-    estimateSize: (index) => estimateReaderBlockSize(
-      blocks[index],
-      layoutMetrics,
-      stripLeadingTimestamp(blocks[index]?.plain_text ?? ""),
-    ),
-    getItemKey: (index) => blocks[index]?.id ?? `${messageId}-${blocks[index]?.block_index ?? index}`,
+    count: units.length,
+    estimateSize: (index) => estimateDisplayUnit(units[index], layoutMetrics),
+    getItemKey: (index) => units[index]?.blocks[0]?.id ?? `${messageId}-${index}`,
     measureElement: (element) => element?.getBoundingClientRect().height ?? 0,
     overscan,
     scrollMargin,
@@ -381,6 +405,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
 
   virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) => {
     const root = containerRef.current?.closest<HTMLElement>('[data-reader-scroll-root="true"]');
+    if ((root ?? document.documentElement).dataset.readerGeometryOwner === "viewport") return false;
     if (root?.dataset.navigationStage?.startsWith("aligning:")) return false;
     if (root?.dataset.readerLayoutCompensating === "true") return false;
     if (root?.dataset.readerSurfaceCompensating === "true") return false;
@@ -424,13 +449,14 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
       className="relative w-full"
     >
       {virtualFlow.rows.map(({ item, gapBefore }) => {
-        const block = blocks[item.index];
+        const unit = units[item.index];
+        const block = unit?.blocks[0];
         if (!block) return null;
         return (
           <Fragment key={String(item.key)}>
             {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
-            <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={blocks[item.index + 1] ? blockGapVariable(block, blocks[item.index + 1] ?? null) : null}>
-              <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+            <VirtualBlockRow itemIndex={item.index} measureElement={virtualizer.measureElement} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
+              {unit.kind === "attachment-group" ? <AttachmentBlockGroup messageId={messageId} blocks={unit.blocks} previousBlock={null} hasLeadingContent={false} /> : <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />}
             </VirtualBlockRow>
           </Fragment>
         );
@@ -644,6 +670,7 @@ function useVirtualMessageRegistration(
     let measuredFrames = 0;
     for (let frame = 0; frame < 24; frame += 1) {
       await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      revealReaderBlock(targetId);
       const target = document.getElementById(targetId);
       const row = target?.closest<HTMLElement>("[data-index]");
       if (!target || !row) {
@@ -697,7 +724,8 @@ function useSelectionBlockPinning(
 
       const startArticle = elementForSelectionNode(range.startContainer)?.closest<HTMLElement>('article[data-message-id]');
       const endArticle = elementForSelectionNode(range.endContainer)?.closest<HTMLElement>('article[data-message-id]');
-      const lastIndex = Math.max(0, blocks.length - 1);
+      let lastIndex = 0;
+      for (const index of indexByBlock.values()) lastIndex = Math.max(lastIndex, index);
       let first = 0;
       let last = lastIndex;
       if (startArticle === article) first = selectionBlockIndex(range.startContainer, indexByBlock) ?? 0;
@@ -1041,6 +1069,9 @@ function attachmentInlineItem(messageId: string, block: RenderBlockRead): Attach
   return {
     itemKey: viewerItem.itemKey,
     attachmentId: viewerItem.attachmentId,
+    imageHint: block.block_type === "image",
+    blockId: block.id,
+    markdown: markdownForBlock(block),
     attachment: embeddedAttachment(block.data.attachment, viewerItem.attachmentId),
     displayMode: viewerItem.displayMode,
     alt: viewerItem.alt,

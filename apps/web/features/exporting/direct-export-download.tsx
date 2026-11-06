@@ -4,6 +4,7 @@ import { Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import { assertOfflineAccess, authenticationGeneration, captureOfflineAccess, notifyAuthenticationFailure, OFFLINE_ACCESS_LOCKED_EVENT } from "../../lib/offline-access";
+import { DirectDownloadSizeError, readBoundedDownload } from "../../lib/bounded-download";
 
 export function DirectExportDownload({ href, format, label, compact = false }: { href: string; format: "canjson" | "markdown"; label?: string; compact?: boolean }) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
@@ -16,6 +17,7 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
+  const [progress, setProgress] = useState<{ received: number; total: number | null } | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -33,7 +35,7 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
     const controller = new AbortController();
     const generation = authenticationGeneration();
     active.current = controller;
-    setBusy(true); setError(null); setStarted(false);
+    setBusy(true); setError(null); setStarted(false); setProgress(null);
     let status: number | null = null;
     try {
       const access = captureOfflineAccess();
@@ -44,7 +46,10 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
       if (!response.ok) throw new Error("Download unavailable");
       const expectedType = format === "canjson" ? "application/x-ndjson" : "text/markdown";
       if (!response.headers.get("content-type")?.startsWith(expectedType)) throw new Error("Unexpected download response");
-      const blob = await response.blob();
+      const blob = await readBoundedDownload(response, controller.signal, (received, total) => {
+        assertOfflineAccess(access);
+        if (mounted.current && !controller.signal.aborted) setProgress({ received, total });
+      });
       assertOfflineAccess(access);
       if (!mounted.current || controller.signal.aborted) return;
       const url = URL.createObjectURL(blob);
@@ -57,9 +62,11 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
       } finally {
         window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
       }
-    } catch {
+    } catch (failure) {
       if (mounted.current && !controller.signal.aborted && generation === authenticationGeneration()) {
-        setError(status === 404
+        setError(failure instanceof DirectDownloadSizeError || status === 413
+          ? (zh ? "文件超过直接下载预算。请缩小消息范围，或使用导出任务生成制品后下载。" : "This file exceeds the direct-download budget. Select fewer messages or use an export task and download its artifact.")
+          : status === 404
           ? (zh ? "对话已不可用，无法下载。" : "This conversation is no longer available.")
           : status === 503
             ? (zh ? "暂时无法准备下载，请稍后重试。" : "The download could not be prepared. Please retry shortly.")
@@ -80,6 +87,9 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
       {busy ? <button type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => active.current?.abort()}>{zh ? "取消" : "Cancel"}</button> : null}
     </div>
     {error ? <p role="alert" className="text-sm text-[var(--danger)]">{error}</p> : null}
+    {busy && progress ? <p role="status" className="text-xs tabular-nums text-secondary">
+      {zh ? "正在接收：" : "Receiving: "}{(progress.received / 1024 / 1024).toFixed(1)} MiB{progress.total !== null ? ` / ${(progress.total / 1024 / 1024).toFixed(1)} MiB` : ""}
+    </p> : null}
     {started ? <p role="status" className="text-xs text-secondary">{zh ? "下载已交给浏览器。" : "Download sent to your browser."}</p> : null}
   </div>;
 }

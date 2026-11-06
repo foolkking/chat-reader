@@ -7,6 +7,14 @@ nor a substitute for current authenticated-browser/user-data acceptance.
 
 ## Current exact-source CI and production — recovery consistency — 2026-11-06
 
+New image/viewport candidate is pending separate exact-source verification.
+`reading-stability` adds a required browser matrix and
+`scripts/ci/verify-reading-stability.mjs` demands every case execute and all
+48 stopped/down/up frame traces exist. Peak/final drift and fixed-frame limits
+are described in [the contract](system/IMAGE_READING_STABILITY_CONTRACT.md).
+No existing gate, timeout, memory/capacity budget or test requirement is relaxed.
+The accepted release results below do not validate this new candidate.
+
 Exact application source `67e63364f794d2b6d820eb8502ead9010c76f4bd` passed
 all six jobs in run `42043078359`, attempt 1. First read was
 2026-11-05 15:04:42.366Z, after its 15:04:42.075Z boundary; final success

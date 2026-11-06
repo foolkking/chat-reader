@@ -9,7 +9,7 @@ import { offlineAuthenticationRequired } from "./offline-access";
 export const OFFLINE_SYNC_CHANGED_EVENT = "chat-reader:sync-changed";
 export const OFFLINE_SYNC_MAX_ATTEMPTS = 5;
 const BATCH_SIZE = 50;
-type SyncResult = { synced: number; conflicts: number; retryAt?: number };
+type SyncResult = { synced: number; conflicts: number; retryAt?: number; authenticationStopped?: boolean };
 const running = new WeakMap<typeof offlineDb, Map<string, Promise<SyncResult>>>();
 const tails = new WeakMap<typeof offlineDb, Promise<unknown>>();
 
@@ -31,10 +31,18 @@ export function flushAnnotationOutbox(conversationIds?: readonly string[]): Prom
   const access = captureOfflineAccess();
   const work = async () => {
     assertOfflineAccess(access);
-    let annotations = { synced: 0, conflicts: 0 }, failed = false;
-    try { annotations = await flushBatch(db, access, scope); } catch { assertOfflineAccess(access); failed = true; }
+    let annotations: SyncResult = { synced: 0, conflicts: 0 }, failed = false;
+    try { annotations = await flushBatch(db, access, scope); } catch (error) {
+      assertOfflineAccess(access);
+      // Authentication is account-wide: do not keep issuing writes for other
+      // entities/positions after the session was rejected.
+      if (error instanceof ApiRequestError && error.status === 401) return annotations;
+      failed = true;
+    }
+    if (annotations.authenticationStopped) return annotations;
     const positions = await flushReadingPositionBatch(db, access, scope);
-    const retryAt = failed ? Math.min(positions.retryAt ?? Infinity, Date.now() + 2_000) : positions.retryAt;
+    const nextRetry = Math.min(annotations.retryAt ?? Infinity, positions.retryAt ?? Infinity, failed ? Date.now() + 2_000 : Infinity);
+    const retryAt = Number.isFinite(nextRetry) ? nextRetry : undefined;
     return { synced: annotations.synced + positions.synced, conflicts: annotations.conflicts + positions.conflicts, retryAt };
   };
   const previous = tails.get(db) ?? Promise.resolve();
@@ -66,6 +74,35 @@ async function flushBatch(db: typeof offlineDb, access: number, conversationIds?
       && item.attempts < OFFLINE_SYNC_MAX_ATTEMPTS;
   }).limit(BATCH_SIZE).toArray();
   if (!operations.length) return { synced: 0, conflicts: 0 };
+  const groups = new Map<string, OfflineOutboxRecord[]>();
+  for (const operation of operations) {
+    const batch = groups.get(operation.conversation_id) ?? [];
+    batch.push(operation);
+    groups.set(operation.conversation_id, batch);
+  }
+  const total: SyncResult = { synced: 0, conflicts: 0 };
+  for (const batch of groups.values()) {
+    assertOfflineAccess(access);
+    try {
+      const result = await flushConversationBatch(db, access, batch);
+      total.synced += result.synced;
+      total.conflicts += result.conflicts;
+    } catch (error) {
+      assertOfflineAccess(access);
+      if (error instanceof ApiRequestError && error.status === 401) {
+        // Preserve receipts already confirmed before the account-wide stop.
+        total.authenticationStopped = true;
+        return total;
+      }
+      // Failed operations retain their identity. A different conversation can
+      // still confirm its own receipt and authoritative snapshot this pass.
+      total.retryAt = Date.now() + 2_000;
+    }
+  }
+  return total;
+}
+
+async function flushConversationBatch(db: typeof offlineDb, access: number, operations: OfflineOutboxRecord[]): Promise<SyncResult> {
   try {
     assertOfflineAccess(access);
     const response = await syncConversationAnnotations(operations.map((item) => ({
