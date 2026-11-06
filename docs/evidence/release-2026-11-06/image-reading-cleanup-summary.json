@@ -1,0 +1,298 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "operation": "separately_authorized_bounded_release_retention",
+  "application_source": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+  "rollback_source": "67e63364f794d2b6d820eb8502ead9010c76f4bd",
+  "accepted_ci_run_id": 42217357688,
+  "new_ci_dispatch": false,
+  "new_deployment": false,
+  "authorization": {
+    "recorded_at_utc": "2026-11-06T14:40:49.6301025Z",
+    "scope": "Exactly two old verified backups and eight unreferenced role tags; keep latest two backups and current/direct rollback. No archives, evidence, volumes, user files or unrelated images."
+  },
+  "started_at_utc": "2026-11-06T14:46:59.114892Z",
+  "completed_at_utc": "2026-11-06T14:50:39.228725Z",
+  "independently_rechecked_at_utc": "2026-11-06T14:53:09.088508Z",
+  "backup_retention": {
+    "candidates": 2,
+    "held": 1,
+    "mode": "apply",
+    "removed": 2,
+    "retained": 2,
+    "unlinked_bytes": 1987286636,
+    "verified": 4,
+    "held_explanation": "Own shared operation lock; final read-only verification has zero held entries",
+    "kept": [
+      "chat-reader-20261106T140111Z",
+      "chat-reader-20261105T160504Z"
+    ],
+    "removed_names": [
+      "chat-reader-20261104T004004Z",
+      "chat-reader-20261103T155702Z"
+    ],
+    "all_four_verified_before_unlink": true,
+    "verification": [
+      "five SHA256",
+      "four tar streams",
+      "PostgreSQL TOC"
+    ],
+    "kept_reverified_after_and_independently": true,
+    "retained_component_sha256": {
+      "chat-reader-20261106T140111Z": {
+        "assets.tar.gz": "b2284c3931b5b22d1dd4a5c4bef6c73fc369c55383feed3f4e77c84504cc6be5",
+        "exports.tar.gz": "ba4d7da2c96d8b0f5532ce04bcc044260ffd47633110545613422db068a2a4bf",
+        "imports.tar.gz": "98e9dcbfa6683c15040c3388b7e318985afaf96ede02aca48bf910347831c928",
+        "offline.tar.gz": "ceb800a7bfef3608d19f6661f194c3fe28b48781f10c7cddc0b1afc14c19d953",
+        "postgres.dump": "2c3191a8678dfeb9017bedd378c96c8b924fb40867ccbc8ed7a3f393b25162b9"
+      },
+      "chat-reader-20261105T160504Z": {
+        "assets.tar.gz": "b2284c3931b5b22d1dd4a5c4bef6c73fc369c55383feed3f4e77c84504cc6be5",
+        "exports.tar.gz": "ba4d7da2c96d8b0f5532ce04bcc044260ffd47633110545613422db068a2a4bf",
+        "imports.tar.gz": "98e9dcbfa6683c15040c3388b7e318985afaf96ede02aca48bf910347831c928",
+        "offline.tar.gz": "ceb800a7bfef3608d19f6661f194c3fe28b48781f10c7cddc0b1afc14c19d953",
+        "postgres.dump": "3614b37e2cfb4a142e72b5f489a48f1fac0c3e052d1ca677f8f92a72cc2711c0"
+      }
+    },
+    "source_helper_sha256": "6c9dd2738fc5bf928cce2b54f48050f59384efdfd09a15b64d7cb0cc19661cc4",
+    "shared_lock_and_exact_directory_allowlist": true,
+    "toc_helper": {
+      "pinned_installed_postgres_image": true,
+      "memory_mib": 96,
+      "network": "none",
+      "read_only_root": true,
+      "mounted_volumes": 0,
+      "pull": "never"
+    },
+    "production_restore_drill_or_offsite_recovery_verified": false
+  },
+  "images": {
+    "retained_tags": [
+      "chat-reader-api:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+      "chat-reader-api:9cf235f3730aae0f3ae747fe0e36763056a624c0",
+      "chat-reader-import-worker:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+      "chat-reader-import-worker:9cf235f3730aae0f3ae747fe0e36763056a624c0",
+      "chat-reader-migrate:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+      "chat-reader-migrate:9cf235f3730aae0f3ae747fe0e36763056a624c0",
+      "chat-reader-web:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+      "chat-reader-web:9cf235f3730aae0f3ae747fe0e36763056a624c0"
+    ],
+    "removed": [
+      {
+        "image": "sha256:c91601e8edab170e208f1d6d8c20ea04981909a15fe7f3940490e67b422fa45b",
+        "tag": "chat-reader-api:3b839dc1adfac431b6c44c2e1928a9be946cb42f"
+      },
+      {
+        "image": "sha256:ff8ea4d608e88472a83ebf35627a6bbb0a1c20d7d15192b1686718ddd2710ddb",
+        "tag": "chat-reader-api:be58b12b191e9f0fa4010f8ed4293781fec01157"
+      },
+      {
+        "image": "sha256:c91601e8edab170e208f1d6d8c20ea04981909a15fe7f3940490e67b422fa45b",
+        "tag": "chat-reader-import-worker:3b839dc1adfac431b6c44c2e1928a9be946cb42f"
+      },
+      {
+        "image": "sha256:ff8ea4d608e88472a83ebf35627a6bbb0a1c20d7d15192b1686718ddd2710ddb",
+        "tag": "chat-reader-import-worker:be58b12b191e9f0fa4010f8ed4293781fec01157"
+      },
+      {
+        "image": "sha256:c91601e8edab170e208f1d6d8c20ea04981909a15fe7f3940490e67b422fa45b",
+        "tag": "chat-reader-migrate:3b839dc1adfac431b6c44c2e1928a9be946cb42f"
+      },
+      {
+        "image": "sha256:ff8ea4d608e88472a83ebf35627a6bbb0a1c20d7d15192b1686718ddd2710ddb",
+        "tag": "chat-reader-migrate:be58b12b191e9f0fa4010f8ed4293781fec01157"
+      },
+      {
+        "image": "sha256:16f1326787d9ad368a686219326276edd9a37562365415a148eaa34e5067f448",
+        "tag": "chat-reader-web:3b839dc1adfac431b6c44c2e1928a9be946cb42f"
+      },
+      {
+        "image": "sha256:7904dee611b40cab19805680936e59039e83ca2b632a2edfbd2bcf845d0b6799",
+        "tag": "chat-reader-web:be58b12b191e9f0fa4010f8ed4293781fec01157"
+      }
+    ],
+    "removed_tag_count": 8,
+    "removed_unique_image_configs": 4,
+    "running_and_stopped_container_references_checked": true,
+    "unknown_aliases_rejected": true,
+    "force_or_parent_prune_or_global_prune": false,
+    "unrelated_image_inventory_preserved": true,
+    "transfer_archives_preserved": true
+  },
+  "disk": {
+    "before_apply": {
+      "available_bytes": 3973746688,
+      "available_kib": 3880612,
+      "used_kib": 36168592,
+      "used_percent": 91
+    },
+    "after_apply": {
+      "available_bytes": 6315483136,
+      "available_kib": 6167464,
+      "used_kib": 33881740,
+      "used_percent": 85
+    },
+    "independent_recheck": {
+      "available_bytes": 6315433984,
+      "available_kib": 6167416,
+      "used_kib": 33881788,
+      "used_percent": 85
+    },
+    "measured_available_delta_bytes": 2341736448,
+    "accounting_note": "Filesystem delta includes concurrent system activity; backup unlinked_bytes are logical unique-link bytes, not allocated blocks or independent physical copies."
+  },
+  "runtime": {
+    "services": {
+      "postgres": {
+        "health": "healthy",
+        "image": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "mounts": [
+          [
+            "volume",
+            "chat-reader_postgres-data",
+            "/var/lib/docker/volumes/chat-reader_postgres-data/_data",
+            "/var/lib/postgresql/data",
+            true
+          ]
+        ],
+        "name": "chat-reader-postgres-1",
+        "oom_killed": false,
+        "restart_count": 0,
+        "started_at": "2026-09-30T03:05:33.567319401Z",
+        "status": "running",
+        "id": "04e7676283197c63fbc27d49e028e8631de6562ed2bf2f5ff3bf2abbcfe84b33"
+      },
+      "api": {
+        "health": "healthy",
+        "image": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd",
+        "mounts": [
+          [
+            "volume",
+            "chat-reader_asset-storage",
+            "/var/lib/docker/volumes/chat-reader_asset-storage/_data",
+            "/data/assets",
+            true
+          ],
+          [
+            "volume",
+            "chat-reader_export-storage",
+            "/var/lib/docker/volumes/chat-reader_export-storage/_data",
+            "/data/exports",
+            true
+          ],
+          [
+            "volume",
+            "chat-reader_import-storage",
+            "/var/lib/docker/volumes/chat-reader_import-storage/_data",
+            "/data/imports",
+            true
+          ],
+          [
+            "volume",
+            "chat-reader_offline-storage",
+            "/var/lib/docker/volumes/chat-reader_offline-storage/_data",
+            "/data/offline",
+            true
+          ]
+        ],
+        "name": "chat-reader-api-1",
+        "oom_killed": false,
+        "restart_count": 0,
+        "started_at": "2026-11-06T14:05:27.146323476Z",
+        "status": "running",
+        "id": "3496c6faa5459e8a06875d188caa7a5bcad2a92dbefb062f8b05ca8f932f4ac2"
+      },
+      "web": {
+        "health": "healthy",
+        "image": "sha256:0b1cdaeac4267270e613d797c5d76e2e90dc7de6d0800801f2f86a5ca7c2be95",
+        "mounts": [],
+        "name": "chat-reader-web-1",
+        "oom_killed": false,
+        "restart_count": 0,
+        "started_at": "2026-11-06T14:06:29.195894712Z",
+        "status": "running",
+        "id": "545e22e4470db791875a6edde01ce93c74cba9846e94ada703fbdae758aa4ac4"
+      },
+      "import-worker": {
+        "health": null,
+        "image": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd",
+        "mounts": [
+          [
+            "volume",
+            "chat-reader_asset-storage",
+            "/var/lib/docker/volumes/chat-reader_asset-storage/_data",
+            "/data/assets",
+            true
+          ],
+          [
+            "volume",
+            "chat-reader_export-storage",
+            "/var/lib/docker/volumes/chat-reader_export-storage/_data",
+            "/data/exports",
+            true
+          ],
+          [
+            "volume",
+            "chat-reader_import-storage",
+            "/var/lib/docker/volumes/chat-reader_import-storage/_data",
+            "/data/imports",
+            true
+          ],
+          [
+            "volume",
+            "chat-reader_offline-storage",
+            "/var/lib/docker/volumes/chat-reader_offline-storage/_data",
+            "/data/offline",
+            true
+          ]
+        ],
+        "name": "chat-reader-import-worker-1",
+        "oom_killed": false,
+        "restart_count": 0,
+        "started_at": "2026-11-06T14:05:26.546121272Z",
+        "status": "running",
+        "id": "a79c1dc51005ac36cde6c4a23088bbad540d775ddba0b53520afd7f0cab7ee44"
+      }
+    },
+    "worker": "alive_idle",
+    "http": {
+      "https_health": 200,
+      "https_login": 200
+    },
+    "schema": "20261105_0059",
+    "all_existing_container_identity_start_restart_mounts_unchanged": true,
+    "existing_container_count": 11,
+    "postgres_unchanged": true,
+    "env_compose_nginx_and_release_pointers_unchanged": true,
+    "host_oom_kill_unchanged": true,
+    "production_services_restarted": false,
+    "live_canonical_row_counts": "not_compared"
+  },
+  "preservation": {
+    "user_files_and_volumes_deleted": false,
+    "release_archives_or_evidence_deleted": false,
+    "local_preserved_file_hash_count": 11,
+    "original_deployment_receipt_unchanged": true,
+    "local_application_tests_or_services": false,
+    "application_source_changed": false,
+    "production_build": false,
+    "new_or_resumed_automation": false
+  },
+  "operator_evidence_batch": "chat-reader-release-cleanup-9cf235f-20261106",
+  "operator_sha256": "f92932e13c12c721730de0b8d26dbe077c4de17cc74a72527fc03f657ef26d80",
+  "operator_receipt_sha256": {
+    "backup-retention.json": "7849aa6ba876e2b2cda3c79dcd34c987a05a271e28f8a8fd25cde6ca358c223c",
+    "image-removal-01.json": "145596e814fcb2f76303ff145a60627af0086a98e3fef8928383846eaa36a3df",
+    "image-removal-02.json": "709ca1b8c35bb643001581580484737155c385a86b6132c5a7c81fb377c87862",
+    "image-removal-03.json": "f325acf0b628bb18a8ae90153819bf3000cedfb0a652ef584ace223cd65660a0",
+    "image-removal-04.json": "ace0e5e6a744c2074a5cbf876ebdaffd0028d0c507003c4a22b1aeb2fcb05a05",
+    "image-removal-05.json": "96b784d5dec6e5f4ba776570df7ee3ae19faabd23e91a7a8e9e98f3bdb203eb3",
+    "image-removal-06.json": "0b1c346f35d30993113cac69d80f8f79690aa23d0195afd3a8d9c5d3048dab71",
+    "image-removal-07.json": "f70c746947f4a6ecac47fb61969fe7fd4b017374f8e846f7a021f1539125e333",
+    "image-removal-08.json": "85149001c6a5590680ed7c871fd7a3c6d2ad1eea98d3ba47272bb1e54503f35d",
+    "independent-recheck.json": "6370b4c7be746523c510525e7f0b8a63664b144cb2db79a2291b3e181f5658d1",
+    "operation-started.json": "175e54b410aa4d72e4a3e2e1776cdd0d3dfb3f603b9f2f852c5661f18a480f56",
+    "plan.json": "4f86dd91de9936b6d842a12545bd4b6285ef1f90430184fce1d3df3883c7775f",
+    "result.json": "0d2fce88988ebd699220712ca58e832a00eb3fb140376cca965babd387c6c349"
+  }
+}

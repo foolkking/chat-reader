@@ -19,10 +19,10 @@ No migration or Dexie upgrade; existing offline copies retain their own snapshot
 | --- | --- |
 | Source / branch | Existing `master`; deployed application source `9cf235f3730aae0f3ae747fe0e36763056a624c0`; subsequent documentation-only receipts are not new application releases |
 | Accepted / deployed-source CI | `42217357688`, attempt 1, exact `9cf235f`; six jobs and all five artifact contents passed after the 50-minute first-read gate |
-| Production / retained rollback images | `9cf235f` / `67e6336`; accepted **2026-11-06 14:07:48Z** (**22:07:48 +08:00**), independently rechecked **14:10:03Z**; older `be58b12`/`3b839dc` also retained |
+| Production / retained rollback images | `9cf235f` / `67e6336`; accepted **2026-11-06 14:07:48Z** (**22:07:48 +08:00**), independently rechecked **14:10:03Z**; later authorized cleanup removed only the older `be58b12`/`3b839dc` tags |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
 | Database | Production single head/current `20261105_0059`, unchanged this release; prior private-search backfill remains committed, 52/52 |
-| Verification / delivery | API 6072 passed / 3 optional skipped; Web Node 2092/2092 and 14/14 gates; reading 23/23 with 64 traces; settings 463 plus isolated restore 1; capacity baseline/candidate 9/9; exact-image 320 MiB memory gate passed. No local application tests, production build, cleanup or raw ZIP replay |
+| Verification / delivery | API 6072 passed / 3 optional skipped; Web Node 2092/2092 and 14/14 gates; reading 23/23 with 64 traces; settings 463 plus isolated restore 1; capacity baseline/candidate 9/9; exact-image 320 MiB memory gate passed. No local application tests, production build or raw ZIP replay; separately authorized retention is recorded below |
 
 The current release adds fixed image previews, explicit reading-size suggestions,
 offline dimension snapshots and unified reading compensation, retaining the
@@ -35,12 +35,18 @@ artifact hashes, OCI/config identity, stopped-writer backup, deployment and pres
 evidence. [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)
 owns qualification and compatibility details.
 
-The new five-component backup `chat-reader-20261106T140111Z` and all three previous
-backup points remain; this deployment did no cleanup. Direct rollback `67e6336`
+Deployment initially kept all four backup points and sixteen role tags. The
+subsequent explicit cleanup request retained the two newly reverified backups
+`chat-reader-20261106T140111Z` and `chat-reader-20261105T160504Z`, removing only
+two older verified points and eight unreferenced old image tags (four image configs).
+Current/direct rollback role tags remain; release archives/evidence and user data
+were not deleted. See the [cleanup receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md#subsequent-authorized-cleanup).
+Direct rollback `67e6336`
 supports the same 0059 schema, but still needs stopped-writer/job/data checks.
-Never automatically downgrade; the older `be58b12` worker cannot claim
-`personal_search_backfill`. Disk preservation check: **91% used, 3,881,188 KiB free**;
-future releases need fresh capacity admission, not automatic cleanup or reduced budgets.
+Never automatically downgrade. Post-cleanup disk check: **85% used,
+6,167,416 KiB free** at **14:53:09Z**, approximately **2.18 GiB** more filesystem
+space available.
+Future releases need fresh capacity admission, not automatic cleanup or reduced budgets.
 Capacity and aggregate data counts are time-point
 observations, not invariants. Writers resumed after deployment; do not claim all
 canonical row counts stayed unchanged or restore data to make them match.
@@ -135,7 +141,9 @@ commit/push on existing master. Each submitted run obeyed its fresh minimum
 Exact `9cf235f` is fully green. The subsequent explicit “部署” request authorized
 the accepted release above; deployment and independent recheck are complete.
 The CI recheck remains paused; no schedule was created or resumed.
-It did not authorize broader cleanup or replaying the user's source ZIP.
+Deployment itself did not authorize cleanup. A later explicit request authorized
+only the bounded old-backup/image retention above, not broader cleanup or replaying
+the user's source ZIP.
 The unrelated `apps/web/tsconfig.tsbuildinfo` modification and release/test
 evidence remain preserved.
 [Closeout receipt](docs/execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md) records checks,

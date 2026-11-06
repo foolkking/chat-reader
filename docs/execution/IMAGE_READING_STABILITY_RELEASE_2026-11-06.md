@@ -5,6 +5,9 @@
 The user explicitly requested deployment after the exact-source CI was accepted.
 This supersedes the earlier no-deployment boundary for this release only, not
 for cleanup, replaying user imports, schedules or unrelated production work.
+The later explicit old-backup/image cleanup authorization and its result are
+recorded in [Subsequent authorized cleanup](#subsequent-authorized-cleanup);
+the deployment-time facts below remain historical evidence.
 
 | Boundary | Verified result |
 | --- | --- |
@@ -132,3 +135,53 @@ owns exact artifact/runtime/backup evidence. Detailed operator evidence remains
 in desktop batch `chat-reader-deploy-9cf235f-20261106`, and CI evidence in
 `chat-reader-images-reading-fix7-20261106`.
 The existing CI recheck remains paused; no schedule was created or resumed.
+
+## Subsequent authorized cleanup
+
+After the 91% disk warning, the user explicitly approved clearing this task's old
+backups and images. This separate authorization covered bounded retention only:
+two latest verified recovery points and current/direct rollback images must
+remain. It did not authorize user-data, volume, release-archive/evidence deletion,
+global Docker pruning or scheduled cleanup.
+
+| Boundary | Verified cleanup result |
+| --- | --- |
+| Completion / independent recheck | **2026-11-06 22:50:39 / 22:53:09 +08:00** |
+| Kept backups | `chat-reader-20261106T140111Z`, `chat-reader-20261105T160504Z` |
+| Removed old backups | `chat-reader-20261104T004004Z`, `chat-reader-20261103T155702Z` |
+| Kept images | All eight API/worker/migrate/Web tags for `9cf235f` and `67e6336` |
+| Removed images | Eight exact tags for `be58b12` and `3b839dc`, four unique image configs |
+| Backup unlinked bytes | **1,987,286,636**; only last-link logical bytes counted, not shared references or allocated blocks |
+| Filesystem space | 91% → **85%**; available **3,880,612 → 6,167,464 KiB** at apply completion; independent recheck **6,167,416 KiB** |
+| Measured available-space increase | **2,341,736,448 bytes ≈2.18 GiB** at apply completion, including concurrent system activity |
+| Runtime | API/Web/PostgreSQL healthy, worker `alive_idle`, HTTPS health/login 200 |
+
+The immutable `9cf235f` backup helper was SHA-verified and used under its shared
+backup-operation lock, with an exact four-directory allowlist. All four points
+passed five SHA-256 checks, four tar-stream scans and PostgreSQL TOC before
+deletion. The retained two were verified again after deletion and during the
+independent recheck; their original identities and checksums match.
+The matching installed PostgreSQL image performed TOC checks with 96 MiB memory,
+no network, no mounts, read-only root and no pull/build. The apply report's
+`held: 1` is its own lock directory; post-lock verification had zero held entries.
+
+Every old image config was checked against **all running and stopped containers**
+and rejected if it had an unapproved alias or shared a protected config ID.
+Deletion used only exact tags, without force or parent/global pruning. The final
+image inventory equals the previous inventory minus exactly those four configs;
+all unrelated images remain.
+
+All eleven existing container identities/start times/restarts/mounts were
+unchanged. Production env/Compose/Nginx/current-and-rollback pointer hashes,
+PostgreSQL identity, schema 0059 and host OOM count were unchanged. No services
+were restarted. Live canonical row counts were deliberately not compared.
+No user files, data volumes, image-transfer archives, original release evidence
+or unrelated workloads were deleted. Eleven original local files remain hashed
+and preserved; no application source, local application test, new CI dispatch,
+deployment or automation change was needed.
+
+The original deployment machine receipt remains immutable. The separate
+[sanitized cleanup receipt](../evidence/release-2026-11-06/image-reading-cleanup-summary.json)
+and task batch `chat-reader-release-cleanup-9cf235f-20261106` retain this result.
+Two local verified backups are not a production restore drill or off-site
+recovery guarantee. Future capacity checks and cleanup still need fresh review.
