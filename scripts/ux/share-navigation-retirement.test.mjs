@@ -76,6 +76,8 @@ const storageKey = byte => `chat-reader:share-position:${byte.toString(16).padSt
 // position helpers. Hooks, query snapshots, digest bytes, storage, transport,
 // leases, DOM, alignment/settling and timers are controlled adapters. This is
 // not mounted React, real crypto/storage, QueryClient or browser acceptance.
+// Manual input reads the same window-scroller dataset as persistence. Keep
+// that browser boundary in this separate adapter, not just the storage suite.
 function fixture({ items = [B], positions = new Map() } = {}) {
   const calls = { writes: [], resolvers: [], windows: [], leases: [], mounts: [], settles: [], released: [],
     timers: [], clearedTimers: [], querySpecs: [], digests: [], storageReads: [], manual: 0 };
@@ -112,6 +114,7 @@ function fixture({ items = [B], positions = new Map() } = {}) {
     pending.clear();
   };
   const exports = {};
+  const document = { documentElement: { dataset: {} }, getElementById: () => null, querySelector: () => null };
   const dependencies = { exports, useMemo: memo, useCallback: (callback, deps) => memo(() => callback, deps),
     useEffect: (effect, deps) => register(pendingPassive, effect, deps),
     useLayoutEffect: (effect, deps) => register(pendingLayout, effect, deps),
@@ -132,7 +135,7 @@ function fixture({ items = [B], positions = new Map() } = {}) {
         calls.timers.push({ id, callback, delay }); timers.set(id, callback); return id;
       },
     },
-    document: { getElementById: () => null, querySelector: () => null },
+    document,
     CSS: { escape: value => value }, ACTIVE_READING_OFFSET: 96, INITIAL_WINDOW_TURNS: windowExports.INITIAL_WINDOW_TURNS,
     emptyLoadedWindow: windowExports.emptyLoadedWindow, replaceLoadedWindow: windowExports.replaceLoadedWindow,
     resolveSharedLocator: async (token, value) => {
@@ -160,7 +163,7 @@ function fixture({ items = [B], positions = new Map() } = {}) {
   };
   render();
   state.loadedWindowRef.current = windowExports.replaceLoadedWindow(page(items), state.windowGenerationRef.current);
-  return { state, calls, handlers, timers, render, get current() { return current; },
+  return { state, calls, handlers, timers, document, render, get current() { return current; },
     get querySpec() { return calls.querySpecs.at(-1); },
     flushPassive() { flush(pendingPassive, passives); },
     async readyStorage() {
@@ -276,6 +279,49 @@ for (const retirement of ["unmount", "token", "layout replay", "manual input"]) 
         assert.deepEqual(observable(f), snapshot);
       }
     } finally { f.dispose(); }
+  });
+}
+
+for (const restoration of [false, true]) for (const realInputAfterClose of [false, true]) {
+  test(`${restoration ? "saved restore" : "explicit navigation"}: Viewer input preserves the pending target${realInputAfterClose ? ", then real reading cancels it" : " through completion"}`, async () => {
+    const f = fixture(restoration ? { items: [], positions: new Map([[storageKey(1), JSON.stringify(saved(A))]]) } : {});
+    const hold = deferred();
+    try {
+      let navigation;
+      f.handlers.mount = () => hold.promise;
+      if (restoration) {
+        await f.readyStorage();
+        f.initial([A]);
+      } else navigation = f.current.navigate(target(A));
+      await setImmediate();
+      assert.equal(f.calls.mounts.length, 1);
+      const { tokenIsCurrent } = f.calls.mounts[0];
+      const sequence = f.state.scrollIntentSequenceRef.current, token = f.state.navigationTokenRef.current;
+      f.document.documentElement.dataset.readerViewerLocked = "true";
+      for (let action = 0; action < 3; action++) f.current.manualIntent();
+      assert.equal(f.state.scrollIntentSequenceRef.current, sequence);
+      assert.equal(f.state.navigationTokenRef.current, token);
+      assert.equal(f.state.userScrollIntentRef.current, false);
+      assert.equal(f.calls.manual, 0);
+      assert.equal(tokenIsCurrent(), true);
+      delete f.document.documentElement.dataset.readerViewerLocked;
+      if (realInputAfterClose) {
+        f.current.manualIntent();
+        assert.equal(f.state.scrollIntentSequenceRef.current, sequence + 1);
+        assert.equal(f.state.navigationTokenRef.current, token + 1);
+        assert.equal(f.state.userScrollIntentRef.current, true);
+        assert.equal(f.calls.manual, 1);
+        assert.equal(tokenIsCurrent(), false);
+      }
+      hold.resolve({ ok: true, targetId: `block-${A.id}-0` });
+      if (navigation) assert.equal((await navigation).ok, !realInputAfterClose);
+      await setImmediate();
+      assert.equal(f.calls.mounts.length, 1, "No extra fallback or replacement target is admitted.");
+      assert.equal(f.calls.settles.length, realInputAfterClose ? 0 : 1);
+      assert.deepEqual(f.calls.released, [A.id]);
+      assert.equal(f.state.positionReady, true);
+      if (!realInputAfterClose) assert.equal(f.state.activeMessageId, A.id);
+    } finally { hold.resolve({ ok: false, reason: "cancelled" }); f.dispose(); }
   });
 }
 

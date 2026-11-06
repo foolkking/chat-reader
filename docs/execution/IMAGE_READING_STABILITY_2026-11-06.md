@@ -105,3 +105,32 @@ Viewer 锁移到焦点前的 layout effect，保存来源容器与真实触发 o
 强制 **64** 份轨迹；失败时也保留已有部分逐帧数据。23 个用例、所有旧门禁、
 预算、超时和零 skip 要求不变。本轮仍只做本地静态检查，新增回归须由下一次
 完整精确源码 CI 执行；未部署。新 SHA/run/至少 50 分钟门限以交接 JSON 为准。
+
+## 第三轮精确 CI：独立 Share 导航适配器遗漏
+
+源码 `c3a21f50496f2b371e19df4de67010fb68e98630`、run `42174449666`
+attempt 1 于 2026-11-06 07:20:21Z 回查，晚于 07:16:43Z 门限。
+Web job `127749564806` 的 lint/typecheck/build 通过，Node 为
+**2052 passed / 2 failed / 0 skipped**；上轮新增 12 项受控源码回归均通过，
+但浏览器尚未启动，汇总明确 **14 NOT_VERIFIED**。API/settings/performance
+job 通过，不能代替本轮完整验收。
+
+两个失败都在 `share-navigation-retirement.test.mjs`：其单独抽取的
+`markScrollIntent` 调用新增 Viewer guard 时，受控 `document` 缺少真实浏览器
+必有的 `documentElement.dataset`，在原“手动输入取消导航/恢复”断言前抛错。
+上轮只补全 storage effect 的另一个适配器，没有覆盖这个独立抽取路径；
+这是测试依赖审查遗漏，不是浏览器缺失根节点，也不是已复现新的图片抖动。
+
+修复只补全该测试适配器，不改产品 guard、不改旧断言、不加可选链掩盖遗漏。
+另加四项实际回调回归，交叉验证显式导航/保存位置恢复：Viewer 内输入不取消
+待定位目标，关闭后真实阅读输入必须仍能取消；无新输入时原目标继续完成，
+租约正常释放且不启动额外 fallback。静态盘点七个 Share 源码抽取测试：
+仅 retirement 和 storage 两处执行这组输入/持久化 guards；其他五处的抽取
+范围为 query、edge、sheet、unlock 和 focus，不执行该手动输入回调。
+
+精确 Web 制品 `13483400571` 的 SHA-256 为
+`3c298f5d90d35a0f1f9f8fe29298eeca32d4b0f5519a75a64882572bed644f7e`，
+包含 NOT_VERIFIED 汇总而无浏览器逐帧证据。日志、制品核验、依赖盘点和静态
+检查保存于 `C:\Users\86182\Desktop\wkkk\chat-reader-images-reading-fix3-20261106`。
+本地未执行应用测试；23 个阅读用例、64 份轨迹及全部旧门禁仍待新精确 CI。
+再次派发仍归档旧交接、重算至少 50 分钟；本轮没有部署。
