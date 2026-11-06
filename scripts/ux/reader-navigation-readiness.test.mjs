@@ -56,7 +56,9 @@ const refDefaults = {
   restoreAttemptedRef: false, restoreInProgressRef: false, readingRestoreTokenRef: 0, userScrollIntentRef: false,
   scrollDirectionRef: null, scrollIntentSequenceRef: 1, lastPersistedIntentRef: 1, lastReaderUserIntentAtRef: 0,
   preferenceStableAnchorRef: null, lastSavedSignatureRef: "", latestStablePositionRef: null,
+  cancelPreferenceTransitionRef: () => {},
   pointerDraggingRef: false, pointerDragMovedRef: false, pointerScrollTopRef: 0, activeMessageIdRef: null, activeBlockIdRef: null,
+  pointerDragStartScrollTopRef: 0,
   locatePulseTimerRef: null, lastNavigationTargetRef: null, previousTurnAnchorRef: null, nextTurnAnchorRef: null,
   tocReturnPointRef: null, collapsedTurnKeysRef: new Set(),
   edgeTransitionRef: null, loadingPreviousRef: false, loadingNextRef: false, previousSentinelVisibleRef: false,
@@ -443,6 +445,25 @@ test("a deliberate index navigation can persist its settled real target without 
     assert.equal(f.state.userScrollIntentRef.current, false, "navigation intent is not relabelled as a wheel gesture");
   } finally { f.dispose(); }
 });
+
+for (const takeover of ["wheel", "scrollbar", "navigation", "Viewer"]) {
+  test(`${takeover}: Reader wires preference retirement only to a real position takeover`, async () => {
+    const f = fixture();
+    try {
+      await f.setInitial(); await f.frame();
+      let cancellations = 0;
+      f.state.cancelPreferenceTransitionRef.current = () => { cancellations++; };
+      if (takeover === "wheel") f.userWheel(60);
+      else if (takeover === "scrollbar") { f.root.emit("pointerdown"); f.window.emit("pointerup"); }
+      else if (takeover === "navigation") await f.navigate();
+      else {
+        f.root.dataset.readerViewerLocked = "true";
+        f.result().markReaderScrollIntent("down"); f.root.emit("pointerdown");
+      }
+      assert.equal(cancellations, takeover === "Viewer" ? 0 : 1);
+    } finally { f.dispose(); }
+  });
+}
 
 test("real input retires a pending geometry lease and releases its compensation flag", async () => {
   const f = fixture();

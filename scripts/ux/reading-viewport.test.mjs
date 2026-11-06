@@ -35,12 +35,36 @@ function fixture() {
       observe() {} unobserve() {} disconnect() { this.closed = true; }
     }, callback => { frames.set(++next, callback); return next; }, id => frames.delete(id), KeyboardEvent, { TEXT_NODE: 3 },
   );
-  return { ...exports, root, second, observers, cancelled, corrections, KeyboardEvent,
+  return { ...exports, root, second, document, observers, cancelled, corrections, KeyboardEvent,
     content: scroller => ({ closest: () => scroller }), setBusy: value => { busy = value; },
     frame: () => { const tasks = [...frames.values()]; frames.clear(); tasks.forEach(task => task()); },
     resize: () => observers.filter(observer => !observer.closed).forEach(observer => observer.callback()),
   };
 }
+test("retokenization cannot turn a live text Range's parent into a new reading anchor", () => {
+  const f = fixture();
+  const text = { nodeType: 3, isConnected: true, textContent: "synthetic code" };
+  f.root.target.contains = node => node === text || node === f.root.target;
+  const range = {
+    startContainer: text, endContainer: text, startOffset: 0, endOffset: 0, drift: 0,
+    setStart(node, start) { this.startContainer = node; this.startOffset = start; },
+    setEnd(node, end) { this.endContainer = node; this.endOffset = end; },
+    getBoundingClientRect() { return { top: f.root.flowTop - f.root.scrollTop + this.drift, height: 20 }; },
+  };
+  f.document.caretRangeFromPoint = () => range;
+  const release = f.observeReadingViewport(f.content(f.root));
+  f.frame();
+  range.startContainer = f.root.target; range.endContainer = f.root.target;
+  range.startOffset = 0; range.endOffset = 0; range.drift = 25;
+  text.isConnected = false;
+  f.resize();
+  assert.equal(f.root.scrollTop, 0);
+  assert.equal(f.corrections.length, 0);
+  f.root.flowTop += 12; f.resize();
+  assert.equal(f.root.scrollTop, 12, "A real block displacement is still corrected after token replacement.");
+  release();
+});
+
 test("one owner corrects the actual delta once for all messages in one scroller", () => {
   const f = fixture(), release1 = f.observeReadingViewport(f.content(f.root)), release2 = f.observeReadingViewport(f.content(f.root));
   f.frame();
@@ -78,6 +102,27 @@ test("explicit navigation owns its layout round and independent Compare scroller
   assert.equal(f.second.scrollTop, 0);
   release1(); release2();
 });
+
+for (const flag of ["readerLayoutCompensating", "readerViewerLocked"]) {
+  test(`${flag}: the release handoff catches a row resize before the next animation frame`, () => {
+    const f = fixture(), release = f.observeReadingViewport(f.content(f.root));
+    f.frame();
+    f.root.dataset[flag] = "true";
+    f.root.flowTop += 80; f.resize();
+    // The explicit owner has aligned the real target before handing it back.
+    f.root.scrollTop = 80;
+    delete f.root.dataset[flag];
+    f.root.dispatchEvent(new Event("chat-reader:position-released"));
+    // Releasing a virtual pin may resize rows before the queued capture RAF.
+    f.root.flowTop += 25; f.resize();
+    assert.equal(f.root.scrollTop, 105);
+    assert.equal(f.root.target.getBoundingClientRect().top, 150);
+    assert.equal(f.corrections.length, 1);
+    f.frame(); f.resize();
+    assert.equal(f.root.scrollTop, 105, "The following frame cannot repeat or undo the correction.");
+    release();
+  });
+}
 
 test("Viewer owns only its scroller; modal input and its return cannot revive a stale geometry anchor", () => {
   const f = fixture(), release1 = f.observeReadingViewport(f.content(f.root)), release2 = f.observeReadingViewport(f.content(f.second));

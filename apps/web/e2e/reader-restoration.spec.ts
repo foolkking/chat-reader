@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 
 const runLongReaderRegression = process.env.E2E_LONG_READER === "1";
 
@@ -10,6 +11,24 @@ let targetBlockIndex = 0;
 let annotationQuote = "";
 let shareId = "";
 let shareToken = "";
+
+type PreferenceFrameProbe = {
+  frames: { time: number; top: number; scroll: number; height: number; mounted: number;
+    layout: boolean; geometry: boolean; writer: string }[];
+  corrections: { time: number; delta: number; applied: number }[];
+};
+
+test.afterEach(async ({ page }, info) => {
+  if (page.isClosed()) return;
+  const evidence = await page.evaluate(() => {
+    const host = window as unknown as { preferenceFrameProbe?: PreferenceFrameProbe; stopPreferenceFrameProbe?: () => void };
+    host.stopPreferenceFrameProbe?.();
+    return host.preferenceFrameProbe ?? null;
+  }).catch(() => null);
+  // Retain intermediate geometry/ownership on success AND failure. No text,
+  // object IDs or navigation/Share URLs are written to this scalar evidence.
+  if (evidence) await writeFile(info.outputPath("preference-ownership-frames.json"), JSON.stringify(evidence));
+});
 
 test.beforeAll(async ({ request }) => {
   const existingConversationId = process.env.E2E_LONG_READER_CONVERSATION_ID;
@@ -250,6 +269,29 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
   await page.waitForTimeout(250);
   const anchor = await captureReadingBlockAnchor(page, targetMessageId);
   expect(anchor.id).not.toBe("");
+  await page.locator(`[id="${anchor.id}"]`).evaluate(target => {
+    const root = target.closest<HTMLElement>("[data-reader-scroll-root='true']")!;
+    const state: PreferenceFrameProbe = { frames: [], corrections: [] };
+    const host = window as unknown as { preferenceFrameProbe: PreferenceFrameProbe; stopPreferenceFrameProbe: () => void };
+    host.preferenceFrameProbe = state;
+    let active = true;
+    const onCorrection = (event: Event) => state.corrections.push({
+      time: performance.now(), ...(event as CustomEvent<{ delta: number; applied: number }>).detail,
+    });
+    root.addEventListener("chat-reader:geometry-correction", onCorrection);
+    host.stopPreferenceFrameProbe = () => { active = false; root.removeEventListener("chat-reader:geometry-correction", onCorrection); };
+    const sample = () => {
+      if (!active) return;
+      state.frames.push({
+        time: performance.now(), top: target.getBoundingClientRect().top - root.getBoundingClientRect().top,
+        scroll: root.scrollTop, height: root.scrollHeight, mounted: root.querySelectorAll("[data-block-index]").length,
+        layout: root.dataset.readerLayoutCompensating === "true",
+        geometry: root.dataset.readerGeometryCompensating === "true", writer: root.dataset.readerLastScrollWriter ?? "none",
+      });
+      requestAnimationFrame(sample);
+    };
+    sample();
+  });
 
   const applyLayoutPreference = async (action: () => Promise<void>, applied: () => Promise<boolean>) => {
     await action();
@@ -321,6 +363,8 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
     () => resetFontSize.click(),
     () => readerFrame.evaluate((frame) => getComputedStyle(frame).getPropertyValue("--reader-font-size").trim() === "17px"),
   );
+  await expect(scrollRoot).not.toHaveAttribute("data-reader-layout-compensating", "true");
+  await expect.poll(() => focusAnchorError(page, anchor)).toBeLessThanOrEqual(24);
   await page.locator(`button[aria-controls="${preferencesPanelId}"]`).click();
 });
 
@@ -364,6 +408,9 @@ test("far annotation jump and refresh restore hydrate heavy content", async ({ p
 
   const scrollRoot = page.locator("[data-navigation-stage]");
   await expect(scrollRoot).toHaveAttribute("data-navigation-stage", "settled");
+  // Initial preference hydration may precede any message DOM. It must never
+  // strand the layout flag and suppress this explicit annotation visit's save.
+  await expect(scrollRoot).not.toHaveAttribute("data-reader-layout-compensating", "true");
   await scrollRoot.evaluate((root) => root.scrollBy({ top: 420, behavior: "auto" }));
   await page.waitForTimeout(2500);
   await expect.poll(async () => {

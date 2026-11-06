@@ -65,6 +65,17 @@ Reader geometry loop yield to the same owner. Wheel, touch, relevant keys and
 pointer actions invalidate an older position lease. Layout flags distinguish
 programmatic corrections from user intent and reading-position writes.
 
+Reader preference/surface transitions claim layout ownership only when a real
+DOM anchor exists. A single frame writer performs their corrections; an
+identified preference event cannot be completed by an older event or an
+unrelated anonymous surface event. A suspended settle observer rechecks its
+token after every frame. New reading input/navigation retires that transition;
+completion releases ownership before virtual pins and immediately hands the
+actual geometry to the shared viewport owner. Code tokenization must not turn
+a live Range's collapsed/reparented endpoints into a different text anchor:
+the original node/character endpoints must still match, otherwise the real
+block is the fallback. These source guards still require full CI acceptance.
+
 Viewer captures its originating scroller and real trigger before modal focus.
 Window restoration uses `left/top`; element scrollers restore their own
 occurrence without touching the opposite Compare pane. Modal input/return

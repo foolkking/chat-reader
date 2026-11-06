@@ -31,7 +31,7 @@ const inputNames = ["conversationId", "dataSource", "conversationQuery", "queryC
   "windowGenerationRef", "loadedWindowRef", "applyLoadedWindow", "userScrollIntentRef", "scrollDirectionRef",
   "scrollIntentSequenceRef", "setNavigationStatus", "setNavigationFailureReason", "setActiveMessageId", "setActiveBlockId",
   "locatePulseTimerRef", "setLocatePulse", "scrollContainerRef", "resolvedLocatorKeysRef", "previousTurnAnchorRef",
-  "nextTurnAnchorRef", "initialWindowAppliedRef", "collapsedTurnKeysRef", "setCollapsedTurnKeys"];
+  "nextTurnAnchorRef", "initialWindowAppliedRef", "collapsedTurnKeysRef", "setCollapsedTurnKeys", "cancelPreferenceTransitionRef"];
 const compiled = compile(`function renderNavigation(input) {
   const { ${inputNames.join(", ")} } = input;
   ${guard.getText(ast)}
@@ -86,6 +86,7 @@ function fixture({ mode = "remote", items = [B] } = {}) {
     windowGenerationRef: 0, userScrollIntentRef: false, scrollDirectionRef: null,
     scrollIntentSequenceRef: 0, locatePulseTimerRef: null, previousTurnAnchorRef: null, nextTurnAnchorRef: null,
     initialWindowAppliedRef: false, searchNavigationRef: null, collapsedTurnKeysRef: new Set(),
+    cancelPreferenceTransitionRef: () => {},
   })) state[name] = { current: value };
   state.scrollContainerRef = { current: root };
   state.loadedWindowRef = { current: windowExports.replaceLoadedWindow(page(items), 0) };

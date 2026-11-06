@@ -440,6 +440,7 @@ export function ConversationReader({
   const preferenceTransitionRef = useRef(0);
   const preferenceBlockLeaseRef = useRef<Promise<ReaderBlockLease | null> | null>(null);
   const preferenceCompensationFrameRef = useRef<number | null>(null);
+  const cancelPreferenceTransitionRef = useRef<() => void>(() => {});
   const annotationTransitionRef = useRef(0);
   const annotationBlockLeaseRef = useRef<Promise<ReaderBlockLease | null> | null>(null);
   const annotationCompensationFrameRef = useRef<number | null>(null);
@@ -492,9 +493,39 @@ export function ConversationReader({
   }, [focusMode, onFocusModeChange, setUtilityPanel]);
 
   useEffect(() => {
-    const capturePreferenceAnchor = () => {
+    let pendingLayoutId: unknown;
+    let settlingToken: number | null = null;
+    const finishPreferenceTransition = (token: number) => {
+      if (preferenceTransitionRef.current !== token) return;
+      preferenceAnchorRef.current = null;
+      const blockLease = preferenceBlockLeaseRef.current;
+      preferenceBlockLeaseRef.current = null;
+      if (preferenceCompensationFrameRef.current !== null) {
+        window.cancelAnimationFrame(preferenceCompensationFrameRef.current);
+        preferenceCompensationFrameRef.current = null;
+      }
+      const root = scrollContainerRef.current;
+      if (root?.dataset.readerLayoutCompensating === "true") {
+        delete root.dataset.readerLayoutCompensating;
+        // Hand off the actual aligned geometry before releasing virtual pins:
+        // their following layout must be corrected, not adopted as a baseline.
+        root.dispatchEvent(new CustomEvent("chat-reader:position-released"));
+      }
+      void blockLease?.then((lease) => lease?.release());
+    };
+    const cancelPreferenceTransition = () => {
+      finishPreferenceTransition(preferenceTransitionRef.current);
+      preferenceTransitionRef.current += 1;
+      preferenceStableAnchorRef.current = null;
+      pendingLayoutId = undefined;
+      settlingToken = null;
+    };
+    cancelPreferenceTransitionRef.current = cancelPreferenceTransition;
+    const capturePreferenceAnchor = (event: Event) => {
       preferenceTransitionRef.current += 1;
       const token = preferenceTransitionRef.current;
+      pendingLayoutId = (event as CustomEvent<unknown>).detail;
+      settlingToken = null;
       const root = scrollContainerRef.current;
       const captured = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
       const stable = preferenceStableAnchorRef.current;
@@ -515,7 +546,7 @@ export function ConversationReader({
         };
       }
       preferenceAnchorRef.current = anchor;
-      if (root) root.dataset.readerLayoutCompensating = "true";
+      if (root && anchor) root.dataset.readerLayoutCompensating = "true";
       if (preferenceCompensationFrameRef.current !== null) {
         window.cancelAnimationFrame(preferenceCompensationFrameRef.current);
         preferenceCompensationFrameRef.current = null;
@@ -530,48 +561,36 @@ export function ConversationReader({
             900,
           )
         : null;
-      if (anchor) {
-        const compensate = () => {
-          if (preferenceTransitionRef.current !== token) return;
-          compensateScrollAnchorFrame(scrollContainerRef.current, anchor);
-          preferenceCompensationFrameRef.current = window.requestAnimationFrame(compensate);
-        };
-        preferenceCompensationFrameRef.current = window.requestAnimationFrame(compensate);
+      if (!anchor) {
+        // A cold/failed initial body has no DOM position to own. In particular,
+        // do not leave the save/geometry guards locked after the body arrives.
+        finishPreferenceTransition(token);
+        return;
       }
+      const compensate = () => {
+        if (preferenceTransitionRef.current !== token) return;
+        compensateScrollAnchorFrame(scrollContainerRef.current, anchor);
+        preferenceCompensationFrameRef.current = window.requestAnimationFrame(compensate);
+      };
+      preferenceCompensationFrameRef.current = window.requestAnimationFrame(compensate);
     };
-    const restorePreferenceAnchor = () => {
+    const restorePreferenceAnchor = (event: Event) => {
       const anchor = preferenceAnchorRef.current;
       const token = preferenceTransitionRef.current;
-      if (!anchor) return;
-      const blockLease = preferenceBlockLeaseRef.current;
+      if ((event as CustomEvent<unknown>).detail !== pendingLayoutId || settlingToken === token) return;
+      if (!anchor) { finishPreferenceTransition(token); return; }
+      settlingToken = token;
       void settlePreferenceLayoutAnchor({
         root: scrollContainerRef.current,
         anchor,
         tokenIsCurrent: () => preferenceTransitionRef.current === token,
-      }).finally(() => {
-        void blockLease?.then((lease) => lease?.release());
-        if (preferenceTransitionRef.current === token) {
-          preferenceAnchorRef.current = null;
-          preferenceBlockLeaseRef.current = null;
-          if (preferenceCompensationFrameRef.current !== null) {
-            window.cancelAnimationFrame(preferenceCompensationFrameRef.current);
-            preferenceCompensationFrameRef.current = null;
-          }
-          delete scrollContainerRef.current?.dataset.readerLayoutCompensating;
-        }
-      });
+      }).finally(() => finishPreferenceTransition(token));
     };
     window.addEventListener("chat-reader:reader-layout-will-change", capturePreferenceAnchor);
     window.addEventListener("chat-reader:reader-layout-did-change", restorePreferenceAnchor);
     return () => {
-      preferenceTransitionRef.current += 1;
-      void preferenceBlockLeaseRef.current?.then((lease) => lease?.release());
-      preferenceBlockLeaseRef.current = null;
-      if (preferenceCompensationFrameRef.current !== null) {
-        window.cancelAnimationFrame(preferenceCompensationFrameRef.current);
-        preferenceCompensationFrameRef.current = null;
-      }
-      delete scrollContainerRef.current?.dataset.readerLayoutCompensating;
+      cancelPreferenceTransition();
+      cancelPreferenceTransitionRef.current = () => {};
       window.removeEventListener("chat-reader:reader-layout-will-change", capturePreferenceAnchor);
       window.removeEventListener("chat-reader:reader-layout-did-change", restorePreferenceAnchor);
     };
@@ -796,6 +815,7 @@ export function ConversationReader({
   const markReaderScrollIntent = useCallback((direction: ScrollDirection = null) => {
     const root = scrollContainerRef.current;
     if (root?.dataset.readerViewerLocked === "true") return;
+    cancelPreferenceTransitionRef.current();
     userScrollIntentRef.current = true;
     scrollIntentSequenceRef.current += 1;
     geometryTransitionRef.current += 1;
@@ -841,6 +861,8 @@ export function ConversationReader({
       lastTouchY = currentY;
     };
     const markPointerDown = () => {
+      if (root.dataset.readerViewerLocked === "true") return;
+      cancelPreferenceTransitionRef.current();
       pointerDraggingRef.current = true;
       pointerDragMovedRef.current = false;
       pointerDragStartScrollTopRef.current = root.scrollTop;
@@ -1228,6 +1250,7 @@ export function ConversationReader({
       if (!ownsReaderReadRecovery(recentOwner) || options?.isCurrent?.() === false) {
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
       }
+      cancelPreferenceTransitionRef.current();
       const currentWindow = loadedWindowRef.current;
       const targetTurn = buildReaderTurnGroups(currentWindow.turns, currentWindow.items)
         .find((turn) => turn.messageIds.includes(messageId));
@@ -4080,7 +4103,9 @@ async function settlePreferenceLayoutAnchor({
   let stableFrames = 0;
   while (tokenIsCurrent() && window.performance.now() < deadline) {
     await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-    compensateScrollAnchorFrame(root, anchor);
+    if (!tokenIsCurrent()) return false;
+    // The transition's single RAF writer owns correction. This waiter only
+    // observes it; an older suspended waiter must never write after takeover.
     stableFrames = focusAnchorError(root, anchor) <= 1 ? stableFrames + 1 : 0;
     // Width/font changes update the estimator first and commit TanStack's
     // rebuilt measurement cache on the following layout pass. Keep the
@@ -4123,7 +4148,10 @@ function compensateScrollAnchorFrame(root: HTMLElement | null, anchor: ScrollAnc
   if (!target?.isConnected) return;
   const expectedTop = root.getBoundingClientRect().top + anchor.offset;
   const delta = target.getBoundingClientRect().top - expectedTop;
-  if (Math.abs(delta) > 0.5) root.scrollTop += delta;
+  if (Math.abs(delta) > 0.5) {
+    root.dataset.readerLastScrollWriter = "layout";
+    root.scrollTop += delta;
+  }
 }
 
 function focusTransitionDelay(timeoutMs: number): Promise<void> {

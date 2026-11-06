@@ -24,6 +24,8 @@ function createOwner(root: HTMLElement) {
   let anchor: ScrollAnchorSnapshot | null = null;
   let anchorElement: HTMLElement | null = null;
   let textRange: Range | null = null;
+  let textNode: Node | null = null;
+  let textStart = 0;
   let textOffset = 0;
   let scrollAtCapture = windowMode ? window.scrollY : root.scrollTop;
   let captureFrame = 0;
@@ -47,6 +49,7 @@ function createOwner(root: HTMLElement) {
     anchor = captureScrollAnchor(scrollRoot, 120);
     anchorElement = anchor ? document.getElementById(anchor.targetId) : null;
     textRange = null;
+    textNode = null;
     if (anchorElement) {
       const bounds = anchorElement.getBoundingClientRect();
       const rootTop = scrollRoot?.getBoundingClientRect().top ?? 0;
@@ -60,6 +63,8 @@ function createOwner(root: HTMLElement) {
           caret.setEnd(caret.startContainer, start + 1);
           if (caret.getBoundingClientRect().height > 0) {
             textRange = caret;
+            textNode = caret.startContainer;
+            textStart = start;
             textOffset = caret.getBoundingClientRect().top - rootTop;
           }
         }
@@ -82,7 +87,12 @@ function createOwner(root: HTMLElement) {
     if (rebaseAfterExplicitPosition) { rebaseAfterExplicitPosition = false; capture(); return; }
     if (!anchor || !anchorElement?.isConnected || !root.contains(anchorElement)) { capture(); return; }
     // Native scrolling since the last sample is user motion, not layout drift.
-    const useText = textRange?.startContainer.isConnected && anchorElement.contains(textRange.startContainer)
+    // DOM Ranges are live: replacing plain code with token spans can silently
+    // move their endpoints to the still-connected parent. That parent is not
+    // the captured character and must not create a one-line phantom delta.
+    const useText = textRange && textNode?.isConnected && textRange.startContainer === textNode
+      && textRange.endContainer === textNode && textRange.startOffset === textStart
+      && textRange.endOffset === textStart + 1 && anchorElement.contains(textNode)
       && textRange.getBoundingClientRect().height > 0;
     const top = (useText ? textRange!.getBoundingClientRect().top : anchorElement.getBoundingClientRect().top)
       - (scrollRoot?.getBoundingClientRect().top ?? 0);
@@ -108,7 +118,14 @@ function createOwner(root: HTMLElement) {
   };
   const resize = new ResizeObserver(compensate);
   const onScroll = () => { if (!writing) scheduleCapture(); };
-  const onPositionReleased = () => { rebaseAfterExplicitPosition = true; scheduleCapture(); };
+  const onPositionReleased = () => {
+    rebaseAfterExplicitPosition = true;
+    // Capture the explicit owner's final position synchronously. Deferring
+    // this until RAF adopts any intervening virtual-pin/row resize as if it
+    // were the user's chosen position, losing the first displacement.
+    if (!busy() && !writing) { rebaseAfterExplicitPosition = false; capture(); }
+    else scheduleCapture();
+  };
   const onIntent = (event: Event) => {
     if (root.dataset.readerViewerLocked === "true") return;
     if (event instanceof KeyboardEvent) {
