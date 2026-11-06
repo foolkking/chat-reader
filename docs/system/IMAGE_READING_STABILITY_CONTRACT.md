@@ -1,7 +1,11 @@
 # Image previews and reading viewport stability
 
-Source contract updated **2026-11-06**. Candidate implementation; full exact-source
-CI is required before acceptance. This is not a production deployment receipt.
+Source contract updated **2026-11-06**. Exact source `9cf235f` passed all six jobs
+in CI `42217357688`, including 14 Web gates and 23/23 reading-stability cases.
+All five artifacts and 64 frame traces were independently verified.
+The later authorized deployment is recorded in the
+[release receipt](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md);
+synthetic CI is not authenticated production UI or real-device acceptance.
 
 ## Geometry and saved dimensions
 
@@ -74,7 +78,7 @@ completion releases ownership before virtual pins and immediately hands the
 actual geometry to the shared viewport owner. Code tokenization must not turn
 a live Range's collapsed/reparented endpoints into a different text anchor:
 the original node/character endpoints must still match, otherwise the real
-block is the fallback. These source guards still require full CI acceptance.
+block is the fallback. These guards passed the exact-source CI above.
 
 Viewer captures its originating scroller and real trigger before modal focus.
 Window restoration uses `left/top`; element scrollers restore their own

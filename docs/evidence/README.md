@@ -1,6 +1,14 @@
 # 事实证据索引
 
-## 当前发布 — 恢复一致性 — 2026-11-06
+## 当前发布 — 图片展示与阅读稳定性 — 2026-11-06
+
+[脱敏汇总](release-2026-11-06/image-reading-deployment-summary.json)与
+[发布回执](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md)
+绑定精确 `9cf235f`、CI `42217357688`、五份制品、64 条阅读轨迹、
+新停写备份、0059 不变及运行态独立复核。不含用户正文或凭据；
+原三份备份和旧镜像均保留，未清理资料或重传用户 ZIP。
+
+## 上一发布 — 恢复一致性 — 2026-11-06（历史）
 
 [脱敏汇总](release-2026-11-06/recovery-deployment-summary.json)与
 [发布回执](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)

@@ -3,9 +3,9 @@
 ## Current verification boundaries — 2026-11-06
 
 Use [Project State](../../PROJECT_STATE.md) and the
-[current release record](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)
+[current release record](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md)
 for exact source/CI/artifact/backup and production acceptance; this deployment
-did no cleanup. Runtime/retained rollback images are `67e6336`/`be58b12`, schema
+did no cleanup. Runtime/direct rollback images are `9cf235f`/`67e6336`, schema
 `20261105_0059`; all six exact-source CI jobs, independent artifact acceptance
 and the deployment/runtime recheck passed. Earlier uncommitted/no-deployment
 statements below describe their own checkpoints, not the current runtime.
@@ -19,13 +19,19 @@ statements below describe their own checkpoints, not the current runtime.
 - Noise protection remains bounded recognition with the limitations below;
   a passing corpus is not exhaustive Markdown/AI-adapter parity or an
   unmeasured performance guarantee.
-- The new stopped-writer backup and two previously retained five-component points are verified, not
+- The new stopped-writer backup and three previously retained five-component points are verified, not
   restore-drill accepted.
   Server-local points may share hardlinks; independent off-site recovery and
-  scheduled backups remain unconfigured. Future releases need fresh capacity.
+  scheduled backups remain unconfigured. Preservation check: 91% disk used,
+  3,881,188 KiB available. Future releases need fresh capacity; no cleanup or
+  reduced headroom is authorized by this receipt.
 - Old images are retained, not unconditional 0059 rollback approval. Stop writers
   and check new job/data compatibility; never automatically downgrade or let the
-  old worker claim an unknown `personal_search_backfill` job.
+  old `be58b12` worker claim an unknown `personal_search_backfill` job. The direct
+  `67e6336` rollback already supports 0059 but still requires fresh job/data checks.
+- The 23/23 synthetic reading gate and 64 frame traces passed; zero observed
+  drift in that matrix is not universal real-device or real-library proof.
+  Search full-rebuild costs were measured, not eliminated or incrementally optimized.
 
 <a id="current-verification-boundaries--2026-10-29"></a>
 

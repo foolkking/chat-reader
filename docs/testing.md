@@ -5,15 +5,34 @@ describe the current release. Dated results below retain their original
 checkpoint scope; a historical candidate/failure is neither a new work order
 nor a substitute for current authenticated-browser/user-data acceptance.
 
-## Current exact-source CI and production — recovery consistency — 2026-11-06
+## Current exact-source CI and production — image/reading stability — 2026-11-06
 
-New image/viewport candidate is pending separate exact-source verification.
-`reading-stability` adds a required browser matrix and
+Exact `9cf235f3730aae0f3ae747fe0e36763056a624c0`, run `42217357688`,
+attempt 1, passed all six required jobs and five independently inspected
+artifacts. First read 13:14:12.5340498Z followed its 13:14:12.2415817Z gate.
+API: 6072 passed, three unchanged optional skips; Web Node 2092/2092;
+14/14 required Web gates; focused 45/45; settings 463 plus isolated restore 1;
+capacity baseline/candidate 9/9. Real exact-image 320 MiB worker memory gate
+passed with 56,532,992-byte workspace growth, zero OOM/failcnt/restart.
+
+`reading-stability` passed 23/23 with no skipped case. It is a required matrix;
 `scripts/ci/verify-reading-stability.mjs` demands every case execute and all
-64 stopped/down/up/Viewer frame traces exist. Peak/final drift and fixed-frame limits
-are described in [the contract](system/IMAGE_READING_STABILITY_CONTRACT.md).
+64 stopped/down/up/Viewer traces exist. The accepted traces contain 2238 frames:
+fixed-cell and stopped/Viewer peak/final drift were 0 CSS px, and each directional
+trace actually moved 360px without reverse pullback. The focused preference flow
+retains another 839 frames. Peak/final limits remain in
+[the contract](system/IMAGE_READING_STABILITY_CONTRACT.md).
 No existing gate, timeout, memory/capacity budget or test requirement is relaxed.
-The accepted release results below do not validate this new candidate.
+The default-PWA environment-routed exclusions and optional import-user-file
+case remain explicit skips, not a claim that every discovered case ran.
+
+Production was subsequently authorized and independently rechecked with schema
+0059 unchanged, a new validated backup and no cleanup. No local application tests,
+services or production build ran. Authenticated production UI, real-user
+ZIP/offline updates, devices and production-backup restore remain unverified.
+See the [release receipt](execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md).
+
+## Previous exact-source CI — recovery consistency — 2026-11-06
 
 Exact application source `67e63364f794d2b6d820eb8502ead9010c76f4bd` passed
 all six jobs in run `42043078359`, attempt 1. First read was

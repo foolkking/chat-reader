@@ -5,7 +5,12 @@ Implemented 2026-11-05; deployed in `67e6336` on 2026-11-06 after exact CI
 acceptance; operational proof lives in the
 [release receipt](../execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md).
 
-## November 6 candidate additions (not deployed/accepted yet)
+## November 6 image/reading and seven follow-up additions
+
+Exact source `9cf235f`, CI `42217357688`, passed all six jobs and the required
+artifact gates. The subsequent user-authorized deployment and remaining
+verification limits are recorded in the
+[release receipt](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md).
 
 The [image/viewport contract](IMAGE_READING_STABILITY_CONTRACT.md) owns preview
 geometry, saved/offline dimensions and single-scroller compensation. The
@@ -137,7 +142,7 @@ capacity limits stay enforced; streaming package redesign is not introduced.
 
 ## Recovery consistency follow-up
 
-Current candidate source, 2026-11-05; exact-source CI acceptance and limits are recorded in
+Implemented 2026-11-05 and retained in the later accepted release; historical CI and limits are recorded in
 [the implementation receipt](../execution/RECOVERY_CONSISTENCY_2026-11-05.md).
 
 - Personal Skill upload submits the current name/file/category together as

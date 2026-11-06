@@ -6,38 +6,42 @@ Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 ## Release and runtime
 
-**Current source work (2026-11-06, not yet accepted/deployed):** image presentation,
-reading viewport ownership and seven follow-up audit items are being implemented
-on existing master. New required `reading-stability` full-frame browser gate;
-old release CI below is **not** acceptance of this candidate.
+**Current release (2026-11-06):** image presentation, reading viewport ownership
+and seven follow-up audit items passed exact-source CI and were subsequently
+authorized for deployment. The required `reading-stability` gate passed 23/23
+cases with 64 complete frame traces; earlier partial successes are not acceptance.
 [Source contract](docs/system/IMAGE_READING_STABILITY_CONTRACT.md) /
-[implementation boundary](docs/execution/IMAGE_READING_STABILITY_2026-11-06.md).
-No migration or Dexie upgrade; production remains the snapshot below.
+[implementation history](docs/execution/IMAGE_READING_STABILITY_2026-11-06.md) /
+[release receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md).
+No migration or Dexie upgrade; existing offline copies retain their own snapshots.
 
 | Boundary | Verified snapshot |
 | --- | --- |
-| Source / branch | Existing `master`; deployed application source `67e63364f794d2b6d820eb8502ead9010c76f4bd`; subsequent documentation-only receipts are not new application releases |
-| Accepted / deployed-source CI | `42043078359`, attempt 1, exact `67e6336`; all six jobs and required artifacts passed after the 50-minute first-read gate |
-| Production / retained rollback images | `67e6336` / `be58b12`; accepted **2026-11-05 16:12:00Z** (**2026-11-06 00:12:00 +08:00**) and independently rechecked; older `3b839dc` also retained |
+| Source / branch | Existing `master`; deployed application source `9cf235f3730aae0f3ae747fe0e36763056a624c0`; subsequent documentation-only receipts are not new application releases |
+| Accepted / deployed-source CI | `42217357688`, attempt 1, exact `9cf235f`; six jobs and all five artifact contents passed after the 50-minute first-read gate |
+| Production / retained rollback images | `9cf235f` / `67e6336`; accepted **2026-11-06 14:07:48Z** (**22:07:48 +08:00**), independently rechecked **14:10:03Z**; older `be58b12`/`3b839dc` also retained |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
-| Database | Production single head `20261105_0059`; upgraded from 0058 after validated stopped-writer backup; private-search backfill committed, 52/52 |
-| Verification / delivery | API 6065 passed / 3 optional skipped; Web Node 2022/2022 and 13/13 gates; settings 463 plus isolated restore 1; performance baseline/candidate 9/9; exact-image 320 MiB memory gate passed. No local application tests, production build, data cleanup or raw ZIP replay |
+| Database | Production single head/current `20261105_0059`, unchanged this release; prior private-search backfill remains committed, 52/52 |
+| Verification / delivery | API 6072 passed / 3 optional skipped; Web Node 2092/2092 and 14/14 gates; reading 23/23 with 64 traces; settings 463 plus isolated restore 1; capacity baseline/candidate 9/9; exact-image 320 MiB memory gate passed. No local application tests, production build, cleanup or raw ZIP replay |
 
-The current release ships the consolidated authentication/offline and recovery
-consistency work, preserving the bounded small-ZIP memory path and structured failure/retry
+The current release adds fixed image previews, explicit reading-size suggestions,
+offline dimension snapshots and unified reading compensation, retaining the
+consolidated authentication/offline and recovery consistency work, bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,
 a 128 MiB reserve and a 64 MiB workspace-growth budget; other imports keep standard
 admission. Real exact-image 320 MiB worker CI is not proof of success on user data.
-[Release receipt](docs/execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md) owns official
-artifact hashes, OCI/config identity, stopped-writer backup, deployment and cleanup
+[Release receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md) owns official
+artifact hashes, OCI/config identity, stopped-writer backup, deployment and preservation
 evidence. [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)
 owns qualification and compatibility details.
 
-The new five-component backup `chat-reader-20261105T160504Z` and the two previously
-retained backup points remain; this deployment did no cleanup. Rollback image tags
-are retained, not blanket compatibility approval for new 0059 jobs/data. Stop writers
-and review compatibility before rollback; never automatically downgrade or run the
-old worker against pending `personal_search_backfill`. Capacity and aggregate data counts are time-point
+The new five-component backup `chat-reader-20261106T140111Z` and all three previous
+backup points remain; this deployment did no cleanup. Direct rollback `67e6336`
+supports the same 0059 schema, but still needs stopped-writer/job/data checks.
+Never automatically downgrade; the older `be58b12` worker cannot claim
+`personal_search_backfill`. Disk preservation check: **91% used, 3,881,188 KiB free**;
+future releases need fresh capacity admission, not automatic cleanup or reduced budgets.
+Capacity and aggregate data counts are time-point
 observations, not invariants. Writers resumed after deployment; do not claim all
 canonical row counts stayed unchanged or restore data to make them match.
 Production environment/Compose/Nginx and PostgreSQL were not replaced.
@@ -125,12 +129,12 @@ release helpers; future releases need exact-source staging and fresh preflight.
 Documentation/governance closeout and the subsequently approved bounded local
 cleanup are complete. Only the merged local branch and reviewed regenerable
 caches/empty directory were removed; no remote branch or production data changed.
-The subsequent 2026-11-05 request explicitly authorizes the consolidated
-optimization, completion review, commit/push on existing master and exact-source
-CI. Each submitted run obeyed its fresh minimum 50-minute first-read boundary,
-except explicit user-reported failure diagnoses. Exact `67e6336` is fully green.
-The later explicit deployment request authorized the accepted release above;
-deployment and independent recheck are complete, and this CI recheck is stopped.
+The later image/reading plan includes all seven follow-up audit items and
+commit/push on existing master. Each submitted run obeyed its fresh minimum
+50-minute first-read boundary except explicit user-reported failure diagnoses.
+Exact `9cf235f` is fully green. The subsequent explicit “部署” request authorized
+the accepted release above; deployment and independent recheck are complete.
+The CI recheck remains paused; no schedule was created or resumed.
 It did not authorize broader cleanup or replaying the user's source ZIP.
 The unrelated `apps/web/tsconfig.tsbuildinfo` modification and release/test
 evidence remain preserved.

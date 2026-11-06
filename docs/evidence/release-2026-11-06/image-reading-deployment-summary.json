@@ -1,0 +1,504 @@
+{
+  "schema_version": 1,
+  "status": "accepted",
+  "application_source": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+  "branch": "master",
+  "documentation_only_receipt_does_not_change_application_source": true,
+  "ci": {
+    "commit": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+    "run_id": 42217357688,
+    "producer_attempt": 1,
+    "conclusion": "success",
+    "deployment_authorized": true,
+    "checked_at": "2026-11-06T13:51:32.701975+00:00",
+    "not_before": "2026-11-06T13:14:12.2415817+00:00",
+    "first_checked_at": "2026-11-06T13:14:12.5340498+00:00",
+    "artifact_id": 13504104247,
+    "artifact_zip_sha256": "d3592c3312e2208d52aa3f9aad9809cd192c6ed7cf367b7c95abd31bb32d2b67",
+    "jobs": [
+      {
+        "name": "api-quality",
+        "id": 127890594418,
+        "conclusion": "success"
+      },
+      {
+        "name": "web-quality",
+        "id": 127890594442,
+        "conclusion": "success"
+      },
+      {
+        "name": "settings-quality",
+        "id": 127890594505,
+        "conclusion": "success"
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "id": 127901381768,
+        "conclusion": "success"
+      },
+      {
+        "name": "build-images",
+        "id": 127909944782,
+        "conclusion": "success"
+      },
+      {
+        "name": "inspect-release-artifact",
+        "id": 127911606116,
+        "conclusion": "success"
+      }
+    ],
+    "reading_stability_cases_passed": 23,
+    "reading_stability_traces_verified": 64,
+    "all_required_artifact_contents_verified": true
+  },
+  "artifact": {
+    "status": "passed",
+    "commit": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+    "run_id": 42217357688,
+    "run_attempt": 1,
+    "images": {
+      "api": "sha256:9407ea5a5c9e5e35f487574b98be23ad5e7df5d57120ec7d51f721c86b78b63b",
+      "web": "sha256:60a29392d476a2ce9a4406b103a646ace0b5e36594129a0d5f30a02c67f2e84f"
+    },
+    "chains": {
+      "api": {
+        "digest_chain": [
+          "sha256:9407ea5a5c9e5e35f487574b98be23ad5e7df5d57120ec7d51f721c86b78b63b",
+          "sha256:ac71825763eb8ca89193772d0136a2fd2729110cbcaa52d5dcbf9fcad98c4362",
+          "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd"
+        ],
+        "config_id": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd",
+        "platform": "linux/amd64"
+      },
+      "web": {
+        "digest_chain": [
+          "sha256:60a29392d476a2ce9a4406b103a646ace0b5e36594129a0d5f30a02c67f2e84f",
+          "sha256:87840e3acca524066a8b4f934826545131840f98dd57650c0a27bcd838e7d1e4",
+          "sha256:0b1cdaeac4267270e613d797c5d76e2e90dc7de6d0800801f2f86a5ca7c2be95"
+        ],
+        "config_id": "sha256:0b1cdaeac4267270e613d797c5d76e2e90dc7de6d0800801f2f86a5ca7c2be95",
+        "platform": "linux/amd64"
+      }
+    },
+    "archive_sha256": "e21c512a8216fd9404da30567ad94aaea4c7b04e3b7780f158803fc28a8584f8",
+    "artifact_id": 13504104247,
+    "artifact_zip_sha256": "d3592c3312e2208d52aa3f9aad9809cd192c6ed7cf367b7c95abd31bb32d2b67",
+    "forbidden_paths_present": false,
+    "verified_blob_count": 35,
+    "web_gates": 14,
+    "settings_gates": 2,
+    "capacity_cases": 9,
+    "real_memory_gate": {
+      "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+      "passed": true,
+      "real_sensor": true,
+      "memory_limit_bytes": 335544320,
+      "memory_swap_limit_bytes": 335544320,
+      "attachment_count": 14,
+      "conversation_count": 1,
+      "message_count": 4,
+      "reference_count": 13,
+      "verified_asset_hashes": 14,
+      "archive_bytes": 1456292,
+      "entries": 18,
+      "baseline_bytes": 87322624,
+      "peak_bytes": 143855616,
+      "workspace_peak_delta_bytes": 56532992,
+      "oom": 0,
+      "oom_kill": 0,
+      "failcnt_delta": 0,
+      "restarts": 0
+    },
+    "note": "Archive/config inspection only; no images loaded or application code executed locally."
+  },
+  "maintenance": {
+    "started_at": "2026-11-06T14:00:46Z",
+    "ended_at": "2026-11-06T14:07:48Z",
+    "zero_downtime": false
+  },
+  "backup": {
+    "name": "chat-reader-20261106T140111Z",
+    "components": [
+      "postgres",
+      "imports",
+      "exports",
+      "offline",
+      "assets"
+    ],
+    "checksums_postgres_toc_tar_validation": "passed",
+    "independent_recheck": "passed",
+    "older_points_retained": 3,
+    "retention_cleanup_performed": false
+  },
+  "read_only_attachment_audit": {
+    "applicable": true,
+    "clean": true,
+    "complete": true,
+    "issue_count": 0,
+    "issue_counts": {},
+    "orphan_classification_safe": true,
+    "read_only": true,
+    "scanned_active_attachment_count": 352,
+    "scanned_asset_object_count": 373,
+    "scanned_context_object_count": 12,
+    "scanned_file_count": 385,
+    "scanned_skill_object_count": 0,
+    "sha256_verified_count": 385,
+    "storage_backend": "local"
+  },
+  "migration": {
+    "after": "20261105_0059",
+    "backfill_at_migration": {
+      "has_error": false,
+      "present": true,
+      "processed": 52,
+      "progress": 100,
+      "status": "committed",
+      "total": 52
+    },
+    "before": "20261105_0059",
+    "canonical_row_counts_unchanged_while_stopped": true,
+    "operation": "read_only_head_current_verification",
+    "status": "passed"
+  },
+  "runtime_acceptance": {
+    "accepted_at": "2026-11-06T14:07:48.050064Z",
+    "approved_nginx_privacy_location": true,
+    "authenticated_browser_acceptance": "not_run",
+    "backfill": {
+      "job": {
+        "has_error": false,
+        "present": true,
+        "processed": 52,
+        "progress": 100,
+        "status": "committed",
+        "total": 52
+      },
+      "scope": "migration job completion, not authenticated search UI acceptance",
+      "status": "passed"
+    },
+    "canonical_counts_after_writer_resume": "not_compared_to_stopped_baseline",
+    "canonical_row_counts_unchanged_while_stopped": true,
+    "commit": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+    "complex_preview_enabled": false,
+    "host_oom_kill_after": 487,
+    "host_oom_kill_before": 487,
+    "http": {
+      "anonymous_copy_plan": 401,
+      "anonymous_image_display": 401,
+      "anonymous_new_messages": 401,
+      "anonymous_tags": 401,
+      "http_https_redirect": 301,
+      "https_health": 200,
+      "https_login": 200,
+      "local_api_health": 200,
+      "local_web_health": 200,
+      "missing_image_capability": 404,
+      "page_method_denials_without_cookie_or_redirect": 50,
+      "public_diagnostics": 404,
+      "security_headers": "passed",
+      "unauthenticated_capabilities": 401
+    },
+    "new_kernel_oom_lines": 0,
+    "nginx_unchanged": true,
+    "postgres_unchanged": true,
+    "production_env_compose_unchanged": true,
+    "scanner_disabled": true,
+    "schema": "20261105_0059",
+    "schema_migration": "none_read_only_head_current_verification",
+    "services": {
+      "api": {
+        "health": "healthy",
+        "id": "3496c6faa5459e8a06875d188caa7a5bcad2a92dbefb062f8b05ca8f932f4ac2",
+        "image": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "started_at": "2026-11-06T14:05:27.146323476Z",
+        "status": "running"
+      },
+      "import-worker": {
+        "health": null,
+        "id": "a79c1dc51005ac36cde6c4a23088bbad540d775ddba0b53520afd7f0cab7ee44",
+        "image": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "started_at": "2026-11-06T14:05:26.546121272Z",
+        "status": "running"
+      },
+      "postgres": {
+        "health": "healthy",
+        "id": "04e7676283197c63fbc27d49e028e8631de6562ed2bf2f5ff3bf2abbcfe84b33",
+        "image": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "",
+        "started_at": "2026-09-30T03:05:33.567319401Z",
+        "status": "running"
+      },
+      "web": {
+        "health": "healthy",
+        "id": "545e22e4470db791875a6edde01ce93c74cba9846e94ada703fbdae758aa4ac4",
+        "image": "sha256:0b1cdaeac4267270e613d797c5d76e2e90dc7de6d0800801f2f86a5ca7c2be95",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "started_at": "2026-11-06T14:06:29.195894712Z",
+        "status": "running"
+      }
+    },
+    "startup_logs": {
+      "api": {
+        "categories": {},
+        "container_id": "3496c6faa5459e8a06875d188caa7a5bcad2a92dbefb062f8b05ca8f932f4ac2",
+        "error_keyword_lines": 0,
+        "error_line_sha256_counts": {},
+        "observed_lines": 16,
+        "read_complete": true,
+        "read_returncode": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "since": "2026-11-06T14:05:27.146323476Z"
+      },
+      "import-worker": {
+        "categories": {},
+        "container_id": "a79c1dc51005ac36cde6c4a23088bbad540d775ddba0b53520afd7f0cab7ee44",
+        "error_keyword_lines": 0,
+        "error_line_sha256_counts": {},
+        "observed_lines": 1,
+        "read_complete": true,
+        "read_returncode": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "since": "2026-11-06T14:05:26.546121272Z"
+      },
+      "web": {
+        "categories": {},
+        "container_id": "545e22e4470db791875a6edde01ce93c74cba9846e94ada703fbdae758aa4ac4",
+        "error_keyword_lines": 0,
+        "error_line_sha256_counts": {},
+        "observed_lines": 5,
+        "read_complete": true,
+        "read_returncode": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "since": "2026-11-06T14:06:29.195894712Z"
+      }
+    },
+    "status": "passed"
+  },
+  "independent_runtime_recheck": {
+    "accepted_at": "2026-11-06T14:10:03.632346Z",
+    "approved_nginx_privacy_location": true,
+    "authenticated_browser_acceptance": "not_run",
+    "backfill": {
+      "job": {
+        "has_error": false,
+        "present": true,
+        "processed": 52,
+        "progress": 100,
+        "status": "committed",
+        "total": 52
+      },
+      "scope": "migration job completion, not authenticated search UI acceptance",
+      "status": "passed"
+    },
+    "canonical_counts_after_writer_resume": "not_compared_to_stopped_baseline",
+    "canonical_row_counts_unchanged_while_stopped": true,
+    "commit": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+    "complex_preview_enabled": false,
+    "host_oom_kill_after": 487,
+    "host_oom_kill_before": 487,
+    "http": {
+      "anonymous_copy_plan": 401,
+      "anonymous_image_display": 401,
+      "anonymous_new_messages": 401,
+      "anonymous_tags": 401,
+      "http_https_redirect": 301,
+      "https_health": 200,
+      "https_login": 200,
+      "local_api_health": 200,
+      "local_web_health": 200,
+      "missing_image_capability": 404,
+      "page_method_denials_without_cookie_or_redirect": 50,
+      "public_diagnostics": 404,
+      "security_headers": "passed",
+      "unauthenticated_capabilities": 401
+    },
+    "new_kernel_oom_lines": 0,
+    "nginx_unchanged": true,
+    "postgres_unchanged": true,
+    "production_env_compose_unchanged": true,
+    "scanner_disabled": true,
+    "schema": "20261105_0059",
+    "schema_migration": "none_read_only_head_current_verification",
+    "services": {
+      "api": {
+        "health": "healthy",
+        "id": "3496c6faa5459e8a06875d188caa7a5bcad2a92dbefb062f8b05ca8f932f4ac2",
+        "image": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "started_at": "2026-11-06T14:05:27.146323476Z",
+        "status": "running"
+      },
+      "import-worker": {
+        "health": null,
+        "id": "a79c1dc51005ac36cde6c4a23088bbad540d775ddba0b53520afd7f0cab7ee44",
+        "image": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "started_at": "2026-11-06T14:05:26.546121272Z",
+        "status": "running"
+      },
+      "postgres": {
+        "health": "healthy",
+        "id": "04e7676283197c63fbc27d49e028e8631de6562ed2bf2f5ff3bf2abbcfe84b33",
+        "image": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "",
+        "started_at": "2026-09-30T03:05:33.567319401Z",
+        "status": "running"
+      },
+      "web": {
+        "health": "healthy",
+        "id": "545e22e4470db791875a6edde01ce93c74cba9846e94ada703fbdae758aa4ac4",
+        "image": "sha256:0b1cdaeac4267270e613d797c5d76e2e90dc7de6d0800801f2f86a5ca7c2be95",
+        "oom_killed": false,
+        "restart_count": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "started_at": "2026-11-06T14:06:29.195894712Z",
+        "status": "running"
+      }
+    },
+    "startup_logs": {
+      "api": {
+        "categories": {},
+        "container_id": "3496c6faa5459e8a06875d188caa7a5bcad2a92dbefb062f8b05ca8f932f4ac2",
+        "error_keyword_lines": 0,
+        "error_line_sha256_counts": {},
+        "observed_lines": 29,
+        "read_complete": true,
+        "read_returncode": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "since": "2026-11-06T14:05:27.146323476Z"
+      },
+      "import-worker": {
+        "categories": {},
+        "container_id": "a79c1dc51005ac36cde6c4a23088bbad540d775ddba0b53520afd7f0cab7ee44",
+        "error_keyword_lines": 0,
+        "error_line_sha256_counts": {},
+        "observed_lines": 1,
+        "read_complete": true,
+        "read_returncode": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "since": "2026-11-06T14:05:26.546121272Z"
+      },
+      "web": {
+        "categories": {},
+        "container_id": "545e22e4470db791875a6edde01ce93c74cba9846e94ada703fbdae758aa4ac4",
+        "error_keyword_lines": 0,
+        "error_line_sha256_counts": {},
+        "observed_lines": 5,
+        "read_complete": true,
+        "read_returncode": 0,
+        "revision": "9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "since": "2026-11-06T14:06:29.195894712Z"
+      }
+    },
+    "status": "passed"
+  },
+  "preservation": {
+    "checked_at": "2026-11-06T14:13:54.060284Z",
+    "backups_retained": [
+      "chat-reader-20261103T155702Z",
+      "chat-reader-20261104T004004Z",
+      "chat-reader-20261105T160504Z",
+      "chat-reader-20261106T140111Z"
+    ],
+    "image_tags_retained": [
+      {
+        "tag": "chat-reader-api:9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "id": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd"
+      },
+      {
+        "tag": "chat-reader-web:9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "id": "sha256:0b1cdaeac4267270e613d797c5d76e2e90dc7de6d0800801f2f86a5ca7c2be95"
+      },
+      {
+        "tag": "chat-reader-import-worker:9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "id": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd"
+      },
+      {
+        "tag": "chat-reader-migrate:9cf235f3730aae0f3ae747fe0e36763056a624c0",
+        "id": "sha256:86d4d51659eb6331283d80ce94ea8cb3f0cd2f69857641e3ca351e6a266cd1fd"
+      },
+      {
+        "tag": "chat-reader-api:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+        "id": "sha256:95e34fb7ca0059fab9e1586963fc080709b4de20afe137901abf43c79d3ec95f"
+      },
+      {
+        "tag": "chat-reader-web:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+        "id": "sha256:4bc1deb7f9ea2a96dd4cc5abf7f463e1071ed17ee0b8d38c63d880d16f674042"
+      },
+      {
+        "tag": "chat-reader-import-worker:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+        "id": "sha256:95e34fb7ca0059fab9e1586963fc080709b4de20afe137901abf43c79d3ec95f"
+      },
+      {
+        "tag": "chat-reader-migrate:67e63364f794d2b6d820eb8502ead9010c76f4bd",
+        "id": "sha256:95e34fb7ca0059fab9e1586963fc080709b4de20afe137901abf43c79d3ec95f"
+      },
+      {
+        "tag": "chat-reader-api:be58b12b191e9f0fa4010f8ed4293781fec01157",
+        "id": "sha256:ff8ea4d608e88472a83ebf35627a6bbb0a1c20d7d15192b1686718ddd2710ddb"
+      },
+      {
+        "tag": "chat-reader-web:be58b12b191e9f0fa4010f8ed4293781fec01157",
+        "id": "sha256:7904dee611b40cab19805680936e59039e83ca2b632a2edfbd2bcf845d0b6799"
+      },
+      {
+        "tag": "chat-reader-import-worker:be58b12b191e9f0fa4010f8ed4293781fec01157",
+        "id": "sha256:ff8ea4d608e88472a83ebf35627a6bbb0a1c20d7d15192b1686718ddd2710ddb"
+      },
+      {
+        "tag": "chat-reader-migrate:be58b12b191e9f0fa4010f8ed4293781fec01157",
+        "id": "sha256:ff8ea4d608e88472a83ebf35627a6bbb0a1c20d7d15192b1686718ddd2710ddb"
+      },
+      {
+        "tag": "chat-reader-api:3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+        "id": "sha256:c91601e8edab170e208f1d6d8c20ea04981909a15fe7f3940490e67b422fa45b"
+      },
+      {
+        "tag": "chat-reader-web:3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+        "id": "sha256:16f1326787d9ad368a686219326276edd9a37562365415a148eaa34e5067f448"
+      },
+      {
+        "tag": "chat-reader-import-worker:3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+        "id": "sha256:c91601e8edab170e208f1d6d8c20ea04981909a15fe7f3940490e67b422fa45b"
+      },
+      {
+        "tag": "chat-reader-migrate:3b839dc1adfac431b6c44c2e1928a9be946cb42f",
+        "id": "sha256:c91601e8edab170e208f1d6d8c20ea04981909a15fe7f3940490e67b422fa45b"
+      }
+    ],
+    "cleanup_performed": false,
+    "disk": "Filesystem     1024-blocks     Used Available Capacity Mounted on\n/dev/vda3         40900288 36168016   3881188      91% /\n"
+  },
+  "user_files_preserved": 11,
+  "local_application_tests_or_services_run": false,
+  "production_build": false,
+  "user_zip_replayed": false,
+  "cleanup_performed": false,
+  "automation_created_or_resumed": false,
+  "ci_recheck_complete": true,
+  "automation_status": "PAUSED",
+  "limits": [
+    "Authenticated production UI, real user ZIP/offline update, physical device/clipboard/screen reader and sustained load were not accepted.",
+    "Production backup validation is not a restore drill or off-site recovery.",
+    "Only stopped-writer canonical counts were compared; later user writes are not claimed unchanged.",
+    "Disk at the preservation check is 91% used, 3881188 KiB available; future deployment requires fresh capacity or separate cleanup authorization.",
+    "Synthetic reading evidence is scope-bound; NX-PERF-01 records the full-rebuild baseline, not incremental-search gains."
+  ]
+}

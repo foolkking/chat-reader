@@ -6,19 +6,21 @@
 
 ## 当前状态与验收边界
 
-11 月 6 日图片/阅读稳定性及七项追加审查正在现有 master 实施，尚未通过新精确
-CI、未部署。见[行为合同](system/IMAGE_READING_STABILITY_CONTRACT.md)及
-[实施映射](execution/IMAGE_READING_STABILITY_2026-11-06.md)；以下是旧发布快照。
-
-生产／保留回退镜像为 **`67e6336`／`be58b12`**，schema **`20261105_0059`**。
-精确源码 CI `42043078359` 六项及全部制品门禁通过；停写备份、0059 升级、
-52/52 索引回填和生产独立复核见
-[恢复一致性发布回执](execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)。
-回退镜像保留不等于新 schema/job 无条件兼容；禁止自动 downgrade。
+11 月 6 日图片/阅读稳定性及七项追加审查已通过精确 CI `42217357688`：
+六项 job、14 项 Web 门禁、阅读 23/23 与 64 条逐帧轨迹、五份制品独立核验。
+后续单独授权部署于 **22:07:48 +08:00** 验收，**22:10:03** 独立复核通过。
+生产／直接回退为 **`9cf235f`／`67e6336`**，schema **`20261105_0059`**
+不变；新五组件备份与原三份备份均保留。见
+[发布回执](execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md)、
+[行为合同](system/IMAGE_READING_STABILITY_CONTRACT.md)及
+[实施映射](execution/IMAGE_READING_STABILITY_2026-11-06.md)。
+磁盘检查为 91% 使用，未授权清理；后续发布必须重新容量预检。
+回退仍需停写、job/data 兼容检查；禁止自动 downgrade。
 原用户 ZIP 重试、真实 47 对话离线更新与认证生产 UI 仍待单独验收。
 11 月 5 日候选已通过隔离合成 PostgreSQL/附件备份恢复演练，不等于生产备份恢复。
-源码 `46cb518` 的 CI 是历史基线；当前 `67e6336` 完整通过并经后续独立授权部署，
-修复链与最终 CI 见[本轮实施回执](execution/RECOVERY_CONSISTENCY_2026-11-05.md)。
+前一恢复一致性 `67e6336` 的 0059 升级与 52/52 回填仍由
+[上一发布回执](execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)保存。
+CI 回查保持暂停，没有创建或恢复安排。
 此前知识整理及汇报后获准的本地安全清场已完成，该收尾任务本身未重新发布；
 见[收尾回执](execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md)中的删除范围与保全核验。
 
@@ -65,6 +67,7 @@ CI、未部署。见[行为合同](system/IMAGE_READING_STABILITY_CONTRACT.md)�
 
 ## 近期证据（历史记录，不替代当前状态）
 
+- 图片/阅读：[完整 CI／部署回执](execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md)。
 - 恢复一致性：[完整 CI／部署回执](execution/RECOVERY_CONSISTENCY_RELEASE_2026-11-06.md)。
 - 小内存 ZIP：[诊断与实施](execution/SMALL_ZIP_MEMORY_2026-11-04.md)、
   [精确 CI／部署回执](execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)。
