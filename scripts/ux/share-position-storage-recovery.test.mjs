@@ -55,7 +55,9 @@ new Function("exports", "require", "ApiRequestError", "useEffect", "window", "do
 
 // Exact discard/persistence effect bodies, classification helper, error class
 // and fixed-header status JSX. Hook commits, storage, position capture,
-// listeners, time and layout-refresh callbacks are controlled adapters.
+// listeners, time and layout-refresh callbacks are controlled adapters. The
+// documentElement dataset is the real window-scroller compensation boundary;
+// retain it in the adapter instead of weakening the production guard.
 // Initialization/key/query rejection cases also live in the actual-source
 // share-navigation-retirement regression; neither file is browser evidence.
 function fixture() {
@@ -97,7 +99,7 @@ function fixture() {
       removeItem: storageKey => { calls.removals.push(storageKey); handlers.remove?.(); },
     },
   };
-  const document = { visibilityState: "visible",
+  const document = { visibilityState: "visible", documentElement: { dataset: {} },
     addEventListener: (name, callback) => add(documentEvents, name, callback),
     removeEventListener: (name, callback) => documentEvents.get(name)?.delete(callback) };
   const exports = {};
@@ -121,7 +123,15 @@ function fixture() {
   };
   render();
   return { state, calls, handlers, events, frames, timers, render, advance,
-    scroll() { window.scrollY += 10; emit(events, "scroll"); },
+    scroll(delta = 10) { window.scrollY += delta; emit(events, "scroll"); },
+    compensate(active) {
+      if (active) document.documentElement.dataset.readerGeometryCompensating = "true";
+      else delete document.documentElement.dataset.readerGeometryCompensating;
+    },
+    frame() {
+      const callbacks = [...frames.values()]; frames.clear();
+      for (const callback of callbacks) callback();
+    },
     pagehide() { emit(events, "pagehide"); },
     hide() { document.visibilityState = "hidden"; emit(documentEvents, "visibilitychange"); },
     dispose() { for (const entry of effects.values()) entry.cleanup?.(); effects.clear(); },
@@ -141,6 +151,64 @@ test("successful idle saving retains the exact key/bytes and cached unload does 
     assert.ok(f.calls.writes.every(write => write.key === key && write.bytes === JSON.stringify(position)));
     assert.equal(f.calls.captures, 1);
     assert.equal(f.state.positionStorageUnavailable, false);
+  } finally { f.dispose(); }
+});
+
+test("geometry correction refreshes layout without becoming user direction or persisted progress", () => {
+  const f = fixture();
+  try {
+    // A correction can arrive during an existing reading session. It must not
+    // reverse that intent or count as another navigation/input sequence.
+    f.state.userScrollIntentRef.current = true;
+    f.state.scrollDirectionRef.current = "down";
+    const latest = f.state.latestStablePositionRef.current;
+    f.compensate(true);
+    f.scroll(-36);
+    f.frame();
+    f.advance(2000);
+    f.pagehide(); f.hide();
+    assert.deepEqual(f.calls.writes, []);
+    assert.equal(f.calls.captures, 0);
+    assert.equal(f.state.latestStablePositionRef.current, latest);
+    assert.equal(f.calls.timers.includes(1000), false);
+    assert.deepEqual(f.calls.refresh, [false]);
+    assert.equal(f.state.lastScrollTopRef.current, -36);
+    assert.equal(f.state.scrollDirectionRef.current, "down");
+    assert.equal(f.state.navigationTokenRef.current, 0);
+    assert.equal(f.state.scrollIntentSequenceRef.current, 0);
+
+    // Use the corrected coordinate as the baseline for the next actual scroll.
+    // Comparing -16 to the old zero instead would falsely report upward input.
+    f.compensate(false);
+    f.scroll(20);
+    assert.equal(f.state.scrollDirectionRef.current, "down");
+    f.advance(1000);
+    assert.deepEqual(f.calls.writes, [{ key, bytes: JSON.stringify(position) }]);
+    assert.equal(f.calls.captures, 1);
+  } finally { f.dispose(); }
+});
+
+test("an already queued idle writer cannot capture or flush while geometry owns the scroller", () => {
+  const f = fixture();
+  try {
+    f.scroll();
+    f.advance(500);
+    f.compensate(true);
+    f.scroll(-4);
+    f.advance(500);
+    f.pagehide(); f.hide();
+    assert.deepEqual(f.calls.writes, []);
+    assert.equal(f.calls.captures, 0);
+    assert.equal(f.state.positionStorageDisabledRef.current, null);
+    assert.equal(f.state.storageKey, key);
+
+    f.compensate(false);
+    f.advance(2000);
+    assert.deepEqual(f.calls.writes, []);
+    f.scroll();
+    f.advance(1000);
+    assert.deepEqual(f.calls.writes, [{ key, bytes: JSON.stringify(position) }]);
+    assert.equal(f.calls.captures, 1);
   } finally { f.dispose(); }
 });
 
