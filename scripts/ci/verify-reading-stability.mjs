@@ -18,6 +18,12 @@ for (const file of files) {
   assert.ok(evidence.frames.length > 10);
   assert.ok(evidence.frames.every(frame => [frame.top, frame.time, frame.scroll, frame.height].every(Number.isFinite)));
   assert.ok(Array.isArray(evidence.corrections));
+  assert.ok(Array.isArray(evidence.events));
+  if (file.endsWith("viewer-frames.json")) {
+    assert.ok(evidence.events.some(event => event.type === "pointerdown" && event.targetsAnchor), "Viewer needs a real hit-tested trigger action.");
+    assert.ok(evidence.frames.some(frame => frame.viewerLocked && frame.viewerVisible));
+    assert.equal(evidence.frames.at(-1).viewerLocked, false, "Viewer must relinquish reading ownership.");
+  }
   if (file.endsWith("stopped-frames.json") || file.endsWith("viewer-frames.json")) {
     const first = evidence.frames[0].top;
     assert.ok(Math.max(...evidence.frames.map(frame => Math.abs(frame.top - first))) <= 2);

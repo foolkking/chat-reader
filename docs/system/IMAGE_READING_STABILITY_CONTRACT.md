@@ -89,6 +89,10 @@ Measured row caches survive ordinary image/content resize; width/font/density
 changes may remeasure. Code tokenization retains the same inline newline/blank
 line geometry as fallback. Late Mermaid/content height changes are covered by
 the scroller owner. Independent Compare scrollers never compensate each other.
+Compare's explicit section navigation aligns within 1px of its 24px inset;
+the shared navigator's legacy default tolerance and visible physical-endpoint
+exception remain intact. Compare releases its navigation flag and rebases the
+geometry owner before releasing the virtual target pin, including cancellation.
 
 ## Required evidence
 
@@ -105,6 +109,11 @@ Directional samples inspect both the real anchor and scroll coordinate, not
 only the final screenshot. Each of the 16 matrix entries also retains a
 full-frame Viewer open/close trace with the same peak/final displacement
 limits (64 required traces total). A failed case retains any partial trace.
+Viewer sampling starts only after an explicit positioning action puts the real
+trigger centre outside sticky-header occlusion. A hit-tested physical click,
+not a forced/DOM click or an auto-scrolling locator retry, then opens it.
+Scalar pointer/focus/scroll events and modal/ownership frames are retained;
+the full opening/closing interval still obeys the same peak/final limits.
 Fresh Reader readiness does not invent a navigation transaction; Offline
 network isolation starts only after canonical messages and all source-bound
 fixture assets exist in its own package/cache. Lazy offscreen images are not

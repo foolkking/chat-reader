@@ -124,6 +124,33 @@ test("an interior target still reaches the reading line, not a merely visible po
   assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, 120);
 });
 
+test("Compare precision corrects a 23.546875px near miss instead of accepting the legacy tolerance", async () => {
+  const legacy = fixture({ contentTop: 47.546875 });
+  assert.equal((await legacy.run({ offset: 24 })).ok, true);
+  assert.equal(legacy.writes.length, 0, "Other callers retain their existing 24px contract.");
+  const exact = fixture({ contentTop: 47.546875 });
+  assert.equal((await exact.run({ offset: 24, alignmentTolerance: 1 })).ok, true);
+  assert.equal(exact.root.scrollTop, 23.546875);
+  assert.equal(exact.target.getBoundingClientRect().top - exact.root.getBoundingClientRect().top, 24);
+});
+
+test("strict Compare precision retains the real visible endpoint exception", async () => {
+  const f = fixture({ extent: 400, contentTop: 32 });
+  assert.equal((await f.run({ offset: 24, alignmentTolerance: 1 })).ok, true);
+  assert.equal(f.root.scrollTop, 0);
+});
+
+test("strict alignment cannot overwrite input that cancels before its next frame", async () => {
+  const f = fixture({ contentTop: 47.546875 });
+  let count;
+  const result = await f.run({ offset: 24, alignmentTolerance: 1 }, frame => {
+    if (frame === 4) { f.cancel(); f.root.scrollTop = 100; count = f.writes.length; }
+  });
+  assert.equal(result.reason, "cancelled");
+  assert.equal(f.root.scrollTop, 100);
+  assert.equal(f.writes.length, count);
+});
+
 test("exact text navigation reveals nested rich disclosures without expanding unrelated cards", async () => {
   const f = fixture({ rangeInset: 30, foldedRange: true });
   assert.equal((await f.run()).ok, true);

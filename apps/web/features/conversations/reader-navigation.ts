@@ -7,6 +7,7 @@ type NavigateMountedTargetOptions = {
   fallbackId?: string;
   tokenIsCurrent?: () => boolean;
   offset?: number;
+  alignmentTolerance?: number;
   characterOffset?: number;
   endCharacterOffset?: number;
   quote?: string | null;
@@ -81,6 +82,7 @@ async function navigateMountedTargetImpl({
   fallbackId,
   tokenIsCurrent = () => true,
   offset = 12,
+  alignmentTolerance = 24,
   characterOffset,
   endCharacterOffset,
   quote,
@@ -101,6 +103,7 @@ async function navigateMountedTargetImpl({
           root,
           target: fallback,
           offset,
+          alignmentTolerance,
           tokenIsCurrent,
           timeoutMs,
         });
@@ -130,6 +133,7 @@ async function navigateMountedTargetImpl({
     root,
     target,
     offset,
+    alignmentTolerance,
     characterOffset: resolvedCharacterOffset,
     endCharacterOffset: resolvedEndCharacterOffset,
     quote: resolvedQuote,
@@ -368,12 +372,12 @@ type TargetAlignmentResult = {
   textAnchorMissing: boolean;
 };
 
-function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number, textRect?: DOMRect | null): boolean {
+function isAligned(root: HTMLElement | null, target: HTMLElement, offset: number, tolerance: number, textRect?: DOMRect | null): boolean {
   const rootTop = root?.getBoundingClientRect().top ?? 0;
   const expectedTop = rootTop + offset;
   const targetRect = textRect ?? target.getBoundingClientRect();
   const delta = targetRect.top - expectedTop;
-  if (Math.abs(delta) <= 24) return true;
+  if (Math.abs(delta) <= tolerance) return true;
 
   // A short mounted window cannot always put its first/last anchor on the
   // reading line. Accept only the actual clamped endpoint, with the anchor
@@ -397,6 +401,7 @@ async function stabilizeTargetAlignment({
   root,
   target,
   offset,
+  alignmentTolerance,
   characterOffset,
   endCharacterOffset,
   quote,
@@ -408,6 +413,7 @@ async function stabilizeTargetAlignment({
   root: HTMLElement | null;
   target: HTMLElement;
   offset: number;
+  alignmentTolerance: number;
   characterOffset?: number;
   endCharacterOffset?: number;
   quote?: string | null;
@@ -458,11 +464,11 @@ async function stabilizeTargetAlignment({
       const targetRect = target.getBoundingClientRect();
       const measured = Number.isFinite(targetRect.height) && targetRect.height > 0 &&
         (!wantsTextAnchor || !textRect || Boolean(textRect.width || textRect.height));
-      const aligned = measured && isAligned(root, target, offset, alignmentRect);
+      const aligned = measured && isAligned(root, target, offset, alignmentTolerance, alignmentRect);
       if (aligned) {
         if (alignedSince === null) alignedSince = now;
         alignedFrames += 1;
-        // Alignment (the 24px reading line or a visible clamped endpoint)
+        // Alignment (the caller's reading-line tolerance or a visible endpoint)
         // must hold for three consecutive frames and at least 240ms. The
         // latter filters out the first frame before virtual rows/images
         // finish changing their geometry.

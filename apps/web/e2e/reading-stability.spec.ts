@@ -145,24 +145,40 @@ async function expectOfflineCopyReady(page: Page, fixture: Fixture) {
   if (mobile) await page.locator("aside:visible").getByRole("button", { name: "Close", exact: true }).click();
 }
 
-type Sample = { time: number; top: number; scroll: number; height: number; cells: number[][]; writer: string; mounted: number; measuredRows: number[][] };
-type Probe = { frames: Sample[]; corrections: { time: number; delta: number; applied: number }[] };
+type Sample = { time: number; top: number; scroll: number; height: number; cells: number[][]; writer: string; mounted: number; measuredRows: number[][]; viewerLocked: boolean; viewerVisible: boolean };
+type Probe = { frames: Sample[]; corrections: { time: number; delta: number; applied: number }[];
+  events: { time: number; type: string; top: number; scroll: number; viewerLocked: boolean; targetsAnchor: boolean }[] };
 async function startProbe(anchor: Locator) {
   await anchor.evaluate(node => {
     const target = node as HTMLElement;
     const root = target.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? document.documentElement;
-    const state = { frames: [] as Sample[], corrections: [] as Probe["corrections"], stop: false };
+    const state = { frames: [] as Sample[], corrections: [] as Probe["corrections"], events: [] as Probe["events"], stop: false };
     const host = window as unknown as { readingProbe: typeof state; stopReadingProbe: () => void };
     host.readingProbe = state;
     const onCorrection = (event: Event) => state.corrections.push({ time: performance.now(), ...(event as CustomEvent).detail });
+    const onInput = (event: Event) => {
+      if (state.events.length >= 2048) return;
+      state.events.push({ time: performance.now(), type: event.type,
+        top: target.getBoundingClientRect().top - (root === document.documentElement ? 0 : root.getBoundingClientRect().top),
+        scroll: root === document.documentElement ? scrollY : root.scrollTop,
+        viewerLocked: root.dataset.readerViewerLocked === "true",
+        targetsAnchor: event.target instanceof Node && target.contains(event.target) });
+    };
+    const eventTypes = ["pointerdown", "click", "keydown", "focusin", "scroll"];
+    eventTypes.forEach(type => document.addEventListener(type, onInput, true));
     root.addEventListener("chat-reader:geometry-correction", onCorrection);
-    host.stopReadingProbe = () => { state.stop = true; root.removeEventListener("chat-reader:geometry-correction", onCorrection); };
+    host.stopReadingProbe = () => {
+      state.stop = true; root.removeEventListener("chat-reader:geometry-correction", onCorrection);
+      eventTypes.forEach(type => document.removeEventListener(type, onInput, true));
+    };
     const tick = () => {
       if (state.stop) return;
       state.frames.push({
         time: performance.now(), top: target.getBoundingClientRect().top - (root === document.documentElement ? 0 : root.getBoundingClientRect().top),
         scroll: root === document.documentElement ? scrollY : root.scrollTop,
         height: root.scrollHeight, writer: root.dataset.readerLastScrollWriter ?? "none",
+        viewerLocked: root.dataset.readerViewerLocked === "true",
+        viewerVisible: Boolean(document.querySelector('[data-testid="attachment-viewer-shell"]')),
         mounted: root.querySelectorAll("[data-block-index]").length,
         measuredRows: Array.from(root.querySelectorAll<HTMLElement>('[data-virtualized-block-list="true"] > [data-index]'))
           .map(row => [Number(row.dataset.index), row.getBoundingClientRect().height]),
@@ -279,17 +295,32 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
         }
       }
       const more = article.locator(".attachment-gallery-more").first();
-      await more.scrollIntoViewIfNeeded();
+      // Establish a genuinely clickable reading position before measuring.
+      // Nearest-edge scrolling can leave this tile's centre behind Share's
+      // sticky header. Locator.click then retries with end alignment, which
+      // scrolls the page before the Viewer even opens.
+      await more.evaluate(node => node.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));
       await frames(page, 4);
+      const clickPoint = await more.evaluate(node => {
+        const box = node.getBoundingClientRect(), x = box.left + box.width / 2, y = box.top + box.height / 2;
+        return { x, y, receivesPointer: node.contains(document.elementFromPoint(x, y)) };
+      });
+      expect(clickPoint.receivesPointer, "The real trigger must be unobscured before the stationary Viewer probe").toBe(true);
       await startProbe(more);
       const beforeViewer = await more.boundingBox();
-      await more.click();
+      // A real pointer action, without a hidden framework scroll/retry in the
+      // measured interval. A blocked/moved trigger fails instead of bypassing
+      // hit testing with force or DOM click.
+      await page.mouse.click(clickPoint.x, clickPoint.y);
       await expect(page.getByTestId("attachment-viewer-shell")).toBeVisible();
       await frames(page, 6);
       await page.keyboard.press("Escape");
       await expect(page.getByTestId("attachment-viewer-shell")).toHaveCount(0);
       await frames(page, 6);
       const viewerFrames = await endProbe(page, info, "viewer");
+      expect(viewerFrames.events.some(event => event.type === "pointerdown" && event.targetsAnchor)).toBe(true);
+      expect(viewerFrames.frames.some(frame => frame.viewerLocked && frame.viewerVisible)).toBe(true);
+      expect(viewerFrames.frames.at(-1)!.viewerLocked).toBe(false);
       const afterViewer = await more.boundingBox();
       expect(Math.max(...viewerFrames.frames.map(frame => Math.abs(frame.top - viewerFrames.frames[0].top)))).toBeLessThanOrEqual(2);
       expect(Math.abs(afterViewer!.y - beforeViewer!.y)).toBeLessThanOrEqual(1);
@@ -325,6 +356,8 @@ test("Compare deep navigation leases a real virtual block; URL and opposite scro
   await expect(heading).toBeVisible();
   await expect.poll(() => heading.evaluate(node => node.getBoundingClientRect().top
     - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top)).toBeLessThanOrEqual(26);
+  await expect.poll(() => heading.evaluate(node => Math.abs(node.getBoundingClientRect().top
+    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top - 24))).toBeLessThanOrEqual(2);
   expect(await rightRoot.evaluate(node => node.scrollTop)).toBe(rightTop);
   await page.evaluate(id => { const url = new URL(location.href); url.searchParams.set("right", id); history.pushState(null, "", url); }, normal.id);
   await expect(page.getByRole("textbox", { name: "Comparison conversation ID" })).toHaveValue(normal.id);

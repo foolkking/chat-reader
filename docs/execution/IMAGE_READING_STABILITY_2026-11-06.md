@@ -173,3 +173,40 @@ Web job `127775095967`；该授权不延续至新 run。Node **2058/2058**，上
 用户本次明确要求不创建安排：没有新建安排，并暂停原有 `chat-reader-ci`
 回查；下一次派发仍更新唯一交接与至少 50 分钟首查门限，不自动恢复安排。
 本轮不部署。
+
+## 第五轮精确 CI：Compare 精度与 Viewer 测量前提
+
+源码 `fcb6f37b6bbabe47203cd4b1edb86eef436ea603`、run `42190675082`
+attempt 1，于 2026-11-06 09:41:36.314Z 回查，晚于本次
+09:41:36.017Z 门限。Node **2073/2073**，上轮新增 15 项实际执行通过，
+此前 focused Reader 两个失败均恢复，focused **45/45**。新的阅读门禁
+**21 passed / 2 failed / 0 skipped**；Web job `127801624052` 失败。
+API/settings/performance 通过，build/inspect 未执行，仍不是全门禁通过。
+
+精确 Web 制品 `13490937494`，17,276,069 bytes，SHA-256
+`3d5fb9325dbb92345498b4c0d9557cfbb05e14db521620e1aeccd7ebc299126e`。
+原日志、64 份轨迹和失败上下文保存于
+`C:\Users\86182\Desktop\wkkk\chat-reader-images-reading-fix5-20261106`。
+
+- Compare 深章节停在 **47.546875px**，目标 inset 为 24px，既有门禁要求
+  ≤26px。共享导航默认允许 ±24px，恰好接受这个 23.546875px 的近似误差。
+  Compare 现在显式要求 ±1px，不改变其他调用方默认值、可见物理端点例外
+  或等待预算；修正导航 flag 释放和虚拟 pin 释放顺序，同步交回实际几何。
+  新增三个真实导航精度/端点/取消回归及六个实际 Compare effect 生命周期
+  回归；原浏览器上界断言保留，并追加距 24px 绝对误差 ≤2px。
+- 375px 虚拟 Share 的 Viewer 轨迹仍出现 **598px**，但既有证据不能区分
+  点击前工具滚动与模态打开。基线入口 top=0.390625px，图格高=129.1875px，
+  中心 y=64.984375px，而 sticky header 高 65px。安装版本 Playwright 的
+  locator click 在命中遮挡后按 nearest/end/center/start 重试滚动；end
+  对文档坐标约 727.6px 的图格会夹到 scrollY=0，正好解释 598→0 的量级。
+  因此前提不足，不能把它直接当成新的补偿 writer 错误或关闭虚拟化解决。
+  测试现在先明确居中并通过 elementFromPoint 验证真实点击点未遮挡，再开始
+  全帧记录，使用真实鼠标点击且不让 locator 隐式重滚；保留开关全过程
+  ≤2px 峰值/≤1px 最终断言。新增标量 pointer/focus/scroll 事件、Viewer
+  可见/锁定帧和解锁验收，由下一次 CI 进一步确认完整因果边界。
+
+23 用例、64 轨迹和所有旧容量/内存/安全/离线/导航门禁保留；没有延长等待、
+跳过用例、放宽阈值或把新编写回归当成已执行。原文件 11 项哈希保全，
+本地仅 TypeScript（禁止 incremental）、lint、语法和静态差异检查。
+继续只在现有 master 提交派发，唯一交接重新计算至少 50 分钟门限；
+没有新安排，原回查仍暂停，本轮不部署。

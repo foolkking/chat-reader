@@ -108,22 +108,30 @@ function ComparePane({ conversationId, label, zh }: { conversationId: string; la
         if (!current()) return;
         const target = document.getElementById(targetBlockId);
         if (!lease || !target || !root.contains(target)) { setNavigationError(true); return; }
-        const result = await navigateMountedTarget({ root, targetId: lease.targetId, offset: 24, tokenIsCurrent: current });
+        const result = await navigateMountedTarget({ root, targetId: lease.targetId, offset: 24, alignmentTolerance: 1, tokenIsCurrent: current });
         if (!current()) return;
         setNavigationError(!result.ok);
         if (result.ok) setTargetBlockId(null);
       } catch {
         if (current()) setNavigationError(true);
       } finally {
+        if (current()) {
+          delete root.dataset.navigationStage;
+          // Rebase ordinary geometry before releasing the measured virtual
+          // target. The navigator's earlier release still saw this pane busy.
+          root.dispatchEvent(new CustomEvent("chat-reader:position-released"));
+        }
         lease?.release();
-        if (current()) delete root.dataset.navigationStage;
+        lease = null;
       }
     })();
     return () => {
       navigationToken.current++;
-      lease?.release();
-      cancelReaderPosition(root);
       delete root.dataset.navigationStage;
+      cancelReaderPosition(root);
+      root.dispatchEvent(new CustomEvent("chat-reader:position-released"));
+      lease?.release();
+      lease = null;
     };
   }, [targetBlockId, turn.data, activeMessageId, navigationAttempt]);
 
