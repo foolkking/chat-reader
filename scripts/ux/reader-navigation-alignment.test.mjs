@@ -21,7 +21,8 @@ const compiled = ts.transpileModule(source, { fileName: "reader-navigation.ts", 
 function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight = 80,
   rangeInset, paddingTop = 0, windowScroll = false, stuck = false, foldedRange = false } = {}) {
   let now = 0, nextFrame = 0, frameCount = 0, current = true, position = 0;
-  const frames = new Map(), observers = [], writes = [];
+  const frames = new Map(), observers = [], writes = [], leaseEvents = [], busyAtRelease = [];
+  let pins = 0;
   const rootTop = windowScroll ? 0 : 80;
   const rect = (top, size) => ({ top, bottom: top + size, height: size, left: 0, right: 300, width: 300 });
   const root = {
@@ -66,6 +67,20 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     disconnect() { this.disconnected = true; }
   }
   const imports = name => {
+    if (name === "./block-virtualization") return {
+      acquireReaderBlockLease: async (messageId, blockIndex, isCurrent) => {
+        assert.equal(isCurrent(), true);
+        assert.equal(module.exports.readerPositionBusy(windowScroll ? null : root), true);
+        pins++;
+        leaseEvents.push({ action: "pin", messageId, blockIndex });
+        await new Promise(resolve => window.requestAnimationFrame(resolve));
+        return { targetId: target.id, release: () => {
+          assert.equal(isCurrent(), false, "Retire this navigation before releasing its virtual pin.");
+          busyAtRelease.push(module.exports.readerPositionBusy(windowScroll ? null : root));
+          pins--; leaseEvents.push({ action: "release" });
+        } };
+      },
+    };
     assert.equal(name, "./text-anchor");
     return {
       resolveTextAnchorRange: (_target, anchor) => anchor.startOffset !== undefined || anchor.quote ? range : null,
@@ -77,7 +92,7 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     imports, module, module.exports, document, window, ResizeObserver,
     () => ({ scrollPaddingTop: `${paddingTop}px` }),
   );
-  async function drain(task, onFrame) {
+  async function drain(task, onFrame = () => {}) {
     let settled = false;
     task.then(() => { settled = true; }, () => { settled = true; });
     for (let index = 0; index < 100 && !settled; index += 1) {
@@ -93,8 +108,17 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     assert.ok(observers.every(observer => observer.disconnected), "Navigation observers must be released.");
     return task;
   }
+  const start = (options = {}) => module.exports.navigateMountedTarget({
+    root: windowScroll ? null : root, targetId: target.id,
+    offset: 120, timeoutMs: 600, tokenIsCurrent: () => current,
+    ...(range ? { characterOffset: 2, endCharacterOffset: 8 } : {}), ...options,
+  });
   return {
-    root, target, writes, rangeRect, outerDisclosure, innerDisclosure, unrelatedDisclosure,
+    root, target, writes, rangeRect, outerDisclosure, innerDisclosure, unrelatedDisclosure, leaseEvents,
+    busyAtRelease, start, drain,
+    isPinned: () => pins > 0,
+    busy: () => module.exports.readerPositionBusy(windowScroll ? null : root),
+    cancelPosition: () => module.exports.cancelReaderPosition(windowScroll ? null : root),
     cancel: () => { current = false; },
     grow: size => { root.scrollHeight = size; for (const observer of observers) observer.action(); },
     restore(options = {}, onFrame = () => {}) {
@@ -105,12 +129,7 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
       }), onFrame);
     },
     async run(options = {}, onFrame = () => {}) {
-      const task = module.exports.navigateMountedTarget({
-        root: windowScroll ? null : root, targetId: target.id,
-        offset: 120, timeoutMs: 600, tokenIsCurrent: () => current,
-        ...(range ? { characterOffset: 2, endCharacterOffset: 8 } : {}), ...options,
-      });
-      return drain(task, onFrame);
+      return drain(start(options), onFrame);
     },
   };
 }
@@ -122,6 +141,53 @@ test("an interior target still reaches the reading line, not a merely visible po
   assert.equal(result.fallback, false);
   assert.equal(f.root.scrollTop, 480);
   assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, 120);
+});
+
+test("layout navigation pins the real row before committing and releases it after exact alignment", async () => {
+  const f = fixture(), virtualBlock = { messageId: "synthetic", blockIndex: 6 };
+  let commits = 0;
+  const task = f.run({ virtualBlock, alignmentTolerance: 1, commitLayout: () => {
+    assert.equal(f.isPinned(), true); assert.equal(f.busy(), true); commits++;
+  } });
+  assert.equal(commits, 1, "The pin and layout action must start synchronously, before the first await.");
+  assert.equal((await task).ok, true);
+  assert.equal(f.target.getBoundingClientRect().top - f.root.getBoundingClientRect().top, 120);
+  assert.deepEqual(f.leaseEvents, [{ action: "pin", ...virtualBlock }, { action: "release" }]);
+  assert.equal(f.isPinned(), false);
+  assert.deepEqual(f.busyAtRelease, [false]);
+});
+
+test("new intent during virtual acquisition cancels alignment, not the clicked layout change", async () => {
+  const f = fixture();
+  let commits = 0;
+  const result = await f.run({ virtualBlock: { messageId: "synthetic", blockIndex: 6 },
+    commitLayout: () => { commits++; } }, frame => {
+    if (frame === 1) { f.cancelPosition(); f.root.scrollTop = 180; }
+  });
+  assert.equal(result.reason, "cancelled");
+  assert.equal(commits, 1);
+  assert.deepEqual(f.writes, [180], "No delayed alignment may overwrite the newer reading action.");
+  assert.equal(f.isPinned(), false); assert.equal(f.busy(), false);
+});
+
+test("a failed layout callback retires both navigation ownership and its pending virtual pin", async () => {
+  const f = fixture();
+  await assert.rejects(f.run({ virtualBlock: { messageId: "synthetic", blockIndex: 6 },
+    commitLayout: () => { throw new Error("Synthetic commit failure"); } }), /Synthetic commit failure/);
+  assert.equal(f.isPinned(), false); assert.equal(f.busy(), false);
+  assert.deepEqual(f.writes, []);
+  assert.equal(f.leaseEvents.at(-1).action, "release");
+});
+
+test("a superseded virtual navigation releases only its pin, never the new position owner", async () => {
+  const f = fixture();
+  const old = f.start({ virtualBlock: { messageId: "synthetic", blockIndex: 6 } });
+  const newer = f.start({ virtualBlock: { messageId: "synthetic", blockIndex: 7 } });
+  const [retired, aligned] = await f.drain(Promise.all([old, newer]));
+  assert.equal(retired.reason, "cancelled"); assert.equal(aligned.ok, true);
+  assert.deepEqual(f.busyAtRelease, [true, false]);
+  assert.equal(f.root.scrollTop, 480);
+  assert.equal(f.isPinned(), false); assert.equal(f.busy(), false);
 });
 
 test("Compare precision corrects a 23.546875px near miss instead of accepting the legacy tolerance", async () => {

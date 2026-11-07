@@ -126,13 +126,13 @@ async function expectOfflineCopyReady(page: Page, fixture: Fixture) {
 }
 
 type Sample = { time: number; top: number; scroll: number; height: number; cells: number[][]; writer: string; mounted: number; measuredRows: number[][]; viewerLocked: boolean; viewerVisible: boolean; otherScroll: number[] };
-type Probe = { frames: Sample[]; corrections: { time: number; delta: number; applied: number }[];
-  events: { time: number; type: string; top: number; scroll: number; viewerLocked: boolean; targetsAnchor: boolean }[] };
-async function startProbe(anchor: Locator) {
-  await anchor.evaluate(node => {
+type Probe = { frames: Sample[]; corrections: { time: number; delta: number; applied: number }[]; preDefaultWheel: boolean;
+  events: { time: number; type: string; top: number; scroll: number; viewerLocked: boolean; targetsAnchor: boolean; cancelable: boolean; trusted: boolean }[] };
+async function startProbe(anchor: Locator, preDefaultWheel = false) {
+  await anchor.evaluate((node, preDefaultWheel) => {
     const target = node as HTMLElement;
     const root = target.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? document.documentElement;
-    const state = { frames: [] as Sample[], corrections: [] as Probe["corrections"], events: [] as Probe["events"], stop: false };
+    const state = { frames: [] as Sample[], corrections: [] as Probe["corrections"], events: [] as Probe["events"], preDefaultWheel, stop: false };
     const host = window as unknown as { readingProbe: typeof state; stopReadingProbe: () => void };
     host.readingProbe = state;
     const onCorrection = (event: Event) => state.corrections.push({ time: performance.now(), ...(event as CustomEvent).detail });
@@ -142,10 +142,16 @@ async function startProbe(anchor: Locator) {
         top: target.getBoundingClientRect().top - (root === document.documentElement ? 0 : root.getBoundingClientRect().top),
         scroll: root === document.documentElement ? scrollY : root.scrollTop,
         viewerLocked: root.dataset.readerViewerLocked === "true",
+        cancelable: event.cancelable, trusted: event.isTrusted,
         targetsAnchor: event.target instanceof Node && target.contains(event.target) });
     };
     const eventTypes = ["pointerdown", "click", "keydown", "focusin", "scroll", "wheel"];
-    eventTypes.forEach(type => document.addEventListener(type, onInput, true));
+    // Only the immediate-wheel branch needs a pre-default baseline. Passive
+    // wheel delivery can occur AFTER the compositor has already scrolled.
+    // Never preventDefault or write scroll here; the original 64 traces retain
+    // their normal listener behavior.
+    eventTypes.forEach(type => document.addEventListener(type, onInput,
+      type === "wheel" && preDefaultWheel ? { capture: true, passive: false } : true));
     root.addEventListener("chat-reader:geometry-correction", onCorrection);
     host.stopReadingProbe = () => {
       state.stop = true; root.removeEventListener("chat-reader:geometry-correction", onCorrection);
@@ -170,7 +176,7 @@ async function startProbe(anchor: Locator) {
       requestAnimationFrame(tick);
     };
     tick();
-  });
+  }, preDefaultWheel);
 }
 async function endProbe(page: Page, info: TestInfo, label: string): Promise<Probe> {
   const evidence = await page.evaluate(() => {
@@ -414,7 +420,7 @@ for (const surface of ["reader", "share", "offline", "compare"] as const) {
       expect(Math.abs(hidden.frames.at(-1)!.top - 120)).toBeLessThanOrEqual(1);
 
       point = await prepareHiddenPoint();
-      await startProbe(long);
+      await startProbe(long, true);
       await page.mouse.click(point.x, point.y);
       // Send real wheel immediately, not after waiting for the navigator to
       // settle. Every subsequent frame is retained to expose stale restoration.
@@ -423,11 +429,30 @@ for (const surface of ["reader", "share", "offline", "compare"] as const) {
       const cancelled = await endProbe(page, info, "fold-cancelled");
       const wheel = cancelled.events.find(event => event.type === "wheel");
       expect(wheel).toBeTruthy();
+      expect(wheel!.cancelable).toBe(true);
+      expect(wheel!.trusted).toBe(true);
       const afterWheel = cancelled.frames.filter(frame => frame.time >= wheel!.time);
       expect(afterWheel.length).toBeGreaterThan(10);
       for (let i = 1; i < afterWheel.length; i++) expect(afterWheel[i].top - afterWheel[i - 1].top).toBeLessThanOrEqual(2);
       expect(afterWheel.at(-1)!.top).toBeLessThan(wheel!.top - 20);
-      for (const evidence of [preserved, hidden, cancelled]) {
+
+      // Also retain the production-like passive delivery path. Its event can
+      // already include compositor motion, so it checks no subsequent pullback;
+      // the preceding pre-default probe independently requires real movement.
+      point = await prepareHiddenPoint();
+      await startProbe(long);
+      await page.mouse.click(point.x, point.y);
+      await page.mouse.wheel(0, 180);
+      await frames(page, 30);
+      const passive = await endProbe(page, info, "fold-passive");
+      const passiveWheel = passive.events.find(event => event.type === "wheel");
+      expect(passiveWheel?.trusted).toBe(true);
+      const afterPassive = passive.frames.filter(frame => frame.time >= passiveWheel!.time);
+      expect(afterPassive.length).toBeGreaterThan(10);
+      for (const frame of afterPassive) expect(frame.top - passiveWheel!.top).toBeLessThanOrEqual(2);
+      for (let i = 1; i < afterPassive.length; i++) expect(afterPassive[i].top - afterPassive[i - 1].top).toBeLessThanOrEqual(2);
+      expect(afterPassive.at(-1)!.top - passiveWheel!.top).toBeLessThanOrEqual(1);
+      for (const evidence of [preserved, hidden, cancelled, passive]) {
         for (const frame of evidence.frames) expect(frame.otherScroll).toEqual(evidence.frames[0].otherScroll);
       }
       await page.screenshot({ path: info.outputPath("long-image-collapse.png") });

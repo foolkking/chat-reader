@@ -29,10 +29,26 @@ retains bounded scalar decode/loading state without URLs or source IDs.
 The long-image remount case uses real wheel input and proves that the old DOM
 node disconnected before checking the expanded state on a new mount; a
 one-shot programmatic scroll assignment is not evidence of user scrolling.
+It then hit-tests Collapse while the reading point is inside the hidden portion,
+requires the real virtual occurrence to stay mounted and align within 1px, and
+opens Viewer without test-side reveal/remount assistance.
 `reading-viewport.test.mjs` checks commit-time correction without waiting for
 RAF/ResizeObserver, stale-owner retirement and immediate user intent.
 `inline-image-recovery.test.mjs` exercises the actual component/URL helper with
 explicit hook/DOM adapters; it does not replace browser decoding/geometry gates.
+The same suite checks fold routing; `reader-navigation-alignment.test.mjs`
+checks pin-before-commit, release ordering, cancelled acquisition, newer-owner
+isolation and cleanup after a failed callback.
+
+The four immediate-wheel collapse probes require a trusted/cancelable event
+sampled before default scrolling; their temporary non-passive capture listener
+never prevents scrolling. A passive callback can be delivered after Chromium
+already moved 180px, so it is not a valid starting point for another >20px
+movement assertion. Four additional normal-passive traces check no subsequent
+pullback. The verifier requires all original 64+12 traces plus these four guards,
+with unchanged original displacement thresholds. Native and long/tiny/Viewer image DOMRect checks
+use <0.005 CSS px tolerance for floating-point subtraction, not strict binary
+equality; image attributes and dimensions/line-box semantics are still checked.
 
 The workflow additionally runs `image-scale-slider-browser.mjs` with mounted
 controls, real CSS and mouse/keyboard/touch; only its API transport is adapted.

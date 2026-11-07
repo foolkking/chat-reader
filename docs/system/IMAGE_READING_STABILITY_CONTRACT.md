@@ -39,7 +39,9 @@ UI or physical-device acceptance.
   the image. Expansion uses body scrolling and survives virtual remounts in
   query-client session memory, scoped to authority/source/real occurrence.
   Collapse preserves the shared live anchor; a reading point in the hidden
-  portion explicitly navigates to the actual image start.
+  portion explicitly navigates to the actual image start. For virtual content,
+  this uses the existing real block lease before shrinking, retaining the actual
+  occurrence until alignment or cancellation; no duplicate target or permanent pin.
 - Media has no permanent gray backing, rounded crop or decorative padding.
   Captions and error/retry actions are outside its reserved geometry; failure
   does not repartition the image run. Image pixels remain 32×24 when appropriate;
@@ -135,6 +137,12 @@ ResizeObserver remains the owner of later asynchronous geometry, but is not a
 substitute for commit-time correction of a multi-thousand-pixel collapse.
 The handoff retains busy/retired-owner checks and never creates a second
 image-specific restoration loop.
+For hidden-point collapse, the existing navigator claims position ownership and
+begins block acquisition synchronously before the layout callback. This allows
+React to commit the pin and fold together. Its normal completion/cancellation
+releases position ownership before the row lease. New user intent cancels only
+the pending alignment, not the already requested fold; stale work cannot reclaim
+ownership from a newer navigation.
 
 Explicit navigation/restoration claims the existing navigation position lease;
 ordinary geometry yields. Virtual-list automatic size adjustments and the old
@@ -215,6 +223,14 @@ Four surfaces each retain three additional collapse traces (12 total): surviving
 anchor ≤2px peak/≤1px final, hidden point explicitly aligned to image start at
 120px, and real immediate wheel not overwritten by stale restoration. The
 intentional hidden-point jump is retained in evidence, not called stationary.
+The immediate-wheel movement probe observes a trusted, cancelable wheel before
+its default scroll, using a temporary non-passive capture listener that never
+prevents default or writes scroll. It retains the >20px movement requirement and
+≤2px reversal limit. Four additional `fold-passive` traces preserve the normal
+passive/compositor delivery path: their wheel callback may already include the
+motion, so they require no subsequent pullback (≤2px peak/≤1px final), rather
+than incorrectly demanding that the same wheel scroll twice. Original 64 and
+12 traces remain mandatory, not replaced by these four guards.
 Every trace also records the opposite Compare scroll position. A separate cold
 Viewer panel trace spans delayed detail reads and next-image loading; public
 PNG checks prove full long-image output and stable URL identity after resizing.

@@ -1,5 +1,6 @@
 import type { NavigationResult, ScrollAnchorSnapshot } from "../../lib/types";
 import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
+import { acquireReaderBlockLease, type ReaderBlockLease } from "./block-virtualization";
 
 type NavigateMountedTargetOptions = {
   root: HTMLElement | null;
@@ -15,6 +16,10 @@ type NavigateMountedTargetOptions = {
   suffix?: string | null;
   timeoutMs?: number;
   allowFallback?: boolean;
+  /** Retain the real virtual row before a discrete layout change can remove it. */
+  virtualBlock?: { messageId: string; blockIndex: number };
+  /** Runs synchronously after ownership/pinning starts, before any await. */
+  commitLayout?: () => void;
 };
 
 type RestoreScrollAnchorOptions = {
@@ -71,9 +76,27 @@ export function resolveActiveBlockDomId(
 
 export async function navigateMountedTarget(options: NavigateMountedTargetOptions): Promise<NavigationResult> {
   const owner = claimReaderPosition(options.root);
+  const current = () => owner.current() && (options.tokenIsCurrent?.() ?? true);
+  let pendingLease: Promise<ReaderBlockLease | null> | null = null;
   try {
-    return await navigateMountedTargetImpl({ ...options, tokenIsCurrent: () => owner.current() && (options.tokenIsCurrent?.() ?? true) });
-  } finally { owner.release(); }
+    if (options.virtualBlock) {
+      pendingLease = acquireReaderBlockLease(options.virtualBlock.messageId, options.virtualBlock.blockIndex, current);
+    }
+    // Callers can flush the pin and layout change in the same React commit.
+    // The click still changes layout if later input cancels only its alignment.
+    options.commitLayout?.();
+    if (pendingLease) {
+      const lease = await pendingLease;
+      if (!current()) return { ok: false, targetId: options.targetId, reason: "cancelled" };
+      if (!lease) return { ok: false, targetId: options.targetId, reason: "target-not-mounted" };
+    }
+    return await navigateMountedTargetImpl({ ...options, tokenIsCurrent: current });
+  } finally {
+    // Hand the final anchor back before releasing its virtual row, also on
+    // cancellation or a failed layout callback. Never leave a permanent pin.
+    owner.release();
+    if (pendingLease) (await pendingLease)?.release();
+  }
 }
 
 async function navigateMountedTargetImpl({

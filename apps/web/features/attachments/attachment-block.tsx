@@ -178,8 +178,19 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: 
     const bounds = element?.getBoundingClientRect();
     const hiddenReadingPoint = expanded && bounds && readingLine > bounds.top + Math.min(640, image.lane.height * .7)
       && readingLine < bounds.top + body.fullHeight;
-    flushSync(() => setExpanded(!expanded));
-    if (hiddenReadingPoint && element?.id) void navigateMountedTarget({ root, targetId: element.id, offset: 120, alignmentTolerance: 1 });
+    if (hiddenReadingPoint && element?.id) {
+      const block = element.closest<HTMLElement>("[data-block-index]");
+      const messageId = element.closest<HTMLElement>("article[data-message-id]")?.dataset.messageId;
+      const blockIndex = Number(block?.dataset.blockIndex);
+      const virtualBlock = element.closest('[data-virtualized-block-list="true"]') && messageId && Number.isInteger(blockIndex) && blockIndex >= 0
+        ? { messageId, blockIndex } : undefined;
+      // Pin the actual row before shrinking it. Otherwise virtualization can
+      // remove the occurrence while the shared navigator awaits media/frames.
+      flushSync(() => { void navigateMountedTarget({
+        root, targetId: element.id, offset: 120, alignmentTolerance: 1, virtualBlock,
+        commitLayout: () => setExpanded(false),
+      }); });
+    } else flushSync(() => setExpanded(!expanded));
   };
   return (
     <Container

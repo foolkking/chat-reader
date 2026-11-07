@@ -169,7 +169,7 @@ test("long fold survives virtual remounts, tiny images stay tiny, and Viewer mod
   const article = await open(page);
   const long = article.locator(`[data-attachment-id="${assets[2].id}"]`).first();
   await reveal(page, long);
-  await expect.poll(() => long.locator("img").evaluate(node => node.getBoundingClientRect().width)).toBe(240);
+  await expect.poll(() => long.locator("img").evaluate(node => node.getBoundingClientRect().width)).toBeCloseTo(240, 2);
   await long.getByRole("button", { name: /Image display scale:/ }).click();
   const size = page.getByRole("dialog", { name: "Image size", exact: true });
   await expect(size.getByText("Full body image", { exact: true })).toBeVisible();
@@ -179,7 +179,7 @@ test("long fold survives virtual remounts, tiny images stay tiny, and Viewer mod
   await size.getByRole("button", { name: "Close image size" }).click();
   await long.getByRole("button", { name: "Expand full image" }).click();
   await expect(long).toHaveAttribute("data-image-expanded", "true");
-  expect((await long.locator("img").boundingBox())!.height).toBe(4000);
+  expect((await long.locator("img").boundingBox())!.height).toBeCloseTo(4000, 2);
   const root = page.getByTestId("reader-scroll-root");
   await expect(article.locator('[data-virtualized-block-list="true"]')).toHaveCount(1);
   const original = await long.elementHandle();
@@ -200,12 +200,29 @@ test("long fold survives virtual remounts, tiny images stay tiny, and Viewer mod
   }
   await expect(long).toHaveAttribute("data-image-expanded", "true");
   await original!.dispose();
-  await long.getByRole("button", { name: "Collapse image" }).click();
+  const collapse = long.getByRole("button", { name: "Collapse image" });
+  await collapse.evaluate(node => node.scrollIntoView({ block: "center", behavior: "instant" }));
+  await nextFrames();
+  const relativeTop = await long.evaluate(node => node.getBoundingClientRect().top
+    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top);
+  expect(relativeTop + 630).toBeLessThan(120);
+  expect(relativeTop + 4000).toBeGreaterThan(120);
+  const point = await collapse.evaluate(node => {
+    const rect = node.getBoundingClientRect(), x = rect.left + rect.width / 2, y = rect.top + rect.height / 2;
+    return { x, y, hit: node.contains(document.elementFromPoint(x, y)) };
+  });
+  expect(point.hit).toBe(true);
+  await page.mouse.click(point.x, point.y);
+  // No test-side reveal/remount after collapse: the product must retain and
+  // align the actual virtual occurrence before the user can view it again.
+  await expect(long).toHaveAttribute("data-image-expanded", "false");
+  await expect.poll(() => long.evaluate(node => Math.abs(node.getBoundingClientRect().top
+    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top - 120))).toBeLessThanOrEqual(1);
   await long.locator(".attachment-gallery-trigger").click();
   const viewer = page.getByTestId("attachment-viewer-shell"), image = viewer.locator(".image-viewer-original");
   await viewer.getByRole("button", { name: "Original 1:1", exact: true }).click();
-  await expect.poll(() => image.evaluate(node => node.getBoundingClientRect().width)).toBe(240);
-  expect((await image.boundingBox())!.height).toBe(4000);
+  await expect.poll(() => image.evaluate(node => node.getBoundingClientRect().width)).toBeCloseTo(240, 2);
+  expect((await image.boundingBox())!.height).toBeCloseTo(4000, 2);
   await viewer.getByRole("button", { name: "Fit to window", exact: true }).click();
   const canvas = await viewer.getByTestId("image-viewer-canvas").boundingBox();
   await expect.poll(() => image.evaluate(node => node.getBoundingClientRect().height)).toBeLessThanOrEqual(canvas!.height + 1);
@@ -217,8 +234,8 @@ test("long fold survives virtual remounts, tiny images stay tiny, and Viewer mod
   for (const [index, width] of [[3, 32], [4, 80]]) {
     const tiny = article.locator(`[data-attachment-id="${assets[index].id}"]`).first();
     await reveal(page, tiny);
-    await expect.poll(() => tiny.locator("img").evaluate(node => node.getBoundingClientRect().width)).toBe(width);
-    expect((await tiny.boundingBox())!.width).toBe(Math.max(44, width));
+    await expect.poll(() => tiny.locator("img").evaluate(node => node.getBoundingClientRect().width)).toBeCloseTo(width, 2);
+    expect((await tiny.boundingBox())!.width).toBeCloseTo(Math.max(44, width), 2);
     await expect(tiny.getByRole("button", { name: "Image options", exact: true })).toBeVisible();
   }
 });
@@ -286,7 +303,10 @@ test("native prose, linked and table images keep real aspect ratios and inline l
         const boxes = text.map(node => { const range = document.createRange(); range.selectNodeContents(node); const b = range.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; });
         return { display: getComputedStyle(node).display, width: image.width, height: image.height, left: image.left, right: image.right, top: image.top, bottom: image.bottom, boxes };
       });
-      expect(line.display).toBe("inline-block"); expect(line.width).toBe(80); expect(line.height).toBe(60);
+      expect(line.display).toBe("inline-block");
+      // Fractional DOMRect subtraction can yield 80.000015px for an 80px image.
+      // Keep subpixel precision, not bitwise floating-point equality.
+      expect(line.width).toBeCloseTo(80, 2); expect(line.height).toBeCloseTo(60, 2);
       expect(line.boxes).toHaveLength(2);
       expect(line.boxes[0].right).toBeLessThanOrEqual(line.left + 1);
       expect(line.boxes[1].left).toBeGreaterThanOrEqual(line.right - 1);

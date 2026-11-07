@@ -70,3 +70,52 @@ for (const url of ["/api/attachments/synthetic/content?scope=preserved", "blob:h
     assert.deepEqual(commits, [ref.current], "The commit delegates to the shared viewport owner.");
   });
 }
+
+for (const scenario of [
+  { name: "virtual hidden reading point", expanded: true, top: -2000, virtual: true, navigate: true },
+  { name: "ordinary hidden reading point", expanded: true, top: -2000, virtual: false, navigate: true },
+  { name: "surviving reading point", expanded: true, top: -4100, virtual: true, navigate: false },
+  { name: "expansion", expanded: false, top: 120, virtual: true, navigate: false },
+]) {
+  test(`fold action uses the existing owner and only pins its real hidden target: ${scenario.name}`, () => {
+    const navigation = [], changes = [];
+    let flushing = false;
+    const root = { getBoundingClientRect: () => ({ top: 0 }) };
+    const element = { id: "attachment-occurrence-synthetic", getBoundingClientRect: () => ({ top: scenario.top }),
+      closest: selector => ({
+        '[data-reader-scroll-root="true"]': root,
+        "[data-block-index]": { dataset: { blockIndex: "6" } },
+        "article[data-message-id]": { dataset: { messageId: "synthetic-message" } },
+        '[data-virtualized-block-list="true"]': scenario.virtual ? {} : null,
+      })[selector] ?? null,
+    };
+    const component = compile(declaration("attachment-block.tsx", "InlineImage"), "InlineImage", {
+      useBodyImage: () => ({
+        ref: { current: element }, body: { width: 240, height: scenario.expanded ? 4000 : 630, fullHeight: 4000, foldable: true },
+        size: { width: 240, height: 4000 }, expanded: scenario.expanded, lane: { width: 720, height: 900 },
+        setExpanded: value => { assert.equal(flushing, true); changes.push(value); },
+      }),
+      useState: () => [0, () => {}], useLayoutEffect() {},
+      normalizeImageDisplayMode: () => "auto", normalizeVisibleCaption: () => "",
+      attachmentLocatorAttributes: () => ({}), retryableUrl,
+      ImageDisplayControls: "ImageDisplayControls", DownloadButton: "DownloadButton",
+      flushSync: operation => { flushing = true; try { operation(); } finally { flushing = false; } },
+      navigateMountedTarget: options => {
+        assert.equal(flushing, true);
+        navigation.push(options); options.commitLayout(); return Promise.resolve({ ok: true });
+      },
+    });
+    const tree = component({ attachment: { id: "synthetic", display_name: "synthetic.png", content_url: "/synthetic" },
+      props: {}, onOpen() {}, onRuntime() {}, zh: false, unavailable: false });
+    const toggle = nodes(tree).find(node => node.type === "button" && node.props.children === (scenario.expanded ? "Collapse image" : "Expand full image"));
+    toggle.props.onClick();
+    assert.deepEqual(changes, [!scenario.expanded]);
+    assert.equal(navigation.length, scenario.navigate ? 1 : 0);
+    if (scenario.navigate) {
+      const options = navigation[0];
+      assert.equal(options.targetId, element.id); assert.equal(options.root, root);
+      assert.equal(options.offset, 120); assert.equal(options.alignmentTolerance, 1);
+      assert.deepEqual(options.virtualBlock, scenario.virtual ? { messageId: "synthetic-message", blockIndex: 6 } : undefined);
+    }
+  });
+}

@@ -50,13 +50,31 @@ for (const file of foldFiles) {
     assert.ok(frames.slice(aligned).every(frame => Math.abs(frame.top - 120) <= 2));
     assert.ok(Math.abs(frames.at(-1).top - 120) <= 1);
   } else {
+    assert.equal(evidence.preDefaultWheel, true, "Movement needs a pre-default wheel baseline, not post-compositor delivery.");
     const wheel = evidence.events.find(event => event.type === "wheel");
     assert.ok(wheel);
+    assert.equal(wheel.cancelable, true);
+    assert.equal(wheel.trusted, true, "The probe must observe a real wheel, not dispatchEvent.");
     const after = frames.filter(frame => frame.time >= wheel.time);
     assert.ok(after.length > 10);
     for (let i = 1; i < after.length; i++) assert.ok(after[i].top - after[i - 1].top <= 2);
     assert.ok(after.at(-1).top < wheel.top - 20);
   }
+}
+const passiveFiles = readdirSync(root, { recursive: true }).filter(name => name.endsWith("fold-passive-frames.json"));
+assert.equal(passiveFiles.length, 4, "Pre-default measurement must not replace the normal passive delivery path.");
+for (const file of passiveFiles) {
+  const evidence = JSON.parse(readFileSync(join(root, file), "utf8"));
+  assert.equal(evidence.preDefaultWheel, false);
+  const wheel = evidence.events.find(event => event.type === "wheel");
+  assert.equal(wheel?.trusted, true);
+  const frames = evidence.frames.filter(frame => frame.time >= wheel.time);
+  assert.ok(frames.length > 10);
+  assert.ok(frames.every(frame => [frame.top, frame.time, frame.scroll, frame.height].every(Number.isFinite)));
+  for (const frame of frames) assert.ok(frame.top - wheel.top <= 2);
+  for (let i = 1; i < frames.length; i++) assert.ok(frames[i].top - frames[i - 1].top <= 2);
+  assert.ok(frames.at(-1).top - wheel.top <= 1);
+  for (const frame of evidence.frames) assert.deepEqual(frame.otherScroll, evidence.frames[0].otherScroll);
 }
 const coldShell = readdirSync(root, { recursive: true }).filter(name => name.endsWith("viewer-cold-shell.json"));
 assert.equal(coldShell.length, 1);
@@ -66,4 +84,4 @@ for (const frame of shellFrames) for (let axis = 0; axis < 4; axis++) {
   assert.ok(Number.isFinite(frame[axis]));
   assert.ok(Math.abs(frame[axis] - shellFrames[0][axis]) <= 1);
 }
-console.info("reading-stability: required cases, original 64 traces, 12 collapse traces and cold Viewer shell verified");
+console.info("reading-stability: required cases, original 64 traces, 12 collapse plus 4 passive traces and cold Viewer shell verified");

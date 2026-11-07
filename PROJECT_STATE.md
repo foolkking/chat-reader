@@ -13,12 +13,14 @@ pixels. Optional offline v3 geometry does not change Dexie v2 or older package
 reads. This is **not a deployed release or completed CI acceptance**.
 [Current contract](docs/system/IMAGE_READING_STABILITY_CONTRACT.md) /
 [implementation and verification](docs/execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
-The required CI retains all 64 frame traces, adds 12 collapse traces and a cold
-Viewer panel trace, and requires at least 35 reading/image cases. Follow-up
+The required CI retains all 64 frame traces, adds 12 collapse traces, four
+passive-wheel guards and a cold Viewer panel trace, and requires at least 35 reading/image cases. Follow-up
 audit fixes cover native Markdown CSS, final-choice saving, authority-isolated
 write feedback and cold image presentation; they still await exact-source CI.
 Further CI-driven fixes cover offscreen preview retry and commit-time fold
 compensation through the same reading viewport owner; no new acceptance claim.
+Hidden-point virtual collapse now acquires the existing real-row lease before
+shrinking and retains the same cancellable navigation owner through alignment.
 [Audit](docs/execution/ux-audit-image-natural-flow-2026-11-07.md);
 no local application tests/services, new dependencies, migration, schedules or
 production operations are authorized in this task.
