@@ -651,7 +651,6 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .attachment-gallery-overlay,
   .attachment-preview-actions,
   .workspace-import-drop-target { transition: none; }
 }

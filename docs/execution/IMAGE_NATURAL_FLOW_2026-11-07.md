@@ -294,3 +294,61 @@ TypeScript、完整 ESLint、三份改动脚本的语法和 diff 静态检查，
 原生及尚被前置失败挡住的长图/小图/Viewer 像素测量统一使用同一
 <0.005px 浮点容差；整数属性/天然像素及原位移阈值不变。
 用户 build-info 与用户审查/evidence 保留，未触及导入资料、生产或安排。
+
+### 虚拟收起及采样修正后的完整重跑
+
+精确 **`6b312525bc7ad05f0fa5149d1bbd468ad7b80e13`** 已提交并推送 master。
+完整 `Build release images` run **42362703270** 于
+**2026-11-07 18:08:50.288 +08:00** 派发，
+**18:08:53.018 +08:00** 返回成功。仅读取派发回执 URL，
+未读取新运行状态、日志或制品，结果待验证。
+除用户明确报告失败/授权提前诊断外，保守首次回查不早于
+**2026-11-07 18:59:54 +08:00**；未创建安排，未部署。
+本段为派发后的本地回执，不属于该精确源码 CI 的输入。
+
+### 第六轮：阅读专项通过，Default PWA 发现旧 CSS 残留
+
+用户再次报告 Web Quality 失败，沿用明确的失败诊断/取消授权，
+首次读取于 **2026-11-07 18:56 +08:00**，未等到该轮常规首次回查时刻。
+run **42362703270** 精确对应
+**`6b312525bc7ad05f0fa5149d1bbd468ad7b80e13`**。
+Web 已 failure，API success，settings 和读取性能尚在运行；已取消剩余
+任务并确认整轮 `completed/cancelled`。settings、读取性能、build、inspect
+为 cancelled，不能视为通过或部署凭据。
+
+官方 Web evidence artifact **13570849399**：
+`release-a-quality-evidence-6b312525bc7ad05f0fa5149d1bbd468ad7b80e13-1`，
+官方 digest
+`sha256:2ef629999cf65d4324baaf5597dc72b1d222cc917e03b414fd5a140b65d253da`。
+完整日志、制品、取消回执和只读统计保存在本任务临时目录；没有运行
+本地应用、应用测试或 trace 服务。
+
+- Web Node **2107/2107**，消息编辑/删除 **118/118**、Markdown/Viewer
+  **31/31**、reading **35/35**、PDF **13/13**。
+- 原 **64 条**逐帧轨迹完整，共 **2258 帧**；停止阅读峰值 **0.25px**、
+  最终 **0px**；Viewer 开关峰值/最终 **0px**。
+- **12 条**收起轨迹和 **4 条**被动滚轮轨迹均通过：收起保位峰值/最终
+  最多 **0.5px**，隐藏点最终定位偏差最多 **0.1875px**；冷 Viewer 外壳
+  另有 **69 帧**。上轮六个失败点本轮均通过，没有降低位移阈值。
+- 机器汇总为 **11 PASS / 1 FAIL / 2 NOT_VERIFIED**。Default PWA
+  **186 passed / 1 failed / 812 skipped**；独立账户与负向 PWA 未执行。
+  整轮仍未通过，不得以阅读专项或 API 成功宣称可发布。
+
+唯一失败来自 `attachment-inline-layout.spec.ts` 的源码合同：
+`globals.css` 仍在 `prefers-reduced-motion: reduce` 媒体查询中包含
+`.attachment-gallery-overlay`。该旧覆盖层在当前组件中已无引用，原图片
+规则已移除，却漏掉了共用“关闭过渡”选择器列表中的这一项。
+
+修正仅删除这一行，**不改动或删除失败断言，不跳过用例**。
+同列表的 `.attachment-preview-actions`、`.workspace-import-drop-target`
+及 `transition: none` 完整保留；常驻图片选项、44px 目标、自然尺寸、
+触摸/键盘操作与所有布局/滚动逻辑不变。检查了相关图库类名及源文件，
+没有发现其他该旧覆盖层引用。对修正前后 CSS 做换行归一化后的 PostCSS
+静态解析，均为 **343 条规则**，唯一差异是上述选择器列表，声明未改变。
+没有借此次修正引入新 UI、依赖或修改 CI 门禁顺序。
+
+非增量 TypeScript、完整 ESLint 与 CSS 静态解析通过；现有回归用例仍由
+下一轮完整精确 CI 执行，不冒充本地应用测试通过。
+用户 build-info SHA-256 保持
+`fcc39cfd4093a15dc2cf9f8e80acbe12e7a858fcaeb961ee2b47d8a08e960afc`；
+用户审查/evidence、导入资料、生产与安排未动。
