@@ -4,75 +4,63 @@ Last synchronized: **2026-11-07**. Current facts and verification boundaries onl
 dated implementation, CI failures and release narratives belong in execution records.
 Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
-## Current source candidate — natural image sizing
+## Current release — natural image sizing
 
-The 2026-11-07 candidate replaces fixed preview cells with source-bound original
-geometry, one saved percentage, source-order wrapping and width-preserving long
-image folding. Controls commit on release; Viewer zoom measures intrinsic CSS
-pixels. Optional offline v3 geometry does not change Dexie v2 or older package
-reads. This is **not a deployed release or completed CI acceptance**.
+Exact **`897ba788fd89e18c9634ca2271ba6146339939a0`** passed full CI
+**`42371615326`** and was deployed after the user's separate “成功，部署”
+authorization on **2026-11-07**. Source-bound original geometry, one saved
+percentage, natural wrapping and width-preserving long-image folding replace
+fixed preview cells. Controls commit on release; Viewer zoom measures intrinsic
+CSS pixels. Optional offline v3 geometry preserves Dexie v2 and older packages.
+The Skill panel retains its opening-language query hint while labels localize;
+all three controlled preference-hydration regressions passed.
 [Current contract](docs/system/IMAGE_READING_STABILITY_CONTRACT.md) /
-[implementation and verification](docs/execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
-The required CI retains all 64 frame traces, adds 12 collapse traces, four
-passive-wheel guards and a cold Viewer panel trace, and requires at least 35 reading/image cases. Follow-up
-audit fixes cover native Markdown CSS, final-choice saving, authority-isolated
-write feedback and cold image presentation; full exact-source CI remains required.
-Further CI-driven fixes cover offscreen preview retry and commit-time fold
-compensation through the same reading viewport owner; no new acceptance claim.
-Hidden-point virtual collapse now acquires the existing real-row lease before
-shrinking and retains the same cancellable navigation owner through alignment.
-Exact `35f5140` passed Web Quality (14/14 gates, including all 35 reading/image
-cases and required frame evidence), API and reading performance. Full acceptance
-is still blocked by a separate Settings Quality failure (462/463): late account
-language hydration can switch a personal Skill list query and unmount its saved
-row. The candidate keeps that panel's legacy read hint stable while localizing
-labels; controlled hydration regressions and a fresh complete CI remain pending.
-[Audit](docs/execution/ux-audit-image-natural-flow-2026-11-07.md);
-no local application tests/services, new dependencies, migration, schedules or
-production operations are authorized in this task.
+[implementation and CI history](docs/execution/IMAGE_NATURAL_FLOW_2026-11-07.md) /
+[release receipt](docs/execution/IMAGE_NATURAL_FLOW_RELEASE_2026-11-07.md).
+
+All six jobs and five official artifact ZIP digests/content checks passed.
+Reading/image cases **35/35**, original **64** frame traces plus **12** collapse,
+**4** passive-wheel guards and a cold Viewer shell trace passed without relaxing
+thresholds. API **6078 passed / 3 optional skipped**, Web Node **2111/2111**,
+Web gates **14/14**, Settings **466/466** plus isolated restore **1/1**,
+performance baseline/candidate **9/9**, exact-image **320 MiB** memory gate passed.
+Synthetic CI is not authenticated production UI or physical-device acceptance.
 
 ## Release and runtime
 
-**Current release (2026-11-06):** image presentation, reading viewport ownership
-and seven follow-up audit items passed exact-source CI and were subsequently
-authorized for deployment. The required `reading-stability` gate passed 23/23
-cases with 64 complete frame traces; earlier partial successes are not acceptance.
-[Source contract](docs/system/IMAGE_READING_STABILITY_CONTRACT.md) /
-[implementation history](docs/execution/IMAGE_READING_STABILITY_2026-11-06.md) /
-[release receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md).
-No migration or Dexie upgrade; existing offline copies retain their own snapshots.
+Maintenance lasted **21:31:35–21:38:56 +08:00** (7m21s). Independent runtime
+recheck passed at **21:39:40**; backup/preservation recheck completed at
+**21:40:37**. No migration or Dexie upgrade; existing offline copies retain their
+own snapshots. Only API/worker/Web were recreated from verified CI images.
 
 | Boundary | Verified snapshot |
 | --- | --- |
-| Source / branch | Existing `master`; deployed application source `9cf235f3730aae0f3ae747fe0e36763056a624c0`; subsequent documentation-only receipts are not new application releases |
-| Accepted / deployed-source CI | `42217357688`, attempt 1, exact `9cf235f`; six jobs and all five artifact contents passed after the 50-minute first-read gate |
-| Production / retained rollback images | `9cf235f` / `67e6336`; accepted **2026-11-06 14:07:48Z** (**22:07:48 +08:00**), independently rechecked **14:10:03Z**; later authorized cleanup removed only the older `be58b12`/`3b839dc` tags |
+| Source / branch | Existing `master`; deployed application source `897ba788fd89e18c9634ca2271ba6146339939a0`; subsequent documentation-only receipts are not new application releases |
+| Accepted / deployed-source CI | `42371615326`, attempt 1; six jobs and all five artifact contents passed after the 50-minute first-read gate |
+| Production / retained rollback images | `897ba78` / `9cf235f`; older `67e6336` also retained; accepted **2026-11-07 13:38:56Z**, independently rechecked **13:39:40Z** |
 | Runtime recheck | API, Web and PostgreSQL healthy; worker `alive_idle`; canonical HTTPS health and login return 200 |
 | Database | Production single head/current `20261105_0059`, unchanged this release; prior private-search backfill remains committed, 52/52 |
-| Verification / delivery | API 6072 passed / 3 optional skipped; Web Node 2092/2092 and 14/14 gates; reading 23/23 with 64 traces; settings 463 plus isolated restore 1; capacity baseline/candidate 9/9; exact-image 320 MiB memory gate passed. No local application tests, production build or raw ZIP replay; separately authorized retention is recorded below |
+| Verification / delivery | New stopped-writer five-component backup `chat-reader-20261107T133202Z` independently verified; attachment audit 390/390 hashes, zero issues. No local application tests, production build, raw ZIP replay or cleanup |
 
-The deployed release adds fixed image previews, explicit reading-size suggestions,
-offline dimension snapshots and unified reading compensation, retaining the
+The deployed release adds natural image sizing, explicit pixel/column feedback,
+offline geometry snapshots and unified reading compensation, retaining the
 consolidated authentication/offline and recovery consistency work, bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,
 a 128 MiB reserve and a 64 MiB workspace-growth budget; other imports keep standard
 admission. Real exact-image 320 MiB worker CI is not proof of success on user data.
-[Release receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md) owns official
+[Release receipt](docs/execution/IMAGE_NATURAL_FLOW_RELEASE_2026-11-07.md) owns official
 artifact hashes, OCI/config identity, stopped-writer backup, deployment and preservation
 evidence. [Adaptive ZIP contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)
 owns qualification and compatibility details.
 
-Deployment initially kept all four backup points and sixteen role tags. The
-subsequent explicit cleanup request retained the two newly reverified backups
-`chat-reader-20261106T140111Z` and `chat-reader-20261105T160504Z`, removing only
-two older verified points and eight unreferenced old image tags (four image configs).
-Current/direct rollback role tags remain; release archives/evidence and user data
-were not deleted. See the [cleanup receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md#subsequent-authorized-cleanup).
-Direct rollback `67e6336`
+This deployment retains all **three** backup points (November 7, 6 and 5) and
+all **twelve** role tags for `897ba78`, `9cf235f` and `67e6336`. No cleanup was
+authorized or performed. The separately authorized November 6 cleanup remains
+historical in its [receipt](docs/execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md#subsequent-authorized-cleanup).
+Direct rollback `9cf235f`
 supports the same 0059 schema, but still needs stopped-writer/job/data checks.
-Never automatically downgrade. Post-cleanup disk check: **85% used,
-6,167,416 KiB free** at **14:53:09Z**, approximately **2.18 GiB** more filesystem
-space available.
+Never automatically downgrade. Post-deployment disk check: **92% used,
+3,457,056 KiB free** at **2026-11-07 13:40:37Z**; capacity is tight.
 Future releases need fresh capacity admission, not automatic cleanup or reduced budgets.
 Capacity and aggregate data counts are time-point
 observations, not invariants. Writers resumed after deployment; do not claim all
@@ -165,12 +153,11 @@ caches/empty directory were removed; no remote branch or production data changed
 The later image/reading plan includes all seven follow-up audit items and
 commit/push on existing master. Each submitted run obeyed its fresh minimum
 50-minute first-read boundary except explicit user-reported failure diagnoses.
-Exact `9cf235f` is fully green. The subsequent explicit “部署” request authorized
-the accepted release above; deployment and independent recheck are complete.
+Exact `897ba78` is fully green. The subsequent explicit “成功，部署” request
+authorized the accepted release above; deployment and independent recheck are complete.
 The CI recheck remains paused; no schedule was created or resumed.
-Deployment itself did not authorize cleanup. A later explicit request authorized
-only the bounded old-backup/image retention above, not broader cleanup or replaying
-the user's source ZIP.
+This deployment did not authorize cleanup. November 6's earlier bounded cleanup
+authorization does not authorize a new deletion or replaying the user's source ZIP.
 The unrelated `apps/web/tsconfig.tsbuildinfo` modification and release/test
 evidence remain preserved.
 [Closeout receipt](docs/execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md) records checks,

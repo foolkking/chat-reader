@@ -1,11 +1,28 @@
 # Testing
 
-## Natural image flow — 2026-11-07 source candidate
+## Current exact-source CI and production — natural image flow — 2026-11-07
 
-New full exact-source CI is required; the 2026-11-06 pass below belongs to the
-previous deployed implementation. This task runs no local application services,
-builds or application tests. TypeScript without incremental output and ESLint
-are static checks, not browser/API acceptance.
+Exact `897ba788fd89e18c9634ca2271ba6146339939a0`, CI `42371615326`, attempt 1,
+passed all six jobs and five independently verified official artifact ZIPs.
+API **6078 passed / 3 optional skipped**, Web Node **2111/2111**, Web gates
+**14/14**, Settings **466/466** plus isolated restore **1/1**, performance
+baseline/candidate **9/9**, and the exact-image 320 MiB memory gate passed.
+The previous Skill failure and all three controlled language-hydration cases
+passed. Default PWA has 187 passed/815 environment-routed skips; adaptive
+recovery has 12 passed/1 optional skip, not universal discovered-case execution.
+
+Reading **35/35** and all **64+12+4** traces plus the cold shell passed.
+The original 64 traces contain 2235 frames: stopped/Viewer peak 0.25px,
+final 0px; preserved collapse peak/final 0.5px; the 59-frame cold shell is
+unchanged. Independent local processing only read CI evidence; the first
+Node traversal hit Windows long-path limits, then an SHA-identical short-path
+copy passed the unchanged verifier. No application/test was launched locally.
+TypeScript without incremental output and ESLint are static checks.
+
+Subsequent authorized deployment and independent health/backup checks passed;
+schema 0059, production configuration and PostgreSQL identity stayed unchanged.
+No authenticated production UI, physical devices or user ZIP/offline replay was
+accepted. See the [release receipt](execution/IMAGE_NATURAL_FLOW_RELEASE_2026-11-07.md).
 
 The existing `reading-stability` workflow gate also runs
 `image-natural-flow.spec.ts`: at least 35 cases plus the unchanged **64** complete
@@ -57,8 +74,10 @@ and owner-to-Share/Offline/admin/read-only-Compare scope switches.
 API geometry tests cover read-only lookup, no bulk scanning, source allowlists,
 EXIF orientation, blocked assets, authentication and encoded-byte admission.
 Existing resize/animation/SVG/public URL/old offline package suites remain.
-First status read is at least 50 minutes after each dispatch; no schedules or
-deployment. See [implementation and receipts](execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
+First status read is at least 50 minutes after each dispatch unless explicitly
+waived for a user-reported failure; no schedules were created. Deployment was
+separately authorized only after full acceptance.
+See [implementation and receipts](execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
 The user explicitly waived the first-read delay for diagnosing failed run
 `42341779367`. Its mutation lifecycle trace exposed an invalid baseline captured
 during URL alignment followed by locator-driven scrolling. That test now
@@ -80,7 +99,9 @@ describe the current release. Dated results below retain their original
 checkpoint scope; a historical candidate/failure is neither a new work order
 nor a substitute for current authenticated-browser/user-data acceptance.
 
-## Current exact-source CI and production — image/reading stability — 2026-11-06
+<a id="current-exact-source-ci-and-production--imagereading-stability--2026-11-06"></a>
+
+## Previous exact-source CI and production — image/reading stability — 2026-11-06
 
 Exact `9cf235f3730aae0f3ae747fe0e36763056a624c0`, run `42217357688`,
 attempt 1, passed all six required jobs and five independently inspected
@@ -4127,12 +4148,12 @@ retained final screenshots were reviewed; initial failures remain in the audit.
 
 ## Skill replacement recovery (2026-10-07)
 
-**2026-11-07 candidate regression:** exact `35f5140` passed all Web gates but
+**2026-11-07 regression and acceptance:** exact `35f5140` passed all Web gates but
 Settings Quality failed one of 463 cases: the personal replacement row vanished
 into initial loading while a committed write's list refresh was held. The API
 log places the late account-preference response after the first Skill list and
 immediately before the write response. The personal list previously keyed its
-query to the live interface language; the new candidate captures that legacy
+query to the live interface language; accepted `897ba78` captures that legacy
 read hint for the open panel instead.
 
 Three additional controlled browser cases retain the real first preference
@@ -4143,8 +4164,9 @@ bytes, one write and retained success across held/failed/retried list reads.
 The original 14 cases and four-second acknowledgement assertions are unchanged.
 Four compiled-component/hook-adapter regressions cover both locale directions,
 fresh panel scope and pending upload acknowledgement; these adapters are not
-mounted-browser evidence. New cases await complete remote CI, with no local
-application test execution.
+mounted-browser evidence. Full exact-source CI `42371615326` passed all three
+new browser cases within Settings 466/466 and all four adapter cases within
+Web Node 2111/2111; no local application tests ran.
 
 `settings-skill-recovery.spec.ts` adds 14 cases on the authenticated isolated
 PostgreSQL/API fixture. It tests personal/system acknowledgement during held and

@@ -1,11 +1,12 @@
 # Natural image sizing and reading viewport stability
 
-Source contract updated **2026-11-07**; new implementation awaits exact-source CI.
+Source contract updated **2026-11-07**; exact `897ba78` passed CI `42371615326`
+and was subsequently authorized for deployment and independently rechecked.
 It supersedes the previous fixed-cell geometry, not its reading-stability gates.
-The deployed `9cf235f` / CI `42217357688` remains a separate historical acceptance:
-[release receipt](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md).
-No deployment is authorized here. Synthetic CI is not authenticated production
-UI or physical-device acceptance.
+The preceding `9cf235f` / CI `42217357688` remains a historical acceptance;
+see the [current release receipt](../execution/IMAGE_NATURAL_FLOW_RELEASE_2026-11-07.md).
+Synthetic CI and runtime checks are not authenticated production UI or
+physical-device acceptance. This contract does not authorize a future rollout.
 
 ## Geometry and saved dimensions
 

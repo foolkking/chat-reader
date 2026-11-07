@@ -1,12 +1,14 @@
 # 已知风险与不确定性
 
-## Current verification boundaries — 2026-11-06
+<a id="current-verification-boundaries--2026-11-06"></a>
+
+## Current verification boundaries — 2026-11-07
 
 Use [Project State](../../PROJECT_STATE.md) and the
-[current release record](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md)
-for exact source/CI/artifact/backup and production acceptance. Deployment itself
-did no cleanup; the subsequent separately authorized old-backup/image cleanup
-is recorded there. Runtime/direct rollback images are `9cf235f`/`67e6336`, schema
+[current release record](../execution/IMAGE_NATURAL_FLOW_RELEASE_2026-11-07.md)
+for exact source/CI/artifact/backup and production acceptance. This deployment
+did no cleanup; November 6's separately authorized cleanup is historical.
+Runtime/direct rollback images are `897ba78`/`9cf235f`, schema
 `20261105_0059`; all six exact-source CI jobs, independent artifact acceptance
 and the deployment/runtime recheck passed. Earlier uncommitted/no-deployment
 statements below describe their own checkpoints, not the current runtime.
@@ -20,24 +22,26 @@ statements below describe their own checkpoints, not the current runtime.
 - Noise protection remains bounded recognition with the limitations below;
   a passing corpus is not exhaustive Markdown/AI-adapter parity or an
   unmeasured performance guarantee.
-- The latest two retained five-component points (November 6 and November 5) were
-  reverified before and after authorized retention, not restore-drill accepted.
+- Three five-component points (November 7, 6 and 5) remain. The new stopped-writer
+  backup was independently reverified, not restore-drill accepted; previous
+  points were not re-created or pruned.
   Server-local points may share hardlinks; independent off-site recovery and
-  scheduled backups remain unconfigured. Post-cleanup check: 85% disk used,
-  6,167,416 KiB available. Future releases need fresh capacity; no broader cleanup
+  scheduled backups remain unconfigured. Post-deployment check: **92% disk used,
+  3,457,056 KiB available**. Future releases need fresh capacity; no cleanup
   or reduced headroom is authorized by this receipt.
 - Current/direct rollback images are retained, not unconditional 0059 rollback
   approval. Stop writers and check new job/data compatibility; never automatically
   downgrade. Superseded `be58b12`/`3b839dc` tags were removed; the direct
-  `67e6336` rollback already supports 0059 but still requires fresh job/data checks.
-- The 23/23 synthetic reading gate and 64 frame traces passed; zero observed
-  drift in that matrix is not universal real-device or real-library proof.
+  `9cf235f` rollback already supports 0059 but still requires fresh job/data checks.
+  Older `67e6336` images also remain; retaining them does not select them as direct rollback.
+- The 35/35 synthetic reading gate and original 64 plus 12+4/cold traces passed;
+  bounded drift in that matrix is not universal real-device or real-library proof.
   Search full-rebuild costs were measured, not eliminated or incrementally optimized.
 
 <a id="current-verification-boundaries--2026-10-29"></a>
 
 The former 2026-10-29 boundary anchor is retained for old incoming links;
-use the 2026-11-06 scope above for current release acceptance and remaining debt.
+use the 2026-11-07 scope above for current release acceptance and remaining debt.
 
 ## Historical local verification checkpoint — 2026-10-14
 
