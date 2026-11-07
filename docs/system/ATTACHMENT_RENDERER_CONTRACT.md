@@ -1,5 +1,17 @@
 # Attachment Renderer Contract
 
+## Image presentation — 2026-11-07 source candidate
+
+The [image sizing/stability contract](IMAGE_READING_STABILITY_CONTRACT.md)
+supersedes older fixed-gallery and CSS-fitted image zoom descriptions here.
+Images use source-bound geometry, one saved percentage and natural wrapping;
+long-image folding preserves width and complete exports. Controls/captions are
+outside media, with no permanent gray card. The existing Viewer uses intrinsic
+CSS-pixel zoom and a stable canvas shell; original downloads and permission
+routing are unchanged. New exact-source CI and visual acceptance are pending;
+the previous deployed release is not proof of this candidate.
+Non-image attachment tracks and preview budgets are unchanged.
+
 ## Explicit preview bounds — 2026-10-28, source only
 
 Current code has bounded browser previews for DOC (extracted body text),

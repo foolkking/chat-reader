@@ -10,7 +10,9 @@ import { createContext, memo, useCallback, useContext, useEffect, useId, useMemo
 import { Check, Copy, Maximize2, Minimize2, WrapText } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
-import type { ImageDisplay } from "../../lib/image-display";
+import type { ImageDisplay, ImageGeometry } from "../../lib/image-display";
+import { useImageSource } from "../attachments/image-presentation";
+import { AttachmentBlock } from "../attachments/attachment-block";
 import type { Components } from "react-markdown";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import type { BundledLanguage, ThemedToken } from "shiki";
@@ -51,11 +53,15 @@ export type MarkdownAttachmentOccurrence = {
   alt?: string | null;
   caption?: string | null;
   imageDisplay?: ImageDisplay;
+  imageGeometry?: ImageGeometry;
+  sourceSha256?: string;
 };
 
 const EMPTY_TASK_ITEMS: MarkdownTaskItem[] = [];
 const EMPTY_ATTACHMENT_OCCURRENCES: MarkdownAttachmentOccurrence[] = [];
 const MarkdownLinkContext = createContext(false);
+const MarkdownImageParagraphContext = createContext(false);
+const MarkdownImageTableContext = createContext(false);
 type MarkdownAttachmentContextValue = {
   byId: Map<string, MarkdownAttachmentOccurrence>;
   byKey: Map<string, MarkdownAttachmentOccurrence>;
@@ -263,7 +269,11 @@ const markdownComponents: Components & {
     if (node?.properties?.dataReaderCalloutTitle) {
       return <p {...markdownSourcePositionAttributes(node)} className="font-semibold">{children}</p>;
     }
-    return <p {...markdownSourcePositionAttributes(node)} className="break-words">{children}</p>;
+    const imageOnly = Boolean(node?.children?.length && node.children.every(child =>
+      (child.type === "element" && child.tagName === "img") || (child.type === "text" && !child.value.trim())));
+    return <p {...markdownSourcePositionAttributes(node)} className={imageOnly ? "reader-image-paragraph" : "break-words"}>
+      <MarkdownImageParagraphContext.Provider value={imageOnly}>{children}</MarkdownImageParagraphContext.Provider>
+    </p>;
   },
   pre({ children, node }) {
     return <pre {...markdownSourcePositionAttributes(node)} className="max-w-full overflow-x-auto rounded-lg border border-ui bg-[var(--code-bg)] p-4 text-[0.875em] leading-[1.65] text-primary">{children}</pre>;
@@ -271,7 +281,7 @@ const markdownComponents: Components & {
   table({ children, node }) {
     return (
       <ReaderMarkdownTable {...markdownSourcePositionAttributes(node)} node={node}>
-        <MarkdownTableContent>{children}</MarkdownTableContent>
+        <MarkdownImageTableContext.Provider value={true}><MarkdownTableContent>{children}</MarkdownTableContent></MarkdownImageTableContext.Provider>
       </ReaderMarkdownTable>
     );
   },
@@ -1015,6 +1025,8 @@ function SafeMarkdownImage({ alt, src, width, height, node }: {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const insideLink = useContext(MarkdownLinkContext);
+  const imageOnly = useContext(MarkdownImageParagraphContext);
+  const insideTable = useContext(MarkdownImageTableContext);
   const attachmentContext = useContext(MarkdownAttachmentContext);
   const attachment = resolveAttachmentFromContext(attachmentContext, src, node);
   const resolvedSrc = attachment?.contentUrl ?? attachment?.downloadUrl ?? src;
@@ -1023,22 +1035,39 @@ function SafeMarkdownImage({ alt, src, width, height, node }: {
     ? resolvedSrc
     : undefined;
   const resolvedAlt = alt ?? attachment?.alt ?? attachment?.caption ?? undefined;
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const image = useImageSource({ id: attachment?.attachmentId ?? `local:${safeSrc}`, sha256: attachment?.sourceSha256,
+    metadata: { image_display_v1: attachment?.imageDisplay, image_geometry_v1: attachment?.imageGeometry } }, imageRef);
   const occurrenceAnchor = attachment ? {
     id: `attachment-occurrence-${attachment.occurrenceKey}`,
     "data-attachment-id": attachment.attachmentId,
     "data-occurrence-key": attachment.occurrenceKey,
   } : {};
-  const safeWidth = attachment?.imageDisplay?.width ?? boundedImageDimension(width);
-  const safeHeight = attachment?.imageDisplay?.height ?? boundedImageDimension(height);
+  const safeWidth = image.size?.width ?? boundedImageDimension(width);
+  const safeHeight = image.size?.height ?? boundedImageDimension(height);
   const ratio = safeWidth && safeHeight ? `${safeWidth} / ${safeHeight}` : undefined;
   const style: CSSProperties = {
     ...safeRichHtmlStyle(node),
-    aspectRatio: ratio ?? "4 / 3",
-    width: safeWidth ? safeRichHtmlStyle(node).width ?? safeWidth : "min(100%, 320px)",
+    aspectRatio: ratio,
+    width: safeWidth ?? "auto",
     maxWidth: "100%",
-    maxHeight: "min(70svh, 40rem)",
-    objectFit: "scale-down",
+    height: "auto",
   };
+  if (imageOnly && !insideLink && !insideTable && attachment?.sourceSha256 && safeSrc && !failed) {
+    // Reuse the image UI with span-only DOM. No figure/div inside a paragraph;
+    // linked, table and prose-inline images retain their native semantics.
+    return <AttachmentBlock attachmentId={attachment.attachmentId} occurrenceKey={attachment.occurrenceKey}
+      alt={resolvedAlt ?? undefined} caption={attachment.caption ?? undefined} grouped phrasing inlinePresentation="gallery"
+      attachment={{
+        id: attachment.attachmentId, conversation_id: "", display_name: resolvedAlt || (zh ? "图片" : "Image"),
+        original_filename: "", detected_mime_type: attachment.mimeType || "image/png",
+        status: "available", scan_status: "unscanned", source_type: "markdown", resolution_status: "resolved", created_at: "",
+        content_url: safeSrc, download_url: attachment.downloadUrl,
+        asset_object: attachment.sourceSha256 ? { id: attachment.attachmentId, sha256: attachment.sourceSha256,
+          byte_size: 1, detected_mime_type: attachment.mimeType || "image/png", scan_status: "unscanned", status: "available" } : null,
+        metadata: { image_display_v1: attachment.imageDisplay, image_geometry_v1: attachment.imageGeometry },
+      }} />;
+  }
   if (!safeSrc || failed) {
     return <span {...occurrenceAnchor} className="reader-rich-image-fallback inline-flex max-w-full items-center gap-2 rounded-lg border border-dashed border-ui bg-[var(--attachment-bg)] px-2 py-1 text-[0.75em] text-secondary" role={resolvedAlt ? "img" : undefined} aria-label={resolvedAlt || undefined} style={style}>
       <span className="min-w-0 truncate">{resolvedAlt || (zh ? "图片附件" : "Image attachment")}</span>
@@ -1046,6 +1075,7 @@ function SafeMarkdownImage({ alt, src, width, height, node }: {
     </span>;
   }
   return <img
+    ref={imageRef}
     {...occurrenceAnchor}
     src={safeSrc}
     alt={resolvedAlt ?? ""}
@@ -1053,9 +1083,10 @@ function SafeMarkdownImage({ alt, src, width, height, node }: {
     height={safeHeight}
     loading="lazy"
     decoding="async"
-    className="reader-rich-image h-auto max-w-full rounded-lg object-contain"
+    className="reader-rich-image inline-block h-auto max-w-full align-middle"
     style={style}
     onError={() => setFailed(true)}
+    onLoad={event => image.onDecoded(event.currentTarget.naturalWidth, event.currentTarget.naturalHeight)}
   />;
 }
 

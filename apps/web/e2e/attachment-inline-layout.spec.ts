@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { imageGridGeometry } from "../lib/image-display";
+import { imageFlowHeight } from "../lib/image-display";
 import { resolveInlinePresentation, type AttachmentRenderPlan, type AttachmentViewerKind } from "../features/attachments/preview-adapter-registry";
 import { parseDelimitedRows } from "../features/attachments/attachment-table-policy";
 import { normalizeVisibleCaption } from "../features/attachments/attachment-caption-policy";
@@ -36,13 +36,11 @@ test("RenderPlan resolves to the six frozen inline presentations", () => {
   expect(resolveInlinePresentation(plan(null, "file-row"))).toBe("file-list");
 });
 
-test("stable gallery estimates use actual lane width and six fixed preview slots", () => {
-  for (const count of [1, 2, 3, 6, 7, 200]) for (const width of [240, 319, 320, 639, 640, 880]) {
-    const grid = imageGridGeometry(count, width);
-    expect(grid.columns).toBe(Math.min(count, width < 320 ? 1 : width < 640 ? 2 : 3));
-    expect(grid.cellWidth * grid.columns + (grid.columns - 1) * 8).toBeCloseTo(width);
-    expect(grid.height).toBe(imageGridGeometry(Math.min(6, count), width).height);
-  }
+test("natural gallery estimates preserve sizes and wrap at the actual lane boundary", () => {
+  const pair = [{ width: 300, height: 200 }, { width: 300, height: 200 }];
+  expect(imageFlowHeight(pair, 720, 900)).toBe(248);
+  expect(imageFlowHeight(pair, 607, 900)).toBe(504);
+  expect(imageFlowHeight(pair, 608, 900)).toBe(248);
 });
 
 test("lane, surface and progressive-disclosure contracts are centralized", () => {
@@ -56,7 +54,8 @@ test("lane, surface and progressive-disclosure contracts are centralized", () =>
   expect(css).toContain("--attachment-lane-files: 38rem");
   expect(css).toContain(".attachment-file-list-row + .attachment-file-list-row");
   expect(css).toContain(".attachment-audio-row + .attachment-audio-row");
-  expect(css).toContain(".attachment-gallery-trigger:hover .attachment-gallery-overlay");
+  expect(css).toContain(".attachment-image-gallery { display: flex; flex-wrap: wrap;");
+  expect(css).not.toContain(".attachment-gallery-overlay");
   expect(block).toContain("attachment-audio-row");
   expect(block).toContain("attachment-file-list-row");
   expect(block).not.toContain("Attachment: ");

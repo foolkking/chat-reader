@@ -1,5 +1,17 @@
 # PWA and Offline Resilience Contract
 
+## Optional image geometry — 2026-11-07 source candidate
+
+New v3 attachment snapshots may add `image_geometry_v1` (source SHA and
+orientation-corrected original width/height), separately from saved
+`image_display_v1`. Existing geometry is copied without reading every source.
+Both fields are validated on ingestion; absence/invalid optional values does
+not reject old packages. Existing v1/v2/v3 readers and Dexie v2 are unchanged.
+An old local copy keeps its snapshot until normal explicit update; online image
+caches never overwrite it. Browser decode can supply session-only fallback.
+See [image contract](IMAGE_READING_STABILITY_CONTRACT.md) and
+[candidate verification](../execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
+
 ## Current contract — implemented 2026-11-05, deployed 2026-11-06
 
 Exact `67e6336` passed complete CI `42043078359` and was separately deployed.

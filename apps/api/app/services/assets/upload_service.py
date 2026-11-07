@@ -218,6 +218,7 @@ def finalize_upload_items(
                 staged_path.unlink(missing_ok=True)
                 if asset.status != "available" or not scan_status_allows_use(asset.scan_status):
                     raise AttachmentUploadError("Matching asset object is unavailable.", 423)
+            from app.services.assets.image_geometry import ingested_geometry
             attachment = Attachment(
                 id=uuid.uuid4(),
                 conversation_id=conversation_id,
@@ -231,7 +232,7 @@ def finalize_upload_items(
                 scan_status=item.scan_status,
                 source_type=source_type,
                 source_attachment_id=str(item.id),
-                metadata_={},
+                metadata_=ingested_geometry(asset),
                 resolution_status="resolved",
             )
             db.add(attachment)

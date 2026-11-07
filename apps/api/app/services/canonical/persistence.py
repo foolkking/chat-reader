@@ -797,7 +797,10 @@ def _persist_canjson_attachments(
             raise CommitImportError("CanJSON attachment ids must be present and unique.")
         attachment_id = uuid.uuid4()
         mapping[source_id] = attachment_id
-        metadata = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
+        metadata = dict(raw.get("metadata")) if isinstance(raw.get("metadata"), dict) else {}
+        # Raw imports cannot assert source geometry or an owner-selected size.
+        metadata.pop("image_geometry_v1", None)
+        metadata.pop("image_display_v1", None)
         if isinstance(raw.get("asset_object"), dict):
             metadata = {**metadata, "asset_object": raw["asset_object"]}
         original_filename = Path(str(raw.get("original_filename") or raw.get("display_name") or "attachment.bin")).name
@@ -880,6 +883,8 @@ def _persist_canjson_attachments(
                     source.close()
                 if archive is not None:
                     archive.close()
+        from app.services.assets.image_geometry import ingested_geometry
+        metadata.update(ingested_geometry(asset))
         db.add(Attachment(
             id=attachment_id,
             conversation_id=conversation.id,

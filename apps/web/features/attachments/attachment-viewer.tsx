@@ -5,8 +5,8 @@ import { createPortal } from "react-dom";
 import { DismissableLayer } from "@radix-ui/react-dismissable-layer";
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ChevronLeft, ChevronRight, Download, Grid2X2, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
-import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
+import { ChevronLeft, ChevronRight, Download, Grid2X2, Loader2, Maximize2, Minimize2, PanelLeftClose, PanelLeftOpen, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ImageViewerCanvas } from "./image-viewer-canvas";
 import { getAttachment } from "../../lib/api";
 import { getOfflineAttachment, releaseOfflineAttachmentUrls } from "../../lib/offline-db";
 import type { AttachmentRead } from "../../lib/types";
@@ -184,6 +184,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
   const [contentMetrics, setContentMetrics] = useState<ViewerContentMetrics | null>(null);
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
+  const [thumbnailsExpanded, setThumbnailsExpanded] = useState(false);
   const viewport = useViewerViewport();
 
   const attachmentQuery = useQuery({
@@ -203,7 +204,9 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const viewerKind = attachment ? resolveAttachmentCapability(attachment).viewerKind : null;
   const effectiveMode = mode ?? defaultMode(viewerKind);
   const presentation = resolveViewerPresentation({ viewerKind, viewerMode: effectiveMode, itemCount: session.items.length, pdfPageCount, contentMetrics });
-  const panelStyle = viewerPresentationStyle({ ...presentation, maximized, viewport, mediaDimensions, itemCount: session.items.length });
+  const panelStyle = viewerKind === "image" && !isMobileViewerViewport(viewport) && !maximized
+    ? { width: Math.min(1100, viewport.width * .9), height: viewport.height * .9, maxWidth: "90vw", maxHeight: "90dvh" }
+    : viewerPresentationStyle({ ...presentation, maximized, viewport, mediaDimensions, itemCount: session.items.length });
   const mobileFullscreen = isMobileViewerViewport(viewport);
 
   useLayoutEffect(() => {
@@ -304,7 +307,7 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
         style={panelStyle}
       >
         <header className="flex min-h-14 flex-wrap items-center gap-2 border-b border-ui px-3 py-1 sm:px-4">
-          <button ref={closeRef} type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={onClose} aria-label={zh ? "关闭附件查看器" : "Close attachment viewer"} title={zh ? "关闭" : "Close"}><X className="h-5 w-5" /></button>
+          <button ref={closeRef} type="button" className={`${viewerKind === "image" ? "order-last " : ""}inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle`} onClick={onClose} aria-label={zh ? "关闭附件查看器" : "Close attachment viewer"} title={zh ? "关闭" : "Close"}><X className="h-5 w-5" /></button>
           <div className="min-w-32 flex-1">
             <h2 className="truncate text-sm font-semibold text-primary" title={attachment?.display_name}>{attachment?.display_name ?? (zh ? "正在加载附件" : "Loading attachment")}</h2>
             <p className="truncate text-xs text-secondary">{attachment ? `${friendlyAttachmentType(attachment, zh)} · ${formatBytes(attachment.asset_object?.byte_size ?? 0)}${attachment.scan_status === "scanner_disabled" || attachment.scan_status === "unscanned" ? (zh ? " · 未扫描" : " · Not scanned") : ""}` : ""}{session.items.length > 1 ? ` · ${index + 1} / ${session.items.length}` : ""}</p>
@@ -314,13 +317,14 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
             {viewerKind === "table" ? <><ModeButton active={effectiveMode === "table"} onClick={() => setMode("table")}>{zh ? "表格" : "Table"}</ModeButton><ModeButton active={effectiveMode === "table-raw"} onClick={() => setMode("table-raw")}>{zh ? "原文" : "Raw"}</ModeButton></> : null}
           </div>
           {!mobileFullscreen ? <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" onClick={() => setMaximized((value) => !value)} aria-label={maximized ? (zh ? "退出最大化" : "Exit fullscreen") : (zh ? "最大化查看器" : "Maximize viewer")} title={maximized ? (zh ? "退出最大化" : "Exit fullscreen") : (zh ? "最大化查看器" : "Maximize viewer")}>{maximized ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}</button> : null}
-          {session.permissions.downloadOriginal && attachment?.download_url ? <a href={attachment.download_url} download className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? `下载 ${attachment.display_name}` : `Download ${attachment.display_name}`} title={zh ? "下载" : "Download"}><Download className="h-5 w-5" /></a> : null}
-          {viewerKind === "image" && session.items.length > 1 ? <button type="button" className="hidden h-11 shrink-0 items-center gap-1 rounded-md px-3 text-sm text-secondary hover:bg-subtle sm:inline-flex" onClick={() => setMode("image-overview")} aria-label={zh ? "查看全部图片" : "View all images"} title={zh ? "查看全部图片" : "View all images"}><Grid2X2 className="h-4 w-4" />{zh ? "全部" : "All"}</button> : null}
+          {session.permissions.downloadOriginal && attachment?.download_url ? <a href={attachment.download_url} download className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={viewerKind === "image" ? (zh ? `下载原图 ${attachment.display_name}` : `Download original ${attachment.display_name}`) : (zh ? `下载 ${attachment.display_name}` : `Download ${attachment.display_name}`)} title={viewerKind === "image" ? (zh ? "下载原图" : "Download original") : (zh ? "下载" : "Download")}><Download className="h-5 w-5" /></a> : null}
+          {viewerKind === "image" && session.items.length > 1 ? <><button type="button" className="inline-flex h-11 shrink-0 items-center gap-1 rounded-md px-3 text-sm text-secondary hover:bg-subtle" onClick={() => setMode("image-overview")} aria-label={zh ? "查看全部图片" : "View all images"}><Grid2X2 className="h-4 w-4" />{zh ? "全部" : "All"}</button>
+            {mobileFullscreen ? <button type="button" className="attachment-inline-action" aria-expanded={thumbnailsExpanded} onClick={() => setThumbnailsExpanded(value => !value)}>{zh ? "缩略图" : "Thumbnails"}</button> : null}</> : null}
         </header>
         <div className="min-h-0 overflow-hidden overscroll-contain" data-testid="attachment-viewer-content">
           {attachmentQuery.isPending ? <div className="flex h-full items-center justify-center text-secondary"><Loader2 className="h-5 w-5 animate-spin" /></div> : attachmentQuery.isError || !attachment ? <ViewerError zh={zh} message={zh ? "附件无法加载。" : "The attachment could not be loaded."} onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : offlineUnavailable ? <ViewerError zh={zh} message={zh ? "离线资源未缓存。重新联网或更新离线副本后重试。" : "This attachment is not cached offline. Reconnect or update the offline copy, then retry."} onRetry={() => void attachmentQuery.refetch()} downloadUrl={undefined} /> : <ViewerBody key={`${item.itemKey}:${attachmentIdentity}`} attachment={attachment} kind={viewerKind} mode={effectiveMode} onModeChange={setMode} session={session} activeIndex={index} onSelect={(next) => { setActiveKey(session.items[next]?.itemKey ?? activeKey); setMode("image-focus"); }} onPrevious={() => setActiveIndex(-1)} onNext={() => setActiveIndex(1)} onMediaDimensions={setMediaDimensions} onPdfPageCount={setPdfPageCount} onComplexPresentationMetrics={setContentMetrics} toolbarHost={toolbarHost} zh={zh} />}
         </div>
-        {viewerKind === "image" && session.items.length > 1 && effectiveMode !== "image-overview" ? <div className="flex min-h-16 gap-2 overflow-x-auto border-t border-ui bg-subtle p-2" role="list" aria-label={zh ? "图片缩略图列表" : "Image thumbnails"}>{session.items.map((candidate, candidateIndex) => <ViewerThumbnail key={candidate.itemKey} item={candidate} access={access} active={candidate.itemKey === activeKey} label={zh ? `第 ${candidateIndex + 1} 张` : `Image ${candidateIndex + 1}`} onClick={() => { setActiveKey(candidate.itemKey); setMode("image-focus"); }} />)}</div> : null}
+        {viewerKind === "image" && session.items.length > 1 && effectiveMode !== "image-overview" && (!mobileFullscreen || thumbnailsExpanded) ? <div className="flex min-h-16 gap-2 overflow-x-auto border-t border-ui bg-subtle p-2" role="list" aria-label={zh ? "图片缩略图列表" : "Image thumbnails"}>{session.items.map((candidate, candidateIndex) => <ViewerThumbnail key={candidate.itemKey} item={candidate} access={access} active={candidate.itemKey === activeKey} label={zh ? `第 ${candidateIndex + 1} 张` : `Image ${candidateIndex + 1}`} onClick={() => { setActiveKey(candidate.itemKey); setMode("image-focus"); }} />)}</div> : null}
       </section>
     </div>
     </DismissableLayer>,
@@ -342,7 +346,7 @@ function ViewerBody({ attachment: sourceAttachment, kind, mode, onModeChange, se
   if ((attachment.asset_object?.byte_size ?? 0) > 50 * 1024 * 1024) {
     return <ViewerError zh={zh} message={zh ? "文件超过 50 MiB 浏览器预览上限。" : "This file exceeds the 50 MiB browser preview limit."} downloadUrl={downloadUrl} />;
   }
-  if (kind === "image") return <ImageViewer attachment={attachment} session={session} activeIndex={activeIndex} mode={mode === "image-overview" ? "overview" : "focus"} onSelect={onSelect} onPrevious={onPrevious} onNext={onNext} onMediaDimensions={onMediaDimensions} zh={zh} />;
+  if (kind === "image") return <ImageViewer attachment={attachment} session={session} activeIndex={activeIndex} mode={mode === "image-overview" ? "overview" : "focus"} onSelect={onSelect} onPrevious={onPrevious} onNext={onNext} zh={zh} />;
   if (kind === "markdown") return <TextualViewer attachment={attachment} mode={mode === "markdown-source" ? "source" : "rendered"} onModeChange={onModeChange} markdown zh={zh} />;
   if (kind === "code") return <TextualViewer attachment={attachment} mode="source" onModeChange={onModeChange} code zh={zh} />;
   if (kind === "json") return <JsonViewer attachment={attachment} zh={zh} />;
@@ -356,7 +360,7 @@ function ViewerBody({ attachment: sourceAttachment, kind, mode, onModeChange, se
   return <TextualViewer attachment={attachment} mode="source" onModeChange={onModeChange} zh={zh} />;
 }
 
-function ImageViewer({ attachment, session, activeIndex, mode, onSelect, onPrevious, onNext, onMediaDimensions, zh }: { attachment: AttachmentRead; session: AttachmentViewerSession; activeIndex: number; mode: "focus" | "overview"; onSelect: (index: number) => void; onPrevious: () => void; onNext: () => void; onMediaDimensions: (dimensions: ViewerMediaDimensions) => void; zh: boolean }) {
+function ImageViewer({ attachment, session, activeIndex, mode, onSelect, onPrevious, onNext, zh }: { attachment: AttachmentRead; session: AttachmentViewerSession; activeIndex: number; mode: "focus" | "overview"; onSelect: (index: number) => void; onPrevious: () => void; onNext: () => void; zh: boolean }) {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const attachmentIdentity = attachmentAssetIdentity(attachment);
@@ -366,21 +370,9 @@ function ImageViewer({ attachment, session, activeIndex, mode, onSelect, onPrevi
   }, [attachmentIdentity]);
   if (mode === "overview") return <div className="h-full overflow-y-auto overscroll-contain p-4" data-testid="image-overview"><div className="columns-2 gap-3 md:columns-3 lg:columns-4">{session.items.map((item, index) => <ViewerOverviewImage key={item.itemKey} item={item} access={session.access ?? { kind: "owner" }} index={index} onSelect={onSelect} zh={zh} />)}</div></div>;
   if (failed) return <ViewerError zh={zh} message={zh ? "无法加载图片预览。" : "The image preview could not be loaded."} onRetry={() => { setFailed(false); setAttempt((value) => value + 1); }} downloadUrl={attachment.download_url ?? undefined} />;
-  return (
-    <div className="relative flex h-full min-h-0 items-center justify-center bg-black p-4" data-testid="image-focus">
-      <TransformWrapper key={attachmentIdentity} initialScale={1} minScale={0.25} maxScale={8} centerOnInit doubleClick={{ mode: "toggle", step: 1 }} wheel={{ step: 0.12 }} panning={{ disabled: false }}>
-        {({ zoomIn, zoomOut, resetTransform }) => (
-          <>
-            <TransformComponent wrapperClass="!h-full !w-full" contentClass="flex !h-full !w-full items-center justify-center">
-              <img src={retryableUrl(attachment.content_url, attempt)} alt={session.items[activeIndex]?.alt ?? attachment.display_name} className="max-h-full max-w-full object-contain" onLoad={(event) => onMediaDimensions({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} onError={() => setFailed(true)} />
-            </TransformComponent>
-            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1 rounded-lg bg-black/70 p-1 text-white"><button type="button" className="h-11 w-11 rounded-md" onClick={() => resetTransform()} aria-label={zh ? "适应窗口" : "Fit to window"} title={zh ? "适应窗口" : "Fit to window"}><RotateCcw className="mx-auto h-4 w-4" /></button><button type="button" data-viewer-zoom="out" className="h-11 w-11 rounded-md" onClick={() => zoomOut()} aria-label={zh ? "缩小" : "Zoom out"} title={zh ? "缩小" : "Zoom out"}><ZoomOut className="mx-auto h-4 w-4" /></button><button type="button" data-viewer-zoom="in" className="h-11 w-11 rounded-md" onClick={() => zoomIn()} aria-label={zh ? "放大" : "Zoom in"} title={zh ? "放大" : "Zoom in"}><ZoomIn className="mx-auto h-4 w-4" /></button></div>
-          </>
-        )}
-      </TransformWrapper>
-      {session.items.length > 1 ? <><button type="button" onClick={onPrevious} className="absolute left-2 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full bg-black/60 text-2xl text-white" aria-label={zh ? "上一张" : "Previous image"}>‹</button><button type="button" onClick={onNext} className="absolute right-2 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full bg-black/60 text-2xl text-white" aria-label={zh ? "下一张" : "Next image"}>›</button></> : null}
-    </div>
-  );
+  return <ImageViewerCanvas key={`${attachmentIdentity}:${attempt}`} src={retryableUrl(attachment.content_url, attempt)}
+    alt={session.items[activeIndex]?.alt ?? attachment.display_name} zh={zh} onError={() => setFailed(true)}
+    onPrevious={session.items.length > 1 ? onPrevious : undefined} onNext={session.items.length > 1 ? onNext : undefined} />;
 }
 
 function ViewerOverviewImage({ item, access, index, onSelect, zh }: { item: AttachmentViewerItem; access: AttachmentAccess; index: number; onSelect: (index: number) => void; zh: boolean }) {

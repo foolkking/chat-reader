@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Grid2X2 } from "lucide-react";
 import { getAttachment } from "../../lib/api";
@@ -11,8 +11,6 @@ import { AttachmentBlock, toViewerItem, type AttachmentBlockProps } from "./atta
 import { useAttachmentViewer, type AttachmentViewerItem } from "./attachment-viewer";
 import { registerReaderBlockReveal } from "../conversations/block-virtualization";
 import { usePreferences } from "../../components/preferences-provider";
-import { IMAGE_DISPLAY_CHANGED_EVENT, validatedImageDisplay, type ImageDisplay } from "../../lib/image-display";
-import { authenticationGeneration } from "../../lib/offline-access";
 import { registerRenderedBlock } from "../conversations/rendered-block-registry";
 import {
   attachmentAssetIdentity,
@@ -40,14 +38,6 @@ type PresentationRun = {
   presentation: InlinePresentation;
   items: ResolvedItem[];
 };
-
-// Owned by a message, not by an individual virtual row. Late metadata must not
-// change an unknown frame merely because that row left and re-entered the DOM.
-const ImageFrames = createContext<Map<string, ImageDisplay | null> | null>(null);
-export function ImageFrameScope({ children }: { children: ReactNode }) {
-  const [frames] = useState(() => new Map<string, ImageDisplay | null>());
-  return <ImageFrames.Provider value={frames}>{children}</ImageFrames.Provider>;
-}
 
 export function AttachmentInlineGroup({ items }: { items: AttachmentInlineGroupItem[] }) {
   const access = useAttachmentAccess();
@@ -193,29 +183,6 @@ function StableImageGallery({ items, galleryItems, onRuntimeChange, onShowAll }:
   onShowAll: (trigger: HTMLElement) => void;
 }) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
-  const access = useAttachmentAccess();
-  const frames = useContext(ImageFrames);
-  const frameKey = `${access.kind}:${items[0]?.input.itemKey}`;
-  // Late metadata/decode does not resize an already mounted unknown frame.
-  // Only an explicit owner save changes that reading frame.
-  const [singleSize, setSingleSize] = useState(() => {
-    if (frames?.has(frameKey)) return frames.get(frameKey) ?? null;
-    const attachment = items[0]?.attachment;
-    const size = validatedImageDisplay(attachment?.metadata?.image_display_v1, attachment?.asset_object?.sha256) ?? null;
-    frames?.set(frameKey, size);
-    return size;
-  });
-  useEffect(() => {
-    if (access.kind !== "owner" || items.length !== 1) return;
-    const changed = (event: Event) => {
-      const detail = (event as CustomEvent<{ attachmentId: string; display: ImageDisplay; generation: number }>).detail;
-      if (detail?.generation !== authenticationGeneration() || detail.attachmentId !== items[0].input.attachmentId) return;
-      const value = validatedImageDisplay(detail.display, items[0].attachment?.asset_object?.sha256);
-      if (value) { frames?.set(frameKey, value); setSingleSize(value); }
-    };
-    window.addEventListener(IMAGE_DISPLAY_CHANGED_EVENT, changed);
-    return () => window.removeEventListener(IMAGE_DISPLAY_CHANGED_EVENT, changed);
-  }, [access.kind, items, frames, frameKey]);
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
   useEffect(() => {
     const releases = items.map(({ input }) => input.messageId && input.blockIndex !== undefined
@@ -229,10 +196,6 @@ function StableImageGallery({ items, galleryItems, onRuntimeChange, onShowAll }:
     ? revealed && !items.slice(0, 5).includes(revealed) ? [...items.slice(0, 4), revealed] : items.slice(0, 5)
     : items;
   return <div className="attachment-image-gallery" data-gallery-count={Math.min(items.length, 6)} data-single-image={items.length === 1 ? "true" : undefined}
-    style={{
-      "--single-image-width": `${singleSize?.width ?? 320}px`,
-      "--single-image-ratio": (singleSize?.width ?? 4) / (singleSize?.height ?? 3),
-    } as CSSProperties}
     data-testid="attachment-group" data-attachment-group="gallery">
     {visible.map(resolved => <GalleryCell key={resolved.input.itemKey} item={resolved.input}>
       <AttachmentBlock {...resolved.input} attachment={resolved.attachment} inlinePresentation="gallery"

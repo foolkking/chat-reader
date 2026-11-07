@@ -1,5 +1,14 @@
 # Markdown 文档台账
 
+## 图片尺寸可信与自然排版 — 2026-11-07 源码候选
+
+沿用当前 Next.js/FastAPI/PostgreSQL monorepo 文档结构，有界更新：
+`IMAGE_READING_STABILITY_CONTRACT.md` 取代过时固定 4:3/冻结未知框/640×1600
+建议，保持真实锚点及 64 条证据标准；同步复制、附件、离线、API 和测试合同。
+状态、两级索引及本台账区分新源码候选与已部署 `9cf235f`；
+新增 execution 映射与精确 CI 回执入口。未改写旧发布/失败历史、
+AGENTS、用户审查或 evidence；新 CI、视觉和真实设备验收不由源码推断。
+
 ## 发布后单独授权的备份／镜像清理 — 2026-11-06
 
 沿用 Next.js/FastAPI/PostgreSQL monorepo 文档结构，仅同步运维事实：

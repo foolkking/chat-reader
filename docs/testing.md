@@ -1,5 +1,30 @@
 # Testing
 
+## Natural image flow — 2026-11-07 source candidate
+
+New full exact-source CI is required; the 2026-11-06 pass below belongs to the
+previous deployed implementation. This task runs no local application services,
+builds or application tests. TypeScript without incremental output and ESLint
+are static checks, not browser/API acceptance.
+
+The existing `reading-stability` workflow gate also runs
+`image-natural-flow.spec.ts`: at least 27 cases plus the unchanged **64** complete
+frame traces. Actual image pixels replace obsolete 4:3-cell assertions; known
+media geometry still changes at most 1px, reading anchors at most 2px peak/1px
+settled. Missing legacy geometry may normalize rather than freeze forever.
+New cases exercise 300/500px images, 607/608px row boundaries, default/explicit
+100%, session-persistent long folds, tiny/transparent images, real Viewer modes
+and Markdown semantics at 375/800/1440px. Images contain synthetic text,
+diagram/table structure and transparency, not private material.
+
+The workflow additionally runs `image-scale-slider-browser.mjs` with mounted
+controls, real CSS and mouse/keyboard/touch; only its API transport is adapted.
+API geometry tests cover read-only lookup, no bulk scanning, source allowlists,
+EXIF orientation, blocked assets, authentication and encoded-byte admission.
+Existing resize/animation/SVG/public URL/old offline package suites remain.
+First status read is at least 50 minutes after each dispatch; no schedules or
+deployment. See [implementation and receipts](execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
+
 Only the top exact-source section and [Project State](../PROJECT_STATE.md)
 describe the current release. Dated results below retain their original
 checkpoint scope; a historical candidate/failure is neither a new work order

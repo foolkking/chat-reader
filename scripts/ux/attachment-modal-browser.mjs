@@ -59,6 +59,7 @@ export const getConversationAttachments=async()=>[window.syntheticAttachment];
 export const getCapabilities=async()=>({attachments:{upload_enabled:false}});
 export const getOfflineAttachment=outsideScope,releaseOfflineAttachmentUrls=outsideScope;
 export const getImageDisplay=outsideScope,setImageDisplay=outsideScope,uploadMessageCopyPreview=outsideScope;
+export class ApiRequestError extends Error {}
 export const createAttachmentUploadSession=outsideScope,deleteConversationAttachment=outsideScope,
   finalizeConversationAttachments=outsideScope,getAttachmentUploadSession=outsideScope,updateConversationAttachment=outsideScope,
   uploadAttachmentItem=outsideScope,loadPdfJs=outsideScope;

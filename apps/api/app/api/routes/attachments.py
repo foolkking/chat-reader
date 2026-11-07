@@ -47,6 +47,7 @@ from app.services.assets.attachment_service import (
     AttachmentAccessError,
     attachment_content,
     attachment_read,
+    attachment_read_with_geometry,
     get_owner_attachment,
     get_share_attachment,
 )
@@ -590,7 +591,7 @@ def get_attachment_metadata(
     db: Session = Depends(get_db),
 ) -> AttachmentRead:
     try:
-        return attachment_read(get_owner_attachment(db, attachment_id, ownership_scope_from_request(request)))
+        return attachment_read_with_geometry(get_owner_attachment(db, attachment_id, ownership_scope_from_request(request)))
     except AttachmentAccessError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
@@ -678,7 +679,7 @@ def get_shared_attachment_metadata(
     try:
         share = resolve_accessible_share(db, token, request.cookies.get("chat_reader_share_unlock"))
         attachment = get_share_attachment(db, share, attachment_id)
-        return attachment_read(attachment, content_prefix=f"/api/shared/{token}/attachments")
+        return attachment_read_with_geometry(attachment, content_prefix=f"/api/shared/{token}/attachments")
     except (AttachmentAccessError, ShareError) as exc:
         raise HTTPException(status_code=getattr(exc, "status_code", 404), detail=str(exc)) from exc
 

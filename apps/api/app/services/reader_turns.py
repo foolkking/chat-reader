@@ -358,6 +358,9 @@ def _block_read(
                     "imageDisplay": (
                         (attachment_reads[link.attachment_id] or {}).get("metadata") or {}
                     ).get("image_display_v1"),
+                    "imageGeometry": (
+                        (attachment_reads[link.attachment_id] or {}).get("metadata") or {}
+                    ).get("image_geometry_v1"),
                     "sourceSha256": (
                         (attachment_reads[link.attachment_id] or {}).get("asset_object") or {}
                     ).get("sha256"),

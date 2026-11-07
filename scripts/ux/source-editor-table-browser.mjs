@@ -90,6 +90,7 @@ export const createAttachmentUploadSession=outsideScope,deleteAttachmentUploadIt
   deleteConversationAttachment=outsideScope,finalizeConversationAttachments=outsideScope,
   getConversation=outsideScope,getConversationReaderTurn=outsideScope,uploadAttachmentItem=outsideScope;
 export const getImageDisplay=outsideScope,setImageDisplay=outsideScope,uploadMessageCopyPreview=outsideScope;
+export class ApiRequestError extends Error {}
 export const ContentCleanupDialog=({open})=>open?outsideScope():null;`);
 // Count actual parser component entries without substituting its implementation.
 // Callback-only rerenders should update editable cells, not parse the same source.

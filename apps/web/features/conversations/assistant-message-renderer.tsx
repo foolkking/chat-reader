@@ -2,7 +2,7 @@
 
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { defaultRangeExtractor, useVirtualizer, useWindowVirtualizer } from "@tanstack/react-virtual";
-import { imageGridGeometry, validatedImageDisplay } from "../../lib/image-display";
+import { imageFlowHeight, imageTargetSize } from "../../lib/image-display";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { BlockRenderer } from "./block-renderer";
 import { extractMarkdownTaskItems, MarkdownRenderer, ThinkingDisclosure, stripLeadingTimestamp, type MarkdownTaskItem } from "./markdown-renderer";
@@ -11,7 +11,7 @@ import { notifyReaderWindowLayoutChanged, READER_WINDOW_LAYOUT_EVENT, registerVi
 import { registerRenderedBlock } from "./rendered-block-registry";
 import type { AttachmentViewerItem } from "../attachments/attachment-viewer";
 import { embeddedAttachment } from "../attachments/attachment-block";
-import { AttachmentInlineGroup, ImageFrameScope, type AttachmentInlineGroupItem } from "../attachments/attachment-inline-layout";
+import { AttachmentInlineGroup, type AttachmentInlineGroupItem } from "../attachments/attachment-inline-layout";
 import {
   DEFAULT_READER_BLOCK_LAYOUT_METRICS,
   estimateReaderBlockSize,
@@ -85,7 +85,7 @@ export function AssistantMessageRenderer({
   }
 
   return (
-    <ImageFrameScope key={`${message.id}:${message.current_version?.id}`}><div ref={flowRef} className="reader-block-flow break-words">
+    <div key={`${message.id}:${message.current_version?.id}`} ref={flowRef} className="reader-block-flow break-words">
       {leadingThinking ? (
         <div className="reader-block-slot">
           <ThinkingDisclosure label={leadingThinking.label} text={leadingThinking.text} richTextProfile={richTextProfile ?? undefined}>
@@ -136,7 +136,7 @@ export function AssistantMessageRenderer({
         );
       })}
       {visibleBlocks.length === 0 ? null : null}
-    </div></ImageFrameScope>
+    </div>
   );
 }
 
@@ -275,14 +275,11 @@ function estimateDisplayUnit(unit: DisplayUnit | undefined, metrics: ReaderBlock
   if (!unit) return metrics.lineHeight * 3.5;
   if (unit.kind !== "attachment-group") return estimateReaderBlockSize(unit.blocks[0], metrics, stripLeadingTimestamp(unit.blocks[0]?.plain_text ?? ""));
   if (unit.blocks.every(isImageAttachment)) {
-    if (unit.blocks.length > 1) return imageGridGeometry(unit.blocks.length, metrics.contentWidth).height;
-    const block = unit.blocks[0];
-    const attachment = embeddedAttachment(block.data.attachment, String(block.data.attachmentId ?? ""));
-    const size = validatedImageDisplay(attachment?.metadata?.image_display_v1, attachment?.asset_object?.sha256);
-    const ratio = size ? size.width / size.height : 4 / 3;
-    const maxHeight = Math.min(640, (typeof window === "undefined" ? 900 : window.innerHeight) * .7);
-    const width = Math.min(metrics.contentWidth, Math.max(76, size?.width ?? 320), Math.max(76, maxHeight * ratio));
-    return Math.max(44, Math.min(width / ratio, maxHeight));
+    return imageFlowHeight(unit.blocks.map(block => {
+      const attachment = embeddedAttachment(block.data.attachment, String(block.data.attachmentId ?? ""));
+      const size = imageTargetSize(attachment?.metadata, attachment?.asset_object?.sha256);
+      return size ? { ...size, caption: Boolean(block.data.caption && block.data.caption !== attachment?.display_name) } : undefined;
+    }), metrics.contentWidth, typeof window === "undefined" ? 900 : window.innerHeight);
   }
   return unit.blocks.reduce((height, block) => height + estimateReaderBlockSize(block, metrics), 0);
 }

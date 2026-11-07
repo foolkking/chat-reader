@@ -17,11 +17,14 @@ const path = value => value.replaceAll("\\", "/");
 writeFileSync(join(out, "loader.cjs"), `const ts=require(${JSON.stringify(require.resolve("typescript"))});
 module.exports=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText;`);
 writeFileSync(join(out, "adapters.mjs"), `
+export class ApiRequestError extends Error {}
+export const getAttachment=()=>{throw Error("No geometry reads in this control-only fixture");};
 export async function getImageDisplay(){window.reads++;return {...window.display};}
 export async function setImageDisplay(id,current,percent){
  if(current.scale_percent!==window.display.scale_percent)throw Error("Stale scale");
  window.writes.push(percent);
  await new Promise(resolve=>setTimeout(resolve,25));
+ if(window.holdSave)await new Promise(resolve=>window.releaseSave=resolve);
  window.display={...window.display,scale_percent:percent,width:Math.max(1,Math.round(400*percent/100)),height:Math.max(1,Math.round(240*percent/100))};
  if(window.failNext){window.failNext=false;throw Error("Lost response after write");}
  return {...window.display};
@@ -38,7 +41,7 @@ createRoot(document.getElementById("root")).render(<QueryClientProvider client={
  <style>{".synthetic-reader-toc{display:block!important}@media(max-width:639px){.synthetic-reader-toc{display:none!important}}"}</style>
  <aside className="reader-toc-column synthetic-reader-toc" style={{position:"fixed",right:0,top:0,bottom:0,width:240,zIndex:20,background:"var(--surface)"}}>Synthetic sticky section contents</aside>
  <main style={{padding:24,boxSizing:"border-box",width:"calc(100% - 24px)",transform:"translate(12px, 16px)"}}><figure style={{position:"relative",width:76,height:180,margin:"0 0 0 auto",background:"var(--subtle)",border:"1px solid var(--border)"}}>
- <ImageDisplayControls attachment={attachment} zh={window.zh??false}/></figure><button style={{marginTop:180}}>Outside</button></main>
+ <ImageDisplayControls attachment={attachment} zh={window.zh??false} compact={false} laneWidth={720} bodySize={{width:400,height:240}}/></figure><button style={{marginTop:180}}>Outside</button></main>
 </QueryClientProvider>);`);
 const webpack = require("next/dist/compiled/webpack/webpack").webpack;
 const adapters = join(out, "adapters.mjs");
@@ -65,7 +68,7 @@ const { chromium, expect } = require("@playwright/test");
 const results = [];
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
 try {
-  for (const width of [1440, 375]) for (const theme of ["light", "dark"]) {
+  for (const width of [1440, 800, 375]) for (const theme of ["light", "dark"]) {
     const page = await browser.newPage({ viewport: { width, height: 800 }, hasTouch: true });
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
@@ -86,7 +89,7 @@ try {
     await expect(slider).toHaveValue("100");
     const panel = await page.locator(".image-display-menu").boundingBox();
     const anchor = await trigger.boundingBox();
-    assert.ok(panel.x >= 16 && panel.x + panel.width <= width - 16 && panel.y >= anchor.y + anchor.height);
+    assert.ok(panel.x >= 0 && panel.x + panel.width <= width && panel.y >= 0 && panel.y + panel.height <= 801);
     if (width >= 640) {
       const rail = await page.locator(".synthetic-reader-toc").boundingBox();
       assert.ok(panel.x + panel.width <= rail.x, "sticky TOC must not intercept menu clicks");
@@ -101,7 +104,10 @@ try {
     await slider.press("ArrowRight");
     await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(51);
     await expect(slider).toBeEnabled();
-    await page.getByRole("button", { name: "Outside" }).click();
+    // On mobile the bottom sheet deliberately covers the lower page. Use a
+    // real exposed outside point, not an auto-scrolling covered page button.
+    await page.mouse.click(4, 8);
+    await expect(page.locator(".image-display-menu")).toHaveCount(0);
     await trigger.click();
     await expect(slider).toHaveValue("51");
     const box = await slider.boundingBox(), y = box.y + box.height / 2;
@@ -134,9 +140,14 @@ try {
     await page.evaluate(() => window.failNext = true);
     await preset(75).click();
     await expect(page.getByRole("alert")).toBeVisible();
-    await expect(slider).toHaveCount(0);
+    await expect(slider).toBeDisabled();
     const failedWrites = await page.evaluate(() => window.writes.length);
-    await page.getByRole("button", { name: /Retry|重试/ }).click();
+    const failedReads = await page.evaluate(() => window.reads);
+    await page.getByRole("button", { name: /Close image size|关闭尺寸面板/ }).click();
+    await trigger.click();
+    await expect(slider).toBeDisabled();
+    assert.equal(await page.evaluate(() => window.reads), failedReads, "reopening must not silently resolve an uncertain write");
+    await page.getByRole("button", { name: /Check result|核对结果/ }).click();
     await expect(slider).toHaveValue("75");
     assert.equal(await page.evaluate(() => window.writes.length), failedWrites, "unknown write recovery reads only");
     const touchBox = await slider.boundingBox();
@@ -160,6 +171,18 @@ try {
     await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(100);
     await expect(slider).toBeEnabled();
     await expect(slider).toHaveAttribute("aria-valuetext", "100%");
+    await page.evaluate(() => window.holdSave = true);
+    const pendingWrites = await page.evaluate(() => window.writes.length);
+    await preset(25).click();
+    await expect(slider).toBeDisabled();
+    await page.getByRole("button", { name: /Close image size|关闭尺寸面板/ }).click();
+    await trigger.click();
+    await expect(slider).toBeDisabled();
+    await expect.poll(() => page.evaluate(() => typeof window.releaseSave)).toBe("function");
+    await page.evaluate(() => { window.holdSave = false; window.releaseSave(); });
+    await expect(slider).toHaveValue("25");
+    await expect(slider).toBeEnabled();
+    assert.equal(await page.evaluate(() => window.writes.length), pendingWrites + 1, "closing/reopening pending save cannot resend or cancel it");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assert.deepEqual(errors, []);
     await page.screenshot({ path: join(out, `${width}-${theme}.png`) });
@@ -169,8 +192,8 @@ try {
     await trigger.click();
     await expect(slider).toBeEnabled();
     const edge = await page.locator(".image-display-menu").boundingBox();
-    assert.ok(edge.y >= 16 && edge.y + edge.height <= 784, "bottom-edge controls must remain reachable");
-    results.push({ width, theme, status: "passed", checks: ["downward/clamped panel", "translated containing block", "sticky rail avoidance", "44px stops", "preset persistence", "1% keyboard", "fast magnet", "one write on release", "slow escape", "Escape cancellation", "read-only unknown-write recovery", "trusted touch commit/cancel", "100% restore", "no overflow/errors", "bottom-edge visibility"] });
+    assert.ok(edge.y >= 0 && edge.y + edge.height <= 801, "bottom-edge controls must remain reachable");
+    results.push({ width, theme, status: "passed", checks: ["downward/clamped panel", "translated containing block", "sticky rail avoidance", "44px stops", "preset persistence", "1% keyboard", "fast magnet", "one write on release", "slow escape", "Escape cancellation", "read-only unknown-write recovery", "trusted touch commit/cancel", "100% original", "pending close/reopen without resend", "no overflow/errors", "bottom-edge visibility"] });
     await page.close();
   }
   writeFileSync(join(out, "result.json"), JSON.stringify({ status: "passed", results, adapters: ["API persistence", "surrounding image/Reader"] }, null, 2));

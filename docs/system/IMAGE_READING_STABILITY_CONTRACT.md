@@ -1,50 +1,100 @@
-# Image previews and reading viewport stability
+# Natural image sizing and reading viewport stability
 
-Source contract updated **2026-11-06**. Exact source `9cf235f` passed all six jobs
-in CI `42217357688`, including 14 Web gates and 23/23 reading-stability cases.
-All five artifacts and 64 frame traces were independently verified.
-The later authorized deployment is recorded in the
-[release receipt](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md);
-synthetic CI is not authenticated production UI or real-device acceptance.
+Source contract updated **2026-11-07**; new implementation awaits exact-source CI.
+It supersedes the previous fixed-cell geometry, not its reading-stability gates.
+The deployed `9cf235f` / CI `42217357688` remains a separate historical acceptance:
+[release receipt](../execution/IMAGE_READING_STABILITY_RELEASE_2026-11-06.md).
+No deployment is authorized here. Synthetic CI is not authenticated production
+UI or physical-device acceptance.
 
 ## Geometry and saved dimensions
 
-- Single images retain their aspect ratio, fit the reading lane and a maximum
-  preview height of `min(70svh, 640px)`. Small image pixels are never enlarged.
-  The View target remains usable independently of the image's pixel dimensions.
-- Multiple images occupy 4:3 rectangles, with 8px gaps, containing rather than
-  cropping/stretching the image. Actual lane width selects one column below
-  320px, two below 640px, otherwise three; never more columns than images.
+- Original geometry and the owner's saved percentage are separate. Optional
+  `image_geometry_v1` contains only source SHA and orientation-corrected original
+  width/height. It is not a saved size, derivative or public capability.
+  New authorized/scanned uploads/imports inspect bounded headers; raw imports
+  cannot assert reserved geometry or saved-display metadata.
+- Existing owner/Share/admin **single-attachment** detail reads may inspect
+  missing geometry, without database writes. Lists, complete turns and offline
+  generation only carry existing geometry, never scan all historical files.
+  Inspection rejection leaves existing original access intact.
+- Visible online images deduplicate reads with at most four geometry requests
+  in flight. Cache identity includes access scope, SHA and authentication
+  generation. Browser decode is a session-only fallback; offline uses its own
+  snapshot and never issues these online reads.
+- Saved pixels use `max(1, floor((original * percent + 50) / 100))`.
+  Body width is `min(saved width, lane width)` and height is proportional.
+  Default 100% and explicitly saved 100% have identical layout. Unknown sources
+  start at 320×240 but normalize when geometry arrives; no frozen unknown frame.
+- Multi-image flow preserves source order and requested widths, wrapping with
+  an 8px gap, centered rows and top alignment. No fixed columns, 4:3 cells,
+  stretching or height-driven width reduction. In a 720px lane, two 300px
+  images share a row; two 500px images do not. Legacy small/medium/large fields
+  remain readable but no longer add hidden size limits.
 - More than six uses five images plus Overview. A navigation lease for a hidden
   occurrence substitutes that actual image into the fifth slot; it does not
   expand the entire group or substitute another image's DOM ID.
-- Trusted source-bound saved dimensions reserve space before decode. An unknown
-  single image uses a maximum 320px-wide 4:3 frame, retained across virtual-row
-  remounts within the message's reading window. Success/failure/retry do not
-  repartition image groups. Controls/captions/errors do not resize their cells.
-- Existing 1–100% settings remain. The explicit “Apply reading size” command
-  selects the largest integer percentage fitting 640×1600px. Integer half-up
-  rounding is `max(1, floor((original * percent + 50) / 100))` on both sides.
-  If 1% cannot fit there is no recommendation. This is not a new manual limit.
-- Only explicit save/slider commit writes. Reading, copying, window resizing
-  and gallery layout do not save percentages. The menu shows original, saved,
-  draft and recommended pixels, and retains Restore 100%.
-- Same saved dimensions govern single preview and public Markdown image.
-  Multi-image cells may further shrink that preview. Existing public image
-  URLs still follow latest saved dimensions; external layout is not controlled.
-  Originals, Viewer bytes, download and `.cr` are not replaced by grids.
+- A ratio of at least 2:1 and displayed height above `min(70svh, 640px)` folds
+  the image's lower content, never its width. Expand/collapse controls sit below
+  the image. Expansion uses body scrolling and survives virtual remounts in
+  query-client session memory, scoped to authority/source/real occurrence.
+  Collapse preserves the shared live anchor; a reading point in the hidden
+  portion explicitly navigates to the actual image start.
+- Media has no permanent gray backing, rounded crop or decorative padding.
+  Captions and error/retry actions are outside its reserved geometry; failure
+  does not repartition the image run. Image pixels remain 32×24 when appropriate;
+  only the interaction container has a 44px minimum. Fitted images disclose the
+  lane limit. Different percentages above the lane width need not change the
+  screen width.
+- Image-only attachment paragraphs reuse span-only image UI. Prose-inline,
+  linked and table images retain document semantics and shared dimensions:
+  no figure/div in paragraphs and no buttons nested inside links.
 
 `image-display` source SHA/expected-percentage checks, row locking, conversion
 slot and byte/pixel/format safety limits remain. A failed conversion never
 silently relaxes those limits. Permission remains distinct: owner can save;
 Share, Offline, admin-read and read-only Compare cannot show write controls.
 
+## Controls and temporary viewing
+
+Size and View actions are below media; under 240px they become one persistent
+44px Image options entry. A root-portal 320px size panel captures its opening
+anchor, avoids Reader rails and stays in the viewport; under 640px it becomes
+a safe-area-aware bottom sheet. Existing focus/closing mechanisms return to the
+live trigger with `preventScroll`, never scroll to find a retired trigger.
+
+Slider movement and numeric drafts change only the panel. Release commits once;
+presets commit once; numeric Enter/blur deduplicate. Percentages remain 1–100,
+with 25/50/75/100 stops and 100 labelled Original. “Fit current column” saves
+a concrete integer, not an automatic mode. The panel distinguishes original,
+draft-selection and currently displayed body pixels. Existing conversion bounds
+still constrain the fit suggestion; they are not enlarged to satisfy a target.
+
+Shared attachment/source/auth-scoped pending state prevents duplicate writes.
+Closing during submission does not cancel or undo the server write. Success
+updates all owner references. An uncertain network/server result blocks writes
+until an explicit read-only Check result; it never automatically resends.
+Conflict, limits, unsupported formats and busy conversion have separate messages.
+Saving updates prior public URLs but does not publish an image.
+
+The existing Viewer and react-zoom-pan-pinch use intrinsic image pixels as the
+transform base. Original 1:1 means one image pixel per **CSS pixel**, not physical
+screen pixels. Fit to window uses actual canvas dimensions; Fit to width starts
+at the top. Fit modes do not upscale small images. Manual zoom does not save.
+Canvas controls/navigation are outside image content, with 44px targets, a
+narrow-screen mode selector and explicit mobile thumbnails. Desktop thumbnails
+remain visible by default. Light/dark/checker backgrounds inspect transparency
+without changing exported bytes. The image shell is viewport-sized and does not
+follow image decode or zoom. Download actions identify the unchanged original.
+
 ## Offline and canonical copy
 
-Package v3 attachment records optionally carry `image_display_v1`, validated
+Package v3 attachment records optionally carry `image_display_v1` and
+`image_geometry_v1`, validated
 against the asset SHA, positive bounded integer dimensions and exact rounding.
-Unknown/invalid optional dimensions degrade to the stable placeholder, not an
-import failure. No Dexie schema change: version 2 and package v1/v2/v3 remain.
+Unknown/invalid optional dimensions use a temporary placeholder and can fall
+back to local decode, not an import failure. No Dexie schema change: version 2
+and package v1/v2/v3 remain.
 An actual saved-size change atomically increments the conversation's offline
 revision. Existing offline copies retain their package snapshot until a normal
 explicit update; online query data cannot override it. Embedded Markdown
@@ -88,7 +138,7 @@ that scroller through the return frame, then releases it for a fresh geometry
 anchor; there is no deferred loop restoring a stale scroll position. Initial
 and fallback modal focus use `preventScroll`.
 
-Ordinary and heavy messages share image display units and grid estimates.
+Ordinary and heavy messages share image display units and natural-flow estimates.
 Measured row caches survive ordinary image/content resize; width/font/density
 changes may remeasure. Code tokenization retains the same inline newline/blank
 line geometry as fallback. Late Mermaid/content height changes are covered by
@@ -108,13 +158,14 @@ geometry owner before releasing the virtual target pin, including cancellation.
 
 `reading-stability` is a required release browser gate, not optional evidence.
 The synthetic matrix covers Reader/Share/Offline/Compare, 375/1440px,
-normal/virtual messages, delayed/reordered/failing/retried images, grid sizes,
+normal/virtual messages, delayed/reordered/failing/retried images, actual sizes,
 Viewer return, forward/backward reading, real hidden-occurrence navigation,
 saved-size/offline revision isolation and baseline/Compare recovery.
 
 Each stationary case records every animation-frame anchor, mounted count,
 scroll coordinate, frame dimensions and compensation source. Required peak
-anchor displacement ≤2 CSS px, final ≤1px, fixed image frame change ≤1px.
+anchor displacement ≤2 CSS px, final ≤1px, known media geometry change ≤1px.
+Missing legacy geometry may normalize once rather than retain a wrong frame.
 Directional samples inspect both the real anchor and scroll coordinate, not
 only the final screenshot. Each of the 16 matrix entries also retains a
 full-frame Viewer open/close trace with the same peak/final displacement
@@ -130,9 +181,15 @@ fixture assets exist in its own package/cache. Lazy offscreen images are not
 misreported as broken because no request has begun; controlled visible images
 must decode successfully, not merely report `complete`.
 `verify-reading-stability.mjs` rejects missing traces, missing cases, skipped
-cases and invalid evidence. Existing navigation,
+cases and invalid evidence. At least 27 cases include four new integration cases
+for actual 300/500px image widths, 607/608px wrap boundaries, default/saved 100%,
+virtual long-image folding, intrinsic Viewer modes, tiny/transparent images,
+semantic Markdown and 375/800/1440px panels. Synthetic PNGs contain bitmap text,
+diagram blocks, table lines and optional transparency, not just solid colors.
+The mounted control browser gate covers themes/locales and trusted mouse,
+touch, keyboard, cancellation and uncertain writes. Existing navigation,
 capacity, memory, security, copy and offline gates remain required.
 
-See [execution record](../execution/IMAGE_READING_STABILITY_2026-11-06.md)
+See [execution record](../execution/IMAGE_NATURAL_FLOW_2026-11-07.md)
 for the current verification boundary, and
 [Markdown copy](MESSAGE_MARKDOWN_COPY_CONTRACT.md) for publication/security.

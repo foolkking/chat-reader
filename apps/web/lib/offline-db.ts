@@ -4,7 +4,7 @@ import { assertOfflineAccess, captureOfflineAccess, lockOfflineAccess } from "./
 import { assertOfflineWritable } from "./offline-write-guard";
 import { ingestReadingPosition } from "./reading-position-sync";
 import { readOfflineContinuation, type OfflineContinuation } from "./offline-continuation";
-import { validatedImageDisplay, type ImageDisplay } from "./image-display";
+import { validatedImageDisplay, validatedImageGeometry, type ImageDisplay, type ImageGeometry } from "./image-display";
 import type {
   AnnotationRead,
   AnnotationSyncOperation,
@@ -73,6 +73,7 @@ export type OfflineOutboxRecord = Omit<AnnotationSyncOperation, "entity_type"> &
 type OfflineSetting = { key: string; value: unknown };
 export type OfflineAttachmentRecord = {
   image_display_v1?: ImageDisplay | null;
+  image_geometry_v1?: ImageGeometry | null;
   id: string;
   conversation_id: string;
   message_id: string | null;
@@ -807,6 +808,7 @@ export async function importOfflinePackage(packageId: string, response: Response
           await bulkPutChunked(db.attachments, raw.attachments.map((attachment) => ({
             ...attachment, conversation_id: raw.id,
             image_display_v1: validatedImageDisplay(attachment.image_display_v1, attachment.sha256),
+            image_geometry_v1: validatedImageGeometry(attachment.image_geometry_v1, attachment.sha256),
           })));
         }
       }
@@ -1129,7 +1131,8 @@ function offlineAttachmentRead(record: OfflineAttachmentRecord, contentUrl: stri
     scan_status: record.scan_status ?? "unscanned",
     source_type: "offline_package",
     source_attachment_id: record.id,
-    metadata: { offline_resource_available: cached, image_display_v1: validatedImageDisplay(record.image_display_v1, record.sha256) },
+    metadata: { offline_resource_available: cached, image_display_v1: validatedImageDisplay(record.image_display_v1, record.sha256),
+      image_geometry_v1: validatedImageGeometry(record.image_geometry_v1, record.sha256) },
     resolution_status: record.resolution_status === "missing"
       ? "missing"
       : cached

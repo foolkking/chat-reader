@@ -461,6 +461,8 @@ const tablePresentation = compileComponent("../../apps/web/features/conversation
 const clipboardCopy = compileComponent("../../apps/web/components/use-clipboard-copy.ts", {});
 const thinkingSummary = (await load("../../apps/web/features/conversations/thinking-summary.ts")).module;
 const renderer = compileComponent("../../apps/web/features/conversations/markdown-renderer.tsx", {
+  "../attachments/image-presentation": { useImageSource: () => ({ onDecoded: () => {} }) },
+  "../attachments/attachment-block": { AttachmentBlock: () => null },
   "@assistant-ui/react": uiAdapter,
   "@assistant-ui/react-markdown": uiAdapter,
   "lucide-react": new Proxy({}, { get: () => () => null }),

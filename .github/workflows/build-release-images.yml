@@ -187,6 +187,12 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/attachment-modal-browser.mjs
 
+      - name: Image size commit, recovery and responsive controls
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/image-scale-slider-browser.mjs
+
       - name: Context and Skill upload proxy transport
         run: |
           sudo apt-get update
@@ -314,7 +320,7 @@ jobs:
           PLAYWRIGHT_GATE_ID: reading-stability
           E2E_READING_STABILITY: "1"
         run: |
-          pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reading-stability.spec.ts
+          pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reading-stability.spec.ts e2e/image-natural-flow.spec.ts
           node scripts/ci/verify-reading-stability.mjs
 
       - name: PDF.js maintained-line browser checks
@@ -423,6 +429,8 @@ jobs:
             ${{ runner.temp }}/worker.log
             ${{ runner.temp }}/attachment-modal-final/result.json
             ${{ runner.temp }}/attachment-modal-final/*.png
+            ${{ runner.temp }}/image-scale-slider-browser/result.json
+            ${{ runner.temp }}/image-scale-slider-browser/*.png
             apps/web/playwright-report
             apps/web/test-results
           if-no-files-found: warn

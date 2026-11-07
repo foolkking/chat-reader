@@ -1,8 +1,21 @@
 # Project State
 
-Last synchronized: **2026-11-06**. Current facts and verification boundaries only;
+Last synchronized: **2026-11-07**. Current facts and verification boundaries only;
 dated implementation, CI failures and release narratives belong in execution records.
 Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
+
+## Current source candidate — natural image sizing
+
+The 2026-11-07 candidate replaces fixed preview cells with source-bound original
+geometry, one saved percentage, source-order wrapping and width-preserving long
+image folding. Controls commit on release; Viewer zoom measures intrinsic CSS
+pixels. Optional offline v3 geometry does not change Dexie v2 or older package
+reads. This is **not a deployed release or completed CI acceptance**.
+[Current contract](docs/system/IMAGE_READING_STABILITY_CONTRACT.md) /
+[implementation and verification](docs/execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
+The required CI retains all 64 frame traces and adds four integration cases;
+no local application tests/services, new dependencies, migration, schedules or
+production operations are authorized in this task.
 
 ## Release and runtime
 
@@ -24,7 +37,7 @@ No migration or Dexie upgrade; existing offline copies retain their own snapshot
 | Database | Production single head/current `20261105_0059`, unchanged this release; prior private-search backfill remains committed, 52/52 |
 | Verification / delivery | API 6072 passed / 3 optional skipped; Web Node 2092/2092 and 14/14 gates; reading 23/23 with 64 traces; settings 463 plus isolated restore 1; capacity baseline/candidate 9/9; exact-image 320 MiB memory gate passed. No local application tests, production build or raw ZIP replay; separately authorized retention is recorded below |
 
-The current release adds fixed image previews, explicit reading-size suggestions,
+The deployed release adds fixed image previews, explicit reading-size suggestions,
 offline dimension snapshots and unified reading compensation, retaining the
 consolidated authentication/offline and recovery consistency work, bounded small-ZIP memory path and structured failure/retry
 handling. Qualifying single-document archives use 192 MiB effective-free admission,

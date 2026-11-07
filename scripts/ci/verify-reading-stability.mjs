@@ -6,7 +6,7 @@ const root = process.argv[2] ?? "apps/web/test-results/reading-stability";
 const gate = JSON.parse(readFileSync(join(root, "gate-evidence.json"), "utf8"));
 assert.equal(gate.gate_id, "reading-stability");
 assert.equal(gate.status, "passed");
-assert.ok(gate.test_count >= 23);
+assert.ok(gate.test_count >= 27, "Existing stability cases plus all four natural-flow integration cases must run.");
 assert.equal(gate.result_counts.passed, gate.test_count, "Every new gate case must actually run.");
 for (const status of ["skipped", "failed", "timedOut", "interrupted"]) assert.equal(gate.result_counts[status], 0);
 const files = readdirSync(root, { recursive: true }).filter(name => /(?:stopped|down|up|viewer)-frames\.json$/.test(name));

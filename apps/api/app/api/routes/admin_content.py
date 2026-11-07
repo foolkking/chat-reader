@@ -22,7 +22,7 @@ from app.models.search_document import SearchDocument
 from app.models.user import User
 from app.schemas.attachment import AttachmentRead
 from app.schemas.message import ReaderTurnResponse
-from app.services.assets.attachment_service import AttachmentAccessError, attachment_content, attachment_read
+from app.services.assets.attachment_service import AttachmentAccessError, attachment_content, attachment_read, attachment_read_with_geometry
 from app.services.reader_turns import ReaderTurnHydrationError, load_reader_turn_from_query
 
 
@@ -272,7 +272,7 @@ def read_user_attachment_metadata(
     _audit(db, request, actor_user_id=actor.id, action="VIEW_USER_ATTACHMENT", target_user_id=user_id,
            resource_type="ATTACHMENT", resource_id=attachment_id)
     db.commit()
-    return attachment_read(row, content_prefix=f"/api/admin/content/users/{user_id}/attachments")
+    return attachment_read_with_geometry(row, content_prefix=f"/api/admin/content/users/{user_id}/attachments")
 
 
 @router.get("/users/{user_id}/attachments/{attachment_id}/content")

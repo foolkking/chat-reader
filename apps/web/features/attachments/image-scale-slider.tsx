@@ -101,9 +101,9 @@ export function ImageScaleSlider({ value, disabled, zh, onChange, onCommit, onCa
     />
     <div className="image-scale-stops" role="group" aria-label={zh ? "常用比例" : "Common scales"}>
       {IMAGE_SCALE_STOPS.map(percent => <button key={percent} type="button"
-        className="image-scale-stop" style={{ left: `${(percent - 1) / 99 * 100}%` }}
-        disabled={disabled} aria-pressed={value === percent} onClick={() => { onChange(percent); onCommit(percent); }}>
-        {percent}%
+        className="image-scale-stop"
+        disabled={disabled} aria-label={`${percent}%`} aria-pressed={value === percent} onClick={() => { onChange(percent); onCommit(percent); }}>
+        {percent}%{percent === 100 ? <span className="block text-xs">{zh ? "原图" : "Original"}</span> : null}
       </button>)}
     </div>
   </div>;

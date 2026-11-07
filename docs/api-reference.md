@@ -59,6 +59,18 @@ PATCH 为 `FROZEN_SHARE_RECLAIMED`（409），不可复活。见
 | `GET /api/attachments/{attachment_id}/image-display` | Original/source-bound dimensions and selected percentage; no mutation. Returns `source_sha256`, `scale_percent`, `original_width`, `original_height`, `width`, `height`, `configured` (false before explicit save). |
 | `PUT /api/attachments/{attachment_id}/image-display` | JSON `{source_sha256, scale_percent, expected_scale_percent}`; percentages strict whole integers 1–100. Returns the same shape with `configured: true`. 409 stale source/selection or missing safe SVG preview; 413 bounds; 422 invalid/animated input; 429 conversion slot busy; retryable 503 storage conflict. |
 
+**Optional original geometry (2026-11-07 source candidate):** attachment metadata
+may include `image_geometry_v1: {source_sha256, original_width, original_height}`.
+It is source-bound, orientation-corrected, read-only geometry, not evidence of a
+saved percentage. Existing owner, Share and admin single-attachment GET routes
+may inspect missing geometry after their existing authorization/scanning checks;
+they do not write metadata, generate derivatives or publish URLs. Failed bounded
+inspection leaves existing original access available. Full-turn/list serializers
+only carry already-stored geometry. New authorized uploads/imports populate it;
+raw import metadata cannot assert reserved geometry/display fields. Offline v3
+may snapshot it without changing package/Dexie versions. See the
+[image contract](system/IMAGE_READING_STABILITY_CONTRACT.md).
+
 The existing public-image URL follows the selected intrinsic size without
 changing token; original content/download stay unchanged. See the
 [current contract](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md#owner-selected-image-size)

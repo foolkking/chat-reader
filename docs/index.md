@@ -1,10 +1,17 @@
 # 文档导航
 
-入口同步：**2026-11-06**。先读 [Project State](../PROJECT_STATE.md) 和
+入口同步：**2026-11-07**。先读 [Project State](../PROJECT_STATE.md) 和
 [AGENTS](../AGENTS.md)，再进入任务专题。当前代码、配置与 migration 是真值；
 带日期的 planning/execution/evidence 只说明各自检查点，不能当成新工作指令。
 
 ## 当前状态与验收边界
+
+11 月 7 日图片自然排版为新源码候选：原始几何与保存比例分离、自然换行、
+长图折叠而不缩窄、松手保存及真实 CSS 像素 Viewer。尚未完成新精确 CI，
+不能沿用昨日通过结果；无部署授权。见
+[现行源码合同](system/IMAGE_READING_STABILITY_CONTRACT.md)、
+[实施与验证](execution/IMAGE_NATURAL_FLOW_2026-11-07.md)。
+仍保留 64 条逐帧证据与原位移阈值；每次派发后至少 50 分钟首次回查，不创建安排。
 
 11 月 6 日图片/阅读稳定性及七项追加审查已通过精确 CI `42217357688`：
 六项 job、14 项 Web 门禁、阅读 23/23 与 64 条逐帧轨迹、五份制品独立核验。
@@ -54,6 +61,7 @@ CI 回查保持暂停，没有创建或恢复安排。
 | --- | --- |
 | 导入格式／ZIP／小内存恢复 | [Adaptive Import](system/ADAPTIVE_IMPORT_CONTRACT.md)、[Archive Import](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md) |
 | 正文与富内容 | [Rich Markdown](system/AI_RICH_MARKDOWN_CONTRACT.md)、[附件](system/ATTACHMENT_RENDERER_CONTRACT.md)、[消息 Markdown 复制](system/MESSAGE_MARKDOWN_COPY_CONTRACT.md) |
+| 图片尺寸／自然排版／长图／Viewer | [图片与阅读稳定性](system/IMAGE_READING_STABILITY_CONTRACT.md)；源码候选、CI 和生产边界分别记录 |
 | 收藏／批注／标签／数据语义 | [功能清单](system/FEATURE_INVENTORY.md)、[数据与存储](system/DATA_AND_STORAGE.md)、[API](api-reference.md) |
 | 页面／导航／阅读流程 | [路由地图](system/PAGE_AND_ROUTE_MAP.md)、[用户流程](system/USER_FLOWS.md)、[前端架构](system/FRONTEND_ARCHITECTURE.md) |
 | 编辑与上传 | [后端/API](system/BACKEND_AND_API.md)、[Source Editor 上传原子性](system/SOURCE_EDITOR_UPLOAD_ATOMICITY_CONTRACT.md) |

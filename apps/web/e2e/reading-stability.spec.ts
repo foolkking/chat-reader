@@ -1,5 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page, type TestInfo } from "@playwright/test";
-import { deflateSync } from "node:zlib";
+import { syntheticImage as png } from "./synthetic-image";
 import { writeFile } from "node:fs/promises";
 import { settingsAppearance } from "./settings-test-helper";
 
@@ -11,26 +11,6 @@ test.use({ trace: "off", serviceWorkers: "allow", extraHTTPHeaders: { Origin: "h
 type Fixture = { id: string; messageId: string; assets: string[]; shareId: string; token: string };
 const fixtures: Fixture[] = [];
 let normal: Fixture, heavy: Fixture, other: Fixture;
-
-function png(width: number, height: number) {
-  const chunk = (name: string, data: Buffer) => {
-    const type = Buffer.from(name), crcBytes = Buffer.concat([type, data]);
-    let crc = 0xffffffff;
-    for (const byte of crcBytes) {
-      crc ^= byte;
-      for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
-    }
-    const length = Buffer.alloc(4), checksum = Buffer.alloc(4);
-    length.writeUInt32BE(data.length); checksum.writeUInt32BE((crc ^ 0xffffffff) >>> 0);
-    return Buffer.concat([length, type, data, checksum]);
-  };
-  const header = Buffer.alloc(13);
-  header.writeUInt32BE(width); header.writeUInt32BE(height, 4); header[8] = 8; header[9] = 2;
-  const pixels = Buffer.alloc((width * 3 + 1) * height, 110);
-  for (let row = 0; row < height; row++) pixels[row * (width * 3 + 1)] = 0;
-  return Buffer.concat([Buffer.from("89504e470d0a1a0a", "hex"), chunk("IHDR", header),
-    chunk("IDAT", deflateSync(pixels)), chunk("IEND", Buffer.alloc(0))]);
-}
 
 async function seed(request: APIRequestContext, long: boolean, label: string): Promise<Fixture> {
   const created = await request.post("/api/conversations", { data: {
@@ -53,7 +33,7 @@ async function seed(request: APIRequestContext, long: boolean, label: string): P
     expect(finalized.status()).toBe(201);
     const asset = (await finalized.json()).items[0];
     fixture.assets.push(asset.id);
-    // Both a known saved frame and an unknown legacy frame occur in each group.
+    // Both saved sizes and unsaved source geometry occur in each group.
     if (index % 2) {
       const display = await (await request.get(`/api/attachments/${asset.id}/image-display`)).json();
       const save = await request.put(`/api/attachments/${asset.id}/image-display`, { data: {
@@ -182,7 +162,7 @@ async function startProbe(anchor: Locator) {
         mounted: root.querySelectorAll("[data-block-index]").length,
         measuredRows: Array.from(root.querySelectorAll<HTMLElement>('[data-virtualized-block-list="true"] > [data-index]'))
           .map(row => [Number(row.dataset.index), row.getBoundingClientRect().height]),
-        cells: Array.from(root.querySelectorAll(".attachment-gallery-cell")).map(cell => {
+        cells: Array.from(root.querySelectorAll(".attachment-gallery-media")).map(cell => {
           const rect = cell.getBoundingClientRect(); return [rect.width, rect.height];
         }),
       });
@@ -253,7 +233,7 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
       for (const done of release.reverse()) { done(); await frames(page, 2); }
       if (surface !== "offline") {
         expect(imageRequests).toBeGreaterThan(0);
-        await expect(article.getByText("Image preview unavailable. Its place is preserved.").first()).toBeAttached();
+        await expect(article.getByText("Image preview unavailable.").first()).toBeAttached();
         // Invoke without scrolling the page: failure recovery must not itself
         // move the anchor to the failed image above the reading line.
         await article.getByRole("button", { name: "Retry preview", exact: true }).first().evaluate((button: HTMLButtonElement) => button.click());
@@ -364,7 +344,7 @@ test("Compare deep navigation leases a real virtual block; URL and opposite scro
   await expect(right.getByRole("heading", { name: "Synthetic geometry normal" })).toBeVisible();
 });
 
-test("all group sizes use lane-based 4:3 slots and preserve full images at every width", async ({ page }, info) => {
+test("all group sizes preserve image pixels with natural source-order wrapping", async ({ page }, info) => {
   await page.goto(`/conversations/${normal.id}`);
   await expectReaderReady(page.getByTestId("reader-scroll-root"));
   const article = page.locator(`#message-${normal.messageId}`);
@@ -377,26 +357,36 @@ test("all group sizes use lane-based 4:3 slots and preserve full images at every
     for (let index = 0; index < counts.length; index++) {
       const group = groups.nth(index);
       await group.scrollIntoViewIfNeeded();
-      const geometry = await group.evaluate(node => {
-        const cells = Array.from(node.querySelectorAll(".attachment-gallery-cell")).map(cell => {
-          const box = cell.getBoundingClientRect(); return { width: box.width, height: box.height };
-        });
-        return { width: node.getBoundingClientRect().width, columns: getComputedStyle(node).gridTemplateColumns.split(" ").length, cells };
-      });
-      const count = counts[index], visible = count > 6 ? 5 : count;
-      expect(geometry.cells).toHaveLength(visible);
-      expect(geometry.columns).toBe(count === 1 ? 1 : Math.min(count, geometry.width < 320 ? 1 : geometry.width < 640 ? 2 : 3));
-      if (count > 1) for (const cell of geometry.cells) expect(Math.abs(cell.height - cell.width * .75)).toBeLessThanOrEqual(1);
-      else expect(geometry.cells[0].width).toBeLessThanOrEqual(320);
-      await expect.poll(() => group.locator("img").evaluateAll(images => images.every(image => (image as HTMLImageElement).complete))).toBe(true);
+      await expect(group.locator(".attachment-gallery-cell")).toHaveCount(counts[index] > 6 ? 5 : counts[index]);
+      // Visit each real lazy image before inspecting decode, including groups
+      // now taller than the viewport. Geometry is measured on img, not cells.
       for (const image of await group.locator("img").all()) {
-        expect(await image.evaluate(node => {
+        await image.locator('xpath=..').scrollIntoViewIfNeeded();
+        await expect.poll(() => image.evaluate(node => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+        const measured = await image.evaluate(node => {
           const image = node as HTMLImageElement, box = image.getBoundingClientRect();
-          return image.naturalWidth > 0 && box.width <= image.naturalWidth + 1 && box.height <= image.naturalHeight + 1
-            && getComputedStyle(image).objectFit === "scale-down";
-        })).toBe(true);
+          const lane = image.closest(".attachment-image-gallery")!.getBoundingClientRect().width;
+          const media = image.closest(".attachment-gallery-media")!.getBoundingClientRect();
+          const savedWidth = Number(image.getAttribute("width")), savedHeight = Number(image.getAttribute("height"));
+          return { width: box.width, height: box.height, expectedWidth: Math.min(savedWidth, lane),
+            expectedHeight: Math.min(savedWidth, lane) * savedHeight / savedWidth, mediaHeight: media.height,
+            naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight };
+        });
+        expect(Math.abs(measured.width - measured.expectedWidth)).toBeLessThanOrEqual(1);
+        expect(Math.abs(measured.height - measured.expectedHeight)).toBeLessThanOrEqual(1);
+        expect(measured.width).toBeLessThanOrEqual(measured.naturalWidth + 1);
+        if (measured.naturalWidth === 240) { expect(measured.width).toBe(240); expect(measured.mediaHeight).toBeLessThanOrEqual(640); }
+        if (measured.naturalWidth === 32) expect(measured.width).toBe(32);
+      }
+      const boxes = await group.locator(".attachment-gallery-cell").evaluateAll(nodes => nodes.map(node => {
+        const box = node.getBoundingClientRect(); return { x: box.x, y: box.y, right: box.right };
+      }));
+      for (let i = 1; i < boxes.length; i++) {
+        expect(boxes[i].y).toBeGreaterThanOrEqual(boxes[i - 1].y - 1);
+        if (Math.abs(boxes[i].y - boxes[i - 1].y) < 1) expect(boxes[i].x - boxes[i - 1].right).toBeCloseTo(8, 0);
       }
     }
+    await groups.first().scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`groups-${width}.png`) });
   }
 });
@@ -464,12 +454,14 @@ test("explicit reading size updates online references but not an existing offlin
   await expectReaderReady(page.getByTestId("reader-scroll-root"));
   const image = page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"]`).first();
   await image.getByRole("button", { name: /Image display scale:/ }).click();
-  await expect(image.getByText("Original pixels", { exact: true })).toBeVisible();
-  await image.getByRole("button", { name: "Apply reading size", exact: true }).click();
-  await expect(image.getByRole("status")).toHaveText("Image size saved.");
+  const menu = page.getByRole("dialog", { name: "Image size", exact: true });
+  await expect(menu.getByText("Original pixels", { exact: true })).toBeVisible();
+  await menu.getByRole("button", { name: "Fit current column", exact: true }).click();
+  await expect(menu.getByRole("status")).toHaveText("Saved");
   const selected = await (await page.request.get(`/api/attachments/${normal.assets[1]}/image-display`)).json();
-  expect(selected.scale_percent).toBe(40);
-  expect([selected.width, selected.height]).toEqual([640, 480]);
+  const lane = await image.evaluate(node => node.closest(".attachment-lane")!.clientWidth);
+  expect(selected.width).toBeLessThanOrEqual(lane);
+  expect(Math.max(1, Math.floor((1600 * (selected.scale_percent + 1) + 50) / 100))).toBeGreaterThan(lane);
   await page.goto(`/library?conversationId=${normal.id}`);
   await expect(page.locator(`#message-${normal.messageId}`)).toBeVisible();
   await expectReaderReady(page.getByTestId("reader-scroll-root"));
@@ -481,16 +473,16 @@ test("explicit reading size updates online references but not an existing offlin
   await expect(update.or(expandSidebar)).toBeVisible();
   if (await expandSidebar.isVisible()) await expandSidebar.click();
   await update.click();
-  await expect.poll(snapshot).toBe(40);
+  await expect.poll(snapshot).toBe(selected.scale_percent);
   await expectOfflineCopyReady(page, normal);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"] img`).first()).toHaveAttribute("width", "640");
+  await expect(page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"] img`).first()).toHaveAttribute("width", String(selected.width));
   await page.screenshot({ path: info.outputPath("updated-offline-snapshot.png") });
   await context.setOffline(false);
   // Restore only this synthetic fixture for later cases.
   expect((await page.request.put(`/api/attachments/${normal.assets[1]}/image-display`, { data: {
-    source_sha256: selected.source_sha256, scale_percent: 25, expected_scale_percent: 40,
+    source_sha256: selected.source_sha256, scale_percent: 25, expected_scale_percent: selected.scale_percent,
   } })).ok()).toBe(true);
 });
 

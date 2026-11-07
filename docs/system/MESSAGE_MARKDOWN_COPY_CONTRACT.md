@@ -105,13 +105,14 @@ operation, not automatic image rollback.
 
 ## Owner-selected image size
 
-An owner can open the compact percentage control floating at the lower-right
-of an inline attachment image and adjust a continuous, whole **1–100%** slider.
-The panel prefers the space below its trigger, clamps to the viewport at
-edges and avoids visible sticky Reader rails. Placement accounts for the
-translated content column's fixed containing block; it does not add explanatory
-copy to the reading surface. Four labelled,
-44px preset targets also select **25/50/75/100%** directly.
+An owner opens the persistent Size control **below** the image (Image options
+below 240px), with numeric entry and a continuous, whole **1–100%** slider.
+The root-portal panel captures its opening position, clamps to the viewport
+and avoids visible Reader rails, independently of virtual-row transforms.
+Below 640px it is a bottom sheet. Four labelled 44px preset targets select
+**25/50/75/100%**, with 100% labelled Original rather than a duplicate reset.
+Original, selected and current body pixels are shown separately. “Fit current
+column” saves a concrete percentage, never a second automatic sizing mode.
 
 Pointer attraction uses raw position/time, never the previous snapped value:
 fast movement (at least 0.12 percentage points/ms) captures within 4 points and
@@ -125,8 +126,12 @@ values are not magnetized. Native assistive-technology changes remain supported.
 The displayed percentage previews locally while dragging; no intermediate
 derivatives or public URLs are written. Pointer release or keyboard key-up
 commits once through the existing owner API. A cancelled/lost-capture gesture
-or Escape discards the local draft. Save failure blocks changes until a fresh
-read confirms server state. The slider remains open after a successful save.
+or Escape discards the unsubmitted local draft. Number Enter/blur deduplicate.
+Save failure blocks changes until a fresh read confirms server state; unknown
+results require explicit read-only Check result and are never automatically
+resent. Closing during submission does not cancel the server write. Shared
+source/auth-scoped pending state prevents duplicate submissions across references.
+The slider remains open after a successful save.
 The percentage is relative to the original, never the last resized result.
 Dimensions are rounded to the nearest pixel, with a one-pixel minimum. Raster
 EXIF orientation is applied before determining width/height. The original file,
@@ -140,10 +145,13 @@ attachment-scoped generator version; there is **no migration** (head stays
 both source hash and expected current percentage under an attachment row lock;
 a stale save returns 409 with a read-before-retry instruction.
 
-All inline references to **the same attachment** use the saved size, with a
-container/preview-height cap; multi-image 4:3 cells can further shrink it.
-The explicit 640×1600 reading-size suggestion, fixed preview frames and offline
-v3 snapshot/revision behavior are in the [image reading contract](IMAGE_READING_STABILITY_CONTRACT.md).
+All inline references to **the same attachment** use the saved size, constrained
+only by actual lane width. Natural wrapping does not shrink images to force a
+row. Long images fold lower content without reducing width; public bytes remain
+complete. Optional `image_geometry_v1` supplies original pixels before any save,
+so default and explicit 100% have the same layout. Geometry lookup, natural flow,
+temporary Viewer zoom and offline v3 snapshots are specified in the
+[image reading contract](IMAGE_READING_STABILITY_CONTRACT.md).
 This is not a different saved setting for each occurrence.
 The image retains its selected visual pixel size even below 44px; only its
 existing View trigger keeps a 44px minimum hit area for touch/keyboard access.

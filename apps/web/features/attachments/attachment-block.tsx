@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Download, ExternalLink, File, FileAudio, FileImage, FileText, FileVideo, Loader2, RotateCcw } from "lucide-react";
 import { getAttachment } from "../../lib/api";
@@ -10,12 +11,13 @@ import { usePreferences } from "../../components/preferences-provider";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import { normalizeVisibleCaption } from "./attachment-caption-policy";
 import { useAttachmentAccess } from "./attachment-access";
-import { ImageDisplayControls, useImageDisplay } from "./image-display-controls";
+import { ImageDisplayControls } from "./image-display-controls";
+import { useBodyImage } from "./image-presentation";
+import { navigateMountedTarget } from "../conversations/reader-navigation";
 import {
   attachmentAssetIdentity,
   buildAttachmentRenderPlan,
   friendlyAttachmentType,
-  imageDisplayMaxWidth,
   normalizeImageDisplayMode,
   resolveAttachmentCapability,
   resolveInlinePresentation,
@@ -45,6 +47,8 @@ export type AttachmentBlockProps = {
   grouped?: boolean;
   imageHint?: boolean;
   singleImage?: boolean;
+  /** Markdown image-only paragraphs must remain phrasing content. */
+  phrasing?: boolean;
   galleryItemStyle?: CSSProperties;
   onImageRatio?: (ratio: number, naturalWidth: number) => void;
   onRuntimeChange?: (state: AttachmentRuntimeRenderState) => void;
@@ -151,26 +155,36 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: 
   zh: boolean;
   unavailable: boolean;
 }) {
-  const { display } = useImageDisplay(attachment);
+  const image = useBodyImage(attachment, `${props.messageVersionId ?? props.messageId ?? ""}:${props.occurrenceKey ?? props.blockIndex ?? attachment.id}`);
+  const { body, size, expanded, setExpanded } = image;
   const displayMode = normalizeImageDisplayMode(props.displayMode);
-  const maxWidth = imageDisplayMaxWidth(displayMode);
   const visibleCaption = normalizeVisibleCaption(props.caption, attachment.display_name);
+  const Container = props.phrasing ? "span" : "figure";
+  const Caption = props.phrasing ? "span" : "figcaption";
+  const toggle = () => {
+    const element = image.ref.current;
+    const root = element?.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? null;
+    const readingLine = (root?.getBoundingClientRect().top ?? 0) + 120;
+    const bounds = element?.getBoundingClientRect();
+    const hiddenReadingPoint = expanded && bounds && readingLine > bounds.top + Math.min(640, image.lane.height * .7)
+      && readingLine < bounds.top + body.fullHeight;
+    flushSync(() => setExpanded(!expanded));
+    if (hiddenReadingPoint && element?.id) void navigateMountedTarget({ root, targetId: element.id, offset: 120, alignmentTolerance: 1 });
+  };
   return (
-    <figure
+    <Container
+      ref={node => { image.ref.current = node; }}
       {...attachmentLocatorAttributes(attachment, props)}
       className="attachment-gallery-item"
-      style={{ ...props.galleryItemStyle, ...(display ? { "--image-display-width": `${display.width}px` } as CSSProperties : {}) }}
-      data-image-sized={display ? "true" : undefined}
+      style={{ ...props.galleryItemStyle, width: Math.max(44, body.width), maxWidth: "100%" }}
+      data-image-sized={size ? "true" : undefined}
+      data-image-expanded={expanded ? "true" : "false"}
       data-testid="attachment-block"
       data-attachment-mode="media"
       data-display-mode={displayMode}
     >
-      <div className="attachment-gallery-media">
-        {unavailable ? <div className="attachment-gallery-failure" role="status">
-          <p>{zh ? "图片暂不可预览，原位置已保留。" : "Image preview unavailable. Its place is preserved."}</p>
-          <button type="button" className="min-h-11 underline" onClick={() => onRuntime({ status: "idle" })}>{zh ? "重试预览" : "Retry preview"}</button>
-          <DownloadButton attachment={attachment} zh={zh} />
-        </div> :
+      <span className="attachment-gallery-media" style={{ width: body.width, height: Math.max(44, body.height) }}>
+        {!unavailable ?
         <button type="button" onClick={onOpen} disabled={!onOpen} className="attachment-gallery-trigger" aria-label={`${zh ? "查看" : "View"} ${attachment.display_name}`}>
         <img
           src={attachment.content_url ?? undefined}
@@ -178,26 +192,39 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: 
           loading="lazy"
           decoding="async"
           className="attachment-gallery-image"
-          width={display?.width}
-          height={display?.height}
-          style={display ? { maxWidth: `min(100%, ${display.width}px)`, maxHeight: `min(100%, ${display.height}px)` } : { maxWidth }}
+          width={size?.width}
+          height={size?.height}
+          style={{ width: body.width, height: body.fullHeight }}
           onLoad={(event) => {
             const image = event.currentTarget;
             props.onImageRatio?.(image.naturalWidth / Math.max(1, image.naturalHeight), image.naturalWidth);
+            // One normalization is allowed for legacy files with no geometry.
+            // The query cache survives virtual-row remounts in this session.
+            reportDecoded(image.naturalWidth, image.naturalHeight);
             onRuntime({ status: "ready", requestId: crypto.randomUUID() });
           }}
           onError={() => onRuntime({ status: "failed", requestId: crypto.randomUUID(), reason: "decode" })}
         />
-        <span className="attachment-gallery-overlay" aria-hidden="true">
-          <span className="truncate">{attachment.display_name}</span>
-          <span>{zh ? "查看" : "View"}</span>
-        </span>
-        </button>}
-        <ImageDisplayControls attachment={attachment} zh={zh} />
-      </div>
-      {visibleCaption ? <figcaption className="attachment-gallery-caption">{visibleCaption}</figcaption> : null}
-    </figure>
+        </button> : <span className="attachment-image-missing" aria-hidden="true" />}
+      </span>
+      {visibleCaption ? <Caption className="attachment-gallery-caption">{visibleCaption}</Caption> : null}
+      {unavailable ? <span className="attachment-gallery-failure" role="status">
+        <span>{zh ? "图片暂不可预览。" : "Image preview unavailable."}</span>
+        <button type="button" className="min-h-11 underline" onClick={() => onRuntime({ status: "idle" })}>{zh ? "重试预览" : "Retry preview"}</button>
+        <DownloadButton attachment={attachment} zh={zh} />
+      </span> : null}
+      {body.foldable ? <span className="attachment-image-fold" data-markdown-copy-ignore="true">
+        {!expanded ? <span>{zh ? "长图未展开" : "Long image collapsed"}</span> : null}
+        <button type="button" className="attachment-inline-action" aria-expanded={expanded} onClick={toggle}>
+          {expanded ? (zh ? "收起图片" : "Collapse image") : (zh ? "展开完整图片" : "Expand full image")}
+        </button>
+      </span> : null}
+      <ImageDisplayControls attachment={attachment} zh={zh} compact={body.width < 240} laneWidth={image.lane.width}
+        bodySize={{ width: body.width, height: body.fullHeight }} onOpen={onOpen} />
+      {body.adapted ? <span className="attachment-image-adapted" data-markdown-copy-ignore="true">{zh ? "已适应栏宽" : "Fitted to column width"}</span> : null}
+    </Container>
   );
+  function reportDecoded(width: number, height: number) { image.onDecoded(width, height); }
 }
 
 function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, presentation, locator, zh }: {
@@ -327,7 +354,9 @@ function AttachmentMeta({ attachment, kind, onOpen, zh }: { attachment: Attachme
 }
 
 function DownloadButton({ attachment, zh }: { attachment: AttachmentRead; zh: boolean }) {
-  return attachment.download_url ? <a href={attachment.download_url} download className="attachment-icon-action" aria-label={`${zh ? "下载" : "Download"} ${attachment.display_name}`} title={zh ? "下载" : "Download"}><Download className="h-4 w-4" /></a> : null;
+  const image = resolveAttachmentCapability(attachment).viewerKind === "image";
+  const label = image ? (zh ? "下载原图" : "Download original") : (zh ? "下载" : "Download");
+  return attachment.download_url ? <a href={attachment.download_url} download className="attachment-icon-action" aria-label={`${label} ${attachment.display_name}`} title={label}><Download className="h-4 w-4" /></a> : null;
 }
 
 function KindIcon({ kind, warning = false }: { kind: AttachmentViewerKind | null; warning?: boolean }) {

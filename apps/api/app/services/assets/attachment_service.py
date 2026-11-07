@@ -126,3 +126,16 @@ def attachment_read(attachment: Attachment, *, content_prefix: str = "/api/attac
         content_url=f"{base}?disposition=inline" if content_available else None,
         download_url=f"{base}?disposition=attachment" if content_available else None,
     )
+
+
+def attachment_read_with_geometry(attachment: Attachment, *, content_prefix: str = "/api/attachments") -> AttachmentRead:
+    """Authorized single-detail reads only; no database mutation or derivative."""
+    from app.services.assets.image_geometry import KEY, inspect_geometry, selected_geometry
+    result = attachment_read(attachment, content_prefix=content_prefix)
+    if result.content_url and selected_geometry(attachment) is None:
+        value = inspect_geometry(attachment.asset_object)
+        metadata = {key: item for key, item in result.metadata.items() if key != KEY}
+        if value:
+            metadata[KEY] = value
+        return result.model_copy(update={"metadata": metadata})
+    return result

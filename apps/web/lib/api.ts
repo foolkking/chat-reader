@@ -124,11 +124,11 @@ export async function getCapabilities(): Promise<CapabilitiesRead> {
   return fetchJson<CapabilitiesRead>("/api/capabilities");
 }
 
-export async function getAttachment(attachmentId: string, shareToken?: string, adminUserId?: string): Promise<AttachmentRead> {
+export async function getAttachment(attachmentId: string, shareToken?: string, adminUserId?: string, signal?: AbortSignal): Promise<AttachmentRead> {
   const path = adminUserId ? `/api/admin/content/users/${encodeURIComponent(adminUserId)}/attachments/${attachmentId}` : shareToken
     ? `/api/shared/${encodeURIComponent(shareToken)}/attachments/${attachmentId}`
     : `/api/attachments/${attachmentId}`;
-  return fetchJson<AttachmentRead>(path);
+  return fetchJson<AttachmentRead>(path, { signal });
 }
 
 export async function getConversationAttachments(conversationId: string): Promise<AttachmentRead[]> {
