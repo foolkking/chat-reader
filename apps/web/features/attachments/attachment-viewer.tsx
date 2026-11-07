@@ -931,7 +931,7 @@ function useViewerViewport(): ViewerViewport {
   return viewport;
 }
 
-function retryableUrl(url: string | null | undefined, attempt: number): string | undefined {
+export function retryableUrl(url: string | null | undefined, attempt: number): string | undefined {
   if (!url) return undefined;
   if (attempt === 0) return url;
   const parsed = new URL(url, window.location.origin);

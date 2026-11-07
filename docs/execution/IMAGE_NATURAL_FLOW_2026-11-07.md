@@ -190,3 +190,53 @@ Web 已失败，API 已成功，settings/性能仍在运行。已发送取消请
 没有本地运行应用测试/构建/服务。用户 build-info SHA-256 仍为
 `fcc39cfd4093a15dc2cf9f8e80acbe12e7a858fcaeb961ee2b47d8a08e960afc`，
 未动用户审查/evidence、导入资料、部署或安排。
+
+### 响应式缩略条验证修正后的完整重跑
+
+精确 **`65132aff304db43aeea0832f025e8de6815888cb`** 已提交并推送 master。
+完整 `Build release images` run **42350035119** 于
+**2026-11-07 15:08:51 +08:00** 派发，**15:08:53.915 +08:00** 返回成功。
+仅读取派发回执 URL，不读取新运行状态、日志或制品，不提前宣称通过。
+除用户再次明确报告失败/授权提前诊断外，保守首次回查不早于
+**2026-11-07 15:59:54 +08:00**；未创建回查安排，未部署。
+
+### 第四轮：阅读门禁的四类失败
+
+用户报告 Web Quality 失败；实际首次回查
+**2026-11-07 16:01:19.074 +08:00**，已超过该轮 50 分钟门槛。
+run **42350035119** 精确对应
+**`65132aff304db43aeea0832f025e8de6815888cb`**，已 `completed/failure`，
+无需取消。API、settings、读取性能 job 成功，Web 失败，build/inspect
+跳过；没有部署，也没有把部分通过当作整轮通过。
+
+官方 Web evidence artifact **13566860076**，
+`release-a-quality-evidence-65132aff304db43aeea0832f025e8de6815888cb-1`，
+官方 digest
+`sha256:f6fe2665e57ff203f8cf76781bbc2493e45a0e4a1483b16b243ad46688164a3d`。
+日志、合成制品和只读解析结果保留在任务临时目录。
+消息编辑/删除 **118/118**、Markdown/Viewer **31/31**；
+九个浏览器门禁通过，本轮首次执行的 reading 为 **17/35**。
+PDF、Default PWA、独立账户和负向 PWA 四个后续门禁未执行。
+
+| 失败类别 | 证据与修正 |
+| --- | --- |
+| 12 项在线读图 | Reader/Share/Compare 两种宽度×普通/虚拟消息均停在五张图 `complete && naturalWidth > 0`；四个 Offline 矩阵用例通过。失败后重挂载仍使用 `loading=lazy`、原 HTTP URL，不能保证离屏显式重试立即发起读取。改为只对显式重试使用 eager、新 HTTP retry marker，复用既有 Viewer URL helper，Blob 地址不变；源身份切换重新初始化本地重试次数。测试只提前启动五张受控 fixture 图片，明确逐项请求、重排返回、一次失败及一次新读取，其他图片仍保持懒加载。 |
+| 4 项长图收起 | 四面逐帧证据都显示约 **3346.5/3348px** 的一帧偏移，随后共享 ResizeObserver 补偿回原位置；并非最终位置错误，也不是允许忽略的瞬时峰值。Query 折叠状态通知并不保证在点击 `flushSync` 内提交。改为在真实 DOM layout effect 调用**已有同一个** viewport owner 的 reconcile，涵盖 fold/size/error-recovery 几何；保留异步 RO、用户意图、显式导航和 Compare 所有权，没有新增延时/恢复循环或修改阈值。 |
+| 1 项虚拟卸载前提 | trace 确认虚拟列表确实挂载（194 blocks），程序化赋值曾从 1352 跳到 21393，随后到 5336，旧图未卸载，故不能宣称已经验证重挂载。测试改用有界真实滚轮往返，必须观察目标 count=0 且原 DOM `isConnected=false`，再验证新挂载仍展开；未删除卸载断言，也不把程序化滚动冒充用户意图。 |
+| 1 项原生 Markdown fixture | trace 中实际 422 响应为 `messages` 至少两条；错误 fixture 只创建 assistant。按现有 API 合同创建 user→assistant 完整对，后续继续对真实 assistant 检查行内/链接/表格像素与语义；不修改或放宽 API。 |
+
+已增加同一 viewport owner 的提交时补偿单元回归（在任何 RAF/RO 回调前
+检查结果）、后续 RO 不重复补偿、旧 owner 退役及新滚轮意图优先验证；
+新增实际 InlineImage/URL helper 的显式 hook/DOM 适配器回归，覆盖 HTTP
+参数保留、Blob 不改写、初始 lazy→显式 eager、原尺寸及 layout 委托。
+这些新用例尚未执行；必须由下一轮 CI 运行。浏览器保留原 **35** 用例、
+**64+12** 帧证据及峰值 ≤2px/稳定 ≤1px，并在失败时补充有界解码状态，
+不记录正文、URL、凭据或业务 ID。
+
+非增量 TypeScript、完整 ESLint、两份改动 Node 测试的 `node --check`
+及 diff 检查已通过；这只是静态检查，不是运行新增测试。
+未运行本地应用服务、构建、API/Node/Playwright 测试。用户 build-info
+SHA-256 仍为
+`fcc39cfd4093a15dc2cf9f8e80acbe12e7a858fcaeb961ee2b47d8a08e960afc`，
+用户审查/evidence、导入资料和生产未动。下一轮继续完整精确源码 CI，
+不只重试失败 job。

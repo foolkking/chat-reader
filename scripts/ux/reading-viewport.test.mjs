@@ -77,6 +77,35 @@ test("one owner corrects the actual delta once for all messages in one scroller"
   release2(); assert.equal(f.observers[0].closed, true);
   assert.equal(f.root.style.overflowAnchor, "auto");
 });
+test("discrete image collapse reconciles in the DOM commit, before RAF or ResizeObserver", () => {
+  const f = fixture(), content = f.content(f.root), release = f.observeReadingViewport(content);
+  f.root.flowTop = 5600; f.root.scrollTop = 5480; f.frame();
+  f.root.flowTop -= 3346.5;
+  f.reconcileReadingViewport(content);
+  assert.equal(f.root.target.getBoundingClientRect().top, 120);
+  assert.equal(f.root.scrollTop, 2133.5);
+  assert.equal(f.corrections.length, 1);
+  f.resize(); f.frame();
+  assert.equal(f.corrections.length, 1, "The delayed observer cannot apply the collapse twice.");
+  assert.equal(f.second.scrollTop, 0);
+  release();
+  f.root.flowTop += 100;
+  f.reconcileReadingViewport(content);
+  assert.equal(f.corrections.length, 1, "An unmounted owner must not be recreated by a stale callback.");
+});
+test("commit reconciliation respects navigation and rebases on new real wheel intent", () => {
+  const f = fixture(), content = f.content(f.root), release = f.observeReadingViewport(content);
+  f.frame(); f.setBusy(true);
+  f.root.flowTop += 200; f.reconcileReadingViewport(content);
+  assert.equal(f.root.scrollTop, 0);
+  f.root.dispatchEvent(new Event("wheel"));
+  f.root.scrollTop = 80;
+  f.root.flowTop -= 40; f.reconcileReadingViewport(content);
+  assert.equal(f.root.scrollTop, 40, "Only the new layout delta is corrected, not the user's 80px motion.");
+  assert.equal(f.root.target.getBoundingClientRect().top, 270);
+  assert.equal(f.corrections.length, 1);
+  release();
+});
 test("real input cancels old navigation and user scrolling is never undone", () => {
   const f = fixture(), release = f.observeReadingViewport(f.content(f.root));
   f.frame(); f.setBusy(true);

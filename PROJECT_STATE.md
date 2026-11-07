@@ -17,6 +17,8 @@ The required CI retains all 64 frame traces, adds 12 collapse traces and a cold
 Viewer panel trace, and requires at least 35 reading/image cases. Follow-up
 audit fixes cover native Markdown CSS, final-choice saving, authority-isolated
 write feedback and cold image presentation; they still await exact-source CI.
+Further CI-driven fixes cover offscreen preview retry and commit-time fold
+compensation through the same reading viewport owner; no new acceptance claim.
 [Audit](docs/execution/ux-audit-image-natural-flow-2026-11-07.md);
 no local application tests/services, new dependencies, migration, schedules or
 production operations are authorized in this task.

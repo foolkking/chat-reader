@@ -191,6 +191,13 @@ test.afterEach(async ({ page }, info) => {
     host.stopReadingProbe?.(); return host.readingProbe ?? null;
   }).catch(() => null);
   if (partial) await writeFile(info.outputPath("failure-partial-frames.json"), JSON.stringify(partial));
+  const images = await page.evaluate(() => Array.from(document.querySelectorAll<HTMLImageElement>(".attachment-gallery-image"))
+    .slice(0, 12).map(image => ({
+      complete: image.complete, decodedWidth: image.naturalWidth, decodedHeight: image.naturalHeight,
+      loading: image.loading, retried: image.currentSrc.includes("viewer_retry="),
+      top: image.getBoundingClientRect().top, width: image.getBoundingClientRect().width,
+    }))).catch(() => []);
+  await writeFile(info.outputPath("failure-image-states.json"), JSON.stringify(images));
 });
 
 for (const width of [375, 1440]) for (const long of [false, true]) for (const surface of ["reader", "share", "offline", "compare"] as const) {
@@ -199,10 +206,15 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
     await page.setViewportSize({ width, height: 900 });
     const fixture = long ? heavy : normal;
     const release: (() => void)[] = [];
-    let hold = surface !== "offline", failed = false, imageRequests = 0, writes = 0;
+    let hold = surface !== "offline", failed = false, imageRequests = 0, retryReads = 0, writes = 0;
+    const controlledReads = new Set<number>();
     page.on("request", request => { if (request.url().includes("/image-display") && request.method() === "PUT") writes++; });
     if (hold) await page.route(/\/api\/.*attachments\/[^/]+\/content(?:\?|$)/, async route => {
       imageRequests++;
+      const url = new URL(route.request().url());
+      const index = fixture.assets.findIndex(id => url.pathname.includes(id));
+      if (index >= 0 && index < 5) controlledReads.add(index);
+      if (index === 0 && url.searchParams.get("viewer_retry") === "1") retryReads++;
       if (hold) await new Promise<void>(resolve => release.push(resolve));
       if (!failed && route.request().url().includes(fixture.assets[0])) {
         failed = true; await route.fulfill({ status: 503, body: "Synthetic image failure" });
@@ -227,6 +239,15 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
       const root = surface === "share" ? page.locator("html") : article.locator('xpath=ancestor::*[@data-reader-scroll-root="true"][1]');
       if (surface === "reader" || surface === "offline") await expectReaderReady(root);
       // A real reading action establishes the anchor; no old scrollTop restore.
+      const loadingGroup = article.locator(".attachment-image-gallery").first();
+      if (surface !== "offline") {
+        // Natural rows can span several viewports. Start only the five controlled
+        // fixture reads before moving below them; unrelated images stay lazy.
+        await expect(loadingGroup.locator(".attachment-gallery-image")).toHaveCount(5);
+        await loadingGroup.locator(".attachment-gallery-image").evaluateAll(images =>
+          images.forEach(image => { (image as HTMLImageElement).loading = "eager"; }));
+        await expect.poll(() => controlledReads.size).toBe(5);
+      }
       await anchor.scrollIntoViewIfNeeded();
       await frames(page, 4);
       await startProbe(anchor);
@@ -234,15 +255,16 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
       for (const done of release.reverse()) { done(); await frames(page, 2); }
       if (surface !== "offline") {
         expect(imageRequests).toBeGreaterThan(0);
-        await expect(article.getByText("Image preview unavailable.").first()).toBeAttached();
+        const failedImage = loadingGroup.locator(`[data-attachment-id="${fixture.assets[0]}"]`).first();
+        await expect(failedImage.getByText("Image preview unavailable.")).toBeAttached();
         // Invoke without scrolling the page: failure recovery must not itself
         // move the anchor to the failed image above the reading line.
-        await article.getByRole("button", { name: "Retry preview", exact: true }).first().evaluate((button: HTMLButtonElement) => button.click());
+        await failedImage.getByRole("button", { name: "Retry preview", exact: true }).evaluate((button: HTMLButtonElement) => button.click());
+        await expect(failedImage.locator("img")).toHaveAttribute("loading", "eager");
+        await expect.poll(() => retryReads).toBe(1);
       }
-      const loadingGroup = article.locator(".attachment-image-gallery").first();
       await expect(loadingGroup.locator(".attachment-gallery-image")).toHaveCount(5);
-      // Images far below the viewport are intentionally lazy and need not have
-      // started a request. The five controlled images above this anchor must
+      // All controlled reads, including the explicit offscreen retry, must
       // actually decode (complete alone also accepts a broken image).
       await expect.poll(() => loadingGroup.locator(".attachment-gallery-image").evaluateAll(images =>
         images.length === 5 && images.every(image => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0))).toBe(true);

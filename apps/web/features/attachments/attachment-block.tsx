@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Download, ExternalLink, File, FileAudio, FileImage, FileText, FileVideo, Loader2, RotateCcw } from "lucide-react";
@@ -14,6 +14,7 @@ import { useAttachmentAccess } from "./attachment-access";
 import { ImageDisplayControls } from "./image-display-controls";
 import { useBodyImage } from "./image-presentation";
 import { navigateMountedTarget } from "../conversations/reader-navigation";
+import { reconcileReadingViewport } from "../conversations/reading-viewport";
 import {
   attachmentAssetIdentity,
   buildAttachmentRenderPlan,
@@ -27,6 +28,7 @@ import {
 } from "./preview-adapter-registry";
 import {
   AttachmentPreviewDialog,
+  retryableUrl,
   useAttachmentViewer,
   type AttachmentViewerItem,
 } from "./attachment-viewer";
@@ -124,7 +126,7 @@ export function AttachmentBlock(props: AttachmentBlockProps) {
 
   let content: ReactNode;
   if (presentation === "gallery") {
-    content = <InlineImage attachment={attachment} props={props} onOpen={openViewer} onRuntime={updateRuntime} zh={zh}
+    content = <InlineImage key={attachmentIdentity} attachment={attachment} props={props} onOpen={openViewer} onRuntime={updateRuntime} zh={zh}
       unavailable={plan.inline !== "media" || plan.viewerKind !== "image" || !attachment.content_url} />;
   } else if ((presentation === "reading" || presentation === "data") && plan.inline === "preview-panel" && ["markdown", "text", "code", "json", "table"].includes(plan.viewerKind ?? "")) {
     content = <InlineTextPreview attachment={attachment} kind={plan.viewerKind!} caption={caption} onOpen={openViewer} onRuntime={updateRuntime} presentation={presentation} locator={props} zh={zh} />;
@@ -158,6 +160,13 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: 
 }) {
   const image = useBodyImage(attachment, `${props.messageVersionId ?? props.messageId ?? ""}:${props.occurrenceKey ?? props.blockIndex ?? attachment.id}`);
   const { body, size, expanded, setExpanded } = image;
+  const [attempt, setAttempt] = useState(0);
+  useLayoutEffect(() => {
+    // Query-backed updates may arrive after the click's flushSync. Reconcile
+    // fold/size/recovery geometry in the actual DOM commit, not in the next
+    // ResizeObserver turn, using the existing scroller owner and live anchor.
+    if (image.ref.current) reconcileReadingViewport(image.ref.current);
+  }, [expanded, unavailable, body.width, body.height, image.ref]);
   const displayMode = normalizeImageDisplayMode(props.displayMode);
   const visibleCaption = normalizeVisibleCaption(props.caption, attachment.display_name);
   const Container = props.phrasing ? "span" : "figure";
@@ -188,9 +197,10 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: 
         {!unavailable ?
         <button type="button" onClick={onOpen} disabled={!onOpen} className="attachment-gallery-trigger" aria-label={`${zh ? "查看" : "View"} ${attachment.display_name}`}>
         <img
-          src={attachment.content_url ?? undefined}
+          key={attempt}
+          src={retryableUrl(attachment.content_url, attempt)}
           alt={props.alt || attachment.display_name}
-          loading="lazy"
+          loading={attempt > 0 ? "eager" : "lazy"}
           decoding="async"
           className="attachment-gallery-image"
           width={size?.width}
@@ -211,7 +221,12 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: 
       {visibleCaption ? <Caption className="attachment-gallery-caption">{visibleCaption}</Caption> : null}
       {unavailable ? <span className="attachment-gallery-failure" role="status">
         <span>{zh ? "图片暂不可预览。" : "Image preview unavailable."}</span>
-        <button type="button" className="min-h-11 underline" onClick={() => onRuntime({ status: "idle" })}>{zh ? "重试预览" : "Retry preview"}</button>
+        <button type="button" className="min-h-11 underline" onClick={() => {
+          // Explicit retry must issue a fresh HTTP read even when this occurrence
+          // is now offscreen. Blob URLs remain byte-for-byte unchanged.
+          setAttempt(value => value + 1);
+          onRuntime({ status: "idle" });
+        }}>{zh ? "重试预览" : "Retry preview"}</button>
         <DownloadButton attachment={attachment} zh={zh} />
       </span> : null}
       {body.foldable ? <span className="attachment-image-fold" data-markdown-copy-ignore="true">

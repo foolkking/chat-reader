@@ -22,6 +22,17 @@ full-screen backdrop. A CI-only loopback/disposable-database fixture removes
 ingestion geometry before canonical parsing, refuses to erase saved display,
 and proves legacy reading does not write before the first explicit 100%.
 Native inline/link/table tests measure aspect ratios and text line boxes.
+The controlled timing matrix starts only its five fixture image reads before
+moving below them; ordinary product images remain lazy. An explicit offscreen
+retry must issue one fresh read and decode successfully. Failure evidence also
+retains bounded scalar decode/loading state without URLs or source IDs.
+The long-image remount case uses real wheel input and proves that the old DOM
+node disconnected before checking the expanded state on a new mount; a
+one-shot programmatic scroll assignment is not evidence of user scrolling.
+`reading-viewport.test.mjs` checks commit-time correction without waiting for
+RAF/ResizeObserver, stale-owner retirement and immediate user intent.
+`inline-image-recovery.test.mjs` exercises the actual component/URL helper with
+explicit hook/DOM adapters; it does not replace browser decoding/geometry gates.
 
 The workflow additionally runs `image-scale-slider-browser.mjs` with mounted
 controls, real CSS and mouse/keyboard/touch; only its API transport is adapted.

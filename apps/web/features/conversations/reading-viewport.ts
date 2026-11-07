@@ -5,6 +5,12 @@ import type { ScrollAnchorSnapshot } from "../../lib/types";
 // per-image scroll loops, account data, or persisted positions live here.
 const owners = new WeakMap<HTMLElement, ReturnType<typeof createOwner>>();
 
+/** Reconcile a committed discrete layout change before the next frame can see it. */
+export function reconcileReadingViewport(content: HTMLElement): void {
+  const root = content.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? document.documentElement;
+  owners.get(root)?.compensate();
+}
+
 export function observeReadingViewport(content: HTMLElement): () => void {
   const root = content.closest<HTMLElement>('[data-reader-scroll-root="true"]') ?? document.documentElement;
   let owner = owners.get(root);
@@ -146,6 +152,7 @@ function createOwner(root: HTMLElement) {
   for (const event of ["wheel", "touchstart", "touchmove", "pointerdown", "keydown"]) events.addEventListener(event, onIntent, { passive: true });
   resize.observe(root);
   return {
+    compensate,
     add(content: HTMLElement) { contents.add(content); resize.observe(content); scheduleCapture(); },
     remove(content: HTMLElement) { contents.delete(content); resize.unobserve(content); },
     size: () => contents.size,

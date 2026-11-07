@@ -46,6 +46,10 @@ UI or physical-device acceptance.
   only the interaction container has a 44px minimum. Fitted images disclose the
   lane limit. Different percentages above the lane width need not change the
   screen width.
+- Explicit preview retry immediately remounts/loads that occurrence even if it
+  has moved offscreen. HTTP retry uses a fresh query marker while retaining the
+  scoped original path/parameters; local Blob URLs remain unchanged. Ordinary
+  image loading stays lazy. Retrying neither saves dimensions nor publishes.
 - Image-only attachment paragraphs reuse span-only image UI. Prose-inline,
   linked and table images retain document semantics and shared dimensions:
   no figure/div in paragraphs and no buttons nested inside links. Native images
@@ -125,6 +129,12 @@ or occurrence, preferably a real text Range at the reading line. It compensates
 actual layout displacement after subtracting intervening user scrolling. It
 does not repeatedly restore an old scrollTop. Scalar correction events contain
 only delta/applied pixels, never conversation content.
+Discrete image fold/size/error-recovery commits invoke that same owner's
+reconciliation from the layout effect, before the next animation-frame sample.
+ResizeObserver remains the owner of later asynchronous geometry, but is not a
+substitute for commit-time correction of a multi-thousand-pixel collapse.
+The handoff retains busy/retired-owner checks and never creates a second
+image-specific restoration loop.
 
 Explicit navigation/restoration claims the existing navigation position lease;
 ordinary geometry yields. Virtual-list automatic size adjustments and the old

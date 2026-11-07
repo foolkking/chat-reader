@@ -181,11 +181,25 @@ test("long fold survives virtual remounts, tiny images stay tiny, and Viewer mod
   await expect(long).toHaveAttribute("data-image-expanded", "true");
   expect((await long.locator("img").boundingBox())!.height).toBe(4000);
   const root = page.getByTestId("reader-scroll-root");
-  const top = await root.evaluate(node => node.scrollTop);
-  await root.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect(article.locator('[data-virtualized-block-list="true"]')).toHaveCount(1);
+  const original = await long.elementHandle();
+  // Traverse with real reading intent. A one-shot scrollTop jump does not
+  // establish user ownership while virtual rows are still being measured.
+  await root.hover();
+  const nextFrames = () => page.evaluate(() => new Promise(resolve =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  for (let step = 0; step < 60 && await long.count(); step++) {
+    await page.mouse.wheel(0, 1200);
+    await nextFrames();
+  }
   await expect(long).toHaveCount(0);
-  await root.evaluate((node, value) => { node.scrollTop = value; }, top);
+  expect(await original!.evaluate(node => node.isConnected)).toBe(false);
+  for (let step = 0; step < 60 && !await long.count(); step++) {
+    await page.mouse.wheel(0, -1200);
+    await nextFrames();
+  }
   await expect(long).toHaveAttribute("data-image-expanded", "true");
+  await original!.dispose();
   await long.getByRole("button", { name: "Collapse image" }).click();
   await long.locator(".attachment-gallery-trigger").click();
   const viewer = page.getByTestId("attachment-viewer-shell"), image = viewer.locator(".image-viewer-original");
@@ -236,10 +250,13 @@ test("375/800/1440 surfaces retain captions and controls; linked and table image
 
 test("native prose, linked and table images keep real aspect ratios and inline line boxes", async ({ page }) => {
   const create = await page.request.post("/api/conversations", { data: {
-    title: "Synthetic native image semantics", messages: [{ role: "assistant", content_markdown: "Synthetic placeholder" }],
+    title: "Synthetic native image semantics", messages: [
+      { role: "user", content_markdown: "Synthetic image question" },
+      { role: "assistant", content_markdown: "Synthetic placeholder" },
+    ],
   } });
   expect(create.status()).toBe(201);
-  const made = await create.json(), id = made.conversation.id, target = made.messages[0];
+  const made = await create.json(), id = made.conversation.id, target = made.messages[1];
   try {
     const uploaded: string[] = [];
     for (const [width, height] of [[80, 60], [240, 4000]]) {
