@@ -223,7 +223,7 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await closeFile(page, source);
   });
 
-  test("gallery supports repeated keys after zoom and resets the next image transform", async ({ page, attachmentConversation }, info) => {
+  test("gallery keeps responsive thumbnails and repeated keys in sync after zoom", async ({ page, attachmentConversation }, info) => {
     const made = attachmentConversation, id = made.conversation.id;
     const images: Attachment[] = [];
     for (let index = 1; index <= 3; index += 1) images.push(await upload(page.request, id, `synthetic-${index}.svg`, "image/svg+xml", Buffer.from(
@@ -242,6 +242,23 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     const focusImage = viewer.getByTestId("image-focus").locator("img");
     const scale = () => focusImage.evaluate(image => new DOMMatrix(getComputedStyle(image.parentElement!).transform).a);
     await expect(viewer).toHaveAttribute("aria-label", images[0].display_name);
+    const thumbnails = viewer.getByRole("list", { name: zh ? "图片缩略图列表" : "Image thumbnails", exact: true });
+    const thumbnailToggle = viewer.getByRole("button", { name: zh ? "缩略图" : "Thumbnails", exact: true });
+    const currentThumbnail = thumbnails.locator('[role="listitem"][aria-current="true"]');
+    // Mobile deliberately reserves the canvas until the reader opens the rail;
+    // desktop keeps the rail visible. Check both defaults before any interaction.
+    if (width < 768) {
+      await expect(thumbnailToggle).toHaveAttribute("aria-expanded", "false");
+      await expect(thumbnails).toHaveCount(0);
+      const target = await thumbnailToggle.boundingBox();
+      expect(target).not.toBeNull();
+      expect(target!.width).toBeGreaterThanOrEqual(44);
+      expect(target!.height).toBeGreaterThanOrEqual(44);
+    } else {
+      await expect(thumbnailToggle).toHaveCount(0);
+      await expect(thumbnails).toBeVisible();
+      await expect(currentThumbnail).toHaveAttribute("aria-label", zh ? "第 1 张" : "Image 1");
+    }
     await viewer.getByRole("button", { name: zh ? "放大" : "Zoom in", exact: true }).click();
     await expect.poll(scale).toBeGreaterThan(1.05);
     await page.keyboard.press("ArrowRight");
@@ -251,8 +268,31 @@ for (const width of [375, 1440]) for (const locale of ["zh-CN", "en-US"]) test.d
     await expect(viewer).toHaveAttribute("aria-label", images[2].display_name);
     await page.keyboard.press("ArrowLeft");
     await expect(viewer).toHaveAttribute("aria-label", images[1].display_name);
-    await expect(viewer.locator('[role="listitem"][aria-current="true"]')).toHaveAttribute("aria-label", zh ? "第 2 张" : "Image 2");
+    if (width < 768) {
+      await expect(thumbnails).toHaveCount(0);
+      await page.screenshot({ path: info.outputPath("gallery-thumbnails-collapsed.png") });
+      await thumbnailToggle.click();
+      await expect(thumbnailToggle).toHaveAttribute("aria-expanded", "true");
+    }
+    await expect(thumbnails).toBeVisible();
+    await expect(thumbnails.getByRole("listitem")).toHaveCount(images.length);
+    await expect(currentThumbnail).toHaveAttribute("aria-label", zh ? "第 2 张" : "Image 2");
     await page.screenshot({ path: info.outputPath("gallery-current-image.png") });
+    await thumbnails.getByRole("listitem", { name: zh ? "第 3 张" : "Image 3", exact: true }).click();
+    await expect(viewer).toHaveAttribute("aria-label", images[2].display_name);
+    await expect(currentThumbnail).toHaveAttribute("aria-label", zh ? "第 3 张" : "Image 3");
+    await expect.poll(scale).toBe(1);
+    await page.keyboard.press("ArrowLeft");
+    await expect(viewer).toHaveAttribute("aria-label", images[1].display_name);
+    await expect(currentThumbnail).toHaveAttribute("aria-label", zh ? "第 2 张" : "Image 2");
+    if (width < 768) {
+      await thumbnailToggle.click();
+      await expect(thumbnailToggle).toHaveAttribute("aria-expanded", "false");
+      await expect(thumbnails).toHaveCount(0);
+      await expect(thumbnailToggle).toBeFocused();
+      await expect(viewer).toHaveAttribute("aria-label", images[1].display_name);
+      await expect.poll(scale).toBe(1);
+    }
     await page.keyboard.press("Escape");
     await expect(viewer).toHaveCount(0);
   });

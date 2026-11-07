@@ -39,6 +39,15 @@ establishes the intended reading anchor and hit-tests a physical Delete click,
 records all mutation frames, and keeps its existing ≤48px/never-empty/undo
 requirements; it does not change product scroll ownership or relax a threshold.
 
+The Markdown/image Viewer gate checks the responsive thumbnail contract in
+`attachment-reading.spec.ts`: 375px starts collapsed with an explicit ≥44px
+toggle, while 1440px starts expanded. Both locales retain repeated keyboard
+navigation and zoom reset, then verify the current thumbnail and actual thumbnail
+selection. Mobile also collapses the rail again without changing the active
+image or losing toggle focus. Hidden mobile thumbnails are not treated as an
+always-mounted desktop list. Failed-run diagnosis/cancellation and subsequent
+exact-source dispatches are recorded in the dated receipt, not as acceptance.
+
 Only the top exact-source section and [Project State](../PROJECT_STATE.md)
 describe the current release. Dated results below retain their original
 checkpoint scope; a historical candidate/failure is neither a new work order
