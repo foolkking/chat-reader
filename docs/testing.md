@@ -4127,6 +4127,25 @@ retained final screenshots were reviewed; initial failures remain in the audit.
 
 ## Skill replacement recovery (2026-10-07)
 
+**2026-11-07 candidate regression:** exact `35f5140` passed all Web gates but
+Settings Quality failed one of 463 cases: the personal replacement row vanished
+into initial loading while a committed write's list refresh was held. The API
+log places the late account-preference response after the first Skill list and
+immediately before the write response. The personal list previously keyed its
+query to the live interface language; the new candidate captures that legacy
+read hint for the open panel instead.
+
+Three additional controlled browser cases retain the real first preference
+response and release it after file choice, during an acknowledged-server-write
+but held client receipt, or after visible success. They require the same connected
+row, localized labels, retained file while pending, exact saved revision/download
+bytes, one write and retained success across held/failed/retried list reads.
+The original 14 cases and four-second acknowledgement assertions are unchanged.
+Four compiled-component/hook-adapter regressions cover both locale directions,
+fresh panel scope and pending upload acknowledgement; these adapters are not
+mounted-browser evidence. New cases await complete remote CI, with no local
+application test execution.
+
 `settings-skill-recovery.spec.ts` adds 14 cases on the authenticated isolated
 PostgreSQL/API fixture. It tests personal/system acknowledgement during held and
 failed list reads at three widths, real lost-response retry without another revision,

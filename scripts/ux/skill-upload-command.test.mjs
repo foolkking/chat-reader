@@ -26,11 +26,11 @@ class ApiRequestError extends Error {
 // Hook scheduling, files, query results and transport are controlled adapters,
 // not mounted React/browser evidence. Holding option effects reproduces the
 // installed useMutation's passive observer.setOptions boundary deterministically.
-function fixture() {
+function fixture(initialLocale = "en-US") {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false, gcTime: Infinity } } });
-  const states = [], refs = [], observers = [], writes = [], dirty = [];
+  const states = [], refs = [], observers = [], writes = [], dirty = [], reads = [];
   let stateIndex, refIndex, mutationIndex, passive = [], layout = [], tree, pending;
-  let outcome = "success", hold = null;
+  let outcome = "success", hold = null, resolvedLocale = initialLocale, queryOptions;
   const fileElement = { value: "" };
   const hooks = {
     useState: initial => {
@@ -43,7 +43,9 @@ function fixture() {
     useEffect: fn => passive.push(fn),
     useLayoutEffect: fn => layout.push(fn),
   };
-  const api = { ApiRequestError, createSkill: async input => {
+  const api = { ApiRequestError, getSkills: async (input, signal) => {
+    reads.push({ input, signal }); return [];
+  }, createSkill: async input => {
     writes.push(input);
     if (hold) await hold;
     if (outcome === "failure") throw new ApiRequestError("Synthetic rejected upload", 503, "/api/skills");
@@ -54,7 +56,10 @@ function fixture() {
     "react/jsx-runtime": { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) },
     "@tanstack/react-query": {
       useQueryClient: () => client,
-      useQuery: () => ({ data: [], isPending: false, isLoading: false }),
+      useQuery: options => {
+        queryOptions = options;
+        return { data: [], isPending: false, isLoading: false };
+      },
       useMutation: options => {
         const index = mutationIndex++;
         const observer = observers[index] ??= new MutationObserver(client, options);
@@ -64,7 +69,7 @@ function fixture() {
       },
     },
     "../lib/api": api,
-    "./preferences-provider": { usePreferences: () => ({ resolvedLocale: "en-US" }) },
+    "./preferences-provider": { usePreferences: () => ({ resolvedLocale }) },
     "./interaction-dialog-provider": { useInteractionDialog: () => ({ confirm: async () => true, prompt: async () => null }) },
     "./skill-bundle-files": { SkillBundleFiles: noop },
   };
@@ -94,9 +99,15 @@ function fixture() {
     fileElement.value = file?.name ?? "";
     fileInput().onChange({ target: { files: file ? [file] : [] } }); render(flushPassive);
   };
-  render(); button("Upload my Skill").onClick(); render();
-  return { writes, dirty, render, button, nameInput, fileInput, setName, setFile, fileElement,
-    save: () => { assert.equal(button("Save Skill").disabled, false); button("Save Skill").onClick(); return pending; },
+  render(); button(resolvedLocale === "zh-CN" ? "上传我的 Skill" : "Upload my Skill").onClick(); render();
+  return { writes, dirty, reads, render, button, nameInput, fileInput, setName, setFile, fileElement,
+    query: () => queryOptions,
+    statuses: () => nodes(tree).filter(node => node.props?.role === "status").map(text),
+    setLocale: value => { resolvedLocale = value; render(); },
+    save: () => {
+      const save = button(resolvedLocale === "zh-CN" ? "保存 Skill" : "Save Skill");
+      assert.equal(save.disabled, false); save.onClick(); return pending;
+    },
     setOutcome: value => { outcome = value; },
     hold: () => { let resolve; hold = new Promise(done => { resolve = done; }); return () => { hold = null; resolve(); }; },
     dispose: () => client.clear(),
@@ -208,5 +219,55 @@ test("invalid file validation rejects before transport without clearing the draf
     assert.equal(f.writes.length, 0);
     assert.equal(f.nameInput().value, "Synthetic invalid");
     assert.equal(f.fileElement.value, "invalid.txt");
+  } finally { f.dispose(); }
+});
+
+for (const [initial, hydrated, hint] of [["en-US", "zh-CN", "en"], ["zh-CN", "en-US", "zh-CN"]]) {
+  test(`${initial} to ${hydrated}: interface hydration retains the panel query and unsaved upload`, async () => {
+    const f = fixture(initial), file = { name: "retained.md" };
+    try {
+      f.setName("Synthetic retained"); f.setFile(file);
+      const initialKey = f.query().queryKey;
+      f.setLocale(hydrated);
+      assert.deepEqual(f.query().queryKey, initialKey);
+      assert.deepEqual(f.query().queryKey, ["skills", "EXPORT_CONTEXT", hint]);
+      assert.equal(f.nameInput().value, "Synthetic retained");
+      assert.equal(f.fileElement.value, "retained.md");
+      assert.equal(f.dirty.at(-1), true);
+      const signal = new AbortController().signal;
+      await f.query().queryFn({ signal });
+      assert.deepEqual(f.reads, [{ input: { category: "EXPORT_CONTEXT", locale: hint }, signal }]);
+      await f.save();
+      assert.deepEqual(f.writes, [{ category: "EXPORT_CONTEXT", name: "Synthetic retained", file }]);
+    } finally { f.dispose(); }
+  });
+}
+
+test("reopening captures the current legacy hint instead of sharing an earlier panel's scope", () => {
+  const first = fixture(), second = fixture("zh-CN");
+  try {
+    first.setLocale("zh-CN");
+    assert.equal(first.query().queryKey[2], "en");
+    assert.equal(second.query().queryKey[2], "zh-CN");
+  } finally { first.dispose(); second.dispose(); }
+});
+
+test("late preferences do not strand a pending upload's acknowledged notice", async () => {
+  const f = fixture();
+  try {
+    f.setFile({ name: "pending.md" });
+    const release = f.hold(), saved = f.save();
+    f.setLocale("zh-CN");
+    assert.equal(f.fileInput().disabled, true);
+    assert.equal(f.query().queryKey[2], "en");
+    release(); await saved; f.render();
+    // Success belongs to the submitted scope even if its copy uses the
+    // mutation's captured language. A display change must not discard it.
+    assert.equal(f.nameInput().value, "");
+    assert.equal(f.fileElement.value, "");
+    assert.equal(f.dirty.at(-1), false);
+    f.button("上传我的 Skill").onClick(); f.render();
+    assert.equal(f.statuses().length, 1);
+    assert.match(f.statuses()[0], /Skill 已保存|Skill saved/);
   } finally { f.dispose(); }
 });

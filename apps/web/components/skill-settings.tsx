@@ -24,7 +24,11 @@ export function SkillSettings({ focused = false, onDirtyChange }: { focused?: bo
   const fileInput = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<SkillCategory>("EXPORT_CONTEXT");
   const [uploadOpen, setUploadOpen] = useState(false);
-  const locale = zh ? "zh-CN" : "en";
+  // Skills are scoped by purpose, not by the current interface language.
+  // Keep the legacy selection hint for this panel session: late preference
+  // hydration must not switch queries and unmount a selected/saving row.
+  // Labels still follow resolvedLocale; reopening takes the current hint.
+  const [locale] = useState<"zh-CN" | "en">(() => zh ? "zh-CN" : "en");
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [notice, setNotice] = useState<string | null>(null);

@@ -21,10 +21,12 @@ Further CI-driven fixes cover offscreen preview retry and commit-time fold
 compensation through the same reading viewport owner; no new acceptance claim.
 Hidden-point virtual collapse now acquires the existing real-row lease before
 shrinking and retains the same cancellable navigation owner through alignment.
-Exact `6b31252` passed all 35 reading/image cases and the required frame evidence,
-but its full run failed the Default PWA source contract on one unused legacy
-gallery selector. That selector is removed without changing active styles or
-the failing assertion; the new candidate still needs a complete fresh CI.
+Exact `35f5140` passed Web Quality (14/14 gates, including all 35 reading/image
+cases and required frame evidence), API and reading performance. Full acceptance
+is still blocked by a separate Settings Quality failure (462/463): late account
+language hydration can switch a personal Skill list query and unmount its saved
+row. The candidate keeps that panel's legacy read hint stable while localizing
+labels; controlled hydration regressions and a fresh complete CI remain pending.
 [Audit](docs/execution/ux-audit-image-natural-flow-2026-11-07.md);
 no local application tests/services, new dependencies, migration, schedules or
 production operations are authorized in this task.

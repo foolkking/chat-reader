@@ -166,6 +166,116 @@ for (const width of [375, 768, 1440]) for (const system of [false, true]) {
   });
 }
 
+test.describe("late account preferences do not replace an open Skill row", () => {
+  test.use({ locale: "en-US" });
+  for (const phase of ["draft", "pending", "confirmed"] as const) {
+    test(`${phase}: late language hydration retains the real row, file and receipt`, async ({ page, playwright, baseURL }, testInfo) => {
+      const admin = await settingsAdmin(playwright.request, baseURL!);
+      let releasePreferences = () => {}, releaseReceipt = () => {}, releaseList = () => {};
+      const preferencesHeld = new Promise<void>(resolve => { releasePreferences = resolve; });
+      const receiptHeld = new Promise<void>(resolve => { releaseReceipt = resolve; });
+      const listHeld = new Promise<void>(resolve => { releaseList = resolve; });
+      let preferencesStarted = false, committed = false, listStarted = false, writes = 0;
+      const readLocales: Array<string | null> = [];
+      // Hold the real account preference response, not a fabricated locale or
+      // a timeout. The first list loads in English before saved Chinese arrives.
+      await page.route("**/api/preferences", async route => {
+        if (route.request().method() !== "GET") { await route.continue(); return; }
+        const response = await route.fetch();
+        expect(response.status()).toBe(200);
+        preferencesStarted = true;
+        await preferencesHeld;
+        try { await route.fulfill({ response }); } catch { /* cancelled read */ }
+      });
+      let f: Awaited<ReturnType<typeof setup>> | undefined;
+      try {
+        f = await setup(page, admin, baseURL!, 1440, false);
+        await expect.poll(() => preferencesStarted).toBe(true);
+        await expect(page.locator("html")).toHaveAttribute("lang", "en-US");
+        const row = f.row, original = await row.elementHandle();
+        if (!original) throw new Error("The actual replacement row must be mounted.");
+        const retained = async () => {
+          await expect(row).toBeVisible({ timeout: 4_000 });
+          expect(await row.evaluate((element, previous) => element === previous && previous.isConnected, original)).toBe(true);
+        };
+        const hydrate = async () => {
+          releasePreferences();
+          await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN", { timeout: 4_000 });
+          await retained();
+        };
+        await page.route(f.endpoint, async route => {
+          readLocales.push(new URL(route.request().url()).searchParams.get("locale"));
+          listStarted = true;
+          await listHeld;
+          try { await route.fulfill({ status: 503, json: { detail: "Synthetic list failure" } }); } catch { /* cancelled read */ }
+        });
+        await page.route(`**${f.path}/revisions`, async route => {
+          writes += 1;
+          const response = await route.fetch();
+          expect(response.status()).toBe(200);
+          committed = true;
+          await receiptHeld;
+          try { await route.fulfill({ response }); } catch { /* cancelled during cleanup */ }
+        });
+        const updated = `# Synthetic late preference ${phase}`;
+        const input = row.getByLabel(/替换 Skill ZIP|Replace Skill ZIP/);
+        await input.setInputFiles(file(updated));
+        if (phase === "draft") {
+          await hydrate();
+          expect(await input.evaluate((element: HTMLInputElement) => element.files?.length)).toBe(1);
+          expect(writes).toBe(0);
+        }
+        await row.getByRole("button", { name: /^(确认替换|Replace)$/ }).click();
+        await expect.poll(() => committed).toBe(true);
+        if (phase === "pending") {
+          await hydrate();
+          await expect(input).toBeDisabled();
+          expect(await input.evaluate((element: HTMLInputElement) => element.files?.length)).toBe(1);
+          await expect(row.getByRole("status")).toHaveCount(0);
+        }
+        releaseReceipt();
+        await expect.poll(() => listStarted).toBe(true);
+        await expect(row.getByRole("status")).toHaveText(/^(已替换|Replaced)$/, { timeout: 4_000 });
+        if (phase === "confirmed") await hydrate();
+        await retained();
+        await expect(row.getByRole("status")).toHaveText("已替换", { timeout: 4_000 });
+        expect(await input.evaluate((element: HTMLInputElement) => element.files?.length)).toBe(0);
+        const saved = await (await page.request.get(f.path)).json();
+        expect(saved.bundle_revision).toBe(f.original + 1);
+        await expect(row.getByRole("link", { name: "下载", exact: true })).toHaveAttribute("href", saved.bundle_url);
+        await assertDownloaded(page, saved.bundle_url, updated);
+        releaseList();
+        const retry = f.dialog.getByRole("button", { name: "重新加载", exact: true });
+        await expect(retry).toBeVisible();
+        await retained();
+        await expect(row.getByRole("status")).toHaveText("已替换");
+        expect(readLocales.length).toBeGreaterThan(0);
+        expect(readLocales.every(locale => locale === "en")).toBe(true);
+        await page.screenshot({ path: testInfo.outputPath(`skill-late-preferences-${phase}.png`) });
+        await page.unroute(f.endpoint);
+        await retry.click();
+        await expect(f.dialog.getByRole("alert")).toHaveCount(0);
+        await retained();
+        await expect(row.getByRole("status")).toHaveText("已替换");
+        expect(writes).toBe(1);
+        expect((await (await page.request.get("/api/skills/resolve?category=EXPORT_CONTEXT&locale=en")).json()).id).toBe(f.id);
+        await testInfo.attach("late-preference-order", { contentType: "application/json", body: JSON.stringify({
+          phase, writes, readLocales, originalRowRetained: await original.evaluate(element => element.isConnected),
+        }) });
+      } finally {
+        releasePreferences(); releaseReceipt(); releaseList();
+        await page.unroute("**/api/preferences");
+        if (f) {
+          await page.unroute(f.endpoint);
+          await page.unroute(`**${f.path}/revisions`);
+          await f.cleanup();
+        }
+        await admin.dispose();
+      }
+    });
+  }
+});
+
 for (const { width, system } of [{ width: 375, system: false }, { width: 768, system: false }, { width: 1440, system: false }, { width: 768, system: true }]) {
   test(`${width}px ${system ? "system" : "personal"}: conflict keeps the file and requires explicit replacement of the latest revision`, async ({ page, playwright, baseURL }) => {
     const admin = await settingsAdmin(playwright.request, baseURL!);

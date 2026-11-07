@@ -129,6 +129,14 @@ three purpose tabs/rows with download and replacement, without cloning or a Skil
 language picker. Normalizer follows the same resolved Bundle; failed online
 resolution offers retry, never a silent built-in substitution.
 
+The personal management panel captures its compatibility locale hint on opening.
+Late account-preference hydration may translate labels but cannot change that
+panel's list identity and unmount a chosen file, pending replacement or confirmed
+receipt. Reopening uses the current language hint; changing purpose still uses
+the existing dirty-state guard. Historical divergent selections and the API's
+locale read compatibility remain unchanged; this does not merge caches across
+accounts or change the selected Skill.
+
 `python tools/context-skills/build.py --output apps/web/public/skills --check`
 verifies public artifacts. Editable runtime trees are experimental sources, not
 the bytes shipped as defaults.
