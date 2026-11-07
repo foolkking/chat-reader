@@ -57,6 +57,8 @@ export type AttachmentViewerSession = {
   activeItemKey: string;
   /** Optional transient entry mode; used by the inline +N Gallery tile. */
   initialMode?: AttachmentViewerMode;
+  /** Presentation hint only; content/permissions still require the scoped read. */
+  initialKind?: AttachmentViewerKind;
   access?: AttachmentAccess;
   permissions: {
     downloadOriginal: boolean;
@@ -185,6 +187,9 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
   const [contentMetrics, setContentMetrics] = useState<ViewerContentMetrics | null>(null);
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const [thumbnailsExpanded, setThumbnailsExpanded] = useState(false);
+  const [imageSession, setImageSession] = useState(session.initialKind === "image"
+    || session.scope === "message-gallery" || session.scope === "conversation-gallery"
+    || session.initialMode === "image-overview");
   const viewport = useViewerViewport();
 
   const attachmentQuery = useQuery({
@@ -202,9 +207,13 @@ export function AttachmentViewerShell({ session, onClose }: { session: Attachmen
     if (access.kind === "offline") releaseOfflineAttachmentUrls(attachment);
   }, [access.kind, attachment]);
   const viewerKind = attachment ? resolveAttachmentCapability(attachment).viewerKind : null;
+  useLayoutEffect(() => {
+    if (viewerKind === "image") setImageSession(true);
+  }, [viewerKind]);
   const effectiveMode = mode ?? defaultMode(viewerKind);
-  const presentation = resolveViewerPresentation({ viewerKind, viewerMode: effectiveMode, itemCount: session.items.length, pdfPageCount, contentMetrics });
-  const panelStyle = viewerKind === "image" && !isMobileViewerViewport(viewport) && !maximized
+  const imageShell = imageSession && (!viewerKind || viewerKind === "image");
+  const presentation = resolveViewerPresentation({ viewerKind: viewerKind ?? (imageShell ? "image" : null), viewerMode: effectiveMode, itemCount: session.items.length, pdfPageCount, contentMetrics });
+  const panelStyle = (imageShell || viewerKind === "image") && !isMobileViewerViewport(viewport) && !maximized
     ? { width: Math.min(1100, viewport.width * .9), height: viewport.height * .9, maxWidth: "90vw", maxHeight: "90dvh" }
     : viewerPresentationStyle({ ...presentation, maximized, viewport, mediaDimensions, itemCount: session.items.length });
   const mobileFullscreen = isMobileViewerViewport(viewport);
@@ -943,6 +952,7 @@ export function AttachmentPreviewDialog({ attachment, alt, onClose }: { attachme
       scope: "single",
       items: [item],
       activeItemKey: item.itemKey,
+      initialKind: resolveAttachmentCapability(attachment).viewerKind ?? undefined,
       permissions: { downloadOriginal: true, enumerateConversationImages: true, batchDownload: true },
       trigger: document.activeElement instanceof HTMLElement ? document.activeElement : null,
       onClosed: () => {

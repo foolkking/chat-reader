@@ -112,6 +112,7 @@ export function AttachmentBlock(props: AttachmentBlockProps) {
     scope: props.galleryItems && props.galleryItems.length > 1 ? "message-gallery" : "single",
     items: props.galleryItems?.length ? props.galleryItems : [item],
     activeItemKey: item.itemKey,
+    initialKind: plan.viewerKind ?? undefined,
     access,
     permissions: {
       downloadOriginal: true,
@@ -220,7 +221,8 @@ function InlineImage({ attachment, props, onOpen, onRuntime, zh, unavailable }: 
         </button>
       </span> : null}
       <ImageDisplayControls attachment={attachment} zh={zh} compact={body.width < 240} laneWidth={image.lane.width}
-        bodySize={{ width: body.width, height: body.fullHeight }} onOpen={onOpen} />
+        bodySize={{ width: body.width, height: body.fullHeight }}
+        visibleSize={body.foldable && !expanded ? { width: body.width, height: body.height } : undefined} onOpen={onOpen} />
       {body.adapted ? <span className="attachment-image-adapted" data-markdown-copy-ignore="true">{zh ? "已适应栏宽" : "Fitted to column width"}</span> : null}
     </Container>
   );

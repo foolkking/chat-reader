@@ -10,7 +10,7 @@ import {
   releaseOfflineAttachmentUrls,
 } from "../../lib/offline-db";
 import type { AttachmentRead, NavigateTarget } from "../../lib/types";
-import { buildAttachmentRenderPlan, friendlyAttachmentType } from "./preview-adapter-registry";
+import { buildAttachmentRenderPlan, friendlyAttachmentType, resolveAttachmentCapability } from "./preview-adapter-registry";
 import { formatBytes, useAttachmentViewer } from "./attachment-viewer";
 import { attachmentOccurrenceTarget } from "./attachment-location";
 import { useAttachmentSearchActivation, useAttachmentSearchTarget } from "./use-attachment-search-target";
@@ -65,6 +65,7 @@ export function OfflineConversationFilesPanel({
       scope: "single",
       items: [{ itemKey: `offline:${attachment.id}`, attachmentId: attachment.id, displayMode: "auto" }],
       activeItemKey: `offline:${attachment.id}`,
+      initialKind: resolveAttachmentCapability(attachment).viewerKind ?? undefined,
       access: { kind: "offline" },
       permissions: { downloadOriginal: true, enumerateConversationImages: false, batchDownload: false },
       trigger,

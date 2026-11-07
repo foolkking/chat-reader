@@ -25,7 +25,11 @@ test("inline attachment controls provide English alternatives for visible and ac
     assert.match(block, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
   assert.match(block, /aria-label=\{`\$\{zh \? "查看" : "View"\}/);
-  assert.match(block, /title=\{zh \? "下载" : "Download"\}/);
+  // Image download is explicitly original, not the saved public rendition.
+  // Non-image attachments retain their existing localized download label.
+  assert.match(block, /const image = resolveAttachmentCapability\(attachment\)\.viewerKind === "image"/);
+  assert.match(block, /const label = image \? \(zh \? "下载原图" : "Download original"\) : \(zh \? "下载" : "Download"\)/);
+  assert.match(block, /aria-label=\{`\$\{label\} \$\{attachment.display_name\}`\} title=\{label\}/);
 });
 
 test("attachment type metadata follows the current locale without changing render plans", () => {

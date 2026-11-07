@@ -8,7 +8,7 @@ builds or application tests. TypeScript without incremental output and ESLint
 are static checks, not browser/API acceptance.
 
 The existing `reading-stability` workflow gate also runs
-`image-natural-flow.spec.ts`: at least 27 cases plus the unchanged **64** complete
+`image-natural-flow.spec.ts`: at least 35 cases plus the unchanged **64** complete
 frame traces. Actual image pixels replace obsolete 4:3-cell assertions; known
 media geometry still changes at most 1px, reading anchors at most 2px peak/1px
 settled. Missing legacy geometry may normalize rather than freeze forever.
@@ -16,9 +16,17 @@ New cases exercise 300/500px images, 607/608px row boundaries, default/explicit
 100%, session-persistent long folds, tiny/transparent images, real Viewer modes
 and Markdown semantics at 375/800/1440px. Images contain synthetic text,
 diagram/table structure and transparency, not private material.
+An additional 12 traces cover preserved/hidden/user-interrupted collapse on all
+four surfaces; the cold Viewer panel trace measures the actual section, not its
+full-screen backdrop. A CI-only loopback/disposable-database fixture removes
+ingestion geometry before canonical parsing, refuses to erase saved display,
+and proves legacy reading does not write before the first explicit 100%.
+Native inline/link/table tests measure aspect ratios and text line boxes.
 
 The workflow additionally runs `image-scale-slider-browser.mjs` with mounted
 controls, real CSS and mouse/keyboard/touch; only its API transport is adapted.
+It also checks number-to-preset/column/range hand-off, unconfirmed draft status,
+and owner-to-Share/Offline/admin/read-only-Compare scope switches.
 API geometry tests cover read-only lookup, no bulk scanning, source allowlists,
 EXIF orientation, blocked assets, authentication and encoded-byte admission.
 Existing resize/animation/SVG/public URL/old offline package suites remain.

@@ -6,7 +6,7 @@ const root = process.argv[2] ?? "apps/web/test-results/reading-stability";
 const gate = JSON.parse(readFileSync(join(root, "gate-evidence.json"), "utf8"));
 assert.equal(gate.gate_id, "reading-stability");
 assert.equal(gate.status, "passed");
-assert.ok(gate.test_count >= 27, "Existing stability cases plus all four natural-flow integration cases must run.");
+assert.ok(gate.test_count >= 35, "Existing stability, seven natural-flow cases and all fold/public-output audit regressions must run.");
 assert.equal(gate.result_counts.passed, gate.test_count, "Every new gate case must actually run.");
 for (const status of ["skipped", "failed", "timedOut", "interrupted"]) assert.equal(gate.result_counts[status], 0);
 const files = readdirSync(root, { recursive: true }).filter(name => /(?:stopped|down|up|viewer)-frames\.json$/.test(name));
@@ -30,4 +30,40 @@ for (const file of files) {
     assert.ok(Math.abs(evidence.frames.at(-1).top - first) <= 1);
   }
 }
-console.info("reading-stability: all required cases and 64 complete frame traces verified");
+const foldFiles = readdirSync(root, { recursive: true }).filter(name => /fold-(?:preserved|hidden|cancelled)-frames\.json$/.test(name));
+assert.equal(foldFiles.length, 12, "Each of four surfaces needs all three collapse branches in addition to the original 64 traces.");
+for (const phase of ["preserved", "hidden", "cancelled"])
+  assert.equal(foldFiles.filter(file => file.endsWith(`fold-${phase}-frames.json`)).length, 4);
+for (const file of foldFiles) {
+  const evidence = JSON.parse(readFileSync(join(root, file), "utf8")), frames = evidence.frames;
+  assert.ok(frames.length > 10);
+  assert.ok(frames.every(frame => [frame.top, frame.time, frame.scroll, frame.height].every(Number.isFinite)));
+  for (const frame of frames) assert.deepEqual(frame.otherScroll, frames[0].otherScroll, "Other Compare scroller must remain stationary.");
+  if (file.endsWith("preserved-frames.json")) {
+    assert.ok(evidence.events.some(event => event.type === "keydown"));
+    assert.ok(Math.max(...frames.map(frame => Math.abs(frame.top - frames[0].top))) <= 2);
+    assert.ok(Math.abs(frames.at(-1).top - frames[0].top) <= 1);
+  } else if (file.endsWith("hidden-frames.json")) {
+    assert.ok(evidence.events.some(event => event.type === "pointerdown" && event.targetsAnchor));
+    const aligned = frames.findIndex(frame => Math.abs(frame.top - 120) <= 1);
+    assert.ok(aligned >= 0);
+    assert.ok(frames.slice(aligned).every(frame => Math.abs(frame.top - 120) <= 2));
+    assert.ok(Math.abs(frames.at(-1).top - 120) <= 1);
+  } else {
+    const wheel = evidence.events.find(event => event.type === "wheel");
+    assert.ok(wheel);
+    const after = frames.filter(frame => frame.time >= wheel.time);
+    assert.ok(after.length > 10);
+    for (let i = 1; i < after.length; i++) assert.ok(after[i].top - after[i - 1].top <= 2);
+    assert.ok(after.at(-1).top < wheel.top - 20);
+  }
+}
+const coldShell = readdirSync(root, { recursive: true }).filter(name => name.endsWith("viewer-cold-shell.json"));
+assert.equal(coldShell.length, 1);
+const shellFrames = JSON.parse(readFileSync(join(root, coldShell[0]), "utf8")).frames;
+assert.ok(shellFrames.length > 30);
+for (const frame of shellFrames) for (let axis = 0; axis < 4; axis++) {
+  assert.ok(Number.isFinite(frame[axis]));
+  assert.ok(Math.abs(frame[axis] - shellFrames[0][axis]) <= 1);
+}
+console.info("reading-stability: required cases, original 64 traces, 12 collapse traces and cold Viewer shell verified");

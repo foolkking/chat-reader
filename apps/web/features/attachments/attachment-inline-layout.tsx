@@ -123,6 +123,7 @@ function PresentationGroup({ run, access, onRuntimeChange }: {
             items: galleryItems,
             activeItemKey: galleryItems[Math.min(5, galleryItems.length - 1)]?.itemKey ?? galleryItems[0]?.itemKey ?? "",
             initialMode: "image-overview",
+            initialKind: "image",
             access,
             permissions: {
               downloadOriginal: true,

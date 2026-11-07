@@ -57,7 +57,7 @@ export function ImageScaleSlider({ value, disabled, zh, onChange, onCommit, onCa
     if (next !== null) onCommit(next);
   };
   return <div className="image-scale-slider">
-    <input type="range" min="1" max="100" step="1" value={value} disabled={disabled}
+    <input type="range" data-image-size-choice min="1" max="100" step="1" value={value} disabled={disabled}
       aria-label={zh ? "图片展示比例" : "Image display scale"} aria-valuetext={`${value}%`}
       className="image-scale-range" style={{ "--image-scale-progress": `${(value - 1) / 99 * 100}%` } as CSSProperties}
       onPointerDown={event => {
@@ -100,7 +100,7 @@ export function ImageScaleSlider({ value, disabled, zh, onChange, onCommit, onCa
       }}
     />
     <div className="image-scale-stops" role="group" aria-label={zh ? "常用比例" : "Common scales"}>
-      {IMAGE_SCALE_STOPS.map(percent => <button key={percent} type="button"
+      {IMAGE_SCALE_STOPS.map(percent => <button key={percent} type="button" data-image-size-choice
         className="image-scale-stop"
         disabled={disabled} aria-label={`${percent}%`} aria-pressed={value === percent} onClick={() => { onChange(percent); onCommit(percent); }}>
         {percent}%{percent === 100 ? <span className="block text-xs">{zh ? "原图" : "Original"}</span> : null}

@@ -49,10 +49,51 @@
 
 初次 `tsc --noEmit --incremental false` 通过；首次 ESLint 的新增测试
 `prefer-const` 已修正，复跑通过。随后兼容性审查补充旧 Markdown 缺 SHA、
-表格语义、svh、只读超时与会话缓存，最终静态复查结果在派发回执补记。
+表格语义、svh、只读超时与会话缓存；最终 TypeScript/ESLint、全部改动
+Python AST、改动脚本 `node --check` 和 `git diff --check` 通过。
 本地没有运行 API/Node/Playwright 应用测试或构建。
 
 ## CI 回执
 
-尚未派发。待记录精确提交、派发时刻、首次允许回查时刻、实际回查与全部结果。
+首轮精确源码 `9ab309c9335ec3a2504932f198d3fc54fb3a5ed9` 已推送 master。
+`Build release images` 派发成功，run **42335833670**；派发命令开始于
+**2026-11-07 11:50:56 +08:00**，保守首次回查门槛为 **12:42:00 +08:00**。
+派发回执只读取身份，没有查看运行状态、日志或制品；不创建安排。
+GitHub CLI 初始未登录，经现有 Git Credential Manager 的非交互凭据完成，
+未持久化或输出凭据。等待完成后记录实际首次回查与全部验收结果；
 不得以旧通过结果或部分 job 成功宣称本轮完成。
+
+### 首轮首次回查与审查修正
+
+实际首次回查 **2026-11-07 12:44:38.117 +08:00**，晚于上述门槛。
+精确 SHA 确认为 `9ab309c9335ec3a2504932f198d3fc54fb3a5ed9`。
+Web lint/typecheck/build 通过，Node **2094/2095**，唯一失败为
+`inline-attachment-locale.test.mjs`：仍匹配旧内联 `title={zh ? ...}`，
+不接受按计划区分图片“下载原图”和普通文件“下载”的共享 label。
+修正保留两种中英文文案及 aria/title 绑定断言，不回退产品要求。
+该失败阻止后续 Web 浏览器门禁；不能将它们视为通过。API、settings
+及读取性能 job 成功不是完整 Web 验收，更不构成部署授权。
+
+用户授权根据[审查报告](ux-audit-image-natural-flow-2026-11-07.md)修正：
+
+| 编号 | 修正与新增验证 |
+| --- | --- |
+| IMG-01 | 移除 Markdown 全局 max-height，恢复 inline-block；实测小图前后文字行盒、行内/链接/表格长图宽高比 |
+| FORM-01 | 面板内部最终选择协调 pointer/兼容 mouse/focus；数字转快捷项、触摸、栏宽和滑杆不先写过时数字；Enter/外部失焦继续去重保存 |
+| STATE-01 | 写缓存及编辑器身份加入访问权限范围和可编辑性；只读不能继承错误/核对入口，也不能调用 owner GET；同一 owner 写锁保持共享 |
+| STATE-02 | 已保存绑定确认比例；草稿单独显示“尚未保存”，不冒充成功 |
+| VIEW-01 | 已知图片提供纯展示 hint；首读/下一张 pending 保持图片会话外壳；逐帧测实际 panel 而非全屏 backdrop |
+| DATA-01 | 折叠面板分别显示正文完整尺寸及当前可见区域，不保存裁切高度 |
+| TEST-01 | CI 一次性旧图在 canonical 解析前清除上传几何，拒绝清除保存设置；数据库/GET/正文零自动写后，第一次显式 100% 布局不变 |
+| TEST-02 | 保留旧 64 轨迹，增 4 面×3 收起分支及对侧滚动记录；完整公开 PNG、同 URL 缩放及原图字节不变 |
+
+最低阅读用例由 27 增至 35，保留峰值 ≤2px、稳定 ≤1px，不靠延时/
+平滑滚动掩盖回跳。新增测试目前仅为源码，必须由下一轮完整精确 CI 执行。
+没有本地应用服务/构建/应用测试、新依赖、migration、安排或生产操作。
+用户原 build-info、审查文件和 evidence 继续保留。
+
+修正轮静态检查：第一次 TypeScript 找到 admin 列表的精简附件类型不满足
+完整 capability 输入，已用现有文件名/MIME 和空 asset 引用生成纯展示 hint；
+随后非增量 TypeScript、ESLint、三个改动脚本语法和 diff 检查通过。
+用户原 build-info SHA-256 仍为
+`fcc39cfd4093a15dc2cf9f8e80acbe12e7a858fcaeb961ee2b47d8a08e960afc`。

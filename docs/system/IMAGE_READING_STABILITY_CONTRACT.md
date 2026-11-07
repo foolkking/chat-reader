@@ -48,7 +48,9 @@ UI or physical-device acceptance.
   screen width.
 - Image-only attachment paragraphs reuse span-only image UI. Prose-inline,
   linked and table images retain document semantics and shared dimensions:
-  no figure/div in paragraphs and no buttons nested inside links.
+  no figure/div in paragraphs and no buttons nested inside links. Native images
+  are inline-block with no global max-height cap; their line boxes and actual
+  aspect ratios, not only width attributes, are part of the contract.
 
 `image-display` source SHA/expected-percentage checks, row locking, conversion
 slot and byte/pixel/format safety limits remain. A failed conversion never
@@ -69,13 +71,21 @@ with 25/50/75/100 stops and 100 labelled Original. “Fit current column” save
 a concrete integer, not an automatic mode. The panel distinguishes original,
 draft-selection and currently displayed body pixels. Existing conversion bounds
 still constrain the fit suggestion; they are not enlarged to satisfy a target.
+Folded images distinguish full body dimensions from the currently visible area.
+Moving from a number draft to a preset, range or column-fit choice is one
+final-choice transaction, including touch compatibility mouse events and keyboard
+focus hand-off. Leaving the editing controls/Enter still commits the number.
+Unconfirmed edits never continue to claim the previous selection was saved.
 
-Shared attachment/source/auth-scoped pending state prevents duplicate writes.
+Shared attachment/source/auth/access-authority-scoped pending state prevents duplicate writes.
 Closing during submission does not cancel or undo the server write. Success
 updates all owner references. An uncertain network/server result blocks writes
 until an explicit read-only Check result; it never automatically resends.
 Conflict, limits, unsupported formats and busy conversion have separate messages.
 Saving updates prior public URLs but does not publish an image.
+Read-only controls neither inherit owner write recovery nor call the owner-only
+size endpoint; switching authority remounts local editor state. Compare may read
+the same owner's confirmed size without acquiring the ability to save/check writes.
 
 The existing Viewer and react-zoom-pan-pinch use intrinsic image pixels as the
 transform base. Original 1:1 means one image pixel per **CSS pixel**, not physical
@@ -86,6 +96,9 @@ narrow-screen mode selector and explicit mobile thumbnails. Desktop thumbnails
 remain visible by default. Light/dark/checker backgrounds inspect transparency
 without changing exported bytes. The image shell is viewport-sized and does not
 follow image decode or zoom. Download actions identify the unchanged original.
+Known-image entry points supply a presentation-only hint before the scoped
+attachment read. The same image session retains that shell while the next image
+is pending. This hint supplies no content, query data or authorization.
 
 ## Offline and canonical copy
 
@@ -181,11 +194,20 @@ fixture assets exist in its own package/cache. Lazy offscreen images are not
 misreported as broken because no request has begun; controlled visible images
 must decode successfully, not merely report `complete`.
 `verify-reading-stability.mjs` rejects missing traces, missing cases, skipped
-cases and invalid evidence. At least 27 cases include four new integration cases
+cases and invalid evidence. At least 35 cases include seven natural-flow cases
 for actual 300/500px image widths, 607/608px wrap boundaries, default/saved 100%,
 virtual long-image folding, intrinsic Viewer modes, tiny/transparent images,
 semantic Markdown and 375/800/1440px panels. Synthetic PNGs contain bitmap text,
 diagram blocks, table lines and optional transparency, not just solid colors.
+The genuine never-configured legacy fixture is created only in guarded CI's
+loopback disposable database; it does not save 100% before testing the default.
+Four surfaces each retain three additional collapse traces (12 total): surviving
+anchor ≤2px peak/≤1px final, hidden point explicitly aligned to image start at
+120px, and real immediate wheel not overwritten by stale restoration. The
+intentional hidden-point jump is retained in evidence, not called stationary.
+Every trace also records the opposite Compare scroll position. A separate cold
+Viewer panel trace spans delayed detail reads and next-image loading; public
+PNG checks prove full long-image output and stable URL identity after resizing.
 The mounted control browser gate covers themes/locales and trusted mouse,
 touch, keyboard, cancellation and uncertain writes. Existing navigation,
 capacity, memory, security, copy and offline gates remain required.

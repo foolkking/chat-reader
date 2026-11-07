@@ -246,7 +246,7 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
 .reader-rich-block,
 .reader-rich-html-block { max-width: none; width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .reader-rich-html-block > :where(div, section) { min-width: 0; }
-.reader-rich-image { display: block; max-height: min(70vh, 40rem); }
+.reader-rich-image { display: inline-block; max-height: none; vertical-align: middle; }
 .reader-rich-media { display: block; }
 .reader-rich-image-fallback { min-height: 2.25rem; }
 .reader-rich-details { min-width: 0; }

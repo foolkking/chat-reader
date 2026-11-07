@@ -125,7 +125,7 @@ async function expectOfflineCopyReady(page: Page, fixture: Fixture) {
   if (mobile) await page.locator("aside:visible").getByRole("button", { name: "Close", exact: true }).click();
 }
 
-type Sample = { time: number; top: number; scroll: number; height: number; cells: number[][]; writer: string; mounted: number; measuredRows: number[][]; viewerLocked: boolean; viewerVisible: boolean };
+type Sample = { time: number; top: number; scroll: number; height: number; cells: number[][]; writer: string; mounted: number; measuredRows: number[][]; viewerLocked: boolean; viewerVisible: boolean; otherScroll: number[] };
 type Probe = { frames: Sample[]; corrections: { time: number; delta: number; applied: number }[];
   events: { time: number; type: string; top: number; scroll: number; viewerLocked: boolean; targetsAnchor: boolean }[] };
 async function startProbe(anchor: Locator) {
@@ -144,7 +144,7 @@ async function startProbe(anchor: Locator) {
         viewerLocked: root.dataset.readerViewerLocked === "true",
         targetsAnchor: event.target instanceof Node && target.contains(event.target) });
     };
-    const eventTypes = ["pointerdown", "click", "keydown", "focusin", "scroll"];
+    const eventTypes = ["pointerdown", "click", "keydown", "focusin", "scroll", "wheel"];
     eventTypes.forEach(type => document.addEventListener(type, onInput, true));
     root.addEventListener("chat-reader:geometry-correction", onCorrection);
     host.stopReadingProbe = () => {
@@ -159,6 +159,7 @@ async function startProbe(anchor: Locator) {
         height: root.scrollHeight, writer: root.dataset.readerLastScrollWriter ?? "none",
         viewerLocked: root.dataset.readerViewerLocked === "true",
         viewerVisible: Boolean(document.querySelector('[data-testid="attachment-viewer-shell"]')),
+        otherScroll: Array.from(document.querySelectorAll<HTMLElement>('[data-reader-scroll-root="true"]')).filter(other => other !== root).map(other => other.scrollTop),
         mounted: root.querySelectorAll("[data-block-index]").length,
         measuredRows: Array.from(root.querySelectorAll<HTMLElement>('[data-virtualized-block-list="true"] > [data-index]'))
           .map(row => [Number(row.dataset.index), row.getBoundingClientRect().height]),
@@ -314,6 +315,141 @@ for (const width of [375, 1440]) for (const long of [false, true]) for (const su
     }
   });
 }
+
+for (const surface of ["reader", "share", "offline", "compare"] as const) {
+  test(`${surface}: collapsing preserves a surviving anchor, locates a hidden reading point and respects user wheel`, async ({ page, context }, info) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const fixture = normal;
+    const url = surface === "reader" ? `/conversations/${fixture.id}`
+      : surface === "share" ? `/share/${fixture.token}`
+        : surface === "compare" ? `/compare?left=${fixture.id}&right=${other.id}` : `/library?conversationId=${fixture.id}`;
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      if (surface === "offline") {
+        await page.getByRole("button", { name: "Download offline copy", exact: true }).click();
+        await expectOfflineCopyReady(page, fixture);
+        await page.route("**/api/attachments/**", route => route.abort());
+        await context.setOffline(true);
+      }
+      const article = page.locator(`#message-${fixture.messageId}`).filter({ visible: true });
+      const root = surface === "share" ? page.locator("html") : article.locator('xpath=ancestor::*[@data-reader-scroll-root="true"][1]');
+      if (surface === "reader" || surface === "offline") await expectReaderReady(root);
+      if (surface === "compare") {
+        const right = page.getByRole("region", { name: "Right conversation", exact: true }).locator('[data-reader-scroll-root="true"]');
+        await right.evaluate(node => { node.scrollTop = 240; });
+      }
+      const long = article.locator(`[data-attachment-id="${fixture.assets[2]}"]`).first();
+      const anchor = article.locator('[data-block-type="paragraph"]').filter({ hasText: /^Reading stability anchor\./ }).first();
+      await long.getByRole("button", { name: "Expand full image", exact: true }).click();
+      await expect(long).toHaveAttribute("data-image-expanded", "true");
+      await anchor.evaluate(node => {
+        const root = node.closest<HTMLElement>('[data-reader-scroll-root="true"]');
+        const delta = node.getBoundingClientRect().top - (root?.getBoundingClientRect().top ?? 0) - 120;
+        if (root) root.scrollTop += delta; else window.scrollBy(0, delta);
+      });
+      await frames(page, 8);
+      const collapse = long.getByRole("button", { name: "Collapse image", exact: true });
+      // Keyboard activation can reach a surviving reading point without the
+      // test framework scrolling the long image back into view first.
+      await collapse.evaluate(node => node.focus({ preventScroll: true }));
+      await startProbe(anchor);
+      await page.keyboard.press("Space");
+      await expect(long).toHaveAttribute("data-image-expanded", "false");
+      await frames(page, 24);
+      const preserved = await endProbe(page, info, "fold-preserved");
+      expect(preserved.events.some(event => event.type === "keydown")).toBe(true);
+      expect(Math.max(...preserved.frames.map(frame => Math.abs(frame.top - preserved.frames[0].top)))).toBeLessThanOrEqual(2);
+      expect(Math.abs(preserved.frames.at(-1)!.top - preserved.frames[0].top)).toBeLessThanOrEqual(1);
+
+      const prepareHiddenPoint = async () => {
+        await long.getByRole("button", { name: "Expand full image", exact: true }).click();
+        await expect(long).toHaveAttribute("data-image-expanded", "true");
+        await collapse.evaluate(node => node.scrollIntoView({ block: "center", behavior: "instant" }));
+        await frames(page, 6);
+        const point = await collapse.evaluate(node => {
+          const box = node.getBoundingClientRect(), x = box.left + box.width / 2, y = box.top + box.height / 2;
+          return { x, y, hit: node.contains(document.elementFromPoint(x, y)) };
+        });
+        expect(point.hit).toBe(true);
+        const relativeTop = await long.evaluate(node => node.getBoundingClientRect().top - (node.closest('[data-reader-scroll-root="true"]')?.getBoundingClientRect().top ?? 0));
+        expect(relativeTop + 630).toBeLessThan(120);
+        expect(relativeTop + 4000).toBeGreaterThan(120);
+        return point;
+      };
+      let point = await prepareHiddenPoint();
+      await startProbe(long);
+      await page.mouse.click(point.x, point.y);
+      await expect(long).toHaveAttribute("data-image-expanded", "false");
+      await expect.poll(() => long.evaluate(node => Math.abs(node.getBoundingClientRect().top
+        - (node.closest('[data-reader-scroll-root="true"]')?.getBoundingClientRect().top ?? 0) - 120))).toBeLessThanOrEqual(1);
+      await frames(page, 24);
+      const hidden = await endProbe(page, info, "fold-hidden");
+      expect(hidden.events.some(event => event.type === "pointerdown" && event.targetsAnchor)).toBe(true);
+      const aligned = hidden.frames.findIndex(frame => Math.abs(frame.top - 120) <= 1);
+      expect(aligned).toBeGreaterThanOrEqual(0);
+      for (const frame of hidden.frames.slice(aligned)) expect(Math.abs(frame.top - 120)).toBeLessThanOrEqual(2);
+      expect(Math.abs(hidden.frames.at(-1)!.top - 120)).toBeLessThanOrEqual(1);
+
+      point = await prepareHiddenPoint();
+      await startProbe(long);
+      await page.mouse.click(point.x, point.y);
+      // Send real wheel immediately, not after waiting for the navigator to
+      // settle. Every subsequent frame is retained to expose stale restoration.
+      await page.mouse.wheel(0, 180);
+      await frames(page, 30);
+      const cancelled = await endProbe(page, info, "fold-cancelled");
+      const wheel = cancelled.events.find(event => event.type === "wheel");
+      expect(wheel).toBeTruthy();
+      const afterWheel = cancelled.frames.filter(frame => frame.time >= wheel!.time);
+      expect(afterWheel.length).toBeGreaterThan(10);
+      for (let i = 1; i < afterWheel.length; i++) expect(afterWheel[i].top - afterWheel[i - 1].top).toBeLessThanOrEqual(2);
+      expect(afterWheel.at(-1)!.top).toBeLessThan(wheel!.top - 20);
+      for (const evidence of [preserved, hidden, cancelled]) {
+        for (const frame of evidence.frames) expect(frame.otherScroll).toEqual(evidence.frames[0].otherScroll);
+      }
+      await page.screenshot({ path: info.outputPath("long-image-collapse.png") });
+    } finally { await context.setOffline(false); await page.unrouteAll({ behavior: "wait" }); }
+  });
+}
+
+test("collapsed long image publishes complete pixels and its existing public URL follows saved size", async ({ page, browser }) => {
+  const fixture = normal, asset = fixture.assets[2];
+  await page.goto(`/conversations/${fixture.id}`);
+  const long = page.locator(`#message-${fixture.messageId} [data-attachment-id="${asset}"]`).first();
+  await long.scrollIntoViewIfNeeded();
+  await expect(long).toHaveAttribute("data-image-expanded", "false");
+  const plan = await (await page.request.get(`/api/messages/${fixture.messageId}/markdown-copy`)).json();
+  const published = await page.request.post(`/api/messages/${fixture.messageId}/markdown-copy`, { data: {
+    base_version_id: plan.version_id, attachment_ids: [asset],
+  } });
+  expect(published.ok()).toBe(true);
+  const url = (await published.json()).urls[asset];
+  const guest = await browser.newContext();
+  try {
+    const dimensions = async () => {
+      const response = await guest.request.get(url);
+      expect(response.status()).toBe(200); expect(response.headers()["content-type"]).toBe("image/png");
+      const bytes = await response.body();
+      expect(bytes.subarray(1, 4).toString()).toBe("PNG");
+      return [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
+    };
+    expect(await dimensions()).toEqual([240, 4000]);
+    const original = await (await page.request.get(`/api/attachments/${asset}/content`)).body();
+    const current = await (await page.request.get(`/api/attachments/${asset}/image-display`)).json();
+    expect((await page.request.put(`/api/attachments/${asset}/image-display`, { data: {
+      source_sha256: current.source_sha256, expected_scale_percent: current.scale_percent, scale_percent: 50,
+    } })).ok()).toBe(true);
+    expect(await dimensions()).toEqual([120, 2000]);
+    expect(await (await page.request.get(`/api/attachments/${asset}/content`)).body()).toEqual(original);
+  } finally {
+    const current = await (await page.request.get(`/api/attachments/${asset}/image-display`)).json();
+    expect((await page.request.put(`/api/attachments/${asset}/image-display`, { data: {
+      source_sha256: current.source_sha256, expected_scale_percent: current.scale_percent, scale_percent: 100,
+    } })).ok()).toBe(true);
+    await guest.close();
+  }
+});
 
 test("Compare deep navigation leases a real virtual block; URL and opposite scroller remain independent", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
