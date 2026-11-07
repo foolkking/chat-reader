@@ -1,10 +1,14 @@
 import { expect, test } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 
 const runMutationFlow = process.env.E2E_MUTATION_FLOW === "1";
 
 test.skip(!runMutationFlow, "E2E_MUTATION_FLOW=1 is required");
 
-test("initial recent-recording cannot make delete stale and failed undo remains retryable", async ({ page }) => {
+type MutationFrame = { time: number; top: number; scroll: number; height: number; writer: string; stage: string; empty: boolean };
+type MutationProbe = { baseline: number; frames: MutationFrame[]; stop: boolean };
+
+test("initial recent-recording cannot make delete stale and failed undo remains retryable", async ({ page }, info) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const createdResponse = await page.request.post("/api/conversations", {
     data: {
@@ -50,6 +54,30 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
     await expect(assistant).toBeVisible();
     await expect(assistant).toContainText(mutationMessageText);
     const scrollRoot = page.getByTestId("reader-scroll-root");
+    await expect(scrollRoot).toHaveAttribute("data-navigation-stage", "settled");
+    // Visible is not navigation-ready. The failing trace captured a baseline
+    // during URL alignment, then Locator.click scrolled twice before hitting
+    // Delete. At confirmation the reading line was in a different, surviving
+    // message, so preserving that real anchor correctly moved the next message.
+    // Establish this test's intended "delete the currently read message" state
+    // explicitly, then use a hit-tested pointer without hidden locator scrolls.
+    await assistant.evaluate(article => {
+      const root = article.closest<HTMLElement>("[data-reader-scroll-root='true']")!;
+      root.scrollTop += article.getBoundingClientRect().top - root.getBoundingClientRect().top - 80;
+    });
+    await expect.poll(() => assistant.evaluate(article => Math.abs(article.getBoundingClientRect().top
+      - article.closest("[data-reader-scroll-root='true']")!.getBoundingClientRect().top - 80))).toBeLessThanOrEqual(1);
+    const articleBox = await assistant.boundingBox();
+    await page.mouse.move(articleBox!.x + 30, articleBox!.y + 20);
+    const deleteButton = assistant.getByRole("button", { name: /Delete message|\u5220\u9664\u6d88\u606f/ });
+    const point = await deleteButton.evaluate(button => {
+      const box = button.getBoundingClientRect(), x = box.left + box.width / 2, y = box.top + box.height / 2;
+      const article = button.closest("article")!, root = article.closest("[data-reader-scroll-root='true']")!;
+      const line = root.getBoundingClientRect().top + 120, bounds = article.getBoundingClientRect();
+      return { x, y, hit: button.contains(document.elementFromPoint(x, y)), readingThisMessage: bounds.top <= line && line < bounds.bottom };
+    });
+    expect(point.hit).toBe(true);
+    expect(point.readingThisMessage).toBe(true);
     const nextMessage = assistant.locator("xpath=following::article[@data-message-id][1]");
     await expect(nextMessage).toBeVisible();
     const nextMessageId = await nextMessage.getAttribute("data-message-id");
@@ -59,6 +87,20 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
       if (!root) throw new Error("Reader scroll root is missing");
       return article.getBoundingClientRect().top - root.getBoundingClientRect().top;
     });
+    await nextMessage.evaluate((article, baseline) => {
+      const root = article.closest<HTMLElement>("[data-reader-scroll-root='true']")!;
+      const host = window as unknown as { mutationProbe: MutationProbe };
+      const probe: MutationProbe = { baseline, frames: [], stop: false };
+      host.mutationProbe = probe;
+      const tick = () => {
+        if (probe.stop) return;
+        const live = document.getElementById(article.id);
+        probe.frames.push({ time: performance.now(), top: live ? live.getBoundingClientRect().top - root.getBoundingClientRect().top : -1,
+          scroll: root.scrollTop, height: root.scrollHeight, writer: root.dataset.readerLastScrollWriter ?? "none",
+          stage: root.dataset.navigationStage ?? "fresh", empty: root.querySelectorAll("article[data-message-id]").length === 0 });
+        requestAnimationFrame(tick);
+      }; tick();
+    }, nextOffsetBefore);
     await scrollRoot.evaluate((root) => {
       root.dataset.testBecameEmpty = "false";
       const observer = new MutationObserver(() => {
@@ -70,7 +112,10 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
       (root as HTMLElement & { __mutationWindowObserver?: MutationObserver }).__mutationWindowObserver = observer;
     });
 
-    await assistant.getByRole("button", { name: /Delete message|\u5220\u9664\u6d88\u606f/ }).click();
+    await page.mouse.click(point.x, point.y);
+    // Opening the confirmation must not have moved the reading baseline.
+    expect(await nextMessage.evaluate((article, baseline) => Math.abs(article.getBoundingClientRect().top
+      - article.closest("[data-reader-scroll-root='true']")!.getBoundingClientRect().top - baseline), nextOffsetBefore)).toBeLessThanOrEqual(1);
     const deleteResponsePromise = page.waitForResponse((response) => (
       response.request().method() === "DELETE" && response.url().includes("/api/messages/")
     ));
@@ -85,6 +130,7 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
       return Math.abs((article.getBoundingClientRect().top - root.getBoundingClientRect().top) - expectedOffset);
     }, nextOffsetBefore)).toBeLessThanOrEqual(48);
     await expect(scrollRoot).toHaveAttribute("data-test-became-empty", "false");
+    await page.evaluate(() => { (window as unknown as { mutationProbe: MutationProbe }).mutationProbe.stop = true; });
 
     const undo = page.getByRole("button", { name: /Undo|\u64a4\u9500/ });
     await expect(undo).toBeVisible();
@@ -104,6 +150,12 @@ test("initial recent-recording cannot make delete stale and failed undo remains 
       (root as HTMLElement & { __mutationWindowObserver?: MutationObserver }).__mutationWindowObserver?.disconnect();
     });
   } finally {
+    const probe = await page.evaluate(() => {
+      const probe = (window as unknown as { mutationProbe?: MutationProbe }).mutationProbe;
+      if (probe) probe.stop = true;
+      return probe ?? null;
+    }).catch(() => null);
+    if (probe) await writeFile(info.outputPath("delete-reading-position-frames.json"), JSON.stringify(probe));
     await page.request.delete(`/api/conversations/${conversationId}`);
   }
 });

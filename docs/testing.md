@@ -32,6 +32,12 @@ EXIF orientation, blocked assets, authentication and encoded-byte admission.
 Existing resize/animation/SVG/public URL/old offline package suites remain.
 First status read is at least 50 minutes after each dispatch; no schedules or
 deployment. See [implementation and receipts](execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
+The user explicitly waived the first-read delay for diagnosing failed run
+`42341779367`. Its mutation lifecycle trace exposed an invalid baseline captured
+during URL alignment followed by locator-driven scrolling. That test now
+establishes the intended reading anchor and hit-tests a physical Delete click,
+records all mutation frames, and keeps its existing ≤48px/never-empty/undo
+requirements; it does not change product scroll ownership or relax a threshold.
 
 Only the top exact-source section and [Project State](../PROJECT_STATE.md)
 describe the current release. Dated results below retain their original
