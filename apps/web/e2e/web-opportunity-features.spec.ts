@@ -150,7 +150,8 @@ test("tag manager checks a lost merge response without replaying the write or de
   await page.getByRole("button", { name: "Merge tags", exact: true }).click();
   const confirm = page.getByRole("dialog", { name: "Merge these tags?" });
   await confirm.getByRole("button", { name: /Confirm|确认/ }).click();
-  await expect(page.getByRole("alert")).toContainText("Merge not confirmed");
+  const tagsPanel = page.locator("fieldset").filter({ has: page.getByRole("heading", { name: "Conversation tags", exact: true }) });
+  await expect(tagsPanel.getByRole("alert")).toContainText("Merge not confirmed");
   expect(writes).toHaveLength(1);
   await expect(page.getByRole("button", { name: "Merge tags", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Check result", exact: true }).click();

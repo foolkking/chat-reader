@@ -354,9 +354,10 @@ test("offline conversation search scopes before its limit and excludes title/typ
   await context.setOffline(true);
 
   await openReaderHeaderAction(page, /^(搜索|Search)$/);
-  const input = page.locator("#conversation-search-input");
-  const panel = input.locator("../..");
-  await input.locator("..").locator("select").first().selectOption("assistant");
+  const panel = page.getByRole("dialog", { name: /^(搜索|Search)$/ });
+  const input = panel.getByRole("textbox", { name: /^(搜索当前对话|Search this conversation)$/ });
+  await expect(input).toBeVisible();
+  await panel.getByRole("combobox", { name: /^(我 \/ ChatGPT|Role)$/ }).selectOption("assistant");
   await input.fill("target-annotation-40");
   await expect(panel.getByRole("status").filter({
     hasText: /^(已加载 1 \/ 1 条结果 · 1 个定位项|1 of 1 results loaded · 1 locations)$/,
@@ -1340,11 +1341,25 @@ async function seedOfflineSearchFixture(page: Page): Promise<void> {
 }
 
 async function openReaderHeaderAction(page: import("@playwright/test").Page, name: RegExp): Promise<void> {
-  const action = page.getByRole("button", { name }).first();
-  if (!await action.isVisible().catch(() => false)) {
-    await page.getByRole("button", { name: /^(Message actions|消息操作|More|更多)$/ }).first().click();
+  const toolbar = page.locator("[data-reader-toolbar]");
+  await expect(toolbar).toBeVisible();
+  const primary = toolbar.getByRole("button", { name });
+  if (await primary.isVisible()) {
+    await primary.click();
+    return;
   }
-  await action.click();
+  const desktop = toolbar.locator('[data-reader-header-more-actions="true"]');
+  if (await desktop.isVisible()) {
+    await desktop.click();
+    const menu = toolbar.getByRole("menu", { name: /^(Message actions|消息操作)$/ });
+    await expect(menu).toBeVisible();
+    await menu.getByRole("menuitem", { name }).click();
+    return;
+  }
+  await toolbar.locator('[data-reader-mobile-more-actions="true"]').click();
+  const tools = page.getByRole("dialog", { name: /^(阅读工具|Reader tools)$/ });
+  await expect(tools).toBeVisible();
+  await tools.getByRole("button", { name }).click();
 }
 
 async function hasConnectedAnnotationHighlight(page: import("@playwright/test").Page, quote: string): Promise<boolean> {
