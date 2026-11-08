@@ -100,19 +100,23 @@ test("same-query search restarts the first page rather than keeping stale earlie
   await expect(page.getByRole("link", { name: /Synthetic old (first|second) page/ })).toHaveCount(0);
 });
 
-test("tag lost-response recovery retains the original UUID across panel close", async ({ page, syntheticConversation }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+for (const width of [375, 1440]) for (const dismissal of ["Escape", "outside pointer"] as const) {
+test(`${width}px: tag lost-response recovery retains the original UUID across ${dismissal} close`, async ({ page, syntheticConversation }) => {
+  await page.setViewportSize({ width, height: 900 });
   const name = `Synthetic recovered tag ${crypto.randomUUID().slice(0, 8)}`;
-  let writes = 0;
+  const writes: string[] = [];
   await page.route("**/api/user-feature-entries/conversation-tag/**", async route => {
     if (route.request().method() !== "PUT") return route.continue();
-    writes++;
+    writes.push(new URL(route.request().url()).pathname.split("/").at(-1)!);
     const response = await route.fetch(); expect(response.ok()).toBe(true);
     await route.abort();
   });
+  const trigger = page.locator("[data-reader-tags-trigger]").filter({ visible: true });
   const openTags = async () => {
-    await page.locator("[data-reader-tags-trigger]").filter({ visible: true }).click();
-    return page.getByRole("group", { name: "Conversation tags", exact: true });
+    await trigger.click();
+    const panel = page.getByRole("group", { name: "Conversation tags", exact: true });
+    await expect(panel).toBeVisible();
+    return panel;
   };
   try {
     await page.goto(`/conversations/${syntheticConversation}`);
@@ -120,13 +124,45 @@ test("tag lost-response recovery retains the original UUID across panel close", 
     await panel.getByRole("textbox", { name: "Tag name", exact: true }).fill(name);
     await panel.getByRole("button", { name: "Create", exact: true }).click();
     await expect(panel.getByRole("button", { name: "Check current state", exact: true })).toBeEnabled();
-    await page.keyboard.press("Escape");
+    // Do not focus a recovery action first: the disabled submit button can
+    // leave focus on body, and Escape must still dismiss this disclosure.
+    if (dismissal === "Escape") {
+      await page.keyboard.press("Escape");
+      await expect(trigger).toBeFocused();
+    } else {
+      await page.getByRole("heading", { name: "Synthetic recovery consistency", exact: true }).click();
+    }
+    await expect(panel).toBeHidden();
     panel = await openTags();
-    await expect(panel.getByRole("button", { name: "Create", exact: true })).toBeDisabled();
+    // A still-mounted draft may now match the committed tag ("Add"); either
+    // caption must remain blocked until the original intent is reconciled.
+    await expect(panel.getByRole("button", { name: /^(Create|Add)$/ })).toBeDisabled();
+    await expect(panel.getByRole("textbox", { name: "Tag name", exact: true })).toBeDisabled();
+    // Nested details keep their own Escape/focus owner, not the whole picker.
+    const retained = panel.locator("summary", { hasText: "Review retained request and current value" });
+    await retained.click();
+    await expect(retained.locator("..")).toHaveAttribute("open", "");
+    await page.keyboard.press("Escape");
+    await expect(retained.locator("..")).not.toHaveAttribute("open", "");
+    await expect(retained).toBeFocused();
+    await expect(panel).toBeVisible();
     await panel.getByRole("button", { name: "Check current state", exact: true }).click();
     await panel.getByRole("button", { name: "Accept checked result", exact: true }).click();
     await expect(panel.getByRole("checkbox", { name: `Remove ${name}`, exact: true })).toBeChecked();
-    expect(writes).toBe(1);
+    expect(writes).toHaveLength(1);
+    const response = await page.request.get("/api/user-feature-entries/conversation-tag");
+    expect(response.ok()).toBe(true);
+    const tags = await response.json() as Array<{ id: string; value: { name: string; conversation_ids: string[] } }>;
+    const matching = tags.filter(tag => tag.value.name === name);
+    expect(matching).toHaveLength(1);
+    expect(matching[0].id).toBe(writes[0]);
+    expect(matching[0].value.conversation_ids).toEqual([syntheticConversation]);
+    // Keyboard departure dismisses without stealing focus back or replaying.
+    const search = page.getByRole("button", { name: "Search", exact: true });
+    await search.focus();
+    await expect(panel).toBeHidden();
+    await expect(search).toBeFocused();
+    expect(writes).toHaveLength(1);
   } finally {
     const response = await page.request.get("/api/user-feature-entries/conversation-tag");
     if (response.ok()) {
@@ -136,3 +172,4 @@ test("tag lost-response recovery retains the original UUID across panel close", 
     }
   }
 });
+}

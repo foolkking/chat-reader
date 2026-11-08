@@ -15,13 +15,33 @@ export function ConversationTagStrip({ conversationId, offline = false }: { conv
   const root = useRef<HTMLDivElement>(null);
   const [picking, setPicking] = useState(false);
   useEffect(() => {
-    const outside = (event: PointerEvent) => {
+    const outside = (event: Event) => {
+      if (event.type === "focusin" && (event.target === document.body || event.target === document.documentElement)) return;
       for (const details of root.current?.querySelectorAll("details[open]") ?? []) {
         if (event.target instanceof Node && !details.contains(event.target)) details.removeAttribute("open");
       }
     };
+    const escapeAfterBlur = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+      // Disabling a submitted button can move focus to body. The root's
+      // bubbled handler cannot receive that Escape; keep the open disclosure
+      // dismissible without moving focus away from another control or modal.
+      if (event.target !== document.body && event.target !== document.documentElement) return;
+      const details = root.current?.querySelector<HTMLDetailsElement>(":scope > details[open]");
+      if (!details?.getClientRects().length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      details.open = false;
+      details.querySelector("summary")?.focus({ preventScroll: true });
+    };
     document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
+    document.addEventListener("focusin", outside);
+    document.addEventListener("keydown", escapeAfterBlur);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("focusin", outside);
+      document.removeEventListener("keydown", escapeAfterBlur);
+    };
   }, []);
   const query = useQuery({
     queryKey: offline ? [...conversationTagsQueryKey, "strip", "offline", conversationId] : conversationTagsQueryKey,
@@ -35,8 +55,8 @@ export function ConversationTagStrip({ conversationId, offline = false }: { conv
     ? <span key={tag.id} className="px-2 text-xs text-secondary">{tag.value.name}</span>
     : <Link key={tag.id} href={`/tags?tag=${tag.id}`} className="inline-flex min-h-11 max-w-40 items-center px-2 text-xs text-secondary hover:text-accent"><span className="truncate">#{tag.value.name}</span></Link>;
   return <div ref={root} className="relative flex min-w-0 flex-wrap items-center gap-1" data-reader-auxiliary onKeyDown={event => {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
-    const details = (event.target as Element).closest("details[open]");
+    if (event.key !== "Escape" || event.defaultPrevented || event.nativeEvent.isComposing || !(event.target instanceof Element)) return;
+    const details = event.target.closest("details[open]");
     if (details) { event.preventDefault(); event.stopPropagation(); details.removeAttribute("open"); details.querySelector("summary")?.focus({ preventScroll: true }); }
   }}>
     {tags.slice(0, 2).map(chip)}

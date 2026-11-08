@@ -64,6 +64,10 @@ Viewer rules in [the image contract](IMAGE_READING_STABILITY_CONTRACT.md) remain
   their stored data and compatible APIs are not deleted.
 - Tags are title metadata, not another right-toolbar item: two chips, overflow
   disclosure, quick add/remove, and a link to the dedicated `/tags` manager.
+  Escape dismisses even when a submitted/disabled control loses focus to the
+  page body, returning to the visible opener without scrolling. Nested details
+  keep their own Escape owner; outside pointer/focus dismisses without taking
+  focus back. Closing does not discard or replay an uncertain tag write.
   Existing paper/graphite/accent tokens, typography and 44px main targets remain.
 
 ## Together
