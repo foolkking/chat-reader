@@ -18,7 +18,10 @@ for (const width of [375, 1440]) test(`${width}px: real wrapped text position, b
     expect((await context.request.patch(`${baseURL}/api/preferences`, { headers, data: { locale_mode: "en-US" } })).ok()).toBe(true);
     const paragraph = Array.from({ length: 95 }, (_, index) => `🙂 Sentence ${index}: reading a long uninterrupted paragraph. `).join("");
     const made = await context.request.post(`${baseURL}/api/conversations`, { headers, data: {
-      title: "Synthetic reading-line bookmark", messages: [{ role: "user", content_markdown: paragraph }],
+      title: "Synthetic reading-line bookmark", messages: [
+        { role: "user", content_markdown: paragraph },
+        { role: "assistant", content_markdown: "Synthetic reading-line answer" },
+      ],
     } });
     expect(made.status()).toBe(201);
     const result = await made.json(), id = result.conversation.id;
@@ -86,7 +89,10 @@ test("together cancels a tab, pane and close transition without losing a failed 
     const ids: string[] = [];
     for (const title of ["Synthetic guard A", "Synthetic guard B"]) {
       const response = await context.request.post(`${baseURL}/api/conversations`, { headers, data: {
-        title, messages: [{ role: "user", content_markdown: "Synthetic reading body" }],
+        title, messages: [
+          { role: "user", content_markdown: "Synthetic reading body" },
+          { role: "assistant", content_markdown: "Synthetic reading answer" },
+        ],
       } });
       expect(response.status()).toBe(201); ids.push((await response.json()).conversation.id);
     }

@@ -3499,7 +3499,8 @@ export function ConversationReader({
             source: "message-action" }, { restorePosition: true });
           if (!result.ok) throw new Error("Unable to locate the saved reading position.");
         }} />
-        <div ref={scrollContainerRef} role="region" tabIndex={-1} aria-label={resolvedLocale === "zh-CN" ? "对话正文" : "Conversation content"} data-testid="reader-scroll-root" data-reader-scroll-root="true" className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-[var(--reader-mobile-header-height,3.5rem)] scroll-pt-[var(--reader-mobile-header-height,3.5rem)] [overflow-anchor:none] md:pt-0 md:scroll-pt-0">
+        {/* Normal rails stay below the toolbar menu. Focus overlays retain their existing viewport-level stacking. */}
+        <div ref={scrollContainerRef} role="region" tabIndex={-1} aria-label={resolvedLocale === "zh-CN" ? "对话正文" : "Conversation content"} data-testid="reader-scroll-root" data-reader-scroll-root="true" className={`${focusMode ? "" : "isolate "}min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-[var(--reader-mobile-header-height,3.5rem)] scroll-pt-[var(--reader-mobile-header-height,3.5rem)] [overflow-anchor:none] md:pt-0 md:scroll-pt-0`}>
           <ResponsiveReaderFrame
             focusMode={focusMode}
             index={<ConversationIndex

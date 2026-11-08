@@ -31,14 +31,23 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.mark.parametrize("via_tasks", [False, True])
 @pytest.mark.parametrize("pause_at", ["before_parse", "before_publish"])
-@pytest.mark.parametrize("bounded_zip", [False, True])
+@pytest.mark.parametrize(("bounded_zip", "streaming"), [
+    pytest.param(False, False, id="json"),
+    pytest.param(True, False, id="small-zip-v1"),
+    pytest.param(True, True, id="bounded-zip-v2"),
+])
 def test_cancellation_during_analysis_rolls_back_before_removing_sources(
-    isolated_schema, tmp_path, monkeypatch, via_tasks, pause_at, bounded_zip,
+    isolated_schema, tmp_path, monkeypatch, via_tasks, pause_at, bounded_zip, streaming,
 ):
     engine, migrate = isolated_schema
     migrate("head")
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "imports"))
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("IMPORT_BOUNDED_ZIP_ENABLED", "true" if streaming else "false")
+    # Model a small host consistently: free bytes alone cannot determine the
+    # v2 reserve. Do not combine 224 MiB free with the CI runner's real capacity.
+    monkeypatch.setattr("app.services.adaptive_import.memory_budget.effective_total_memory_bytes",
+                        lambda: 1024**3)
     monkeypatch.setattr("app.services.uploads.available_memory_bytes",
                         lambda: (224 * 1024**2) if bounded_zip else (16 * 1024**3))
     get_settings.cache_clear()
@@ -69,6 +78,11 @@ def test_cancellation_during_analysis_rolls_back_before_removing_sources(
         assert release.wait(timeout=15), "Test did not release the analysis worker."
 
     def analyze(*args, **kwargs):
+        from app.services.adaptive_import.memory_budget import current_budget
+        budget = current_budget()
+        assert (budget is not None) == bounded_zip
+        if budget is not None:
+            assert budget.streaming == streaming
         if pause_at == "before_parse":
             pause()
         return original_analyze(*args, **kwargs)
@@ -124,8 +138,9 @@ def test_cancellation_during_analysis_rolls_back_before_removing_sources(
         get_settings.cache_clear()
 
 
+@pytest.mark.parametrize("streaming", [False, True], ids=["small-zip-v1", "bounded-zip-v2"])
 def test_bounded_and_standard_parsers_share_a_transaction_scoped_postgres_lane(
-    isolated_schema, tmp_path, monkeypatch,
+    isolated_schema, tmp_path, monkeypatch, streaming,
 ):
     from app.services.adaptive_import.memory_budget import import_analysis_admission, current_budget
     from app.services.uploads import UploadLimitError, bounded_analysis_admission_sync
@@ -133,6 +148,9 @@ def test_bounded_and_standard_parsers_share_a_transaction_scoped_postgres_lane(
     migrate("head")
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "imports"))
     monkeypatch.setenv("UPLOAD_MAX_ACTIVE_ANALYSIS", "2")
+    monkeypatch.setenv("IMPORT_BOUNDED_ZIP_ENABLED", "true" if streaming else "false")
+    monkeypatch.setattr("app.services.adaptive_import.memory_budget.effective_total_memory_bytes",
+                        lambda: 1024**3)
     monkeypatch.setattr("app.services.uploads.available_memory_bytes", lambda: 224 * 1024**2)
     get_settings.cache_clear()
     factory = sessionmaker(bind=engine, expire_on_commit=False)
@@ -147,6 +165,8 @@ def test_bounded_and_standard_parsers_share_a_transaction_scoped_postgres_lane(
             first.commit()
             with import_analysis_admission(first, record, force_memory_check=True):
                 assert current_budget() is not None
+                assert current_budget().streaming == streaming
+                assert current_budget().reserve_bytes == 128 * 1024**2
                 # The local semaphore has a second slot, so this assertion
                 # reaches the PostgreSQL transaction lane rather than timing
                 # out on the in-process slot.

@@ -91,9 +91,14 @@ def test_incremental_writer_preserves_original_draft_bytes_and_hash(tmp_path, mo
         import_storage_dir=tmp_path, import_draft_ttl_hours=24, max_import_file_size_mb=1,
     ))
     conversation = align_exporter_sources(parse_exporter_json(source()), None).conversation
-    expected = (json.dumps(asdict(conversation), ensure_ascii=False, separators=(",", ":")) + "\n").encode()
+    legacy_payload = asdict(conversation)
+    # v2's runtime-only spool pointer is not part of the original v1 format.
+    # Compare against the pre-v2 payload, not the expanded in-memory dataclass.
+    assert legacy_payload.pop("stream_records") is None
+    expected = (json.dumps(legacy_payload, ensure_ascii=False, separators=(",", ":")) + "\n").encode()
     storage_uri, digest, _, _ = draft_store.write_import_draft(uuid.uuid4(), [conversation])
     assert (tmp_path / storage_uri).read_bytes() == expected
+    assert b'"stream_records"' not in expected
     assert digest == hashlib.sha256(expected).hexdigest()
 
 

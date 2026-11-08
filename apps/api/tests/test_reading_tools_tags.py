@@ -26,23 +26,26 @@ def test_tag_merge_unions_members_redirects_saved_search_and_preserves_conversat
     register(auth_client, "together-tags")
     first = conversation(auth_client, "Synthetic first")
     second = conversation(auth_client, "Synthetic second")
-    source = tag(auth_client, "Source", [first["id"]])
+    third = conversation(auth_client, "Synthetic source-only")
+    source = tag(auth_client, "Source", [first["id"], third["id"]])
     target = tag(auth_client, "Target", [first["id"], second["id"]])
     search_id = str(uuid4())
     saved = auth_client.put(f"/api/user-feature-entries/saved-search/{search_id}", json={
         "expected_revision": 0, "value": {"name": "Tagged search", "q": "Synthetic", "tag_id": source["id"]},
     })
     assert saved.status_code == 200, saved.text
-    assert [item["id"] for item in auth_client.get("/api/conversations", params={"tag_id": source["id"]}).json()] == [first["id"]]
+    assert {item["id"] for item in auth_client.get("/api/conversations", params={"tag_id": source["id"]}).json()} == {first["id"], third["id"]}
     before = auth_client.get(f"/api/conversations/{second['id']}").json()["offline_revision"]
     result = merge(auth_client, source, target)
     assert result.status_code == 200, result.text
     assert result.json()["value"]["name"] == "Target"
-    assert set(result.json()["value"]["conversation_ids"]) == {first["id"], second["id"]}
+    assert set(result.json()["value"]["conversation_ids"]) == {first["id"], second["id"], third["id"]}
     assert len(auth_client.get("/api/user-feature-entries/conversation-tag").json()) == 1
     search = auth_client.get("/api/user-feature-entries/saved-search").json()[0]
     assert search["revision"] == 2 and search["value"]["tag_id"] == target["id"]
-    assert {item["id"] for item in auth_client.get("/api/conversations", params={"tag_id": target["id"]}).json()} == {first["id"], second["id"]}
+    assert {item["id"] for item in auth_client.get("/api/conversations", params={"tag_id": target["id"]}).json()} == {first["id"], second["id"], third["id"]}
+    # Membership really changed. The old subset-only fixture depended on UUID
+    # ordering to decide whether a semantically unchanged target was invalidated.
     assert auth_client.get(f"/api/conversations/{second['id']}").json()["offline_revision"] > before
     assert auth_client.get("/api/conversations", params={"tag_id": source["id"]}).status_code == 404
     assert merge(auth_client, source, target).status_code == 409

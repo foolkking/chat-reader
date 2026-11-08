@@ -430,6 +430,7 @@ jobs:
             ${{ runner.temp }}/attachment-modal-final/result.json
             ${{ runner.temp }}/attachment-modal-final/*.png
             ${{ runner.temp }}/image-scale-slider-browser/result.json
+            ${{ runner.temp }}/image-scale-slider-browser/failure.json
             ${{ runner.temp }}/image-scale-slider-browser/*.png
             apps/web/playwright-report
             apps/web/test-results

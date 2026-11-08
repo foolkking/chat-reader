@@ -47,10 +47,10 @@ function Controls(){
  return <AttachmentAccessProvider access={access}><ImageDisplayControls attachment={shown} zh={window.zh??false} compact={surface!=="owner"} laneWidth={720} bodySize={{width:400,height:240}}/></AttachmentAccessProvider>;
 }
 createRoot(document.getElementById("root")).render(<QueryClientProvider client={new QueryClient()}>
- <style>{".synthetic-reader-toc{display:block!important}@media(max-width:639px){.synthetic-reader-toc{display:none!important}}"}</style>
+ <style>{".synthetic-reader-toc{display:block!important}.synthetic-reader-content{padding:24px;box-sizing:border-box;width:calc(100% - 264px);transform:translate(12px,16px)}@media(max-width:639px){.synthetic-reader-toc{display:none!important}.synthetic-reader-content{width:calc(100% - 24px)}}"}</style>
  <aside className="reader-toc-column synthetic-reader-toc" style={{position:"fixed",right:0,top:0,bottom:0,width:240,zIndex:20,background:"var(--surface)"}}>Synthetic sticky section contents</aside>
- <main style={{padding:24,boxSizing:"border-box",width:"calc(100% - 24px)",transform:"translate(12px, 16px)"}}><figure style={{position:"relative",width:76,height:180,margin:"0 0 0 auto",background:"var(--subtle)",border:"1px solid var(--border)"}}>
- <Controls/></figure><button style={{marginTop:180}}>Outside</button></main>
+ <main className="synthetic-reader-content"><figure style={{position:"relative",width:76,margin:"0 0 0 auto",background:"var(--subtle)",border:"1px solid var(--border)"}}>
+ <div aria-hidden="true" style={{height:180}}/><Controls/></figure><button style={{marginTop:180}}>Outside</button></main>
 </QueryClientProvider>);`);
 const webpack = require("next/dist/compiled/webpack/webpack").webpack;
 const adapters = join(out, "adapters.mjs");
@@ -75,10 +75,12 @@ const bundle = readFileSync(join(out, "bundle.js"));
 const html = '<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body><div id="root"></div><script src="/bundle.js"></script></body></html>';
 const { chromium, expect } = require("@playwright/test");
 const results = [];
+let activePage, activeCase;
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
 try {
   for (const width of [1440, 800, 375]) for (const theme of ["light", "dark"]) {
     const page = await browser.newPage({ viewport: { width, height: 800 }, hasTouch: true });
+    activePage = page; activeCase = { width, theme };
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.addInitScript(({ theme }) => { window.zh = theme === "dark"; document.addEventListener("DOMContentLoaded", () => document.documentElement.dataset.theme = theme); }, { theme });
@@ -98,11 +100,25 @@ try {
       if (percent > 1) await page.keyboard.up("ArrowRight");
       await page.keyboard.up("Home");
     };
+    // Reserve the sticky rail's column as Reader does. Keep the obstacle and
+    // real pointer hit-testing rather than force-clicking an occluded trigger.
+    await expect(trigger).toBeVisible();
+    const rail = page.locator(".synthetic-reader-toc");
+    if (await rail.isVisible()) {
+      const triggerBox = await trigger.boundingBox(), railBox = await rail.boundingBox();
+      assert.ok(triggerBox.x + triggerBox.width <= railBox.x, "Reader content must not extend underneath the contents rail");
+    }
     await trigger.click();
     await expect(slider).toBeEnabled();
     const panel = await page.locator(".image-scale-disclosure").boundingBox();
     assert.ok(panel.x >= 0 && panel.x + panel.width <= width && panel.y >= 0 && panel.y + panel.height <= 801);
     assert.ok(panel.height <= 64, "only a compact slider, never a dialog/sheet");
+    const triggerBox = await trigger.boundingBox();
+    assert.ok(panel.y + panel.height <= triggerBox.y, "the ordinary image footer leaves room for the upward disclosure");
+    if (await rail.isVisible()) {
+      const railBox = await rail.boundingBox();
+      assert.ok(panel.x + panel.width <= railBox.x || panel.x >= railBox.x + railBox.width, "the disclosure must avoid the sticky contents rail");
+    }
     assert.equal(await page.getByRole("dialog").count(), 0);
     assert.equal(await page.getByRole("spinbutton").count(), 0);
     assert.ok((await slider.boundingBox()).height >= 44);
@@ -239,4 +255,19 @@ try {
   }
   writeFileSync(join(out, "result.json"), JSON.stringify({ status: "passed", results, adapters: ["API persistence", "surrounding image/Reader"] }, null, 2));
   console.log(JSON.stringify({ status: "passed", cases: results.length, out }));
+} catch (error) {
+  // Preserve bounded synthetic-only evidence before closing Chromium. Never
+  // turn an incomplete case into a passed result or suppress its original error.
+  const geometry = await activePage?.evaluate(() => Object.fromEntries(
+    [".synthetic-reader-toc", "figure", ".image-display-trigger", ".image-scale-disclosure"].map(selector => {
+      const node = document.querySelector(selector), rect = node?.getBoundingClientRect();
+      return [selector, rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+        display: getComputedStyle(node).display } : null];
+    }),
+  )).catch(() => null);
+  await activePage?.screenshot({ path: join(out, "failure.png") }).catch(() => undefined);
+  writeFileSync(join(out, "failure.json"), JSON.stringify({
+    status: "failed", ...activeCase, error: String(error).slice(0, 8000), geometry, completedCases: results.length,
+  }, null, 2));
+  throw error;
 } finally { await browser.close(); }

@@ -3,7 +3,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 from app.models.background_job import BackgroundJob
 from app.models.content_cleanup import ContentCleanupScan, ContentCleanupOccurrence
@@ -54,24 +54,37 @@ def test_request_index_upgrade_downgrade_preserves_data_and_matches_model(isolat
     # first, then exercise the actual legacy schema through downgrade.
     migrate("head")
     old, message = seed(engine)
-    migrate("20261006_0048", "downgrade")
     with Session(engine) as db:
         scan = db.get(ContentCleanupScan, old)
         scope = OwnershipScope(scan.owner_user_id)
         job = db.get(BackgroundJob, scan.background_job_id)
+        job_id = job.id
         key = uuid.uuid4()
         job.payload = {**job.payload, "cleanup_request_key": f"rescan:{old}:{key}"}
         before = db.get(Message, message).current_version_id
         db.commit()
+    # The current ORM selects next_run_at (0060), absent at 0048. Seed using
+    # head, then inspect only historical columns while actually downgraded.
+    receipt_lookup = select(BackgroundJob.id).where(
+        scope.predicate(BackgroundJob),
+        BackgroundJob.job_type == "content_noise_scan",
+        BackgroundJob.payload["cleanup_request_key"].as_string() == f"rescan:{old}:{key}",
+    )
     index = next(item for item in BackgroundJob.__table__.indexes if item.name == "idx_background_jobs_cleanup_request")
-    for target, operation in [("head", "upgrade"), ("20261006_0048", "downgrade"), ("head", "upgrade")]:
+    for target, operation in [
+        ("20261006_0048", "downgrade"), ("head", "upgrade"),
+        ("20261006_0048", "downgrade"), ("head", "upgrade"),
+    ]:
         migrate(target, operation)
         with engine.connect() as conn:
             definition = conn.execute(text("SELECT indexdef FROM pg_indexes WHERE indexname='idx_background_jobs_cleanup_request'")).scalar()
         assert bool(definition) == (operation == "upgrade")
         with Session(engine) as db:
-            assert find_request(db, scope, key, old) is not None
-            assert db.get(Message, message).current_version_id == before
+            assert db.scalar(receipt_lookup) == job_id
+            assert db.scalar(select(Message.current_version_id).where(Message.id == message)) == before
+            if target == "head":
+                # Exercise the production lookup after each real upgrade.
+                assert find_request(db, scope, key, old).id == job_id
     # Have PostgreSQL normalize both migration and metadata DDL; compare actual
     # definitions rather than assuming stringified Python expressions agree.
     with engine.begin() as conn:

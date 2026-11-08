@@ -61,10 +61,16 @@ test.describe("learned format ownership and publication", () => {
         await expect(a.getByTestId("import-dialog-close")).toBeFocused();
         let releaseValidation: (() => void) | undefined;
         if (width === 1440 && locale === "en-US") {
-          await a.route("**/mapping/preview", (route) => route.abort("failed"));
+          // A confirmed admission refusal is retryable. An acknowledgement
+          // lost after POST is deliberately not (covered separately below).
+          await a.route("**/mapping/preview", (route) => route.fulfill({
+            status: 429, contentType: "application/json",
+            body: JSON.stringify({ detail: { code: "UPLOAD_QUEUE_FULL" } }),
+          }));
           await a.getByRole("button", { name: "Validate mapping", exact: true }).click();
-          await expect(a.getByRole("alert").filter({ hasText: "The request result is not confirmed. Check the current import state before deciding whether to retry." })).toBeVisible();
+          await expect(a.getByRole("alert").filter({ hasText: "The import analysis queue is full. Please retry shortly." })).toBeVisible();
           await expect(a.getByLabel("Format name")).toHaveValue("Synthetic personal format");
+          await expect(a.getByRole("button", { name: "Validate mapping", exact: true })).toBeEnabled();
           await a.unroute("**/mapping/preview");
           const pause = new Promise<void>((resolve) => { releaseValidation = resolve; });
           await a.route("**/mapping/preview", async (route) => { const response = await route.fetch(); await pause; await route.fulfill({ response }); });
@@ -132,4 +138,51 @@ test.describe("learned format ownership and publication", () => {
       } finally { if (learnedProfileId) await admin.delete(`/api/admin/import-formats/${learnedProfileId}/publication`); await author.close(); await reader.close(); await adminContext.close(); await admin.dispose(); }
     });
   }
+
+  test("lost mapping acknowledgement retains the draft without replaying the POST", async ({ browser, playwright, baseURL }) => {
+    const admin = await settingsAdmin(playwright.request, baseURL!);
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "en-US" });
+    const page = await context.newPage();
+    try {
+      const password = "synthetic uncertain mapping password";
+      const registered = await context.request.post(`${baseURL}/api/auth/register`, { headers: { Origin: baseURL! }, data: {
+        email: `mapping-unconfirmed-${crypto.randomUUID()}@example.test`, password, confirm_password: password,
+      } });
+      expect(registered.status()).toBe(201);
+      await settingsAppearance(context.request, baseURL!, "en-US");
+      await page.goto("/");
+      await page.getByRole("button", { name: "Import data", exact: true }).click();
+      await page.getByTestId("import-file-input").setInputFiles({
+        name: "synthetic-unconfirmed.json", mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify({
+          [`fixture_${crypto.randomUUID()}`]: true, title: "Synthetic uncertain mapping",
+          turns: [{ speaker: "human", body: "Synthetic question" }, { speaker: "ai", body: "Synthetic answer" }],
+        })),
+      });
+      await page.getByTestId("preview-import-button").click();
+      await page.getByRole("button", { name: "Map format", exact: true }).click();
+      await page.getByLabel("Format name").fill("Synthetic unconfirmed draft");
+      let submissions = 0, accepted = false;
+      await page.route("**/mapping/preview", async route => {
+        submissions++;
+        // The real server receives the request; only its acknowledgement is lost.
+        const response = await route.fetch();
+        accepted = response.ok();
+        await route.abort("failed");
+      });
+      await page.getByRole("button", { name: "Validate mapping", exact: true }).click();
+      await expect(page.getByRole("alert").filter({ hasText: "The operation result is unconfirmed. Check the original task in Tasks; do not submit or upload it again." })).toBeVisible();
+      expect(accepted).toBe(true);
+      await expect(page.getByLabel("Format name")).toHaveValue("Synthetic unconfirmed draft");
+      await expect(page.getByRole("button", { name: "Validate mapping", exact: true })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Learn mapping & continue", exact: true })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "View background tasks", exact: true })).toBeVisible();
+      await page.evaluate(() => { window.dispatchEvent(new Event("focus")); window.dispatchEvent(new Event("online")); });
+      await page.getByLabel("Format name").fill("Synthetic unconfirmed edited draft");
+      await expect(page.getByRole("button", { name: "Validate mapping", exact: true })).toBeDisabled();
+      await page.waitForTimeout(1600); // Cover a task-poll interval without another write.
+      expect(submissions).toBe(1);
+      await expect(page.getByLabel("Format name")).toHaveValue("Synthetic unconfirmed edited draft");
+    } finally { await context.close(); await admin.dispose(); }
+  });
 });

@@ -135,6 +135,11 @@ for (const locale of ["zh-CN", "en-US"]) {
       const saved = await (await context.request.get(`${endpoint}/notebook`)).json();
       expect(saved.blocks.map((block: { annotation_id: string }) => block.annotation_id).sort()).toEqual([...ids].sort());
       await page.locator('[data-annotation-tab="bookmarks"]').click();
+      // Explicit tab changes reset filters, but retain the selected identities.
+      await expect(page.getByPlaceholder(/^(Search annotations|搜索批注)$/)).toHaveValue("");
+      await page.getByPlaceholder(/^(Search annotations|搜索批注)$/).fill("visible");
+      await expect(page.locator(`#annotation-${ids[1]}`)).toHaveCount(0);
+      await expect(page.getByText(/2 selected; 1 hidden by filters|已选 2 项，其中 1 项不在当前筛选中/)).toBeVisible();
       await page.getByRole("button", { name: /^(Delete|删除)$/ }).click();
       const confirmation = page.getByRole("dialog", { name: /Delete 2 annotations|删除 2 条批注/ });
       await expect(confirmation).toContainText(/1 are hidden by the current filters|其中 1 条不在当前筛选中/);

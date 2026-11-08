@@ -214,7 +214,14 @@ test("local and incoming layout preferences retain the real Reader anchor", asyn
       const root = document.querySelector<HTMLElement>("[data-reader-scroll-root='true']")!;
       const line = root.getBoundingClientRect().top + 120;
       const blocks = Array.from(root.querySelectorAll<HTMLElement>("[data-block-index]"));
-      const block = blocks.find((node) => { const rect = node.getBoundingClientRect(); return rect.top <= line && rect.bottom >= line; }) ?? blocks.find((node) => node.getBoundingClientRect().top > line)!;
+      // A reading line in paragraph spacing belongs to the nearest real block,
+      // not always the following block. Anchoring the preceding paragraph while
+      // asserting the next one's top confuses its changed height with a jump.
+      const distance = (node: HTMLElement) => {
+        const rect = node.getBoundingClientRect();
+        return Math.max(rect.top - line, line - rect.bottom, 0);
+      };
+      const block = blocks.reduce((nearest, node) => distance(node) < distance(nearest) ? node : nearest);
       return { id: block.id, offset: block.getBoundingClientRect().top - line };
     });
     expect(anchor.id).not.toBe("");

@@ -71,14 +71,33 @@ def test_online_endpoint_exports_saved_annotations_without_page_filters(client):
 
 
 def test_v2_export_uses_saved_scope_and_literal_context_in_both_locales(client):
-    conversation_id, message, version = _message_context(client)
+    quotes = [f"Literal <script> and ``` source {index}" for index in range(2)]
+    prefix, suffix = "Earlier sentence. ", " Later sentence."
+    content = "\n".join(prefix + quote + suffix for quote in quotes)
+    created = client.post("/api/conversations", json={
+        "title": "Synthetic literal annotation export",
+        "messages": [
+            {"role": "user", "content_markdown": f"````text\n{content}\n````"},
+            {"role": "assistant", "content_markdown": "Synthetic answer."},
+        ],
+    })
+    assert created.status_code == 201, created.text
+    conversation_id = created.json()["conversation"]["id"]
+    detail = client.get(f"/api/messages/{created.json()['messages'][0]['id']}")
+    assert detail.status_code == 200, detail.text
+    message = detail.json()
+    version = message["current_version"]
     endpoint = f"/api/conversations/{conversation_id}"
     ids = []
-    for index in range(2):
+    for index, quote in enumerate(quotes):
+        block = next(row for row in message["render_blocks"] if quote in (row["plain_text"] or ""))
+        start = block["plain_text"].index(quote)
         response = client.post(endpoint + "/annotations", json={
             "message_id": message["id"], "message_version_id": version["id"],
-            "annotation_type": "comment", "quote": f"Literal <script> and ``` source {index}",
-            "prefix": "Earlier sentence. ", "suffix": " Later sentence.",
+            "annotation_type": "comment", "quote": quote,
+            "start_block_index": block["block_index"], "end_block_index": block["block_index"],
+            "start_offset": start, "end_offset": start + len(quote),
+            "prefix": prefix, "suffix": suffix,
             "comment_markdown": f"Saved **comment {index}**.",
         })
         assert response.status_code == 201, response.text
