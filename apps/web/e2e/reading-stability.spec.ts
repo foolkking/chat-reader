@@ -534,7 +534,7 @@ test("Compare deep navigation leases a real virtual block; URL and opposite scro
   // previous right pane's own captured position, not the left pane's.
   await page.getByRole("navigation", { name: "Open conversations" }).getByRole("button", { name: "Synthetic geometry independent", exact: true }).click();
   await expect(right).toBeVisible();
-  await expect.poll(() => rightRoot.evaluate(node => Math.abs(node.scrollTop - rightTop))).toBeLessThanOrEqual(1);
+  await expect.poll(() => rightRoot.evaluate((node, expectedTop) => Math.abs(node.scrollTop - expectedTop), rightTop)).toBeLessThanOrEqual(1);
 });
 
 test("all group sizes preserve image pixels with natural source-order wrapping", async ({ page }, info) => {
