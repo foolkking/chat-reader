@@ -26,7 +26,8 @@ export async function setImageDisplay(id,current,percent){
  await new Promise(resolve=>setTimeout(resolve,25));
  if(window.holdSave)await new Promise(resolve=>window.releaseSave=resolve);
  window.display={...window.display,configured:true,scale_percent:percent,width:Math.max(1,Math.round(window.display.original_width*percent/100)),height:Math.max(1,Math.round(window.display.original_height*percent/100))};
- if(window.failNext){window.failNext=false;throw Error("Lost response after write");}
+ if(window.failNext){window.failNext=false;window.writeResults.push({percent,status:"unconfirmed"});throw Error("Lost response after write");}
+ window.writeResults.push({percent,status:"acknowledged"});
  return {...window.display};
 }
 export const uploadMessageCopyPreview=()=>{throw Error("PNG fixture must not rasterize");};
@@ -36,7 +37,7 @@ import React,{useState} from "react";import {createRoot} from "react-dom/client"
 import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
 import {ImageDisplayControls} from ${JSON.stringify(path(join(web, "features/attachments/image-display-controls.tsx")))};
 import {AttachmentAccessProvider} from ${JSON.stringify(path(join(web, "features/attachments/attachment-access.tsx")))};
-window.reads=0;window.writes=[];window.display={source_sha256:"f".repeat(64),scale_percent:100,original_width:400,original_height:240,width:400,height:240,configured:true};
+window.reads=0;window.writes=[];window.writeResults=[];window.display={source_sha256:"f".repeat(64),scale_percent:100,original_width:400,original_height:240,width:400,height:240,configured:true};
 const attachment={id:"11111111-1111-4111-8111-111111111111",metadata:{image_display_v1:{...window.display}},asset_object:{sha256:"f".repeat(64),detected_mime_type:"image/png"}};
 function Controls(){
  const [surface,setSurface]=useState("owner");window.setSurface=setSurface;
@@ -75,15 +76,29 @@ const bundle = readFileSync(join(out, "bundle.js"));
 const html = '<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body><div id="root"></div><script src="/bundle.js"></script></body></html>';
 const { chromium, expect } = require("@playwright/test");
 const results = [];
-let activePage, activeCase;
+let activePage, activeCase, activeStep;
 const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
 try {
   for (const width of [1440, 800, 375]) for (const theme of ["light", "dark"]) {
     const page = await browser.newPage({ viewport: { width, height: 800 }, hasTouch: true });
     activePage = page; activeCase = { width, theme };
+    activeStep = "open disclosure";
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.addInitScript(({ theme }) => { window.zh = theme === "dark"; document.addEventListener("DOMContentLoaded", () => document.documentElement.dataset.theme = theme); }, { theme });
+    await page.addInitScript(({ theme }) => {
+      window.zh = theme === "dark";
+      window.inputEvents = [];
+      document.addEventListener("DOMContentLoaded", () => document.documentElement.dataset.theme = theme);
+      for (const type of ["keydown", "keyup", "pointerdown", "pointerup", "pointercancel", "focusin", "focusout"]) {
+        document.addEventListener(type, event => {
+          const target = event.target;
+          if (!(target instanceof HTMLElement) || !target.matches(".image-scale-range, .image-display-trigger")) return;
+          window.inputEvents.push({ type, key: event.key, value: target.value,
+            disabled: target.disabled, trusted: event.isTrusted, at: Math.round(performance.now()) });
+          if (window.inputEvents.length > 160) window.inputEvents.shift();
+        }, true);
+      }
+    }, { theme });
     await page.route("http://image-scale.synthetic/**", route => {
       const name = new URL(route.request().url()).pathname;
       return route.fulfill({ contentType: name === "/bundle.js" ? "text/javascript" : name === "/style.css" ? "text/css" : "text/html",
@@ -92,13 +107,40 @@ try {
     await page.goto("http://image-scale.synthetic/");
     const trigger = page.getByRole("button", { name: /Image display scale:|图片展示比例：/ });
     const slider = page.getByRole("slider");
-    const choose = async percent => {
+    const acknowledged = async (percent, count) => {
+      // Query notifications and the disabled attribute are asynchronous. An
+      // enabled snapshot immediately after keyup can still precede "saving".
+      // Wait for this exact write's acknowledgement before the next gesture.
+      await expect.poll(() => page.evaluate(() => window.writeResults)).toHaveLength(count);
+      assert.deepEqual(await page.evaluate(() => window.writeResults.at(-1)), { percent, status: "acknowledged" });
+      assert.equal(await page.evaluate(() => window.writes.length), count, "one gesture must submit exactly once");
+      assert.equal(await page.evaluate(() => window.display.scale_percent), percent);
+      await expect(page.getByRole("status")).toHaveText(theme === "dark" ? "已保存" : "Saved");
+      await expect(trigger).toHaveAccessibleName(theme === "dark" ? `图片展示比例：${percent}%` : `Image display scale: ${percent}%`);
+    };
+    const choose = async (percent, outcome = "acknowledged") => {
       await expect(slider).toBeEnabled(); await slider.focus();
-      if (percent === 100) { await slider.press("End"); return; }
-      await page.keyboard.down("Home");
-      for (let step = 1; step < percent; step++) await page.keyboard.down("ArrowRight");
-      if (percent > 1) await page.keyboard.up("ArrowRight");
-      await page.keyboard.up("Home");
+      const before = await page.evaluate(() => window.writes.length);
+      const endpoint = percent === 100 ? "End" : "Home";
+      await page.keyboard.down(endpoint);
+      if (percent < 100) for (let step = 1; step < percent; step++) await page.keyboard.down("ArrowRight");
+      await expect(slider).toHaveValue(String(percent));
+      assert.equal(await page.evaluate(() => window.writes.length), before, "keyboard repeats change only the draft");
+      if (percent > 1 && percent < 100) await page.keyboard.up("ArrowRight");
+      await page.keyboard.up(endpoint);
+      await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(before + 1);
+      if (outcome === "acknowledged") {
+        await acknowledged(percent, before + 1);
+        await expect(slider).toBeEnabled();
+        await expect(slider).toHaveValue(String(percent));
+      } else {
+        assert.ok(["unconfirmed", "pending"].includes(outcome));
+        await expect(slider).toBeDisabled();
+        if (outcome === "unconfirmed") {
+          await expect.poll(() => page.evaluate(() => window.writeResults)).toHaveLength(before + 1);
+          assert.deepEqual(await page.evaluate(() => window.writeResults.at(-1)), { percent, status: "unconfirmed" });
+        } else assert.equal(await page.evaluate(() => window.writeResults.length), before);
+      }
     };
     // Reserve the sticky rail's column as Reader does. Keep the obstacle and
     // real pointer hit-testing rather than force-clicking an occluded trigger.
@@ -122,19 +164,18 @@ try {
     assert.equal(await page.getByRole("dialog").count(), 0);
     assert.equal(await page.getByRole("spinbutton").count(), 0);
     assert.ok((await slider.boundingBox()).height >= 44);
+    activeStep = "keyboard draft and column fit";
     await choose(50);
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(50);
-    await expect(slider).toBeEnabled();
     const beforeFit = await page.evaluate(() => window.writes.length);
     await page.getByRole("button", { name: /Fit column|适应栏宽/ }).click();
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(100);
-    assert.equal(await page.evaluate(() => window.writes.length), beforeFit + 1);
+    await acknowledged(100, beforeFit + 1);
     await trigger.click();
     await expect(slider).toBeEnabled();
+    activeStep = "consecutive keyboard saves 50 then 51";
     await choose(50);
-    await expect(slider).toBeEnabled();
+    const beforeArrow = await page.evaluate(() => window.writes.length);
     await slider.press("ArrowRight");
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(51);
+    await acknowledged(51, beforeArrow + 1);
     await expect(slider).toBeEnabled();
     await page.mouse.click(4, 8);
     await expect(page.locator(".image-scale-disclosure")).toHaveCount(0);
@@ -142,6 +183,7 @@ try {
     await expect(slider).toHaveValue("51");
     const box = await slider.boundingBox(), y = box.y + box.height / 2;
     const x = percent => box.x + 12 + (percent - 1) / 99 * (box.width - 24);
+    activeStep = "pointer magnet, fine adjustment and cancellation";
     const before = await page.evaluate(() => window.writes.length);
     await page.mouse.move(x(35), y); await page.mouse.down();
     await page.mouse.move(x(47), y);
@@ -149,15 +191,14 @@ try {
     assert.equal(await page.evaluate(() => window.writes.length), before, "drag must not write per movement");
     await page.waitForTimeout(150); // A pause on a magnet must not undo it on release.
     await page.mouse.up();
-    await expect.poll(() => page.evaluate(() => window.writes.length)).toBe(before + 1);
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(50);
+    await acknowledged(50, before + 1);
     await expect(slider).toBeEnabled();
     await page.mouse.move(x(50), y); await page.mouse.down();
     await page.waitForTimeout(150); // Explicitly exercise slow fine adjustment.
     await page.mouse.move(x(51), y);
     await expect(slider).toHaveValue("51");
     await page.mouse.up();
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(51);
+    await acknowledged(51, before + 2);
     await expect(slider).toBeEnabled();
     const cancelledBefore = await page.evaluate(() => window.writes.length);
     await page.mouse.move(x(35), y); await page.mouse.down(); await page.mouse.move(x(40), y);
@@ -167,8 +208,10 @@ try {
     assert.equal(await page.evaluate(() => window.writes.length), cancelledBefore);
     await trigger.click();
     await expect(slider).toHaveValue("51");
+    await expect(slider).toBeEnabled();
+    activeStep = "uncertain write and authority isolation";
     await page.evaluate(() => window.failNext = true);
-    await choose(75);
+    await choose(75, "unconfirmed");
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(slider).toBeDisabled();
     const failedWrites = await page.evaluate(() => window.writes.length);
@@ -193,7 +236,9 @@ try {
     await page.getByRole("button", { name: /Check result|核对结果/ }).click();
     await trigger.click();
     await expect(slider).toHaveValue("75");
+    await expect(slider).toBeEnabled();
     assert.equal(await page.evaluate(() => window.writes.length), failedWrites, "unknown write recovery reads only");
+    activeStep = "touch commit and cancellation";
     const touchBox = await slider.boundingBox();
     const cdp = await page.context().newCDPSession(page);
     const touch = percent => [{ x: touchBox.x + 12 + (percent - 1) / 99 * (touchBox.width - 24), y: touchBox.y + touchBox.height / 2 }];
@@ -201,8 +246,7 @@ try {
     await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: touch(47) });
     await expect(slider).toHaveValue("50");
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(50);
-    assert.equal(await page.evaluate(() => window.writes.length), failedWrites + 1);
+    await acknowledged(50, failedWrites + 1);
     await expect(slider).toBeEnabled();
     await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: touch(60) });
     await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: touch(64) });
@@ -212,24 +256,25 @@ try {
     await trigger.click();
     await expect(slider).toHaveValue("50");
     await choose(100);
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(100);
-    await expect(slider).toBeEnabled();
     await expect(slider).toHaveAttribute("aria-valuetext", "100%");
+    activeStep = "pending save close and reopen";
     await page.evaluate(() => window.holdSave = true);
     const pendingWrites = await page.evaluate(() => window.writes.length);
-    await choose(25);
+    await choose(25, "pending");
     await expect(slider).toBeDisabled();
     await trigger.click();
     await trigger.click();
     await expect(slider).toBeDisabled();
     await expect.poll(() => page.evaluate(() => typeof window.releaseSave)).toBe("function");
     await page.evaluate(() => { window.holdSave = false; window.releaseSave(); });
+    await acknowledged(25, pendingWrites + 1);
     await expect(slider).toHaveValue("25");
     await expect(slider).toBeEnabled();
     assert.equal(await page.evaluate(() => window.writes.length), pendingWrites + 1, "closing/reopening pending save cannot resend or cancel it");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assert.deepEqual(errors, []);
     await page.screenshot({ path: join(out, `${width}-${theme}.png`) });
+    activeStep = "bottom-edge disclosure";
     await trigger.click();
     await page.locator(".synthetic-reader-toc").evaluate(node => node.remove());
     await page.locator("figure").evaluate(node => node.style.marginTop = "540px");
@@ -238,6 +283,7 @@ try {
     const edge = await page.locator(".image-scale-disclosure").boundingBox();
     assert.ok(edge.y >= 0 && edge.y + edge.height <= 801, "bottom-edge controls must remain reachable");
     await page.locator("figure").evaluate(node => node.style.marginTop = "0px");
+    activeStep = "legacy default fit first save";
     const legacyWrites = await page.evaluate(() => window.writes.length);
     await page.evaluate(() => window.useLegacy());
     await expect(trigger).toHaveAccessibleName(/Default fit.*60%|默认适应栏宽.*60%/);
@@ -250,7 +296,7 @@ try {
     assert.equal(await page.evaluate(() => window.writes.length), legacyWrites + 1);
     await page.screenshot({ path: join(out, `${width}-${theme}-legacy-default-fit.png`) });
     assert.deepEqual(errors, []);
-    results.push({ width, theme, status: "passed", checks: ["upward compact disclosure", "no dialog or numeric duplicate", "44px slider", "column fit beside trigger", "one keyboard gesture/one write", "draft zero writes", "fast magnet", "one write on release", "slow adjustment", "Escape cancellation", "read-only authority isolation", "read-only unknown-write check", "trusted touch commit/cancel", "100% original", "pending close/reopen without resend", "no overflow/errors", "edge visibility", "legacy default fit reads without writes", "first legacy adjustment starts at fitted ratio"] });
+    results.push({ width, theme, status: "passed", checks: ["upward compact disclosure", "no dialog or numeric duplicate", "44px slider", "column fit beside trigger", "one keyboard gesture/one write", "consecutive acknowledged keyboard saves", "draft zero writes", "fast magnet", "one write on release", "slow adjustment", "Escape cancellation", "read-only authority isolation", "read-only unknown-write check", "trusted touch commit/cancel", "100% original", "pending close/reopen without resend", "no overflow/errors", "edge visibility", "legacy default fit reads without writes", "first legacy adjustment starts at fitted ratio"] });
     await page.close();
   }
   writeFileSync(join(out, "result.json"), JSON.stringify({ status: "passed", results, adapters: ["API persistence", "surrounding image/Reader"] }, null, 2));
@@ -265,9 +311,15 @@ try {
         display: getComputedStyle(node).display } : null];
     }),
   )).catch(() => null);
+  const interaction = await activePage?.evaluate(() => ({
+    writes: window.writes, results: window.writeResults, reads: window.reads,
+    confirmedPercent: window.display?.scale_percent, inputEvents: window.inputEvents,
+    slider: (() => { const node = document.querySelector(".image-scale-range");
+      return node ? { value: node.value, disabled: node.disabled, focused: document.activeElement === node } : null; })(),
+  })).catch(() => null);
   await activePage?.screenshot({ path: join(out, "failure.png") }).catch(() => undefined);
   writeFileSync(join(out, "failure.json"), JSON.stringify({
-    status: "failed", ...activeCase, error: String(error).slice(0, 8000), geometry, completedCases: results.length,
+    status: "failed", ...activeCase, step: activeStep, error: String(error).slice(0, 8000), geometry, interaction, completedCases: results.length,
   }, null, 2));
   throw error;
 } finally { await browser.close(); }
