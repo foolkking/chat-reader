@@ -55,22 +55,26 @@ function load(path, mocks, window) {
   }, module.exports, window);
   return module.exports;
 }
-function fixture({ resumeImportId, storedId, locale = "en-US", initialRead } = {}) {
-  const runtime = hooksRuntime(), calls = [], mutations = [], queries = new Map(), storage = new Map();
+function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720 } = {}) {
+  const runtime = hooksRuntime(), calls = [], mutations = [], queries = new Map(), storage = new Map(), events = new EventTarget();
   if (storedId) storage.set("chat-reader:adaptive-import-session", storedId);
   let generation = 1, read = initialRead ?? (async () => session()), upload = async () => session(), tree, mutationCursor = 0;
+  let commit = async id => ({ ...completion, import_id: id, status: "queued" });
   const window = { sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
-    dispatchEvent: event => calls.push(["event", event.type]) };
+    addEventListener: (...args) => events.addEventListener(...args),
+    removeEventListener: (...args) => events.removeEventListener(...args),
+    dispatchEvent: event => { calls.push(["event", event.type]); return events.dispatchEvent(event); } };
   const api = { ApiRequestError: class extends Error {},
     createAdaptiveImportSession: files => { calls.push(["upload", files]); return upload(); },
     getAdaptiveImportSession: (id, signal) => { calls.push(["read", id, signal]); return read(id, signal); },
     cancelAdaptiveImportSession: async id => { calls.push(["cancel", id]); },
     retryTask: async id => { calls.push(["retry", id]); return { job_id: id, status: "queued" }; },
     getImportStatus: async id => { calls.push(["result", id]); return completion; },
-    previewImport: noop, commitImport: noop,
+    previewImport: noop,
+    commitImport: (id, options) => { calls.push(["commit", id, options]); return commit(id, options); },
   };
   const mocks = { react: runtime.react,
-    "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
+    "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale, readerWidthMode: "standard", sectionTocMode: "visible" }) },
     "../../lib/api": api, "../../lib/offline-access": { authenticationGeneration: () => generation },
     "../../lib/auth-client": { readAccountCapabilities: noop },
     "../../lib/offline-db": { getActiveOfflineStorageContext: () => ({ userId: null }) },
@@ -79,6 +83,8 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead } = {
     "./adaptive-import-workspace": { AdaptiveImportWorkspace: "AdaptiveImportWorkspace" },
     "./format-conversion-guide": { FormatConversionGuide: "FormatConversionGuide" },
     "./import-noise-review": { ImportNoiseReview: "ImportNoiseReview" },
+    // Geometry is an explicit adapter, not evidence of real DOM measurement.
+    "./image-import-lane": { measureImportImageLane: options => { calls.push(["measure", options, laneWidth]); return laneWidth; } },
     "./pasted-transcript": {
       createPastedTranscriptFile: () => null,
       pastedTranscriptByteLength: () => 0,
@@ -111,6 +117,8 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead } = {
   render(); runtime.flush();
   return { calls, storage, mutations, queries, render, ...runtime,
     setRead: fn => { read = fn; }, setUpload: fn => { upload = fn; }, changeAccount: () => { generation++; },
+    setCommit: fn => { commit = fn; },
+    resize: width => { laneWidth = width; window.dispatchEvent(new Event("resize")); },
     async settle() { for (let i = 0; i < 4; i++) { await setImmediate(); render(); runtime.flush(); } return render(); },
     publish(value, epoch = generation) { queries.get("adaptive-import-analysis").result = { data: { value, generation: epoch } }; render(); runtime.flush(); return render(); },
     tree: () => tree,
@@ -147,6 +155,60 @@ test("polling uses an abortable GET; a ready result opens the existing review, n
     assert.ok(find(tree, node => node.type === "AdaptiveImportWorkspace"));
     assert.equal(f.queries.get("adaptive-import-analysis").options.enabled, false);
     assert.equal(f.calls.filter(row => row[0] === "cancel").length, 0);
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 0);
+  } finally { f.dispose(); }
+});
+
+test("image-lane resize follows reader preferences and unsubscribes when the import pane closes", async () => {
+  const f = fixture();
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    f.publish(session("READY", "ready"));
+    assert.deepEqual(f.calls.filter(row => row[0] === "measure"), [
+      ["measure", { readerWidthMode: "standard", sectionTocMode: "visible" }, 720],
+    ]);
+    assert.match(text(f.tree()), /720px reading column/);
+    f.resize(840); await f.settle();
+    assert.match(text(f.tree()), /840px reading column/);
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 0);
+    f.dispose(); f.resize(960);
+    assert.equal(f.calls.filter(row => row[0] === "measure").length, 2);
+    assert.equal(f.retiredWrites(), 0);
+  } finally { f.dispose(); }
+});
+
+test("explicit commit retry preserves its first lane snapshot after an unknown response and resize", async () => {
+  const f = fixture();
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    f.publish(session("READY", "ready"));
+    f.setCommit(async () => { throw new Error("Synthetic unknown commit response"); });
+    const request = { importId: "synthetic-import", policy: "clone" };
+    await assert.rejects(f.mutations[3].run(request), /Synthetic unknown commit response/);
+    f.resize(960); await f.settle();
+    assert.match(text(f.tree()), /720px reading column/);
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 1, "resize/polling never replays the write");
+    f.setCommit(async id => ({ ...completion, import_id: id, status: "queued" }));
+    await f.mutations[3].run(request); await f.settle();
+    const writes = f.calls.filter(row => row[0] === "commit");
+    assert.equal(writes.length, 2);
+    assert.deepEqual(writes[0], ["commit", "synthetic-import", { duplicatePolicy: "clone", projectId: null, imageLaneWidth: 720 }]);
+    assert.deepEqual(writes[1], writes[0]);
+    assert.equal(f.calls.filter(row => row[0] === "measure").length, 3, "retry reuses the snapshot, not a fresh measurement");
+  } finally { f.dispose(); }
+});
+
+test("a resumed commit uses its server-owned lane rather than the current viewport", async () => {
+  const ready = { ...session("READY", "ready"), analysis_summary: { commit_options: { image_lane_width: 512 } } };
+  const f = fixture({ resumeImportId: "synthetic-import", initialRead: async () => ready, laneWidth: 960 });
+  try {
+    await f.settle();
+    assert.match(text(f.tree()), /512px reading column/);
+    await f.mutations[3].run({ importId: "synthetic-import", policy: "clone" }); await f.settle();
+    assert.deepEqual(f.calls.filter(row => row[0] === "commit"), [
+      ["commit", "synthetic-import", { duplicatePolicy: "clone", projectId: null, imageLaneWidth: 512 }],
+    ]);
+    assert.equal(f.calls.filter(row => row[0] === "measure").length, 1, "server snapshot needs no commit-time measurement");
   } finally { f.dispose(); }
 });
 

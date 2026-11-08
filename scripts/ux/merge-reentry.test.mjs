@@ -107,6 +107,7 @@ function fixture({ projectView = false, state = "empty", open = false, selection
     "../../components/workspace-shell": { useWorkspaceShell: () => ({ embedded: true }) },
     "next/navigation": { useRouter: () => ({ push: noop }) },
     "../../components/import-dialog-provider": { useImportDialog: () => ({ openImportDialog: noop }) },
+    "../reading/conversation-tags-panel": { ConversationTagsPanel: () => null },
     "../conversations/new-conversation-dialog": { NewConversationDialog: () => null },
     "../../components/batch-operation-feedback": { BatchOperationFeedback: () => null },
     "../../components/bulk-move-review": { BulkMoveReview: () => null },

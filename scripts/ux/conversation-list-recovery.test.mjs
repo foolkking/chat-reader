@@ -31,11 +31,11 @@ const compiled = ts.transpileModule(source, { fileName: "conversation-list.tsx",
 // children are explicit doubles, not browser/lifecycle/layout/focus acceptance.
 async function fixture({ mode = "active", rows = [row(mode)], cached = true, error = new Error("Synthetic raw upstream detail"),
   selected = false, locale = "en-US", existenceRows = [], existenceError = null, existenceCached = false,
-  sortMode = "recent_read", direction = "desc" } = {}) {
+  sortMode = "recent_read", direction = "desc", tagId } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   let mainError = error, savedError = existenceError, mainRows = rows, reads = 0, existenceReads = 0, held = null, imports = 0;
   const page = (items, offset = 0) => ({ items: items.slice(offset, offset + 100), offset, hasMore: items.length > offset + 100 });
-  const main = new InfiniteQueryObserver(client, { queryKey: ["conversations", "paged", mode, sortMode, direction], enabled: false,
+  const main = new InfiniteQueryObserver(client, { queryKey: ["conversations", "paged", mode, tagId, sortMode, direction], enabled: false,
     initialPageParam: 0, getNextPageParam: last => last.hasMore ? last.offset + 100 : undefined,
     initialData: cached ? { pages: [page(rows)], pageParams: [0] } : undefined,
     queryFn: async ({ pageParam }) => { reads += 1; const items = held ? await held : mainRows;
@@ -79,6 +79,8 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     "./markdown-renderer": { stripLeadingTimestamp: text => text },
     "./conversation-action-menu": { ConversationActionMenu: () => null },
     "./batch-title-trim": { BatchTitleTrim: () => null },
+    // Tag editing is a separate surface; these cases exercise list read recovery.
+    "../reading/conversation-tags-panel": { ConversationTagsPanel: () => null },
     "./conversation-deletion-provider": { useConversationDeletion: () => ({ busy: false,
       submit: async () => { throw new Error("A read-recovery test must not delete"); } }) },
     // Placement has its own executable suite; this fixture isolates list reads.
@@ -109,7 +111,7 @@ async function fixture({ mode = "active", rows = [row(mode)], cached = true, err
     return appRequire(name);
   }, module, module.exports);
   const render = () => { stateIndex = 0; retryButtons.length = 0; mergeOwners.length = 0; sortableRows.length = 0;
-    return renderToStaticMarkup(React.createElement(module.exports.ConversationList, { mode, onImportClick: () => { imports += 1; } })); };
+    return renderToStaticMarkup(React.createElement(module.exports.ConversationList, { mode, tagId, onImportClick: () => { imports += 1; } })); };
   return { client, main, existence, render, retryButtons, inputs, mergeOwners, apiReads, orderWrites, sortableRows,
     async drag(from, to) { assert.ok(dragContext); dragContext.onDragEnd({ active: { id: from }, over: { id: to } }); await setImmediate(); },
     reads: () => reads, existenceReads: () => existenceReads, imports: () => imports,
@@ -175,10 +177,23 @@ for (const mode of ["active", "archived"]) {
     try {
       f.render(); const options = f.inputs.get(mode);
       assert.equal(options.placeholderData, undefined);
-      assert.deepEqual(options.queryKey, ["conversations", "paged", mode, "recent_read", "desc"]);
+      assert.deepEqual(options.queryKey, ["conversations", "paged", mode, undefined, "recent_read", "desc"]);
       await options.queryFn({ pageParam: 100, signal: new AbortController().signal });
       assert.equal(f.apiReads[0].scope, "all"); assert.equal(f.apiReads[0].statusScope, mode);
       assert.equal(f.apiReads[0].offset, 100); assert.equal(f.apiReads[0].limit, 101);
+    } finally { f.dispose(); }
+  });
+  test(`${mode}: tag-filtered page requests keep their own cache identity and tag scope`, async () => {
+    const f = await fixture({ mode, error: null, tagId: "synthetic-tag" });
+    try {
+      f.render(); const options = f.inputs.get(mode);
+      assert.deepEqual(options.queryKey, ["conversations", "paged", mode, "synthetic-tag", "recent_read", "desc"]);
+      assert.equal(options.placeholderData, undefined);
+      await options.queryFn({ pageParam: 100, signal: new AbortController().signal });
+      assert.equal(f.apiReads[0].tagId, "synthetic-tag");
+      assert.equal(f.apiReads[0].statusScope, mode);
+      assert.equal(f.apiReads[0].scope, "all");
+      assert.equal(f.apiReads[0].offset, 100);
     } finally { f.dispose(); }
   });
   test(`${mode}: successful rendering excludes conversations of the other status`, async () => {
