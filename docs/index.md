@@ -1,5 +1,18 @@
 # 文档导航
 
+## 当前生产与验收 — 2026-11-09
+
+现役 **d61b9c6 / schema0060**，完整CI **42522644855** 六项、五份制品、
+14项Web门禁及五例真实内存门禁独立通过。06:03:02 +08:00发布验收，
+06:03:30运行态、06:06:22备份/保全复核通过。原配置/PostgreSQL不变；
+两份备份与两代镜像保留，无直接旧worker回退，未清理或重试用户ZIP。
+见[发布回执](execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md)、
+[ZIP合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)及
+[阅读工具合同](system/READING_TOOLS_CONTRACT.md)。CI回查已暂停。
+下方11月7–8日“当前/候选/未验收/未授权”仅为旧检查点；
+本节与Project State的最新发布摘要优先，既有清理历史不覆盖或删除。
+
+
 入口同步：**2026-11-08**。先读 [Project State](../PROJECT_STATE.md) 和
 [AGENTS](../AGENTS.md)，再进入任务专题。当前代码、配置与 migration 是真值；
 带日期的 planning/execution/evidence 只说明各自检查点，不能当成新工作指令。

@@ -1,5 +1,17 @@
 # Markdown 文档台账
 
+## 有界 ZIP / 阅读工具精确 CI 与部署回执 — 2026-11-09
+
+新增 `execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md` 与
+`evidence/release-2026-11-09/bounded-zip-deployment-summary.json`；
+同步状态/导航、部署/环境/风险、ZIP/阅读工具合同、API/测试及两级记录索引。
+记录d61b9c6、CI42522644855、五份制品、五例真实内存、0059→0060、
+新停写备份与独立复核；未放宽门禁，真实用户ZIP/生产UI仍未验收。
+八份既有修改文档仅加入可逆的最新说明，旧字节完整保留；文档提交只
+暂存本轮增量，不夹带原清理/审查记录、tsbuildinfo或其他用户修改。
+历史候选和部署记录保持原检查点，后续“当前”解释以最新状态摘要为准。
+
+
 ## 有界 ZIP 导入候选 — 2026-11-08
 
 新增 `execution/BOUNDED_ZIP_IMPORT_2026-11-08.md`，更新ZIP合同、API、

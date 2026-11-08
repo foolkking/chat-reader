@@ -1,12 +1,14 @@
 # Adaptive Import ZIP Contract
 
-Status synchronized **2026-11-08**: production remains `897ba78`, schema
-`20261105_0059`, retaining the small-ZIP policy first shipped with `be58b12`.
-The disk-backed extension below is **unreleased, uncommitted candidate code**,
-with candidate migration `20261108_0060`; it has no runtime/CI acceptance yet.
+Status synchronized **2026-11-09**: exact source `d61b9c6` passed full CI
+`42522644855` and independent artifact/runtime acceptance, and is deployed
+with single head/current `20261108_0060`. The disk-backed extension and retained
+small-ZIP path passed all five real-memory synthetic cases without changing
+the 64-MiB workspace-growth limit. See the
+[release receipt](../execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md).
 Original user ZIPs still require an explicit user retry, not an automatic replay.
 The historical [small-ZIP receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
-does not verify this candidate.
+does not substitute for the new exact-source acceptance.
 This contract extends the existing Adaptive Import session. It does not replace
 `.cr` personal restore, system archives, or the canonical import commit.
 
@@ -82,7 +84,7 @@ recovery flow.
 
 ## Bounded small-ZIP memory policy
 
-This section describes the retained v1/production fallback. The candidate's
+This section describes the retained v1/production fallback. The disk-backed path's
 new v2 lane is specified separately below; neither relaxes JSON admission.
 
 `IMPORT_SMALL_ZIP_ENABLED=true` (default) grants a lower reserve only after
@@ -118,7 +120,9 @@ legacy known memory messages retain their safe reason. Memory, queue and
 budget failures do not imply archive damage or an automatic retry. Explicit
 retry reuses the original analysis job and retained files.
 
-## Disk-backed ZIP candidate — 2026-11-08 (not deployed)
+<a id="disk-backed-zip-candidate--2026-11-08-not-deployed"></a>
+
+## Disk-backed ZIP path — deployed 2026-11-09
 
 `IMPORT_BOUNDED_ZIP_ENABLED=true` selects the new lane only for an owned session
 whose original sources are all adaptive ZIPs. Commit additionally requires an
@@ -255,7 +259,7 @@ ZIP. Two session-scoped operations are added:
 
 Both routes use the current import ownership checks and bounded analysis
 admission. Canonical commit still uses `POST /api/imports/{id}/commit`.
-The core ZIP release had no migration. The candidate above adds queue
+The core ZIP release had no migration. The disk-backed path above adds queue
 scheduling migration0060, but no new canonical column, export format,
 Share URL, offline package version or Dexie version.
 
@@ -273,5 +277,7 @@ new bounded-memory source. Its CI additionally runs the normal exact-image
 worker under a real 320-MiB/no-extra-swap Linux limit, verifies analysis,
 canonical commit and all 14 synthetic assets, and requires workspace peak
 growth ≤64 MiB with no OOM/restarts. The report is included in, and independently
-checked from, the official release artifact. Full candidate CI/production
-acceptance and real user-file retry are separate gates.
+checked from, the official release artifact. Full exact-source CI and deployment
+acceptance passed on November 9, including the four additive bounded-memory cases.
+Real user-file retry and authenticated production interaction remain separate
+acceptance steps; neither was automatically performed.

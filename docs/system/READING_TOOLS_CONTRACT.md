@@ -1,9 +1,11 @@
 # Reading tools and read-together workspace
 
-Source candidate: **2026-11-08**, not yet CI-accepted or deployed.
-The current production release remains the one recorded in
-[Project State](../../PROJECT_STATE.md). This contract describes the candidate;
-it does not replace old release receipts with unverified success claims.
+Released **2026-11-09** with exact source `d61b9c6`, full CI `42522644855`
+and independent artifact/runtime checks. See
+[Project State](../../PROJECT_STATE.md) and the
+[release receipt](../execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md).
+Synthetic browser acceptance is not authenticated production or physical-device
+acceptance; the original November 8 implementation/audit records remain historical.
 
 ## Image percentage and import default
 

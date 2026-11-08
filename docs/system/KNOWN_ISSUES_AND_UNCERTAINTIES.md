@@ -1,5 +1,23 @@
 # 已知风险与不确定性
 
+## Current verification boundaries — 2026-11-09
+
+Exact **d61b9c6**, CI **42522644855**, five official artifacts and independent
+deployment checks passed; production is **20261108_0060**. See the
+[release receipt](../execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md).
+Two five-component backups and both image generations are retained and verified.
+There is **no direct rollback**: old workers cannot consume v2 drafts; never
+automatically downgrade or restore old user data. No cleanup was performed.
+Final available-space snapshot: **10,756,356 KiB**, 74% used.
+
+All five synthetic real-memory gates passed, but do not guarantee every archive.
+Original ZIP retry, real 47-conversation offline update, authenticated production UI,
+physical devices/clipboard/screen readers, sustained load and production-backup
+restore remain unverified. Checksum/TOC checks are not redundant/off-site recovery.
+General security/noise limitations below remain; their older production pointers,
+single-backup counts and pending-CI statements describe historical checkpoints only.
+
+
 <a id="current-verification-boundaries--2026-11-06"></a>
 
 ## Current verification boundaries — 2026-11-07

@@ -1,6 +1,29 @@
 # Testing
 
-## Pending candidate — bounded ZIP import — 2026-11-08
+## Current exact-source acceptance — bounded ZIP and reading tools — 2026-11-09
+
+Exact `d61b9c69004c3c482fd915fd6f77481fa1920ae7`, CI `42522644855` attempt 1:
+all six jobs and five official artifact ZIPs independently passed. API:
+6171 passed / 3 optional skipped / 4 warnings; Web Node: 2161/2161;
+Web gates: 14/14; Settings: 470/470 plus isolated synthetic restore 1/1;
+same-runner performance: 9/9; image controls: 6/6; reading: 35/35.
+The unchanged verifier accepted 64 original + 12 collapse + 4 passive traces
+and the cold Viewer shell. Default PWA: 190 passed / 822 environment-routed
+skips; adaptive recovery: 12 passed / 1 optional skip.
+
+Original 320-MiB and all four additive real-memory cases passed, including
+approximately 100/500-MiB ZIPs, with no extra swap, OOM or restart and under
+64-MiB workspace growth. These are synthetic measurements, not a guarantee
+for every archive. All application/browser tests and builds ran in CI, not
+locally. Production deployment and independent health/security/configuration/
+backup checks passed; no user ZIP replay or authenticated production browser
+acceptance was performed. [Receipt](execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md).
+
+The pending/no-deployment language in the dated sections below describes those
+earlier checkpoints. The later continuous-repair/deployment authorization and
+this accepted release supersede it; the 50-minute first-read rule was observed.
+
+## Historical candidate — bounded ZIP import — 2026-11-08
 
 `test_bounded_zip_streaming.py`, diagnostics and Node operation-recovery tests
 cover new admission, spools, grammar parity, integrity, JSON isolation, waits,
@@ -11,7 +34,7 @@ exact-image synthetic cases with the unchanged64-MiB peak-growth threshold.
 Do not run against production or user ZIPs. Runtime/browser/CI acceptance is
 pending; see [verification record](execution/BOUNDED_ZIP_IMPORT_2026-11-08.md).
 
-## Pending candidate — reading tools — 2026-11-08
+## Historical candidate — reading tools — 2026-11-08
 
 The new [reading-tools contract](system/READING_TOOLS_CONTRACT.md) is not covered
 by the previously green release below. See [its verification record](execution/READING_TOOLS_2026-11-08.md).
@@ -31,7 +54,9 @@ see [the correction record](execution/READING_TOOLS_AUDIT_FIXES_2026-11-08.md).
 After authorized dispatch, the first status query is at least 50 minutes later;
 no schedules.
 
-## Current exact-source CI and production — natural image flow — 2026-11-07
+<a id="current-exact-source-ci-and-production--natural-image-flow--2026-11-07"></a>
+
+## Previous exact-source CI and production — natural image flow — 2026-11-07
 
 Exact `897ba788fd89e18c9634ca2271ba6146339939a0`, CI `42371615326`, attempt 1,
 passed all six jobs and five independently verified official artifact ZIPs.

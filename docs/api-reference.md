@@ -1,6 +1,11 @@
 # API 参考
 
-## 有界 ZIP 后台操作 — 2026-11-08 未发布候选
+## 有界 ZIP 后台操作 — 2026-11-09 已发布
+
+精确 `d61b9c6` / CI `42522644855` 已通过完整门禁与独立部署复核，
+现役单一 head/current 为 `20261108_0060`。见
+[发布回执](execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md)；
+未自动重试真实用户 ZIP，历史接口检查点不定义当前生产版本。
 
 启用 `IMPORT_BOUNDED_ZIP_ENABLED` 后，全ZIP来源会话的分组、重分析、
 分类、排除、保存/选择映射、health和mapping preview返回
@@ -13,7 +18,7 @@ session/task增加`resource_wait: {reason,next_retry_at,remaining_seconds}`；
 代码`IMPORT_RESOURCE_WAIT_EXPIRED`。显式retry复用原job ID。
 资源等待中的canonical提交可cancel，回READY并保留草稿；分析cancel
 仍按现有整会话规则。未知POST结果先查原任务，不自动重放。
-owner、状态/版本检查和canonical commit授权不减少。候选migration0060
+owner、状态/版本检查和canonical commit授权不减少。已部署migration0060
 及内存/兼容边界见[ZIP合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)。
 
 ## 阅读集合与批注收件箱摘要 — 2026-10-31（已发布）
@@ -30,7 +35,7 @@ owner、状态/版本检查和canonical commit授权不减少。候选migration0
 运行态和完整 CI 证据以 [当前发布记录](execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
 及 [项目状态](../PROJECT_STATE.md) 为准。
 
-## 阅读工具 — 2026-11-08 未发布候选
+## 阅读工具 — 2026-11-09 已发布
 
 | Method/path | Additive contract |
 | --- | --- |

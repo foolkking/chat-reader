@@ -1,5 +1,14 @@
 # 事实证据索引
 
+## 有界 ZIP 与阅读工具发布 — 2026-11-09
+
+[脱敏汇总](release-2026-11-09/bounded-zip-deployment-summary.json)与
+[发布回执](../execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md)
+绑定d61b9c6、CI42522644855、五份官方制品/五例内存、0060迁移、
+新停写备份及独立运行态/保全核验。原失败与静态证据仍是历史检查点，
+未改写成运行成功；不包含用户正文/ID、Cookie、凭据或原始应用日志。
+
+
 ## 阅读工具审查修正 — 2026-11-08（仅静态）
 
 [检查摘要与清单](reading-tools-audit-fixes-2026-11-08/README.md)记录七项

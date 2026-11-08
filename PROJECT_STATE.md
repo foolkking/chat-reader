@@ -1,5 +1,25 @@
 # Project State
 
+## Current release — bounded ZIP and reading tools — 2026-11-09
+
+Current application **`d61b9c69004c3c482fd915fd6f77481fa1920ae7`**, full CI
+**42522644855**: all six jobs, five artifacts, 14 Web gates and five real-memory
+cases independently accepted. Production single head/current **20261108_0060**.
+Maintenance **05:55:56–06:03:02 +08:00**; independent runtime check **06:03:30**,
+backup/preservation recheck **06:06:22**. API/Web/PostgreSQL healthy, worker alive_idle.
+Original production configuration, PostgreSQL and seven other containers unchanged.
+Two verified backups and two image generations remain; **no direct rollback** to
+the old worker after v2 drafts/0060. Available-space snapshot: **10,756,356 KiB**.
+No cleanup, local application tests or user-ZIP replay; CI heartbeat is paused.
+[Release receipt](docs/execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md) /
+[contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md).
+
+**Historical release checkpoints below:** the November 7–8 production/candidate,
+pending-CI and former authorization statements before “Project and source map”
+remain provenance, not current release instructions. The current section above
+supersedes them; existing user-written cleanup history is retained verbatim.
+
+
 Last synchronized: **2026-11-08**. Current facts and verification boundaries only;
 dated implementation, CI failures and release narratives belong in execution records.
 Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
