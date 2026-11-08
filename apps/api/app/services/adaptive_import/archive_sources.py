@@ -21,10 +21,12 @@ from app.models.import_record import ImportRecord
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import SourceProfile
 from app.services.adaptive_import.contracts import AdaptiveImportError
-from app.services.storage.local_storage import save_import_file
+from app.services.storage.local_storage import save_import_file, save_import_file_stream
 
 
 CATALOG_VERSION = 1
+MAX_CATALOG_BYTES = 8 * 1024 * 1024
+MAX_CATALOG_LINKS = 32768
 ARCHIVE_SOURCE_TYPE = "adaptive_archive"
 ARCHIVE_DOCUMENT_SOURCE_TYPE = "adaptive_archive_document"
 _MARKDOWN_EXTENSIONS = {".md", ".markdown"}
@@ -68,6 +70,10 @@ def prepare_archive_sources(db: Session, record: ImportRecord) -> list[Path]:
 def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str, Any]:
     archive_path = _artifact_path(record, artifact)
     settings = get_settings()
+    from app.services.adaptive_import.memory_budget import streaming_budget, preflight_directory
+    if streaming_budget():
+        with archive_path.open("rb") as source:
+            preflight_directory(source)
     try:
         archive = zipfile.ZipFile(archive_path, "r")
     except (OSError, zipfile.BadZipFile) as exc:
@@ -92,7 +98,7 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
         manifest_messages = 0
         if manifest:
             raw_messages = manifest.get("messages")
-            manifest_messages = len(raw_messages) if isinstance(raw_messages, list) else 0
+            manifest_messages = int(manifest.get("message_count", len(raw_messages) if isinstance(raw_messages, list) else 0))
             for item in manifest.get("assets") or []:
                 if not isinstance(item, dict) or not isinstance(item.get("path"), str):
                     continue
@@ -151,9 +157,33 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                 member["use"] = "conversation"
 
         missing_references: set[str] = set()
+        catalog_links = 0
         visible_messages = 0
         for document in documents:
             _small_import_checkpoint()
+            if streaming_budget():
+                from app.services.adaptive_import.stream_markdown import resource_chunks
+                with _disk_member(record, archive, effective[document["path"]]) as text_path:
+                    for text in resource_chunks(text_path):
+                        if dedicated and document["path"] == primary_path:
+                            visible_messages += _visible_role_heading_count(text)
+                        references, missing = _document_references(text, document["path"], set(by_path))
+                        missing_references.update(missing)
+                        if len(missing_references) > MAX_CATALOG_LINKS:
+                            raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP resource index exceeds its bounded limit.", layer="archive")
+                        for reference in references:
+                            target = by_path[reference]
+                            target["reference_count"] += 1
+                            if document["member_id"] not in target["referenced_by"]:
+                                catalog_links += 1
+                                if catalog_links > MAX_CATALOG_LINKS:
+                                    raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP ownership index exceeds its bounded limit.", layer="archive")
+                                target["referenced_by"].append(document["member_id"])
+                            if target["use"] == "excluded" and target["kind"] != "markdown":
+                                target["use"] = "attachment"
+                            if target["use"] == "attachment" and document["member_id"] not in target["owner_document_ids"]:
+                                target["owner_document_ids"].append(document["member_id"])
+                continue
             raw = _read_member_bytes(archive, effective[document["path"]], settings.bundle_max_object_bytes)
             try:
                 text = raw.decode("utf-8-sig")
@@ -234,7 +264,7 @@ def archive_catalog(record: ImportRecord, artifact_id: uuid.UUID) -> dict[str, A
     )
     if artifact is None:
         raise AdaptiveImportError("ARCHIVE_NOT_FOUND", "The ZIP source was not found.", layer="archive")
-    return _read_catalog(record.id, artifact.id)
+    return _read_catalog(record.id, artifact.id, (artifact.parsed_summary or {}).get("catalog_file"))
 
 
 def restore_archive_catalog(import_id: uuid.UUID, artifact_id: uuid.UUID, catalog: dict[str, Any]) -> None:
@@ -257,7 +287,7 @@ def update_archive_classification(
     expected_version: int,
     changes: list[dict[str, Any]],
 ) -> list[Path]:
-    catalog = _read_catalog(record.id, artifact.id)
+    catalog = archive_catalog(record, artifact.id)
     if int(catalog.get("classification_version") or 0) != expected_version:
         raise AdaptiveImportError(
             "ARCHIVE_CLASSIFICATION_STALE",
@@ -284,6 +314,9 @@ def update_archive_classification(
         member["owner_document_ids"] = owners if use == "attachment" else []
 
     conversations = {member_id for member_id, member in members.items() if member.get("use") == "conversation"}
+    from app.services.adaptive_import.memory_budget import streaming_budget
+    if streaming_budget() and sum(len(member.get("owner_document_ids") or []) for member in members.values()) > MAX_CATALOG_LINKS:
+        raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP ownership index exceeds its bounded limit.", layer="archive")
     if not conversations:
         raise AdaptiveImportError("ARCHIVE_CONVERSATION_REQUIRED", "Keep at least one Markdown conversation.", layer="archive")
     for member in members.values():
@@ -320,7 +353,7 @@ def archive_enrichment_for_artifact(
     member_id = summary.get("archive_member_id")
     if not archive_id or not member_id:
         return []
-    catalog = _read_catalog(record.id, uuid.UUID(str(archive_id)))
+    catalog = archive_catalog(record, uuid.UUID(str(archive_id)))
     owned = [
         member for member in catalog.get("members") or []
         if isinstance(member, dict)
@@ -370,7 +403,7 @@ def archive_member_stream(record: ImportRecord, attachment: dict[str, Any]):
     )
     if archive_artifact is None:
         raise AdaptiveImportError("ARCHIVE_NOT_FOUND", "The ZIP source is unavailable.", layer="archive")
-    catalog = _read_catalog(record.id, archive_id)
+    catalog = archive_catalog(record, archive_id)
     member = next(
         (item for item in catalog.get("members") or [] if isinstance(item, dict) and item.get("member_id") == member_id),
         None,
@@ -391,7 +424,7 @@ def archive_member_stream(record: ImportRecord, attachment: dict[str, Any]):
         raise AdaptiveImportError("ARCHIVE_MEMBER_NOT_FOUND", "The ZIP attachment is unavailable.", layer="archive") from exc
     from app.services.adaptive_import.memory_budget import BudgetedArchiveStream, current_budget
     if current_budget() is not None:
-        source = BudgetedArchiveStream(source)
+        source = BudgetedArchiveStream(source, archive.fp)
     return archive, source, member
 
 
@@ -409,7 +442,10 @@ def archive_file_recovery(record: ImportRecord):
     """
     root = _session_root(record.id)
     before = {path for path in root.iterdir() if path.is_file()}
-    overwritten = [
+    from app.services.adaptive_import.memory_budget import streaming_budget
+    # V2 publication uses fresh filenames. Backing up a possibly very large
+    # legacy conversation file here would defeat the disk-backed lane.
+    overwritten = [] if streaming_budget() else [
         root / "canonical-draft.jsonl",
         *[_catalog_path(record.id, artifact.id) for artifact in record.artifacts
           if artifact.source_type == ARCHIVE_SOURCE_TYPE],
@@ -464,27 +500,27 @@ def _replace_materialized_documents(
             )[:12]
             for member in importable:
                 _small_import_checkpoint()
-                raw = _read_member_bytes(
-                    archive,
-                    archive.getinfo(str(member["zip_path"])),
-                    get_settings().bundle_max_object_bytes,
-                )
-                text = raw.decode("utf-8-sig")
-                rewritten = _rewrite_document_references(
-                    text,
-                    str(member["path"]),
-                    members,
-                ).encode("utf-8")
-                stored = save_import_file(
-                    record.id,
-                    (
+                filename = (
                         f"{archive_artifact.id.hex[:8]}-"
                         f"{str(member['member_id'])[:8]}-"
                         f"{materialization_token}-"
                         f"{Path(str(member['path'])).name}"
-                    ),
-                    rewritten,
                 )
+                from app.services.adaptive_import.memory_budget import streaming_budget
+                if streaming_budget():
+                    from app.services.adaptive_import.stream_markdown import resource_chunks
+                    with _disk_member(record, archive, archive.getinfo(str(member["zip_path"]))) as text_path:
+                        chunks = (_rewrite_document_references(text, str(member["path"]), members).encode("utf-8")
+                                  for text in resource_chunks(text_path))
+                        stored, digest = save_import_file_stream(
+                            record.id, filename, _ChunkReader(chunks),
+                            max_bytes=get_settings().bundle_max_expanded_bytes, chunk_size=64 * 1024,
+                        )
+                else:
+                    raw = _read_member_bytes(archive, archive.getinfo(str(member["zip_path"])), get_settings().bundle_max_object_bytes)
+                    rewritten = _rewrite_document_references(raw.decode("utf-8-sig"), str(member["path"]), members).encode("utf-8")
+                    stored = save_import_file(record.id, filename, rewritten)
+                    digest = hashlib.sha256(rewritten).hexdigest()
                 path = _session_root(record.id) / stored.safe_filename
                 created_paths.append(path)
                 derived = SourceArtifact(
@@ -494,8 +530,8 @@ def _replace_materialized_documents(
                     source_profile=SourceProfile.unknown.value,
                     filename=str(member["path"]),
                     safe_filename=stored.safe_filename,
-                    sha256=hashlib.sha256(rewritten).hexdigest(),
-                    byte_size=len(rewritten),
+                    sha256=digest,
+                    byte_size=stored.byte_size,
                     mime_guess="text/markdown",
                     file_extension=Path(str(member["path"])).suffix.casefold(),
                     raw_storage_uri=stored.raw_storage_uri,
@@ -772,6 +808,16 @@ def _effective_path(path: str, wrapper: str | None) -> str:
 
 
 def _read_manifest(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> dict[str, Any] | None:
+    from app.services.adaptive_import.memory_budget import streaming_budget
+    if streaming_budget():
+        from app.services.adaptive_import.manifest_stream import read_manifest
+        if info.file_size > 4 * 1024 * 1024:
+            raise AdaptiveImportError("ZIP_MEMBER_TOO_LARGE", "The manifest exceeds its size limit.", layer="archive")
+        try:
+            with archive.open(info) as source:
+                return read_manifest(source, get_settings().bundle_max_entries)
+        except (ValueError, UnicodeError) as exc:
+            raise AdaptiveImportError("ZIP_MANIFEST_INVALID", "The manifest is invalid or exceeds its bounded metadata limit.", layer="archive") from exc
     try:
         payload = json.loads(_read_member_bytes(archive, info, min(get_settings().bundle_max_object_bytes, 4 * 1024 * 1024)))
     except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
@@ -810,6 +856,38 @@ def _small_import_checkpoint() -> None:
     checkpoint()
 
 
+@contextmanager
+def _disk_member(record, archive, info):
+    """Transient derived file, never the retained user's source ZIP."""
+    from app.services.adaptive_import.bounded_io import copy_stream
+    path = _session_root(record.id) / f".member-{uuid.uuid4().hex}.md"
+    try:
+        from app.services.adaptive_import.memory_budget import BudgetedArchiveStream
+        with archive.open(info) as source, path.open("xb") as target:
+            copy_stream(BudgetedArchiveStream(source, archive.fp), target,
+                        maximum=get_settings().bundle_max_object_bytes)
+        yield path
+    except zipfile.BadZipFile as exc:
+        raise AdaptiveImportError("ZIP_CRC_INVALID", "A ZIP member failed integrity validation.", layer="archive") from exc
+    finally:
+        path.unlink(missing_ok=True)
+
+
+class _ChunkReader:
+    def __init__(self, chunks):
+        self.chunks, self.pending = iter(chunks), b""
+
+    def read(self, size):
+        if size < 0:
+            raise ValueError("Unbounded reads are not allowed.")
+        while not self.pending:
+            self.pending = next(self.chunks, None)
+            if self.pending is None:
+                return b""
+        output, self.pending = self.pending[:size], self.pending[size:]
+        return output
+
+
 def _visible_role_heading_count(text: str) -> int:
     count = 0
     fence: tuple[str, int] | None = None
@@ -841,6 +919,7 @@ def _refresh_catalog_summary(catalog: dict[str, Any]) -> None:
 
 def _artifact_summary(catalog: dict[str, Any]) -> dict[str, Any]:
     return {
+        **({"catalog_file": catalog["catalog_file"]} if catalog.get("catalog_file") else {}),
         "archive_catalog_version": CATALOG_VERSION,
         "archive_kind": catalog["archive_kind"],
         "classification_version": catalog["classification_version"],
@@ -872,8 +951,14 @@ def _require_importable_catalog(catalog: dict[str, Any]) -> None:
 
 def _write_catalog(import_id: uuid.UUID, artifact_id: uuid.UUID, catalog: dict[str, Any]) -> None:
     path = _catalog_path(import_id, artifact_id)
+    from app.services.adaptive_import.memory_budget import streaming_budget
+    if streaming_budget():
+        path = path.with_name(f"archive-{artifact_id}-{uuid.uuid4().hex}.json")
+        catalog["catalog_file"] = path.name
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     encoded = json.dumps(catalog, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if streaming_budget() and len(encoded) > MAX_CATALOG_BYTES:
+        raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP metadata exceeds its bounded limit.", layer="archive")
     try:
         with temporary.open("xb") as handle:
             handle.write(encoded)
@@ -884,9 +969,18 @@ def _write_catalog(import_id: uuid.UUID, artifact_id: uuid.UUID, catalog: dict[s
         temporary.unlink(missing_ok=True)
 
 
-def _read_catalog(import_id: uuid.UUID, artifact_id: uuid.UUID) -> dict[str, Any]:
+def _read_catalog(import_id: uuid.UUID, artifact_id: uuid.UUID, filename=None) -> dict[str, Any]:
     path = _catalog_path(import_id, artifact_id)
+    if filename:
+        if not isinstance(filename, str) or Path(filename).name != filename:
+            raise AdaptiveImportError("ARCHIVE_CATALOG_INVALID", "The ZIP preview is invalid.", layer="archive")
+        selected = (path.parent / filename).resolve()
+        if selected.parent != path.parent.resolve() or selected.is_symlink():
+            raise AdaptiveImportError("ARCHIVE_CATALOG_INVALID", "The ZIP preview is invalid.", layer="archive")
+        path = selected
     try:
+        if path.stat().st_size > MAX_CATALOG_BYTES:
+            raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP metadata exceeds its bounded limit.", layer="archive")
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
         raise AdaptiveImportError("ARCHIVE_CATALOG_UNAVAILABLE", "The ZIP preview is unavailable. Reanalyze the source.", layer="archive") from exc

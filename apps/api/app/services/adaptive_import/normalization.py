@@ -25,6 +25,9 @@ def normalize_group(documents: list[SourceDocument], mapping_spec: dict[str, Any
     if mode == "JSON" and json_doc:
         return [_normalize_json(json_doc, mapping_spec, profile_name)]
     if mode == "MARKDOWN" and markdown_doc:
+        if markdown_doc.path is not None:
+            from app.services.adaptive_import.stream_markdown import normalize_path
+            return normalize_path(markdown_doc, mapping_spec, profile_name)
         return [_normalize_markdown(markdown_doc, mapping_spec, profile_name)]
     if mode == "JSON_MARKDOWN" and json_doc and markdown_doc:
         json_draft = _normalize_json(json_doc, mapping_spec["json"], profile_name)
@@ -36,19 +39,30 @@ def normalize_group(documents: list[SourceDocument], mapping_spec: dict[str, Any
 def validate_drafts(drafts: list[CanonicalDraftConversation], validation_spec: dict[str, Any] | None = None) -> dict[str, Any]:
     spec = {"minimum_messages": 1, "content_non_empty": True, "role_coverage": True, **(validation_spec or {})}
     issues: list[dict[str, Any]] = []
+    from app.services.adaptive_import.memory_budget import streaming_budget
+    bounded = streaming_budget()
+    issue_count = 0
+
+    def add_issue(issue):
+        nonlocal issue_count
+        issue_count += 1
+        if not bounded or len(issues) < 100:
+            issues.append(issue)
+
     for conversation_index, draft in enumerate(drafts):
         if len(draft.messages) < int(spec["minimum_messages"]):
-            issues.append(_issue("MINIMUM_MESSAGES", conversation_index, None, "Conversation has too few messages."))
+            add_issue(_issue("MINIMUM_MESSAGES", conversation_index, None, "Conversation has too few messages."))
         for message_index, message in enumerate(draft.messages):
             if spec["role_coverage"] and message.role not in CANONICAL_ROLES:
-                issues.append(_issue("UNKNOWN_ROLE", conversation_index, message_index, "A message role is not mapped."))
+                add_issue(_issue("UNKNOWN_ROLE", conversation_index, message_index, "A message role is not mapped."))
             if spec["content_non_empty"] and not message.plain_text.strip():
-                issues.append(_issue("EMPTY_CONTENT", conversation_index, message_index, "A message has empty content."))
+                add_issue(_issue("EMPTY_CONTENT", conversation_index, message_index, "A message has empty content."))
     return {
-        "valid": not issues,
+        "valid": issue_count == 0,
         "conversation_count": len(drafts),
         "message_count": sum(len(draft.messages) for draft in drafts),
         "issues": issues,
+        **({"issue_count": issue_count, "issues_truncated": issue_count > len(issues)} if bounded else {}),
     }
 
 

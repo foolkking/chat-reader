@@ -154,6 +154,7 @@ def bounded_upload_analysis_sync(files: Iterable[UploadFile], *, db=None) -> Ite
 def bounded_analysis_admission_sync(
     sizes: Iterable[int], *, force_memory_check: bool = False,
     required_memory_bytes: int | None = None,
+    wait_for_slot: bool = True,
     db=None,
 ) -> Iterator[None]:
     """Synchronous admission; persistent worker analysis also checks small batches."""
@@ -180,9 +181,10 @@ def bounded_analysis_admission_sync(
         _queued_heavy_requests += 1
     semaphore = _semaphore()
     try:
-        if not semaphore.acquire(timeout=settings.upload_queue_wait_seconds):
+        acquired = semaphore.acquire(timeout=settings.upload_queue_wait_seconds) if wait_for_slot else semaphore.acquire(blocking=False)
+        if not acquired:
             raise UploadLimitError(
-                "UPLOAD_QUEUE_TIMEOUT",
+                "UPLOAD_QUEUE_TIMEOUT" if wait_for_slot else "UPLOAD_QUEUE_FULL",
                 "The server is still processing another large upload. Try again shortly.",
                 status_code=429,
             )

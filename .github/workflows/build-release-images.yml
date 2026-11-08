@@ -620,6 +620,10 @@ jobs:
         timeout-minutes: 10
         run: python3 scripts/ci/small-import-memory-gate.py
 
+      - name: Verify bounded ZIP 100 and 500 MiB sources and long Markdown
+        timeout-minutes: 35
+        run: python3 scripts/ci/bounded-import-memory-gate.py
+
       - name: Stop memory-gate PostgreSQL
         if: ${{ always() && steps.small_zip_postgres.outcome == 'success' }}
         run: bash scripts/ci/postgres-service.sh stop
@@ -629,7 +633,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: small-zip-memory-${{ github.sha }}-${{ github.run_attempt }}
-          path: small-zip-memory.json
+          path: |
+            small-zip-memory.json
+            bounded-zip-*.json
           if-no-files-found: warn
           retention-days: 3
 
@@ -681,6 +687,7 @@ jobs:
             release-manifest.json
             image-inspection.json
             small-zip-memory.json
+            bounded-zip-memory.json
             deploy/nginx-internal-diagnostics.location.conf
           if-no-files-found: error
           retention-days: 3
@@ -715,6 +722,23 @@ jobs:
           test -s release-manifest.json
           test -s image-inspection.json
           test -s small-zip-memory.json
+          test -s bounded-zip-memory.json
+          jq -e --arg sha "$GITHUB_SHA" \
+            '.revision == $sha and .passed == true and .real_sensor == true and (.cases | length) == 4
+              and ([.cases[].case] | sort) == ["assets100","assets500","long","small"]
+              and all(.cases[]; .revision == $sha and .passed == true and .real_sensor == true
+                and .draft_format == 2 and .workspace_peak_delta_bytes <= 67108864
+                and .memory_swap_limit_bytes == .memory_limit_bytes
+                and .memory_limit_bytes == (if .case == "assets500" then 671088640 else 335544320 end)
+                and .oom == 0 and .oom_kill == 0 and .failcnt_delta == 0 and .restarts == 0
+                and .conversation_count == 1 and .attachment_count == .verified_asset_hashes
+                  and (if .case == "small" then .message_count == 4 and .attachment_count == 14 and .reference_count == 13
+                       else .message_count == 36 and .block_count >= 6000 end)
+                  and (if .case == "assets100" then .archive_bytes >= 102760448 and .archive_bytes <= 104857600 and .attachment_count == 4 and .reference_count == 4
+                       elif .case == "assets500" then .archive_bytes >= 522190848 and .archive_bytes <= 524288000 and .attachment_count == 4 and .reference_count == 4
+                       elif .case == "long" then .archive_bytes > 1048576 and .attachment_count == 0
+                       else true end))' \
+            bounded-zip-memory.json >/dev/null
           jq -e --arg sha "$GITHUB_SHA" \
             '.revision == $sha and .passed == true and .real_sensor == true
               and .memory_limit_bytes == 335544320 and .memory_swap_limit_bytes == 335544320

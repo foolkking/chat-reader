@@ -72,8 +72,17 @@ class LocalAssetStore(AssetStore):
                         raise ValueError("Asset exceeds the configured size limit.")
                     digest.update(chunk)
                     destination.write(chunk)
+                    if byte_size % (4 * 1024 * 1024) < len(chunk):
+                        from app.services.adaptive_import.memory_budget import streaming_budget
+                        if streaming_budget():
+                            from app.services.adaptive_import.bounded_io import release_file_cache
+                            release_file_cache(destination, written=True)
                 destination.flush()
                 os.fsync(destination.fileno())
+                from app.services.adaptive_import.memory_budget import streaming_budget
+                if streaming_budget():
+                    from app.services.adaptive_import.bounded_io import release_file_cache
+                    release_file_cache(destination, written=True)
             os.chmod(path, 0o600)
         except BaseException:
             path.unlink(missing_ok=True)

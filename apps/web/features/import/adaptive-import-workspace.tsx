@@ -49,9 +49,10 @@ type SessionActionControls = {
   begin: () => number | null;
   apply: (token: number, session: AdaptiveImportSession) => boolean;
   finish: (token: number) => void;
+  background?: (token: number) => void;
 };
 
-type ImportEditState = { dirty: boolean; busy: boolean };
+type ImportEditState = { dirty: boolean; busy: boolean; background?: boolean };
 
 function useAdaptiveSessionAction<TVariables>(
   mutationFn: (variables: TVariables) => Promise<AdaptiveImportSession>,
@@ -73,7 +74,7 @@ function useAdaptiveSessionAction<TVariables>(
 }
 
 export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, importing, error, onRetryImport, retryingImport = false, statusError, onRetryStatus, statusRetrying = false, onMappingStateChange }: {
-  onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
+  onMappingStateChange?: (state: ImportEditState) => void;
   session: AdaptiveImportSession;
   onSession: (session: AdaptiveImportSession) => void;
   onBack: () => void;
@@ -90,6 +91,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   const [activeFamilyId, setActiveFamilyId] = useState<string | null>(null);
   const [groupingOpen, setGroupingOpen] = useState(false);
   const [sessionActionBusy, setSessionActionBusy] = useState(false);
+  const [sessionActionBackground, setSessionActionBackground] = useState(false);
   const [mappingState, setMappingState] = useState<ImportEditState>({ dirty: false, busy: false });
   const [archiveStates, setArchiveStates] = useState<Record<string, ImportEditState>>({});
   const onArchiveStateChange = useCallback((artifactId: string, state: ImportEditState) => {
@@ -102,8 +104,9 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
   const archiveBusy = session.archives?.some(archive => archiveStates[archive.artifact_id]?.busy) ?? false;
   const overviewActionBusy = sessionActionBusy || importing || archiveDirty || archiveBusy;
   useEffect(() => {
-    onMappingStateChange?.({ dirty: mappingState.dirty || archiveDirty, busy: mappingState.busy || archiveBusy || sessionActionBusy });
-  }, [archiveBusy, archiveDirty, mappingState, onMappingStateChange, sessionActionBusy]);
+    onMappingStateChange?.({ dirty: mappingState.dirty || archiveDirty, busy: mappingState.busy || archiveBusy || sessionActionBusy,
+      background: sessionActionBackground && !archiveBusy && !importing });
+  }, [archiveBusy, archiveDirty, importing, mappingState, onMappingStateChange, sessionActionBackground, sessionActionBusy]);
   useEffect(() => () => { onMappingStateChange?.({ dirty: false, busy: false }); }, [onMappingStateChange]);
   const sessionActionRef = useRef<{ nextToken: number; activeToken: number | null }>({ nextToken: 0, activeToken: null });
   const currentImportIdRef = useRef(session.import_id);
@@ -113,6 +116,7 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
     const token = sessionActionRef.current.nextToken + 1;
     sessionActionRef.current = { nextToken: token, activeToken: token };
     setSessionActionBusy(true);
+    setSessionActionBackground(false);
     return token;
   }, []);
   const applySessionAction = useCallback((token: number, next: AdaptiveImportSession) => {
@@ -124,12 +128,17 @@ export function AdaptiveImportWorkspace({ session, onSession, onBack, onImport, 
     if (sessionActionRef.current.activeToken !== token) return;
     sessionActionRef.current.activeToken = null;
     setSessionActionBusy(false);
+    setSessionActionBackground(false);
+  }, []);
+  const backgroundSessionAction = useCallback((token: number) => {
+    if (sessionActionRef.current.activeToken === token) setSessionActionBackground(true);
   }, []);
   const sessionActions = useMemo<SessionActionControls>(() => ({
     begin: beginSessionAction,
     apply: applySessionAction,
     finish: finishSessionAction,
-  }), [applySessionAction, beginSessionAction, finishSessionAction]);
+    background: backgroundSessionAction,
+  }), [applySessionAction, backgroundSessionAction, beginSessionAction, finishSessionAction]);
   const rebuildPreview = useAdaptiveSessionAction(
     () => rebuildAdaptiveImportPreview(session.import_id, session.updated_at!), sessionActions);
   const refreshSession = useAdaptiveSessionAction(() => getAdaptiveImportSession(session.import_id), sessionActions);
@@ -563,7 +572,7 @@ function FamilyRow({ session, family, sessionAction, sessionActionBusy, onConfig
         ) : null}
       </div>
       {handling === "NOT_MAPPABLE" ? <NotMappableRecovery session={session} family={family} sessionAction={sessionAction} sessionActionBusy={sessionActionBusy} /> : null}
-      {handling !== "NOT_MAPPABLE" ? <FormatHealthCheck session={session} family={family} disabled={sessionActionBusy} onRepair={actionable ? onConfigure : undefined} /> : null}
+      {handling !== "NOT_MAPPABLE" ? <FormatHealthCheck session={session} family={family} disabled={sessionActionBusy} sessionAction={sessionAction} onRepair={actionable ? onConfigure : undefined} /> : null}
       {selectMutation.isError ? <div className="mt-3"><ErrorLine message={selectMutation.error} action="mutation" /></div> : null}
     </article>
   );

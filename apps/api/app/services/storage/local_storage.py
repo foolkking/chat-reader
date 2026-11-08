@@ -67,8 +67,15 @@ def save_import_file_stream(
                     raise ValueError("Uploaded source exceeds the configured per-file limit.")
                 digest.update(chunk)
                 target.write(chunk)
+                if byte_size % (4 * 1024 * 1024) < len(chunk):
+                    from app.services.adaptive_import.bounded_io import release_file_cache
+                    release_file_cache(target, written=True)
+                    release_file_cache(source)
             target.flush()
             os.fsync(target.fileno())
+            from app.services.adaptive_import.bounded_io import release_file_cache
+            release_file_cache(target, written=True)
+            release_file_cache(source)
         os.replace(temporary, destination)
     except Exception:
         temporary.unlink(missing_ok=True)

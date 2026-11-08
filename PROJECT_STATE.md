@@ -4,6 +4,17 @@ Last synchronized: **2026-11-08**. Current facts and verification boundaries onl
 dated implementation, CI failures and release narratives belong in execution records.
 Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
+**Additional unreleased candidate (2026-11-08):** disk-backed ZIP import,
+message-indexed internal draft v2, async recovery and durable resource waiting.
+Candidate migration **0060** adds queue eligibility fields; production remains
+**0059**. On November 8 the user authorized committing this candidate and
+submitting it with local reading-tools commit `2bb6ef0` to full CI on `master`.
+CI acceptance is pending; no deployment or user-ZIP replay is authorized.
+Static and pending runtime gates are separated in the
+[record](docs/execution/BOUNDED_ZIP_IMPORT_2026-11-08.md) and
+[contract](docs/system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md).
+The user's existing local reading-tools commit and unrelated changes are preserved.
+
 ## Current release — natural image sizing
 
 **Unreleased local candidate (2026-11-08):** compact image slider and
@@ -13,10 +24,10 @@ have passed at review checkpoints; full exact-source CI and visual acceptance
 are still pending. The November 8 completion audit found seven source-level
 gaps; the user then authorized targeted corrections (draft guards, real-line
 capture, manual-upload/default-fit semantics, search destinations and annotation
-filter/export context). Corrections remain local and require runtime/visual
-acceptance. After correction closeout, the user authorized one local checkpoint
-commit only; no push, CI dispatch or deployment is authorized or performed.
-Do not trigger CI until separately instructed.
+filter/export context). Corrections are in local checkpoint `2bb6ef0` and
+require runtime/visual acceptance. The subsequent November 8 instruction
+authorizes pushing that commit together with the bounded-ZIP candidate and
+dispatching full CI once; it does not authorize deployment or automatic polling.
 This does not change the production release below.
 [Candidate contract](docs/system/READING_TOOLS_CONTRACT.md) /
 [verification record](docs/execution/READING_TOOLS_2026-11-08.md).

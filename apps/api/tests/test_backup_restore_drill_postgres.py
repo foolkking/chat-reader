@@ -76,7 +76,7 @@ def test_stopped_writer_database_and_asset_backup_really_restores(isolated_schem
             "--dbname", target_name, input=dump.read_bytes())
         shutil.copytree(backup / "assets", restored_assets)
         with Session(target) as db:
-            assert db.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == "20261105_0059"
+            assert db.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == "20261108_0060"
             assert db.query(Message).count() == 1
             assert db.query(MessageVersion).count() == 2
             assert db.get(MessageVersion, current_version).display_text == "Synthetic"

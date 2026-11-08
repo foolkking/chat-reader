@@ -751,7 +751,8 @@ def claim_next_job(
     job_type: str | None = None,
     exclude_job_types: tuple[str, ...] = ("content_noise_scan",),
 ) -> uuid.UUID | None:
-    query = db.query(BackgroundJob).filter(BackgroundJob.status == "queued")
+    from app.services.adaptive_import.resource_wait import eligible, finish_wait
+    query = db.query(BackgroundJob).filter(BackgroundJob.status == "queued", eligible(BackgroundJob))
     if job_type is not None:
         query = query.filter(BackgroundJob.job_type == job_type)
     if exclude_job_types:
@@ -765,6 +766,7 @@ def claim_next_job(
     if job is None:
         return None
     now = datetime.now(timezone.utc)
+    finish_wait(job, "result")
     job.status = "processing"
     job.phase = "validating"
     job.progress = max(job.progress, 1)
@@ -1154,7 +1156,6 @@ def process_background_job(
             elif job.job_type == "adaptive_import_analysis":
                 from app.models.import_record import ImportRecord
                 from app.services.adaptive_import.service import analyze_initial_session, rebuild_session_preview
-                from app.services.adaptive_import.memory_budget import import_analysis_admission
 
                 import_id = uuid.UUID(str(payload["import_id"]))
                 import_record = db.get(ImportRecord, import_id)
@@ -1168,7 +1169,6 @@ def process_background_job(
                 if import_record.session_state == "CANCELED":
                     raise BackgroundJobCancelled("Import analysis was cancelled.")
 
-                source_sizes = [max(0, int(item.byte_size or 0)) for item in import_record.artifacts]
                 import_record.status = "analyzing"
                 import_record.phase = "analyzing"
                 import_record.session_state = "ANALYZING"
@@ -1184,16 +1184,15 @@ def process_background_job(
                     import_record.heartbeat_at = datetime.now(timezone.utc)
                     report("analyzing", progress, processed, total)
 
-                with import_analysis_admission(
-                    db, import_record, stage="analysis",
-                    sizes=source_sizes, force_memory_check=True,
-                ):
-                    analyze = rebuild_session_preview if payload.get("rebuild_preview") else analyze_initial_session
-                    analyze(
-                        db,
-                        import_record,
-                        progress_callback=report_analysis_progress,
-                    )
+                from app.services.adaptive_import.operations import operation_admission
+                with operation_admission(db, import_record, payload):
+                    operation_result = None
+                    if payload.get("operation"):
+                        from app.services.adaptive_import.operations import execute_operation
+                        operation_result = execute_operation(db, import_record, payload)
+                    else:
+                        analyze = rebuild_session_preview if payload.get("rebuild_preview") else analyze_initial_session
+                        analyze(db, import_record, progress_callback=report_analysis_progress)
                 import_record.heartbeat_at = datetime.now(timezone.utc)
                 import_record.completed_at = datetime.now(timezone.utc)
                 if import_record.session_state == "FAILED":
@@ -1207,6 +1206,7 @@ def process_background_job(
                     "family_count": len(import_record.structure_families),
                     "conversation_count": int((import_record.draft_summary or {}).get("conversation_count") or 0),
                     "message_count": int((import_record.draft_summary or {}).get("message_count") or 0),
+                    **({"operation_result": operation_result} if operation_result is not None else {}),
                 }
                 analysis_failure = (import_record.analysis_summary or {}).get("failure")
                 if isinstance(analysis_failure, dict):
@@ -1496,6 +1496,15 @@ def process_background_job(
         with session_factory() as db:
             job = db.get(BackgroundJob, job_id)
             if job is not None:
+                if job.status == "committed":
+                    return
+                if job.job_type == "adaptive_import_analysis" and job.status == "processing":
+                    from app.models.import_record import ImportRecord
+                    from app.services.adaptive_import.resource_wait import defer_resource
+                    record = db.get(ImportRecord, uuid.UUID(str((job.payload or {})["import_id"])))
+                    if record is not None and defer_resource(job, record, exc, stage="analysis"):
+                        db.commit()
+                        return
                 if job.job_type == "support_notification":
                     from app.services.support_notifications import recover_notification
                     recover_notification(db, job)
@@ -1560,6 +1569,7 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
         job.result = {}
     job.error_message = None
     job.queued_at = now
+    job.next_run_at = None
     job.started_at = None
     job.heartbeat_at = None
     job.completed_at = None
@@ -1575,6 +1585,7 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
         analysis_record.error_message = None
         analysis_summary = dict(analysis_record.analysis_summary or {})
         analysis_summary.pop("failure", None)
+        analysis_summary.pop("resource_wait", None)
         analysis_record.analysis_summary = analysis_summary
     if job.job_type in SYSTEM_JOB_TYPES and (db := object_session(job)) is not None:
         sync_system_archive_record(db, job, status="QUEUED")

@@ -20,6 +20,9 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[TestCli
     # Keep admission active: memory-boundary tests override this probe explicitly.
     # Do not patch the core probe used by the host/cgroup diagnostics tests.
     monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 16 * 1024**3)
+    # Keep the existing v1/synchronous contract regressions explicit. The
+    # bounded-ZIP suite enables v2 and exercises its worker/202 contract.
+    monkeypatch.setenv("IMPORT_BOUNDED_ZIP_ENABLED", "false")
     monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "storage" / "imports"))
     monkeypatch.setenv("EXPORT_STORAGE_DIR", str(tmp_path / "storage" / "exports"))
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "storage" / "assets"))

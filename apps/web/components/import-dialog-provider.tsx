@@ -25,7 +25,7 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
   const t = useTranslations();
   const zh = t("settings") === "设置";
   const { confirm } = useInteractionDialog();
-  const [mappingState, setMappingState] = useState({ dirty: false, busy: false });
+  const [mappingState, setMappingState] = useState<{ dirty: boolean; busy: boolean; background?: boolean }>({ dirty: false, busy: false });
   const [open, setOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [repairProfileId, setRepairProfileId] = useState<string | null>(null);
@@ -42,13 +42,13 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
   const mounted = useRef(true);
   const canLeaveMapping = useCallback(async () => {
     const state = mappingRef.current;
-    if (state.busy) return false;
+    if (state.busy && !state.background) return false;
     const operation = ++transition.current;
     const generation = authenticationGeneration();
     const zh = t("settings") === "设置";
     if (state.dirty && !(await confirm({ title: zh ? "放弃未保存的导入设置？" : "Discard unsaved import settings?", description: zh ? "尚未保存的格式映射或 ZIP 分类选择将被放弃；导入会话和原始文件仍会保留。" : "Unsaved format mappings or ZIP classifications will be discarded. The import session and source files will remain available.", confirmLabel: zh ? "放弃更改" : "Discard changes", danger: true }))) return false;
     return mounted.current && operation === transition.current && generation === authenticationGeneration()
-      && mappingRef.current === state && !mappingRef.current.busy;
+      && mappingRef.current === state && (!mappingRef.current.busy || Boolean(mappingRef.current.background));
   }, [confirm, t]);
   const openImportDialog = useCallback((options?: {
     repairProfileId?: string;
@@ -84,7 +84,7 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
     };
   }, [closeImportDialog]);
   useEffect(() => {
-    if (!mappingState.dirty && !mappingState.busy) return;
+    if (!mappingState.dirty && (!mappingState.busy || mappingState.background)) return;
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
@@ -103,7 +103,7 @@ export function ImportDialogProvider({ children }: { children: React.ReactNode }
               <div>
                 <h2 className="text-base font-semibold text-primary">{initialMode === "archive" ? (zh ? "恢复对话归档" : "Restore conversation archive") : t("importData")}</h2>
               </div>
-              <button ref={closeButtonRef} type="button" data-testid="import-dialog-close" disabled={mappingState.busy} onClick={() => void requestClose()} className="flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50" aria-label={t("close")} title={t("close")}><X className="h-4 w-4" aria-hidden="true" /></button>
+              <button ref={closeButtonRef} type="button" data-testid="import-dialog-close" disabled={mappingState.busy && !mappingState.background} onClick={() => void requestClose()} className="flex h-11 w-11 items-center justify-center rounded-lg text-secondary hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50" aria-label={t("close")} title={t("close")}><X className="h-4 w-4" aria-hidden="true" /></button>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto p-5"><ImportPanel key={`${dialogVersion}:${repairProfileId ?? ""}:${resumeImportId ?? ""}`} repairProfileId={repairProfileId} resumeImportId={resumeImportId} initialMode={initialMode} initialFiles={initialFiles} targetProjectId={targetProjectId} onImportCommitted={closeImportDialog} onWorkspaceChange={setWorkspaceOpen} onMappingStateChange={setMappingState} /></div>
           </section>

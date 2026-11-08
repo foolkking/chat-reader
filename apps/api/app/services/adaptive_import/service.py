@@ -33,6 +33,7 @@ from app.services.adaptive_import.archive_sources import (
     update_archive_classification,
 )
 from app.services.adaptive_import.memory_budget import small_zip_receipt
+from app.services.adaptive_import.bounded_io import reraise_storage_failure
 from app.services.adaptive_import.contracts import AdaptiveImportError, AnalysisResult, SourceDocument
 from app.services.task_errors import public_import_failure, public_task_error
 from app.services.adaptive_import.normalization import normalize_group, validate_drafts
@@ -153,6 +154,7 @@ def add_session_source_stream(
         filename,
         source,
         max_bytes=min(max_file_bytes, settings.max_import_file_size_mb * 1024 * 1024),
+        chunk_size=64 * 1024,
     )
     if not stored.byte_size:
         _remove_source_path(_session_root(record.id) / stored.safe_filename)
@@ -178,7 +180,7 @@ def add_session_source_stream(
 
 def queue_session_analysis(db: Session, record: ImportRecord, *, rebuild_preview: bool = False) -> BackgroundJob:
     """Queue first-pass structure analysis after source files are safely staged."""
-    record.source_fingerprint = ",".join(sorted(artifact.sha256 for artifact in record.artifacts))
+    _refresh_source_fingerprint(record)
     record.session_state = "ANALYZING"
     record.status = "analyzing"
     record.phase = "queued"
@@ -187,6 +189,9 @@ def queue_session_analysis(db: Session, record: ImportRecord, *, rebuild_preview
     record.started_at = None
     record.heartbeat_at = None
     record.completed_at = None
+    record.error_message = None
+    record.analysis_summary = {key: value for key, value in (record.analysis_summary or {}).items()
+                               if key not in {"failure", "resource_wait"}}
     job = BackgroundJob(
         id=uuid.uuid4(),
         owner_user_id=record.owner_user_id,
@@ -296,6 +301,7 @@ def analyze_session(
             bucket = buckets.setdefault((analysis.mode, analysis.signature_digest), (analysis, []))
             bucket[1].append(group)
         except AdaptiveImportError as exc:
+            reraise_storage_failure(exc)
             group.diagnostics = [exc.diagnostic(group_id=str(group.id))]
             group.profile_resolution = {"status": "INVALID"}
             invalid.append((group, exc))
@@ -470,7 +476,8 @@ def replace_session_artifact(
     artifact: SourceArtifact,
     *,
     filename: str,
-    content: bytes,
+    content: bytes | None = None,
+    stored_source=None,
 ) -> tuple[list[Path], Path]:
     _require_session_state(record, RECOVERABLE_SESSION_STATES)
     settings = get_settings()
@@ -479,11 +486,12 @@ def replace_session_artifact(
     extension = _extension(filename)
     if extension not in {".json", ".jsonl", ".gz", ".md", ".markdown", ".txt", ".html", ".htm", ".zip"}:
         raise AdaptiveImportError("SOURCE_UNSUPPORTED", f"Unsupported file extension: {extension or '(none)'}", layer="file")
-    if not content:
+    byte_size = stored_source[0].byte_size if stored_source else len(content or b"")
+    if not byte_size:
         raise AdaptiveImportError("FILE_EMPTY", f"{filename} is empty.", layer="file")
-    if len(content) > max_bytes:
+    if byte_size > max_bytes:
         raise AdaptiveImportError("FILE_TOO_LARGE", f"{filename} exceeds the {settings.max_import_file_size_mb} MB limit.", layer="file")
-    projected_total = record.total_bytes - artifact.byte_size + len(content)
+    projected_total = record.total_bytes - artifact.byte_size + byte_size
     if projected_total > total_limit:
         raise AdaptiveImportError(
             "SESSION_TOO_LARGE",
@@ -499,13 +507,13 @@ def replace_session_artifact(
         if item.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
         and str((item.parsed_summary or {}).get("archive_artifact_id")) == str(artifact.id)
     ]
-    stored = save_import_file(record.id, filename, content)
+    stored, digest = stored_source or (save_import_file(record.id, filename, content), hashlib.sha256(content).hexdigest())
     new_path = _session_root(record.id) / stored.safe_filename
     try:
         artifact.filename = filename
         artifact.safe_filename = stored.safe_filename
-        artifact.sha256 = hashlib.sha256(content).hexdigest()
-        artifact.byte_size = len(content)
+        artifact.sha256 = digest
+        artifact.byte_size = byte_size
         artifact.mime_guess = "application/zip" if extension == ".zip" else "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain"
         artifact.file_extension = extension
         artifact.raw_storage_uri = stored.raw_storage_uri
@@ -552,7 +560,8 @@ def replace_session_artifact(
         analyze_session(db, record)
         return stale_paths, new_path
     except Exception:
-        _remove_source_path(new_path)
+        if stored_source is None:
+            _remove_source_path(new_path)
         raise
 
 
@@ -672,6 +681,7 @@ def select_profile_revision(db: Session, record: ImportRecord, family: ImportStr
 
 
 def session_payload(record: ImportRecord) -> dict[str, Any]:
+    from app.services.adaptive_import.resource_wait import public_wait
     families = sorted(record.structure_families, key=lambda item: (item.display_name.casefold(), str(item.id)))
     groups = sorted(record.input_groups, key=lambda item: (item.display_name.casefold(), str(item.id)))
     return {
@@ -680,6 +690,7 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "status": record.status,
         "phase": record.phase,
         "progress": record.progress,
+        "resource_wait": public_wait(record.analysis_summary),
         "error_message": public_task_error(record.error_message, fallback="IMPORT_FAILED"),
         "analysis_task_id": (record.analysis_summary or {}).get("analysis_task_id"),
         "failure": public_import_failure(
@@ -920,6 +931,7 @@ def _resolve_known_families(db: Session, record: ImportRecord) -> None:
         except UploadLimitError:
             raise
         except (AdaptiveImportError, ValueError) as exc:
+            reraise_storage_failure(exc)
             family.resolution_status = "DRIFTED"
             family.validation_result = {"valid": False, "message": str(exc)}
             family.match_evidence = {
@@ -968,14 +980,16 @@ def evaluate_family(record: ImportRecord, family: ImportStructureFamily, mapping
             result["valid"] = result["valid"] and bool(drafts)
             result["issues"] = [{**issue, "group_id": str(group.id)} for issue in result["issues"]]
             if str(group.id) == sample_key and drafts:
+                from itertools import islice
                 sample = drafts[0]
                 preview = {"title": sample.title, "message_count": len(sample.messages), "messages": [
                     {"role": message.role, "content": message.display_text[:2000],
                      "content_truncated": len(message.display_text) > 2000, "timestamp": message.created_at}
-                    for message in sample.messages[:12]]}
+                    for message in islice(sample.messages, 12)]}
         except UploadLimitError:
             raise
         except (AdaptiveImportError, OSError, ValueError) as exc:
+            reraise_storage_failure(exc)
             diagnostic = exc.diagnostic(group_id=str(group.id)) if isinstance(exc, AdaptiveImportError) else {
                 "code": "SOURCE_UNAVAILABLE" if isinstance(exc, OSError) else "NORMALIZATION_FAILED",
                 "layer": "normalization", "blocking": True, "group_id": str(group.id),
@@ -1018,7 +1032,7 @@ def _update_session_state(db: Session, record: ImportRecord) -> None:
         record.progress = 45 if "INVALID" in statuses else 55
     record.analysis_summary = _summary(record)
     try:
-        receipt = small_zip_receipt(record)
+        receipt = None if (record.draft_summary or {}).get("format_version") == 2 else small_zip_receipt(record)
     except UploadLimitError:
         raise
     except (OSError, ValueError, KeyError):
@@ -1101,8 +1115,11 @@ def _group_documents(record: ImportRecord, group: ImportInputGroup) -> list[Sour
         if artifact is None:
             raise AdaptiveImportError("SOURCE_MISSING", "An input group references a missing source file.", layer="grouping")
         path = _source_path(record, artifact)
+        from app.services.adaptive_import.memory_budget import streaming_budget
+        streamed = streaming_budget() and artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
         result.append(SourceDocument(
-            artifact_id=str(artifact.id), filename=artifact.filename, extension=artifact.file_extension or _extension(artifact.filename), content=path.read_bytes()
+            artifact_id=str(artifact.id), filename=artifact.filename, extension=artifact.file_extension or _extension(artifact.filename),
+            content=b"" if streamed else path.read_bytes(), path=path if streamed else None,
         ))
     return result
 
@@ -1251,6 +1268,10 @@ def _enrich_archive_drafts(
 
     result: list[CanonicalDraftConversation] = []
     for draft_index, draft in enumerate(drafts):
+        if draft.stream_records is not None:
+            from app.services.adaptive_import.stream_enrichment import enrich_stream
+            result.append(enrich_stream(record, source, draft, draft_index))
+            continue
         from app.services.adaptive_import.memory_budget import (
             MAX_BLOCKS, MAX_MESSAGES, checkpoint, enforce_limit,
         )

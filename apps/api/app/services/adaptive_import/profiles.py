@@ -117,6 +117,10 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
                     return None
             return _builtin("builtin:chat-reader-exporter")
     if markdown_doc and not json_doc:
+        if markdown_doc.path is not None:
+            boundary = analysis.signature.get("boundary") or {}
+            roles = {str(value).casefold() for value in analysis.signature.get("role_labels", [])}
+            return _builtin("builtin:chat-reader-markdown") if boundary == {"kind": "HEADING", "level": 2} and roles <= {"prompt", "response"} else None
         try:
             parsed = parse_exporter_markdown(markdown_doc.content)
         except ExporterMarkdownPairingError:
@@ -129,6 +133,9 @@ def match_builtin(analysis: AnalysisResult, documents: list[SourceDocument]) -> 
 def normalize_builtin(key: str, documents: list[SourceDocument]):
     json_doc = next((item for item in documents if item.extension in {".json", ".jsonl", ".gz"}), None)
     markdown_doc = next((item for item in documents if item.extension in {".md", ".markdown"}), None)
+    if markdown_doc is not None and markdown_doc.path is not None:
+        from app.services.adaptive_import.stream_markdown import normalize_path
+        return normalize_path(markdown_doc, {}, key, builtin_key=key)
     if key == "builtin:single-assistant-markdown-v1" and markdown_doc:
         try:
             text = markdown_doc.content.decode("utf-8-sig")

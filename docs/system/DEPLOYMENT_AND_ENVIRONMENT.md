@@ -1,5 +1,13 @@
 # 部署与运行环境
 
+## 未发布导入候选 — 2026-11-08
+
+新增 `IMPORT_BOUNDED_ZIP_ENABLED=true` 与候选migration0060，现役0059未动。
+保留量取物理/cgroup有效容量1/8并夹在128–512 MiB，加64 MiB工作区；
+真实空闲/RSS和ZIP安全限制仍检查，JSON不取消×32。
+沿用单并发worker、next_run_at持久等待；原320 MiB及新容量门禁都须
+精确CI通过，当前只做静态检查。见[合同](ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)。
+
 ## 当前生产 — 图片自然排版 — 2026-11-07
 
 生产 **`897ba78`**／直接回退 **`9cf235f`**，旧 **`67e6336`** 仍保留；

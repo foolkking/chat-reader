@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 def insert_rows(db: Session, model: type, rows: Sequence[dict[str, Any]]) -> None:
     if not rows:
         return
+    from app.services.adaptive_import.memory_budget import checkpoint
+    checkpoint()
 
     mapper = model.__mapper__
     mapper_keys = [attribute.key for attribute in mapper.column_attrs]
@@ -25,6 +27,7 @@ def insert_rows(db: Session, model: type, rows: Sequence[dict[str, Any]]) -> Non
 
     for keys, matching_rows in grouped_rows.items():
         _insert_matching_rows(db, model, mapper, keys, matching_rows)
+    checkpoint()
 
 
 def _insert_matching_rows(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Literal
+from pathlib import Path
 
 SourceMode = Literal["JSON", "MARKDOWN", "JSON_MARKDOWN", "UNKNOWN"]
 ResolutionStatus = Literal["EXACT_MATCH", "COMPATIBLE", "DRIFTED", "AMBIGUOUS", "UNKNOWN", "INVALID"]
@@ -15,6 +16,7 @@ class SourceDocument:
     filename: str
     extension: str
     content: bytes
+    path: Path | None = None
 
 
 @dataclass(frozen=True)

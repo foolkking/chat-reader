@@ -129,6 +129,21 @@ test("release requires a real constrained worker, no swap and independently chec
   assert.match(inspector, /\.workspace_peak_delta_bytes <= 67108864/);
 });
 
+test("bounded large ZIP memory evidence is additive and pinned to the exact release image", () => {
+  const build = job("build-images"), inspector = job("inspect-release-artifact");
+  assert.match(build, /run: python3 scripts\/ci\/bounded-import-memory-gate\.py/);
+  assert.ok(build.indexOf("small-import-memory-gate.py") < build.indexOf("bounded-import-memory-gate.py"));
+  assert.ok(build.indexOf("bounded-import-memory-gate.py") < build.indexOf("Package images and provenance"));
+  assert.match(inspector, /bounded-zip-memory\.json/);
+  assert.match(inspector, /\.draft_format == 2/);
+  assert.match(inspector, /all\(\.cases\[\];/);
+  const script = read("scripts/ci/bounded-import-memory-gate.py");
+  assert.match(script, /\("assets100", 320\)/);
+  assert.match(script, /\("assets500", 640\)/);
+  assert.match(script, /\("long", 320\)/);
+  assert.doesNotMatch(script, /continue.on.error|monkeypatch|patch\.object/);
+});
+
 test("reading capacity comparison is additive and required before release images", () => {
   assert.match(job("reading-performance-comparison"), /uses: \.\/\.github\/workflows\/reading-performance\.yml/);
   assert.match(job("build-images"), /needs: \[api-quality, web-quality, settings-quality, reading-performance-comparison\]/);

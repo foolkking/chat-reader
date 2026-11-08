@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Check, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
-import { previewAdaptiveFamilyMapping, saveAdaptiveFamilyMapping } from "../../lib/api";
+import { ApiRequestError, previewAdaptiveFamilyMapping, saveAdaptiveFamilyMapping } from "../../lib/api";
 import type { AdaptiveImportDiagnostic, AdaptiveImportFamily, AdaptiveImportGroup, AdaptiveImportSession, AdaptiveMappingPreview } from "../../lib/types";
 import { asArray, asObject, DiagnosticLine, FormatIcon, formatBytes, modeLabel, ResolutionBadge } from "./adaptive-import-workspace";
 import { FormatHealthCheck } from "./format-health-check";
@@ -17,6 +17,7 @@ type SessionActionControls = {
   begin: () => number | null;
   apply: (token: number, session: AdaptiveImportSession) => boolean;
   finish: (token: number) => void;
+  background?: (token: number) => void;
 };
 
 export function MappingWorkspace({ session, family, sessionAction, sessionActionBusy, onBack, onMappingStateChange }: { session: AdaptiveImportSession; family: AdaptiveImportFamily; sessionAction: SessionActionControls; sessionActionBusy: boolean; onBack: () => void; onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void }) {
@@ -32,7 +33,30 @@ export function MappingWorkspace({ session, family, sessionAction, sessionAction
   const group = familyGroups.find((item) => item.id === sampleGroupId) ?? familyGroups[0];
   const analysis = asObject(asObject(group?.profile_resolution).analysis);
   const candidates = asObject(analysis.mapping_candidates);
-  const previewMutation = useMutation({ mutationFn: () => previewAdaptiveFamilyMapping(session.import_id, family.id, { profileName, mappingSpec: mapping, sampleGroupId }), onSuccess: setPreview });
+  const previewRequest = useRef<{ key: string; taskId?: string; controller: AbortController } | null>(null);
+  const [previewWaiting, setPreviewWaiting] = useState(false);
+  const [previewStopped, setPreviewStopped] = useState(false);
+  useEffect(() => () => { previewRequest.current?.controller.abort(); previewRequest.current = null; }, []);
+  const previewMutation = useMutation({ mutationFn: () => {
+    const token = sessionAction.begin();
+    if (token === null) return Promise.reject(new Error("Import session is busy"));
+    const key = JSON.stringify([session.import_id, family.id, profileName, mapping, sampleGroupId]);
+    const taskId = previewRequest.current?.key === key ? previewRequest.current.taskId : undefined;
+    previewRequest.current?.controller.abort();
+    const request = { key, taskId, controller: new AbortController() };
+    previewRequest.current = request;
+    setPreviewWaiting(false);
+    setPreviewStopped(false);
+    return previewAdaptiveFamilyMapping(session.import_id, family.id, { profileName, mappingSpec: mapping, sampleGroupId }, {
+      taskId, signal: request.controller.signal,
+      onQueued: id => { request.taskId = id; sessionAction.background?.(token); },
+      onTask: task => { if (previewRequest.current === request) {
+        setPreviewWaiting(task.phase === "waiting_resources");
+        setPreviewStopped(["failed", "cancelled"].includes(task.status));
+      } },
+    }).finally(() => { if (previewRequest.current === request) sessionAction.finish(token); });
+  }, onSuccess: data => { previewRequest.current = null; setPreview(data); } });
+  const previewUnconfirmed = previewStopped || (previewMutation.error instanceof ApiRequestError && previewMutation.error.code === "IMPORT_OPERATION_UNCONFIRMED");
   const saveMutation = useMutation({ mutationFn: () => saveAdaptiveFamilyMapping(session.import_id, family.id, { profileName, mappingSpec: mapping }) });
   const busy = previewMutation.isPending || saveMutation.isPending || sessionActionBusy;
   useEffect(() => { onMappingStateChange?.({ dirty, busy }); }, [busy, dirty, onMappingStateChange]);
@@ -62,7 +86,8 @@ export function MappingWorkspace({ session, family, sessionAction, sessionAction
           <ResolutionBadge status={family.resolution_status} />
         </div>
       </header>
-      <FormatHealthCheck session={session} family={family} disabled={busy} />
+      <FormatHealthCheck session={session} family={family} disabled={busy} sessionAction={sessionAction} />
+      {previewMutation.isPending && previewWaiting ? <p role="status" className="mt-3 text-sm text-secondary">{tr("等待服务器资源，系统会自动继续；源文件和当前映射保留，无需重新上传。")}</p> : null}
       <div className="grid min-h-0 flex-1 gap-0 lg:grid-cols-[minmax(230px,.75fr)_minmax(360px,1.1fr)_minmax(300px,.9fr)]">
         <SourceStructurePane family={family} group={group} candidates={candidates} />
         <fieldset disabled={busy} aria-label={tr("规范字段映射")} className="min-w-0 border-ui py-5 lg:border-x lg:px-5"><h4 className="text-sm font-semibold text-primary">{tr("规范字段映射")}</h4><p className="mt-1 text-xs leading-5 text-secondary">{tr("只保存结构、字段映射与角色字典，不保存示例正文。")}</p><div className="mt-5 space-y-5">
@@ -74,8 +99,9 @@ export function MappingWorkspace({ session, family, sessionAction, sessionAction
         <CanonicalPreviewPane preview={preview} loading={previewMutation.isPending} />
       </div>
       {previewMutation.isError ? <ErrorLine message={previewMutation.error} action="mutation" onBack={() => void requestBack()} /> : null}
+      {previewUnconfirmed ? <button type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => window.dispatchEvent(new Event("chat-reader:open-task-center"))}>{tr("查看后台任务")}</button> : null}
       {saveMutation.isError ? <ErrorLine message={saveMutation.error} action="mutation" onBack={() => void requestBack()} /> : null}
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4"><p className="text-xs text-secondary">{tr("验证会运行此格式的全部")}{family.group_count} {tr("个对话，不只检查示例。")}</p><div className="flex gap-2"><button type="button" disabled={busy || !profileName.trim()} onClick={() => previewMutation.mutate()} className="btn-secondary min-h-11 px-4 text-sm font-medium">{previewMutation.isPending ? tr("正在验证") : tr("验证映射")}</button><button type="button" disabled={!preview?.validation.valid || busy || !profileName.trim()} onClick={save} className="btn-primary min-h-11 px-4 text-sm font-medium">{saveMutation.isPending ? tr("正在保存") : family.resolution_status === "DRIFTED" ? tr("保存新版本并继续") : tr("保存映射并继续")}</button></div></footer>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4"><p className="text-xs text-secondary">{tr("验证会运行此格式的全部")}{family.group_count} {tr("个对话，不只检查示例。")}</p><div className="flex gap-2"><button type="button" disabled={busy || previewUnconfirmed || !profileName.trim()} onClick={() => previewMutation.mutate()} className="btn-secondary min-h-11 px-4 text-sm font-medium">{previewMutation.isPending ? tr("正在验证") : tr("验证映射")}</button><button type="button" disabled={!preview?.validation.valid || busy || !profileName.trim()} onClick={save} className="btn-primary min-h-11 px-4 text-sm font-medium">{saveMutation.isPending ? tr("正在保存") : family.resolution_status === "DRIFTED" ? tr("保存新版本并继续") : tr("保存映射并继续")}</button></div></footer>
     </section>
   );
 }

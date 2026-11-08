@@ -54,3 +54,14 @@ test("permission, validation, replacement and ordinary read failures retain thei
   assert.equal(format("CONNECTION_FAILED"),
     "The request result is not confirmed. Check the current import state before deciding whether to retry.");
 });
+
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: bounded import errors never expose internals or claim success`, () => {
+  const format = formatter(locale);
+  for (const code of ["IMPORT_OPERATION_UNCONFIRMED", "IMPORT_RESOURCE_WAIT_EXPIRED",
+    "IMPORT_STORAGE_FULL", "IMPORT_WORKSPACE_EXCEEDED", "IMPORT_MESSAGE_TOO_LARGE"]) {
+    const result = format({ name: "ApiRequestError", status: 409, code, message: "/private/synthetic-source" });
+    assert.doesNotMatch(result, /private|synthetic-source/);
+    assert.doesNotMatch(result, /successfully|成功导入/);
+    if (locale === "en-US") assert.doesNotMatch(result, /[\u4e00-\u9fff]/);
+  }
+});

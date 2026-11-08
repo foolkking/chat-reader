@@ -1,7 +1,6 @@
 import logging
 import time
 import uuid
-from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
@@ -39,8 +38,10 @@ def queue_import(record: ImportRecord, db: Session) -> ImportRecord:
     record.heartbeat_at = None
     record.completed_at = None
     record.error_message = None
+    record.next_run_at = None
     summary = dict(record.analysis_summary or {})
     summary.pop("failure", None)
+    summary.pop("resource_wait", None)
     record.analysis_summary = summary
     db.flush()
     structured_event(logger, logging.INFO, "import_queued", import_id=str(record.id))
@@ -106,9 +107,10 @@ def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
 
 
 def claim_next_import(db: Session) -> uuid.UUID | None:
+    from app.services.adaptive_import.resource_wait import eligible, finish_wait
     record = (
         db.query(ImportRecord)
-        .filter(ImportRecord.status == "queued")
+        .filter(ImportRecord.status == "queued", eligible(ImportRecord))
         .order_by(ImportRecord.queued_at.asc(), ImportRecord.created_at.asc())
         .with_for_update(skip_locked=True)
         .first()
@@ -116,6 +118,7 @@ def claim_next_import(db: Session) -> uuid.UUID | None:
     if record is None:
         return None
     now = datetime.now(timezone.utc)
+    finish_wait(record, "analysis_summary")
     record.status = "processing"
     record.phase = "parsing"
     record.session_state = "IMPORTING"
@@ -183,6 +186,12 @@ def process_import(
         with session_factory() as db:
             record = db.get(ImportRecord, import_id)
             if record is not None:
+                if record.committed_at is not None or record.status == "committed":
+                    return None
+                from app.services.adaptive_import.resource_wait import defer_resource
+                if defer_resource(record, record, exc, stage="commit"):
+                    db.commit()
+                    return None
                 record.status = "failed"
                 record.phase = "failed"
                 record.session_state = "FAILED"

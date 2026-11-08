@@ -123,21 +123,22 @@ def _requeue_unstarted_task(
 
 
 def _oldest_task_kind(db) -> str | None:
+    from app.services.adaptive_import.resource_wait import eligible
     import_row = (
         db.query(ImportRecord.id, ImportRecord.queued_at)
-        .filter(ImportRecord.status == "queued")
+        .filter(ImportRecord.status == "queued", eligible(ImportRecord))
         .order_by(ImportRecord.queued_at.asc(), ImportRecord.created_at.asc())
         .first()
     )
     job_row = (
         db.query(BackgroundJob.id, BackgroundJob.queued_at)
-        .filter(BackgroundJob.status == "queued", BackgroundJob.job_type != "content_noise_scan")
+        .filter(BackgroundJob.status == "queued", eligible(BackgroundJob), BackgroundJob.job_type != "content_noise_scan")
         .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
         .first()
     )
     noise_row = (
         db.query(BackgroundJob.id, BackgroundJob.queued_at)
-        .filter(BackgroundJob.status == "queued", BackgroundJob.job_type == "content_noise_scan")
+        .filter(BackgroundJob.status == "queued", eligible(BackgroundJob), BackgroundJob.job_type == "content_noise_scan")
         .order_by(BackgroundJob.queued_at.asc(), BackgroundJob.created_at.asc())
         .first()
     )

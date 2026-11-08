@@ -84,6 +84,54 @@ def test_linux_memory_probe_uses_cgroup_v1_memory_controller(monkeypatch):
     assert memory.available_memory_bytes() == 100 * 1024**2
 
 
+@pytest.mark.parametrize("kind", ["v1", "v2"])
+def test_effective_capacity_uses_parent_limit_not_available_or_cpu_mount(monkeypatch, kind):
+    monkeypatch.setattr(memory, "sys", SimpleNamespace(platform="linux"))
+    files = {"/proc/meminfo": "MemTotal: 8388608 kB\nMemAvailable: 500000 kB\n"}
+    if kind == "v1":
+        files.update({
+            "/proc/self/cgroup": "5:cpu,cpuacct:/app\n6:memory:/app\n",
+            "/proc/self/mountinfo": "29 23 0:26 / /cg/cpu rw - cgroup cgroup rw,cpu,cpuacct\n"
+                                    "30 23 0:27 / /cg/memory rw - cgroup cgroup rw,memory\n",
+            "/cg/memory/app/memory.limit_in_bytes": str(640 * 1024**2),
+            "/cg/memory/memory.limit_in_bytes": str(320 * 1024**2),
+        })
+    else:
+        files.update({
+            "/proc/self/cgroup": "0::/slice/app\n",
+            "/proc/self/mountinfo": "29 23 0:26 / /cg rw - cgroup2 cgroup rw\n",
+            "/cg/slice/app/memory.max": str(640 * 1024**2),
+            "/cg/slice/memory.max": str(320 * 1024**2),
+            # The actual v2 hierarchy root legitimately has no memory.max.
+        })
+
+    def read(path, **_kwargs):
+        if str(path) not in files:
+            raise FileNotFoundError("synthetic unavailable control")
+        return io.StringIO(files[str(path)])
+
+    monkeypatch.setattr(memory, "open", read, raising=False)
+    assert memory.effective_total_memory_bytes() == 320 * 1024**2
+    leaf = "/cg/memory/app/memory.limit_in_bytes" if kind == "v1" else "/cg/slice/app/memory.max"
+    del files[leaf]
+    assert memory.effective_total_memory_bytes() is None
+
+
+@pytest.mark.parametrize("limit,expected", [("0", 0), ("-1", None), ("invalid", None)])
+def test_effective_capacity_zero_and_invalid_control_values(monkeypatch, limit, expected):
+    monkeypatch.setattr(memory, "sys", SimpleNamespace(platform="linux"))
+    files = {
+        "/proc/meminfo": "MemTotal: 8388608 kB\n",
+        "/proc/self/cgroup": "0::/app\n",
+        "/proc/self/mountinfo": "29 23 0:26 /app /cg rw - cgroup2 cgroup rw\n",
+        "/cg/memory.max": limit,
+    }
+    monkeypatch.setattr(memory, "open", lambda path, **kwargs: io.StringIO(files[str(path)]), raising=False)
+    assert memory.effective_total_memory_bytes() == expected
+    files["/proc/self/mountinfo"] = "29 23 0:26 /other /cg rw - cgroup2 cgroup rw\n"
+    assert memory.effective_total_memory_bytes() is None
+
+
 @pytest.mark.parametrize("argv,serving", [
     (b"/usr/local/bin/python\0/usr/local/bin/uvicorn\0app.main:app\0", True),
     (b"python\0-m\0uvicorn\0", True),

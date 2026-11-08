@@ -41,6 +41,7 @@ class ImportRecord(Base):
     )
     committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     queued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -78,4 +79,5 @@ class ImportRecord(Base):
 
 
 Index("idx_imports_status_queued_at", ImportRecord.status, ImportRecord.queued_at)
+Index("idx_imports_status_next_run", ImportRecord.status, ImportRecord.next_run_at)
 Index("idx_imports_owner_status_queued", ImportRecord.owner_user_id, ImportRecord.status, ImportRecord.queued_at)

@@ -10,6 +10,7 @@ ARCHIVE_FAILURE_MESSAGE = (
 # These are exact public contracts, not a prefix/uppercase-code exemption:
 # an arbitrary code-looking value may itself contain private information.
 _SAFE_PERSISTED_ERROR_CODES = {
+    "IMPORT_RESOURCE_WAIT_EXPIRED", "IMPORT_STORAGE_FULL", "IMPORT_WORKSPACE_EXCEEDED",
     "TASK_FAILED",
     "IMPORT_FAILED",
     "IMPORT_COMMIT_FAILED",
@@ -145,6 +146,9 @@ _SAFE_NUMERIC_MESSAGES = (
 )
 
 _SAFE_IMPORT_FAILURE_CODES = {
+    "ZIP_METADATA_LIMIT",
+    "IMPORT_RESOURCE_WAIT_EXPIRED",
+    "IMPORT_MESSAGE_TOO_LARGE", "IMPORT_WORKSPACE_EXCEEDED", "IMPORT_STORAGE_FULL", "ZIP_MANIFEST_INVALID",
     "UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED",
     "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT", "ZIP_INVALID", "ZIP_ENTRY_LIMIT",
     "ZIP_MEMBER_TOO_LARGE", "ZIP_EXPANDED_LIMIT", "ZIP_COMPRESSION_UNSAFE",
@@ -179,6 +183,9 @@ def import_failure_from_exception(exc: Exception, *, stage: str) -> dict[str, ob
         if id(current) in seen:
             break
         seen.add(id(current))
+        import errno
+        if isinstance(current, OSError) and current.errno in {errno.ENOSPC, errno.EDQUOT}:
+            return adaptive_import_failure("IMPORT_STORAGE_FULL", stage, False)
         code = getattr(current, "code", None)
         if isinstance(code, str) and code in _SAFE_IMPORT_FAILURE_CODES:
             return adaptive_import_failure(

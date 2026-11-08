@@ -1,5 +1,16 @@
 # Testing
 
+## Pending candidate — bounded ZIP import — 2026-11-08
+
+`test_bounded_zip_streaming.py`, diagnostics and Node operation-recovery tests
+cover new admission, spools, grammar parity, integrity, JSON isolation, waits,
+cancellation and unknown responses. They are authored, not executed locally.
+Retain the original `small-import-memory-gate.py`; additive
+`bounded-import-memory-gate.py` covers four real320/640-MiB, no-extra-swap
+exact-image synthetic cases with the unchanged64-MiB peak-growth threshold.
+Do not run against production or user ZIPs. Runtime/browser/CI acceptance is
+pending; see [verification record](execution/BOUNDED_ZIP_IMPORT_2026-11-08.md).
+
 ## Pending candidate — reading tools — 2026-11-08
 
 The new [reading-tools contract](system/READING_TOOLS_CONTRACT.md) is not covered
@@ -8,7 +19,8 @@ Use the full exact-source workflow: API/PostgreSQL, Web quality/browser gates,
 Settings, performance and image-memory jobs. Preserve all 64+12+4 reading traces
 and original thresholds. Additional import-fit/tag/bookmark/export/pane tests
 are unexecuted until CI; lint/typecheck and syntax checks are not runtime proof.
-CI submission is paused at the user's request until separately instructed.
+The November 8 follow-up authorizes full CI submission together with the
+bounded-ZIP candidate; acceptance remains pending and deployment is not authorized.
 The completion-audit corrections add actual-line/emoji capture cases, Together
 departure guards, phone selection/export, explicit external search destinations,
 manual-upload fit/idempotency/safety skips and shared non-text location fixtures.

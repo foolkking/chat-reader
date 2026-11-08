@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -158,6 +159,19 @@ def cancel_task(
     if job is None:
         record = get_owned(db, ImportRecord, job_id, ownership_scope)
         if record is not None:
+            db.refresh(record, with_for_update=True)
+            if record.status == "queued" and record.phase == "waiting_resources":
+                # Claim and cancel take the same record lock. Keep the draft
+                # so a user can explicitly queue it again, without re-upload.
+                record.status = "cancelled"
+                record.phase = "cancelled"
+                record.session_state = "READY"
+                record.next_run_at = None
+                record.completed_at = datetime.now(timezone.utc)
+                record.analysis_summary = {key: value for key, value in (record.analysis_summary or {}).items()
+                                           if key != "resource_wait"}
+                db.commit()
+                return _import_task(record, db)
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Import tasks cannot be cancelled here.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     try:
@@ -187,6 +201,7 @@ def background_job_read(job: BackgroundJob) -> BackgroundTaskRead:
 
 
 def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
+    from app.services.adaptive_import.resource_wait import public_wait
     payload = job.payload or {}
     result = dict(job.result or {})
     if job.job_type == "conversation_batch_delete" and isinstance(result.get("failed"), list):
@@ -229,6 +244,7 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         export_format=_task_export_format(job.job_type, payload),
         offline_target=_offline_download_target(job.job_type, payload),
         result=result,
+        resource_wait=public_wait(result) if job.phase in {"waiting_resources", "resource_paused"} else None,
         failure=(
             public_import_failure(
                 result.get("failure"), error_message=job.error_message,
@@ -303,6 +319,7 @@ def _job_label(job_type: str) -> str:
 
 
 def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
+    from app.services.adaptive_import.resource_wait import public_wait
     conversation_ids = conversation_ids_for_import(db, record)
     return BackgroundTaskRead(
         job_id=record.id,
@@ -316,6 +333,7 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
         source_label=primary_filename(record),
         result={"conversation_ids": [str(value) for value in conversation_ids]},
         error_message=public_task_error(record.error_message, fallback="IMPORT_FAILED"),
+        resource_wait=public_wait(record.analysis_summary) if record.phase in {"waiting_resources", "resource_paused"} else None,
         failure=(
             public_import_failure(
                 (record.analysis_summary or {}).get("failure"),
@@ -326,6 +344,6 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
         started_at=record.started_at,
         heartbeat_at=record.heartbeat_at,
         completed_at=record.completed_at,
-        cancellable=False,
+        cancellable=record.status == "queued" and record.phase == "waiting_resources",
         attempt_count=record.attempt_count,
     )

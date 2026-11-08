@@ -24,16 +24,22 @@ def delete_headings_for_conversation(db: Session, conversation_id: uuid.UUID) ->
 
 
 def rebuild_headings_for_conversation(db: Session, conversation_id: uuid.UUID) -> TocBuildResult:
+    from app.services.adaptive_import.disk_counter import heading_counts
+    with heading_counts() as counts:
+        return _rebuild_headings(db, conversation_id, counts)
+
+
+def _rebuild_headings(db: Session, conversation_id: uuid.UUID, slug_counts) -> TocBuildResult:
     conversation = db.get(Conversation, conversation_id)
     if conversation is None or conversation.deleted_at is not None:
         return TocBuildResult(conversation_count=0, heading_count=0)
 
     delete_headings_for_conversation(db, conversation_id)
     rows = _heading_source_rows(db, conversation_id)
-    slug_counts: dict[str, int] = {}
     heading_count = 0
 
     heading_rows: list[dict] = []
+    row_bytes = 0
     for heading_index, row in enumerate(rows):
         text = _heading_text(row.data, row.plain_text)
         if not text:
@@ -56,9 +62,13 @@ def rebuild_headings_for_conversation(db: Session, conversation_id: uuid.UUID) -
                 "metadata_": {},
             }
         )
-        if len(heading_rows) >= 500:
+        row_bytes += len(text.encode("utf-8")) + len(slug.encode("utf-8"))
+        if len(heading_rows) >= 500 or row_bytes >= 256 * 1024:
             insert_rows(db, Heading, heading_rows)
             heading_rows.clear()
+            row_bytes = 0
+            from app.services.adaptive_import.memory_budget import checkpoint
+            checkpoint()
         heading_count += 1
 
     if heading_rows:
@@ -81,6 +91,7 @@ def rebuild_headings_for_all(db: Session, *, progress_callback=None) -> TocBuild
 
 
 def _heading_source_rows(db: Session, conversation_id: uuid.UUID):
+    from app.services.adaptive_import.memory_budget import streaming_budget
     return (
         db.query(
             Message.id.label("message_id"),
@@ -99,7 +110,7 @@ def _heading_source_rows(db: Session, conversation_id: uuid.UUID):
             RenderBlock.block_type == "heading",
         )
         .order_by(Message.order_key.asc(), RenderBlock.block_index.asc())
-        .yield_per(500)
+        .yield_per(1 if streaming_budget() else 500)
     )
 
 

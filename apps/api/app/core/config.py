@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     upload_queue_max_size: int = Field(default=8, alias="UPLOAD_QUEUE_MAX_SIZE", ge=1, le=100)
     upload_memory_reserve_mb: int = Field(default=512, alias="UPLOAD_MEMORY_RESERVE_MB", ge=64)
     import_small_zip_enabled: bool = Field(default=True, alias="IMPORT_SMALL_ZIP_ENABLED")
+    import_bounded_zip_enabled: bool = Field(default=True, alias="IMPORT_BOUNDED_ZIP_ENABLED")
     # Starlette creates one spooled file per multipart part before a route
     # receives control. Keep the in-memory portion small so a large batch of
     # individually-small files cannot bypass the analysis admission gate.

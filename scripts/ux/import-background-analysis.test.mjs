@@ -224,6 +224,35 @@ test("explicit cancellation resets this pane; closing/unmounting alone does not"
   } finally { f.dispose(); }
 });
 
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: durable resource waiting is not failure or fake completion`, async () => {
+  const waiting = { ...session("ANALYZING", "waiting_resources"), resource_wait: {
+    reason: "UPLOAD_MEMORY_PRESSURE", next_retry_at: "2026-11-08T00:00:15Z", remaining_seconds: 1785,
+  } };
+  const f = fixture({ locale, resumeImportId: "synthetic-import", initialRead: async () => waiting });
+  try {
+    await f.settle();
+    assert.match(text(f.tree()), locale === "zh-CN" ? /等待.*资源/ : /Waiting for.*resources/i);
+    assert.doesNotMatch(text(f.tree()), /Initial analysis failed|首轮分析失败|100%|damaged|文件损坏/);
+    assert.equal(f.queries.get("adaptive-import-analysis").options.enabled, true);
+    assert.equal(f.calls.filter(row => ["upload", "retry", "cancel"].includes(row[0])).length, 0);
+  } finally { f.dispose(); }
+});
+
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: exhausted resource wait requires explicit original-job continuation`, async () => {
+  const paused = { ...session("FAILED", "analysis_failed"), error_message: "IMPORT_RESOURCE_WAIT_EXPIRED",
+    failure: { code: "IMPORT_RESOURCE_WAIT_EXPIRED", stage: "analysis", retryable: true } };
+  const f = fixture({ locale, resumeImportId: "synthetic-import", initialRead: async () => paused });
+  try {
+    await f.settle();
+    assert.match(text(f.tree()), /30/);
+    assert.match(text(f.tree()), locale === "zh-CN" ? /暂停/ : /paused/);
+    assert.equal(f.calls.filter(row => row[0] === "retry").length, 0);
+    await f.mutations[5].run("synthetic-analysis"); await f.settle();
+    assert.deepEqual(f.calls.filter(row => row[0] === "retry"), [["retry", "synthetic-analysis"]]);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
+  } finally { f.dispose(); }
+});
+
 test("an aborted resume read cannot restore a closed pane", async () => {
   const held = deferred(), f = fixture({ resumeImportId: "synthetic-import", initialRead: () => held.promise });
   try {
@@ -284,6 +313,20 @@ test("opening a task cannot silently discard another session's dirty mapping", a
     f.setAnswer(async () => true); await f.open("second-import");
     assert.equal(f.panel().props.resumeImportId, "second-import");
     assert.notEqual(f.panel().key, firstKey, "Confirmed discard remounts the workspace, not just its dirty flag.");
+  } finally { f.dispose(); }
+});
+
+test("acknowledged background work can detach, but unsaved mapping still needs confirmation", async () => {
+  const f = dialogFixture();
+  try {
+    await f.open("first-import");
+    f.panel().props.onMappingStateChange({ dirty: false, busy: true, background: true }); f.render();
+    await f.open("second-import");
+    assert.equal(f.panel().props.resumeImportId, "second-import");
+    f.panel().props.onMappingStateChange({ dirty: true, busy: true, background: true }); f.render();
+    f.setAnswer(async () => false); await f.open("third-import");
+    assert.equal(f.panel().props.resumeImportId, "second-import");
+    assert.equal(f.prompts.length, 1);
   } finally { f.dispose(); }
 });
 

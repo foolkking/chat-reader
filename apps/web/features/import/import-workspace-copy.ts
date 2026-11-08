@@ -2,6 +2,12 @@ import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
 const english: Record<string, string> = {
+  "操作结果尚未确认。请在任务中心查看原任务，不要重复提交或重新上传。": "The operation result is unconfirmed. Check the original task in Tasks; do not submit or upload it again.",
+  "累计等待资源已达 30 分钟，任务已暂停。请在任务中心继续原任务，无需重新上传。": "Resource waiting reached 30 minutes. Continue the paused original task in Tasks without uploading again.",
+  "单条消息超过 1 MiB 处理上限，未拆分或截断；请检查来源。": "One message exceeds the 1 MiB processing limit. It was not split or truncated; review the source.",
+  "服务器存储空间不足，源文件仍保留。处理已停止，请释放空间后在任务中心继续。": "Server storage is full and sources are retained. Processing stopped; free space, then continue in Tasks.",
+  "处理单元超过内存工作区上限，已停止自动重试；源文件仍保留，请检查处理链路。": "A processing unit exceeded the workspace limit. Automatic retries stopped and sources are retained; review the processing path.",
+  "等待服务器资源，系统会自动继续；源文件和当前映射保留，无需重新上传。": "Waiting for server resources. Processing will resume automatically; sources and the current mapping are retained, with no re-upload needed.",
   "源文件不可用，已保存的配置仍可查看。请选择原文件后继续处理。": "Source files are unavailable. Saved configuration is still visible; choose the original files to continue.",
   "原文件仍保留，导入预览已过期或缺失。重新生成预览会保留分组和映射，不会提交导入。": "Source files are retained, but the import preview expired or is missing. Rebuilding preserves grouping and mappings; it does not commit the import.",
   "重新生成预览": "Rebuild preview",
@@ -155,6 +161,10 @@ export function importFailureMessage(
   stage: "analysis" | "commit",
   zh: boolean,
 ): string | null {
+  if (legacyError === "IMPORT_RESOURCE_WAIT_EXPIRED" || (failure as { code?: unknown } | null)?.code === "IMPORT_RESOURCE_WAIT_EXPIRED") {
+    return zh ? "累计等待资源已达 30 分钟，任务已暂停。源文件和已完成的处理仍保留，可在任务中心继续原任务，无需重新上传。"
+      : "Resource waiting reached 30 minutes; the task is paused. Sources and completed work are retained. Continue the original task in Tasks without uploading again.";
+  }
   const value = failure !== null && typeof failure === "object"
     ? failure as Record<string, unknown>
     : null;
@@ -163,6 +173,18 @@ export function importFailureMessage(
       || legacyError === "The server cannot safely commit this import under current memory pressure. Retry when other work finishes, or split the source into smaller conversations."
       ? "UPLOAD_MEMORY_PRESSURE" : ""
   );
+  if (code === "IMPORT_MESSAGE_TOO_LARGE") {
+    return zh ? "单条消息超过 1 MiB 安全处理上限，未拆分或截断内容。源文件仍保留，请调整该条消息后替换来源。"
+      : "A single message exceeds the 1 MiB processing limit. Nothing was split or truncated. Sources are retained; adjust that message and replace the source.";
+  }
+  if (code === "IMPORT_STORAGE_FULL") {
+    return zh ? "服务器临时存储空间不足，处理已停止。源文件仍保留，请释放服务器空间后继续，无需重新上传。"
+      : "Server staging storage is full. Processing stopped and sources are retained. Free server storage, then continue without uploading again.";
+  }
+  if (code === "IMPORT_WORKSPACE_EXCEEDED") {
+    return zh ? "这一处理单元超出了内存工作区上限，任务已安全停止。源文件仍保留，需要检查处理链路；系统不会反复自动重试。"
+      : "A processing unit exceeded the workspace limit. The task stopped safely and sources are retained. The processing path needs review; it will not repeatedly retry automatically.";
+  }
   if (code === "UPLOAD_MEMORY_PRESSURE") {
     return stage === "commit"
       ? zh ? "服务器可用内存不足，导入已安全停止，本次更改未提交。源文件和导入草稿仍保留，可稍后重试，无需重新上传。" : "Not enough memory is available. Import stopped safely and these changes were not committed. Source files and the import draft are retained. Retry later without uploading again."
@@ -192,6 +214,11 @@ export function importFailureMessage(
 }
 
 const importCodeCopy: Record<string, string> = {
+  IMPORT_OPERATION_UNCONFIRMED: "操作结果尚未确认。请在任务中心查看原任务，不要重复提交或重新上传。",
+  IMPORT_RESOURCE_WAIT_EXPIRED: "累计等待资源已达 30 分钟，任务已暂停。请在任务中心继续原任务，无需重新上传。",
+  IMPORT_MESSAGE_TOO_LARGE: "单条消息超过 1 MiB 处理上限，未拆分或截断；请检查来源。",
+  IMPORT_STORAGE_FULL: "服务器存储空间不足，源文件仍保留。处理已停止，请释放空间后在任务中心继续。",
+  IMPORT_WORKSPACE_EXCEEDED: "处理单元超过内存工作区上限，已停止自动重试；源文件仍保留，请检查处理链路。",
   IMPORT_DISABLED: "管理员已关闭导入功能。",
   IMPORT_TOTAL_SIZE_LIMIT: "本批文件合计超过当前导入总容量限制，请分批导入。",
   FILE_TOO_LARGE: "所选文件超过当前单文件大小限制。",

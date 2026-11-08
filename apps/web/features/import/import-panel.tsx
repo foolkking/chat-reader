@@ -51,7 +51,7 @@ export function ImportPanel({
   targetProjectId?: string | null;
   onImportCommitted?: () => void;
   onWorkspaceChange?: (open: boolean) => void;
-  onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
+  onMappingStateChange?: (state: { dirty: boolean; busy: boolean; background?: boolean }) => void;
 } = {}) {
   const tr = useImportCopy();
   const { resolvedLocale, readerWidthMode, sectionTocMode } = usePreferences();
@@ -391,11 +391,14 @@ export function ImportPanel({
             error={destinationMutation.error}
           />
           <h3 id="import-analysis-title" className="text-lg font-semibold text-primary">
-            {tr(analysisFailed ? "导入分析未完成" : session.state === "CANCELED" ? "导入分析已取消" : session.state === "CANCELING" ? "正在停止导入分析" : session.phase === "queued" ? "已加入后台分析队列" : "正在后台分析文件")}
+            {session.phase === "waiting_resources" ? (zh ? "正在等待可用资源" : "Waiting for available resources") : tr(analysisFailed ? "导入分析未完成" : session.state === "CANCELED" ? "导入分析已取消" : session.state === "CANCELING" ? "正在停止导入分析" : session.phase === "queued" ? "已加入后台分析队列" : "正在后台分析文件")}
           </h3>
           <p className="text-sm leading-6 text-secondary">{session.state === "CANCELED"
             ? tr("本次临时来源已移除，尚未导入对话。你可以重新选择文件。")
             : tr("这批 {0} 个文件已保存在服务器。你可以关闭此窗口继续阅读，在任务中心查看进度和结果。", session.file_count)}</p>
+          {session.phase === "waiting_resources" ? <p role="status" className="text-sm leading-6 text-secondary">{zh
+            ? "当前资源不足以开始下一步，系统会自动间隔检查，累计等待最多 30 分钟。原文件和已完成处理保留，无需重新上传；可以关闭窗口继续阅读。"
+            : "Resources are insufficient for the next step. Checks resume automatically for up to 30 minutes of total waiting. Sources and completed work are retained. You can close this window and keep reading."}</p> : null}
           {analysisPending ? <div role="progressbar" aria-label={tr("导入分析")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, session.progress ?? 0))} className="h-1 overflow-hidden rounded-full bg-subtle">
             <div className="h-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, session.progress ?? 0))}%` }} />
           </div> : null}

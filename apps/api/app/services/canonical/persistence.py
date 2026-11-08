@@ -39,7 +39,6 @@ from app.services.import_pipeline.canonical_draft import (
     PARSER_VERSION,
     SEARCH_DOCUMENT_VERSION,
     CanonicalDraftConversation,
-    CanonicalDraftMessage,
     content_hash,
     normalize_text,
 )
@@ -47,6 +46,7 @@ from app.services.import_pipeline.exporter_aligner import align_exporter_sources
 from app.services.import_pipeline.exporter_json_parser import parse_exporter_json
 from app.services.import_pipeline.exporter_markdown_parser import parse_exporter_markdown
 from app.services.import_pipeline.draft_store import ImportDraftError, iter_import_draft
+from app.services.uploads import UploadLimitError
 from app.services.import_pipeline.official_json_parser import OfficialConversationResult, parse_official_json
 from app.services.import_pipeline.official_normalizer import _extract_content, _metadata_preview
 from app.services.import_pipeline.official_primary_path import resolve_primary_path
@@ -136,6 +136,7 @@ class PersistableConversation:
     notebooks: list[dict] = field(default_factory=list)
     source_refs: list[dict] = field(default_factory=list)
     attachments: list[dict] = field(default_factory=list)
+    stream_records: object | None = field(default=None, repr=False)
 
 
 ProgressCallback = Callable[[str, int, int, int], None]
@@ -280,12 +281,18 @@ def commit_import_preview(
                 total_messages += conversation.message_count
                 all_warnings.extend(conversation_draft.warnings)
             except Exception as exc:
+                from app.services.task_errors import import_failure_from_exception
+                failure_code = import_failure_from_exception(exc, stage="commit")["code"]
+                if conversation_draft.stream_records is not None or failure_code in {"UPLOAD_MEMORY_PRESSURE", "IMPORT_WORKSPACE_EXCEEDED",
+                                    "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT", "IMPORT_STORAGE_FULL"} or isinstance(exc, ImportDraftError):
+                    db.rollback()
+                    raise CommitImportError("The bounded import could not be committed; no conversation was published.") from exc
                 failure = f"Conversation {conversation_draft.title!r} failed canonical commit ({type(exc).__name__}: {str(exc)[:300]})."
                 all_warnings.append(failure)
                 if expected_conversations == 1:
                     raise CommitImportError(failure) from exc
             del conversation_draft
-    except ImportDraftError as exc:
+    except (ImportDraftError, UploadLimitError) as exc:
         db.rollback()
         raise CommitImportError(str(exc)) from exc
     finally:
@@ -353,6 +360,16 @@ def _build_exporter_conversations(import_id: uuid.UUID, artifacts: list[SourceAr
 
 
 def _from_exporter_draft(draft: CanonicalDraftConversation) -> PersistableConversation:
+    if draft.stream_records is not None:
+        from dataclasses import replace
+        from app.services.import_pipeline.record_spool import MappedSequence
+        from app.services.canonical.stream_persistence import conversation_hash
+        header = _from_exporter_draft(replace(draft, messages=[], stream_records=None))
+        def convert(message):
+            return _from_exporter_draft(replace(draft, messages=[message], stream_records=None,
+                                               source_refs=[], attachments=[], annotations=[], notebooks=[])).messages[0]
+        return replace(header, messages=MappedSequence(draft.messages, convert),
+                       content_hash=conversation_hash(draft.messages), stream_records=draft.stream_records)
     messages = [
         PersistableMessage(
             role=message.role,
@@ -527,21 +544,26 @@ def _persist_conversation(
     db.flush()
 
     attachment_map = _persist_canjson_attachments(db, import_record, conversation, draft)
-    persistable_messages = _rewrite_persistable_attachment_ids(draft.messages, attachment_map)
-    identity_map = _persist_messages(
-        conversation,
-        persistable_messages,
-        db,
-        preserved_source_message_ids={
-            str(ref.get("message_id"))
-            for ref in draft.source_refs
-            if isinstance(ref, dict) and ref.get("message_id")
-        },
-        progress_callback=progress_callback,
-        processed_before=processed_before,
-        total_messages=total_messages,
-    )
-    _persist_canjson_private_content(db, conversation, draft, identity_map, attachment_map)
+    if draft.stream_records is not None:
+        from app.services.canonical.stream_persistence import persist_stream_messages
+        persist_stream_messages(db, conversation, draft, attachment_map,
+                                progress_callback, processed_before, total_messages)
+    else:
+        persistable_messages = _rewrite_persistable_attachment_ids(draft.messages, attachment_map)
+        identity_map = _persist_messages(
+            conversation,
+            persistable_messages,
+            db,
+            preserved_source_message_ids={
+                str(ref.get("message_id"))
+                for ref in draft.source_refs
+                if isinstance(ref, dict) and ref.get("message_id")
+            },
+            progress_callback=progress_callback,
+            processed_before=processed_before,
+            total_messages=total_messages,
+        )
+        _persist_canjson_private_content(db, conversation, draft, identity_map, attachment_map)
 
     event_payload = {
         "import_id": str(import_record.id),
@@ -1111,8 +1133,9 @@ def _optional_non_negative_int(value: Any) -> int | None:
     return parsed if parsed >= 0 else None
 
 
-def _batches(items: list[T], size: int) -> list[list[T]]:
-    return [items[index : index + size] for index in range(0, len(items), size)]
+def _batches(items: list[T], size: int):
+    for index in range(0, len(items), size):
+        yield items[index : index + size]
 
 
 def _report(

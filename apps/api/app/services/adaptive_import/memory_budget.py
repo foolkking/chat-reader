@@ -1,8 +1,8 @@
-"""A bounded small-ZIP policy; never a general low-memory bypass.
+"""Disk-backed ZIP and legacy small-ZIP policies; not a general memory bypass.
 
-The normal upload reserve remains unchanged. Qualification is recomputed from
-owned source bytes on every operation, before ZipFile allocates its directory.
-No client-provided profile or persisted preview grants admission.
+JSON/mixed and legacy v1 drafts keep their existing admission. Bounded ZIPs
+use effective capacity, real headroom and a checked 64 MiB workspace delta.
+Owned sources and directory bounds are checked before allocating ZipFile.
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from app.core.config import get_settings
-from app.core.memory import process_resident_memory_bytes
+from app.core.memory import effective_total_memory_bytes, process_resident_memory_bytes
 from app.services import uploads
 
 MIB = 1024 * 1024
@@ -43,15 +43,26 @@ _active: ContextVar[SmallImportBudget | None] = ContextVar("small_import_budget"
 class SmallImportBudget:
     baseline_rss: int
     stage: str
+    streaming: bool = False
+    reserve_bytes: int = RESERVE_BYTES
+    scratch_directory: Path | None = None
 
     def checkpoint(self) -> None:
         available = uploads.available_memory_bytes()
         resident = process_resident_memory_bytes()
-        if available is None or resident is None or available < RESERVE_BYTES:
+        if available is None or resident is None or available < self.reserve_bytes:
             error = uploads._memory_pressure_error()
             error.stage = self.stage
             raise error
         if resident - self.baseline_rss > WORKSPACE_BYTES:
+            if self.streaming:
+                error = uploads.UploadLimitError(
+                    "IMPORT_WORKSPACE_EXCEEDED",
+                    "The bounded import exceeded its workspace budget. Saved sources are retained.",
+                    status_code=422,
+                )
+                error.stage = self.stage
+                raise error
             raise limit_error()
 
 
@@ -78,12 +89,59 @@ def limit_error() -> uploads.UploadLimitError:
 
 
 def enforce_limit(value: int, maximum: int) -> None:
-    if current_budget() is not None and value > maximum:
+    if current_budget() is not None and not streaming_budget() and value > maximum:
         raise limit_error()
+
+
+def streaming_budget() -> bool:
+    budget = current_budget()
+    return budget is not None and budget.streaming
+
+
+def bounded_zip_session(record) -> bool:
+    if not get_settings().import_bounded_zip_enabled:
+        return False
+    originals = [item for item in record.artifacts if item.source_type != "adaptive_archive_document"]
+    return bool(originals) and all(item.source_type == "adaptive_archive" for item in originals)
+
+
+def adaptive_reserve_bytes() -> int:
+    total = effective_total_memory_bytes()
+    if total is None:
+        raise uploads._memory_pressure_error()
+    return min(512 * MIB, max(128 * MIB, total // 8))
+
+
+def preflight_directory(source: BinaryIO) -> None:
+    """Check allocation size before ZipFile reads the directory, not afterwards."""
+    from app.services.adaptive_import.contracts import AdaptiveImportError
+    position = source.tell()
+    try:
+        source.seek(0, 2)
+        size = source.tell()
+        source.seek(max(0, size - 65557))
+        tail = source.read(65557)
+        offset = tail.rfind(b"PK\x05\x06")
+        if offset < 0 or offset + 22 > len(tail):
+            raise ValueError()
+        _, disk, directory_disk, disk_count, count, length, start, comment = struct.unpack_from("<4s4H2LH", tail, offset)
+        if (disk or directory_disk or disk_count != count or count == 65535
+                or b"PK\x06\x07" in tail[max(0, offset - 20):offset]):
+            raise AdaptiveImportError("ZIP_MEMBER_UNSUPPORTED", "Split and ZIP64 archives are not supported by bounded import.", layer="archive")
+        if (offset + 22 + comment != len(tail) or start + length != size - len(tail) + offset
+                or count > get_settings().bundle_max_entries or length > 4 * MIB):
+            raise AdaptiveImportError("ZIP_ENTRY_LIMIT", "The ZIP directory exceeds the bounded metadata limit.", layer="archive")
+    except (ValueError, struct.error) as exc:
+        raise AdaptiveImportError("ZIP_INVALID", "The ZIP directory is invalid.", layer="archive") from exc
+    finally:
+        source.seek(position)
 
 
 def validate_catalog_budget(catalog: dict) -> None:
     if current_budget() is None:
+        return
+    if streaming_budget():
+        checkpoint()
         return
     members = [item for item in catalog.get("members", []) if isinstance(item, dict)]
     documents = [item for item in members if item.get("use") == "conversation"]
@@ -100,19 +158,29 @@ def validate_catalog_budget(catalog: dict) -> None:
 class BudgetedArchiveStream:
     """Only used by bounded imports; asset-store reads remain streaming."""
 
-    def __init__(self, source):
+    def __init__(self, source, archive_file=None):
         self.source = source
+        self.archive_file = archive_file
+        self.bytes_read = 0
 
     def read(self, size=-1):
         if size < 0:
             raise limit_error()
         checkpoint()
         result = self.source.read(min(size, 64 * 1024))
+        self.bytes_read += len(result)
+        if self.archive_file is not None and self.bytes_read >= 1024 * 1024:
+            from app.services.adaptive_import.bounded_io import release_file_cache
+            release_file_cache(self.archive_file)
+            self.bytes_read = 0
         checkpoint()
         return result
 
     def close(self):
         self.source.close()
+        if self.archive_file is not None:
+            from app.services.adaptive_import.bounded_io import release_file_cache
+            release_file_cache(self.archive_file)
 
 
 def _bounded_directory(source: BinaryIO) -> bool:
@@ -207,6 +275,35 @@ def import_analysis_admission(
     if current_budget() is not None:
         checkpoint()
         yield
+        return
+    # A legacy v1 JSONL line contains an entire conversation. Merely enabling
+    # the new parser must not grant that reader the new low-memory admission.
+    if (bounded_zip_session(record) and replacement is None
+            and (stage != "commit" or (record.draft_summary or {}).get("format_version") == 2)):
+        reserve = adaptive_reserve_bytes()
+        baseline = process_resident_memory_bytes()
+        if baseline is None:
+            raise uploads._memory_pressure_error()
+        with uploads.bounded_analysis_admission_sync(
+            sizes or [0], force_memory_check=True, db=db,
+            required_memory_bytes=reserve + WORKSPACE_BYTES,
+            wait_for_slot=False,
+        ):
+            token = _active.set(SmallImportBudget(
+                baseline, stage, streaming=True, reserve_bytes=reserve,
+                scratch_directory=Path(get_settings().import_storage_dir).resolve() / str(record.id),
+            ))
+            try:
+                checkpoint()
+                from app.services.adaptive_import.archive_sources import _artifact_path
+                for artifact in record.artifacts:
+                    if artifact.source_type == "adaptive_archive":
+                        with _artifact_path(record, artifact).open("rb") as source:
+                            preflight_directory(source)
+                yield
+                checkpoint()
+            finally:
+                _active.reset(token)
         return
     source_sizes = sizes if sizes is not None else [
         max(0, int(getattr(item, "byte_size", 0) or 0)) for item in record.artifacts

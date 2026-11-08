@@ -30,6 +30,9 @@ def signature_digest(signature: dict[str, Any]) -> str:
 
 
 def analyze_documents(documents: list[SourceDocument]) -> AnalysisResult:
+    if len(documents) == 1 and documents[0].path is not None:
+        from app.services.adaptive_import.stream_markdown import analyze_path
+        return analyze_path(documents[0])
     json_docs = [item for item in documents if item.extension in {".json", ".jsonl", ".gz"}]
     markdown_docs = [item for item in documents if item.extension in {".md", ".markdown"}]
     if len(json_docs) > 1 or len(markdown_docs) > 1 or not documents:

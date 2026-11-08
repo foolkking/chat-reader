@@ -32,8 +32,17 @@ TASK_LINE_RE = re.compile(r"^(?P<prefix>\s*[-+*]\s+)\[(?P<checked>[ xX])\](?P<la
 
 
 def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
+    from app.services.adaptive_import.memory_budget import MAX_BLOCKS, enforce_limit
+    result = []
+    for block in iter_basic_render_blocks(display_text):
+        enforce_limit(len(result) + 1, MAX_BLOCKS)
+        result.append(block)
+    return result
+
+
+def iter_basic_render_blocks(display_text: str):
     if not display_text.strip():
-        return []
+        return
 
     from app.services.adaptive_import.memory_budget import MAX_BLOCKS, checkpoint, current_budget, enforce_limit
 
@@ -52,10 +61,12 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
     code_metadata: dict[str, str] = {}
     fence_character = ""
     fence_length = 0
-    task_items = extract_markdown_tasks(display_text)
+    task_items = iter(_iter_markdown_tasks(display_text))
+    next_task = next(task_items, None)
     thinking = find_opening_thinking_summary(display_text)
 
     def flush_paragraph() -> None:
+        nonlocal next_task
         if not paragraph_lines:
             return
         paragraph_start = paragraph_lines[0][1]
@@ -64,18 +75,16 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
         paragraph_lines.clear()
         if text:
             data: dict = {"text": text}
-            paragraph_tasks = [
-                {
-                    "task_key": task.task_key,
-                    "checked": task.checked,
-                    "checked_offset": task.checked_offset,
-                    "local_checked_offset": max(0, task.checked_offset - paragraph_start),
-                    "label": task.label,
-                    "ordinal": task.ordinal,
-                }
-                for task in task_items
-                if paragraph_start <= task.checked_offset <= paragraph_end
-            ]
+            paragraph_tasks = []
+            while next_task is not None and next_task.checked_offset <= paragraph_end:
+                if next_task.checked_offset >= paragraph_start:
+                    paragraph_tasks.append({
+                        "task_key": next_task.task_key, "checked": next_task.checked,
+                        "checked_offset": next_task.checked_offset,
+                        "local_checked_offset": max(0, next_task.checked_offset - paragraph_start),
+                        "label": next_task.label, "ordinal": next_task.ordinal,
+                    })
+                next_task = next(task_items, None)
             if paragraph_tasks:
                 data["tasks"] = paragraph_tasks
             blocks.append(
@@ -90,6 +99,8 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
 
     source_offset = 0
     for source_line in display_text.splitlines(keepends=True):
+        yield from blocks
+        blocks.clear()
         line = source_line.rstrip("\r\n")
         line_start = source_offset
         source_offset += len(source_line)
@@ -188,11 +199,15 @@ def build_basic_render_blocks(display_text: str) -> list[RenderBlockDraft]:
         )
 
     flush_paragraph()
-    return blocks
+    yield from blocks
 
 
 def extract_markdown_tasks(display_text: str) -> list[MarkdownTaskDraft]:
-    tasks: list[MarkdownTaskDraft] = []
+    return list(_iter_markdown_tasks(display_text))
+
+
+def _iter_markdown_tasks(display_text: str):
+    ordinal = 0
     duplicate_counts: dict[str, int] = {}
     in_code = False
     fence_character = ""
@@ -223,17 +238,15 @@ def extract_markdown_tasks(display_text: str) -> list[MarkdownTaskDraft]:
             digest = _stable_task_digest(identity)
             occurrence = duplicate_counts.get(digest, 0) + 1
             duplicate_counts[digest] = occurrence
-            tasks.append(
-                MarkdownTaskDraft(
+            yield MarkdownTaskDraft(
                     task_key=f"task-{digest}-{occurrence}",
                     checked=task.group("checked").lower() == "x",
                     checked_offset=source_offset + task.start("checked"),
                     label=label,
-                    ordinal=len(tasks),
+                    ordinal=ordinal,
                 )
-            )
+            ordinal += 1
         source_offset += len(source_line)
-    return tasks
 
 
 def _stable_task_digest(value: str) -> str:

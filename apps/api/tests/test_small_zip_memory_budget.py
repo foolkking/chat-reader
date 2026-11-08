@@ -22,6 +22,14 @@ from test_adaptive_import_api import _complete_analysis
 MIB = 1024**2
 
 
+@pytest.fixture(autouse=True)
+def legacy_small_zip_policy(monkeypatch):
+    monkeypatch.setenv("IMPORT_BOUNDED_ZIP_ENABLED", "false")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 def queued_zip(client, content=None):
     response = client.post("/api/adaptive-import/sessions", files=[
         ("files", ("synthetic.zip", content or small_conversation_zip(), "application/zip")),

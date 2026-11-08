@@ -27,6 +27,7 @@ class BackgroundJob(Base):
     idempotency_key: Mapped[str | None] = mapped_column(String, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     queued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -41,6 +42,7 @@ class BackgroundJob(Base):
 
 
 Index("idx_background_jobs_status_queued_at", BackgroundJob.status, BackgroundJob.queued_at)
+Index("idx_background_jobs_status_next_run", BackgroundJob.status, BackgroundJob.next_run_at)
 Index("idx_background_jobs_type_status", BackgroundJob.job_type, BackgroundJob.status)
 Index("idx_background_jobs_idempotency_key", BackgroundJob.idempotency_key)
 Index("idx_background_jobs_owner_status_queued", BackgroundJob.owner_user_id, BackgroundJob.status, BackgroundJob.queued_at)

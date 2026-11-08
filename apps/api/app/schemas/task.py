@@ -18,6 +18,12 @@ class ImportFailureRead(BaseModel):
     retryable: bool
 
 
+class ImportResourceWaitRead(BaseModel):
+    reason: str
+    next_retry_at: datetime | None = None
+    remaining_seconds: float = Field(ge=0, le=1800)
+
+
 class BackgroundTaskRead(BaseModel):
     job_id: UUID
     job_type: str
@@ -33,6 +39,7 @@ class BackgroundTaskRead(BaseModel):
     result: dict = Field(default_factory=dict)
     error_message: str | None = None
     failure: ImportFailureRead | None = None
+    resource_wait: ImportResourceWaitRead | None = None
     queued_at: datetime | None = None
     started_at: datetime | None = None
     heartbeat_at: datetime | None = None

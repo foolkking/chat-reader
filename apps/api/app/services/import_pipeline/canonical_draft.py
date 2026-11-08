@@ -79,6 +79,8 @@ class CanonicalDraftConversation:
     notebooks: list[dict] = field(default_factory=list)
     source_refs: list[dict] = field(default_factory=list)
     attachments: list[dict] = field(default_factory=list)
+    # Internal v2 import spool only. Never part of portable archive formats.
+    stream_records: object | None = field(default=None, repr=False, compare=False)
 
 
 def normalize_text(text: str) -> str:

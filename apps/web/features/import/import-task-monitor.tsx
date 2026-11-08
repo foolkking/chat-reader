@@ -411,7 +411,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
           {format ? <span className="rounded border border-ui px-1.5 py-0.5 text-xs">{format}</span> : null}
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {active ? <span className="tabular-nums">{progress}%</span> : null}
+          {active && task.phase !== "waiting_resources" ? <span className="tabular-nums">{progress}%</span> : null}
           {onDismiss ? <button type="button" data-testid={`task-dismiss-${task.job_id}`} onClick={onDismiss} className="-my-2 inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-subtle" aria-label={zh ? "关闭任务提示" : "Dismiss task"} title={zh ? "关闭任务提示" : "Dismiss task"}><X className="h-4 w-4" /></button> : null}
         </div>
       </div>
@@ -427,6 +427,9 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
           style={{ width: `${progress}%` }}
         />
       </div> : null}
+      {task.phase === "waiting_resources" ? <p role="status" className="mt-2 leading-5">{zh
+        ? "自动间隔检查资源，累计最多等待 30 分钟；原文件和已完成处理保留，无需重新上传。"
+        : "Automatically checking resources, for up to 30 minutes of total waiting. Sources and completed work are retained; no re-upload is needed."}</p> : null}
       {failed ? (
         <div className="mt-2">
           <p className="break-words whitespace-pre-wrap text-[var(--danger)]">{taskFailureMessage(task, zh)}</p>
@@ -550,6 +553,8 @@ function taskCompletedItems(task: BackgroundTaskRead): number {
 }
 
 function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
+  if (task.phase === "waiting_resources") return zh ? "等待可用资源" : "Waiting for resources";
+  if (task.phase === "resource_paused") return zh ? "资源等待已暂停" : "Resource wait paused";
   if (task.job_type === "conversation_batch_export" && task.status === "processing") {
     return task.phase === "publishing" ? (zh ? "准备下载文件" : "Preparing download") : (zh ? "打包所选对话" : "Packaging selected conversations");
   }

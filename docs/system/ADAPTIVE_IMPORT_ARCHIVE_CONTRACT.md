@@ -1,11 +1,12 @@
 # Adaptive Import ZIP Contract
 
-Status: core ZIP support shipped with `3b839dc`; the bounded-memory extension
-shipped in production source `be58b12` on 2026-11-04 after exact-source CI
-`41737744696` passed. Production schema remains `20261030_0058`; no migration
-or portable archive format changed. The original user ZIP still requires an
-explicit retry to verify its individual import outcome; see the
-[release receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md).
+Status synchronized **2026-11-08**: production remains `897ba78`, schema
+`20261105_0059`, retaining the small-ZIP policy first shipped with `be58b12`.
+The disk-backed extension below is **unreleased, uncommitted candidate code**,
+with candidate migration `20261108_0060`; it has no runtime/CI acceptance yet.
+Original user ZIPs still require an explicit user retry, not an automatic replay.
+The historical [small-ZIP receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
+does not verify this candidate.
 This contract extends the existing Adaptive Import session. It does not replace
 `.cr` personal restore, system archives, or the canonical import commit.
 
@@ -81,6 +82,9 @@ recovery flow.
 
 ## Bounded small-ZIP memory policy
 
+This section describes the retained v1/production fallback. The candidate's
+new v2 lane is specified separately below; neither relaxes JSON admission.
+
 `IMPORT_SMALL_ZIP_ENABLED=true` (default) grants a lower reserve only after
 owned source bytes pass a bounded EOCD/central-directory preflight and the
 existing ZIP safety validation. ZIP64 and multi-volume sources do not qualify.
@@ -113,6 +117,90 @@ JSON fields. Only known codes/stages are projected; wrapped exceptions and
 legacy known memory messages retain their safe reason. Memory, queue and
 budget failures do not imply archive damage or an automatic retry. Explicit
 retry reuses the original analysis job and retained files.
+
+## Disk-backed ZIP candidate — 2026-11-08 (not deployed)
+
+`IMPORT_BOUNDED_ZIP_ENABLED=true` selects the new lane only for an owned session
+whose original sources are all adaptive ZIPs. Commit additionally requires an
+internal v2 draft. Non-ZIP/mixed sessions and old v1 drafts do **not** inherit
+this qualification. ZIP → JSON replacement is admitted against the prospective
+source set. The existing small-ZIP fallback remains available when disabled.
+
+- Effective capacity is the minimum of physical memory and visible finite
+  cgroup memory limits, including ancestors. Reserve is
+  `min(512 MiB, max(128 MiB, effective_capacity / 8))`; admission additionally
+  requires **64 MiB** workspace. Unknown capacity/headroom/RSS fails closed.
+- Qualified ZIP compressed bytes no longer receive the materializing parser's
+  ×32 factor; JSON/mixed/legacy paths keep their existing policy. Live checks
+  retain RSS-growth ≤64 MiB and effective-free ≥reserve. This is not an OS
+  reservation; no subtracting file cache or adding swap to pass admission.
+- Upload/replacement, member reads, hashing and scanner input are sequential.
+  ZIP preflight precedes `ZipFile` allocation (4-MiB directory, configured entry
+  limit, no ZIP64/multi-volume). Existing path/CRC/expanded/member/ratio/scan
+  and owner restrictions remain.
+- Markdown normalization writes immutable message JSONL and a binary
+  offset/length index. Preview projects at most 12 messages sequentially,
+  2,000 characters each. Native marker/Transcript and generic mapping retain
+  their distinct grammars. One real message above **1 MiB UTF-8** is rejected,
+  never split or truncated. Manifest JSON (4 MiB) is validated selectively,
+  without retaining message bodies; catalogs have an 8-MiB serialized ceiling
+  and 32,768 ownership/reference-index links.
+- Internal draft v2 binds owner, source fingerprint, generation, hashes and
+  counts. V1 reading remains. This is **not** CanJSON/.cr/offline package v2.
+  Only complete normalization groups are reused by source/configuration/parser
+  hash; an interrupted group is recomputed. Partial per-message resume is not
+  implemented. Late integrity failures roll back the entire canonical import.
+- Canonical writes process one message/version at a time, block batches bounded
+  by 500 rows or 256 KiB. TOC duplicate-slug counting uses owned SQLite scratch;
+  search uses one-message read batches in this lane. Real attachment occurrence
+  order, scanning, original image-lane adaptation and atomicity are preserved.
+- File-cache advice is best effort; flush/fsync failures are real errors.
+  Disk-full/quota errors stop with `IMPORT_STORAGE_FULL`, preserving saved
+  sources and the previous published draft. This does not reserve disk capacity
+  or automatically delete source generations; derived generations remain
+  subject to the existing session retention policy.
+
+### Durable wait and async operations
+
+Expensive ZIP grouping, classification, mapping, health, preview and reanalysis
+use the existing `adaptive_import_analysis` worker. With the flag enabled,
+all source replacements stage to disk and queue this worker; non-ZIP
+replacements still require standard memory admission. HTTP **202** accepts
+work, not completion. Task GET returns health/preview `operation_result`;
+unknown POST responses require a Tasks check, not automatic resubmission.
+Legacy immediate responses remain readable.
+
+Transient headroom/slot contention defers the **same job** for 15/30/60 seconds
+(then 60-second intervals), releasing its transaction and worker slot.
+`next_run_at` on both queues gates claims. Accumulated waiting, not work time,
+is capped at 30 minutes; exhaustion becomes
+`resource_paused`/`IMPORT_RESOURCE_WAIT_EXPIRED`. Explicit original-job retry
+resets waiting. Workspace, format, integrity and storage failures are not
+automatically retried.
+
+Task/session projections add `resource_wait` (`reason`, `next_retry_at`,
+`remaining_seconds`). Waiting is not corruption or 100% completion. Closing
+the dialog stops browser polling, not server work. Existing analysis cancel
+still cancels the session; cancelling a queued **commit waiting for resources**
+retains the draft and returns the session to READY.
+
+### Candidate release and rollback gates
+
+The original exact-image 320-MiB/no-extra-swap v1 gate remains. Additive v2
+cases cover small ZIP/320 MiB, approximately100-MiB ZIP/320 MiB,
+approximately500-MiB ZIP/640 MiB, and >1-MiB multi-message Markdown/320 MiB.
+Fixtures stay inside existing file limits, use real unpatched sensors, the
+exact image, counts and asset hashes, ≤64-MiB cgroup peak growth, no OOM/restart.
+Reports are packaged and independently inspected. These gates are **unexecuted**.
+
+Migration0060 adds nullable queue eligibility timestamps/indexes; no canonical
+content, Share URL, Dexie or portable-format migration. Disabling the flag on
+**new code** retains v2 reading with standard admission, not guaranteed
+small-machine completion. Older binaries cannot read v2 drafts: freeze/drain
+jobs and review retained drafts before rollback, never downgrade automatically.
+Local-store/disabled-scanner synthetic CI does not prove the memory envelope
+of remote scanners, ClamAV, optional S3, adversarial dense Markdown or user data.
+See [implementation record](../execution/BOUNDED_ZIP_IMPORT_2026-11-08.md).
 
 ## Resource identity and Reader rendering
 
@@ -159,9 +247,10 @@ ZIP. Two session-scoped operations are added:
 | PUT | `/api/adaptive-import/sessions/{id}/archives/{artifact}` | Update member `use`/owner selections with `expected_version`; then rebuild the existing import plan. |
 
 Both routes use the current import ownership checks and bounded analysis
-admission. Canonical commit still uses `POST /api/imports/{id}/commit`. No
-database migration, new canonical column, export format, Share URL, offline
-package version, or Dexie version is added.
+admission. Canonical commit still uses `POST /api/imports/{id}/commit`.
+The core ZIP release had no migration. The candidate above adds queue
+scheduling migration0060, but no new canonical column, export format,
+Share URL, offline package version or Dexie version.
 
 ## Local verification and remaining gates
 

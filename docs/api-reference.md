@@ -1,5 +1,21 @@
 # API 参考
 
+## 有界 ZIP 后台操作 — 2026-11-08 未发布候选
+
+启用 `IMPORT_BOUNDED_ZIP_ENABLED` 后，全ZIP来源会话的分组、重分析、
+分类、排除、保存/选择映射、health和mapping preview返回
+**202 + session + operation_task_id**。所有来源替换先流式落盘再入队；
+JSON/混合仍用标准内存准入。旧同步200结果保留兼容。
+
+`GET /api/tasks/{id}`的health/preview完成结果为`result.operation_result`。
+session/task增加`resource_wait: {reason,next_retry_at,remaining_seconds}`；
+等待是queued/waiting_resources，累计30分钟耗尽是failed/resource_paused，
+代码`IMPORT_RESOURCE_WAIT_EXPIRED`。显式retry复用原job ID。
+资源等待中的canonical提交可cancel，回READY并保留草稿；分析cancel
+仍按现有整会话规则。未知POST结果先查原任务，不自动重放。
+owner、状态/版本检查和canonical commit授权不减少。候选migration0060
+及内存/兼容边界见[ZIP合同](system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md)。
+
 ## 阅读集合与批注收件箱摘要 — 2026-10-31（已发布）
 
 | Method/path | Contract |

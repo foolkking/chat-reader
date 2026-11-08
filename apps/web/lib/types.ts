@@ -722,6 +722,12 @@ export type ImportFailure = {
   retryable: boolean;
 };
 
+export type ImportResourceWait = {
+  reason: string;
+  next_retry_at: string | null;
+  remaining_seconds: number;
+};
+
 export type AdaptiveImportSession = {
   import_id: string;
   target_project_id?: string | null;
@@ -731,6 +737,8 @@ export type AdaptiveImportSession = {
   progress?: number;
   error_message?: string | null;
   failure?: ImportFailure | null;
+  resource_wait?: ImportResourceWait | null;
+  operation_task_id?: string;
   analysis_task_id?: string | null;
   file_count: number;
   total_bytes: number;
@@ -772,7 +780,7 @@ export type ImportFormatHealth = Omit<AdaptiveMappingPreview["validation"], "gro
   revision_id: string | null;
   revision: number | null;
   builtin_key: string | null;
-  groups: Array<{ group_id: string; valid: boolean; message_count: number; conversation_count: number; issues: AdaptiveImportDiagnostic[] }>;
+  groups: Array<{ group_id: string; valid: boolean; message_count: number; conversation_count: number; issues: AdaptiveImportDiagnostic[]; issue_count?: number; issues_truncated?: boolean }>;
 };
 
 export type ImportFormatProfile = {
@@ -819,6 +827,7 @@ export type BackgroundTaskRead = {
   status: "queued" | "processing" | "cancelling" | "cancelled" | "committed" | "failed" | string;
   phase: string;
   failure?: ImportFailure | null;
+  resource_wait?: ImportResourceWait | null;
   progress: number;
   processed_items: number;
   total_items: number;

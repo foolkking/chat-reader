@@ -28,7 +28,7 @@ def _draft_json_default(value):
     if is_dataclass(value) and not isinstance(value, type):
         # JSONEncoder traverses the existing lists lazily. asdict() would first
         # clone every message/version container in this conversation.
-        return {field.name: getattr(value, field.name) for field in fields(value)}
+        return {field.name: getattr(value, field.name) for field in fields(value) if field.name != "stream_records"}
     raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
@@ -79,6 +79,11 @@ def write_import_draft(
 
 
 def attach_import_draft(record: ImportRecord, conversations: Iterable[CanonicalDraftConversation]) -> None:
+    from app.services.adaptive_import.memory_budget import streaming_budget
+    if streaming_budget():
+        from app.services.import_pipeline.stream_draft import attach_stream_draft
+        attach_stream_draft(record, conversations)
+        return
     storage_uri, sha256, summary, expires_at = write_import_draft(record.id, conversations)
     record.draft_storage_uri = storage_uri
     record.draft_sha256 = sha256
@@ -91,6 +96,10 @@ def read_import_draft(record: ImportRecord) -> list[CanonicalDraftConversation]:
 
 
 def iter_import_draft(record: ImportRecord, *, db=None):
+    if (record.draft_summary or {}).get("format_version") == 2:
+        from app.services.import_pipeline.stream_draft import iter_stream_draft
+        yield from iter_stream_draft(record, db=db)
+        return
     if not record.draft_storage_uri or not record.draft_sha256:
         raise ImportDraftError("Import preview has no durable canonical draft.")
     root = Path(get_settings().import_storage_dir).resolve()

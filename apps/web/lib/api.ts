@@ -1724,16 +1724,81 @@ export async function excludeAdaptiveImportGroup(importId: string, groupId: stri
   });
 }
 
-export async function checkAdaptiveFamilyHealth(importId: string, familyId: string): Promise<ImportFormatHealth> {
-  return fetchJson<ImportFormatHealth>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/health`, { method: "POST" });
+export type AdaptiveOperationOptions = {
+  signal?: AbortSignal;
+  taskId?: string;
+  onQueued?: (taskId: string) => void;
+  onTask?: (task: BackgroundTaskRead) => void;
+};
+
+export async function readAdaptiveOperationResult<T>(taskId: string, options: AdaptiveOperationOptions = {}): Promise<T> {
+  const generation = authenticationGeneration();
+  const path = `/api/tasks/${encodeURIComponent(taskId)}`;
+  for (;;) {
+    options.signal?.throwIfAborted();
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    const task = await fetchJson<BackgroundTaskRead>(path, {
+      signal: options.signal, headers: { "X-Chat-Reader-Background": "1" },
+    });
+    options.signal?.throwIfAborted();
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    options.onTask?.(task);
+    if (task.status === "committed") {
+      const result = task.result as Record<string, unknown>;
+      if (result.operation_result === null || typeof result.operation_result !== "object") {
+        throw new ApiRequestError("The operation result is unavailable. Reopen the import session.", 409, path, "IMPORT_OPERATION_UNCONFIRMED");
+      }
+      return result.operation_result as T;
+    }
+    if (["failed", "cancelled"].includes(task.status)) {
+      throw new ApiRequestError("The import operation stopped. Check the original task before continuing.", 409, path,
+        task.error_message === "IMPORT_RESOURCE_WAIT_EXPIRED" ? task.error_message : task.failure?.code ?? "IMPORT_OPERATION_UNCONFIRMED");
+    }
+    await new Promise<void>((resolve, reject) => {
+      const abort = () => { clearTimeout(timer); reject(options.signal?.reason ?? new DOMException("Aborted", "AbortError")); };
+      const timer = setTimeout(() => { options.signal?.removeEventListener("abort", abort); resolve(); }, 1500);
+      options.signal?.addEventListener("abort", abort, { once: true });
+      if (options.signal?.aborted) abort();
+    });
+  }
+}
+
+async function adaptiveOperationResult<T>(path: string, init: RequestInit, options: AdaptiveOperationOptions): Promise<T> {
+  if (options.taskId) {
+    options.onQueued?.(options.taskId);
+    return readAdaptiveOperationResult<T>(options.taskId, options);
+  }
+  const generation = authenticationGeneration();
+  let result: T | AdaptiveImportSession;
+  try {
+    result = await fetchJson<T | AdaptiveImportSession>(path, { ...init, signal: options.signal });
+  } catch (error) {
+    if (generation !== authenticationGeneration() || options.signal?.aborted) throw error;
+    if (!(error instanceof ApiRequestError) || error.status >= 500) {
+      // The queue transaction may have committed. A missing acknowledgement
+      // must lead to a read-only Tasks check, not a repeated POST.
+      throw new ApiRequestError("Submission is unconfirmed. Check the original task before continuing.", 409, path, "IMPORT_OPERATION_UNCONFIRMED");
+    }
+    throw error;
+  }
+  if (generation !== authenticationGeneration()) throw new Error("Account changed");
+  const taskId = (result as AdaptiveImportSession)?.operation_task_id;
+  if (!taskId) return result as T;
+  options.onQueued?.(taskId);
+  return readAdaptiveOperationResult<T>(taskId, options);
+}
+
+export async function checkAdaptiveFamilyHealth(importId: string, familyId: string, options: AdaptiveOperationOptions = {}): Promise<ImportFormatHealth> {
+  return adaptiveOperationResult<ImportFormatHealth>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/health`, { method: "POST" }, options);
 }
 
 export async function previewAdaptiveFamilyMapping(
   importId: string,
   familyId: string,
   input: { profileName: string; mappingSpec: Record<string, unknown>; sampleGroupId?: string },
+  options: AdaptiveOperationOptions = {},
 ): Promise<AdaptiveMappingPreview> {
-  return fetchJson<AdaptiveMappingPreview>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/mapping/preview`, {
+  return adaptiveOperationResult<AdaptiveMappingPreview>(`/api/adaptive-import/sessions/${importId}/families/${familyId}/mapping/preview`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -1741,7 +1806,7 @@ export async function previewAdaptiveFamilyMapping(
       mapping_spec: input.mappingSpec,
       sample_group_id: input.sampleGroupId,
     }),
-  });
+  }, options);
 }
 
 export async function saveAdaptiveFamilyMapping(

@@ -25,7 +25,8 @@ from app.services.adaptive_import.archive_sources import (
     archive_file_recovery,
     remove_archive_sidecar,
 )
-from app.services.adaptive_import.memory_budget import import_analysis_admission
+from app.services.adaptive_import.memory_budget import import_analysis_admission, bounded_zip_session
+from app.services.adaptive_import.operations import queue_operation
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, publish_revision, related_profile_ids, revision_payload, visible_profile
 from app.services.administration import require_root_admin, record_admin_audit, request_id_from
 from app.services.adaptive_import.service import (
@@ -341,6 +342,8 @@ def update_adaptive_import_groups(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
+    if bounded_zip_session(record):
+        return queue_operation(db, record, "groups", payload.model_dump(mode="json"))
     try:
         with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
             resolve_grouping(db, record, [item.model_dump(mode="json") for item in payload.groups])
@@ -362,6 +365,8 @@ def reanalyze_adaptive_import_session(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
+    if bounded_zip_session(record):
+        return queue_operation(db, record, "reanalyze")
     try:
         with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
             reanalyze_session(db, record)
@@ -433,6 +438,29 @@ def replace_adaptive_import_artifact(
     # full SourceArtifact.
     was_archive = getattr(artifact, "source_type", None) == ARCHIVE_SOURCE_TYPE
     replacement_is_archive = (Path(file.filename or "replacement").suffix.casefold() == ".zip")
+    if get_settings().import_bounded_zip_enabled:
+        from dataclasses import asdict
+        from app.services.storage.local_storage import save_import_file_stream
+        maximum = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
+        from app.services.adaptive_import.service import _require_session_state, RECOVERABLE_SESSION_STATES
+        try:
+            _require_session_state(record, RECOVERABLE_SESSION_STATES)
+            size = upload_size(file)
+            if size > maximum:
+                raise AdaptiveImportError("FILE_TOO_LARGE", "The replacement exceeds the per-file limit.", layer="file")
+            if record.total_bytes - artifact.byte_size + size > get_settings().max_adaptive_import_total_mb * 1024 * 1024:
+                raise AdaptiveImportError("SESSION_TOO_LARGE", "The replacement exceeds the session limit.", layer="file")
+            with bounded_upload_staging_sync([file]):
+                stored, digest = save_import_file_stream(record.id, file.filename or "replacement", file.file,
+                                                        max_bytes=maximum, chunk_size=64 * 1024)
+        except AdaptiveImportError as exc:
+            raise _http_error(exc) from exc
+        except UploadLimitError as exc:
+            raise _upload_error(exc) from exc
+        return queue_operation(db, record, "replace", {
+            "artifact_id": str(artifact.id), "filename": file.filename or "replacement",
+            "stored": asdict(stored), "sha256": digest,
+        })
     try:
         max_bytes = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
         sizes = [
@@ -533,6 +561,14 @@ def update_adaptive_import_archive(
     if not get_feature_policy(db).allow_user_import:
         raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
     removed_paths: list[Path] = []
+    if bounded_zip_session(record):
+        if int((artifact.parsed_summary or {}).get("classification_version") or 0) != payload.expected_version:
+            raise HTTPException(status_code=409, detail={
+                "code": "ARCHIVE_CLASSIFICATION_STALE", "message": "The ZIP preview changed. Refresh before saving.",
+            })
+        return queue_operation(db, record, "classification", {
+            "artifact_id": str(artifact.id), **payload.model_dump(mode="json"),
+        })
     mutation_committed = False
     try:
         with archive_file_recovery(record):
@@ -576,6 +612,8 @@ def exclude_adaptive_import_group(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     group = _group(import_id, group_id, db)
+    if bounded_zip_session(record):
+        return queue_operation(db, record, "exclude", {"group_id": str(group.id)})
     try:
         with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             removed_paths = remove_input_group(db, record, group)
@@ -601,6 +639,8 @@ def save_family_mapping(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
+    if bounded_zip_session(record):
+        return queue_operation(db, record, "mapping", {"family_id": str(family.id), **payload.model_dump(mode="json")})
     try:
         with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             verify_family_mapping(
@@ -628,6 +668,8 @@ def check_format_health(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
+    if bounded_zip_session(record):
+        return queue_operation(db, record, "health", {"family_id": str(family.id)})
     try:
         with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             result = check_family_health(db, record, family)
@@ -651,6 +693,8 @@ def preview_family_mapping_route(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
+    if bounded_zip_session(record):
+        return queue_operation(db, record, "preview", {"family_id": str(family.id), **payload.model_dump(mode="json")})
     try:
         with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             return preview_family_mapping(
@@ -676,6 +720,8 @@ def choose_family_profile(
 ) -> dict[str, Any]:
     record = _record(import_id, db, ownership_scope)
     family = _family(import_id, family_id, db)
+    if bounded_zip_session(record):
+        return queue_operation(db, record, "profile", {"family_id": str(family.id), **payload.model_dump(mode="json")})
     try:
         with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
             select_profile_revision(db, record, family, payload.revision_id)

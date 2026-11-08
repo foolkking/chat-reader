@@ -16,6 +16,14 @@ from app.core.config import get_settings
 _MAGIC_DETECTION_LOCK = Lock()
 
 
+def _bounded_source(source):
+    from app.services.adaptive_import.memory_budget import streaming_budget
+    if streaming_budget():
+        from app.services.adaptive_import.bounded_io import CacheBoundedReader
+        return CacheBoundedReader(source)
+    return source
+
+
 class AssetScanError(RuntimeError):
     pass
 
@@ -62,6 +70,7 @@ class ClamAVScanner(AttachmentScanner):
             ) as connection:
                 connection.sendall(b"zINSTREAM\0")
                 with path.open("rb") as source:
+                    source = _bounded_source(source)
                     while chunk := source.read(1024 * 1024):
                         connection.sendall(struct.pack("!I", len(chunk)))
                         connection.sendall(chunk)
@@ -98,13 +107,16 @@ class RemoteScanner(AttachmentScanner):
             with path.open("rb") as source:
                 response = httpx.post(
                     settings.remote_scanner_url,
-                    files={"file": ("attachment.bin", source, "application/octet-stream")},
+                    files={"file": ("attachment.bin", _bounded_source(source), "application/octet-stream")},
                     headers=headers,
                     timeout=settings.remote_scanner_timeout_seconds,
                 )
             response.raise_for_status()
             payload = response.json()
         except (OSError, httpx.HTTPError, ValueError) as exc:
+            from app.services.uploads import UploadLimitError
+            if isinstance(exc, UploadLimitError):
+                raise
             raise AssetScanError("Remote attachment scanner is unavailable.") from exc
         status = str(payload.get("status") or "").casefold()
         if status not in {"clean", "infected"}:

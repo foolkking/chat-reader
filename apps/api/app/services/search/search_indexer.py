@@ -16,9 +16,14 @@ from app.services.assets.asset_store import get_asset_store
 from app.services.toc.toc_builder import rebuild_headings_for_all, rebuild_headings_for_conversation
 from app.services.search.annotation_indexer import sync_annotations_for_conversation
 from app.services.search.personal_content_indexer import sync_personal_content
+from app.services.adaptive_import.memory_budget import streaming_budget
 
 _MAX_DOCUMENT_TEXT_CHARS = 2 * 1024 * 1024
 _BODY_READ_BATCH_SIZE = 8
+
+
+def _read_batch():
+    return 1 if streaming_budget() else _BODY_READ_BATCH_SIZE
 
 
 @dataclass(frozen=True)
@@ -105,7 +110,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
             document_rows.clear()
             document_text_chars = 0
 
-    for heading in db.query(Heading).filter(Heading.conversation_id == conversation.id).yield_per(500):
+    for heading in db.query(Heading).filter(Heading.conversation_id == conversation.id).yield_per(1 if streaming_budget() else 500):
         search_text = f"{heading.text} {conversation.display_title}".strip()
         document_rows.append(
             {
@@ -156,7 +161,7 @@ def rebuild_search_documents_for_conversation(db: Session, conversation_id: uuid
             RenderBlock.block_type == "code",
         )
         .order_by(Message.order_key.asc(), RenderBlock.block_index.asc())
-        .yield_per(_BODY_READ_BATCH_SIZE)
+        .yield_per(_read_batch())
     )
     for row in code_rows:
         block_data = row.data if isinstance(row.data, dict) else {}
@@ -286,7 +291,7 @@ def _message_version_rows(db: Session, conversation_id: uuid.UUID):
         .join(MessageVersion, MessageVersion.id == Message.current_version_id)
         .filter(Message.conversation_id == conversation_id, Message.is_deleted.is_(False))
         .order_by(Message.order_key.asc())
-        .yield_per(_BODY_READ_BATCH_SIZE)
+        .yield_per(_read_batch())
     )
 
 
@@ -334,7 +339,7 @@ def _attachment_rows(db: Session, conversation_id: uuid.UUID):
         )
         .order_by(Message.order_key.asc(), MessageVersionAttachment.display_order.asc(),
             MessageVersionAttachment.id.asc())
-        .yield_per(_BODY_READ_BATCH_SIZE)
+        .yield_per(_read_batch())
     )
 
 
