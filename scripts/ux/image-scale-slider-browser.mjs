@@ -107,6 +107,9 @@ try {
     await page.goto("http://image-scale.synthetic/");
     const trigger = page.getByRole("button", { name: /Image display scale:|图片展示比例：/ });
     const slider = page.getByRole("slider");
+    // The portalled slider's <output> also has an implicit status role.
+    // Scope the save receipt to its owning control, not every status on the page.
+    const saveStatus = page.locator("[data-image-display-controls]").getByRole("status");
     const acknowledged = async (percent, count) => {
       // Query notifications and the disabled attribute are asynchronous. An
       // enabled snapshot immediately after keyup can still precede "saving".
@@ -115,7 +118,7 @@ try {
       assert.deepEqual(await page.evaluate(() => window.writeResults.at(-1)), { percent, status: "acknowledged" });
       assert.equal(await page.evaluate(() => window.writes.length), count, "one gesture must submit exactly once");
       assert.equal(await page.evaluate(() => window.display.scale_percent), percent);
-      await expect(page.getByRole("status")).toHaveText(theme === "dark" ? "已保存" : "Saved");
+      await expect(saveStatus).toHaveText(theme === "dark" ? "已保存" : "Saved");
       await expect(trigger).toHaveAccessibleName(theme === "dark" ? `图片展示比例：${percent}%` : `Image display scale: ${percent}%`);
     };
     const choose = async (percent, outcome = "acknowledged") => {
@@ -166,6 +169,9 @@ try {
     assert.ok((await slider.boundingBox()).height >= 44);
     activeStep = "keyboard draft and column fit";
     await choose(50);
+    // Both statuses remain accessible and carry different, independently
+    // asserted values; do not hide output or use first() to mask ambiguity.
+    await expect(page.locator(".image-scale-disclosure").getByRole("status")).toHaveText("50%");
     const beforeFit = await page.evaluate(() => window.writes.length);
     await page.getByRole("button", { name: /Fit column|适应栏宽/ }).click();
     await acknowledged(100, beforeFit + 1);
