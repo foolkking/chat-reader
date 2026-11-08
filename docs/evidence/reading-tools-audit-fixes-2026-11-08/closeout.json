@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-11-08T16:59:36.9942541+08:00",
+  "head": "adc7c308aba7ab693ea8383ea0e22b270c76e79d",
+  "branch": "master",
+  "diff_check_exit": 0,
+  "staged_paths": 0,
+  "source_manifest_mismatches": 0,
+  "buildinfo_preserved": true,
+  "application_tests": "not_run",
+  "application_build": "not_run",
+  "visual_review": "not_run",
+  "ci": "not_dispatched",
+  "deployment": "not_performed"
+}

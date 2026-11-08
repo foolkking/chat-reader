@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises";
 
 test.use({ serviceWorkers: "block" });
 
-for (const width of [375, 1440]) {
-  test(`comparison panes have independent complete turns and stay read-only at ${width}px`, async ({ page }) => {
+for (const width of [375, 800, 1440]) {
+  test(`together panes have independent complete turns and passive reads never write at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     const writes: string[] = [];
     const reads: string[] = [];
@@ -28,22 +28,80 @@ for (const width of [375, 1440]) {
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
     });
     await page.goto("/compare?left=synthetic-left&right=synthetic-right");
-    const left = page.getByRole("region", { name: "Left conversation", exact: true });
-    const right = page.getByRole("region", { name: "Right conversation", exact: true });
+    const left = page.locator('[data-together-pane="synthetic-left"]');
+    const right = page.locator('[data-together-pane="synthetic-right"]');
     await expect(left.getByRole("heading", { name: "Synthetic left", exact: true })).toBeVisible();
-    if (width < 768) await page.getByRole("button", { name: "Right", exact: true }).click();
+    if (width < 1052) await page.getByRole("button", { name: "Synthetic right", exact: true }).click();
     await expect(right.getByRole("heading", { name: "Synthetic right", exact: true })).toBeVisible();
     await expect(right.getByRole("button", { name: "Next turn", exact: true })).toBeEnabled();
     await expect.poll(() => reads.includes("/api/conversations/synthetic-left/reader-turn") && reads.includes("/api/conversations/synthetic-right/reader-turn")).toBe(true);
     const roots = await page.locator("[data-reader-scroll-root]").evaluateAll(elements => elements.map(element => ({
       overflow: getComputedStyle(element).overflowY, height: element.clientHeight,
     })));
-    expect(roots).toHaveLength(2);
+    expect(roots).toHaveLength(width < 1052 ? 1 : 2);
     expect(roots.filter(root => root.height > 0).every(root => root.overflow === "auto")).toBe(true);
     expect(writes).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
+
+test("together opens eight named tabs, mounts at most two bodies and retains responsive search state", async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const entries = Array.from({ length: 9 }, (_, index) => ({ id: `synthetic-tab-${index}`, title: `Synthetic tab ${index}`, display_title: `Synthetic tab ${index}` }));
+  const writes: string[] = [];
+  await page.route("**/api/**", async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    const id = path.split("/")[3], entry = entries.find(item => item.id === id) ?? entries[0];
+    if (request.method() !== "GET" && !path.endsWith("/resolve-locator")) writes.push(path);
+    let payload: unknown = [];
+    if (path === "/api/conversations") payload = entries;
+    else if (path.endsWith("/reading-position")) payload = { position: null };
+    else if (path.endsWith("/reader-turn")) payload = {
+      conversation_id: entry.id, turn_key: "one", start_offset: 0, end_offset: 1, total_messages: 1,
+      items: [{ id: `${entry.id}-message`, conversation_id: entry.id, role: "user", order_key: "a", turn_index: 0, block_count: 0, char_count: 0, is_heavy: false, current_version: null, render_blocks: [] }],
+      previous_anchor_message_id: null, next_anchor_message_id: null,
+    };
+    else if (path.endsWith("/resolve-locator")) payload = { status: "MESSAGE_ONLY", message_id: `${entry.id}-message` };
+    else if (path.endsWith("/dialogue-index") || path.endsWith("/toc")) payload = { conversation_id: entry.id, items: [], total: 0, limit: 80, offset: 0, message_count: 1, turn_count: 1, has_more: false, has_previous: false };
+    else if (path === `/api/conversations/${id}`) payload = entry;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
+  });
+  await page.goto("/read-together?left=synthetic-tab-0&right=synthetic-tab-1");
+  await expect(page.locator("[data-together-pane]")).toHaveCount(2);
+  await page.keyboard.press("Alt+Shift+O");
+  const chooser = page.getByRole("dialog", { name: "Open another conversation to read together" });
+  await expect(chooser.getByRole("textbox")).toBeFocused();
+  for (let index = 2; index < 8; index++) {
+    if (index > 2) await page.getByRole("button", { name: "Open another", exact: true }).click();
+    await chooser.getByRole("button", { name: `Synthetic tab ${index} Resume`, exact: true }).click();
+    await expect(page.locator("[data-together-pane]")).toHaveCount(2);
+  }
+  const tabs = page.getByRole("navigation", { name: "Open conversations" });
+  await expect(tabs.getByRole("button", { name: /^Synthetic tab \d$/ })).toHaveCount(8);
+  await page.getByRole("button", { name: "Open another", exact: true }).click();
+  await chooser.getByRole("button", { name: "Synthetic tab 8 Resume", exact: true }).click();
+  await expect(chooser.getByRole("status")).toContainText("Up to 8 conversations");
+  await expect(chooser.getByRole("status")).toBeVisible();
+  await page.keyboard.press("Escape");
+  const divider = page.getByRole("separator", { name: "Resize reading panes" });
+  await divider.focus(); await divider.press("ArrowLeft");
+  for (const pane of await page.locator("[data-together-pane]").all()) expect((await pane.boundingBox())!.width).toBeGreaterThanOrEqual(519);
+  await divider.press("Home");
+  const active = page.locator('[data-together-pane="synthetic-tab-7"]');
+  await active.getByRole("button", { name: "Search this conversation" }).click();
+  await expect(active.getByRole("textbox")).toBeVisible();
+  await page.setViewportSize({ width: 800, height: 900 });
+  await expect(page.locator("[data-together-pane]")).toHaveCount(1);
+  await tabs.getByRole("button", { name: "Synthetic tab 0", exact: true }).click();
+  await tabs.getByRole("button", { name: "Synthetic tab 7", exact: true }).click();
+  await expect(active.getByRole("textbox")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("together-800-tabs.png") });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.locator("[data-together-pane]")).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath("together-375-tabs.png") });
+  expect(writes).toEqual([]);
+});
 
 for (const viewport of [
   { width: 375, height: 812, label: "mobile" },
@@ -68,6 +126,39 @@ for (const viewport of [
     expect(writes).toEqual([]);
   });
 }
+
+test("tag manager checks a lost merge response without replaying the write or deleting conversations", async ({ page }, info) => {
+  const sourceId = "11111111-1111-4111-8111-111111111111", targetId = "22222222-2222-4222-8222-222222222222";
+  let tags = [{ id: sourceId, collection: "conversation-tag", revision: 1, value: { name: "Source tag", conversation_ids: ["synthetic-a"] } },
+    { id: targetId, collection: "conversation-tag", revision: 1, value: { name: "Target tag", conversation_ids: ["synthetic-b"] } }];
+  const writes: string[] = [];
+  await page.route("**/api/**", async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    if (request.method() !== "GET") writes.push(path);
+    if (path.endsWith(`/${sourceId}/merge`)) {
+      expect(request.postDataJSON()).toMatchObject({ target_id: targetId, source_revision: 1, target_revision: 1 });
+      tags = [{ ...tags[1], revision: 2, value: { name: "Target tag", conversation_ids: ["synthetic-a", "synthetic-b"] } }];
+      await route.abort("failed"); return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(
+      path === "/api/user-feature-entries/conversation-tag" ? tags : []) });
+  });
+  await page.goto("/tags");
+  const source = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "Source tag", exact: true }) });
+  await source.getByRole("button", { name: "Merge", exact: true }).click();
+  await page.getByLabel("Merge into (keep target name)").selectOption(targetId);
+  await page.getByRole("button", { name: "Merge tags", exact: true }).click();
+  const confirm = page.getByRole("dialog", { name: "Merge these tags?" });
+  await confirm.getByRole("button", { name: /Confirm|确认/ }).click();
+  await expect(page.getByRole("alert")).toContainText("Merge not confirmed");
+  expect(writes).toHaveLength(1);
+  await expect(page.getByRole("button", { name: "Merge tags", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Check result", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Source tag", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Target tag", exact: true })).toHaveAttribute("href", `/tags?tag=${targetId}`);
+  expect(writes).toEqual([`/api/user-feature-entries/conversation-tag/${sourceId}/merge`]);
+  await page.screenshot({ path: info.outputPath("private-tag-merge-recovered.png") });
+});
 
 test("table export offers manual clipboard recovery and a real CSV download", async ({ page }) => {
   await page.route("**/api/**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));

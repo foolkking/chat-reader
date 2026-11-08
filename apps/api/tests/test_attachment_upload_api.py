@@ -138,6 +138,58 @@ def _upload(client, session_id: str, name: str = "evidence.md", body: bytes = b"
     return response.json()
 
 
+@pytest.mark.parametrize("busy", [False, True])
+def test_new_manual_image_gets_fit_once_without_publishing_or_changing_original(client, tmp_path, monkeypatch, busy):
+    from test_message_markdown_copy import png
+    from app.services.assets import image_display
+    from app.models.attachment_public_link import AttachmentPublicLink
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setenv("ATTACHMENT_SCANNER", "disabled")
+    monkeypatch.setenv("ALLOW_UNSCANNED_ATTACHMENTS", "true")
+    monkeypatch.setattr("app.core.memory.available_memory_bytes", lambda: 1024 ** 3)
+    get_settings.cache_clear()
+    conversation_id, _ = _conversation_with_message(client)
+    original = png(size=(600, 400), color=(20, 100, 50, 100))
+    item = _upload(client, _create_session(client, conversation_id)["id"], "diagram.png", original)
+    if busy:
+        assert image_display.conversion_slot.acquire(blocking=False)
+    try:
+        response = client.post(f"/api/conversations/{conversation_id}/attachments",
+            json={"upload_item_ids": [item["id"]], "image_lane_width": 300})
+        assert response.status_code == 201, response.text
+    finally:
+        if busy:
+            image_display.conversion_slot.release()
+    attachment = response.json()["items"][0]
+    if busy:
+        assert "image_display_v1" not in attachment["metadata"]
+        assert "original retained" in attachment["metadata"]["image_fit_warning"]
+    else:
+        display = attachment["metadata"]["image_display_v1"]
+        assert (display["scale_percent"], display["width"], display["height"]) == (50, 300, 200)
+        assert display["origin"] == "upload_fit"
+    retry = client.post(f"/api/conversations/{conversation_id}/attachments",
+        json={"upload_item_ids": [item["id"]], "image_lane_width": 150})
+    assert retry.status_code == 201, retry.text
+    assert retry.json()["items"][0]["metadata"] == attachment["metadata"]
+    assert client.get(f"/api/attachments/{attachment['id']}/content").content == original
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    try:
+        assert db.query(AttachmentPublicLink).filter_by(attachment_id=uuid.UUID(attachment["id"])).count() == 0
+    finally:
+        db.close()
+        generator.close()
+
+
+@pytest.mark.parametrize("lane", [True, 43, 8193, 500.5, "500"])
+def test_upload_fit_rejects_unbounded_or_noninteger_lanes(lane):
+    from pydantic import ValidationError
+    from app.schemas.attachment import AttachmentFinalizeRequest
+    with pytest.raises(ValidationError):
+        AttachmentFinalizeRequest(upload_item_ids=[uuid.uuid4()], image_lane_width=lane)
+
+
 def _canonical_entity_counts() -> dict[str, int]:
     override = app.dependency_overrides[get_db]
     generator = override()

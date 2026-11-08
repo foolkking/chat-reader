@@ -498,6 +498,10 @@ def commit_import(
         summary = dict(import_record.analysis_summary or {})
         commit_options = dict(summary.get("commit_options") or {})
         commit_options["project_id"] = str(effective_project_id) if effective_project_id else None
+        # A queued/retried import uses its original reading-lane snapshot, not
+        # whichever device happens to retry it. Archive restoration is separate.
+        if options.image_lane_width is not None:
+            commit_options.setdefault("image_lane_width", options.image_lane_width)
         summary["commit_options"] = commit_options
         import_record.analysis_summary = summary
 

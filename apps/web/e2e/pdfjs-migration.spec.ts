@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
@@ -341,7 +342,7 @@ async function openConversationFiles(page: Page, conversationId: string): Promis
   const actions = page.getByRole("button", { name: (page.viewportSize()?.width ?? 1280) < 768 ? /^(More|更多)$/ : /^(Message actions|消息操作)$/ });
   await expect(actions).toBeVisible();
   await actions.click();
-  await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
+  await openReaderAction(page, "conversation-files");
   await expect(page.getByTestId("conversation-files-panel")).toBeVisible();
 }
 

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { settingsAppearance } from "./settings-test-helper";
+import { openReaderAction } from "./reader-actions";
 
 test.use({ trace: "off", extraHTTPHeaders: { Origin: "http://127.0.0.1:3107" } });
 test.skip(process.env.E2E_CONTEXT_EXPORT !== "1", "Requires the isolated API");
@@ -39,8 +40,7 @@ for (const width of [375, 768, 1440]) {
     await save(1, 'current', '# Current replaced');
     await save(2, 'index', index);
     const open = async () => {
-      if (width < 768) { await page.getByRole('button', { name: /^(更多|More)$/ }).click(); }
-      await page.getByRole('button', { name: /^(接续|Continuation)$/ }).click();
+      await openReaderAction(page, "continuation");
     };
     await page.goto(`/conversations/${id}`);
     await expect(page.locator('article[data-message-id]').first()).toBeVisible();

@@ -5,9 +5,9 @@ import { test } from "node:test";
 
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = require("typescript");
-const source = readFileSync(new URL("../../apps/web/features/compare/conversation-compare.tsx", import.meta.url), "utf8");
-const ast = ts.createSourceFile("conversation-compare.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const pane = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ComparePane");
+const source = readFileSync(new URL("../../apps/web/features/compare/together-pane.tsx", import.meta.url), "utf8");
+const ast = ts.createSourceFile("together-pane.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const pane = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "TogetherPane");
 const effect = pane.body.statements.find(node => ts.isExpressionStatement(node) && ts.isCallExpression(node.expression)
   && node.expression.expression.getText(ast) === "useEffect");
 assert.ok(effect);
@@ -23,7 +23,7 @@ const flush = async () => { for (let i = 0; i < 12; i++) await Promise.resolve()
 
 // The actual Compare effect; only async transport/virtual leases and DOM
 // geometry are adapters. Browser alignment and opposite-pane proof stay in CI.
-function fixture({ targetPresent = true } = {}) {
+function fixture({ targetPresent = true, intentIsCurrent } = {}) {
   const root = new EventTarget(), other = new EventTarget();
   Object.assign(root, { dataset: {}, isConnected: true, scrollTop: 100 });
   Object.assign(other, { dataset: {}, isConnected: true, scrollTop: 240 });
@@ -33,17 +33,19 @@ function fixture({ targetPresent = true } = {}) {
   const calls = [], releases = [], handoffs = [], errors = [], targets = [], cancellations = [];
   const lease = { targetId: target.id, release: () => releases.push({ stage: root.dataset.navigationStage, handoffs: handoffs.length }) };
   root.addEventListener("chat-reader:position-released", () => handoffs.push({ stage: root.dataset.navigationStage, top: root.scrollTop }));
+  const results = [];
   const inputs = {
-    targetBlockId: target.id, activeMessageId: "synthetic", turn: { data: { items: [{ id: "synthetic" }] } },
-    navigationToken: token, rootRef: { current: root },
-    document: { getElementById: () => targetPresent ? target : null },
+    navigation: { target: { messageId: "synthetic", blockIndex: 190, allowMessageFallback: false }, serial: 0, isCurrent: intentIsCurrent, resolve: result => results.push(result) },
+    turn: { data: { items: [{ id: "synthetic" }] } },
+    serial: token, root: { current: root }, mounted: { current: true },
+    generation: { current: 1 }, authenticationGeneration: () => 1, pending: { current: null },
     acquireReaderBlockLease: (messageId, index, current) => { calls.push({ kind: "lease", messageId, index, current }); return block.promise; },
-    navigateMountedTarget: options => { calls.push({ kind: "navigate", options }); return alignment.promise; },
+    navigateMountedTarget: options => { calls.push({ kind: "navigate", options }); return targetPresent ? alignment.promise : Promise.resolve({ ok: false, reason: "block-not-found" }); },
     cancelReaderPosition: value => cancellations.push(value),
-    setNavigationError: value => errors.push(value), setTargetBlockId: value => targets.push(value),
+    setNavigationError: value => errors.push(value), setNavigation: value => targets.push(value),
   };
   const cleanup = new Function(...Object.keys(inputs), compiled)(...Object.values(inputs));
-  return { root, other, token, block, alignment, lease, calls, releases, handoffs, errors, targets, cancellations, cleanup };
+  return { root, other, token, block, alignment, lease, calls, releases, handoffs, errors, targets, cancellations, cleanup, results };
 }
 
 test("Compare requests strict alignment and hands geometry back before virtual pin release", async () => {
@@ -51,10 +53,10 @@ test("Compare requests strict alignment and hands geometry back before virtual p
   f.block.resolve(f.lease); await flush();
   const options = f.calls.find(call => call.kind === "navigate").options;
   assert.equal(options.root, f.root);
-  assert.equal(options.offset, 24);
+  assert.equal(options.offset, 120);
   assert.equal(options.alignmentTolerance, 1);
   f.alignment.resolve({ ok: true }); await flush();
-  assert.deepEqual(f.errors, [false]);
+  assert.deepEqual(f.errors, [null]);
   assert.deepEqual(f.targets, [null]);
   assert.deepEqual(f.handoffs, [{ stage: undefined, top: 100 }]);
   assert.deepEqual(f.releases, [{ stage: undefined, handoffs: 1 }]);
@@ -68,8 +70,8 @@ test("failed exact alignment keeps its retry target but never strands ownership"
   const f = fixture();
   f.block.resolve(f.lease); await flush();
   f.alignment.resolve({ ok: false }); await flush();
-  assert.deepEqual(f.errors, [true]);
-  assert.deepEqual(f.targets, []);
+  assert.deepEqual(f.errors, [{ ok: false }]);
+  assert.deepEqual(f.targets, [null]);
   assert.equal(f.root.dataset.navigationStage, undefined);
   assert.deepEqual(f.releases, [{ stage: undefined, handoffs: 1 }]);
   f.cleanup();
@@ -78,8 +80,8 @@ test("failed exact alignment keeps its retry target but never strands ownership"
 test("a missing real target cannot report navigation success or keep a pin", async () => {
   const f = fixture({ targetPresent: false });
   f.block.resolve(f.lease); await flush();
-  assert.equal(f.calls.some(call => call.kind === "navigate"), false);
-  assert.deepEqual(f.errors, [true]);
+  assert.equal(f.results[0].ok, false);
+  assert.deepEqual(f.errors, [{ ok: false, reason: "block-not-found" }]);
   assert.equal(f.releases.length, 1);
   assert.equal(f.root.dataset.navigationStage, undefined);
   f.cleanup();
@@ -117,4 +119,17 @@ test("a retired completion cannot clear a replacement pane navigation", async ()
   assert.equal(f.handoffs.length, 1);
   assert.equal(f.releases.length, 1);
   assert.deepEqual(f.targets, []);
+});
+
+test("editing a search retires alignment without leaving a busy stage or virtual pin", async () => {
+  let current = true;
+  const f = fixture({ intentIsCurrent: () => current });
+  f.block.resolve(f.lease); await flush();
+  current = false;
+  f.alignment.resolve({ ok: false, reason: "cancelled" }); await flush();
+  assert.equal(f.root.dataset.navigationStage, undefined);
+  assert.deepEqual(f.releases, [{ stage: undefined, handoffs: 1 }]);
+  assert.deepEqual(f.results, [{ ok: false, targetId: "", reason: "cancelled" }]);
+  assert.deepEqual(f.errors, []);
+  f.cleanup();
 });

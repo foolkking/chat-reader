@@ -14,6 +14,22 @@
 运行态和完整 CI 证据以 [当前发布记录](execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
 及 [项目状态](../PROJECT_STATE.md) 为准。
 
+## 阅读工具 — 2026-11-08 未发布候选
+
+| Method/path | Additive contract |
+| --- | --- |
+| `POST /api/imports/{id}/commit` | Optional strict `image_lane_width` 44–8192; first committed value retained on retry. New adaptive-import images fit once within existing conversion/memory limits. No read-side writes or archive reset. |
+| `POST /api/conversations/{id}/attachments` | Optional strict `image_lane_width` 44–8192 alongside existing `upload_item_ids`; new authorized/scanned manual images fit once during finalization. Existing committed receipts/settings remain unchanged on retry. Safety skips retain the original with optional `metadata.image_fit_warning`. |
+| `POST /api/user-feature-entries/conversation-tag/{source}/merge` | `{target_id, source_revision, target_revision}`; atomic owner-only union (max 2000), saved-search redirect and source-tag removal. CAS/ownership conflict 409, limit 422. |
+| `GET /api/conversations?tag_id=...` | Owner tag memberships without a text query; existing status/paging/sort filters apply. Missing/inaccessible tag 404. |
+| `POST /api/conversations/{id}/exports/annotations` | `{scope: all/filtered/selected, locale: en/zh-CN, annotation_ids?: UUID[]}`. Scoped IDs required for filtered/selected, forbidden for all; max 2000. Bounded saved-snapshot readable Markdown v2; existing GET and archive v1 remain. |
+
+Optional display metadata `origin: import_fit / upload_fit` does not create a second setting;
+explicit image saves remove that origin. Interactive reading-point bookmark
+creation deduplicates equivalent locations under the existing subject lock;
+offline sync entity IDs and receipts are unchanged. Full boundary and verification:
+[Reading tools](system/READING_TOOLS_CONTRACT.md).
+
 ## 累计功能补齐 — 2026-10-30（已发布，生产 head 0058）
 
 | Method/path | Contract |

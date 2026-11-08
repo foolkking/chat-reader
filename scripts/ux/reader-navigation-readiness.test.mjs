@@ -31,6 +31,9 @@ const helpers = ast.statements.filter(node => ts.isFunctionDeclaration(node) && 
   "loadCompleteTurnWindow", "loadCompleteTurnWindowWithAnchorFallback", "isMissingReaderAnchorError", "captureReadingPosition",
   "findBlockIndexById", "numberOrNull", "locallyResolvableMessage", "navigationTargetIdentity", "readerCacheIdentity", "setNavigationStage",
 ].includes(node.name?.text));
+const captureAst = ts.createSourceFile("capture.ts", readFileSync(new URL("../../apps/web/features/conversations/reading-position-capture.ts", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true);
+const captureFunction = captureAst.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "captureReadingPosition");
+assert.ok(captureFunction);
 const ownerGuard = reader.body.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "ownsReaderReadRecovery");
 const compile = (text, capture = false) => ts.transpileModule(text, { fileName: "reader-readiness-test.ts", compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
@@ -81,6 +84,7 @@ const compiled = compile(`function InspectReadiness(input) {
   return { navigateToTarget, markReaderScrollIntent, applyLoadedWindow, loadingProgress };
 }
 ${helpers.map(node => node.getText(ast)).join("\n")}
+${captureFunction.getText(captureAst).replace("export function", "function")}
 module.exports = InspectReadiness;`, true);
 const sameDeps = (a, b) => a && b && a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
 const microtasks = async () => { await setImmediate(); await setImmediate(); };
@@ -124,7 +128,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     assert.equal(name, "./rendered-block-registry"); return registry;
   }, document);
   root.contains = element => Boolean(element && (element === root || element.readerRoot === root && element.isConnected));
-  root.querySelector = () => null;
+  root.querySelector = selector => rootMounted ? elements.get(selector.match(/\[id="([^"]+)"\]/)?.[1]) ?? null : null;
   root.querySelectorAll = selector => [...elements.values()].filter(element => selector === "article[data-message-id]" && Boolean(element.dataset.messageId));
   document.getElementById = id => rootMounted ? elements.get(id) ?? null : null;
   document.querySelectorAll = selector => root.querySelectorAll(selector);
@@ -150,6 +154,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
       article.querySelectorAll = selector => selector === "[data-block-index]" ? [block] : [];
       article.querySelector = selector => selector.includes(message.render_blocks[0].id) ? block : null;
       block.querySelector = () => null;
+      block.querySelectorAll = () => [];
       article.closest = selector => selector === "article[data-message-id]" ? article : null;
       block.closest = selector => selector === "article[data-message-id]" ? article : selector === "[data-block-index]" ? block : null;
       article.contains = element => element === article || element === block;
@@ -221,7 +226,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     ...windowHelpers, loadTurnNeighborhood: windowHelpers.loadCompleteTurnWindow,
     buildReaderTurnGroups: turnFoldingHelpers.buildReaderTurnGroups,
     startTransition: action => action(), resolveActiveReadingTarget: active.resolveActiveReadingTarget,
-    navigateMountedTarget, restoreScrollAnchor, estimateCharacterOffsetAtReadingLine: () => null,
+    navigateMountedTarget, restoreScrollAnchor, estimateCharacterOffsetAtReadingLine: () => null, textOffsetAtReadingLine: () => undefined,
     captureScrollAnchor: scope => { const target = active.resolveActiveReadingTarget(scope, 120);
       return target ? { targetId: target.blockId ?? "message-" + target.messageId, offset: 120 } : null; },
     acquireReaderBlockLease: async () => ({ release() {} }), notifyReaderWindowLayoutChanged: () => {},

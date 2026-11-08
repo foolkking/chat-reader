@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test, type Page } from "@playwright/test";
 import { zipSync, strToU8 } from "fflate";
 import { settingsAppearance } from "./settings-test-helper";
@@ -44,7 +45,7 @@ for (const width of [375, 1440]) {
       if (width < 768) {
         await page.getByRole("button", { name: /^(更多|More)$/ }).click();
         await page.getByRole("dialog", { name: /阅读工具|Reader tools/ }).getByRole("button", { name: /^(接续|Continuation)$/ }).click();
-      } else await page.getByRole("button", { name: /^(接续|Continuation)$/ }).click();
+      } else await openReaderAction(page, "continuation");
       await expect(page.getByTestId("continuation-drop-target")).toBeVisible();
     };
     const panel = page.getByRole("region", { name: /^(上下文接续|Context continuation)$/ });

@@ -131,6 +131,7 @@ def post_annotation(
             conversation_id,
             payload,
             subject_key=subject_key_from_request(request),
+            deduplicate_reading_point=True,
         )
         db.commit()
         return annotation_read(annotation)

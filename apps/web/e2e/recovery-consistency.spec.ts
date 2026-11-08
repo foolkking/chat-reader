@@ -111,19 +111,18 @@ test("tag lost-response recovery retains the original UUID across panel close", 
     await route.abort();
   });
   const openTags = async () => {
-    await page.locator('[data-reader-header-more-actions="true"]').click();
-    await page.locator('[data-reader-header-action="tags"]').click();
-    return page.getByRole("dialog", { name: "Conversation tags", exact: true });
+    await page.locator("[data-reader-tags-trigger]").filter({ visible: true }).click();
+    return page.getByRole("group", { name: "Conversation tags", exact: true });
   };
   try {
     await page.goto(`/conversations/${syntheticConversation}`);
     let panel = await openTags();
     await panel.getByRole("textbox", { name: "Tag name", exact: true }).fill(name);
-    await panel.getByRole("button", { name: "Add", exact: true }).click();
+    await panel.getByRole("button", { name: "Create", exact: true }).click();
     await expect(panel.getByRole("button", { name: "Check current state", exact: true })).toBeEnabled();
     await page.keyboard.press("Escape");
     panel = await openTags();
-    await expect(panel.getByRole("button", { name: "Add", exact: true })).toBeDisabled();
+    await expect(panel.getByRole("button", { name: "Create", exact: true })).toBeDisabled();
     await panel.getByRole("button", { name: "Check current state", exact: true }).click();
     await panel.getByRole("button", { name: "Accept checked result", exact: true }).click();
     await expect(panel.getByRole("checkbox", { name: `Remove ${name}`, exact: true })).toBeChecked();

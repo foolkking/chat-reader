@@ -82,6 +82,7 @@ for (const locale of ["zh-CN", "en-US"] as const) {
         await page.goto(`${baseURL}/conversations/${id}${scenario === "bookmark" ? "" : "?annotations=open"}`);
         if (scenario === "bookmark") {
           await page.getByRole("button", { name: /^(Bookmark message|收藏消息)$/ }).first().click();
+          await page.getByRole("status").filter({ hasText: /书签保存中或待核对|Bookmark saving or awaiting verification/ }).getByRole("button", { name: /^(View|查看)$/ }).click();
           await expect(page.getByRole("button", { name: /^(Check bookmark|核对书签)$/ })).toBeVisible();
           expect(writes).toHaveLength(1); expect(writes[0]).toMatch(/^[0-9a-f-]{36}$/);
           await page.screenshot({ path: info.outputPath(`bookmark-unknown-${locale}.png`) });
@@ -99,10 +100,11 @@ for (const locale of ["zh-CN", "en-US"] as const) {
             releaseNotebookReads();
             await expect(editor).toHaveAttribute("data-notebook-save-ready", "true");
           }
-          await page.getByRole("button", { name: /^(All|全部批注)$/ }).click();
+          await page.locator('[data-annotation-tab="all"]').click();
           const first = page.locator(`#annotation-${annotations[0].id}`);
           await expect(first).toBeVisible();
           if (scenario === "comment") {
+            await first.locator("summary").filter({ hasText: /编辑与操作|Edit and actions/ }).click();
             const input = first.getByRole("textbox", { name: /^(Comment|评论)$/ });
             await input.fill("Synthetic protected comment draft");
             await first.getByRole("button", { name: /^(Save comment|保存评论)$/ }).click();

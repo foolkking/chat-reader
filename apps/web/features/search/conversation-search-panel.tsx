@@ -57,6 +57,8 @@ export function ConversationSearchPanel({
   initialState,
   onStateChange,
   onPrepareRetry,
+  externalResultHref,
+  onOpenExternal,
 }: {
   conversationId: string;
   dataSource?: ReaderDataSource;
@@ -68,9 +70,12 @@ export function ConversationSearchPanel({
   initialState?: ConversationSearchPanelState;
   onStateChange?: (state: ConversationSearchPanelState) => void;
   onPrepareRetry?: () => Promise<void>;
+  externalResultHref?: (target: SearchNavigationTarget) => string | undefined;
+  onOpenExternal?: (href: string) => void;
 }) {
   const { resolvedLocale } = usePreferences();
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = `conversation-search-input-${sourceKey}-${conversationId}`;
   const [query, setQuery] = useState(initialState?.query ?? "");
   const [debounced, setDebounced] = useState(initialState?.query.trim() ?? "");
   const [activeIndex, setActiveIndex] = useState(initialState?.activeIndex ?? 0);
@@ -179,6 +184,8 @@ export function ConversationSearchPanel({
   const activate = async (index: number) => {
     const occurrence = occurrences[index];
     if (!navigationScope.active || !occurrence || navigationScope.pendingKey === occurrence.key) return;
+    const external = externalResultHref?.(occurrence.target);
+    if (external) { onOpenExternal?.(external); return; }
     const sequence = ++navigationScope.sequence;
     navigationScope.pendingKey = occurrence.key;
     const isCurrent = () => navigationScope.active && navigationScope.sequence === sequence;
@@ -218,8 +225,8 @@ export function ConversationSearchPanel({
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-raised">
       {showHeader ? <header className="flex items-center gap-2 border-b border-ui p-4"><Search className="h-4 w-4 text-secondary" /><h2 className="flex-1 text-base font-semibold text-primary">{zh ? "当前对话搜索" : "Search this conversation"}</h2><button type="button" onClick={close} className="flex h-9 w-9 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header> : null}
       <div className="border-b border-ui p-4">
-        <label className="sr-only" htmlFor="conversation-search-input">{zh ? "搜索当前对话" : "Search this conversation"}</label>
-        <input id="conversation-search-input" ref={inputRef} value={query} onChange={(event) => { if (event.target.value !== query) retireNavigation(); setQuery(event.target.value); setActiveIndex(0); setActiveOccurrenceKey(null); }} onKeyDown={(event) => {
+        <label className="sr-only" htmlFor={inputId}>{zh ? "搜索当前对话" : "Search this conversation"}</label>
+        <input id={inputId} ref={inputRef} value={query} onChange={(event) => { if (event.target.value !== query) retireNavigation(); setQuery(event.target.value); setActiveIndex(0); setActiveOccurrenceKey(null); }} onKeyDown={(event) => {
           if (event.nativeEvent.isComposing || event.keyCode === 229) return;
           if (event.key === "ArrowDown") { event.preventDefault(); selectIndex(Math.max(0, Math.min(selectedIndex + 1, occurrences.length - 1))); }
           if (event.key === "ArrowUp") { event.preventDefault(); selectIndex(Math.max(0, selectedIndex - 1)); }
@@ -246,7 +253,9 @@ export function ConversationSearchPanel({
           void (results.isFetchNextPageError ? results.fetchNextPage() : results.refetch());
         }}>{zh ? "重试" : "Retry"}</button></div> : null}
         {currentResults && results.data && !results.isError && !results.isFetching && activeOccurrenceKey !== null && selectedIndex < 0 ? <p role="status" className="p-4 text-sm text-secondary">{zh ? "此前选中的匹配已不在当前结果中，请重新选择或修改搜索。" : "The selected match is no longer in these results. Choose a match or change the search."}</p> : null}
-        {occurrences.map((occurrence, index) => <button key={`${occurrence.item.document_id}-${index}`} type="button" aria-busy={currentNavigation?.pendingKey === occurrence.key} onMouseEnter={() => selectIndex(index)} onClick={() => void activate(index)} className={`block w-full border-b border-ui px-4 py-3 text-left ${selectedIndex === index ? "bg-subtle" : "hover:bg-subtle"}`}>
+        {occurrences.map((occurrence, index) => {
+          const href = externalResultHref?.(occurrence.target);
+          const content = <>
           <span className="block text-xs font-medium text-secondary">{occurrence.item.document_type === "attachment"
             ? occurrence.item.attachment_display_name ?? documentTypeLabel("attachment", zh)
             : roleLabel(occurrence.item.role, zh)}</span>
@@ -254,7 +263,13 @@ export function ConversationSearchPanel({
             ? <ContextSnippet before={occurrence.before} match={occurrence.match} after={occurrence.after} />
             : occurrence.item.snippet}</span>
           <span className="mt-1 block text-xs text-secondary">{documentTypeLabel(occurrence.item.document_type, zh)}{occurrence.item.occurrence_count > 1 ? ` · ${zh ? `第 ${index + 1} 个命中` : `Match ${index + 1}`}` : ""}{occurrence.item.matches_truncated ? ` · ${zh ? "匹配过多，仅显示前 100 个" : "More matches exist; showing the first 100"}` : ""}</span>
-        </button>)}
+          {href ? <span className="mt-1 block text-xs text-accent">{zh ? "在完整阅读页查看此结果" : "View this result in the full reader"}</span> : null}
+          </>;
+          const className = `block w-full border-b border-ui px-4 py-3 text-left ${selectedIndex === index ? "bg-subtle" : "hover:bg-subtle"}`;
+          return href ? <a key={occurrence.key} href={href} className={className} onMouseEnter={() => selectIndex(index)}
+            onClick={event => { if (onOpenExternal && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); onOpenExternal(href); } }}>{content}</a>
+            : <button key={occurrence.key} type="button" aria-busy={currentNavigation?.pendingKey === occurrence.key} onMouseEnter={() => selectIndex(index)} onClick={() => void activate(index)} className={className}>{content}</button>;
+        })}
         {currentResults && !results.isError && hasMoreResults ? <div className="p-4"><button type="button" className="btn-secondary min-h-11 w-full" disabled={results.isFetchingNextPage} onClick={() => void results.fetchNextPage()}>{results.isFetchingNextPage ? (zh ? "正在加载更多…" : "Loading more…") : (zh ? "加载更多结果" : "Load more results")}</button></div> : null}
       </div>
     </div>

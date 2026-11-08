@@ -124,6 +124,7 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
     || pathname === "/recent"
     || pathname === "/reading-list"
     || pathname === "/annotations"
+    || pathname === "/tags"
     || pathname === "/files"
     || pathname === "/duplicates"
     || pathname === "/search"
@@ -156,7 +157,7 @@ export function WorkspaceShellBoundary({ children }: { children: React.ReactNode
           onImportClick={() => openImportDialog({ projectId: importProjectId ?? null })}
         />
         </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+        <div data-workspace-content className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
         {fileDropActive ? (
           <div aria-hidden="true" data-testid="workspace-file-drop-overlay" className="workspace-file-drop-overlay fixed inset-0 z-[80] grid place-items-center p-4">
             <div data-testid="workspace-import-drop-target" data-workspace-import-drop-target="true" className={`workspace-import-drop-target pointer-events-auto max-w-md border border-dashed bg-raised px-6 py-5 text-center shadow-2xl ${dropOverImportTarget ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-ui"}`}>

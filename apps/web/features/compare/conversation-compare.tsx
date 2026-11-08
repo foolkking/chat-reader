@@ -1,177 +1,173 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { createRef, useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { getConversation, getConversationReaderTurn, getConversations } from "../../lib/api";
-import { ConversationIndex } from "../toc/conversation-index";
-import { ConversationToc } from "../toc/conversation-toc";
-import { MessageItem } from "../conversations/message-item";
+import { useQueries } from "@tanstack/react-query";
+import { getConversation } from "../../lib/api";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import { usePreferences } from "../../components/preferences-provider";
-import { acquireReaderBlockLease, type ReaderBlockLease } from "../conversations/block-virtualization";
-import { cancelReaderPosition, navigateMountedTarget } from "../conversations/reader-navigation";
+import { AnnotationWorkspace, type AnnotationLeaveGuard } from "../annotations/annotation-workspace";
+import { remoteAnnotationRepository } from "../../lib/annotation-repository";
+import { TogetherChooser, type TogetherChoice } from "./together-chooser";
+import { TogetherPane, type TogetherPaneHandle, type TogetherPaneState } from "./together-pane";
+import { togetherTarget, TOGETHER_MAX_TABS, TOGETHER_MIN_PANE, type TogetherSnapshot } from "./together-session";
+import type { NavigateTarget } from "../../lib/types";
+import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
 
+type Tab = { id: string; title?: string; target?: NavigateTarget; sequence: number };
+const GUTTER = 12;
+const subscribeIdentity = (listener: () => void) => {
+  window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, listener);
+  return () => window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, listener);
+};
 export function ConversationCompare() {
-  const params = useSearchParams();
-  const router = useRouter();
-  const leftId = params?.get("left") ?? "";
-  const rightId = params?.get("right") ?? "";
-  const [draft, setDraft] = useState({ source: rightId, value: rightId });
-  const rightDraft = draft.source === rightId ? draft.value : rightId;
-  const setRightDraft = (value: string) => setDraft({ source: rightId, value });
-  const [activeSide, setActiveSide] = useState<"left" | "right">("left");
-  const [search, setSearch] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const { resolvedLocale } = usePreferences();
-  const zh = resolvedLocale === "zh-CN";
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSearchTerm(search.trim()), 200);
-    return () => window.clearTimeout(timer);
-  }, [search]);
-  const candidates = useQuery({
-    queryKey: ["conversation-compare-candidates", searchTerm],
-    queryFn: ({ signal }) => getConversations({ q: searchTerm, statusScope: "all", limit: 20, sort: "recent_read" }, signal),
-  });
-  const options = useMemo(() => {
-    const needle = search.trim().toLocaleLowerCase();
-    return (candidates.data ?? []).filter((item) =>
-      item.id !== leftId
-      && (!needle || `${item.display_title} ${item.title}`.toLocaleLowerCase().includes(needle)),
-    ).slice(0, 12);
-  }, [candidates.data, leftId, search]);
-
-  function applyRightId(value: string) {
-    const next = value.trim();
-    if (!next || next === leftId) return;
-    setRightDraft(next);
-    const url = new URL(window.location.href);
-    url.searchParams.set("right", next);
-    router.replace(`${url.pathname}${url.search}`, { scroll: false });
-  }
-
-  return <main className="flex h-dvh min-h-0 min-w-0 flex-col bg-page text-primary">
-    <header className="z-10 flex flex-wrap items-center gap-3 border-b border-ui bg-surface px-4 py-3">
-      <button type="button" onClick={() => router.back()} className="min-h-10 rounded-md border border-ui px-3 text-xs">{zh ? "返回" : "Back"}</button>
-      <div className="min-w-0 flex-1"><h1 className="text-base font-semibold">{zh ? "只读对照阅读" : "Read-only comparison"}</h1><p className="text-xs text-secondary">{zh ? "两侧目录、当前轮次与滚动各自独立；不会同步或写入阅读位置。" : "Each side has independent navigation, turn and scrolling. Nothing is synchronized or saved as a reading position."}</p></div>
-      <div className="relative flex min-w-0 flex-1 basis-full flex-wrap gap-2 md:basis-auto md:flex-nowrap">
-        <input value={search} onChange={event => setSearch(event.target.value)} placeholder={zh ? "按标题查找要对照的对话" : "Find a conversation by title"} className="min-h-10 min-w-40 flex-1 rounded-md border border-ui bg-page px-3 text-sm" aria-label={zh ? "搜索对照对话" : "Search comparison conversations"} />
-        <input value={rightDraft} onChange={event => setRightDraft(event.target.value)} onKeyDown={event => { if (event.key === "Enter") applyRightId(rightDraft); }} placeholder={zh ? "或粘贴对话 ID" : "Or paste a conversation ID"} className="min-h-10 min-w-32 flex-1 rounded-md border border-ui bg-page px-3 text-xs" aria-label={zh ? "对照对话 ID" : "Comparison conversation ID"} />
-        <button type="button" onClick={() => applyRightId(rightDraft)} disabled={!rightDraft.trim() || rightDraft.trim() === leftId} className="min-h-10 rounded-md bg-[var(--text)] px-3 text-xs text-[var(--surface)] disabled:opacity-50">{zh ? "打开" : "Open"}</button>
-        {search.trim() && options.length ? <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-md border border-ui bg-surface p-1 shadow-xl md:right-1/3">
-          {options.map(item => <li key={item.id}><button type="button" onClick={() => { applyRightId(item.id); setSearch(""); }} className="min-h-10 w-full rounded px-3 text-left text-sm hover:bg-subtle"><span className="block truncate">{item.display_title || item.title}</span><span className="block text-[11px] text-secondary">{item.message_count} {zh ? "条消息" : "messages"}</span></button></li>)}
-        </ul> : null}
-        {search.trim() && candidates.isError ? <p role="alert" className="text-xs text-[var(--danger)]">{zh ? "搜索失败，可重试或粘贴对话 ID。" : "Search failed. Retry or paste a conversation ID."}<button type="button" onClick={() => void candidates.refetch()} className="ml-1 underline">{zh ? "重试" : "Retry"}</button></p> : null}
-        {searchTerm && search.trim() === searchTerm && candidates.isSuccess && !options.length ? <p role="status" className="text-xs text-secondary">{zh ? "未找到匹配的其他对话。" : "No other matching conversations."}</p> : null}
-      </div>
-    </header>
-    {!leftId || !rightId ? <p className="m-4 rounded-lg border border-ui bg-subtle p-4 text-sm text-secondary">{zh ? "先在原对话点击“对照阅读”，再搜索或输入另一条有权限的对话。" : "Open comparison from a conversation, then find or enter another conversation you can access."}</p>
-      : leftId === rightId ? <p role="alert" className="m-4 rounded-lg border border-ui bg-subtle p-4 text-sm text-secondary">{zh ? "两侧必须是不同的对话。" : "Choose two different conversations."}</p>
-      : <>
-        <div className="grid grid-cols-2 gap-1 border-b border-ui bg-surface p-2 md:hidden">
-          <button type="button" onClick={() => setActiveSide("left")} aria-pressed={activeSide === "left"} className={`min-h-10 rounded-md text-sm ${activeSide === "left" ? "bg-subtle font-medium" : "text-secondary"}`}>{zh ? "左侧" : "Left"}</button>
-          <button type="button" onClick={() => setActiveSide("right")} aria-pressed={activeSide === "right"} className={`min-h-10 rounded-md text-sm ${activeSide === "right" ? "bg-subtle font-medium" : "text-secondary"}`}>{zh ? "右侧" : "Right"}</button>
-        </div>
-        <div className="grid min-h-0 flex-1 gap-px overflow-hidden bg-ui md:grid-cols-2">
-          <div className={activeSide === "left" ? "min-h-0" : "hidden min-h-0 md:block"}><ComparePane key={leftId} conversationId={leftId} label={zh ? "左侧对话" : "Left conversation"} zh={zh} /></div>
-          <div className={activeSide === "right" ? "min-h-0" : "hidden min-h-0 md:block"}><ComparePane key={rightId} conversationId={rightId} label={zh ? "右侧对话" : "Right conversation"} zh={zh} /></div>
-        </div>
-      </>}
-  </main>;
+  const generation = useSyncExternalStore(subscribeIdentity, authenticationGeneration, () => 0);
+  return <TogetherWorkspace key={generation} />;
 }
-
-function ComparePane({ conversationId, label, zh }: { conversationId: string; label: string; zh: boolean }) {
-  const conversation = useQuery({ queryKey: ["compare-conversation", conversationId], queryFn: ({ signal }) => getConversation(conversationId, signal) });
-  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
-  const [targetBlockId, setTargetBlockId] = useState<string | null>(null);
-  const [navigationError, setNavigationError] = useState(false);
-  const [navigationAttempt, setNavigationAttempt] = useState(0);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const navigationToken = useRef(0);
-  const turn = useQuery({
-    queryKey: ["compare-turn", conversationId, activeMessageId],
-    queryFn: ({ signal }) => getConversationReaderTurn(conversationId, activeMessageId ?? undefined, signal),
-    enabled: conversation.isSuccess,
-  });
-
+function TogetherWorkspace() {
+  const params = new URLSearchParams(useSearchParams()?.toString() ?? ""), router = useRouter(), zh = usePreferences().resolvedLocale === "zh-CN";
+  const initial = useRef([...new Set([params.get("left"), params.get("right")].filter((id): id is string => Boolean(id)))].slice(0, TOGETHER_MAX_TABS));
+  const [tabs, setTabs] = useState<Tab[]>(() => initial.current.map(id => ({ id, sequence: 0, target: togetherTarget(params.get(id === params.get("right") ? "rightHref" : "leftHref") ?? "") })));
+  const [visible, setVisible] = useState<string[]>(initial.current.slice(0, 2));
+  const initialAnnotation = useRef(tabs.find(tab => tab.target?.annotationId));
+  const [activeId, setActiveId] = useState(initialAnnotation.current?.id ?? initial.current[0] ?? "");
+  const [choosing, setChoosing] = useState(params.has("choose") || initial.current.length < 2);
+  const [annotationsOpen, setAnnotationsOpen] = useState(Boolean(initialAnnotation.current));
+  const [annotationTarget, setAnnotationTarget] = useState<{ conversationId: string; id: string } | null>(() => initialAnnotation.current?.target?.annotationId
+    ? { conversationId: initialAnnotation.current.id, id: initialAnnotation.current.target.annotationId } : null);
+  const [paneStates, setPaneStates] = useState<Record<string, TogetherPaneState>>({});
+  const [width, setWidth] = useState(0), [fraction, setFraction] = useState(.5);
+  const [notice, setNotice] = useState("");
+  const leaveGuard = useRef<AnnotationLeaveGuard | null>(null);
+  const focusAfterLeave = useRef(false);
+  const leaving = useRef(false), mounted = useRef(true), active = useRef(activeId);
+  active.current = activeId;
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  function beforeLeaving(action: () => void): boolean {
+    if (leaving.current) return false;
+    const guard = leaveGuard.current;
+    if (!guard?.needsConfirmation()) { action(); return true; }
+    leaving.current = true;
+    const owner = activeId;
+    void guard.confirm().then(allowed => {
+      if (allowed && mounted.current && active.current === owner) { focusAfterLeave.current = true; action(); }
+    }).catch(() => { /* A failed confirmation cannot authorize leaving. */ }).finally(() => { leaving.current = false; });
+    return false;
+  }
+  const titles = useQueries({ queries: tabs.map(tab => ({
+    queryKey: ["compare-conversation", tab.id],
+    queryFn: ({ signal }: { signal: AbortSignal }) => getConversation(tab.id, signal),
+  })) });
+  const body = useRef<HTMLDivElement>(null), snapshots = useRef(new Map<string, TogetherSnapshot>());
+  const handles = useRef(new Map<string, ReturnType<typeof createRef<TogetherPaneHandle>>>());
+  useLayoutEffect(() => {
+    if (!focusAfterLeave.current) return;
+    focusAfterLeave.current = false;
+    handles.current.get(activeId)?.current?.focus();
+  }, [activeId]);
+  const closed = useRef(new Set<string>());
+  const snapshot = useCallback((id: string, value: TogetherSnapshot) => { if (!closed.current.has(id)) snapshots.current.set(id, value); }, []);
+  const receive = useCallback((id: string, value: TogetherPaneState) => {
+    setPaneStates(current => ({ ...current, [id]: value }));
+    setTabs(current => current.map(tab => tab.id === id && tab.title !== value.title ? { ...tab, title: value.title } : tab));
+  }, []);
   useEffect(() => {
-    if (!targetBlockId || !turn.data || !activeMessageId || !turn.data.items.some(item => item.id === activeMessageId)) return;
-    const token = ++navigationToken.current;
-    const root = rootRef.current;
-    if (!root) return;
-    const current = () => navigationToken.current === token && root.isConnected;
-    let lease: ReaderBlockLease | null = null;
-    root.dataset.navigationStage = "aligning:compare";
-    void (async () => {
-      try {
-        const blockIndex = Number(targetBlockId.slice(targetBlockId.lastIndexOf("-") + 1));
-        lease = await acquireReaderBlockLease(activeMessageId, blockIndex, current);
-        if (!current()) return;
-        const target = document.getElementById(targetBlockId);
-        if (!lease || !target || !root.contains(target)) { setNavigationError(true); return; }
-        const result = await navigateMountedTarget({ root, targetId: lease.targetId, offset: 24, alignmentTolerance: 1, tokenIsCurrent: current });
-        if (!current()) return;
-        setNavigationError(!result.ok);
-        if (result.ok) setTargetBlockId(null);
-      } catch {
-        if (current()) setNavigationError(true);
-      } finally {
-        if (current()) {
-          delete root.dataset.navigationStage;
-          // Rebase ordinary geometry before releasing the measured virtual
-          // target. The navigator's earlier release still saw this pane busy.
-          root.dispatchEvent(new CustomEvent("chat-reader:position-released"));
-        }
-        lease?.release();
-        lease = null;
-      }
-    })();
-    return () => {
-      navigationToken.current++;
-      delete root.dataset.navigationStage;
-      cancelReaderPosition(root);
-      root.dispatchEvent(new CustomEvent("chat-reader:position-released"));
-      lease?.release();
-      lease = null;
-    };
-  }, [targetBlockId, turn.data, activeMessageId, navigationAttempt]);
-
-  const cancelNavigation = () => {
-    navigationToken.current++;
-    cancelReaderPosition(rootRef.current);
-    setTargetBlockId(null);
-    setNavigationError(false);
-  };
-
-  if (conversation.isPending) return <section className="min-h-0 bg-page p-4 text-sm text-secondary">{zh ? "正在加载…" : "Loading…"}</section>;
-  if (conversation.isError || !conversation.data) return <section className="min-h-0 bg-page p-4 text-sm text-[var(--danger)]" role="alert">{label}: {zh ? "无法读取此对话。" : "This conversation could not be read."}<button type="button" className="ml-2 min-h-11 underline" onClick={() => void conversation.refetch()}>{zh ? "重试本侧" : "Retry this side"}</button></section>;
-  const title = conversation.data.display_title || conversation.data.title;
-  const activeTurn = turn.data;
-  return <section className="flex h-full min-h-0 min-w-0 flex-col bg-page" aria-label={label}>
-    <header className="shrink-0 border-b border-ui px-3 py-2"><h2 className="truncate text-sm font-semibold">{title}</h2><div className="mt-2 flex min-w-0 gap-2">
-      <details className="relative min-w-0 flex-1">
-        <summary className="min-h-9 cursor-pointer rounded-md border border-ui px-3 py-2 text-xs text-secondary">{zh ? "对话目录" : "Dialogue index"}</summary>
-        <div className="absolute left-0 top-full z-10 mt-1 max-h-[55vh] w-[min(90vw,28rem)] overflow-y-auto rounded-lg border border-ui bg-surface p-2 shadow-xl">
-          <ConversationIndex conversationId={conversationId} sourceKey={`compare:${conversationId}`} mode="sheet" ready={conversation.isSuccess} onNavigate={item => { cancelNavigation(); setActiveMessageId(item.messageId); }} />
-        </div>
-      </details>
-      <details className="relative min-w-0 flex-1">
-        <summary className="min-h-9 cursor-pointer rounded-md border border-ui px-3 py-2 text-xs text-secondary">{zh ? "章节目录" : "Sections"}</summary>
-        <div className="absolute right-0 top-full z-10 mt-1 max-h-[55vh] w-[min(90vw,28rem)] overflow-y-auto rounded-lg border border-ui bg-surface p-2 shadow-xl">
-          <ConversationToc conversationId={conversationId} sourceKey={`compare:${conversationId}`} activeMessageId={activeMessageId ?? activeTurn?.items[0]?.id} mode="sheet" ready={Boolean(activeTurn)} onNavigate={item => { navigationToken.current++; setNavigationError(false); setActiveMessageId(item.message_id); setTargetBlockId(`block-${item.message_id}-${item.block_index}`); setNavigationAttempt(value => value + 1); }} />
-        </div>
-      </details>
-    </div></header>
-    {navigationError ? <div role="alert" className="px-3 text-xs text-secondary">{zh ? "尚未定位到章节，正文仍保留。" : "The section could not be located. Content is preserved."}<button type="button" className="ml-2 min-h-11 underline" onClick={() => { setNavigationError(false); setNavigationAttempt(value => value + 1); }}>{zh ? "重试定位" : "Retry navigation"}</button></div> : null}
-    <div ref={rootRef} data-reader-scroll-root="true" onWheelCapture={cancelNavigation} onTouchStartCapture={cancelNavigation} onPointerDownCapture={cancelNavigation}
-      onKeyDownCapture={event => { if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) cancelNavigation(); }}
-      className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-5 [overflow-anchor:none]">
-      {turn.isPending ? <p className="text-sm text-secondary">{zh ? "正在读取完整轮次…" : "Loading complete turn…"}</p>
-        : turn.isError || !activeTurn ? <div role="alert" className="rounded-lg border border-ui bg-subtle p-3 text-sm text-secondary"><p>{zh ? "无法读取该轮次。" : "This turn could not be loaded."}</p><button type="button" onClick={() => void turn.refetch()} className="mt-2 min-h-9 text-accent">{zh ? "重试" : "Retry"}</button></div>
-          : <div className="mx-auto grid max-w-3xl gap-4">{activeTurn.items.map(message => <MessageItem key={`${conversationId}:${message.id}`} message={message} readOnly attachmentAccess={{ kind: "owner", readOnly: true }} conversationTitle={title} highlightTargetId={targetBlockId} />)}</div>}
+    const node = body.current;
+    if (!node) return;
+    const observer = new ResizeObserver(() => setWidth(node.clientWidth));
+    observer.observe(node); setWidth(node.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const open = () => setChoosing(true);
+    window.addEventListener("chat-reader:open-together", open);
+    return () => window.removeEventListener("chat-reader:open-together", open);
+  }, []);
+  const split = visible.length === 2 && width >= TOGETHER_MIN_PANE * 2 + GUTTER;
+  const minimum = Math.min(.5, TOGETHER_MIN_PANE / Math.max(1, width - GUTTER));
+  const ratio = Math.max(minimum, Math.min(1 - minimum, fraction));
+  const mountedIds = split ? visible : (activeId ? [activeId] : []);
+  function activate(id: string) {
+    if (id === activeId) return !leaving.current;
+    const allowed = beforeLeaving(() => {
+      setActiveId(id);
+      setVisible(current => current.includes(id) ? current : current.length < 2 ? [...current, id] : current.map(value => value === activeId ? id : value));
+    });
+    // A keyboard focus in the other pane must not become the confirmation's
+    // return target: cancelling would focus it and immediately ask again.
+    if (!allowed && !document.querySelector('[role="dialog"][aria-modal="true"]')) handles.current.get(activeId)?.current?.focus();
+    return allowed;
+  }
+  function choose(choice: TogetherChoice, approved = false) {
+    if (leaving.current && !approved) return;
+    if (!approved) { beforeLeaving(() => choose(choice, true)); return; }
+    const existing = tabs.find(tab => tab.id === choice.conversationId);
+    if (!existing && tabs.length >= TOGETHER_MAX_TABS) { setNotice(zh ? "最多打开 8 个对话，请先关闭一个标签。" : "Up to 8 conversations. Close a tab before opening another."); return; }
+    closed.current.delete(choice.conversationId);
+    const target = togetherTarget(choice.href);
+    if (target?.annotationId) { setAnnotationTarget({ conversationId: choice.conversationId, id: target.annotationId }); setAnnotationsOpen(true); }
+    if (target) snapshots.current.delete(choice.conversationId);
+    setTabs(current => existing ? current.map(tab => tab.id === choice.conversationId ? { ...tab, ...(target ? { target, sequence: tab.sequence + 1 } : {}) } : tab)
+      : [...current, { id: choice.conversationId, title: choice.title, target, sequence: 0 }]);
+    if (!visible.includes(choice.conversationId)) setVisible(current => current.length < 2 ? [...current, choice.conversationId]
+      : current.map(id => id !== activeId ? choice.conversationId : id));
+    setActiveId(choice.conversationId); setChoosing(false); setNotice("");
+  }
+  function closeTab(id: string, approved = false) {
+    if (leaving.current && !approved) return;
+    if (id === activeId && !approved) { beforeLeaving(() => closeTab(id, true)); return; }
+    closed.current.add(id);
+    snapshots.current.delete(id);
+    setPaneStates(current => { const next = { ...current }; delete next[id]; return next; });
+    if (annotationTarget?.conversationId === id) setAnnotationTarget(null);
+    const next = tabs.filter(tab => tab.id !== id);
+    const remaining = visible.filter(value => value !== id);
+    const replacement = next.find(tab => !remaining.includes(tab.id));
+    if (visible.includes(id) && replacement && remaining.length < 2) remaining.push(replacement.id);
+    setTabs(next); setVisible(remaining);
+    if (activeId === id) setActiveId(remaining[0] ?? next[0]?.id ?? "");
+    handles.current.delete(id);
+  }
+  const activeState = paneStates[activeId];
+  const closeWorkspace = () => beforeLeaving(() => {
+    const origin = params.get("returnTo");
+    if (origin?.startsWith("/conversations/") && !origin.includes("\\") && !origin.includes("\n")) router.push(origin);
+    else if (initial.current[0]) router.push(`/conversations/${initial.current[0]}`);
+    else router.push("/");
+  });
+  return <main className="flex h-dvh min-h-0 min-w-0 flex-col bg-page text-primary">
+    <header className="flex flex-wrap items-center gap-2 border-b border-ui bg-surface px-3 py-2">
+      <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm text-secondary hover:bg-subtle" onClick={closeWorkspace}><ArrowLeft className="h-[18px] w-[18px]" />{zh ? "返回阅读" : "Back to reading"}</button>
+      <h1 className="min-w-0 flex-1 text-sm font-semibold">{zh ? "一起阅读" : "Read together"}</h1>
+      <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm text-secondary hover:bg-subtle" title="Alt+Shift+O" onClick={() => setChoosing(true)}><Plus className="h-[18px] w-[18px]" />{zh ? "打开另一对话" : "Open another"}</button>
+    </header>
+    <nav aria-label={zh ? "已打开的对话" : "Open conversations"} className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-ui bg-surface px-2">
+      {tabs.map((tab, index) => <div key={tab.id} className={`flex shrink-0 items-center border-b-2 ${tab.id === activeId ? "border-[var(--accent)]" : "border-transparent"}`}>
+        <button type="button" aria-current={tab.id === activeId ? "page" : undefined} className="min-h-11 max-w-56 truncate px-3 text-sm text-secondary hover:text-primary" onClick={() => activate(tab.id)}>{titles[index]?.data?.display_title || titles[index]?.data?.title || paneStates[tab.id]?.title || tab.title || (zh ? "读取对话…" : "Loading conversation…")}</button>
+        <button type="button" className="inline-flex h-11 w-11 items-center justify-center text-secondary hover:bg-subtle" aria-label={`${zh ? "关闭对话" : "Close conversation"} ${paneStates[tab.id]?.title || tab.title || ""}`} onClick={() => closeTab(tab.id)}><X className="h-4 w-4" /></button>
+      </div>)}
+    </nav>
+    {notice && !choosing ? <p role="status" className="px-4 py-2 text-xs text-secondary">{notice}</p> : null}
+    <div ref={body} className="relative grid min-h-0 flex-1 overflow-hidden" style={{ gridTemplateColumns: split ? `minmax(0, ${ratio}fr) ${GUTTER}px minmax(0, ${1 - ratio}fr)` : "minmax(0, 1fr)" }}>
+      {!tabs.length ? <div className="p-6 text-sm text-secondary">{zh ? "搜索要一起阅读的对话，阅读位置和正文滚动相互独立。" : "Find conversations to read together. Each keeps its own position and scrolling."}</div> : null}
+      {mountedIds.flatMap((id, index) => {
+        const tab = tabs.find(item => item.id === id);
+        if (!tab) return [];
+        if (!handles.current.has(id)) handles.current.set(id, createRef<TogetherPaneHandle>());
+        const pane = <div key={id} className="min-h-0 min-w-0 overflow-hidden"><TogetherPane conversationId={id} zh={zh} active={activeId === id} snapshot={snapshots.current.get(id)} initialTarget={tab.target} targetSequence={tab.sequence} paneRef={handles.current.get(id)!}
+          onActivate={() => activate(id)} onState={receive} onSnapshot={snapshot} onAnnotations={() => { if (activate(id)) setAnnotationsOpen(true); }}
+          onOpenExternal={href => beforeLeaving(() => router.push(href))} /></div>;
+        if (!split || index === 0) return [pane];
+        return [<div key="divider" className="relative border-x border-ui bg-subtle"><button type="button" role="separator" aria-label={zh ? "调整阅读栏宽度" : "Resize reading panes"} aria-orientation="vertical" aria-valuemin={Math.round(minimum * 100)} aria-valuemax={Math.round((1 - minimum) * 100)} aria-valuenow={Math.round(ratio * 100)}
+          className="absolute inset-y-0 left-1/2 z-20 w-11 -translate-x-1/2 cursor-col-resize touch-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus)]"
+          onDoubleClick={() => setFraction(.5)} onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); }}
+          onPointerMove={event => { if (!event.currentTarget.hasPointerCapture(event.pointerId) || !body.current) return; const bounds = body.current.getBoundingClientRect(); setFraction(Math.max(minimum, Math.min(1 - minimum, (event.clientX - bounds.left - GUTTER / 2) / (bounds.width - GUTTER)))); }}
+          onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+          onKeyDown={event => { if (["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) { event.preventDefault(); setFraction(event.key === "Home" ? .5 : Math.max(minimum, Math.min(1 - minimum, ratio + (event.key === "ArrowLeft" ? -.025 : .025)))); } }} /></div>, pane];
+      })}
     </div>
-    <footer className="flex shrink-0 items-center justify-between border-t border-ui bg-surface px-3 py-2 text-xs text-secondary">
-      <span>{activeTurn ? (zh ? `第 ${activeTurn.start_offset + 1}–${activeTurn.end_offset} 条／共 ${activeTurn.total_messages} 条` : `Messages ${activeTurn.start_offset + 1}–${activeTurn.end_offset} of ${activeTurn.total_messages}`) : (zh ? "完整轮次" : "Complete turn")}</span>
-      <div className="flex gap-2"><button type="button" disabled={!activeTurn?.previous_anchor_message_id || turn.isFetching} onClick={() => { cancelNavigation(); setActiveMessageId(activeTurn?.previous_anchor_message_id ?? null); }} className="min-h-9 rounded border border-ui px-2 disabled:opacity-40">{zh ? "上一轮" : "Previous turn"}</button><button type="button" disabled={!activeTurn?.next_anchor_message_id || turn.isFetching} onClick={() => { cancelNavigation(); setActiveMessageId(activeTurn?.next_anchor_message_id ?? null); }} className="min-h-9 rounded border border-ui px-2 disabled:opacity-40">{zh ? "下一轮" : "Next turn"}</button></div>
-    </footer>
-  </section>;
+    {activeState && activeId ? <AnnotationWorkspace leaveGuardRef={leaveGuard} conversationId={activeId} messages={activeState.messages} activeMessageId={activeState.messageId} initialAnnotationId={annotationTarget?.conversationId === activeId ? annotationTarget.id : undefined} repository={remoteAnnotationRepository} open={annotationsOpen} onOpenChange={setAnnotationsOpen}
+      onNavigate={target => handles.current.get(activeId)?.current?.navigate(target) ?? { ok: false, targetId: "", reason: "target-not-mounted" }} /> : null}
+    <TogetherChooser open={choosing} onClose={() => setChoosing(false)} onChoose={choose} openedIds={tabs.map(tab => tab.id)} notice={notice} onOpenExternal={href => beforeLeaving(() => router.push(href))} />
+  </main>;
 }

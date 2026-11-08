@@ -25,3 +25,13 @@ test("offline annotation Markdown serializer follows the shared synthetic v1 fix
   assert.match(result, /Synthetic \*\*comment\*\*\./);
   assert.match(result, /批注数：1/);
 });
+
+for (const zh of [false, true]) test(`standalone v2 matches the shared ${zh ? "Chinese" : "English"} golden document byte for byte`, () => {
+  const fixture = JSON.parse(readFileSync(new URL("./fixtures/annotation-document-v2.json", import.meta.url), "utf8"));
+  const result = loaded.exports.readableAnnotationHeader(fixture.title, fixture.exported_at, 1, "selected", "server", zh)
+    + loaded.exports.readableAnnotationEntry(fixture.record, 1, zh, fixture.source_base);
+  assert.equal(result, fixture[zh ? "expected_zh" : "expected_en"].join("\n"));
+  for (const example of fixture.location_cases) assert.equal(
+    loaded.exports.annotationLocationLabel(example.record, zh), example[zh ? "zh" : "en"],
+  );
+});

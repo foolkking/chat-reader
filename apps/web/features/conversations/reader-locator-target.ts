@@ -32,6 +32,11 @@ export function annotationNavigationTarget(
 ): NavigateTarget {
   const unresolved = annotation.anchor_status === "orphaned" || annotation.anchor_status === "needs_review";
   const blockIndex = unresolved ? undefined : explicitBlockIndex ?? annotation.start_block_index ?? undefined;
+  const savedAnchor = annotation.metadata?.reading_anchor as Record<string, unknown> | undefined;
+  const nonTextOffset = annotation.annotation_type === "bookmark" && !annotation.quote
+    && annotation.metadata?.bookmark_kind === "reading_point" && typeof savedAnchor?.block_offset === "number"
+    && Number.isFinite(savedAnchor.block_offset) && savedAnchor.block_offset >= 0
+    ? savedAnchor.block_offset : null;
   return {
     messageId: annotation.message_id ?? "",
     messageVersionId: annotation.message_version_id,
@@ -43,6 +48,7 @@ export function annotationNavigationTarget(
     suffix: blockIndex === undefined ? null : annotation.suffix,
     anchorStatus: annotation.anchor_status,
     annotationId: annotation.id,
+    ...(blockIndex !== undefined && nonTextOffset !== null ? { alignmentOffset: 120 - nonTextOffset } : {}),
     preferTocPipeline: true,
     allowMessageFallback: true,
     source: "annotation",

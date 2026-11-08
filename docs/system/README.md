@@ -10,6 +10,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
+| [READING_TOOLS_CONTRACT.md](READING_TOOLS_CONTRACT.md) | 11 月 8 日未发布候选：比例条/导入默认、一起阅读、工具/标签、位置书签及批注文档 |
 | [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) | 产品边界、模块和部署总览 |
 | [FEATURE_INVENTORY.md](FEATURE_INVENTORY.md) | 当前能力与明确未实现项 |
 | [PAGE_AND_ROUTE_MAP.md](PAGE_AND_ROUTE_MAP.md) | 页面、覆盖层和跳转关系 |

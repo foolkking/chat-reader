@@ -203,6 +203,37 @@ def entry_read(row: UserFeatureEntry) -> UserFeatureEntryRead:
     )
 
 
+def merge_tags(db: Session, subject_key: str, source_id: uuid.UUID, target_id: uuid.UUID,
+               source_revision: int, target_revision: int, scope: OwnershipScope) -> UserFeatureEntryRead:
+    """Atomic union and saved-search redirect, with the existing collection lock order."""
+    if source_id == target_id:
+        raise UserFeatureEntryConflict("Choose two different tags.")
+    lock_feature_collection(db, subject_key, "conversation-tag")
+    lock_feature_collection(db, subject_key, "saved-search")
+    rows = db.scalars(select(UserFeatureEntry).where(
+        UserFeatureEntry.subject_key == subject_key, UserFeatureEntry.collection == "conversation-tag",
+        UserFeatureEntry.id.in_([source_id, target_id]),
+    ).order_by(UserFeatureEntry.id).with_for_update()).all()
+    by_id = {row.id: row for row in rows}
+    source, target = by_id.get(source_id), by_id.get(target_id)
+    if source is None or target is None or source.revision != source_revision or target.revision != target_revision:
+        raise UserFeatureEntryConflict("Tags changed. Read the current result before merging.")
+    merged = sorted(set(source.value.get("conversation_ids", [])) | set(target.value.get("conversation_ids", [])))
+    # Validate before any write. Never truncate a collection at its limit.
+    value = ConversationTagValue(name=target.value["name"], conversation_ids=merged).model_dump(mode="json")
+    result = write_entry(db, subject_key, "conversation-tag", target_id, target_revision, value, scope)
+    for search in db.scalars(select(UserFeatureEntry).where(
+        UserFeatureEntry.subject_key == subject_key, UserFeatureEntry.collection == "saved-search",
+        UserFeatureEntry.value["tag_id"].as_string() == str(source_id),
+    ).with_for_update()):
+        search.value = {**search.value, "tag_id": str(target_id)}
+        search.revision += 1
+    _invalidate_tag_packages(db, source.value, None, scope)
+    db.delete(source)
+    db.flush()
+    return result
+
+
 def _ensure_collection(collection: str):
     schema = VALUE_SCHEMAS.get(collection)
     if schema is None:

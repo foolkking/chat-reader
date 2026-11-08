@@ -299,3 +299,78 @@ def test_header_inspection_checks_bytes_before_pillow(client, monkeypatch, tmp_p
     assert save(client, case, 100, expected=50).status_code == 413
     with database() as db:
         assert db.get(Attachment, uuid.UUID(case["raster"])).metadata_["image_display_v1"]["scale_percent"] == 50
+
+
+def test_new_import_fit_is_once_only_original_preserving_and_private(client, monkeypatch, tmp_path):
+    import app.services.assets.image_display as service
+    from app.services.ownership import OwnershipScope
+    from test_message_markdown_copy import png
+    monkeypatch.setattr("app.core.memory.available_memory_bytes", lambda: 1024 ** 3)
+    case = seed(monkeypatch, tmp_path)
+    original = png(size=(600, 400), color=(20, 100, 50, 100))
+    replace_raster(case, original)
+    with database() as db:
+        row = db.get(Attachment, uuid.UUID(case["raster"]))
+        scope = OwnershipScope(None, include_legacy_unowned=True)
+        assert service.initialize_import_display(db, row, 300, scope) is None
+        selected = service.selected_display(row)
+        assert selected["scale_percent"] == 50 and selected["width"] == 300
+        assert selected["origin"] == "import_fit"
+        # Retrying or another viewport must not recompute a committed default.
+        assert service.initialize_import_display(db, row, 150, scope) is None
+        assert service.selected_display(row) == selected
+        assert db.query(AttachmentPublicLink).count() == 0
+        db.commit()
+    assert client.get(f"/api/attachments/{case['raster']}/content").content == original
+    link = publish(client, case).json()["urls"][case["raster"]]
+    assert size(client.get(link)) == (300, 200)
+    with Image.open(io.BytesIO(client.get(link).content)) as image:
+        assert image.getpixel((0, 0))[3] == 100
+    # An explicit gesture takes over the one setting, without another layer.
+    assert save(client, case, 25, expected=50).status_code == 200
+    assert size(client.get(link)) == (150, 100)
+    with database() as db:
+        assert "origin" not in service.selected_display(db.get(Attachment, uuid.UUID(case["raster"])))
+
+
+@pytest.mark.parametrize("boundary", ["memory", "slot", "svg", "animated", "database-slot"])
+def test_import_fit_safety_skip_preserves_original_and_unconfigured_state(client, monkeypatch, tmp_path, boundary):
+    import app.services.assets.image_display as service
+    from app.services.ownership import OwnershipScope
+    from test_message_markdown_copy import png
+    case = seed(monkeypatch, tmp_path)
+    replace_raster(case, png(size=(600, 400)))
+    monkeypatch.setattr("app.core.memory.available_memory_bytes", lambda: 1024 ** 3)
+    if boundary == "memory":
+        monkeypatch.setattr("app.core.memory.available_memory_bytes", lambda: 1)
+    if boundary == "database-slot":
+        monkeypatch.setattr(service, "acquire_conversion_transaction", lambda db: False)
+    if boundary == "animated":
+        out = io.BytesIO()
+        Image.new("RGB", (600, 400), "red").save(out, "GIF", save_all=True,
+            append_images=[Image.new("RGB", (600, 400), "blue")], duration=50, loop=0)
+        replace_raster(case, out.getvalue(), "image/gif")
+    key = "svg" if boundary == "svg" else "raster"
+    before = client.get(f"/api/attachments/{case[key]}/content").content
+    if boundary == "slot":
+        assert service.conversion_slot.acquire(blocking=False)
+    try:
+        with database() as db:
+            row = db.get(Attachment, uuid.UUID(case[key]))
+            warning = service.initialize_import_display(db, row, 300, OwnershipScope(None, include_legacy_unowned=True))
+            assert "original retained" in warning
+            assert service.selected_display(row) is None
+            assert db.query(AttachmentPublicLink).count() == 0
+            db.commit()
+    finally:
+        if boundary == "slot":
+            service.conversion_slot.release()
+    assert client.get(f"/api/attachments/{case[key]}/content").content == before
+
+
+@pytest.mark.parametrize("lane", [True, 43, 8193, 400.5, "400"])
+def test_import_fit_lane_requires_a_bounded_integer(lane):
+    from pydantic import ValidationError
+    from app.schemas.import_schema import ImportCommitOptions
+    with pytest.raises(ValidationError):
+        ImportCommitOptions(image_lane_width=lane)

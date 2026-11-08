@@ -374,7 +374,7 @@ test("far annotation jump and refresh restore hydrate heavy content", async ({ p
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/conversations/${conversationId}?annotations=open`);
 
-  await page.locator('[data-annotation-mode="floating"]').getByRole("button", { name: /^(全部批注|All)$/ }).click();
+  await page.locator('[data-annotation-mode="floating"]').locator('[data-annotation-tab="all"]').click();
   const annotation = page.getByText(annotationQuote, { exact: true });
   await expect(annotation).toBeVisible();
   await annotation.click();
@@ -531,7 +531,7 @@ test("annotation actions dismiss outside or with Escape and restore the source a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/conversations/${conversationId}?annotations=open`);
   const workspace = page.locator('[data-annotation-mode="floating"]');
-  await workspace.getByRole("button", { name: /^(全部批注|All)$/ }).click();
+  await workspace.locator('[data-annotation-tab="all"]').click();
   await page.getByText(annotationQuote, { exact: true }).click();
 
   const targetBlock = page.locator(`#block-${targetMessageId}-${targetBlockIndex}`);
@@ -599,7 +599,7 @@ test("failed annotation location preserves the current reader content", async ({
     await route.continue();
   });
   const workspace = page.locator('[data-annotation-mode="floating"]');
-  await workspace.getByRole("button", { name: /^(全部批注|All)$/ }).click();
+  await workspace.locator('[data-annotation-tab="all"]').click();
   await page.getByText(annotationQuote, { exact: true }).click();
 
   await expect(workspace.getByText("无法定位批注原文，当前正文保持不变。")).toBeVisible();

@@ -21,7 +21,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Archive, ChevronDown, ChevronRight, Clock3, Command, Folder, Import, ListTodo, PanelLeftClose, Plus, X } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Clock3, Command, Folder, Import, ListTodo, PanelLeftClose, Plus, Tags, X } from "lucide-react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -695,6 +695,7 @@ function SidebarContent(props: SidebarContentProps) {
         <ImportTaskMonitor placement="sidebar" />
         <nav className="grid grid-cols-2 gap-1 md:grid-cols-1" aria-label={t("quickNavigation")}>
           <NavLink href="/recent" label={t("recent")} active={props.pathname === "/recent"} icon={<Clock3 className="h-4 w-4" />} onClick={props.closeMobile} className="md:hidden" />
+          <NavLink href="/tags" label={zh ? "标签" : "Tags"} active={props.pathname === "/tags"} icon={<Tags className="h-4 w-4" />} onClick={props.closeMobile} />
           <NavLink href="/archived" label={t("archived")} active={props.pathname === "/archived"} icon={<Archive className="h-4 w-4" />} onClick={props.closeMobile} />
         </nav>
 

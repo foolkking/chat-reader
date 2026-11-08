@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -94,7 +95,7 @@ for (const legacy of [false, true]) test(`${legacy ? "legacy optional-member com
   await page.goto(`/conversations/${id}`);
   await expect(page.locator("article[data-message-id]").first()).toBeVisible();
   await page.getByRole("button", { name: "Message actions", exact: true }).click();
-  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await openReaderAction(page, "export");
   await page.getByRole("checkbox", { name: /^Include attachments/ }).check();
   await page.getByRole("button", { name: "Generate export", exact: true }).click();
   const online = await downloadPackage(page, info, "online");
@@ -130,7 +131,7 @@ for (const legacy of [false, true]) test(`${legacy ? "legacy optional-member com
   await expect(page.locator(`[data-message-id="${message.id}"]`).first()).toBeVisible();
   await page.screenshot({ path: info.outputPath("offline-reader-after-reload.png") });
   await page.getByRole("button", { name: "Message actions", exact: true }).click();
-  await page.getByRole("button", { name: "Export", exact: true }).click();
+  await openReaderAction(page, "export");
   const panel = page.getByTestId("offline-export-panel");
   await panel.getByLabel(/^Include cached attachments/).check();
   await panel.getByText("More content options", { exact: true }).click();

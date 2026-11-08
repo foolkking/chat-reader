@@ -34,7 +34,7 @@ test("one Reader instance replays the same canonical target once per explicit ac
   const bindings = {
     pendingTargetMessageId: null, targetMessageId: "synthetic-message",
     targetMessageVersionId: "synthetic-version", targetRenderBlockId: "synthetic-block",
-    targetBlockIndex: 3, targetCharacterOffset: 12, targetEndCharacterOffset: 18,
+    targetBlockIndex: 3, targetCharacterOffset: 12, targetEndCharacterOffset: 18, targetBlockOffset: null,
     requestedAnnotationId: null, requestedAttachmentId: null, searchReplayKey: 0,
     targetNavigationKeyRef: { current: null }, restoreAttemptedRef: { current: false },
     setPendingTargetMessageId: () => undefined,
@@ -105,11 +105,12 @@ test("annotation replay resets only visibility filters and waits for a committed
   const calls = [];
   const reset = findEffect(workspace, "setFocusedAnnotationId(initialAnnotationId)");
   const setters = Object.fromEntries([
-    "setFocusedAnnotationId", "setView", "setAnnotationQuery", "setTypeFilter", "setColorFilter", "setStatusFilter",
+    "setFocusedAnnotationId", "setView", "setCurrentMessageOnly", "setAnnotationQuery", "setTypeFilter", "setColorFilter", "setStatusFilter",
   ].map(name => [name, value => calls.push([name, value])]));
-  runEffect(reset, { initialAnnotationId: "synthetic-annotation", ...setters });
+  runEffect(reset, { initialAnnotationId: "synthetic-annotation", initialMarkTab: { current: null }, ...setters });
   assert.deepEqual(calls, [
     ["setFocusedAnnotationId", "synthetic-annotation"], ["setView", "all"],
+    ["setCurrentMessageOnly", false],
     ["setAnnotationQuery", ""], ["setTypeFilter", "all"], ["setColorFilter", "all"], ["setStatusFilter", "all"],
   ]);
   const scroll = findEffect(workspace, "document.getElementById(`annotation-${focusedAnnotationId}`)");

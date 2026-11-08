@@ -4,7 +4,7 @@ import { releaseExportScope } from "../../lib/export-usage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Bell, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitBranch, GitCompareArrows, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, Tag, X } from "lucide-react";
+import { ArrowLeft, BookmarkPlus, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitCompareArrows, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   ApiRequestError,
   deleteMessage,
@@ -53,6 +53,7 @@ import { useInteractionDialog } from "../../components/interaction-dialog-provid
 import { AnnotationWorkspace } from "../annotations/annotation-workspace";
 import { ReadingPositionSyncStatus } from "../../components/reading-position-sync-status";
 import { ReadingListButton } from "../reading/reading-list-button";
+import { ConversationTagStrip } from "../reading/conversation-tag-strip";
 import { ConversationTagsPanel } from "../reading/conversation-tags-panel";
 import { NewMessagesPanel } from "../reading/new-messages-panel";
 import { ConversationSplitWorkspace } from "../editing/conversation-split-workspace";
@@ -68,7 +69,8 @@ import { tocNavigationTarget } from "./reader-locator-target";
 import { ConversationFilesPanel } from "../attachments/conversation-files-panel";
 import { OfflineConversationFilesPanel } from "../attachments/offline-conversation-files-panel";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
-import { ConversationLineagePanel } from "./conversation-lineage-panel";
+import { TogetherChooser, type TogetherChoice } from "../compare/together-chooser";
+import { captureReadingPosition } from "./reading-position-capture";
 import { resolveActiveReadingTarget } from "./reader-active-position";
 import { TocRefreshDialog } from "../toc/toc-refresh-dialog";
 import { ReaderMarkdownCopyBoundary } from "./reader-markdown-copy";
@@ -126,6 +128,8 @@ export function ConversationReader({
   const targetBlockIndex = numberOrNull(searchParams?.get("blockIndex") ?? null);
   const targetCharacterOffset = numberOrNull(searchParams?.get("characterOffset") ?? null);
   const targetEndCharacterOffset = numberOrNull(searchParams?.get("endCharacterOffset") ?? null);
+  const rawBlockOffset = numberOrNull(searchParams?.get("blockOffset") ?? null);
+  const targetBlockOffset = rawBlockOffset !== null && Number.isSafeInteger(rawBlockOffset) && rawBlockOffset >= 0 ? rawBlockOffset : null;
   const searchQueueId = searchParams?.get("searchQueue") ?? null;
   const searchQueueOwnerId = getCurrentOfflineRuntimeUserId();
   const rawSearchQueueIndex = searchParams?.get("searchIndex");
@@ -209,7 +213,13 @@ export function ConversationReader({
     setSearchHighlight(null);
   }, [publishSearchNavigation]);
   const [showFiles, setShowFiles] = useState(false);
-  const [lineageOpen, setLineageOpen] = useState(false);
+  const [togetherOpen, setTogetherOpen] = useState(false);
+  useEffect(() => {
+    if (dataSource.mode !== "remote") return;
+    const show = () => setTogetherOpen(true);
+    window.addEventListener("chat-reader:open-together", show);
+    return () => window.removeEventListener("chat-reader:open-together", show);
+  }, [dataSource.mode]);
   const [searchAttachmentTarget, setSearchAttachmentTarget] = useState<{ conversationId: string; attachmentId: string } | null>(null);
   const fileSearchAttachmentId = searchAttachmentTarget?.conversationId === conversationId ? searchAttachmentTarget.attachmentId : null;
   const [searchAnnotationTarget, setSearchAnnotationTarget] = useState<{ conversationId: string; annotationId: string } | null>(null);
@@ -1987,7 +1997,7 @@ export function ConversationReader({
     if (requestedAttachmentId) {
       return;
     }
-    const navigationKey = `${messageId}:${targetMessageVersionId ?? ""}:${targetRenderBlockId ?? ""}:${targetBlockIndex ?? ""}:${targetCharacterOffset ?? ""}:${targetEndCharacterOffset ?? ""}:${requestedAnnotationId ?? ""}:${searchReplayKey}`;
+    const navigationKey = `${messageId}:${targetMessageVersionId ?? ""}:${targetRenderBlockId ?? ""}:${targetBlockIndex ?? ""}:${targetCharacterOffset ?? ""}:${targetEndCharacterOffset ?? ""}:${targetBlockOffset ?? ""}:${requestedAnnotationId ?? ""}:${searchReplayKey}`;
     if (targetNavigationKeyRef.current === navigationKey) {
       return;
     }
@@ -1999,13 +2009,14 @@ export function ConversationReader({
       blockIndex: targetBlockIndex ?? undefined,
       characterOffset: targetCharacterOffset ?? undefined,
       endCharacterOffset: targetEndCharacterOffset ?? undefined,
+      ...(targetCharacterOffset === null && targetBlockOffset !== null ? { alignmentOffset: ACTIVE_READING_OFFSET - targetBlockOffset } : {}),
       annotationId: requestedAnnotationId ?? undefined,
       source: requestedAnnotationId ? "annotation" : "search",
     }).finally(() => {
       restoreAttemptedRef.current = true;
       setPendingTargetMessageId(null);
     });
-  }, [navigateToTarget, pendingTargetMessageId, requestedAnnotationId, requestedAttachmentId, searchReplayKey, targetBlockIndex, targetCharacterOffset, targetEndCharacterOffset, targetMessageId, targetMessageVersionId, targetRenderBlockId]);
+  }, [navigateToTarget, pendingTargetMessageId, requestedAnnotationId, requestedAttachmentId, searchReplayKey, targetBlockIndex, targetBlockOffset, targetCharacterOffset, targetEndCharacterOffset, targetMessageId, targetMessageVersionId, targetRenderBlockId]);
 
   useEffect(() => {
     if (!targetMessageId && positionQuery.isError && windowQuery.isSuccess) {
@@ -3121,6 +3132,14 @@ export function ConversationReader({
       onSelect: () => { void openUtilityPanel("search"); },
     },
     {
+      id: "save-position", label: resolvedLocale === "zh-CN" ? "保存当前位置" : "Save reading position", icon: BookmarkPlus,
+      onSelect: () => {
+        const root = scrollContainerRef.current;
+        const position = root ? captureReadingPosition(root, messages, total) : null;
+        if (position?.message_id) window.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", { detail: { conversationId, messageId: position.message_id, position } }));
+      },
+    },
+    {
       id: "annotations",
       label: t("annotations"),
       icon: MessageSquareText,
@@ -3144,35 +3163,17 @@ export function ConversationReader({
       icon: Share2,
       onSelect: () => { void openUtilityPanel("share"); },
     } as ReaderHeaderAction] : []),
-    ...(dataSource.mode === "remote" || dataSource.mode === "offline" ? [{
-      id: "tags",
-      label: resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags",
-      icon: Tag,
-      onSelect: () => { void openUtilityPanel("tags"); },
-    } as ReaderHeaderAction] : []),
-    ...(dataSource.mode === "remote" ? [{
-      id: "updates",
-      label: resolvedLocale === "zh-CN" ? "新增消息" : "New messages",
-      icon: Bell,
-      onSelect: () => { void openUtilityPanel("updates"); },
-    } as ReaderHeaderAction] : []),
     ...(dataSource.mode === "remote" ? [{
       id: "compare",
-      label: resolvedLocale === "zh-CN" ? "对照阅读" : "Compare conversation",
+      label: resolvedLocale === "zh-CN" ? "一起阅读" : "Read together",
       icon: GitCompareArrows,
-      onSelect: () => router.push(`/compare?left=${encodeURIComponent(conversation.id)}`),
+      onSelect: () => window.dispatchEvent(new Event("chat-reader:open-together")),
     } as ReaderHeaderAction] : []),
     ...(dataSource.capabilities.export ? [{
       id: "export",
       label: t("export"),
       icon: FileOutput,
       onSelect: () => { void openUtilityPanel("export"); },
-    } as ReaderHeaderAction] : []),
-    ...(dataSource.mode === "remote" ? [{
-      id: "lineage",
-      label: resolvedLocale === "zh-CN" ? "来源追溯" : "Conversation lineage",
-      icon: GitBranch,
-      onSelect: () => setLineageOpen(true),
     } as ReaderHeaderAction] : []),
     ...(canBrowseAttachments ? [{
       id: "conversation-files",
@@ -3201,9 +3202,12 @@ export function ConversationReader({
       onSelect: () => { void openSplitWorkspace(); },
     }] : []),
   ];
-  const desktopPrimaryActionIds = new Set(["edit-source", "search", "annotations", "continuation", "focus-mode"]);
-  const desktopPrimaryActions = headerActions.filter((action) => desktopPrimaryActionIds.has(action.id));
-  const desktopSecondaryActions = headerActions.filter((action) => !desktopPrimaryActionIds.has(action.id));
+  const desktopPrimaryActionIds = new Set(["search", "save-position", "annotations", "compare", "focus-mode"]);
+  const desktopPrimaryActions = ["search", "save-position", "annotations", "compare", "focus-mode"]
+    .flatMap(id => headerActions.filter(action => action.id === id));
+  const desktopSecondaryActions = headerActions.filter((action) => (!desktopPrimaryActionIds.has(action.id) || ["compare", "focus-mode"].includes(action.id))).map(action => ({ ...action,
+    group: ["share", "export", "conversation-files"].includes(action.id) ? (resolvedLocale === "zh-CN" ? "数据与分享" : "Data and sharing") : (resolvedLocale === "zh-CN" ? "内容工具" : "Content tools"),
+  })).sort((a, b) => Number(["share", "export", "conversation-files"].includes(a.id)) - Number(["share", "export", "conversation-files"].includes(b.id)));
 
   const navigationTabs = (
     <div className="flex items-center gap-2">
@@ -3285,6 +3289,7 @@ export function ConversationReader({
     </button>
   ) : null;
   const mobileHeaderActions: ReaderHeaderAction[] = [
+    ...headerActions.filter(action => ["save-position", "annotations", "compare"].includes(action.id)),
     {
       id: "reader-navigation",
       label: t("readerNavigation"),
@@ -3303,10 +3308,27 @@ export function ConversationReader({
       icon: ArrowLeft,
       onSelect: () => { void returnToTocOrigin(); },
     } as ReaderHeaderAction] : []),
-    ...headerActions.filter((action) => action.id !== "search" && action.id !== "edit-source"),
+    ...headerActions.filter((action) => !["search", "edit-source", "save-position", "annotations", "compare"].includes(action.id)),
   ];
 
   const navigationTargetIsAttachment = Boolean(lastNavigationTargetRef.current?.attachmentId);
+  const openTogether = (choice: TogetherChoice) => {
+    if (choice.conversationId === conversationId) { setTogetherOpen(false); return; }
+    const root = scrollContainerRef.current;
+    const position = root ? captureReadingPosition(root, messagesRef.current, total) : null;
+    const origin = new URL(window.location.href);
+    for (const name of ["messageId", "messageVersionId", "renderBlockId", "blockIndex", "characterOffset", "endCharacterOffset", "blockOffset", "annotationId", "attachmentId", "annotations", "files"]) origin.searchParams.delete(name);
+    if (position?.message_id) {
+      origin.searchParams.set("messageId", position.message_id);
+      if (position.block_index != null) origin.searchParams.set("blockIndex", String(position.block_index));
+      if (typeof position.anchor_data?.character_offset === "number") origin.searchParams.set("characterOffset", String(position.anchor_data.character_offset));
+      else origin.searchParams.set("blockOffset", String(Math.max(0, Math.round(position.scroll_offset))));
+      if (typeof position.anchor_data?.version_id === "string") origin.searchParams.set("messageVersionId", position.anchor_data.version_id);
+    }
+    const returnTo = `${origin.pathname}${origin.search}`;
+    setTogetherOpen(false);
+    router.push(`/read-together?${new URLSearchParams({ left: conversationId, right: choice.conversationId, leftHref: returnTo, rightHref: choice.href, returnTo })}`);
+  };
   const navigationFailureMessage = navigationFailureCopyV2(navigationFailureReason, resolvedLocale, navigationTargetIsAttachment);
 
   return (
@@ -3317,8 +3339,9 @@ export function ConversationReader({
         mobileOpenSignal={mobileSidebarOpenSignal}
         showMobileTrigger={false}
       /> : null}
+      {dataSource.mode === "remote" ? <TogetherChooser open={togetherOpen} onClose={() => setTogetherOpen(false)} onChoose={openTogether} openedIds={[conversationId]} /> : null}
       <section ref={readerMainSectionRef} data-reader-main-section="true" data-reader-focus={focusMode ? "on" : "off"} className="relative flex min-w-0 flex-1 flex-col">
-        <header ref={reserveMobileReaderHeaderSpace} data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible || tocReturnPoint ? "translate-y-0" : "-translate-y-full"}`}>
+        <header ref={reserveMobileReaderHeaderSpace} data-reader-toolbar data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible || tocReturnPoint ? "translate-y-0" : "-translate-y-full"}`}>
           {mergedIntoConversationId ? <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-[3vw] py-2 text-sm text-amber-900" role="status"><span className="min-w-0 flex-1">{resolvedLocale === "zh-CN" ? "此对话已合并，当前内容可能正在更新。" : "This conversation was merged and may be updating."}</span><button type="button" className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-white" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{resolvedLocale === "zh-CN" ? "打开目标对话" : "Open target"}</button></div> : null}
           {loadingProgress < 100 ? (
             <div className="absolute inset-x-0 bottom-0 h-0.5 bg-subtle">
@@ -3330,6 +3353,7 @@ export function ConversationReader({
                 <h1 className="truncate text-base font-semibold text-primary">
                   {conversation.display_title || conversation.title}
                 </h1>
+                {dataSource.mode === "remote" || dataSource.mode === "offline" ? <ConversationTagStrip conversationId={conversationId} offline={isOffline} /> : null}
                 <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-secondary">
                   <span>{loadedLabel}</span>
                 </div>
@@ -3341,7 +3365,7 @@ export function ConversationReader({
               <div className="flex shrink-0 items-center gap-1" aria-label="Primary reader actions">
                 {desktopPrimaryActions.map((action) => {
                   const Icon = action.icon;
-                  return <Fragment key={action.id}><button type="button" onClick={action.onSelect} disabled={action.disabled} data-reader-header-action={action.id} aria-pressed={action.id === "continuation" ? continuationOpen : action.id === "edit-source" ? Boolean(sourceEditorTarget) : undefined} className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-ui hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 ${action.id === "edit-source" && sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={action.label} title={action.label}><Icon className="h-[1.125rem] w-[1.125rem]" /></button>{action.id === "search" && dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}</Fragment>;
+                  return <Fragment key={action.id}><button type="button" onClick={action.onSelect} disabled={action.disabled} data-reader-header-action={action.id} aria-pressed={action.id === "continuation" ? continuationOpen : action.id === "edit-source" ? Boolean(sourceEditorTarget) : undefined} className={`${["compare", "focus-mode"].includes(action.id) ? "reader-wide-action" : "inline-flex"} h-11 w-11 items-center justify-center rounded-lg hover:bg-subtle hover:text-primary focus:outline-none focus:ring-2 focus:ring-[var(--focus)] disabled:opacity-50 ${action.id === "edit-source" && sourceEditorTarget ? "bg-[var(--accent-soft)] text-accent" : "bg-surface text-secondary"}`} aria-label={action.label} title={action.label}><Icon className="h-[1.125rem] w-[1.125rem]" /></button>{action.id === "search" && dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}</Fragment>;
                 })}
               </div>
               <ReaderHeaderActionRail
@@ -3362,9 +3386,9 @@ export function ConversationReader({
               <p className="truncate text-xs text-secondary">{loadedLabel}</p>
             </div>
             {!mobileActionsExpanded ? <button type="button" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary" aria-label={t("search")} title={t("search")}><Search className="h-5 w-5" /></button> : null}
-            {dataSource.mode === "remote" && !mobileActionsExpanded ? <ReadingListButton conversationId={conversation.id} compact /> : null}
             <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
+          {!focusMode && (dataSource.mode === "remote" || dataSource.mode === "offline") ? <div className="px-[3vw] md:hidden"><ConversationTagStrip conversationId={conversationId} offline={isOffline} /></div> : null}
           {tocReturnError ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert" data-testid="reader-return-to-toc-origin-error">
               <span className="min-w-0 flex-1">{tocReturnError}</span>
@@ -3557,9 +3581,8 @@ export function ConversationReader({
                       }}
                       onBookmark={() => {
                         window.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", {
-                          detail: { messageId: message.id, messageVersionId: message.current_version?.id },
+                          detail: { conversationId, messageId: message.id, messageVersionId: message.current_version?.id },
                         }));
-                        setAnnotationsOpenPreservingAnchor(true);
                       }}
                     />
                     );
@@ -3633,8 +3656,9 @@ export function ConversationReader({
         }}
       /> : null}
       <MobileReaderSheet open={mobileActionsExpanded} onOpenChange={setMobileActionsExpanded} title={t("readerTools")} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{t("readerTools")}</h2><button type="button" onClick={() => setMobileActionsExpanded(false)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
-        <div className="reader-aux-scroll grid min-h-0 grid-cols-2 gap-2 overflow-y-auto py-3">
-          {mobileHeaderActions.map((action) => { const Icon = action.icon; return <button key={action.id} type="button" disabled={action.disabled} onClick={() => { setMobileActionsExpanded(false); action.onSelect(); }} className="flex min-h-12 items-center gap-3 rounded-lg border border-ui bg-surface px-3 text-left text-sm text-primary disabled:opacity-50"><Icon className="h-4 w-4 shrink-0 text-accent" /><span className="min-w-0 line-clamp-2">{action.label}</span></button>; })}
+        <div className="reader-aux-scroll grid min-h-0 gap-1 overflow-y-auto py-3">
+          {dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} /> : null}
+          {mobileHeaderActions.map((action) => { const Icon = action.icon; return <button key={action.id} type="button" data-reader-header-action={action.id} disabled={action.disabled} onClick={() => { setMobileActionsExpanded(false); action.onSelect(); }} className="flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-sm text-primary hover:bg-subtle disabled:opacity-50"><Icon className="h-[18px] w-[18px] shrink-0 text-secondary" /><span className="min-w-0">{action.label}</span></button>; })}
         </div>
       </MobileReaderSheet>
       <MobileReaderSheet
@@ -3707,19 +3731,6 @@ export function ConversationReader({
             /> : <OfflineConversationFilesPanel conversationId={conversation.id} initialAttachmentId={fileSearchAttachmentId} searchReplayKey={searchReplayKey} onLocate={async (target) => { setShowFiles(false); await navigateToTarget(target); }} />}
         </FloatingWorkspacePanel>
       ) : null}
-      {!focusMode && lineageOpen ? (
-        <FloatingWorkspacePanel
-          storageKey="chat-reader:conversation-lineage-workspace-floating-v1"
-          placement="reader-floating"
-          testId="conversation-lineage-workspace"
-          title={resolvedLocale === "zh-CN" ? "来源追溯" : "Conversation lineage"}
-          closeLabel={t("close")}
-          resetLabel={resolvedLocale === "zh-CN" ? "重置追溯窗口位置" : "Reset lineage window position"}
-          onClose={() => setLineageOpen(false)}
-        >
-          <ConversationLineagePanel conversationId={conversation.id} locale={resolvedLocale} onClose={() => setLineageOpen(false)} />
-        </FloatingWorkspacePanel>
-      ) : null}
       {continuationOpen && (canManageCanonical || dataSource.mode === "offline") ? <ContinuationWorkspace key={conversationId} conversationId={conversationId} viewState={continuationView} showGuideInitially={continuationGuideRequested} offline={dataSource.mode === "offline"} onClose={() => setContinuationOpen(false)} onNavigate={async reference => {
         let messageId = reference.messageId;
         if (!messageId && reference.sequence) {
@@ -3731,7 +3742,7 @@ export function ConversationReader({
         // restoration before it can retry its old anchor over this jump.
         return (await navigateToTarget({ messageId, messageVersionId: reference.messageVersionId,
           blockIndex: reference.blockIndex, source: "dialogue-index", preferTocPipeline: true })).ok;
-      }} restoreFocus={() => window.innerWidth < 768 ? document.querySelector<HTMLElement>("[data-reader-mobile-more-actions='true']") : document.querySelector<HTMLElement>("[data-reader-header-action='continuation']")} /> : null}
+      }} restoreFocus={() => window.innerWidth < 768 ? document.querySelector<HTMLElement>("[data-reader-mobile-more-actions='true']") : document.querySelector<HTMLElement>("[data-reader-header-more-actions='true']")} /> : null}
       <AnnotationWorkspace
         conversationId={conversation.id}
         messages={messages}
@@ -3963,75 +3974,6 @@ async function acquireScrollAnchorLease(
   return acquireReaderBlockLease(messageId, blockIndex, tokenIsCurrent);
 }
 
-function captureReadingPosition(
-  root: HTMLElement,
-  messages: MessageListItem[],
-  totalMessages: number,
-): ReadingPositionInput | null {
-  const activeTarget = resolveActiveReadingTarget(root, ACTIVE_READING_OFFSET);
-  const messageId = activeTarget?.messageId;
-  if (!messageId) {
-    return null;
-  }
-  const article = document.getElementById(`message-${messageId}`);
-  if (!article) {
-    return null;
-  }
-  const readingLine = root.getBoundingClientRect().top + ACTIVE_READING_OFFSET;
-  const blocks = Array.from(article.querySelectorAll<HTMLElement>("[data-block-index]"));
-  let activeBlock = activeTarget?.blockId ? document.getElementById(activeTarget.blockId) : null;
-  if (!activeBlock || !article.contains(activeBlock)) {
-    activeBlock = null;
-    for (const block of blocks) {
-      const rect = block.getBoundingClientRect();
-      if (rect.top <= readingLine) {
-        activeBlock = block;
-      }
-      if (rect.top <= readingLine && rect.bottom >= readingLine) {
-        activeBlock = block;
-        break;
-      }
-    }
-  }
-  const anchorElement = activeBlock ?? article;
-  const activeBlockIndex = numberOrNull(activeBlock?.dataset.blockIndex);
-  let headingBlockIndex: number | null = null;
-  for (const block of blocks) {
-    const blockIndex = numberOrNull(block.dataset.blockIndex);
-    if (blockIndex === null || (activeBlockIndex !== null && blockIndex > activeBlockIndex)) {
-      break;
-    }
-    if (block.dataset.blockType === "heading") {
-      headingBlockIndex = blockIndex;
-    }
-  }
-  const message = messages.find((item) => item.id === messageId);
-  const ordinal = message?.ordinal ?? null;
-  const blockOffset = Math.max(0, Math.round(readingLine - anchorElement.getBoundingClientRect().top));
-  const scrollableHeight = Math.max(0, root.scrollHeight - root.clientHeight);
-  const characterOffset = activeBlockIndex === null
-    ? null
-    : estimateCharacterOffsetAtReadingLine(root, messageId, activeBlockIndex, ACTIVE_READING_OFFSET) ?? null;
-  return {
-    message_id: messageId,
-    block_index: activeBlockIndex,
-    scroll_offset: blockOffset,
-    anchor_data: {
-      locator_version: 2,
-      position_mode: "block-relative-v2",
-      block_id: activeBlock?.dataset.blockId ?? null,
-      version_id: message?.current_version?.id ?? null,
-      order_key: message?.order_key ?? article.dataset.orderKey ?? "",
-      scroll_ratio: scrollableHeight > 0 ? root.scrollTop / scrollableHeight : 0,
-      block_offset: blockOffset,
-      character_offset: characterOffset,
-      ordinal,
-      progress: ordinal && totalMessages > 0 ? Math.min(100, Math.max(0, (ordinal / totalMessages) * 100)) : null,
-      heading_block_index: headingBlockIndex,
-      current_version_id: message?.current_version?.id ?? null,
-    },
-  };
-}
 
 function findBlockIndexById(message: MessageListItem | undefined, blockId: string | null): number | null {
   if (!message || !blockId) return null;

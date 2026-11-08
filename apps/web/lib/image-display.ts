@@ -7,6 +7,7 @@ export type ImageDisplay = {
   width: number;
   height: number;
   configured?: boolean;
+  origin?: "import_fit" | "upload_fit";
 };
 export const IMAGE_DISPLAY_CHANGED_EVENT = "chat-reader:image-display-changed";
 export type ImageGeometry = Pick<ImageDisplay, "source_sha256" | "original_width" | "original_height">;
@@ -58,6 +59,7 @@ export function validatedImageDisplay(value: unknown, sha256: string | undefined
     original_width: candidate.original_width, original_height: candidate.original_height,
     width: candidate.width, height: candidate.height,
     ...(typeof candidate.configured === "boolean" ? { configured: candidate.configured } : {}),
+    ...(candidate.origin === "import_fit" || candidate.origin === "upload_fit" ? { origin: candidate.origin } : {}),
   };
 }
 

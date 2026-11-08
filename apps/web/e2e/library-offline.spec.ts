@@ -571,6 +571,7 @@ test("offline annotation edits and deletion refresh Library search without reloa
 
   // Use the real annotation repository/Dexie write path. Native IndexedDB
   // fixture writes alone do not emit Dexie's liveQuery mutation notifications.
+  await row.locator("summary").filter({ hasText: /编辑与操作|Edit and actions/ }).click();
   await row.getByRole("textbox", { name: /^(评论|Comment)$/ }).fill("LifecycleFresh first edit");
   await row.getByRole("button", { name: /^(保存评论|Save comment)$/ }).click();
   await expect(row.getByText(/^(未保存的评论|Unsaved comment)$/)).toHaveCount(0);
@@ -865,7 +866,7 @@ test("restores the offline reader frame and target-loads a distant annotation", 
   await expect(separator).toBeVisible();
 
   await page.goto("/library?conversationId=offline-fixture&annotations=open");
-  await page.getByRole("button", { name: /^(全部批注|All)$/ }).click();
+  await page.locator('[data-annotation-tab="all"]').click();
   await expect(page.locator("#annotation-offline-far")).toBeVisible();
   await page.locator("#annotation-offline-far button").first().click();
   await expect.poll(() => page.locator("[data-navigation-stage]").getAttribute("data-navigation-stage"), { timeout: 15_000 }).toBe("resolved");
@@ -900,7 +901,7 @@ test("copies a long virtualized offline message as complete Markdown and release
   await page.goto("/library");
   await seedOfflineFixture(page);
   await page.goto("/library?conversationId=offline-fixture&annotations=open");
-  await page.getByRole("button", { name: /^(全部批注|All)$/ }).click();
+  await page.locator('[data-annotation-tab="all"]').click();
   await page.locator("#annotation-offline-far button").first().click();
   const firstBlock = page.locator("#block-offline-message-40-1");
   await expect(firstBlock).toBeVisible();

@@ -208,6 +208,8 @@ def create_conversation_attachments(
             db,
             conversation_id=conversation_id,
             item_ids=payload.upload_item_ids,
+            image_lane_width=payload.image_lane_width,
+            ownership_scope=ownership_scope,
         )
         promoted = result.promoted_storage_keys
         db.commit()

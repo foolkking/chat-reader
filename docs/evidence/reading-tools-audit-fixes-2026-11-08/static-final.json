@@ -1,0 +1,17 @@
+{
+  "started_at": "2026-11-08T16:55:56.2266260+08:00",
+  "checked_at": "2026-11-08T16:56:38.9181724+08:00",
+  "head": "adc7c308aba7ab693ea8383ea0e22b270c76e79d",
+  "lint_command": "corepack pnpm run lint",
+  "lint_exit": 0,
+  "typecheck_command": "corepack pnpm --filter web exec tsc --noEmit --incremental false",
+  "typecheck_exit": 0,
+  "checked_changed_source_files": 104,
+  "source_changed_during_static_checks": 0,
+  "buildinfo_sha256": "FCC39CFD4093A15DC2CF9F8E80ACBE12E7A858FCAEB961EE2B47D8A08E960AFC",
+  "application_tests": "not_run",
+  "application_build": "not_run",
+  "visual_review": "not_run",
+  "ci": "not_dispatched",
+  "deployment": "not_performed"
+}

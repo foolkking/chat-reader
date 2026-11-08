@@ -12,7 +12,7 @@ async function openAction(page: Page, width: number, name: RegExp) {
     await page.getByRole("button", { name: /^(更多|More)$/ }).click();
     await page.getByRole("dialog", { name: /阅读工具|Reader tools/ }).getByRole("button", { name }).click();
   } else {
-    const direct = page.getByRole("button", { name });
+    const direct = page.getByRole("button", { name }).or(page.getByRole("menuitem", { name })).filter({ visible: true });
     if (!await direct.isVisible()) await page.getByRole("button", { name: /^(消息操作|Message actions)$/ }).click();
     await direct.click();
   }

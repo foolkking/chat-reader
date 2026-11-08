@@ -6,9 +6,12 @@ import io
 import math
 import re
 import warnings
+from threading import BoundedSemaphore
 import xml.etree.ElementTree as ET
 
 from PIL import Image, ImageOps
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.attachment import AssetDerivative, AssetObject, Attachment
@@ -22,6 +25,13 @@ TYPE = "image_display_png"
 MAX_BYTES = 16 * 1024 * 1024
 MAX_SOURCE_PIXELS = 8_000_000
 MAX_RESULT_PIXELS = 4_000_000
+conversion_slot = BoundedSemaphore(1)
+
+def acquire_conversion_transaction(db: Session) -> bool:
+    """Coordinate the API and the single worker, not just threads in one process."""
+    return db.get_bind().dialect.name != "postgresql" or bool(
+        db.scalar(text("SELECT pg_try_advisory_xact_lock(17011, 308)"))
+    )
 
 
 def selected_display(attachment: Attachment) -> dict | None:
@@ -39,9 +49,12 @@ def selected_display(attachment: Attachment) -> dict | None:
     if any(value[k] != max(1, (value[f"original_{k}"] * value["scale_percent"] + 50) // 100)
            for k in ("width", "height")):
         return None
-    return {k: value[k] for k in (
+    result = {k: value[k] for k in (
         "source_sha256", "scale_percent", "original_width", "original_height", "width", "height",
     )}
+    if value.get("origin") in {"import_fit", "upload_fit"}:
+        result["origin"] = value["origin"]
+    return result
 
 
 def dimensions(content) -> tuple[int, int]:
@@ -203,6 +216,8 @@ def _store_derivative(db: Session, row: Attachment, percent: int, raw: bytes) ->
         staged = store.stage(io.BytesIO(raw), max_bytes=MAX_BYTES, quarantine=False)
         key = store.object_key()
         store.promote(staged.path, key)
+        from app.services.exporting.archive_transaction import track_archive_object
+        track_archive_object(db, store, key)
         if asset is None:
             asset = AssetObject(sha256=digest, byte_size=len(raw), detected_mime_type="image/png",
                                 detected_extension=".png", storage_key=key, storage_backend=store.backend,
@@ -224,3 +239,61 @@ def _store_derivative(db: Session, row: Attachment, percent: int, raw: bytes) ->
                                status="ready", metadata_={"image_display": True}))
     else:
         derivative.derivative_asset_object_id, derivative.status = asset.id, "ready"
+
+
+def recommended_percent(width: int, height: int, lane: int) -> int | None:
+    """Same integer half-up and conversion limits as the browser fit action."""
+    for percent in range(100, 0, -1):
+        w, h = (max(1, (size * percent + 50) // 100) for size in (width, height))
+        if w <= lane and (percent == 100 or (
+            width * height <= MAX_SOURCE_PIXELS and max(w, h) <= 4096 and w * h <= MAX_RESULT_PIXELS
+        )):
+            return percent
+    return None
+
+
+def initialize_import_display(db: Session, row: Attachment, lane: int, scope: OwnershipScope, *, origin: str = "import_fit") -> str | None:
+    """Optional, once-only new-import/upload enrichment. Never called from reads.
+
+    Admission failure keeps the complete original and becomes an import warning.
+    The caller owns its canonical transaction; a savepoint isolates enrichment.
+    """
+    from app.core.memory import available_memory_bytes, process_resident_memory_bytes
+    from app.services.adaptive_import.memory_budget import current_budget, RESERVE_BYTES, WORKSPACE_BYTES
+    from app.services.assets.public_images import _usable
+    if selected_display(row) or row.asset_object is None:
+        return None
+    if not (row.asset_object.detected_mime_type or "").startswith("image/"):
+        return None
+    acquired = conversion_slot.acquire(blocking=False)
+    if not acquired:
+        return "Image default fit skipped: conversion busy; original retained."
+    try:
+        if not acquire_conversion_transaction(db):
+            return "Image default fit skipped: conversion busy; original retained."
+        content = _usable(row)
+        width, height = dimensions(content)
+        percent = recommended_percent(width, height, lane)
+        if percent is None or row.asset_object.detected_mime_type == "image/svg+xml":
+            return "Image default fit skipped: unsupported safe conversion; original retained."
+        if percent < 100:
+            # Conservative simultaneous decode/orientation/RGBA/resample/PNG
+            # allowance, in addition to the import's existing reserve/budget.
+            estimated = width * height * 20 + MAX_BYTES * 2
+            available = available_memory_bytes()
+            budget = current_budget()
+            resident = process_resident_memory_bytes()
+            if available is None or available < RESERVE_BYTES + estimated or (
+                budget is not None and (resident is None or resident - budget.baseline_rss + estimated > WORKSPACE_BYTES)
+            ):
+                return "Image default fit skipped: conversion memory unavailable; original retained."
+        with db.begin_nested():
+            value = save_display(db, row.id, scope, row.asset_object.sha256, percent, 100)
+            value.pop("configured", None)
+            row.metadata_ = {**(row.metadata_ or {}), KEY: {**value, "origin": origin}}
+            db.flush()
+        return None
+    except (AttachmentAccessError, OSError, ValueError, IntegrityError):
+        return "Image default fit skipped: format or safe conversion limit; original retained."
+    finally:
+        conversion_slot.release()

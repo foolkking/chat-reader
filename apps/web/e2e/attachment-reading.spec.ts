@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test as base, type APIRequestContext, type Page } from "@playwright/test";
 import { strToU8, zipSync } from "fflate";
 import { settingsAppearance } from "./settings-test-helper";
@@ -39,7 +40,7 @@ async function upload(request: APIRequestContext, conversationId: string, name: 
 async function openFiles(page: Page, conversationId: string) {
   await page.goto(`/conversations/${conversationId}`);
   await page.getByRole("button", { name: (page.viewportSize()?.width ?? 1280) < 768 ? /^(More|更多)$/ : /^(Message actions|消息操作)$/ }).click();
-  await page.getByRole("button", { name: /^(Conversation files|当前对话文件)$/ }).click();
+  await openReaderAction(page, "conversation-files");
   await expect(page.getByTestId("conversation-files-panel")).toBeVisible();
 }
 

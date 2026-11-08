@@ -25,7 +25,7 @@ export async function setImageDisplay(id,current,percent){
  window.writes.push(percent);
  await new Promise(resolve=>setTimeout(resolve,25));
  if(window.holdSave)await new Promise(resolve=>window.releaseSave=resolve);
- window.display={...window.display,scale_percent:percent,width:Math.max(1,Math.round(400*percent/100)),height:Math.max(1,Math.round(240*percent/100))};
+ window.display={...window.display,configured:true,scale_percent:percent,width:Math.max(1,Math.round(window.display.original_width*percent/100)),height:Math.max(1,Math.round(window.display.original_height*percent/100))};
  if(window.failNext){window.failNext=false;throw Error("Lost response after write");}
  return {...window.display};
 }
@@ -40,8 +40,11 @@ window.reads=0;window.writes=[];window.display={source_sha256:"f".repeat(64),sca
 const attachment={id:"11111111-1111-4111-8111-111111111111",metadata:{image_display_v1:{...window.display}},asset_object:{sha256:"f".repeat(64),detected_mime_type:"image/png"}};
 function Controls(){
  const [surface,setSurface]=useState("owner");window.setSurface=setSurface;
+ const [legacy,setLegacy]=useState(false);
+ window.useLegacy=()=>{window.display={source_sha256:"a".repeat(64),scale_percent:100,original_width:1200,original_height:800,width:1200,height:800,configured:false};setLegacy(true);};
+ const shown=legacy?{...attachment,id:"22222222-2222-4222-8222-222222222222",metadata:{image_geometry_v1:{source_sha256:"a".repeat(64),original_width:1200,original_height:800}},asset_object:{...attachment.asset_object,sha256:"a".repeat(64)}}:attachment;
  const access=surface==="share"?{kind:"share",token:"synthetic-share"}:surface==="admin"?{kind:"admin",userId:"synthetic-admin"}:surface==="compare"?{kind:"owner",readOnly:true}:{kind:surface};
- return <AttachmentAccessProvider access={access}><ImageDisplayControls attachment={attachment} zh={window.zh??false} compact={surface!=="owner"} laneWidth={720} bodySize={{width:400,height:240}}/></AttachmentAccessProvider>;
+ return <AttachmentAccessProvider access={access}><ImageDisplayControls attachment={shown} zh={window.zh??false} compact={surface!=="owner"} laneWidth={720} bodySize={{width:400,height:240}}/></AttachmentAccessProvider>;
 }
 createRoot(document.getElementById("root")).render(<QueryClientProvider client={new QueryClient()}>
  <style>{".synthetic-reader-toc{display:block!important}@media(max-width:639px){.synthetic-reader-toc{display:none!important}}"}</style>
@@ -87,83 +90,46 @@ try {
     await page.goto("http://image-scale.synthetic/");
     const trigger = page.getByRole("button", { name: /Image display scale:|图片展示比例：/ });
     const slider = page.getByRole("slider");
-    const preset = percent => page.getByRole("button", { name: `${percent}%`, exact: true });
-    // Keep the trigger exposed but put the wider menu in the sticky rail's
-    // default footprint. The real Reader CI trace reproduced this occlusion.
-    if (width >= 640) await page.locator(".synthetic-reader-toc").evaluate(node => node.style.top = "208px");
+    const choose = async percent => {
+      await expect(slider).toBeEnabled(); await slider.focus();
+      if (percent === 100) { await slider.press("End"); return; }
+      await page.keyboard.down("Home");
+      for (let step = 1; step < percent; step++) await page.keyboard.down("ArrowRight");
+      if (percent > 1) await page.keyboard.up("ArrowRight");
+      await page.keyboard.up("Home");
+    };
     await trigger.click();
-    await expect(slider).toHaveValue("100");
-    const panel = await page.locator(".image-display-menu").boundingBox();
-    const anchor = await trigger.boundingBox();
+    await expect(slider).toBeEnabled();
+    const panel = await page.locator(".image-scale-disclosure").boundingBox();
     assert.ok(panel.x >= 0 && panel.x + panel.width <= width && panel.y >= 0 && panel.y + panel.height <= 801);
-    if (width >= 640) {
-      const rail = await page.locator(".synthetic-reader-toc").boundingBox();
-      assert.ok(panel.x + panel.width <= rail.x, "sticky TOC must not intercept menu clicks");
-    }
-    for (const percent of [25, 50, 75, 100]) {
-      const box = await preset(percent).boundingBox();
-      assert.ok(box.width >= 44 && box.height >= 44);
-    }
-    await preset(50).click();
+    assert.ok(panel.height <= 64, "only a compact slider, never a dialog/sheet");
+    assert.equal(await page.getByRole("dialog").count(), 0);
+    assert.equal(await page.getByRole("spinbutton").count(), 0);
+    assert.ok((await slider.boundingBox()).height >= 44);
+    await choose(50);
     await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(50);
-    await expect(slider).toBeEnabled();
-    const numeric = page.getByRole("spinbutton");
-    for (const method of ["click", "tap"]) {
-      const count = await page.evaluate(() => window.writes.length);
-      await numeric.fill("30");
-      await expect(page.locator(".image-save-status")).toContainText(/not saved|尚未保存/);
-      await preset(75)[method]();
-      await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(75);
-      await expect(slider).toBeEnabled();
-      assert.equal(await page.evaluate(() => window.writes.length), count + 1, "number blur must not submit before a clicked/tapped preset");
-      await preset(50).click();
-      await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(50);
-      await expect(slider).toBeEnabled();
-    }
-    const beforeKeyboard = await page.evaluate(() => window.writes.length);
-    await numeric.fill("31");
-    for (let step = 0; step < 4; step++) await page.keyboard.press("Tab");
-    await expect(preset(75)).toBeFocused();
-    assert.equal(await page.evaluate(() => window.writes.length), beforeKeyboard, "keyboard hand-off must not commit the abandoned number");
-    await page.keyboard.press("Enter");
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(75);
-    await expect(slider).toBeEnabled();
-    assert.equal(await page.evaluate(() => window.writes.length), beforeKeyboard + 1);
-    const beforeBlur = await page.evaluate(() => window.writes.length);
-    await numeric.fill("60");
-    await page.getByRole("button", { name: /Close image size|关闭尺寸面板/ }).click();
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(60);
-    assert.equal(await page.evaluate(() => window.writes.length), beforeBlur + 1, "leaving the size choices still commits once");
-    await trigger.click();
     await expect(slider).toBeEnabled();
     const beforeFit = await page.evaluate(() => window.writes.length);
-    await numeric.fill("33");
-    await page.getByRole("button", { name: /Fit current column|适合当前栏宽/ }).click();
+    await page.getByRole("button", { name: /Fit column|适应栏宽/ }).click();
     await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(100);
-    await expect(slider).toBeEnabled();
     assert.equal(await page.evaluate(() => window.writes.length), beforeFit + 1);
-    const beforeNumber = await page.evaluate(() => window.writes.length);
-    await numeric.fill("50"); await numeric.press("Enter");
-    await expect(slider).toBeEnabled(); await numeric.press("Tab");
-    await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(50);
-    assert.equal(await page.evaluate(() => window.writes.length), beforeNumber + 1, "Enter then blur must not submit twice");
+    await trigger.click();
+    await expect(slider).toBeEnabled();
+    await choose(50);
+    await expect(slider).toBeEnabled();
     await slider.press("ArrowRight");
     await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(51);
     await expect(slider).toBeEnabled();
-    // On mobile the bottom sheet deliberately covers the lower page. Use a
-    // real exposed outside point, not an auto-scrolling covered page button.
     await page.mouse.click(4, 8);
-    await expect(page.locator(".image-display-menu")).toHaveCount(0);
+    await expect(page.locator(".image-scale-disclosure")).toHaveCount(0);
     await trigger.click();
     await expect(slider).toHaveValue("51");
     const box = await slider.boundingBox(), y = box.y + box.height / 2;
     const x = percent => box.x + 12 + (percent - 1) / 99 * (box.width - 24);
     const before = await page.evaluate(() => window.writes.length);
-    await numeric.fill("33");
     await page.mouse.move(x(35), y); await page.mouse.down();
     await page.mouse.move(x(47), y);
     await expect(slider).toHaveValue("50");
-    await expect(page.locator(".image-save-status")).toContainText(/not saved|尚未保存/);
     assert.equal(await page.evaluate(() => window.writes.length), before, "drag must not write per movement");
     await page.waitForTimeout(150); // A pause on a magnet must not undo it on release.
     await page.mouse.up();
@@ -186,36 +152,30 @@ try {
     await trigger.click();
     await expect(slider).toHaveValue("51");
     await page.evaluate(() => window.failNext = true);
-    await preset(75).click();
+    await choose(75);
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(slider).toBeDisabled();
     const failedWrites = await page.evaluate(() => window.writes.length);
     const failedReads = await page.evaluate(() => window.reads);
-    await page.getByRole("button", { name: /Close image size|关闭尺寸面板/ }).click();
+    await trigger.click();
     await trigger.click();
     await expect(slider).toBeDisabled();
     assert.equal(await page.evaluate(() => window.reads), failedReads, "reopening must not silently resolve an uncertain write");
-    await page.getByRole("button", { name: /Close image size|关闭尺寸面板/ }).click();
+    await trigger.click();
     for (const surface of ["offline", "share", "admin", "compare"]) {
       await page.evaluate(surface => window.setSurface(surface), surface);
-      await page.getByRole("button", { name: /Image options|图片选项/ }).click();
       await expect(page.getByRole("slider")).toHaveCount(0);
       await expect(page.getByRole("alert")).toHaveCount(0);
       await expect(page.getByRole("button", { name: /Check result|核对结果/ })).toHaveCount(0);
-      await expect(page.locator(".image-save-status")).toBeEmpty();
-      // Compare is the same owner read authority and may use the last confirmed
-      // 51%; it still must never inherit writable recovery. Other scopes use
-      // their own immutable 100% snapshot, not the owner cache.
-      await expect(page.locator(".image-dimensions dd").nth(1)).toHaveText(surface === "compare" ? "204 × 122" : "400 × 240");
       assert.equal(await page.evaluate(() => window.reads), failedReads, "read-only scope must not consult the owner endpoint");
       assert.equal(await page.evaluate(() => window.writes.length), failedWrites);
-      await page.getByRole("button", { name: /Close image size|关闭尺寸面板/ }).click();
     }
     await page.evaluate(() => window.setSurface("owner"));
     await trigger.click();
     await expect(page.getByRole("alert")).toBeVisible();
     assert.equal(await page.evaluate(() => window.reads), failedReads, "owner uncertainty survives authority remounts without an automatic read");
     await page.getByRole("button", { name: /Check result|核对结果/ }).click();
+    await trigger.click();
     await expect(slider).toHaveValue("75");
     assert.equal(await page.evaluate(() => window.writes.length), failedWrites, "unknown write recovery reads only");
     const touchBox = await slider.boundingBox();
@@ -235,15 +195,15 @@ try {
     assert.equal(await page.evaluate(() => window.writes.length), failedWrites + 1);
     await trigger.click();
     await expect(slider).toHaveValue("50");
-    await preset(100).click();
+    await choose(100);
     await expect.poll(() => page.evaluate(() => window.display.scale_percent)).toBe(100);
     await expect(slider).toBeEnabled();
     await expect(slider).toHaveAttribute("aria-valuetext", "100%");
     await page.evaluate(() => window.holdSave = true);
     const pendingWrites = await page.evaluate(() => window.writes.length);
-    await preset(25).click();
+    await choose(25);
     await expect(slider).toBeDisabled();
-    await page.getByRole("button", { name: /Close image size|关闭尺寸面板/ }).click();
+    await trigger.click();
     await trigger.click();
     await expect(slider).toBeDisabled();
     await expect.poll(() => page.evaluate(() => typeof window.releaseSave)).toBe("function");
@@ -259,9 +219,22 @@ try {
     await page.locator("figure").evaluate(node => node.style.marginTop = "540px");
     await trigger.click();
     await expect(slider).toBeEnabled();
-    const edge = await page.locator(".image-display-menu").boundingBox();
+    const edge = await page.locator(".image-scale-disclosure").boundingBox();
     assert.ok(edge.y >= 0 && edge.y + edge.height <= 801, "bottom-edge controls must remain reachable");
-    results.push({ width, theme, status: "passed", checks: ["downward/clamped panel", "translated containing block", "sticky rail avoidance", "44px stops", "preset persistence", "number to mouse/touch preset", "number to column fit", "Enter/blur deduplication", "number to slider hand-off", "draft is not saved", "1% keyboard", "fast magnet", "one write on release", "slow escape", "Escape cancellation", "read-only scope isolation", "read-only unknown-write recovery", "trusted touch commit/cancel", "100% original", "pending close/reopen without resend", "no overflow/errors", "bottom-edge visibility"] });
+    await page.locator("figure").evaluate(node => node.style.marginTop = "0px");
+    const legacyWrites = await page.evaluate(() => window.writes.length);
+    await page.evaluate(() => window.useLegacy());
+    await expect(trigger).toHaveAccessibleName(/Default fit.*60%|默认适应栏宽.*60%/);
+    await trigger.click();
+    await expect(slider).toHaveValue("60");
+    assert.equal(await page.evaluate(() => window.writes.length), legacyWrites, "reading a default never writes historical images");
+    await choose(59);
+    await expect.poll(() => page.evaluate(() => window.display.width)).toBe(708);
+    await expect(trigger).toHaveAccessibleName(/59%/);
+    assert.equal(await page.evaluate(() => window.writes.length), legacyWrites + 1);
+    await page.screenshot({ path: join(out, `${width}-${theme}-legacy-default-fit.png`) });
+    assert.deepEqual(errors, []);
+    results.push({ width, theme, status: "passed", checks: ["upward compact disclosure", "no dialog or numeric duplicate", "44px slider", "column fit beside trigger", "one keyboard gesture/one write", "draft zero writes", "fast magnet", "one write on release", "slow adjustment", "Escape cancellation", "read-only authority isolation", "read-only unknown-write check", "trusted touch commit/cancel", "100% original", "pending close/reopen without resend", "no overflow/errors", "edge visibility", "legacy default fit reads without writes", "first legacy adjustment starts at fitted ratio"] });
     await page.close();
   }
   writeFileSync(join(out, "result.json"), JSON.stringify({ status: "passed", results, adapters: ["API persistence", "surrounding image/Reader"] }, null, 2));

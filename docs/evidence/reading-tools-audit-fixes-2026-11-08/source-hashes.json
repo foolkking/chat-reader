@@ -1,0 +1,418 @@
+[
+  {
+    "path": "apps/api/app/api/routes/annotations.py",
+    "sha256": "ae04b49c31d6e7595a17f0fec5aa1c9d8f4c347782e11e4549ee4119196c2439"
+  },
+  {
+    "path": "apps/api/app/api/routes/attachments.py",
+    "sha256": "5c85ea424bdd975fecdc56a8f8e0f732ba8999fadb8596b2f96d590e07cb12d2"
+  },
+  {
+    "path": "apps/api/app/api/routes/conversations.py",
+    "sha256": "b69a0204dbfc60b06c151d9bef3004b8fede7ee4699ea72d196221c8fc34268e"
+  },
+  {
+    "path": "apps/api/app/api/routes/exports.py",
+    "sha256": "c7c63b03229a5498012c83319c151f6d848a5279c571b9813f97c577af67218b"
+  },
+  {
+    "path": "apps/api/app/api/routes/imports.py",
+    "sha256": "9c40fb0205b6cbefaaa1377a7af59932c228127f75da4a9c9ac209eb7da5bf70"
+  },
+  {
+    "path": "apps/api/app/api/routes/markdown_copy.py",
+    "sha256": "c155b3336984bd26b0a2579a3f169c79ac16e71f552f8eb725bbbc9f881cf06f"
+  },
+  {
+    "path": "apps/api/app/api/routes/user_feature_entries.py",
+    "sha256": "4c719bd53a38a5d96fb7c48ee378dc5a0f9f3520195085fd010518d2d1da7dec"
+  },
+  {
+    "path": "apps/api/app/schemas/attachment.py",
+    "sha256": "09bc3791b2b26cfbc73d1d255851e71c737471d69944563ea24adb7f59d0c07e"
+  },
+  {
+    "path": "apps/api/app/schemas/import_schema.py",
+    "sha256": "7eeacd85133d142ed3c7346692ae7dc8e811d75c54010f5c2b8885cf119de671"
+  },
+  {
+    "path": "apps/api/app/services/annotations.py",
+    "sha256": "5227ee05d2b265eb2bfc719719884403d298e340a0d03fad81c829fb6fa6c48e"
+  },
+  {
+    "path": "apps/api/app/services/assets/image_display.py",
+    "sha256": "cca243ac5241fa621718ea324fb8b9d7961adac58dc405eed8e01d6148e2a287"
+  },
+  {
+    "path": "apps/api/app/services/assets/upload_service.py",
+    "sha256": "efe883ad277cd54d46fdd5ec3484946731a1f8302c22f63e183f09c302de893b"
+  },
+  {
+    "path": "apps/api/app/services/canonical/persistence.py",
+    "sha256": "cacbbdb095681880a236bf3e6607cafc34e3ff2ecfc71f06ebb29e997d932208"
+  },
+  {
+    "path": "apps/api/app/services/exporting/annotation_document.py",
+    "sha256": "3d221ee06ef02407bc09265d74e2fd6daf3faaac31bd95f3999d32e884341d44"
+  },
+  {
+    "path": "apps/api/app/services/exporting/prepared_export.py",
+    "sha256": "3a706d94db8a32ea253e33345ba510f48d0e004eb2642276b5bf6906a3377970"
+  },
+  {
+    "path": "apps/api/app/services/user_feature_entries.py",
+    "sha256": "89e8a0b828c0c6476ba30e5a80910170d3034d307f18b4b0a5df7b2bb1007391"
+  },
+  {
+    "path": "apps/api/tests/test_adaptive_import_api.py",
+    "sha256": "ed55671546b3ef37e5849358320c71c1dc9dd45b9d1cdc25d68ca9f7a481b3eb"
+  },
+  {
+    "path": "apps/api/tests/test_annotation_document.py",
+    "sha256": "52e1bd87e86582ac3f9e0a82924c4aa73e7db1229464a42ac18d4786bef75a9f"
+  },
+  {
+    "path": "apps/api/tests/test_attachment_upload_api.py",
+    "sha256": "6e4128877b9769f6ebea2143d946c8238cce608b2db6f9f6d3ff8d292621bd5b"
+  },
+  {
+    "path": "apps/api/tests/test_image_display.py",
+    "sha256": "6d06662f900140bd408840d9ad2b341fe005c1349789b7274cdaa9d94a4ea648"
+  },
+  {
+    "path": "apps/api/tests/test_offline_annotations_api.py",
+    "sha256": "2a9c8757cba93b4c4c5545aab4e955841aa9099ff59230116061318af1ae13aa"
+  },
+  {
+    "path": "apps/api/tests/test_reading_tools_tags.py",
+    "sha256": "a43988d3e9c2eb99b07974375d94a15aa99802f8ba120a3e5c4215ec6d225953"
+  },
+  {
+    "path": "apps/api/tests/test_user_feature_entries_postgres.py",
+    "sha256": "11ccfcd89ad097bdf15060d26dd29427f685e91adae0ac7f35fce57fc0c9f65a"
+  },
+  {
+    "path": "apps/web/app/compare/page.tsx",
+    "sha256": "678f12c3dc60b49b3eb77d8f2f3e9f6798eea170cab1df096a1c195bd417cc7e"
+  },
+  {
+    "path": "apps/web/app/globals.css",
+    "sha256": "520ef401dfcc68b04bc69086134066cf6c620c1b846de1ed8b3292b4015dcfa2"
+  },
+  {
+    "path": "apps/web/app/read-together/page.tsx",
+    "sha256": "3e37ccd3e06d688c35c73f03822d6ff1158475cffc1390be81657661a03e3454"
+  },
+  {
+    "path": "apps/web/app/tags/page.tsx",
+    "sha256": "a626a883a695764a5733cbeaad7f9fb60f455a49074e0a0574a437cdccb64e2d"
+  },
+  {
+    "path": "apps/web/components/action-palette.tsx",
+    "sha256": "9dfd28298e9364c1ab6f3e2937cd99c38b1682e5d8c8e3b224690c5b58d5ae5a"
+  },
+  {
+    "path": "apps/web/components/reader-header-action-rail.tsx",
+    "sha256": "80117b803abc60988e33bce4c7ba10d5774495963320559a952be6ea362e8b51"
+  },
+  {
+    "path": "apps/web/components/reader-keyboard-help.tsx",
+    "sha256": "8c3248982eee7a43f49fe4ffad598786c7a53b267103e6fdc4ee254981d61e7a"
+  },
+  {
+    "path": "apps/web/components/shortcut-manager.tsx",
+    "sha256": "61bf5f5d9a98dec17ddfefb5e3fb9236fdd5dbde0a05050ab5af112ab99673ba"
+  },
+  {
+    "path": "apps/web/components/workspace-shell.tsx",
+    "sha256": "4156be4974c5d9d8e667ee4dc2cdc0a1820676976e160c96db99e1e61999b6bb"
+  },
+  {
+    "path": "apps/web/e2e/attachment-reading.spec.ts",
+    "sha256": "661dc8bcbe8a5572b5cf1df1c2236eac1c489adf83af52972b0baec7813a3bdc"
+  },
+  {
+    "path": "apps/web/e2e/attachment-upload-flow.spec.ts",
+    "sha256": "2e31c06d34adb16adb13b13593db9e7b7a9c1b7287cbb627b0a09521300081ec"
+  },
+  {
+    "path": "apps/web/e2e/context-continuation-drop.spec.ts",
+    "sha256": "9a52371a13924f818dc8572d336ededc5b1e5e3eb2ff0bb423ab704cee9e586d"
+  },
+  {
+    "path": "apps/web/e2e/context-continuation.spec.ts",
+    "sha256": "d8981284f2542e6857779174333351009ce0d07e80312c126d364bf16e85a054"
+  },
+  {
+    "path": "apps/web/e2e/context-export-options.spec.ts",
+    "sha256": "615d55eabf8eaf24c74c9bab10bc7db5185f15c716266d911ec2197afeb26a23"
+  },
+  {
+    "path": "apps/web/e2e/context-guidance.spec.ts",
+    "sha256": "6ac85c940417e1fe20e47810e6a220f6959f8b175d90061640c0a3aec8cbf23d"
+  },
+  {
+    "path": "apps/web/e2e/context-offline-parity.spec.ts",
+    "sha256": "5de36a0bfa67fa87d2df74f60ca15f8a25d7df3476266e461188e6b84d9dcae9"
+  },
+  {
+    "path": "apps/web/e2e/context-reading-tools.spec.ts",
+    "sha256": "ac6ce076359110a9bfd899bb4b172651a02b625211471f7fcb92f60c1fb7556f"
+  },
+  {
+    "path": "apps/web/e2e/image-natural-flow.spec.ts",
+    "sha256": "30a63d017c2f2bff06011ebfe26743c41fe221b37bb2bf5c813e8b35fc0f98e8"
+  },
+  {
+    "path": "apps/web/e2e/library-offline.spec.ts",
+    "sha256": "3de886eb1e70f70accdba08d985a611987720e6ce65a5a782bc6a01fecffe630"
+  },
+  {
+    "path": "apps/web/e2e/message-markdown-copy.spec.ts",
+    "sha256": "6e38cd0d0b7ded30e682c0da6f4dc61032f12cdf0a700b1e1481242070f6d057"
+  },
+  {
+    "path": "apps/web/e2e/pdfjs-migration.spec.ts",
+    "sha256": "770e47fdd5613789c4f8fb55130efd099172faaf2dd3aa7302321be9f0c3dd1c"
+  },
+  {
+    "path": "apps/web/e2e/pwa-negative.spec.ts",
+    "sha256": "b730e32ea69412351de78c977aa67c9fb5643971a79a3772ab68ef990a30e6b6"
+  },
+  {
+    "path": "apps/web/e2e/reader-actions.ts",
+    "sha256": "4c4ef225ad7da0045b35ff567c74d8fd3876caaa7c01a823ab5bef53510bb418"
+  },
+  {
+    "path": "apps/web/e2e/reader-layout.spec.ts",
+    "sha256": "01f62dcbbc94defd6585795aa3bb568ad01427e0ba8e169ccd8ddb486056d996"
+  },
+  {
+    "path": "apps/web/e2e/reader-restoration.spec.ts",
+    "sha256": "758c32c175652afe070f8c99151908c35f5f28cc19898dceb0356d74bd34ccec"
+  },
+  {
+    "path": "apps/web/e2e/reading-stability.spec.ts",
+    "sha256": "79cf556b619ba9d1faa148e869b953b0b698d43b53f81bbf8d96aed714141253"
+  },
+  {
+    "path": "apps/web/e2e/recovery-consistency.spec.ts",
+    "sha256": "7994f6ae0f0e653faf9f355430d0ca265de55e147caedf2e05975292b4093577"
+  },
+  {
+    "path": "apps/web/e2e/settings-annotation-composition.spec.ts",
+    "sha256": "0478b6ddb0b3c58d5e96b77910964cdaa95aa48853850f278e359b1fca4063db"
+  },
+  {
+    "path": "apps/web/e2e/settings-annotation-reads.spec.ts",
+    "sha256": "15a277943df1d0d88c4dee183ef479e172d8a94a49bcdd6d813a3cdf79066563"
+  },
+  {
+    "path": "apps/web/e2e/settings-annotation-writes.spec.ts",
+    "sha256": "604c90f8a3cb45e8a5b365562953f963784e0e1136b552182f3f67bfbbac8361"
+  },
+  {
+    "path": "apps/web/e2e/settings-attachment-export.spec.ts",
+    "sha256": "c986b444a24b7cedbc91722bdc40cee35839a8d5de889193fbcd4c0903b1bbe5"
+  },
+  {
+    "path": "apps/web/e2e/settings-context-drafts.spec.ts",
+    "sha256": "6e2aba78d1e3f5aeee9f1471caff202da99b5c04f458b010a6f6d57e4504dff7"
+  },
+  {
+    "path": "apps/web/e2e/settings-direct-export.spec.ts",
+    "sha256": "e93b25f848bb1c91d6255cf4ca7939c5cb6fdaf3d2b3e403c755594c45afce07"
+  },
+  {
+    "path": "apps/web/e2e/settings-export-retention.spec.ts",
+    "sha256": "0012af66d8eaa4a15ad1afb2999d099df297f9b305fa98774ca189f95b90a71f"
+  },
+  {
+    "path": "apps/web/e2e/settings-offline-conflicts.spec.ts",
+    "sha256": "ade906c46230b0dc1d9022f851db0f31dbb8396a08d5fc2db29e8621ebc61949"
+  },
+  {
+    "path": "apps/web/e2e/ux-recovery-followup.spec.ts",
+    "sha256": "2ae52ad0923c33d57e07ab0200ea30144e76095842009dd9ce239b7795e81eee"
+  },
+  {
+    "path": "apps/web/e2e/ux-whole-site.spec.ts",
+    "sha256": "3d7f2ec1a40ee1ed1bf03680da3eebaa482ab2649bb2b29e5a18a84e240c30cd"
+  },
+  {
+    "path": "apps/web/e2e/web-opportunity-features.spec.ts",
+    "sha256": "9cb91ee74553bc88c82264edd224bace5dbf07408ec1239e3d115b6c0a70e6c5"
+  },
+  {
+    "path": "apps/web/features/annotations/annotation-document-download.ts",
+    "sha256": "e5932789e9a0259fdbc8a38950c66a198abeec118d48d40b245117ebe64d0c33"
+  },
+  {
+    "path": "apps/web/features/annotations/annotation-workspace.tsx",
+    "sha256": "477ea782513061f3fdfcb0929e669e7c82a91b5a988df4472c291f7968bd0834"
+  },
+  {
+    "path": "apps/web/features/annotations/notebook-view.tsx",
+    "sha256": "bb65e039d3cdc574fc8b01df15035f564f74c5104665c9b3fb30469d7f01e0ff"
+  },
+  {
+    "path": "apps/web/features/annotations/reading-bookmark.ts",
+    "sha256": "000357c885709c3d43682d716b15f16ea56080926ac871ef4e96f9f8d5a24135"
+  },
+  {
+    "path": "apps/web/features/attachments/conversation-files-panel.tsx",
+    "sha256": "2a321bb2ea03bd6abab001c6a32fcd4be3400594dc06008ab4d9d1b9b9f14bb6"
+  },
+  {
+    "path": "apps/web/features/attachments/image-display-controls.tsx",
+    "sha256": "da54d81b78f5cfb6dbafd1e2f5e745117ce329f85217f250a182c851adb906b1"
+  },
+  {
+    "path": "apps/web/features/attachments/image-display-position.ts",
+    "sha256": "ed99a33dad1315332a3267ed10eb263bfc7c7078646c7cd240844fbab3cf230e"
+  },
+  {
+    "path": "apps/web/features/attachments/image-scale-slider.tsx",
+    "sha256": "be3dc161ac6901784af4111d71423cc5b654584649131d5565d2d3989585f0cf"
+  },
+  {
+    "path": "apps/web/features/compare/conversation-compare.tsx",
+    "sha256": "234c16b0e0635fa0872e2a0fef67a34b0ec5fa715cbed0d84b5caa86b14eab8c"
+  },
+  {
+    "path": "apps/web/features/compare/together-chooser.tsx",
+    "sha256": "831a67f2c15b43f862ee152f0bf0412ff1682daf119b20345014d614b6611474"
+  },
+  {
+    "path": "apps/web/features/compare/together-pane.tsx",
+    "sha256": "8a1ca4e93d9b58a3120f5b9590a907996221f790093c1657f9b7824c784ad067"
+  },
+  {
+    "path": "apps/web/features/compare/together-session.ts",
+    "sha256": "fe5209503129255b3e06a03edcacf567b637d3c60b989cfbb33eb82af9a13f5b"
+  },
+  {
+    "path": "apps/web/features/conversations/conversation-list.tsx",
+    "sha256": "c74a3bdc57796b8b0b8abac4cff87677754f4599aba989c6b0c482997730a010"
+  },
+  {
+    "path": "apps/web/features/conversations/conversation-reader.tsx",
+    "sha256": "056eca397ba47c5dfacd55aa3e47d82bbb438042eefdd676aa68cc024a6c0de3"
+  },
+  {
+    "path": "apps/web/features/conversations/message-item.tsx",
+    "sha256": "1a0b6a081f6f72d17e731aa93ba34f067ebae342c8a8b473cbaf48cd6ee2fb8d"
+  },
+  {
+    "path": "apps/web/features/conversations/reader-locator-target.ts",
+    "sha256": "d04cb231f2d4cd58feb5d9f0b5ec27133624768907b9f18b6c977958ff420d05"
+  },
+  {
+    "path": "apps/web/features/conversations/reading-position-capture.ts",
+    "sha256": "1de0581625cc7a4eefe599204d30766d95f420b1e79656d14eaca216982109a1"
+  },
+  {
+    "path": "apps/web/features/conversations/text-anchor.ts",
+    "sha256": "935129247f370867bfe5ff04c4bebcd7325b701d285ab4736a73d29047d2d036"
+  },
+  {
+    "path": "apps/web/features/editing/source-editor-workspace.tsx",
+    "sha256": "dcd89bdba20da3eae46d9f4afd1d6b3a66b23924555b9bcd275f0b240371aedc"
+  },
+  {
+    "path": "apps/web/features/exporting/direct-export-download.tsx",
+    "sha256": "85554376d050b09fff7b24e59642972058101d08ddb7b26150647102a881f472"
+  },
+  {
+    "path": "apps/web/features/import/image-import-lane.ts",
+    "sha256": "6c6f081421b1059592825855ec3cc29695983717da106cfa64bd7cc21f33e616"
+  },
+  {
+    "path": "apps/web/features/import/import-panel.tsx",
+    "sha256": "217d48625102e6e277a6b0c1e2e90d941876318c99a0d773b3b4ee0137a85ea1"
+  },
+  {
+    "path": "apps/web/features/projects/project-sidebar.tsx",
+    "sha256": "d148541c5604525ac4e25ac548ef712b1c9976d78d0f5b408391cae85a24e742"
+  },
+  {
+    "path": "apps/web/features/reading/conversation-tag-strip.tsx",
+    "sha256": "92675a0da046f001c102c416e112440b5e69d7223c3409b5885bfbcb16a44436"
+  },
+  {
+    "path": "apps/web/features/reading/conversation-tags-panel.tsx",
+    "sha256": "be096d5723b57ae7e487686ff3e750d6202da3b6e83f7b3d4e2e893b7026d07a"
+  },
+  {
+    "path": "apps/web/features/search/conversation-search-panel.tsx",
+    "sha256": "f6c108dcfb71bc13d489cb1b2e9ffde49852c74c4e1f0a8c9a292ee6228c81aa"
+  },
+  {
+    "path": "apps/web/lib/annotation-document.ts",
+    "sha256": "829a783d4d405caf1f8804b1b9cd0354327ed5cf55c6599c97b9df479b433205"
+  },
+  {
+    "path": "apps/web/lib/annotation-repository.ts",
+    "sha256": "1ba46912190ad5fcf38b3707f6b104d72fb4b1aec1f1553242d2f82c4d9873d3"
+  },
+  {
+    "path": "apps/web/lib/api.ts",
+    "sha256": "c575c87142fd4cd69541c8f7a9a83c2b3381180e4ac0d04d8adb7f935bc7fb8d"
+  },
+  {
+    "path": "apps/web/lib/image-display.ts",
+    "sha256": "9f439a9b94832af9cd7051df3ba3169f13b78f2e4bc307a30086475b1f79fc26"
+  },
+  {
+    "path": "scripts/ux/annotation-document-parity.test.mjs",
+    "sha256": "e35f79530c19f606ae0848a4ad3c01c60c4a904a4815f85515c344976c80665c"
+  },
+  {
+    "path": "scripts/ux/annotation-workspace-reads.test.mjs",
+    "sha256": "e984d8fe86ce04b29ce5a49283c8af213451281e59490b5f01b7c8129dc485c6"
+  },
+  {
+    "path": "scripts/ux/attachment-upload-queue.test.mjs",
+    "sha256": "7b7d52be77a63109a24dfd7d784b1c2e0a8a01f0b8acefa4ce491f37149c68e5"
+  },
+  {
+    "path": "scripts/ux/compare-navigation-ownership.test.mjs",
+    "sha256": "78bbf5c36cd05529b0ee4df7698c35f600c7fa9dd7e5564c04e952ced065d92b"
+  },
+  {
+    "path": "scripts/ux/conversation-search-selection.test.mjs",
+    "sha256": "328ca8eed42b743887926ecd6da0bfcff284a892f91bee308b037d37a0e3f643"
+  },
+  {
+    "path": "scripts/ux/fixtures/annotation-document-v2.json",
+    "sha256": "7664e0c69c35ef0e96f546e298e2b304e0a88a1421581b4f2dcf78108e5f8989"
+  },
+  {
+    "path": "scripts/ux/image-display-position.test.mjs",
+    "sha256": "0510bbad7588825ac8e3e244169c34ec2c8602d2bbc8c697f92be4c04418751f"
+  },
+  {
+    "path": "scripts/ux/image-scale-slider-browser.mjs",
+    "sha256": "f0db9fade837703a1e79356ba4b904a76b01593f91e95d50fd722ec5e5b4665c"
+  },
+  {
+    "path": "scripts/ux/reader-navigation-readiness.test.mjs",
+    "sha256": "50df3331822ecf96439e5996f50ddb02b0eb1f3827f44760e6fb3d94cc9b6149"
+  },
+  {
+    "path": "scripts/ux/reader-search-replay.test.mjs",
+    "sha256": "d41c1ab0dbdbe183f4ef3ad9e983bd75fa89eb412a8367d1f5bb4cdccfe51b98"
+  },
+  {
+    "path": "scripts/ux/reading-tools-contracts.test.mjs",
+    "sha256": "0fd97d3fa5f03efaac5031f8f8cba9121adc9ea788495adaa762bc61dbcf2dc9"
+  },
+  {
+    "path": "scripts/ux/search-anchor-range.test.mjs",
+    "sha256": "4ed324b54a6d0f4ab962fe39dff74fe177c65a0782353bb14befcf94066010b2"
+  },
+  {
+    "path": "scripts/ux/together-leave-guard.test.mjs",
+    "sha256": "a8d658d154516eb05c4ba97454ff0b9ff483f5198c5f9566afe0530dfeda710a"
+  }
+]

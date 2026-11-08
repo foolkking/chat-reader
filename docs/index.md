@@ -1,6 +1,6 @@
 # 文档导航
 
-入口同步：**2026-11-07**。先读 [Project State](../PROJECT_STATE.md) 和
+入口同步：**2026-11-08**。先读 [Project State](../PROJECT_STATE.md) 和
 [AGENTS](../AGENTS.md)，再进入任务专题。当前代码、配置与 migration 是真值；
 带日期的 planning/execution/evidence 只说明各自检查点，不能当成新工作指令。
 
@@ -41,6 +41,16 @@ CI 回查保持暂停，没有创建或恢复安排。
 见[收尾回执](execution/KNOWLEDGE_CLOSEOUT_2026-11-04.md)中的删除范围与保全核验。
 
 ## 开始这里
+
+**11 月 8 日源码候选（尚未通过完整 CI/部署）：**
+[阅读工具合同](system/READING_TOOLS_CONTRACT.md) /
+[实现与验证边界](execution/READING_TOOLS_2026-11-08.md)。
+覆盖紧凑比例条、一起阅读、位置书签/批注导出及标签管理；
+不改写上方已发布版本和独立存储清理回执。修正收尾后用户仅授权一次本地提交；
+未推送或派发 CI，须等用户明确要求后再提交 CI。
+随后用户授权修正[完成度审查](execution/ux-audit-reading-tools-completion-2026-11-08.md)
+中的七项问题，见[修正记录](execution/READING_TOOLS_AUDIT_FIXES_2026-11-08.md)；
+本地修正不等于运行/视觉验收，CI 仍须等明确指令。
 
 | 文档 | 长期职责 |
 | --- | --- |

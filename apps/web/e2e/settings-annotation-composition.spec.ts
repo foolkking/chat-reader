@@ -2,9 +2,137 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { settingsAdmin } from "./settings-test-helper";
 import type { AnnotationCreateInput, AnnotationRead, NotebookBlock } from "../lib/types";
+import { openReaderAction } from "./reader-actions";
 
 test.use({ trace: "retain-on-failure", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL and authentication");
+
+for (const width of [375, 1440]) test(`${width}px: real wrapped text position, bookmark reveal and selected export`, async ({ browser, playwright, baseURL }, info) => {
+  const admin = await settingsAdmin(playwright.request, baseURL!);
+  const context = await browser.newContext({ viewport: { width, height: 900 } });
+  const page = await context.newPage(), headers = { Origin: baseURL! };
+  try {
+    expect((await context.request.post(`${baseURL}/api/auth/register`, { headers, data: {
+      email: `reading-point-${randomUUID()}@example.test`, password: "synthetic point password", confirm_password: "synthetic point password",
+    } })).status()).toBe(201);
+    expect((await context.request.patch(`${baseURL}/api/preferences`, { headers, data: { locale_mode: "en-US" } })).ok()).toBe(true);
+    const paragraph = Array.from({ length: 95 }, (_, index) => `🙂 Sentence ${index}: reading a long uninterrupted paragraph. `).join("");
+    const made = await context.request.post(`${baseURL}/api/conversations`, { headers, data: {
+      title: "Synthetic reading-line bookmark", messages: [{ role: "user", content_markdown: paragraph }],
+    } });
+    expect(made.status()).toBe(201);
+    const result = await made.json(), id = result.conversation.id;
+    const endpoint = `${baseURL}/api/conversations/${id}`;
+    await page.goto(`/conversations/${id}`);
+    const block = page.locator(`article[data-message-id="${result.messages[0].id}"] [data-block-index="0"]`).first();
+    await expect(block).toBeVisible();
+    await block.evaluate(element => {
+      const root = element.closest<HTMLElement>("[data-reader-scroll-root]")!;
+      const rect = element.getBoundingClientRect();
+      root.scrollTop += rect.top - root.getBoundingClientRect().top + rect.height * .45 - 120;
+    });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const expected = await block.evaluate(element => {
+      const root = element.closest<HTMLElement>("[data-reader-scroll-root]")!, line = root.getBoundingClientRect().top + 120;
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      let best = { offset: -1, distance: Infinity }, offset = 0;
+      while (walker.nextNode()) {
+        const node = walker.currentNode, value = node.textContent ?? "";
+        let unit = 0;
+        for (const character of value) {
+          const range = document.createRange(); range.setStart(node, unit); unit += character.length; range.setEnd(node, unit);
+          const rect = range.getBoundingClientRect(), distance = Math.max(rect.top - line, line - rect.bottom, 0);
+          if (rect.height > 0 && rect.width > 0 && distance < best.distance) best = { offset, distance };
+          offset++;
+        }
+      }
+      return best.offset;
+    });
+    expect(expected).toBeGreaterThan(100);
+    expect(expected).toBeLessThan(Array.from(paragraph).length - 200);
+    await openReaderAction(page, "save-position");
+    let saved: AnnotationRead[] = [];
+    await expect.poll(async () => { saved = await (await context.request.get(`${endpoint}/annotations`)).json(); return saved.length; }).toBe(1);
+    expect(saved[0].start_offset).toBe(expected);
+    expect(saved[0].quote).toBe(Array.from(paragraph).slice(expected, expected + 160).join(""));
+    await page.getByRole("button", { name: "View", exact: true }).click();
+    const panel = page.getByRole("region", { name: "批注", exact: true });
+    await expect(panel.locator(`#annotation-${saved[0].id}`)).toBeVisible();
+    await panel.getByRole("button", { name: "Manage", exact: true }).click();
+    await panel.getByLabel("Annotation export scope").selectOption("selected");
+    await expect(panel.getByRole("button", { name: "Export Markdown", exact: true })).toBeDisabled();
+    await panel.locator(`#annotation-${saved[0].id}`).getByRole("button", { name: "Select annotation", exact: true }).click();
+    const downloaded = page.waitForEvent("download");
+    await panel.getByRole("button", { name: "Export Markdown", exact: true }).click();
+    const stream = await (await downloaded).createReadStream(), chunks: Buffer[] = [];
+    for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
+    const markdown = Buffer.concat(chunks).toString("utf8");
+    expect(markdown).toContain("Scope: selected · 1");
+    expect(markdown).toContain(saved[0].quote!);
+    expect(markdown).toContain("Context when saved");
+    await page.screenshot({ path: info.outputPath(`reading-position-selected-${width}.png`) });
+  } finally { await context.close(); await admin.dispose(); }
+});
+
+test("together cancels a tab, pane and close transition without losing a failed local notebook draft", async ({ browser, playwright, baseURL }, info) => {
+  const admin = await settingsAdmin(playwright.request, baseURL!);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage(), headers = { Origin: baseURL! };
+  try {
+    expect((await context.request.post(`${baseURL}/api/auth/register`, { headers, data: {
+      email: `together-draft-${randomUUID()}@example.test`, password: "synthetic guard password", confirm_password: "synthetic guard password",
+    } })).status()).toBe(201);
+    expect((await context.request.patch(`${baseURL}/api/preferences`, { headers, data: { locale_mode: "en-US" } })).ok()).toBe(true);
+    const ids: string[] = [];
+    for (const title of ["Synthetic guard A", "Synthetic guard B"]) {
+      const response = await context.request.post(`${baseURL}/api/conversations`, { headers, data: {
+        title, messages: [{ role: "user", content_markdown: "Synthetic reading body" }],
+      } });
+      expect(response.status()).toBe(201); ids.push((await response.json()).conversation.id);
+    }
+    await page.route(`**/api/conversations/${ids[0]}/notebook`, async route => {
+      if (route.request().method() === "PUT") await route.fulfill({ status: 503, contentType: "application/json", body: '{"detail":"Synthetic save unavailable"}' });
+      else await route.continue();
+    });
+    await page.goto(`/read-together?left=${ids[0]}&right=${ids[1]}`);
+    const a = page.locator(`[data-together-pane="${ids[0]}"]`), b = page.locator(`[data-together-pane="${ids[1]}"]`);
+    await expect(a).toBeVisible(); await expect(b).toBeVisible();
+    await a.getByRole("button", { name: "Annotations and bookmarks" }).click();
+    const panel = page.getByRole("region", { name: "批注", exact: true });
+    await panel.locator('[data-annotation-tab="notebook"]').click();
+    const title = panel.getByRole("textbox", { name: "Notebook title", exact: true });
+    await expect(title).toBeEnabled();
+    // Fail only this synthetic draft's writes, not reads, auth or other stores.
+    await page.evaluate(() => {
+      const put = IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put = function(value, key) {
+        if (this.name === "settings" && String(value?.key).startsWith("notebook-draft:")) throw new DOMException("Synthetic quota", "QuotaExceededError");
+        return put.call(this, value, key);
+      };
+    });
+    await title.fill("Synthetic text that must remain until explicit consent");
+    await expect(panel.getByText("Local draft could not be saved", { exact: true })).toBeVisible();
+    const tabs = page.getByRole("navigation", { name: "Open conversations" });
+    const confirmation = page.getByRole("dialog", { name: "Draft not saved on this device. Leave anyway?" });
+    await tabs.getByRole("button", { name: "Synthetic guard B", exact: true }).click();
+    await expect(confirmation).toBeVisible(); await page.keyboard.press("Escape");
+    await expect(a).toHaveAttribute("data-pane-active", "true");
+    await expect(title).toHaveValue("Synthetic text that must remain until explicit consent");
+    await b.getByRole("button", { name: "Search this conversation" }).focus();
+    await expect(confirmation).toBeVisible(); await page.keyboard.press("Escape");
+    await expect(confirmation).toHaveCount(0);
+    await expect(a).toHaveAttribute("data-pane-active", "true");
+    await expect(title).toHaveValue("Synthetic text that must remain until explicit consent");
+    await tabs.getByRole("button", { name: "Close conversation Synthetic guard A", exact: true }).click();
+    await expect(confirmation).toBeVisible(); await page.keyboard.press("Escape");
+    await expect(title).toHaveValue("Synthetic text that must remain until explicit consent");
+    await page.screenshot({ path: info.outputPath("together-retained-failed-draft.png") });
+    await tabs.getByRole("button", { name: "Synthetic guard B", exact: true }).click();
+    await confirmation.getByRole("button", { name: "Leave anyway", exact: true }).click();
+    await expect(b).toHaveAttribute("data-pane-active", "true");
+    await expect(confirmation).toHaveCount(0);
+  } finally { await context.close(); await admin.dispose(); }
+});
 
 for (const [width, locale, kind] of [[375, "zh-CN", "text"], [1440, "en-US", "text"], [1440, "zh-CN", "notes"], [1440, "en-US", "notes"]] as const) {
   test(`${width}px ${locale}: ${kind} keeps the original input through an unknown write`, async ({ browser, playwright, baseURL }, info) => {
@@ -87,7 +215,7 @@ for (const [width, locale, kind] of [[375, "zh-CN", "text"], [1440, "en-US", "te
           await route.continue();
         });
         await page.goto(`${baseURL}/conversations/${id}?annotations=open`);
-        await page.getByRole("button", { name: /^(All|全部批注)$/ }).click();
+        await page.locator('[data-annotation-tab="bookmarks"]').click();
         await expect(page.locator(`#annotation-${annotations[1].id}`)).toBeVisible();
         await page.getByRole("button", { name: /^(Manage|管理)$/ }).click();
         await page.getByRole("button", { name: /^(Select visible|全选当前结果)$/ }).click();

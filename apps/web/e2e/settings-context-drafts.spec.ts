@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { strFromU8, unzipSync } from "fflate";
@@ -104,7 +105,7 @@ test("expired Continuation cache and drafts stay locked, survive another account
     expect(cached.continuation.members.current.text).toBe(savedCurrent);
     expect(cached.continuation.members.index.text).toBe(savedIndex);
     await context.setOffline(true);
-    await page.getByRole("button", { name: "Continuation", exact: true }).click();
+    await openReaderAction(page, "continuation");
     await expect(page.getByRole("heading", { name: "Saved synthetic Current" })).toBeVisible();
     await page.clock.fastForward(49 * 60 * 60 * 1000);
     await expect(page.getByRole("heading", { name: "Sign in required" })).toBeVisible();

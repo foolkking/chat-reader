@@ -1,0 +1,808 @@
+{
+  "captured_at": "2026-11-08T14:59:33.8632373+08:00",
+  "head": "adc7c308aba7ab693ea8383ea0e22b270c76e79d",
+  "source": "uncommitted working tree; excerpts are code, not runtime evidence",
+  "files": [
+    {
+      "path": "apps/web/features/conversations/reading-position-capture.ts",
+      "sha256": "E6F84FEEE99F953CFE5742BFC2FB01404C14BDB0784747B2866E61CF5CEC3A3F",
+      "excerpts": [
+        {
+          "start": 49,
+          "end": 74,
+          "lines": [
+            "  const message = messages.find((item) => item.id === messageId);",
+            "  const ordinal = message?.ordinal ?? null;",
+            "  const blockOffset = Math.max(0, Math.round(readingLine - anchorElement.getBoundingClientRect().top));",
+            "  const scrollableHeight = Math.max(0, root.scrollHeight - root.clientHeight);",
+            "  const characterOffset = activeBlockIndex === null",
+            "    ? null",
+            "    : estimateCharacterOffsetAtReadingLine(root, messageId, activeBlockIndex, ACTIVE_READING_OFFSET) ?? null;",
+            "  return {",
+            "    message_id: messageId,",
+            "    block_index: activeBlockIndex,",
+            "    scroll_offset: blockOffset,",
+            "    anchor_data: {",
+            "      locator_version: 2,",
+            "      position_mode: \"block-relative-v2\",",
+            "      block_id: activeBlock?.dataset.blockId ?? null,",
+            "      version_id: message?.current_version?.id ?? null,",
+            "      order_key: message?.order_key ?? article.dataset.orderKey ?? \"\",",
+            "      scroll_ratio: scrollableHeight > 0 ? root.scrollTop / scrollableHeight : 0,",
+            "      block_offset: blockOffset,",
+            "      character_offset: characterOffset,",
+            "      ordinal,",
+            "      progress: ordinal && totalMessages > 0 ? Math.min(100, Math.max(0, (ordinal / totalMessages) * 100)) : null,",
+            "      heading_block_index: headingBlockIndex,",
+            "      current_version_id: message?.current_version?.id ?? null,",
+            "    },",
+            "  };"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/conversations/reader-navigation.ts",
+      "sha256": "E173A17C9C870579FAFA6794B2C2E56A3247CF9BE185FC4A1CCEF8BAFE8BA97A",
+      "excerpts": [
+        {
+          "start": 304,
+          "end": 339,
+          "lines": [
+            "export function estimateCharacterOffsetAtReadingLine(",
+            "  root: HTMLElement | null,",
+            "  messageId: string,",
+            "  blockIndex: number,",
+            "  readingLineOffset: number,",
+            "): number | undefined {",
+            "  const block = document.getElementById(`block-${messageId}-${blockIndex}`);",
+            "  if (!block) return undefined;",
+            "  const rootTop = root?.getBoundingClientRect().top ?? 0;",
+            "  const readingLine = rootTop + readingLineOffset;",
+            "  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);",
+            "  let total = 0;",
+            "  let closest: { offset: number; distance: number } | null = null;",
+            "  while (walker.nextNode()) {",
+            "    const node = walker.currentNode as Text;",
+            "    const text = node.textContent ?? \"\";",
+            "    const length = text.length;",
+            "    if (length === 0) continue;",
+            "    const range = document.createRange();",
+            "    range.setStart(node, 0);",
+            "    range.setEnd(node, Math.min(1, length));",
+            "    const firstRect = range.getBoundingClientRect();",
+            "    range.setStart(node, Math.max(0, length - 1));",
+            "    range.setEnd(node, length);",
+            "    const lastRect = range.getBoundingClientRect();",
+            "    for (const candidate of [",
+            "      { offset: total, rect: firstRect },",
+            "      { offset: total + length - 1, rect: lastRect },",
+            "    ]) {",
+            "      if (!candidate.rect.width && !candidate.rect.height) continue;",
+            "      const distance = Math.abs(candidate.rect.top - readingLine);",
+            "      if (!closest || distance < closest.distance) closest = { offset: candidate.offset, distance };",
+            "    }",
+            "    total += length;",
+            "  }",
+            "  return closest?.offset;"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/annotations/reading-bookmark.ts",
+      "sha256": "3E5AC8A7FC89231F1075027A271CD27E2EBA5FE0BE1B9DDADB0A8633BF30DC6D",
+      "excerpts": [
+        {
+          "start": 5,
+          "end": 35,
+          "lines": [
+            "export function readingBookmarkInput(message: MessageListItem, position?: ReadingPositionInput): AnnotationCreateInput {",
+            "  const blockIndex = position?.block_index;",
+            "  const block = (message.render_blocks ?? message.current_version?.blocks ?? []).find(item => item.block_index === blockIndex);",
+            "  const text = Array.from(block?.plain_text ?? \"\");",
+            "  const offset = Math.min(Math.max(0, Number(position?.anchor_data?.character_offset) || 0), Math.max(0, text.length - 1));",
+            "  const quote = text.slice(offset, offset + 160).join(\"\");",
+            "  return {",
+            "    id: crypto.randomUUID(), annotation_type: \"bookmark\", color: null,",
+            "    message_id: message.id, message_version_id: message.current_version?.id ?? null,",
+            "    ...(blockIndex != null ? {",
+            "      start_block_index: blockIndex, end_block_index: blockIndex,",
+            "      start_offset: quote ? offset : null, end_offset: quote ? offset + Array.from(quote).length : null,",
+            "      quote: quote || null, prefix: text.slice(Math.max(0, offset - 120), offset).join(\"\"),",
+            "      suffix: text.slice(offset + Array.from(quote).length, offset + Array.from(quote).length + 120).join(\"\"),",
+            "    } : {}),",
+            "    metadata: {",
+            "      message_role: message.role, message_order_key: message.order_key, message_role_number: message.ordinal ?? null,",
+            "      ...(position ? { bookmark_kind: \"reading_point\", reading_anchor: position.anchor_data ?? {} } : {}),",
+            "    },",
+            "  };",
+            "}",
+            "",
+            "export function sameBookmark(item: AnnotationRead, input: AnnotationCreateInput): boolean {",
+            "  return item.annotation_type === \"bookmark\" && item.message_id === input.message_id",
+            "    && item.message_version_id === input.message_version_id",
+            "    && (item.start_block_index ?? null) === (input.start_block_index ?? null)",
+            "    && (item.start_offset ?? null) === (input.start_offset ?? null)",
+            "    && (item.quote ?? \"\") === (input.quote ?? \"\")",
+            "    && (Boolean(input.quote) || JSON.stringify((item.metadata?.reading_anchor as Record<string, unknown> | undefined)?.block_offset ?? null)",
+            "      === JSON.stringify((input.metadata?.reading_anchor as Record<string, unknown> | undefined)?.block_offset ?? null))",
+            "    && ![\"orphaned\", \"needs_review\"].includes(item.anchor_status);"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/conversations/reader-locator-target.ts",
+      "sha256": "D04CB231F2D4CD58FEB5D9F0B5EC27133624768907B9F18B6C977958FF420D05",
+      "excerpts": [
+        {
+          "start": 29,
+          "end": 55,
+          "lines": [
+            "export function annotationNavigationTarget(",
+            "  annotation: AnnotationRead,",
+            "  explicitBlockIndex?: number,",
+            "): NavigateTarget {",
+            "  const unresolved = annotation.anchor_status === \"orphaned\" || annotation.anchor_status === \"needs_review\";",
+            "  const blockIndex = unresolved ? undefined : explicitBlockIndex ?? annotation.start_block_index ?? undefined;",
+            "  const savedAnchor = annotation.metadata?.reading_anchor as Record<string, unknown> | undefined;",
+            "  const nonTextOffset = annotation.annotation_type === \"bookmark\" && !annotation.quote",
+            "    && annotation.metadata?.bookmark_kind === \"reading_point\" && typeof savedAnchor?.block_offset === \"number\"",
+            "    && Number.isFinite(savedAnchor.block_offset) && savedAnchor.block_offset >= 0",
+            "    ? savedAnchor.block_offset : null;",
+            "  return {",
+            "    messageId: annotation.message_id ?? \"\",",
+            "    messageVersionId: annotation.message_version_id,",
+            "    blockIndex,",
+            "    characterOffset: blockIndex === undefined ? undefined : annotation.start_offset ?? undefined,",
+            "    endCharacterOffset: blockIndex === undefined ? undefined : annotation.end_offset ?? undefined,",
+            "    quote: blockIndex === undefined ? null : annotation.quote,",
+            "    prefix: blockIndex === undefined ? null : annotation.prefix,",
+            "    suffix: blockIndex === undefined ? null : annotation.suffix,",
+            "    anchorStatus: annotation.anchor_status,",
+            "    annotationId: annotation.id,",
+            "    ...(blockIndex !== undefined && nonTextOffset !== null ? { alignmentOffset: 120 - nonTextOffset } : {}),",
+            "    preferTocPipeline: true,",
+            "    allowMessageFallback: true,",
+            "    source: \"annotation\",",
+            "  };"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/compare/conversation-compare.tsx",
+      "sha256": "57F87FAE41011F7C9518124727915B0D288D7B34CB17A820A27E090FE40DCEFC",
+      "excerpts": [
+        {
+          "start": 65,
+          "end": 105,
+          "lines": [
+            "  const split = visible.length === 2 && width >= TOGETHER_MIN_PANE * 2 + GUTTER;",
+            "  const minimum = Math.min(.5, TOGETHER_MIN_PANE / Math.max(1, width - GUTTER));",
+            "  const ratio = Math.max(minimum, Math.min(1 - minimum, fraction));",
+            "  const mountedIds = split ? visible : (activeId ? [activeId] : []);",
+            "  function activate(id: string) {",
+            "    setActiveId(id);",
+            "    setVisible(current => current.includes(id) ? current : current.length < 2 ? [...current, id] : current.map(value => value === activeId ? id : value));",
+            "  }",
+            "  function choose(choice: TogetherChoice) {",
+            "    const existing = tabs.find(tab => tab.id === choice.conversationId);",
+            "    if (!existing && tabs.length >= TOGETHER_MAX_TABS) { setNotice(zh ? \"最多打开 8 个对话，请先关闭一个标签。\" : \"Up to 8 conversations. Close a tab before opening another.\"); return; }",
+            "    closed.current.delete(choice.conversationId);",
+            "    const target = togetherTarget(choice.href);",
+            "    if (target?.annotationId) { setAnnotationTarget({ conversationId: choice.conversationId, id: target.annotationId }); setAnnotationsOpen(true); }",
+            "    if (target) snapshots.current.delete(choice.conversationId);",
+            "    setTabs(current => existing ? current.map(tab => tab.id === choice.conversationId ? { ...tab, ...(target ? { target, sequence: tab.sequence + 1 } : {}) } : tab)",
+            "      : [...current, { id: choice.conversationId, title: choice.title, target, sequence: 0 }]);",
+            "    if (!visible.includes(choice.conversationId)) setVisible(current => current.length < 2 ? [...current, choice.conversationId]",
+            "      : current.map(id => id !== activeId ? choice.conversationId : id));",
+            "    setActiveId(choice.conversationId); setChoosing(false); setNotice(\"\");",
+            "  }",
+            "  function closeTab(id: string) {",
+            "    closed.current.add(id);",
+            "    snapshots.current.delete(id);",
+            "    setPaneStates(current => { const next = { ...current }; delete next[id]; return next; });",
+            "    if (annotationTarget?.conversationId === id) setAnnotationTarget(null);",
+            "    const next = tabs.filter(tab => tab.id !== id);",
+            "    const remaining = visible.filter(value => value !== id);",
+            "    const replacement = next.find(tab => !remaining.includes(tab.id));",
+            "    if (visible.includes(id) && replacement && remaining.length < 2) remaining.push(replacement.id);",
+            "    setTabs(next); setVisible(remaining);",
+            "    if (activeId === id) setActiveId(remaining[0] ?? next[0]?.id ?? \"\");",
+            "    handles.current.delete(id);",
+            "  }",
+            "  const activeState = paneStates[activeId];",
+            "  const closeWorkspace = () => {",
+            "    const origin = params.get(\"returnTo\");",
+            "    if (origin?.startsWith(\"/conversations/\") && !origin.includes(\"\\\\\") && !origin.includes(\"\\n\")) router.push(origin);",
+            "    else if (initial.current[0]) router.push(`/conversations/${initial.current[0]}`);",
+            "    else router.push(\"/\");",
+            "  };"
+          ]
+        },
+        {
+          "start": 121,
+          "end": 138,
+          "lines": [
+            "      {mountedIds.flatMap((id, index) => {",
+            "        const tab = tabs.find(item => item.id === id);",
+            "        if (!tab) return [];",
+            "        if (!handles.current.has(id)) handles.current.set(id, createRef<TogetherPaneHandle>());",
+            "        const pane = <div key={id} className=\"min-h-0 min-w-0 overflow-hidden\"><TogetherPane conversationId={id} zh={zh} active={activeId === id} snapshot={snapshots.current.get(id)} initialTarget={tab.target} targetSequence={tab.sequence} paneRef={handles.current.get(id)!}",
+            "          onActivate={() => setActiveId(id)} onState={receive} onSnapshot={snapshot} onAnnotations={() => { setActiveId(id); setAnnotationsOpen(true); }} /></div>;",
+            "        if (!split || index === 0) return [pane];",
+            "        return [<div key=\"divider\" className=\"relative border-x border-ui bg-subtle\"><button type=\"button\" role=\"separator\" aria-label={zh ? \"调整阅读栏宽度\" : \"Resize reading panes\"} aria-orientation=\"vertical\" aria-valuemin={Math.round(minimum * 100)} aria-valuemax={Math.round((1 - minimum) * 100)} aria-valuenow={Math.round(ratio * 100)}",
+            "          className=\"absolute inset-y-0 left-1/2 z-20 w-11 -translate-x-1/2 cursor-col-resize touch-none outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus)]\"",
+            "          onDoubleClick={() => setFraction(.5)} onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); }}",
+            "          onPointerMove={event => { if (!event.currentTarget.hasPointerCapture(event.pointerId) || !body.current) return; const bounds = body.current.getBoundingClientRect(); setFraction(Math.max(minimum, Math.min(1 - minimum, (event.clientX - bounds.left - GUTTER / 2) / (bounds.width - GUTTER)))); }}",
+            "          onPointerUp={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}",
+            "          onKeyDown={event => { if ([\"ArrowLeft\", \"ArrowRight\", \"Home\"].includes(event.key)) { event.preventDefault(); setFraction(event.key === \"Home\" ? .5 : Math.max(minimum, Math.min(1 - minimum, ratio + (event.key === \"ArrowLeft\" ? -.025 : .025)))); } }} /></div>, pane];",
+            "      })}",
+            "    </div>",
+            "    {activeState && activeId ? <AnnotationWorkspace conversationId={activeId} messages={activeState.messages} activeMessageId={activeState.messageId} initialAnnotationId={annotationTarget?.conversationId === activeId ? annotationTarget.id : undefined} repository={remoteAnnotationRepository} open={annotationsOpen} onOpenChange={setAnnotationsOpen}",
+            "      onNavigate={target => handles.current.get(activeId)?.current?.navigate(target) ?? { ok: false, targetId: \"\", reason: \"target-not-mounted\" }} /> : null}",
+            "    <TogetherChooser open={choosing} onClose={() => setChoosing(false)} onChoose={choose} openedIds={tabs.map(tab => tab.id)} />"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/compare/together-pane.tsx",
+      "sha256": "B60F68CC95927BB40517B3E1A3693DD006F1C2745EC1B60083D50E215D918962",
+      "excerpts": [
+        {
+          "start": 250,
+          "end": 274,
+          "lines": [
+            "  if (conversation.isError) return <section role=\"alert\" className=\"p-4 text-sm\">{zh ? \"无法读取此对话。\" : \"Conversation unavailable.\"}<button type=\"button\" className=\"min-h-11 px-2 underline\" onClick={() => void conversation.refetch()}>{zh ? \"重试本侧\" : \"Retry this pane\"}</button></section>;",
+            "  const title = latest.current.title, data = turn.data;",
+            "  const iconClass = \"inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle\";",
+            "  return <section className=\"flex h-full min-h-0 min-w-0 flex-col bg-page\" aria-label={title} data-together-pane={conversationId} data-pane-active={active}",
+            "    onPointerDownCapture={onActivate} onFocusCapture={onActivate}>",
+            "    <header className=\"shrink-0 border-b border-ui px-3 py-2\">",
+            "      <div className=\"flex items-center gap-1\"><h2 className=\"min-w-0 flex-1 truncate text-sm font-semibold\" title={title}>{title}</h2>",
+            "        <button type=\"button\" className={iconClass} aria-label={zh ? \"搜索当前对话\" : \"Search this conversation\"} onClick={() => setSearchOpen(value => !value)}><Search className=\"h-[18px] w-[18px]\" /></button>",
+            "        <button type=\"button\" className={iconClass} aria-label={zh ? \"保存当前位置\" : \"Save reading position\"} onClick={bookmark}><BookmarkPlus className=\"h-[18px] w-[18px]\" /></button>",
+            "        <button type=\"button\" className={iconClass} aria-label={zh ? \"批注与书签\" : \"Annotations and bookmarks\"} onClick={onAnnotations}><MessageSquareText className=\"h-[18px] w-[18px]\" /></button>",
+            "        <a href={readingPositionHref(conversationId, snapshot?.position ?? null)} onClick={event => { event.currentTarget.href = readingPositionHref(conversationId, capture()); }}",
+            "          onAuxClick={event => { event.currentTarget.href = readingPositionHref(conversationId, capture()); }}",
+            "          className={iconClass} aria-label={zh ? \"单独打开此对话\" : \"Open conversation alone\"}><ExternalLink className=\"h-[18px] w-[18px]\" /></a>",
+            "      </div>",
+            "      <div className=\"flex min-w-0 gap-2\">",
+            "        <details className=\"relative min-w-0 flex-1\"><summary className=\"min-h-11 cursor-pointer px-2 py-3 text-xs text-secondary\">{zh ? \"对话目录\" : \"Dialogue index\"}</summary><div className=\"absolute left-0 top-full z-30 max-h-[55svh] w-[min(85vw,24rem)] overflow-auto rounded-lg border border-ui bg-raised p-2 shadow-sm\">",
+            "          <ConversationIndex conversationId={conversationId} sourceKey={`compare:${conversationId}`} mode=\"sheet\" ready onNavigate={item => void navigate({ messageId: item.messageId, source: \"dialogue-index\" })} />",
+            "        </div></details>",
+            "        <details className=\"relative min-w-0 flex-1\"><summary className=\"min-h-11 cursor-pointer px-2 py-3 text-xs text-secondary\">{zh ? \"章节目录\" : \"Sections\"}</summary><div className=\"absolute right-0 top-full z-30 max-h-[55svh] w-[min(85vw,24rem)] overflow-auto rounded-lg border border-ui bg-raised p-2 shadow-sm\">",
+            "          <ConversationToc conversationId={conversationId} sourceKey={`compare:${conversationId}`} activeMessageId={readingMessageId ?? anchorId ?? data?.items[0]?.id} mode=\"sheet\" ready={Boolean(data)} onNavigate={item => void navigate(tocNavigationTarget(item))} />",
+            "        </div></details>",
+            "      </div>",
+            "    </header>",
+            "    {searchOpen ? <div className=\"max-h-[45svh] shrink-0 overflow-auto border-b border-ui\"><ConversationSearchPanel conversationId={conversationId} sourceKey={`together:${conversationId}`} initialState={searchState.current} onStateChange={state => { searchState.current = state; }}",
+            "      onClose={() => { cancel(); setSearchOpen(false); }} onNavigate={async (target, _context, isCurrent) => target.messageId ? navigate({ ...target, annotationId: target.annotationId ?? undefined, messageId: target.messageId, source: \"search\", allowMessageFallback: true }, isCurrent) : { ok: false, targetId: \"\", reason: \"block-not-found\" }} /></div> : null}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/annotations/notebook-view.tsx",
+      "sha256": "DA33CE62AE2DF0ABF5C0AC7C801B65E3C6D78D8E80D2BD834815D4F47395A576",
+      "excerpts": [
+        {
+          "start": 27,
+          "end": 38,
+          "lines": [
+            "  const conversationId = notebook?.conversation_id;",
+            "  const requestedDraft = typeof window === \"undefined\" ? null : new URLSearchParams(window.location.search).get(\"notebookDraft\");",
+            "  const key = conversationId ? (requestedDraft?.startsWith(`notebook-draft:${conversationId}:${repository.mode}:`) ? requestedDraft : notebookDraftKey(conversationId, repository.mode)) : \"\";",
+            "  const [draft, setDraft] = useState<Working | null>(null), draftRef = useRef<Working | null>(null);",
+            "  const [busy, setBusy] = useState(false), busyRef = useRef(false), [loading, setLoading] = useState(true);",
+            "  const [storage, setStorage] = useState<\"saved\" | \"saving\" | \"failed\">(\"saved\");",
+            "  const [error, setError] = useState(\"\"), [latest, setLatest] = useState<NotebookRead | null>(null);",
+            "  const [cleanup, setCleanup] = useState<{ key: string; version: number; sequence: number } | null>(null);",
+            "  const version = useRef(0), writes = useRef<Promise<void>>(Promise.resolve()), sequence = useRef(0);",
+            "  const pendingWrite = useRef<{ key: string; mode: NotebookDraft[\"mode\"]; value: Working; serial: number } | null>(null);",
+            "  const writing = useRef(false);",
+            "  const currentNotebook = useRef(notebook); currentNotebook.current = notebook;"
+          ]
+        },
+        {
+          "start": 64,
+          "end": 118,
+          "lines": [
+            "  const atRisk = storage !== \"saved\" && Boolean(draft && edited(draft));",
+            "  useEffect(() => { onRiskChange(atRisk); }, [atRisk, onRiskChange]);",
+            "  useEffect(() => () => onRiskChange(false), [onRiskChange]);",
+            "  useEffect(() => {",
+            "    if (!atRisk) return;",
+            "    const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = \"\"; };",
+            "    window.addEventListener(\"beforeunload\", guard);",
+            "    return () => window.removeEventListener(\"beforeunload\", guard);",
+            "  }, [atRisk]);",
+            "",
+            "  const retain = (value: Working) => {",
+            "    const serial = ++sequence.current;",
+            "    if (cleanup) setError(\"\");",
+            "    setCleanup(null);",
+            "    draftRef.current = value; setDraft(value); setStorage(\"saving\");",
+            "    // Keep only the newest waiting snapshot while storage is busy. The same",
+            "    // promise drains it before save/cleanup, without delaying the first write.",
+            "    pendingWrite.current = { key, mode: repository.mode, value, serial };",
+            "    if (writing.current) return;",
+            "    writing.current = true;",
+            "    writes.current = (async () => {",
+            "      try {",
+            "        while (pendingWrite.current) {",
+            "          const pending = pendingWrite.current;",
+            "          pendingWrite.current = null;",
+            "          try {",
+            "            version.current = await writeNotebookDraft(pending.key, version.current, {",
+            "              ...pending.value, conversation_id: pending.value.base.conversation_id, mode: pending.mode,",
+            "            });",
+            "            if (pending.serial === sequence.current) setStorage(\"saved\");",
+            "          } catch { if (pending.serial === sequence.current) setStorage(\"failed\"); }",
+            "        }",
+            "      } finally { writing.current = false; }",
+            "    })();",
+            "  };",
+            "  const reportSaveBlocked = () => setError(zh",
+            "    ? \"笔记未保存，当前笔记或冲突核对尚未就绪。草稿已保留，请待核对完成后重试。\"",
+            "    : \"Notebook not saved. The notebook or conflict check is not ready. Your draft is retained; retry after checking finishes.\");",
+            "  const save = async (baseOverride?: NotebookRead) => {",
+            "    const value = draftRef.current;",
+            "    if (!value || busyRef.current) return;",
+            "    if (!canSave()) { reportSaveBlocked(); return; }",
+            "    busyRef.current = true; setBusy(true); setError(\"\");",
+            "    try {",
+            "      // A durable draft has no pending work to wait for. An idle await would",
+            "      // let an unrelated background read revoke this already-ready save.",
+            "      if (writing.current) await writes.current;",
+            "      if (!canSave()) { reportSaveBlocked(); return; }",
+            "      const saved = await repository.saveNotebook(baseOverride ?? value.base, value.blocks, value.title || null);",
+            "      const next = { base: saved, title: saved.title ?? \"\", blocks: saved.blocks };",
+            "      onSaved(saved); draftRef.current = next; setDraft(next); setLatest(null);",
+            "      const candidate = { key, version: version.current, sequence: sequence.current };",
+            "      try { await removeNotebookDraft(candidate.key, candidate.version); version.current = 0; setCleanup(null); setStorage(\"saved\"); }",
+            "      catch { setCleanup(candidate); setStorage(\"failed\"); setError(zh ? \"笔记已保存，但本机草稿未能清除。可重试清除。\" : \"Notebook saved, but the local draft could not be cleared. Retry clearing it.\"); }",
+            "    } catch { setError(zh ? \"笔记未保存，草稿已保留。可重试，或查看当前版本后再决定。\" : \"Notebook not saved. Your draft is retained. Retry, or compare the current version before deciding.\"); }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/annotations/annotation-workspace.tsx",
+      "sha256": "7834994EB2D9E58E28161BDC10FEDB9B2997AEAC8499A57509D4640438883AD5",
+      "excerpts": [
+        {
+          "start": 393,
+          "end": 397,
+          "lines": [
+            "  const closeWorkspace = async () => {",
+            "    if (notebookDraftAtRisk && !await dialog.confirm({ title: zh ? \"草稿尚未写入本机，仍要关闭？\" : \"The draft is not saved on this device. Close anyway?\", description: zh ? \"返回笔记可重试保存；关闭可能丢失最近的输入。\" : \"Return to the notebook to retry saving. Closing may lose recent input.\", confirmLabel: zh ? \"仍然关闭\" : \"Close anyway\", danger: true })) return;",
+            "    if (!isCurrent()) return;",
+            "    setExpanded(false); onOpenChange(false);",
+            "  };"
+          ]
+        },
+        {
+          "start": 713,
+          "end": 724,
+          "lines": [
+            "  const visibleAnnotations = useMemo(() => {",
+            "    const base = annotations.filter(item => (view === \"bookmarks\" ? item.annotation_type === \"bookmark\" : item.annotation_type !== \"bookmark\")",
+            "      && (!currentMessageOnly || item.message_id === focusedMessageId));",
+            "    const normalized = annotationQuery.trim().toLocaleLowerCase();",
+            "    return base.filter((item) => {",
+            "      if (typeFilter !== \"all\" && item.annotation_type !== typeFilter) return false;",
+            "      if (colorFilter !== \"all\" && item.color !== colorFilter) return false;",
+            "      if (statusFilter !== \"all\" && item.anchor_status !== statusFilter) return false;",
+            "      if (!normalized) return true;",
+            "      return `${item.quote ?? \"\"}\\n${item.comment_markdown}`.toLocaleLowerCase().includes(normalized);",
+            "    });",
+            "  }, [annotationQuery, annotations, colorFilter, focusedMessageId, statusFilter, typeFilter, view, currentMessageOnly]);"
+          ]
+        },
+        {
+          "start": 748,
+          "end": 767,
+          "lines": [
+            "  const selectedAnnotations = useMemo(() => annotations.filter(item => selectedAnnotationIds.has(item.id)), [annotations, selectedAnnotationIds]);",
+            "  const exportIds = exportScope === \"all\" ? null : (exportScope === \"selected\" ? selectedAnnotations : visibleAnnotations).map(item => item.id);",
+            "  const annotationExport = view !== \"notebook\" ? <div data-comment-actions className=\"shrink-0 border-b border-ui px-3 py-2\">",
+            "    <label className=\"flex min-h-11 items-center gap-2 text-xs text-secondary\"><input type=\"checkbox\" checked={currentMessageOnly} onChange={event => setCurrentMessageOnly(event.target.checked)} />{zh ? \"仅当前消息\" : \"Current message only\"}</label>",
+            "    <div className=\"flex flex-wrap items-center gap-2\">",
+            "      <select value={exportScope} onChange={event => setExportScope(event.target.value as typeof exportScope)} aria-label={zh ? \"批注导出范围\" : \"Annotation export scope\"} className=\"min-h-11 max-w-full rounded-md border border-ui bg-surface px-2 text-xs\">",
+            "        <option value=\"filtered\">{zh ? `当前筛选（${visibleAnnotations.length}）` : `Filtered (${visibleAnnotations.length})`}</option>",
+            "        <option value=\"selected\">{zh ? `已勾选（${selectedAnnotations.length}）` : `Selected (${selectedAnnotations.length})`}</option>",
+            "        <option value=\"all\">{zh ? `全部已保存（${annotations.length}）` : `All saved (${annotations.length})`}</option>",
+            "      </select>",
+            "      {exportIds && exportIds.length > 2000 ? <p role=\"alert\" className=\"text-xs text-secondary\">{zh ? \"筛选导出最多 2000 条，请缩小范围或导出全部。\" : \"Select at most 2,000 marks, or export all.\"}</p> : <DirectExportDownload",
+            "        href={`/api/conversations/${conversationId}/exports/annotations`} format=\"markdown\" label={zh ? \"导出 Markdown\" : \"Export Markdown\"} compact",
+            "        disabled={exportScope !== \"all\" && !reads.annotations.isReady()}",
+            "        requestBody={{ scope: exportScope, annotation_ids: exportIds, locale: zh ? \"zh-CN\" : \"en\" }}",
+            "        prepareLocal={repository.mode === \"offline\" ? () => prepareOfflineAnnotationDocument(conversationId, exportIds, exportScope, zh) : undefined} />}",
+            "    </div>",
+            "    <p className=\"mt-1 text-xs text-secondary\">{repository.mode === \"offline\"",
+            "      ? (zh ? \"导出本机已保存内容，可能含待同步修改；不包含未保存草稿。\" : \"Exports local saved content, including pending sync; excludes unsaved drafts.\")",
+            "      : (zh ? \"以服务器已保存快照为准；不包含未保存草稿。\" : \"Exports a saved server snapshot; excludes unsaved drafts.\")}</p>",
+            "  </div> : null;"
+          ]
+        },
+        {
+          "start": 1134,
+          "end": 1145,
+          "lines": [
+            "    {notebook ? <NotebookView key={scopeKey} notebook={notebook} conflicts={notebookConflicts} annotations={annotations}",
+            "      repository={repository} onSaved={setNotebook} onReload={reload} onResolve={openNotebookConflicts}",
+            "      onRiskChange={setNotebookDraftAtRisk} onNavigate={navigateFromAnnotation}",
+            "      saveBlocked={!notebookReady || Boolean(deleteFeedback) || Boolean(additionFeedback)} canSave={() => canUseNotebook() && !deleteGate.busy && !deleteGate.operation && !additionGate.busy && !additionGate.request} annotationsLoaded={reads.annotations.data !== null} /> : null}",
+            "  </div>;",
+            "",
+            "  return <>",
+            "    {conflictKey ? <SettingsFocusedDialog category=\"offline\" initialConflictKey={conflictKey} onClose={() => { setConflictKey(null); void reload(); }} restoreFocus={() => conflictOpener.current} /> : null}",
+            "    {!open && (bookmarkReadError || bookmarkNotice || creationFeedback?.input.annotation_type === \"bookmark\") ? <div className=\"fixed bottom-4 left-1/2 z-[110] flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2 rounded-lg border border-ui bg-raised px-3 text-sm shadow-sm\" role=\"status\">",
+            "      <span>{bookmarkReadError ? (zh ? \"书签读取失败，尚未保存。请重试保存当前位置。\" : \"Bookmarks could not be read. Nothing saved; try Save reading position again.\") : creationFeedback ? (zh ? \"书签保存中或待核对\" : \"Bookmark saving or awaiting verification\") : (zh ? \"阅读位置已保存\" : \"Reading position saved\")}</span>",
+            "      <button type=\"button\" className=\"min-h-11 px-2 text-accent\" onClick={() => { setView(\"bookmarks\"); setFocusedAnnotationId(bookmarkNotice); onOpenChange(true); setBookmarkNotice(null); }}>{zh ? \"查看\" : \"View\"}</button>",
+            "      <button type=\"button\" className=\"min-h-11 px-2\" aria-label={zh ? \"关闭提示\" : \"Dismiss notice\"} onClick={() => { setBookmarkNotice(null); setBookmarkReadError(false); }} disabled={Boolean(creationFeedback)}><X className=\"h-4 w-4\" /></button>"
+          ]
+        },
+        {
+          "start": 1152,
+          "end": 1171,
+          "lines": [
+            "    {contextAnnotation && desktop ? <AnnotationContextMenu",
+            "      key={contextAnnotation.annotation.id}",
+            "      item={contextAnnotation.annotation}",
+            "      x={contextAnnotation.x}",
+            "      y={contextAnnotation.y}",
+            "      returnFocus={contextAnnotation.returnFocus}",
+            "      onClose={() => setContextAnnotation(null)}",
+            "      onNavigate={() => { setContextAnnotation(null); void navigateFromAnnotation(annotationNavigationTarget(contextAnnotation.annotation)); }}",
+            "      onDelete={() => void deleteAnnotations(new Set([contextAnnotation.annotation.id]))}",
+            "      onStyle={(type, color) => void updateAnnotationStyle(contextAnnotation.annotation, type, color)}",
+            "      onAddToNotebook={() => void addAnnotationToNotebook(contextAnnotation.annotation)}",
+            "      onSelect={() => { setSelectionMode(true); setSelectedAnnotationIds((current) => new Set(current).add(contextAnnotation.annotation.id)); setContextAnnotation(null); }}",
+            "    /> : null}",
+            "    {open && !expanded ? <section className={`fixed z-[110] flex min-h-0 flex-col overflow-hidden border border-ui bg-raised shadow-2xl ${panelPinned && desktop ? \"inset-y-0 left-0 w-[min(22rem,32vw)] rounded-none\" : \"inset-x-2 bottom-2 top-16 rounded-md md:inset-auto\"}`} style={desktop && !panelPinned ? { left: panel.x, top: panel.y, width: panel.width, height: panel.height } : undefined} aria-label=\"批注\" data-annotation-mode={panelPinned && desktop ? \"docked\" : \"floating\"}>",
+            "      <header className=\"flex h-12 shrink-0 touch-none items-center gap-2 border-b border-ui px-3\" onPointerDown={(event) => { if (panelPinned || (event.target as HTMLElement).closest(\"button\")) return; beginPanelDrag(\"move\", event); }}><MessageSquareText className=\"h-4 w-4 text-accent\" /><h2 className=\"min-w-0 flex-1 truncate text-sm font-semibold\">{zh ? \"批注\" : \"Annotations\"}</h2>{desktop && !panelPinned ? <button type=\"button\" onClick={resetPanelPosition} className=\"flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle\" aria-label={zh ? \"重置批注窗口位置\" : \"Reset annotation window position\"} title={zh ? \"重置位置\" : \"Reset position\"}><RotateCcw className=\"h-4 w-4\" /></button> : null}{desktop ? <button type=\"button\" onClick={() => { const next = !panelPinned; setPanelPinned(next); void setAnnotationDefaultPosition(next ? \"docked\" : \"floating\"); }} className=\"flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle\" aria-label={panelPinned ? (zh ? \"恢复为浮窗\" : \"Return to floating\") : (zh ? \"固定到左侧栏\" : \"Dock to the left\")} title={panelPinned ? (zh ? \"恢复为浮窗\" : \"Return to floating\") : (zh ? \"固定到左侧栏\" : \"Dock to the left\")}>{panelPinned ? <PinOff className=\"h-4 w-4\" /> : <Pin className=\"h-4 w-4\" />}</button> : null}<button type=\"button\" onClick={() => setExpanded(true)} className=\"flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle\" aria-label={zh ? \"展开批注阅读\" : \"Expand annotation reading\"} title={zh ? \"展开阅读\" : \"Expand reading\"}><Maximize2 className=\"h-4 w-4\" /></button><button type=\"button\" onClick={() => void closeWorkspace()} className=\"flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle\" aria-label={zh ? \"关闭\" : \"Close\"}><X className=\"h-4 w-4\" /></button></header>",
+            "      {annotationExport}",
+            "      <div className=\"grid shrink-0 grid-cols-3 border-b border-ui bg-subtle p-1\">{([\"all\", \"bookmarks\", \"notebook\"] as const).map((item) => <button key={item} data-annotation-tab={item} type=\"button\" onClick={() => setView(item)} className={`min-h-9 rounded px-2 text-xs font-medium ${view === item ? \"bg-surface text-primary shadow-sm\" : \"text-secondary\"}`}>{item === \"all\" ? (zh ? \"批注\" : \"Annotations\") : item === \"bookmarks\" ? (zh ? \"书签\" : \"Bookmarks\") : (zh ? \"精选笔记\" : \"Notes\")}</button>)}</div>",
+            "      {navigationFeedback.status !== \"idle\" ? <div className={`flex shrink-0 items-center gap-2 border-b border-ui px-3 py-2 text-xs ${navigationFeedback.status === \"failed\" ? \"bg-[var(--danger-soft)] text-[var(--danger)]\" : navigationFeedback.status === \"stale\" ? \"bg-amber-50 text-amber-800\" : \"bg-subtle text-accent\"}`} role=\"status\"><span className=\"min-w-0 flex-1\">{navigationFeedback.status === \"loading\" ? \"正在按对话与章节位置加载批注原文…\" : navigationFeedback.status === \"stale\" ? \"原文已更改，已定位到最近的段落或消息。\" : \"无法定位批注原文，当前正文保持不变。\"}</span>{navigationFeedback.status === \"failed\" && navigationFeedback.target ? <button type=\"button\" onClick={() => void navigateFromAnnotation(navigationFeedback.target as NavigateTarget)} className=\"shrink-0 font-semibold underline\">重试</button> : null}</div> : null}",
+            "      {view !== \"notebook\" ? <div className=\"mx-3 mt-3 grid shrink-0 grid-cols-2 gap-2\"><label className=\"col-span-2 flex min-h-9 min-w-0 items-center gap-2 rounded-md border border-ui bg-page px-2\"><Search className=\"h-4 w-4 text-secondary\" /><input value={annotationQuery} onChange={(event) => setAnnotationQuery(event.target.value)} className=\"min-w-0 flex-1 bg-transparent text-sm outline-none\" placeholder={zh ? \"搜索批注\" : \"Search annotations\"} /></label><select aria-label={zh ? \"批注类型\" : \"Annotation type\"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | \"all\")} className=\"min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs\"><option value=\"all\">{zh ? \"全部类型\" : \"All types\"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}<option value=\"bookmark\">{localizedAnnotationType(\"bookmark\", zh)}</option></select><select aria-label={zh ? \"批注颜色\" : \"Annotation color\"} value={colorFilter} onChange={(event) => setColorFilter(event.target.value as AnnotationColor | \"all\")} className=\"min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs\"><option value=\"all\">{zh ? \"全部颜色\" : \"All colors\"}</option>{COLORS.map((color) => <option key={color.value} value={color.value}>{localizedColor(color.value, zh)}</option>)}</select><select aria-label={zh ? \"锚点状态\" : \"Anchor status\"} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as AnnotationRead[\"anchor_status\"] | \"all\")} className=\"min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs\"><option value=\"all\">{zh ? \"全部状态\" : \"All status\"}</option><option value=\"valid\">{zh ? \"正常\" : \"Valid\"}</option><option value=\"remapped\">{zh ? \"已重定位\" : \"Remapped\"}</option><option value=\"needs_review\">{zh ? \"需要检查\" : \"Needs review\"}</option><option value=\"orphaned\">{zh ? \"原文缺失\" : \"Orphaned\"}</option></select>{desktop ? <button type=\"button\" onClick={() => { setSelectionMode((current) => !current); setSelectedAnnotationIds(new Set()); }} className={`min-h-9 rounded-md border px-3 text-xs font-medium ${selectionMode ? \"border-[var(--accent)] bg-[var(--accent-soft)] text-accent\" : \"border-ui text-secondary hover:bg-subtle\"}`}>{selectionMode ? (zh ? \"完成\" : \"Done\") : (zh ? \"管理\" : \"Manage\")}</button> : null}</div> : null}",
+            "      {view !== \"notebook\" && selectionMode ? <div className=\"mx-3 mt-2 flex flex-wrap items-center gap-2 border-b border-ui pb-2 text-xs\">"
+          ]
+        },
+        {
+          "start": 1244,
+          "end": 1260,
+          "lines": [
+            "    const sectionTitle = typeof annotation.metadata.section_title === \"string\" ? annotation.metadata.section_title : null;",
+            "    const label = `${metadataRole === \"user\" ? (zh ? \"用户\" : \"User\") : metadataRole === \"assistant\" ? (zh ? \"助手\" : \"Assistant\") : metadataRole ?? (zh ? \"消息\" : \"Message\")} ${metadataNumber ?? \"\"}`;",
+            "    const blockIndex = hasUnresolvedAnchor(annotation) ? undefined : annotation.start_block_index ?? undefined;",
+            "    const selected = selectedAnnotationIds.has(annotation.id);",
+            "    return <article id={`annotation-${annotation.id}`} key={annotation.id} className={`rounded-sm border-b border-ui pb-4 last:border-0 ${focusedAnnotationId === annotation.id ? \"bg-[var(--accent-soft)] ring-2 ring-[var(--focus)]\" : \"\"}`}>",
+            "      <div className=\"flex items-start gap-1\">",
+            "        {selectionMode ? <button type=\"button\" onClick={() => onToggleSelected(annotation.id)} className=\"mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle\" aria-label={selected ? \"取消选择批注\" : \"选择批注\"}>{selected ? <CheckSquare2 className=\"h-4 w-4 text-accent\" /> : <Square className=\"h-4 w-4\" />}</button> : null}",
+            "        <button type=\"button\" onClick={() => selectionMode ? onToggleSelected(annotation.id) : void onNavigate(annotationNavigationTarget(annotation, blockIndex))} className=\"min-w-0 flex-1 px-1 text-left\">",
+            "         <div className=\"flex flex-wrap items-center gap-2 text-xs text-secondary\"><span className={`h-2.5 w-2.5 rounded-full ${colorClass(annotation.color)}`} /><span>{label}</span><span className=\"rounded bg-subtle px-1.5 py-0.5\">{localizedAnnotationType(annotation.annotation_type, zh)}</span>{sectionTitle ? <span className=\"min-w-0 truncate\">{sectionTitle}</span> : null}{hasUnresolvedAnchor(annotation) ? <span className=\"text-[var(--danger)]\">{zh ? \"原文需要检查\" : \"Source needs review\"}</span> : null}{annotation.conflict_of_id ? <span className=\"text-amber-600\">{zh ? \"冲突副本\" : \"Conflict copy\"}</span> : null}</div>",
+            "          <blockquote data-annotation-color={annotation.color ?? \"yellow\"} className=\"annotation-quote mt-2 border-l-2 px-3 py-2 text-sm leading-6 text-primary\">{annotation.quote || (zh ? \"整条消息书签\" : \"Message bookmark\")}</blockquote>",
+            "        </button>",
+            "      </div>",
+            "       {annotation.prefix || annotation.suffix ? <details className=\"mt-2 text-xs text-secondary\"><summary className=\"min-h-11 cursor-pointer py-3\">{zh ? \"查看保存时的上下文\" : \"Context when saved\"}</summary><blockquote className=\"whitespace-pre-wrap border-l-2 border-ui pl-3 leading-6\">{annotation.prefix}<mark className=\"bg-[var(--mark-bg)] text-[var(--mark-text)]\">{annotation.quote}</mark>{annotation.suffix}</blockquote></details> : null}",
+            "       {annotation.comment_markdown ? <div className=\"mt-2 text-sm\"><MarkdownRenderer text={annotation.comment_markdown} /></div> : null}",
+            "       {editable ? <details className=\"mt-2\"><summary className=\"min-h-11 cursor-pointer py-3 text-xs text-secondary\">{zh ? \"编辑与操作\" : \"Edit and actions\"}</summary>",
+            "       {editable ? <div className=\"mt-2 flex flex-wrap items-center gap-2\"><select value={annotation.annotation_type === \"bookmark\" ? \"bookmark\" : annotation.annotation_type} disabled={annotation.annotation_type === \"bookmark\"} onChange={(event) => void onStyle(annotation, event.target.value as Exclude<AnnotationType, \"bookmark\">, annotation.color ?? \"yellow\")} className=\"min-h-8 rounded-md border border-ui bg-page px-2 text-xs\">{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}{annotation.annotation_type === \"bookmark\" ? <option value=\"bookmark\">{localizedAnnotationType(\"bookmark\", zh)}</option> : null}</select><AnnotationColorPicker value={annotation.color ?? \"yellow\"} disabled={annotation.annotation_type === \"bookmark\"} onChange={(color) => void onStyle(annotation, annotation.annotation_type as Exclude<AnnotationType, \"bookmark\">, color)} zh={zh} /></div> : null}",
+            "       {editable ? <AnnotationCommentEditor annotation={annotation} readDraft={readCommentDraft} focused={focusedAnnotationId === annotation.id} zh={zh} loading={commentsLoading} onChange={onDraftChange} onSave={onSaveComment} onDiscard={onDiscardComment} onCheck={onCheckComments} /> : null}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/api/app/services/canonical/persistence.py",
+      "sha256": "CACBBDB095681880A236BF3E6607CAFC34E3FF2ECFC71F06EBB29E997D932208",
+      "excerpts": [
+        {
+          "start": 900,
+          "end": 916,
+          "lines": [
+            "            source_type=\"adaptive_zip\" if archive_attachment else \"canjson\",",
+            "            source_attachment_id=source_id,",
+            "            metadata_=metadata,",
+            "            resolution_status=\"resolved\" if asset else \"unresolved\",",
+            "        )",
+            "        db.add(attachment)",
+            "        lane = ((import_record.analysis_summary or {}).get(\"commit_options\") or {}).get(\"image_lane_width\")",
+            "        if asset is not None and type(lane) is int and 44 <= lane <= 8192:",
+            "            from app.services.assets.image_display import initialize_import_display",
+            "            db.flush()",
+            "            warning = initialize_import_display(",
+            "                db, attachment, lane,",
+            "                OwnershipScope(import_record.owner_user_id, include_legacy_unowned=import_record.owner_user_id is None),",
+            "            )",
+            "            if warning:",
+            "                import_record.warnings = list(dict.fromkeys([*(import_record.warnings or []), warning]))",
+            "    return mapping"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/api/app/services/assets/upload_service.py",
+      "sha256": "4758D314AD5814E1ABE79B78A73625B517133F5D90F7D1C483AA63BFE8959191",
+      "excerpts": [
+        {
+          "start": 219,
+          "end": 238,
+          "lines": [
+            "                if asset.status != \"available\" or not scan_status_allows_use(asset.scan_status):",
+            "                    raise AttachmentUploadError(\"Matching asset object is unavailable.\", 423)",
+            "            from app.services.assets.image_geometry import ingested_geometry",
+            "            attachment = Attachment(",
+            "                id=uuid.uuid4(),",
+            "                conversation_id=conversation_id,",
+            "                asset_object_id=asset.id,",
+            "                import_id=None,",
+            "                original_filename=item.client_filename,",
+            "                display_name=item.client_filename,",
+            "                declared_mime_type=item.declared_mime_type,",
+            "                detected_mime_type=item.detected_mime_type,",
+            "                status=\"available\",",
+            "                scan_status=item.scan_status,",
+            "                source_type=source_type,",
+            "                source_attachment_id=str(item.id),",
+            "                metadata_=ingested_geometry(asset),",
+            "                resolution_status=\"resolved\",",
+            "            )",
+            "            db.add(attachment)"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/api/app/services/assets/image_display.py",
+      "sha256": "A2135130BD4A11B20FF92C7582E7023B0F13F5BDDDA67AC773E475E2AC981C9F",
+      "excerpts": [
+        {
+          "start": 102,
+          "end": 115,
+          "lines": [
+            "    except (OSError, ValueError, Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:",
+            "        raise AttachmentAccessError(\"Image dimensions cannot be read.\", 422) from exc",
+            "",
+            "",
+            "def display_state(db: Session, attachment_id, scope: OwnershipScope) -> dict:",
+            "    from app.services.assets.public_images import _usable",
+            "    row = get_owner_attachment(db, attachment_id, scope)",
+            "    content = _usable(row)",
+            "    width, height = dimensions(content)",
+            "    selected = selected_display(row)",
+            "    return {**selected, \"configured\": True} if selected else {",
+            "        \"source_sha256\": content.asset_object.sha256, \"scale_percent\": 100, \"configured\": False,",
+            "        \"original_width\": width, \"original_height\": height, \"width\": width, \"height\": height,",
+            "    }"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/attachments/image-display-controls.tsx",
+      "sha256": "D71647E19B9B9A10945FC33830FBCA7CF5C8C9B3094B21E65321CD54A34DFD5E",
+      "excerpts": [
+        {
+          "start": 143,
+          "end": 175,
+          "lines": [
+            "  const shown = draft ?? current?.scale_percent ?? display?.scale_percent ?? 100;",
+            "  async function fitColumn() {",
+            "    if (busy || blocked) return;",
+            "    const base = current ?? await read();",
+            "    if (!base || !isCurrent()) return;",
+            "    const percent = recommendedImagePercent(base.original_width, base.original_height, laneWidth);",
+            "    if (percent === null) { setReadError(zh ? \"此图片无法在安全限制内适应栏宽，仍保留原图。\" : \"This image cannot fit within safe conversion limits. The original is retained.\"); return; }",
+            "    // The read above can precede React's state update. Pass its confirmed base.",
+            "    await save(percent, base);",
+            "  }",
+            "  const error = readError || (write?.phase === \"uncertain\"",
+            "    ? (zh ? \"保存结果待确认。请核对结果，不要重复提交。\" : \"Save result is uncertain. Check the result before saving again.\")",
+            "    : write?.phase === \"error\" ? ({",
+            "      conflict: zh ? \"来源或尺寸已改变，请重新读取后选择。\" : \"Source or size changed. Read the current result before choosing again.\",",
+            "      limit: zh ? \"超过安全转换限制，请核对后选择更小比例；原图仍保留。\" : \"Conversion limit exceeded. Check the result, then choose a smaller size. The original is retained.\",",
+            "      format: zh ? \"此格式不能安全缩放。动画请保留 100%。\" : \"This format cannot be safely resized. Keep animation at 100%.\",",
+            "      busy: zh ? \"图片转换繁忙，请稍后核对再保存。\" : \"Image conversion is busy. Check the result before retrying later.\",",
+            "      failed: zh ? \"未能保存，保留最后确认的尺寸。\" : \"Could not save. The last confirmed size is retained.\",",
+            "    }[write.reason ?? \"failed\"]) : \"\");",
+            "  return <span className=\"image-display-control\" data-markdown-copy-ignore=\"true\" data-image-display-controls>",
+            "    {editable ? <span className=\"image-display-actions\">",
+            "      <button ref={trigger} type=\"button\" aria-expanded={open} aria-controls={open ? panelId : undefined}",
+            "        aria-label={zh ? `图片展示比例：${display?.scale_percent ?? 100}%` : `Image display scale: ${display?.scale_percent ?? 100}%`}",
+            "        className={`image-display-trigger${compact ? \" image-display-trigger--compact\" : \"\"}`} title={zh ? \"松手即保存；同步更新已公开的图片链接，不会自动公开图片。\" : \"Release to save. Updates existing public image links; does not publish images.\"}",
+            "        onClick={() => {",
+            "          if (open) { dismiss(); return; }",
+            "          anchor.current = trigger.current?.getBoundingClientRect() ?? null; setOpen(true);",
+            "          if (!pending && write?.phase !== \"uncertain\") void read();",
+            "        }}>",
+            "        {compact ? <SlidersHorizontal aria-hidden=\"true\" className=\"h-4 w-4\" /> : <><span>{zh ? \"比例\" : \"Scale\"} {display?.scale_percent ?? 100}%</span><ChevronUp className=\"h-3.5 w-3.5\" /></>}",
+            "      </button>",
+            "      <button type=\"button\" className={compact ? \"attachment-icon-action\" : \"attachment-inline-action\"} aria-label={zh ? \"适应栏宽\" : \"Fit column\"} title={zh ? \"适应栏宽\" : \"Fit column\"} disabled={busy || blocked} onClick={() => void fitColumn()}>",
+            "        {compact ? <ArrowLeftRight aria-hidden=\"true\" className=\"h-4 w-4\" /> : zh ? \"适应栏宽\" : \"Fit column\"}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/search/conversation-search-panel.tsx",
+      "sha256": "EFF8333C1B850E271C6079CFC4E78DE03AB697D012E695EEDCA5A421F7198C3A",
+      "excerpts": [
+        {
+          "start": 235,
+          "end": 235,
+          "lines": [
+            "         <label className=\"text-xs font-medium text-secondary\">{zh ? \"筛选\" : \"Filter\"}<select value={documentType} onChange={(event) => { if (event.target.value !== documentType) retireNavigation(); setDocumentType(event.target.value); setActiveIndex(0); setActiveOccurrenceKey(null); }} className=\"ml-1 h-8 rounded-md border border-ui bg-surface px-2 text-sm text-primary\"><option value=\"all\">{zh ? \"全部\" : \"All\"}</option><option value=\"message\">{zh ? \"正文\" : \"Messages\"}</option><option value=\"heading\">{zh ? \"章节\" : \"Sections\"}</option><option value=\"code\">{zh ? \"代码\" : \"Code\"}</option><option value=\"annotation\">{zh ? \"批注\" : \"Annotations\"}</option><option value=\"attachment\">{zh ? \"附件\" : \"Attachments\"}</option></select></label>"
+          ]
+        },
+        {
+          "start": 265,
+          "end": 294,
+          "lines": [
+            "function toOccurrences(item: SearchResultItem): SearchOccurrence[] {",
+            "  if (item.document_type === \"attachment\") {",
+            "    if (!item.attachment_id) return [];",
+            "    return [{",
+            "      key: JSON.stringify([item.document_id, item.attachment_id]),",
+            "      item,",
+            "      target: { attachmentId: item.attachment_id },",
+            "      before: \"\",",
+            "      match: \"\",",
+            "      after: \"\",",
+            "    }];",
+            "  }",
+            "  if (item.document_type === \"annotation\") {",
+            "    if (!item.annotation_id) return [];",
+            "    // Annotation text is a separate search surface; its saved anchor, not",
+            "    // comment/snippet text, owns the Reader position.",
+            "    return [{",
+            "      key: JSON.stringify([item.document_id, item.annotation_id, item.message_version_id ?? null]),",
+            "      item,",
+            "      target: {",
+            "        messageId: item.message_id ?? undefined,",
+            "        messageVersionId: item.message_version_id,",
+            "        blockIndex: item.block_index ?? undefined,",
+            "        characterOffset: item.character_offset ?? undefined,",
+            "        annotationId: item.annotation_id,",
+            "      },",
+            "      before: item.snippet,",
+            "      match: \"\",",
+            "      after: \"\",",
+            "    }];"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/features/compare/together-chooser.tsx",
+      "sha256": "8B77E5BCD71A8295605D8A020529723438353CEEA2E5479FB9D9D98F5400AFEF",
+      "excerpts": [
+        {
+          "start": 54,
+          "end": 60,
+          "lines": [
+            "        {groups.map(group => <div key={group[0].conversationId} className=\"border-b border-ui py-1 last:border-0\">",
+            "          <button type=\"button\" className=\"flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-3 text-left text-sm font-medium hover:bg-subtle\" onClick={() => onChoose({ ...group[0], href: `/conversations/${group[0].conversationId}` })}>",
+            "            <span className=\"min-w-0 truncate\">{group[0].title}</span><span className=\"shrink-0 text-xs font-normal text-secondary\">{openedIds.includes(group[0].conversationId) ? (zh ? \"切换到此对话\" : \"Switch to tab\") : (zh ? \"继续阅读\" : \"Resume\")}</span>",
+            "          </button>",
+            "          {group.filter(item => item.snippet).map(item => togetherTarget(item.href)",
+            "            ? <button type=\"button\" key={item.key} className=\"min-h-11 w-full rounded-md px-3 py-2 text-left text-xs leading-5 text-secondary hover:bg-subtle\" onClick={() => onChoose(item)}><span className=\"line-clamp-3\">{item.snippet}</span></button>",
+            "            : <Link key={item.key} href={item.href} className=\"block min-h-11 rounded-md px-3 py-2 text-xs leading-5 text-secondary hover:bg-subtle\"><span className=\"line-clamp-3\">{item.snippet}</span><span className=\"text-accent\">{zh ? \"在完整阅读页查看此结果\" : \"View this result in the full reader\"}</span></Link>)}"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/api/app/services/exporting/annotation_document.py",
+      "sha256": "D5F3C47271811190A66BA2B12C0C4A4CDCAC7586AB64CFA9E549238C9E641AA7",
+      "excerpts": [
+        {
+          "start": 132,
+          "end": 159,
+          "lines": [
+            "def readable_entry(record, ordinal, *, zh=True, source_base=None):",
+            "    role = record.get(\"message_role\") or \"unknown\"",
+            "    kind = record[\"annotation_type\"]",
+            "    if zh:",
+            "        role = {\"user\": \"用户\", \"assistant\": \"助手\", \"system\": \"系统\", \"unknown\": \"未知角色\"}.get(role, role)",
+            "        kind = {\"bookmark\": \"书签\", \"highlight\": \"高亮\", \"underline\": \"下划线\", \"strikethrough\": \"删除线\", \"comment\": \"评论\"}.get(kind, kind)",
+            "    lines = [f\"## {ordinal}. {_inline(kind)} · {_inline(role)} {record.get('message_seq') or ''}\", \"\"]",
+            "    section = (record.get(\"metadata\") or {}).get(\"section_title\")",
+            "    if section:",
+            "        lines.extend([f\"{'章节' if zh else 'Section'}: {_inline(section)}\", \"\"])",
+            "    if record.get(\"start_block_index\") is not None:",
+            "        lines.extend([f\"{'段落' if zh else 'Block'} {record['start_block_index'] + 1} · {'文字位置' if zh else 'Character'} {record.get('start_offset') or 0}\", \"\"])",
+            "    if record[\"anchor_status\"] not in {\"valid\", \"remapped\"}:",
+            "        lines.extend([\"> \" + (\"原文需要检查，不能保证精确定位。\" if zh else \"Source needs review; exact location is not guaranteed.\"), \"\"])",
+            "    if source_base and record.get(\"message_id\"):",
+            "        link = f\"{source_base.rstrip('/')}/conversations/{record['conversation_id']}?annotationId={record['id']}\"",
+            "        lines.extend([f\"[{'返回原文（需登录）' if zh else 'Open source (sign-in required)'}](<{link}>)\", \"\"])",
+            "    quote = record.get(\"quoted_text\") or \"\"",
+            "    for label, value in [",
+            "        (\"原文摘录\" if zh else \"Saved quote\", quote),",
+            "        (\"保存时的上下文\" if zh else \"Context when saved\",",
+            "         (record.get(\"prefix\") or \"\") + quote + (record.get(\"suffix\") or \"\") if record.get(\"prefix\") or record.get(\"suffix\") else \"\"),",
+            "    ]:",
+            "        if value:",
+            "            fence = \"`\" * max(3, max((len(match[0]) + 1 for match in re.finditer(r\"`+\", value)), default=3))",
+            "            lines.extend([f\"### {label}\", \"\", fence + \"text\", value, fence, \"\"])",
+            "    lines.extend([\"### \" + (\"批注内容\" if zh else \"Comment\"), \"\", record.get(\"comment_markdown\") or (\"（无文字批注）\" if zh else \"(No comment)\"), \"\",",
+            "                  f\"{'创建 / 更新 (UTC)' if zh else 'Created / updated (UTC)'}: {record.get('created_at') or ''} / {record.get('updated_at') or ''}\", \"\", \"\"])"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "apps/web/lib/annotation-document.ts",
+      "sha256": "D444DA3A2BABE25B59F56734ABA0436F6A2BE2BDF624D3EDD97BA6E7F2EB28F8",
+      "excerpts": [
+        {
+          "start": 30,
+          "end": 55,
+          "lines": [
+            "}",
+            "",
+            "export function readableAnnotationEntry(record: AnnotationDocumentRecord, ordinal: number, zh = true, sourceBase?: string): string {",
+            "  let role = record.message_role || \"unknown\", kind = record.annotation_type;",
+            "  if (zh) {",
+            "    role = ({ user: \"用户\", assistant: \"助手\", system: \"系统\", unknown: \"未知角色\" } as Record<string, string>)[role] ?? role;",
+            "    kind = ({ bookmark: \"书签\", highlight: \"高亮\", underline: \"下划线\", strikethrough: \"删除线\", comment: \"评论\" } as Record<string, string>)[kind] ?? kind;",
+            "  }",
+            "  const lines = [`## ${ordinal}. ${inline(kind)} · ${inline(role)} ${record.message_seq || \"\"}`, \"\"];",
+            "  if (record.metadata?.section_title) lines.push(`${zh ? \"章节\" : \"Section\"}: ${inline(record.metadata.section_title)}`, \"\");",
+            "  if (record.start_block_index != null) lines.push(`${zh ? \"段落\" : \"Block\"} ${record.start_block_index + 1} · ${zh ? \"文字位置\" : \"Character\"} ${record.start_offset || 0}`, \"\");",
+            "  if (![\"valid\", \"remapped\"].includes(record.anchor_status)) lines.push(\"> \" + (zh ? \"原文需要检查，不能保证精确定位。\" : \"Source needs review; exact location is not guaranteed.\"), \"\");",
+            "  if (sourceBase && record.message_id && record.conversation_id && record.id) lines.push(",
+            "    `[${zh ? \"返回原文（需登录）\" : \"Open source (sign-in required)\"}](<${sourceBase.replace(/\\/$/, \"\")}/conversations/${record.conversation_id}?annotationId=${record.id}>)`, \"\");",
+            "  const quote = record.quoted_text || \"\";",
+            "  for (const [label, value] of [[zh ? \"原文摘录\" : \"Saved quote\", quote], [zh ? \"保存时的上下文\" : \"Context when saved\",",
+            "    record.prefix || record.suffix ? (record.prefix || \"\") + quote + (record.suffix || \"\") : \"\"]]) {",
+            "    if (!value) continue;",
+            "    let length = 3;",
+            "    for (const match of value.matchAll(/`+/g)) length = Math.max(length, match[0].length + 1);",
+            "    const fence = \"`\".repeat(length);",
+            "    lines.push(`### ${label}`, \"\", fence + \"text\", value, fence, \"\");",
+            "  }",
+            "  lines.push(\"### \" + (zh ? \"批注内容\" : \"Comment\"), \"\", record.comment_markdown || (zh ? \"（无文字批注）\" : \"(No comment)\"), \"\",",
+            "    `${zh ? \"创建 / 更新 (UTC)\" : \"Created / updated (UTC)\"}: ${record.created_at || \"\"} / ${record.updated_at || \"\"}`, \"\", \"\");",
+            "  return lines.join(\"\\n\");"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "scripts/ux/reading-tools-contracts.test.mjs",
+      "sha256": "653EB17FE8143518B1B40D150A217100CF75D0C3DCA85C1A70F31D6E71464C80",
+      "excerpts": [
+        {
+          "start": 18,
+          "end": 33,
+          "lines": [
+            "test(\"reading-point quote and surrounding context use Unicode code points, not UTF-16 units\", () => {",
+            "  const text = \"前🙂文\" + \"读\".repeat(200);",
+            "  const message = { id: \"message\", role: \"assistant\", order_key: \"a\", current_version: { id: \"version\" },",
+            "    render_blocks: [{ block_index: 4, plain_text: text }] };",
+            "  const input = bookmark.readingBookmarkInput(message, { message_id: \"message\", block_index: 4, scroll_offset: 12, anchor_data: { character_offset: 1 } });",
+            "  assert.equal(input.quote, \"🙂文\" + \"读\".repeat(158));",
+            "  assert.equal(input.start_offset, 1);",
+            "  assert.equal(input.end_offset, 161);",
+            "  assert.equal(input.prefix, \"前\");",
+            "  assert.equal(input.suffix, \"读\".repeat(42));",
+            "  assert.equal(input.metadata.bookmark_kind, \"reading_point\");",
+            "  const stored = { ...input, anchor_status: \"valid\" };",
+            "  assert.equal(bookmark.sameBookmark(stored, input), true);",
+            "  for (const patch of [{ message_version_id: \"replaced\" }, { start_offset: 2 }, { quote: \"changed\" }, { anchor_status: \"orphaned\" }])",
+            "    assert.equal(bookmark.sameBookmark({ ...stored, ...patch }, input), false);",
+            "});"
+          ]
+        }
+      ]
+    }
+  ]
+}

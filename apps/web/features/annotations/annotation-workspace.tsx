@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight, BookmarkPlus, Check, CheckSquare2, Highlighter, Maximize2, MessageSquareText, Minimize2, Pin, PinOff, RotateCcw, Search, Square, Trash2, Underline, Strikethrough, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { PointerEvent as ReactPointerEvent, SetStateAction } from "react";
+import type { PointerEvent as ReactPointerEvent, RefObject, SetStateAction } from "react";
 import type { AnnotationRepository } from "../../lib/annotation-repository";
 import type { AnnotationColor, AnnotationCreateInput, AnnotationRead, AnnotationType, MessageListItem, NavigateTarget, NavigationResult } from "../../lib/types";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
@@ -20,7 +20,11 @@ import { useAnnotationWorkspaceReads, type AnnotationReadKind, type AnnotationRe
 import { AnnotationCommentEditor, type CommentDraft } from "./annotation-comment-editor";
 import { DirectExportDownload } from "../exporting/direct-export-download";
 import { captureCommentDraftStorage, readAnnotationCommentDrafts, removeAnnotationCommentDraft, trackCommentDraftPersistence, writeAnnotationCommentDraft, type CommentDraftStorage } from "../../lib/annotation-comment-drafts";
+import { prepareOfflineAnnotationDocument } from "./annotation-document-download";
+import { annotationLocationLabel } from "../../lib/annotation-document";
+import { readingBookmarkInput, sameBookmark, type BookmarkRequest } from "./reading-bookmark";
 import { invalidateReaderSearch } from "../../lib/reader-search-cache";
+import { offlineReaderDataSource, remoteReaderDataSource } from "../../lib/reader-data-source";
 
 type SelectionDraft = {
   messageId: string;
@@ -73,7 +77,9 @@ function useScopedState<T>(scopeKey: number, initial: T) {
   return [state.scopeKey === scopeKey ? state.value : initial, update] as const;
 }
 
-export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, requestedView, searchReplayKey = 0, repository, open, onOpenChange, onNavigate }: {
+export type AnnotationLeaveGuard = { needsConfirmation: () => boolean; confirm: () => Promise<boolean> };
+
+export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, requestedView, searchReplayKey = 0, repository, open, onOpenChange, onNavigate, leaveGuardRef }: {
   conversationId: string;
   messages: MessageListItem[];
   activeMessageId: string | null;
@@ -84,6 +90,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   open: boolean;
   onOpenChange: (value: boolean) => void;
   onNavigate: (target: NavigateTarget) => NavigationResult | Promise<NavigationResult>;
+  leaveGuardRef?: RefObject<AnnotationLeaveGuard | null>;
 }) {
   const queryClient = useQueryClient();
   const dialog = useInteractionDialog();
@@ -115,7 +122,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const [creationFeedback, setCreationFeedback] = useScopedState<CreationRequest | null>(scopeKey, null);
   const additionGate = useMemo(() => ({ busy: false, request: null as NoteAddition | null }), [scopeKey]);
   const [additionFeedback, setAdditionFeedback] = useScopedState<NoteAddition | null>(scopeKey, null);
-  const [notebookActionNotice, setNotebookActionNotice] = useState<{ scopeKey: number; action: "delete" | "add"; returnView: "all" | "current" } | null>(null);
+  const [notebookActionNotice, setNotebookActionNotice] = useState<{ scopeKey: number; action: "delete" | "add"; returnView: "all" | "bookmarks" } | null>(null);
   const [selection, setSelectionState] = useScopedState<SelectionDraft | null>(scopeKey, null);
   const selectionRef = useMemo(() => ({ current: null as SelectionDraft | null }), [scopeKey]);
   const setSelection = useCallback((value: SelectionDraft | null) => {
@@ -123,7 +130,12 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     selectionRef.current = value; setSelectionState(value);
   }, [isCurrent, selectionRef, setSelectionState]);
   const [selectionType, setSelectionType] = useState<Exclude<AnnotationType, "bookmark">>("highlight");
-  const [view, setView] = useState<"current" | "all" | "notebook">(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("notebookDraft") ? "notebook" : "current");
+  const [view, setView] = useState<"bookmarks" | "all" | "notebook">(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("notebookDraft") ? "notebook" : "all");
+  const [exportScope, setExportScope] = useState<"all" | "filtered" | "selected">("filtered");
+  const [currentMessageOnly, setCurrentMessageOnly] = useState(false);
+  const [bookmarkNotice, setBookmarkNotice] = useScopedState<string | null>(scopeKey, null);
+  const [bookmarkReadError, setBookmarkReadError] = useScopedState<boolean>(scopeKey, false);
+  const initialMarkTab = useRef<string | null>(null);
   const [annotationQuery, setAnnotationQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<AnnotationType | "all">("all");
   const [colorFilter, setColorFilter] = useState<AnnotationColor | "all">("all");
@@ -140,6 +152,10 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const [panelPinned, setPanelPinned] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [notebookDraftAtRisk, setNotebookDraftAtRisk] = useScopedState(scopeKey, false);
+  const notebookRisk = useMemo(() => ({ current: false }), [scopeKey]);
+  const updateNotebookRisk = useCallback((value: boolean) => {
+    notebookRisk.current = value; setNotebookDraftAtRisk(value);
+  }, [notebookRisk, setNotebookDraftAtRisk]);
   const [conflictKey, setConflictKey] = useScopedState<string | null>(scopeKey, null);
   const conflictOpener = useRef<HTMLElement | null>(null);
   const [reviewMode, setReviewMode] = useState<"continuous" | "single">("continuous");
@@ -364,18 +380,63 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
 
   useEffect(() => {
     if (!initialAnnotationId) return;
+    initialMarkTab.current = null;
     setFocusedAnnotationId(initialAnnotationId);
     setView("all");
+    setCurrentMessageOnly(false);
     setAnnotationQuery("");
     setTypeFilter("all");
     setColorFilter("all");
     setStatusFilter("all");
   }, [initialAnnotationId, searchReplayKey, setFocusedAnnotationId]);
 
+  useEffect(() => {
+    if (!initialAnnotationId || initialMarkTab.current === initialAnnotationId) return;
+    const mark = annotations.find(item => item.id === initialAnnotationId);
+    if (!mark) return;
+    initialMarkTab.current = initialAnnotationId;
+    setView(mark.annotation_type === "bookmark" ? "bookmarks" : "all");
+  }, [initialAnnotationId, annotations, searchReplayKey, scopeKey]);
+
+  const needsLeaveConfirmation = useCallback(() => notebookRisk.current || (hasCommentDrafts
+    && (commentStorage === "failed" || commentPersistQueue.size > 0 || pendingCommentDrafts.size > 0)),
+  [notebookRisk, notebookDraftAtRisk, hasCommentDrafts, commentStorage, commentPersistQueue, pendingCommentDrafts]);
+  const leaveFlight = useRef<Promise<boolean> | null>(null);
+  const confirmLeave = useCallback((): Promise<boolean> => {
+    if (leaveFlight.current) return leaveFlight.current;
+    const flight = (async () => {
+      if (needsLeaveConfirmation() && !await dialog.confirm({
+        title: zh ? "草稿尚未写入本机，仍要离开？" : "Draft not saved on this device. Leave anyway?",
+        description: zh ? "留在当前对话可重试保存。离开或切换对话可能丢失最近输入的笔记或批注。" : "Stay here to retry saving. Leaving or switching conversations may lose recent notes or comments.",
+        confirmLabel: zh ? "仍然离开" : "Leave anyway", danger: true,
+      })) return false;
+      return isCurrent();
+    })();
+    leaveFlight.current = flight;
+    void flight.finally(() => { if (leaveFlight.current === flight) leaveFlight.current = null; }).catch(() => undefined);
+    return flight;
+  }, [needsLeaveConfirmation, dialog, zh, isCurrent]);
+  useEffect(() => {
+    if (!leaveGuardRef) return;
+    const guard = { needsConfirmation: needsLeaveConfirmation, confirm: confirmLeave };
+    leaveGuardRef.current = guard;
+    return () => { if (leaveGuardRef.current === guard) leaveGuardRef.current = null; };
+  }, [leaveGuardRef, needsLeaveConfirmation, confirmLeave]);
   const closeWorkspace = async () => {
-    if (notebookDraftAtRisk && !await dialog.confirm({ title: zh ? "草稿尚未写入本机，仍要关闭？" : "The draft is not saved on this device. Close anyway?", description: zh ? "返回笔记可重试保存；关闭可能丢失最近的输入。" : "Return to the notebook to retry saving. Closing may lose recent input.", confirmLabel: zh ? "仍然关闭" : "Close anyway", danger: true })) return;
-    if (!isCurrent()) return;
+    if (!await confirmLeave()) return;
     setExpanded(false); onOpenChange(false);
+  };
+  const resetFilters = () => {
+    setAnnotationQuery(""); setCurrentMessageOnly(false); setTypeFilter("all"); setColorFilter("all"); setStatusFilter("all");
+  };
+  const switchView = async (next: typeof view) => {
+    if (next === view) return;
+    if (view === "notebook" && !await confirmLeave()) return;
+    resetFilters(); setView(next); setReviewIndex(0);
+  };
+  const revealBookmark = () => {
+    resetFilters(); setView("bookmarks"); setReviewMode("continuous"); setReviewIndex(0);
+    setFocusedAnnotationId(bookmarkNotice); onOpenChange(true); setBookmarkNotice(null);
   };
   const openNotebookConflicts = async () => {
     if (!notebook || !canUseNotebook()) return;
@@ -591,19 +652,35 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     } finally { creationGate.busy = false; }
   }
 
-  async function createBookmark(message: MessageListItem) {
+  async function createBookmark(message: MessageListItem, position?: BookmarkRequest["position"]) {
     if (!isCurrent() || creationGate.busy) return;
     if (creationGate.request) { onOpenChange(true); return; }
-    const request: CreationRequest = { status: "saving", input: {
-      id: crypto.randomUUID(),
-      annotation_type: "bookmark",
-      message_id: message.id,
-      message_version_id: message.current_version?.id ?? null,
-      quote: null,
-      color: null,
-      metadata: { message_role: message.role, message_order_key: message.order_key, message_role_number: message.ordinal ?? null },
-    } };
-    await submitCreation(request);
+    creationGate.busy = true;
+    setBookmarkReadError(false);
+    try {
+      const blockIndex = position?.block_index;
+      if (blockIndex != null && !(message.render_blocks ?? message.current_version?.blocks ?? []).some(block =>
+        block.block_index === blockIndex && typeof block.plain_text === "string")) {
+        const source = repository.mode === "offline" ? offlineReaderDataSource : remoteReaderDataSource;
+        const blocks = await source.getMessageBlocks(message.id, { start: blockIndex, limit: 1 });
+        if (!isCurrent()) return;
+        const block = blocks.find(item => item.block_index === blockIndex);
+        const expectedId = position?.anchor_data?.block_id;
+        if (!block || (typeof expectedId === "string" && block.id !== expectedId)) throw new Error("Bookmark source changed");
+        message = { ...message, render_blocks: blocks };
+      }
+      const input = readingBookmarkInput(message, position);
+      // Read the repository, not a possibly stale workspace list, before a new
+      // create. Offline uses the same local/outbox repository transaction.
+      const saved = await repository.list(conversationId);
+      if (!isCurrent()) return;
+      const existing = saved.find(item => sameBookmark(item, input));
+      if (existing) { setBookmarkNotice(existing.id); return; }
+      creationGate.busy = false;
+      await submitCreation({ status: "saving", input });
+    } catch {
+      if (isCurrent()) setBookmarkReadError(true);
+    } finally { creationGate.busy = false; }
   }
 
   function publishCreation(request: CreationRequest | null) {
@@ -623,13 +700,14 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       }
       setView("all"); setFocusedAnnotationId(created.id);
     }
+    if (request.input.annotation_type === "bookmark") setBookmarkNotice(created.id);
     publishCreation(null);
   }
 
   async function submitCreation(request: CreationRequest) {
     if (!isCurrent() || creationGate.busy) return;
     creationGate.busy = true; publishCreation({ ...request, status: "saving" });
-    onOpenChange(true);
+    if (request.input.annotation_type !== "bookmark") onOpenChange(true);
     try {
       const created = await repository.create(conversationId, request.input);
       if (!isCurrent()) return;
@@ -651,7 +729,8 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       if (!isCurrent()) return;
       if (!reads.annotations.isReady()) publishCreation({ ...request, status: "unknown" });
       else {
-        const created = currentAnnotations()?.find(item => item.id === request.input.id);
+        const created = currentAnnotations()?.find(item => item.id === request.input.id
+          || (request.input.annotation_type === "bookmark" && sameBookmark(item, request.input)));
         if (created) finishCreation(request, created);
         else publishCreation({ ...request, status: "missing" });
       }
@@ -665,28 +744,30 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
 
   useEffect(() => {
     const handler = (event: Event) => {
-      const messageId = (event as CustomEvent<{ messageId: string }>).detail?.messageId;
-      const message = messages.find((item) => item.id === messageId);
-      if (message && desktop) void createBookmark(message);
+      const detail = (event as CustomEvent<BookmarkRequest>).detail;
+      if (detail?.conversationId && detail.conversationId !== conversationId) return;
+      const message = messages.find((item) => item.id === detail?.messageId);
+      if (message) void createBookmark(message, detail.position);
     };
     window.addEventListener("chat-reader:create-bookmark", handler);
     return () => window.removeEventListener("chat-reader:create-bookmark", handler);
   });
 
   const visibleAnnotations = useMemo(() => {
-    const base = view === "current" ? annotations.filter((item) => item.message_id === focusedMessageId) : annotations;
+    const base = annotations.filter(item => (view === "bookmarks" ? item.annotation_type === "bookmark" : item.annotation_type !== "bookmark")
+      && (!currentMessageOnly || item.message_id === focusedMessageId));
     const normalized = annotationQuery.trim().toLocaleLowerCase();
     return base.filter((item) => {
-      if (typeFilter !== "all" && item.annotation_type !== typeFilter) return false;
-      if (colorFilter !== "all" && item.color !== colorFilter) return false;
+      if (view !== "bookmarks" && typeFilter !== "all" && item.annotation_type !== typeFilter) return false;
+      if (view !== "bookmarks" && colorFilter !== "all" && item.color !== colorFilter) return false;
       if (statusFilter !== "all" && item.anchor_status !== statusFilter) return false;
       if (!normalized) return true;
       return `${item.quote ?? ""}\n${item.comment_markdown}`.toLocaleLowerCase().includes(normalized);
     });
-  }, [annotationQuery, annotations, colorFilter, focusedMessageId, statusFilter, typeFilter, view]);
+  }, [annotationQuery, annotations, colorFilter, focusedMessageId, statusFilter, typeFilter, view, currentMessageOnly]);
 
   useEffect(() => {
-    if (!open || !initialAnnotationId || searchReviewActivation.aligned || view !== "all"
+    if (!open || !initialAnnotationId || searchReviewActivation.aligned || view === "notebook"
       || annotationQuery || typeFilter !== "all" || colorFilter !== "all" || statusFilter !== "all") return;
     const index = visibleAnnotations.findIndex((item) => item.id === initialAnnotationId);
     if (index < 0) return;
@@ -708,11 +789,27 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   }, [focusedAnnotationId, focusedAnnotationVisible, open, searchReplayKey, view]);
 
   const selectedAnnotations = useMemo(() => annotations.filter(item => selectedAnnotationIds.has(item.id)), [annotations, selectedAnnotationIds]);
+  const exportIds = exportScope === "all" ? null : (exportScope === "selected" ? selectedAnnotations : visibleAnnotations).map(item => item.id);
+  const viewTabs = <div className="grid shrink-0 grid-cols-3 border-b border-ui bg-subtle p-1">{(["all", "bookmarks", "notebook"] as const).map((item) => <button key={item} data-annotation-tab={item} type="button" onClick={() => void switchView(item)} className={`min-h-9 rounded px-2 text-xs font-medium ${view === item ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{item === "all" ? (zh ? "批注" : "Annotations") : item === "bookmarks" ? (zh ? "书签" : "Bookmarks") : (zh ? "精选笔记" : "Notes")}</button>)}</div>;
   const annotationExport = view !== "notebook" ? <div data-comment-actions className="shrink-0 border-b border-ui px-3 py-2">
-    {repository.mode === "remote" ? <DirectExportDownload key={`${scopeKey}:${conversationId}`} href={`/api/conversations/${conversationId}/exports/annotations`} format="markdown" label={zh ? "导出全部批注" : "Export all annotations"} compact /> : null}
+    <label className="flex min-h-11 items-center gap-2 text-xs text-secondary"><input type="checkbox" checked={currentMessageOnly} onChange={event => setCurrentMessageOnly(event.target.checked)} />{zh ? "仅当前消息" : "Current message only"}</label>
+    <div className="flex flex-wrap items-center gap-2">
+      {expanded ? <button type="button" className="min-h-11 rounded-md border border-ui px-3 text-xs" onClick={() => { setSelectionMode(value => !value); setSelectedAnnotationIds(new Set()); }}>{selectionMode ? (zh ? "完成" : "Done") : (zh ? "管理" : "Manage")}</button> : null}
+      <select value={exportScope} onChange={event => setExportScope(event.target.value as typeof exportScope)} aria-label={zh ? "批注导出范围" : "Annotation export scope"} className="min-h-11 max-w-full rounded-md border border-ui bg-surface px-2 text-xs">
+        <option value="filtered">{zh ? `当前筛选（${visibleAnnotations.length}）` : `Filtered (${visibleAnnotations.length})`}</option>
+        <option value="selected">{zh ? `已勾选（${selectedAnnotations.length}）` : `Selected (${selectedAnnotations.length})`}</option>
+        <option value="all">{zh ? `全部已保存（${annotations.length}）` : `All saved (${annotations.length})`}</option>
+      </select>
+      {exportIds && exportIds.length > 2000 ? <p role="alert" className="text-xs text-secondary">{zh ? "筛选导出最多 2000 条，请缩小范围或导出全部。" : "Select at most 2,000 marks, or export all."}</p> : <DirectExportDownload
+        href={`/api/conversations/${conversationId}/exports/annotations`} format="markdown" label={zh ? "导出 Markdown" : "Export Markdown"} compact
+        disabled={exportScope !== "all" && (!reads.annotations.isReady() || !exportIds?.length)}
+        requestBody={{ scope: exportScope, annotation_ids: exportIds, locale: zh ? "zh-CN" : "en" }}
+        prepareLocal={repository.mode === "offline" ? () => prepareOfflineAnnotationDocument(conversationId, exportIds, exportScope, zh) : undefined} />}
+    </div>
+    {exportScope === "selected" && !selectedAnnotations.length ? <p role="status" className="mt-1 text-xs text-secondary">{zh ? "先点“管理”勾选要导出的条目。" : "Use Manage to select the marks to export."}</p> : null}
     <p className="mt-1 text-xs text-secondary">{repository.mode === "offline"
-      ? (zh ? "单独导出批注需要在线访问服务器已保存内容。" : "Standalone export requires online access to saved server content.")
-      : (zh ? "导出全部未删除的服务器已保存批注，不受筛选或勾选影响；不含未保存草稿。" : "Exports all non-deleted, saved server annotations, regardless of filters or selection. Unsaved drafts are excluded.")}</p>
+      ? (zh ? "导出本机已保存内容，可能含待同步修改；不包含未保存草稿。" : "Exports local saved content, including pending sync; excludes unsaved drafts.")
+      : (zh ? "以服务器已保存快照为准；不包含未保存草稿。" : "Exports a saved server snapshot; excludes unsaved drafts.")}</p>
   </div> : null;
 
   const visibleIds = new Set(visibleAnnotations.map(item => item.id));
@@ -841,7 +938,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   }
 
   async function updateAnnotationStyle(annotation: AnnotationRead, annotationType: Exclude<AnnotationType, "bookmark">, color: AnnotationColor) {
-    if (!isCurrent() || !desktop || annotation.annotation_type === "bookmark") return;
+    if (!isCurrent() || annotation.annotation_type === "bookmark") return;
     await changeStyles([annotation], annotationType, color);
     if (isCurrent() && !styleGate.needsCheck) setContextAnnotation(null);
   }
@@ -1036,7 +1133,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     if (!isCurrent()) return false;
     if (action === "add" && (deleteGate.busy || deleteGate.operation)) return false;
     if (canUseNotebook()) { setNotebookActionNotice(null); return true; }
-    setNotebookActionNotice({ scopeKey, action, returnView: view === "current" ? "current" : "all" });
+    setNotebookActionNotice({ scopeKey, action, returnView: view === "notebook" ? "all" : view });
     setContextAnnotation(null);
     setView("notebook");
     onOpenChange(true);
@@ -1082,12 +1179,17 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     {readFeedback("notebook")}{readFeedback("conflicts")}{readFeedback("annotations")}
     {notebook ? <NotebookView key={scopeKey} notebook={notebook} conflicts={notebookConflicts} annotations={annotations}
       repository={repository} onSaved={setNotebook} onReload={reload} onResolve={openNotebookConflicts}
-      onRiskChange={setNotebookDraftAtRisk} onNavigate={navigateFromAnnotation}
+      onRiskChange={updateNotebookRisk} onNavigate={navigateFromAnnotation}
       saveBlocked={!notebookReady || Boolean(deleteFeedback) || Boolean(additionFeedback)} canSave={() => canUseNotebook() && !deleteGate.busy && !deleteGate.operation && !additionGate.busy && !additionGate.request} annotationsLoaded={reads.annotations.data !== null} /> : null}
   </div>;
 
   return <>
     {conflictKey ? <SettingsFocusedDialog category="offline" initialConflictKey={conflictKey} onClose={() => { setConflictKey(null); void reload(); }} restoreFocus={() => conflictOpener.current} /> : null}
+    {!open && (bookmarkReadError || bookmarkNotice || creationFeedback?.input.annotation_type === "bookmark") ? <div className="fixed bottom-4 left-1/2 z-[110] flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2 rounded-lg border border-ui bg-raised px-3 text-sm shadow-sm" role="status">
+      <span>{bookmarkReadError ? (zh ? "书签读取失败，尚未保存。请重试保存当前位置。" : "Bookmarks could not be read. Nothing saved; try Save reading position again.") : creationFeedback ? (zh ? "书签保存中或待核对" : "Bookmark saving or awaiting verification") : (zh ? "阅读位置已保存" : "Reading position saved")}</span>
+      <button type="button" className="min-h-11 px-2 text-accent" onClick={revealBookmark}>{zh ? "查看" : "View"}</button>
+      <button type="button" className="min-h-11 px-2" aria-label={zh ? "关闭提示" : "Dismiss notice"} onClick={() => { setBookmarkNotice(null); setBookmarkReadError(false); }} disabled={Boolean(creationFeedback)}><X className="h-4 w-4" /></button>
+    </div> : null}
     {selection ? <div className={`fixed z-[120] flex max-w-[min(92vw,34rem)] flex-wrap items-center gap-1 rounded-md border border-ui bg-raised p-1.5 shadow-xl ${desktop ? "" : "inset-x-2 bottom-[calc(.5rem+env(safe-area-inset-bottom))] justify-center"}`} style={desktop ? { left: clamp(selection.rect.left + selection.rect.width / 2 - 170, 8, window.innerWidth - 360), top: Math.max(8, selection.rect.top - 88) } : undefined} role="toolbar" aria-label="Create annotation">
       {creationTypes.map((type) => { const Icon = type.icon; const label = localizedAnnotationType(type.value, zh); return <button key={type.value} type="button" onClick={() => setSelectionType(type.value)} className={`inline-flex h-8 items-center gap-1 rounded px-2 text-xs ${effectiveSelectionType === type.value ? "bg-[var(--accent-soft)] text-accent" : "text-secondary hover:bg-subtle"}`} aria-label={label} title={label}><Icon className="h-3.5 w-3.5" />{label}</button>; })}
       <span className="mx-1 h-5 w-px bg-[var(--border)]" />
@@ -1109,15 +1211,15 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     {open && !expanded ? <section className={`fixed z-[110] flex min-h-0 flex-col overflow-hidden border border-ui bg-raised shadow-2xl ${panelPinned && desktop ? "inset-y-0 left-0 w-[min(22rem,32vw)] rounded-none" : "inset-x-2 bottom-2 top-16 rounded-md md:inset-auto"}`} style={desktop && !panelPinned ? { left: panel.x, top: panel.y, width: panel.width, height: panel.height } : undefined} aria-label="批注" data-annotation-mode={panelPinned && desktop ? "docked" : "floating"}>
       <header className="flex h-12 shrink-0 touch-none items-center gap-2 border-b border-ui px-3" onPointerDown={(event) => { if (panelPinned || (event.target as HTMLElement).closest("button")) return; beginPanelDrag("move", event); }}><MessageSquareText className="h-4 w-4 text-accent" /><h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{zh ? "批注" : "Annotations"}</h2>{desktop && !panelPinned ? <button type="button" onClick={resetPanelPosition} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "重置批注窗口位置" : "Reset annotation window position"} title={zh ? "重置位置" : "Reset position"}><RotateCcw className="h-4 w-4" /></button> : null}{desktop ? <button type="button" onClick={() => { const next = !panelPinned; setPanelPinned(next); void setAnnotationDefaultPosition(next ? "docked" : "floating"); }} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={panelPinned ? (zh ? "恢复为浮窗" : "Return to floating") : (zh ? "固定到左侧栏" : "Dock to the left")} title={panelPinned ? (zh ? "恢复为浮窗" : "Return to floating") : (zh ? "固定到左侧栏" : "Dock to the left")}>{panelPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}</button> : null}<button type="button" onClick={() => setExpanded(true)} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "展开批注阅读" : "Expand annotation reading"} title={zh ? "展开阅读" : "Expand reading"}><Maximize2 className="h-4 w-4" /></button><button type="button" onClick={() => void closeWorkspace()} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header>
       {annotationExport}
-      <div className="grid shrink-0 grid-cols-3 border-b border-ui bg-subtle p-1">{(["current", "all", "notebook"] as const).map((item) => <button key={item} type="button" onClick={() => setView(item)} className={`min-h-9 rounded px-2 text-xs font-medium ${view === item ? "bg-surface text-primary shadow-sm" : "text-secondary"}`}>{item === "current" ? (zh ? "当前消息" : "Current") : item === "all" ? (zh ? "全部批注" : "All") : (zh ? "精选笔记" : "Notes")}</button>)}</div>
+      {viewTabs}
       {navigationFeedback.status !== "idle" ? <div className={`flex shrink-0 items-center gap-2 border-b border-ui px-3 py-2 text-xs ${navigationFeedback.status === "failed" ? "bg-[var(--danger-soft)] text-[var(--danger)]" : navigationFeedback.status === "stale" ? "bg-amber-50 text-amber-800" : "bg-subtle text-accent"}`} role="status"><span className="min-w-0 flex-1">{navigationFeedback.status === "loading" ? "正在按对话与章节位置加载批注原文…" : navigationFeedback.status === "stale" ? "原文已更改，已定位到最近的段落或消息。" : "无法定位批注原文，当前正文保持不变。"}</span>{navigationFeedback.status === "failed" && navigationFeedback.target ? <button type="button" onClick={() => void navigateFromAnnotation(navigationFeedback.target as NavigateTarget)} className="shrink-0 font-semibold underline">重试</button> : null}</div> : null}
-      {view !== "notebook" ? <div className="mx-3 mt-3 grid shrink-0 grid-cols-2 gap-2"><label className="col-span-2 flex min-h-9 min-w-0 items-center gap-2 rounded-md border border-ui bg-page px-2"><Search className="h-4 w-4 text-secondary" /><input value={annotationQuery} onChange={(event) => setAnnotationQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索批注" : "Search annotations"} /></label><select aria-label={zh ? "批注类型" : "Annotation type"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部类型" : "All types"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}<option value="bookmark">{localizedAnnotationType("bookmark", zh)}</option></select><select aria-label={zh ? "批注颜色" : "Annotation color"} value={colorFilter} onChange={(event) => setColorFilter(event.target.value as AnnotationColor | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部颜色" : "All colors"}</option>{COLORS.map((color) => <option key={color.value} value={color.value}>{localizedColor(color.value, zh)}</option>)}</select><select aria-label={zh ? "锚点状态" : "Anchor status"} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as AnnotationRead["anchor_status"] | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部状态" : "All status"}</option><option value="valid">{zh ? "正常" : "Valid"}</option><option value="remapped">{zh ? "已重定位" : "Remapped"}</option><option value="needs_review">{zh ? "需要检查" : "Needs review"}</option><option value="orphaned">{zh ? "原文缺失" : "Orphaned"}</option></select>{desktop ? <button type="button" onClick={() => { setSelectionMode((current) => !current); setSelectedAnnotationIds(new Set()); }} className={`min-h-9 rounded-md border px-3 text-xs font-medium ${selectionMode ? "border-[var(--accent)] bg-[var(--accent-soft)] text-accent" : "border-ui text-secondary hover:bg-subtle"}`}>{selectionMode ? (zh ? "完成" : "Done") : (zh ? "管理" : "Manage")}</button> : null}</div> : null}
+      {view !== "notebook" ? <div className="mx-3 mt-3 grid shrink-0 grid-cols-2 gap-2"><label className="col-span-2 flex min-h-9 min-w-0 items-center gap-2 rounded-md border border-ui bg-page px-2"><Search className="h-4 w-4 text-secondary" /><input value={annotationQuery} onChange={(event) => setAnnotationQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder={zh ? "搜索批注" : "Search annotations"} /></label><select disabled={view === "bookmarks"} aria-label={zh ? "批注类型" : "Annotation type"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部类型" : "All types"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}</select><select disabled={view === "bookmarks"} aria-label={zh ? "批注颜色" : "Annotation color"} value={colorFilter} onChange={(event) => setColorFilter(event.target.value as AnnotationColor | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部颜色" : "All colors"}</option>{COLORS.map((color) => <option key={color.value} value={color.value}>{localizedColor(color.value, zh)}</option>)}</select><select aria-label={zh ? "锚点状态" : "Anchor status"} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as AnnotationRead["anchor_status"] | "all")} className="min-h-9 min-w-0 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部状态" : "All status"}</option><option value="valid">{zh ? "正常" : "Valid"}</option><option value="remapped">{zh ? "已重定位" : "Remapped"}</option><option value="needs_review">{zh ? "需要检查" : "Needs review"}</option><option value="orphaned">{zh ? "原文缺失" : "Orphaned"}</option></select><button type="button" onClick={() => { setSelectionMode((current) => !current); setSelectedAnnotationIds(new Set()); }} className={`min-h-9 rounded-md border px-3 text-xs font-medium ${selectionMode ? "border-[var(--accent)] bg-[var(--accent-soft)] text-accent" : "border-ui text-secondary hover:bg-subtle"}`}>{selectionMode ? (zh ? "完成" : "Done") : (zh ? "管理" : "Manage")}</button></div> : null}
       {view !== "notebook" && selectionMode ? <div className="mx-3 mt-2 flex flex-wrap items-center gap-2 border-b border-ui pb-2 text-xs">
         <button type="button" onClick={() => setSelectedAnnotationIds(current => new Set([...current, ...visibleIds]))} className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-secondary hover:bg-subtle"><CheckSquare2 className="h-4 w-4" />{zh ? "全选当前结果" : "Select visible"}</button>
         <button type="button" onClick={() => setSelectedAnnotationIds(current => { const next = new Set(current); for (const id of visibleIds) { if (next.has(id)) next.delete(id); else next.add(id); } return next; })} className="inline-flex min-h-11 items-center rounded-md px-2 text-secondary hover:bg-subtle">{zh ? "反选当前结果" : "Invert visible"}</button>
         <button type="button" onClick={() => setSelectedAnnotationIds(new Set())} className="inline-flex min-h-11 items-center rounded-md px-2 text-secondary hover:bg-subtle">{zh ? "清除" : "Clear"}</button>
         <span className="min-w-0 flex-1 text-secondary">{zh ? `已选 ${selectedAnnotations.length} 项` : `${selectedAnnotations.length} selected`}{hiddenSelectedCount ? (zh ? `，其中 ${hiddenSelectedCount} 项不在当前筛选中` : `; ${hiddenSelectedCount} hidden by filters`) : ""}</span>
-        {hiddenSelectedCount ? <button type="button" className="min-h-11 px-2 text-accent underline" onClick={() => { setView("all"); setAnnotationQuery(""); setTypeFilter("all"); setColorFilter("all"); setStatusFilter("all"); }}>{zh ? "显示全部批注" : "Show all annotations"}</button> : null}
+        {hiddenSelectedCount ? <button type="button" className="min-h-11 px-2 text-accent underline" onClick={() => { setAnnotationQuery(""); setCurrentMessageOnly(false); setTypeFilter("all"); setColorFilter("all"); setStatusFilter("all"); }}>{zh ? "显示本页全部结果" : "Show all results in this tab"}</button> : null}
         <select aria-label={zh ? "批量样式" : "Batch style"} value={batchType} onChange={(event) => setBatchType(event.target.value as Exclude<AnnotationType, "bookmark">)} className="min-h-11 rounded-md border border-ui bg-page px-2 text-xs">{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}</select>
         <AnnotationColorPicker value={batchColor} onChange={setBatchColor} zh={zh} />
         <button type="button" disabled={!styleCount || Boolean(styleFeedback) || Boolean(deleteFeedback) || commentWrites.size > 0} onClick={() => void applyBatchStyle()} className="min-h-11 rounded-md border border-ui px-2 text-secondary disabled:opacity-40">{zh ? `应用样式（${styleCount}）` : `Apply style (${styleCount})`}</button>
@@ -1126,14 +1228,15 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
         {selectedAnnotations.length > styleCount ? <p className="w-full text-secondary">{zh ? "书签不参与样式修改。" : "Bookmarks keep their existing style."}</p> : null}
         {notebookReady && noteAdditionCount < selectedAnnotations.length ? <p className="w-full text-secondary">{zh ? "已在笔记中的批注不会重复添加。" : "Annotations already in notes will not be added again."}</p> : null}
       </div> : null}
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={desktop} commentsLoading={commentStorage === "loading"} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} /> : null}</>}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={true} commentsLoading={commentStorage === "loading"} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} /> : null}</>}</div>
       {desktop ? <><button type="button" role="separator" aria-orientation="vertical" className="absolute bottom-0 left-0 top-12 z-20 w-2 cursor-col-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-left", event)} onDoubleClick={() => { const next = defaultPanel(); panelRef.current = next; setPanel(next); writeStoredPanel(next); }} aria-label="从左侧调整批注窗口宽度" /><button type="button" role="separator" aria-orientation="vertical" className="absolute bottom-0 right-0 top-12 z-20 w-2 cursor-col-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-right", event)} aria-label="从右侧调整批注窗口宽度" /><button type="button" role="separator" aria-orientation="horizontal" className="absolute bottom-0 left-0 right-6 z-20 h-2 cursor-row-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-bottom", event)} aria-label="调整批注窗口高度" /><button type="button" className="absolute bottom-0 right-0 z-30 flex h-6 w-6 cursor-se-resize items-end justify-end p-0.5 text-secondary" onPointerDown={(event) => beginPanelDrag("resize-bottom-right", event)} aria-label="调整批注窗口大小"><Maximize2 className="h-3.5 w-3.5" /></button></> : null}
     </section> : null}
     {open && expanded ? <section className="fixed inset-0 z-[150] flex min-h-0 flex-col bg-raised" aria-label={zh ? "批注阅读" : "Annotation reading"} data-annotation-mode="expanded">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><MessageSquareText className="h-5 w-5 text-accent" /><h2 className="min-w-0 flex-1 truncate text-base font-semibold">{zh ? "批注阅读" : "Annotation reading"}</h2><button type="button" onClick={() => setExpanded(false)} className="inline-flex h-9 items-center gap-1 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle" aria-label={zh ? "退出展开阅读" : "Exit expanded reading"}><Minimize2 className="h-4 w-4" />{zh ? "退出" : "Exit"}</button><button type="button" onClick={() => void closeWorkspace()} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header>
       {annotationExport}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ui px-4 py-3"><div className="flex items-center gap-1 rounded-md bg-subtle p-1"><button type="button" onClick={() => { setReviewMode("continuous"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "continuous" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "连续阅读" : "Continuous"}</button><button type="button" onClick={() => { setReviewMode("single"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "single" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "逐条回顾" : "Review one by one"}</button></div><div className="flex min-w-0 flex-1 items-center gap-2"><span className="text-xs text-secondary">{view === "notebook" ? (notebook?.title || (zh ? "精选笔记" : "Notes")) : `${visibleAnnotations.length} ${zh ? "条批注" : "annotations"}`}</span></div>{view !== "notebook" ? <div className="flex items-center gap-2"><select aria-label={zh ? "批注类型" : "Annotation type"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部类型" : "All types"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}<option value="bookmark">{localizedAnnotationType("bookmark", zh)}</option></select><button type="button" onClick={() => setView("notebook")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "精选笔记" : "Notes"}</button></div> : <button type="button" onClick={() => setView("all")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "全部批注" : "All annotations"}</button>}</div>
-      <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto w-full max-w-4xl p-4 md:p-8">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={desktop} commentsLoading={commentStorage === "loading"} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} reviewMode={reviewMode} reviewIndex={reviewIndex} onReviewIndexChange={setReviewIndex} /> : null}</>}</div></div>
+      {viewTabs}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-ui px-4 py-3"><div className="flex items-center gap-1 rounded-md bg-subtle p-1"><button type="button" onClick={() => { setReviewMode("continuous"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "continuous" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "连续阅读" : "Continuous"}</button><button type="button" onClick={() => { setReviewMode("single"); setReviewIndex(0); }} className={`min-h-8 rounded px-3 text-xs ${reviewMode === "single" ? "bg-surface font-medium text-primary shadow-sm" : "text-secondary"}`}>{zh ? "逐条回顾" : "Review one by one"}</button></div><div className="flex min-w-0 flex-1 items-center gap-2"><span className="text-xs text-secondary">{view === "notebook" ? (notebook?.title || (zh ? "精选笔记" : "Notes")) : `${visibleAnnotations.length} ${zh ? "条批注" : "annotations"}`}</span></div>{view !== "notebook" ? <div className="flex items-center gap-2"><select disabled={view === "bookmarks"} aria-label={zh ? "批注类型" : "Annotation type"} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as AnnotationType | "all")} className="min-h-9 rounded-md border border-ui bg-page px-2 text-xs"><option value="all">{zh ? "全部类型" : "All types"}</option>{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}</select><button type="button" onClick={() => void switchView("notebook")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "精选笔记" : "Notes"}</button></div> : <button type="button" onClick={() => void switchView("all")} className="min-h-9 rounded-md border border-ui px-3 text-xs text-accent hover:bg-subtle">{zh ? "全部批注" : "All annotations"}</button>}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto"><div className="mx-auto w-full max-w-4xl p-4 md:p-8">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={true} commentsLoading={commentStorage === "loading"} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} reviewMode={reviewMode} reviewIndex={reviewIndex} onReviewIndexChange={setReviewIndex} /> : null}</>}</div></div>
     </section> : null}
   </>;
 }
@@ -1186,21 +1289,25 @@ function AnnotationList({ items, editable, commentsLoading, messages, focusedAnn
     const metadataRole = typeof annotation.metadata.message_role === "string" ? annotation.metadata.message_role : message?.role;
     const metadataNumber = typeof annotation.metadata.message_role_number === "number" ? annotation.metadata.message_role_number : message?.ordinal;
     const sectionTitle = typeof annotation.metadata.section_title === "string" ? annotation.metadata.section_title : null;
-    const label = `${metadataRole === "user" ? "U" : "A"}${metadataNumber ?? ""}`;
+    const label = `${metadataRole === "user" ? (zh ? "用户" : "User") : metadataRole === "assistant" ? (zh ? "助手" : "Assistant") : metadataRole ?? (zh ? "消息" : "Message")} ${metadataNumber ?? ""}`;
     const blockIndex = hasUnresolvedAnchor(annotation) ? undefined : annotation.start_block_index ?? undefined;
     const selected = selectedAnnotationIds.has(annotation.id);
     return <article id={`annotation-${annotation.id}`} key={annotation.id} className={`rounded-sm border-b border-ui pb-4 last:border-0 ${focusedAnnotationId === annotation.id ? "bg-[var(--accent-soft)] ring-2 ring-[var(--focus)]" : ""}`}>
       <div className="flex items-start gap-1">
-        {selectionMode ? <button type="button" onClick={() => onToggleSelected(annotation.id)} className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={selected ? "取消选择批注" : "选择批注"}>{selected ? <CheckSquare2 className="h-4 w-4 text-accent" /> : <Square className="h-4 w-4" />}</button> : null}
+        {selectionMode ? <button type="button" onClick={() => onToggleSelected(annotation.id)} className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-pressed={selected} aria-label={selected ? (zh ? "取消选择批注" : "Deselect annotation") : (zh ? "选择批注" : "Select annotation")}>{selected ? <CheckSquare2 className="h-4 w-4 text-accent" /> : <Square className="h-4 w-4" />}</button> : null}
         <button type="button" onClick={() => selectionMode ? onToggleSelected(annotation.id) : void onNavigate(annotationNavigationTarget(annotation, blockIndex))} className="min-w-0 flex-1 px-1 text-left">
          <div className="flex flex-wrap items-center gap-2 text-xs text-secondary"><span className={`h-2.5 w-2.5 rounded-full ${colorClass(annotation.color)}`} /><span>{label}</span><span className="rounded bg-subtle px-1.5 py-0.5">{localizedAnnotationType(annotation.annotation_type, zh)}</span>{sectionTitle ? <span className="min-w-0 truncate">{sectionTitle}</span> : null}{hasUnresolvedAnchor(annotation) ? <span className="text-[var(--danger)]">{zh ? "原文需要检查" : "Source needs review"}</span> : null}{annotation.conflict_of_id ? <span className="text-amber-600">{zh ? "冲突副本" : "Conflict copy"}</span> : null}</div>
-          <blockquote data-annotation-color={annotation.color ?? "yellow"} className="annotation-quote mt-2 border-l-2 px-3 py-2 text-sm leading-6 text-primary">{annotation.quote || "整条消息书签"}</blockquote>
+          <blockquote data-annotation-color={annotation.color ?? "yellow"} className="annotation-quote mt-2 border-l-2 px-3 py-2 text-sm leading-6 text-primary">{annotation.quote || annotationLocationLabel(annotation, zh)}</blockquote>
         </button>
-        {editable && !selectionMode ? <button type="button" onClick={() => void onDelete(annotation)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]" aria-label={zh ? "删除批注" : "Delete annotation"} title={zh ? "删除批注" : "Delete annotation"}><Trash2 className="h-4 w-4" /></button> : null}
       </div>
+       {annotation.prefix || annotation.suffix ? <details className="mt-2 text-xs text-secondary"><summary className="min-h-11 cursor-pointer py-3">{zh ? "查看保存时的上下文" : "Context when saved"}</summary><blockquote className="whitespace-pre-wrap border-l-2 border-ui pl-3 leading-6">{annotation.prefix}<mark className="bg-[var(--mark-bg)] text-[var(--mark-text)]">{annotation.quote}</mark>{annotation.suffix}</blockquote></details> : null}
+       {annotation.comment_markdown ? <div className="mt-2 text-sm"><MarkdownRenderer text={annotation.comment_markdown} /></div> : null}
+       {editable ? <details className="mt-2"><summary className="min-h-11 cursor-pointer py-3 text-xs text-secondary">{zh ? "编辑与操作" : "Edit and actions"}</summary>
        {editable ? <div className="mt-2 flex flex-wrap items-center gap-2"><select value={annotation.annotation_type === "bookmark" ? "bookmark" : annotation.annotation_type} disabled={annotation.annotation_type === "bookmark"} onChange={(event) => void onStyle(annotation, event.target.value as Exclude<AnnotationType, "bookmark">, annotation.color ?? "yellow")} className="min-h-8 rounded-md border border-ui bg-page px-2 text-xs">{TEXT_TYPES.map((type) => <option key={type.value} value={type.value}>{localizedAnnotationType(type.value, zh)}</option>)}{annotation.annotation_type === "bookmark" ? <option value="bookmark">{localizedAnnotationType("bookmark", zh)}</option> : null}</select><AnnotationColorPicker value={annotation.color ?? "yellow"} disabled={annotation.annotation_type === "bookmark"} onChange={(color) => void onStyle(annotation, annotation.annotation_type as Exclude<AnnotationType, "bookmark">, color)} zh={zh} /></div> : null}
-       {editable ? <AnnotationCommentEditor annotation={annotation} readDraft={readCommentDraft} focused={focusedAnnotationId === annotation.id} zh={zh} loading={commentsLoading} onChange={onDraftChange} onSave={onSaveComment} onDiscard={onDiscardComment} onCheck={onCheckComments} /> : annotation.comment_markdown ? <div className="mt-2 text-sm"><MarkdownRenderer text={annotation.comment_markdown} /></div> : null}
+       {editable ? <AnnotationCommentEditor annotation={annotation} readDraft={readCommentDraft} focused={focusedAnnotationId === annotation.id} zh={zh} loading={commentsLoading} onChange={onDraftChange} onSave={onSaveComment} onDiscard={onDiscardComment} onCheck={onCheckComments} /> : null}
        {editable ? <button type="button" onClick={() => void onAddToNotebook(annotation)} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-accent hover:bg-subtle"><BookmarkPlus className="h-3.5 w-3.5" />{zh ? "加入精选笔记" : "Add to notes"}</button> : null}
+       <button type="button" aria-label={zh ? "删除批注" : "Delete annotation"} onClick={() => void onDelete(annotation)} className="min-h-11 px-2 text-xs text-[var(--danger)]">{zh ? "删除" : "Delete"}</button>
+       </details> : null}
     </article>;
   })}</div>;
 }

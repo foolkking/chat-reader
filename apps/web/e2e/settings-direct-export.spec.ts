@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { settingsAdmin, settingsAppearance, settingsSignIn } from "./settings-test-helper";
@@ -12,7 +13,7 @@ async function openExport(page: Page, width: number) {
     await page.getByRole("dialog", { name: /阅读工具|Reader tools/ }).getByRole("button", { name: /^(导出|Export)$/ }).click();
   } else {
     await page.getByRole("button", { name: /^(消息操作|Message actions)$/ }).click();
-    await page.getByRole("button", { name: /^(导出|Export)$/ }).click();
+    await openReaderAction(page, "export");
   }
   await page.getByRole("button", { name: "Markdown", exact: true }).click();
 }

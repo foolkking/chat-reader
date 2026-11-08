@@ -66,6 +66,14 @@ Share, Offline, admin-read and read-only Compare cannot show write controls.
 
 ## Controls and temporary viewing
 
+**2026-11-08 candidate override (not yet CI/deployed):** the size-panel interaction
+in the next two paragraphs is replaced by the upward single-slider disclosure,
+adjacent fit action and bounded once-only import default described in
+[Reading tools](READING_TOOLS_CONTRACT.md#image-percentage-and-import-default).
+The following panel/numeric/preset description records the November 7 released
+behavior, not the new candidate UI. Geometry, write safety, Viewer and frame
+stability requirements below are unchanged.
+
 Size and View actions are below media; under 240px they become one persistent
 44px Image options entry. A root-portal 320px size panel captures its opening
 anchor, avoids Reader rails and stays in the viewport; under 640px it becomes

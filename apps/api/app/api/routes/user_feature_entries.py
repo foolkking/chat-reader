@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -13,9 +13,31 @@ from app.services.user_feature_entries import (
     delete_entry,
     list_entries,
     write_entry,
+    merge_tags,
 )
 
 router = APIRouter(prefix="/api/user-feature-entries", tags=["user-feature-entries"])
+
+
+class TagMergeInput(BaseModel):
+    target_id: UUID
+    source_revision: int = Field(strict=True, ge=1)
+    target_revision: int = Field(strict=True, ge=1)
+
+
+@router.post("/conversation-tag/{source_id}/merge", response_model=UserFeatureEntryRead)
+def merge_conversation_tags(source_id: UUID, payload: TagMergeInput, request: Request, db: Session = Depends(get_db)):
+    try:
+        result = merge_tags(db, subject_key_from_request(request), source_id, payload.target_id,
+                            payload.source_revision, payload.target_revision, ownership_scope_from_request(request))
+        db.commit()
+        return result
+    except (UserFeatureEntryConflict, IntegrityError) as exc:
+        db.rollback()
+        raise HTTPException(409, detail="Tags changed. Read the current result before merging.") from exc
+    except ValidationError as exc:
+        db.rollback()
+        raise HTTPException(422, detail="Merged tag exceeds its conversation limit. No tags were changed.") from exc
 
 
 @router.get("/{collection}", response_model=list[UserFeatureEntryRead])

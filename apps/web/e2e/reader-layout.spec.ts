@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { openReaderAction } from "./reader-actions";
 
 const conversationId = process.env.E2E_CONVERSATION_ID;
 const evidenceDir = process.env.E2E_SCREENSHOT_DIR ?? "../../docs/execution/screenshots";
@@ -85,7 +86,7 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   });
   for (let focusCycle = 0; focusCycle < 3; focusCycle += 1) {
     if (focusCycle > 0) await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
-    await page.getByRole("button", { name: /Focus mode|专注模式/ }).click();
+    await openReaderAction(page, "focus-mode");
     await expect(page.locator('[data-focus-mode="on"]')).toBeVisible();
     await expect(page.locator(".reader-index-column")).toBeHidden();
     await expect(page.locator("[data-reader-primary-sidebar]")).toBeHidden();
@@ -103,11 +104,13 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   }
 
   const primaryActions = page.locator('div[aria-label="Primary reader actions"] button');
-  await expect(primaryActions).toHaveCount(4);
-  await expect(primaryActions.nth(0)).toHaveAttribute("aria-label", /Edit Markdown source|\u7f16\u8f91 Markdown \u6e90\u7801/);
-  await expect(primaryActions.nth(1)).toHaveAttribute("aria-label", /Search|\u641c\u7d22/);
-  await expect(primaryActions.nth(2)).toHaveAttribute("aria-label", /Annotations|\u6279\u6ce8/);
-  await expect(primaryActions.nth(3)).toHaveAttribute("aria-label", /Focus mode|\u4e13\u6ce8\u6a21\u5f0f/);
+  await expect(primaryActions).toHaveCount(6);
+  await expect(primaryActions.nth(0)).toHaveAttribute("aria-label", /Search|搜索/);
+  await expect(primaryActions.nth(1)).toHaveAttribute("data-testid", "reading-list-toggle");
+  await expect(primaryActions.nth(2)).toHaveAttribute("aria-label", /Save reading position|保存当前位置/);
+  await expect(primaryActions.nth(3)).toHaveAttribute("aria-label", /Annotations|批注/);
+  await expect(primaryActions.nth(4)).toHaveAttribute("aria-label", /Read together|一起阅读/);
+  await expect(primaryActions.nth(5)).toHaveAttribute("aria-label", /Focus mode|专注模式/);
 
   const activeArticle = page.locator("article[data-message-id]").filter({ visible: true }).first();
   const articleHeightBeforeEditor = await activeArticle.evaluate((element) => element.getBoundingClientRect().height);
@@ -117,7 +120,7 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
     const target = candidates.find((element) => element.getBoundingClientRect().bottom > line) ?? candidates[0];
     return { id: target?.id ?? "", top: target?.getBoundingClientRect().top ?? line };
   });
-  await primaryActions.nth(0).click();
+  await openReaderAction(page, "edit-source");
   const sourceWorkspace = page.getByTestId("floating-source-workspace");
   await expect(sourceWorkspace).toBeVisible();
   await expect(page.getByTestId("source-editor-codemirror")).toBeVisible();
@@ -141,13 +144,12 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
-  await primaryActions.nth(0).click();
+  await openReaderAction(page, "edit-source");
   await expect(sourceWorkspace).toHaveCount(0);
   await expect.poll(async () => Math.abs((await page.locator(`#${sourceAnchor.id}`).boundingBox())!.y - sourceAnchor.top)).toBeLessThanOrEqual(24);
 
   await page.evaluate(() => localStorage.removeItem("chat-reader:conversation-files-workspace-floating-v2"));
-  const filesButton = page.getByRole("button", { name: /\u5f53\u524d\u5bf9\u8bdd\u6587\u4ef6|Conversation files/ }).first();
-  await filesButton.click();
+  await openReaderAction(page, "conversation-files");
   const filesWorkspace = page.getByTestId("conversation-files-workspace");
   await expect(filesWorkspace).toBeVisible();
   const defaultFilesBox = await filesWorkspace.boundingBox();
@@ -167,7 +169,7 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   expect(movedFilesBox!.x).toBeCloseTo(defaultFilesBox!.x - 80, 0);
   expect(movedFilesBox!.y).toBeCloseTo(defaultFilesBox!.y + 24, 0);
   await filesWorkspace.getByRole("button", { name: /Close|\u5173\u95ed/ }).click();
-  await filesButton.click();
+  await openReaderAction(page, "conversation-files");
   const restoredFilesBox = await filesWorkspace.boundingBox();
   expect(restoredFilesBox!.x).toBeCloseTo(movedFilesBox!.x, 0);
   expect(restoredFilesBox!.y).toBeCloseTo(movedFilesBox!.y, 0);
@@ -175,9 +177,9 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   await expect.poll(async () => (await filesWorkspace.boundingBox())!.x).toBeCloseTo(defaultFilesBox!.x, 0);
   await filesWorkspace.getByRole("button", { name: /Close|\u5173\u95ed/ }).click();
 
-  await primaryActions.nth(2).click();
+  await openReaderAction(page, "annotations");
   await expect(page.locator('[data-annotation-mode="floating"]')).toBeVisible();
-  await primaryActions.nth(2).click();
+  await openReaderAction(page, "annotations");
   await expect(page.locator('[data-annotation-mode="floating"]')).toHaveCount(0);
 
   await page.getByRole("button", { name: /^(Search|\u641c\u7d22)$/ }).click();
@@ -188,7 +190,7 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   await page.getByRole("button", { name: /Close|关闭/ }).last().click();
 
   await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
-  await page.getByRole("button", { name: /Export|导出/ }).click();
+  await openReaderAction(page, "export");
   await expect(page.getByRole("group", { name: /^(Export|导出)$/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Markdown", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "CanJSON", exact: true })).toBeVisible();
@@ -214,7 +216,7 @@ test("navigation, search, reader layout, annotation modes, and screenshots", asy
   await expect(page.locator('[data-annotation-mode="floating"]')).toBeVisible();
 
   await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
-  await page.getByRole("button", { name: /分享|Share/ }).click();
+  await openReaderAction(page, "share");
   await expect(page.getByText(/创建分享链接|Create share link/)).toBeVisible();
   await page.screenshot({ path: `${evidenceDir}/share-panel-light-1440x900.png`, fullPage: true });
   await page.getByRole("button", { name: /关闭|Close/ }).last().click();
@@ -407,7 +409,7 @@ test("utility drawer and annotation window stay inside constrained viewports", a
   const offlineGuideDismiss = page.getByRole("button", { name: /暂不显示|Not now/ });
   if (await offlineGuideDismiss.isVisible()) await offlineGuideDismiss.click();
 
-  await page.getByRole("button", { name: /分享|Share/ }).click();
+  await openReaderAction(page, "share");
   const drawer = page.getByRole("dialog", { name: /分享对话|Share conversation/ });
   await expect(drawer).toBeVisible();
   const drawerBox = await drawer.boundingBox();

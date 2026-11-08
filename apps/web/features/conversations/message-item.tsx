@@ -17,6 +17,7 @@ function MessageItemComponent({
   message,
   onChanged,
   readOnly = false,
+  allowCopySelection = false,
   selected = false,
   onSelectedChange,
   highlightTargetId,
@@ -38,6 +39,7 @@ function MessageItemComponent({
   message: MessageListItem;
   onChanged?: (message?: MessageListItem, conversationRevision?: number) => Promise<void> | void;
   readOnly?: boolean;
+  allowCopySelection?: boolean;
   selected?: boolean;
   onSelectedChange?: (selected: boolean) => void;
   highlightTargetId?: string | null;
@@ -74,7 +76,7 @@ function MessageItemComponent({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const wideUserMessage = isUser && shouldUseWideUserLayout(currentText, blocks);
-  const hasActions = !readOnly || Boolean(onSelectedChange) || Boolean(onBookmark);
+  const hasActions = !readOnly || allowCopySelection || Boolean(onSelectedChange) || Boolean(onBookmark);
   const messageDomId = `message-${message.id}`;
   const mobileActionsId = `message-actions-${message.id}`;
   const isNavigationTarget = highlightTargetId === messageDomId || Boolean(highlightTargetId?.startsWith(`block-${message.id}-`));
@@ -214,7 +216,7 @@ function MessageItemComponent({
       {!readOnly && attachmentAccess.kind === "owner" ? <MessageMarkdownCopyButton controller={markdownCopy} zh={zh} onActivate={mobile ? () => {
         setMobileActionsOpen(false); mobileActionsTriggerRef.current?.focus({ preventScroll: true });
       } : undefined} /> : null}
-      {!readOnly && attachmentAccess.kind === "owner" ? <button
+      {(!readOnly || allowCopySelection) && attachmentAccess.kind === "owner" ? <button
         type="button"
         onPointerDown={() => captureCitationSelection(true)}
         onFocus={() => captureCitationSelection()}
@@ -362,6 +364,7 @@ export const MessageItem = memo(MessageItemComponent, (previous, next) => (
   && previous.conversationTitle === next.conversationTitle
   && previous.userLabel === next.userLabel
   && previous.readOnly === next.readOnly
+  && previous.allowCopySelection === next.allowCopySelection
   && previous.selected === next.selected
   && previous.highlightTargetId === next.highlightTargetId
   && previous.editing === next.editing

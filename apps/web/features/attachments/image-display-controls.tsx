@@ -4,17 +4,16 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DismissableLayer } from "@radix-ui/react-dismissable-layer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Loader2, MoreHorizontal, X } from "lucide-react";
+import { ArrowLeftRight, ChevronUp, Expand, Loader2, SlidersHorizontal } from "lucide-react";
 import type { AttachmentRead } from "../../lib/types";
 import { ApiRequestError, getImageDisplay, setImageDisplay, uploadMessageCopyPreview, type ImageDisplayRead } from "../../lib/api";
 import { authenticationGeneration } from "../../lib/offline-access";
 import { rasterizeCopySvg } from "../conversations/message-markdown-copy-prepare";
-import { useDialogFocus } from "../../components/use-dialog-focus";
 import { useAttachmentAccess } from "./attachment-access";
 import { useImageDisplay } from "./image-presentation";
 import { ImageScaleSlider } from "./image-scale-slider";
 import { imageDisplayMenuPosition } from "./image-display-position";
-import { IMAGE_DISPLAY_CHANGED_EVENT, recommendedImagePercent, scaledImageDimensions, validatedImageDisplay, type ImageSize } from "../../lib/image-display";
+import { IMAGE_DISPLAY_CHANGED_EVENT, recommendedImagePercent, validatedImageDisplay, type ImageSize } from "../../lib/image-display";
 
 export { useImageDisplay } from "./image-presentation";
 export function storedImageDisplay(attachment: AttachmentRead): ImageDisplayRead | undefined {
@@ -31,9 +30,9 @@ export function ImageDisplayControls(props: Props) {
   return <SizeEditor key={JSON.stringify([...state.identity, editable])} {...props} editable={editable} />;
 }
 
-function SizeEditor({ attachment, zh, compact, laneWidth, bodySize, visibleSize, onOpen, editable }: Props & { editable: boolean }) {
+function SizeEditor({ attachment, zh, compact, laneWidth, onOpen, editable }: Props & { editable: boolean }) {
   const client = useQueryClient();
-  const { display, geometry, queryKey, generation, identity } = useImageDisplay(attachment);
+  const { display, geometry: originalGeometry, queryKey, generation, identity } = useImageDisplay(attachment);
   const writeKey = ["image-write", ...identity, editable ? "editable" : "read-only"];
   const writeQuery = useQuery<WriteState | null>({ queryKey: writeKey, enabled: false, gcTime: Infinity });
   // Read-only surfaces never inherit an owner's write recovery, even if their
@@ -42,12 +41,9 @@ function SizeEditor({ attachment, zh, compact, laneWidth, bodySize, visibleSize,
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<ImageDisplayRead | null>(null);
   const [draft, setDraft] = useState<number | null>(null);
-  const [numeric, setNumeric] = useState("");
-  const numericDirty = useRef(false);
-  const replacingNumber = useRef(false);
   const [reading, setReading] = useState(false), [readError, setReadError] = useState("");
   const trigger = useRef<HTMLButtonElement | null>(null);
-  const close = useRef<HTMLButtonElement | null>(null);
+  const readFlight = useRef(false);
   const panel = useRef<HTMLDivElement | null>(null);
   const anchor = useRef<DOMRect | null>(null);
   const panelId = useId();
@@ -57,26 +53,18 @@ function SizeEditor({ attachment, zh, compact, laneWidth, bodySize, visibleSize,
   const busy = pending || reading;
   useEffect(() => {
     if (editable && open && !current && display && write?.phase === "saved") {
-      setCurrent(display); setDraft(display.scale_percent); setNumeric(String(display.scale_percent));
+      setCurrent(display); setDraft(display.scale_percent);
     }
   }, [editable, open, current, display, write?.phase]);
+  // This is a non-modal, single-control disclosure: no focus trap or backdrop.
   useEffect(() => {
-    if (!open) return;
-    const release = () => { replacingNumber.current = false; };
-    document.addEventListener("pointerup", release, true);
-    document.addEventListener("pointercancel", release, true);
-    return () => {
-      release();
-      document.removeEventListener("pointerup", release, true);
-      document.removeEventListener("pointercancel", release, true);
-    };
-  }, [open]);
-  useDialogFocus({ open, rootRef: panel, initialFocusRef: close, onClose: () => {
-    numericDirty.current = false;
-    if (current) changeDraft(current.scale_percent);
+    if (open && current && !reading) panel.current?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+  }, [open, Boolean(current), reading]);
+  function dismiss(restore = false) {
+    setDraft(null);
     setOpen(false);
-  },
-    restoreFocus: () => trigger.current?.isConnected ? trigger.current : null });
+    if (restore && trigger.current?.isConnected) trigger.current.focus({ preventScroll: true });
+  }
   useLayoutEffect(() => {
     if (!open) return;
     // Capture the original viewport anchor, not the image's new location after
@@ -96,32 +84,34 @@ function SizeEditor({ attachment, zh, compact, laneWidth, bodySize, visibleSize,
     return () => { observer.disconnect(); window.removeEventListener("resize", place); };
   }, [open]);
   const changeDraft = (percent: number) => {
-    numericDirty.current = false;
-    setDraft(percent); setNumeric(String(percent));
+    setDraft(percent);
   };
   const isCurrent = () => generation === authenticationGeneration();
   const confirm = (value: ImageDisplayRead) => {
     const checked = validatedImageDisplay(value, attachment.asset_object?.sha256);
     if (!checked) throw new Error("Source changed");
     client.setQueryData(queryKey, checked);
-    setCurrent(checked); changeDraft(checked.scale_percent);
+    setCurrent(checked); setDraft(null);
   };
-  async function read() {
-    if (!editable || reading || client.getQueryData<WriteState>(writeKey)?.phase === "saving") return;
+  async function read(): Promise<ImageDisplayRead | undefined> {
+    if (!editable || readFlight.current || client.getQueryData<WriteState>(writeKey)?.phase === "saving") return;
+    readFlight.current = true;
+    const observedWrite = client.getQueryData<WriteState | null>(writeKey);
     setReading(true); setReadError("");
     try {
       const value = await getImageDisplay(attachment.id, AbortSignal.timeout(20_000));
-      if (!isCurrent()) return;
+      if (!isCurrent() || client.getQueryData<WriteState | null>(writeKey) !== observedWrite) return;
       confirm(value); client.setQueryData(writeKey, null);
+      return value;
     } catch (failure) {
-      if (isCurrent()) setReadError(failure instanceof ApiRequestError && [413, 422].includes(failure.status)
+      if (isCurrent() && client.getQueryData<WriteState | null>(writeKey) === observedWrite) setReadError(failure instanceof ApiRequestError && [413, 422].includes(failure.status)
         ? (zh ? "此图片无法安全读取缩放尺寸，仍可查看或下载原图。" : "Size inspection is unavailable. You can still view or download the original.")
         : (zh ? "读取失败，保留最后确认的尺寸。" : "Could not read size. The last confirmed size is retained."));
-    } finally { if (isCurrent()) setReading(false); }
+    } finally { readFlight.current = false; if (isCurrent()) setReading(false); }
   }
-  async function save(percent: number) {
-    if (!current || busy || blocked || !editable || !Number.isInteger(percent) || percent < 1 || percent > 100
-      || client.getQueryData<WriteState>(writeKey)?.phase === "saving") return;
+  async function save(percent: number, base = current) {
+    if (!base || busy || blocked || !editable || !Number.isInteger(percent) || percent < 1 || percent > 100
+      || ["saving", "uncertain", "error"].includes(client.getQueryData<WriteState>(writeKey)?.phase ?? "")) return;
     client.setQueryData(writeKey, { phase: "saving" });
     let submitted = false;
     // Closing/unmounting is not cancellation of an in-flight server write.
@@ -131,11 +121,11 @@ function SizeEditor({ attachment, zh, compact, laneWidth, bodySize, visibleSize,
       if (attachment.asset_object?.detected_mime_type === "image/svg+xml") {
         const png = await rasterizeCopySvg(`/api/attachments/${attachment.id}/content`, signal);
         if (!isCurrent()) return;
-        await uploadMessageCopyPreview(attachment.id, current.source_sha256, png, signal);
+        await uploadMessageCopyPreview(attachment.id, base.source_sha256, png, signal);
       }
       if (!isCurrent()) return;
       submitted = true;
-      const value = await setImageDisplay(attachment.id, current, percent, signal);
+      const value = await setImageDisplay(attachment.id, base, percent, signal);
       if (!isCurrent()) return;
       confirm(value);
       client.setQueryData(writeKey, { phase: "saved", percent: value.scale_percent });
@@ -147,24 +137,27 @@ function SizeEditor({ attachment, zh, compact, laneWidth, bodySize, visibleSize,
       const uncertain = submitted && (status === 0 || status >= 500);
       client.setQueryData(writeKey, { phase: uncertain ? "uncertain" : "error",
         reason: status === 409 ? "conflict" : status === 413 ? "limit" : status === 422 ? "format" : status === 429 ? "busy" : "failed" });
-      changeDraft(current.scale_percent);
+      setDraft(null);
     }
   }
-  function commitNumber() {
-    if (!numericDirty.current) return;
-    numericDirty.current = false;
-    const value = Number(numeric);
-    if (!/^\d{1,3}$/.test(numeric) || !Number.isInteger(value) || value < 1 || value > 100) {
-      changeDraft(current?.scale_percent ?? 100); return;
-    }
-    changeDraft(value); void save(value);
+  const confirmed = display ?? current;
+  const unconfigured = !confirmed || confirmed.configured === false;
+  const geometry = confirmed ?? originalGeometry;
+  const fitPercent = geometry ? recommendedImagePercent(geometry.original_width, geometry.original_height, laneWidth) : null;
+  const effectivePercent = unconfigured ? fitPercent : confirmed.scale_percent;
+  const shown = draft ?? effectivePercent ?? 100;
+  const scaleLabel = unconfigured
+    ? (zh ? `默认适应栏宽${effectivePercent === null ? "" : ` · 约 ${effectivePercent}%`}` : `Default fit${effectivePercent === null ? "" : ` · about ${effectivePercent}%`}`)
+    : `${zh ? "比例" : "Scale"} ${effectivePercent}%`;
+  async function fitColumn() {
+    if (busy || blocked) return;
+    const base = current ?? await read();
+    if (!base || !isCurrent()) return;
+    const percent = recommendedImagePercent(base.original_width, base.original_height, laneWidth);
+    if (percent === null) { setReadError(zh ? "此图片无法在安全限制内适应栏宽，仍保留原图。" : "This image cannot fit within safe conversion limits. The original is retained."); return; }
+    // The read above can precede React's state update. Pass its confirmed base.
+    await save(percent, base);
   }
-  const shown = draft ?? current?.scale_percent ?? display?.scale_percent ?? 100;
-  const original = current ?? geometry;
-  const selection = original ? scaledImageDimensions(original.original_width, original.original_height, shown) : null;
-  const recommendation = current ? recommendedImagePercent(current.original_width, current.original_height, laneWidth) : null;
-  const unsaved = editable && current && !pending && !blocked
-    && (shown !== current.scale_percent || numeric !== String(current.scale_percent));
   const error = readError || (write?.phase === "uncertain"
     ? (zh ? "保存结果待确认。请核对结果，不要重复提交。" : "Save result is uncertain. Check the result before saving again.")
     : write?.phase === "error" ? ({
@@ -174,82 +167,49 @@ function SizeEditor({ attachment, zh, compact, laneWidth, bodySize, visibleSize,
       busy: zh ? "图片转换繁忙，请稍后核对再保存。" : "Image conversion is busy. Check the result before retrying later.",
       failed: zh ? "未能保存，保留最后确认的尺寸。" : "Could not save. The last confirmed size is retained.",
     }[write.reason ?? "failed"]) : "");
-  const openViewer = () => { setOpen(false); trigger.current?.focus({ preventScroll: true }); onOpen?.(); };
-  const pixels = (size: ImageSize) => `${Math.round(size.width)} × ${Math.round(size.height)}`;
   return <span className="image-display-control" data-markdown-copy-ignore="true" data-image-display-controls>
-    {editable || compact ? <button ref={trigger} type="button" aria-expanded={open} aria-haspopup="dialog" aria-controls={open ? panelId : undefined}
-      aria-label={compact ? (zh ? "图片选项" : "Image options") : (zh ? `图片展示比例：${display?.scale_percent ?? 100}%` : `Image display scale: ${display?.scale_percent ?? 100}%`)}
-      title={compact ? (zh ? "图片选项" : "Image options") : undefined}
-      className={compact ? "image-display-trigger image-display-trigger--compact" : "image-display-trigger"}
-      onClick={() => {
-        if (open) { setOpen(false); return; }
-        anchor.current = trigger.current?.getBoundingClientRect() ?? null; setOpen(true);
-        if (editable && !pending && write?.phase !== "uncertain") void read();
-      }}>
-      {compact ? <MoreHorizontal className="h-4 w-4" /> : <><span>{zh ? "尺寸" : "Size"} {display?.scale_percent ?? 100}%</span><ChevronDown className="h-3.5 w-3.5" /></>}
-    </button> : null}
-    {!compact && onOpen ? <button type="button" className="attachment-inline-action" onClick={onOpen}>{zh ? "查看大图" : "View image"}</button> : null}
-    {open && typeof document !== "undefined" ? createPortal(<DismissableLayer asChild onPointerDownOutside={event => {
-      const target = event.detail.originalEvent.target;
-      if (!(target instanceof Node) || !trigger.current?.contains(target)) {
-        commitNumber(); setOpen(false);
-      }
-    }}>
-      <div ref={panel} id={panelId} role="dialog" aria-modal="true" aria-labelledby={`${panelId}-title`} tabIndex={-1}
-        className="image-display-menu" style={position} data-markdown-copy-ignore="true"
-        onPointerDownCapture={event => {
-          replacingNumber.current = event.target instanceof Element && Boolean(event.target.closest("[data-image-size-choice]"));
-        }}
-        onMouseDownCapture={event => {
-          // Touch may focus through compatibility mousedown after pointerup.
-          // Keep that blur in the same final-choice transaction too.
-          replacingNumber.current = event.target instanceof Element && Boolean(event.target.closest("[data-image-size-choice]"));
-        }}
-        onClickCapture={() => { replacingNumber.current = false; }}
-        onBlurCapture={event => {
-          // Moving between size controls is one selection, not two writes.
-          // Pointer intent covers browsers that do not focus touched buttons;
-          // relatedTarget also preserves keyboard hand-off to another choice.
-          const next = event.relatedTarget;
-          if (replacingNumber.current || (next instanceof Element && next.closest("[data-image-size-choice]"))) return;
-          commitNumber();
+    {editable ? <span className="image-display-actions">
+      <button ref={trigger} type="button" aria-expanded={open} aria-controls={open ? panelId : undefined}
+        aria-label={zh ? `图片展示比例：${unconfigured ? scaleLabel : `${effectivePercent}%`}` : `Image display scale: ${unconfigured ? scaleLabel : `${effectivePercent}%`}`}
+        className={`image-display-trigger${compact ? " image-display-trigger--compact" : ""}`} title={zh ? "松手即保存；同步更新已公开的图片链接，不会自动公开图片。" : "Release to save. Updates existing public image links; does not publish images."}
+        onClick={() => {
+          if (open) { dismiss(); return; }
+          anchor.current = trigger.current?.getBoundingClientRect() ?? null; setOpen(true);
+          if (!pending && write?.phase !== "uncertain") void read();
         }}>
-        <header className="image-display-menu-heading"><h3 id={`${panelId}-title`}>{editable ? (zh ? "图片尺寸" : "Image size") : (zh ? "图片选项" : "Image options")}</h3>
-          <button ref={close} type="button" className="attachment-icon-action" aria-label={zh ? "关闭尺寸面板" : "Close image size"} onClick={() => setOpen(false)}><X className="h-4 w-4" /></button></header>
-        <div className="image-display-menu-body">
-          {reading ? <p role="status" className="flex items-center gap-2 text-xs text-secondary"><Loader2 className="h-4 w-4 animate-spin" />{zh ? "正在读取尺寸" : "Reading size"}</p> : null}
-          {editable && error ? <div><p role="alert" className="text-xs text-[var(--danger)]">{error}</p><button type="button" className="attachment-inline-action" disabled={busy} onClick={() => void read()}>{zh ? "核对结果" : "Check result"}</button></div> : null}
-          {editable && current ? <>
-            <label className="flex items-center justify-between gap-2 text-sm">{zh ? "百分比" : "Percentage"}
-              <span className="flex items-center gap-1"><input type="number" min={1} max={100} step={1} inputMode="numeric" aria-label={zh ? "图片尺寸百分比" : "Image size percentage"}
-                className="min-h-11 w-20 rounded-md border border-ui bg-surface px-2 text-primary" disabled={busy || blocked} value={numeric}
-                onChange={event => { numericDirty.current = true; setNumeric(event.target.value); const n = Number(event.target.value); if (Number.isInteger(n) && n >= 1 && n <= 100) setDraft(n); }}
-                data-image-size-choice onKeyDown={event => {
-                  if (event.key === "Enter") { event.preventDefault(); commitNumber(); }
-                  if (event.key === "Escape") { numericDirty.current = false; changeDraft(current.scale_percent); }
-                }} />%</span>
-            </label>
-            <ImageScaleSlider value={shown} zh={zh} disabled={busy || blocked} onChange={changeDraft} onCommit={percent => void save(percent)}
-              onCancel={() => { changeDraft(current.scale_percent); setOpen(false); }} />
-          </> : null}
-          <dl className="image-dimensions">
-            <dt>{zh ? "原图像素" : "Original pixels"}</dt><dd>{original ? `${original.original_width} × ${original.original_height}` : (zh ? "尚未取得" : "Not available")}</dd>
-            <dt>{zh ? "当前选择" : "Selection"}</dt><dd>{selection ? pixels(selection) : (zh ? "原图" : "Original")}</dd>
-            <dt>{visibleSize ? (zh ? "正文完整尺寸" : "Full body image") : (zh ? "正文实际显示" : "Currently in the body")}</dt><dd>{pixels(bodySize)}</dd>
-            {visibleSize ? <><dt>{zh ? "当前可见（已折叠）" : "Visible area (collapsed)"}</dt><dd>{pixels(visibleSize)}</dd></> : null}
-          </dl>
-          {editable ? <><button type="button" data-image-size-choice className="attachment-inline-action" disabled={busy || blocked || recommendation === null}
-            onClick={() => { if (recommendation !== null) { changeDraft(recommendation); void save(recommendation); } }}>{zh ? "适合当前栏宽" : "Fit current column"}</button>
-            <p className="text-xs text-secondary">{zh ? "松手即保存，也会更新此前复制的公开图片链接；不会自动公开图片。外部平台可能再次缩放。" : "Release to save, including previously copied public image links. This does not publish the image. Other apps may resize it."}</p></> : null}
-          {onOpen ? <button type="button" className="attachment-inline-action" onClick={openViewer}>{zh ? "查看大图" : "View image"}</button> : null}
-          {attachment.download_url ? <a href={attachment.download_url} download className="attachment-inline-action">{zh ? "下载原图" : "Download original"}</a> : null}
-        </div>
-        <p className="image-save-status" role="status">{pending ? (zh ? "正在保存…关闭面板不会取消提交。" : "Saving… Closing does not cancel the write.")
-          : unsaved ? (zh ? "当前选择尚未保存；松手或结束输入即保存。" : "Selection not saved. Release the slider or finish the number to save.")
-          : write?.phase === "saved" && write.percent === shown ? (zh ? "已保存" : "Saved")
-          : write?.phase === "uncertain" ? (zh ? "保存结果待确认" : "Save result uncertain") : ""}</p>
+        {compact ? <SlidersHorizontal aria-hidden="true" className="h-4 w-4" /> : <><span>{scaleLabel}</span><ChevronUp className="h-3.5 w-3.5" /></>}
+      </button>
+      <button type="button" className={compact ? "attachment-icon-action" : "attachment-inline-action"} aria-label={zh ? "适应栏宽" : "Fit column"} title={zh ? "适应栏宽" : "Fit column"} disabled={busy || blocked} onClick={() => void fitColumn()}>
+        {compact ? <ArrowLeftRight aria-hidden="true" className="h-4 w-4" /> : zh ? "适应栏宽" : "Fit column"}
+      </button>
+    </span> : null}
+    {onOpen ? <button type="button" className={compact ? "attachment-icon-action" : "attachment-inline-action"} aria-label={zh ? "查看大图" : "View image"} title={zh ? "查看大图" : "View image"} onClick={onOpen}>{compact ? <Expand aria-hidden="true" className="h-4 w-4" /> : zh ? "查看大图" : "View image"}</button> : null}
+    {open && editable && typeof document !== "undefined" ? createPortal(<DismissableLayer asChild
+      onEscapeKeyDown={event => { event.preventDefault(); dismiss(true); }}
+      onPointerDownOutside={event => {
+        const target = event.detail.originalEvent.target;
+        if (!(target instanceof Node) || !trigger.current?.contains(target)) dismiss();
+      }} onFocusOutside={event => {
+        const target = event.detail.originalEvent.target;
+        if (!(target instanceof Node) || !trigger.current?.contains(target)) dismiss();
+      }}>
+      <div ref={panel} id={panelId} role="group" aria-label={zh ? "图片比例" : "Image scale"}
+        className="image-scale-disclosure" style={position} data-markdown-copy-ignore="true">
+        <ImageScaleSlider value={shown} zh={zh} disabled={busy || blocked || !current} onChange={changeDraft}
+          onCommit={percent => void save(percent)}
+          onCancel={() => dismiss(true)} />
       </div>
     </DismissableLayer>, document.body) : null}
-    {!open && (pending || write?.phase === "uncertain") ? <span className="basis-full text-xs text-secondary" role="status">{pending ? (zh ? "正在保存" : "Saving") : (zh ? "保存结果待确认" : "Save result uncertain")}</span> : null}
+    {open && editable && !error ? <span className="image-display-feedback">{zh
+      ? "松手即保存；同步更新已公开的图片链接，不会自动公开图片。"
+      : "Release to save. Updates existing public image links; does not publish images."}
+      {unconfigured ? (zh ? " 当前为正文默认适应，尚未保存比例；旧公开图片和离线副本保持原样。" : " Currently fitted for reading, not saved; existing public images and offline copies are unchanged.") : null}
+    </span> : null}
+    {error ? <span className="image-display-feedback"><span role="alert">{error}</span>
+      <button type="button" className="attachment-inline-action" disabled={busy} onClick={() => void read()}>{zh ? "核对结果" : "Check result"}</button></span> : null}
+    {reading || pending || write?.phase === "saved" ? <span className="image-display-feedback" role="status">
+      {reading || pending ? <Loader2 className="inline h-3 w-3 animate-spin" /> : null} {reading ? (zh ? "读取尺寸…" : "Reading size…")
+        : pending ? (zh ? "正在保存；关闭不会取消提交" : "Saving; closing does not cancel the write") : (zh ? "已保存" : "Saved")}
+    </span> : null}
   </span>;
 }

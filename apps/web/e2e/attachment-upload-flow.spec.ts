@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test, type APIRequestContext, type APIResponse, type Page } from "@playwright/test";
 
 const runUploadFlow = process.env.E2E_ATTACHMENT_UPLOAD === "1";
@@ -132,7 +133,7 @@ async function openConversationFiles(page: Page): Promise<void> {
   } else {
     await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
   }
-  await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
+  await openReaderAction(page, "conversation-files");
   await expect(page.getByTestId("conversation-files-panel")).toBeVisible();
 }
 
@@ -209,7 +210,7 @@ test("uploads, inserts, versions, and reuses conversation attachments", async ({
     await expect(message.getByTestId("attachment-block")).toHaveCount(1);
 
     await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
-    await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
+    await openReaderAction(page, "conversation-files");
     await expect(page.getByTestId("conversation-files-panel")).toBeVisible();
     await page.getByTestId("conversation-files-upload-input").setInputFiles({
       name: "later-file.txt",
@@ -370,7 +371,7 @@ test("drags an existing conversation file into source and confirms removed refer
   try {
     await page.goto(`/conversations/${conversationId}`);
     await page.getByRole("button", { name: /Message actions|消息操作/ }).click();
-    await page.getByRole("button", { name: /Conversation files|当前对话文件/ }).click();
+    await openReaderAction(page, "conversation-files");
     await expect(page.getByTestId("conversation-files-workspace")).toBeVisible();
     await page.getByTestId("conversation-files-upload-input").setInputFiles({
       name: "existing-file.txt",

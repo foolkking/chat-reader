@@ -41,6 +41,7 @@ export function ReaderKeyboardHelp({ zh }: { zh: boolean }) {
         <dt>PageUp / PageDown</dt><dd>{zh ? "按页滚动" : "Scroll by page"}</dd>
         <dt>Home / End</dt><dd>{zh ? "第一条／最后一条消息" : "First / last message"}</dd>
         <dt>J / K</dt><dd>{zh ? "下一条／上一条消息" : "Next / previous message"}</dd>
+        <dt>Alt + Shift + O</dt><dd>{zh ? "搜索并打开另一个对话一起阅读" : "Find another conversation to read together"}</dd>
         <dt>Tab / Escape</dt><dd>{zh ? "按 Tab 在控件间移动／按 Escape 关闭说明" : "Use Tab to move between controls / Escape closes this help"}</dd>
       </dl>
     </div>

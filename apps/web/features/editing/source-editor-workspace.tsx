@@ -5,6 +5,7 @@ import { Eraser, Eye, EyeOff, File, Image as ImageIcon, Link2, LocateFixed, Pape
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FloatingWorkspacePanel } from "../../components/floating-workspace-panel";
 import { usePreferences } from "../../components/preferences-provider";
+import { measureImportImageLane } from "../import/image-import-lane";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { createAttachmentUploadSession, deleteAttachmentUploadItem, deleteConversationAttachment, editMessage, finalizeConversationAttachments, getConversation, getConversationAttachments, getConversationReaderTurn, uploadAttachmentItem } from "../../lib/api";
 import type { AttachmentRead, MessageEditResponse, MessageListItem, NavigateTarget } from "../../lib/types";
@@ -26,6 +27,7 @@ type UploadJob = {
   sessionId?: string;
   itemId?: string;
   attachmentId?: string;
+  imageLaneWidth?: number;
   cancel?: () => void;
   callbacks: AttachmentDraftCallbacks;
   cancelled?: boolean;
@@ -59,7 +61,7 @@ export function SourceEditorWorkspace({
   onDiscardAndSwitch: () => void | Promise<void>;
   onAttachmentInsertionApplied?: () => void;
 }) {
-  const { resolvedLocale } = usePreferences();
+  const { resolvedLocale, readerWidthMode, sectionTocMode } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const queryClient = useQueryClient();
   const cursorOffsetRef = useRef(target.cursorOffset);
@@ -109,7 +111,8 @@ export function SourceEditorWorkspace({
         job.itemId = item.id;
       }
       if (job.cancelled) return;
-      const finalized = await finalizeConversationAttachments(message.conversation_id, [job.itemId]);
+      job.imageLaneWidth ??= measureImportImageLane({ readerWidthMode, sectionTocMode });
+      const finalized = await finalizeConversationAttachments(message.conversation_id, [job.itemId], job.imageLaneWidth);
       const attachment = finalized[0];
       if (!attachment) throw new Error("Uploaded attachment could not be finalized.");
       job.attachmentId = attachment.id;

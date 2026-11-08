@@ -55,6 +55,7 @@ from app.services.search.search_indexer import rebuild_search_documents_for_conv
 from app.services.toc.toc_builder import rebuild_headings_for_conversation
 from app.services.exporting.cr_archive import CrArchiveError, import_cr_archive
 from app.services.exporting.archive_transaction import track_archive_object
+from app.services.ownership import OwnershipScope
 
 
 class CommitImportError(ValueError):
@@ -885,7 +886,7 @@ def _persist_canjson_attachments(
                     archive.close()
         from app.services.assets.image_geometry import ingested_geometry
         metadata.update(ingested_geometry(asset))
-        db.add(Attachment(
+        attachment = Attachment(
             id=attachment_id,
             conversation_id=conversation.id,
             asset_object_id=asset.id if asset else None,
@@ -900,7 +901,18 @@ def _persist_canjson_attachments(
             source_attachment_id=source_id,
             metadata_=metadata,
             resolution_status="resolved" if asset else "unresolved",
-        ))
+        )
+        db.add(attachment)
+        lane = ((import_record.analysis_summary or {}).get("commit_options") or {}).get("image_lane_width")
+        if asset is not None and type(lane) is int and 44 <= lane <= 8192:
+            from app.services.assets.image_display import initialize_import_display
+            db.flush()
+            warning = initialize_import_display(
+                db, attachment, lane,
+                OwnershipScope(import_record.owner_user_id, include_legacy_unowned=import_record.owner_user_id is None),
+            )
+            if warning:
+                import_record.warnings = list(dict.fromkeys([*(import_record.warnings or []), warning]))
     return mapping
 
 

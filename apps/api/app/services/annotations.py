@@ -3,7 +3,7 @@ import json
 import uuid
 from http import HTTPStatus
 
-from sqlalchemy import func, text
+from sqlalchemy import Text, cast, func, text
 from sqlalchemy.orm import Session
 
 from app.models.annotation import AnnotationSyncReceipt, ConversationAnnotation, ConversationNotebook
@@ -160,10 +160,38 @@ def create_annotation(
     payload: AnnotationCreate,
     *,
     subject_key: str = DEFAULT_SUBJECT_KEY,
+    deduplicate_reading_point: bool = False,
 ) -> ConversationAnnotation:
     _lock_subject(db, subject_key)
     conversation = _conversation(db, conversation_id)
     _validate_annotation_anchor(db, conversation_id, payload)
+    # The interactive route may converge two tabs saving the same reading
+    # point. Sync keeps its original entity ID/receipt contract unchanged.
+    if deduplicate_reading_point and payload.annotation_type == "bookmark" and payload.metadata.get("bookmark_kind") == "reading_point":
+        existing_points = db.query(ConversationAnnotation).filter(
+            ConversationAnnotation.subject_key == subject_key,
+            ConversationAnnotation.conversation_id == conversation_id,
+            ConversationAnnotation.annotation_type == "bookmark",
+            ConversationAnnotation.is_deleted.is_(False),
+            ConversationAnnotation.anchor_status.in_(["valid", "remapped"]),
+            ConversationAnnotation.message_id == payload.message_id,
+            ConversationAnnotation.message_version_id == payload.message_version_id,
+            ConversationAnnotation.start_block_index == payload.start_block_index,
+            ConversationAnnotation.start_offset == payload.start_offset,
+            func.coalesce(ConversationAnnotation.quote, "") == (payload.quote or ""),
+        )
+        if not payload.quote:
+            anchor = payload.metadata.get("reading_anchor")
+            block_offset = anchor.get("block_offset") if isinstance(anchor, dict) else None
+            # Cast to text rather than integer: imported metadata may contain
+            # non-numeric values, which must not abort a PostgreSQL transaction.
+            existing_points = existing_points.filter(
+                cast(ConversationAnnotation.metadata_["reading_anchor"]["block_offset"].as_string(), Text)
+                == (str(block_offset) if block_offset is not None else None)
+            )
+        existing_point = existing_points.first()
+        if existing_point is not None:
+            return existing_point
     annotation_id = payload.id or uuid.uuid4()
     if db.get(ConversationAnnotation, annotation_id, populate_existing=True) is not None:
         raise AnnotationError("Annotation id already exists.", HTTPStatus.CONFLICT)
@@ -417,7 +445,7 @@ def relocate_annotations_for_new_version(
         return
     now = utc_now()
     for annotation in annotations:
-        if annotation.annotation_type == "bookmark":
+        if annotation.annotation_type == "bookmark" and annotation.start_block_index is None and not annotation.quote:
             annotation.message_version_id = version.id
             annotation.anchor_status = "valid"
             annotation.revision += 1

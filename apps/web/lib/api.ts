@@ -90,6 +90,7 @@ import type {
   UserPreferenceUpdate,
   UserFeatureCollection,
   UserFeatureEntry,
+  ConversationTagValue,
   SortDirection,
   SkillCategory,
   SkillLocale,
@@ -201,10 +202,10 @@ export function uploadAttachmentItem(
   return { promise, cancel: () => request.abort() };
 }
 
-export async function finalizeConversationAttachments(conversationId: string, uploadItemIds: string[]): Promise<AttachmentRead[]> {
+export async function finalizeConversationAttachments(conversationId: string, uploadItemIds: string[], imageLaneWidth?: number): Promise<AttachmentRead[]> {
   return (await fetchJson<AttachmentListRead>(
     `/api/conversations/${conversationId}/attachments`,
-    jsonRequest("POST", { upload_item_ids: uploadItemIds }),
+    jsonRequest("POST", { upload_item_ids: uploadItemIds, ...(imageLaneWidth === undefined ? {} : { image_lane_width: imageLaneWidth }) }),
   )).items;
 }
 
@@ -267,6 +268,7 @@ export function syncPreferenceFields(input: import("./types").PreferenceSyncRequ
 export async function getConversations(
   input: {
     q?: string;
+    tagId?: string;
     includeArchived?: boolean;
     statusScope?: "active" | "archived" | "all";
     scope?: "all" | "history";
@@ -278,6 +280,7 @@ export async function getConversations(
   signal?: AbortSignal,
 ): Promise<ConversationListItem[]> {
   const params = new URLSearchParams();
+  if (input.tagId) params.set("tag_id", input.tagId);
   if (input.q?.trim()) params.set("q", input.q.trim());
   if (input.includeArchived) {
     params.set("include_archived", "true");
@@ -904,6 +907,7 @@ export async function commitImport(
     duplicatePolicy?: ImportDuplicatePolicy | "copy";
     projectId?: string | null;
     createArchiveProject?: boolean;
+    imageLaneWidth?: number;
   } = {},
 ): Promise<CommitImportResponse> {
   return fetchJson<CommitImportResponse>(`/api/imports/${importId}/commit`, {
@@ -913,6 +917,7 @@ export async function commitImport(
       duplicate_policy: options.duplicatePolicy ?? "clone",
       project_id: options.projectId ?? null,
       create_archive_project: options.createArchiveProject ?? false,
+      ...(options.imageLaneWidth === undefined ? {} : { image_lane_width: options.imageLaneWidth }),
     }),
   });
 }
@@ -1651,6 +1656,11 @@ export async function replaceAdaptiveImportArtifact(
     method: "PUT",
     body: formData,
   });
+}
+
+export async function mergeConversationTags(source: UserFeatureEntry<ConversationTagValue>, target: UserFeatureEntry<ConversationTagValue>) {
+  return fetchJson<UserFeatureEntry<ConversationTagValue>>(`/api/user-feature-entries/conversation-tag/${source.id}/merge`,
+    jsonRequest("POST", { target_id: target.id, source_revision: source.revision, target_revision: target.revision }));
 }
 
 export async function findShareCreation(conversationId: string, key: string): Promise<ShareCreateResponse | null> {

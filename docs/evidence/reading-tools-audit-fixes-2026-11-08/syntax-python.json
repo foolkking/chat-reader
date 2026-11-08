@@ -1,0 +1,32 @@
+{
+  "python_ast_count": 23,
+  "python_files": [
+    "apps/api/app/api/routes/annotations.py",
+    "apps/api/app/api/routes/attachments.py",
+    "apps/api/app/api/routes/conversations.py",
+    "apps/api/app/api/routes/exports.py",
+    "apps/api/app/api/routes/imports.py",
+    "apps/api/app/api/routes/markdown_copy.py",
+    "apps/api/app/api/routes/user_feature_entries.py",
+    "apps/api/app/schemas/attachment.py",
+    "apps/api/app/schemas/import_schema.py",
+    "apps/api/app/services/annotations.py",
+    "apps/api/app/services/assets/image_display.py",
+    "apps/api/app/services/assets/upload_service.py",
+    "apps/api/app/services/canonical/persistence.py",
+    "apps/api/app/services/exporting/annotation_document.py",
+    "apps/api/app/services/exporting/prepared_export.py",
+    "apps/api/app/services/user_feature_entries.py",
+    "apps/api/tests/test_adaptive_import_api.py",
+    "apps/api/tests/test_annotation_document.py",
+    "apps/api/tests/test_attachment_upload_api.py",
+    "apps/api/tests/test_image_display.py",
+    "apps/api/tests/test_offline_annotations_api.py",
+    "apps/api/tests/test_reading_tools_tags.py",
+    "apps/api/tests/test_user_feature_entries_postgres.py"
+  ],
+  "json_fixtures": [
+    "scripts/ux/fixtures/annotation-document-v2.json"
+  ],
+  "application_code_executed": false
+}

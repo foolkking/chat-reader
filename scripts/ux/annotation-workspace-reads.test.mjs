@@ -47,6 +47,11 @@ function runtime(extra = {}, desktop = false, observeWorkspace) {
     "../conversations/reader-locator-target": { annotationNavigationTarget: value => ({ annotationId: value.id }) },
     "../conversations/text-anchor": { resolveTextAnchorRange: () => null },
     "../exporting/direct-export-download": { DirectExportDownload: "DirectExportDownload" },
+    "./annotation-document-download": { prepareOfflineAnnotationDocument: async () => { throw new Error("No download in this read-ownership fixture"); } },
+    "../../lib/reader-data-source": {
+      remoteReaderDataSource: { getMessageBlocks: async () => [] },
+      offlineReaderDataSource: { getMessageBlocks: async () => [] },
+    },
     "./notebook-view": { NotebookView: "Notebook" },
     "../../components/settings-focused-dialog": { SettingsFocusedDialog: "Settings" },
     "../../lib/offline-conflicts": { ensureNotebookConflict: async () => "synthetic-conflict" },
@@ -89,6 +94,8 @@ function runtime(extra = {}, desktop = false, observeWorkspace) {
       if (name === "react") return react;
       if (name === "./use-annotation-workspace-reads") return load("use-annotation-workspace-reads.ts");
       if (name === "./annotation-comment-editor") return load("annotation-comment-editor.tsx");
+      if (name === "./reading-bookmark") return load("reading-bookmark.ts");
+      if (name === "../../lib/annotation-document") return load("../../lib/annotation-document.ts");
       if (Object.hasOwn(mocks, name)) return mocks[name];
       if (name.startsWith(".")) throw new Error(`Unexpected dependency ${name}`);
       return appRequire(name);
@@ -237,8 +244,67 @@ test("a bookmark can still be created from the closed desktop Reader", async () 
   try { r.render("annotation-workspace.tsx", "AnnotationWorkspace", props); r.flush();
     r.render("annotation-workspace.tsx", "AnnotationWorkspace", props); r.flush();
     r.events.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", { detail: { messageId: "synthetic-message" } }));
-    await setImmediate(); assert.equal(repo.calls.create, 1); assert.deepEqual(openings, [true]);
+    await setImmediate(); assert.equal(repo.calls.create, 1); assert.deepEqual(openings, []);
   } finally { r.dispose(); }
+});
+
+test("mobile can select marks for export and a new bookmark is revealed through old filters", async () => {
+  const mark = { ...annotation("bookmark"), message_version_id: null, annotation_type: "bookmark", color: null };
+  const r = runtime(), repo = repository({ list: async () => [annotation("first"), mark] });
+  const props = { conversationId: "synthetic-a", repository: repo.value, open: true,
+    messages: [{ id: "synthetic-message", role: "user", order_key: "a" }], activeMessageId: null,
+    onOpenChange: value => { props.open = value; }, onNavigate: noop };
+  const render = () => r.render("annotation-workspace.tsx", "AnnotationWorkspace", props);
+  const select = (tree, label) => find(tree, item => item.type === "select" && item.props["aria-label"] === label).props;
+  const list = tree => find(tree, item => item.type?.name === "AnnotationList").props;
+  const download = tree => find(tree, item => item.type === "DirectExportDownload").props;
+  try {
+    render(); r.flush(); await setImmediate(); let tree = render(); r.flush();
+    button(tree, "Manage").onClick(); tree = render();
+    assert.equal(list(tree).selectionMode, true);
+    select(tree, "Annotation export scope").onChange({ target: { value: "selected" } }); tree = render();
+    assert.equal(download(tree).disabled, true);
+    list(tree).onToggleSelected("first"); tree = render();
+    assert.equal(download(tree).disabled, false);
+    assert.deepEqual(download(tree).requestBody.annotation_ids, ["first"]);
+    select(tree, "Annotation type").onChange({ target: { value: "highlight" } });
+    select(tree, "Annotation color").onChange({ target: { value: "yellow" } });
+    tree = render(); await button(tree, "Bookmarks").onClick(); tree = render();
+    assert.deepEqual(list(tree).items.map(item => item.id), ["bookmark"]);
+    assert.equal(select(tree, "Annotation type").disabled, true);
+    await button(tree, "Annotations").onClick(); tree = render();
+    find(tree, item => item.type === "input" && item.props.placeholder === "Search annotations").props.onChange({ target: { value: "not matching" } });
+    props.open = false; render(); r.flush();
+    r.events.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", { detail: { conversationId: "synthetic-a", messageId: "synthetic-message" } }));
+    await setImmediate(); tree = render();
+    button(tree, "View").onClick(); tree = render();
+    assert.deepEqual(list(tree).items.map(item => item.id), ["bookmark"]);
+  } finally { r.dispose(); }
+});
+
+test("the shared leave guard blocks a scope switch and notes-tab exit when storage has not retained the draft", async () => {
+  let consent = false; const confirmations = [], closed = [];
+  const r = runtime({ "../../components/interaction-dialog-provider": { useInteractionDialog: () => ({
+    confirm: async args => { confirmations.push(args); return consent; },
+  }) } });
+  const repo = repository(), leaveGuardRef = { current: null };
+  const props = { conversationId: "synthetic-a", repository: repo.value, open: true, messages: [], activeMessageId: null,
+    leaveGuardRef, onOpenChange: value => closed.push(value), onNavigate: noop };
+  const render = () => r.render("annotation-workspace.tsx", "AnnotationWorkspace", props);
+  try {
+    render(); r.flush(); await setImmediate(); let tree = render(); r.flush();
+    await button(tree, "Notes").onClick(); tree = render(); r.flush();
+    const notebook = find(tree, item => item.type === "Notebook");
+    notebook.props.onRiskChange(true); tree = render(); r.flush();
+    assert.equal(leaveGuardRef.current.needsConfirmation(), true);
+    assert.equal(await leaveGuardRef.current.confirm(), false);
+    await button(tree, "Bookmarks").onClick(); tree = render();
+    assert.ok(find(tree, item => item.type === "Notebook"), "cancel keeps the same note mounted");
+    const close = find(tree, item => item.type === "button" && item.props["aria-label"] === "Close");
+    close.props.onClick(); await setImmediate(); assert.deepEqual(closed, []);
+    consent = true; assert.equal(await leaveGuardRef.current.confirm(), true);
+    assert.ok(confirmations.length >= 3);
+  } finally { r.dispose(); assert.equal(leaveGuardRef.current, null); }
 });
 
 function notebookFixture(write = async () => 1, remove = async () => {}, locale = "en-US") {
@@ -431,8 +497,8 @@ test("a late bookmark completion cannot open a different conversation's workspac
   const render = () => r.render("annotation-workspace.tsx", "AnnotationWorkspace", props);
   try { render(); r.flush(); render(); r.flush();
     r.events.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", { detail: { messageId: "synthetic-message" } }));
-    assert.equal(repo.calls.create, 1); props.conversationId = "synthetic-b"; render(); slow.resolve(annotation("created")); await setImmediate();
-    assert.deepEqual(openings, [true]); assert.equal(repo.calls.annotations, 0);
+    await setImmediate(); assert.equal(repo.calls.create, 1); props.conversationId = "synthetic-b"; render(); slow.resolve(annotation("created")); await setImmediate();
+    assert.deepEqual(openings, []); assert.equal(repo.calls.annotations, 1);
   } finally { r.dispose(); }
 });
 test("a deletion confirmation that outlives its conversation cannot delete or reopen the new one", async () => {
@@ -497,7 +563,7 @@ for (const action of ["style", "notes", "delete"]) test(`batch ${action} keeps t
 test("visible select/invert preserve hidden selections and show-all restores their context", async () => {
   const f = batchFixture(); try { let tree = await f.start(); button(tree, "Invert visible").onClick(); tree = f.render();
     assert.ok(text(tree).includes("1 selected; 1 hidden by filters")); button(tree, "Select visible").onClick(); tree = f.render();
-    assert.ok(text(tree).includes("2 selected; 1 hidden by filters")); button(tree, "Show all annotations").onClick(); tree = f.render();
+    assert.ok(text(tree).includes("2 selected; 1 hidden by filters")); button(tree, "Show all results in this tab").onClick(); tree = f.render();
     assert.ok(text(tree).includes("2 selected")); assert.equal(text(tree).includes("hidden by filters"), false);
     button(tree, "Clear").onClick(); assert.ok(text(f.render()).includes("0 selected"));
   } finally { f.r.dispose(); }
@@ -561,14 +627,14 @@ test("repeated bookmark events share one stable request and unknown results neve
   try {
     render(); r.flush(); render(); r.flush();
     const event = () => r.events.dispatchEvent(new CustomEvent("chat-reader:create-bookmark", { detail: { messageId: "synthetic-message" } }));
-    event(); event(); assert.equal(requests.length, 1); assert.ok(requests[0].id);
+    event(); event(); await setImmediate(); assert.equal(requests.length, 1); assert.ok(requests[0].id);
     pending.reject(new Error("Synthetic unknown create")); await setImmediate();
     props.open = true;
     let tree = render(); assert.match(text(tree), /Bookmark creation was not confirmed/);
     button(tree, "Check bookmark").onClick(); await setImmediate(); tree = render();
     assert.equal(requests.length, 1); assert.match(text(tree), /bookmark is currently absent/);
     button(tree, "Finish without retrying").onClick(); assert.equal(text(render()).includes("Bookmark creation was not confirmed"), false);
-    assert.deepEqual(openings, [true]);
+    assert.deepEqual(openings, []);
   } finally { r.dispose(); }
 });
 

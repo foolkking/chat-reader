@@ -108,6 +108,7 @@ class ImportCommitOptions(BaseModel):
     duplicate_policy: str = "clone"
     project_id: UUID | None = None
     create_archive_project: bool = False
+    image_lane_width: int | None = Field(default=None, strict=True, ge=44, le=8192)
 
 
 class SourceArtifactRead(BaseModel):

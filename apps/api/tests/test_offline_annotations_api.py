@@ -269,6 +269,50 @@ def test_annotation_anchor_relocates_and_marks_stale_after_message_edits(client:
     assert annotation["message_version_id"] != removed.json()["current_version_id"]
 
 
+def test_reading_point_bookmarks_deduplicate_and_remap_without_claiming_missing_source(client: TestClient):
+    conversation_id, message, version = _message_context(client)
+    endpoint = f"/api/conversations/{conversation_id}/annotations"
+    payload = {
+        "annotation_type": "bookmark", "message_id": message["id"], "message_version_id": version["id"],
+        "start_block_index": 0, "end_block_index": 0, "start_offset": 0, "end_offset": 8,
+        "quote": "Original", "suffix": " user", "metadata": {"bookmark_kind": "reading_point"},
+    }
+    first = client.post(endpoint, json={**payload, "id": str(uuid.uuid4())})
+    assert first.status_code == 201, first.text
+    duplicate = client.post(endpoint, json={**payload, "id": str(uuid.uuid4())})
+    assert duplicate.status_code == 201 and duplicate.json()["id"] == first.json()["id"]
+    assert len(client.get(endpoint).json()) == 1
+    changed = client.patch(f"/api/messages/{message['id']}", json={"display_text": "Prefix Original user question"})
+    assert changed.status_code == 200
+    mark = client.get(endpoint).json()[0]
+    assert mark["anchor_status"] == "remapped" and mark["start_offset"] == 7
+    assert client.patch(f"/api/messages/{message['id']}", json={"display_text": "Replacement source"}).status_code == 200
+    mark = client.get(endpoint).json()[0]
+    assert mark["anchor_status"] == "orphaned" and mark["quote"] == "Original"
+    # A legacy whole-message bookmark still follows its own message.
+    legacy = client.post(endpoint, json={"annotation_type": "bookmark", "message_id": message["id"]})
+    assert legacy.status_code == 201
+    assert client.patch(f"/api/messages/{message['id']}", json={"display_text": "Another source"}).status_code == 200
+    assert next(row for row in client.get(endpoint).json() if row["id"] == legacy.json()["id"])["anchor_status"] == "valid"
+
+
+def test_non_text_reading_points_deduplicate_only_the_same_block_offset(client: TestClient):
+    conversation_id, message, version = _message_context(client)
+    endpoint = f"/api/conversations/{conversation_id}/annotations"
+    payload = {
+        "annotation_type": "bookmark", "message_id": message["id"], "message_version_id": version["id"],
+        "start_block_index": 0, "end_block_index": 0, "start_offset": None, "end_offset": None,
+        "metadata": {"bookmark_kind": "reading_point", "reading_anchor": {"block_offset": 650}},
+    }
+    first = client.post(endpoint, json=payload)
+    assert first.status_code == 201, first.text
+    assert client.post(endpoint, json=payload).json()["id"] == first.json()["id"]
+    payload["metadata"]["reading_anchor"]["block_offset"] = 20
+    second = client.post(endpoint, json=payload)
+    assert second.status_code == 201 and second.json()["id"] != first.json()["id"]
+    assert len(client.get(endpoint).json()) == 2
+
+
 def test_cr_v2_optional_private_entries_round_trip(client: TestClient) -> None:
     conversation_id, message, _ = _message_context(client)
     client.patch(f"/api/conversations/{conversation_id}", json={"description_markdown": "private description"})

@@ -161,6 +161,7 @@ def list_conversations(
     source_type: str | None = None,
     source_profile: str | None = None,
     q: str = Query(default="", max_length=200),
+    tag_id: uuid.UUID | None = None,
     include_archived: bool = False,
     status_scope: str | None = Query(default=None, pattern="^(active|archived|all)$"),
     scope: str = Query(default="all", pattern="^(all|history)$"),
@@ -181,6 +182,15 @@ def list_conversations(
             selectinload(Conversation.project_links).selectinload(ProjectConversation.project),
         )
     )
+    if tag_id is not None:
+        from app.models.user_feature_entry import UserFeatureEntry
+        from app.services.ownership import subject_key_from_request
+        tag = db.query(UserFeatureEntry).filter_by(
+            id=tag_id, subject_key=subject_key_from_request(request), collection="conversation-tag",
+        ).one_or_none()
+        if tag is None:
+            raise HTTPException(404, detail="Tag not found.")
+        query = query.filter(Conversation.id.in_([uuid.UUID(value) for value in tag.value.get("conversation_ids", [])]))
     if q.strip():
         query = query.filter(or_(
             Conversation.display_title.icontains(q.strip(), autoescape=True),

@@ -38,18 +38,30 @@ class PreparedExportContent(Iterator[bytes]):
         self.stream.close()
 
 
-def prepare_annotation_export(db: Session, conversation_id: UUID) -> StreamingExportResult:
+def prepare_annotation_export(db: Session, conversation_id: UUID, *, annotation_ids=None, scope="all", locale="zh-CN", readable=False) -> StreamingExportResult:
     from app.core.config import get_settings
-    from app.services.exporting.annotation_document import annotation_query, iter_document
+    from app.services.exporting.annotation_document import annotation_query, iter_document, annotation_record, readable_header, readable_entry
+    from app.models.annotation import ConversationAnnotation
     stream = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")
     try:
         with archive_read_snapshot(db) as snapshot:
             conversation = _get_conversation(snapshot, conversation_id)
             query = annotation_query(snapshot, conversation_id, _subject_key_for_conversation(conversation))
+            if annotation_ids is not None:
+                query = query.filter(ConversationAnnotation.id.in_(annotation_ids))
             count = query.order_by(None).count()
             filename = f"{_safe_filename(conversation.display_title or conversation.title)}--annotations.md"
-            for chunk in iter_document(query, title=conversation.display_title or conversation.title,
-                exported_at=datetime.now(timezone.utc), scope="all_non_deleted_annotations"):
+            def chunks():
+                if not readable:
+                    yield from iter_document(query, title=conversation.display_title or conversation.title,
+                                             exported_at=datetime.now(timezone.utc), scope="all_non_deleted_annotations")
+                    return
+                yield readable_header(conversation.display_title or conversation.title, datetime.now(timezone.utc),
+                                      count, scope=scope, zh=locale == "zh-CN")
+                for ordinal, row in enumerate(query.yield_per(1), 1):
+                    yield readable_entry(annotation_record(*row), ordinal, zh=locale == "zh-CN",
+                                         source_base=get_settings().public_web_base_url)
+            for chunk in chunks():
                 if stream.tell() + len(chunk) > get_settings().bundle_max_expanded_bytes:
                     raise ExportError("Annotation export exceeds the download size limit.", 413)
                 stream.write(chunk)

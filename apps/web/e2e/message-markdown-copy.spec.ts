@@ -97,13 +97,21 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await page.route(displayRoute, route => route.fulfill({
       status: 413, contentType: "application/json", body: '{"detail":"Synthetic size admission limit"}',
     }));
-    const scaleTrigger = article.getByRole("button", { name: /Image options|图片选项/ });
-    const sizePanel = page.locator(".image-display-menu");
+    const scaleTrigger = article.getByRole("button", { name: /Image display scale:|图片展示比例：/ });
+    const sizePanel = page.locator(".image-scale-disclosure");
     await scaleTrigger.click();
-    await expect(sizePanel.getByRole("alert")).toHaveText(/Size inspection is unavailable|无法安全读取缩放尺寸/);
+    await expect(article.getByRole("alert")).toHaveText(/Size inspection is unavailable|无法安全读取缩放尺寸/);
     await page.unroute(displayRoute);
-    await sizePanel.getByRole("button", { name: /Check result|核对结果/ }).click();
-    const scaleOption = (percent: number) => sizePanel.getByRole("button", { name: `${percent}%`, exact: true });
+    await article.getByRole("button", { name: /Check result|核对结果/ }).click();
+    const scaleOption = (percent: number) => ({ click: async () => {
+      if (!await sizePanel.isVisible()) await scaleTrigger.click();
+      const slider = sizePanel.getByRole("slider"); await expect(slider).toBeEnabled();
+      await slider.focus(); await page.keyboard.down("Home");
+      for (let i = 1; i < percent; i++) await page.keyboard.down("ArrowRight");
+      if (percent > 1) await page.keyboard.up("ArrowRight");
+      await page.keyboard.up("Home");
+    } });
+    if (!await sizePanel.isVisible()) await scaleTrigger.click();
     const scaleSlider = sizePanel.getByRole("slider", { name: /Image display scale|图片展示比例/ });
     await expect(scaleSlider).toHaveValue("100");
     if (width >= 640) {
@@ -121,9 +129,9 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     // Explicitly applying the unchanged 100% configures intrinsic size; the
     // same action remains available for a missing-derivative repair.
     await scaleOption(100).click();
-    await expect(sizePanel.getByRole("status").filter({ hasText: /Saved|已保存/ })).toBeVisible();
+    await expect(article.getByRole("status").filter({ hasText: /Saved|已保存/ })).toBeVisible();
     await scaleOption(50).click();
-    await expect(sizePanel.getByRole("status").filter({ hasText: /Saved|已保存/ })).toBeVisible();
+    await expect(article.getByRole("status").filter({ hasText: /Saved|已保存/ })).toBeVisible();
     await Promise.all([
       page.waitForResponse(response => response.url().endsWith(`/api/attachments/${svg.id}/image-display`)
         && response.request().method() === "PUT" && response.status() === 200),
@@ -151,7 +159,7 @@ for (const width of [1440, 375]) test(`${width}px copies whole message Markdown 
     await page.reload();
     await expect(article).toBeVisible();
     await expect.poll(() => inlineImage.evaluate(node => node.getBoundingClientRect().width)).toBe(5);
-    await expect(scaleTrigger).toHaveAccessibleName(/Image options|图片选项/);
+    await expect(scaleTrigger).toHaveAccessibleName(/Image display scale:|图片展示比例：/);
     await scaleTrigger.click();
     await scaleOption(100).click();
     await expect.poll(imageSize).toBe(20);

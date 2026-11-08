@@ -39,6 +39,7 @@ import { BulkMoveReview } from "../../components/bulk-move-review";
 import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
 import { useBatchResultCheck } from "./use-batch-result-check";
 import { BatchTitleTrim, type BatchTitleTrimResult } from "./batch-title-trim";
+import { ConversationTagsPanel } from "../reading/conversation-tags-panel";
 
 type ConversationPage = { items: ConversationListItem[]; offset: number; hasMore: boolean };
 
@@ -61,9 +62,11 @@ function reverseSortGroups(rows: ConversationListItem[]): ConversationListItem[]
 export function ConversationList({
   onImportClick,
   mode = "active",
+  tagId,
 }: {
   onImportClick?: () => void;
   mode?: "active" | "archived";
+  tagId?: string;
 }) {
   const queryClient = useQueryClient();
   const { conversationSortMode, conversationSortDirection, resolvedLocale } = usePreferences();
@@ -100,6 +103,7 @@ export function ConversationList({
   const [selectedConversationIds, setSelectedConversationIds] = useState<Set<string>>(new Set());
   const [isMerging, setIsMerging] = useState(false);
   const [bulkBusy, setBulkBusy] = useState<string | null>(null);
+  const [tagsBusy, setTagsBusy] = useState(false);
   const [undo, setUndo] = useState<UndoAction | null>(null);
   const [mergeTitle, setMergeTitle] = useState("Merged conversation");
   const [mergeOrderIds, setMergeOrderIds] = useState<string[]>([]);
@@ -122,11 +126,11 @@ export function ConversationList({
   );
   const pageSize = 100;
   const conversationsQuery = useInfiniteQuery({
-    queryKey: ["conversations", "paged", mode, conversationSortMode, conversationSortDirection],
+    queryKey: ["conversations", "paged", mode, tagId, conversationSortMode, conversationSortDirection],
     initialPageParam: 0,
     queryFn: async ({ pageParam, signal }): Promise<ConversationPage> => {
       const rows = await getConversations({
-        statusScope: mode, scope: "all", sort: conversationSortMode,
+        statusScope: mode, tagId, scope: "all", sort: conversationSortMode,
         direction: conversationSortDirection, limit: pageSize + 1, offset: pageParam,
       }, signal);
       return { items: rows.slice(0, pageSize), offset: pageParam, hasMore: rows.length > pageSize };
@@ -170,7 +174,7 @@ export function ConversationList({
     ids: conversations.map((conversation) => conversation.id),
     selectedIds: selectedConversationIds,
     onChange: applySelection,
-    disabled: bulkBusy !== null || isMerging,
+    disabled: bulkBusy !== null || isMerging || tagsBusy,
     selectionMode,
     onActivate: () => setSelectionMode(true),
     onExit: exitSelectionMode,
@@ -523,17 +527,23 @@ export function ConversationList({
         loadedOnly={conversationsQuery.hasNextPage}
         selectedCount={selectedConversationIds.size}
         totalCount={conversations.length}
-        busy={bulkBusy !== null || isMerging}
+        busy={bulkBusy !== null || isMerging || tagsBusy}
         locale={resolvedLocale}
         onSelectAll={linearSelection.selectAll}
         onInvert={linearSelection.invert}
         onClear={clearSelection}
         onDone={exitSelectionMode}
       >
+        <details className="relative">
+          <summary className="btn-secondary flex min-h-11 cursor-pointer items-center px-3 text-sm">{zh ? "批量标签" : "Batch tags"}</summary>
+          <div className="absolute left-0 top-full z-50 max-h-[60dvh] w-80 max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-ui bg-raised shadow-sm">
+            <ConversationTagsPanel key={[...selectedConversationIds].sort().join(":")} conversationIds={[...selectedConversationIds]} disabled={bulkBusy !== null || isMerging} onBusyChange={setTagsBusy} />
+          </div>
+        </details>
         <BulkActions
             mode={mode}
             selectedConversations={selectedMergeConversations}
-            bulkBusy={bulkBusy}
+            bulkBusy={bulkBusy ?? (tagsBusy ? "tags" : null)}
             projects={(projectsQuery.data ?? []).filter((project) => !project.is_default && !project.is_archived)}
             exportOverLimit={batchExport.overLimit(selectedConversationIds.size)}
             unresolvedSelection={[...selectedConversationIds].some((id) => batchCheck.blockedIds.has(id))}

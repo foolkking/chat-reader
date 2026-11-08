@@ -104,6 +104,7 @@ class AttachmentUploadSessionRead(BaseModel):
 
 class AttachmentFinalizeRequest(BaseModel):
     upload_item_ids: list[UUID]
+    image_lane_width: int | None = Field(default=None, ge=44, le=8192, strict=True)
 
 
 class AttachmentUpdateRequest(BaseModel):

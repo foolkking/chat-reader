@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test as base, type Page } from "@playwright/test";
 
 const test = base.extend<{ draftFocusTrace: void }>({
@@ -292,7 +293,7 @@ test("attachments: failed load, rename draft, copy feedback and partial detach r
     await page.route(`**${endpoint}`, (route) => route.fulfill({ status: 503, json: { detail: "Synthetic file failure" } }));
     await page.goto(`/conversations/${id}`);
     await page.getByRole("button", { name: "Message actions", exact: true }).click();
-    await page.getByRole("button", { name: "Conversation files", exact: true }).click();
+    await openReaderAction(page, "conversation-files");
     const files = page.getByTestId("conversation-files-panel");
     await expect(files.getByRole("alert")).toContainText("Could not load files");
     await page.unroute(`**${endpoint}`); await files.getByRole("button", { name: "Retry", exact: true }).click();
@@ -348,7 +349,7 @@ test("export status recovers the same real task; task center read failures are e
   try {
     await page.goto(`/conversations/${id}`);
     await page.getByRole("button", { name: "Message actions", exact: true }).click();
-    await page.getByRole("button", { name: "Export", exact: true }).click();
+    await openReaderAction(page, "export");
     await page.route("**/api/tasks/*", (route) => route.fulfill({ status: 503, json: { detail: "Synthetic task status failure" } }));
     const queued = page.waitForResponse((response) => response.url().endsWith(`/conversations/${id}/exports`) && response.request().method() === "POST");
     await page.getByRole("button", { name: "Generate export", exact: true }).click();

@@ -109,3 +109,51 @@ test("renderer-only UI cannot create a text anchor", () => {
   ], { quote: "needle", startOffset: 0, endOffset: 6 });
   assert.equal(range, null);
 });
+
+// The production capture algorithm with deterministic Range geometry. A
+// separate Playwright case measures real wrapping; these are not visual tests.
+function captureLine(text, line, { canonical = text, ignored = false } = {}) {
+  const node = textNode(text, ignored ? '[data-markdown-copy-ignore="true"]' : undefined);
+  let measurements = 0;
+  const rect = row => ({ top: row * 20, bottom: row * 20 + 18, height: 18, width: 200 });
+  const rowForUnit = unit => Math.floor(Array.from(text.slice(0, unit)).length / 20);
+  const document = {
+    createTreeWalker: (_root, _show, filter) => {
+      let used = false;
+      return { currentNode: node, nextNode() { if (used) return false; used = true; return filter.acceptNode(node) === 1; } };
+    },
+    createRange: () => ({
+      start: 0, end: text.length,
+      selectNodeContents() {},
+      setStart(_node, offset) { this.start = offset; },
+      setEnd(_node, offset) { this.end = offset; },
+      getClientRects() { return Array.from({ length: Math.ceil(Array.from(text).length / 20) }, (_, index) => rect(index)); },
+      getBoundingClientRect() {
+        measurements++;
+        if (this.start === 0 && this.end === text.length) return { ...rect(0), bottom: Math.ceil(Array.from(text).length / 20) * 20, height: Math.ceil(Array.from(text).length / 20) * 20 };
+        return rect(rowForUnit(this.start));
+      },
+    }),
+  };
+  const exports = {};
+  new Function("exports", "document", "NodeFilter", compiled)(exports, document, { SHOW_TEXT: 4, FILTER_REJECT: 2, FILTER_ACCEPT: 1 });
+  return { offset: exports.textOffsetAtReadingLine({}, line * 20 + 5, canonical), measurements };
+}
+
+test("a mid-paragraph reading point is measured inside a single text node, not at either endpoint", () => {
+  const result = captureLine("a".repeat(4000), 91);
+  assert.equal(result.offset, 1820);
+  assert.ok(result.measurements <= 14, "bounded logarithmic glyph measurements, not one layout per character");
+});
+
+test("reading capture returns canonical code points after emoji and skips renderer-only text", () => {
+  const text = "🙂".repeat(31) + "字".repeat(200);
+  assert.equal(captureLine(text, 4).offset, 80);
+  assert.equal(captureLine(text, 4, { ignored: true }).offset, undefined);
+  assert.equal(captureLine(text, 4, { canonical: "different source" }).offset, undefined);
+});
+
+test("a canonical Markdown difference maps only when normalized source agrees", () => {
+  const text = "word ".repeat(100);
+  assert.equal(captureLine(text, 7, { canonical: `**${text}**` }).offset, 142);
+});

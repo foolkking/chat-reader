@@ -112,6 +112,57 @@ export function firstVisibleRangeRect(range: Range): DOMRect | null {
   return fallback.width > 0 || fallback.height > 0 ? fallback : null;
 }
 
+/** Capture a real glyph on the reading line, in canonical Unicode code points.
+ * A DOM/canonical mismatch is deliberately a block-offset fallback, not a
+ * guessed character-zero anchor. Renderer controls use the same exclusions as
+ * navigation. Binary search also works when caretFromPoint APIs are unavailable
+ * or a floating tool obscures the text underneath the pointer. */
+export function textOffsetAtReadingLine(root: HTMLElement, readingLine: number, canonicalText?: string): number | undefined {
+  invalidateTextAnchorCache(root);
+  const source = collectText(root);
+  let closest: { segment: TextNodeSegment; rect: DOMRect; distance: number } | undefined;
+  for (const segment of source.segments) {
+    const range = document.createRange();
+    range.selectNodeContents(segment.node);
+    const bounds = range.getBoundingClientRect();
+    const distance = Math.max(bounds.top - readingLine, readingLine - bounds.bottom, 0);
+    if (bounds.height <= 0 || (closest && distance > closest.distance)) continue;
+    for (const rect of Array.from(range.getClientRects())) {
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      const distance = Math.max(rect.top - readingLine, readingLine - rect.bottom, 0);
+      if (!closest || distance < closest.distance) closest = { segment, rect, distance };
+    }
+  }
+  if (!closest || closest.distance > closest.rect.height) return undefined;
+  const { segment, rect } = closest;
+  const boundaries = [0];
+  for (const character of segment.node.textContent ?? "") boundaries.push(boundaries.at(-1)! + character.length);
+  const glyph = (index: number) => {
+    const range = document.createRange();
+    range.setStart(segment.node, boundaries[index]);
+    range.setEnd(segment.node, boundaries[index + 1]);
+    return range.getBoundingClientRect();
+  };
+  let low = 0, high = boundaries.length - 2;
+  const middleY = (rect.top + rect.bottom) / 2;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (glyph(middle).bottom <= middleY) low = middle + 1;
+    else high = middle;
+  }
+  const actual = glyph(low);
+  if (actual.height <= 0 || actual.top >= rect.bottom || actual.bottom <= rect.top) return undefined;
+  let unitOffset = segment.start + boundaries[low];
+  if (canonicalText !== undefined && canonicalText !== source.text) {
+    const dom = normalizeMarkdownAnchor(source.text), canonical = normalizeMarkdownAnchor(canonicalText);
+    if (!canonical.text || canonical.text !== dom.text) return undefined;
+    const index = dom.sourceIndexes.findIndex(value => value >= unitOffset);
+    if (index < 0 || canonical.sourceIndexes[index] === undefined) return undefined;
+    unitOffset = canonical.sourceIndexes[index];
+  }
+  return Array.from((canonicalText ?? source.text).slice(0, unitOffset)).length;
+}
+
 function collectText(root: HTMLElement): TextIndex {
   const cached = textIndexCache.get(root);
   if (cached) return cached;

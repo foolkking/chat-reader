@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test as base, type Page } from "@playwright/test";
 import type { BackgroundTaskRead, ConversationCreateResponse, ConversationDetail, ProjectConversationRead, ProjectRead, ReadingPositionInput, ReadingPositionRead, RecentItemRead, SearchResponse, SearchResultItem } from "../lib/types";
 
@@ -2249,7 +2250,7 @@ for (const [width, zh] of [[375, true], [1440, false]] as const) {
     const before = await Promise.all(created.messages.map(async message => (await page.request.get(`/api/messages/${message.id}`)).json()));
     const openSplit = async () => {
       await page.locator(width < 768 ? "[data-reader-mobile-more-actions='true']" : "[data-reader-header-more-actions='true']").click();
-      await page.getByRole("button", { name: zh ? "拆分为新对话" : "Split into new conversation", exact: true }).filter({ visible: true }).click();
+      await openReaderAction(page, "split-conversation");
       return page.getByRole("dialog", { name: zh ? "拆分对话" : "Split conversation", exact: true });
     };
     try {

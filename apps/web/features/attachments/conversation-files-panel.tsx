@@ -32,6 +32,7 @@ import {
 } from "react";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { usePreferences } from "../../components/preferences-provider";
+import { measureImportImageLane } from "../import/image-import-lane";
 import {
   createAttachmentUploadSession,
   deleteConversationAttachment,
@@ -88,7 +89,7 @@ function ConversationFilesWorkspace({
   onLocate,
   onInsert,
 }: ConversationFilesPanelProps) {
-  const { resolvedLocale } = usePreferences();
+  const { resolvedLocale, readerWidthMode, sectionTocMode } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const queryClient = useQueryClient();
   const dialog = useInteractionDialog();
@@ -97,6 +98,7 @@ function ConversationFilesWorkspace({
   const renameDrafts = useRef<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const finalizeLanes = useRef(new Map<string, number>());
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FileFilter>("all");
   const [sort, setSort] = useState<FileSort>("recent");
@@ -337,10 +339,13 @@ function ConversationFilesWorkspace({
   }
 
   async function finalizeUploadedEntries(entries: UploadEntry[], current: () => boolean) {
+    const key = entries.map(entry => entry.uploadItemId).sort().join(",");
+    const lane = finalizeLanes.current.get(key) ?? measureImportImageLane({ readerWidthMode, sectionTocMode });
+    finalizeLanes.current.set(key, lane);
     const ids = new Set(entries.map((entry) => entry.id));
     setUploadQueue((queue) => queue.map((entry) => ids.has(entry.id) ? { ...entry, status: "finalizing" } : entry));
     try {
-      await finalizeConversationAttachments(conversationId, entries.map((entry) => entry.uploadItemId!));
+      await finalizeConversationAttachments(conversationId, entries.map((entry) => entry.uploadItemId!), lane);
     } catch {
       if (!current()) return;
       setUploadQueue((queue) => queue.map((entry) => ids.has(entry.id) ? { ...entry, status: "unknown" } : entry));

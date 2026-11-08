@@ -364,7 +364,7 @@ for (const surface of ["reader", "share", "offline", "compare"] as const) {
       const root = surface === "share" ? page.locator("html") : article.locator('xpath=ancestor::*[@data-reader-scroll-root="true"][1]');
       if (surface === "reader" || surface === "offline") await expectReaderReady(root);
       if (surface === "compare") {
-        const right = page.getByRole("region", { name: "Right conversation", exact: true }).locator('[data-reader-scroll-root="true"]');
+        const right = page.locator(`[data-together-pane="${other.id}"] [data-reader-scroll-root="true"]`);
         await right.evaluate(node => { node.scrollTop = 240; });
       }
       const long = article.locator(`[data-attachment-id="${fixture.assets[2]}"]`).first();
@@ -501,8 +501,8 @@ test("collapsed long image publishes complete pixels and its existing public URL
 test("Compare deep navigation leases a real virtual block; URL and opposite scroller remain independent", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/compare?left=${heavy.id}&right=${other.id}`);
-  const left = page.getByRole("region", { name: "Left conversation", exact: true });
-  const right = page.getByRole("region", { name: "Right conversation", exact: true });
+  const left = page.locator(`[data-together-pane="${heavy.id}"]`);
+  const right = page.locator(`[data-together-pane="${other.id}"]`);
   await expect(left.locator("article").first()).toBeVisible();
   const rightRoot = right.locator('[data-reader-scroll-root="true"]');
   await rightRoot.evaluate(node => { node.scrollTop = 240; });
@@ -518,13 +518,23 @@ test("Compare deep navigation leases a real virtual block; URL and opposite scro
   const heading = left.locator('[data-block-type="heading"]').filter({ hasText: "Deep synthetic target" });
   await expect(heading).toBeVisible();
   await expect.poll(() => heading.evaluate(node => node.getBoundingClientRect().top
-    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top)).toBeLessThanOrEqual(26);
+    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top)).toBeLessThanOrEqual(122);
   await expect.poll(() => heading.evaluate(node => Math.abs(node.getBoundingClientRect().top
-    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top - 24))).toBeLessThanOrEqual(2);
+    - node.closest('[data-reader-scroll-root="true"]')!.getBoundingClientRect().top - 120))).toBeLessThanOrEqual(2);
   expect(await rightRoot.evaluate(node => node.scrollTop)).toBe(rightTop);
-  await page.evaluate(id => { const url = new URL(location.href); url.searchParams.set("right", id); history.pushState(null, "", url); }, normal.id);
-  await expect(page.getByRole("textbox", { name: "Comparison conversation ID" })).toHaveValue(normal.id);
-  await expect(right.getByRole("heading", { name: "Synthetic geometry normal" })).toBeVisible();
+  await expect(page).toHaveURL(/\/read-together\?/);
+  await page.getByRole("button", { name: "Open another", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Open another conversation to read together", exact: true });
+  await picker.getByRole("textbox").fill("Synthetic geometry normal");
+  await picker.getByRole("button", { name: /Synthetic geometry normal.*Resume/ }).click();
+  await expect(page.locator(`[data-together-pane="${normal.id}"]`)).toBeVisible();
+  await expect(left.locator("article").first()).toBeAttached();
+  await expect(page.locator("[data-together-pane]")).toHaveCount(2);
+  // A third named tab does not mount a third body; returning restores the
+  // previous right pane's own captured position, not the left pane's.
+  await page.getByRole("navigation", { name: "Open conversations" }).getByRole("button", { name: "Synthetic geometry independent", exact: true }).click();
+  await expect(right).toBeVisible();
+  await expect.poll(() => rightRoot.evaluate(node => Math.abs(node.scrollTop - rightTop))).toBeLessThanOrEqual(1);
 });
 
 test("all group sizes preserve image pixels with natural source-order wrapping", async ({ page }, info) => {
@@ -574,30 +584,18 @@ test("all group sizes preserve image pixels with natural source-order wrapping",
   }
 });
 
-test("unknown baseline result checks are read-only; a new snapshot requires a second explicit action", async ({ page }) => {
+test("removed baseline UI never creates snapshots during reading; compatibility reads remain available", async ({ page }) => {
   let writes = 0;
-  await page.route(`**/api/conversations/${other.id}/new-messages/baseline`, async route => {
-    if (route.request().method() !== "POST") return route.continue();
-    writes++;
-    const response = await route.fetch();
-    expect(response.ok()).toBe(true);
-    if (writes === 1) await route.abort(); else await route.fulfill({ response });
-  });
+  page.on("request", request => { if (request.method() === "POST" && request.url().includes("/new-messages/baseline")) writes++; });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/conversations/${other.id}`);
   await expectReaderReady(page.getByTestId("reader-scroll-root"));
   await page.locator('[data-reader-header-more-actions="true"]').click();
-  await page.getByRole("button", { name: "New messages", exact: true }).click();
-  await page.getByRole("button", { name: "Mark current server content as seen" }).click();
-  const create = page.getByRole("button", { name: "Create a new server snapshot" });
-  await expect(create).toBeDisabled();
-  await page.getByRole("button", { name: "Check last result" }).click();
-  await expect(page.getByText(/time does not prove the last save succeeded/)).toBeVisible();
-  expect(writes).toBe(1);
-  await expect(create).toBeEnabled();
-  await create.click();
-  await expect(page.getByRole("status").filter({ hasText: /Save confirmed:/ })).toBeVisible();
-  expect(writes).toBe(2);
+  await expect(page.getByRole("menuitem", { name: "New messages", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Conversation lineage", exact: true })).toHaveCount(0);
+  const read = await page.request.get(`/api/conversations/${other.id}/new-messages`);
+  expect(read.ok()).toBe(true);
+  expect(writes).toBe(0);
 });
 
 test("a hidden image target occupies a real preview slot without expanding the group", async ({ page }) => {
@@ -637,10 +635,9 @@ test("explicit reading size updates online references but not an existing offlin
   await expectReaderReady(page.getByTestId("reader-scroll-root"));
   const image = page.locator(`#message-${normal.messageId} [data-attachment-id="${normal.assets[1]}"]`).first();
   await image.getByRole("button", { name: /Image display scale:/ }).click();
-  const menu = page.getByRole("dialog", { name: "Image size", exact: true });
-  await expect(menu.getByText("Original pixels", { exact: true })).toBeVisible();
-  await menu.getByRole("button", { name: "Fit current column", exact: true }).click();
-  await expect(menu.getByRole("status")).toHaveText("Saved");
+  await expect(page.getByRole("slider", { name: "Image display scale", exact: true })).toBeEnabled();
+  await image.getByRole("button", { name: "Fit column", exact: true }).click();
+  await expect(image.getByRole("status")).toHaveText("Saved");
   const selected = await (await page.request.get(`/api/attachments/${normal.assets[1]}/image-display`)).json();
   const lane = await image.evaluate(node => node.closest(".attachment-lane")!.clientWidth);
   expect(selected.width).toBeLessThanOrEqual(lane);

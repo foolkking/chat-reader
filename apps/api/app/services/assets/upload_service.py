@@ -21,6 +21,7 @@ from app.models.message import Message
 from app.models.message_version import MessageVersion
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import AssetScanError, detect_mime_type, scan_attachment, scan_status_allows_use
+from app.services.ownership import OwnershipScope
 
 
 class AttachmentUploadError(ValueError):
@@ -145,6 +146,8 @@ def finalize_upload_items(
     conversation_id: uuid.UUID,
     item_ids: list[uuid.UUID],
     source_type: str = "upload",
+    image_lane_width: int | None = None,
+    ownership_scope: OwnershipScope | None = None,
 ) -> FinalizeResult:
     if not item_ids or len(item_ids) != len(set(item_ids)):
         raise AttachmentUploadError("Upload item ids must be present and unique.", 422)
@@ -243,6 +246,13 @@ def finalize_upload_items(
             if all(item.validation_status == "committed" for item in session.items):
                 session.status = "committed"
         db.flush()
+        if image_lane_width is not None and ownership_scope is not None:
+            from app.services.assets.image_display import initialize_import_display
+            for attachment in created:
+                warning = initialize_import_display(db, attachment, image_lane_width, ownership_scope, origin="upload_fit")
+                if warning:
+                    attachment.metadata_ = {**(attachment.metadata_ or {}), "image_fit_warning": warning}
+            db.flush()
         return FinalizeResult(attachments=created, promoted_storage_keys=promoted)
     except Exception:
         for storage_key in promoted:

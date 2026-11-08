@@ -1,7 +1,6 @@
 import re
 import uuid
 import asyncio
-from threading import BoundedSemaphore
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
@@ -16,7 +15,7 @@ from app.services.ownership import ownership_scope_from_request
 from app.api.routes.attachments import _content_response
 
 router = APIRouter(tags=["markdown-copy"])
-_preview_slot = BoundedSemaphore(1)
+_preview_slot = image_display.conversion_slot
 
 
 class PublishImagesRequest(BaseModel):
@@ -49,7 +48,7 @@ def update_image_display(attachment_id: uuid.UUID, payload: ImageDisplayRequest,
         scope = ownership_scope_from_request(request)
         get_owner_attachment(db, attachment_id, scope)
         acquired = _preview_slot.acquire(blocking=False)
-        if not acquired:
+        if not acquired or not image_display.acquire_conversion_transaction(db):
             raise HTTPException(429, detail="Another image conversion is in progress.", headers={"Retry-After": "3"})
         result = image_display.save_display(db, attachment_id, scope, payload.source_sha256,
                                             payload.scale_percent, payload.expected_scale_percent)
@@ -101,7 +100,7 @@ async def upload_markdown_copy_preview(
         # Reject wrong ownership before reading even a bounded request body.
         await run_in_threadpool(get_owner_attachment, db, attachment_id, scope)
         acquired = _preview_slot.acquire(blocking=False)
-        if not acquired:
+        if not acquired or not await run_in_threadpool(image_display.acquire_conversion_transaction, db):
             raise HTTPException(429, detail="Another safe image conversion is in progress.", headers={"Retry-After": "3"})
         payload = bytearray()
         async with asyncio.timeout(15):

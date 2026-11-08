@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { unzipSync } from "fflate";
@@ -28,7 +29,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await page.getByRole("dialog", { name: /阅读工具|Reader tools/ }).getByRole("button", { name: /^(导出|Export)$/ }).click();
     } else {
       await page.getByRole("button", { name: /^(消息操作|Message actions)$/ }).click();
-      await page.getByRole("button", { name: /^(导出|Export)$/ }).click();
+      await openReaderAction(page, "export");
     }
     await expect(page.getByRole("button", { name: /^(交给 AI|For AI)$/ })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("checkbox", { name: /^(包含附件|Include attachments)/ })).not.toBeChecked();

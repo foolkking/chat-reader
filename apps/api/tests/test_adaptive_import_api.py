@@ -155,6 +155,21 @@ def test_native_json_is_a_builtin_profile(client: TestClient) -> None:
     assert session["families"][0]["matched_profile_key"] == "builtin:chat-reader-exporter"
 
 
+def test_image_lane_snapshot_is_immutable_after_explicit_import_commit(client: TestClient):
+    first = _create(client, [("lane.json", _json_bytes(), "application/json")])
+    ready = _save_mapping(client, first)
+    path = f"/api/imports/{ready['import_id']}/commit"
+    result = client.post(path, json={"image_lane_width": 608})
+    assert result.status_code == 200, result.text
+    assert result.json()["status"] == "committed"
+    snapshot = client.get(f"/api/adaptive-import/sessions/{ready['import_id']}").json()
+    assert snapshot["analysis_summary"]["commit_options"]["image_lane_width"] == 608
+    again = client.post(path, json={"image_lane_width": 320})
+    assert again.status_code == 200
+    snapshot = client.get(f"/api/adaptive-import/sessions/{ready['import_id']}").json()
+    assert snapshot["analysis_summary"]["commit_options"]["image_lane_width"] == 608
+
+
 @pytest.mark.parametrize(
     "unsafe_path",
     ["../escape.md", "/absolute.md", "C:/drive.md", "folder\\escape.md"],
@@ -430,6 +445,41 @@ def test_conversation_zip_commit_persists_real_attachment_and_occurrence(
     finally:
         db.close()
         generator.close()
+
+
+def test_image_zip_import_commits_one_private_fit_and_retains_original_bytes(client: TestClient, tmp_path: Path, monkeypatch):
+    from PIL import Image
+    from app.models.attachment_public_link import AttachmentPublicLink
+    monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path / "assets"))
+    monkeypatch.setattr("app.core.memory.available_memory_bytes", lambda: 1024 ** 3)
+    get_settings.cache_clear()
+    image = io.BytesIO()
+    Image.new("RGBA", (600, 400), (20, 80, 100, 100)).save(image, "PNG")
+    original = image.getvalue()
+    session = _create(client, [("image-export.zip", _zip_bytes({
+        "conversation.md": b"# Synthetic image\n\n## User\nInspect\n\n## Assistant\n![Diagram](assets/diagram.png)\n",
+        "manifest.json": json.dumps({"version": "1", "assets": [{"path": "assets/diagram.png", "kind": "image"}],
+            "messages": [{"id": "u"}, {"id": "a"}]}).encode(),
+        "assets/diagram.png": original,
+    }), "application/zip")])
+    assert session["state"] == "READY"
+    result = client.post(f"/api/imports/{session['import_id']}/commit", json={"image_lane_width": 300})
+    assert result.status_code == 200, result.text
+    conversation_id = result.json()["conversation_ids"][0]
+    items = client.get(f"/api/conversations/{conversation_id}/attachments").json()["items"]
+    assert len(items) == 1
+    attachment = items[0]
+    display = attachment["metadata"]["image_display_v1"]
+    assert (display["scale_percent"], display["width"], display["height"], display["origin"]) == (50, 300, 200, "import_fit")
+    assert attachment["metadata"]["image_geometry_v1"]["original_width"] == 600
+    assert client.get(attachment["content_url"]).content == original
+    generator = app.dependency_overrides[get_db]()
+    db = next(generator)
+    try:
+        assert db.query(AttachmentPublicLink).count() == 0
+        assert db.query(MessageVersionAttachment).filter_by(attachment_id=uuid.UUID(attachment["id"])).count() == 1
+    finally:
+        db.close(); generator.close()
 
 
 def _dedicated_zip(body: str = "[Open note](assets/note.txt)") -> bytes:

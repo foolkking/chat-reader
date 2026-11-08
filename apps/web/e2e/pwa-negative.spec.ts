@@ -1022,7 +1022,7 @@ async function prepareAuthenticatedOfflinePage(page: Page): Promise<void> {
 
 async function openOfflineFiles(page: Page): Promise<void> {
   await page.goto("/library?conversationId=offline-negative");
-  const action = page.getByRole("button", { name: /Conversation files|当前对话文件/ }).first();
+  const action = page.locator('[data-reader-header-action="conversation-files"]').filter({ visible: true });
   const overflow = page.getByRole("button", { name: /^(More|Message actions|更多|消息操作)$/ }).first();
   await expect(action.or(overflow).first()).toBeVisible();
   if (!await action.isVisible()) await overflow.click();

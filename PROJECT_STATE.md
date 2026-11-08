@@ -1,10 +1,27 @@
 # Project State
 
-Last synchronized: **2026-11-07**. Current facts and verification boundaries only;
+Last synchronized: **2026-11-08**. Current facts and verification boundaries only;
 dated implementation, CI failures and release narratives belong in execution records.
 Start with [AGENTS](AGENTS.md), then [documentation navigation](docs/index.md).
 
 ## Current release — natural image sizing
+
+**Unreleased local candidate (2026-11-08):** compact image slider and
+once-only adaptive-import fit; reorganized Reader tools, read-together tabs,
+location bookmarks/contextual exports and private tag management. Static checks
+have passed at review checkpoints; full exact-source CI and visual acceptance
+are still pending. The November 8 completion audit found seven source-level
+gaps; the user then authorized targeted corrections (draft guards, real-line
+capture, manual-upload/default-fit semantics, search destinations and annotation
+filter/export context). Corrections remain local and require runtime/visual
+acceptance. After correction closeout, the user authorized one local checkpoint
+commit only; no push, CI dispatch or deployment is authorized or performed.
+Do not trigger CI until separately instructed.
+This does not change the production release below.
+[Candidate contract](docs/system/READING_TOOLS_CONTRACT.md) /
+[verification record](docs/execution/READING_TOOLS_2026-11-08.md).
+[Audit](docs/execution/ux-audit-reading-tools-completion-2026-11-08.md) /
+[correction record](docs/execution/READING_TOOLS_AUDIT_FIXES_2026-11-08.md).
 
 Exact **`897ba788fd89e18c9634ca2271ba6146339939a0`** passed full CI
 **`42371615326`** and was deployed after the user's separate “成功，部署”

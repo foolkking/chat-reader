@@ -54,6 +54,19 @@ def test_different_entry_ids_cannot_add_one_conversation_twice(isolated_schema):
         assert rows[0].value == value
 
 
+def test_api_and_worker_image_conversion_share_a_transaction_slot(isolated_schema):
+    from app.services.assets.image_display import acquire_conversion_transaction
+    engine, migrate = isolated_schema
+    migrate("head")
+    with Session(engine) as api, Session(engine) as worker:
+        assert acquire_conversion_transaction(api)
+        assert not acquire_conversion_transaction(worker)
+        api.rollback()
+        assert acquire_conversion_transaction(worker)
+        worker.rollback()
+        assert acquire_conversion_transaction(api)
+
+
 def test_concurrent_creates_cannot_exceed_the_collection_limit(isolated_schema):
     engine, migrate = isolated_schema
     migrate("head")

@@ -19,6 +19,7 @@ import { ImportNoiseReview } from "./import-noise-review";
 import { createPastedTranscriptFile, pastedTranscriptByteLength } from "./pasted-transcript";
 import { getUnfinishedImports } from "../../lib/api";
 import { getActiveOfflineStorageContext } from "../../lib/offline-db";
+import { measureImportImageLane } from "./image-import-lane";
 
 type ImportMode = "adaptive" | "archive";
 type ImportSessionRestoreState = {
@@ -53,7 +54,15 @@ export function ImportPanel({
   onMappingStateChange?: (state: { dirty: boolean; busy: boolean }) => void;
 } = {}) {
   const tr = useImportCopy();
-  const { resolvedLocale } = usePreferences();
+  const { resolvedLocale, readerWidthMode, sectionTocMode } = usePreferences();
+  const [imageLaneWidth, setImageLaneWidth] = useState<number | null>(null);
+  const importLaneSnapshots = useRef(new Map<string, number>());
+  useEffect(() => {
+    const measure = () => setImageLaneWidth(measureImportImageLane({ readerWidthMode, sectionTocMode }));
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [readerWidthMode, sectionTocMode]);
   const zh = resolvedLocale === "zh-CN";
   const queryClient = useQueryClient();
   const mounted = useRef(true);
@@ -76,6 +85,9 @@ export function ImportPanel({
   const [files, setFiles] = useState<File[]>([]);
   const [archivePreview, setArchivePreview] = useState<ImportPreviewResponse | null>(null);
   const [session, setSession] = useState<AdaptiveImportSession | null>(null);
+  const savedCommitOptions = session?.analysis_summary?.commit_options as { image_lane_width?: number } | undefined;
+  const committedLane = savedCommitOptions?.image_lane_width;
+  const shownImageLane = committedLane ?? (session ? importLaneSnapshots.current.get(session.import_id) : undefined) ?? imageLaneWidth;
   const [targetProjectId, setTargetProjectId] = useState<string | null>(initialProjectId);
   const [sessionRestore, setSessionRestore] = useState<ImportSessionRestoreState>({ phase: "idle", error: null });
   const [sessionRestoreRetry, setSessionRestoreRetry] = useState(0);
@@ -241,7 +253,13 @@ export function ImportPanel({
     onSuccess: (result) => { if (current()) { setArchivePreview(result); setSession(null); } },
   });
   const commitMutation = useMutation({
-    mutationFn: ({ importId, policy }: { importId: string; policy: ImportDuplicatePolicy }) => commitImport(importId, { duplicatePolicy: policy, projectId: targetProjectId }),
+    mutationFn: ({ importId, policy }: { importId: string; policy: ImportDuplicatePolicy }) => {
+      const lane = (session?.import_id === importId ? committedLane : undefined)
+        ?? importLaneSnapshots.current.get(importId) ?? measureImportImageLane({ readerWidthMode, sectionTocMode });
+      importLaneSnapshots.current.set(importId, lane);
+      setImageLaneWidth(lane);
+      return commitImport(importId, { duplicatePolicy: policy, projectId: targetProjectId, ...(mode === "adaptive" ? { imageLaneWidth: lane } : {}) });
+    },
     onSuccess: (result) => {
       if (!current()) return;
       setTerminalImportError(null);
@@ -404,6 +422,9 @@ export function ImportPanel({
           unavailable={destinationUnavailable}
           error={destinationMutation.error}
         />
+        <p className="text-xs text-secondary">{zh
+          ? `新图片默认适应 ${shownImageLane ?? "…"}px 阅读栏；确认导入时记录一次，原图保留。无法安全转换时会提示。`
+          : `New images fit the ${shownImageLane ?? "…"}px reading column once on import. Originals are kept; unsupported conversions are reported.`}</p>
         <AdaptiveImportWorkspace
           onMappingStateChange={onMappingStateChange}
           session={session}

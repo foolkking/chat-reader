@@ -1,5 +1,13 @@
 # 页面与路由地图
 
+## 2026-11-08 源码候选（未发布）
+
+`/read-together` 是最多八个对话标签、最多两个同时挂载正文的并读工作区；
+`/compare` 保留参数重定向。Reader 的 Alt+Shift+O 打开复用既有搜索的选择器。
+`/tags` 管理私人标签，`?tag=` 展示成员（未归档/已归档）；侧栏、快捷操作及
+标题标签条进入，不占右上角更多菜单。书签复用批注工作区，不新增数据格式。
+详见[阅读工具合同](READING_TOOLS_CONTRACT.md)，验收状态以 Project State 为准。
+
 ## Current account routes (2026-10-09)
 
 The owner workspace is session-protected. Public auth pages are `/login`,

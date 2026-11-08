@@ -3,6 +3,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field, model_validator
+from typing import Literal
 
 from app.core.database import get_db
 from app.schemas.export import ExportOptions
@@ -13,6 +15,39 @@ from app.models.conversation import Conversation
 from app.services.ownership import get_owned, ownership_scope_from_request
 
 router = APIRouter(prefix="/api/conversations", tags=["exports"])
+
+
+class AnnotationDocumentOptions(BaseModel):
+    scope: Literal["all", "filtered", "selected"] = "all"
+    annotation_ids: list[uuid.UUID] | None = Field(default=None, max_length=2000)
+    locale: Literal["zh-CN", "en"] = "zh-CN"
+
+    @model_validator(mode="after")
+    def check_scope(self):
+        if (self.scope == "all") != (self.annotation_ids is None):
+            raise ValueError("Explicit annotation ids are required for a scoped export.")
+        return self
+
+
+@router.post("/{conversation_id}/exports/annotations")
+def export_annotation_document(conversation_id: uuid.UUID, payload: AnnotationDocumentOptions, request: Request, db: Session = Depends(get_db)):
+    result = None
+    try:
+        _require_owner(db, conversation_id, request)
+        db.rollback()
+        result = prepare_annotation_export(db, conversation_id, annotation_ids=payload.annotation_ids,
+                                           scope=payload.scope, locale=payload.locale, readable=True)
+        db.rollback()
+        _require_owner(db, conversation_id, request)
+        db.rollback()
+        return PreparedExportResponse(result)
+    except BaseException as exc:
+        if result is not None:
+            result.content.close()
+        db.rollback()
+        if isinstance(exc, ExportError):
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        raise
 
 
 @router.get("/{conversation_id}/exports/annotations")

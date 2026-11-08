@@ -63,6 +63,18 @@ export const offlineAnnotationRepository: AnnotationRepository = {
   },
   async create(conversationId, input) {
     return localEdit(async (db) => {
+      if (input.annotation_type === "bookmark" && input.metadata?.bookmark_kind === "reading_point") {
+        const existing = await db.annotations.where("conversation_id").equals(conversationId).filter(item =>
+          !item.is_deleted && item.annotation_type === "bookmark"
+          && ["valid", "remapped"].includes(item.anchor_status)
+          && item.message_id === input.message_id && item.message_version_id === input.message_version_id
+          && (item.start_block_index ?? null) === (input.start_block_index ?? null)
+          && (item.start_offset ?? null) === (input.start_offset ?? null)
+          && (item.quote ?? "") === (input.quote ?? "")
+          && (Boolean(input.quote) || JSON.stringify((item.metadata?.reading_anchor as Record<string, unknown> | undefined)?.block_offset ?? null)
+            === JSON.stringify((input.metadata?.reading_anchor as Record<string, unknown> | undefined)?.block_offset ?? null))).first();
+        if (existing) return existing;
+      }
       const now = new Date().toISOString();
       const annotation: AnnotationRead = {
         id: input.id ?? crypto.randomUUID(), conversation_id: conversationId,

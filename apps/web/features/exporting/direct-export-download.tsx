@@ -6,12 +6,13 @@ import { usePreferences } from "../../components/preferences-provider";
 import { assertOfflineAccess, authenticationGeneration, captureOfflineAccess, notifyAuthenticationFailure, OFFLINE_ACCESS_LOCKED_EVENT } from "../../lib/offline-access";
 import { DirectDownloadSizeError, readBoundedDownload } from "../../lib/bounded-download";
 
-export function DirectExportDownload({ href, format, label, compact = false }: { href: string; format: "canjson" | "markdown"; label?: string; compact?: boolean }) {
+type DownloadProps = { href: string; format: "canjson" | "markdown"; label?: string; compact?: boolean; disabled?: boolean; requestBody?: unknown; prepareLocal?: () => Promise<Response> };
+export function DirectExportDownload({ href, format, label, compact = false, disabled, requestBody, prepareLocal }: DownloadProps) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
-  return <DownloadButton key={`${href}:${zh}`} href={href} format={format} zh={zh} label={label} compact={compact} />;
+  return <DownloadButton key={`${href}:${zh}:${JSON.stringify(requestBody)}`} href={href} format={format} zh={zh} label={label} compact={compact} disabled={disabled} requestBody={requestBody} prepareLocal={prepareLocal} />;
 }
 
-function DownloadButton({ href, format, zh, label, compact }: { href: string; format: "canjson" | "markdown"; zh: boolean; label?: string; compact?: boolean }) {
+function DownloadButton({ href, format, zh, label, compact, disabled, requestBody, prepareLocal }: DownloadProps & { zh: boolean }) {
   const active = useRef<AbortController | null>(null);
   const mounted = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -31,7 +32,7 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
   }, []);
 
   async function download() {
-    if (active.current) return;
+    if (active.current || disabled) return;
     const controller = new AbortController();
     const generation = authenticationGeneration();
     active.current = controller;
@@ -39,7 +40,10 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
     let status: number | null = null;
     try {
       const access = captureOfflineAccess();
-      const response = await fetch(href, { credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal });
+      const response = prepareLocal ? await prepareLocal() : await fetch(href, {
+        credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal,
+        ...(requestBody === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }),
+      });
       status = response.status;
       if (status === 401) notifyAuthenticationFailure(access);
       assertOfflineAccess(access);
@@ -80,7 +84,7 @@ function DownloadButton({ href, format, zh, label, compact }: { href: string; fo
 
   return <div className="grid min-w-0 gap-2" data-testid="direct-export-download">
     <div className="flex gap-2">
-      <button type="button" disabled={busy} aria-busy={busy} onClick={() => void download()} className={compact ? "btn-secondary inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs disabled:opacity-60" : "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"}>
+      <button type="button" disabled={busy || disabled} aria-busy={busy} onClick={() => void download()} className={compact ? "btn-secondary inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs disabled:opacity-60" : "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"}>
         <Download className="h-4 w-4 shrink-0" aria-hidden />
         {busy ? (zh ? "正在准备下载…" : "Preparing download…") : error ? (zh ? "重试下载" : "Retry download") : label ?? (zh ? "下载文件" : "Download file")}
       </button>

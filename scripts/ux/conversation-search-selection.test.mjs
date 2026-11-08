@@ -113,6 +113,7 @@ function fixture({ items = [A, B], locale = "en-US", initialState = initial, nav
   return {
     calls, render, get options() { return options; },
     change(patch) { props = { ...props, ...patch }; render(); },
+    links() { return walk(tree).filter(node => node.type === "a").map(node => node.props); },
     setItems(next) { rows = next; render(); },
     setQueryState(next) { queryState = next; render(); },
     contentChanged(detail) {
@@ -147,6 +148,21 @@ function fixture({ items = [A, B], locale = "en-US", initialState = initial, nav
     dispose() { for (const state of slots) state.cleanup?.(); timers.clear(); },
   };
 }
+
+test("unsupported pane result kinds are explicit links and Enter uses the guarded external dispatcher", async () => {
+  const f = fixture({ items: [{ ...A, document_type: "attachment", attachment_id: "synthetic-file" }] });
+  const opened = [];
+  try {
+    f.change({ externalResultHref: target => target.attachmentId ? "/conversations/c?files=open&attachmentId=synthetic-file" : undefined,
+      onOpenExternal: href => opened.push(href) });
+    assert.equal(f.links()[0].href, "/conversations/c?files=open&attachmentId=synthetic-file");
+    assert.match(f.text(), /View this result in the full reader/);
+    f.key("Enter"); await setImmediate();
+    assert.deepEqual(opened, ["/conversations/c?files=open&attachmentId=synthetic-file"]);
+    assert.equal(f.calls.navigation.length, 0);
+    assert.equal(f.failure(), "");
+  } finally { f.dispose(); }
+});
 
 test("first-result and legacy numeric state remain supported, with arrows based on the visible clamped row", async () => {
   for (const activeIndex of [0, 99]) {

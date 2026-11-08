@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { AnnotationRepository } from "../../lib/annotation-repository";
 import { notebookDraftKey, readNotebookDraft, removeNotebookDraft, writeNotebookDraft, type NotebookDraft } from "../../lib/notebook-drafts";
@@ -62,8 +62,13 @@ export function NotebookView({ notebook, conflicts, annotations, repository, onS
     }
   }, [notebook, key]);
   const atRisk = storage !== "saved" && Boolean(draft && edited(draft));
-  useEffect(() => { onRiskChange(atRisk); }, [atRisk, onRiskChange]);
-  useEffect(() => () => onRiskChange(false), [onRiskChange]);
+  const reportedRisk = useRef(false);
+  const reportRisk = useCallback((value: boolean) => {
+    if (reportedRisk.current === value) return;
+    reportedRisk.current = value; onRiskChange(value);
+  }, [onRiskChange]);
+  useEffect(() => { reportRisk(atRisk); }, [atRisk, reportRisk]);
+  useEffect(() => () => { reportedRisk.current = false; onRiskChange(false); }, [onRiskChange]);
   useEffect(() => {
     if (!atRisk) return;
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -76,6 +81,8 @@ export function NotebookView({ notebook, conflicts, annotations, repository, onS
     if (cleanup) setError("");
     setCleanup(null);
     draftRef.current = value; setDraft(value); setStorage("saving");
+    // Publish the risk before a second event can activate another reader pane.
+    reportRisk(edited(value));
     // Keep only the newest waiting snapshot while storage is busy. The same
     // promise drains it before save/cleanup, without delaying the first write.
     pendingWrite.current = { key, mode: repository.mode, value, serial };

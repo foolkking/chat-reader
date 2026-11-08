@@ -18,6 +18,9 @@ const compiled = ts.transpileModule(`
   let uploadQueue = [], actionBusy = false, uploading = false, error = null, notice = null;
   const actionLock = { current: false }, uploadGeneration = { current: 0 }, uploadCancellable = { current: false };
   const activeUpload = { current: null }, mounted = { current: true };
+  const finalizeLanes = { current: new Map() };
+  const readerWidthMode = "comfortable", sectionTocMode = "collapsed";
+  const measureImportImageLane = () => 720;
   const setUploadQueue = value => { uploadQueue = typeof value === "function" ? value(uploadQueue) : value; };
   const setActionBusy = value => { actionBusy = value; }, setUploading = value => { uploading = value; };
   const setError = value => { error = value; }, setNotice = value => { notice = value; };

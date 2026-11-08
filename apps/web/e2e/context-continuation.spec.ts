@@ -1,3 +1,4 @@
+import { openReaderAction } from "./reader-actions";
 import { zipSync, strToU8 } from "fflate";
 import { expect, test } from "@playwright/test";
 import { settingsAppearance } from "./settings-test-helper";
@@ -25,7 +26,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
         await page.getByRole("button", { name: /^(更多|More)$/ }).click();
         await page.getByRole("dialog", { name: /阅读工具|Reader tools/ }).getByRole("button", { name: /^(接续|Continuation)$/ }).click();
       } else {
-        await page.getByRole("button", { name: /^(接续|Continuation)$/ }).click();
+        await openReaderAction(page, "continuation");
       }
     };
     await openPanel();
@@ -98,7 +99,7 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
     await page.screenshot({ path: testInfo.outputPath(`continuation-edit-${width}-${locale}.png`) });
     await panel.getByRole("button", { name: /^(取消|Cancel)$/ }).click();
     await page.getByRole("button", { name: /^(关闭接续|Close continuation)$/ }).click();
-    await expect(page.getByRole("button", { name: width < 768 ? /^(更多|More)$/ : /^(接续|Continuation)$/ })).toBeFocused();
-    if (width >= 768) await expect(page.locator('[data-reader-header-action="annotations"] + [data-reader-header-action="continuation"]')).toHaveCount(1);
+    await expect(page.locator("[data-reader-more-actions=true], [data-reader-mobile-more-actions=true]").filter({ visible: true })).toBeFocused();
+    await expect(page.locator('div[aria-label="Primary reader actions"] [data-reader-header-action="continuation"]')).toHaveCount(0);
   });
 }

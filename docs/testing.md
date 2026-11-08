@@ -1,5 +1,24 @@
 # Testing
 
+## Pending candidate — reading tools — 2026-11-08
+
+The new [reading-tools contract](system/READING_TOOLS_CONTRACT.md) is not covered
+by the previously green release below. See [its verification record](execution/READING_TOOLS_2026-11-08.md).
+Use the full exact-source workflow: API/PostgreSQL, Web quality/browser gates,
+Settings, performance and image-memory jobs. Preserve all 64+12+4 reading traces
+and original thresholds. Additional import-fit/tag/bookmark/export/pane tests
+are unexecuted until CI; lint/typecheck and syntax checks are not runtime proof.
+CI submission is paused at the user's request until separately instructed.
+The completion-audit corrections add actual-line/emoji capture cases, Together
+departure guards, phone selection/export, explicit external search destinations,
+manual-upload fit/idempotency/safety skips and shared non-text location fixtures.
+`settings-annotation-composition.spec.ts` includes real wrapped-text capture and
+IndexedDB-write-failure departure scenarios; `image-scale-slider-browser.mjs`
+adds default-fit/no-read-write coverage. These remain **unexecuted** here;
+see [the correction record](execution/READING_TOOLS_AUDIT_FIXES_2026-11-08.md).
+After authorized dispatch, the first status query is at least 50 minutes later;
+no schedules.
+
 ## Current exact-source CI and production — natural image flow — 2026-11-07
 
 Exact `897ba788fd89e18c9634ca2271ba6146339939a0`, CI `42371615326`, attempt 1,

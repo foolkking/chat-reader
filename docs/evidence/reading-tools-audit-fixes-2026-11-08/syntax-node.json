@@ -1,0 +1,19 @@
+{
+  "node_syntax_count": 12,
+  "files": [
+    "scripts/ux/annotation-document-parity.test.mjs",
+    "scripts/ux/annotation-workspace-reads.test.mjs",
+    "scripts/ux/attachment-upload-queue.test.mjs",
+    "scripts/ux/compare-navigation-ownership.test.mjs",
+    "scripts/ux/conversation-search-selection.test.mjs",
+    "scripts/ux/image-display-position.test.mjs",
+    "scripts/ux/image-scale-slider-browser.mjs",
+    "scripts/ux/reader-navigation-readiness.test.mjs",
+    "scripts/ux/reader-search-replay.test.mjs",
+    "scripts/ux/reading-tools-contracts.test.mjs",
+    "scripts/ux/search-anchor-range.test.mjs",
+    "scripts/ux/together-leave-guard.test.mjs"
+  ],
+  "application_code_executed": false,
+  "errors": []
+}
