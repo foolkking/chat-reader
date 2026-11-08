@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { resolve } from "node:path";
 import { unzipSync, strFromU8 } from "fflate";
 import { settingsAppearance } from "./settings-test-helper";
@@ -309,13 +309,34 @@ test("keeps valid mapping work while invalid groups are excluded or replaced", a
 
     const remainingGroup = page.getByRole("article").filter({ hasText: `broken-b-${suffix}.json` });
     await expect(remainingGroup.getByRole("button", { name: new RegExp(`(?:替换|Replace) broken-b-${suffix}\\.json`) })).toBeEnabled();
-    await remainingGroup.locator('input[data-testid^="replace-import-file-"]').setInputFiles({
-      name: `replacement-${suffix}.json`,
-      mimeType: "application/json",
-      buffer: Buffer.from(source(`Replacement ${suffix}`, "replacement")),
-    });
-    await expect(page.getByText(/准备导入 2 个对话|Ready to import 2 conversations/)).toBeVisible();
-    await expect(page.getByTestId("commit-import-button")).toBeEnabled();
+    const requests: Array<{ method: string; path: string }> = [];
+    const recordRequest = (request: Request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith("/api/adaptive-import/sessions")) requests.push({ method: request.method(), path });
+    };
+    page.on("request", recordRequest);
+    try {
+      const accepted = page.waitForResponse(response => response.request().method() === "PUT"
+        && /\/api\/adaptive-import\/sessions\/[^/]+\/artifacts\/[^/]+$/.test(new URL(response.url()).pathname));
+      await remainingGroup.locator('input[data-testid^="replace-import-file-"]').setInputFiles({
+        name: `replacement-${suffix}.json`,
+        mimeType: "application/json",
+        buffer: Buffer.from(source(`Replacement ${suffix}`, "replacement")),
+      });
+      const response = await accepted;
+      expect(response.status()).toBe(202);
+      const queued = await response.json() as { import_id: string; state: string; analysis_task_id: string; operation_task_id: string };
+      expect(queued.state).toBe("ANALYZING");
+      expect(queued.operation_task_id).toBe(queued.analysis_task_id);
+      expect(queued.analysis_task_id).toBeTruthy();
+      // The mounted panel must resume its own GET polling. Do not reload,
+      // refocus or call the session API from the test to rescue a stuck cache.
+      await expect(page.getByText(/准备导入 2 个对话|Ready to import 2 conversations/)).toBeVisible();
+      await expect(page.getByTestId("commit-import-button")).toBeEnabled();
+      expect(requests.some(request => request.method === "GET" && request.path === `/api/adaptive-import/sessions/${queued.import_id}`)).toBe(true);
+      expect(requests.filter(request => request.method === "PUT")).toHaveLength(1);
+      expect(requests.filter(request => request.method === "POST")).toHaveLength(0);
+    } finally { page.off("request", recordRequest); }
 
     await page.getByRole("button", { name: /重新选择文件|Choose different files/ }).click();
     await expect(page.getByTestId("import-file-input")).toBeVisible();

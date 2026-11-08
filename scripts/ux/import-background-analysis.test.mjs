@@ -6,6 +6,7 @@ import { setImmediate } from "node:timers/promises";
 
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const React = require("react"), ts = require("typescript"), noop = () => {};
+const { QueryClient, QueryObserver } = require("@tanstack/react-query");
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { resolve, reject, promise }; };
 const text = node => node == null || typeof node === "boolean" ? "" : typeof node !== "object" ? String(node)
   : Array.isArray(node) ? node.map(text).join("") : text(node.props?.children);
@@ -94,7 +95,8 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
       useQueryClient: () => queryClient,
       useQuery: options => {
         const key = options.queryKey[0], previous = queries.get(key) ?? {};
-        const result = previous.result ?? (key === "account-capabilities" ? {
+        const sameKey = JSON.stringify(previous.options?.queryKey) === JSON.stringify(options.queryKey);
+        const result = (sameKey ? previous.result : undefined) ?? (key === "account-capabilities" ? {
           data: { allow_user_import: true, maximum_import_size_mb: 500, maximum_import_total_mb: 512 },
         } : {});
         queries.set(key, { options, result });
@@ -120,7 +122,10 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
     setCommit: fn => { commit = fn; },
     resize: width => { laneWidth = width; window.dispatchEvent(new Event("resize")); },
     async settle() { for (let i = 0; i < 4; i++) { await setImmediate(); render(); runtime.flush(); } return render(); },
-    publish(value, epoch = generation) { queries.get("adaptive-import-analysis").result = { data: { value, generation: epoch } }; render(); runtime.flush(); return render(); },
+    publish(value, epoch = generation, analysisTaskId = queries.get("adaptive-import-analysis").options.queryKey[3]) {
+      queries.get("adaptive-import-analysis").result = { data: { value, generation: epoch, analysisTaskId } };
+      render(); runtime.flush(); return render();
+    },
     tree: () => tree,
   };
 }
@@ -156,6 +161,86 @@ test("polling uses an abortable GET; a ready result opens the existing review, n
     assert.equal(f.queries.get("adaptive-import-analysis").options.enabled, false);
     assert.equal(f.calls.filter(row => row[0] === "cancel").length, 0);
     assert.equal(f.calls.filter(row => row[0] === "commit").length, 0);
+  } finally { f.dispose(); }
+});
+
+for (const state of ["RESOLVING", "READY", "BLOCKED"]) test(`${state}: a queued replacement starts a new query despite a fresh terminal analysis cache`, async () => {
+  const f = fixture(), client = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: false } } });
+  let observer, unsubscribe;
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    const previous = session(state, "input_recovery");
+    const workspace = find(f.publish(previous), node => node.type === "AdaptiveImportWorkspace");
+    assert.ok(workspace);
+    const oldOptions = f.queries.get("adaptive-import-analysis").options;
+    const oldData = { value: previous, generation: 1, analysisTaskId: previous.analysis_task_id };
+    client.setQueryData(oldOptions.queryKey, oldData);
+    observer = new QueryObserver(client, oldOptions);
+    unsubscribe = observer.subscribe(noop);
+    assert.equal(observer.getCurrentResult().fetchStatus, "idle");
+    assert.equal(oldOptions.refetchInterval({ state: { data: oldData } }), false);
+
+    const replacement = { ...session(), analysis_task_id: "synthetic-replacement" };
+    workspace.props.onSession(replacement); await f.settle();
+    const options = f.queries.get("adaptive-import-analysis").options;
+    assert.notDeepEqual(options.queryKey, oldOptions.queryKey, "task identity is part of the query, not just the import ID");
+    assert.equal(options.enabled, true);
+    const finished = { ...replacement, state: "READY", phase: "ready", can_import: true };
+    f.setRead(async () => finished);
+    observer.setOptions(options);
+    await f.settle();
+    const result = observer.getCurrentResult();
+    assert.equal(result.status, "success");
+    assert.equal(result.data.value, finished);
+    assert.equal(f.calls.filter(row => row[0] === "read").length, 1, "re-enabling naturally fetches; the test never forces refetch");
+    assert.deepEqual(client.getQueryData(oldOptions.queryKey), oldData, "old completed cache remains isolated");
+    f.publish(result.data.value, result.data.generation, result.data.analysisTaskId);
+    assert.equal(find(f.tree(), node => node.type === "AdaptiveImportWorkspace").props.session, finished);
+    assert.equal(f.queries.get("adaptive-import-analysis").options.enabled, false);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1, "replacement recovery cannot reupload the batch");
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 0);
+  } finally { unsubscribe?.(); observer?.destroy(); client.clear(); f.dispose(); }
+});
+
+test("retry of the same failed task re-enables an immediate GET inside the provider freshness window", async () => {
+  const f = fixture(), client = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: false } } });
+  let observer, unsubscribe;
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    const failed = session("FAILED", "analysis_failed");
+    f.publish(failed);
+    const oldOptions = f.queries.get("adaptive-import-analysis").options;
+    client.setQueryData(oldOptions.queryKey, { value: failed, generation: 1, analysisTaskId: failed.analysis_task_id });
+    observer = new QueryObserver(client, oldOptions); unsubscribe = observer.subscribe(noop);
+    await f.mutations[5].run(failed.analysis_task_id); await f.settle();
+    const options = f.queries.get("adaptive-import-analysis").options;
+    assert.deepEqual(options.queryKey, oldOptions.queryKey);
+    f.setRead(async () => session());
+    observer.setOptions(options); await f.settle();
+    assert.equal(f.calls.filter(row => row[0] === "read").length, 1);
+    assert.equal(observer.getCurrentResult().data.value.state, "ANALYZING");
+    assert.equal(options.refetchInterval({ state: { data: observer.getCurrentResult().data } }), 1500);
+    assert.deepEqual(f.calls.filter(row => row[0] === "retry"), [["retry", failed.analysis_task_id]]);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 0);
+  } finally { unsubscribe?.(); observer?.destroy(); client.clear(); f.dispose(); }
+});
+
+test("late completion of an older analysis cannot overwrite a queued replacement for the same import", async () => {
+  const f = fixture();
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    const oldOptions = f.queries.get("adaptive-import-analysis").options, held = deferred();
+    f.setRead(() => held.promise);
+    const lateRead = oldOptions.queryFn({ signal: new AbortController().signal });
+    const workspace = find(f.publish(session("RESOLVING", "input_recovery")), node => node.type === "AdaptiveImportWorkspace");
+    workspace.props.onSession({ ...session(), analysis_task_id: "synthetic-replacement" }); await f.settle();
+    held.resolve(session("READY", "ready"));
+    const late = await lateRead;
+    f.publish(late.value, late.generation, late.analysisTaskId);
+    assert.ok(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"));
+    assert.equal(find(f.tree(), node => node.type === "AdaptiveImportWorkspace"), undefined);
+    assert.equal(f.queries.get("adaptive-import-analysis").options.queryKey[3], "synthetic-replacement");
   } finally { f.dispose(); }
 });
 

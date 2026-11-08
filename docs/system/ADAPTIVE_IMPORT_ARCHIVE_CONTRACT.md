@@ -170,6 +170,13 @@ work, not completion. Task GET returns health/preview `operation_result`;
 unknown POST responses require a Tasks check, not automatic resubmission.
 Legacy immediate responses remain readable.
 
+Browser analysis queries are scoped to the import, authentication generation
+and analysis task ID. An accepted replacement/reanalysis starts polling its new
+task even when the preceding terminal result is still fresh. Explicit retry
+of the same failed job immediately revalidates its state; late reads belonging
+to the preceding task cannot replace the current workspace. These are read-only
+GETs, not reuploads, repeated operations or implicit canonical commits.
+
 Transient headroom/slot contention defers the **same job** for 15/30/60 seconds
 (then 60-second intervals), releasing its transaction and worker slot.
 `next_run_at` on both queues gates claims. Accumulated waiting, not work time,

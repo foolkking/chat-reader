@@ -169,24 +169,31 @@ export function ImportPanel({
     };
   }, [activeSessionKey, current, initialProjectId, resumeImportId, session, sessionRestoreRetry]);
 
+  const analysisTaskId = session?.analysis_task_id ?? null;
   const analysisSessionQuery = useQuery({
-    queryKey: ["adaptive-import-analysis", session?.import_id, generation.current],
+    // Replacement/reanalysis keeps the import ID but queues a new task. A
+    // recently completed task must not supply this task's terminal cache.
+    queryKey: ["adaptive-import-analysis", session?.import_id, generation.current, analysisTaskId],
     queryFn: async ({ signal }) => {
       const value = await getAdaptiveImportSession(session!.import_id, signal);
-      return { value, generation: generation.current };
+      return { value, generation: generation.current, analysisTaskId };
     },
     enabled: current() && Boolean(session && ["COLLECTING", "ANALYZING", "CANCELING"].includes(session.state)),
+    // Explicit retry can reuse a failed task ID. Re-enabling must read it even
+    // within the provider's freshness window; only GETs are repeated here.
+    staleTime: 0,
     refetchInterval: query => !query.state.data || ["COLLECTING", "ANALYZING", "CANCELING"].includes(query.state.data.value.state) ? 1500 : false,
     retry: 2,
   });
   useEffect(() => {
     const result = analysisSessionQuery.data;
-    if (!result || !current() || result.generation !== authenticationGeneration() || result.value.import_id !== session?.import_id) return;
+    if (!result || !current() || result.generation !== authenticationGeneration()
+      || result.value.import_id !== session?.import_id || result.analysisTaskId !== analysisTaskId) return;
     setSession(result.value);
     if (!["COLLECTING", "ANALYZING", "CANCELING"].includes(result.value.state)) {
       void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     }
-  }, [analysisSessionQuery.data, current, queryClient, session?.import_id]);
+  }, [analysisSessionQuery.data, analysisTaskId, current, queryClient, session?.import_id]);
 
   const finishCommittedImport = useCallback((result: CommitImportResponse) => {
     if (!current()) return;
