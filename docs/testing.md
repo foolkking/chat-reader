@@ -13,6 +13,9 @@ unchanged; it does not replace any of the existing 14 gates or 64+12+4 traces.
 New API missing-resource/security tests remain in the full API suite.
 Each CI dispatch has a fresh 50-minute minimum first-read boundary.
 No real-user ZIP replay or recurring schedule is part of this authorization.
+The mounted Reader gate additionally measures the complete keyboard-help
+dialog, including 320/375px wide and 480/900px tall viewports in both locales
+and themes. The PWA baseline retains the 8px viewport boundary assertion.
 
 ## Current exact-source acceptance — bounded ZIP and reading tools — 2026-11-09
 

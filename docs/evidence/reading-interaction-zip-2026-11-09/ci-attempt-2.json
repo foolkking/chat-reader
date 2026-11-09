@@ -1,0 +1,31 @@
+{
+  "run_id": 42584925443,
+  "sha": "1e9049c7206a6cf4e24905db6b8337d347b850f3",
+  "accepted_at": "2026-11-09T08:17:54.801320+00:00",
+  "first_read_at": "2026-11-09T09:07:55.059308+00:00",
+  "minimum_first_read_delay_minutes": 50,
+  "conclusion": "failure",
+  "api": {"passed": 6199, "optional_skipped": 3},
+  "web_node": {"passed": 2175},
+  "reader_interaction_browser": {"passed": 19},
+  "focused_online": {"passed": 45, "failed": 0},
+  "settings": {"passed": 470, "failed": 0},
+  "isolated_restore": {"passed": 1},
+  "performance": {"job": "success", "candidate_passed": 9, "baseline_passed": 9},
+  "reading_stability": {
+    "passed": 35,
+    "independently_verified_original_traces": 64,
+    "collapse_traces": 12,
+    "passive_traces": 4,
+    "cold_viewer_shell": true
+  },
+  "default_pwa": {"passed": 188, "failed": 2, "environment_routed_skipped": 822},
+  "release_images": "not_built",
+  "official_artifacts_verified_sha256": {
+    "settings-quality-evidence": "352459ccac2c04a0b4bbcb5bbff5d1493f98c50b0487db84946c54a9d80b5e02",
+    "release-a-quality-evidence": "890319f370543e091f44a1c74eb5b528df2e777575c6d0d9711d13696032075c",
+    "reading-performance-comparison": "81acc7eccdb47efd33cbb68488b4e3327204b27450f9cf26fa3f0c86db6d5314"
+  },
+  "observed_failure": "Keyboard help remained downward/right-aligned to one button after the narrow focus toolbar moved to the bottom, clipping at 320/375px.",
+  "correction": "Anchor help above the complete wrapped toolbar and bound its width/height to the viewport. Preserve reading geometry, focus and 8px E2E boundary assertions."
+}

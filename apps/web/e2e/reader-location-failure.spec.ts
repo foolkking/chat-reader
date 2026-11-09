@@ -145,7 +145,7 @@ for (const width of [320, 375, 1440]) test(`focus edge navigation preserves the 
   const helpPanel = page.getByRole("heading", { name: "Reading keyboard help", exact: true }).filter({ visible: true });
   await expect(helpPanel).toBeInViewport();
   if (width < 768) {
-    const helpBounds = await helpPanel.locator("..").boundingBox();
+    const helpBounds = await page.getByRole("dialog", { name: "Reading keyboard help", exact: true }).boundingBox();
     const viewport = await page.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
     expect(helpBounds).not.toBeNull();
     expect(helpBounds!.x).toBeGreaterThanOrEqual(8);

@@ -31,7 +31,7 @@ export function ReaderKeyboardHelp({ zh }: { zh: boolean }) {
       document.removeEventListener("focusin", closeOutside);
     };
   }, []);
-  return <details ref={root} data-reader-auxiliary className="relative text-sm text-secondary">
+  return <details ref={root} data-reader-auxiliary data-reader-keyboard-help className="relative text-sm text-secondary">
     <summary className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg border border-ui bg-surface hover:bg-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)] [&::-webkit-details-marker]:hidden" aria-label={zh ? "阅读快捷键" : "Reading keyboard help"} title={zh ? "阅读快捷键" : "Reading keyboard help"}><CircleHelp aria-hidden="true" className="h-[1.125rem] w-[1.125rem]" /></summary>
     <div role="dialog" aria-label={zh ? "阅读快捷键" : "Reading keyboard help"} className="absolute right-0 top-12 z-[80] max-h-[min(28rem,70dvh)] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-ui bg-raised p-4 shadow-md">
       <div className="mb-2 flex items-center justify-between gap-2"><h2 className="font-semibold text-primary">{zh ? "阅读快捷键" : "Reading keyboard help"}</h2><button type="button" onClick={dismiss} aria-label={zh ? "关闭快捷键说明" : "Close keyboard help"} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-subtle"><X aria-hidden="true" className="h-4 w-4" /></button></div>

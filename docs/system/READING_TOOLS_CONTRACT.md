@@ -32,6 +32,9 @@ Reader regression supplements, not replaces, the original reading matrix.
   retire the previous focus-width restoration before it can reclaim position.
   On mobile, the focus More menu opens above its controls inside the viewport;
   the controls reserve space for the two navigation edge buttons and can wrap.
+  Keyboard help also opens above the whole wrapped toolbar, centered and bounded
+  by the viewport minus the toolbar's actual height; its contents can scroll.
+  Escape/close still returns to the help trigger without moving the document.
 - A successful index/TOC jump emphasizes Return for three seconds; the top
   entry becomes ordinary, then hides at thirty seconds unless focused or busy.
   Its original checkpoint remains in More in normal/focus modes. A later

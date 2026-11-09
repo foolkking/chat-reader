@@ -158,6 +158,33 @@ try {
     await page.getByRole(width<768?"button":width<1280?"menuitem":"button",{name:locale==="zh-CN"?"专注模式":"Focus mode",exact:true}).click();
     const focus=page.locator('[data-reader-focus="on"]');
     await expect(focus).toBeVisible();
+    const helpLabel=locale==="zh-CN"?"阅读快捷键":"Reading keyboard help";
+    const helpTrigger=page.locator(`summary[aria-label="${helpLabel}"]:visible`);
+    await helpTrigger.click();
+    const helpPanel=page.getByRole("dialog",{name:helpLabel,exact:true});
+    const checkHelpBounds=async()=>{
+      await expect(helpPanel).toBeInViewport();
+      const b=await helpPanel.boundingBox(),v=page.viewportSize();
+      assert.ok(b.x>=8&&b.y>=8&&b.x+b.width<=v.width-8&&b.y+b.height<=v.height-8,"The complete keyboard help must stay inside the viewport.");
+      await helpPanel.getByRole("button",{name:locale==="zh-CN"?"关闭快捷键说明":"Close keyboard help"}).click({trial:true});
+      if(v.width<768) {
+        const controls=await page.locator("[data-reader-focus-controls]").boundingBox();
+        assert.ok(b.y+b.height<=controls.y-4,"Mobile help opens above the whole wrapped toolbar.");
+      }
+    };
+    await checkHelpBounds();
+    if(width===375) {
+      for(const smallWidth of [320,375]) for(const height of [900,480]) {
+        await page.setViewportSize({width:smallWidth,height});
+        await checkHelpBounds();
+      }
+      await page.screenshot({path:join(out,`focus-help-short-${locale}-${theme}.png`)});
+      await page.setViewportSize({width,height:900});
+      await checkHelpBounds();
+    }
+    await page.keyboard.press("Escape");
+    await expect(helpPanel).toHaveCount(0);
+    await expect(helpTrigger).toBeFocused();
     const search=page.locator('[data-reader-focus-controls] button[data-reader-header-action="search"]');
     await search.click();
     const dialog=page.getByRole("dialog",{name:locale==="zh-CN"?"搜索":"Search",exact:true});
@@ -205,7 +232,7 @@ try {
         expected:window.syntheticMessages[1].render_blocks.slice(0,2).map(b=>b.plain_text).join("\n\n")};
     });
     assert.equal(copied.prevented,true);assert.equal(copied.text,copied.expected);
-    results.push({width,locale,theme,header:true,focusSearch:true,searchNavigation:true,focusTools:true,formulaSelectionCopy:true});
+    results.push({width,locale,theme,header:true,keyboardHelp:true,helpSmallViewports:width===375?4:0,focusSearch:true,searchNavigation:true,focusTools:true,formulaSelectionCopy:true});
     if(width===1440&&locale==="en-US"&&theme==="light") {
       const cdp=await page.context().newCDPSession(page);
       await cdp.send("Performance.enable");
