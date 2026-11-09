@@ -8,6 +8,7 @@ type DialogFocusOptions = {
   onClose: () => void;
   initialFocusRef?: RefObject<HTMLElement | null>;
   restoreFocus?: () => HTMLElement | null;
+  modal?: boolean;
 };
 
 function focusable(root: HTMLElement): HTMLElement[] {
@@ -48,7 +49,7 @@ function compareModalLayers(a: HTMLElement, b: HTMLElement): number {
 }
 
 /** Shared modal lifecycle: initial focus, trap, Escape and logical restoration. */
-export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restoreFocus }: DialogFocusOptions) {
+export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restoreFocus, modal = true }: DialogFocusOptions) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const restoreFocusRef = useRef(restoreFocus);
@@ -75,13 +76,14 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
       // A nested review's local z-index is relative to its parent's layer;
       // comparing that number directly with the parent's closes both dialogs.
       if (dialog && dialogs.length && dialogs[dialogs.length - 1] !== dialog) return;
+      if (!modal && (dialogs.length || !rootRef.current?.contains(document.activeElement))) return;
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
         closeRef.current();
         return;
       }
-      if (event.key !== "Tab") return;
+      if (event.key !== "Tab" || !modal) return;
       const root = rootRef.current;
       if (!root) return;
       const items = focusable(root);
@@ -127,5 +129,5 @@ export function useDialogFocus({ open, rootRef, onClose, initialFocusRef, restor
         else focusFallback();
       }, 0);
     };
-  }, [initialFocusRef, open, rootRef]);
+  }, [initialFocusRef, modal, open, rootRef]);
 }

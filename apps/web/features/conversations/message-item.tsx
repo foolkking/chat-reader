@@ -267,13 +267,12 @@ function MessageItemComponent({
       data-hover-surface="none"
       aria-current={isNavigationTarget ? "location" : undefined}
       data-state={highlightTargetId === messageDomId ? (selected ? "current-selected" : "current") : selected ? "selected" : undefined}
-      className={`reader-message reader-interactive-row group relative block w-full max-w-full scroll-mt-3 rounded-lg transition sm:flex sm:justify-start sm:rounded-2xl ${hiddenByTurn ? "!hidden" : ""} ${highlightTargetId === messageDomId ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""}`}
+      className={`reader-message reader-interactive-row relative block w-full max-w-full scroll-mt-3 rounded-lg sm:flex sm:justify-start sm:rounded-2xl ${hiddenByTurn ? "!hidden" : ""} ${highlightTargetId === messageDomId ? "ring-2 ring-[var(--mark-border)] ring-offset-4 ring-offset-[var(--page)]" : ""}`}
     >
       <div className="min-w-0 w-full max-w-full flex-1">
-        <div data-message-meta className="relative mb-2 flex min-h-10 items-center gap-2">
+        <div data-message-meta className="group/message-actions relative mb-2 flex min-h-10 items-center gap-2">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${isUser ? "bg-[var(--accent-soft)] text-accent" : "bg-[var(--text)] text-[var(--surface)]"}`}>{isUser ? "U" : "CR"}</span>
           <span className="text-xs font-semibold text-secondary">{isUser ? userLabel ?? t("you") : "Assistant"} - #{message.ordinal ?? message.order_key}</span>
-          {!isUser ? <span className="hidden font-mono text-[11px] text-secondary group-hover:inline">{message.order_key}</span> : null}
           {turnLead && onToggleTurn ? (
             <button
               type="button"
@@ -293,7 +292,7 @@ function MessageItemComponent({
           ) : null}
           {hasActions ? (
             <>
-              <div className={`ml-auto hidden min-h-10 items-center transition group-hover:opacity-100 group-focus-within:opacity-100 sm:flex ${versionHistory.needsAttention ? "opacity-100" : "opacity-0"}`}>{actions(false)}</div>
+              <div className={`ml-auto hidden min-h-10 items-center transition-opacity group-hover/message-actions:opacity-100 group-focus-within/message-actions:opacity-100 sm:flex ${versionHistory.needsAttention ? "opacity-100" : "opacity-0"}`}>{actions(false)}</div>
               <div className="ml-auto sm:hidden">
                 <button
                   ref={mobileActionsTriggerRef}

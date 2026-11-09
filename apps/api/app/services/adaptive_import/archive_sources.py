@@ -157,8 +157,52 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                 member["use"] = "conversation"
 
         missing_references: set[str] = set()
+        missing_manifest_assets = sorted(path for path in manifest_assets if path not in by_path)
+
+        def missing_member(path: str) -> dict[str, Any]:
+            if path in by_path:
+                return by_path[path]
+            if len(members) >= settings.bundle_max_entries:
+                raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP resource index exceeds its bounded limit.", layer="archive")
+            member = {
+                "member_id": str(uuid.uuid5(artifact.id, path)),
+                "path": path, "zip_path": None, "extension": Path(path).suffix.casefold(),
+                "byte_size": None, "compressed_size": None, "crc": None,
+                "kind": "file", "availability": "missing", "use": "attachment",
+                "owner_document_ids": [], "referenced_by": [], "reference_count": 0,
+                # Manifest geometry is not evidence of a decoded original.
+                "width": None, "height": None, "manifest_kind": None,
+            }
+            members.append(member)
+            by_path[path] = member
+            return member
+
+        if dedicated:
+            for path in missing_manifest_assets:
+                missing_member(path)["owner_document_ids"] = [by_path[primary_path]["member_id"]]
         catalog_links = 0
         visible_messages = 0
+
+        def register_references(text: str, document: dict[str, Any]) -> None:
+            nonlocal catalog_links
+            references, missing = _document_references(text, document["path"], set(by_path))
+            for path in missing:
+                missing_member(path)
+            for reference in references | missing:
+                target = by_path[reference]
+                if target.get("availability") == "missing":
+                    missing_references.add(reference)
+                target["reference_count"] += 1
+                if document["member_id"] not in target["referenced_by"]:
+                    catalog_links += 1
+                    if catalog_links > MAX_CATALOG_LINKS:
+                        raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP ownership index exceeds its bounded limit.", layer="archive")
+                    target["referenced_by"].append(document["member_id"])
+                if target["use"] == "excluded" and target["kind"] != "markdown":
+                    target["use"] = "attachment"
+                if target["use"] == "attachment" and document["member_id"] not in target["owner_document_ids"]:
+                    target["owner_document_ids"].append(document["member_id"])
+
         for document in documents:
             _small_import_checkpoint()
             if streaming_budget():
@@ -167,22 +211,7 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                     for text in resource_chunks(text_path):
                         if dedicated and document["path"] == primary_path:
                             visible_messages += _visible_role_heading_count(text)
-                        references, missing = _document_references(text, document["path"], set(by_path))
-                        missing_references.update(missing)
-                        if len(missing_references) > MAX_CATALOG_LINKS:
-                            raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP resource index exceeds its bounded limit.", layer="archive")
-                        for reference in references:
-                            target = by_path[reference]
-                            target["reference_count"] += 1
-                            if document["member_id"] not in target["referenced_by"]:
-                                catalog_links += 1
-                                if catalog_links > MAX_CATALOG_LINKS:
-                                    raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP ownership index exceeds its bounded limit.", layer="archive")
-                                target["referenced_by"].append(document["member_id"])
-                            if target["use"] == "excluded" and target["kind"] != "markdown":
-                                target["use"] = "attachment"
-                            if target["use"] == "attachment" and document["member_id"] not in target["owner_document_ids"]:
-                                target["owner_document_ids"].append(document["member_id"])
+                        register_references(text, document)
                 continue
             raw = _read_member_bytes(archive, effective[document["path"]], settings.bundle_max_object_bytes)
             try:
@@ -196,18 +225,7 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                 ) from exc
             if dedicated and document["path"] == primary_path:
                 visible_messages = _visible_role_heading_count(text)
-            references, missing = _document_references(text, document["path"], set(by_path))
-            missing_references.update(missing)
-            for reference in references:
-                _small_import_checkpoint()
-                target = by_path[reference]
-                target["reference_count"] += 1
-                if document["member_id"] not in target["referenced_by"]:
-                    target["referenced_by"].append(document["member_id"])
-                if target["use"] == "excluded" and target["kind"] != "markdown":
-                    target["use"] = "attachment"
-                if target["use"] == "attachment" and document["member_id"] not in target["owner_document_ids"]:
-                    target["owner_document_ids"].append(document["member_id"])
+            register_references(text, document)
 
         issues: list[dict[str, Any]] = []
         if dedicated and manifest_messages:
@@ -220,11 +238,10 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                         f"contains {visible_messages} visible message boundaries. Markdown boundaries will be used."
                     ),
                 })
-        missing_manifest_assets = sorted(path for path in manifest_assets if path not in by_path)
         if missing_manifest_assets:
             issues.append({
                 "code": "MANIFEST_ASSET_MISSING",
-                "severity": "error",
+                "severity": "warning",
                 "message": f"The manifest references {len(missing_manifest_assets)} missing archive resources.",
             })
         if invalid_manifest_asset_paths:
@@ -236,12 +253,13 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
         if missing_references:
             issues.append({
                 "code": "MARKDOWN_RESOURCE_MISSING",
-                "severity": "error",
+                "severity": "warning",
                 "message": f"Markdown references {len(missing_references)} missing relative resources.",
             })
 
         catalog = {
             "version": CATALOG_VERSION,
+            "source_sha256": getattr(artifact, "sha256", None),
             "artifact_id": str(artifact.id),
             "archive_kind": archive_kind,
             "wrapper_prefix": wrapper,
@@ -367,6 +385,7 @@ def archive_enrichment_for_artifact(
             "archive_artifact_id": str(archive_id),
             "archive_member_id": source_id,
             "archive_path": member["path"],
+            "archive_classification_version": catalog["classification_version"],
             **({"width": member["width"]} if member.get("width") else {}),
             **({"height": member["height"]} if member.get("height") else {}),
             **({"manifest_kind": member["manifest_kind"]} if member.get("manifest_kind") else {}),
@@ -384,6 +403,44 @@ def archive_enrichment_for_artifact(
     # every message again for every attachment or fabricate a last-message ref
     # for manifest-only resources.
     return attachments
+
+
+def archive_missing_member(record: ImportRecord, attachment: dict[str, Any], verified: set[str] | None = None) -> bool:
+    """Only an owned server catalog can authorize a fileless attachment.
+
+    Never use an imported metadata flag as evidence, or catch a failed read as
+    'missing'. Verify the immutable source once per commit/conversation.
+    """
+    metadata = attachment.get("metadata") or {}
+    try:
+        archive_id = uuid.UUID(str(metadata["archive_artifact_id"]))
+        member_id = str(metadata["archive_member_id"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise AdaptiveImportError("ARCHIVE_MEMBER_NOT_FOUND", "Invalid ZIP resource identity.", layer="archive") from exc
+    catalog = archive_catalog(record, archive_id)
+    revision = metadata.get("archive_classification_version")
+    if revision is not None and revision != catalog["classification_version"]:
+        raise AdaptiveImportError("ARCHIVE_CLASSIFICATION_STALE", "The ZIP classification changed.", layer="archive")
+    member = next((item for item in catalog["members"] if item["member_id"] == member_id), None)
+    if member is None or member.get("use") != "attachment":
+        raise AdaptiveImportError("ARCHIVE_MEMBER_NOT_FOUND", "The ZIP resource is unavailable.", layer="archive")
+    if member.get("availability") != "missing":
+        return False
+    artifact = next(item for item in record.artifacts if item.id == archive_id and item.source_type == ARCHIVE_SOURCE_TYPE)
+    key = f"{archive_id}:{catalog['classification_version']}"
+    if verified is None or key not in verified:
+        from app.services.adaptive_import.bounded_io import file_hash
+        digest = file_hash(_artifact_path(record, artifact))
+        if not catalog.get("source_sha256") or digest != artifact.sha256 or digest != catalog["source_sha256"]:
+            raise AdaptiveImportError("ZIP_INVALID", "The retained ZIP source changed.", layer="archive")
+        with zipfile.ZipFile(_artifact_path(record, artifact)) as archive:
+            infos, wrapper = _validated_members(archive)
+            present = {_effective_path(info.filename, wrapper) for info in infos}
+            if any(item.get("availability") == "missing" and item["path"] in present for item in catalog["members"]):
+                raise AdaptiveImportError("ZIP_INVALID", "The ZIP resource index changed.", layer="archive")
+        if verified is not None:
+            verified.add(key)
+    return True
 
 
 def archive_member_stream(record: ImportRecord, attachment: dict[str, Any]):
@@ -727,7 +784,19 @@ def _reference_candidate(document_path: str, raw_target: str) -> str | None:
         return None
     if split.scheme or split.netloc or raw_target.startswith(("#", "/", "\\")):
         return None
-    decoded = unquote(split.path).replace("\\", "/")
+    decoded = split.path
+    # Missing-member identities must pass the same portability boundary as
+    # real members. Decoding must not turn an absent relative asset into an
+    # absolute/drive/NUL path that could later be mistaken for a readable file.
+    for _ in range(3):
+        if decoded.startswith("/") or any(char in decoded for char in ("\\", ":", "\x00")):
+            raise AdaptiveImportError("ZIP_PATH_UNSAFE", "A ZIP resource reference uses an unsafe path.", layer="archive")
+        unquoted = unquote(decoded)
+        if unquoted == decoded:
+            break
+        decoded = unquoted
+    else:
+        raise AdaptiveImportError("ZIP_PATH_UNSAFE", "A ZIP resource reference has excessive path encoding.", layer="archive")
     if not decoded:
         return None
     base = PurePosixPath(document_path).parent
@@ -738,7 +807,7 @@ def _reference_candidate(document_path: str, raw_target: str) -> str | None:
             continue
         if part == "..":
             if not parts:
-                return None
+                raise AdaptiveImportError("ZIP_PATH_UNSAFE", "A ZIP resource reference escapes its archive.", layer="archive")
             parts.pop()
         else:
             parts.append(part)
@@ -910,6 +979,16 @@ def _refresh_catalog_summary(catalog: dict[str, Any]) -> None:
     members = [item for item in catalog.get("members") or [] if isinstance(item, dict)]
     catalog["document_count"] = sum(item.get("use") == "conversation" for item in members)
     catalog["attachment_count"] = sum(item.get("use") == "attachment" for item in members)
+    catalog["missing_attachment_count"] = sum(
+        item.get("use") == "attachment" and item.get("availability") == "missing" for item in members
+    )
+    # One stable warning also survives the existing task/commit warning API.
+    catalog["issues"] = [item for item in catalog.get("issues", []) if item.get("code") != "ZIP_MISSING_ATTACHMENTS"]
+    if catalog["missing_attachment_count"]:
+        catalog["issues"].append({
+            "code": "ZIP_MISSING_ATTACHMENTS", "severity": "warning",
+            "message": f"ZIP missing attachments: {catalog['missing_attachment_count']}. Text and missing references are retained.",
+        })
     catalog["excluded_count"] = sum(item.get("use") == "excluded" for item in members)
     catalog["unreferenced_count"] = sum(
         item.get("use") == "excluded" and item.get("kind") != "markdown" and not item.get("reference_count")
@@ -925,6 +1004,7 @@ def _artifact_summary(catalog: dict[str, Any]) -> dict[str, Any]:
         "classification_version": catalog["classification_version"],
         "document_count": catalog["document_count"],
         "attachment_count": catalog["attachment_count"],
+        "missing_attachment_count": catalog.get("missing_attachment_count", 0),
         "excluded_count": catalog["excluded_count"],
         "unreferenced_count": catalog["unreferenced_count"],
         "issue_count": len(catalog.get("issues") or []),

@@ -287,7 +287,7 @@ test("virtualized reading anchor survives consecutive spacing, font, and width c
         scroll: root.scrollTop, height: root.scrollHeight, mounted: root.querySelectorAll("[data-block-index]").length,
         layout: root.dataset.readerLayoutCompensating === "true",
         geometry: root.dataset.readerGeometryCompensating === "true", writer: root.dataset.readerLastScrollWriter ?? "none",
-        measuredRows: Array.from(target.closest('[data-virtualized-block-list="true"]')?.querySelectorAll<HTMLElement>(":scope > [data-index]") ?? [])
+        measuredRows: Array.from(target.closest('[data-virtualized-block-list="true"]')?.querySelectorAll<HTMLElement>("[data-reader-virtual-slot] > [data-index]") ?? [])
           .map(row => [Number(row.dataset.index), row.getBoundingClientRect().top - root.getBoundingClientRect().top, row.getBoundingClientRect().height]),
       });
       requestAnimationFrame(sample);

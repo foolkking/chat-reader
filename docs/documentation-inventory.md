@@ -1,5 +1,19 @@
 # Markdown 文档台账
 
+## 阅读交互 / 缺附件 ZIP 本地修复 — 2026-11-09
+
+新增 `execution/READING_INTERACTION_ZIP_FIXES_2026-11-09.md`；
+同步 `system/READING_TOOLS_CONTRACT.md`、`system/ADAPTIVE_IMPORT_ARCHIVE_CONTRACT.md`
+与状态/导航。本轮工作树候选与现役 d61b9c6 分开记录，既有清理/部署历史和
+用户证据保留。没有新 migration、依赖、离线格式或部署动作。
+新增 `evidence/reading-interaction-zip-2026-11-09/` 的合成数据/截图与源码摘要，
+同步执行/证据索引；记录专项及最终完整隔离Next构建通过，早期跨盘失败留档，
+未以旧CI代替本次验收，新的CI/PWA/原64条矩阵仍未运行。
+后续新增 `execution/ux-audit-reading-interaction-zip-2026-11-09.md`：
+先报告CI接线与组合覆盖缺口，再补强制浏览器步骤/证据和完整交叉矩阵。
+同步测试/状态/合同的最新授权：完整CI至通过并部署，逐次50分钟首次回查，
+不创建安排、不重放原用户资料；尚未宣称本候选发布成功。
+
 ## 有界 ZIP / 阅读工具精确 CI 与部署回执 — 2026-11-09
 
 新增 `execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md` 与

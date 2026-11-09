@@ -193,6 +193,12 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/image-scale-slider-browser.mjs
 
+      - name: Formula reading, focus tools and timed return regression
+        timeout-minutes: 10
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/reader-interaction-browser.mjs
+
       - name: Context and Skill upload proxy transport
         run: |
           sudo apt-get update
@@ -432,6 +438,9 @@ jobs:
             ${{ runner.temp }}/image-scale-slider-browser/result.json
             ${{ runner.temp }}/image-scale-slider-browser/failure.json
             ${{ runner.temp }}/image-scale-slider-browser/*.png
+            ${{ runner.temp }}/reader-interaction-browser/result.json
+            ${{ runner.temp }}/reader-interaction-browser/failure-state.json
+            ${{ runner.temp }}/reader-interaction-browser/*.png
             apps/web/playwright-report
             apps/web/test-results
           if-no-files-found: warn

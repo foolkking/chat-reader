@@ -73,12 +73,33 @@ edits for explicit discard/review, never silently rebases them. Unsaved ZIP
 choices block canonical import and conflicting overview actions, and join the
 existing dialog-close protection; collapsing the ledger does not lose them.
 
-Missing relative resources and missing manifest-declared assets are blocking
-issues. A manifest asset path that is absolute, traverses, uses a drive/colon,
-backslash, NUL or otherwise fails member normalization is also a blocking
+**Release candidate, 2026-11-09 (not yet deployed):** missing relative
+resources and missing manifest-declared assets are nonblocking warnings.
+The normal mapping/review/commit workflow remains explicit; no ignore checkbox
+or automatic commit is added. Preview reports the unique missing count; a
+successful import says that some attachments are missing, not “not imported.”
+
+The bounded server-owned catalog adds optional `source_sha256`, member
+`availability: "missing"` and summary `missing_attachment_count`. Missing
+members use the existing archive/path-derived UUID, null ZIP/byte/CRC fields
+and no claimed geometry. References become canonical attachment identities;
+manifest-only resources have no invented message occurrence. Commit may skip
+streaming only after validating the owned catalog/revision and retained source
+hash, and checking that the resource really is absent. Imported metadata flags
+are not evidence. Fileless attachments retain honest `missing` status without
+an asset, download URL or fake file. All-missing archives are supported.
+Old failed analysis tasks require the user's explicit retry of their retained
+source; no tasks or already-imported conversations are automatically replayed.
+Catalog version 1 and older drafts remain readable; no migration, Dexie change,
+portable package change or `.cr` restore change is involved.
+
+A manifest asset path that is absolute, traverses, uses a drive/colon,
+backslash, NUL or otherwise fails member normalization remains a blocking
 `MANIFEST_ASSET_PATH_INVALID` issue; it is never ignored or guessed. CRC,
-decode, or archive errors fail safely rather than leaving a partially imported
-conversation. Unreferenced files are never silently attached. A valid archive
+scanner rejection, I/O, source replacement, decode and archive errors still
+fail and roll back rather than being mislabeled as missing. Encoded relative
+references cannot escape the archive or create unsafe placeholder paths.
+External resources are not fetched. Unreferenced, nonmanifest files are never silently attached. A valid archive
 can still be reviewed, corrected, or replaced using the normal Adaptive Import
 recovery flow.
 

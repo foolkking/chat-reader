@@ -54,6 +54,8 @@ function runtime(extra = {}, desktop = false, observeWorkspace) {
     },
     "./notebook-view": { NotebookView: "Notebook" },
     "../../components/settings-focused-dialog": { SettingsFocusedDialog: "Settings" },
+    // Focus lifecycle is exercised with real DOM in reader-interaction-browser.
+    "../../components/use-dialog-focus": { useDialogFocus: noop },
     "../../lib/offline-conflicts": { ensureNotebookConflict: async () => "synthetic-conflict" },
     "../../lib/reader-search-cache": { invalidateReaderSearch: noop },
     "../../lib/annotation-comment-drafts": {

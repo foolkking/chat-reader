@@ -52,13 +52,14 @@ function createOwner(root: HTMLElement) {
   const capture = () => {
     captureFrame = 0;
     if (closed || writing || busy()) return;
-    anchor = captureScrollAnchor(scrollRoot, 120);
+    const measurements = new Map<HTMLElement, DOMRect>();
+    anchor = captureScrollAnchor(scrollRoot, 120, measurements);
     anchorElement = anchor ? document.getElementById(anchor.targetId) : null;
     textRange = null;
     textNode = null;
     if (anchorElement) {
-      const bounds = anchorElement.getBoundingClientRect();
-      const rootTop = scrollRoot?.getBoundingClientRect().top ?? 0;
+      const bounds = measurements.get(anchorElement) ?? anchorElement.getBoundingClientRect();
+      const rootTop = scrollRoot ? (measurements.get(scrollRoot) ?? scrollRoot.getBoundingClientRect()).top : 0;
       const caret = (document as Document & { caretRangeFromPoint?: (x: number, y: number) => Range | null })
         .caretRangeFromPoint?.(bounds.left + Math.min(24, bounds.width / 2), rootTop + 120);
       if (caret?.startContainer.nodeType === Node.TEXT_NODE && anchorElement.contains(caret.startContainer)) {
@@ -67,11 +68,12 @@ function createOwner(root: HTMLElement) {
           const start = Math.min(caret.startOffset, length - 1);
           caret.setStart(caret.startContainer, start);
           caret.setEnd(caret.startContainer, start + 1);
-          if (caret.getBoundingClientRect().height > 0) {
+          const caretBounds = caret.getBoundingClientRect();
+          if (caretBounds.height > 0) {
             textRange = caret;
             textNode = caret.startContainer;
             textStart = start;
-            textOffset = caret.getBoundingClientRect().top - rootTop;
+            textOffset = caretBounds.top - rootTop;
           }
         }
       }
@@ -98,11 +100,12 @@ function createOwner(root: HTMLElement) {
     // the captured character and must not create a one-line phantom delta.
     const useText = textRange && textNode?.isConnected && textRange.startContainer === textNode
       && textRange.endContainer === textNode && textRange.startOffset === textStart
-      && textRange.endOffset === textStart + 1 && anchorElement.contains(textNode)
-      && textRange.getBoundingClientRect().height > 0;
-    const top = (useText ? textRange!.getBoundingClientRect().top : anchorElement.getBoundingClientRect().top)
+      && textRange.endOffset === textStart + 1 && anchorElement.contains(textNode);
+    const rangeBounds = useText ? textRange!.getBoundingClientRect() : null;
+    const validText = rangeBounds && rangeBounds.height > 0;
+    const top = (validText ? rangeBounds.top : anchorElement.getBoundingClientRect().top)
       - (scrollRoot?.getBoundingClientRect().top ?? 0);
-    const expected = (useText ? textOffset : anchor.offset) - (offset() - scrollAtCapture);
+    const expected = (validText ? textOffset : anchor.offset) - (offset() - scrollAtCapture);
     const delta = top - expected;
     if (!Number.isFinite(delta) || Math.abs(delta) <= .5) return;
     writing = true;
@@ -138,6 +141,7 @@ function createOwner(root: HTMLElement) {
       if (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " ", "j", "k"].includes(event.key)
         || (event.target as HTMLElement | null)?.closest("input,textarea,select,[contenteditable=true]")) return;
     }
+    const needsRebase = busy() || writing || rebaseAfterExplicitPosition || !anchorElement?.isConnected;
     cancelReaderPosition(scrollRoot);
     root.dataset.readerLastScrollWriter = "user-intent";
     rebaseAfterExplicitPosition = false;
@@ -145,7 +149,10 @@ function createOwner(root: HTMLElement) {
     writing = false;
     if (releaseFrame) cancelAnimationFrame(releaseFrame);
     delete root.dataset.readerGeometryCompensating;
-    capture();
+    // Ordinary wheel bursts retain the previous real anchor; compensate()
+    // already subtracts native scroll motion. Only retiring an explicit owner
+    // needs a synchronous new anchor. The scroll event batches normal reads.
+    if (needsRebase) capture();
   };
   events.addEventListener("scroll", onScroll, { passive: true });
   root.addEventListener("chat-reader:position-released", onPositionReleased);

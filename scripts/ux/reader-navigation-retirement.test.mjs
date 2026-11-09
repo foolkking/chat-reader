@@ -31,7 +31,8 @@ const inputNames = ["conversationId", "dataSource", "conversationQuery", "queryC
   "windowGenerationRef", "loadedWindowRef", "applyLoadedWindow", "userScrollIntentRef", "scrollDirectionRef",
   "scrollIntentSequenceRef", "setNavigationStatus", "setNavigationFailureReason", "setActiveMessageId", "setActiveBlockId",
   "locatePulseTimerRef", "setLocatePulse", "scrollContainerRef", "resolvedLocatorKeysRef", "previousTurnAnchorRef",
-  "nextTurnAnchorRef", "initialWindowAppliedRef", "collapsedTurnKeysRef", "setCollapsedTurnKeys", "cancelPreferenceTransitionRef"];
+  "nextTurnAnchorRef", "initialWindowAppliedRef", "collapsedTurnKeysRef", "setCollapsedTurnKeys", "cancelPreferenceTransitionRef",
+  "tocReturnPointRef", "setReturnCueStartedAt", "focusTransitionRef", "focusAnchorRef"];
 const compiled = compile(`function renderNavigation(input) {
   const { ${inputNames.join(", ")} } = input;
   ${guard.getText(ast)}
@@ -87,6 +88,8 @@ function fixture({ mode = "remote", items = [B] } = {}) {
     scrollIntentSequenceRef: 0, locatePulseTimerRef: null, previousTurnAnchorRef: null, nextTurnAnchorRef: null,
     initialWindowAppliedRef: false, searchNavigationRef: null, collapsedTurnKeysRef: new Set(),
     cancelPreferenceTransitionRef: () => {},
+    focusTransitionRef: 0, focusAnchorRef: null,
+    tocReturnPointRef: null,
   })) state[name] = { current: value };
   state.scrollContainerRef = { current: root };
   state.loadedWindowRef = { current: windowExports.replaceLoadedWindow(page(items), 0) };
@@ -111,6 +114,7 @@ function fixture({ mode = "remote", items = [B] } = {}) {
   };
   state.queryClient = { setQueryData: (...args) => calls.cache.push(args) };
   const setter = name => value => { state[name] = value; calls.writes.push([name, value]); };
+  state.setReturnCueStartedAt = setter("returnCueStartedAt");
   for (const name of ["SearchNavigation", "SearchHighlight", "NavigationStatus", "NavigationFailureReason",
     "ActiveMessageId", "ActiveBlockId", "LocatePulse"]) state[`set${name}`] = setter(name[0].toLowerCase() + name.slice(1));
   state.applyLoadedWindow = value => { state.loadedWindowRef.current = value; calls.writes.push(["window", value]); };

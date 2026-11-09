@@ -2,6 +2,10 @@ import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
 const english: Record<string, string> = {
+  "缺少 {0} 个附件，正文仍可导入；缺失引用将保留。": "{0} attachments are missing. Text can still be imported; missing references will be retained.",
+  "文件缺失 · 保留引用": "File missing · reference retained",
+  "已导入，部分附件缺失": "Imported with missing attachments",
+  "缺少 {0} 个附件；正文和缺失引用已保留。": "{0} attachments are missing; text and missing references were retained.",
   "操作结果尚未确认。请在任务中心查看原任务，不要重复提交或重新上传。": "The operation result is unconfirmed. Check the original task in Tasks; do not submit or upload it again.",
   "累计等待资源已达 30 分钟，任务已暂停。请在任务中心继续原任务，无需重新上传。": "Resource waiting reached 30 minutes. Continue the paused original task in Tasks without uploading again.",
   "单条消息超过 1 MiB 处理上限，未拆分或截断；请检查来源。": "One message exceeds the 1 MiB processing limit. It was not split or truncated; review the source.",
@@ -153,6 +157,11 @@ const english: Record<string, string> = {
 
 export type ImportCopy = (key: string, ...values: Array<string | number>) => string;
 
+export function importWarningMessage(warning: string, tr: ImportCopy): string {
+  const missing = /^ZIP missing attachments: (\d+)\./.exec(warning);
+  return missing ? tr("缺少 {0} 个附件；正文和缺失引用已保留。", missing[1]) : warning;
+}
+
 export type ImportErrorAction = "read" | "mutation" | "commit";
 
 export function importFailureMessage(
@@ -199,8 +208,8 @@ export function importFailureMessage(
       : "The server is processing another import. This analysis did not finish, but source files are retained. Retry later without uploading again.";
   }
   if (["MANIFEST_ASSET_MISSING", "MARKDOWN_RESOURCE_MISSING"].includes(code)) {
-    return zh ? "ZIP 中缺少正文或清单引用的附件，尚未导入对话。源文件仍保留，请补齐资源后替换文件。"
-      : "The ZIP is missing resources referenced by its Markdown or manifest. No conversations were imported. Source files are retained. Add the missing resources and replace the file.";
+    return zh ? "此前的分析因附件缺失停止，源文件仍保留。可以重试原任务；缺失附件将保留引用，不再阻止正文导入。"
+      : "The previous analysis stopped because attachments were missing. Sources are retained. Retry the original task; missing references will be kept without blocking the text import.";
   }
   if (["ZIP_INVALID", "ZIP_CRC_INVALID"].includes(code)) {
     return zh ? "ZIP 文件损坏或完整性校验失败，尚未导入对话。源文件仍保留，请重新导出后替换文件。"

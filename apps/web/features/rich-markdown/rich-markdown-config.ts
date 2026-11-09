@@ -31,7 +31,17 @@ const BASE_REMARK_PLUGINS: NonNullable<Options["remarkPlugins"]> = [
   remarkAiMathCompatibility,
   remarkReaderHighlight,
   remarkSafeHtml,
+  remarkParseProbe,
 ];
+
+/** Opt-in synthetic test instrumentation at the real Markdown pipeline. */
+function remarkParseProbe() {
+  return () => {
+    if (typeof window === "undefined") return;
+    const probe = (window as typeof window & { __chatReaderPerfProbe?: { markdownParseTotal?: number } }).__chatReaderPerfProbe;
+    if (probe) probe.markdownParseTotal = (probe.markdownParseTotal ?? 0) + 1;
+  };
+}
 
 const RICH_MARKDOWN_SANITIZE_SCHEMA = {
   ...defaultSchema,

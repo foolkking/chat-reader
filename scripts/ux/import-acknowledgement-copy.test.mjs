@@ -21,6 +21,19 @@ function formatter(locale) {
   return (error, action = "mutation") => exports.importErrorMessage(error, tr, action);
 }
 
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: missing ZIP warning retains count without claiming an uncommitted import succeeded`, () => {
+  const exports = {};
+  new Function("require", "exports", compiled)(name => name === "react"
+    ? { useCallback: callback => callback }
+    : { usePreferences: () => ({ resolvedLocale: locale }) }, exports);
+  const tr = exports.useImportCopy();
+  assert.equal(exports.importWarningMessage("ZIP missing attachments: 3. Text and missing references are retained.", tr),
+    locale === "zh-CN" ? "缺少 3 个附件；正文和缺失引用已保留。" : "3 attachments are missing; text and missing references were retained.");
+  assert.equal(tr("已导入，部分附件缺失"), locale === "zh-CN" ? "已导入，部分附件缺失" : "Imported with missing attachments");
+  assert.doesNotMatch(exports.importErrorMessage("MARKDOWN_RESOURCE_MISSING", tr), /已导入|Imported with/);
+  assert.equal(exports.importWarningMessage("Unrelated preserved warning", tr), "Unrelated preserved warning");
+});
+
 const messages = {
   "zh-CN": "导入分析的提交结果尚未确认。请先在任务中心核对是否已有本批分析，再决定是否重新上传。",
   "en-US": "Import analysis submission is not confirmed. Check Tasks for this batch before uploading it again.",

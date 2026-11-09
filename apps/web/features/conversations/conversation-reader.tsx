@@ -83,6 +83,7 @@ import {
   type SearchReadingQueue,
 } from "../search/search-reading-queue";
 import { buildReaderTurnGroups } from "./reader-turn-folding";
+import { useReturnReadingCue } from "./use-return-reading-cue";
 
 const ACTIVE_READING_OFFSET = 120;
 const APP_TITLE = "chat-reader";
@@ -161,6 +162,9 @@ export function ConversationReader({
     collapsedTurnKeysRef.current = next;
     setCollapsedTurnKeys(next);
   }, []);
+  const turnToggleHandlers = useMemo(() => new Map(turnGroups.map(turn => [
+    turn.key, () => toggleTurnCollapsed(turn.key),
+  ])), [turnGroups, toggleTurnCollapsed]);
   useEffect(() => {
     collapsedTurnKeysRef.current = new Set();
     setCollapsedTurnKeys(new Set());
@@ -323,11 +327,17 @@ export function ConversationReader({
       tocReturnPointRef.current = null;
       setTocReturnPoint(null);
       setTocReturnError(null);
+      setReturnCueStartedAt(0);
+      tocReturnFlightRef.current = null;
+      setTocReturnPending(false);
       tocReturnIdentityRef.current = { conversationId, dataSource, accessGeneration: authenticationGeneration() };
     };
     clearTocOrigin();
     window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, clearTocOrigin);
-    return () => window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, clearTocOrigin);
+    return () => {
+      window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, clearTocOrigin);
+      tocReturnFlightRef.current = null;
+    };
   }, [conversationId, dataSource]);
 
   useEffect(() => {
@@ -438,6 +448,11 @@ export function ConversationReader({
   const tocReturnIdentityRef = useRef({ conversationId, dataSource, accessGeneration: authenticationGeneration() });
   const [tocReturnPoint, setTocReturnPoint] = useState<ScrollAnchorSnapshot | null>(null);
   const [tocReturnError, setTocReturnError] = useState<string | null>(null);
+  const [returnCueStartedAt, setReturnCueStartedAt] = useState(0);
+  const tocReturnFlightRef = useRef<object | null>(null);
+  const [tocReturnPending, setTocReturnPending] = useState(false);
+  const returnBusy = tocReturnPending || navigationStatus === "loading";
+  const returnCue = useReturnReadingCue(returnCueStartedAt, Boolean(tocReturnPoint), returnBusy);
   const previousTurnAnchorRef = useRef<string | null>(null);
   const nextTurnAnchorRef = useRef<string | null>(null);
   const focusAnchorRef = useRef<ReturnType<typeof captureScrollAnchor>>(null);
@@ -826,6 +841,8 @@ export function ConversationReader({
     const root = scrollContainerRef.current;
     if (root?.dataset.readerViewerLocked === "true") return;
     cancelPreferenceTransitionRef.current();
+    focusTransitionRef.current += 1;
+    focusAnchorRef.current = null;
     userScrollIntentRef.current = true;
     scrollIntentSequenceRef.current += 1;
     geometryTransitionRef.current += 1;
@@ -873,6 +890,8 @@ export function ConversationReader({
     const markPointerDown = () => {
       if (root.dataset.readerViewerLocked === "true") return;
       cancelPreferenceTransitionRef.current();
+      focusTransitionRef.current += 1;
+      focusAnchorRef.current = null;
       pointerDraggingRef.current = true;
       pointerDragMovedRef.current = false;
       pointerDragStartScrollTopRef.current = root.scrollTop;
@@ -1261,6 +1280,10 @@ export function ConversationReader({
         return { ok: false, targetId: blockId ?? messageIdDom, reason: "cancelled" };
       }
       cancelPreferenceTransitionRef.current();
+      // A focus-width transition must not reclaim the scroll owner after an
+      // explicit search/index/Return target has already started aligning.
+      focusTransitionRef.current += 1;
+      focusAnchorRef.current = null;
       const currentWindow = loadedWindowRef.current;
       const targetTurn = buildReaderTurnGroups(currentWindow.turns, currentWindow.items)
         .find((turn) => turn.messageIds.includes(messageId));
@@ -1287,6 +1310,7 @@ export function ConversationReader({
           originalWindowIdentity = loadedWindowRef.current.items.map((message) => message.id).join("\u0000");
           tocReturnPointRef.current = originalPosition;
           setTocReturnPoint(originalPosition);
+          setReturnCueStartedAt(0);
           setTocReturnError(null);
         }
       }
@@ -1599,6 +1623,9 @@ export function ConversationReader({
             }, 720);
           }
           if (!result.fallback) setNavigationStatus("idle");
+          if (tocReturnPointRef.current && (target.source === "dialogue-index" || target.source === "section-toc")) {
+            setReturnCueStartedAt(Date.now());
+          }
         } else {
           setNavigationStatus("failed");
           setNavigationFailureReason(result.reason ?? "load-failed");
@@ -1659,7 +1686,6 @@ export function ConversationReader({
     setSearchAttachmentTarget({ conversationId, attachmentId });
     setSearchAnnotationTarget(null);
     clearSearchNavigation();
-    setFocusMode(false);
     setShowSearch(false);
     setShowShare(false);
     setShowExport(false);
@@ -1693,7 +1719,6 @@ export function ConversationReader({
       setSearchAnnotationTarget({ conversationId, annotationId: target.annotationId });
       setSearchAttachmentTarget(null);
       clearSearchNavigation();
-      setFocusMode(false);
       setShowSearch(false);
       setShowFiles(false);
       setShowShare(false);
@@ -2370,10 +2395,8 @@ export function ConversationReader({
       : conversationQuery.isSuccess
         ? 25
         : 10;
-  const loadedLabel = useMemo(
-    () => t("showMessages", { shown: messages.length, total }),
-    [messages.length, t, total],
-  );
+  const activeOrdinal = messages.find(message => message.id === activeMessageId)?.ordinal;
+  const currentMessageLabel = `${resolvedLocale === "zh-CN" ? "当前消息" : "Current message"} ${activeOrdinal ?? "—"}/${conversation?.message_count ?? total}`;
   const selectedIds = useMemo(() => Array.from(selectedMessageIds), [selectedMessageIds]);
   const selectedOrderedIds = useMemo(
     () => messages.filter((message) => selectedMessageIds.has(message.id)).map((message) => message.id),
@@ -2786,7 +2809,7 @@ export function ConversationReader({
   }
 
   const openUtilityPanel = useCallback(async (panel: Exclude<ReaderUtilityPanel, null | "navigation">) => {
-    if (window.innerWidth >= 768 && document.activeElement instanceof HTMLElement) {
+    if (document.activeElement instanceof HTMLElement) {
       desktopUtilityOpenerRef.current = document.activeElement;
       desktopUtilityPanelRef.current = panel === "files" ? null : panel;
     }
@@ -2850,19 +2873,21 @@ export function ConversationReader({
     const opener = desktopUtilityOpenerRef.current;
     // Header actions are retained while their rail closes, but are then inside
     // an aria-hidden container. Do not restore focus into that hidden subtree.
-    if (opener?.isConnected && !opener.closest("[aria-hidden='true']")) return opener;
+    if (opener?.isConnected && opener.getClientRects().length && !opener.closest("[aria-hidden='true'],[inert]")) return opener;
     const panel = desktopUtilityPanelRef.current;
     const replacement = panel
-      ? document.querySelector<HTMLElement>(`[data-reader-header-action="${panel}"]`)
+      ? readerMainSectionRef.current?.querySelector<HTMLElement>(`[data-reader-header-action="${panel}"]`)
       : null;
-    return replacement?.isConnected && !replacement.closest("[aria-hidden='true']")
+    return replacement?.isConnected && replacement.getClientRects().length && !replacement.closest("[aria-hidden='true'],[inert]")
       ? replacement
-      : document.querySelector<HTMLElement>("[data-reader-header-more-actions='true']");
+      : Array.from(readerMainSectionRef.current?.querySelectorAll<HTMLElement>("[data-reader-more-actions='true']") ?? []).find(node => node.getClientRects().length) ?? null;
   }, []);
 
-  const restoreMobileUtilityFocus = useCallback(() => (
-    document.querySelector<HTMLElement>("[data-reader-mobile-more-actions='true']")
-  ), []);
+  const restoreMobileUtilityFocus = useCallback(() => {
+    const opener = desktopUtilityOpenerRef.current;
+    return opener?.isConnected && opener.getClientRects().length && !opener.closest("[aria-hidden='true'],[inert]")
+      ? opener : Array.from(readerMainSectionRef.current?.querySelectorAll<HTMLElement>("[data-reader-more-actions='true']") ?? []).find(node => node.getClientRects().length) ?? null;
+  }, []);
 
   const restoreNavigationFocus = useCallback(() => {
     const opener = navigationOpenerRef.current;
@@ -2930,6 +2955,7 @@ export function ConversationReader({
       return;
     }
     if (!(await closeSourceEditorForWorkspace())) return;
+    if (document.activeElement instanceof HTMLElement) desktopUtilityOpenerRef.current = document.activeElement;
     setUtilityPanel(null);
     setShowShare(false);
     setShowExport(false);
@@ -3119,6 +3145,12 @@ export function ConversationReader({
   };
 
   const headerActions: ReaderHeaderAction[] = [
+    ...(tocReturnPoint ? [{
+      id: "return-to-reading",
+      label: resolvedLocale === "zh-CN" ? "返回阅读位置" : "Return to reading position",
+      icon: ArrowLeft, disabled: returnBusy,
+      onSelect: () => { void returnToTocOrigin(); },
+    }] : []),
     ...(canManageCanonical ? [{
       id: "edit-source",
       label: resolvedLocale === "zh-CN" ? "\u7f16\u8f91 Markdown \u6e90\u7801" : "Edit Markdown source",
@@ -3225,65 +3257,69 @@ export function ConversationReader({
     <ConversationToc conversationId={conversationId} sourceKey={readerSourceKey} networkMode={readerQueryNetworkMode} activeMessageId={activeMessageId} activeItems={activeTocItems} activeHeadingId={activeHeadingId} observerKey={tocObserverKey} ready={canLoadInitialWindow} mode="sheet" loadPage={(options) => dataSource.getToc(conversationId, options)} onNavigate={(item) => navigateFromNavigationSheet(tocNavigationTarget(item))} />
   );
 
-  const returnToTocOrigin = async () => {
+  const returnToTocOrigin = async (messageOnly = false) => {
     const anchor = tocReturnPointRef.current;
-    if (!anchor?.messageId || navigationStatus === "loading") return;
+    if (!anchor?.messageId || navigationStatus === "loading" || tocReturnFlightRef.current) return;
     if (tocReturnIdentityRef.current.accessGeneration !== authenticationGeneration()) {
       tocReturnPointRef.current = null;
       setTocReturnPoint(null);
       setTocReturnError(null);
       return;
     }
+    const flight = {};
+    tocReturnFlightRef.current = flight;
+    setTocReturnPending(true);
     setTocReturnError(null);
-    const result = await navigateToTarget({
-      messageId: anchor.messageId,
-      messageVersionId: anchor.messageVersionId ?? undefined,
-      blockIndex: anchor.blockIndex ?? undefined,
-      source: "message-action",
-    });
-    if (!result.ok) {
-      if (result.reason !== "cancelled") setTocReturnError(resolvedLocale === "zh-CN" ? "未能恢复原阅读位置；检查点仍保留，可重试或定位到原消息。" : "Could not restore the original position. The checkpoint is retained; retry or locate the original message.");
-      return;
-    }
-    if (userScrollIntentRef.current) {
-      setTocReturnError(resolvedLocale === "zh-CN" ? "已停止自动定位；原位置仍保留。" : "Automatic positioning stopped. The checkpoint is retained.");
-      return;
-    }
-    const token = navigationTokenRef.current;
-    const restored = await restoreScrollAnchor({
-      root: scrollContainerRef.current,
-      anchor,
-      tokenIsCurrent: () => navigationTokenRef.current === token
-        && ownsReaderReadRecovery(recentOwner) && !userScrollIntentRef.current,
-      timeoutMs: 3500,
-    });
-    if (restored && tocReturnPointRef.current === anchor && tocReturnIdentityRef.current.conversationId === conversationId) {
-      tocReturnPointRef.current = null;
-      setTocReturnPoint(null);
-      setTocReturnError(null);
-    } else if (!userScrollIntentRef.current) {
-      setTocReturnError(resolvedLocale === "zh-CN" ? "精确阅读位置不可用；检查点仍保留，可重试或定位到原消息。" : "The exact reading position is unavailable. The checkpoint is retained; retry or locate the original message.");
+    try {
+      const result = await navigateToTarget({
+        messageId: anchor.messageId,
+        ...(messageOnly ? { allowMessageFallback: true } : {
+          messageVersionId: anchor.messageVersionId ?? undefined,
+          blockIndex: anchor.blockIndex ?? undefined,
+        }),
+        source: "message-action",
+      });
+      if (tocReturnFlightRef.current !== flight || !ownsReaderReadRecovery(recentOwner)) return;
+      if (!result.ok) {
+        if (result.reason !== "cancelled") setTocReturnError(resolvedLocale === "zh-CN" ? "未能恢复原阅读位置；检查点仍保留，可重试或定位到原消息。" : "Could not restore the original position. The checkpoint is retained; retry or locate the original message.");
+        return;
+      }
+      if (userScrollIntentRef.current) {
+        setTocReturnError(resolvedLocale === "zh-CN" ? "已停止自动定位；原位置仍保留。" : "Automatic positioning stopped. The checkpoint is retained.");
+        return;
+      }
+      const token = navigationTokenRef.current;
+      const restored = messageOnly || await restoreScrollAnchor({
+        root: scrollContainerRef.current,
+        anchor,
+        tokenIsCurrent: () => tocReturnFlightRef.current === flight && navigationTokenRef.current === token
+          && ownsReaderReadRecovery(recentOwner) && !userScrollIntentRef.current,
+        timeoutMs: 3500,
+      });
+      if (tocReturnFlightRef.current !== flight || !ownsReaderReadRecovery(recentOwner)) return;
+      if (restored && tocReturnPointRef.current === anchor && tocReturnIdentityRef.current.conversationId === conversationId) {
+        tocReturnPointRef.current = null;
+        setTocReturnPoint(null);
+        setTocReturnError(null);
+      } else if (!userScrollIntentRef.current) {
+        setTocReturnError(resolvedLocale === "zh-CN" ? "精确阅读位置不可用；检查点仍保留，可重试或定位到原消息。" : "The exact reading position is unavailable. The checkpoint is retained; retry or locate the original message.");
+      }
+    } finally {
+      if (tocReturnFlightRef.current === flight) {
+        tocReturnFlightRef.current = null;
+        setTocReturnPending(false);
+      }
     }
   };
-  const locateTocOriginMessage = async () => {
-    const anchor = tocReturnPointRef.current;
-    if (!anchor?.messageId || navigationStatus === "loading") return;
-    setTocReturnError(null);
-    const result = await navigateToTarget({ messageId: anchor.messageId, source: "message-action", allowMessageFallback: true });
-    if (result.ok && tocReturnPointRef.current === anchor) {
-      tocReturnPointRef.current = null;
-      setTocReturnPoint(null);
-      setTocReturnError(null);
-    } else if (result.reason !== "cancelled") {
-      setTocReturnError(resolvedLocale === "zh-CN" ? "无法定位原消息；检查点仍保留，可重试。" : "The original message could not be located. The checkpoint is retained; retry.");
-    }
-  };
+  const locateTocOriginMessage = () => returnToTocOrigin(true);
   const returnToReadingLabel = resolvedLocale === "zh-CN" ? "返回阅读位置" : "Return to reading position";
-  const returnToReadingButton = (compact = false) => tocReturnPoint ? (
-    <button type="button" onClick={() => void returnToTocOrigin()} disabled={navigationStatus === "loading"}
-      aria-busy={navigationStatus === "loading"}
+  const returnToReadingButton = (compact = false) => returnCue.visible ? (
+    <button type="button" onClick={() => void returnToTocOrigin()} disabled={returnBusy}
+      aria-busy={returnBusy}
       data-testid="reader-return-to-toc-origin"
-      className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent-soft)] px-2.5 text-xs font-medium text-primary hover:bg-subtle disabled:opacity-50 ${compact ? "w-11 px-0" : ""}`}
+      data-return-emphasized={returnCue.emphasized}
+      onFocus={returnCue.onFocus} onBlur={returnCue.onBlur}
+      className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium hover:bg-subtle disabled:opacity-50 ${returnCue.emphasized ? "border-[var(--accent)]/30 bg-[var(--accent-soft)] text-primary" : "border-ui bg-surface text-secondary"} ${compact ? "w-11 px-0" : ""}`}
       aria-label={returnToReadingLabel} title={returnToReadingLabel}>
       <ArrowLeft className="h-4 w-4" />{compact ? <span className="sr-only">{returnToReadingLabel}</span> : <span>{resolvedLocale === "zh-CN" ? "返回阅读" : "Return"}</span>}
     </button>
@@ -3301,12 +3337,6 @@ export function ConversationReader({
       label: resolvedLocale === "zh-CN" ? "编辑 Markdown 源码" : "Edit Markdown source",
       icon: Pencil,
       onSelect: () => openSourceEditor(),
-    } as ReaderHeaderAction] : []),
-    ...(tocReturnPoint ? [{
-      id: "return-to-reading",
-      label: returnToReadingLabel,
-      icon: ArrowLeft,
-      onSelect: () => { void returnToTocOrigin(); },
     } as ReaderHeaderAction] : []),
     ...headerActions.filter((action) => !["search", "edit-source", "save-position", "annotations", "compare"].includes(action.id)),
   ];
@@ -3341,24 +3371,18 @@ export function ConversationReader({
       /> : null}
       {dataSource.mode === "remote" ? <TogetherChooser open={togetherOpen} onClose={() => setTogetherOpen(false)} onChoose={openTogether} openedIds={[conversationId]} /> : null}
       <section ref={readerMainSectionRef} data-reader-main-section="true" data-reader-focus={focusMode ? "on" : "off"} className="relative flex min-w-0 flex-1 flex-col">
-        <header ref={reserveMobileReaderHeaderSpace} data-reader-toolbar data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible || tocReturnPoint ? "translate-y-0" : "-translate-y-full"}`}>
+        <header ref={reserveMobileReaderHeaderSpace} data-reader-toolbar data-testid="mobile-reader-header" className={`absolute inset-x-0 top-0 z-40 border-b border-ui bg-surface/95 backdrop-blur transition-transform duration-100 ease-out md:relative md:z-20 md:translate-y-0 ${mobileHeaderVisible || returnCue.visible || tocReturnError ? "translate-y-0" : "-translate-y-full"}`}>
           {mergedIntoConversationId ? <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-[3vw] py-2 text-sm text-amber-900" role="status"><span className="min-w-0 flex-1">{resolvedLocale === "zh-CN" ? "此对话已合并，当前内容可能正在更新。" : "This conversation was merged and may be updating."}</span><button type="button" className="shrink-0 rounded-md border border-amber-700/30 px-2 py-1 text-xs font-medium hover:bg-white" onClick={() => router.push(`/conversations/${mergedIntoConversationId}`)}>{resolvedLocale === "zh-CN" ? "打开目标对话" : "Open target"}</button></div> : null}
           {loadingProgress < 100 ? (
             <div className="absolute inset-x-0 bottom-0 h-0.5 bg-subtle">
               <div className="h-full bg-accent transition-[width] duration-300" style={{ width: `${loadingProgress}%` }} />
             </div>
           ) : null}
-          <div className="hidden min-h-14 items-center justify-between gap-3 px-6 py-2 md:flex">
+          {!focusMode ? <div className="hidden min-h-14 items-center justify-between gap-3 px-6 py-2 md:flex">
             {!focusMode ? <div className="min-w-0 flex-1">
-                <h1 className="truncate text-base font-semibold text-primary">
-                  {conversation.display_title || conversation.title}
-                </h1>
-                {dataSource.mode === "remote" || dataSource.mode === "offline" ? <ConversationTagStrip conversationId={conversationId} offline={isOffline} /> : null}
-                <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-secondary">
-                  <span>{loadedLabel}</span>
-                </div>
+                <ConversationTagStrip conversationId={conversationId} offline={isOffline} title={conversation.display_title || conversation.title} positionLabel={currentMessageLabel} />
             </div> : <div className="flex-1" />}
-            {focusMode ? <div className="flex items-center gap-2"><button type="button" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ui bg-surface text-secondary hover:bg-subtle" aria-label={t("search")} title={t("search")}><Search className="h-[1.125rem] w-[1.125rem]" /></button>{dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}<ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton()}<button type="button" onClick={toggleFocusMode} className="inline-flex h-11 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary hover:bg-subtle" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" />{t("exitFocusMode")}</button></div> : <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
+            <div className="reader-header-auxiliary flex shrink-0 items-center gap-1.5">
               <button type="button" data-reader-navigation-trigger="true" onClick={(event) => void openNavigation("dialogue", event.currentTarget)} className="hidden h-9 items-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm text-secondary hover:bg-subtle md:inline-flex xl:hidden" aria-label={t("readerNavigation")}><ListTree className="h-4 w-4" />{t("readerNavigation")}</button>
               <ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />
               {returnToReadingButton()}
@@ -3375,25 +3399,33 @@ export function ConversationReader({
                 triggerLabel={t("messageActions")}
                 closeLabel={t("collapseActions")}
               />
-            </div>}
-          </div>
-          {focusMode ? <div data-reader-focus-controls className="flex min-h-14 items-center justify-center gap-2 px-[3vw] py-2 md:hidden"><button type="button" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary" aria-label={t("search")} title={t("search")}><Search className="h-5 w-5" /></button>{dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}<ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />{returnToReadingButton(true)}<button type="button" onClick={toggleFocusMode} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-ui bg-surface text-sm font-medium text-secondary" aria-label={t("exitFocusMode")}><Focus className="h-4 w-4" /></button></div> : <div className="flex min-h-14 items-center gap-2 px-[3vw] py-2 md:hidden">
+            </div>
+          </div> : null}
+          {focusMode ? <div data-reader-focus-controls className="flex min-h-14 items-center justify-center gap-2 px-[3vw] py-2 md:justify-end">
+            <button type="button" data-reader-header-action="search" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary" aria-label={t("search")} title={t("search")}><Search className="h-5 w-5" /></button>
+            {dataSource.mode === "remote" ? <ReadingListButton conversationId={conversation.id} compact /> : null}
+            <ReaderKeyboardHelp zh={resolvedLocale === "zh-CN"} />
+            {returnToReadingButton(true)}
+            <ReaderHeaderActionRail expanded={desktopActionsExpanded} onExpandedChange={setDesktopActionsExpanded}
+              actions={headerActions.filter(action => ["return-to-reading", "save-position", "annotations", "conversation-files"].includes(action.id))}
+              triggerLabel={t("more")} closeLabel={t("collapseActions")} />
+            <button type="button" onClick={toggleFocusMode} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-ui bg-surface px-3 text-sm font-medium text-secondary" aria-label={t("exitFocusMode")} title={t("exitFocusMode")}><Focus className="h-4 w-4" /><span className="hidden md:inline">{t("exitFocusMode")}</span></button>
+          </div> : <div className="flex min-h-14 flex-wrap items-center gap-x-2 px-[3vw] py-2 md:hidden">
             <MobileSidebarTrigger
               onOpen={() => isOffline ? onOpenLibrary?.() : workspace.embedded ? workspace.openMobileSidebar() : setMobileSidebarOpenSignal((value) => value + 1)}
             />
-            <div className={`min-w-0 flex-1 overflow-hidden transition-opacity duration-150 ${mobileActionsExpanded ? "pointer-events-none opacity-0" : "opacity-100"}`}>
-              <h1 className="truncate text-[15px] font-semibold text-primary">{conversation.display_title || conversation.title}</h1>
-              <p className="truncate text-xs text-secondary">{loadedLabel}</p>
+            <div className="contents">
+              <ConversationTagStrip compact conversationId={conversationId} offline={isOffline} title={conversation.display_title || conversation.title} positionLabel={currentMessageLabel} />
             </div>
             {!mobileActionsExpanded ? <button type="button" onClick={() => { void openUtilityPanel("search"); }} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-ui bg-surface text-secondary" aria-label={t("search")} title={t("search")}><Search className="h-5 w-5" /></button> : null}
+            {returnToReadingButton(true)}
             <button type="button" data-reader-more-actions="true" data-reader-mobile-more-actions="true" onClick={() => setMobileActionsExpanded(true)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--text)] text-[var(--surface)]" aria-label={t("more")} title={t("more")}><MoreHorizontal className="h-5 w-5" /></button>
           </div>}
-          {!focusMode && (dataSource.mode === "remote" || dataSource.mode === "offline") ? <div className="px-[3vw] md:hidden"><ConversationTagStrip conversationId={conversationId} offline={isOffline} /></div> : null}
           {tocReturnError ? (
             <div className="flex flex-wrap items-center gap-2 border-t border-ui bg-[var(--danger-soft)] px-[3vw] py-2 text-sm text-[var(--danger)]" role="alert" data-testid="reader-return-to-toc-origin-error">
               <span className="min-w-0 flex-1">{tocReturnError}</span>
-              <button type="button" onClick={() => void returnToTocOrigin()} className="shrink-0 rounded-md border border-[var(--danger)]/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={navigationStatus === "loading"}>{resolvedLocale === "zh-CN" ? "重试返回" : "Retry return"}</button>
-              <button type="button" onClick={() => void locateTocOriginMessage()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle" disabled={navigationStatus === "loading"}>{resolvedLocale === "zh-CN" ? "定位原消息" : "Locate message"}</button>
+              <button type="button" onClick={() => void returnToTocOrigin()} className="shrink-0 rounded-md border border-[var(--danger)]/30 px-2 py-1 text-xs font-medium hover:bg-surface" disabled={returnBusy}>{resolvedLocale === "zh-CN" ? "重试返回" : "Retry return"}</button>
+              <button type="button" onClick={() => void locateTocOriginMessage()} className="shrink-0 rounded-md border border-ui px-2 py-1 text-xs font-medium text-primary hover:bg-subtle" disabled={returnBusy}>{resolvedLocale === "zh-CN" ? "定位原消息" : "Locate message"}</button>
             </div>
           ) : null}
           {navigationStatus === "loading" ? <div className="border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-accent" role="status">{t("locating")}</div> : null}
@@ -3413,7 +3445,7 @@ export function ConversationReader({
               {navigationTargetIsAttachment ? <button type="button" onClick={() => void refreshAttachmentReferences()} className="shrink-0 rounded-md border border-ui bg-surface px-2 py-1 text-xs font-medium text-primary hover:bg-subtle">{resolvedLocale === "zh-CN" ? "刷新文件引用" : "Refresh file references"}</button> : null}
             </div>
           ) : null}
-          {!focusMode && searchNavigation ? <div className="flex min-w-0 items-center gap-2 border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-primary" role="status">
+          {searchNavigation ? <div className="flex min-w-0 items-center gap-2 border-t border-ui bg-subtle px-[3vw] py-2 text-sm text-primary" role="status">
             <span className="min-w-0 flex-1 truncate font-medium">{searchNavigation.query}</span>
             <span className="shrink-0 text-xs text-secondary">{searchNavigation.index + 1} / {searchNavigation.targets.length}</span>
             <button type="button" onClick={() => void navigateSearchResult(Math.max(0, searchNavigation.index - 1))} disabled={searchNavigation.index === 0} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-surface disabled:opacity-40" aria-label={resolvedLocale === "zh-CN" ? "上一个匹配" : "Previous match"}><ChevronUp className="h-4 w-4" /></button>
@@ -3567,7 +3599,7 @@ export function ConversationReader({
                       turnLead={isTurnLead}
                       turnMessageCount={turn?.messageIds.length ?? 1}
                       hiddenByTurn={turnCollapsed && !isTurnLead}
-                      onToggleTurn={isTurnLead && turn ? () => toggleTurnCollapsed(turn.key) : undefined}
+                      onToggleTurn={isTurnLead && turn ? turnToggleHandlers.get(turn.key) : undefined}
                       selected={selectedMessageIds.has(message.id)}
                       onSelectedChange={!canManageCanonical ? undefined : (selected) => {
                         setSelectedMessageIds((current) => {
@@ -3695,7 +3727,7 @@ export function ConversationReader({
       <MobileReaderSheet open={utilityPanel === "files" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "当前对话文件" : "Conversation files"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel conversationId={conversation.id} initialAttachmentId={fileSearchAttachmentId} searchReplayKey={searchReplayKey} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} onInsert={insertConversationAttachment} /> : <OfflineConversationFilesPanel conversationId={conversation.id} initialAttachmentId={fileSearchAttachmentId} searchReplayKey={searchReplayKey} onLocate={async (target) => { setUtilityPanel(null); await navigateToTarget(target); }} />}
       </MobileReaderSheet>
-      {!focusMode && (showShare || showExport || showSearch || showTags || showUpdates) ? (
+      {(showSearch || (!focusMode && (showShare || showExport || showTags || showUpdates))) ? (
         <ReaderUtilityDrawer active={!sourceEditorTarget} label={showSearch ? t("search") : showShare ? t("shareConversation") : showTags ? (resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags") : showUpdates ? (resolvedLocale === "zh-CN" ? "新增消息" : "New messages") : t("export")} onClose={closeDesktopUtilityPanels} restoreFocus={restoreDesktopUtilityFocus}>
             <div className="flex h-full min-w-0 w-full overflow-hidden">
               {showSearch ? <ConversationSearchPanel active={!sourceEditorTarget} conversationId={conversation.id} dataSource={dataSource} sourceKey={readerSourceKey} initialState={searchPanelState} onStateChange={setSearchPanelState} onNavigate={handleSearchNavigate} onClose={() => setShowSearch(false)} onPrepareRetry={onPrepareSearchRetry} /> : <ReaderPanelShell title={showShare ? t("shareConversation") : showTags ? (resolvedLocale === "zh-CN" ? "对话标签" : "Conversation tags") : showUpdates ? (resolvedLocale === "zh-CN" ? "新增消息" : "New messages") : t("export")} closeLabel={t("close")} onClose={closeDesktopUtilityPanels}>
@@ -3713,7 +3745,7 @@ export function ConversationReader({
       <MobileReaderSheet open={utilityPanel === "updates" && !sourceEditorTarget} onOpenChange={(open) => { if (!open && !sourceEditorTarget) setUtilityPanel(null); }} title={resolvedLocale === "zh-CN" ? "新增消息" : "New messages"} restoreFocus={restoreMobileUtilityFocus} header={<div className="flex items-center justify-between"><h2 className="text-base font-semibold">{resolvedLocale === "zh-CN" ? "新增消息" : "New messages"}</h2><button type="button" onClick={() => setUtilityPanel(null)} className="h-10 w-10 rounded-lg text-secondary hover:bg-subtle" aria-label={t("close")}><X className="mx-auto h-5 w-5" /></button></div>}>
         <div className="reader-aux-scroll min-h-0 flex-1 overflow-y-auto"><NewMessagesPanel conversationId={conversation.id} onNavigate={(messageId) => { setUtilityPanel(null); void navigateToTarget({ messageId, source: "message-action" }); }} /></div>
       </MobileReaderSheet>
-      {!focusMode && showFiles ? (
+      {showFiles ? (
         <FloatingWorkspacePanel
           storageKey="chat-reader:conversation-files-workspace-floating-v2"
           placement="reader-floating"
@@ -3722,6 +3754,7 @@ export function ConversationReader({
           closeLabel={t("close")}
           resetLabel={resolvedLocale === "zh-CN" ? "重置文件窗口位置" : "Reset file window position"}
           onClose={() => setShowFiles(false)}
+          restoreFocus={restoreDesktopUtilityFocus}
         >
           {dataSource.capabilities.attachments === "manage" ? <ConversationFilesPanel
               conversationId={conversation.id}
@@ -3752,8 +3785,9 @@ export function ConversationReader({
         requestedView={searchParams?.get("annotation_view") === "notebook" ? "notebook" : undefined}
         searchReplayKey={searchReplayKey}
         repository={annotationRepository}
-        open={annotationsOpen && !focusMode && !sourceEditorTarget}
+        open={annotationsOpen && !sourceEditorTarget}
         onOpenChange={setAnnotationsOpenPreservingAnchor}
+        restoreFocus={restoreDesktopUtilityFocus}
         onNavigate={navigateToTarget}
       />
       {canManageCanonical ? <ConversationSplitWorkspace

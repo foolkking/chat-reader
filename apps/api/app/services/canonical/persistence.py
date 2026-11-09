@@ -22,7 +22,7 @@ from app.models.render_block import RenderBlock
 from app.models.source_artifact import SourceArtifact
 from app.models.source_message_ref import SourceMessageRef
 from app.services.canonical.block_builder import build_basic_render_blocks
-from app.services.adaptive_import.archive_sources import archive_member_stream
+from app.services.adaptive_import.archive_sources import archive_member_stream, archive_missing_member
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.assets.asset_store import get_asset_store
 from app.services.assets.scanner import (
@@ -811,6 +811,7 @@ def _persist_canjson_attachments(
     from app.services.adaptive_import.memory_budget import checkpoint
 
     mapping: dict[str, uuid.UUID] = {}
+    verified_missing_archives: set[str] = set()
     for raw in draft.attachments:
         checkpoint()
         if not isinstance(raw, dict) or raw.get("record_type") != "attachment":
@@ -831,7 +832,8 @@ def _persist_canjson_attachments(
         asset: AssetObject | None = None
         detected_mime = _optional_text(raw.get("detected_mime_type"))
         scan_status = "not_available"
-        if archive_attachment:
+        missing_archive_attachment = archive_attachment and archive_missing_member(import_record, raw, verified_missing_archives)
+        if archive_attachment and not missing_archive_attachment:
             store = get_asset_store()
             archive = source = None
             staged = None
@@ -922,7 +924,7 @@ def _persist_canjson_attachments(
             source_type="adaptive_zip" if archive_attachment else "canjson",
             source_attachment_id=source_id,
             metadata_=metadata,
-            resolution_status="resolved" if asset else "unresolved",
+            resolution_status="resolved" if asset else "missing" if missing_archive_attachment else "unresolved",
         )
         db.add(attachment)
         lane = ((import_record.analysis_summary or {}).get("commit_options") or {}).get("image_lane_width")

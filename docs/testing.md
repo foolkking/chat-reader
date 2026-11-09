@@ -1,5 +1,19 @@
 # Testing
 
+## Reading interaction / missing ZIP candidate — 2026-11-09
+
+Local source-hashed static/synthetic checks and an isolated full Next build
+passed; [the record](execution/READING_INTERACTION_ZIP_FIXES_2026-11-09.md)
+states their adapters and limits. Full exact-source CI is pending.
+The completion review adds the required `reader-interaction-browser.mjs`
+step and its result/screenshots to Web quality evidence: twelve viewport ×
+locale × theme interaction combinations, six gesture/performance samples and
+the real 3s/30s Return lifecycle. Its 34/150/250-ms performance thresholds are
+unchanged; it does not replace any of the existing 14 gates or 64+12+4 traces.
+New API missing-resource/security tests remain in the full API suite.
+Each CI dispatch has a fresh 50-minute minimum first-read boundary.
+No real-user ZIP replay or recurring schedule is part of this authorization.
+
 ## Current exact-source acceptance — bounded ZIP and reading tools — 2026-11-09
 
 Exact `d61b9c69004c3c482fd915fd6f77481fa1920ae7`, CI `42522644855` attempt 1:

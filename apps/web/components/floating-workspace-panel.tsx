@@ -2,6 +2,7 @@
 
 import { GripHorizontal, Maximize2, Paperclip, X } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useDialogFocus } from "./use-dialog-focus";
 
 type Geometry = { x: number; y: number; width: number; height: number };
 type DragMode = "move" | "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
@@ -22,6 +23,7 @@ export function FloatingWorkspacePanel({
   placement = "floating",
   testId = "floating-source-workspace",
   children,
+  restoreFocus,
 }: {
   storageKey: string;
   title: string;
@@ -33,10 +35,12 @@ export function FloatingWorkspacePanel({
   placement?: WorkspacePlacement;
   testId?: string;
   children: ReactNode;
+  restoreFocus?: () => HTMLElement | null;
 }) {
   const [geometry, setGeometry] = useState<Geometry | null>(null);
   const geometryRef = useRef<Geometry | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
+  useDialogFocus({ open: Boolean(restoreFocus), rootRef: panelRef, onClose, restoreFocus, modal: false });
   const dragRef = useRef<{ mode: DragMode; x: number; y: number; geometry: Geometry } | null>(null);
   const desktop = () => window.innerWidth >= (placement === "left-overlay" ? 1024 : 768);
 
@@ -149,6 +153,9 @@ export function FloatingWorkspacePanel({
     <section
       data-testid={testId}
       aria-label={title}
+      role="dialog"
+      aria-modal="false"
+      tabIndex={-1}
       ref={panelRef}
       className={`fixed inset-x-0 bottom-0 top-14 z-[115] flex min-h-0 flex-col overflow-hidden border-t border-ui bg-surface shadow-2xl ${placement === "left-overlay" ? "lg:inset-auto lg:left-0 lg:top-0 lg:h-[100dvh] lg:w-[clamp(560px,32vw,720px)] lg:rounded-none lg:border-b-0 lg:border-l-0 lg:border-r lg:border-t" : "md:inset-auto md:rounded-lg md:border"}`}
       style={geometry && typeof window !== "undefined" && desktop()

@@ -167,7 +167,7 @@ async function startProbe(anchor: Locator, preDefaultWheel = false) {
         viewerVisible: Boolean(document.querySelector('[data-testid="attachment-viewer-shell"]')),
         otherScroll: Array.from(document.querySelectorAll<HTMLElement>('[data-reader-scroll-root="true"]')).filter(other => other !== root).map(other => other.scrollTop),
         mounted: root.querySelectorAll("[data-block-index]").length,
-        measuredRows: Array.from(root.querySelectorAll<HTMLElement>('[data-virtualized-block-list="true"] > [data-index]'))
+        measuredRows: Array.from(root.querySelectorAll<HTMLElement>('[data-virtualized-block-list="true"] [data-reader-virtual-slot] > [data-index]'))
           .map(row => [Number(row.dataset.index), row.getBoundingClientRect().height]),
         cells: Array.from(root.querySelectorAll(".attachment-gallery-media")).map(cell => {
           const rect = cell.getBoundingClientRect(); return [rect.width, rect.height];

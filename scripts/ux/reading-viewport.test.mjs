@@ -77,6 +77,25 @@ test("one owner corrects the actual delta once for all messages in one scroller"
   release2(); assert.equal(f.observers[0].closed, true);
   assert.equal(f.root.style.overflowAnchor, "auto");
 });
+test("ordinary wheel bursts batch geometry reads, but still cancel stale navigation synchronously", () => {
+  const f = fixture(), release = f.observeReadingViewport(f.content(f.root));
+  f.frame();
+  let reads = 0;
+  const original = f.root.target.getBoundingClientRect;
+  f.root.target.getBoundingClientRect = () => { reads++; return original(); };
+  for (let i = 0; i < 24; i++) {
+    f.root.dispatchEvent(new Event("wheel"));
+    f.root.scrollTop += 5;
+    f.root.dispatchEvent(new Event("scroll"));
+  }
+  assert.equal(reads, 0, "No synchronous layout read per ordinary pointer/wheel sample.");
+  assert.equal(f.cancelled.length, 24, "Every input still invalidates the old navigation immediately.");
+  f.frame();
+  assert.ok(reads <= 3, `One batched geometry sample, saw ${reads} reads`);
+  assert.equal(f.root.scrollTop, 120);
+  assert.equal(f.corrections.length, 0);
+  release();
+});
 test("discrete image collapse reconciles in the DOM commit, before RAF or ResizeObserver", () => {
   const f = fixture(), content = f.content(f.root), release = f.observeReadingViewport(content);
   f.root.flowTop = 5600; f.root.scrollTop = 5480; f.frame();

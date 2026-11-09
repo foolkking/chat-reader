@@ -743,6 +743,7 @@ const virtualizer = ({ count, getItemKey }) => ({
 const assistant = compileComponent("../../apps/web/features/conversations/assistant-message-renderer.tsx", {
   "../../lib/image-display": compileComponent("../../apps/web/lib/image-display.ts", {}),
   "./reading-viewport": { observeReadingViewport: () => () => {} },
+  "./reader-render-policy": compileComponent("../../apps/web/features/conversations/reader-render-policy.ts", {}),
   "../attachments/preview-adapter-registry": { resolveAttachmentCapability: () => ({ viewerKind: null }) },
   "@tanstack/react-virtual": { defaultRangeExtractor: () => [], useVirtualizer: virtualizer, useWindowVirtualizer: virtualizer },
   "../../components/preferences-provider": { useTranslations: () => key => key },

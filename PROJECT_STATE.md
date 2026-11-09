@@ -1,5 +1,26 @@
 # Project State
 
+## Release candidate — reading interactions / missing ZIP assets — 2026-11-09
+
+Candidate: formula-cost virtualization, scoped hover/geometry reads,
+canonical current-message header/title tag editing, focus-mode search and
+timed Return presentation; missing ZIP resources import as honest fileless
+attachments with warnings, without bypassing integrity/scanner/source checks.
+No migration or portable/offline schema change. Local static/synthetic checks
+and limitations: [implementation record](docs/execution/READING_INTERACTION_ZIP_FIXES_2026-11-09.md).
+Local lint/typecheck, 2174 Web cases, 186 API cases (3 Windows symlink skips),
+13 Reader and 12 Viewer browser groups passed. Full Next build passed in a
+task-local, source-hashed copy with the same installed dependency versions;
+earlier cross-drive/junction build failures remain in the record.
+Full PWA/64-frame CI remains unrun.
+The current release below is unchanged. The subsequent user goal authorizes
+completion review, corrections, commit/push and full CI through successful
+deployment. Each dispatch requires a fresh **50-minute minimum before the
+first status read**; no schedules or real-user source replay.
+[Review](docs/execution/ux-audit-reading-interaction-zip-2026-11-09.md)
+identified missing CI wiring and incomplete language/theme cross-coverage;
+the additional required browser gate does not replace the original matrix.
+
 ## Current release — bounded ZIP and reading tools — 2026-11-09
 
 Current application **`d61b9c69004c3c482fd915fd6f77481fa1920ae7`**, full CI

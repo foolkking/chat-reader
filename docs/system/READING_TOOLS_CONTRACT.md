@@ -7,6 +7,58 @@ and independent artifact/runtime checks. See
 Synthetic browser acceptance is not authenticated production or physical-device
 acceptance; the original November 8 implementation/audit records remain historical.
 
+## Local reading-interaction candidate — 2026-11-09
+
+This section describes the release candidate, **not** the deployed
+`d61b9c6`. Local synthetic verification is recorded in
+[the implementation receipt](../execution/READING_INTERACTION_ZIP_FIXES_2026-11-09.md).
+The subsequent user goal authorizes full CI and deployment after independent
+acceptance; first status reads must wait 50 minutes after each dispatch.
+No schedule or real-user source replay is authorized. The required mounted
+Reader regression supplements, not replaces, the original reading matrix.
+
+- The header has title and, on its second line, the current message's canonical
+  ordinal / complete conversation count, followed by tags. An unknown location
+  displays `—`, never a loaded-window count or guessed ordinal. Clicking the
+  title opens the existing tag editor; hover/focus has an accessible management
+  hint. Desktop shows two tags, mobile one, with an overflow disclosure.
+  Offline tags are read-only. Tag management remains in quick actions and
+  `/tags`, not the primary left navigation.
+- Focus mode permits the existing search drawer/sheet and attachment/annotation
+  destinations without exiting focus or reopening the sidebar. Escape/close
+  restore a live, visible opener without scrolling. Floating workspaces use
+  the existing focus lifecycle in nonmodal mode; they do not trap body reading
+  or consume Escape from a newer modal. New navigation and real user input
+  retire the previous focus-width restoration before it can reclaim position.
+  On mobile, the focus More menu opens above its controls inside the viewport;
+  the controls reserve space for the two navigation edge buttons and can wrap.
+- A successful index/TOC jump emphasizes Return for three seconds; the top
+  entry becomes ordinary, then hides at thirty seconds unless focused or busy.
+  Its original checkpoint remains in More in normal/focus modes. A later
+  successful jump renews presentation, not the origin. Failures retain their
+  explanatory retry controls; auth/conversation changes retire timers/state.
+  A separate single-flight guard remains busy through final exact restoration,
+  not just target loading, and ignores late results from a retired identity.
+- Messages with math and more than eight semantic display units use the
+  existing block virtualizer. Math overscan stays eight; plain-text thresholds
+  and adaptive overscan are unchanged. Detection is a memoized cost hint, not
+  a Markdown rewrite. Tables/formulas, selection pins, block identities and
+  source copying remain intact, including Share/Offline/Together renderers.
+  Math rows use stable eight-slot sibling groups to bound style invalidation.
+  Newly virtualized replies up to 160 units keep only empty shells for absent
+  units; larger replies keep active groups only. Empty shells have no content,
+  block identity or geometry. Measured gaps, selection pins and actual mounted
+  rows remain owned by the existing virtualizer.
+- Message hover affects only the operation toolbar's opacity. It does not
+  reveal internal sorting fields or resize prose. Stable turn handlers preserve
+  memo boundaries. Geometry samples reuse rectangles only within the same
+  synchronous read; ordinary wheel bursts batch through the existing frame
+  owner, while explicit navigation release/discrete layout compensation remain
+  synchronous. No stale cross-frame rectangle cache is introduced.
+- Opt-in `__chatReaderPerfProbe.markdownParseTotal` counts actual Markdown
+  pipeline executions, not React render attempts, and records no content.
+  KaTeX still emits MathML and retains its safety configuration.
+
 ## Image percentage and import default
 
 - The large size dialog is replaced by a non-modal root-portal disclosure above

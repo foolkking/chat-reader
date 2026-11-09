@@ -1,0 +1,29 @@
+{
+  "startedAt": "2026-11-09T06:38:55.599Z",
+  "completedAt": "2026-11-09T06:39:08.050Z",
+  "phase": "final",
+  "sources": {
+    "apps/web/features/attachments/attachment-viewer.tsx": "58b4c058ebae4c8b79fa77d82bf89bd32ab393385187afe984847099f9714d23",
+    "apps/web/features/conversations/conversation-reader.tsx": "4bc6532868553e5d1761c80683a1f3c3e250dc83147a3d7e54f53d4f35cbf543",
+    "apps/web/components/mobile-reader-sheet.tsx": "43b2a892402ce59bdd01e8bb848ecbc874d05731bcbffabfb0ecaee1bd23bf6d",
+    "apps/web/components/use-dialog-focus.ts": "10518e18130060eb4fd337ab1d690f530c09b47d2cbaca6a9debaf17769e1656",
+    "scripts/ux/attachment-modal-browser.mjs": "72e2d1d4b0df53ce4cfb3959ad5c44c90de9d77effee045586dcb226e0b17aa7"
+  },
+  "status": "passed",
+  "passed": [
+    "zh-CN: mount actual mobile files sheet and viewer",
+    "zh-CN: Escape closes only Viewer and restores retained panel, filter and selection",
+    "zh-CN: second Escape closes the returned sheet and restores its opener",
+    "zh-CN: composing and child-handled Escape do not close either modal",
+    "zh-CN: close button returns to the same preview without remounting the panel",
+    "zh-CN: touch close does not deliver a deferred outside click to the drawer",
+    "en-US: mount actual mobile files sheet and viewer",
+    "en-US: Escape closes only Viewer and restores retained panel, filter and selection",
+    "en-US: second Escape closes the returned sheet and restores its opener",
+    "en-US: composing and child-handled Escape do not close either modal",
+    "en-US: close button returns to the same preview without remounting the panel",
+    "en-US: touch close does not deliver a deferred outside click to the drawer"
+  ],
+  "count": 12,
+  "boundary": "Mounted Chromium/React/Vaul/Viewer with synthetic query data; not API/auth/offline-package acceptance."
+}

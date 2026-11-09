@@ -672,11 +672,12 @@ export type AdaptiveArchiveIssue = {
 export type AdaptiveArchiveMember = {
   member_id: string;
   path: string;
-  zip_path: string;
+  zip_path: string | null;
   extension: string;
-  byte_size: number;
-  compressed_size: number;
-  crc: number;
+  byte_size: number | null;
+  compressed_size: number | null;
+  crc: number | null;
+  availability?: "missing" | "available";
   kind: "markdown" | "file" | string;
   use: "conversation" | "attachment" | "excluded" | string;
   owner_document_ids: string[];
@@ -696,6 +697,7 @@ export type AdaptiveArchiveSummary = {
   classification_version: number;
   document_count: number;
   attachment_count: number;
+  missing_attachment_count?: number;
   excluded_count: number;
   unreferenced_count: number;
   issue_count: number;

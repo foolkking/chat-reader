@@ -202,24 +202,31 @@ async function settleTargetMedia(target: HTMLElement, timeoutMs: number, tokenIs
 export function captureScrollAnchor(
   root: HTMLElement | null,
   readingLineOffset: number,
+  bounds = new Map<HTMLElement, DOMRect>(),
 ): ScrollAnchorSnapshot | null {
-  const rootTop = root?.getBoundingClientRect().top ?? 0;
+  // A synchronous sample only: never retain rectangles across a scroll/write.
+  const measure = (element: HTMLElement) => {
+    let rect = bounds.get(element);
+    if (!rect) { rect = element.getBoundingClientRect(); bounds.set(element, rect); }
+    return rect;
+  };
+  const rootTop = root ? measure(root).top : 0;
   const readingLine = rootTop + readingLineOffset;
   const scope: ParentNode = root ?? document;
   const articles = Array.from(scope.querySelectorAll<HTMLElement>("article[data-message-id]"));
   const article = articles.find((item) => {
-    const rect = item.getBoundingClientRect();
+    const rect = measure(item);
     return rect.top <= readingLine && rect.bottom >= readingLine;
-  }) ?? articles.find((item) => item.getBoundingClientRect().bottom > readingLine) ?? articles.at(-1);
+  }) ?? articles.find((item) => measure(item).bottom > readingLine) ?? articles.at(-1);
   if (!article) return null;
   const blocks = Array.from(article.querySelectorAll<HTMLElement>("[data-block-index]"));
   const block = blocks.find((item) => {
-    const rect = item.getBoundingClientRect();
+    const rect = measure(item);
     return rect.top <= readingLine && rect.bottom >= readingLine;
   }) ?? blocks.reduce<HTMLElement | null>((nearest, item) => {
     if (!nearest) return item;
-    const itemRect = item.getBoundingClientRect();
-    const nearestRect = nearest.getBoundingClientRect();
+    const itemRect = measure(item);
+    const nearestRect = measure(nearest);
     const itemDistance = itemRect.bottom < readingLine
       ? readingLine - itemRect.bottom
       : itemRect.top - readingLine;
@@ -232,7 +239,7 @@ export function captureScrollAnchor(
   if (!target.id) return null;
   return {
     targetId: target.id,
-    offset: target.getBoundingClientRect().top - rootTop,
+    offset: measure(target).top - rootTop,
     messageId: article.dataset.messageId ?? null,
     messageVersionId: article.dataset.messageVersionId ?? null,
     blockId: target.dataset.blockId ?? null,

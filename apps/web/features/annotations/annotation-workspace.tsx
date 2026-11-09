@@ -9,6 +9,7 @@ import type { AnnotationColor, AnnotationCreateInput, AnnotationRead, Annotation
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import { useInteractionDialog } from "../../components/interaction-dialog-provider";
 import { usePreferences } from "../../components/preferences-provider";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 import { getRenderedBlocks, subscribeRenderedBlocks } from "../conversations/rendered-block-registry";
 import { annotationNavigationTarget } from "../conversations/reader-locator-target";
 import { resolveTextAnchorRange } from "../conversations/text-anchor";
@@ -79,7 +80,7 @@ function useScopedState<T>(scopeKey: number, initial: T) {
 
 export type AnnotationLeaveGuard = { needsConfirmation: () => boolean; confirm: () => Promise<boolean> };
 
-export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, requestedView, searchReplayKey = 0, repository, open, onOpenChange, onNavigate, leaveGuardRef }: {
+export function AnnotationWorkspace({ conversationId, messages, activeMessageId, initialAnnotationId, requestedView, searchReplayKey = 0, repository, open, onOpenChange, onNavigate, leaveGuardRef, restoreFocus }: {
   conversationId: string;
   messages: MessageListItem[];
   activeMessageId: string | null;
@@ -91,6 +92,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   onOpenChange: (value: boolean) => void;
   onNavigate: (target: NavigateTarget) => NavigationResult | Promise<NavigationResult>;
   leaveGuardRef?: RefObject<AnnotationLeaveGuard | null>;
+  restoreFocus?: () => HTMLElement | null;
 }) {
   const queryClient = useQueryClient();
   const dialog = useInteractionDialog();
@@ -164,6 +166,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const [desktop, setDesktop] = useState(false);
   const [panel, setPanel] = useState<PanelState>({ x: 0, y: 72, width: 400, height: 620 });
   const panelRef = useRef(panel);
+  const workspaceRootRef = useRef<HTMLElement | null>(null);
   const dragRef = useRef<{ type: DragType; startX: number; startY: number; panel: PanelState } | null>(null);
   const focusedMessageId = activeMessageId;
 
@@ -426,6 +429,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
     if (!await confirmLeave()) return;
     setExpanded(false); onOpenChange(false);
   };
+  useDialogFocus({ open, rootRef: workspaceRootRef, onClose: () => { void closeWorkspace(); }, restoreFocus, modal: expanded });
   const resetFilters = () => {
     setAnnotationQuery(""); setCurrentMessageOnly(false); setTypeFilter("all"); setColorFilter("all"); setStatusFilter("all");
   };
@@ -1208,7 +1212,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       onAddToNotebook={() => void addAnnotationToNotebook(contextAnnotation.annotation)}
       onSelect={() => { setSelectionMode(true); setSelectedAnnotationIds((current) => new Set(current).add(contextAnnotation.annotation.id)); setContextAnnotation(null); }}
     /> : null}
-    {open && !expanded ? <section className={`fixed z-[110] flex min-h-0 flex-col overflow-hidden border border-ui bg-raised shadow-2xl ${panelPinned && desktop ? "inset-y-0 left-0 w-[min(22rem,32vw)] rounded-none" : "inset-x-2 bottom-2 top-16 rounded-md md:inset-auto"}`} style={desktop && !panelPinned ? { left: panel.x, top: panel.y, width: panel.width, height: panel.height } : undefined} aria-label="批注" data-annotation-mode={panelPinned && desktop ? "docked" : "floating"}>
+    {open && !expanded ? <section ref={workspaceRootRef} role="dialog" aria-modal="false" tabIndex={-1} className={`fixed z-[110] flex min-h-0 flex-col overflow-hidden border border-ui bg-raised shadow-2xl ${panelPinned && desktop ? "inset-y-0 left-0 w-[min(22rem,32vw)] rounded-none" : "inset-x-2 bottom-2 top-16 rounded-md md:inset-auto"}`} style={desktop && !panelPinned ? { left: panel.x, top: panel.y, width: panel.width, height: panel.height } : undefined} aria-label={zh ? "批注" : "Annotations"} data-annotation-mode={panelPinned && desktop ? "docked" : "floating"}>
       <header className="flex h-12 shrink-0 touch-none items-center gap-2 border-b border-ui px-3" onPointerDown={(event) => { if (panelPinned || (event.target as HTMLElement).closest("button")) return; beginPanelDrag("move", event); }}><MessageSquareText className="h-4 w-4 text-accent" /><h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{zh ? "批注" : "Annotations"}</h2>{desktop && !panelPinned ? <button type="button" onClick={resetPanelPosition} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "重置批注窗口位置" : "Reset annotation window position"} title={zh ? "重置位置" : "Reset position"}><RotateCcw className="h-4 w-4" /></button> : null}{desktop ? <button type="button" onClick={() => { const next = !panelPinned; setPanelPinned(next); void setAnnotationDefaultPosition(next ? "docked" : "floating"); }} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={panelPinned ? (zh ? "恢复为浮窗" : "Return to floating") : (zh ? "固定到左侧栏" : "Dock to the left")} title={panelPinned ? (zh ? "恢复为浮窗" : "Return to floating") : (zh ? "固定到左侧栏" : "Dock to the left")}>{panelPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}</button> : null}<button type="button" onClick={() => setExpanded(true)} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "展开批注阅读" : "Expand annotation reading"} title={zh ? "展开阅读" : "Expand reading"}><Maximize2 className="h-4 w-4" /></button><button type="button" onClick={() => void closeWorkspace()} className="flex h-8 w-8 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header>
       {annotationExport}
       {viewTabs}
@@ -1231,7 +1235,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       <div className="min-h-0 flex-1 overflow-y-auto p-3">{writeFeedback}{view === "notebook" ? notebookContent : <>{readFeedback("annotations")}{reads.annotations.data !== null ? <AnnotationList items={visibleAnnotations} editable={true} commentsLoading={commentStorage === "loading"} messages={messages} focusedAnnotationId={focusedAnnotationId} selectionMode={selectionMode} selectedAnnotationIds={selectedAnnotationIds} onToggleSelected={toggleSelected} onNavigate={navigateFromAnnotation} readCommentDraft={(id) => commentDraftsRef.current[id]} onDraftChange={changeCommentDraft} onSaveComment={saveComment} onDiscardComment={discardCommentDraft} onCheckComments={() => reload("annotations")} onStyle={updateAnnotationStyle} onDelete={(annotation) => deleteAnnotations(new Set([annotation.id]))} onAddToNotebook={addAnnotationToNotebook} /> : null}</>}</div>
       {desktop ? <><button type="button" role="separator" aria-orientation="vertical" className="absolute bottom-0 left-0 top-12 z-20 w-2 cursor-col-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-left", event)} onDoubleClick={() => { const next = defaultPanel(); panelRef.current = next; setPanel(next); writeStoredPanel(next); }} aria-label="从左侧调整批注窗口宽度" /><button type="button" role="separator" aria-orientation="vertical" className="absolute bottom-0 right-0 top-12 z-20 w-2 cursor-col-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-right", event)} aria-label="从右侧调整批注窗口宽度" /><button type="button" role="separator" aria-orientation="horizontal" className="absolute bottom-0 left-0 right-6 z-20 h-2 cursor-row-resize touch-none bg-transparent hover:bg-[var(--accent)] focus:bg-[var(--accent)] focus:outline-none" onPointerDown={(event) => beginPanelDrag("resize-bottom", event)} aria-label="调整批注窗口高度" /><button type="button" className="absolute bottom-0 right-0 z-30 flex h-6 w-6 cursor-se-resize items-end justify-end p-0.5 text-secondary" onPointerDown={(event) => beginPanelDrag("resize-bottom-right", event)} aria-label="调整批注窗口大小"><Maximize2 className="h-3.5 w-3.5" /></button></> : null}
     </section> : null}
-    {open && expanded ? <section className="fixed inset-0 z-[150] flex min-h-0 flex-col bg-raised" aria-label={zh ? "批注阅读" : "Annotation reading"} data-annotation-mode="expanded">
+    {open && expanded ? <section ref={workspaceRootRef} role="dialog" aria-modal="true" tabIndex={-1} className="fixed inset-0 z-[150] flex min-h-0 flex-col bg-raised" aria-label={zh ? "批注阅读" : "Annotation reading"} data-annotation-mode="expanded">
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-ui px-4"><MessageSquareText className="h-5 w-5 text-accent" /><h2 className="min-w-0 flex-1 truncate text-base font-semibold">{zh ? "批注阅读" : "Annotation reading"}</h2><button type="button" onClick={() => setExpanded(false)} className="inline-flex h-9 items-center gap-1 rounded-md border border-ui px-2 text-xs text-secondary hover:bg-subtle" aria-label={zh ? "退出展开阅读" : "Exit expanded reading"}><Minimize2 className="h-4 w-4" />{zh ? "退出" : "Exit"}</button><button type="button" onClick={() => void closeWorkspace()} className="flex h-9 w-9 items-center justify-center rounded-md text-secondary hover:bg-subtle" aria-label={zh ? "关闭" : "Close"}><X className="h-4 w-4" /></button></header>
       {annotationExport}
       {viewTabs}

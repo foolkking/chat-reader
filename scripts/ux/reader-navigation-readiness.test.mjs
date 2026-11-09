@@ -60,6 +60,7 @@ const refDefaults = {
   scrollDirectionRef: null, scrollIntentSequenceRef: 1, lastPersistedIntentRef: 1, lastReaderUserIntentAtRef: 0,
   preferenceStableAnchorRef: null, lastSavedSignatureRef: "", latestStablePositionRef: null,
   cancelPreferenceTransitionRef: () => {},
+  focusTransitionRef: 0, focusAnchorRef: null,
   pointerDraggingRef: false, pointerDragMovedRef: false, pointerScrollTopRef: 0, activeMessageIdRef: null, activeBlockIdRef: null,
   pointerDragStartScrollTopRef: 0,
   locatePulseTimerRef: null, lastNavigationTargetRef: null, previousTurnAnchorRef: null, nextTurnAnchorRef: null,
@@ -73,7 +74,7 @@ const inputNames = [...Object.keys(refDefaults), "loadedWindowRef", "scrollConta
   "windowQuery", "positionQuery", "targetMessageId", "savedPosition", "loadedWindow", "initialPaintReady", "mergedIntoConversationId",
   "queryClient", "setInitialPaintReady", "setLoadedWindow", "setPendingTargetMessageId", "setNavigationStatus", "setNavigationFailureReason",
   "setActiveMessageId", "setActiveBlockId", "setLocatePulse", "setReadingSaveError",
-  "setTocReturnPoint", "setTocReturnError", "pruneMessageState", "setCollapsedTurnKeys"];
+  "setTocReturnPoint", "setTocReturnError", "setReturnCueStartedAt", "pruneMessageState", "setCollapsedTurnKeys"];
 const compiled = compile(`function InspectReadiness(input) {
   const { ${inputNames.join(", ")} } = input;
   const conversation = conversationQuery.data, messages = loadedWindow.items, isOffline = dataSource.mode === "offline";
@@ -194,6 +195,7 @@ function fixture({ cold = false, mode = "remote", saved = null, positionError = 
     setActiveBlockId: value => { state.activeBlockIdRef.current = value; change("activeBlockId", value); },
     setTocReturnPoint: value => change("tocReturnPoint", value),
     setTocReturnError: value => change("tocReturnError", value),
+    setReturnCueStartedAt: value => change("returnCueStartedAt", value),
     setCollapsedTurnKeys: value => {
       state.collapsedTurnKeysRef.current = value;
       dirty = true;
@@ -458,6 +460,8 @@ for (const takeover of ["wheel", "scrollbar", "navigation", "Viewer"]) {
       await f.setInitial(); await f.frame();
       let cancellations = 0;
       f.state.cancelPreferenceTransitionRef.current = () => { cancellations++; };
+      f.state.focusAnchorRef.current = { targetId: "synthetic-old-focus-anchor" };
+      const focusGeneration = f.state.focusTransitionRef.current;
       if (takeover === "wheel") f.userWheel(60);
       else if (takeover === "scrollbar") { f.root.emit("pointerdown"); f.window.emit("pointerup"); }
       else if (takeover === "navigation") await f.navigate();
@@ -466,6 +470,8 @@ for (const takeover of ["wheel", "scrollbar", "navigation", "Viewer"]) {
         f.result().markReaderScrollIntent("down"); f.root.emit("pointerdown");
       }
       assert.equal(cancellations, takeover === "Viewer" ? 0 : 1);
+      assert.equal(f.state.focusTransitionRef.current, focusGeneration + (takeover === "Viewer" ? 0 : 1));
+      assert.equal(f.state.focusAnchorRef.current === null, takeover !== "Viewer");
     } finally { f.dispose(); }
   });
 }

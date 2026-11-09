@@ -1,5 +1,13 @@
 # 事实证据索引
 
+## 阅读交互 / 缺附件 ZIP — 2026-11-09（本地候选）
+
+[合成证据](reading-interaction-zip-2026-11-09/README.md)保留Reader交互/公式
+逐帧数据、Viewer焦点回归与截图；只含合成内容。完整Next隔离构建通过，
+早期跨盘失败留档；CI/PWA/生产仍未验收。后续授权与审查修正另见
+[完成度审查](../execution/ux-audit-reading-interaction-zip-2026-11-09.md)，
+不能把原本地证据改写成新发布已经通过。
+
 ## 有界 ZIP 与阅读工具发布 — 2026-11-09
 
 [脱敏汇总](release-2026-11-09/bounded-zip-deployment-summary.json)与

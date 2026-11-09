@@ -370,6 +370,9 @@ function ArchiveLedgerRow({
             {archive.document_count} {tr("个文档")} · {archive.attachment_count} {tr("个附件")} · {archive.excluded_count} {tr("项排除")}
             {archive.issue_count ? ` · ${archive.issue_count} ${tr("条提示")}` : ""}
           </span>
+          {archive.missing_attachment_count ? <span className="mt-1 block text-xs text-[var(--warning)]">
+            {tr("缺少 {0} 个附件，正文仍可导入；缺失引用将保留。", archive.missing_attachment_count ?? 0)}
+          </span> : null}
         </button>
         <button type="button" className="btn-secondary min-h-9 px-3 text-xs" onClick={() => setOpen((value) => !value)} aria-label={tr("查看 ZIP 内容")}>
           {open ? tr("收起内容") : tr("查看内容")}
@@ -478,7 +481,7 @@ function ArchiveMemberRow({
       <div className="min-w-0">
         <p className="truncate text-sm text-primary" title={member.path}>{member.path}</p>
         <p className="text-xs text-secondary">
-          {formatBytes(member.byte_size)} · {member.reference_count} {tr("次引用")}
+          {member.availability === "missing" ? tr("文件缺失 · 保留引用") : formatBytes(member.byte_size ?? 0)} · {member.reference_count} {tr("次引用")}
           {member.manifest_kind ? ` · ${member.manifest_kind}` : ""}
         </p>
       </div>

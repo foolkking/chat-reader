@@ -66,7 +66,7 @@ export function ReaderHeaderActionRail({
     }
   }
 
-  return <div ref={rootRef} className="relative flex shrink-0 items-center" onBlur={event => {
+  return <div ref={rootRef} data-reader-action-rail className="relative flex shrink-0 items-center" onBlur={event => {
     if (expanded && event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) onExpandedChange(false);
   }}>
     <button ref={triggerRef} data-reader-more-actions="true" data-reader-header-more-actions="true" type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { importErrorMessage, importFailureMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
+import { importErrorMessage, importFailureMessage, importWarningMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud } from "lucide-react";
 import Link from "next/link";
@@ -603,15 +603,15 @@ function ImportCompletionSummary({
   return (
     <div role="status" data-testid="import-completion-summary" className="space-y-3 border border-[var(--accent)] bg-[var(--accent-soft)] px-4 py-4 text-sm text-primary">
       <div>
-        <p className="font-semibold text-accent">{tr("导入已完成")}</p>
+        <p className="font-semibold text-accent">{tr(result.warnings.some(warning => /^ZIP missing attachments: \d+\./.test(warning)) ? "已导入，部分附件缺失" : "导入已完成")}</p>
         <p className="mt-1 text-secondary">{tr("已提交 {0} 个对话，共 {1} 条消息。", result.conversation_count, result.message_count)}</p>
       </div>
       {result.warnings.length ? <div className="border-l-2 border-[var(--warning)] pl-3 text-xs text-secondary">
         <p className="font-medium text-primary">{tr("导入提示")} · {result.warnings.length}</p>
-        <ul className="mt-1 list-disc space-y-1 break-words pl-4">{result.warnings.slice(0, 4).map((warning, index) => <li key={index}>{warning}</li>)}</ul>
+        <ul className="mt-1 list-disc space-y-1 break-words pl-4">{result.warnings.slice(0, 4).map((warning, index) => <li key={index}>{importWarningMessage(warning, tr)}</li>)}</ul>
         {result.warnings.length > 4 ? <details className="mt-2" data-testid="import-remaining-warnings">
           <summary className="min-h-11 cursor-pointer content-center font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]">{tr("展开其余 {0} 条提示", result.warnings.length - 4)}</summary>
-          <ul className="list-disc space-y-1 break-words pl-4">{result.warnings.slice(4).map((warning, index) => <li key={index}>{warning}</li>)}</ul>
+          <ul className="list-disc space-y-1 break-words pl-4">{result.warnings.slice(4).map((warning, index) => <li key={index}>{importWarningMessage(warning, tr)}</li>)}</ul>
         </details> : null}
       </div> : null}
       <ImportNoiseReview importId={result.import_id} />

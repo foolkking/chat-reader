@@ -8,14 +8,30 @@ const ts = require("typescript");
 const { Virtualizer } = require("@tanstack/react-virtual");
 const source = readFileSync(new URL("../../apps/web/features/conversations/assistant-message-renderer.tsx", import.meta.url), "utf8");
 const ast = ts.createSourceFile("assistant-message-renderer.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const names = new Set(["useReaderVirtualRowMeasurement", "buildVirtualFlow"]);
+const names = new Set(["useReaderVirtualRowMeasurement", "buildVirtualFlow", "groupVirtualFlowRows"]);
 const helpers = ast.statements.filter(node => ts.isFunctionDeclaration(node) && names.has(node.name?.text));
-assert.equal(helpers.length, 2);
+assert.equal(helpers.length, 3);
 const compiled = ts.transpileModule(helpers.map(node => node.getText(ast)).join("\n"), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
-const { useReaderVirtualRowMeasurement, buildVirtualFlow } = new Function("useCallback",
-  `${compiled}\nreturn {useReaderVirtualRowMeasurement, buildVirtualFlow};`)(callback => callback);
+const { useReaderVirtualRowMeasurement, buildVirtualFlow, groupVirtualFlowRows } = new Function("useCallback",
+  `${compiled}\nreturn {useReaderVirtualRowMeasurement, buildVirtualFlow, groupVirtualFlowRows};`)(callback => callback);
+
+test("math groups keep bounded stable empty slots without rendering extra formulas or changing gaps", () => {
+  const rows = [7, 8, 9, 31].map(index => ({ item: { index, key: `block-${index}`, start: index * 92, end: (index+1)*92 }, gapBefore: index === 31 ? 1800 : 0 }));
+  const groups = groupVirtualFlowRows(rows, true);
+  assert.deepEqual(groups.map(g => g.key), [0, 1, 3]);
+  assert.ok(groups.every(g => g.slots.length === 8));
+  assert.deepEqual(groups.flatMap(g => g.slots.filter(Boolean)), rows);
+  assert.equal(groups[0].slots[7], rows[0]);
+  assert.equal(groups[1].slots[0], rows[1]);
+  assert.deepEqual(groupVirtualFlowRows(rows, false), [{ key: 0, slots: rows }]);
+  const medium = groupVirtualFlowRows(rows, true, 72);
+  assert.equal(medium.length, 9);
+  assert.deepEqual(medium.flatMap(g => g.slots.filter(Boolean)), rows);
+  const huge = groupVirtualFlowRows(rows, true, 10_000);
+  assert.equal(huge.length, 3, "Large histories never allocate thousands of empty shells.");
+});
 
 function row(index, height = 117.28125) {
   return { isConnected: true, height,

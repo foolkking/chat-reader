@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { defaultRangeExtractor, useVirtualizer, useWindowVirtualizer } from "@tanstack/react-virtual";
 import { imageFlowHeight, imageTargetSize } from "../../lib/image-display";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
@@ -25,6 +25,7 @@ import { detectChatGptRichText, withChatGptRichTextProfile } from "../rich-markd
 import { findLeadingThinkingBlocks } from "./thinking-summary";
 import { observeReadingViewport } from "./reading-viewport";
 import { resolveAttachmentCapability } from "../attachments/preview-adapter-registry";
+import { hasReaderMath, virtualizeReaderBlocks } from "./reader-render-policy";
 
 export function AssistantMessageRenderer({
   message,
@@ -67,8 +68,9 @@ export function AssistantMessageRenderer({
     () => withChatGptRichTextProfile(resolveCrossBlockFootnotes(resolveCrossBlockBareBracketMath(visibleBlocks, currentText)), richTextProfile),
     [currentText, richTextProfile, visibleBlocks],
   );
-  const shouldVirtualize = message.block_count > 160 || message.char_count > 50_000;
   const displayUnits = useMemo(() => groupAttachmentBlocks(semanticBlocks), [semanticBlocks]);
+  const hasMath = useMemo(() => hasReaderMath(semanticBlocks), [semanticBlocks]);
+  const shouldVirtualize = virtualizeReaderBlocks(message.block_count, message.char_count, displayUnits.length, hasMath);
   const flowRef = useRef<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
     if (flowRef.current) return observeReadingViewport(flowRef.current);
@@ -100,9 +102,9 @@ export function AssistantMessageRenderer({
       {shouldVirtualize ? (
         <div className="reader-block-slot" style={leadingThinking ? slotGapStyle(blockGapVariable(null, semanticBlocks[0])) : undefined}>
           {scrollRootMode === "window" ? (
-            <WindowVirtualizedBlocks messageId={message.id} blocks={semanticBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+            <WindowVirtualizedBlocks hasMath={hasMath} messageId={message.id} blocks={semanticBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
           ) : (
-            <ElementVirtualizedBlocks messageId={message.id} blocks={semanticBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
+            <ElementVirtualizedBlocks hasMath={hasMath} messageId={message.id} blocks={semanticBlocks} isAssistant={isAssistant} highlightTargetId={highlightTargetId} tasksByBlock={tasksByBlock} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />
           )}
         </div>
       ) : displayUnits.map((unit, index) => {
@@ -284,13 +286,13 @@ function estimateDisplayUnit(unit: DisplayUnit | undefined, metrics: ReaderBlock
   return unit.blocks.reduce((height, block) => height + estimateReaderBlockSize(block, metrics), 0);
 }
 
-function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle }: VirtualizedBlocksProps) {
+function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle, hasMath }: VirtualizedBlocksProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
   const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
-  const overscan = useAdaptiveReaderOverscan(containerRef, "element");
+  const overscan = useAdaptiveReaderOverscan(containerRef, "element", hasMath);
   const units = useMemo(() => groupAttachmentBlocks(blocks), [blocks]);
   const indexByBlock = useMemo(() => new Map(units.flatMap((unit, index) => unit.blocks.map(block => [block.block_index, index] as const))), [units]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
@@ -357,32 +359,35 @@ function ElementVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTar
       data-virtualized-block-count={blocks.length}
       className="relative w-full"
     >
-      {virtualFlow.rows.map(({ item, gapBefore }) => {
+      {groupVirtualFlowRows(virtualFlow.rows, hasMath, units.length).map(group => <div key={group.key} data-reader-virtual-chunk>
+      {group.slots.map((row, slot) => {
+        if (!row) return <div key={slot} data-reader-virtual-slot />;
+        const { item, gapBefore } = row;
         const unit = units[item.index];
         const block = unit?.blocks[0];
         if (!block) return null;
         return (
-          <Fragment key={String(item.key)}>
+          <div key={hasMath ? slot : String(item.key)} data-reader-virtual-slot>
             {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
             <VirtualBlockRow itemIndex={item.index} measureElement={measureRow} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
               {unit.kind === "attachment-group" ? <AttachmentBlockGroup messageId={messageId} blocks={unit.blocks} previousBlock={null} hasLeadingContent={false} /> : <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />}
             </VirtualBlockRow>
-          </Fragment>
+          </div>
         );
-      })}
+      })}</div>)}
       {virtualFlow.gapAfter > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
       {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
   );
 }
 
-function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle }: VirtualizedBlocksProps) {
+function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTargetId, tasksByBlock, pendingTaskKeys, onTaskToggle, hasMath }: VirtualizedBlocksProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
   const [layoutMetrics, setLayoutMetrics] = useState<ReaderBlockLayoutMetrics>(DEFAULT_READER_BLOCK_LAYOUT_METRICS);
   const [pinnedVirtualIndexes, setPinnedVirtualIndexes] = useState<Set<number>>(() => new Set());
   const [selectionPinnedIndexes, setSelectionPinnedIndexes] = useState<Set<number>>(() => new Set());
-  const overscan = useAdaptiveReaderOverscan(containerRef, "window");
+  const overscan = useAdaptiveReaderOverscan(containerRef, "window", hasMath);
   const units = useMemo(() => groupAttachmentBlocks(blocks), [blocks]);
   const indexByBlock = useMemo(() => new Map(units.flatMap((unit, index) => unit.blocks.map(block => [block.block_index, index] as const))), [units]);
   const rangeExtractor = useCallback((range: Parameters<typeof defaultRangeExtractor>[0]) => {
@@ -447,19 +452,22 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
       data-virtualized-block-count={blocks.length}
       className="relative w-full"
     >
-      {virtualFlow.rows.map(({ item, gapBefore }) => {
+      {groupVirtualFlowRows(virtualFlow.rows, hasMath, units.length).map(group => <div key={group.key} data-reader-virtual-chunk>
+      {group.slots.map((row, slot) => {
+        if (!row) return <div key={slot} data-reader-virtual-slot />;
+        const { item, gapBefore } = row;
         const unit = units[item.index];
         const block = unit?.blocks[0];
         if (!block) return null;
         return (
-          <Fragment key={String(item.key)}>
+          <div key={hasMath ? slot : String(item.key)} data-reader-virtual-slot>
             {gapBefore > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${gapBefore}px` }} /> : null}
             <VirtualBlockRow itemIndex={item.index} measureElement={measureRow} gapAfter={units[item.index + 1] ? blockGapVariable(unit.blocks.at(-1) ?? null, units[item.index + 1]?.blocks[0] ?? null) : null}>
               {unit.kind === "attachment-group" ? <AttachmentBlockGroup messageId={messageId} blocks={unit.blocks} previousBlock={null} hasLeadingContent={false} /> : <BlockSlot messageId={messageId} block={block} previousBlock={null} hasLeadingContent={false} isAssistant={isAssistant} highlightTargetId={highlightTargetId} taskItems={tasksByBlock.get(block.block_index)} pendingTaskKeys={pendingTaskKeys} onTaskToggle={onTaskToggle} />}
             </VirtualBlockRow>
-          </Fragment>
+          </div>
         );
-      })}
+      })}</div>)}
       {virtualFlow.gapAfter > 0 ? <div data-reader-virtual-spacer="true" aria-hidden="true" style={{ height: `${virtualFlow.gapAfter}px` }} /> : null}
       {virtualItems.length === 0 && blocks.length > 0 ? <div data-virtual-gap-recovery="true" className="flex min-h-[12rem] items-center justify-center px-6 py-12 text-sm text-secondary" role="status" aria-live="polite">正在恢复内容…</div> : null}
     </div>
@@ -467,6 +475,7 @@ function WindowVirtualizedBlocks({ messageId, blocks, isAssistant, highlightTarg
 }
 
 type VirtualizedBlocksProps = {
+  hasMath: boolean;
   messageId: string;
   blocks: RenderBlockRead[];
   isAssistant: boolean;
@@ -535,7 +544,7 @@ function useVisibleVirtualGapRecovery(
       index: item.index,
       start: item.start,
       end: item.end,
-      mounted: Boolean(container.querySelector<HTMLElement>(`:scope > [data-index="${item.index}"]`)),
+      mounted: Boolean(container.querySelector<HTMLElement>(`[data-reader-virtual-slot] > [data-index="${item.index}"]`)),
     }));
     const coverage = inspectReaderViewportCoverage(
       geometries,
@@ -545,7 +554,7 @@ function useVisibleVirtualGapRecovery(
     );
 
     const mountedIntervals = Array.from(
-      container.querySelectorAll<HTMLElement>(":scope > [data-index]"),
+      container.querySelectorAll<HTMLElement>("[data-reader-virtual-slot] > [data-index]"),
     ).map((element) => {
       const rect = element.getBoundingClientRect();
       return { start: rect.top, end: rect.bottom };
@@ -582,7 +591,7 @@ function useVisibleVirtualGapRecovery(
     // Re-measure only mounted rows. TanStack's measure() clears all known row
     // sizes, so it must not be used for a coordinate/coverage repair. The
     // margin update and changed row measurements already recompute the range.
-    container.querySelectorAll<HTMLElement>(':scope > [data-index]').forEach((row) => measureElement(row));
+    container.querySelectorAll<HTMLElement>('[data-reader-virtual-slot] > [data-index]').forEach((row) => measureElement(row));
   }, [
     containerRef,
     firstIndex,
@@ -599,9 +608,11 @@ function useVisibleVirtualGapRecovery(
 function useAdaptiveReaderOverscan(
   containerRef: React.RefObject<HTMLDivElement | null>,
   mode: "element" | "window",
+  hasMath: boolean,
 ): number {
   const [overscan, setOverscan] = useState(8);
   useEffect(() => {
+    if (hasMath) return;
     const container = containerRef.current;
     const root = mode === "window"
       ? window
@@ -627,8 +638,8 @@ function useAdaptiveReaderOverscan(
       root.removeEventListener("scroll", onScroll);
       if (settleTimer !== null) window.clearTimeout(settleTimer);
     };
-  }, [containerRef, mode]);
-  return overscan;
+  }, [containerRef, mode, hasMath]);
+  return hasMath ? 8 : overscan;
 }
 
 function useVirtualMessageRegistration(
@@ -793,7 +804,7 @@ function useVirtualLayoutMeasurements(
 
     const measureMountedRows = () => {
       remeasureFrame = 0;
-      container.querySelectorAll<HTMLElement>(":scope > [data-index]").forEach((row) => measureElement(row));
+      container.querySelectorAll<HTMLElement>("[data-reader-virtual-slot] > [data-index]").forEach((row) => measureElement(row));
     };
     const resetForLayoutChange = () => {
       resetMeasurements();
@@ -926,6 +937,27 @@ function buildVirtualFlow(items: VirtualFlowItem[], scrollMargin: number, totalS
     rows,
     gapAfter: Math.max(0, totalSize - cursor),
   };
+}
+
+function groupVirtualFlowRows(rows: ReturnType<typeof buildVirtualFlow>["rows"], hasMath: boolean, count = 0) {
+  const groups: Array<{ key: number; slots: Array<(typeof rows)[number] | null> }> = [];
+  // Newly virtualized medium-size math replies can keep tiny empty shells
+  // stable. Never allocate this skeleton for unbounded historical block lists.
+  if (hasMath && count > 0 && count <= 160) {
+    for (let key = 0; key < Math.ceil(count / 8); key++) groups.push({ key, slots: Array(8).fill(null) });
+    for (const row of rows) groups[Math.floor(row.item.index / 8)].slots[row.item.index % 8] = row;
+    return groups;
+  }
+  for (const row of rows) {
+    const key = hasMath ? Math.floor(row.item.index / 8) : 0;
+    let group = groups.at(-1);
+    if (group?.key !== key) { group = { key, slots: hasMath ? Array(8).fill(null) : [] }; groups.push(group); }
+    if (hasMath) group.slots[row.item.index % 8] = row;
+    else group.slots.push(row);
+  }
+  // Stable small sibling groups bound Blink's subtree style invalidation when
+  // a virtual row mounts. They do not add rows, alter gaps/keys or hide MathML.
+  return groups;
 }
 
 function useReaderVirtualRowMeasurement(virtualizer: {
