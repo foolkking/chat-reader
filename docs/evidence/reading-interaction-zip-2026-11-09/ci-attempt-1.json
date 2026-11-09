@@ -1,0 +1,23 @@
+{
+  "run_id": 42577788205,
+  "sha": "f5c4dcb965a71ec92a3f02f0455bc650edcf78c6",
+  "accepted_at": "2026-11-09T07:11:57.899363+00:00",
+  "first_read_at": "2026-11-09T08:01:58.353565+00:00",
+  "minimum_first_read_delay_minutes": 50,
+  "conclusion": "failure",
+  "api": {"passed": 6199, "optional_skipped": 3},
+  "web_node": {"passed": 2175},
+  "reader_interaction_browser": {"passed": 19},
+  "focused_online": {"passed": 44, "failed": 1},
+  "settings": {"passed": 466, "failed": 4},
+  "performance": {"job": "success", "candidate_passed": 9, "baseline_passed": 6, "baseline_failed": 3},
+  "release_images": "not_built",
+  "official_artifacts_verified_sha256": {
+    "settings-quality-evidence": "37017109459257787e9afc4f96cd51b1f17ab598a6e11b73e10e7cdc2231dc2d",
+    "release-a-quality-evidence": "d4328ef77717a4b5c2f7fd3c9b84f4ed61b8630fb2781a6cd263a2cd6ef12af2",
+    "reading-performance-comparison": "bc7ade64d0f4600f405fafdf2b3c5d0ab5e6830d63cda3dab5b95aa8ec748486"
+  },
+  "observed_failure": "Five tests waited for the old annotation region or Chinese-only accessible name; the current panel is a localized non-modal dialog.",
+  "correction": "Update stale locators in three E2E files without weakening actions, assertions, timeouts or thresholds.",
+  "local_correction_checks": {"lint": "passed", "typecheck": "passed", "annotation_return_node_passed": 105, "e2e_collected_not_executed": 22}
+}

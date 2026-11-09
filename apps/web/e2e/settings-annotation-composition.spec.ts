@@ -59,7 +59,7 @@ for (const width of [375, 1440]) test(`${width}px: real wrapped text position, b
     expect(saved[0].start_offset).toBe(expected);
     expect(saved[0].quote).toBe(Array.from(paragraph).slice(expected, expected + 160).join(""));
     await page.getByRole("button", { name: "View", exact: true }).click();
-    const panel = page.getByRole("region", { name: "批注", exact: true });
+    const panel = page.getByRole("dialog", { name: "Annotations", exact: true });
     await expect(panel.locator(`#annotation-${saved[0].id}`)).toBeVisible();
     await panel.getByRole("button", { name: "Manage", exact: true }).click();
     await panel.getByLabel("Annotation export scope").selectOption("selected");
@@ -104,7 +104,7 @@ test("together cancels a tab, pane and close transition without losing a failed 
     const a = page.locator(`[data-together-pane="${ids[0]}"]`), b = page.locator(`[data-together-pane="${ids[1]}"]`);
     await expect(a).toBeVisible(); await expect(b).toBeVisible();
     await a.getByRole("button", { name: "Annotations and bookmarks" }).click();
-    const panel = page.getByRole("region", { name: "批注", exact: true });
+    const panel = page.getByRole("dialog", { name: "Annotations", exact: true });
     await panel.locator('[data-annotation-tab="notebook"]').click();
     const title = panel.getByRole("textbox", { name: "Notebook title", exact: true });
     await expect(title).toBeEnabled();

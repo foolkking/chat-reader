@@ -53,7 +53,7 @@ for (const [width, choice, locale] of [[375, "local", "zh-CN"], [768, "server", 
       await expect.poll(async () => (await readLocal(page, userId)).outbox.length).toBe(0);
       await page.setViewportSize({ width, height: 900 });
       const openReview = async () => {
-        const annotationPanel = page.locator('section[aria-label="批注"]');
+        const annotationPanel = page.getByRole("dialog", { name: locale === "zh-CN" ? "批注" : "Annotations", exact: true });
         if (await annotationPanel.isVisible()) await annotationPanel.getByRole("button", { name: /^(Close|关闭)$/ }).click();
         if (width < 768 && !await page.getByRole("button", { name: /Settings|设置/, exact: true }).isVisible()) await page.getByRole("button", { name: /Open sidebar|打开侧栏/, exact: true }).click();
         await page.getByRole("button", { name: /Settings|设置/, exact: true }).click();
@@ -188,7 +188,7 @@ test("annotation merge removes its conflict and persists the canonical comment",
     await page.goto(`${baseURL}/library?conversationId=${conversationId}&annotations=open`);
     await page.getByRole("button", { name: /Download offline copy|下载离线副本/, exact: true }).click();
     await expect.poll(async () => (await readLocal(page, userId)).conversations.length).toBe(1);
-    const annotationPanel = page.locator('section[aria-label="批注"]');
+    const annotationPanel = page.getByRole("dialog", { name: "Annotations", exact: true });
     // This conflict targets a known annotation, independently of which message
     // the real Reader position makes Current. Do not depend on initial geometry.
     await annotationPanel.getByRole("button", { name: "Bookmarks", exact: true }).click();
@@ -206,7 +206,7 @@ test("annotation merge removes its conflict and persists the canonical comment",
     expect((await context.request.patch(`${baseURL}/api/annotations/${annotation.id}`, { headers, data: { base_revision: 1, comment_markdown: "Synthetic server comment" } })).status()).toBe(200);
     await context.setOffline(false);
     await expect.poll(async () => (await markers(page, userId)).length).toBe(1);
-    await page.locator('section[aria-label="批注"]').getByRole("button", { name: "Close", exact: true }).click();
+    await annotationPanel.getByRole("button", { name: "Close", exact: true }).click();
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("button", { name: "Offline & sync" }).click();
     const center = page.getByRole("dialog", { name: "Offline & sync" });

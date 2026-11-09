@@ -398,8 +398,9 @@ test("far annotation jump and refresh restore hydrate heavy content", async ({ p
   await page.waitForTimeout(4600);
   await expect.poll(() => readingRangeError(targetBlock)).toBeLessThanOrEqual(24);
 
-  const annotationRegion = page.getByRole("region", { name: /批注|Annotations/ });
-  await annotationRegion.getByRole("button", { name: /关闭|Close/ }).click();
+  const annotationPanel = page.getByRole("dialog", { name: /^(批注|Annotations)$/ });
+  await expect(annotationPanel).toBeVisible();
+  await annotationPanel.getByRole("button", { name: /^(关闭|Close)$/ }).click();
   await expect(targetBlock).toBeVisible();
   await page.waitForTimeout(200);
   await expect.poll(() => readingRangeError(targetBlock)).toBeLessThanOrEqual(24);
