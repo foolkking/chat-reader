@@ -1,5 +1,22 @@
 # Testing
 
+## Current exact-source acceptance — reading interactions / missing ZIP — 2026-11-09
+
+Exact **865b0a6**, full CI **42594459199** attempt1: six jobs, five official
+artifact ZIPs and independent source/image/runtime checks passed. API6199/3
+optional skips, Web Node2175, Web14 gates, Settings470+isolated restore1,
+new Reader19 groups, image slider6, candidate performance9. The immutable
+diagnostic baseline passed8/failed1; do not report it as fully green.
+All original64+12+4 reading traces and cold Viewer shell passed the unchanged
+verifier. Default PWA190 passed/822 environment-routed skips; import12/1.
+Five exact-image real-memory cases passed with no additional swap/OOM/restart
+and unchanged64MiB workspace-growth limit. No source or gate thresholds were
+relaxed. Each of three dispatches waited50minutes before first status reads.
+[Receipt](execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md) records
+the two CI failures, operational preflight correction, deployment and remaining
+real-user/physical-device/production-backup-restore limits. Below are preserved
+historical checkpoints, not outstanding release gates for this exact revision.
+
 ## Reading interaction / missing ZIP candidate — 2026-11-09
 
 Local source-hashed static/synthetic checks and an isolated full Next build

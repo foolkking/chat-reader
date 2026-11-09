@@ -1,5 +1,23 @@
 # 已知风险与不确定性
 
+## Current verification boundaries — reading interactions — 2026-11-09
+
+Exact **865b0a6**, CI **42594459199** and five official artifacts accepted;
+deployment and independent runtime/three-backup preservation checks passed.
+Schema0060 unchanged; no cleanup, direct rollback or real-user ZIP replay.
+See [receipt](../execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md).
+New missing-resource catalogs/attachments may exist: never assume old workers
+can consume them or automatically restore old data. Final free-space snapshot
+7,819,320KiB is not future capacity admission.
+The first maintenance aborted on operational verifier representation/order,
+not a production mount mutation; exact original containers were safely resumed
+before corrected preflight and redeployment. Failure evidence remains intact.
+Physical devices/clipboard/screen readers, authenticated production interaction,
+explicit original ZIP retry, real offline updates, sustained load and production
+backup restoration remain unverified. The immutable performance baseline had
+one diagnostic failure; candidate9/9 passed. Older pointers below are history.
+
+
 ## Current verification boundaries — 2026-11-09
 
 Exact **d61b9c6**, CI **42522644855**, five official artifacts and independent

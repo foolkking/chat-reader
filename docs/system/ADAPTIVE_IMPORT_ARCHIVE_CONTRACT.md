@@ -1,11 +1,11 @@
 # Adaptive Import ZIP Contract
 
-Status synchronized **2026-11-09**: exact source `d61b9c6` passed full CI
-`42522644855` and independent artifact/runtime acceptance, and is deployed
+Status synchronized **2026-11-09**: exact source `865b0a6` passed full CI
+`42594459199` and independent artifact/runtime acceptance, and is deployed
 with single head/current `20261108_0060`. The disk-backed extension and retained
 small-ZIP path passed all five real-memory synthetic cases without changing
 the 64-MiB workspace-growth limit. See the
-[release receipt](../execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md).
+[release receipt](../execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md).
 Original user ZIPs still require an explicit user retry, not an automatic replay.
 The historical [small-ZIP receipt](../execution/SMALL_ZIP_MEMORY_RELEASE_2026-11-04.md)
 does not substitute for the new exact-source acceptance.
@@ -73,7 +73,7 @@ edits for explicit discard/review, never silently rebases them. Unsaved ZIP
 choices block canonical import and conflicting overview actions, and join the
 existing dialog-close protection; collapsing the ledger does not lose them.
 
-**Release candidate, 2026-11-09 (not yet deployed):** missing relative
+**Deployed in `865b0a6`, 2026-11-09:** missing relative
 resources and missing manifest-declared assets are nonblocking warnings.
 The normal mapping/review/commit workflow remains explicit; no ignore checkbox
 or automatic commit is added. Preview reports the unique missing count; a

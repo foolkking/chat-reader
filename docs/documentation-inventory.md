@@ -1,5 +1,16 @@
 # Markdown 文档台账
 
+## 阅读交互 / 缺附件 ZIP 精确发布 — 2026-11-09
+
+新增 `execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md` 和
+`evidence/release-2026-11-09/reading-interaction-zip-deployment-summary.json`。
+同步状态/导航、部署/环境/风险、测试、两份行为合同、审查/实施及记录索引。
+绑定865b0a6、CI42594459199、三轮50分钟规则、最终备份/独立部署验收。
+首轮CI旧定位、第二轮手机帮助越界、首次维护验证器误报和恢复均保留。
+八份已修改文档只插入本轮说明，原字节保留，暂存不夹带用户清理/审查文件。
+原候选/待CI文字保留为历史检查点，由最新发布摘要明确覆盖状态。
+
+
 ## 阅读交互 / 缺附件 ZIP 本地修复 — 2026-11-09
 
 新增 `execution/READING_INTERACTION_ZIP_FIXES_2026-11-09.md`；

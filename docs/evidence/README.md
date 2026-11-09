@@ -1,5 +1,14 @@
 # 事实证据索引
 
+## 阅读交互 / 缺附件 ZIP 已发布 — 2026-11-09
+
+[脱敏机器回执](release-2026-11-09/reading-interaction-zip-deployment-summary.json)
+与[发布记录](../execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md)
+绑定865b0a6、CI42594459199、五份制品、19组新增Reader、原稳定性轨迹、
+三份备份和独立运行态复核。保留两轮失败、首次维护保护中止/恢复。
+以下本地候选/旧生产均是历史检查点，真实用户资料仍未自动回放。
+
+
 ## 阅读交互 / 缺附件 ZIP — 2026-11-09（本地候选）
 
 [合成证据](reading-interaction-zip-2026-11-09/README.md)保留Reader交互/公式

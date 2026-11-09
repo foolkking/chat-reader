@@ -1,21 +1,20 @@
 # Reading tools and read-together workspace
 
-Released **2026-11-09** with exact source `d61b9c6`, full CI `42522644855`
+Released **2026-11-09** with exact source `865b0a6`, full CI `42594459199`
 and independent artifact/runtime checks. See
 [Project State](../../PROJECT_STATE.md) and the
-[release receipt](../execution/BOUNDED_ZIP_IMPORT_RELEASE_2026-11-09.md).
+[release receipt](../execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md).
 Synthetic browser acceptance is not authenticated production or physical-device
 acceptance; the original November 8 implementation/audit records remain historical.
 
-## Local reading-interaction candidate — 2026-11-09
+## Reading-interaction behavior — deployed 2026-11-09
 
-This section describes the release candidate, **not** the deployed
-`d61b9c6`. Local synthetic verification is recorded in
+This section is deployed in `865b0a6`. Local synthetic verification is recorded in
 [the implementation receipt](../execution/READING_INTERACTION_ZIP_FIXES_2026-11-09.md).
-The subsequent user goal authorizes full CI and deployment after independent
-acceptance; first status reads must wait 50 minutes after each dispatch.
-No schedule or real-user source replay is authorized. The required mounted
-Reader regression supplements, not replaces, the original reading matrix.
+Exact-source CI, independent artifact and runtime acceptance are complete.
+All three dispatches observed the 50-minute first-read boundary. No schedule or
+real-user source replay was used. The required mounted Reader regression
+supplements, not replaces, the original reading matrix.
 
 - The header has title and, on its second line, the current message's canonical
   ordinal / complete conversation count, followed by tags. An unknown location

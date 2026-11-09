@@ -1,5 +1,25 @@
 # Project State
 
+## Current release — reading interaction / missing ZIP assets — 2026-11-09
+
+Application **`865b0a6e381bb3d5c2afba06b5c3aa4c59a61092`**, full CI
+**42594459199**: six jobs, five official artifacts and independent acceptance.
+API6199, Web Node2175, Web14 gates, Settings470+restore1, Reader19 groups,
+candidate performance9, original64+12+4 traces and cold Viewer, five real-memory cases.
+Formula reading, canonical header/tags, focus tools, timed Return and nonblocking
+missing-asset ZIP imports are deployed; no migration/offline format change.
+Final maintenance **18:48:16–18:55:46 +08:00**; runtime recheck **18:56:43**,
+backup/preservation **19:01:13**. Schema **20261108_0060** unchanged.
+First maintenance safely aborted on task-verifier mount-order/JSON comparison;
+old services restored before corrected preflight/redeployment. Full history in
+[receipt](docs/execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md).
+Three verified backups and three image generations remain, no cleanup/direct
+rollback. Final free-space snapshot **7,819,320 KiB**. Original config/PG retained.
+No real-user ZIP replay or authenticated production UI acceptance.
+The candidate/pending/previous-current sections below are historical checkpoints;
+this release and receipt supersede their status, not their preserved evidence.
+
+
 ## Release candidate — reading interactions / missing ZIP assets — 2026-11-09
 
 Candidate: formula-cost virtualization, scoped hover/geometry reads,

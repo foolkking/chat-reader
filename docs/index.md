@@ -1,5 +1,17 @@
 # 文档导航
 
+## 当前发布：阅读交互 / 缺附件 ZIP — 2026-11-09
+
+现役 **865b0a6 / schema0060**，完整CI **42594459199** 六项、五份制品、
+14项Web门禁、19组新增Reader和原64+12+4轨迹独立通过。
+18:55:46 +08:00发布验收，18:56:43运行态、19:01:13备份/保全复核通过。
+首次维护保护中止及原服务恢复如实留档；无migration、生产配置替换或清理。
+保留三备份/三代镜像，无直接旧worker回退，不自动重放用户ZIP。
+[完整回执](execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md) /
+[机器证据](evidence/release-2026-11-09/reading-interaction-zip-deployment-summary.json)。
+下方候选、待CI及此前“当前生产”均为历史检查点；本节优先。
+
+
 ## 阅读交互 / 缺附件 ZIP 发布候选 — 2026-11-09
 
 [阅读交互与缺附件 ZIP 实施记录](execution/READING_INTERACTION_ZIP_FIXES_2026-11-09.md)：

@@ -1,5 +1,13 @@
 # 阅读交互 / 缺附件 ZIP — 本地合成证据
 
+## 最终发布状态
+
+精确`865b0a6` / CI42594459199已独立核验并部署，见
+[发布证据](../release-2026-11-09/reading-interaction-zip-deployment-summary.json)
+及[回执](../../execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md)。
+下方本地/未CI/未部署描述保留原检查点，不能覆盖新回执，
+也不因后续发布而把本地适配器变成完整生产验收。
+
 - `reader-browser.json`：13组浏览器结果，含6组完整帧间隔/滚动位置数组、
   实际Markdown流水线解析次数、布局统计、长任务、挂载块数与MathML检查。
   没有删除异常帧；性能门槛仍为P95≤34ms、单长任务≤150ms、总长任务≤250ms。
