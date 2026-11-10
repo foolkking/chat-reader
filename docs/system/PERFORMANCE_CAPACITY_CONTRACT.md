@@ -72,7 +72,7 @@ baseline assertion failure is not relabeled as a pass.
 
 For an unexplained failed budget, manual Reading performance comparison accepts
 an optional full lowercase `diagnostic_ref` SHA. It runs the same baseline and
-that exact failed source with only the plain-10000 case, adding per-cold-run CPU
+that exact failed source through all nine cases in original order, adding per-cold-run CPU
 profiles and browser metric snapshots. The artifact and payload explicitly say
 **diagnostic only**. Profiling affects timing; no result from this opt-in run is
 release acceptance or replaces the original failure. The normal reusable

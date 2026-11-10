@@ -56,6 +56,24 @@ an outdated warning. No cleanup, restart, automated backup or notification
 action is added. Tests and dated execution evidence distinguish these snapshots
 from operational remediation and production validation.
 
+Worktree follow-up (2026-11-11): runtime reads use the existing finite-request
+helper with a 15-second bound including response-body reads and unmount abort.
+Query keys include authentication generation; late retired responses cannot
+populate the active view, and inactive runtime cache entries are not retained.
+Temporary failures keep the same-generation snapshot, but 401/403/404 hide it
+until a successful current read; a later transport error cannot reveal it again.
+An explicit refresh remains available; no automatic mutation is issued.
+
+The default view keeps worker/queue/storage summaries. Zero pending export
+cleanup is silent; unavailable/nonzero cleanup remains visible. Archive task
+history and mail configuration are under **More runtime information**, with a
+closed-summary warning for failed/unknown/unavailable archive records. Labels
+explicitly distinguish application `.cr` archive jobs from host backups.
+Completion does not verify current artifact availability, a download, restore
+success, off-site storage or the separately managed single host backup.
+Historical failed job counts are labelled **Failure records**, not active jobs.
+The bounded API metrics, read-only permission boundary and scan limits are unchanged.
+
 ## Existing operator observability
 
 The current contract combines the Release C request/logging and bounded

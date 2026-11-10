@@ -43,6 +43,8 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "en-US"]] 
       await page.getByRole("button", { name: /Runtime status|运行状态/ }).click();
       const runtime = page.getByRole("region", { name: /Runtime status|运行状态/ });
       await expect(runtime.getByRole("heading", { name: /Task queues|任务队列/ })).toBeVisible();
+      await runtime.locator("summary").filter({ hasText: /More runtime information|更多运行信息/ }).click();
+      await expect(runtime.locator("details")).toContainText(/does not include server backups|不包含服务器备份/);
       await expect(runtime.getByText(/Configured \(delivery not tested\)|已配置（未测试投递）/)).toBeVisible();
       const response = await context.request.get(`${base}/api/admin/runtime-status`);
       expect(response.status()).toBe(200);

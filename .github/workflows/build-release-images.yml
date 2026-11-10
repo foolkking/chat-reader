@@ -211,6 +211,12 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/import-recovery-browser.mjs
 
+      - name: Minimal administrator runtime and bounded read recovery
+        timeout-minutes: 10
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/admin-runtime-browser.mjs
+
       - name: Failed and paused import source repair
         timeout-minutes: 5
         env:
@@ -488,6 +494,8 @@ jobs:
             ${{ runner.temp }}/import-recovery-browser/result.json
             ${{ runner.temp }}/import-recovery-browser/failure.json
             ${{ runner.temp }}/import-recovery-browser/*.png
+            ${{ runner.temp }}/admin-runtime-browser/result.json
+            ${{ runner.temp }}/admin-runtime-browser/*.png
             ${{ runner.temp }}/import-source-repair-browser/result.json
             ${{ runner.temp }}/import-source-repair-browser/failure.json
             ${{ runner.temp }}/import-source-repair-browser/*.png

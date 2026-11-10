@@ -652,16 +652,17 @@ export async function getConversationReaderTurn(
 export async function resolveConversationLocator(
   conversationId: string,
   input: LocatorTargetRequest,
+  signal?: AbortSignal,
 ): Promise<ResolvedLocatorResponse> {
   return fetchJson<ResolvedLocatorResponse>(
     `/api/conversations/${conversationId}/resolve-locator`,
-    jsonRequest("POST", input),
+    { ...jsonRequest("POST", input), signal },
   );
 }
 
 export async function getConversationDialogueIndex(
   conversationId: string,
-  options: { offset?: number; limit?: number; anchorMessageId?: string } = {},
+  options: { offset?: number; limit?: number; anchorMessageId?: string; signal?: AbortSignal } = {},
 ): Promise<DialogueIndexResponse> {
   const params = new URLSearchParams({
     offset: String(options.offset ?? 0),
@@ -670,6 +671,7 @@ export async function getConversationDialogueIndex(
   if (options.anchorMessageId) params.set("anchor_message_id", options.anchorMessageId);
   return fetchJson<DialogueIndexResponse>(
     `/api/conversations/${conversationId}/dialogue-index?${params.toString()}`,
+    { signal: options.signal },
   );
 }
 
@@ -1180,7 +1182,7 @@ export async function reindexSearch(input: { conversationId?: string } = {}): Pr
 
 export async function getConversationToc(
   conversationId: string,
-  options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number; role?: string; query?: string; startOrderKey?: string; endOrderKey?: string } = {},
+  options: { messageId?: string; offset?: number; limit?: number; maxLevel?: number; role?: string; query?: string; startOrderKey?: string; endOrderKey?: string; signal?: AbortSignal } = {},
 ): Promise<TocResponse> {
   const params = new URLSearchParams({
     offset: String(options.offset ?? 0),
@@ -1192,7 +1194,7 @@ export async function getConversationToc(
   if (options.query) params.set("q", options.query);
   if (options.startOrderKey) params.set("start_order_key", options.startOrderKey);
   if (options.endOrderKey) params.set("end_order_key", options.endOrderKey);
-  return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc?${params.toString()}`);
+  return fetchJson<TocResponse>(`/api/conversations/${conversationId}/toc?${params.toString()}`, { signal: options.signal });
 }
 
 export async function queueConversationArchiveExport(

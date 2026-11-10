@@ -13,7 +13,8 @@ test("CPU diagnostics select an explicitly validated failed SHA and cannot be re
   assert.match(workflow, /git cat-file -e "\$READER_DIAGNOSTIC_REF\^\{commit\}"/);
   assert.match(workflow, /diagnostic_args=\(\)[\s\S]*if \[ -n "\$READER_DIAGNOSTIC_REF" \]; then[\s\S]*export E2E_READER_CAPACITY_PROFILE=1/);
   assert.match(workflow, /for phase in baseline candidate/);
-  assert.match(workflow, /diagnostic_args=\(--grep 'plain 10000 messages:'\)/);
+  assert.doesNotMatch(workflow, /diagnostic_args=\(--grep/);
+  assert.match(workflow, /Total: 9 tests in 1 file/);
   assert.match(workflow, /diagnostic-only; not release acceptance/);
   assert.match(harness, /const diagnostic = process\.env\.E2E_READER_CAPACITY_PROFILE === "1"/);
   assert.match(harness, /const cdp = profilePath \? await page\.context\(\)\.newCDPSession\(page\) : null/);

@@ -51,6 +51,7 @@ import {ConversationReader} from ${modulePath("features/conversations/conversati
 import {InteractionDialogProvider} from ${modulePath("components/interaction-dialog-provider.tsx")};
 import {activateProtectedOfflineData} from ${modulePath("lib/offline-db.ts")};
 import {authorizeOfflineAccess} from ${modulePath("lib/offline-access.ts")};
+import {remoteReaderDataSource} from ${modulePath("lib/reader-data-source.ts")};
 const id="synthetic", dense=window.fixtureKind!=="short";
 const messages=Array.from({length:36},(_,i)=>{
  const parts=dense&&i===1?Array.from({length:72},(_,n)=>"Formula "+n+": $x_{"+n+"}^2+y^2=z^2$.\\n\\n$$\\\\sum_{k=1}^{n} k^2=\\\\frac{n(n+1)(2n+1)}{6}$$")
@@ -70,11 +71,13 @@ const turn=(anchor="m0")=>{
  return {conversation_id:id,turn_key:"turn"+start,start_offset:start,end_offset:start+2,total_messages:36,
    items:messages.slice(start,start+2),previous_anchor_message_id:start?"m"+(start-2):null,next_anchor_message_id:start<34?"m"+(start+2):null};
 };
+window.syntheticTurn=turn;
 const index={conversation_id:id,items:messages.map(m=>({message_id:m.id,role:m.role,role_number:Math.floor((m.ordinal+1)/2),ordinal:m.ordinal,
   order_key:m.order_key,preview:"Synthetic message "+m.ordinal,turn_index:m.turn_index})),message_count:36,turn_count:18,limit:36,offset:0,total:36,has_previous:false,has_more:false};
 const toc={conversation_id:id,items:[],limit:100,offset:0,total:0,has_more:false};
 const source={mode:"remote",capabilities:{canonicalManagement:false,attachments:"read-only",share:false,export:false},
- getConversation:async()=>conversation,getReaderTurn:async(_,anchor)=>turn(anchor),
+ getConversation:async()=>conversation,getReaderTurn:async(_,anchor)=>window.fixtureRemoteRequests
+   ?remoteReaderDataSource.getReaderTurn(id,anchor):turn(anchor),
  getDialogueIndex:async()=>index,getToc:async()=>toc,
  getMessageBlocks:async(id)=>messages.find(m=>m.id===id).render_blocks,
  getMessageWindow:async()=>({items:messages,limit:36,offset:0,total:36,has_previous:false,has_more:false}),
@@ -118,9 +121,11 @@ const {chromium,expect}=require("@playwright/test");
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM==="1"?"chromium":"chrome"});
 const results=[], errors=[];
 const touchOnly=process.env.READER_TOUCH_ONLY==="1";
+const requestOnly=process.env.READER_REQUEST_ONLY==="1";
 let current;
 try {
   for(const width of [1440,800,375]) for(const locale of ["en-US","zh-CN"]) for(const theme of ["light","dark"]) {
+    if(requestOnly) continue;
     if(touchOnly&&(width===1440||locale!=="en-US"||theme!=="light")) continue;
     const page=await browser.newPage({viewport:{width,height:900},hasTouch:true});
     current=page;
@@ -396,6 +401,58 @@ try {
       results.push({returnCue:true,focusedExpiry:true,focusMoreCheckpoint:true,originOffset});
     }
     }
+    await page.close();
+  }
+  if(!touchOnly) for(const width of [375,800,1440]) {
+    const page=await browser.newPage({viewport:{width,height:900}});
+    current=page;
+    page.on("pageerror",error=>errors.push(error.stack??error.message));
+    await page.clock.install();
+    await page.addInitScript(()=>{
+      window.fixtureKind="short";window.fixtureRemoteRequests=true;window.hangReaderRequests=true;window.remoteTurnReads=0;
+      const fetch=window.fetch;
+      window.fetch=(url,options)=>{
+        if(String(url).includes("/reader-turn")){
+          window.remoteTurnReads++;
+          // Non-cooperative transport: the real Reader deadline must settle
+          // even if neither the headers nor body ever arrives.
+          if(window.hangReaderRequests) return new Promise(()=>{});
+        }
+        return fetch(url,options);
+      };
+    });
+    await page.route("http://reader.synthetic/**",async route=>{
+      const url=new URL(route.request().url()),p=url.pathname;
+      if(p.endsWith("/reader-turn")) return route.fulfill({json:await page.evaluate(anchor=>window.syntheticTurn(anchor??"m0"),url.searchParams.get("anchor_message_id"))});
+      if(p.startsWith("/api/")) return route.fulfill({json:p.endsWith("/reading-position")?{position:null}:[]});
+      if(p.startsWith("/katex/")) {const file=join(katexRoot,p.slice(7));return route.fulfill({body:readFileSync(file),contentType:p.endsWith(".css")?"text/css":"font/woff2"});}
+      return route.fulfill({contentType:p==="/bundle.js"?"text/javascript":p==="/style.css"?"text/css":"text/html",body:p==="/bundle.js"?bundle:p==="/style.css"?styles.css:html});
+    });
+    await page.goto("http://reader.synthetic/");
+    const scroller=page.locator('[data-reader-scroll-root="true"]');
+    await expect.poll(()=>page.evaluate(()=>window.remoteTurnReads)).toBe(1);
+    await page.clock.fastForward(20_001);
+    const retry=page.locator("[data-reader-initial-read-retry]");
+    await expect(retry).toBeVisible();
+    await expect(retry).toBeEnabled();
+    await page.evaluate(()=>{window.hangReaderRequests=false;});
+    await retry.click();
+    await expect(scroller.locator("article[data-message-id]").first()).toBeVisible();
+    const ids=await scroller.locator("article[data-message-id]").evaluateAll(nodes=>nodes.map(n=>n.dataset.messageId));
+    await page.evaluate(()=>{window.hangReaderRequests=true;});
+    await scroller.evaluate(node=>{node.scrollTop=node.scrollHeight;});
+    await scroller.hover();await page.mouse.wheel(0,120);
+    await expect(scroller).toHaveAttribute("data-reader-edge-stage","next:loading");
+    await page.clock.fastForward(20_001);
+    await expect(scroller).toHaveAttribute("data-reader-edge-stage","next:failed");
+    await expect(scroller.locator("article[data-message-id]").first()).toBeVisible();
+    const edgeRetry=scroller.getByRole("button",{name:"Retry later messages"});
+    await expect(edgeRetry).toBeVisible();
+    await page.evaluate(()=>{window.hangReaderRequests=false;});
+    await edgeRetry.click();
+    await expect.poll(()=>scroller.locator("article[data-message-id]").evaluateAll((nodes,old)=>nodes.some(n=>!old.includes(n.dataset.messageId)),ids)).toBe(true);
+    await expect(scroller).toHaveAttribute("data-reader-edge-stage",/^next:(settled|mounted)/);
+    results.push({requestLifetime:true,width,initialTimeoutRetry:true,edgeTimeoutRetry:true,retainedBody:true});
     await page.close();
   }
   assert.deepEqual(errors,[]);

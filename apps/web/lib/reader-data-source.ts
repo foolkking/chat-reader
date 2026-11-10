@@ -11,7 +11,8 @@ import {
 } from "./api";
 import { readSyncedReadingPosition, saveLocalReadingPosition } from "./reading-position-sync";
 import { getOfflineAttachment, offlineDb, type OfflineMessageRecord, type OfflineSearchDocument } from "./offline-db";
-import { assertOfflineAccess, captureOfflineAccess } from "./offline-access";
+import { assertOfflineAccess, authenticationGeneration, captureOfflineAccess } from "./offline-access";
+import { withRequestDeadline } from "./request-deadline";
 import { searchOfflinePage } from "./offline-search";
 import { findOpeningThinkingSummary } from "../features/conversations/thinking-summary";
 import { findSearchTextMatches } from "./search-text-matches";
@@ -54,6 +55,7 @@ export type ReaderSearchOptions = {
 };
 
 export type TocOptions = {
+  signal?: AbortSignal;
   messageId?: string;
   offset?: number;
   limit?: number;
@@ -80,12 +82,30 @@ export type ReaderTargetContext = {
 // network work without retaining user content beyond the request lifetime.
 const readerTurnInflight = new Map<string, Promise<ReaderTurnResponse>>();
 const targetContextInflight = new Map<string, Promise<ReaderTargetContext>>();
+let requestGeneration: number | undefined;
+
+function readerRequestGeneration(): number {
+  const current = authenticationGeneration();
+  if (current !== requestGeneration) {
+    readerTurnInflight.clear();
+    targetContextInflight.clear();
+    requestGeneration = current;
+  }
+  return current;
+}
+
+function currentReaderResult<T>(generation: number, result: T): T {
+  if (generation !== authenticationGeneration()) throw new Error("Reader authentication retired");
+  return result;
+}
 
 function getRemoteReaderTurn(conversationId: string, anchorMessageId?: string): Promise<ReaderTurnResponse> {
-  const key = `${conversationId}:${anchorMessageId ?? "first"}`;
+  const generation = readerRequestGeneration();
+  const key = JSON.stringify([generation, conversationId, anchorMessageId ?? null]);
   const existing = readerTurnInflight.get(key);
   if (existing) return existing;
-  const request = getConversationReaderTurn(conversationId, anchorMessageId).finally(() => {
+  const request = withRequestDeadline(signal => getConversationReaderTurn(conversationId, anchorMessageId, signal))
+    .then(result => currentReaderResult(generation, result)).finally(() => {
     if (readerTurnInflight.get(key) === request) readerTurnInflight.delete(key);
   });
   readerTurnInflight.set(key, request);
@@ -103,7 +123,7 @@ export interface ReaderDataSource {
   getConversation(conversationId: string): Promise<ConversationDetail>;
   getMessageWindow(conversationId: string, options?: MessageWindowOptions): Promise<MessageWindowResponse>;
   getReaderTurn(conversationId: string, anchorMessageId?: string): Promise<ReaderTurnResponse>;
-  getDialogueIndex(conversationId: string, options?: { offset?: number; limit?: number; anchorMessageId?: string }): Promise<DialogueIndexResponse>;
+  getDialogueIndex(conversationId: string, options?: { offset?: number; limit?: number; anchorMessageId?: string; signal?: AbortSignal }): Promise<DialogueIndexResponse>;
   getMessageBlocks(messageId: string, options?: { start?: number; limit?: number }): Promise<RenderBlockRead[]>;
   getToc(conversationId: string, options?: TocOptions): Promise<TocResponse>;
   getTargetContext(conversationId: string, target: NavigateTarget, options?: { includeNavigation?: boolean }): Promise<ReaderTargetContext>;
@@ -123,20 +143,14 @@ export const remoteReaderDataSource: ReaderDataSource = {
   getMessageBlocks,
   getToc: getConversationToc,
   getTargetContext(conversationId, target, options) {
-    const key = [
-      conversationId,
-      target.messageId,
-      target.messageVersionId ?? "",
-      target.renderBlockId ?? "",
-      target.occurrenceKey ?? "",
-      target.canonicalStart ?? target.characterOffset ?? "",
-      target.canonicalEnd ?? target.endCharacterOffset ?? "",
-      target.source ?? "",
-      options?.includeNavigation ? "navigation" : "target",
-    ].join(":");
+    const generation = readerRequestGeneration();
+    const key = JSON.stringify([generation, conversationId, toLocatorRequest(target),
+      target.source ?? null, Boolean(target.preferTocPipeline), Boolean(options?.includeNavigation)]);
     const existing = targetContextInflight.get(key);
     if (existing) return existing;
-    const request = loadTargetContext(remoteReaderDataSource, conversationId, target, options).finally(() => {
+    const request = withRequestDeadline(signal => loadTargetContext(
+      remoteReaderDataSource, conversationId, target, { ...options, signal },
+    )).then(result => currentReaderResult(generation, result)).finally(() => {
       if (targetContextInflight.get(key) === request) targetContextInflight.delete(key);
     });
     targetContextInflight.set(key, request);
@@ -507,11 +521,11 @@ async function loadTargetContext(
   dataSource: ReaderDataSource,
   conversationId: string,
   target: NavigateTarget,
-  options: { includeNavigation?: boolean } = {},
+  options: { includeNavigation?: boolean; signal?: AbortSignal } = {},
 ): Promise<ReaderTargetContext> {
   const turnPromise = dataSource.getReaderTurn(conversationId, target.messageId);
   const locatorPromise = dataSource.mode === "remote"
-    ? resolveConversationLocator(conversationId, toLocatorRequest(target)).catch(() => undefined)
+    ? resolveConversationLocator(conversationId, toLocatorRequest(target), options.signal).catch(() => undefined)
     : resolveOfflineLocator(conversationId, target).catch(() => undefined);
   // A target only needs the auxiliary projection that owns its navigation
   // surface. Loading both the dialogue rail and the TOC for every annotation
@@ -519,10 +533,10 @@ async function loadTargetContext(
   const includeDialogueIndex = Boolean(options.includeNavigation && !target.preferTocPipeline);
   const includeToc = Boolean(options.includeNavigation && target.preferTocPipeline);
   const dialogueIndexPromise = includeDialogueIndex
-    ? dataSource.getDialogueIndex(conversationId, { anchorMessageId: target.messageId, limit: 80 }).catch(() => emptyDialogueIndex(conversationId))
+    ? dataSource.getDialogueIndex(conversationId, { anchorMessageId: target.messageId, limit: 80, signal: options.signal }).catch(() => emptyDialogueIndex(conversationId))
     : Promise.resolve(emptyDialogueIndex(conversationId));
   const tocPromise = includeToc
-    ? dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200 }).catch(() => emptyToc(conversationId))
+    ? dataSource.getToc(conversationId, { messageId: target.messageId, limit: 200, signal: options.signal }).catch(() => emptyToc(conversationId))
     : Promise.resolve(emptyToc(conversationId));
   const [turn, dialogueIndex, toc, resolvedLocator] = await Promise.all([turnPromise, dialogueIndexPromise, tocPromise, locatorPromise]);
   // The dialogue index is an auxiliary projection and can legitimately lag

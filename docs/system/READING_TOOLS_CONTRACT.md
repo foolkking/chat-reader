@@ -7,6 +7,27 @@ and independent artifact/runtime checks. See
 Synthetic browser acceptance is not authenticated production or physical-device
 acceptance; the original November 8 implementation/audit records remain historical.
 
+## Bounded remote reading — worktree follow-up 2026-11-11
+
+Owner complete-turn and target-context reads reuse the existing 20-second
+request deadline, including a stalled response body. Expiry releases the
+in-flight slot and the Reader's loading state; existing initial/edge retry
+controls retry the read, retaining already loaded content. This is not a
+server cancellation guarantee or a way to interrupt synchronous JSON parsing.
+
+Concurrent same-generation reads still share one turn request. Authentication
+generation is part of both in-flight keys, late retired results are rejected,
+and target keys include the complete semantic locator and navigation pipeline.
+Auxiliary locator/index/TOC reads receive the target deadline signal. A shared
+turn has its own deadline so one pane's auxiliary cancellation cannot abort a
+different pane's surviving turn. Offline snapshots, complete-turn boundaries,
+position ownership and explicit device handoff are unchanged.
+
+No persistent body cache or automatic write retry is introduced. Local tests
+and full-CI limitations belong in the
+[small-host execution ledger](../execution/SMALL_HOST_OPERATIONS_2026-11-11.md);
+the deployed release above does not yet include this follow-up.
+
 ## Touch boundaries and device handoff — released 2026-11-11
 
 Touch movement and wheel input request the same guarded complete-turn edge

@@ -4,11 +4,17 @@
 
 Block A separates single-flight housekeeping from worker heartbeats without
 increasing user-job concurrency. Local synthetic/real-PostgreSQL checks:
-121 passed, four Windows POSIX-signal skips; full exact-source CI pending.
+121 passed, four Windows POSIX-signal skips. Exact CI42868364815 passed API,
+Web and Settings but failed a plain-10000 Reader long task (180ms >150ms);
+release CI is paused pending diagnosis, not a threshold relaxation.
 Block B adds durable explicit-disposal receipts and original-task cleanup retry;
 paused/canceled/unknown runtime states are counted honestly. Local API/PG and
 12 mounted Task Center cases pass; no automatic source purge or migration.
-Reader request-lifetime and minimal administrator follow-ups continue.
+C adds bounded/auth-scoped turn reads; D makes runtime reads recoverable and
+labels application archive history honestly. Local Reader30/Runtime12,
+UX Node2269, API runtime11 and isolated production build pass.
+The unexplained full-CI 180ms long task remains open; isolated 10k diagnostic
+did not reproduce it. Next diagnostic preserves all nine preceding fixtures.
 [Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
 [execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
 The latest user instruction allows major-block commits/CI without waiting;

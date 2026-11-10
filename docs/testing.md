@@ -5878,3 +5878,20 @@ Local browser acceptance is pending: starting the Web test server was blocked by
 execution policy. Do not remove/relax gates or equate compilation/test discovery
 with execution. Counts and measurement boundaries belong in
 [the receipt](execution/RECOVERY_CONSISTENCY_2026-11-05.md).
+
+## Small-host follow-up — 2026-11-11
+
+`reader-request-lifetime.test.mjs` exercises the actual source/API/deadline with
+controlled transport, body stalls and authentication changes. The existing
+`reader-interaction-browser.mjs` adds three responsive mounted Reader
+initial/edge deadline-and-retry cases without dropping its 27 interaction and
+performance groups. `admin-runtime-browser.mjs` runs the real panel/client/query
+cache across 12 width/language/theme combinations, including stale/denied reads,
+non-cooperative bodies, auth retirement, hidden polling and honest archive labels.
+Both browser scripts are required Web-quality steps; they use synthetic data.
+
+The capacity workflow's optional failed-source CPU diagnostic is not a release
+gate and cannot substitute for the unchanged unprofiled nine-case comparison.
+Local Windows small fixtures do not constitute Linux 10k capacity acceptance.
+Counts, failed attempts and current CI status are in the
+[execution ledger](execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
