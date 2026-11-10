@@ -701,7 +701,11 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
             BackgroundJob.status.in_(("processing", "cancelling")),
             or_(BackgroundJob.heartbeat_at.is_(None), BackgroundJob.heartbeat_at < cutoff),
         )
-        .with_for_update(skip_locked=True).all()
+        .order_by(BackgroundJob.heartbeat_at.asc().nullsfirst(), BackgroundJob.created_at, BackgroundJob.id)
+        .limit(100)
+        .with_for_update(skip_locked=True)
+        .populate_existing()
+        .all()
     )
     now = datetime.now(timezone.utc)
     recovered = 0

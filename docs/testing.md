@@ -1,5 +1,23 @@
 # Testing
 
+## Small-host continuation — 2026-11-11 (not deployed)
+
+`reader-window-retention.test.mjs` executes complete-turn protection including
+long turns, distant selection and unknown IDs. The actual mounted
+`reader-interaction-browser.mjs` adds six80/160-message retention cases at
+375/800/1440px, Offline source mode, text selection/focus, unfiltered idle anchor
+traces, no idle request loop and reverse-wheel rereading. These extend, not
+replace, the existing30 groups and original64-frame/large Linux capacity gates.
+`READER_RETENTION_ONLY=1` is for a local targeted run; release CI does not set it.
+
+`test_stale_recovery_bounds.py` uses synthetic105-row histories and actual
+disposable PostgreSQL writers to test100/5 batches, skip-locked heartbeat rows,
+current ORM attempts, canonical execution leases and late failure fencing.
+It is included in the unchanged full API suite. No real source archive is
+replayed, and Windows/small fixtures do not establish host-wide capacity.
+Exact results, intermediate failures and still-unexplained original CI timing
+remain in the [execution ledger](execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
+
 ## Unreleased recoverable-operation checks — 2026-11-10
 
 The [implementation ledger](execution/RECOVERABLE_OPERATIONS_2026-11-10.md)

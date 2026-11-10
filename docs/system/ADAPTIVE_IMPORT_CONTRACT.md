@@ -4,6 +4,42 @@ Release status: `3564cbf`, exact CI `42828329240`, deployed **2026-11-11**.
 See the [release and cleanup receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
 Earlier dated checkpoints below are historical, not pending release work.
 
+## Bounded stale recovery and canonical lease — worktree follow-up 2026-11-11
+
+Each worker iteration reads at most100 stale ImportRecords and100 stale
+BackgroundJobs in stable oldest-heartbeat/creation/ID order. PostgreSQL skips
+row locks and refreshes existing ORM identities before checking attempts. A
+following iteration handles the remaining batch; normal job/import FIFO and
+the deliberately lower noise-scan priority are unchanged.
+
+Canonical commit, including the legacy inline and `.cr` entry, holds one
+nonblocking PostgreSQL transaction advisory lease per import before reading
+sources. Stale recovery must obtain that same lease: elapsed heartbeat time
+alone cannot authorize replay while a canonical transaction remains alive.
+Commit/rollback/connection loss releases the lease automatically. This follows
+the existing analysis lease pattern without a table, migration or new service.
+SQLite compatibility does not claim the same distributed guarantee.
+
+A duplicate worker invocation leaves the live task unchanged. Failure publication
+rechecks processing status and the claimed attempt/start time under a row lock
+and execution lease, so a retired failure cannot fail a newer execution.
+Unclaimed queued work is not executed by a stale direct invocation.
+Inline HTTP contention returns409 `IMPORT_ALREADY_PROCESSING` with task-status
+guidance; it neither claims success nor changes the original task to failed.
+An already-processing inline request returns its existing202 task projection,
+without resetting the current phase/start time or calling the writer again.
+Source validation, scan/CRC checks, transaction rollback, retry limits and
+explicit manual recovery remain unchanged. No source is automatically deleted.
+
+Canonical progress publication uses the existing1500ms statement/250ms lock
+transaction limits and skips locked task rows. A warning written by the
+canonical transaction can hold that same row: the auxiliary connection must
+not wait for its own caller to finish. It also checks the current attempt/start
+identity. SQL failure publishing progress retains the last confirmed progress
+and logs one redacted warning per failure spell; it does not abort canonical
+work. Real source/persistence failures still roll back. This is not a guarantee
+that arbitrary connection or OS calls can be interrupted within1.5seconds.
+
 ## Commit transport correction — released 2026-11-11
 
 The dedicated five-minute Pages API commit proxy now forwards the complete

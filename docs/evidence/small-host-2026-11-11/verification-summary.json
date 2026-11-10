@@ -1,0 +1,132 @@
+{
+  "date": "2026-11-11",
+  "synthetic_only": true,
+  "deployed": false,
+  "base_commit": "e7a775ba06a28a19d800cc0bc82a86127d7da035",
+  "source_sha256": {
+    "apps/web/features/conversations/conversation-reader.tsx": "16a8e99c5a798b0dd97f60fce2a7afdf4f364046a8b74b52b72f4ec3ea19d357",
+    "apps/web/features/conversations/reader-navigation.ts": "564f5d45a47784b42baba8889449d5fd428871c635aab9eb246253dfde638463",
+    "apps/web/features/conversations/reader-window.ts": "2878fc7496b01e026fd54d78d3f38859a1482994fcca8ab854953381fe4a83ec",
+    "scripts/ux/reader-interaction-browser.mjs": "99c7ee1232e40e0df35f3fe29c76479a3461304d080c5cccbe544c6d1a40e293",
+    "apps/api/app/services/import_queue.py": "01d1a82e9bf50ff59bb564ba68680c0ab0af70cb33862d700fd66520b9f9db17",
+    "apps/api/app/services/background_jobs.py": "1666e4a9b0f0af0539bf7836c42ec69437d1c12d1f95b438edf5ea83b5ca9693",
+    "apps/api/app/services/canonical/persistence.py": "b5a10d0ce35b9cc70a37c414e4b6fcbe9166879344a010e4ba3c941874c3f2cb",
+    "apps/api/app/api/routes/imports.py": "a85c8fcdac93df69f23e86076bc09956f79259aa17563b80e704d467f70f1078",
+    "apps/api/tests/test_stale_recovery_bounds.py": "cdaf3f0c544b1a76c0b7ca9b5ebabaa8a37efb1fbd7cfcb2432461b4355a9861",
+    "apps/api/tests/test_import_queue.py": "17adb7dbd2a1f4f7c13f4d83aec4fd8f2b6f3e86ae114d91050d3bfd7480ae6f"
+  },
+  "local_checks": {
+    "reader_browser_groups": 36,
+    "node_cases": 2279,
+    "lint": "passed",
+    "typecheck": "passed",
+    "isolated_webpack_build": "passed, 537 source hashes, same installed dependencies, one build worker",
+    "queue_draft_zip_final": "75 passed, 2 platform skips",
+    "inline_lease_archive": "20 passed"
+  },
+  "original_ci": {
+    "run": 42868364815,
+    "plain_10000_longest_ms": 180,
+    "limit_ms": 150,
+    "root_cause": "unexplained; not claimed repaired by this local fixture"
+  },
+  "exact_failed_source_diagnostics": [
+    {
+      "run": 42887974476,
+      "scope": "plain10000 only",
+      "reproduced": false
+    },
+    {
+      "run": 42889807714,
+      "scope": "all nine in original order",
+      "reproduced": false,
+      "plain10000_peak_ms": 65
+    }
+  ],
+  "retention_summary": [
+    {
+      "width": 375,
+      "count": 80,
+      "offline": false,
+      "protect": false,
+      "before": 80,
+      "after": 6,
+      "blocks": 9,
+      "frames": 190,
+      "peak_css_px": 0,
+      "settled_css_px": 0
+    },
+    {
+      "width": 800,
+      "count": 80,
+      "offline": false,
+      "protect": false,
+      "before": 80,
+      "after": 6,
+      "blocks": 9,
+      "frames": 190,
+      "peak_css_px": 0.125,
+      "settled_css_px": 0.125
+    },
+    {
+      "width": 1440,
+      "count": 80,
+      "offline": false,
+      "protect": false,
+      "before": 80,
+      "after": 6,
+      "blocks": 9,
+      "frames": 190,
+      "peak_css_px": 0.125,
+      "settled_css_px": 0.125
+    },
+    {
+      "width": 800,
+      "count": 80,
+      "offline": true,
+      "protect": false,
+      "before": 80,
+      "after": 6,
+      "blocks": 9,
+      "frames": 190,
+      "peak_css_px": 0.125,
+      "settled_css_px": 0.125
+    },
+    {
+      "width": 1440,
+      "count": 160,
+      "offline": false,
+      "protect": false,
+      "before": 52,
+      "after": 6,
+      "blocks": 9,
+      "frames": 189,
+      "peak_css_px": 0.375,
+      "settled_css_px": 0.375
+    },
+    {
+      "width": 1440,
+      "count": 80,
+      "offline": false,
+      "protect": true,
+      "before": 80,
+      "after": 6,
+      "blocks": 9,
+      "frames": 190,
+      "peak_css_px": 0.125,
+      "settled_css_px": 0.125
+    }
+  ],
+  "initial_identical_80_message_probe": {
+    "before": {
+      "messages": 80,
+      "blocks": 120,
+      "reads": 59
+    },
+    "first_repair": {
+      "messages": 6,
+      "blocks": 9,
+      "reads": 62
+    }
+  }
+}

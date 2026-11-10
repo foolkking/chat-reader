@@ -29,6 +29,8 @@ type RestoreScrollAnchorOptions = {
   minimumMs?: number;
   settleMs?: number;
   timeoutMs?: number;
+  /** Optional discrete commit: measure and reconcile synchronously before paint. */
+  commitLayout?: () => void;
 };
 
 const positionOwners = new WeakMap<object, object>();
@@ -254,6 +256,7 @@ export async function restoreScrollAnchor({
   minimumMs = 320,
   settleMs = 120,
   timeoutMs = 1500,
+  commitLayout,
 }: RestoreScrollAnchorOptions): Promise<boolean> {
   const target = document.getElementById(anchor.targetId)
     ?? (anchor.blockId ? document.querySelector<HTMLElement>(`[data-block-id="${anchor.blockId}"]`) : null)
@@ -266,13 +269,16 @@ export async function restoreScrollAnchor({
   let stopped = false;
   const observedLayout = target.closest<HTMLElement>(".reader-content-inner") ?? target.parentElement;
 
-  return new Promise((resolve) => {
-    const finish = (restored: boolean) => {
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
       if (stopped) return;
       stopped = true;
       if (frame) window.cancelAnimationFrame(frame);
       observer.disconnect();
       owner.release();
+    };
+    const finish = (restored: boolean) => {
+      cleanup();
       resolve(restored);
     };
     const check = () => {
@@ -304,7 +310,15 @@ export async function restoreScrollAnchor({
       if (!frame) frame = window.requestAnimationFrame(check);
     });
     if (observedLayout) observer.observe(observedLayout);
-    frame = window.requestAnimationFrame(check);
+    if (commitLayout) {
+      try {
+        commitLayout();
+        check();
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    } else frame = window.requestAnimationFrame(check);
   });
 }
 

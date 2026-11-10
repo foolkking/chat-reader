@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 import zipfile
 from contextlib import closing
@@ -6,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
-from sqlalchemy import insert
+from sqlalchemy import insert, text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -60,6 +61,17 @@ from app.services.ownership import OwnershipScope
 
 class CommitImportError(ValueError):
     pass
+
+
+class ImportExecutionBusy(CommitImportError):
+    """The original transaction still owns this source; never mark it failed."""
+
+
+def try_import_execution_lock(db: Session, import_id: uuid.UUID) -> bool:
+    if db.get_bind().dialect.name != "postgresql":
+        return True
+    key = int.from_bytes(hashlib.sha256(b"chat-reader:canonical-import:" + import_id.bytes).digest()[:8], "big", signed=True)
+    return bool(db.execute(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key}).scalar())
 
 
 T = TypeVar("T")
@@ -147,7 +159,11 @@ def commit_import_preview(
     db: Session,
     progress_callback: ProgressCallback | None = None,
 ) -> CommitImportResult:
-    import_record = db.get(ImportRecord, import_id)
+    # Unlike a heartbeat, this lease lives for the entire canonical transaction
+    # and is released by PostgreSQL on commit, rollback or connection loss.
+    if not try_import_execution_lock(db, import_id):
+        raise ImportExecutionBusy("This import is already being processed. Check its task status before retrying.")
+    import_record = db.get(ImportRecord, import_id, populate_existing=True)
     if import_record is None:
         raise CommitImportError("Import record not found.")
     if import_record.committed_at is not None or import_record.status == "committed":

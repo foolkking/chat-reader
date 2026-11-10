@@ -4,6 +4,7 @@ import { releaseExportScope } from "../../lib/export-usage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { ArrowLeft, BookmarkPlus, BookOpen, ChevronDown, ChevronUp, Download, FileOutput, Focus, GitCompareArrows, ListTree, Merge, MessageSquareText, MoreHorizontal, Paperclip, Pencil, RefreshCw, Scissors, Search, Share2, X } from "lucide-react";
 import {
   ApiRequestError,
@@ -31,15 +32,16 @@ import { readReaderBlockLayoutMetrics } from "./reader-block-layout";
 import { usePreferences, useTranslations } from "../../components/preferences-provider";
 import { MessageItem } from "./message-item";
 import { MessageInsertDialog } from "./message-insert-dialog";
-import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor } from "./reader-navigation";
+import { captureScrollAnchor, estimateCharacterOffsetAtReadingLine, navigateMountedTarget, restoreScrollAnchor, readerPositionBusy } from "./reader-navigation";
 import { firstVisibleRangeRect, resolveTextAnchorRange } from "./text-anchor";
 import {
   emptyLoadedWindow,
   INITIAL_WINDOW_TURNS,
+  MAX_WINDOW_MESSAGES,
   loadCompleteTurnWindow as loadTurnNeighborhood,
   mergeLoadedTurnWindow,
   replaceLoadedWindow,
-  trimLoadedTurnWindow,
+  trimLoadedTurnWindowToProtectedMessages,
   type CompleteTurnWindow,
 } from "./reader-window";
 import { ReaderHeaderActionRail, type ReaderHeaderAction } from "../../components/reader-header-action-rail";
@@ -438,6 +440,7 @@ export function ConversationReader({
   const scrollIntentSequenceRef = useRef(0);
   const loadPreviousActionRef = useRef<() => void>(() => undefined);
   const loadNextActionRef = useRef<() => void>(() => undefined);
+  const requestWindowTrimRef = useRef<() => void>(() => undefined);
   const previousSentinelVisibleRef = useRef(false);
   const nextSentinelVisibleRef = useRef(false);
   const navigationTokenRef = useRef(0);
@@ -851,6 +854,9 @@ export function ConversationReader({
     geometryTransitionRef.current += 1;
     if (root) delete root.dataset.readerGeometryCompensating;
     lastReaderUserIntentAtRef.current = Date.now();
+    // At a physical endpoint wheel/touch intent need not emit a scroll event.
+    // It still postpones idle reclamation; don't rebase under an active gesture.
+    requestWindowTrimRef.current();
     preferenceStableAnchorRef.current = null;
     setPendingTargetMessageId(null);
     if (direction) {
@@ -1085,6 +1091,91 @@ export function ConversationReader({
     setLoadedWindow(next);
   }, []);
 
+  useEffect(() => {
+    const root = scrollContainerRef.current;
+    if (!root || !readerSurfaceAvailable || sourceEditorTarget) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let active = true, running = false;
+    const busy = () => navigationInProgressRef.current || restoreInProgressRef.current
+      || edgeTransitionRef.current !== null || readerPositionBusy(root)
+      || pointerDraggingRef.current || root.dataset.readerViewerLocked === "true"
+      || root.dataset.readerLayoutCompensating === "true" || root.dataset.readerSurfaceCompensating === "true";
+    const trim = async () => {
+      timer = undefined;
+      if (!active || running || busy() || !ownsReaderReadRecovery(recentOwner)) return;
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed && (
+        root.contains(selection.anchorNode) || root.contains(selection.focusNode))) return;
+      const current = loadedWindowRef.current;
+      if (current.turns.length <= 3) return;
+      const measurements = new Map<HTMLElement, DOMRect>();
+      const anchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET, measurements);
+      if (!anchor) return;
+      const protectedIds = new Set(selectedMessageIds);
+      const bounds = measurements.get(root) ?? root.getBoundingClientRect();
+      for (const article of root.querySelectorAll<HTMLElement>("article[data-message-id]")) {
+        const rect = measurements.get(article) ?? article.getBoundingClientRect();
+        if (rect.height > 0 && rect.bottom > bounds.top && rect.top < bounds.bottom) protectedIds.add(article.dataset.messageId!);
+      }
+      const anchorMessage = messageIdForScrollAnchor(anchor);
+      if (anchorMessage) protectedIds.add(anchorMessage);
+      const focused = document.activeElement?.closest<HTMLElement>("article[data-message-id]");
+      if (focused && root.contains(focused)) protectedIds.add(focused.dataset.messageId!);
+      const next = trimLoadedTurnWindowToProtectedMessages(current, protectedIds);
+      if (next === current) return;
+      const intent = scrollIntentSequenceRef.current;
+      const currentRequest = () => active && ownsReaderReadRecovery(recentOwner)
+        && scrollIntentSequenceRef.current === intent && loadedWindowRef.current === current && !busy();
+      running = true;
+      let lease: ReaderBlockLease | null = null;
+      try {
+        lease = await acquireScrollAnchorLease(anchor, currentRequest);
+        if (!lease || !currentRequest()) return;
+        await restoreScrollAnchor({
+          root, anchor, minimumMs: 0, settleMs: 0,
+          tokenIsCurrent: () => ownsReaderReadRecovery(recentOwner) && scrollIntentSequenceRef.current === intent,
+          commitLayout: () => {
+            // This is a discrete complete-turn removal. The existing position
+            // owner fences viewport compensation and reconciles before paint.
+            flushSync(() => applyLoadedWindow(next));
+            syncTurnAnchorRefs(next, previousTurnAnchorRef, nextTurnAnchorRef);
+          },
+        });
+        notifyReaderWindowLayoutChanged();
+      } finally { lease?.release(); running = false; }
+    };
+    const schedule = () => {
+      if (timer !== undefined) clearTimeout(timer);
+      timer = setTimeout(() => {
+        // Reclamation is optional: failure keeps the existing readable body,
+        // rather than failing navigation or starting an automatic retry loop.
+        void trim().catch(() => undefined);
+      }, loadedWindowRef.current.items.length > MAX_WINDOW_MESSAGES ? 0 : 250);
+    };
+    const positionReleased = () => {
+      // Another operation may have postponed this pass. Our own failed
+      // commit/release is not a reason to schedule an endless retry cycle.
+      if (!running) schedule();
+    };
+    requestWindowTrimRef.current = schedule;
+    root.addEventListener("scroll", schedule, { passive: true });
+    root.addEventListener("focusout", schedule);
+    root.addEventListener("chat-reader:position-released", positionReleased);
+    document.addEventListener("selectionchange", schedule);
+    window.addEventListener("pointerup", schedule, { passive: true });
+    schedule();
+    return () => {
+      active = false;
+      if (timer !== undefined) clearTimeout(timer);
+      root.removeEventListener("scroll", schedule);
+      root.removeEventListener("focusout", schedule);
+      root.removeEventListener("chat-reader:position-released", positionReleased);
+      document.removeEventListener("selectionchange", schedule);
+      window.removeEventListener("pointerup", schedule);
+      if (requestWindowTrimRef.current === schedule) requestWindowTrimRef.current = () => undefined;
+    };
+  }, [applyLoadedWindow, loadedWindow, readerSurfaceAvailable, recentOwner, selectedMessageIds, sourceEditorTarget]);
+
   const loadPreviousWindow = useCallback(async () => {
     const root = scrollContainerRef.current;
     const current = loadedWindowRef.current;
@@ -1133,45 +1224,9 @@ export function ConversationReader({
         transitionIsCurrent() &&
         scrollIntentSequenceRef.current === scrollIntentAtAnchor
       );
-      const restored = anchor
-        ? await restoreScrollAnchor({
-          root,
-          anchor,
-          tokenIsCurrent: restoreIsCurrent,
-        })
-        : false;
-      if (anchor && restored && restoreIsCurrent()) {
-        const trimAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
-        const protectedMessageId = trimAnchor ? messageIdForScrollAnchor(trimAnchor) : null;
-        const trimmed = trimLoadedTurnWindow(loadedWindowRef.current, "previous", protectedMessageId);
-        if (trimAnchor && trimmed !== loadedWindowRef.current) {
-          const trimIntent = scrollIntentSequenceRef.current;
-          const trimIsCurrent = () => (
-            transitionIsCurrent() &&
-            scrollIntentSequenceRef.current === trimIntent
-          );
-          const trimLease = await acquireScrollAnchorLease(trimAnchor, trimIsCurrent);
-          if (!trimLease && !transitionIsCurrent()) {
-            setReaderEdgeStage(root, "previous:cancelled");
-            return;
-          }
-          if (!trimLease && trimIsCurrent()) throw new Error("The previous-window trim anchor could not be pinned.");
-          if (trimLease) {
-            try {
-              if (trimIsCurrent()) {
-                setReaderEdgeStage(root, "previous:trimming");
-                applyLoadedWindow(trimmed);
-                syncTurnAnchorRefs(trimmed, previousTurnAnchorRef, nextTurnAnchorRef);
-                if (protectedMessageId) await waitForMountedMessage(protectedMessageId, trimIsCurrent);
-                notifyReaderWindowLayoutChanged();
-                await restoreScrollAnchor({ root, anchor: trimAnchor, tokenIsCurrent: trimIsCurrent });
-              }
-            } finally {
-              trimLease.release();
-            }
-          }
-        }
-      }
+      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent });
+      // The shared idle reclamation protects the entire visible/interaction
+      // interval; don't separately trim an arbitrary head/tail here.
       setReaderEdgeStage(root, "previous:settled");
     } catch {
       setReaderEdgeStage(root, "previous:failed");
@@ -1181,6 +1236,7 @@ export function ConversationReader({
       loadingPreviousRef.current = false;
       if (edgeTransitionRef.current === "previous") edgeTransitionRef.current = null;
       setEdgeLoading((currentLoading) => currentLoading === "previous" ? null : currentLoading);
+      requestWindowTrimRef.current();
     }
   }, [applyLoadedWindow, conversationId, dataSource]);
 
@@ -1232,45 +1288,9 @@ export function ConversationReader({
         transitionIsCurrent() &&
         scrollIntentSequenceRef.current === scrollIntentAtAnchor
       );
-      const restored = anchor
-        ? await restoreScrollAnchor({
-          root,
-          anchor,
-          tokenIsCurrent: restoreIsCurrent,
-        })
-        : false;
-      if (anchor && restored && restoreIsCurrent()) {
-        const trimAnchor = captureScrollAnchor(root, ACTIVE_READING_OFFSET);
-        const protectedMessageId = trimAnchor ? messageIdForScrollAnchor(trimAnchor) : null;
-        const trimmed = trimLoadedTurnWindow(loadedWindowRef.current, "next", protectedMessageId);
-        if (trimAnchor && trimmed !== loadedWindowRef.current) {
-          const trimIntent = scrollIntentSequenceRef.current;
-          const trimIsCurrent = () => (
-            transitionIsCurrent() &&
-            scrollIntentSequenceRef.current === trimIntent
-          );
-          const trimLease = await acquireScrollAnchorLease(trimAnchor, trimIsCurrent);
-          if (!trimLease && !transitionIsCurrent()) {
-            setReaderEdgeStage(root, "next:cancelled");
-            return;
-          }
-          if (!trimLease && trimIsCurrent()) throw new Error("The next-window trim anchor could not be pinned.");
-          if (trimLease) {
-            try {
-              if (trimIsCurrent()) {
-                setReaderEdgeStage(root, "next:trimming");
-                applyLoadedWindow(trimmed);
-                syncTurnAnchorRefs(trimmed, previousTurnAnchorRef, nextTurnAnchorRef);
-                if (protectedMessageId) await waitForMountedMessage(protectedMessageId, trimIsCurrent);
-                notifyReaderWindowLayoutChanged();
-                await restoreScrollAnchor({ root, anchor: trimAnchor, tokenIsCurrent: trimIsCurrent });
-              }
-            } finally {
-              trimLease.release();
-            }
-          }
-        }
-      }
+      if (anchor) await restoreScrollAnchor({ root, anchor, tokenIsCurrent: restoreIsCurrent });
+      // The shared idle reclamation protects the entire visible/interaction
+      // interval; don't separately trim an arbitrary head/tail here.
       setReaderEdgeStage(root, "next:settled");
     } catch {
       setReaderEdgeStage(root, "next:failed");
@@ -1280,6 +1300,7 @@ export function ConversationReader({
       loadingNextRef.current = false;
       if (edgeTransitionRef.current === "next") edgeTransitionRef.current = null;
       setEdgeLoading((currentLoading) => currentLoading === "next" ? null : currentLoading);
+      requestWindowTrimRef.current();
     }
   }, [applyLoadedWindow, conversationId, dataSource]);
 

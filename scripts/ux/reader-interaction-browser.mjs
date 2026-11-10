@@ -52,9 +52,11 @@ import {InteractionDialogProvider} from ${modulePath("components/interaction-dia
 import {activateProtectedOfflineData} from ${modulePath("lib/offline-db.ts")};
 import {authorizeOfflineAccess} from ${modulePath("lib/offline-access.ts")};
 import {remoteReaderDataSource} from ${modulePath("lib/reader-data-source.ts")};
-const id="synthetic", dense=window.fixtureKind!=="short";
-const messages=Array.from({length:36},(_,i)=>{
- const parts=dense&&i===1?Array.from({length:72},(_,n)=>"Formula "+n+": $x_{"+n+"}^2+y^2=z^2$.\\n\\n$$\\\\sum_{k=1}^{n} k^2=\\\\frac{n(n+1)(2n+1)}{6}$$")
+const id="synthetic", retention=window.fixtureKind==="retention", dense=window.fixtureKind!=="short";
+const count=retention?(window.fixtureCount??80):36;
+const messages=Array.from({length:count},(_,i)=>{
+ const parts=retention?(i%2?["Synthetic capacity response "+i+".","Bounded paragraph for tier "+count+"."]:["Synthetic capacity prompt "+i+" seed 20260814."])
+   :dense&&i===1?Array.from({length:72},(_,n)=>"Formula "+n+": $x_{"+n+"}^2+y^2=z^2$.\\n\\n$$\\\\sum_{k=1}^{n} k^2=\\\\frac{n(n+1)(2n+1)}{6}$$")
    :[i%2?"Short formula "+i+": $\\\\alpha_i+\\\\beta^2=\\\\gamma$.":"Synthetic prompt "+i];
  const text=parts.join("\\n\\n");
  return {id:"m"+i,conversation_id:id,role:i%2?"assistant":"user",order_key:String(i+1).padStart(6,"0"),ordinal:i+1,turn_index:Math.floor(i/2),
@@ -63,29 +65,29 @@ const messages=Array.from({length:36},(_,i)=>{
    render_blocks:parts.map((text,n)=>({id:"b"+i+"-"+n,block_index:n,block_type:"paragraph",plain_text:text,data:{}}))};
 });
 window.syntheticMessages=messages;
-const conversation={id,title:"Synthetic formula reading",display_title:"Synthetic formula reading",message_count:36,turn_count:18,
+const conversation={id,title:"Synthetic formula reading",display_title:"Synthetic formula reading",message_count:count,turn_count:count/2,
   offline_revision:1,description_markdown:null,project_id:null,status:"active",source_type:"synthetic",source_profile:"synthetic"};
 const turn=(anchor="m0")=>{
  (window.turnReads??=[]).push(anchor);
  const start=Math.floor(messages.findIndex(m=>m.id===anchor)/2)*2;
- return {conversation_id:id,turn_key:"turn"+start,start_offset:start,end_offset:start+2,total_messages:36,
-   items:messages.slice(start,start+2),previous_anchor_message_id:start?"m"+(start-2):null,next_anchor_message_id:start<34?"m"+(start+2):null};
+ return {conversation_id:id,turn_key:"turn"+start,start_offset:start,end_offset:start+2,total_messages:count,
+   items:messages.slice(start,start+2),previous_anchor_message_id:start?"m"+(start-2):null,next_anchor_message_id:start<count-2?"m"+(start+2):null};
 };
 window.syntheticTurn=turn;
 const index={conversation_id:id,items:messages.map(m=>({message_id:m.id,role:m.role,role_number:Math.floor((m.ordinal+1)/2),ordinal:m.ordinal,
-  order_key:m.order_key,preview:"Synthetic message "+m.ordinal,turn_index:m.turn_index})),message_count:36,turn_count:18,limit:36,offset:0,total:36,has_previous:false,has_more:false};
+  order_key:m.order_key,preview:"Synthetic message "+m.ordinal,turn_index:m.turn_index})),message_count:count,turn_count:count/2,limit:count,offset:0,total:count,has_previous:false,has_more:false};
 const toc={conversation_id:id,items:[],limit:100,offset:0,total:0,has_more:false};
-const source={mode:"remote",capabilities:{canonicalManagement:false,attachments:"read-only",share:false,export:false},
+const source={mode:window.fixtureOffline?"offline":"remote",capabilities:{canonicalManagement:false,attachments:"read-only",share:false,export:false},
  getConversation:async()=>conversation,getReaderTurn:async(_,anchor)=>window.fixtureRemoteRequests
    ?remoteReaderDataSource.getReaderTurn(id,anchor):turn(anchor),
  getDialogueIndex:async()=>index,getToc:async()=>toc,
  getMessageBlocks:async(id)=>messages.find(m=>m.id===id).render_blocks,
- getMessageWindow:async()=>({items:messages,limit:36,offset:0,total:36,has_previous:false,has_more:false}),
+ getMessageWindow:async()=>({items:messages,limit:count,offset:0,total:count,has_previous:false,has_more:false}),
  getReadingPosition:async()=>({position:window.touchAnchor?{conversation_id:id,message_id:window.touchAnchor,block_index:0,scroll_offset:0,anchor_data:{},revision:1}:null}),saveReadingPosition:async()=>{},recordRecent:async()=>conversation,
  searchConversation:async(_,options)=>({query:options.query,items:[{document_id:"search-m1",document_type:"message",conversation_id:id,conversation_title:conversation.title,
  message_id:"m1",message_version_id:"v1",role:"assistant",order_key:"2",block_index:0,render_block_id:"b1-0",snippet:"Synthetic formula",rank:1,occurrence_count:1,matches:[]}],limit:50,offset:0,total:1}),
  getTargetContext:async(_,target)=>{const t=turn(target.messageId),m=messages.find(m=>m.id===target.messageId);return{
- readerTurn:t,messageWindow:{items:t.items,limit:2,offset:t.start_offset,total:36,has_previous:t.start_offset>0,has_more:t.end_offset<36},
+ readerTurn:t,messageWindow:{items:t.items,limit:2,offset:t.start_offset,total:count,has_previous:t.start_offset>0,has_more:t.end_offset<count},
  targetMessage:m,targetBlocks:m.render_blocks,dialogueIndex:index,toc,nearestHeading:null};}
 };
 window.__chatReaderPerfProbe={};
@@ -122,10 +124,11 @@ const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGH
 const results=[], errors=[];
 const touchOnly=process.env.READER_TOUCH_ONLY==="1";
 const requestOnly=process.env.READER_REQUEST_ONLY==="1";
+const retentionOnly=process.env.READER_RETENTION_ONLY==="1";
 let current;
 try {
   for(const width of [1440,800,375]) for(const locale of ["en-US","zh-CN"]) for(const theme of ["light","dark"]) {
-    if(requestOnly) continue;
+    if(requestOnly||retentionOnly) continue;
     if(touchOnly&&(width===1440||locale!=="en-US"||theme!=="light")) continue;
     const page=await browser.newPage({viewport:{width,height:900},hasTouch:true});
     current=page;
@@ -403,7 +406,7 @@ try {
     }
     await page.close();
   }
-  if(!touchOnly) for(const width of [375,800,1440]) {
+  if(!touchOnly&&!retentionOnly) for(const width of [375,800,1440]) {
     const page=await browser.newPage({viewport:{width,height:900}});
     current=page;
     page.on("pageerror",error=>errors.push(error.stack??error.message));
@@ -455,11 +458,99 @@ try {
     results.push({requestLifetime:true,width,initialTimeoutRetry:true,edgeTimeoutRetry:true,retainedBody:true});
     await page.close();
   }
+  if(!touchOnly&&!requestOnly) for(const [width,count,offline,protect] of [
+    [375,80,false,false],[800,80,false,false],[1440,80,false,false],
+    [800,80,true,false],[1440,160,false,false],[1440,80,false,true],
+  ]) {
+    const page=await browser.newPage({viewport:{width,height:900}});
+    current=page;page.on("pageerror",error=>errors.push(error.stack??error.message));
+    await page.addInitScript(({count,offline})=>{
+      window.fixtureKind="retention";window.fixtureCount=count;window.fixtureOffline=offline;
+    },{count,offline});
+    await page.route("http://reader.synthetic/**",route=>{
+      const p=new URL(route.request().url()).pathname;
+      if(p.startsWith("/api/"))return route.fulfill({json:p.endsWith("/reading-position")?{position:null}:[]});
+      if(p.startsWith("/katex/"))return route.fulfill({body:readFileSync(join(katexRoot,p.slice(7))),contentType:p.endsWith(".css")?"text/css":"font/woff2"});
+      return route.fulfill({contentType:p==="/bundle.js"?"text/javascript":p==="/style.css"?"text/css":"text/html",body:p==="/bundle.js"?bundle:p==="/style.css"?styles.css:html});
+    });
+    await page.goto("http://reader.synthetic/");
+    const scroller=page.locator('[data-reader-scroll-root="true"]');
+    await expect(scroller.locator('article').first()).toBeVisible();await scroller.hover();
+    if(protect) await page.evaluate(()=>{
+      const block=document.getElementById("block-m0-0");
+      const selection=getSelection(),range=document.createRange();range.selectNodeContents(block);
+      selection.removeAllRanges();selection.addRange(range);window.retainedSelection=selection.toString();
+    });
+    for(let step=0;step<(count===160?200:100);step++){
+      await page.mouse.wheel(0,120);await page.waitForTimeout(34);
+    }
+    // Allow the final native wheel's compositor movement, not reclamation, to
+    // settle. Every following frame (including the removal) is kept unfiltered.
+    await page.waitForTimeout(40);
+    if(protect) {
+      await page.waitForTimeout(700);
+      assert.equal(await page.evaluate(()=>getSelection().toString()),await page.evaluate(()=>window.retainedSelection));
+      await expect(page.locator("#block-m0-0")).toHaveCount(1);
+      // Focus protects an offscreen article even after the text range clears.
+      await page.evaluate(()=>{
+        const button=document.querySelector("#message-m0 button");
+        button.focus({preventScroll:true});getSelection().removeAllRanges();window.retainedFocus=button;
+      });
+      await page.waitForTimeout(700);
+      assert.equal(await page.evaluate(()=>document.activeElement===window.retainedFocus),true);
+      await expect(page.locator("#message-m0")).toHaveCount(1);
+    }
+    const before=await page.evaluate(()=>{
+      const root=document.querySelector("[data-reader-scroll-root]"),line=root.getBoundingClientRect().top+120;
+      const articles=[...root.querySelectorAll("article[data-message-id]")];
+      const article=articles.find(n=>{const r=n.getBoundingClientRect();return r.top<=line&&r.bottom>line;})
+        ??articles.find(n=>n.getBoundingClientRect().bottom>line)??articles.at(-1);
+      const block=[...article.querySelectorAll("[data-block-index]")].find(n=>n.getBoundingClientRect().bottom>line)??article;
+      const offset=block.getBoundingClientRect().top-root.getBoundingClientRect().top;
+      window.retentionTrace=[];window.retentionSampling=true;
+      const sample=()=>{
+        const target=document.getElementById(block.id);
+        window.retentionTrace.push({at:performance.now(),offset:target?target.getBoundingClientRect().top-root.getBoundingClientRect().top:null,
+          messages:root.querySelectorAll("article[data-message-id]").length,top:root.scrollTop});
+        if(window.retentionSampling)requestAnimationFrame(sample);
+      };sample();
+      return {id:block.id,offset,ordinal:Number(article.dataset.messageId.slice(1)),messages:articles.length,reads:window.turnReads.length};
+    });
+    if(protect) await page.evaluate(()=>{
+      window.retainedFocus.blur();
+      // Releasing a user interaction must retry postponed reclamation without
+      // requiring the user to move away from the current reading position.
+    });
+    await page.waitForTimeout(2500);
+    const after=await page.evaluate(()=>{
+      window.retentionSampling=false;
+      const root=document.querySelector("[data-reader-scroll-root]");
+      return {trace:window.retentionTrace,ids:[...root.querySelectorAll("article[data-message-id]")].map(n=>n.dataset.messageId),
+        blocks:root.querySelectorAll("[data-block-index]").length,reads:window.turnReads.length};
+    });
+    results.push({retention:true,width,count,offline,protect,before,after});
+    assert.ok(after.trace.length>30);
+    assert.ok(after.trace.every(frame=>frame.offset!==null),"The real protected block must never unmount.");
+    assert.ok(Math.max(...after.trace.map(frame=>Math.abs(frame.offset-before.offset)))<=2,"Reclamation peak anchor movement must stay within 2 CSS px.");
+    assert.ok(Math.abs(after.trace.at(-1).offset-before.offset)<=1,"Settled anchor movement must stay within 1 CSS px.");
+    assert.ok(after.ids.length<=40,"An idle small-message Reader must reclaim old complete turns.");
+    assert.ok(after.ids.every((id,i)=>!i||Number(id.slice(1))===Number(after.ids[i-1].slice(1))+1),"Retained turns remain contiguous.");
+    const idleReads=after.reads;
+    await page.waitForTimeout(1000);
+    assert.equal(await page.evaluate(()=>window.turnReads.length),idleReads,"Reclamation must not cause an idle load/trim request loop.");
+    // Real wheel direction reversal reloads removed content through the same
+    // canonical turn path, not a fabricated anchor or a second message cache.
+    const oldest=Number(after.ids[0].slice(1));
+    for(let step=0;step<30;step++){await page.mouse.wheel(0,-120);await page.waitForTimeout(34);}
+    await expect.poll(()=>scroller.locator("article[data-message-id]").evaluateAll(nodes=>Math.min(...nodes.map(n=>Number(n.dataset.messageId.slice(1)))))).toBeLessThan(oldest);
+    await expect(page.locator("[data-reader-current-message]:visible")).toContainText("/"+count);
+    await page.close();
+  }
   assert.deepEqual(errors,[]);
   writeFileSync(join(out,"result.json"),JSON.stringify({status:"passed",results,errors},null,2));
   console.log(JSON.stringify({status:"passed",cases:results.length,out}));
 } catch(error) {
-  if(current&&!current.isClosed()) {await current.screenshot({path:join(out,"failure.png")});writeFileSync(join(out,"failure.txt"),await current.locator("body").innerText());writeFileSync(join(out,"failure-state.json"),JSON.stringify(await current.evaluate(()=>({root:document.querySelector("[data-reader-scroll-root]")?.dataset,returnOrigin:window.returnOrigin,returnTrace:window.returnTrace})),null,2));}
+  if(current&&!current.isClosed()) {await current.screenshot({path:join(out,"failure.png")});writeFileSync(join(out,"failure.txt"),await current.locator("body").innerText());writeFileSync(join(out,"failure-state.json"),JSON.stringify(await current.evaluate(()=>({root:document.querySelector("[data-reader-scroll-root]")?.dataset,returnOrigin:window.returnOrigin,returnTrace:window.returnTrace,retentionTrace:window.retentionTrace})),null,2));}
   writeFileSync(join(out,"result.json"),JSON.stringify({status:"failed",error:String(error),results,errors},null,2));
   throw error;
 } finally {await browser.close();}

@@ -28,6 +28,30 @@ and full-CI limitations belong in the
 [small-host execution ledger](../execution/SMALL_HOST_OPERATIONS_2026-11-11.md);
 the deployed release above does not yet include this follow-up.
 
+## Complete-turn reclamation — worktree follow-up 2026-11-11
+
+Reader (including its Offline data-source mode) reclaims no-longer-needed
+complete turns around the actual viewport, rather than only an arbitrary
+head/tail after a successful edge restore. Visible articles, the real reading
+anchor, checked messages and the focused article protect a continuous interval,
+with a neighbouring turn on each side and at least three turns. A long single
+turn or distant selected messages can legitimately exceed the 120-message
+reclamation trigger; no message/turn is truncated to meet that number.
+
+Ordinary reclamation waits for 250ms without scroll or genuine input, including
+wheel/touch at a physical endpoint. Edge completion and released selection,
+focus or position ownership request a new attempt. Over-120 working sets may
+be reclaimed sooner, but never over a text selection, Viewer, editor, drag,
+navigation or an active edge transition. No periodic reclamation loop is added.
+The real retained block is pinned and the existing position owner synchronously
+commits/reconciles removal before paint; newer intent retires stale work.
+Reclaimed content remains reachable via the original complete-turn API.
+
+This changes ConversationReader, not Share/Together's independent DOM/window
+implementations. Shared navigation keeps its ordinary timing unless the caller
+explicitly supplies the synchronous commit. Full original stability gates remain
+mandatory; the small synthetic retention fixture is not the 10,000-message SLA.
+
 ## Touch boundaries and device handoff — released 2026-11-11
 
 Touch movement and wheel input request the same guarded complete-turn edge

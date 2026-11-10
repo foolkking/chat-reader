@@ -803,6 +803,12 @@ import-event payloads; later concurrent deletion can still invalidate a link.
 | GET | `/api/imports/{import_id}/status` | 查询阶段、百分比、消息进度、结果或错误 |
 | GET | `/api/imports/active` | 返回 queued、processing 和待处理 failed 任务 |
 
+2026-11-11未部署增量：canonical提交持有独立PG事务租约，旧心跳不能触发
+并行重放。inline入口发现已processing时返回原202，不重置执行身份；
+真正的执行租约冲突返回409 `IMPORT_ALREADY_PROCESSING`，提示核对任务状态，
+不将原任务置为failed。无新接口或migration，详见
+[导入合同](system/ADAPTIVE_IMPORT_CONTRACT.md#bounded-stale-recovery-and-canonical-lease--worktree-follow-up-2026-11-11)。
+
 Adaptive JSON / Markdown：
 
 | Method | Path | 说明 |

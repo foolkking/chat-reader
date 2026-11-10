@@ -120,6 +120,8 @@ function fixture({ height = 500, extent = 2000, contentTop = 600, targetHeight =
     busy: () => module.exports.readerPositionBusy(windowScroll ? null : root),
     cancelPosition: () => module.exports.cancelReaderPosition(windowScroll ? null : root),
     cancel: () => { current = false; },
+    moveContent: delta => { contentTop += delta; },
+    queuedFrames: () => frames.size,
     grow: size => { root.scrollHeight = size; for (const observer of observers) observer.action(); },
     restore(options = {}, onFrame = () => {}) {
       const anchor = { targetId: target.id, offset: target.getBoundingClientRect().top - rootTop };
@@ -300,7 +302,7 @@ test("retired navigation cannot become a successful endpoint alignment", async (
   assert.equal((await f.run({}, frame => { if (frame === 5) f.cancel(); })).reason, "cancelled");
 });
 
-test("Reader edge restore and trim both retire when a new scroll intent arrives", () => {
+test("Reader edge restores retire on input and request the shared protected-window reclamation", () => {
   for (const name of ["loadPreviousWindow", "loadNextWindow"]) {
     const declaration = readerDeclarations.get(name);
     assert.ok(declaration, `${name} must remain a Reader callback`);
@@ -308,10 +310,36 @@ test("Reader edge restore and trim both retire when a new scroll intent arrives"
     assert.match(callback, /const scrollIntentAtAnchor = scrollIntentSequenceRef\.current/);
     assert.match(callback, /scrollIntentSequenceRef\.current === scrollIntentAtAnchor/);
     assert.match(callback, /tokenIsCurrent: restoreIsCurrent/);
-    assert.match(callback, /const trimIntent = scrollIntentSequenceRef\.current/);
-    assert.match(callback, /scrollIntentSequenceRef\.current === trimIntent/);
-    assert.match(callback, /tokenIsCurrent: trimIsCurrent/);
+    assert.match(callback, /finally \{[\s\S]*requestWindowTrimRef\.current\(\)/);
+    assert.doesNotMatch(callback, /trimLoadedTurnWindow\(/, "No second head/tail trim may remove protected visible or selected content.");
   }
+});
+
+test("discrete restoration claims ownership and reconciles before the first animation frame", async () => {
+  const f = fixture({ extent: 5000 });
+  const before = f.target.getBoundingClientRect().top;
+  const task = f.restore({ minimumMs: 0, settleMs: 0, commitLayout: () => {
+    assert.equal(f.busy(), true); f.moveContent(400);
+  } }, () => { assert.equal(f.target.getBoundingClientRect().top, before); });
+  assert.equal(f.target.getBoundingClientRect().top, before);
+  assert.equal(f.writes.at(-1), 400);
+  assert.equal(f.busy(), false);
+  assert.equal(f.queuedFrames(), 0, "The correction does not wait for any animation callback.");
+  assert.equal(await task, true);
+});
+
+test("a failed discrete restoration commit rejects and releases ownership", async () => {
+  const f = fixture();
+  await assert.rejects(f.restore({ commitLayout: () => { throw Error("Synthetic commit failed"); } }),
+    /Synthetic commit failed/);
+  assert.equal(f.busy(), false); assert.deepEqual(f.writes, []);
+});
+
+test("input retirement before a discrete restoration cannot commit stale removal", async () => {
+  const f = fixture(); f.cancel();
+  let commits = 0;
+  assert.equal(await f.restore({ commitLayout: () => { commits++; } }), false);
+  assert.equal(commits, 0); assert.equal(f.busy(), false);
 });
 
 test("retired Reader edge restoration cannot overwrite a later user scroll", async () => {

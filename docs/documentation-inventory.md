@@ -11,6 +11,9 @@ B同步导入/Retention/Observability及API合同：显式放弃清理回执、
 C/D同步Reading tools/Observability/测试入口：有限阅读请求、认证隔离、
 管理员归档真实性及读取恢复；性能合同补充仅诊断的失败源码CPU取证，
 不替代完整CI或改变冻结阈值。
+E/F同步Reading tools/Adaptive Import/API/测试合同：完整轮次保护回收、
+100条遗留恢复、canonical事务租约及辅助进度隔离；新增small-host-2026-11-11
+合成完整帧与源码hash摘要。原CI失败/诊断及本地专项边界保留在执行账本。
 
 ## 可恢复操作发布及单份备份收尾 — 2026-11-11
 

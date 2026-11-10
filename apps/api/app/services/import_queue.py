@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
@@ -11,7 +12,10 @@ from app.core.database import SessionLocal
 from app.models.conversation import Conversation
 from app.models.conversation_event import ConversationEvent
 from app.models.import_record import ImportRecord
-from app.services.canonical.persistence import CommitImportError, CommitImportResult, commit_import_preview
+from app.services.canonical.persistence import (
+    CommitImportError, CommitImportResult, ImportExecutionBusy,
+    commit_import_preview, try_import_execution_lock,
+)
 from app.services.import_pipeline.draft_store import ImportDraftError
 from app.services.retry_policy import MAX_AUTOMATIC_ATTEMPTS
 from app.services.content_cleanup import queue_import_scan
@@ -64,11 +68,20 @@ def recover_stale_imports(db: Session, stale_after_seconds: int) -> int:
             ImportRecord.status == "processing",
             or_(ImportRecord.heartbeat_at.is_(None), ImportRecord.heartbeat_at < cutoff),
         )
+        # Recovery must neither retain the entire abandoned history nor wait
+        # behind a live heartbeat/canonical writer. Re-read cached ORM rows
+        # under the lock before applying the retry limit.
+        .order_by(ImportRecord.heartbeat_at.asc().nullsfirst(), ImportRecord.created_at, ImportRecord.id)
+        .limit(100)
+        .with_for_update(skip_locked=True)
+        .populate_existing()
         .all()
     )
     now = datetime.now(timezone.utc)
     requeued = 0
     for record in stale:
+        if not try_import_execution_lock(db, record.id):
+            continue
         if record.attempt_count >= MAX_AUTOMATIC_ATTEMPTS:
             record.status = "failed"
             record.phase = "failed"
@@ -142,23 +155,45 @@ def process_import(
     import_id: uuid.UUID,
     session_factory: sessionmaker = SessionLocal,
 ) -> CommitImportResult | None:
+    execution: tuple | None = None
+    progress_unavailable = False
     def report(phase: str, progress: int, processed: int, total: int) -> None:
-        with session_factory() as progress_db:
-            record = progress_db.get(ImportRecord, import_id)
-            if record is None or record.status != "processing":
-                return
-            record.phase = phase
-            record.progress = max(0, min(progress, 99))
-            record.processed_messages = processed
-            record.total_messages = total
-            record.heartbeat_at = datetime.now(timezone.utc)
-            progress_db.commit()
+        nonlocal progress_unavailable
+        from app.services.worker_maintenance import bound_worker_transaction
+        try:
+            with session_factory() as progress_db:
+                bound_worker_transaction(progress_db)
+                record = (progress_db.query(ImportRecord)
+                    .filter(ImportRecord.id == import_id, ImportRecord.status == "processing")
+                    .with_for_update(skip_locked=True).populate_existing().one_or_none())
+                # Image-fit warnings can already hold this row in the outer
+                # canonical transaction. Never wait for our own writer here.
+                if record is None or (record.attempt_count, record.started_at) != execution:
+                    return
+                record.phase = phase
+                record.progress = max(0, min(progress, 99))
+                record.processed_messages = processed
+                record.total_messages = total
+                record.heartbeat_at = datetime.now(timezone.utc)
+                progress_db.commit()
+            progress_unavailable = False
+        except SQLAlchemyError as exc:
+            # Auxiliary publication is not the canonical transaction. Retain
+            # the last confirmed progress, with a single redacted warning.
+            if not progress_unavailable:
+                structured_event(logger, logging.WARNING, "import_progress_unavailable", error_class=type(exc).__name__)
+            progress_unavailable = True
 
     try:
         with session_factory() as db:
+            if not try_import_execution_lock(db, import_id):
+                return None
             record = db.get(ImportRecord, import_id)
             if record is None:
                 raise ValueError(f"Import record {import_id} not found.")
+            if record.status != "processing" or record.committed_at is not None:
+                return None
+            execution = (record.attempt_count, record.started_at)
             result = commit_import_preview(import_id, db, progress_callback=report)
             # Noise review is deliberately best-effort: a scanner outage must
             # never turn a successful canonical import into a failed import.
@@ -175,6 +210,8 @@ def process_import(
             db.commit()
             structured_event(logger, logging.INFO, "import_committed", import_id=str(import_id))
             return result
+    except ImportExecutionBusy:
+        return None
     except Exception as exc:
         structured_event(
             logger,
@@ -184,9 +221,12 @@ def process_import(
             error_class=type(exc).__name__,
         )
         with session_factory() as db:
-            record = db.get(ImportRecord, import_id)
+            record = db.query(ImportRecord).filter(ImportRecord.id == import_id).with_for_update().populate_existing().one_or_none()
             if record is not None:
-                if record.committed_at is not None or record.status == "committed":
+                if (execution is None or record.status != "processing"
+                    or record.committed_at is not None
+                    or (record.attempt_count, record.started_at) != execution
+                    or not try_import_execution_lock(db, import_id)):
                     return None
                 from app.services.adaptive_import.resource_wait import defer_resource
                 if defer_resource(record, record, exc, stage="commit"):

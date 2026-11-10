@@ -30,7 +30,7 @@ from app.schemas.import_schema import (
     SourceProfile,
 )
 from app.schemas.canonical import CommitImportResponse
-from app.services.canonical.persistence import CommitImportError, commit_import_preview
+from app.services.canonical.persistence import CommitImportError, ImportExecutionBusy, commit_import_preview
 from app.services.import_queue import (
     ACTIVE_IMPORT_STATUSES,
     conversation_ids_for_import,
@@ -440,9 +440,8 @@ def commit_import(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> CommitImportResponse:
     import_record = _get_import_or_404(import_id, db, ownership_scope)
-    if (
-        import_record.source_profile == "adaptive_json_markdown"
-        and import_record.session_state not in {"COLLECTING", "ANALYZING"}
+    if import_record.source_profile != "adaptive_json_markdown" or (
+        import_record.session_state not in {"COLLECTING", "ANALYZING"}
         and import_record.status not in {"queued", "processing", "committed"}
     ):
         # Serialize canonical queueing with ZIP classification/replacement.
@@ -538,6 +537,13 @@ def commit_import(
     if not get_settings().import_commit_inline:
         return _commit_response(import_record, db)
 
+    # A background worker/another inline request may have claimed the queued
+    # row after our commit. Do not reset its execution identity or phase.
+    db.refresh(import_record, with_for_update=True)
+    if import_record.status != "queued":
+        if import_record.status == "committed":
+            response.status_code = status.HTTP_200_OK
+        return _commit_response(import_record, db)
     import_record.status = "processing"
     import_record.phase = "parsing"
     import_record.started_at = datetime.now(timezone.utc)
@@ -553,6 +559,12 @@ def commit_import(
         except Exception as exc:  # pragma: no cover - operational guard
             structured_event(logger, logging.WARNING, "post_import_noise_scan_queue_failed", import_id=str(import_id), error_class=type(exc).__name__)
         db.commit()
+    except ImportExecutionBusy as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={
+            "code": "IMPORT_ALREADY_PROCESSING",
+            "message": str(exc),
+        }) from exc
     except CommitImportError as exc:
         db.rollback()
         failure = import_failure_from_exception(exc, stage="commit")

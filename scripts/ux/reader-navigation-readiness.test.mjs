@@ -60,6 +60,7 @@ const refDefaults = {
   scrollDirectionRef: null, scrollIntentSequenceRef: 1, lastPersistedIntentRef: 1, lastReaderUserIntentAtRef: 0,
   preferenceStableAnchorRef: null, lastSavedSignatureRef: "", latestStablePositionRef: null,
   cancelPreferenceTransitionRef: () => {},
+  requestWindowTrimRef: () => {},
   focusTransitionRef: 0, focusAnchorRef: null,
   pointerDraggingRef: false, pointerDragMovedRef: false, pointerScrollTopRef: 0, activeMessageIdRef: null, activeBlockIdRef: null,
   pointerDragStartScrollTopRef: 0,
@@ -383,6 +384,17 @@ for (const [direction, sentinel, before, after, expected] of [
     f.root.emit("touchmove", { touches: [{ clientY: after }] });
     assert.equal(f.state.scrollDirectionRef.current, direction);
     assert.deepEqual(f.edgeLoads, [expected], "A stationary sentinel must not require a new IntersectionObserver entry.");
+  } finally { f.dispose(); }
+});
+test("real endpoint input also postpones idle reclamation without a scroll event", () => {
+  const f = fixture(); try {
+    let requests = 0;
+    f.state.requestWindowTrimRef.current = () => { requests++; };
+    f.root.emit("wheel", { deltaY: 80 });
+    f.root.emit("touchstart", { touches: [{ clientY: 400 }] });
+    f.root.emit("touchmove", { touches: [{ clientY: 360 }] });
+    assert.equal(requests, 3);
+    assert.equal(f.root.scrollTop, 0, "Input is not fabricated as a programmatic scroll.");
   } finally { f.dispose(); }
 });
 test("a touch pointer is not classified as a native scrollbar-thumb drag", async () => {

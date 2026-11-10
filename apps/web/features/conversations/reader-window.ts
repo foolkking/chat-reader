@@ -77,6 +77,34 @@ export function trimLoadedTurnWindow(
   return loadedWindowFromTurns(candidate, current.generation);
 }
 
+/** Preserve the actual viewport/interaction interval, not an arbitrary tail. */
+export function trimLoadedTurnWindowToProtectedMessages(
+  current: LoadedMessageWindow,
+  protectedIds: ReadonlySet<string>,
+): LoadedMessageWindow {
+  if (current.turns.length <= MAX_SETTLED_TURNS || protectedIds.size === 0) return current;
+  const found = new Set<string>();
+  const indexes: number[] = [];
+  current.turns.forEach((turn, index) => {
+    for (const message of turn.items) if (protectedIds.has(message.id)) {
+      found.add(message.id);
+      if (indexes.at(-1) !== index) indexes.push(index);
+    }
+  });
+  if (found.size !== protectedIds.size || indexes.length === 0) return current;
+  // Keep a neighbour on each side so the nearest boundary need not be
+  // immediately fetched again. The protected interval always stays complete.
+  let first = Math.max(0, indexes[0] - 1);
+  let end = Math.min(current.turns.length, indexes[indexes.length - 1] + 2);
+  while (end - first < MAX_SETTLED_TURNS) {
+    if (first > 0) first--;
+    else if (end < current.turns.length) end++;
+    else break;
+  }
+  if (first === 0 && end === current.turns.length) return current;
+  return loadedWindowFromTurns(current.turns.slice(first, end), current.generation);
+}
+
 export async function loadCompleteTurnWindow(
   loadTurn: (anchorMessageId?: string) => Promise<ReaderTurnResponse>,
   anchorMessageId?: string,

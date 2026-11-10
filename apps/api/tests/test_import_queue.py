@@ -34,6 +34,33 @@ def test_commit_queues_and_is_idempotent(client: TestClient, monkeypatch) -> Non
     assert any(task["import_id"] == import_id for task in client.get("/api/imports/active").json())
 
 
+def test_inline_commit_conflict_preserves_the_original_processing_task(client: TestClient, monkeypatch) -> None:
+    from app.api.routes import imports
+    from app.services.canonical.persistence import ImportExecutionBusy
+    monkeypatch.setenv("IMPORT_COMMIT_INLINE", "true")
+    get_settings.cache_clear()
+    preview = client.post("/api/imports/preview", files={
+        "files": ("synthetic.json", b'{"metadata":{"powered_by":"ChatGPT Exporter"},"messages":[]}', "application/json"),
+    })
+    assert preview.status_code == 200
+    import_id = preview.json()["import_id"]
+
+    def busy(*args, **kwargs):
+        raise ImportExecutionBusy("This import is already being processed. Check its task status before retrying.")
+
+    monkeypatch.setattr(imports, "commit_import_preview", busy)
+    response = client.post(f"/api/imports/{import_id}/commit")
+    assert response.status_code == 409
+    assert response.json()["detail"]["code"] == "IMPORT_ALREADY_PROCESSING"
+    current = client.get(f"/api/imports/{import_id}/status").json()
+    assert current["status"] == "processing" and current["error_message"] is None
+    repeated = client.post(f"/api/imports/{import_id}/commit")
+    assert repeated.status_code == 202
+    after = client.get(f"/api/imports/{import_id}/status").json()
+    assert after["started_at"] == current["started_at"]
+    assert after["status"] == "processing"
+
+
 def test_claim_order_and_stale_recovery(tmp_path) -> None:
     engine = create_engine(f"sqlite:///{tmp_path / 'queue.db'}")
     Base.metadata.create_all(engine)

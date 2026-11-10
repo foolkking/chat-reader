@@ -13,8 +13,12 @@ paused/canceled/unknown runtime states are counted honestly. Local API/PG and
 C adds bounded/auth-scoped turn reads; D makes runtime reads recoverable and
 labels application archive history honestly. Local Reader30/Runtime12,
 UX Node2269, API runtime11 and isolated production build pass.
-The unexplained full-CI 180ms long task remains open; isolated 10k diagnostic
-did not reproduce it. Next diagnostic preserves all nine preceding fixtures.
+E reclaims protected complete-turn intervals without rebasing under active
+input; F bounds stale recovery and protects canonical writers/progress updates.
+Reader36/Node2279, targeted API/PG and the exact local production build pass.
+The unexplained full-CI 180ms task remains open: neither single-case nor full
+nine-case exact-failed-source diagnostics reproduced it. A new full release
+CI must validate this materially repaired candidate; no threshold is relaxed.
 [Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
 [execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
 The latest user instruction allows major-block commits/CI without waiting;
