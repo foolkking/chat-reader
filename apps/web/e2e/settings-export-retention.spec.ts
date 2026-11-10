@@ -108,7 +108,7 @@ test("regeneration survives a polling refresh and a temporary option change", as
     await action(page, 768, /^(接续|Continuation)$/);
     await page.getByRole("button", { name: "Prepare maintenance", exact: true }).click();
     const preparation = page.getByTestId("maintenance-preparation");
-    const queued = page.waitForResponse(response => response.url().endsWith(`/conversations/${id}/exports`) && response.request().method() === "POST");
+    const queued = page.waitForResponse(response => new URL(response.url()).pathname === `/api/conversations/${id}/exports` && response.request().method() === "POST");
     await preparation.getByRole("button", { name: "Generate export", exact: true }).click();
     const job = await (await queued).json();
     const download = preparation.getByRole("button", { name: "Download Context Package", exact: true });

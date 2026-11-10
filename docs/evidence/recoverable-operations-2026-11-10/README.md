@@ -1,6 +1,8 @@
 # Recoverable operations — local synthetic checkpoint
 
-This is an **unfinished, uncommitted candidate**, not release acceptance.
+This is **unreleased candidate evidence**, not release acceptance. The first
+source candidate was committed as65db720; its CI failed. Earlier uncommitted
+snapshots below remain historical and are not rebound to the corrections.
 [Implementation ledger](../../execution/RECOVERABLE_OPERATIONS_2026-11-10.md)
 owns the scope and unfinished work. `source-checkpoint.json` binds the relevant
 files to their local SHA-256 values and starting revision.
@@ -157,3 +159,25 @@ The final-source Reader gate was subsequently rerun in a new task directory:
 checkpoint is retained unchanged. Build transcript trailing spaces are normalized
 only in this repository copy; its original raw-log digest is recorded in the
 final-local manifest. No frame samples, failures or timing thresholds were edited.
+
+## First CI failure corrections
+
+`ci-first-failure-summary.json` records the exact65db720 run42764243257, the
+50-minute first-read boundary and the31 observed Settings failures grouped by
+root cause. No raw job log, synthetic credentials or account IDs are copied here.
+`source-checkpoint-ci-fix01.json` binds only this correction checkpoint.
+
+`ci-fix01-local-summary.txt`: lint/typecheck and **2324** Node cases pass. This
+includes all `scripts/**/*.test.mjs`, a broader set than the prior2239-case Web
+sweep; the counts must not be added. API108 pass /2 optional Windows skips.
+The actual pinned fullChromium reruns pass12 each: offline confirmation,
+export recovery, source repair, reading feedback and table/code/attachment.
+`ci-fix01-*-browser.json` preserves those result objects. The export gate now
+checks context-specific delivery naming; source selection checks visible
+row-local alerts; offline confirmation retains its original Escape/focus test
+plus duplicate-submit/native-blur assertions.
+
+The real Settings/full-app/PWA suite must pass the next exact-source CI.
+No timeout, retry, frame or memory threshold was increased. Failed browser
+launches before installing/selecting the pinned fullChromium remain recorded
+in the implementation ledger rather than represented as passing executions.

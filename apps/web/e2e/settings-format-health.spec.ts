@@ -45,7 +45,12 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       await openRepair();
       const groupCount = width === 375 && locale === "zh-CN" ? 23 : 3;
       await page.getByTestId("import-file-input").setInputFiles(Array.from({ length: groupCount }, (_, i) => ({ name: `synthetic-${String(i).padStart(2, "0")}.json`, mimeType: "application/json", buffer: bytes(i === groupCount - 1) })));
+      const uploaded = page.waitForResponse(response => response.request().method() === "POST"
+        && new URL(response.url()).pathname === "/api/adaptive-import/sessions");
       await page.getByTestId("preview-import-button").click();
+      const staged = await uploaded;
+      expect(staged.ok()).toBe(true);
+      const importId = (await staged.json()).import_id;
       const health = page.getByRole("region", { name: /格式健康检查|Format health check/ });
       await health.getByRole("button", { name: /检查已保存格式|Check saved format/ }).click();
       await expect(health.getByRole("status")).toContainText(/1 组需要处理|1 group needs attention/);
@@ -59,6 +64,11 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       if (process.env.SETTINGS_SCREENSHOT_DIR) await health.screenshot({ path: `${process.env.SETTINGS_SCREENSHOT_DIR}/format-health-${width}-${locale}.png` });
       await page.reload();
       await openRepair();
+      // A fresh Import entry must not reopen an old batch implicitly. Resume
+      // this exact retained session before checking its persisted health result.
+      await expect(health).toHaveCount(0);
+      await page.locator(`[data-import-session-id="${importId}"]`)
+        .getByRole("button", { name: /^(继续处理|Resume)$/ }).click();
       await expect(health.getByRole("status")).toContainText(/1 组需要处理|1 group needs attention/);
       await health.getByRole("button", { name: /打开映射修复|Open mapping repair/ }).click();
       // Health tests the saved version; editing the draft uses the same validator

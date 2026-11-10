@@ -241,10 +241,13 @@ try {
       const selectedFiles = names => names.map((name, index) => ({ name, mimeType: "application/json", buffer: Buffer.from(`{"synthetic":${index}}`) }));
       await selectInput.setInputFiles(selectedFiles(["02.json", "invalid.exe", "01.json"]));
       await expect(page.getByTestId("preview-import-button")).toBeDisabled();
+      await expect(selected.getByRole("alert")).toHaveCount(1);
+      await expect(selected.getByRole("alert")).toBeVisible();
       await selected.getByRole("button", { name: /(?:移除文件：|Remove file: )invalid.exe/ }).focus();
       await page.keyboard.press("Enter");
       await expect(selected.getByRole("button", { name: /(?:移除文件：|Remove file: )01.json/ })).toBeFocused();
       await expect(page.getByTestId("preview-import-button")).toBeEnabled();
+      await expect(selected.getByRole("alert")).toHaveCount(0);
       await selectInput.setInputFiles(selectedFiles(["01.json"])); // Same name ≠ same source.
       await expect(selected.locator('input[type="file"]')).toHaveCount(3);
       await selected.locator('input[type="file"]').first().setInputFiles(selectedFiles(["replacement.json"]));

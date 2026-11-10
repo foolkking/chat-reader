@@ -710,7 +710,7 @@ export function ImportPanel({
     <section className="space-y-5">
       {mode === "adaptive" && (!unfinished.isSuccess || Boolean(unfinished.data?.items?.length) || unfinishedOffset > 0) ? <section className="space-y-2 border-b border-ui pb-3" aria-label={zh ? "待完成导入" : "Unfinished imports"}>
         <h3 className="text-sm font-semibold text-primary">{zh ? "待完成导入" : "Unfinished imports"}</h3>
-        {unfinished.isPending ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取…" : "Loading…"}</p> : unfinished.error ? <ErrorLine message={unfinished.error} onRetry={() => void unfinished.refetch()} /> : unfinished.data?.items?.length ? <ul className="divide-y divide-[var(--border)]">{unfinished.data.items.map(item => <li key={item.import_id} className="flex items-center gap-3 py-2">
+        {unfinished.isPending ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取…" : "Loading…"}</p> : unfinished.error ? <ErrorLine message={unfinished.error} onRetry={() => void unfinished.refetch()} /> : unfinished.data?.items?.length ? <ul className="divide-y divide-[var(--border)]">{unfinished.data.items.map(item => <li key={item.import_id} data-import-session-id={item.import_id} className="flex items-center gap-3 py-2">
           <div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{item.title}</p><p className="text-xs text-secondary">{importStateLabel(item.state, zh)} · <time dateTime={item.updated_at} title={new Date(item.updated_at).toLocaleString(zh ? "zh-CN" : "en-US")}>{new Date(item.updated_at).toLocaleString(zh ? "zh-CN" : "en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</time>{!item.source_available ? (zh ? " · 源文件不可用；仍可查看已保存配置" : " · Source unavailable; saved configuration is readable") : item.draft_status === "expired" ? (zh ? " · 原文件仍保留，预览已过期" : " · Source retained; preview expired") : ""}</p></div>
           <button type="button" disabled={sessionRestore.phase === "loading"} className="btn-secondary min-h-11 px-3 text-sm disabled:opacity-50" onClick={() => { resumeSessionRef.current = item.import_id; setSessionRestoreRetry(value => value + 1); }}>{zh ? "继续处理" : "Resume"}</button>
         </li>)}</ul> : <p className="text-sm text-secondary">{zh ? "没有待完成的导入。" : "No unfinished imports."}</p>}
@@ -792,7 +792,7 @@ export function ImportPanel({
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            {issue ? <p className="pl-7 text-xs text-[var(--danger)]">{issue}</p> : null}
+            {issue ? <p role="alert" className="pl-7 text-xs text-[var(--danger)]">{issue}</p> : null}
           </li>;
         })}
         {mode === "adaptive" && files.length > 1 ? <li className="py-2 text-xs text-secondary">{zh ? "按上方顺序逐个分析；审阅整批后再确认导入。" : "Analyzed in the order above; review the whole batch before confirming import."}</li> : null}

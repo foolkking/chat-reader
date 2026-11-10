@@ -64,7 +64,7 @@ for (const width of [375, 768, 1440]) for (const format of ["canjson", "context"
       if (format === "canjson") await page.getByRole("button", { name: "CanJSON", exact: true }).click();
       await page.getByRole("checkbox", { name: /包含附件|Include attachments/ }).check();
       const submit = page.getByRole("button", { name: /^(生成导出包|Generate export)$/ });
-      const failedJob = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith(`/conversations/${id}/exports`));
+      const failedJob = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === `/api/conversations/${id}/exports`);
       await submit.click();
       const job = await (await failedJob).json();
       await expect.poll(async () => (await (await admin.get(`/api/tasks/${job.job_id}`)).json()).status).toBe("failed");
@@ -72,7 +72,7 @@ for (const width of [375, 768, 1440]) for (const format of ["canjson", "context"
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await page.screenshot({ path: info.outputPath(`attachment-failure-${format}-${width}.png`) });
       fixtureBytes(attachmentId, original);
-      const resubmitted = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith(`/conversations/${id}/exports`));
+      const resubmitted = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname === `/api/conversations/${id}/exports`);
       await submit.focus(); await page.keyboard.press("Enter");
       const retry = await (await resubmitted).json();
       expect(retry.job_id).not.toBe(job.job_id);

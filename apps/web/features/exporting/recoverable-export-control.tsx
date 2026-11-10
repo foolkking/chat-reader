@@ -125,7 +125,8 @@ export function RecoverableExportControl({ conversationId, identity, request, zh
   const artifactId = !deliveryDisabled && task.data?.status === "committed" ? task.data.result.artifact_id : null;
   const mustAdjust = task.data?.status === "failed" && exportNeedsAdjustment(task.data.error_message);
   const delivery = artifactId ? <ExportArtifactDelivery artifactId={artifactId} scope={scope}
-    label={zh ? "下载导出包" : "Download export"} onRegenerated={job => accept(job, receipt?.key ?? `regenerated-${job.job_id}`)} /> : null;
+    label={request.format === "context_package" ? (zh ? "下载上下文包" : "Download Context Package") : (zh ? "下载导出包" : "Download export")}
+    onRegenerated={job => accept(job, receipt?.key ?? `regenerated-${job.job_id}`)} /> : null;
   const generate = (fallback = false) => <button type="button" disabled={disabled || pending}
     onClick={() => void submit()} className={`${fallback ? "btn-secondary" : "btn-primary"} min-h-11 px-3 text-sm disabled:opacity-60`}>
     {pending ? (zh ? "正在生成导出文件…" : "Preparing export…") : fallback

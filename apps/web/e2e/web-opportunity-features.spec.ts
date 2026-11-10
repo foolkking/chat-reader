@@ -170,12 +170,24 @@ test("table export offers manual clipboard recovery and a real CSV download", as
     });
   });
   await page.goto("/example");
-  await page.getByRole("button", { name: "Copy TSV", exact: true }).click();
-  const recovery = page.getByRole("textbox", { name: "Manually copy the selected data:" });
+  const table = page.locator(".reader-table-export").filter({ hasText: "Follow-ups completed" });
+  await table.hover();
+  const copy = table.getByRole("button", { name: "Copy table (TSV)", exact: true });
+  await copy.click();
+  const dialog = page.getByRole("dialog", { name: "Table export", exact: true });
+  const recovery = dialog.getByRole("textbox", { name: "Content for manual copy", exact: true });
   await expect(recovery).toBeVisible();
   await expect(recovery).toHaveValue(/Follow-ups completed/);
+  await expect(recovery).toBeFocused();
+  expect(await recovery.evaluate(node => {
+    const input = node as HTMLTextAreaElement;
+    return input.selectionStart === 0 && input.selectionEnd === input.value.length;
+  })).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(copy).toBeFocused();
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download CSV", exact: true }).click();
+  await table.getByRole("button", { name: "Download table (CSV)", exact: true }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe("reader-table.csv");
   const path = await download.path();

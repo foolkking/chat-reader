@@ -79,7 +79,7 @@ const styles = await require("postcss")([require("tailwindcss")({
 const bundle = readFileSync(join(out, "bundle.js"));
 const html = '<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body><div id="root"></div><script src="/bundle.js"></script></body></html>';
 const { chromium, expect } = require("@playwright/test");
-const browser = await chromium.launch(process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? {} : { channel: "chrome" });
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
 const results = [];
 try {
   for (const width of [375, 800, 1440]) for (const locale of ["zh-CN", "en-US"]) for (const theme of ["light", "dark"]) {

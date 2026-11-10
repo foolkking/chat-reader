@@ -1,0 +1,138 @@
+{
+  "passed": 12,
+  "cases": [
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "light",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "light",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "dark",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "light",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "light",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "dark",
+      "admissions": 8,
+      "retained_old_v1_v2": true,
+      "queue_pause": true,
+      "scoped_retries": true,
+      "actual_dexie_and_package_import": true,
+      "focus_return": true
+    }
+  ],
+  "limitations": "Synthetic HTTP/preferences/identity setup and secondary panes; real API client/queue, package decode, Dexie, Web Locks, UI and focus. Not authenticated server/PWA shell or physical device acceptance."
+}

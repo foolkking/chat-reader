@@ -3,6 +3,7 @@ import gzip
 import random
 import string
 import uuid
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -95,24 +96,28 @@ def test_gzip_preview_memory_pressure_is_retryable_not_a_format_error(client, co
 
 def test_adaptive_validation_does_not_turn_memory_pressure_into_mapping_drift(compressed_source, monkeypatch):
     compressed, _ = compressed_source
-    group = SimpleNamespace(id=uuid.uuid4(), display_name="Synthetic gzip")
+    group = SimpleNamespace(id=uuid.uuid4(), display_name="Synthetic gzip", artifact_ids=[])
     family = SimpleNamespace(groups=[group])
+    record = SimpleNamespace(id=uuid.uuid4(), artifacts=[], analysis_summary={})
     documents = [SourceDocument(artifact_id="synthetic", filename="synthetic.canonical.jsonl.gz",
         extension=".gz", content=compressed)]
     monkeypatch.setattr(service, "_group_documents", lambda *_: documents)
     monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 0)
     with pytest.raises(uploads.UploadLimitError):
-        service.evaluate_family(SimpleNamespace(), family, None, "CanJSON", builtin_key="builtin:canjson-v2")
+        service.evaluate_family(record, family, None, "CanJSON", builtin_key="builtin:canjson-v2")
 
 
 def test_known_family_resource_failure_does_not_change_resolution_status(monkeypatch):
-    family = SimpleNamespace(resolution_status="EXACT_MATCH", matched_profile_key="builtin:canjson-v2",
-        match_evidence={}, groups=[])
+    family_id = uuid.uuid4()
+    group = SimpleNamespace(id=uuid.uuid4(), family_id=family_id, artifact_ids=[], display_name="Synthetic gzip")
+    family = SimpleNamespace(id=family_id, resolution_status="EXACT_MATCH", matched_profile_key="builtin:canjson-v2",
+        match_evidence={}, groups=[group])
+    record = SimpleNamespace(artifacts=[], analysis_summary={}, input_groups=[group], structure_families=[family])
     def fail(*_, **__):
         raise uploads.UploadLimitError("UPLOAD_MEMORY_PRESSURE", "retry later", status_code=429)
     monkeypatch.setattr(service, "evaluate_family", fail)
     with pytest.raises(uploads.UploadLimitError):
-        service._resolve_known_families(None, SimpleNamespace(structure_families=[family]))
+        service._resolve_known_families(None, record)
     assert family.resolution_status == "EXACT_MATCH"
 
 
@@ -152,7 +157,11 @@ def test_background_gzip_resource_failure_preserves_sources_and_retries_same_tas
     from sqlalchemy.orm import sessionmaker
     from app.core.database import get_db
     from app.main import app
+    from app.models.background_job import BackgroundJob
+    from app.models.import_record import ImportRecord
+    from app.services.adaptive_import.resource_wait import defer_resource, finish_wait
     from app.services.background_jobs import claim_next_job, process_background_job
+    from test_import_analysis_queue import database
 
     compressed, _ = compressed_source
     uploaded = client.post("/api/adaptive-import/sessions",
@@ -179,9 +188,32 @@ def test_background_gzip_resource_failure_preserves_sources_and_retries_same_tas
         probes.append(True)
         return 16 * 1024**3 if len(probes) == 1 else 0
     monkeypatch.setattr(uploads, "available_memory_bytes", available)
-    failed = run_task()
-    assert failed["status"] == "failed", failed
-    assert "memory" in failed["error_message"].lower()
+    waiting = run_task()
+    assert waiting["status"] == "queued" and waiting["phase"] == "waiting_resources", waiting
+    assert waiting["resource_wait"]["reason"] == "UPLOAD_MEMORY_PRESSURE"
+    assert waiting["attempt_count"] == 0 and waiting["cancellable"]
+    with database() as db:
+        assert claim_next_job(db, job_type="adaptive_import_analysis") is None
+    state = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
+    assert state["state"] == "ANALYZING" and state["can_import"] is False
+    assert client.get("/api/conversations").json() == []
+    # Only exhaustion of the existing thirty-minute wait requires a manual
+    # retry. Exercise that boundary, rather than bypassing backoff or parsing
+    # compressed input without sufficient memory.
+    with database() as db:
+        row = db.get(BackgroundJob, task_id)
+        row.result = {**row.result, "resource_wait": {
+            **row.result["resource_wait"],
+            "waiting_since": (datetime.now(timezone.utc) - timedelta(seconds=1801)).isoformat(),
+            "waited_seconds": 0,
+        }}
+        finish_wait(row, "result")
+        record = db.get(ImportRecord, uuid.UUID(queued["import_id"]))
+        assert defer_resource(row, record, uploads._memory_pressure_error(), stage="analysis")
+        db.commit()
+    failed = client.get(f"/api/tasks/{task_id}").json()
+    assert failed["status"] == "failed" and failed["phase"] == "resource_paused"
+    assert failed["error_message"] == "IMPORT_RESOURCE_WAIT_EXPIRED"
     state = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
     assert state["state"] == "FAILED"
     root = tmp_path / "storage" / "imports" / queued["import_id"]
@@ -192,6 +224,7 @@ def test_background_gzip_resource_failure_preserves_sources_and_retries_same_tas
     monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 16 * 1024**3)
     retry = client.post(f"/api/tasks/{task_id}/retry")
     assert retry.status_code == 200
+    assert retry.json()["resource_wait"] is None
     completed = run_task()
     assert completed["job_id"] == str(task_id)
     assert completed["status"] == "committed", completed

@@ -398,3 +398,74 @@ existing resource limits.
   in a separate task subdirectory:19 groups passed. The earlier feedback
   checkpoint remains unchanged; `reader-final-local.json` is the new evidence.
   It still does not replace original64+12+4, Share/Together or full PWA gates.
+
+## First exact CI dispatch and waiting-period review — November 10
+
+- Candidate `65db720d639fb34270ae782c7753adbe435e6c0a` was committed and
+  pushed on existing master. Nine unrelated/mixed tracked working files were
+  SHA-256 checked unchanged; historical storage-cleanup and user audit evidence
+  were not staged.
+- Full CI `42764243257` was acknowledged at13:46:46.187+08:00. Its first
+  status read is prohibited before14:36:48.187+08:00. The first CLI attempt
+  had no CLI authentication and did not dispatch; the existing configured Git
+  credential then authenticated a process-only invocation without saving or
+  printing credentials. No schedule was created.
+- Waiting-period review found an old full-app table-export test still locating
+  removed text-button names and the old inline manual-copy label. The test now
+  locates the actual44px icons and modal, verifies selected full manual content,
+  closes with Escape and checks real-trigger focus before the same CSV byte
+  assertions. This does not relax content, focus or download checks. Lint and
+  typecheck pass. A task-local full-app reproduction command was rejected before
+  execution by tool policy; it was not retried through another launcher. The
+  final exact-source CI, not a claimed local full-app result, must verify it.
+- A preliminary read-only production capacity check at14:01:52+08:00 found
+  5,550,204KiB available but6,137,236KiB required by the unchanged backup
+  calculation alone. Candidate transfer, unpacked image and image/transfer
+  headrooms are additional. No jobs/imports were active; schema remained0060.
+  This is not deployment admission: no service was stopped, configuration
+  changed, backup/image pruned or user data modified. Capacity must be resolved
+  and freshly checked before any deployment.
+
+## First CI results and corrections — November 10
+
+- First status read14:36:48.814+08:00,50m2.6s after dispatch acknowledgement.
+  Exact65db720 run42764243257 failed. API6305 passed /3 failed /3 skipped;
+  Web stopped at the offline recovery confirmation focus assertion. Settings
+  reached456 completed cases with31 failures before the unchanged60-minute
+  job limit cancelled the remainder. No acceptance or release images resulted.
+- API failures were stale test fixtures/expectations, not suppressed resource
+  errors: ordered validation now receives real group/artifact shape; compressed
+  analysis asserts bounded queued resource wait, expiry then explicit same-task
+  retry with retained bytes. Local108 pass /2 optional Windows skips.
+- The offline confirmation opener was natively disabled by its parent action
+  lock before the shared dialog captured focus. Its two policy actions now use
+  guarded `aria-disabled`, keeping the real trigger. The existing Escape/focus
+  assertion remains, with added lock/no-submission checks. FullChromium12 pass.
+- Settings failure families:6 export POST watchers ignored `?background=true`;
+ 8 Context download assertions exposed a real loss of the context-specific
+  button name;1 regeneration watcher had the same URL issue;6 format-health
+  tests wrongly expected implicit session reopening;6 wrong-format tests exposed
+  missing row-local alert semantics;1 limit-recovery test inspected the cleared
+  native chooser instead of retained selection;3 identity tests expected distinct
+  minute labels rather than full time disclosure. Fixes retain all source,
+  checksum, canonical-no-auto-import, retention and focus assertions.
+- Context export naming is restored in the actual shared control. Row-level
+  source errors expose alerts. Format-health reload explicitly resumes the
+  exact retained import; it still checks all groups, persisted health and actual
+  mapping repair. The limit-recovery test additionally verifies zero uploads
+  before explicit analysis and the submitted source's complete byte length/SHA.
+  A pinned-Chromium synthetic multipart probe independently confirmed full bytes
+  are observable without launching the application or importing user data.
+- Waiting review also corrected the table-export full-app locator and the
+  existing whole-site export status recovery probe. The two newly added browser
+  harnesses now consistently use pinned fullChromium, not headless-shell.
+  Initial missing-browser/shell launches failed before execution and remain
+  task-local logs; no browser assertion was weakened.
+- Latest lint/typecheck and2324Node checks pass (all scripts tests, broader
+  than2239Web). Pinned-Chromium matrices pass12 each for offline, export,
+  source repair, reading feedback and table/code/attachment. This does not
+  assert full Settings/application acceptance. The rejected local full-app
+  command was not retried via another launcher; next exact-source CI owns it.
+- No workflow timeout, per-case timeout, retry policy or existing performance/
+  frame/memory threshold changed. The original failed run finished itself;
+  no cancellation was sent. A corrected commit/new full run is the next step.

@@ -182,7 +182,11 @@ try {
       await reduce.focus(); await reduce.press("Enter");
       const dialog = page.getByRole("dialog");
       await expect(dialog).toContainText(locale === "zh-CN" ? "不下载附件文件" : "without attachment files");
+      await expect(reduce).toHaveAttribute("aria-disabled", "true");
+      assert.equal(await reduce.getAttribute("disabled"), null, "Confirmation must not natively blur its real opener");
+      assert.equal(admissions.length, 7, "Opening a confirmation must not submit a download");
       await page.keyboard.press("Escape"); await expect(reduce).toBeFocused();
+      await expect(reduce).not.toHaveAttribute("aria-disabled", "true");
       assert.equal(admissions.length, 7);
       await reduce.click();
       await page.screenshot({ path: join(out, `${width}-${locale}-${theme}-policy.png`), fullPage: true });

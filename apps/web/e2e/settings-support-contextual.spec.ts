@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { removeSyntheticAccount, settingsAdmin, settingsAppearance } from "./settings-test-helper";
 import { readLocal } from "./settings-offline-helper";
 
@@ -39,6 +40,13 @@ test("import limit request preserves selected bytes and never uploads until the 
     expect(registered.status()).toBe(201); userId = (await registered.json()).user_id;
     await settingsAppearance(context.request, base, "en-US");
     const page = await context.newPage(); await page.goto(base);
+    const uploads: Array<{ body: Buffer; contentType: string }> = [];
+    page.on("request", request => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/adaptive-import/sessions") {
+        const body = request.postDataBuffer();
+        if (body) uploads.push({ body, contentType: request.headers()["content-type"] });
+      }
+    });
     await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
     await page.getByRole("button", { name: /^(Import data|Import)$/ }).filter({ visible: true }).first().click();
     const source = Buffer.from(JSON.stringify({ metadata: { powered_by: "ChatGPT Exporter" }, messages: [{ role: "Prompt", say: "Synthetic input" }, { role: "Response", say: "Synthetic answer" }] }) + " ".repeat(1024 * 1024));
@@ -73,7 +81,10 @@ test("import limit request preserves selected bytes and never uploads until the 
     await expect(page.getByRole("heading", { name: "Synthetic import limit request", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog", { name: "Import data", exact: true })).toBeVisible();
-    expect(await input.evaluate((element: HTMLInputElement) => Array.from(element.files ?? [], file => ({ name: file.name, size: file.size })))).toEqual([{ name: "synthetic-private-selection.json", size: source.length }]);
+    // The chooser resets after each append so the same filename can be chosen
+    // again. The ordered selection owns the File objects, not input.files.
+    await expect(page.getByTestId("import-selected-files").getByText("synthetic-private-selection.json", { exact: true })).toBeVisible();
+    expect(uploads).toHaveLength(0);
     await expect(page.getByTestId("preview-import-button")).toBeEnabled();
     await expect(page.getByTestId("preview-import-button")).toBeFocused();
     expect((await (await context.request.get("/api/conversations")).json())).toHaveLength(0);
@@ -81,6 +92,18 @@ test("import limit request preserves selected bytes and never uploads until the 
     const preview = page.waitForResponse(response => response.url().includes("/api/adaptive-import/sessions") && response.request().method() === "POST");
     await page.getByTestId("preview-import-button").click();
     expect((await preview).ok()).toBe(true);
+    expect(uploads).toHaveLength(1);
+    const submitted = await new Response(new Uint8Array(uploads[0].body), {
+      headers: { "Content-Type": uploads[0].contentType },
+    }).formData();
+    const files = submitted.getAll("files");
+    expect(files).toHaveLength(1);
+    const file = files[0];
+    if (typeof file === "string") throw new Error("The original source must be submitted as a file");
+    expect(file.name).toBe("synthetic-private-selection.json");
+    const bytes = Buffer.from(await file.arrayBuffer());
+    expect(bytes.length).toBe(source.length);
+    expect(createHash("sha256").update(bytes).digest("hex")).toBe(createHash("sha256").update(source).digest("hex"));
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   } catch (error) { failed = true; throw error; }
   finally {

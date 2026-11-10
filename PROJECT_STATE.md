@@ -2,7 +2,7 @@
 
 ## Unreleased recovery work — 2026-11-10
 
-Working tree only: safe ZIP body-reference recovery with explicit verified-member
+Unreleased candidate: safe ZIP body-reference recovery with explicit verified-member
 bindings; retained analysis stop/resume; fresh import entry; finite control reads
 and per-task unknown-result reconciliation; execution/heartbeat/lease fencing.
 Selection order now covers recognition/validation/draft passes; JSON/mixed
@@ -26,7 +26,16 @@ API sweep passes 190 with 4 Windows-only skips. After an initial capacity
 refusal, a fresh capacity check admitted an isolated source-hashed Next build,
 which passed. Exact-source CI/PWA/stability/memory gates remain required
 before release.
-No CI/commit/push/deployment for this candidate.
+Candidate `65db720` was committed/pushed and full CI `42764243257`
+dispatched on November10 at13:46+08:00; first read followed the50-minute gate.
+It failed API/Web and Settings hit its job limit after31 observed failures.
+Corrections cover offline confirmation focus, context-download naming, row-local
+error semantics and stale test contracts (explicit resume, exact timestamps,
+selected-file bytes and background-export URLs). Local2324 Node checks,
+lint/typecheck,108 API checks and pinned-Chromium recovery matrices pass;
+new exact-source CI remains required. Preliminary production capacity is below
+the unchanged backup budget; do not stop services or deploy without fresh
+successful admission.
 [Implementation and validation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
 [Scoped completion review](docs/execution/ux-audit-recoverable-operations-2026-11-10.md).
 The deployed source/schema and user-owned historical evidence below are unchanged.

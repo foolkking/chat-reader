@@ -35,6 +35,10 @@ PostgreSQL测试与真实组件的合成浏览器测试，而非生产用户使�
 | REC-02 | 缺陷 / 错误预防 | Medium | Observed (code + synthetic browser) | `import-task-monitor.tsx:457–510`，确定超限仍原样重试；本轮已改为返回调整 | S |
 | PERF-01 | 缺陷 / 有界读取 | High | Observed (code + executed stream tests) | 原InlineTextPreview整段`response.text()`；已由`inline-text-preview.ts:7`有界前缀替代 | M |
 | DENS-01 | 机会 / 层级与操作 | Low | Observed (code + screenshots) | `export-presets-panel.tsx:80`及`markdown-renderer.tsx:1330`，常驻次要信息；已减负 | S |
+| CI-01 | 回归用例 / 完成度 | Medium | Observed (code) | `web-opportunity-features.spec.ts`仍用已移除的表格按钮/手动复制名称；等待期间修正定位并增强焦点断言，待新精确CI | S |
+| CI-02 | 缺陷 / 键盘恢复 | Medium | Observed (CI + pinned Chromium) | 离线减少附件确认时原生disabled提前丢焦点；改为防重入aria-disabled，原Escape焦点断言及12组合通过 | S |
+| CI-03 | 缺陷 / 一致性与错误发现 | Medium | Observed (CI) | Context下载退化成泛化名称、来源行内错误丢失alert；恢复实际产品语义并补组件验证，待新完整CI | S |
+| CI-04 | 回归用例 / 合同准确性 | Medium | Observed (CI + source) | 旧URL后缀、自动恢复、原生FileList和秒级常驻标签假设；按真实合同修正并保留/增强字节、身份和恢复验证 | M |
 
 ### REC-01：不能对已确定不可访问的内容推荐另一种生成方式
 

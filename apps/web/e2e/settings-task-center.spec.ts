@@ -118,7 +118,7 @@ for (const width of [375, 768, 1440]) {
       const id = (await created.json()).conversation.id;
       const jobs: Array<{ job_id: string; queued_at: string; format: string }> = [];
       for (const format of ["markdown_bundle", "canjson_bundle", "canjson_bundle"]) {
-        // Ensure two identical operations have visibly different server times.
+        // Keep distinct full timestamps, even when the compact minute labels match.
         if (jobs.length) await page.waitForTimeout(1100);
         const queued = await admin.post(`/api/conversations/${id}/exports`, {
           headers: { "Idempotency-Key": crypto.randomUUID() }, data: { format },
@@ -142,7 +142,10 @@ for (const width of [375, 768, 1440]) {
         await expect(row).toContainText(title);
         await expect(row).toContainText(job.format === "markdown_bundle" ? "Markdown" : "CanJSON");
         await expect(row.locator("time")).toHaveAttribute("datetime", job.queued_at);
-        times.push((await row.locator("time").textContent())!);
+        const fullTime = await row.locator("time").getAttribute("title");
+        expect(fullTime).toBeTruthy();
+        await expect(row.locator("time")).toHaveAttribute("aria-label", `${locale === "zh-CN" ? "提交于" : "Submitted"} ${fullTime}`);
+        times.push(fullTime!);
         await expect(row.getByRole("progressbar")).toHaveCount(0);
         const download = row.getByRole("button", { name: /^(下载结果|Download result)$/ });
         await expect(download).toBeEnabled();

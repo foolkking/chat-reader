@@ -345,21 +345,21 @@ test("export status recovers the same real task; task center read failures are e
   await page.request.patch("/api/preferences", { data: { locale_mode: "en-US", theme_mode: "dark" } });
   const id = await conversation(page, "Synthetic export recovery");
   let exports = 0;
-  page.on("request", (request) => { if (request.method() === "POST" && request.url().endsWith(`/conversations/${id}/exports`)) exports++; });
+  page.on("request", (request) => { if (request.method() === "POST" && new URL(request.url()).pathname === `/api/conversations/${id}/exports`) exports++; });
   try {
     await page.goto(`/conversations/${id}`);
     await page.getByRole("button", { name: "Message actions", exact: true }).click();
     await openReaderAction(page, "export");
     await page.route("**/api/tasks/*", (route) => route.fulfill({ status: 503, json: { detail: "Synthetic task status failure" } }));
-    const queued = page.waitForResponse((response) => response.url().endsWith(`/conversations/${id}/exports`) && response.request().method() === "POST");
+    const queued = page.waitForResponse((response) => new URL(response.url()).pathname === `/api/conversations/${id}/exports` && response.request().method() === "POST");
     await page.getByRole("button", { name: "Generate export", exact: true }).click();
     const response = await queued; expect(response.ok()).toBe(true);
     const job = (await response.json()).job_id;
-    await expect(page.getByRole("alert").filter({ hasText: "Export status is unavailable" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Waiting for task status", exact: true })).toBeDisabled();
+    await expect(page.getByRole("status").filter({ hasText: "Status is unavailable; the task may still be running." })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Preparing export…", exact: true })).toBeDisabled();
     await expect.poll(async () => (await (await page.request.get(`/api/tasks/${job}`)).json()).status).toBe("committed");
     await page.unroute("**/api/tasks/*");
-    await page.getByRole("button", { name: "Retry status", exact: true }).click();
+    await page.getByRole("button", { name: "Read status again", exact: true }).click();
     await expect(page.getByRole("button", { name: "Download Context Package", exact: true })).toBeVisible();
     expect(exports).toBe(1);
     const task = await (await page.request.get(`/api/tasks/${job}`)).json();

@@ -55,7 +55,7 @@ const styles = await require("postcss")([require("tailwindcss")({
 const bundle = readFileSync(join(out, "bundle.js"));
 const html = '<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body><div id="root"></div><script src="/bundle.js"></script></body></html>';
 const { chromium, expect } = require("@playwright/test");
-const browser = await chromium.launch(process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? {} : { channel: "chrome" });
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
 const results = [];
 try {
   for (const width of [375, 800, 1440]) for (const locale of ["zh-CN", "en-US"]) for (const theme of ["light", "dark"]) {
@@ -77,6 +77,9 @@ try {
       if (url.pathname === "/bundle.js") return route.fulfill({ contentType: "text/javascript", body: bundle });
       if (url.pathname === "/style.css") return route.fulfill({ contentType: "text/css", body: styles.css });
       if (url.pathname.endsWith("/attachments")) return route.fulfill({ json: { items: [] } });
+      if (url.pathname.startsWith("/api/skills/resolve")) return route.fulfill({ json: {
+        name: "Synthetic context guidance", bundle_url: "/synthetic-guidance.zip",
+      } });
       if (url.pathname === "/api/user-feature-entries/export-preset") return route.fulfill({ json: presets });
       if (url.pathname.startsWith("/api/user-feature-entries/export-preset/") && request.method() === "PUT") {
         presetWrites++;
@@ -228,6 +231,12 @@ try {
       assert.equal(submissions[4].payload.format, "context_package");
       assert.equal(submissions[4].payload.context_attachment_policy, "include");
       assert.equal(submissions[4].payload.continuation_policy, "raw_only");
+      const contextJob = receipts.get(submissions[4].key);
+      tasks.set(contextJob.job_id, { ...contextJob, status: "committed", phase: "committed", progress: 100,
+        result: { artifact_id: "synthetic-artifact" } });
+      await page.evaluate(async id => window.gate.client.invalidateQueries({ queryKey: ["task", id] }), contextJob.job_id);
+      await expect(page.getByTestId("context-package-delivery")
+        .getByRole("button", { name: zh ? "下载上下文包" : "Download Context Package", exact: true })).toBeEnabled();
       await button("CanJSON", "CanJSON").click();
       await includeAttachments.uncheck();
       // Late acknowledgement after an account epoch changes must never bind
@@ -247,7 +256,7 @@ try {
       assert.deepEqual(errors, []);
       results.push({ width, locale, theme, original_options: true, remount_receipt: true, check_read_only: true,
         explicit_same_key_retry: true, adjustment_retained: true, empty_selection_blocked: true, server_limit_not_bypassed: true,
-        bundle_context_options: true, account_retirement: true, collapsed_presets_preserve_recovery: true,
+        bundle_context_options: true, context_delivery_named: true, account_retirement: true, collapsed_presets_preserve_recovery: true,
         unavailable_or_denied_not_backgrounded: true });
     } catch (error) {
       writeFileSync(join(out, "failure.json"), JSON.stringify({ width, locale, theme, error: String(error), errors, submissions }, null, 2));

@@ -57,8 +57,10 @@ export function OfflineDownloadRecovery({ item, zh, disabled, onRetry, onAction,
         {item.error === "UNAVAILABLE_TARGET" ? (zh ? "重新核对范围" : "Review scope")
           : counts.total > 1 ? (zh ? "仅重试未完成项" : "Retry unfinished only") : retryLabel ?? (zh ? "重试下载" : "Retry download")}
       </button> : null}
-      {canReduce && item.assetMode === "all" ? <button type="button" disabled={disabled} className="btn-secondary min-h-11 px-3 text-xs" onClick={() => reduce("small")}>{zh ? "改为仅小附件" : "Use small attachments"}</button> : null}
-      {canReduce ? <button type="button" disabled={disabled} className="btn-secondary min-h-11 px-3 text-xs" onClick={() => reduce("none")}>{zh ? "改为正文与附件信息" : "Use text and file metadata"}</button> : null}
+      {/* The parent owns the action lock while confirmation is open. Native
+          disabled blurs its opener before the dialog can capture that trigger. */}
+      {canReduce && item.assetMode === "all" ? <button type="button" aria-disabled={disabled || undefined} className="btn-secondary min-h-11 px-3 text-xs" onClick={() => { if (!disabled) reduce("small"); }}>{zh ? "改为仅小附件" : "Use small attachments"}</button> : null}
+      {canReduce ? <button type="button" aria-disabled={disabled || undefined} className="btn-secondary min-h-11 px-3 text-xs" onClick={() => { if (!disabled) reduce("none"); }}>{zh ? "改为正文与附件信息" : "Use text and file metadata"}</button> : null}
     </div>
   </div>;
 }

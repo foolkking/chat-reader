@@ -1,0 +1,8 @@
+First CI correction checkpoint (unreleased)
+Lint: passed
+Typecheck: passed (task-local tsBuildInfoFile; user file unchanged)
+Node: 2324 passed / 0 failed / 0 skipped (all scripts/**/*.test.mjs; includes prior2239 Web cases, not additive)
+API: 108 passed / 2 optional Windows skips; canjson memory, analysis queue, per-unit admission, bounded ZIP.
+Pinned fullChromium: offline12, export12, source repair12, feedback12, table/code/attachment12.
+Synthetic multipart: original 1048586-byte file verified, intercepted HTTPS; no app server or user source.
+Full Settings/PWA/Linux/stability/memory gates: pending corrected exact-source CI; prior run failed.

@@ -1,0 +1,31 @@
+{
+  "base_revision": "65db720d639fb34270ae782c7753adbe435e6c0a",
+  "status": "uncommitted correction after failed exact-source CI",
+  "recorded_at": "2026-11-10T07:24:46.760463+00:00",
+  "sources": {
+    "apps/api/tests/test_canjson_memory_bounds.py": "75b24b966c0ad274c37585268e646e28aa2e23572aa49a624bcb9e9b8dfee00c",
+    "apps/web/components/offline-download-recovery.tsx": "3532a8d6098e25e6a80f4b9534e8ce2ade7b00a6e99eb3bdd74f7bc3a699083b",
+    "apps/web/e2e/settings-attachment-export.spec.ts": "11db735b0716595abdd92d09d0b2716fd4a1a41e5f1e92698248e3cef053ffb6",
+    "apps/web/e2e/settings-export-retention.spec.ts": "b23093a5383c804677fd39fa62e0677af04c00156d2ee5e67508bb2c79a9ef47",
+    "apps/web/e2e/settings-format-health.spec.ts": "0d4dddb1ee52eb3171d1be4c33a68d90800e9a57e020a17c1dab5dbc4700a9cd",
+    "apps/web/e2e/settings-support-contextual.spec.ts": "6719825e8116c713f18cfbee8c882bbb6cd6fc2bfc9a7649ab4597dd4dd6c170",
+    "apps/web/e2e/settings-task-center.spec.ts": "5b1c895bf043c09fd8494b08ed588940148dd2ace0c828b4183ada5a7e9090e5",
+    "apps/web/e2e/ux-whole-site.spec.ts": "d84530ea2a6c631332bb5f9b5170b2f91cf2b960232cba9aadfbf473b07c8a5d",
+    "apps/web/e2e/web-opportunity-features.spec.ts": "b3a56aca1bb6ef1d96b58768eecd26a1f04dfb10c5d7ec5ec4d69a7c768a8539",
+    "apps/web/features/exporting/recoverable-export-control.tsx": "868b26c2c4197b995b1f3c3a7de11f4d834394a0ffd6a73466ce15238ffe5366",
+    "apps/web/features/import/import-panel.tsx": "fc4bf7f9a95ccac8fa008799ca5d85f39a5ed8b75209a12e2a04dfdd3cb19e97",
+    "scripts/ux/export-recovery-browser.mjs": "aa074accbf2de826c2dd3c05f7808915251e93d0dde65a15348b2c2526a81a60",
+    "scripts/ux/import-source-repair-browser.mjs": "3c475b719f18e98c5ca3440923bb4b38be3c1316f80214625bdc31e8d486dca7",
+    "scripts/ux/offline-recovery-browser.mjs": "0e4ea599c3f4f8fbb689b260c25717c1add6bf2e1151bcd30dee13bd0ee7986f",
+    "scripts/ux/reading-feedback-browser.mjs": "d1216bddc2b926675486d6aeab9c48efe48096987d6f68a2c5224f4a0b90e0df"
+  },
+  "evidence": {
+    "ci-fix01-export-browser.json": "e48e6133945c7408e4ffd09217e15ea6fa5bd4bb3e5de304e4f6877e36f4b821",
+    "ci-fix01-feedback-browser.json": "2838cacb5518993f618f8b9ad77c9abd527d5a520f7ceea63c3cb85c32a295cc",
+    "ci-fix01-local-summary.txt": "a12eb34e21e5fc19368ae6d9a3bda29ec739f9c917955b1b59f8cc4796b20e2d",
+    "ci-fix01-offline-browser.json": "610bedfb66968d8139495ee5d72978be852673ea68827d89e780f212605b427c",
+    "ci-fix01-source-browser.json": "fc2962fc37500897798729bc907a8897b17b462f3cd06052f0c7c84e3f06249c",
+    "ci-fix01-table-browser.json": "38bc7a5dec92616a20baeeaf4f872bc3ad5cc430cb9324079008ca32b2e55222",
+    "ci-first-failure-summary.json": "0db390ffcca11088c65cf21e856c80bf83ef1cb66e9f01837dc7e7ff93ce8355"
+  }
+}
