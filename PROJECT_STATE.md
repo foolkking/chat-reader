@@ -65,6 +65,14 @@ Read-only production capacity at18:32+08:00 is5,527,340KiB available versus
 6,147,100KiB backup-only budget, before images/headroom; no deployment/cleanup.
 [Implementation and validation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
 [Scoped completion review](docs/execution/ux-audit-recoverable-operations-2026-11-10.md).
+Fifth run42804546886 (`aa21ea9`) failed Web at one adaptive-import commit
+upstream ECONNRESET; API/Settings/performance passed, images skipped. The user
+waived waiting for this run; the actual first read was19:55:38+08:00.
+Follow-up corrects commit socket/body forwarding and explicit unknown-result
+recovery, reproduced touch-window edge starvation, and cross-device position
+handoff/coalesced revision safety. Final local2345 Node checks, lint/typecheck,
+Reader27, cross-device12 and import-source12 mounted cases pass. Exact-source
+replacement CI is the next gate; no deployment. Original64+12+4 thresholds remain.
 The deployed source/schema and user-owned historical evidence below are unchanged.
 
 ## Current release — reading interaction / missing ZIP assets — 2026-11-09

@@ -1,0 +1,23 @@
+{
+  "base_revision": "aa21ea9dc5cbd483a8932285477da89cc025e994",
+  "scope": "Commit proxy/uncertain acknowledgement, touch-window edge starvation and reading handoff/revision safety",
+  "hash_format": "SHA-256 of UTF-8 source bytes with CRLF normalized to LF, matching Git checkout normalization",
+  "files": {
+    ".github/workflows/build-release-images.yml": "c0241088f5842b2b8f85869b6245c591283b89efa77bac454e8b726ed3c35e56",
+    "apps/web/components/reading-position-sync-status.tsx": "c79866789d1cb03a797907cfca20b4d632b7b5edd5f173302f90f2908b4187b3",
+    "apps/web/e2e/settings-reading-sync.spec.ts": "39f77f9abb065e2ffad02243199fa7caf42d50871304fad43f79b9fd4f8ef61e",
+    "apps/web/features/conversations/conversation-reader.tsx": "2e9c2ad4c624f575d3e072ae9dcb3031dcc14ec04b6fe3befbe4c90fe31b7fe1",
+    "apps/web/features/import/import-panel.tsx": "c68e82d1a3c3819645fb5c658a2f974b358627beda4f7d71e6d599a18d838836",
+    "apps/web/lib/api.ts": "345f7d48b5e29711a28149b66e2c9cd051b7d12c96cba70a219f4ff48c8ff146",
+    "apps/web/lib/reading-position-sync.ts": "c4fd5df35010147fe1c957e2f0c31c067f5bc8cfacb11dfa6e5b8bb43900ab65",
+    "apps/web/pages/api/imports/[importId]/commit.ts": "1fcf7ee5877b09c8c79986325fc39937a5da8f268aceec04c63b4e9cb3e2dbeb",
+    "scripts/ux/import-background-analysis.test.mjs": "eaaaecf6d57d94aab0e0ff0ef3feea8a23cca52424f2094914fe8366b8030168",
+    "scripts/ux/import-commit-proxy.test.mjs": "170e97bf463e83eb252d76c1bb22f5967748c1ff721c1b94152d6f50713d7eff",
+    "scripts/ux/import-source-repair-browser.mjs": "fd830f28a8eef22c1b95218d39ea9904c398f1e3aa89269354bf14818ed9f947",
+    "scripts/ux/reader-autosave-feedback.test.mjs": "a362f72c13a7333eacbe02c421df1cc945eaa5a1785ad67fc0741356dffa861f",
+    "scripts/ux/reader-interaction-browser.mjs": "2d7368197edc38f5003b8a8936090827f337f6eb254a753b5d24dcbfdb86705d",
+    "scripts/ux/reader-navigation-readiness.test.mjs": "47865e93ee6f50f1d9f9c87f146f89f5ec32a4f979fc6770f63839fcf588100b",
+    "scripts/ux/reading-position-browser.mjs": "68004676e405aed6e1048cd8de48c5c4eb548375f3195cbfeb0627ae47a4a1d7",
+    "scripts/ux/reading-position-handoff.test.mjs": "92cc86dcd568470af2729296d88fc45787c71294285904b4399079bc47766cab"
+  }
+}

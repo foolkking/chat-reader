@@ -199,6 +199,12 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reader-interaction-browser.mjs
 
+      - name: Cross-device reading handoff and conflict recovery
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/reading-position-browser.mjs
+
       - name: Retained import stop and per-task recovery controls
         timeout-minutes: 5
         env:
@@ -477,6 +483,8 @@ jobs:
             ${{ runner.temp }}/reader-interaction-browser/result.json
             ${{ runner.temp }}/reader-interaction-browser/failure-state.json
             ${{ runner.temp }}/reader-interaction-browser/*.png
+            ${{ runner.temp }}/reading-position-browser/result.json
+            ${{ runner.temp }}/reading-position-browser/*.png
             ${{ runner.temp }}/import-recovery-browser/result.json
             ${{ runner.temp }}/import-recovery-browser/failure.json
             ${{ runner.temp }}/import-recovery-browser/*.png

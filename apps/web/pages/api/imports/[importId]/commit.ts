@@ -5,6 +5,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 const API_INTERNAL_URL = (process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const UPSTREAM_TIMEOUT_MS = 300_000;
+const MAX_COMMIT_BODY_BYTES = 16 * 1024;
 
 export const config = {
   maxDuration: 300,
@@ -33,9 +34,25 @@ export default async function handler(request: NextApiRequest, response: NextApi
   const upstreamUrl = `${API_INTERNAL_URL}/api/imports/${encodeURIComponent(importId)}/commit`;
 
   try {
+    // bodyParser is disabled for this long-lived route. Consume and forward
+    // the small options document; silently dropping it loses destination,
+    // duplicate policy and the selected image-column width.
+    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const chunk of request) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      size += bytes.length;
+      if (size > MAX_COMMIT_BODY_BYTES) {
+        response.status(413).json({ detail: "Import commit options are too large." });
+        return;
+      }
+      chunks.push(bytes);
+    }
     const upstream = await requestImportCommit(
       upstreamUrl,
       request.headers.accept ?? "application/json",
+      Buffer.concat(chunks),
+      request.headers["content-type"],
       request.headers.cookie,
       request.headers.origin,
     );
@@ -55,21 +72,29 @@ type UpstreamResponse = {
   statusCode: number;
 };
 
-function requestImportCommit(urlValue: string, accept: string, cookie?: string, origin?: string): Promise<UpstreamResponse> {
+function requestImportCommit(urlValue: string, accept: string, body: Buffer, contentType?: string, cookie?: string, origin?: string): Promise<UpstreamResponse> {
   return new Promise((resolve, reject) => {
     const url = new URL(urlValue);
     const upstreamRequest = (url.protocol === "https:" ? httpsRequest : httpRequest)(
       url,
       {
         method: "POST",
+        // A mutation must not race an upstream keep-alive expiry on a pooled
+        // socket. Open a fresh connection, rather than replaying an uncertain
+        // POST after ECONNRESET (which may already have committed).
+        agent: false,
         headers: {
           accept,
+          "content-length": String(body.length),
+          ...(contentType ? { "content-type": contentType } : {}),
           ...(cookie ? { cookie } : {}),
           ...(origin ? { origin } : {}),
         },
       },
       (upstreamResponse) => {
         const chunks: Uint8Array[] = [];
+        upstreamResponse.on("error", reject);
+        upstreamResponse.on("aborted", () => reject(new Error("Import commit response was interrupted.")));
         upstreamResponse.on("data", (chunk: Uint8Array) => chunks.push(chunk));
         upstreamResponse.on("end", () => {
           resolve({
@@ -85,6 +110,6 @@ function requestImportCommit(urlValue: string, accept: string, cookie?: string, 
       upstreamRequest.destroy(new Error("Import commit upstream request timed out."));
     });
     upstreamRequest.on("error", reject);
-    upstreamRequest.end();
+    upstreamRequest.end(body);
   });
 }

@@ -65,6 +65,7 @@ window.syntheticMessages=messages;
 const conversation={id,title:"Synthetic formula reading",display_title:"Synthetic formula reading",message_count:36,turn_count:18,
   offline_revision:1,description_markdown:null,project_id:null,status:"active",source_type:"synthetic",source_profile:"synthetic"};
 const turn=(anchor="m0")=>{
+ (window.turnReads??=[]).push(anchor);
  const start=Math.floor(messages.findIndex(m=>m.id===anchor)/2)*2;
  return {conversation_id:id,turn_key:"turn"+start,start_offset:start,end_offset:start+2,total_messages:36,
    items:messages.slice(start,start+2),previous_anchor_message_id:start?"m"+(start-2):null,next_anchor_message_id:start<34?"m"+(start+2):null};
@@ -77,7 +78,7 @@ const source={mode:"remote",capabilities:{canonicalManagement:false,attachments:
  getDialogueIndex:async()=>index,getToc:async()=>toc,
  getMessageBlocks:async(id)=>messages.find(m=>m.id===id).render_blocks,
  getMessageWindow:async()=>({items:messages,limit:36,offset:0,total:36,has_previous:false,has_more:false}),
- getReadingPosition:async()=>({position:null}),saveReadingPosition:async()=>{},recordRecent:async()=>conversation,
+ getReadingPosition:async()=>({position:window.touchAnchor?{conversation_id:id,message_id:window.touchAnchor,block_index:0,scroll_offset:0,anchor_data:{},revision:1}:null}),saveReadingPosition:async()=>{},recordRecent:async()=>conversation,
  searchConversation:async(_,options)=>({query:options.query,items:[{document_id:"search-m1",document_type:"message",conversation_id:id,conversation_title:conversation.title,
  message_id:"m1",message_version_id:"v1",role:"assistant",order_key:"2",block_index:0,render_block_id:"b1-0",snippet:"Synthetic formula",rank:1,occurrence_count:1,matches:[]}],limit:50,offset:0,total:1}),
  getTargetContext:async(_,target)=>{const t=turn(target.messageId),m=messages.find(m=>m.id===target.messageId);return{
@@ -116,9 +117,11 @@ const html = '<!doctype html><html><meta charset="utf-8"><meta name="viewport" c
 const {chromium,expect}=require("@playwright/test");
 const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM==="1"?"chromium":"chrome"});
 const results=[], errors=[];
+const touchOnly=process.env.READER_TOUCH_ONLY==="1";
 let current;
 try {
   for(const width of [1440,800,375]) for(const locale of ["en-US","zh-CN"]) for(const theme of ["light","dark"]) {
+    if(touchOnly&&(width===1440||locale!=="en-US"||theme!=="light")) continue;
     const page=await browser.newPage({viewport:{width,height:900},hasTouch:true});
     current=page;
     page.on("pageerror",error=>errors.push(error.stack??error.message));
@@ -140,6 +143,65 @@ try {
     assert.ok((await scroller.boundingBox()).height<=900,"The embedded Reader owns a bounded viewport, as in the real app shell.");
     await expect(page.locator(".katex").first()).toBeVisible({timeout:30000});
     await page.waitForTimeout(600);
+    if(width!==1440&&locale==="en-US"&&theme==="light") {
+      const cdp=await page.context().newCDPSession(page);
+      for(const direction of ["down","up"]) {
+        await page.addInitScript(()=>{window.fixtureKind="short";window.touchAnchor="m14";});
+        await page.reload();
+        await expect(scroller).toHaveAttribute("data-navigation-stage",/^settled/,{timeout:15000});
+        // Position without user intent, like arriving from a TOC/restore. The
+        // sentinel already intersects; a new finger drag cannot cross it again.
+        await scroller.evaluate((node,d)=>{node.scrollTop=d==="down"?node.scrollHeight:0;},direction);
+        await page.waitForTimeout(500);
+        const before=await page.evaluate(()=>({reads:window.turnReads.length,
+          ids:[...document.querySelectorAll("article[data-message-id]")].map(n=>n.dataset.messageId)}));
+        const box=await scroller.boundingBox(),x=Math.round(box.x+box.width*.5);
+        const startY=Math.round(box.y+box.height*(direction==="down"?.72:.25));
+        await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x,y:startY}]});
+        for(let step=1;step<=12;step++) {
+          await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x,y:startY+(direction==="down"?-1:1)*step*20}]});
+          await page.waitForTimeout(25);
+        }
+        await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+        await expect.poll(()=>page.evaluate(()=>window.turnReads.length)).toBeGreaterThan(before.reads);
+        await expect.poll(()=>scroller.getAttribute("data-reader-edge-stage")).toMatch(/settled|mounted/);
+        const after=await page.evaluate(()=>({reads:window.turnReads.length,
+          ids:[...document.querySelectorAll("article[data-message-id]")].map(n=>n.dataset.messageId),
+          pointerDragging:document.querySelector("[data-reader-scroll-root]").dataset.readerPointerDragging??null}));
+        assert.ok(after.ids.some(id=>!before.ids.includes(id)),"A genuine touch gesture must load readable content beyond the original edge.");
+        assert.equal(after.pointerDragging,null);
+        results.push({touchBoundary:true,width,direction,before,after});
+      }
+      // Restore the ordinary fixture for all existing UI/performance gates.
+      await page.addInitScript(()=>{window.fixtureKind="dense";window.touchAnchor=null;});
+      await page.reload();await expect(page.locator(".katex").first()).toBeVisible();await page.waitForTimeout(600);
+      for(const direction of ["down","up"]) {
+        await scroller.evaluate(node=>node.scrollTop=1600);await page.waitForTimeout(300);
+        await page.evaluate(()=>{
+          window.touchTrace=[];window.touchSampling=true;
+          const tick=()=>{const root=document.querySelector("[data-reader-scroll-root]");
+            window.touchTrace.push({top:root.scrollTop,writer:root.dataset.readerLastScrollWriter});
+            if(window.touchSampling)requestAnimationFrame(tick);};tick();
+        });
+        const box=await scroller.boundingBox(),x=Math.round(box.x+box.width*.5);
+        const startY=Math.round(box.y+box.height*(direction==="down"?.72:.25));
+        await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x,y:startY}]});
+        for(let step=1;step<=12;step++){
+          await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x,y:startY+(direction==="down"?-1:1)*step*20}]});
+          await page.waitForTimeout(25);
+        }
+        await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+        await page.waitForTimeout(350);
+        const trace=await page.evaluate(()=>{window.touchSampling=false;return window.touchTrace;});
+        const sign=direction==="down"?1:-1;
+        assert.ok((trace.at(-1).top-trace[0].top)*sign>100,"Dense formula content must move in the finger's reading direction.");
+        assert.ok(trace.every((frame,i)=>!i||(frame.top-trace[i-1].top)*sign>=-2),"Geometry must not undo the touch gesture by more than 2px.");
+        assert.ok(await page.locator('[data-virtualized-block-list="true"]').count()>0);
+        results.push({touchVirtual:true,width,direction,trace});
+      }
+      await scroller.evaluate(node=>node.scrollTop=0);await page.waitForTimeout(300);
+    }
+    if(!touchOnly) {
     const title=page.locator("[data-reader-tags-trigger]:visible");
     await expect(title).toHaveCount(1);
     const position=page.locator("[data-reader-current-message]:visible");
@@ -332,6 +394,7 @@ try {
       await expect.poll(()=>scroller.evaluate((root,expected)=>Math.abs(document.getElementById("block-m0-0").getBoundingClientRect().top-root.getBoundingClientRect().top-expected),originOffset),{timeout:15000}).toBeLessThanOrEqual(1);
       await expect(scroller).toHaveAttribute("data-navigation-stage","settled");
       results.push({returnCue:true,focusedExpiry:true,focusMoreCheckpoint:true,originOffset});
+    }
     }
     await page.close();
   }

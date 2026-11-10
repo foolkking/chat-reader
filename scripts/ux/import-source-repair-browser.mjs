@@ -42,10 +42,12 @@ export const createAdaptiveImportSession=files=>{
  return request("/api/adaptive-import/sessions",{method:"POST",body});
 };
 const forbidden=()=>{throw Error("Unexpected mutation or secondary workflow")};
-export const cancelAdaptiveImportSession=forbidden,cancelTask=forbidden,commitImport=forbidden,
-getImportStatus=forbidden,previewImport=forbidden,
+export const commitImport=id=>request("/api/imports/"+id+"/commit",{method:"POST"});
+export const getImportStatus=id=>request("/api/imports/"+id+"/status");
+export const cancelAdaptiveImportSession=forbidden,cancelTask=forbidden,previewImport=forbidden,
 resumeAdaptiveImportSession=forbidden,retryTask=forbidden,updateAdaptiveImportDestination=forbidden;
-export const SupportLimitAction=()=>null,ImportPreviewCard=()=>null,AdaptiveImportWorkspace=()=>null,
+export const AdaptiveImportWorkspace=({onImport,importing})=><button data-testid="commit-import-button" disabled={importing} onClick={onImport}>Synthetic confirm</button>;
+export const SupportLimitAction=()=>null,ImportPreviewCard=()=>null,
 FormatConversionGuide=()=>null,ImportNoiseReview=()=>null;
 export default ({href,children,...props})=><a href={href} {...props}>{children}</a>;
 `);
@@ -279,8 +281,34 @@ try {
       assert.deepEqual([...selectionWrites[0].matchAll(/filename="([^"]+)"/g)].map(match => match[1]), ["replacement.json", "01.json", "01.json"]);
       releaseUpload();
       await expect(page.getByTestId("import-analysis-status")).toBeVisible();
+      await page.unroute("http://source-repair.synthetic/**");
+      let commitPosts=0,commitReads=0;
+      await page.route("http://source-repair.synthetic/**",route=>{
+        const path=new URL(route.request().url()).pathname;
+        if(path.endsWith("/commit")){commitPosts++;return route.abort("failed");}
+        if(path.endsWith("/status")){
+          commitReads++;
+          return route.fulfill({json:{import_id:"synthetic-import",status:"committed",conversation_ids:["synthetic-result"],
+            conversation_count:1,message_count:2,warnings:[]}});
+        }
+        if(path.startsWith("/api/"))return route.fulfill({json:{...session,state:"READY",phase:"ready",can_import:true}});
+        return route.fulfill({contentType:path==="/bundle.js"?"text/javascript":path==="/style.css"?"text/css":"text/html",
+          body:path==="/bundle.js"?bundle:path==="/style.css"?styles.css:html});
+      });
+      await page.goto("http://source-repair.synthetic/");
+      const commitButton=page.getByTestId("commit-import-button");
+      await expect(commitButton).toBeEnabled();await commitButton.click();
+      const checkCommit=page.getByRole("button",{name:locale==="zh-CN"?"核对导入结果":"Check import result",exact:true});
+      await expect(checkCommit).toBeVisible();await expect(commitButton).toBeDisabled();
+      await page.getByRole("button",{name:"Toggle import",exact:true}).click();
+      await page.getByRole("button",{name:"Toggle import",exact:true}).click();
+      await expect(checkCommit).toBeVisible();await expect(commitButton).toBeDisabled();
+      assert.equal(commitPosts,1);
+      await checkCommit.click();await expect(page.getByTestId("import-completion-summary")).toBeVisible();
+      assert.equal(commitReads,1);assert.equal(commitPosts,1);
       results.push({ width, locale, theme, state: theme === "light" ? "FAILED" : "PAUSED", writes: writes.length, reads, geometry,
-        screenshot: filename, exclusionScreenshot, selectionScreenshot, selectionGeometry, selectedUploadCount: selectionWrites.length });
+        screenshot: filename, exclusionScreenshot, selectionScreenshot, selectionGeometry, selectedUploadCount: selectionWrites.length,
+        unknownCommitRecovered:true,commitPosts,commitReads });
     } catch (error) {
       await page.screenshot({ path: join(out, `failure-${width}-${locale}-${theme}.png`), fullPage: true }).catch(() => {});
       const chooserEvents = await page.evaluate(() => window.chooserEvents).catch(() => null);

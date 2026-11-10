@@ -2,6 +2,11 @@
 
 ## 可恢复操作实施中 — 2026-11-10
 
+第五轮CI后的增量：导入代理请求体/新连接/未知提交核对，触摸完整轮次
+边界加载及跨设备进度显式接续。同步`READING_TOOLS_CONTRACT.md`、
+`PWA_OFFLINE_RESILIENCE_CONTRACT.md`、`ADAPTIVE_IMPORT_CONTRACT.md`；
+新增必需`reading-position-browser`双存储浏览器门禁，旧稳定性门禁不变。
+
 新增 `execution/RECOVERABLE_OPERATIONS_2026-11-10.md`，以逐项待完成清单
 记录选择顺序、任务恢复、ZIP 引用兼容及后续密度/离线/导出工作。
 同步两份 Adaptive Import 合同和状态/导航的未发布边界。

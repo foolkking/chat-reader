@@ -7,6 +7,40 @@ and independent artifact/runtime checks. See
 Synthetic browser acceptance is not authenticated production or physical-device
 acceptance; the original November 8 implementation/audit records remain historical.
 
+## Unreleased touch boundaries and device handoff — 2026-11-10
+
+Touch movement and wheel input request the same guarded complete-turn edge
+load when its sentinel is already visible. Native panning is not classified as
+a scrollbar-thumb drag. This fixes a reproduced stop at a restored/TOC window
+endpoint without disabling virtualization, clearing its size cache or writing
+scrollTop in an input handler. Direction reversal still invalidates old work;
+Viewer-locked input cannot request background reading loads.
+
+Fresh Reader entry fetches the confirmed position before freezing its initial
+restore decision (including a previously cached query). During an active visit,
+focus/reconnect/visibility and one nonoverlapping foreground read every30seconds
+observe remote progress without replacing the local reading point or moving the
+body. An incoming newer point offers explicit Continue here / Use other device,
+with message/block and recorded time, not a fabricated device identity. The
+Reader notice floats outside document flow and may collapse to Needs attention;
+that dismissal never discards either point. Routine autosaves remain silent.
+
+A queued offline edit keeps its original base revision even if a remote GET
+arrives before another local scroll is coalesced. Only an applied receipt can
+advance subsequent local operations' base. Stale applied receipts preserve a
+newer observed remote point as a handoff, rather than accepting it implicitly.
+Both conflict and clean handoff choices recheck the displayed local signature,
+remote revision and absence of unacknowledged submitted operations. Use-server
+navigates through the existing Reader owner, including non-text block offset;
+a failed locate retains the exact retry. No client clock/furthest-page winner,
+automatic live scroll synchronization, new migration or Dexie version is added.
+
+Synthetic tests reproduce the original missing touch load and exercise both
+directions at375/800px, plus both directions within a dense virtualized formula
+reply with ≤2px reversal. Separate real Chromium/Dexie stores cover12 responsive/
+locale/theme handoff combinations. Exact full-app CI remains required; physical
+tablet/Safari acceptance has not been performed.
+
 ## Unreleased image receipt presentation — 2026-11-10
 
 The working-tree candidate expires only a successful image-size receipt three

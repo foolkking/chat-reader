@@ -98,7 +98,7 @@ for (const choice of ["local", "server"] as const) test(`reading conflict keeps 
   } finally { await a.close(); await b.close(); await admin.dispose(); }
 });
 
-test("an incoming remote position changes the next restore without scrolling the active Reader", async ({ browser, playwright, baseURL }) => {
+test("an incoming remote position offers an explicit handoff without scrolling the active Reader", async ({ browser, playwright, baseURL }) => {
   const admin = await settingsAdmin(playwright.request, baseURL!);
   const a = await browser.newContext({ locale: "en-US" }), b = await browser.newContext({ locale: "en-US" });
   try {
@@ -112,12 +112,17 @@ test("an incoming remote position changes the next restore without scrolling the
     const remote = (await server(b, baseURL!, id))!;
     const top = await pa.getByTestId("reader-scroll-root").evaluate((node) => node.scrollTop);
     await pa.bringToFront(); await pa.evaluate(() => window.dispatchEvent(new Event("focus")));
-    await expect.poll(async () => (await local(pa, userId, id)).position?.revision).toBe(2);
+    const status = pa.getByRole("region", { name: "Reading progress sync", exact: true });
+    await expect(status.getByRole("button", { name: "Use other device position", exact: true })).toBeVisible();
+    expect((await local(pa, userId, id)).position?.revision).toBe(1);
     await pa.waitForTimeout(1200);
     expect(Math.abs(await pa.getByTestId("reader-scroll-root").evaluate((node) => node.scrollTop) - top)).toBeLessThanOrEqual(24);
     expect((await server(a, baseURL!, id))?.revision).toBe(2);
     expect((await local(pa, userId, id)).pending).toHaveLength(0);
+    // Merely opening afresh may use the new confirmed server point. The
+    // currently mounted Reader must offer it, not silently replace its point.
     await pa.reload(); await expect(pa.locator(`#block-${remote.message_id}-${remote.block_index}`)).toBeVisible();
+    await expect.poll(async () => (await local(pa, userId, id)).position?.revision).toBe(2);
     await expect(pa.getByTestId("reader-scroll-root")).toHaveAttribute("data-navigation-stage", "settled");
   } finally { await a.close(); await b.close(); await admin.dispose(); }
 });

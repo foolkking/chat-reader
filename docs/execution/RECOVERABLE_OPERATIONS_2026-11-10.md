@@ -4,6 +4,67 @@ Status: implementation and scoped completion review complete; release acceptance
 Starting application: `865b0a6`; starting checkout: `1fb0912`, existing `master`.
 Existing documentation, tsbuildinfo and historical evidence edits are preserved.
 
+## Fifth CI and reading follow-up — November 10
+
+- Exact run42804546886 / `aa21ea9dc5cbd483a8932285477da89cc025e994`
+  failed Web's adaptive-import flow:11 pass,1 fail,1 existing private-fixture
+  skip. API, Settings and candidate performance jobs passed; images skipped.
+  Dispatch acknowledgement19:05:15+08:00; actual first status read19:55:38.
+  User explicitly waived waiting for this run and requested reading fixes
+  before the next dispatch. The early-read permission did not initiate a
+  second run, cancellation, schedule or deployment.
+- The failing768px conversion case reached a proxy `ECONNRESET` and never saw
+  completion; API logs have no matching commit admission at that time. The
+  old proxy used Node's pooled socket and discarded its unparsed request body.
+  A stale-socket race is consistent with, not conclusively proved by, those
+  logs. Correction uses a fresh connection, forwards bounded exact options
+  and settles aborted responses. There is no automatic replay of a mutation.
+  The pane now retains unknown submission controls through remount, reads the
+  original result explicitly, and permits only an explicit same-ID/same-option
+  retry after an adaptive previewed status. Legacy archive preview reads alone
+  do not establish the same row-lock guarantee, so they retain checking/Tasks,
+  not an unsafe POST retry. Uncertainty does not lock unrelated imports.
+- Touch stop reproduced before changing Reader:3 extracted production tests
+  failed; actual Chromium touch at an already-visible boundary kept turn reads
+  at5 despite repeated movement. This occurs with short, nonvirtual messages:
+  the IntersectionObserver has no new crossing, and touch lacked wheel's
+  explicit edge request. Touch pointers were also mistaken for thumb dragging.
+  The fix shares guarded loading and separates panning; it does not disable
+  virtual rows or add a scroll-restoration timer. Four boundary and four dense
+  virtual-formula directional cases pass at375/800px; reversal≤2px.
+- Current progress was already local-first with revisioned server sync, not
+  permanently local-only. However, a remote GET followed by coalescing could
+  rebase a pending local edit onto the remote revision and bypass conflict.
+  It now retains its original base until its own receipt. New entry resumes
+  a confirmed clean server point; active readers receive an explicit handoff,
+  not forced scrolling. Incoming/true conflict positions survive Later and
+  exact-target retries. Stale applied receipts cannot accept a later remote
+  point implicitly. Non-text offsets and initial query freshness are preserved.
+- Local evidence:54 focused checks at the earlier checkpoint; final broad
+  Node2345 pass, lint/typecheck pass; mounted Reader27 cases, cross-device
+  Chromium/Dexie12 combinations, import-source recovery12 combinations pass.
+  Final controlled tests include dialog detachment without discarding a dirty
+  mapping and no unknown archive replay. Missing
+  local browser-cache configuration, a test adapter's CJS default import,
+  invalid wildcard/extra command-separator arguments and duplicate binding failed early and were
+  corrected without weakening assertions; the original touch failures remain.
+  All tests use synthetic content. No full local application service was
+  started or forbidden launch retried. Physical tablet/WebKit acceptance and
+  exact-source full CI remain outstanding at this checkpoint.
+- No API model/migration, Dexie/package revision, stable URL, production data,
+  workflow timeout/retry or existing64+12+4 stability requirement was changed.
+  The separate handoff gate is mandatory and retains screenshots/results.
+  Production capacity remains an independent unresolved deployment admission;
+  this request did not authorize cleanup or storage changes.
+
+The `ci-fix05-*` evidence preserves the original failed touch result, corrected
+Reader27/real-Dexie12/import12 results and reviewed mobile/desktop screenshots.
+`source-checkpoint-ci-fix05.json` uses LF-normalized SHA-256 for the changed
+production/test/workflow subset; it does not bind earlier failures to new code.
+The full Reader test uses real rendered content and native Chromium touch;
+the separate handoff test's small paragraph scroller is only a navigation
+adapter, not a second full-Reader stability measurement.
+
 ## Approved behavior and acceptance ledger
 
 The November 10 execution goal authorizes implementation, completion review,

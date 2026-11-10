@@ -614,6 +614,14 @@ remain part of the full release gates.
 
 ## Settings completion: lock and sync (working tree, 2026-10-01)
 
+November10 unreleased handoff refinement: active observations retain the local
+working point and mark a newer remote point for explicit adoption; fresh entry
+may adopt a clean server copy. Pending/conflicted points remain protected.
+Coalescing never rebases onto a remote GET; an acknowledged predecessor is the
+only automatic base-revision advance. Optional `ReadingSyncState.incoming` lives
+in the existing settings store, with no database/package format change.
+Details and validation limits: [reading tools](READING_TOOLS_CONTRACT.md#unreleased-touch-boundaries-and-device-handoff--2026-11-10).
+
 Reading positions use server revisions and account/operation-scoped receipts
 (`20261001_0040`). The existing readingPositions store holds the local working
 anchor; settings stores the server comparison and conflict marker. Only an

@@ -913,6 +913,7 @@ export async function commitImport(
 ): Promise<CommitImportResponse> {
   return fetchJson<CommitImportResponse>(`/api/imports/${importId}/commit`, {
     method: "POST",
+    signal: AbortSignal.timeout(300_000),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       duplicate_policy: options.duplicatePolicy ?? "clone",
@@ -928,7 +929,7 @@ export async function getActiveImports(): Promise<ImportStatusResponse[]> {
 }
 
 export async function getImportStatus(importId: string): Promise<ImportStatusResponse> {
-  return fetchJson<ImportStatusResponse>(`/api/imports/${importId}/status`);
+  return fetchJson<ImportStatusResponse>(`/api/imports/${importId}/status`, { signal: AbortSignal.timeout(10_000) });
 }
 
 export async function getActiveTasks(signal?: AbortSignal): Promise<BackgroundTaskRead[]> {

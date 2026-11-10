@@ -65,7 +65,7 @@ function load(path, mocks, window) {
   }, module.exports, window);
   return module.exports;
 }
-function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720, cache = new Map() } = {}) {
+function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720, cache = new Map(), initialMode = "adaptive" } = {}) {
   const runtime = hooksRuntime(), calls = [], mutations = [], queries = new Map(), storage = new Map(), events = new EventTarget();
   if (storedId) storage.set("chat-reader:adaptive-import-session", storedId);
   let generation = 1, read = initialRead ?? (async () => session()), upload = async () => session(), tree, mutationCursor = 0;
@@ -73,6 +73,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
   let replace = async () => ({ ...session(), analysis_task_id: "replacement-analysis" });
   let exclude = async () => ({ ...session(), analysis_task_id: "exclusion-analysis" });
   let commit = async id => ({ ...completion, import_id: id, status: "queued" });
+  let status = async () => completion;
   const window = { sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     addEventListener: (...args) => events.addEventListener(...args),
     removeEventListener: (...args) => events.removeEventListener(...args),
@@ -92,8 +93,8 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
       calls.push(["exclude", id, artifact, updatedAt]); return exclude(id, artifact, updatedAt);
     },
     retryTask: async id => { calls.push(["retry", id]); return { job_id: id, status: "queued" }; },
-    getImportStatus: async id => { calls.push(["result", id]); return completion; },
-    previewImport: noop,
+    getImportStatus: async id => { calls.push(["result", id]); return status(); },
+    previewImport: async () => ({ import_id: "synthetic-archive", can_commit: true }),
     commitImport: (id, options) => { calls.push(["commit", id, options]); return commit(id, options); },
   };
   const mocks = { react: runtime.react,
@@ -122,7 +123,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
           data: { allow_user_import: true, maximum_import_size_mb: 500, maximum_import_total_mb: 512 },
         } : {});
         queries.set(key, { options, result });
-        return { ...result, ...(key === "import-source-repair" ? { data: cache.get(JSON.stringify(options.queryKey)) } : {}),
+        return { ...result, ...(["import-source-repair", "import-commit-control"].includes(key) ? { data: cache.get(JSON.stringify(options.queryKey)) } : {}),
           refetch: async () => { calls.push(["refetch", key]); return options.queryFn({}); } };
       },
       useMutation: options => {
@@ -157,7 +158,8 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
   };
   mocks["./import-workspace-copy"] = load("features/import/import-workspace-copy.ts", mocks, window);
   const { ImportPanel } = load("features/import/import-panel.tsx", mocks, window);
-  const props = { resumeImportId, onImportCommitted: () => calls.push(["close"]) };
+  const props = { resumeImportId, initialMode, onImportCommitted: () => calls.push(["close"]),
+    onMappingStateChange: state => calls.push(["mapping", state]) };
   const render = () => { runtime.reset(); mutationCursor = 0; return tree = ImportPanel(props); };
   render(); runtime.flush();
   return { calls, storage, mutations, queries, render, ...runtime,
@@ -166,6 +168,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
     setReplace: fn => { replace = fn; },
     setExclude: fn => { exclude = fn; },
     setCommit: fn => { commit = fn; },
+    setStatus: fn => { status = fn; },
     resize: width => { laneWidth = width; window.dispatchEvent(new Event("resize")); },
     async settle() { for (let i = 0; i < 4; i++) { await setImmediate(); render(); runtime.flush(); } return render(); },
     publish(value, epoch = generation, analysisTaskId = queries.get("adaptive-import-analysis").options.queryKey[3]) {
@@ -197,6 +200,51 @@ test("selected files can be removed and replaced without losing siblings or file
     find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button").props.onClick();
     await f.settle();
     assert.deepEqual(f.calls.filter(row => row[0] === "upload"), [["upload", [replacement, last, duplicate]]]);
+  } finally { f.dispose(); }
+});
+
+test("an uncertain commit locks only its original import, survives reopen and checks the receipt without POST replay", async () => {
+  const cache = new Map(), ready = { ...session("READY"), updated_at: "2026-11-10T00:00:00Z" };
+  const f = fixture({ cache, resumeImportId: ready.import_id, initialRead: async () => ready });
+  await f.settle();
+  f.setCommit(async () => { throw Error("CONNECTION_FAILED"); });
+  find(f.tree(), node => node.type === "AdaptiveImportWorkspace").props.onImport();
+  await f.settle();
+  assert.match(text(f.tree()), /submission is unconfirmed/);
+  assert.equal(find(f.tree(), node => node.type === "AdaptiveImportWorkspace").props.importing, true);
+  assert.equal(f.calls.filter(row => row[0] === "commit").length, 1);
+  const report = find(f.tree(), node => node.type === "AdaptiveImportWorkspace").props.onMappingStateChange;
+  report({ dirty: false, busy: true });
+  assert.deepEqual(f.calls.at(-1), ["mapping", { dirty: false, busy: true, background: true }], "An unknown acknowledgement must not trap the whole dialog.");
+  report({ dirty: true, busy: true });
+  assert.deepEqual(f.calls.at(-1), ["mapping", { dirty: true, busy: true }], "Actual unsaved mapping still needs its existing protection.");
+  f.dispose();
+  const reopened = fixture({ cache, resumeImportId: ready.import_id, initialRead: async () => ready });
+  try {
+    await reopened.settle();
+    assert.equal(find(reopened.tree(), node => node.type === "AdaptiveImportWorkspace").props.importing, true);
+    find(reopened.tree(), node => node.type === "button" && text(node) === "Check import result").props.onClick();
+    await reopened.settle();
+    assert.equal(reopened.calls.filter(row => row[0] === "result").length, 1);
+    assert.equal(reopened.calls.filter(row => row[0] === "commit").length, 0);
+    assert.equal(find(reopened.tree(), node => node.type === "AdaptiveImportWorkspace"), undefined);
+    assert.equal(cache.get(JSON.stringify(["import-commit-control", 1, ready.import_id])), null);
+  } finally { reopened.dispose(); }
+});
+
+test("a previewed archive read is not proof that an unknown restoration can be safely replayed", async () => {
+  const f = fixture({ initialMode: "archive" });
+  try {
+    await f.mutations[2].run([]); await f.settle();
+    f.setCommit(async () => { throw Error("CONNECTION_FAILED"); });
+    find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button").props.onClick();
+    await f.settle();
+    f.setStatus(async () => ({ ...completion, import_id: "synthetic-archive", status: "previewed" }));
+    find(f.tree(), node => node.type === "button" && text(node) === "Check import result").props.onClick();
+    await f.settle();
+    assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "Retry original submission (same options)"), undefined);
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 1);
+    assert.match(text(f.tree()), /Check again or open Tasks/);
   } finally { f.dispose(); }
 });
 
@@ -457,8 +505,13 @@ test("explicit commit retry preserves its first lane snapshot after an unknown r
     f.resize(960); await f.settle();
     assert.match(text(f.tree()), /720px reading column/);
     assert.equal(f.calls.filter(row => row[0] === "commit").length, 1, "resize/polling never replays the write");
+    f.setStatus(async () => ({ ...completion, status: "previewed" }));
+    find(f.tree(), node => node.type === "button" && text(node) === "Check import result").props.onClick();
+    await f.settle();
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 1, "A read-only check never sends another commit.");
     f.setCommit(async id => ({ ...completion, import_id: id, status: "queued" }));
-    await f.mutations[3].run(request); await f.settle();
+    find(f.tree(), node => node.type === "button" && text(node) === "Retry original submission (same options)").props.onClick();
+    await f.settle();
     const writes = f.calls.filter(row => row[0] === "commit");
     assert.equal(writes.length, 2);
     assert.deepEqual(writes[0], ["commit", "synthetic-import", { duplicatePolicy: "clone", projectId: null, imageLaneWidth: 720 }]);

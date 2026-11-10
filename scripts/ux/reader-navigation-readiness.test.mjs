@@ -371,6 +371,32 @@ for (const mode of ["remote", "offline"]) {
     } finally { f.dispose(); }
   });
 }
+for (const [direction, sentinel, before, after, expected] of [
+  ["down", "nextSentinelVisibleRef", 550, 450, "next"],
+  ["up", "previousSentinelVisibleRef", 450, 550, "previous"],
+]) test(`touch ${direction} retries an already intersecting complete-turn boundary without another observer crossing`, async () => {
+  const f = fixture();
+  try {
+    await f.setInitial(); await f.settleTasks();
+    f.state[sentinel].current = true;
+    f.root.emit("touchstart", { touches: [{ clientY: before }] });
+    f.root.emit("touchmove", { touches: [{ clientY: after }] });
+    assert.equal(f.state.scrollDirectionRef.current, direction);
+    assert.deepEqual(f.edgeLoads, [expected], "A stationary sentinel must not require a new IntersectionObserver entry.");
+  } finally { f.dispose(); }
+});
+test("a touch pointer is not classified as a native scrollbar-thumb drag", async () => {
+  const f = fixture();
+  try {
+    await f.setInitial(); await f.settleTasks();
+    f.root.emit("pointerdown", { pointerType: "touch", button: 0 });
+    assert.equal(f.state.pointerDraggingRef.current, false);
+    assert.notEqual(f.root.dataset.readerPointerDragging, "true");
+    f.root.emit("touchstart", { touches: [{ clientY: 500 }] });
+    f.root.emit("touchmove", { touches: [{ clientY: 400 }] });
+    assert.equal(f.state.scrollDirectionRef.current, "down");
+  } finally { f.dispose(); }
+});
 test("saved-position restoration and its programmed scroll do not invent new user intent", async () => {
   const f = fixture(); try {
     const remembered = f.turns[1].items[1]; f.setView("savedPosition", { message_id: remembered.id, block_index: 0, scroll_offset: 4,

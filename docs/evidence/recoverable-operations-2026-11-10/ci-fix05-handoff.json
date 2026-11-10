@@ -1,0 +1,150 @@
+{
+  "status": "passed",
+  "results": [
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "light",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "light",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "dark",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "light",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "light",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "dark",
+      "cleanHandoff": true,
+      "noPassiveScroll": true,
+      "exactLocateRetry": true,
+      "coalescedConflict": true,
+      "explicitLocal": true,
+      "reentry": true,
+      "posts": 4
+    }
+  ],
+  "errors": []
+}

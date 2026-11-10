@@ -1,0 +1,67 @@
+{
+  "run_id": 42804546886,
+  "head_sha": "aa21ea9dc5cbd483a8932285477da89cc025e994",
+  "conclusion": "failure",
+  "dispatch_acknowledged": "2026-11-10T19:05:15.3014759+08:00",
+  "first_status_read": "2026-11-10T19:55:38.7136945+08:00",
+  "user_waived_wait_for_this_run": true,
+  "jobs": [
+    {
+      "name": "web-quality",
+      "databaseId": 129790248288,
+      "conclusion": "failure",
+      "startedAt": "2026-11-10T11:05:21Z",
+      "completedAt": "2026-11-10T11:14:57Z"
+    },
+    {
+      "name": "api-quality",
+      "databaseId": 129790248543,
+      "conclusion": "success",
+      "startedAt": "2026-11-10T11:05:21Z",
+      "completedAt": "2026-11-10T11:38:38Z"
+    },
+    {
+      "name": "settings-quality",
+      "databaseId": 129790249388,
+      "conclusion": "success",
+      "startedAt": "2026-11-10T11:05:21Z",
+      "completedAt": "2026-11-10T11:55:17Z"
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "databaseId": 129805828669,
+      "conclusion": "success",
+      "startedAt": "2026-11-10T11:38:41Z",
+      "completedAt": "2026-11-10T11:48:03Z"
+    },
+    {
+      "name": "build-images",
+      "databaseId": 129813413915,
+      "conclusion": "skipped",
+      "startedAt": "2026-11-10T11:55:17Z",
+      "completedAt": "2026-11-10T11:55:17Z"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "databaseId": 129813414983,
+      "conclusion": "skipped",
+      "startedAt": "2026-11-10T11:55:17Z",
+      "completedAt": "2026-11-10T11:55:17Z"
+    }
+  ],
+  "web_failure": {
+    "gate": "Adaptive Import recovery browser flow",
+    "case": "768px conversion discovery and converted Markdown import",
+    "passed": 11,
+    "failed": 1,
+    "existing_private_fixture_skipped": 1,
+    "observed": "Dedicated commit proxy returned ECONNRESET; no matching API commit admission observed. Completion remained absent.",
+    "inference_not_proven": "Pooled stale upstream socket is consistent with the log. Exact socket-lifetime cause was not captured.",
+    "independent_code_defect": "Disabled body parsing without reading/forwarding the commit options dropped the POST body."
+  },
+  "verified_web_artifact": {
+    "id": 13757927910,
+    "sha256": "333af5abc70f5a48d90e7a79722a24897461f09a38e078faeb4581312094f4c4"
+  },
+  "not_release_acceptance": true
+}

@@ -1,5 +1,19 @@
 # Recoverable operations — local synthetic checkpoint
 
+November10 follow-up (`ci-fix05-*`): failed exact CI42804546886,
+touch boundary red/green evidence, Reader27 and cross-device12/source12
+mounted combinations. `source-checkpoint-ci-fix05.json` binds this increment;
+the earlier evidence below remains historical. Chromium emulation is not a
+physical tablet/Safari verdict, and local checks are not complete release CI.
+`ci-fix05-local-summary.txt` records2345 Node/static checks, exact command scopes
+and retained unsuccessful setup/argument attempts. `ci-fix05-touch-before.json`
+is the original missing-load failure, not a passing acceptance artifact.
+`ci-fix05-reader.json` retains27 real Reader cases and frame data;
+`ci-fix05-handoff.json` retains12 real-Dexie/two-context combinations with a
+synthetic navigation adapter; `ci-fix05-source.json` retains12 import recovery
+combinations. The two `ci-fix05-handoff-*.png` files are visually inspected
+synthetic status controls, not authenticated full-application screenshots.
+
 This is **unreleased candidate evidence**, not release acceptance. The first
 source candidate was committed as65db720; its CI failed. Earlier uncommitted
 snapshots below remain historical and are not rebound to the corrections.

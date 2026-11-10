@@ -784,16 +784,19 @@ export function ConversationReader({
   const positionQuery = useQuery({
     queryKey: ["reading-position", dataSource.mode, conversationId],
     queryFn: () => dataSource.getReadingPosition(conversationId),
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     ...(readerQueryNetworkMode ? { networkMode: readerQueryNetworkMode } : {}),
   });
 
   const positionContext = `${dataSource.mode}:${conversationId}`;
   const [initialPosition, setInitialPosition] = useState<{ key: string; position: import("../../lib/types").ReadingPositionRead | null } | null>(null);
   useEffect(() => {
-    if (initialPosition?.key !== positionContext && (positionQuery.isSuccess || positionQuery.isError)) {
+    if (initialPosition?.key !== positionContext && !positionQuery.isFetching && (positionQuery.isSuccess || positionQuery.isError)) {
       setInitialPosition({ key: positionContext, position: positionQuery.data?.position ?? null });
     }
-  }, [initialPosition?.key, positionContext, positionQuery.data, positionQuery.isError, positionQuery.isSuccess]);
+  }, [initialPosition?.key, positionContext, positionQuery.data, positionQuery.isError, positionQuery.isSuccess, positionQuery.isFetching]);
   const savedPosition = targetMessageId || initialPosition?.key !== positionContext ? null : initialPosition.position;
   const initialAnchorMessageId = targetMessageId ?? savedPosition?.message_id ?? null;
   const canLoadInitialWindow = Boolean(targetMessageId) || initialPosition?.key === positionContext;
@@ -870,12 +873,16 @@ export function ConversationReader({
     const root = scrollContainerRef.current;
     if (!readerSurfaceAvailable || !root) return;
     let lastTouchY: number | null = null;
+    const loadVisibleEdge = (direction: ScrollDirection) => {
+      if (root.dataset.readerViewerLocked === "true") return;
+      if (direction === "up" && previousSentinelVisibleRef.current) loadPreviousActionRef.current();
+      if (direction === "down" && nextSentinelVisibleRef.current) loadNextActionRef.current();
+    };
     const markWheelIntent = (event: WheelEvent) => {
       if (event.deltaY === 0) return;
       const direction = event.deltaY < 0 ? "up" : "down";
       markReaderScrollIntent(direction);
-      if (direction === "up" && previousSentinelVisibleRef.current) loadPreviousActionRef.current();
-      if (direction === "down" && nextSentinelVisibleRef.current) loadNextActionRef.current();
+      loadVisibleEdge(direction);
     };
     const markTouchStart = (event: TouchEvent) => {
       lastTouchY = event.touches[0]?.clientY ?? null;
@@ -884,11 +891,19 @@ export function ConversationReader({
     const markTouchMove = (event: TouchEvent) => {
       const currentY = event.touches[0]?.clientY;
       if (currentY === undefined || lastTouchY === null || Math.abs(currentY - lastTouchY) <= 1) return;
-      markReaderScrollIntent(currentY < lastTouchY ? "down" : "up");
+      const direction = currentY < lastTouchY ? "down" : "up";
+      markReaderScrollIntent(direction);
       lastTouchY = currentY;
+      // At a loaded-window endpoint the finger can move while scrollTop and
+      // intersection stay unchanged. The observer will not fire again. Use
+      // the same guarded edge request as wheel input, not a virtualizer reset.
+      loadVisibleEdge(direction);
     };
-    const markPointerDown = () => {
+    const markPointerDown = (event: PointerEvent) => {
       if (root.dataset.readerViewerLocked === "true") return;
+      // Touch panning emits pointercancel when the browser takes ownership.
+      // It is not a scrollbar-thumb drag and must not suppress edge loading.
+      if (event.pointerType === "touch") return;
       cancelPreferenceTransitionRef.current();
       focusTransitionRef.current += 1;
       focusAnchorRef.current = null;
@@ -3511,7 +3526,7 @@ export function ConversationReader({
         ) : null}
 
         {conversationReadNotice}
-        <ReadingPositionSyncStatus conversationId={conversationId} storageError={readingSaveError} onRetryStorage={async () => {
+        <ReadingPositionSyncStatus floating conversationId={conversationId} storageError={readingSaveError} onRetryStorage={async () => {
           if (latestStablePositionRef.current) await dataSource.saveReadingPosition(conversationId, latestStablePositionRef.current);
           setReadingSaveError(false);
         }} onUseServer={async (position) => {
@@ -3528,6 +3543,7 @@ export function ConversationReader({
             messageVersionId: typeof anchor.version_id === "string" ? anchor.version_id : undefined,
             renderBlockId: typeof anchor.block_id === "string" ? anchor.block_id : undefined,
             characterOffset: typeof anchor.character_offset === "number" ? anchor.character_offset : undefined,
+            alignmentOffset: typeof anchor.character_offset === "number" ? ACTIVE_READING_OFFSET : ACTIVE_READING_OFFSET - position.scroll_offset,
             source: "message-action" }, { restorePosition: true });
           if (!result.ok) throw new Error("Unable to locate the saved reading position.");
         }} />

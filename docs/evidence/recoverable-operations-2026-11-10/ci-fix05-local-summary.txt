@@ -1,0 +1,21 @@
+Local synthetic checkpoint, November 10, 2026. NOT full release acceptance.
+Base aa21ea9dc5cbd483a8932285477da89cc025e994; source-checkpoint-ci-fix05.json binds final code/test subset.
+
+Final recursive scripts/**/*.test.mjs Node sweep: 2345 passed, 0 failed/skipped/cancelled; concurrency 4.
+Import background analysis final focused: 42 passed (overlaps the full total).
+Earlier closeout subset: 120 passed; earlier broad checkpoint: 2344 passed. Do not add overlapping totals.
+corepack pnpm run lint: passed, max-warnings=0.
+corepack pnpm run typecheck --tsBuildInfoFile <task-owned path>: passed; user's tracked tsbuildinfo not modified.
+git diff --check: passed.
+
+Reader mounted real production code: 27 passed, including 4 touch-window edge directions and 4 dense virtual-formula touch directions.
+Before fix, actual native Chromium touch remained at 5 turn reads and failed, and 3 extracted edge/pointer tests failed.
+Two independent Chromium/Dexie stores: 12 width/locale/theme combinations passed; CAS/transport and a small body/navigation adapter are synthetic.
+ImportPanel/React Query recovery: 12 combinations passed; unknown commit remount/reconciliation sends only one POST plus a status GET.
+375px Chinese/light and 1440px English/dark handoff screenshots inspected; no horizontal overflow or receipt-driven body reflow in this mounted fixture.
+
+Early browser-cache configuration, CJS adapter, wildcard/extra command separator, and duplicate test-binding failures were corrected without changing product acceptance thresholds.
+The original touch failure is retained as ci-fix05-touch-before.json. The extra typecheck -- separator was rejected before compilation; corrected command passed.
+The first evidence collector expected a status field that the source-repair result does not use; corrected collection checks its 12 actual result records and empty errors without rewriting the source evidence.
+No full local app service, real-user ZIP replay, API/model/migration change or production write. No physical tablet/WebKit acceptance claimed.
+Exact-source full CI, original 64+12+4 stability, full application integration/performance and independent artifact acceptance remain required.

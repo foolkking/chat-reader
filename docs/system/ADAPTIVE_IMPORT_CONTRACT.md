@@ -1,5 +1,26 @@
 # Adaptive Import Contract
 
+## Unreleased commit transport correction — 2026-11-10
+
+The dedicated five-minute Pages API commit proxy now forwards the complete
+options body (bounded to16KiB), content type/length and existing origin/cookie.
+Previously it disabled parsing but never forwarded the body, silently dropping
+duplicate policy, explicit destination and image-lane options. Commit uses a
+fresh upstream connection rather than the default pooled keep-alive socket;
+a reset or incomplete response is never automatically replayed as another POST.
+
+The import pane retains an unknown-result control by account/import identity
+across dialog remounts in its query cache. It prevents duplicate submission,
+offers a finite read-only result check and allows leaving for Tasks. A confirmed
+queued/processing/terminal status resumes the existing path. An adaptive
+previewed status offers explicit retry of the same import identity and captured
+options, guarded by the existing server row lock/status idempotence; it does not
+upload again. A legacy archive previewed read alone does not establish that
+admission guarantee, so its unknown restoration retains checking/Tasks rather
+than offering an unsafe repeated POST.
+Source/destination edits are blocked while submission is unresolved. This
+in-memory control is not a new durable server receipt or crash-proof client log.
+
 ## Unreleased retained-stop and task recovery — 2026-11-10
 
 The working tree adds explicit stop-with-retention, without changing the

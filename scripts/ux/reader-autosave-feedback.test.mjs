@@ -28,8 +28,8 @@ function fixture({ zh = false, state = view(), online = true, storageError = fal
   const listeners = new Map();
   let cursor = 0, effectCursor = 0, subscription = null, queryFn = null, openCalls = 0, unsubscribeCalls = 0;
   let dbFailure = false, actionFailure = false, rows = [], storedLocal = local, storedConflict = false;
-  const navigator = { onLine: online }, document = { visibilityState: "visible" };
-  const window = { addEventListener: (name, action) => listeners.set(name, action), removeEventListener: (name, action) => {
+  const navigator = { onLine: online }, document = { visibilityState: "visible", addEventListener() {}, removeEventListener() {} };
+  const window = { setInterval: () => 1, clearInterval() {}, addEventListener: (name, action) => listeners.set(name, action), removeEventListener: (name, action) => {
     if (listeners.get(name) === action) listeners.delete(name);
   }, dispatchEvent: event => { events.push(event.type); return true; } };
   const outbox = { where: () => ({ equals: () => ({ filter: predicate => ({

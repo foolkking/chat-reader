@@ -30,6 +30,7 @@ type SourceRepairControl = {
   taskId: string | null; state: "uploading" | "unknown"; excludeArtifactId?: string;
   replaceArtifactId?: string; sourceRevision?: number;
 };
+type CommitControl = { state: "submitting" | "unknown" | "retryable"; options: NonNullable<Parameters<typeof commitImport>[1]> };
 const ACTIVE_SESSION_KEY = "chat-reader:adaptive-import-session";
 
 function sessionStorageKey(repairProfileId?: string | null): string {
@@ -108,6 +109,13 @@ export function ImportPanel({
     retry: false,
   });
   const [pendingImportId, setPendingImportId] = useState<string | null>(null);
+  const commitControlId = session?.import_id ?? archivePreview?.import_id ?? null;
+  const commitControlKey = ["import-commit-control", generation.current, commitControlId];
+  const commitControl = useQuery<CommitControl | null>({
+    queryKey: commitControlKey, queryFn: async () => null, enabled: false,
+  }).data;
+  const [checkingCommit, setCheckingCommit] = useState(false);
+  const [commitCheckError, setCommitCheckError] = useState(false);
   const [commitResult, setCommitResult] = useState<CommitImportResponse | null>(null);
   const [terminalImportError, setTerminalImportError] = useState<string | null>(null);
   const [terminalImportId, setTerminalImportId] = useState<string | null>(null);
@@ -128,8 +136,11 @@ export function ImportPanel({
   const [workspaceEditState, setWorkspaceEditState] = useState({ dirty: false, busy: false });
   const handleMappingStateChange = useCallback((state: { dirty: boolean; busy: boolean; background?: boolean }) => {
     setWorkspaceEditState(previous => previous.dirty === state.dirty && previous.busy === state.busy ? previous : state);
-    onMappingStateChange?.(state);
-  }, [onMappingStateChange]);
+    // An unresolved acknowledgement locks this import's mutations, not the
+    // whole dialog/application. Its retained per-import check survives close.
+    onMappingStateChange?.(commitControl && commitControl.state !== "submitting" && !state.dirty
+      ? { ...state, background: true } : state);
+  }, [onMappingStateChange, commitControl]);
   useEffect(() => {
     if (nextFileFocus.current === null) return;
     const index = Math.min(nextFileFocus.current, files.length - 1);
@@ -307,14 +318,20 @@ export function ImportPanel({
   });
   const commitMutation = useMutation({
     mutationFn: ({ importId, policy }: { importId: string; policy: ImportDuplicatePolicy }) => {
+      const key = ["import-commit-control", authenticationGeneration(), importId];
+      const previous = queryClient.getQueryData<CommitControl>(key);
+      if (previous && previous.state !== "retryable") throw new Error("IMPORT_OPERATION_UNCONFIRMED");
       const lane = (session?.import_id === importId ? committedLane : undefined)
         ?? importLaneSnapshots.current.get(importId) ?? measureImportImageLane({ readerWidthMode, sectionTocMode });
       importLaneSnapshots.current.set(importId, lane);
       setImageLaneWidth(lane);
-      return commitImport(importId, { duplicatePolicy: policy, projectId: targetProjectId, ...(mode === "adaptive" ? { imageLaneWidth: lane } : {}) });
+      const options = previous?.options ?? { duplicatePolicy: policy, projectId: targetProjectId, ...(mode === "adaptive" ? { imageLaneWidth: lane } : {}) };
+      queryClient.setQueryData<CommitControl>(key, { state: "submitting", options });
+      return commitImport(importId, options);
     },
     onMutate: mutationOwner,
-    onSuccess: (result, _variables, owner) => {
+    onSuccess: (result, variables, owner) => {
+      if (owner?.generation === authenticationGeneration()) queryClient.setQueryData(["import-commit-control", owner.generation, variables.importId], null);
       if (!ownsMutation(owner)) return;
       setTerminalImportError(null);
       setCommitResult(result);
@@ -322,7 +339,56 @@ export function ImportPanel({
       else if (result.status === "failed" || result.status === "cancelled") finishTerminalImport(result);
       else setPendingImportId(result.import_id);
     },
+    onError: (error, variables, owner) => {
+      if (owner?.generation !== authenticationGeneration()) return;
+      const rejected = error instanceof ApiRequestError && error.status >= 400 && error.status < 500
+        && ![408, 429].includes(error.status);
+      queryClient.setQueryData<CommitControl | null>(["import-commit-control", owner.generation, variables.importId],
+        previous => rejected ? null : previous ? { ...previous, state: "unknown" } : null);
+    },
   });
+  const checkCommit = async () => {
+    if (!commitControlId || checkingCommit || !current()) return;
+    const owner = mutationOwner(), importId = commitControlId;
+    setCheckingCommit(true); setCommitCheckError(false);
+    try {
+      const result = await getImportStatus(importId);
+      if (!ownsMutation(owner)) return;
+      if (result.status === "previewed") {
+        // Adaptive commits serialize admission with a row lock. Do not infer
+        // the same guarantee for legacy archive restoration from a GET alone.
+        if (session?.import_id !== importId) {
+          setCommitCheckError(true);
+          return;
+        }
+        // Explicit retry retains the server identity and exact options. A
+        // late first request meets the same existing row lock/status guard.
+        queryClient.setQueryData<CommitControl | null>(["import-commit-control", owner.generation, importId],
+          previous => previous ? { ...previous, state: "retryable" } : null);
+        return;
+      }
+      if (!["queued", "processing", "committed", "failed", "cancelled"].includes(result.status)) {
+        setCommitCheckError(true); return;
+      }
+      queryClient.setQueryData(["import-commit-control", owner.generation, importId], null);
+      commitMutation.reset();
+      if (result.status === "committed") finishCommittedImport(result);
+      else if (result.status === "failed" || result.status === "cancelled") finishTerminalImport(result);
+      else setPendingImportId(importId);
+    } catch {
+      if (ownsMutation(owner)) setCommitCheckError(true);
+    } finally {
+      if (ownsMutation(owner)) setCheckingCommit(false);
+    }
+  };
+  const commitRecovery = commitControl && commitControl.state !== "submitting" ? <div role="status" className="space-y-2 border border-ui bg-subtle p-3 text-sm">
+    <p>{zh ? "导入提交结果尚未确认，来源和预览已保留。请先核对原任务，不要重复导入。" : "The import submission is unconfirmed. Sources and preview are retained. Check the original task before submitting again."}</p>
+    {commitCheckError ? <p role="alert">{zh ? "尚未取得确认结果，可再次核对或在任务中心查看；没有重新提交。" : "No confirmed result is available yet. Check again or open Tasks; nothing was resubmitted."}</p> : null}
+    <div className="flex flex-wrap gap-2"><button type="button" disabled={checkingCommit} className="btn-secondary min-h-11 px-3" onClick={() => void checkCommit()}>{zh ? "核对导入结果" : "Check import result"}</button>
+      {commitControl.state === "retryable" && commitControlId ? <button type="button" disabled={checkingCommit} className="btn-secondary min-h-11 px-3"
+        onClick={() => commitMutation.mutate({ importId: commitControlId, policy: duplicatePolicy })}>{zh ? "重试原提交（保留选项）" : "Retry original submission (same options)"}</button> : null}
+      <button type="button" className="btn-secondary min-h-11 px-3" onClick={() => { onImportCommitted?.(); window.dispatchEvent(new Event("chat-reader:open-task-center")); }}>{tr("查看后台任务")}</button></div>
+  </div> : null;
   const retryImportMutation = useMutation({
     mutationFn: (importId: string) => retryTask(importId),
     onMutate: mutationOwner,
@@ -481,6 +547,8 @@ export function ImportPanel({
     setCommitResult(null);
     setTerminalImportError(null);
     setTerminalImportId(null);
+    setCheckingCommit(false);
+    setCommitCheckError(false);
     setConversionOpen(false);
     setDiscardConfirm(false);
     setExcludeSourceId(null);
@@ -535,7 +603,7 @@ export function ImportPanel({
   if (session) {
     const analysisPending = ["COLLECTING", "ANALYZING", "CANCELING"].includes(session.state);
     const analysisFailed = session.state === "FAILED" && session.phase === "analysis_failed";
-    const repairBusy = sourceRepairMutation.isPending || Boolean(sourceRepairControl);
+    const repairBusy = sourceRepairMutation.isPending || Boolean(sourceRepairControl) || Boolean(commitControl);
     const repairDisabled = repairBusy || resumeMutation.isPending || resumeMutation.isError
       || retryAnalysisMutation.isPending || retryAnalysisMutation.isError || destinationMutation.isPending
       || workspaceEditState.dirty || workspaceEditState.busy || commitMutation.isPending || Boolean(pendingImportId)
@@ -676,6 +744,7 @@ export function ImportPanel({
           {sourceActions}
         </details> : null}
         {sourceFeedback}
+        {commitRecovery}
         {sourceRepairUnknown && analysisSessionQuery.error ? <ErrorLine message={analysisSessionQuery.error} /> : null}
         <AdaptiveImportWorkspace
           onMappingStateChange={handleMappingStateChange}
@@ -684,7 +753,7 @@ export function ImportPanel({
           onBack={leaveRetainedSession}
           onImport={() => commitMutation.mutate({ importId: session.import_id, policy: duplicatePolicy })}
           importing={repairBusy || commitMutation.isPending || Boolean(pendingImportId)}
-          error={retryImportMutation.error ?? cancelMutation.error ?? commitMutation.error ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
+          error={retryImportMutation.error ?? cancelMutation.error ?? (commitControl ? null : commitMutation.error) ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
           onRetryImport={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined}
           retryingImport={retryImportMutation.isPending}
           statusError={importStatusQuery.error}
@@ -802,7 +871,8 @@ export function ImportPanel({
       {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
       {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error} action="mutation" /> : null}
       {archiveMutation.isError ? <ErrorLine message={archiveMutation.error} action="mutation" /> : null}
-      {commitMutation.isError ? <ErrorLine message={commitMutation.error} action="commit" /> : null}
+      {commitRecovery}
+      {commitMutation.isError && !commitControl ? <ErrorLine message={commitMutation.error} action="commit" /> : null}
       {(retryImportMutation.error || terminalImportError) ? <ErrorLine message={retryImportMutation.error ?? terminalImportError} action="commit" onRetry={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined} retrying={retryImportMutation.isPending} /> : null}
       {importStatusQuery.error ? <ErrorLine message={importStatusQuery.error} onRetry={() => { void importStatusQuery.refetch(); }} retrying={importStatusQuery.isFetching} /> : null}
       {showConversion ? <div className="border-y border-ui">
@@ -813,7 +883,7 @@ export function ImportPanel({
         <button ref={previewButtonRef} type="button" disabled={!(inputMethod === "paste" ? pastedText.trim() : files.length) || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={previewImportSource} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
           {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
         </button>
-        {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? tr("正在导入") : tr("恢复归档")}</button> : null}
+        {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending || Boolean(commitControl)} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? tr("正在导入") : tr("恢复归档")}</button> : null}
       </div>
       {archivePreview ? <ImportPreviewCard preview={archivePreview} /> : null}
       {archivePreview?.duplicate_conversation_id ? <div className="border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary"><p>{tr("系统中已有相同归档。默认会创建副本，不覆盖原记录。")}</p><Link href={`/conversations/${archivePreview.duplicate_conversation_id}`} className="mt-2 inline-block font-medium text-accent underline">{tr("打开已有对话")}</Link></div> : null}

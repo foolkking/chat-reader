@@ -1,0 +1,1386 @@
+{
+  "scope": "Production ImportPanel/React Query; synthetic transport/account/secondary surfaces, no real import",
+  "results": [
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "state": "FAILED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 82,
+            "height": 44,
+            "left": 209.609375,
+            "right": 291.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 299.609375,
+            "right": 363
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 209.609375,
+            "right": 291.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 299.609375,
+            "right": 363
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 26,
+            "right": 108
+          },
+          {
+            "width": 116,
+            "height": 44,
+            "left": 12,
+            "right": 128
+          },
+          {
+            "width": 90,
+            "height": 44,
+            "left": 136,
+            "right": 226
+          },
+          {
+            "width": 118,
+            "height": 44,
+            "left": 234,
+            "right": 352
+          },
+          {
+            "width": 119.390625,
+            "height": 44,
+            "left": 12,
+            "right": 131.390625
+          }
+        ]
+      },
+      "screenshot": "source-repair-375-zh-CN-light.png",
+      "exclusionScreenshot": "source-exclusion-375-zh-CN-light.png",
+      "selectionScreenshot": "source-selection-375-zh-CN-light.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 44,
+            "height": 44,
+            "left": 267,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 267,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 267,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "state": "PAUSED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 82,
+            "height": 44,
+            "left": 209.609375,
+            "right": 291.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 299.609375,
+            "right": 363
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 209.609375,
+            "right": 291.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 299.609375,
+            "right": 363
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 26,
+            "right": 108
+          },
+          {
+            "width": 116,
+            "height": 44,
+            "left": 12,
+            "right": 128
+          },
+          {
+            "width": 90,
+            "height": 44,
+            "left": 136,
+            "right": 226
+          },
+          {
+            "width": 118,
+            "height": 44,
+            "left": 234,
+            "right": 352
+          },
+          {
+            "width": 119.390625,
+            "height": 44,
+            "left": 12,
+            "right": 131.390625
+          }
+        ]
+      },
+      "screenshot": "source-repair-375-zh-CN-dark.png",
+      "exclusionScreenshot": "source-exclusion-375-zh-CN-dark.png",
+      "selectionScreenshot": "source-selection-375-zh-CN-dark.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 44,
+            "height": 44,
+            "left": 267,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 267,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 267,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "state": "FAILED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 142.359375,
+            "right": 268.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 276.65625,
+            "right": 363
+          },
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 142.359375,
+            "right": 268.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 276.65625,
+            "right": 363
+          },
+          {
+            "width": 110.484375,
+            "height": 44,
+            "left": 26,
+            "right": 136.484375
+          },
+          {
+            "width": 186.0625,
+            "height": 44,
+            "left": 12,
+            "right": 198.0625
+          },
+          {
+            "width": 125.3125,
+            "height": 44,
+            "left": 206.0625,
+            "right": 331.375
+          },
+          {
+            "width": 171.4375,
+            "height": 44,
+            "left": 12,
+            "right": 183.4375
+          },
+          {
+            "width": 163.140625,
+            "height": 44,
+            "left": 191.4375,
+            "right": 354.578125
+          }
+        ]
+      },
+      "screenshot": "source-repair-375-en-US-light.png",
+      "exclusionScreenshot": "source-exclusion-375-en-US-light.png",
+      "selectionScreenshot": "source-selection-375-en-US-light.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 242.96875,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 242.96875,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 242.96875,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "state": "PAUSED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 142.359375,
+            "right": 268.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 276.65625,
+            "right": 363
+          },
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 142.359375,
+            "right": 268.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 276.65625,
+            "right": 363
+          },
+          {
+            "width": 110.484375,
+            "height": 44,
+            "left": 26,
+            "right": 136.484375
+          },
+          {
+            "width": 186.0625,
+            "height": 44,
+            "left": 12,
+            "right": 198.0625
+          },
+          {
+            "width": 151.109375,
+            "height": 44,
+            "left": 206.0625,
+            "right": 357.171875
+          },
+          {
+            "width": 171.4375,
+            "height": 44,
+            "left": 12,
+            "right": 183.4375
+          },
+          {
+            "width": 163.140625,
+            "height": 44,
+            "left": 191.4375,
+            "right": 354.578125
+          }
+        ]
+      },
+      "screenshot": "source-repair-375-en-US-dark.png",
+      "exclusionScreenshot": "source-exclusion-375-en-US-dark.png",
+      "selectionScreenshot": "source-selection-375-en-US-dark.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 242.96875,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 242.96875,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 242.96875,
+            "right": 311
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 319,
+            "right": 363
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "light",
+      "state": "FAILED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 82,
+            "height": 44,
+            "left": 594.609375,
+            "right": 676.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 684.609375,
+            "right": 748
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 594.609375,
+            "right": 676.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 684.609375,
+            "right": 748
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 66,
+            "right": 148
+          },
+          {
+            "width": 116,
+            "height": 44,
+            "left": 52,
+            "right": 168
+          },
+          {
+            "width": 90,
+            "height": 44,
+            "left": 176,
+            "right": 266
+          },
+          {
+            "width": 118,
+            "height": 44,
+            "left": 274,
+            "right": 392
+          },
+          {
+            "width": 119.390625,
+            "height": 44,
+            "left": 400,
+            "right": 519.390625
+          }
+        ]
+      },
+      "screenshot": "source-repair-800-zh-CN-light.png",
+      "exclusionScreenshot": "source-exclusion-800-zh-CN-light.png",
+      "selectionScreenshot": "source-selection-800-zh-CN-light.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 44,
+            "height": 44,
+            "left": 652,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 652,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 652,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "state": "PAUSED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 82,
+            "height": 44,
+            "left": 594.609375,
+            "right": 676.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 684.609375,
+            "right": 748
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 594.609375,
+            "right": 676.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 684.609375,
+            "right": 748
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 66,
+            "right": 148
+          },
+          {
+            "width": 116,
+            "height": 44,
+            "left": 52,
+            "right": 168
+          },
+          {
+            "width": 90,
+            "height": 44,
+            "left": 176,
+            "right": 266
+          },
+          {
+            "width": 118,
+            "height": 44,
+            "left": 274,
+            "right": 392
+          },
+          {
+            "width": 119.390625,
+            "height": 44,
+            "left": 400,
+            "right": 519.390625
+          }
+        ]
+      },
+      "screenshot": "source-repair-800-zh-CN-dark.png",
+      "exclusionScreenshot": "source-exclusion-800-zh-CN-dark.png",
+      "selectionScreenshot": "source-selection-800-zh-CN-dark.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 44,
+            "height": 44,
+            "left": 652,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 652,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 652,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "light",
+      "state": "FAILED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 527.359375,
+            "right": 653.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 661.65625,
+            "right": 748
+          },
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 527.359375,
+            "right": 653.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 661.65625,
+            "right": 748
+          },
+          {
+            "width": 110.484375,
+            "height": 44,
+            "left": 66,
+            "right": 176.484375
+          },
+          {
+            "width": 186.0625,
+            "height": 44,
+            "left": 52,
+            "right": 238.0625
+          },
+          {
+            "width": 125.3125,
+            "height": 44,
+            "left": 246.0625,
+            "right": 371.375
+          },
+          {
+            "width": 171.4375,
+            "height": 44,
+            "left": 379.375,
+            "right": 550.8125
+          },
+          {
+            "width": 163.140625,
+            "height": 44,
+            "left": 558.8125,
+            "right": 721.953125
+          }
+        ]
+      },
+      "screenshot": "source-repair-800-en-US-light.png",
+      "exclusionScreenshot": "source-exclusion-800-en-US-light.png",
+      "selectionScreenshot": "source-selection-800-en-US-light.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 627.96875,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 627.96875,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 627.96875,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "dark",
+      "state": "PAUSED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 527.359375,
+            "right": 653.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 661.65625,
+            "right": 748
+          },
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 527.359375,
+            "right": 653.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 661.65625,
+            "right": 748
+          },
+          {
+            "width": 110.484375,
+            "height": 44,
+            "left": 66,
+            "right": 176.484375
+          },
+          {
+            "width": 186.0625,
+            "height": 44,
+            "left": 52,
+            "right": 238.0625
+          },
+          {
+            "width": 151.109375,
+            "height": 44,
+            "left": 246.0625,
+            "right": 397.171875
+          },
+          {
+            "width": 171.4375,
+            "height": 44,
+            "left": 405.171875,
+            "right": 576.609375
+          },
+          {
+            "width": 163.140625,
+            "height": 44,
+            "left": 584.609375,
+            "right": 747.75
+          }
+        ]
+      },
+      "screenshot": "source-repair-800-en-US-dark.png",
+      "exclusionScreenshot": "source-exclusion-800-en-US-dark.png",
+      "selectionScreenshot": "source-selection-800-en-US-dark.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 627.96875,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 627.96875,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 627.96875,
+            "right": 696
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 704,
+            "right": 748
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "light",
+      "state": "FAILED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 82,
+            "height": 44,
+            "left": 914.609375,
+            "right": 996.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 1004.609375,
+            "right": 1068
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 914.609375,
+            "right": 996.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 1004.609375,
+            "right": 1068
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 386,
+            "right": 468
+          },
+          {
+            "width": 116,
+            "height": 44,
+            "left": 372,
+            "right": 488
+          },
+          {
+            "width": 90,
+            "height": 44,
+            "left": 496,
+            "right": 586
+          },
+          {
+            "width": 118,
+            "height": 44,
+            "left": 594,
+            "right": 712
+          },
+          {
+            "width": 119.390625,
+            "height": 44,
+            "left": 720,
+            "right": 839.390625
+          }
+        ]
+      },
+      "screenshot": "source-repair-1440-zh-CN-light.png",
+      "exclusionScreenshot": "source-exclusion-1440-zh-CN-light.png",
+      "selectionScreenshot": "source-selection-1440-zh-CN-light.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 44,
+            "height": 44,
+            "left": 972,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 972,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 972,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "state": "PAUSED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 82,
+            "height": 44,
+            "left": 914.609375,
+            "right": 996.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 1004.609375,
+            "right": 1068
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 914.609375,
+            "right": 996.609375
+          },
+          {
+            "width": 63.390625,
+            "height": 44,
+            "left": 1004.609375,
+            "right": 1068
+          },
+          {
+            "width": 82,
+            "height": 44,
+            "left": 386,
+            "right": 468
+          },
+          {
+            "width": 116,
+            "height": 44,
+            "left": 372,
+            "right": 488
+          },
+          {
+            "width": 90,
+            "height": 44,
+            "left": 496,
+            "right": 586
+          },
+          {
+            "width": 118,
+            "height": 44,
+            "left": 594,
+            "right": 712
+          },
+          {
+            "width": 119.390625,
+            "height": 44,
+            "left": 720,
+            "right": 839.390625
+          }
+        ]
+      },
+      "screenshot": "source-repair-1440-zh-CN-dark.png",
+      "exclusionScreenshot": "source-exclusion-1440-zh-CN-dark.png",
+      "selectionScreenshot": "source-selection-1440-zh-CN-dark.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 44,
+            "height": 44,
+            "left": 972,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 972,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 972,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "light",
+      "state": "FAILED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 847.359375,
+            "right": 973.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 981.65625,
+            "right": 1068
+          },
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 847.359375,
+            "right": 973.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 981.65625,
+            "right": 1068
+          },
+          {
+            "width": 110.484375,
+            "height": 44,
+            "left": 386,
+            "right": 496.484375
+          },
+          {
+            "width": 186.0625,
+            "height": 44,
+            "left": 372,
+            "right": 558.0625
+          },
+          {
+            "width": 125.3125,
+            "height": 44,
+            "left": 566.0625,
+            "right": 691.375
+          },
+          {
+            "width": 171.4375,
+            "height": 44,
+            "left": 699.375,
+            "right": 870.8125
+          },
+          {
+            "width": 163.140625,
+            "height": 44,
+            "left": 878.8125,
+            "right": 1041.953125
+          }
+        ]
+      },
+      "screenshot": "source-repair-1440-en-US-light.png",
+      "exclusionScreenshot": "source-exclusion-1440-en-US-light.png",
+      "selectionScreenshot": "source-selection-1440-en-US-light.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 947.96875,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 947.96875,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 947.96875,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "dark",
+      "state": "PAUSED",
+      "writes": 4,
+      "reads": 11,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 847.359375,
+            "right": 973.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 981.65625,
+            "right": 1068
+          },
+          {
+            "width": 126.296875,
+            "height": 44,
+            "left": 847.359375,
+            "right": 973.65625
+          },
+          {
+            "width": 86.34375,
+            "height": 44,
+            "left": 981.65625,
+            "right": 1068
+          },
+          {
+            "width": 110.484375,
+            "height": 44,
+            "left": 386,
+            "right": 496.484375
+          },
+          {
+            "width": 186.0625,
+            "height": 44,
+            "left": 372,
+            "right": 558.0625
+          },
+          {
+            "width": 151.109375,
+            "height": 44,
+            "left": 566.0625,
+            "right": 717.171875
+          },
+          {
+            "width": 171.4375,
+            "height": 44,
+            "left": 725.171875,
+            "right": 896.609375
+          },
+          {
+            "width": 163.140625,
+            "height": 44,
+            "left": 904.609375,
+            "right": 1067.75
+          }
+        ]
+      },
+      "screenshot": "source-repair-1440-en-US-dark.png",
+      "exclusionScreenshot": "source-exclusion-1440-en-US-dark.png",
+      "selectionScreenshot": "source-selection-1440-en-US-dark.png",
+      "selectionGeometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 947.96875,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 947.96875,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          },
+          {
+            "width": 68.03125,
+            "height": 44,
+            "left": 947.96875,
+            "right": 1016
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1024,
+            "right": 1068
+          }
+        ]
+      },
+      "selectedUploadCount": 1,
+      "unknownCommitRecovered": true,
+      "commitPosts": 1,
+      "commitReads": 1
+    }
+  ],
+  "errors": []
+}
