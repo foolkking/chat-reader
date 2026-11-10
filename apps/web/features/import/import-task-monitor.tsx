@@ -33,6 +33,10 @@ type TaskControls = Record<string, TaskControl>;
 
 function controlConfirmed(control: TaskControl, current: BackgroundTaskRead) {
   if (control.action === "stop") return ["cancelling", "cancelled", "committed", "failed"].includes(current.status);
+  if (needsSourceCleanup(control.before)) {
+    const receipt = current.result.source_cleanup;
+    return !!receipt && (receipt.state === "completed" || receipt.revision !== control.before.result.source_cleanup?.revision);
+  }
   // A heartbeat/update alone is not evidence that a retry was accepted.
   return current.status !== control.before.status
     || current.attempt_count !== control.before.attempt_count
@@ -288,7 +292,7 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const listedTasks = tasksQuery.data ?? [];
   const retainedControls = Object.values(controls).map(control => control.before)
     .filter(task => !listedTasks.some(current => current.job_id === task.job_id));
-  const allTasks = [...listedTasks, ...retainedControls].filter((task) => !dismissedTaskIds.has(task.job_id) || (placement === "center" && (needsAccountCleanup(task) || controls[task.job_id])));
+  const allTasks = [...listedTasks, ...retainedControls].filter((task) => !dismissedTaskIds.has(task.job_id) || (placement === "center" && (needsFileCleanup(task) || controls[task.job_id])));
   const noiseTasks = allTasks.filter((task) => task.job_type === "content_noise_scan" && !["committed", "cancelled"].includes(task.status));
   const tasks = allTasks.filter((task) => task.job_type !== "content_noise_scan" || task.result.cleanup_apply?.status === "COMPLETED");
   const taskRows = completedTask && !dismissedTaskIds.has(completedTask.job_id) && !tasks.some((task) => task.job_id === completedTask.job_id)
@@ -296,9 +300,9 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     : tasks;
   const processingTasks = taskRows.filter((task) => ["queued", "processing", "cancelling"].includes(task.status));
   const failedTasks = taskRows.filter((task) => task.status === "failed");
-  const cleanupTasks = taskRows.filter((task) => task.status === "committed" && (needsAccountCleanup(task) || hasItemFailures(task)));
+  const cleanupTasks = taskRows.filter((task) => needsSourceCleanup(task) || task.status === "committed" && (needsAccountCleanup(task) || hasItemFailures(task)));
   const completedTasks = taskRows.filter((task) => task.status === "committed" && !needsAccountCleanup(task) && !hasItemFailures(task));
-  const cancelledTasks = taskRows.filter((task) => task.status === "cancelled");
+  const cancelledTasks = taskRows.filter((task) => task.status === "cancelled" && !needsSourceCleanup(task));
   const visibleTask = processingTasks.find((task) => task.status === "processing")
     ?? processingTasks[0]
     ?? (placement === "mobile" ? completedTask : null);
@@ -339,7 +343,7 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
           onCheck={() => { void checkControl(task); }}
           onRetry={() => { void runControl(task, "retry"); }}
           onCancel={() => { void runControl(task, "stop"); }}
-          onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) && !controls[task.job_id] ? () => dismissTask(task.job_id) : undefined} />
+          onDismiss={isTerminalTask(task) && !needsFileCleanup(task) && !controls[task.job_id] ? () => dismissTask(task.job_id) : undefined} />
       </div>
     );
     return (
@@ -428,6 +432,15 @@ function needsAccountCleanup(task: BackgroundTaskRead): boolean {
   return task.job_type === "user_account_delete" && task.result.account_deleted === true && Number(task.result.asset_cleanup_pending) > 0;
 }
 
+function needsSourceCleanup(task: BackgroundTaskRead): boolean {
+  return task.job_type === "import" && task.status === "cancelled"
+    && !!task.result.source_cleanup && ["pending", "failed", "blocked"].includes(task.result.source_cleanup.state);
+}
+
+function needsFileCleanup(task: BackgroundTaskRead): boolean {
+  return needsAccountCleanup(task) || needsSourceCleanup(task);
+}
+
 function hasItemFailures(task: BackgroundTaskRead): boolean {
   return Array.isArray(task.result.failed) && task.result.failed.length > 0;
 }
@@ -453,6 +466,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
   const accountDelete = task.job_type === "user_account_delete";
   const accountDeleted = accountDelete && task.result.account_deleted === true;
   const cleanupPending = accountDeleted && Number(task.result.asset_cleanup_pending) > 0;
+  const sourceCleanupPending = needsSourceCleanup(task);
   const failed = task.status === "failed";
   const exportAdjustment = failed && exportNeedsAdjustment(task.error_message);
   const analysisAdjustment = task.job_type === "adaptive_import_analysis" && task.failure?.retryable === false;
@@ -482,7 +496,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
       </div>
       {source ? <p className="mt-1 break-words text-sm text-primary">{source}</p> : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending ? "text-[var(--warning)]" : ""}>{partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
+        <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending || sourceCleanupPending ? "text-[var(--warning)]" : ""}>{partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
         {validTimestamp ? <time dateTime={timestamp} title={fullActivityTime(timestamp, resolvedLocale)} aria-label={`${zh ? "提交于" : "Submitted"} ${fullActivityTime(timestamp, resolvedLocale)}`} className="tabular-nums">{new Intl.DateTimeFormat(resolvedLocale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(timestamp))}</time> : null}
         {task.total_items > 0 && (active || task.total_items > 1) ? <span className="tabular-nums">{task.processed_items} / {task.total_items}</span> : null}
       </div>
@@ -509,6 +523,12 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
         {conversationId ? (zh ? "返回对话调整导出" : "Return to the conversation to adjust export") : (zh ? "返回列表调整导出" : "Return to the list to adjust export")}
       </Link> : null}
       {cleanupPending && !failed ? <div className="mt-2 text-[var(--warning)]" role="status"><p>{zh ? `账户已删除，仍有 ${Number(task.result.asset_cleanup_pending)} 个文件待清理。` : `Account deleted. ${Number(task.result.asset_cleanup_pending)} files still need cleanup.`}</p>{committed && onRetry ? <button type="button" disabled={busy} onClick={onRetry} className="min-h-11 font-medium underline">{zh ? "重试文件清理" : "Retry file cleanup"}</button> : null}</div> : null}
+      {sourceCleanupPending ? <div className="mt-2 text-[var(--warning)]" role="status">
+        <p>{task.result.source_cleanup?.state === "blocked"
+          ? (zh ? "导入已取消。来源存储位置需管理员检查，确认后可重试清理。" : "Import cancelled. Ask an administrator to check the source storage location before retrying cleanup.")
+          : (zh ? "导入已取消，临时来源仍待清理。不影响继续导入其他文件。" : "Import cancelled; temporary sources still need cleanup. You can import other files.")}</p>
+        {onRetry ? <button type="button" disabled={busy} onClick={onRetry} className="min-h-11 font-medium underline">{zh ? "重试文件清理" : "Retry file cleanup"}</button> : null}
+      </div> : null}
       {partial ? <p className="mt-2 text-[var(--warning)]" role="status">{zh ? `${completedItems} \u9879\u5b8c\u6210 \u00b7 ${itemFailures} \u9879\u5931\u8d25` : `${completedItems} completed \u00b7 ${itemFailures} failed`}</p> : null}
       {control ? <div className="mt-2 border-l-2 border-ui pl-3" role="status">
         <p>{control.state === "pending" ? (zh ? "正在提交操作…" : "Submitting…")

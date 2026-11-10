@@ -1,5 +1,24 @@
 # API 参考
 
+## 来源放弃后的清理回执 — 2026-11-11（未部署）
+
+导入会话读取增加可选`source_cleanup`：固定状态
+`pending|failed|blocked|completed`、opaque `revision`及`retryable`。
+服务端存储根绑定不返回到analysis_summary。
+原DELETE仍先提交取消，再尽力清理；回滚保留文件，清理失败不把已取消事务说成失败。
+
+`GET /api/tasks/active`以独立最多20条窗口返回本人未完成的来源清理，
+不挤占活跃任务、也不同时展示该会话旧的分析终态任务。任务结果包含相同回执，
+将旧`canceled`拼写归一为`cancelled`。`POST /api/tasks/{import_id}/retry`
+重新核对所有权和终态，仅重试已经明确放弃的来源清理，不重新分析/提交导入。
+结果未知只读核对。暂停/成功/活动中的来源不符合条件。
+单独获确认的账户删除将这些未完成回执移交执行删除的Root，避免级联丢失；
+不因此保留被删账户的普通工作区或对其他来源创建删除意图。
+
+Root运行摘要新增可选source_cleanup待处理/受保护会话数；
+队列统计补充paused/previewed/analyzing/other并归一取消拼写。
+不增加文件名、存储路径、全局删除操作或migration。
+
 ## 来源调整与可恢复分析 — 2026-11-10 未发布候选
 
 Session GET 可选 `sources[]` 包含原始来源身份、文件名、扩展名、大小及

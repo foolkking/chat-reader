@@ -178,9 +178,24 @@ only after that transaction commits; rollback, abandoned sessions and rolled-bac
 savepoints retain it. A successful savepoint transfers pending cleanup to its
 parent rather than deleting immediately. The configured storage root is captured
 when cancellation is scheduled, and resolved-directory guards still apply.
-Filesystem cleanup failures after commit retain the orphan and emit only safe
-exception-class telemetry; they do not turn a committed cancellation into an
-apparent failed transaction. No automatic cleanup retry is implied.
+Worktree follow-up (2026-11-11, not deployed): explicit disposal also commits
+a versioned private source-cleanup receipt in the existing `analysis_summary`.
+The receipt binds a server-generated request revision and storage-root digest.
+After-commit deletion records completed/failed/blocked in a separate short
+transaction; an unknown receipt write remains pending, never fabricated success.
+Only a canceled, uncommitted, conversation-less session can be cleaned. Changed
+roots, directory symlinks/junctions and non-directory replacements are protected.
+Missing directories reconcile idempotently; stale receipt revisions cannot delete.
+
+The session response exposes only optional `source_cleanup` state/revision/
+retryable, not the private root binding. Task Center projects up to20 unfinished
+disposals independently of active jobs and terminal-result expiry, suppressing the
+same session's old terminal analysis task. An explicit original ImportRecord task
+retry repeats only disposal, not analysis/canonical import. No automatic retry is
+introduced. A failed filesystem operation does not undo committed cancellation.
+An approved account deletion transfers these already-authorized unfinished
+receipts to its Root task owner rather than losing them to cascade deletion.
+This does not create disposal intent for other retained/successful sources.
 
 The new task type uses the generic BackgroundJob model and worker; it adds no
 migration. Other adaptive routes such as stored-source replacement,

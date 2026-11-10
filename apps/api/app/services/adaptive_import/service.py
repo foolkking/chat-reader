@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import shutil
+import stat
 import uuid
 from collections import defaultdict
 from contextlib import closing
@@ -860,6 +861,7 @@ def select_profile_revision(db: Session, record: ImportRecord, family: ImportStr
 
 def session_payload(record: ImportRecord) -> dict[str, Any]:
     from app.services.adaptive_import.resource_wait import public_wait
+    from app.services.adaptive_import.source_cleanup import KEY, public_receipt
     families = ordered_families(record)
     groups = ordered_groups(record)
     artifacts = ordered_artifacts(record)
@@ -871,6 +873,7 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "phase": record.phase,
         "progress": record.progress,
         "resource_wait": public_wait(record.analysis_summary),
+        "source_cleanup": public_receipt(record),
         "error_message": public_task_error(record.error_message, fallback="IMPORT_FAILED"),
         "analysis_task_id": (record.analysis_summary or {}).get("analysis_task_id"),
         "failure": public_import_failure(
@@ -950,7 +953,7 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
             for family in families
         ],
         "warnings": record.warnings or [],
-        "analysis_summary": record.analysis_summary or {},
+        "analysis_summary": {key: value for key, value in (record.analysis_summary or {}).items() if key != KEY},
     }
 
 
@@ -1037,7 +1040,7 @@ def resume_retained_analysis(db: Session, record: ImportRecord, *, previous_stat
 
 
 def cancel_session(record: ImportRecord) -> None:
-    if record.status == "committed" or record.committed_at is not None:
+    if record.status == "committed" or record.committed_at is not None or record.conversation_id is not None:
         raise AdaptiveImportError("SESSION_ALREADY_COMMITTED", "A committed import session cannot be canceled.", layer="session")
     if record.status in {"queued", "processing"}:
         raise AdaptiveImportError("SESSION_STATE_INVALID", "Canonical import has already started; its source files cannot be removed.", layer="session")
@@ -1053,7 +1056,9 @@ def cancel_session(record: ImportRecord) -> None:
     record.draft_storage_uri = None
     record.draft_sha256 = None
     record.draft_summary = {}
-    db.info.setdefault(_CANCELED_SESSION_CLEANUP_KEY, {}).setdefault(transaction, {})[record.id] = storage_root
+    from app.services.adaptive_import.source_cleanup import schedule_receipt
+    revision = schedule_receipt(record, storage_root)
+    db.info.setdefault(_CANCELED_SESSION_CLEANUP_KEY, {}).setdefault(transaction, {})[record.id] = (storage_root, revision)
 
 
 @event.listens_for(Session, "after_commit")
@@ -1065,16 +1070,9 @@ def _canceled_session_commit(db: Session) -> None:
         if sessions:
             pending.setdefault(transaction.parent, {}).update(sessions)
     else:
-        for import_id, storage_root in sessions.items():
-            try:
-                remove_session_files(import_id, storage_root=storage_root)
-            except (OSError, RuntimeError, ValueError) as exc:
-                # The cancellation is already committed. Retain the orphan rather
-                # than report a failed transaction or expose a private file path.
-                structured_event(
-                    logger, logging.WARNING, "adaptive_import_cancel_cleanup_failed",
-                    error_class=type(exc).__name__,
-                )
+        from app.services.adaptive_import.source_cleanup import finish_receipt
+        for import_id, (storage_root, revision) in sessions.items():
+            finish_receipt(db.get_bind(), import_id, storage_root, revision, remove_session_files)
     if not pending:
         db.info.pop(_CANCELED_SESSION_CLEANUP_KEY, None)
 
@@ -1757,7 +1755,29 @@ def _extension(filename: str) -> str:
 
 
 def remove_session_files(import_id: uuid.UUID, *, storage_root: Path | None = None) -> None:
+    from app.services.adaptive_import.source_cleanup import SourceCleanupBlocked
+    try:
+        identity = str(uuid.UUID(str(import_id)))
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise SourceCleanupBlocked() from exc
+    if identity != str(import_id):
+        raise SourceCleanupBlocked()
     root = (storage_root or Path(get_settings().import_storage_dir)).resolve()
-    target = (root / str(import_id)).resolve()
-    if target.parent == root and target.name == str(import_id) and target.is_dir():
-        shutil.rmtree(target)
+    if not root.is_dir():
+        # Creation can fail before even staging its first source. That local
+        # rollback has no durable disposal receipt to confirm.
+        if storage_root is None:
+            return
+        raise SourceCleanupBlocked()
+    target = root / identity
+    try:
+        metadata = target.lstat()
+    except FileNotFoundError:
+        return
+    if (not stat.S_ISDIR(metadata.st_mode) or target.is_symlink()
+            or getattr(metadata, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+            or target.resolve() != target):
+        raise SourceCleanupBlocked()
+    # shutil.rmtree does not follow child symlinks/junctions. In particular,
+    # never resolve a root symlink first and silently claim it was removed.
+    shutil.rmtree(target)

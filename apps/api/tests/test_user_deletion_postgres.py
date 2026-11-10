@@ -15,6 +15,7 @@ from app.models.background_job import BackgroundJob
 from app.models.content_cleanup import ContentCleanupRule, ContentCleanupRuleGrant, ContentCleanupRuleRevision
 from app.models.conversation import Conversation
 from app.models.import_profile import ImportProfile, ImportProfileGrant, ImportProfileRevision
+from app.models.import_record import ImportRecord
 from app.models.user import User
 from app.models.user_preference import PreferenceSyncReceipt, UserPreference
 from app.services.auth import ROOT_ADMIN_USER_ID, issue_session, register_user
@@ -30,6 +31,7 @@ def test_concurrent_confirmations_and_atomic_shared_account_deletion(isolated_sc
     engine, migrate = isolated_schema
     migrate("head")
     monkeypatch.setenv("ASSET_STORAGE_DIR", str(tmp_path))
+    monkeypatch.setenv("IMPORT_STORAGE_DIR", str(tmp_path / "imports"))
     get_settings.cache_clear()
     from app.services.adaptive_import.analysis import default_mapping
     from app.services.adaptive_import.profiles import create_verified_revision
@@ -43,6 +45,14 @@ def test_concurrent_confirmations_and_atomic_shared_account_deletion(isolated_sc
         db.add(other); db.flush()
         _, session = issue_session(db, principal, get_settings())
         target_id, other_id, session_id = target.id, other.id, session.id
+        from app.services.adaptive_import.source_cleanup import schedule_receipt
+        pending_source = ImportRecord(owner_user_id=target_id, source_profile="synthetic", source_fingerprint="d" * 64,
+            json_filename="private-source-name.json", detected_title="private-title",
+            analysis_summary={"private": "account content"}, status="canceled", session_state="CANCELED")
+        db.add(pending_source)
+        db.flush()
+        pending_source_id = pending_source.id
+        schedule_receipt(pending_source, tmp_path / "imports")
         subject = str(target_id)
         db.add(UserPreference(subject_key=subject)); db.flush()
         db.add(PreferenceSyncReceipt(subject_key=subject, operation_id=uuid.uuid4(), request_hash="test", response={}))
@@ -70,6 +80,9 @@ def test_concurrent_confirmations_and_atomic_shared_account_deletion(isolated_sc
     (tmp_path / "objects").mkdir()
     for name in ("shared", "exclusive"):
         (tmp_path / "objects" / name).write_bytes(b"x")
+    discarded_source = tmp_path / "imports" / str(pending_source_id)
+    discarded_source.mkdir(parents=True)
+    (discarded_source / "synthetic-source.txt").write_bytes(b"pending explicit disposal")
     barrier = Barrier(2)
     def queue(key):
         with Session(engine) as db:
@@ -99,6 +112,7 @@ def test_concurrent_confirmations_and_atomic_shared_account_deletion(isolated_sc
         assert db.get(AssetObject, exclusive_id) is not None
         assert db.query(PreferenceSyncReceipt).count() == 1
         assert db.get(ImportProfile, profile_id).owner_user_id == target_id
+        assert db.get(ImportRecord, pending_source_id).owner_user_id == target_id
         retry_background_job(db.get(BackgroundJob, job_id)); db.commit()
         assert db.query(UserDeletionRequest).one().status == "QUEUED"
         assert claim_next_job(db, job_type="user_account_delete") == job_id
@@ -116,6 +130,11 @@ def test_concurrent_confirmations_and_atomic_shared_account_deletion(isolated_sc
         job = db.get(BackgroundJob, job_id)
         assert job.status == "committed", job.error_message
         assert db.get(User, target_id) is None
+        assert db.get(ImportRecord, pending_source_id).owner_user_id == ROOT_ADMIN_USER_ID
+        assert set(db.get(ImportRecord, pending_source_id).analysis_summary) == {"_source_cleanup"}
+        assert db.get(ImportRecord, pending_source_id).detected_title is None
+        assert db.get(ImportRecord, pending_source_id).json_filename is None
+        assert discarded_source.is_dir()
         assert db.get(User, other_id) is not None
         assert db.query(Conversation).count() == 1
         assert db.get(AssetObject, shared_id) is not None
@@ -155,6 +174,12 @@ def test_concurrent_confirmations_and_atomic_shared_account_deletion(isolated_sc
         assert db.query(AdminAuditLog).filter_by(action="USER_DELETED", target_user_id=target_id).count() == 1
     assert (tmp_path / "objects" / "shared").is_file()
     assert not (tmp_path / "objects" / "exclusive").exists()
+    from app.api.routes.tasks import retry_task
+    from app.services.ownership import OwnershipScope
+    with Session(engine) as db:
+        result = retry_task(pending_source_id, db, OwnershipScope(ROOT_ADMIN_USER_ID))
+        assert result.result["source_cleanup"]["state"] == "completed"
+    assert not discarded_source.exists()
     get_settings.cache_clear()
 
 

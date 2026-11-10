@@ -40,7 +40,8 @@ export type AuditFilters = { action: string; actor: string; target: string; resu
 export type ContentResult = { conversation_id: string; user_id: string; user_email: string; user_display_name: string | null; title: string; status: string; message_count: number; snippet: string; created_at: string; updated_at: string };
 
 type RuntimeMetric<T> = { available: false } | ({ available: true } & T);
-type TaskCounts = Record<"queued" | "processing" | "cancelling" | "committed" | "failed" | "cancelled", number>;
+type TaskCounts = Record<"queued" | "processing" | "cancelling" | "committed" | "failed" | "cancelled", number>
+  & Partial<Record<"paused" | "previewed" | "analyzing" | "other", number>>;
 type RuntimeArchive = RuntimeMetric<{ record: { status: string; created_at: string; completed_at: string | null } | null }>;
 export type AdminRuntimeStatus = {
   generated_at: string; complete: boolean;
@@ -48,6 +49,7 @@ export type AdminRuntimeStatus = {
   queue: RuntimeMetric<{ jobs: TaskCounts; imports: TaskCounts }>;
   storage: Record<"imports" | "exports" | "offline" | "assets", RuntimeMetric<{ file_count: number; bytes: number; complete: boolean }> & { kind?: "local" | "object_records" }>;
   export_cleanup?: RuntimeMetric<{ pending_count: number; pending_bytes: number; failed_count: number }>;
+  source_cleanup?: RuntimeMetric<{ pending_count: number; blocked_count: number }>;
   backup: RuntimeArchive; restore: RuntimeArchive; mail: { configured: boolean };
 };
 

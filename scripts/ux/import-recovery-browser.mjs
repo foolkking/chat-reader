@@ -92,7 +92,9 @@ try {
       result: { conversation_id: "synthetic-export-source" } };
     const invalid = { ...row("invalid", "adaptive_import_analysis", "failed"),
       error_message: "ZIP_PATH_UNSAFE", failure: { code: "ZIP_PATH_UNSAFE", stage: "analysis", retryable: false } };
-    const rows = [analysis, other, limited, invalid], writes = [];
+    const sourceCleanup = { ...row("source-cleanup", "import", "cancelled"),
+      result: { source_cleanup: { state: "failed", revision: "synthetic-cleanup-before", retryable: true } } };
+    const rows = [analysis, other, limited, invalid, sourceCleanup], writes = [];
     let releaseCancel, retryFailed = false, taskReads = 0;
     const cancellation = new Promise(resolve => { releaseCancel = resolve; });
     await page.route("http://import-recovery.synthetic/**", async route => {
@@ -104,8 +106,14 @@ try {
         analysis.status = analysis.phase = "cancelling"; analysis.cancellation_requested_at = new Date().toISOString();
         return route.fulfill({ json: analysis });
       }
-      if (path.endsWith("/retry")) { writes.push({ path }); retryFailed = true; return route.abort("failed"); }
-      if (path.startsWith("/api/tasks/")) { taskReads++; return route.fulfill({ json: path.endsWith("/other") ? other : analysis }); }
+      if (path.endsWith("/retry")) {
+        writes.push({ path });
+        if (path.endsWith("/source-cleanup/retry")) {
+          sourceCleanup.result.source_cleanup = { state: "completed", revision: "synthetic-cleanup-after", retryable: false };
+        } else retryFailed = true;
+        return route.abort("failed");
+      }
+      if (path.startsWith("/api/tasks/")) { taskReads++; return route.fulfill({ json: rows.find(row => path.endsWith("/" + row.job_id)) ?? analysis }); }
       return route.fulfill({ contentType: path === "/bundle.js" ? "text/javascript" : path === "/style.css" ? "text/css" : "text/html",
         body: path === "/bundle.js" ? bundle : path === "/style.css" ? styles.css : html });
     });
@@ -155,7 +163,19 @@ try {
       }
       const filename = `tasks-${width}-${locale}-${theme}.png`;
       await page.screenshot({ path: join(out, filename), fullPage: true });
-      results.push({ width, locale, theme, writes: writes.length, taskReads, geometry, screenshot: filename });
+      const cleanupRow = page.locator("#task-row-source-cleanup");
+      await expect(cleanupRow).toContainText(locale === "zh-CN" ? "临时来源仍待清理" : "temporary sources still need cleanup");
+      await expect(cleanupRow.getByRole("button", { name: /关闭任务提示|Dismiss task/ })).toHaveCount(0);
+      const cleanupRetry = cleanupRow.getByRole("button", { name: /重试文件清理|Retry file cleanup/ });
+      await cleanupRetry.focus(); await page.keyboard.press("Enter");
+      await expect(cleanupRow).toContainText(locale === "zh-CN" ? "操作结果尚未确认" : "The result is unconfirmed");
+      await expect(cleanupRetry).toBeDisabled();
+      await cleanupRow.getByRole("button", { name: /核对状态|Check status/ }).click();
+      await expect(cleanupRow.getByRole("button", { name: /重试文件清理|Retry file cleanup/ })).toHaveCount(0);
+      await expect(cleanupRow.getByRole("button", { name: /关闭任务提示|Dismiss task/ })).toBeVisible();
+      assert.equal(writes.filter(item => item.path.endsWith("/source-cleanup/retry")).length, 1);
+      results.push({ width, locale, theme, writes: writes.length, taskReads, geometry, screenshot: filename,
+        sourceCleanup: "cancelled → explicit cleanup retry → unknown response → read-only confirmation" });
     } catch (error) {
       await page.screenshot({ path: join(out, `failure-${width}-${locale}-${theme}.png`), fullPage: true }).catch(() => {});
       writeFileSync(join(out, "failure.json"), JSON.stringify({

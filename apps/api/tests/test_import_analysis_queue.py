@@ -465,6 +465,31 @@ def test_cancel_cleanup_failure_retains_sources_without_failing_committed_cancel
     assert private_error not in caplog.text
 
 
+def test_discard_cleanup_failure_is_durable_and_retry_does_not_restart_analysis(client, tmp_path, monkeypatch):
+    queued = queue(client, count=1)
+    path = tmp_path / "storage" / "imports" / queued["import_id"]
+    with monkeypatch.context() as patch:
+        patch.setattr(service.shutil, "rmtree", lambda _path: (_ for _ in ()).throw(PermissionError("private path")))
+        assert client.delete(f"/api/adaptive-import/sessions/{queued['import_id']}").status_code == 204
+    state = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
+    assert state["source_cleanup"]["state"] == "failed"
+    assert state["source_cleanup"]["retryable"] is True
+    task = client.get(f"/api/tasks/{queued['import_id']}").json()
+    assert task["status"] == "cancelled"
+    assert task["result"]["source_cleanup"] == state["source_cleanup"]
+    rows = client.get("/api/tasks/active").json()
+    assert any(row["job_id"] == queued["import_id"] for row in rows)
+    assert not any(row["job_id"] == queued["analysis_task_id"] for row in rows)
+    before = client.get(f"/api/tasks/{queued['analysis_task_id']}").json()
+    retried = client.post(f"/api/tasks/{queued['import_id']}/retry")
+    assert retried.status_code == 200, retried.text
+    assert retried.json()["result"]["source_cleanup"]["state"] == "completed"
+    assert not path.exists()
+    after = client.get(f"/api/tasks/{queued['analysis_task_id']}").json()
+    assert after == before
+    assert not any(row["job_id"] == queued["import_id"] for row in client.get("/api/tasks/active").json())
+
+
 @pytest.mark.parametrize("via_tasks", [False, True])
 def test_processing_cancel_only_updates_the_job_until_worker_acknowledges(client, tmp_path, via_tasks):
     queued = queue(client)

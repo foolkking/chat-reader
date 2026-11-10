@@ -42,6 +42,14 @@ No/future heartbeat is unavailable; stale heartbeat is labelled stale, even
 when metrics are complete. Mail configured does not imply tested delivery.
 Latest archive status is derived without updating the backup record.
 
+Worktree follow-up (2026-11-11): import counts include paused, previewed and
+analyzing; canceled/cancelled normalize to one canceled count. Unknown states
+contribute to fixed `other`, never disappear or expose arbitrary status strings.
+Optional `source_cleanup` reports only unfinished explicitly discarded session
+count and blocked count, not guessed residual bytes/files. The panel shows this
+exception only when nonzero/unavailable. Extra queue states also appear only
+when nonzero. Read-only runtime requests never retry disposal.
+
 The administrator panel refreshes every 30 seconds while visible, pauses when
 hidden and refreshes on return. A failed refresh retains the last result with
 an outdated warning. No cleanup, restart, automated backup or notification

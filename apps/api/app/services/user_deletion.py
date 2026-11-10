@@ -211,6 +211,10 @@ def execute_user_account_delete(
     db.query(BackgroundJob).filter(BackgroundJob.owner_user_id == target_user_id,
                                   BackgroundJob.job_type.in_(["skill_object_cleanup", "context_object_cleanup"])).update(
         {BackgroundJob.owner_user_id: job.owner_user_id}, synchronize_session=False)
+    # Preserve only already-authorized unfinished source disposal, like the
+    # cleanup jobs above. Account deletion must not erase its recovery receipt.
+    from app.services.adaptive_import.source_cleanup import transfer_discarded_receipts
+    transfer_discarded_receipts(db, target_user_id, job.owner_user_id)
 
     db.query(PreferenceSyncReceipt).filter(PreferenceSyncReceipt.subject_key == subject).delete(synchronize_session=False)
     db.query(ReadingPositionSyncReceipt).filter(ReadingPositionSyncReceipt.subject_key == subject).delete(synchronize_session=False)

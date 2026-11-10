@@ -16,6 +16,7 @@ from app.models.export_artifact import ExportArtifact
 from app.services.diagnostics import storage_usage, worker_status
 
 STATUSES = ("queued", "processing", "cancelling", "committed", "failed", "cancelled")
+IMPORT_STATUSES = (*STATUSES, "paused", "previewed", "analyzing")
 
 
 def _metric(db: Session, read):
@@ -29,9 +30,13 @@ def _metric(db: Session, read):
 
 
 def _counts(db: Session, model) -> dict[str, int]:
-    rows = db.query(model.status, func.count(model.id)).filter(model.status.in_(STATUSES)).group_by(model.status).all()
-    counts = dict(rows)
-    return {state: int(counts.get(state, 0)) for state in STATUSES}
+    rows = db.query(model.status, func.count(model.id)).group_by(model.status).all()
+    states = IMPORT_STATUSES if model is ImportRecord else STATUSES
+    counts = {state: 0 for state in (*states, "other")}
+    for state, count in rows:
+        state = "cancelled" if state == "canceled" else state
+        counts[state if state in counts else "other"] += int(count)
+    return counts
 
 
 def _backup(db: Session, operation: str) -> dict:
@@ -71,6 +76,18 @@ def _export_cleanup(db: Session, now: datetime) -> dict:
             "failed_count": sum(int(count) for state, count, _ in rows if state == "retry")}
 
 
+def _source_cleanup(db: Session) -> dict:
+    from app.services.adaptive_import.source_cleanup import KEY, UNFINISHED
+    rows = db.query(ImportRecord.analysis_summary[KEY]["state"].as_string(), func.count(ImportRecord.id)).filter(
+        ImportRecord.status.in_(("canceled", "cancelled")), ImportRecord.session_state == "CANCELED",
+        ImportRecord.committed_at.is_(None), ImportRecord.conversation_id.is_(None),
+        ImportRecord.analysis_summary[KEY]["version"].as_integer() == 1,
+        ImportRecord.analysis_summary[KEY]["state"].as_string().in_(UNFINISHED),
+    ).group_by(ImportRecord.analysis_summary[KEY]["state"].as_string()).all()
+    return {"pending_count": sum(int(count) for _, count in rows),
+            "blocked_count": sum(int(count) for state, count in rows if state == "blocked")}
+
+
 def runtime_snapshot(db: Session, settings: Settings, *, now: datetime | None = None) -> dict:
     now = now or datetime.now(timezone.utc)
     queue = _metric(db, lambda: {"jobs": _counts(db, BackgroundJob), "imports": _counts(db, ImportRecord)})
@@ -101,10 +118,12 @@ def runtime_snapshot(db: Session, settings: Settings, *, now: datetime | None = 
     backup = _metric(db, lambda: _backup(db, "BACKUP"))
     restore = _metric(db, lambda: _backup(db, "RESTORE"))
     export_cleanup = _metric(db, lambda: _export_cleanup(db, now))
+    source_cleanup = _metric(db, lambda: _source_cleanup(db))
     return {"generated_at": now.isoformat(), "worker": worker, "queue": queue,
         "storage": storage, "backup": backup, "restore": restore, "export_cleanup": export_cleanup,
+        "source_cleanup": source_cleanup,
         "mail": {"configured": bool(settings.smtp_host and settings.smtp_from_address)},
-        "complete": all(metric["available"] for metric in (worker, queue, backup, restore, export_cleanup))
+        "complete": all(metric["available"] for metric in (worker, queue, backup, restore, export_cleanup, source_cleanup))
                     and worker.get("status") not in {None, "unavailable"}
                     and all(metric.get("available") and metric.get("complete") for metric in storage.values())}
 

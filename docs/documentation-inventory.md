@@ -6,6 +6,8 @@
 `execution/SMALL_HOST_OPERATIONS_2026-11-11.md`，记录A–D设计与分块验证。
 同步Observability/Artifact的独立维护、事务本地时限、轮换预算和中断语义；
 状态/导航区分未部署工作与3564cbf现役，不扩大自动清理范围。
+B同步导入/Retention/Observability及API合同：显式放弃清理回执、
+受保护路径/未知结果、独立待处理窗口与原任务重试、账户删除时最小回执移交。
 
 ## 可恢复操作发布及单份备份收尾 — 2026-11-11
 

@@ -341,6 +341,24 @@ test("current healthy data still shows genuine live progress", () => {
   finally { f.dispose(); }
 });
 
+test("cancelled source cleanup is attention work and confirms a retry without restarting analysis", async () => {
+  const before = { ...task("cleanup", "cancelled"),
+    result: { source_cleanup: { state: "failed", revision: "before", retryable: true } } };
+  const f = fixture({ rows: [before] });
+  try {
+    assert.equal(f.taskProps("cleanup").onDismiss, undefined);
+    f.taskProps("cleanup").onRetry(); await setImmediate(); f.render(); f.flush();
+    assert.equal(f.taskProps("cleanup").control.state, "unknown");
+    const current = { ...before, result: { source_cleanup: { state: "completed", revision: "after", retryable: false } } };
+    f.setFinalRead(async () => current);
+    f.taskProps("cleanup").onCheck(); await setImmediate(); f.render(); f.flush();
+    assert.equal(f.taskProps("cleanup").control, undefined);
+    assert.equal(typeof f.taskProps("cleanup").onDismiss, "function");
+    assert.deepEqual(f.writes, [["retry", "cleanup"]]);
+    assert.deepEqual(f.reads, ["cleanup"]);
+  } finally { f.dispose(); }
+});
+
 test("a confirmed list result retires an older held lookup without duplicating completion", async () => {
   const f = fixture(), held = deferred();
   try {

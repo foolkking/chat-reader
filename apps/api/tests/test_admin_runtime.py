@@ -101,6 +101,35 @@ def test_runtime_real_aggregates_latest_archive_and_read_only(auth_client, monke
         assert "private" not in serialized and str(job.id) not in serialized
 
 
+def test_runtime_counts_pauses_and_both_cancel_spellings_without_hiding_unknowns(auth_client, monkeypatch, tmp_path):
+    settings = roots(monkeypatch, tmp_path)
+    with auth_middleware.SessionLocal() as db:
+        for state in ("paused", "previewed", "analyzing", "canceled", "cancelled", "unknown-private-state"):
+            db.add(ImportRecord(source_profile="synthetic", source_fingerprint=uuid.uuid4().hex, status=state))
+        db.commit()
+        result = admin_runtime.runtime_snapshot(db, settings)["queue"]["imports"]
+        assert result["paused"] == result["previewed"] == result["analyzing"] == 1
+        assert result["cancelled"] == 2
+        assert result["other"] == 1
+        assert "unknown-private-state" not in json.dumps(result)
+        assert sum(result.values()) == 6
+
+
+def test_runtime_source_cleanup_counts_only_discarded_sessions_and_does_not_expose_bindings(auth_client, monkeypatch, tmp_path):
+    from app.services.adaptive_import.source_cleanup import KEY
+    settings = roots(monkeypatch, tmp_path)
+    with auth_middleware.SessionLocal() as db:
+        for status, state in (("canceled", "pending"), ("cancelled", "blocked"),
+                              ("canceled", "completed"), ("paused", "failed"), ("committed", "failed")):
+            db.add(ImportRecord(source_profile="synthetic", source_fingerprint=uuid.uuid4().hex,
+                status=status, session_state="CANCELED", analysis_summary={KEY: {
+                    "state": state, "version": 1, "revision": str(uuid.uuid4()), "root_digest": "private-binding"}}))
+        db.commit()
+        result = admin_runtime.runtime_snapshot(db, settings)
+        assert result["source_cleanup"] == {"available": True, "pending_count": 2, "blocked_count": 1}
+        assert "private-binding" not in json.dumps(result)
+
+
 @pytest.mark.parametrize("age,state", [(10, "alive_idle"), (500, "stale"), (-10, "unavailable")])
 def test_worker_liveness_is_not_inferred_from_finished_jobs(auth_client, monkeypatch, tmp_path, age, state):
     settings = roots(monkeypatch, tmp_path)

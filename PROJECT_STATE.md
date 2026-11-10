@@ -5,7 +5,10 @@
 Block A separates single-flight housekeeping from worker heartbeats without
 increasing user-job concurrency. Local synthetic/real-PostgreSQL checks:
 121 passed, four Windows POSIX-signal skips; full exact-source CI pending.
-Queue/source-cleanup, Reader and minimal administrator follow-ups continue.
+Block B adds durable explicit-disposal receipts and original-task cleanup retry;
+paused/canceled/unknown runtime states are counted honestly. Local API/PG and
+12 mounted Task Center cases pass; no automatic source purge or migration.
+Reader request-lifetime and minimal administrator follow-ups continue.
 [Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
 [execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
 The latest user instruction allows major-block commits/CI without waiting;

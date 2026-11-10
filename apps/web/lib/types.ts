@@ -857,6 +857,7 @@ export type BackgroundTaskRead = {
   export_format?: string | null;
   offline_target?: OfflineDownloadTarget | null;
   result: {
+    source_cleanup?: { state: "pending" | "failed" | "blocked" | "completed"; revision: string; retryable: boolean };
     offline_failure?: {
       code: string;
       phase: string;

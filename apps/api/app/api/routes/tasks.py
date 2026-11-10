@@ -21,6 +21,7 @@ from app.services.import_queue import ACTIVE_IMPORT_STATUSES, conversation_ids_f
 from app.services.task_retention import TERMINAL_IMPORT_STATUSES, TERMINAL_JOB_STATUSES, terminal_result_cutoff
 from app.services.task_errors import ARCHIVE_FAILURE_MESSAGE, public_import_failure, public_task_error
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
+from app.services.adaptive_import.source_cleanup import KEY as SOURCE_CLEANUP_KEY, UNFINISHED, public_receipt
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -32,6 +33,21 @@ def list_active_tasks(
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> list[BackgroundTaskRead]:
     cutoff = terminal_result_cutoff(settings.task_terminal_result_retention_seconds)
+    # A cancelled import is not active work, but its explicitly requested file
+    # cleanup can remain unfinished beyond the terminal notification window.
+    pending_source_cleanup = db.query(ImportRecord).filter(
+        ownership_scope.predicate(ImportRecord),
+        ImportRecord.status.in_(("canceled", "cancelled")), ImportRecord.session_state == "CANCELED",
+        ImportRecord.committed_at.is_(None), ImportRecord.conversation_id.is_(None),
+        ImportRecord.analysis_summary[SOURCE_CLEANUP_KEY]["version"].as_integer() == 1,
+        ImportRecord.analysis_summary[SOURCE_CLEANUP_KEY]["state"].as_string().in_(UNFINISHED),
+    ).order_by(ImportRecord.updated_at.asc(), ImportRecord.id.asc()).limit(20).all()
+    replaced_analysis_ids = []
+    for record in pending_source_cleanup:
+        try:
+            replaced_analysis_ids.append(uuid.UUID(str((record.analysis_summary or {}).get("analysis_task_id"))))
+        except (ValueError, TypeError, AttributeError):
+            pass
     active_imports = (
         db.query(ImportRecord)
         .filter(
@@ -50,6 +66,7 @@ def list_active_tasks(
             ImportRecord.phase != "analysis_failed",
             ImportRecord.completed_at.is_not(None),
             ImportRecord.completed_at >= cutoff,
+            ImportRecord.id.not_in([record.id for record in pending_source_cleanup]),
         )
         .order_by(ImportRecord.completed_at.desc())
         .limit(max(0, 20 - len(active_imports)))
@@ -83,13 +100,14 @@ def list_active_tasks(
             BackgroundJob.completed_at.is_not(None),
             BackgroundJob.completed_at >= cutoff,
             BackgroundJob.id.not_in([job.id for job in pending_cleanup_jobs]),
+            BackgroundJob.id.not_in(replaced_analysis_ids),
         )
         .order_by(BackgroundJob.completed_at.desc())
         .limit(max(0, 20 - len(active_jobs)))
         .all()
     )
     active_tasks = [_import_task(record, db) for record in active_imports] + [_job_task(job) for job in active_jobs]
-    terminal_tasks = [_import_task(record, db) for record in recent_imports] + [_job_task(job) for job in [*pending_cleanup_jobs, *recent_jobs]]
+    terminal_tasks = [_import_task(record, db) for record in [*recent_imports, *pending_source_cleanup]] + [_job_task(job) for job in [*pending_cleanup_jobs, *recent_jobs]]
     ordered = sorted(active_tasks, key=_active_task_sort_key) + sorted(terminal_tasks, key=_terminal_task_sort_key, reverse=True)
     # A worker can finish between these bounded READ COMMITTED queries. A row
     # seen as active can then also enter the terminal window; expose one task,
@@ -143,6 +161,14 @@ def retry_task(
         return _job_task(job)
     record = get_owned(db, ImportRecord, job_id, ownership_scope)
     if record is not None:
+        db.refresh(record, with_for_update=True)
+        receipt = public_receipt(record)
+        if receipt and receipt["retryable"]:
+            from app.services.adaptive_import.service import cancel_session
+            cancel_session(record)
+            db.commit()
+            db.refresh(record)
+            return _import_task(record, db)
         if record.status != "failed":
             return _import_task(record, db)
         if record.phase == "analysis_failed":
@@ -331,18 +357,20 @@ def _job_label(job_type: str) -> str:
 
 def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
     from app.services.adaptive_import.resource_wait import public_wait
-    conversation_ids = conversation_ids_for_import(db, record)
+    receipt = public_receipt(record)
+    conversation_ids = [] if receipt else conversation_ids_for_import(db, record)
     return BackgroundTaskRead(
         job_id=record.id,
         job_type="import",
-        status=record.status,
+        status="cancelled" if record.status == "canceled" else record.status,
         phase=record.phase,
         progress=record.progress,
         processed_items=record.processed_messages,
         total_items=record.total_messages,
         label=primary_filename(record),
         source_label=primary_filename(record),
-        result={"conversation_ids": [str(value) for value in conversation_ids]},
+        result={"conversation_ids": [str(value) for value in conversation_ids],
+                **({"source_cleanup": receipt} if receipt else {})},
         error_message=public_task_error(record.error_message, fallback="IMPORT_FAILED"),
         resource_wait=public_wait(record.analysis_summary) if record.phase in {"waiting_resources", "resource_paused"} else None,
         failure=(
@@ -351,7 +379,7 @@ def _import_task(record: ImportRecord, db: Session) -> BackgroundTaskRead:
                 error_message=record.error_message, stage="commit",
             ) if record.status == "failed" else None
         ),
-        queued_at=record.queued_at,
+        queued_at=record.queued_at or record.created_at,
         started_at=record.started_at,
         heartbeat_at=record.heartbeat_at,
         completed_at=record.completed_at,
