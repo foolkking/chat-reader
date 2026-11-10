@@ -70,6 +70,15 @@ service startup, build, missing evidence or other harness/infrastructure
 failures still fail the comparison workflow. Neither phase is skipped, and a
 baseline assertion failure is not relabeled as a pass.
 
+For an unexplained failed budget, manual Reading performance comparison accepts
+an optional full lowercase `diagnostic_ref` SHA. It runs the same baseline and
+that exact failed source with only the plain-10000 case, adding per-cold-run CPU
+profiles and browser metric snapshots. The artifact and payload explicitly say
+**diagnostic only**. Profiling affects timing; no result from this opt-in run is
+release acceptance or replaces the original failure. The normal reusable
+workflow has no diagnostic input, runs all nine cases, and retains every
+original threshold/assertion. No profiling is installed in the product.
+
 ## Cache interpretation
 
 The browser probe is installed only by Playwright and counts Rich Markdown

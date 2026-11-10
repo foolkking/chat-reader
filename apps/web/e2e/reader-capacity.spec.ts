@@ -3,6 +3,9 @@ import { dirname } from "node:path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const enabled = process.env.E2E_READER_CAPACITY === "1";
+// Explicit diagnostic workflow only. Profiling changes scheduling; these
+// measurements never replace the unchanged unprofiled release gate.
+const diagnostic = process.env.E2E_READER_CAPACITY_PROFILE === "1";
 test.skip(!enabled, "E2E_READER_CAPACITY=1 is required");
 test.setTimeout(900_000);
 // DOM snapshots/screencasts at every Playwright action are a diagnostic
@@ -24,12 +27,13 @@ for (const profile of profiles) {
       });
       const runs = [];
       for (let run = 0; run < 3; run += 1) {
-        runs.push(await measureReader(page, conversationId, run));
+        runs.push(await measureReader(page, conversationId, run, diagnostic
+          ? testInfo.outputPath(`reader-cpu-${profile}-${messages}-${run}.json`) : undefined));
       }
       const warm = await measureWarmRevisit(page, conversationId);
       const payload = {
         fixture: { version: "release-d-reader-capacity-v1", seed: 20260814, profile, messages },
-        measurement: { version: 2, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34 },
+        measurement: { version: 2, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34, diagnosticOnly: diagnostic },
         runs, warm,
       };
       // The list/gate reporters do not materialize body-only attachments.
@@ -117,7 +121,7 @@ function buildMessage(index: number, messages: number, profile: Profile): string
   return `Synthetic capacity response ${index}.`;
 }
 
-async function measureReader(page: Page, conversationId: string, run: number) {
+async function measureReader(page: Page, conversationId: string, run: number, profilePath?: string) {
   const requests = { total: 0, conversation: 0, dialogueIndex: 0, bytes: 0 };
   const onResponse = async (response: import("@playwright/test").Response) => {
     if (!response.url().includes("/api/")) return;
@@ -151,7 +155,26 @@ async function measureReader(page: Page, conversationId: string, run: number) {
   }
   await root.evaluate((element) => { element.scrollTop = 0; });
   await page.waitForTimeout(150);
-  const telemetry = await runWheelTelemetry(page, root);
+  const cdp = profilePath ? await page.context().newCDPSession(page) : null;
+  if (cdp) {
+    await cdp.send("Profiler.enable");
+    await cdp.send("Performance.enable");
+    await cdp.send("Profiler.start");
+  }
+  const metricsBefore = cdp ? await cdp.send("Performance.getMetrics") : null;
+  const pageClockBefore = cdp ? await page.evaluate(() => performance.now()) : null;
+  let telemetry: Awaited<ReturnType<typeof runWheelTelemetry>>;
+  try {
+    telemetry = await runWheelTelemetry(page, root, 30, Boolean(cdp));
+  } finally {
+    if (cdp && profilePath) {
+      const metricsAfter = await cdp.send("Performance.getMetrics");
+      const profile = await cdp.send("Profiler.stop");
+      await mkdir(dirname(profilePath), { recursive: true });
+      await writeFile(profilePath, JSON.stringify({ diagnosticOnly: true, pageClockBefore, metricsBefore, metricsAfter, profile: profile.profile }));
+      await cdp.detach();
+    }
+  }
   const probe = await page.evaluate(() => (window as typeof window & { __chatReaderPerfProbe?: Record<string, number> }).__chatReaderPerfProbe ?? {});
   page.off("response", onResponse);
   return { run, navigationElapsedMs, restoredReadingPosition, ...telemetry, ...requests, probe };
@@ -171,13 +194,14 @@ async function measureWarmRevisit(page: Page, conversationId: string) {
   return { ...telemetry, parseDelta: (after.markdownRenderTotal ?? 0) - (before.markdownRenderTotal ?? 0), probe: after, conversationId };
 }
 
-async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, steps = 30) {
+async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, steps = 30, includeTiming = false) {
   // Move once, before the timed window. Repeated hover actions wait for
   // stability and capture diagnostic snapshots between every wheel event.
   await root.hover();
-  await page.evaluate(() => {
+  await page.evaluate((includeTiming) => {
     const state = {
       frames: [] as number[], longTasks: [] as number[], lastFrame: 0,
+      longTaskSpans: [] as Array<{ startTime: number; duration: number }>, includeTiming,
       startedAt: performance.now(), frameId: 0, observer: null as PerformanceObserver | null,
     };
     (window as typeof window & { __capacityTelemetry?: typeof state }).__capacityTelemetry = state;
@@ -189,12 +213,15 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     state.frameId = requestAnimationFrame(frame);
     if (PerformanceObserver.supportedEntryTypes.includes("longtask")) {
       const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) if (entry.startTime >= state.startedAt) state.longTasks.push(entry.duration);
+        for (const entry of list.getEntries()) if (entry.startTime >= state.startedAt) {
+          state.longTasks.push(entry.duration);
+          if (state.includeTiming) state.longTaskSpans.push({ startTime: entry.startTime, duration: entry.duration });
+        }
       });
       observer.observe({ type: "longtask" });
       state.observer = observer;
     }
-  });
+  }, includeTiming);
   const samples: number[] = [];
   const scrollReversals: Array<{
     step: number;
@@ -257,14 +284,19 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
   const value = await page.evaluate(() => {
     const state = (window as typeof window & { __capacityTelemetry?: {
       frames: number[]; longTasks: number[]; startedAt: number; frameId: number; observer: PerformanceObserver | null;
+      longTaskSpans: Array<{ startTime: number; duration: number }>; includeTiming: boolean;
     } }).__capacityTelemetry;
     if (!state) throw new Error("Capacity telemetry was not installed");
     cancelAnimationFrame(state.frameId);
     for (const entry of state.observer?.takeRecords() ?? []) {
-      if (entry.startTime >= state.startedAt) state.longTasks.push(entry.duration);
+      if (entry.startTime >= state.startedAt) {
+        state.longTasks.push(entry.duration);
+        if (state.includeTiming) state.longTaskSpans.push({ startTime: entry.startTime, duration: entry.duration });
+      }
     }
     state.observer?.disconnect();
-    return { frames: state.frames, longTasks: state.longTasks, durationMs: performance.now() - state.startedAt };
+    return { frames: state.frames, longTasks: state.longTasks, durationMs: performance.now() - state.startedAt,
+      ...(state.includeTiming ? { diagnosticTiming: { startedAt: state.startedAt, longTaskSpans: state.longTaskSpans } } : {}) };
   });
   const memory = await page.evaluate(() => {
     const performanceWithMemory = performance as Performance & { memory?: { usedJSHeapSize?: number } };
@@ -287,6 +319,7 @@ async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, 
     p95FrameInterval: frames[Math.max(0, Math.ceil(frames.length * 0.95) - 1)] ?? null,
     longestTask: value.longTasks.length ? Math.max(...value.longTasks) : 0,
     longTaskTotal: value.longTasks.reduce((sum, item) => sum + item, 0),
+    ...(value.diagnosticTiming ? { diagnosticTiming: value.diagnosticTiming } : {}),
     ...memory,
   };
 }

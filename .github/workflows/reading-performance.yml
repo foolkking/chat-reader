@@ -2,6 +2,12 @@ name: Reading performance comparison
 
 on:
   workflow_dispatch:
+    inputs:
+      diagnostic_ref:
+        description: "Optional exact failed source SHA: plain-10000 CPU diagnostic only, NOT release acceptance"
+        required: false
+        type: string
+        default: ""
   workflow_call:
 
 permissions:
@@ -20,6 +26,7 @@ jobs:
       CORS_ORIGINS: http://127.0.0.1:3107
       PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
       E2E_READER_CAPACITY: "1"
+      READER_DIAGNOSTIC_REF: ${{ inputs.diagnostic_ref || '' }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -48,6 +55,15 @@ jobs:
         run: |
           set -euo pipefail
           candidate="${{ github.sha }}"
+          diagnostic_args=()
+          if [ -n "$READER_DIAGNOSTIC_REF" ]; then
+            [[ "$READER_DIAGNOSTIC_REF" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "$READER_DIAGNOSTIC_REF^{commit}"
+            candidate="$READER_DIAGNOSTIC_REF"
+            export E2E_READER_CAPACITY_PROFILE=1
+            diagnostic_args=(--grep '^plain 10000 messages:')
+            printf 'diagnostic-only; not release acceptance\n' > "$RUNNER_TEMP/reading-comparison/diagnostic-only.txt"
+          fi
           baseline=43a714f2c13f6e6573eb02916c8ff8f78dd2d82e
           cleanup() {
             for file in "$RUNNER_TEMP/perf-api.pid" "$RUNNER_TEMP/perf-worker.pid"; do
@@ -96,7 +112,7 @@ jobs:
             printf 'phase=%s\nsource=%s\nrunner=%s\n' "$phase" "$ref" "$RUNNER_NAME" > "$RUNNER_TEMP/reading-comparison/$phase-source.txt"
             # Preserve both results with unchanged assertions and thresholds.
             # The immutable baseline is diagnostic; candidate results gate release.
-            if pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts; then
+            if pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts "${diagnostic_args[@]}"; then
               printf 'passed\n' > "$RUNNER_TEMP/reading-comparison/$phase-result.txt"
             else
               printf 'failed\n' > "$RUNNER_TEMP/reading-comparison/$phase-result.txt"
