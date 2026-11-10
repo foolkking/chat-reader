@@ -1,0 +1,7 @@
+{
+  "base_revision": "19a825354f199e5aa0d4caa0a6fdbfb426c6462e",
+  "scope": "Context conversion E2E explicit exact-ID resume and no-reupload assertion",
+  "files": {
+    "apps/web/e2e/context-skill-bundles.spec.ts": "ee89a1beeb291a829317f55c4c87958d6a4341d4a39c5c77cff2bff69e998cbb"
+  }
+}

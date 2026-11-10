@@ -198,3 +198,12 @@ rejections without launching the application/database. The helper's actual
 stored-upload SHA acceptance remains an exact-source Settings CI obligation.
 The earlier intercepted multipart probe is not presented as proof that a
 real unintercepted browser request always exposes its body.
+
+## Third CI failure correction
+
+`ci-third-failure-summary.json` binds19a8253/run42784946090 and50m16.7s
+first-read. API6308, performance, Settings470+restore1, adaptive12 and CSP4
+passed; Context35 passed/1 implicit-resume test failed. No release images.
+`source-checkpoint-ci-fix03.json` and `ci-fix03-local-summary.txt` record the
+single E2E correction and passing static/2324 Node checks. Exact import ID,
+single-upload and complete revised Bundle bytes are required, not relaxed.

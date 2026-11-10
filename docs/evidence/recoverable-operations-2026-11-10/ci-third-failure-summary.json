@@ -1,0 +1,29 @@
+{
+  "revision": "19a825354f199e5aa0d4caa0a6fdbfb426c6462e",
+  "run_id": 42784946090,
+  "attempt": 1,
+  "dispatch_acknowledged": "2026-11-10T16:44:04.3777620+08:00",
+  "first_read": "2026-11-10T17:34:21.0978404+08:00",
+  "first_read_after_seconds": 3016.720078,
+  "api": {
+    "passed": 6308,
+    "skipped": 3,
+    "failed": 0
+  },
+  "reading_performance_job": "success",
+  "settings": {
+    "passed": 470,
+    "failed": 0,
+    "fresh_instance_restore_passed": 1
+  },
+  "web": {
+    "adaptive_import_passed": 12,
+    "adaptive_import_existing_private_skip": 1,
+    "csp_passed": 4,
+    "context_passed": 35,
+    "context_failed": 1,
+    "failure": "conversion Bundle test expected implicit reopening of failed import"
+  },
+  "new_release_images": false,
+  "deployment": false
+}

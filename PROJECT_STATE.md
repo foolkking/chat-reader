@@ -47,6 +47,12 @@ the attachment test uses the retained full-preview action. Lint/typecheck and
 2324 Node checks pass with bounded local test concurrency; the initial
 unbounded sweep's one shell timeout is retained in the ledger. New full CI
 is still required; no release images or deployment from either failed run.
+Third run `42784946090` (`19a8253`), first read17:34:21+08:00 after50m16.7s:
+API6308, Settings470 plus independent restore1 and performance passed.
+Adaptive import12 and CSP4 passed; Context35 passed/1 failed at another
+implicit-resume assertion. It now resumes the exact saved import and checks
+one upload while retaining selected-Bundle revision/bytes and recovery tests.
+Static checks/2324 Node cases pass; next full CI and deployment remain pending.
 [Implementation and validation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
 [Scoped completion review](docs/execution/ux-audit-recoverable-operations-2026-11-10.md).
 The deployed source/schema and user-owned historical evidence below are unchanged.

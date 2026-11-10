@@ -512,3 +512,27 @@ existing resource limits.
   no real-user source replay, no production modification and no automatic
   cleanup. New exact-source CI is required before artifact acceptance and
   a fresh successful deployment-capacity precheck.
+
+## Third CI results and corrections — November 10
+
+- Commit `19a825354f199e5aa0d4caa0a6fdbfb426c6462e` was pushed via the
+  existing HTTPS credential after two SSH connection resets; no remote config
+  was changed. Run42784946090 acknowledged16:44:04.3777620+08:00;
+  first read17:34:21.0978404+08:00 (50m16.7s). No intermediate status read
+  or schedule. Nine unrelated/mixed working files remained byte-identical.
+- API6308/3 optional skips, performance, Settings470 and independent
+  fresh-instance restore1 passed. Adaptive import12 passed/1 existing
+  optional private-fixture skip, CSP4 passed. Context35 passed/1 failed;
+  later Web gates/images were not reached. No release acceptance or deployment.
+- The remaining Context test changed the selected conversion Bundle, then
+  reopened Import and incorrectly expected its failed source to resume
+  automatically. It now records the actual201 import identity, requires the
+  fresh entry not to show old conversion actions, and explicitly selects
+  that exact retained row. Its original selected Bundle, revision2 bytes,
+  no silent fallback, clipboard failure, focus return and keyboard trap checks
+  are unchanged; an added counter requires exactly one source upload.
+- Cross-test review covered Import open/close, Skills, format-health, Tasks
+  and empty-project entries. Tasks already use explicit View analysis and
+  format-health was corrected previously; no unrelated controls were rewritten.
+  Lint/typecheck and full bounded2324 Node suite pass. No local full-app launch
+  or replay of private sources; next exact full CI remains required.

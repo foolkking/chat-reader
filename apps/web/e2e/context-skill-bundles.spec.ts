@@ -138,10 +138,19 @@ test("format conversion respects the selected Bundle and exposes loading failure
   const skill = await created.json();
   try {
     expect((await page.request.put("/api/skills/selections", { headers: { Origin: baseURL! }, data: { category: "CONVERSATION_RESCUE", skill_id: skill.id } })).status()).toBe(204);
+    let uploads = 0;
+    page.on("request", request => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/adaptive-import/sessions") uploads += 1;
+    });
     await page.goto("/");
     await page.getByRole("button", { name: /Import data|导入数据/, exact: true }).click();
     await page.getByTestId("import-file-input").setInputFiles({ name: "synthetic-broken.json", mimeType: "application/json", buffer: Buffer.from("not-json") });
+    const submitted = page.waitForResponse(response => response.request().method() === "POST"
+      && new URL(response.url()).pathname === "/api/adaptive-import/sessions");
     await page.getByTestId("preview-import-button").click();
+    const response = await submitted;
+    expect(response.status()).toBe(201);
+    const importId = (await response.json()).import_id;
     await expect(page.getByRole("button", { name: /使用格式转换 Skill|Use format conversion Skill/ })).toBeVisible();
     await page.route("**/api/skills/resolve?**", route => route.abort("failed"));
     await page.getByRole("button", { name: /使用格式转换 Skill|Use format conversion Skill/ }).click();
@@ -182,7 +191,11 @@ test("format conversion respects the selected Bundle and exposes loading failure
     await expect(skills).toHaveCount(0);
     await expect(page.getByRole("dialog", { name: "Discard unsaved changes?" })).toHaveCount(0);
     await page.getByRole("button", { name: "Import data", exact: true }).click();
-    // Reopening resumes the existing failed import; it does not need another upload.
+    // A fresh Import entry offers retained work, without implicitly reopening it.
+    // Resume the exact failed source and verify that no second upload occurred.
+    await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toHaveCount(0);
+    await page.locator(`[data-import-session-id="${importId}"]`)
+      .getByRole("button", { name: "Resume", exact: true }).click();
     await expect(page.getByRole("button", { name: "Use format conversion Skill", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Use format conversion Skill", exact: true }).click();
     const updatedDialog = page.getByRole("dialog", { name: "Use format conversion Skill", exact: true });
@@ -190,6 +203,7 @@ test("format conversion respects the selected Bundle and exposes loading failure
     await expect(updatedLink).toHaveAttribute("href", `/api/skills/${skill.id}/bundle?revision=2`);
     const updatedBytes = unzipSync(await (await page.request.get((await updatedLink.getAttribute("href"))!)).body());
     expect(new TextDecoder().decode(updatedBytes["personal-skill/references/legacy-instructions.md"])).toBe("# Updated synthetic normalizer\nKeep this new instruction.");
+    expect(uploads).toBe(1);
   } finally {
     await page.unroute("**/api/skills/resolve?**");
     await page.request.delete(`/api/skills/${skill.id}`, { headers: { Origin: baseURL! } });
