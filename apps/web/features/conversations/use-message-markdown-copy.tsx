@@ -6,10 +6,12 @@ import { ApiRequestError, getMessageMarkdownCopyPlan, publishMessageCopyImages, 
 import { AUTH_GENERATION_CHANGED_EVENT, authenticationGeneration } from "../../lib/offline-access";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
 import { analyseMessageCopy, rasterizeCopySvg } from "./message-markdown-copy-prepare";
+import { RecoverableExportControl } from "../exporting/recoverable-export-control";
+import { getConversationExportUrl } from "../../lib/api";
 
 type Result = { scope: string; phase: "preparing" | "ready" | "error"; markdown?: string; error?: string; images?: number; omitted?: number };
 
-export function useMessageMarkdownCopy(messageId: string, versionId: string | undefined, enabled: boolean, zh: boolean) {
+export function useMessageMarkdownCopy(messageId: string, versionId: string | undefined, enabled: boolean, zh: boolean, conversationId?: string) {
   const [generation, setGeneration] = useState(authenticationGeneration);
   const scope = `${messageId}:${versionId}:${enabled}:${generation}`;
   const currentScope = useRef(scope);
@@ -73,15 +75,21 @@ export function useMessageMarkdownCopy(messageId: string, versionId: string | un
     }
   }
   const [automaticCopy, setAutomaticCopy] = useState<{ scope: string; markdown: string; success: boolean | null } | null>(null);
+  const [expiredReceipt, setExpiredReceipt] = useState<typeof automaticCopy>(null);
+  useEffect(() => {
+    if (automaticCopy?.success !== true) return;
+    const timer = setTimeout(() => setExpiredReceipt(automaticCopy), 3000);
+    return () => clearTimeout(timer);
+  }, [automaticCopy]);
   const automatic = automaticCopy?.scope === scope && automaticCopy.markdown === shown?.markdown ? automaticCopy : null;
-  const copied = shown?.phase === "ready" && (automatic ? automatic.success === true : clipboard.state === "copied");
+  const copied = shown?.phase === "ready" && (automatic ? automatic.success === true && automatic !== expiredReceipt : clipboard.state === "copied");
   const manual = shown?.phase === "ready" && !copied && (automatic ? automatic.success === false : clipboard.state === "failed");
   const manualRef = clipboard.manualRef;
   useEffect(() => {
     if (manual) { manualRef.current?.focus({ preventScroll: true }); manualRef.current?.select(); }
   }, [manual, manualRef]);
   return {
-    shown, copied, manual, manualRef, enabled: enabled && Boolean(versionId),
+    shown, copied, manual, manualRef, scope, messageId, conversationId, enabled: enabled && Boolean(versionId),
     busy: shown?.phase === "preparing" || shown?.phase === "ready" && (automatic ? automatic.success === null : clipboard.state === "copying"),
     run: () => {
       if (generation !== authenticationGeneration()) return;
@@ -110,6 +118,14 @@ export function MessageMarkdownCopyButton({ controller, zh, onActivate }: { cont
 export function MessageMarkdownCopyFeedback({ controller, zh }: { controller: Controller; zh: boolean }) {
   const result = controller.shown;
   if (!result) return null;
+  // Pending/success is expressed by the existing action, never a transient
+  // body row. Keep prepared text and public-link receipts for retry/manual copy.
+  if (result.phase !== "error" && !controller.manual) return <span className="sr-only" role="status" data-markdown-copy-ignore="true">
+    {result.phase === "preparing" ? (zh ? "正在准备完整 Markdown 与图片外链…" : "Preparing full Markdown and image links…")
+      : controller.copied ? (zh ? "Markdown 已复制。" : "Markdown copied.")
+        + (result.images ? (zh ? " 图片链接公开。" : " Image links are public.") : "")
+        + (result.omitted ? (zh ? " 其他附件未包含。" : " Other attachments are omitted.") : "") : ""}
+  </span>;
   return <div className="mb-3 border-y border-ui py-2 text-sm text-secondary" data-markdown-copy-ignore="true">
     <div className="flex items-start gap-2">
       <p className="min-w-0 flex-1 py-2" role={result.phase === "error" ? "alert" : "status"}>
@@ -122,6 +138,14 @@ export function MessageMarkdownCopyFeedback({ controller, zh }: { controller: Co
       </p>
       <button type="button" onClick={controller.dismiss} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-subtle" aria-label={zh ? "关闭复制提示" : "Dismiss copy notice"}><X className="h-4 w-4" aria-hidden /></button>
     </div>
+    {result.phase === "error" && controller.conversationId ? <div className="space-y-2 pb-2">
+      <p className="text-xs">{zh ? "也可导出这条消息的完整 Markdown。不会公开图片；附件使用未包含提示，不生成空附件。" : "You can export this message's complete Markdown instead. No images are published; omitted attachments are marked, not replaced with empty files."}</p>
+      <RecoverableExportControl key={controller.scope} identity={`copy-recovery:${controller.scope}`}
+        conversationId={controller.conversationId} zh={zh} scope={`copy-export:${controller.conversationId}`}
+        request={{ format: "markdown_v2", message_ids: [controller.messageId] }} onAccepted={() => {}}
+        plainHref={getConversationExportUrl(controller.conversationId, { format: "markdown_v2", messageIds: [controller.messageId] })}
+      />
+    </div> : null}
     {controller.manual ? <label className="block">
       <span className="sr-only">{zh ? "可手动复制的完整 Markdown" : "Full Markdown for manual copy"}</span>
       <textarea ref={controller.manualRef} value={result.markdown} readOnly onFocus={event => event.currentTarget.select()}

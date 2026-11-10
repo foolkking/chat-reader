@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 
 class OfflineDownloadTarget(BaseModel):
@@ -16,12 +16,25 @@ class ImportFailureRead(BaseModel):
     code: str
     stage: str
     retryable: bool
+    details: dict[str, str | int] | None = None
+
+    @model_serializer(mode="wrap")
+    def omit_absent_details(self, handler):
+        result = handler(self)
+        if self.details is None:
+            result.pop("details", None)
+        return result
 
 
 class ImportResourceWaitRead(BaseModel):
     reason: str
     next_retry_at: datetime | None = None
     remaining_seconds: float = Field(ge=0, le=1800)
+
+
+class TaskCancellationRequest(BaseModel):
+    # Legacy calls without a body keep their disposal semantics.
+    source_disposition: Literal["retain", "discard"] = "discard"
 
 
 class BackgroundTaskRead(BaseModel):
@@ -44,6 +57,9 @@ class BackgroundTaskRead(BaseModel):
     started_at: datetime | None = None
     heartbeat_at: datetime | None = None
     completed_at: datetime | None = None
+    updated_at: datetime | None = None
+    cancellation_requested_at: datetime | None = None
+    progress_updated_at: datetime | None = None
     cancellable: bool = False
     attempt_count: int = 0
 

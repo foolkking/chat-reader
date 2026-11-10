@@ -199,6 +199,42 @@ jobs:
           PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
         run: node scripts/ux/reader-interaction-browser.mjs
 
+      - name: Retained import stop and per-task recovery controls
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/import-recovery-browser.mjs
+
+      - name: Failed and paused import source repair
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/import-source-repair-browser.mjs
+
+      - name: Reader table export and recovery controls
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/reader-table-actions-browser.mjs
+
+      - name: Offline per-conversation recovery and capacity choices
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/offline-recovery-browser.mjs
+
+      - name: Export option continuity and unknown-result recovery
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/export-recovery-browser.mjs
+
+      - name: Reading success feedback and explicit copy recovery
+        timeout-minutes: 5
+        env:
+          PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"
+        run: node scripts/ux/reading-feedback-browser.mjs
+
       - name: Context and Skill upload proxy transport
         run: |
           sudo apt-get update
@@ -441,6 +477,24 @@ jobs:
             ${{ runner.temp }}/reader-interaction-browser/result.json
             ${{ runner.temp }}/reader-interaction-browser/failure-state.json
             ${{ runner.temp }}/reader-interaction-browser/*.png
+            ${{ runner.temp }}/import-recovery-browser/result.json
+            ${{ runner.temp }}/import-recovery-browser/failure.json
+            ${{ runner.temp }}/import-recovery-browser/*.png
+            ${{ runner.temp }}/import-source-repair-browser/result.json
+            ${{ runner.temp }}/import-source-repair-browser/failure.json
+            ${{ runner.temp }}/import-source-repair-browser/*.png
+            ${{ runner.temp }}/reader-table-actions-browser/result.json
+            ${{ runner.temp }}/reader-table-actions-browser/failure.json
+            ${{ runner.temp }}/reader-table-actions-browser/*.png
+            ${{ runner.temp }}/offline-recovery-browser/result.json
+            ${{ runner.temp }}/offline-recovery-browser/failure.json
+            ${{ runner.temp }}/offline-recovery-browser/*.png
+            ${{ runner.temp }}/export-recovery-browser/result.json
+            ${{ runner.temp }}/export-recovery-browser/failure.json
+            ${{ runner.temp }}/export-recovery-browser/*.png
+            ${{ runner.temp }}/reading-feedback-browser/result.json
+            ${{ runner.temp }}/reading-feedback-browser/failure.json
+            ${{ runner.temp }}/reading-feedback-browser/*.png
             apps/web/playwright-report
             apps/web/test-results
           if-no-files-found: warn

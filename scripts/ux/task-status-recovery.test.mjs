@@ -23,6 +23,17 @@ const source = readFileSync(new URL("../../apps/web/features/import/import-task-
 const compiled = ts.transpileModule(source + "\nexport { taskFailureMessage };", { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
 } }).outputText;
+test("the mounted recovery matrix is a required CI step with retained evidence", () => {
+  const workflow = readFileSync(new URL("../../.github/workflows/build-release-images.yml", import.meta.url), "utf8");
+  const step = workflow.split("- name: Retained import stop and per-task recovery controls")[1]?.split("- name:")[0];
+  assert.ok(step);
+  assert.match(step, /run: node scripts\/ux\/import-recovery-browser\.mjs/);
+  assert.match(step, /PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"/);
+  assert.doesNotMatch(step, /continue-on-error|if:/);
+  for (const entry of ["result\\.json", "failure\\.json", "\\*\\.png"]) {
+    assert.match(workflow, new RegExp(`import-recovery-browser/${entry}`));
+  }
+});
 const copyModule = { exports: {} };
 const copyCode = ts.transpileModule(readFileSync(new URL("../../apps/web/features/import/import-workspace-copy.ts", import.meta.url), "utf8"), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
@@ -39,6 +50,7 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
   const hooks = [], effects = new Map(), observers = new Map(), reads = [], writes = [], timers = [], events = [];
   let cursor = 0, tree, generation = 1, disposed = false, writesAfterDispose = 0;
   let list = rows, listError = null, scanError = null, finalRead = async id => task(id, "committed");
+  let controlWrite = async () => { throw Error("Synthetic unconfirmed command"); };
   const hook = init => { const i = cursor++; return hooks[i] ??= init(); };
   const memo = (fn, deps) => { const h = hook(() => ({})); if (!same(h.deps, deps)) Object.assign(h, { value: fn(), deps }); return h.value; };
   const react = { ...React, useMemo: memo, useCallback: (fn, deps) => memo(() => fn, deps),
@@ -55,15 +67,15 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
   const api = { authenticationGeneration: () => generation,
     getActiveTasks: () => queryRead("active-tasks"), getPendingCleanupScans: () => queryRead("content-cleanup-pending"),
     getTask: id => { reads.push(id); return finalRead(id); },
-    retryTask: id => { writes.push(["retry", id]); throw Error("Unexpected mutation"); },
-    cancelTask: id => { writes.push(["cancel", id]); throw Error("Unexpected mutation"); },
+    retryTask: id => { writes.push(["retry", id]); return controlWrite("retry", id); },
+    cancelTask: (id, signal, disposition) => { writes.push(["cancel", id, disposition]); return controlWrite("cancel", id); },
   };
   const mocks = {
     react,
     "./import-workspace-copy": copyModule.exports,
     "@tanstack/react-query": { useQueryClient: () => client, useMutation: () => ({ isPending: false, mutate: noop }),
       useQuery: options => {
-        const key = options.queryKey[0];
+        const key = options.queryKey[0] === "task-controls" ? options.queryKey.join(":") : options.queryKey[0];
         if (!observers.has(key)) {
           const observer = new QueryObserver(client, { ...options, enabled: false, retryDelay: 0 });
           const stop = observer.subscribe(noop); observers.set(key, { observer, stop });
@@ -102,6 +114,8 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
   };
   render(); flush();
   return { client, reads, writes, timers, events, observers, render, flush, retry,
+    taskProps: id => find(render(), n => n.type?.name === "TaskContent" && n.props.task.job_id === id)?.props,
+    setControlWrite: fn => { controlWrite = fn; },
     failureText: value => module.exports.taskFailureMessage(value, locale === "zh-CN"),
     setList: value => { list = value; }, setListError: value => { listError = value; }, setScanError: value => { scanError = value; },
     setFinalRead: fn => { finalRead = fn; }, changeAccount: () => { generation++; },
@@ -242,6 +256,70 @@ test("unmount fences a held final check's result and notifications", async () =>
   f.setList([]); f.setFinalRead(() => held.promise); await f.refresh(); f.dispose();
   held.resolve(task(undefined, "committed")); await setImmediate();
   assert.equal(f.writesAfterDispose(), 0); assert.deepEqual(f.timers, []); assert.deepEqual(f.events, []);
+});
+
+test("task commands lock only their own row, deduplicate clicks and retain analysis sources", async () => {
+  const a = { ...task("analysis"), job_type: "adaptive_import_analysis" }, b = task("other", "failed");
+  const f = fixture({ rows: [a, b] }), held = deferred();
+  try {
+    f.setControlWrite((_action, id) => id === a.job_id ? held.promise : Promise.resolve({ ...b, status: "queued" }));
+    const action = f.taskProps(a.job_id).onCancel;
+    action(); action();
+    assert.deepEqual(f.writes, [["cancel", "analysis", "retain"]]);
+    assert.equal(f.taskProps(a.job_id).busy, true);
+    assert.equal(f.taskProps(b.job_id).busy, false);
+    f.taskProps(b.job_id).onRetry();
+    assert.equal(f.writes.length, 2);
+    held.resolve({ ...a, status: "cancelled", result: { source_retained: true } });
+    await setImmediate();
+    assert.equal(f.taskProps(a.job_id).busy, false);
+  } finally { held.resolve(a); f.dispose(); }
+});
+
+test("an unknown retry stays locked until a GET proves a new attempt; heartbeat is not progress", async () => {
+  const before = { ...task("retry", "failed"), attempt_count: 2, queued_at: "2026-11-10T00:00:00Z" };
+  const f = fixture({ rows: [before] });
+  try {
+    f.taskProps("retry").onRetry(); await setImmediate();
+    assert.equal(f.taskProps("retry").control.state, "unknown");
+    f.taskProps("retry").onRetry();
+    assert.equal(f.writes.length, 1);
+    f.setFinalRead(async () => ({ ...before, heartbeat_at: "2026-11-10T01:00:00Z" }));
+    f.taskProps("retry").onCheck(); await setImmediate();
+    assert.equal(f.taskProps("retry").control.state, "unknown");
+    assert.equal(f.writes.length, 1);
+    f.setFinalRead(async () => ({ ...before, attempt_count: 3 }));
+    f.taskProps("retry").onCheck(); await setImmediate();
+    assert.equal(f.taskProps("retry").control, undefined);
+    assert.deepEqual(f.reads, ["retry", "retry"]);
+  } finally { f.dispose(); }
+});
+
+test("disappearing unknown-command rows remain recoverable and an acknowledged rejection can be checked", async () => {
+  const before = task("rejected", "failed"), f = fixture({ rows: [before] });
+  try {
+    f.setControlWrite(async () => { throw Object.assign(Error("Synthetic conflict"), { status: 409 }); });
+    f.taskProps("rejected").onRetry(); await setImmediate();
+    assert.equal(f.taskProps("rejected").control.state, "rejected");
+    f.setList([]); await f.refresh();
+    assert.ok(f.taskProps("rejected"));
+    f.setFinalRead(async () => before);
+    f.taskProps("rejected").onCheck(); await setImmediate();
+    assert.equal(f.taskProps("rejected").control, undefined);
+    assert.equal(f.writes.length, 1);
+  } finally { f.dispose(); }
+});
+
+test("late control responses cannot publish or unlock another authentication generation", async () => {
+  const before = task("owned"), f = fixture({ rows: [before] }), held = deferred();
+  try {
+    f.setControlWrite(() => held.promise);
+    f.taskProps("owned").onCancel(); f.changeAccount(); f.render(); f.flush();
+    held.resolve({ ...before, status: "cancelled" }); await setImmediate();
+    assert.equal(f.client.getQueryData(["active-tasks"])[0].status, "processing");
+    assert.equal(f.taskProps("owned").control, undefined);
+    assert.deepEqual(f.client.getQueryData(["task-controls", 2]), {});
+  } finally { held.resolve(before); f.dispose(); }
 });
 
 test("an unresolved final GET can recover even when the task list is still unavailable", async () => {

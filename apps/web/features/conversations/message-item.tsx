@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef, useState } from "react";
-import { BookmarkPlus, CheckSquare2, ChevronDown, ChevronUp, MoreHorizontal, Pencil, Plus, Quote, Square, Trash2, X } from "lucide-react";
+import { BookmarkPlus, Check, CheckSquare2, ChevronDown, ChevronUp, MoreHorizontal, Pencil, Plus, Quote, Square, Trash2, X } from "lucide-react";
 import type { MessageListItem, RenderBlockRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { normalizedMessageBlocks } from "../editing/message-source-position";
@@ -12,6 +12,7 @@ import { AttachmentAccessProvider, type AttachmentAccess } from "../attachments/
 import { ApiRequestError, toggleMessageTask } from "../../lib/api";
 import { MessageMarkdownCopyButton, MessageMarkdownCopyFeedback, useMessageMarkdownCopy } from "./use-message-markdown-copy";
 import { buildReaderCitationMarkdown, selectedMessageText } from "./reader-citation";
+import { authenticationGeneration, AUTH_GENERATION_CHANGED_EVENT } from "../../lib/offline-access";
 
 function MessageItemComponent({
   message,
@@ -71,6 +72,31 @@ function MessageItemComponent({
   const [taskError, setTaskError] = useState<string | null>(null);
   const [citationStatus, setCitationStatus] = useState<string | null>(null);
   const [citationFallback, setCitationFallback] = useState<string | null>(null);
+  const [citationCopied, setCitationCopied] = useState<{ at: number } | null>(null);
+  const [citationBusy, setCitationBusy] = useState(false);
+  const citationField = useRef<HTMLTextAreaElement>(null);
+  const citationEpoch = useRef(0), citationActive = useRef(false);
+  useEffect(() => {
+    const retire = () => {
+      citationEpoch.current++; citationActive.current = false;
+      citationSelectionRef.current = null;
+      setCitationStatus(null); setCitationFallback(null); setCitationCopied(null); setCitationBusy(false);
+    };
+    retire();
+    window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, retire);
+    return () => { citationEpoch.current++; window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, retire); };
+  }, [message.id, message.current_version?.id]);
+  useEffect(() => {
+    if (!citationCopied) return;
+    const timer = setTimeout(() => { setCitationCopied(null); setCitationStatus(null); }, 3000);
+    return () => clearTimeout(timer);
+  }, [citationCopied]);
+  useEffect(() => {
+    if (!citationFallback) return;
+    citationField.current?.focus({ preventScroll: true });
+    citationField.current?.scrollIntoView({ block: "nearest" });
+    citationField.current?.select();
+  }, [citationFallback]);
   const blocks = normalizedMessageBlocks(message);
   const currentText = message.current_version?.display_text ?? message.current_version?.plain_text ?? "";
   const isUser = message.role === "user";
@@ -84,7 +110,7 @@ function MessageItemComponent({
     message, enabled: !readOnly && Boolean(onChanged), zh,
     onChanged: replaceMessagePreservingAnchor,
   });
-  const markdownCopy = useMessageMarkdownCopy(message.id, message.current_version?.id, !readOnly && attachmentAccess.kind === "owner", zh);
+  const markdownCopy = useMessageMarkdownCopy(message.id, message.current_version?.id, !readOnly && attachmentAccess.kind === "owner", zh, message.conversation_id);
 
   function captureCitationSelection(clearPrevious = false) {
     if (clearPrevious) citationSelectionRef.current = null;
@@ -94,9 +120,11 @@ function MessageItemComponent({
   }
 
   async function copySelectionAsCitation() {
+    if (citationActive.current) return;
     const body = articleRef.current?.querySelector<HTMLElement>(".reader-message-body");
     const selectedText = citationSelectionRef.current ?? (body ? selectedMessageText(body, window.getSelection()) : null);
     citationSelectionRef.current = null;
+    setCitationCopied(null);
     if (!selectedText) {
       setCitationFallback(null);
       setCitationStatus(zh ? "请先在这条消息正文中选择要引用的内容。" : "Select text within this message first.");
@@ -110,14 +138,22 @@ function MessageItemComponent({
       origin: window.location.origin,
     });
     if (!citation) return;
+    const epoch = citationEpoch.current, generation = authenticationGeneration();
+    const current = () => epoch === citationEpoch.current && generation === authenticationGeneration();
+    citationActive.current = true; setCitationBusy(true); setCitationStatus(null); setCitationFallback(null);
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
       await navigator.clipboard.writeText(citation);
+      if (!current()) return;
       setCitationFallback(null);
+      setCitationCopied({ at: Date.now() });
       setCitationStatus(zh ? "引用已复制；来源链接需要原对话访问权限。" : "Citation copied; the source link still requires access to the original conversation.");
     } catch {
+      if (!current()) return;
       setCitationFallback(citation);
       setCitationStatus(zh ? "无法自动访问剪贴板。引用已选中，请手动复制。" : "Clipboard access was denied. The citation is selected for manual copying.");
+    } finally {
+      if (current()) { citationActive.current = false; setCitationBusy(false); }
     }
   }
 
@@ -218,6 +254,8 @@ function MessageItemComponent({
       } : undefined} /> : null}
       {(!readOnly || allowCopySelection) && attachmentAccess.kind === "owner" ? <button
         type="button"
+        disabled={citationBusy}
+        aria-busy={citationBusy}
         onPointerDown={() => captureCitationSelection(true)}
         onFocus={() => captureCitationSelection()}
         onClick={() => {
@@ -231,7 +269,7 @@ function MessageItemComponent({
         aria-label={zh ? "复制所选内容并附上来源" : "Copy selection with source"}
         title={zh ? "复制为引用" : "Copy as citation"}
         data-markdown-copy-ignore="true"
-      ><Quote className="h-4 w-4" aria-hidden="true" /></button> : null}
+      >{citationCopied ? <Check className="h-4 w-4" aria-hidden="true" /> : <Quote className="h-4 w-4" aria-hidden="true" />}</button> : null}
       {onBookmark ? (
         <button type="button" onClick={() => void onBookmark(message)} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-secondary hover:bg-subtle" aria-label={zh ? "\u6536\u85cf\u6d88\u606f" : "Bookmark message"} title={zh ? "\u6536\u85cf\u6d88\u606f" : "Bookmark message"}>
           <BookmarkPlus className="h-4 w-4" />
@@ -292,7 +330,7 @@ function MessageItemComponent({
           ) : null}
           {hasActions ? (
             <>
-              <div className={`ml-auto hidden min-h-10 items-center transition-opacity group-hover/message-actions:opacity-100 group-focus-within/message-actions:opacity-100 sm:flex ${versionHistory.needsAttention ? "opacity-100" : "opacity-0"}`}>{actions(false)}</div>
+              <div className={`ml-auto hidden min-h-10 items-center transition-opacity group-hover/message-actions:opacity-100 group-focus-within/message-actions:opacity-100 sm:flex ${versionHistory.needsAttention || citationCopied || markdownCopy.copied ? "opacity-100" : "opacity-0"}`}>{actions(false)}</div>
               <div className="ml-auto sm:hidden">
                 <button
                   ref={mobileActionsTriggerRef}
@@ -324,10 +362,10 @@ function MessageItemComponent({
           ) : null}
         </div>
         <MessageMarkdownCopyFeedback controller={markdownCopy} zh={zh} />
-        {citationStatus ? <p role="status" className="mb-2 text-xs text-secondary">{citationStatus}</p> : null}
+        {citationStatus ? <p role="status" data-markdown-copy-ignore="true" className={citationCopied ? "sr-only" : "mb-2 text-xs text-secondary"}>{citationStatus}</p> : null}
         {citationFallback ? <label className="mb-3 block text-xs text-secondary" data-markdown-copy-ignore="true">
           {zh ? "手动复制引用：" : "Manually copy the citation:"}
-          <textarea readOnly value={citationFallback} onFocus={(event) => event.currentTarget.select()} rows={Math.min(6, Math.max(2, citationFallback.split("\n").length))} className="mt-1 w-full rounded-md border border-ui bg-surface p-2 font-mono text-xs text-primary" />
+          <textarea ref={citationField} readOnly value={citationFallback} onFocus={(event) => event.currentTarget.select()} rows={Math.min(6, Math.max(2, citationFallback.split("\n").length))} className="mt-1 w-full rounded-md border border-ui bg-surface p-2 font-mono text-xs text-primary" />
         </label> : null}
         {turnCollapsed && turnLead ? <p className="mb-2 text-xs text-secondary">
           {zh ? `本轮共 ${turnMessageCount} 条消息。展开后可继续阅读、定位和使用消息操作。` : `This turn has ${turnMessageCount} messages. Expand to read, navigate, or use message actions.`}

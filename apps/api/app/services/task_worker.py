@@ -61,6 +61,7 @@ def run_task_worker_iteration(
         return False
     task_kind: str | None
     task_id = None
+    execution = None
     with SessionLocal() as db:
         from app.services.context_return_jobs import expire_context_returns
         expired_return_paths = expire_context_returns(db)
@@ -69,6 +70,8 @@ def run_task_worker_iteration(
         task_kind = _oldest_task_kind(db)
         if shutdown is None or not shutdown.requested:
             task_id = claim_next_import(db) if task_kind == "import" else claim_next_job(db, job_type="content_noise_scan", exclude_job_types=()) if task_kind == "noise" else claim_next_job(db) if task_kind == "job" else None
+            if task_kind in {"job", "noise"}:
+                execution = getattr(db, "info", {}).get("claimed_background_execution")
         db.commit()
     if expired_return_paths:
         from pathlib import Path
@@ -78,17 +81,18 @@ def run_task_worker_iteration(
         reporter.set_idle()
         return False
     worker_kind = "job" if task_kind == "noise" else task_kind
-    if (shutdown is not None and shutdown.requested) or not reporter.set_busy(worker_kind, task_id):
-        _requeue_unstarted_task(worker_kind, task_id)
+    claim_options = {"execution": execution} if execution is not None else {}
+    if (shutdown is not None and shutdown.requested) or not reporter.set_busy(worker_kind, task_id, **claim_options):
+        _requeue_unstarted_task(worker_kind, task_id, **claim_options)
         return False
     try:
         if shutdown is not None and shutdown.requested:
-            _requeue_unstarted_task(worker_kind, task_id)
+            _requeue_unstarted_task(worker_kind, task_id, **claim_options)
             return False
         if task_kind == "import":
             process_import(task_id)
         else:
-            process_background_job(task_id)
+            process_background_job(task_id, **({"expected_execution": execution} if execution is not None else {}))
     finally:
         reporter.set_idle()
     return True
@@ -98,13 +102,21 @@ def _requeue_unstarted_task(
     task_kind: str,
     task_id: uuid.UUID,
     session_factory: sessionmaker | None = None,
+    *,
+    execution: tuple | None = None,
 ) -> None:
     now = datetime.now(timezone.utc)
     with (session_factory or SessionLocal)() as db:
         model = ImportRecord if task_kind == "import" else BackgroundJob
         # Check at the write boundary: cancellation may commit after a read.
         # Preserve that state and leave an already-requeued row unchanged.
-        db.query(model).filter(model.id == task_id, model.status == "processing").update(
+        query = db.query(model).filter(model.id == task_id, model.status == "processing")
+        if task_kind == "job" and execution is not None:
+            query = query.filter(
+                model.attempt_count == execution[0], model.started_at == execution[1],
+                BackgroundJob.payload["execution_token"].as_string() == execution[2],
+            )
+        query.update(
             {
                 model.status: "queued",
                 model.phase: "queued",

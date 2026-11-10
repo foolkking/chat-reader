@@ -1,6 +1,6 @@
 "use client";
 
-import { importErrorMessage, useImportCopy, type ImportCopy, type ImportErrorAction } from "./import-workspace-copy";
+import { archivePathReason, importErrorMessage, importWarningMessage, useImportCopy, type ImportCopy, type ImportErrorAction } from "./import-workspace-copy";
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import {
   Archive,
@@ -330,8 +330,16 @@ function ArchiveLedgerRow({
       }];
     });
   }, [catalog, draft]);
+  const referenceChanges = useMemo(() => (catalog?.unresolved_references ?? []).flatMap(reference => {
+    const value = draftState.references?.[reference.reference_id];
+    return value !== undefined && value !== reference.target_member_id
+      ? [{ referenceId: reference.reference_id, targetMemberId: value }] : [];
+  }), [catalog, draftState.references]);
   const saveMutation = useAdaptiveSessionAction(
-    (changes: Array<{ memberId: string; use: string; ownerDocumentIds: string[] }>) => updateAdaptiveImportArchive(
+    (changes: Array<{ memberId: string; use: string; ownerDocumentIds: string[] }>) => referenceChanges.length ? updateAdaptiveImportArchive(
+      session.import_id, archive.artifact_id,
+      catalog?.classification_version ?? archive.classification_version, changes, referenceChanges,
+    ) : updateAdaptiveImportArchive(
       session.import_id,
       archive.artifact_id,
       catalog?.classification_version ?? archive.classification_version,
@@ -345,7 +353,8 @@ function ArchiveLedgerRow({
   );
   const conversationMembers = catalog?.members.filter((member) => (draft[member.member_id]?.use ?? member.use) === "conversation") ?? [];
   const statusTone = archive.blocking_issue_count > 0 ? "text-[var(--danger)]" : archive.issue_count > 0 ? "text-[var(--warning)]" : "text-secondary";
-  const dirty = mixedVersions || staleDraft || dirtyChanges.length > 0 || (!catalog && Object.keys(draft).length > 0);
+  const dirty = mixedVersions || staleDraft || dirtyChanges.length > 0 || referenceChanges.length > 0
+    || (!catalog && (Object.keys(draft).length > 0 || Object.keys(draftState.references ?? {}).length > 0));
   useEffect(() => {
     onStateChange(archive.artifact_id, { dirty, busy: saveMutation.isPending });
   }, [archive.artifact_id, dirty, onStateChange, saveMutation.isPending]);
@@ -373,6 +382,9 @@ function ArchiveLedgerRow({
           {archive.missing_attachment_count ? <span className="mt-1 block text-xs text-[var(--warning)]">
             {tr("缺少 {0} 个附件，正文仍可导入；缺失引用将保留。", archive.missing_attachment_count ?? 0)}
           </span> : null}
+          {archive.blocked_reference_count ? <span className="mt-1 block text-xs text-[var(--warning)]">
+            {tr("有 {0} 处本地链接无法解析；文字保留，链接暂不可访问，其他内容可正常导入。", archive.blocked_reference_count)}
+          </span> : null}
         </button>
         <button type="button" className="btn-secondary min-h-9 px-3 text-xs" onClick={() => setOpen((value) => !value)} aria-label={tr("查看 ZIP 内容")}>
           {open ? tr("收起内容") : tr("查看内容")}
@@ -391,8 +403,48 @@ function ArchiveLedgerRow({
                 {staleDraft ? <button type="button" className="ml-3 min-h-9 underline" onClick={() => setDraftState({ version: null, members: {} })}>{tr("放弃旧选择，使用最新分类")}</button> : null}
               </div> : null}
               {catalog.issues.length ? <div className="space-y-1 border-l-2 border-[var(--warning)] pl-3 text-xs text-secondary">
-                {catalog.issues.map((issue) => <p key={`${issue.code}-${issue.message}`}><strong className="text-primary">{issue.code}</strong> · {issue.message}</p>)}
+                {catalog.issues.map((issue) => <p key={`${issue.code}-${issue.message}`}>{importWarningMessage(issue.message, tr)}</p>)}
               </div> : null}
+              {catalog.unresolved_references?.length ? <details className="text-xs text-secondary">
+                <summary className="min-h-11 cursor-pointer content-center font-medium text-primary">
+                  {tr("处理无法解析的链接（{0} 个目标）", catalog.reference_count ?? catalog.unresolved_references.length)}
+                </summary>
+                <p className="py-2">{tr("仅关联本 ZIP 内已经核验的文件，不按同名猜测，不访问包外。没有对应文件时可保留文字继续；需要补充文件时替换 ZIP 后重新核对。")}</p>
+                <div className="divide-y divide-ui">
+                  {catalog.unresolved_references.map(reference => {
+                    const document = catalog.members.find(member => member.member_id === reference.document_member_id);
+                    const target = draftState.references && Object.hasOwn(draftState.references, reference.reference_id)
+                      ? draftState.references[reference.reference_id] : reference.target_member_id;
+                    const available = catalog.members.filter(member => member.availability !== "missing"
+                      && (draft[member.member_id]?.use ?? member.use) !== "conversation");
+                    return <div key={reference.reference_id} className="space-y-2 py-3">
+                      <p className="break-all font-mono text-primary">{reference.target_display}{reference.target_truncated ? "…" : ""}</p>
+                      <p>{document?.path ?? tr("文档 {0}", reference.document_index)} · {tr("行 {0}", reference.lines.join("、"))} · {tr("{0} 次引用", reference.reference_count)}</p>
+                      <p>{tr(archivePathReason(reference.reason, true))}</p>
+                      <label className="block">
+                        <span className="mb-1 block">{tr("关联包内文件")}</span>
+                        <select
+                          value={target ?? ""}
+                          aria-label={tr("为 {0} 选择包内文件", reference.target_display)}
+                          disabled={sessionActionBusy || saveMutation.isPending || mixedVersions || staleDraft}
+                          onChange={event => {
+                            const value = event.currentTarget.value || null;
+                            setDraftState(current => current.version !== null && current.version !== catalog.classification_version
+                              ? current : { ...current, version: catalog.classification_version,
+                                references: { ...current.references, [reference.reference_id]: value } });
+                          }}
+                          className="min-h-11 w-full rounded-md border border-ui bg-surface px-2 text-sm text-primary"
+                        >
+                          <option value="">{tr("保留文字，不访问此链接")}</option>
+                          {target && !available.some(member => member.member_id === target)
+                            ? <option value={target}>{tr("当前关联目标未在此页或已排除，请重新核对")}</option> : null}
+                          {available.map(member => <option key={member.member_id} value={member.member_id}>{member.path}</option>)}
+                        </select>
+                      </label>
+                    </div>;
+                  })}
+                </div>
+              </details> : null}
               <div className="divide-y divide-ui border-y border-ui">
                 {catalog.members.map((member) => (
                   <ArchiveMemberRow
@@ -407,16 +459,16 @@ function ArchiveLedgerRow({
               </div>
               {catalog.has_more && !mixedVersions ? (
                 <button type="button" className="text-xs font-medium text-accent underline" disabled={archiveQuery.isFetchingNextPage} onClick={() => { void archiveQuery.fetchNextPage(); }}>
-                  {archiveQuery.isFetchingNextPage ? tr("正在读取…") : tr("读取其余 {0} 项", catalog.member_count - catalog.members.length)}
+                  {archiveQuery.isFetchingNextPage ? tr("正在读取…") : tr("读取其余 {0} 项", Math.max(catalog.member_count - catalog.members.length, (catalog.reference_count ?? 0) - (catalog.unresolved_references?.length ?? 0)))}
                 </button>
               ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-secondary">{tr("只保存发生变化的分类；资源文件仍从原 ZIP 安全读取。")}</p>
-                {!staleDraft && Object.keys(draft).length > 0 ? <button type="button" className="min-h-9 text-xs underline" disabled={sessionActionBusy || saveMutation.isPending} onClick={() => setDraftState({ version: null, members: {} })}>{tr("放弃 ZIP 分类选择")}</button> : null}
+                {!staleDraft && (Object.keys(draft).length > 0 || Object.keys(draftState.references ?? {}).length > 0) ? <button type="button" className="min-h-9 text-xs underline" disabled={sessionActionBusy || saveMutation.isPending} onClick={() => setDraftState({ version: null, members: {} })}>{tr("放弃 ZIP 分类选择")}</button> : null}
                 <button
                   type="button"
                   className="btn-primary inline-flex min-h-9 items-center gap-2 px-3 text-xs"
-                  disabled={!dirtyChanges.length || sessionActionBusy || saveMutation.isPending || mixedVersions || staleDraft}
+                  disabled={(!dirtyChanges.length && !referenceChanges.length) || sessionActionBusy || saveMutation.isPending || mixedVersions || staleDraft}
                   onClick={() => saveMutation.run(dirtyChanges)}
                 >
                   {saveMutation.isPending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -435,6 +487,7 @@ function ArchiveLedgerRow({
 type ArchiveClassificationDraft = {
   version: number | null;
   members: Record<string, { use: string; ownerDocumentIds: string[] }>;
+  references?: Record<string, string | null>;
 };
 
 function editArchiveClassificationDraft(
@@ -445,7 +498,7 @@ function editArchiveClassificationDraft(
 ): ArchiveClassificationDraft {
   // A newer catalog cannot silently rebase an old user's selection.
   if (current.version !== null && current.version !== version) return current;
-  return { version, members: { ...current.members, [memberId]: value } };
+  return { ...current, version, members: { ...current.members, [memberId]: value } };
 }
 
 function mergeArchiveCatalogPages(pages: AdaptiveArchiveCatalog[]): { catalog: AdaptiveArchiveCatalog | null; mixedVersions: boolean } {
@@ -455,8 +508,9 @@ function mergeArchiveCatalogPages(pages: AdaptiveArchiveCatalog[]): { catalog: A
   const consistent = pages.filter(page => page.classification_version === first.classification_version);
   const members = consistent.flatMap(page => page.members);
   const last = consistent.at(-1) ?? first;
+  const references = consistent.flatMap(page => page.unresolved_references ?? []);
   return {
-    catalog: { ...first, members, offset: 0, limit: members.length, has_more: last.has_more },
+    catalog: { ...first, members, unresolved_references: references, offset: 0, limit: members.length, has_more: last.has_more },
     mixedVersions,
   };
 }
@@ -592,7 +646,7 @@ function NotMappableRecovery({ session, family, sessionAction, sessionActionBusy
   const [rescueArtifact, setRescueArtifact] = useState<{ id: string; filename: string } | null>(null);
   const groups = session.groups.filter((group) => family.group_ids.includes(group.id));
   const replaceMutation = useAdaptiveSessionAction(
-    ({ artifactId, file }: { artifactId: string; file: File }) => replaceAdaptiveImportArtifact(session.import_id, artifactId, file),
+    ({ artifactId, file }: { artifactId: string; file: File }) => replaceAdaptiveImportArtifact(session.import_id, artifactId, file, session.updated_at),
     sessionAction,
   );
   const excludeMutation = useAdaptiveSessionAction(

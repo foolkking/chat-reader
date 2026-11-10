@@ -198,3 +198,14 @@ can force those clients or update their saved local copies.
 See [API](../api-reference.md), [deployment](../deployment.md),
 [testing](../testing.md), and the
 [dated size implementation/release record](../execution/IMAGE_DISPLAY_SCALE_2026-10-23.md).
+# Unreleased recoverable feedback — 2026-11-10
+
+Preparation and successful clipboard completion no longer add a transient
+Reader body row. The existing copy action shows busy/check state; successful
+acknowledgement lasts3seconds and prepared Markdown survives that expiry.
+Failure retains manual full-text recovery. An explicit single-message ordinary
+Markdown export is now available when preparation cannot finish: no silent
+text truncation, no new public images, and omitted attachment placeholders are
+disclosed. Background recovery retains the selected message and all chosen
+options; server export limits still apply. No public capability contract changes.
+Full release acceptance remains pending in the recovery implementation ledger.

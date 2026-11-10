@@ -2,7 +2,57 @@
 
 Last synchronized: 2026-11-03
 
+## Unreleased reading-density extension — 2026-11-10
+
+Working-tree candidate only; the release pointer remains in Project State.
+Normal reading tables now keep only two labelled 44px copy/download icons in
+a fixed-width side rail **outside** the cell scroller. Fine-pointer hover and
+keyboard focus reveal them using opacity only; coarse/no-hover devices retain
+visible controls. There is no table title, header/security checkbox or permanent
+protection count. Headers and spreadsheet-formula escaping remain enabled.
+This affects presentation/export controls, not Markdown parsing or canonical data.
+
+Cell text and TSV/CSV are read/serialized only on explicit actions, not during
+render or hover. The full 50,000-cell bound is checked before extracting any
+cell values. KaTeX's TeX annotation is exported once, without removing MathML
+or visual DOM from the reader. Clipboard success expires after three seconds;
+download feedback means the browser was asked to download, not a proven disk save.
+Feedback changes only the existing icon and live region, not body geometry.
+
+Over-limit/unsupported tables offer an explicit copy/download of the input
+Markdown **segment**, including any surrounding segment content; they do not
+silently truncate, guess cells, or label Markdown as CSV. The exact segment is
+passed separately from display projections/offsets. This is not the whole-message
+copy/publication contract. Clipboard denial provides a selected read-only field.
+Recovery uses the existing modal focus lifecycle and stays until a user action;
+late retired source/mount results cannot resurrect feedback.
+
+Inline CSV/TSV attachments now use the same quoted-field parser as Viewer.
+They render an 8-row/8-column prefix (28 rows when expanded), with one record
+lookahead and smaller input/cell budgets. Quoted separators, escaped quotes,
+multiline cells and empty fields retain their meaning. Optional smaller budgets
+cannot enlarge Viewer's existing ceilings. Expansion counts logical records,
+not newline characters inside a quoted value; partial previews retain the
+existing full-table action.
+
+The [recovery ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md) records
+local checks and outstanding full Reader/Share/Offline/stability acceptance.
+
 ## Purpose and canonical source
+
+Unreleased November10 density follow-up: code actions occupy one fixed44px
+rail, visible on hover/focus or touch, without geometry changes. Meaningful
+language is retained; an empty/`text` default label is omitted. Full source copy,
+wrap/expand and persistent manual-copy recovery remain. Mermaid already omits
+the generic header; authored accessible titles/descriptions and source/failure
+disclosure are not removed for visual minimalism.
+
+Inline attachment text uses an explicit128KiB prefix with30-second preparation/
+inactivity bounds. A Range-ignoring response is cancelled at that prefix;
+invalid ranges/incomplete responses fail into the existing recovery row.
+Partial content is disclosed independently of a caption. One full-preview
+entry remains below the content and original download remains in its header.
+This does not change full Viewer byte policies or truncate canonical content.
 
 Chat Reader renders modern AI conversation Markdown through one semantic core. PostgreSQL `MessageVersion` Markdown remains canonical. Rendering never rewrites `\[...\]` to `$$...$$`, never persists KaTeX HTML, and does not add a database migration or export field.
 

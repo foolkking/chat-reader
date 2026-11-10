@@ -36,7 +36,7 @@ test("mixed-version pages cannot be presented or saved as one classification", (
   const result = merge([page(1, 0, [{ member_id: "old" }], true), page(2, 1, [{ member_id: "new" }])]);
   assert.equal(result.mixedVersions, true);
   assert.deepEqual(result.catalog.members.map(item => item.member_id), ["old"]);
-  assert.match(source, /disabled=\{!dirtyChanges\.length \|\| sessionActionBusy \|\| saveMutation\.isPending \|\| mixedVersions \|\| staleDraft\}/);
+  assert.match(source, /disabled=\{\(!dirtyChanges\.length && !referenceChanges\.length\) \|\| sessionActionBusy \|\| saveMutation\.isPending \|\| mixedVersions \|\| staleDraft\}/);
 });
 
 test("a newer classification preserves but cannot silently rebase old edits", () => {
@@ -79,6 +79,7 @@ function ledgerFixture(initialPages) {
   };
   const dependencies = {
     require, exports: {}, useState, useEffect, useMemo: fn => fn(), useImportCopy: () => text => text,
+    archivePathReason: reason => reason, importWarningMessage: text => text,
     useInfiniteQuery: () => ({ data: { pages }, refetch() {}, fetchNextPage() {} }),
     useAdaptiveSessionAction: (fn, _controls, onApplied) => ({
       isPending: false, isError: false, run: value => { fn(value); onApplied({}); },
@@ -111,12 +112,47 @@ function ledgerFixture(initialPages) {
     writes, statuses, render,
     setPages: next => { pages = next; render(); },
     member: id => find(tree, node => node.type === "Member" && node.props.member.member_id === id),
+    select: () => find(tree, node => node.type === "select"),
     button: label => find(tree, node => node.type === "button" && text(node) === label),
   };
 }
 const member = (id, use = "attachment") => ({ member_id: id, use, owner_document_ids: ["doc"], kind: "file" });
 const catalog = (version, offset, members, hasMore = false) => ({
   ...page(version, offset, members, hasMore), issues: [],
+});
+
+test("explicit reference bindings stay local and dirty until a revision-bound save", () => {
+  const first = catalog(1, 0, [member("doc", "conversation"), member("asset", "excluded")]);
+  first.unresolved_references = [{
+    reference_id: "ref", document_member_id: "doc", document_index: 1,
+    reason: "outside_archive", target_display: "../synthetic.txt",
+    reference_count: 2, lines: [7, 9], target_member_id: null,
+  }];
+  const f = ledgerFixture([first]);
+  f.select().props.onChange({ currentTarget: { value: "asset" } });
+  f.render();
+  assert.equal(f.select().props.value, "asset");
+  assert.equal(f.writes.length, 0);
+  assert.equal(f.statuses.at(-1).dirty, true);
+  f.button("保存 ZIP 分类").props.onClick();
+  assert.deepEqual(f.writes, [["session", "zip", 1, [], [{ referenceId: "ref", targetMemberId: "asset" }]]]);
+});
+
+test("a newer archive cannot silently rebase an unresolved-link selection", () => {
+  const first = catalog(1, 0, [member("asset", "excluded")]);
+  first.unresolved_references = [{
+    reference_id: "ref", document_member_id: "doc", document_index: 1,
+    reason: "outside_archive", target_display: "../synthetic.txt",
+    reference_count: 1, lines: [7], target_member_id: null,
+  }];
+  const f = ledgerFixture([first]);
+  f.select().props.onChange({ currentTarget: { value: "asset" } });
+  f.render();
+  f.setPages([{ ...first, classification_version: 2 }]);
+  assert.equal(f.select().props.value, "asset");
+  assert.equal(f.select().props.disabled, true);
+  assert.equal(f.button("保存 ZIP 分类").props.disabled, true);
+  assert.equal(f.writes.length, 0);
 });
 
 test("actual ZIP ledger retains edited rows across pagination, refetch and collapse", () => {

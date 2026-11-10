@@ -9,7 +9,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { ConversationReader } from "../conversations/conversation-reader";
 import { ApiRequestError, getOfflineCatalog } from "../../lib/api";
 import { OfflinePackageImportError, OfflinePendingChangesError, OfflineDownloadInProgressError, offlineDb, removeOfflineConversations, type OfflineConversationRecord, type OfflineSearchDocument } from "../../lib/offline-db";
-import { offlineFailureCanRetry } from "../../lib/offline-download-errors";
+import { offlineDownloadSummary, offlineQueueIsPaused } from "../../lib/offline-download-progress";
+import { OfflineDownloadRecovery } from "../../components/offline-download-recovery";
 import { offlineReaderDataSource, resolveOfflineSearchResult } from "../../lib/reader-data-source";
 import { matchesLibrarySearchTarget, searchResultHref, type SearchResultReplay } from "../search/search-result-target";
 import { initializeOfflineSearch, searchOffline } from "../../lib/offline-search";
@@ -403,18 +404,19 @@ export function LibraryShell() {
       // A newer attempt for the same scope supersedes its older failure.
       // Persisted failures survive navigation/reload without generating alerts.
       const scopes = new Set<string>();
-      setDownloadFailure(records.filter(item => {
+      const latestFailures = records.filter(item => {
         const key = `${item.scope}:${item.scopeId ?? "all"}`;
         if (scopes.has(key)) return false;
         scopes.add(key);
         return item.state === "failed";
-      })[0] ?? null);
+      });
+      setDownloadFailure(records.find(item => item.state === "failed" && item.queuePaused) ?? latestFailures[0] ?? null);
       const completed = records.map((item) => `${item.id}:${item.conversationCursor ?? 0}:${item.state === "completed"}`).join("|");
       if (completed !== completedDownloadsRef.current) {
         completedDownloadsRef.current = completed;
         void reloadLocal().catch(() => undefined);
       }
-      const current = records.find((item) => ["queued", "generating", "downloading", "writing"].includes(item.state));
+      const current = !offlineQueueIsPaused(records) ? records.find((item) => ["queued", "generating", "downloading", "writing"].includes(item.state)) : undefined;
       setDownload(current ? { key: `${current.scope}:${current.scopeId ?? "all"}`, progress: current.progress,
         label: (zh ? { queued: "排队中", generating: "正在生成离线包", downloading: "正在下载", writing: "正在写入离线资料库" } : { queued: "Queued", generating: "Generating package", downloading: "Downloading", writing: "Writing offline copy" })[current.state as "queued"] } : null);
     }, error: () => {
@@ -461,7 +463,7 @@ export function LibraryShell() {
 
   useEffect(() => {
     const catalog = catalogQuery.data;
-    if (!catalog || !conversations.length || download || autoRefreshRunningRef.current) return;
+    if (!catalog || !conversations.length || download || downloadFailure || autoRefreshRunningRef.current) return;
     const changed = conversations.filter((local) => catalog.conversations.some((remote) => remote.id === local.id && remote.revision !== local.offline_revision));
     const refreshKey = changed
       .map((local) => `${local.id}:${catalog.conversations.find((remote) => remote.id === local.id)?.revision ?? "missing"}`)
@@ -486,7 +488,7 @@ export function LibraryShell() {
         autoRefreshRunningRef.current = false;
       }
     })();
-  }, [catalogQuery.data, conversations, download, reloadLocal, runDownload, zh]);
+  }, [catalogQuery.data, conversations, download, downloadFailure, reloadLocal, runDownload, zh]);
 
   useEffect(() => {
     if (!searchIndexReady) return;
@@ -575,14 +577,27 @@ export function LibraryShell() {
   );
 
   const failedRequest = failedDownload ?? (downloadFailure ? { scope: downloadFailure.scope, id: downloadFailure.scopeId } : null);
-  const requestedFailure = failedRequest && (failedRequest.scope === "all"
+  const selectedDownloadResult = selectedId ? downloadFailure?.conversationResults?.[selectedId] : undefined;
+  const requestedFailure = selectedDownloadResult?.state !== "completed" && failedRequest && (failedRequest.scope === "all"
     || failedRequest.scope === "conversation" && failedRequest.id === selectedId
     || failedRequest.scope === "project" && failedRequest.id === requestedCatalogConversation?.project_id);
-  const requestedFailureMessage = requestedFailure ? ((failedDownload ? error : null) ?? offlineDownloadFailureMessage(downloadFailure?.error ?? null, zh, Boolean(selectedConversation))) : null;
+  const requestedFailureMessage = requestedFailure ? ((failedDownload ? error : null) ?? offlineDownloadFailureMessage(selectedDownloadResult?.error ?? downloadFailure?.error ?? null, zh, Boolean(selectedConversation))) : null;
   const retainedFailureCopy = downloadFailure && conversations.some(conversation => downloadFailure.scope === "all"
     || downloadFailure.scope === "conversation" && downloadFailure.scopeId === conversation.id
     || downloadFailure.scope === "project" && downloadFailure.scopeId === conversation.project_id);
-  const sidebarError = error ?? requestedFailureMessage ?? (downloadFailure ? offlineDownloadFailureMessage(downloadFailure.error, zh, Boolean(retainedFailureCopy)) : catalogQuery.isError ? offlineCatalogErrorMessage(catalogQuery.error, zh) : null);
+  const sidebarError = error ?? requestedFailureMessage ?? (downloadFailure ? `${offlineDownloadSummary(downloadFailure, zh)} · ${offlineDownloadFailureMessage(downloadFailure.error, zh, Boolean(retainedFailureCopy))}` : catalogQuery.isError ? offlineCatalogErrorMessage(catalogQuery.error, zh) : null);
+  const recoveryControls = downloadFailure && !failedDownload ? <OfflineDownloadRecovery
+    key={downloadFailure.id} item={downloadFailure} zh={zh} disabled={!online || Boolean(download) || retryingDownload}
+    retryLabel={zh ? "重试离线下载" : "Retry offline download"} onRetry={retryDownload} onAction={async work => {
+      if (retryingDownload) return;
+      setRetryingDownload(true); setError(null);
+      try { await work(); }
+      catch (cause) {
+        setError(cause instanceof Error && cause.message === "OFFLINE_RETRY_STATE_CHANGED"
+          ? (zh ? "任务在确认期间发生变化，请查看当前状态后再选择。" : "The task changed during confirmation. Review the current state before choosing again.")
+          : offlineDownloadErrorMessage(cause, zh));
+      } finally { setRetryingDownload(false); }
+    }} /> : null;
   const localReadReady = localRead.phase === "ready";
   const sidebar = (
     <LibrarySidebar
@@ -609,6 +624,7 @@ export function LibraryShell() {
       offlineShellStatus={offlineShellStatus}
       error={sidebarError}
       failedDownload={failedRequest}
+      recoveryControls={recoveryControls}
       localRead={localRead}
       downloadStatusError={downloadStatusError}
       suppressDesktopError={Boolean(!selectedConversation && requestedCatalogConversation && requestedFailureMessage && sidebarError === requestedFailureMessage)}
@@ -637,7 +653,7 @@ export function LibraryShell() {
       {!requestedFailureMessage && !download ? <p className="mt-2 max-w-sm text-sm text-secondary">{zh ? "下载后即可在这里离线阅读。" : "Download this conversation to read it here offline."}</p> : null}
       {download ? <p role="status" className="mt-4 flex items-center gap-2 text-sm text-secondary"><LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" />{online ? download.label : (zh ? "已暂停，联网后继续" : "Paused; resumes when online")}</p> : null}
       {requestedFailureMessage ? <p role="status" className="mt-4 max-w-sm rounded-md bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">{requestedFailureMessage}</p> : null}
-      {(!requestedFailure || offlineFailureCanRetry(downloadFailure?.error ?? null) || downloadFailure?.error === "UNAVAILABLE_TARGET") ? <button type="button" disabled={!online || Boolean(download) || retryingDownload} onClick={() => requestedFailure ? retryDownload() : startDownload({ scope: "conversation", id: requestedCatalogConversation.id })} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{requestedFailure ? (downloadFailure?.error === "UNAVAILABLE_TARGET" ? (zh ? "重新核对范围" : "Review download scope") : (zh ? "重试离线下载" : "Retry offline download")) : (zh ? "下载离线副本" : "Download offline copy")}</button> : null}
+      {requestedFailure && recoveryControls ? <div className="mt-4 max-w-xl text-left">{recoveryControls}</div> : <button type="button" disabled={!online || Boolean(download) || retryingDownload} onClick={() => requestedFailure ? retryDownload() : startDownload({ scope: "conversation", id: requestedCatalogConversation.id })} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{requestedFailure ? (zh ? "重试离线下载" : "Retry offline download") : (zh ? "下载离线副本" : "Download offline copy")}</button>}
       <button type="button" onClick={openLibrary} className={`mt-3 min-h-10 rounded-md border border-ui px-4 text-sm font-medium text-primary ${desktopSidebarExpanded ? "md:hidden" : ""}`}>{zh ? "打开资料库" : "Open library"}</button>
     </div>
   ) : !localReadReady ? (
@@ -685,7 +701,7 @@ function formatLibraryConversationTitle(conversation: { display_title: string; p
   return project ? `${project} / ${title}` : title;
 }
 
-function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, searchState, onRetrySearch, download, storage, assetMode, offlineShellStatus, error, failedDownload, localRead, downloadStatusError, catalogReadError, catalogReadFetching, suppressDesktopError, onClose, onCollapse, onOpen, onOpenSearchResult, onDownload, onRetryDownload, onRetryLocalRead, onRetryDownloadStatus, onRetryCatalog, onAssetModeChange, onRetryShell, onRemove }: {
+function LibrarySidebar({ online, catalog, conversations, sidebarConversations, unclassifiedConversations, selectedId, groupedProjects, query, setQuery, searchResults, searchState, onRetrySearch, download, storage, assetMode, offlineShellStatus, error, failedDownload, recoveryControls, localRead, downloadStatusError, catalogReadError, catalogReadFetching, suppressDesktopError, onClose, onCollapse, onOpen, onOpenSearchResult, onDownload, onRetryDownload, onRetryLocalRead, onRetryDownloadStatus, onRetryCatalog, onAssetModeChange, onRetryShell, onRemove }: {
   online: boolean;
   catalog?: OfflineCatalogResponse;
   conversations: OfflineConversationRecord[];
@@ -704,6 +720,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
   offlineShellStatus: OfflineShellStatus;
   error: string | null;
   failedDownload: DownloadRequest | null;
+  recoveryControls?: React.ReactNode;
   localRead: OfflineLibraryReadState;
   downloadStatusError: boolean;
   catalogReadError: boolean;
@@ -766,7 +783,7 @@ function LibrarySidebar({ online, catalog, conversations, sidebarConversations, 
         <button type="button" disabled={Boolean(download)} onClick={() => setRevisionAttempt((attempt) => attempt + 1)} className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 px-3 text-sm disabled:opacity-50"><RefreshCw aria-hidden="true" className="h-4 w-4" />{zh ? "重新检查离线资源" : "Retry resource check"}</button>
       </div> : <button type="button" disabled={Boolean(download) || knownRevisions === null || pendingSummary.count === 0} onClick={() => onDownload("all")} className="flex min-h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--text)] px-3 text-sm font-medium text-[var(--surface)] disabled:opacity-50"><Download className="h-4 w-4" />{knownRevisions === null ? (zh ? "正在检查离线资源" : "Checking offline resources") : pendingSummary.count > 0 ? (zh ? `更新 ${pendingSummary.count} 个对话 · ${formatBytes(pendingSummary.bytes)}` : `Update ${pendingSummary.count} conversations · ${formatBytes(pendingSummary.bytes)}`) : (zh ? "离线资料已是最新" : "Offline library is up to date")}</button> : null}
       {download ? <div className="space-y-1" role="status"><div className="h-1.5 overflow-hidden rounded bg-subtle"><div className="h-full bg-accent transition-[width]" style={{ width: `${download.progress}%` }} /></div><p className="flex items-center gap-1 text-xs text-secondary">{online ? <LoaderCircle className="h-3 w-3 animate-spin motion-reduce:animate-none" /> : <WifiOff className="h-3 w-3" />}{online ? download.label : (zh ? "已暂停，联网后继续" : "Paused; resumes when online")}</p></div> : null}
-      {error ? <div role="status" className={`flex items-center gap-2 rounded-md bg-[var(--danger-soft)] px-2 py-1.5 text-xs text-[var(--danger)] ${suppressDesktopError ? "md:hidden" : ""}`}><p className="min-w-0 flex-1">{error}</p>{failedDownload && online ? <button type="button" onClick={onRetryDownload} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium hover:bg-surface" aria-label={zh ? "重试离线下载" : "Retry offline download"}><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试" : "Retry"}</button> : null}{catalogReadError && online ? <button type="button" disabled={catalogReadFetching} onClick={onRetryCatalog} className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded border border-[var(--danger)] px-2 font-medium hover:bg-surface disabled:opacity-50" aria-label={zh ? "重试读取在线目录" : "Retry online catalog"}><RefreshCw className={`h-3.5 w-3.5 ${catalogReadFetching ? "motion-safe:animate-spin" : ""}`} />{zh ? "重试目录" : "Retry catalog"}</button> : null}</div> : null}
+      {error ? <div className={`space-y-2 border-l-2 border-[var(--danger)] pl-3 text-xs ${suppressDesktopError ? "md:hidden" : ""}`}><p role="status" className="text-[var(--danger)]">{error}</p>{recoveryControls ?? (failedDownload && online ? <button type="button" onClick={onRetryDownload} className="btn-secondary inline-flex min-h-11 items-center gap-1 px-2 font-medium" aria-label={zh ? "重试离线下载" : "Retry offline download"}><RefreshCw className="h-3.5 w-3.5" />{zh ? "重试" : "Retry"}</button> : null)}{catalogReadError && online ? <button type="button" disabled={catalogReadFetching} onClick={onRetryCatalog} className="btn-secondary inline-flex min-h-11 items-center gap-1 px-2 font-medium disabled:opacity-50" aria-label={zh ? "重试读取在线目录" : "Retry online catalog"}><RefreshCw className={`h-3.5 w-3.5 ${catalogReadFetching ? "motion-safe:animate-spin" : ""}`} />{zh ? "重试目录" : "Retry catalog"}</button> : null}</div> : null}
     </div>
     <div className="min-h-0 flex-1 overflow-y-auto p-2">
       {query ? localRead.phase !== "ready" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "读取本地资料后才能搜索…" : "Read local copies before searching…"}</p> : searchState === "unavailable" ? <div role="alert" className="space-y-2 px-3 py-5 text-sm text-secondary"><p>{zh ? "离线搜索暂不可用。若离线资源缺失，请联网更新后重试。已下载的对话仍然保留。" : "Offline search is unavailable. If resources are missing, reconnect to update them and retry. Downloaded conversations are retained."}</p><button type="button" onClick={onRetrySearch} className="btn-secondary min-h-11 px-3">{zh ? "重试离线搜索" : "Retry offline search"}</button></div> : searchState === "loading" ? <p role="status" className="px-3 py-5 text-sm text-secondary">{zh ? "正在准备离线搜索…" : "Preparing offline search…"}</p> : <SearchResultList items={searchResults} query={query} conversations={conversations} onOpen={onOpen} onOpenSearchResult={onOpenSearchResult} /> : localRead.phase !== "ready" ? null : <>

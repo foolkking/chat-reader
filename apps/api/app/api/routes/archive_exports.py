@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.conversation import Conversation
+from app.models.background_job import BackgroundJob
 from app.schemas.task import BackgroundTaskRead
 from app.schemas.export import ExportRequest, ConversationBatchExportRequest
 from app.services.background_jobs import queue_conversation_auto_clean, queue_conversation_derived_rebuild, queue_conversation_export
@@ -59,13 +60,15 @@ def queue_archive_export(
     include_description: bool = False,
     include_annotations: bool = False,
     include_notebook: bool = False,
-    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    background: bool = False,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key", min_length=1, max_length=200),
     db: Session = Depends(get_db),
 ) -> BackgroundTaskRead | StreamingResponse:
     ownership_scope = ownership_scope_from_request(request)
     if get_owned(db, Conversation, conversation_id, ownership_scope) is None:
         raise HTTPException(status_code=404, detail="Conversation not found.")
-    if payload is not None and payload.format in {"markdown_v2", "canjson_v2"}:
+    plain = payload is not None and payload.format in {"markdown_v2", "canjson_v2"}
+    if plain and not background:
         try:
             options = payload.to_options()
             return direct_export_response(db, conversation_id, options)
@@ -91,13 +94,33 @@ def queue_archive_export(
             context_attachment_policy=payload.context_attachment_policy if payload is not None else "include",
             continuation_policy=payload.continuation_policy if payload is not None else "auto",
             start_message_id=payload.start_message_id if payload is not None else None,
+            plain_options=payload.model_dump(mode="json") if plain else None,
             ownership_scope=ownership_scope,
         )
         db.commit()
-    except MessageEditError as exc:
+    except (MessageEditError, ExportError) as exc:
         db.rollback()
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
     return background_job_read(job)
+
+
+@router.get("/api/conversations/{conversation_id}/exports/by-request/{request_key}")
+def read_export_request(conversation_id: uuid.UUID, request_key: str, request: Request,
+                        response: Response, db: Session = Depends(get_db)):
+    """A missing receipt is not proof that an in-flight submission was rejected."""
+    scope = ownership_scope_from_request(request)
+    conversation = get_owned(db, Conversation, conversation_id, scope)
+    if conversation is None or conversation.deleted_at is not None:
+        raise HTTPException(404, "Conversation not found.")
+    if not request_key or len(request_key) > 200:
+        raise HTTPException(422, "Invalid request key.")
+    job = db.query(BackgroundJob).filter(
+        scope.predicate(BackgroundJob), BackgroundJob.job_type == "conversation_export",
+        BackgroundJob.idempotency_key == request_key,
+    ).order_by(BackgroundJob.created_at.desc()).first()
+    response.headers["Cache-Control"] = "private, no-store"
+    return {"task": background_job_read(job) if job is not None
+            and job.payload.get("conversation_id") == str(conversation_id) else None}
 
 
 @router.post(
@@ -172,7 +195,7 @@ def download_archive(
         CONTEXT_PACKAGE_MIME
         if artifact.format == CONTEXT_PACKAGE_FORMAT
         else BUNDLE_MIME
-        if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT, "attachment-batch-zip", "chat-reader-conversation-batch"}
+        if artifact.format in {MARKDOWN_BUNDLE_FORMAT, CANJSON_BUNDLE_FORMAT, "attachment-batch-zip", "chat-reader-conversation-batch", "chat-reader-plain-export"}
         else ARCHIVE_MIME
     )
     return ExportFileResponse(path, media_type=media_type, filename=artifact.filename,

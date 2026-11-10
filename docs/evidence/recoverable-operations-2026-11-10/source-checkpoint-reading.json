@@ -1,0 +1,67 @@
+{
+  "scope": "Uncommitted reading-density source subset; synthetic component checks, not full-plan or release acceptance",
+  "captured_at": "2026-11-10T04:46:33.3461094+08:00",
+  "checkout": "1fb091210c552ae88da3acea7bb33520c2035d7b",
+  "node": "v20.13.1",
+  "checks": {
+    "table_browser": 12,
+    "typecheck": "passed",
+    "image_controls": 6,
+    "lint": "passed",
+    "web_node": 2202
+  },
+  "sources": [
+    {
+      "path": ".github/workflows/build-release-images.yml",
+      "sha256": "46913d2a8ae51c6490b931fd9e1eb63f883345b50d071271808146fe4d024be7"
+    },
+    {
+      "path": "apps/web/app/globals.css",
+      "sha256": "ebf8f1abbc699a76a80fd5a6221093b7de2ff9c4c1583db884c88988ca6c5894"
+    },
+    {
+      "path": "apps/web/features/attachments/attachment-block.tsx",
+      "sha256": "073f6d4c47a4a9c1ec5d44711a31b440e5850ced7988dcb87a04ab4f83be4c3c"
+    },
+    {
+      "path": "apps/web/features/attachments/attachment-table-policy.ts",
+      "sha256": "1b288555266488a1d1b98c8679bbefe68eda46bdff1cc0c85155e184bae6d968"
+    },
+    {
+      "path": "apps/web/features/attachments/image-display-controls.tsx",
+      "sha256": "95693d40b003b3fc7367876af560475ac5ddd31fde00b0195eab1d7c8879b976"
+    },
+    {
+      "path": "apps/web/features/conversations/markdown-renderer.tsx",
+      "sha256": "f3e0eef059a9cb54b93b758c866fcb648d948af9e467db10f07653b37e641cae"
+    },
+    {
+      "path": "apps/web/features/conversations/markdown-table-export.ts",
+      "sha256": "cb15efe046e56c6cf827ef87e3eccba514f00a9a802decc61fed08462fe5f8d2"
+    },
+    {
+      "path": "apps/web/features/conversations/markdown-table-export-actions.tsx",
+      "sha256": "f42e5effe789675974b9dd0c8b6ea465d1b7832cb0989b4fa4a4cb8d9c8d0ebe"
+    },
+    {
+      "path": "scripts/ux/reader-table-actions-browser.mjs",
+      "sha256": "98ed3a079235640a5ff58435a1c13455551380c20d712ddd91eec4a8bee23168"
+    },
+    {
+      "path": "scripts/ux/image-scale-slider-browser.mjs",
+      "sha256": "a5ba63b68f3dbf12606a7c1101d55072dd7900d672bb21d47c4b379e1a62f4ac"
+    },
+    {
+      "path": "scripts/ux/web-opportunity-primitives.test.mjs",
+      "sha256": "c6453c7a8b7eeb6d63c08a752181c3011ca76fc6d1c1c10474b1e38faba59777"
+    },
+    {
+      "path": "scripts/ux/attachment-table-preview.test.mjs",
+      "sha256": "a9fe98920b862b227665ebc578e0d5b937d438e78e0ee2f401445c253ff47421"
+    },
+    {
+      "path": "scripts/ux/chatgpt-rich-text.test.mjs",
+      "sha256": "c72fd3cd4b93da76962f070b859945c35fea6a1bb2826e1029bef8af8cfe48cf"
+    }
+  ]
+}

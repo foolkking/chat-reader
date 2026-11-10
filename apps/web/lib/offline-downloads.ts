@@ -1,4 +1,4 @@
-import { offlineFailureCanRetry, offlineGenerationFailureCode, offlineFailureNeedsRebuild } from "./offline-download-errors";
+import { offlineFailureCanRetry, offlineGenerationFailureCode, offlineFailureNeedsRebuild, offlineFailureIsIndependent, offlineFailurePausesQueue } from "./offline-download-errors";
 export { offlineDownloadFailureMessage } from "./offline-download-errors";
 import { ApiRequestError, cancelTask, getOfflineCatalog, getTask, queueOfflinePackage } from "./api";
 import { liveQuery } from "dexie";
@@ -7,6 +7,8 @@ import { importOfflinePackage, inspectOfflineCopyAssets, offlineDb, OfflinePacka
 import { planOfflineConversationDownloads } from "./offline-download-plan";
 import { canUseServer } from "./server-session";
 import { offlineAuthenticationRequired } from "./offline-access";
+import { offlineConversationResult, offlineQueueIsPaused } from "./offline-download-progress";
+import { withRequestDeadline } from "./request-deadline";
 
 export type OfflineAssetMode = "none" | "small" | "all";
 export type OfflineDownload = {
@@ -21,7 +23,11 @@ export type OfflineDownload = {
   targetConversationIds?: string[];
   conversationIdempotencyKeys?: Record<string, string>;
   currentConversationId?: string;
+  currentConversationLabel?: string;
   conversationCursor?: number;
+  conversationResults?: Record<string, { state: "completed" | "failed"; error?: string; label?: string; assetMode?: OfflineAssetMode; jobId?: string }>;
+  queuePaused?: boolean;
+  enqueueOrder?: number;
 };
 export const OFFLINE_DOWNLOAD_CHANGED_EVENT = "chat-reader:offline-downloads";
 const PREFIX = "offline-download:";
@@ -32,7 +38,7 @@ const controllers = new Map<string, AbortController>();
 
 export async function listOfflineDownloads(db = offlineDb): Promise<OfflineDownload[]> {
   return (await db.settings.where("key").startsWith(PREFIX).toArray()).map((row) => row.value as OfflineDownload)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || (b.enqueueOrder ?? 0) - (a.enqueueOrder ?? 0));
 }
 
 export async function usableOfflineRevisions(mode: OfflineAssetMode): Promise<Record<string, number>> {
@@ -48,25 +54,28 @@ export async function usableOfflineRevisions(mode: OfflineAssetMode): Promise<Re
 
 export async function enqueueOfflineDownload(input: { scope: OfflineDownload["scope"]; scopeId?: string; assetMode: OfflineAssetMode }): Promise<OfflineDownload> {
   const access = captureOfflineAccess(), db = offlineDb;
-  const catalog = await getOfflineCatalog();
+  const catalog = await withRequestDeadline(() => getOfflineCatalog());
   const knownRevisions = await usableOfflineRevisions(input.assetMode);
   assertOfflineAccess(access);
   const targetConversationIds = planOfflineConversationDownloads(catalog, input.scope, input.scopeId, knownRevisions);
   const label = input.scope === "conversation" ? catalog.conversations.find((item) => item.id === input.scopeId)?.display_title
     : input.scope === "project" ? catalog.projects.find((item) => item.id === input.scopeId)?.name : "";
   const result = await db.transaction("rw", db.settings, async () => {
-    const existing = (await listOfflineDownloads(db)).find((item) => (ACTIVE.has(item.state) || item.state === "failed" && ["NETWORK", "DOWNLOAD"].includes(item.error ?? "")) && !item.cancelRequested && item.scope === input.scope && item.scopeId === input.scopeId && item.assetMode === input.assetMode);
+    const records = await listOfflineDownloads(db);
+    const existing = records.find((item) => (ACTIVE.has(item.state) || item.state === "failed" && (item.queuePaused || ["NETWORK", "DOWNLOAD"].includes(item.error ?? ""))) && !item.cancelRequested && item.scope === input.scope && item.scopeId === input.scopeId && item.assetMode === input.assetMode);
     if (existing) {
       if (existing.state === "failed") {
         if (existing.targetConversationIds === undefined) {
           return partitionLegacyDownload(db, existing, targetConversationIds, knownRevisions);
         }
-        return patch(db, existing.id, { state: "queued", error: null, attemptRevision: (existing.attemptRevision ?? 0) + 1 });
+        // Enqueue is not consent to resume a paused queue (including auto-refresh).
+        return existing;
       }
       return existing;
     }
     const now = new Date().toISOString();
     const record: OfflineDownload = { ...input, label: label ?? "", id: crypto.randomUUID(), idempotencyKey: crypto.randomUUID(),
+      enqueueOrder: records.reduce((max, item) => Math.max(max, item.enqueueOrder ?? 0), 0) + 1,
       state: "queued", progress: 0, jobId: null, packageId: null, knownRevisions, cancelRequested: false, error: null,
       targetConversationIds, conversationIdempotencyKeys: Object.fromEntries(targetConversationIds.map(id => [id, crypto.randomUUID()])),
       conversationCursor: 0, createdAt: now, updatedAt: now };
@@ -89,7 +98,7 @@ export async function inspectOfflineDownloadRetryScope(id: string): Promise<{
   if (!record || record.error !== "UNAVAILABLE_TARGET" || record.targetConversationIds === undefined) {
     throw new Error("OFFLINE_RETRY_REVIEW_UNAVAILABLE");
   }
-  const catalog = await getOfflineCatalog();
+  const catalog = await withRequestDeadline(() => getOfflineCatalog());
   const knownRevisions = await usableOfflineRevisions(record.assetMode);
   assertOfflineAccess(access);
   const currentScopeIds = catalogScopeConversationIds(catalog, record.scope, record.scopeId);
@@ -125,11 +134,21 @@ export async function retryOfflineDownloadWithReview(
   await retryOfflineDownload(id, { confirmedTargetIds: review.targetConversationIds });
 }
 
-export async function cancelOfflineDownload(id: string): Promise<void> {
-  const db = offlineDb;
+export async function cancelOfflineDownload(id: string, expectedAttemptRevision?: number): Promise<void> {
+  const access = captureOfflineAccess(), db = offlineDb;
   await db.transaction("rw", db.settings, async () => {
+    assertOfflineAccess(access);
     const record = (await db.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
+    if (expectedAttemptRevision !== undefined && (!record || (record.attemptRevision ?? 0) !== expectedAttemptRevision
+      || record.state !== "failed" || !record.queuePaused)) throw new Error("OFFLINE_RETRY_STATE_CHANGED");
     if (record && ACTIVE.has(record.state)) await patch(db, id, { cancelRequested: true });
+    else if (record?.state === "failed" && record.queuePaused) {
+      const remote = Boolean(record.jobId || record.admissionStarted);
+      if (remote) await db.settings.put({ key: CANCELLATION_PREFIX + record.idempotencyKey,
+        value: { download: record, attempts: 0, retryAt: 0 } satisfies PendingCancellation });
+      await patch(db, id, { state: "cancelled", cancelRequested: true, queuePaused: false,
+        serverCancellation: record.serverCancellation === "failed" ? "failed" : remote ? "pending" : record.serverCancellation });
+    }
   });
   controllers.get(id)?.abort();
   changed();
@@ -137,17 +156,28 @@ export async function cancelOfflineDownload(id: string): Promise<void> {
 
 export async function retryOfflineDownload(
   id: string,
-  options: { confirmedTargetIds?: string[] } = {},
+  options: { confirmedTargetIds?: string[]; assetMode?: OfflineAssetMode; expectedAttemptRevision?: number } = {},
 ): Promise<void> {
   const access = captureOfflineAccess(), db = offlineDb, record = (await db.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
   const needsTargetReview = record?.error === "UNAVAILABLE_TARGET";
+  if (options.expectedAttemptRevision !== undefined && (record?.attemptRevision ?? 0) !== options.expectedAttemptRevision) {
+    throw new Error("OFFLINE_RETRY_STATE_CHANGED");
+  }
+  if (options.expectedAttemptRevision !== undefined && (!record || !["failed", "cancelled"].includes(record.state))) {
+    throw new Error("OFFLINE_RETRY_STATE_CHANGED");
+  }
+  const reducedAssets = record && options.assetMode !== undefined
+    && ["none", "small", "all"].includes(options.assetMode)
+    && ["none", "small", "all"].indexOf(options.assetMode) < ["none", "small", "all"].indexOf(record.assetMode);
   if (!record || !["failed", "cancelled"].includes(record.state)
-    || record.targetConversationIds !== undefined && !offlineFailureCanRetry(record.error) && !needsTargetReview) return;
+    || record.targetConversationIds !== undefined && !offlineFailureCanRetry(record.error) && !needsTargetReview && !reducedAssets) return;
+  if (options.assetMode !== undefined && !reducedAssets) throw new Error("OFFLINE_ASSET_POLICY_UNCHANGED");
   const legacy = record.targetConversationIds === undefined;
   if (needsTargetReview && !options.confirmedTargetIds) return;
-  const catalog = legacy || needsTargetReview ? await getOfflineCatalog() : undefined;
-  const rebuild = legacy || needsTargetReview || record.state === "cancelled" || offlineFailureNeedsRebuild(record.error);
-  const knownRevisions = rebuild ? await usableOfflineRevisions(record.assetMode) : record.knownRevisions;
+  const catalog = legacy || needsTargetReview ? await withRequestDeadline(() => getOfflineCatalog()) : undefined;
+  const rebuild = legacy || needsTargetReview || record.state === "cancelled" || offlineFailureNeedsRebuild(record.error) || reducedAssets;
+  const assetMode = options.assetMode ?? record.assetMode;
+  const knownRevisions = rebuild ? await usableOfflineRevisions(assetMode) : record.knownRevisions;
   assertOfflineAccess(access);
   const targetConversationIds = needsTargetReview && catalog
     ? planOfflineConversationDownloads(catalog, record.scope, record.scopeId, knownRevisions)
@@ -158,9 +188,21 @@ export async function retryOfflineDownload(
   const conversationIdempotencyKeys = rebuild
     ? Object.fromEntries(targetConversationIds.map(conversationId => [conversationId, crypto.randomUUID()]))
     : record.conversationIdempotencyKeys;
+  const conversationResults: NonNullable<OfflineDownload["conversationResults"]> = rebuild ? {} : { ...record.conversationResults };
+  if (rebuild && !needsTargetReview) (record.targetConversationIds ?? []).forEach((conversationId, index) => {
+    const result = offlineConversationResult(record, conversationId, index);
+    if (result?.state === "completed") conversationResults[conversationId] = result;
+    // An unchanged capacity retry would be futile. Other failed children can
+    // retry while this one remains visibly unresolved.
+    else if (result?.error === "CAPACITY" && !reducedAssets) conversationResults[conversationId] = result;
+  });
   await db.transaction("rw", db.settings, async () => {
+    assertOfflineAccess(access);
     const current = (await db.settings.get(PREFIX + id))?.value as OfflineDownload | undefined;
-    if (!current || !["failed", "cancelled"].includes(current.state) || current.idempotencyKey !== record.idempotencyKey || (current.attemptRevision ?? 0) !== (record.attemptRevision ?? 0)) return;
+    if (!current || !["failed", "cancelled"].includes(current.state) || current.idempotencyKey !== record.idempotencyKey || (current.attemptRevision ?? 0) !== (record.attemptRevision ?? 0)) {
+      if (options.expectedAttemptRevision !== undefined) throw new Error("OFFLINE_RETRY_STATE_CHANGED");
+      return;
+    }
     if (catalog && current.targetConversationIds === undefined) {
       await partitionLegacyDownload(db, current,
         planOfflineConversationDownloads(catalog, current.scope, current.scopeId, knownRevisions), knownRevisions);
@@ -177,8 +219,15 @@ export async function retryOfflineDownload(
         throw new Error("OFFLINE_TARGET_SCOPE_CHANGED");
       }
     }
-    await patch(db, id, { state: "queued", progress: 0, error: null, cancelRequested: false, attemptRevision: (current.attemptRevision ?? 0) + 1,
-      ...(rebuild ? { jobId: null, packageId: null, admissionStarted: false, currentConversationId: undefined,
+    if (reducedAssets && (current.jobId || current.admissionStarted)) {
+      // A policy change must not orphan a possibly admitted old request.
+      await db.settings.put({ key: CANCELLATION_PREFIX + current.idempotencyKey,
+        value: { download: current, attempts: 0, retryAt: 0 } satisfies PendingCancellation });
+    }
+    await patch(db, id, { state: "queued", progress: 0, error: null, cancelRequested: false, queuePaused: false,
+      assetMode, conversationResults, attemptRevision: (current.attemptRevision ?? 0) + 1,
+      ...(reducedAssets && (current.jobId || current.admissionStarted) ? { serverCancellation: "pending" as const } : {}),
+      ...(rebuild ? { jobId: null, packageId: null, admissionStarted: false, currentConversationId: undefined, currentConversationLabel: undefined,
         idempotencyKey: crypto.randomUUID(), conversationIdempotencyKeys, knownRevisions,
         targetConversationIds, conversationCursor: 0 } : {}) });
   });
@@ -194,7 +243,7 @@ export async function resumeOfflineDownloads(signal: AbortSignal): Promise<void>
     const records = await listOfflineDownloads(db);
     // Cancellation must not wait for a connection or another queued download.
     const record = records.find((item) => ACTIVE.has(item.state) && item.cancelRequested)
-      ?? (navigator.onLine && (!offlineAuthenticationRequired() || canUseServer()) ? records.reverse().find((item) => ACTIVE.has(item.state)) : undefined);
+      ?? (!offlineQueueIsPaused(records) && navigator.onLine && (!offlineAuthenticationRequired() || canUseServer()) ? records.reverse().find((item) => ACTIVE.has(item.state)) : undefined);
     if (record) await runDownload(db, record, access, signal);
   };
   if (navigator.locks) await navigator.locks.request(`chat-reader:downloads:${db.name}`, { ifAvailable: true }, async (lock) => { if (lock) await work(); });
@@ -243,7 +292,7 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
         await patch(db, record.id, { state: "completed", progress: 100 });
         return;
       }
-      const catalog = await getOfflineCatalog();
+      const catalog = await withRequestDeadline(() => getOfflineCatalog(), signal);
       const knownRevisions = await usableOfflineRevisions(record.assetMode);
       await check();
       record = await db.transaction("rw", db.settings, async () => {
@@ -255,7 +304,7 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
     }
     if (record.targetConversationIds) {
       const targetConversationIds = record.targetConversationIds;
-      const catalog = await getOfflineCatalog();
+      const catalog = await withRequestDeadline(() => getOfflineCatalog(), signal);
       await check();
       const catalogById = new Map(catalog.conversations.map(conversation => [conversation.id, conversation]));
       const total = targetConversationIds.length;
@@ -265,106 +314,143 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
         await check();
         const conversationId = targetConversationIds[cursor];
         const catalogConversation = catalogById.get(conversationId);
-        if (!catalogConversation) throw new DownloadFailure("UNAVAILABLE_TARGET");
-        if (record.knownRevisions[conversationId] === catalogConversation.revision) {
+        if (record.conversationResults?.[conversationId]) {
           cursor += 1;
-          record = await patch(db, record.id, {
-            conversationCursor: cursor,
-            progress: Math.floor(cursor / Math.max(total, 1) * 100),
-            ...(record.currentConversationId === conversationId
-              ? { jobId: null, packageId: null, currentConversationId: undefined, admissionStarted: false }
-              : {}),
-          });
+          record = await patch(db, record.id, { conversationCursor: cursor, progress: Math.floor(cursor / Math.max(total, 1) * 100) });
           continue;
         }
-
-        if (record.currentConversationId && record.currentConversationId !== conversationId) {
-          throw new OfflinePackageImportError("STORAGE_WRITE", "Offline download continuation did not match its pending conversation.");
-        }
-        const childIdempotencyKey = record.conversationIdempotencyKeys?.[conversationId];
-        if (!childIdempotencyKey) {
-          throw new OfflinePackageImportError("STORAGE_WRITE", "Offline download continuation is missing its retry receipt.");
-        }
-        if (!record.currentConversationId) {
-          record = await patch(db, record.id, { currentConversationId: conversationId, admissionStarted: true });
-        }
-        if (!record.jobId) {
-          let queued: Awaited<ReturnType<typeof queueOfflinePackage>>;
-          try {
-            queued = await queueOfflinePackage({
-              scope: "conversation",
-              conversation_id: conversationId,
-              include_assets: record.assetMode,
-              known_revisions: record.knownRevisions[conversationId] === undefined
-                ? {}
-                : { [conversationId]: record.knownRevisions[conversationId] },
-            }, childIdempotencyKey, requestSignal(signal));
-          } catch (error) {
-            if (error instanceof ApiRequestError && [403, 404].includes(error.status)) {
-              throw new DownloadFailure("UNAVAILABLE_TARGET");
-            }
-            throw error;
-          }
-          assertOfflineAccess(access);
-          record = await patch(db, record.id, {
-            jobId: queued.job_id,
-            packageId: queued.package_id,
-            state: "generating",
-          });
-        }
-
-        while (true) {
-          await check();
-          const task = await getTask(record.jobId!, requestSignal(signal));
-          await check();
-          if (task.status === "cancelled") {
-            await patch(db, record.id, { state: "cancelled" });
-            return;
-          }
-          if (task.status === "failed") throw new DownloadFailure(offlineGenerationFailureCode(task.error_message));
-          const partProgress = task.status === "committed" ? 0.95 : Math.min(0.9, Math.max(0, task.progress / 100 * 0.9));
-          const overallProgress = Math.min(99, Math.floor((cursor + partProgress) / Math.max(total, 1) * 100));
-          if (task.status === "committed") {
-            const packageId = String(task.result.package_id ?? record.packageId);
-            record = await patch(db, record.id, { packageId, state: "downloading", progress: overallProgress });
-            const generation = authenticationGeneration();
-            const response = await fetch(`/api/offline/packages/${encodeURIComponent(packageId)}/download`, {
-              credentials: "same-origin", cache: "no-store", signal,
-            });
-            if (response.status === 401) notifyAuthenticationFailure(generation);
-            if ([403, 404].includes(response.status)) throw new DownloadFailure("EXPIRED_ARTIFACT");
-            if (!response.ok) throw new DownloadFailure("NETWORK");
-            await check();
-            await importOfflinePackage(packageId, response, {
-              signal,
-              expectedConversationId: conversationId,
-              onWriting: async () => {
-                const writingProgress = Math.min(99, Math.floor((cursor + 0.98) / Math.max(total, 1) * 100));
-                record = await patch(db, record.id, { state: "writing", progress: writingProgress });
-              },
-            });
-            const importedConversation = await db.conversations.get(conversationId);
-            const knownRevisions = importedConversation
-              ? { ...record.knownRevisions, [conversationId]: importedConversation.offline_revision }
-              : record.knownRevisions;
+        try {
+          if (!catalogConversation) throw new DownloadFailure("UNAVAILABLE_TARGET");
+          if (record.knownRevisions[conversationId] === catalogConversation.revision) {
             cursor += 1;
             record = await patch(db, record.id, {
-              knownRevisions,
+              conversationResults: { ...record.conversationResults, [conversationId]: {
+                state: "completed", label: catalogConversation.display_title, assetMode: record.assetMode,
+              } },
               conversationCursor: cursor,
-              jobId: null,
-              packageId: null,
-              currentConversationId: undefined,
-              admissionStarted: false,
-              state: "downloading",
               progress: Math.floor(cursor / Math.max(total, 1) * 100),
+              ...(record.currentConversationId === conversationId
+              ? { jobId: null, packageId: null, currentConversationId: undefined, currentConversationLabel: undefined, admissionStarted: false }
+                : {}),
             });
-            break;
+            continue;
           }
-          record = await patch(db, record.id, { state: "generating", progress: overallProgress });
-          await pause(signal);
+
+          if (record.currentConversationId && record.currentConversationId !== conversationId) {
+            throw new OfflinePackageImportError("STORAGE_WRITE", "Offline download continuation did not match its pending conversation.");
+          }
+          const childIdempotencyKey = record.conversationIdempotencyKeys?.[conversationId];
+          if (!childIdempotencyKey) {
+            throw new OfflinePackageImportError("STORAGE_WRITE", "Offline download continuation is missing its retry receipt.");
+          }
+          if (!record.currentConversationId) {
+            record = await patch(db, record.id, { currentConversationId: conversationId, currentConversationLabel: catalogConversation.display_title, admissionStarted: true });
+          }
+          if (!record.jobId) {
+            let queued: Awaited<ReturnType<typeof queueOfflinePackage>>;
+            try {
+              queued = await queueOfflinePackage({
+                scope: "conversation",
+                conversation_id: conversationId,
+                include_assets: record.assetMode,
+                known_revisions: record.knownRevisions[conversationId] === undefined
+                  ? {}
+                  : { [conversationId]: record.knownRevisions[conversationId] },
+              }, childIdempotencyKey, requestSignal(signal));
+            } catch (error) {
+              if (error instanceof ApiRequestError && [403, 404].includes(error.status)) {
+                throw new DownloadFailure("UNAVAILABLE_TARGET");
+              }
+              throw error;
+            }
+            assertOfflineAccess(access);
+            record = await patch(db, record.id, {
+              jobId: queued.job_id,
+              packageId: queued.package_id,
+              state: "generating",
+            });
+          }
+
+          while (true) {
+            await check();
+            const task = await getTask(record.jobId!, requestSignal(signal));
+            await check();
+            if (task.status === "cancelled") {
+              await patch(db, record.id, { state: "cancelled" });
+              return;
+            }
+            if (task.status === "failed") throw new DownloadFailure(offlineGenerationFailureCode(task.error_message));
+            const partProgress = task.status === "committed" ? 0.95 : Math.min(0.9, Math.max(0, task.progress / 100 * 0.9));
+            const overallProgress = Math.min(99, Math.floor((cursor + partProgress) / Math.max(total, 1) * 100));
+            if (task.status === "committed") {
+              const packageId = String(task.result.package_id ?? record.packageId);
+              record = await patch(db, record.id, { packageId, state: "downloading", progress: overallProgress });
+              const generation = authenticationGeneration();
+              const response = await withRequestDeadline(headerSignal => fetch(`/api/offline/packages/${encodeURIComponent(packageId)}/download`, {
+                credentials: "same-origin", cache: "no-store", signal: AbortSignal.any([signal, headerSignal]),
+              }), signal, 30_000);
+              try {
+                if (response.status === 401) {
+                  notifyAuthenticationFailure(generation);
+                  throw new DownloadFailure("AUTH");
+                }
+                if ([403, 404].includes(response.status)) throw new DownloadFailure("EXPIRED_ARTIFACT");
+                if (!response.ok) throw new DownloadFailure("NETWORK");
+                await check();
+                await importOfflinePackage(packageId, response, {
+                  signal,
+                  expectedConversationId: conversationId,
+                  onWriting: async () => {
+                    const writingProgress = Math.min(99, Math.floor((cursor + 0.98) / Math.max(total, 1) * 100));
+                    record = await patch(db, record.id, { state: "writing", progress: writingProgress });
+                  },
+                });
+              } finally {
+                // Header/quota rejection must stop the body before yielding to a
+                // sibling. Never retain a large unread response in the background.
+                if (!response.body?.locked) void response.body?.cancel().catch(() => undefined);
+              }
+              const importedConversation = await db.conversations.get(conversationId);
+              if (!importedConversation) throw new OfflinePackageImportError("STORAGE_WRITE", "Committed offline conversation is unavailable.");
+              const knownRevisions = { ...record.knownRevisions, [conversationId]: importedConversation.offline_revision };
+              cursor += 1;
+              record = await patch(db, record.id, {
+                knownRevisions,
+                conversationResults: { ...record.conversationResults, [conversationId]: {
+                  state: "completed", label: catalogConversation.display_title, assetMode: record.assetMode, jobId: record.jobId ?? undefined,
+                } },
+                conversationCursor: cursor,
+                jobId: null,
+                packageId: null,
+                currentConversationId: undefined,
+                currentConversationLabel: undefined,
+                admissionStarted: false,
+                state: "downloading",
+                progress: Math.floor(cursor / Math.max(total, 1) * 100),
+              });
+              break;
+            }
+            record = await patch(db, record.id, { state: "generating", progress: overallProgress });
+            await pause(signal);
+          }
+        } catch (error) {
+          // No incomplete package is published. Only a bounded, independently
+          // failed child may yield to its siblings; retain the reason and keep
+          // the final batch unresolved until explicit recovery succeeds.
+          await check();
+          const code = downloadFailureCode(error);
+          if (!offlineFailureIsIndependent(code)) throw error;
+          cursor += 1;
+          record = await patch(db, record.id, {
+            conversationResults: { ...record.conversationResults, [conversationId]: {
+              state: "failed", error: code, label: catalogConversation?.display_title, assetMode: record.assetMode, jobId: record.jobId ?? undefined,
+            } },
+            conversationCursor: cursor, jobId: null, packageId: null, currentConversationId: undefined, currentConversationLabel: undefined,
+            admissionStarted: false, state: "downloading", progress: Math.floor(cursor / Math.max(total, 1) * 100),
+          });
         }
       }
-      await patch(db, record.id, { state: "completed", progress: 100, error: null });
+      await finishDownload(db, record);
       return;
     }
   } catch (error) {
@@ -373,7 +459,7 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
     const partitionedComplete = record.targetConversationIds !== undefined
       && (record.conversationCursor ?? 0) >= record.targetConversationIds.length;
     if (partitionedComplete || record.targetConversationIds === undefined && record.packageId && await db.packages.get(record.packageId)) {
-      await patch(db, record.id, { state: "completed", progress: 100, error: null });
+      await finishDownload(db, record);
     }
     else if (record.cancelRequested) {
       // We still hold the browser writer lock: no import can publish after
@@ -388,10 +474,28 @@ async function runDownload(db: typeof offlineDb, initial: OfflineDownload, acces
     } else if (parentSignal.aborted) {
       return; // Navigation/network loss retains resumable state.
     } else {
-      const code = error instanceof DownloadFailure ? error.code : error instanceof OfflinePackageImportError ? error.code : error instanceof ApiRequestError && error.status === 404 ? "EXPIRED_ARTIFACT" : "NETWORK";
-      await patch(db, record.id, { state: "failed", error: code });
+      const code = downloadFailureCode(error);
+      await patch(db, record.id, { state: "failed", error: code, queuePaused: offlineFailurePausesQueue(code) });
     }
   } finally { cancellation.unsubscribe(); controllers.delete(initial.id); changed(); }
+}
+
+async function finishDownload(db: typeof offlineDb, record: OfflineDownload) {
+  const failures = Object.values(record.conversationResults ?? {}).filter(result => result.state === "failed");
+  const codes = new Set(failures.map(result => result.error ?? "GENERATION"));
+  await patch(db, record.id, { state: failures.length ? "failed" : "completed", progress: 100,
+    error: codes.size > 1 ? "PARTIAL" : codes.values().next().value ?? null, queuePaused: false });
+}
+
+function downloadFailureCode(error: unknown): string {
+  if (error instanceof DownloadFailure || error instanceof OfflinePackageImportError) return error.code;
+  if (error instanceof ApiRequestError) {
+    if (error.status === 401) return "AUTH";
+    if (error.status === 403) return "UNAVAILABLE_TARGET";
+    if (error.status === 404) return "EXPIRED_ARTIFACT";
+    if (error.status === 429 || error.status === 503) return "SERVER_BUSY";
+  }
+  return "NETWORK";
 }
 
 async function partitionLegacyDownload(
@@ -408,11 +512,11 @@ async function partitionLegacyDownload(
     });
   }
   return patch(db, record.id, {
-    state: "queued", progress: 0, error: null, cancelRequested: false,
+    state: "queued", progress: 0, error: null, cancelRequested: false, queuePaused: false, conversationResults: undefined,
     attemptRevision: (record.attemptRevision ?? 0) + 1,
     idempotencyKey: crypto.randomUUID(), knownRevisions, targetConversationIds,
     conversationIdempotencyKeys: Object.fromEntries(targetConversationIds.map(id => [id, crypto.randomUUID()])),
-    conversationCursor: 0, currentConversationId: undefined,
+    conversationCursor: 0, currentConversationId: undefined, currentConversationLabel: undefined,
     jobId: null, packageId: null, admissionStarted: false,
     serverCancellation: record.serverCancellation === "failed" ? "failed" : remote ? "pending" : record.serverCancellation,
   });

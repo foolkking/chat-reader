@@ -35,13 +35,15 @@ def _draft_json_default(value):
 def write_import_draft(
     import_id: uuid.UUID,
     conversations: Iterable[CanonicalDraftConversation],
+    *,
+    fresh_publication: bool = False,
 ) -> tuple[str, str, dict, datetime]:
     root = Path(get_settings().import_storage_dir).resolve()
     directory = (root / str(import_id)).resolve()
     if not directory.is_relative_to(root):
         raise ImportDraftError("Invalid import draft path.")
     directory.mkdir(parents=True, exist_ok=True)
-    destination = directory / "canonical-draft.jsonl"
+    destination = directory / (f"canonical-draft-{uuid.uuid4().hex}.jsonl" if fresh_publication else "canonical-draft.jsonl")
     temporary = directory / f".{destination.name}.{uuid.uuid4().hex}.tmp"
     digest = hashlib.sha256()
     message_count = 0
@@ -84,7 +86,9 @@ def attach_import_draft(record: ImportRecord, conversations: Iterable[CanonicalD
         from app.services.import_pipeline.stream_draft import attach_stream_draft
         attach_stream_draft(record, conversations)
         return
-    storage_uri, sha256, summary, expires_at = write_import_draft(record.id, conversations)
+    storage_uri, sha256, summary, expires_at = write_import_draft(
+        record.id, conversations, **({"fresh_publication": True} if getattr(record, "_fresh_import_draft", False) else {}),
+    )
     record.draft_storage_uri = storage_uri
     record.draft_sha256 = sha256
     record.draft_summary = summary

@@ -12,6 +12,10 @@ ARCHIVE_FAILURE_MESSAGE = (
 _SAFE_PERSISTED_ERROR_CODES = {
     "IMPORT_RESOURCE_WAIT_EXPIRED", "IMPORT_STORAGE_FULL", "IMPORT_WORKSPACE_EXCEEDED",
     "TASK_FAILED",
+    "PLAIN_EXPORT_ACCOUNT_UNAVAILABLE",
+    "PLAIN_EXPORT_SOURCE_UNAVAILABLE",
+    "PLAIN_EXPORT_LIMIT",
+    "PLAIN_EXPORT_STORAGE_UNAVAILABLE",
     "IMPORT_FAILED",
     "IMPORT_COMMIT_FAILED",
     "UPLOAD_MEMORY_PRESSURE",
@@ -146,7 +150,7 @@ _SAFE_NUMERIC_MESSAGES = (
 )
 
 _SAFE_IMPORT_FAILURE_CODES = {
-    "ZIP_METADATA_LIMIT",
+    "ZIP_METADATA_LIMIT", "ZIP_SOURCE_CHANGED", "SOURCE_CHANGED", "SOURCE_PATH_INVALID",
     "IMPORT_RESOURCE_WAIT_EXPIRED",
     "IMPORT_MESSAGE_TOO_LARGE", "IMPORT_WORKSPACE_EXCEEDED", "IMPORT_STORAGE_FULL", "ZIP_MANIFEST_INVALID",
     "UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED",
@@ -162,17 +166,40 @@ _SAFE_IMPORT_FAILURE_STAGES = {
     "admission", "archive", "analysis", "normalization", "mapping", "validation",
     "grouping", "file", "commit",
 }
+_SAFE_ARCHIVE_REASONS = frozenset({
+    "empty", "nul", "absolute", "parent_segment", "backslash", "local_filesystem",
+    "noncanonical", "duplicate", "encrypted", "special_file", "outside_archive",
+    "invalid_url", "excessive_encoding",
+})
 
 
-def adaptive_import_failure(code: str | None, stage: str | None, retryable: bool) -> dict[str, object]:
+def public_import_failure_details(value) -> dict[str, object]:
+    """Locations are bounded ordinals, never a raw source/server path or URL."""
+    if not isinstance(value, dict):
+        return {}
+    details = {}
+    if isinstance(value.get("reason"), str) and value["reason"] in _SAFE_ARCHIVE_REASONS:
+        details["reason"] = value["reason"]
+    index = value.get("entry_index")
+    if type(index) is int and 1 <= index <= 1_000_000:
+        details["entry_index"] = index
+    return details
+
+
+def adaptive_import_failure(code: str | None, stage: str | None, retryable: bool, *, details=None) -> dict[str, object]:
     """Project internal task failures onto stable, non-sensitive UI metadata."""
     safe_code = code if isinstance(code, str) and code in _SAFE_IMPORT_FAILURE_CODES else "TASK_FAILED"
     safe_stage = stage if isinstance(stage, str) and stage in _SAFE_IMPORT_FAILURE_STAGES else "analysis"
-    return {
+    result = {
         "code": safe_code,
         "stage": safe_stage,
         "retryable": bool(retryable and safe_code != "TASK_FAILED"),
     }
+    if safe_code in {"ZIP_PATH_UNSAFE", "ZIP_PATH_DUPLICATE", "ZIP_MEMBER_UNSUPPORTED", "MANIFEST_ASSET_PATH_INVALID"}:
+        safe_details = public_import_failure_details(details)
+        if safe_details:
+            result["details"] = safe_details
+    return result
 
 
 def import_failure_from_exception(exc: Exception, *, stage: str) -> dict[str, object]:
@@ -194,6 +221,7 @@ def import_failure_from_exception(exc: Exception, *, stage: str) -> dict[str, ob
                     "commit" if stage == "commit" else getattr(current, "layer", None) or "admission"
                 ),
                 code in {"UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED", "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT"},
+                details=getattr(current, "details", None),
             )
         cause = current.__cause__ or current.__context__
         if not isinstance(cause, Exception):
@@ -206,6 +234,7 @@ def public_import_failure(value, *, error_message: str | None = None, stage="ana
     if isinstance(value, dict) and isinstance(value.get("code"), str):
         return adaptive_import_failure(
             value["code"], value.get("stage"), value.get("retryable") is True,
+            details=value.get("details"),
         )
     # Legacy tasks retained this authored message, but no machine-readable code.
     safe_message = public_task_error(error_message)

@@ -20,25 +20,28 @@ export const MAX_EXPORTED_TABLE_CELLS = 50_000;
 export function readMarkdownTableData(node: unknown): MarkdownTableReadResult | null {
   if (!isTableNode(node)) return null;
 
-  const rows: string[][] = [];
+  const cellRows: MarkdownTableNode[][] = [];
   let hasHeader = false;
   let cellCount = 0;
   for (const section of node.children ?? []) {
     if (section.tagName === "thead") hasHeader = true;
-    const sectionRows = section.tagName === "tr"
-      ? [section]
-      : (section.children ?? []).filter((child) => child.tagName === "tr");
+    const sectionRows = section.tagName === "tr" ? [section] : section.children ?? [];
     for (const row of sectionRows) {
-      const cells = (row.children ?? []).filter((child) => child.tagName === "th" || child.tagName === "td");
-      rows.push(cells.map(readCellText));
-      cellCount += cells.length;
-      if (cellCount > MAX_EXPORTED_TABLE_CELLS) return { tooLarge: true };
+      if (row.tagName !== "tr") continue;
+      const cells: MarkdownTableNode[] = [];
+      for (const cell of row.children ?? []) {
+        if (cell.tagName !== "th" && cell.tagName !== "td") continue;
+        if (++cellCount > MAX_EXPORTED_TABLE_CELLS) return { tooLarge: true };
+        cells.push(cell);
+      }
+      if (cells.length) cellRows.push(cells);
     }
   }
 
-  if (!rows.length) return null;
-  const totalCells = rows.reduce((total, row) => total + row.length, 0);
-  return totalCells <= MAX_EXPORTED_TABLE_CELLS ? { rows, hasHeader } : { tooLarge: true };
+  // Establish the complete bound before walking any (potentially dense math)
+  // cell contents. Never materialize a partial oversized export.
+  if (!cellCount) return null;
+  return { rows: cellRows.map(cells => cells.map(readCellText)), hasHeader };
 }
 
 export function serializeTableData(
@@ -70,7 +73,25 @@ function readCellText(node: MarkdownTableNode): string {
     const alt = node.properties?.alt;
     return typeof alt === "string" ? alt : "";
   }
+  const classes = node.properties?.className;
+  if ((Array.isArray(classes) ? classes : String(classes ?? "").split(/\s+/)).includes("katex")) {
+    const source = findMathSource(node);
+    // KaTeX contains accessible MathML, its TeX annotation and visual HTML.
+    // Export the annotation once, without changing any rendered/accessible DOM.
+    if (source !== null) return source;
+  }
   return (node.children ?? []).map(readCellText).join("");
+}
+
+function findMathSource(node: MarkdownTableNode): string | null {
+  if (node.tagName === "annotation" && node.properties?.encoding === "application/x-tex") {
+    return (node.children ?? []).map(readCellText).join("");
+  }
+  for (const child of node.children ?? []) {
+    const source = findMathSource(child);
+    if (source !== null) return source;
+  }
+  return null;
 }
 
 function isFormulaLikeCell(value: string): boolean {

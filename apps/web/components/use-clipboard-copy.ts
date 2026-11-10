@@ -9,9 +9,14 @@ export function useClipboardCopy(value: string) {
   const [result, setResult] = useState<{ value: string; phase: CopyPhase } | null>(null);
   const sequence = useRef(0);
   useEffect(() => {
-    // A late clipboard completion must not update an unmounted control.
+    // A late clipboard completion cannot revive an old text/retired control.
     return () => { sequence.current += 1; };
-  }, []);
+  }, [value]);
+  useEffect(() => {
+    if (result?.phase !== "copied") return;
+    const timer = setTimeout(() => setResult(current => current === result ? null : current), 3000);
+    return () => clearTimeout(timer);
+  }, [result]);
   const manualRef = useRef<HTMLTextAreaElement>(null);
   const state = result?.value === value ? result.phase : "idle";
   useEffect(() => {

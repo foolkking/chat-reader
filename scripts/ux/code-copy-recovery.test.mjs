@@ -116,7 +116,7 @@ for (const locale of ["en-US", "zh-CN"]) for (const missing of [false, true]) {
     assert.deepEqual(f.selected, ["focus", "select"]);
     assert.doesNotMatch(JSON.stringify(f.alert().props.children), /synthetic-private-reason/);
     assert.notEqual(f.button().props["aria-label"], "Copied");
-    assert.equal(f.button().props.disabled, false);
+    assert.notEqual(f.button().props["aria-disabled"], true);
   });
 }
 
@@ -131,13 +131,16 @@ test("a failed copy can be retried, and a later denial replaces prior success", 
 });
 
 test("pending copying is busy and disables duplicate requests", async () => {
-  const request = defer(), f = fixture({ write: () => request.promise });
+  let writes = 0;
+  const request = defer(), f = fixture({ write: () => { writes++; return request.promise; } });
   const copied = f.click();
   f.render();
-  assert.equal(f.button().props.disabled, true);
+  assert.equal(f.button().props["aria-disabled"], true);
+  assert.notEqual(f.button().props.disabled, true, "keep the real keyboard trigger focused");
   assert.equal(f.button().props["aria-busy"], true);
+  f.button().props.onClick(); assert.equal(writes, 1);
   request.resolve(); await copied;
-  assert.equal(f.button().props.disabled, false);
+  assert.notEqual(f.button().props["aria-disabled"], true);
 });
 
 test("changing source hides old failure and fences a late old success", async () => {

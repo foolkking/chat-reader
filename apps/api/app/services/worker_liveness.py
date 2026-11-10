@@ -16,6 +16,7 @@ from app.models.worker_runtime_state import WorkerRuntimeState
 
 PRIMARY_WORKER_KEY = "primary"
 ACTIVE_JOB_STATUSES = ("processing", "cancelling")
+TaskExecution = tuple[int, datetime | None, str | None]
 
 logger = logging.getLogger(__name__)
 
@@ -93,12 +94,21 @@ def refresh_active_task_heartbeat(
     task_kind: str,
     task_id: uuid.UUID,
     now: datetime | None = None,
+    execution: TaskExecution | None = None,
 ) -> bool:
     timestamp = now or datetime.now(timezone.utc)
     if task_kind == "job":
+        query = db.query(BackgroundJob).filter(
+            BackgroundJob.id == task_id, BackgroundJob.status.in_(ACTIVE_JOB_STATUSES),
+        )
+        if execution is not None:
+            query = query.filter(
+                BackgroundJob.attempt_count == execution[0],
+                BackgroundJob.started_at == execution[1],
+                BackgroundJob.payload["execution_token"].as_string() == execution[2],
+            )
         updated = (
-            db.query(BackgroundJob)
-            .filter(BackgroundJob.id == task_id, BackgroundJob.status.in_(ACTIVE_JOB_STATUSES))
+            query
             .update({BackgroundJob.heartbeat_at: timestamp}, synchronize_session=False)
         )
     elif task_kind == "import":
@@ -134,6 +144,7 @@ class WorkerHeartbeatReporter:
         self._state = "idle"
         self._task_kind: str | None = None
         self._task_id: uuid.UUID | None = None
+        self._execution: TaskExecution | None = None
         self._registered = False
         self._worker_failure_active = False
         self._task_failure_active = False
@@ -160,11 +171,12 @@ class WorkerHeartbeatReporter:
         if self._thread is not None:
             self._thread.join(timeout=max(1.0, self.interval_seconds))
 
-    def set_busy(self, task_kind: str, task_id: uuid.UUID) -> bool:
+    def set_busy(self, task_kind: str, task_id: uuid.UUID, *, execution: TaskExecution | None = None) -> bool:
         with self._state_lock:
             self._state = "busy"
             self._task_kind = task_kind
             self._task_id = task_id
+            self._execution = execution
         return self.pulse()
 
     def set_idle(self) -> bool:
@@ -173,6 +185,7 @@ class WorkerHeartbeatReporter:
             self._state = "idle"
             self._task_kind = None
             self._task_id = None
+            self._execution = None
         if changed:
             return self.pulse()
         return not self._superseded
@@ -185,6 +198,7 @@ class WorkerHeartbeatReporter:
                 state = self._state
                 task_kind = self._task_kind
                 task_id = self._task_id
+                execution = self._execution
             try:
                 with self._session_factory() as db:
                     if not self._registered:
@@ -232,6 +246,7 @@ class WorkerHeartbeatReporter:
                             task_kind=task_kind,
                             task_id=task_id,
                             now=now,
+                            execution=execution,
                         )
                         task_db.commit()
                     if self._task_failure_active:

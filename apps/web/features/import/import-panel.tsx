@@ -1,12 +1,12 @@
 "use client";
 
-import { importErrorMessage, importFailureMessage, importWarningMessage, useImportCopy, type ImportCopy } from "./import-workspace-copy";
+import { importErrorMessage, importFailureMessage, importWarningMessage, importStateLabel, useImportCopy, type ImportCopy } from "./import-workspace-copy";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud } from "lucide-react";
+import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent } from "react";
-import { ApiRequestError, cancelAdaptiveImportSession, commitImport, createAdaptiveImportSession, getAdaptiveImportSession, getImportStatus, getProjects, previewImport, retryTask, updateAdaptiveImportDestination } from "../../lib/api";
+import { ApiRequestError, cancelAdaptiveImportSession, cancelTask, commitImport, createAdaptiveImportSession, excludeAdaptiveImportSource, getAdaptiveImportSession, getImportStatus, getProjects, previewImport, replaceAdaptiveImportArtifact, resumeAdaptiveImportSession, retryTask, updateAdaptiveImportDestination } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
 import { readAccountCapabilities } from "../../lib/auth-client";
 import { authenticationGeneration } from "../../lib/offline-access";
@@ -25,6 +25,10 @@ type ImportMode = "adaptive" | "archive";
 type ImportSessionRestoreState = {
   phase: "idle" | "loading" | "error";
   error: unknown | null;
+};
+type SourceRepairControl = {
+  taskId: string | null; state: "uploading" | "unknown"; excludeArtifactId?: string;
+  replaceArtifactId?: string; sourceRevision?: number;
 };
 const ACTIVE_SESSION_KEY = "chat-reader:adaptive-import-session";
 
@@ -68,6 +72,11 @@ export function ImportPanel({
   const mounted = useRef(true);
   const generation = useRef(authenticationGeneration());
   const current = useCallback(() => mounted.current && generation.current === authenticationGeneration(), []);
+  const paneEpoch = useRef(0);
+  const mutationOwner = () => ({ epoch: paneEpoch.current, generation: authenticationGeneration() });
+  const ownsMutation = (owner: ReturnType<typeof mutationOwner> | undefined) => Boolean(
+    current() && owner?.epoch === paneEpoch.current && owner?.generation === authenticationGeneration(),
+  );
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
@@ -106,12 +115,44 @@ export function ImportPanel({
   const [conversionOpen, setConversionOpen] = useState(false);
   const conversionId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const replaceSelectionRef = useRef(false);
+  useEffect(() => {
+    const input = fileInputRef.current;
+    const cancelSelection = () => { replaceSelectionRef.current = false; };
+    input?.addEventListener("cancel", cancelSelection);
+    return () => input?.removeEventListener("cancel", cancelSelection);
+  }, [mode, inputMethod, session?.import_id]);
+  const fileListRef = useRef<HTMLOListElement>(null);
+  const nextFileFocus = useRef<number | null>(null);
+  const [excludeSourceId, setExcludeSourceId] = useState<string | null>(null);
+  const [workspaceEditState, setWorkspaceEditState] = useState({ dirty: false, busy: false });
+  const handleMappingStateChange = useCallback((state: { dirty: boolean; busy: boolean; background?: boolean }) => {
+    setWorkspaceEditState(previous => previous.dirty === state.dirty && previous.busy === state.busy ? previous : state);
+    onMappingStateChange?.(state);
+  }, [onMappingStateChange]);
+  useEffect(() => {
+    if (nextFileFocus.current === null) return;
+    const index = Math.min(nextFileFocus.current, files.length - 1);
+    const action = fileListRef.current?.children[index]?.querySelector<HTMLButtonElement>("button");
+    (action ?? fileInputRef.current)?.focus({ preventScroll: true });
+    nextFileFocus.current = null;
+  }, [files]);
   const [duplicatePolicy, setDuplicatePolicy] = useState<ImportDuplicatePolicy>("clone");
   const completedImportRef = useRef<string | null>(null);
   const resumeSessionRef = useRef(resumeImportId);
   const previewButtonRef = useRef<HTMLButtonElement>(null);
   const targetSessionRef = useRef<string | null>(null);
   const activeSessionKey = sessionStorageKey(repairProfileId);
+  const [savedImportId, setSavedImportId] = useState<string | null>(null);
+  const [discardConfirm, setDiscardConfirm] = useState(false);
+  const [stopUnconfirmed, setStopUnconfirmed] = useState(false);
+  useEffect(() => { setSavedImportId(window.sessionStorage.getItem(activeSessionKey)); }, [activeSessionKey]);
+  useEffect(() => {
+    setStopUnconfirmed(false);
+    if (session?.state !== "CANCELING") return;
+    const timer = setTimeout(() => setStopUnconfirmed(true), 30_000);
+    return () => clearTimeout(timer);
+  }, [session?.import_id, session?.state]);
   const activeFileBytes = inputMethod === "paste"
     ? (pastedText ? pastedTranscriptByteLength(pastedText) : 0)
     : files.reduce((largest, file) => Math.max(largest, file.size), 0);
@@ -133,7 +174,8 @@ export function ImportPanel({
   }, [initialProjectId, session?.import_id, session?.target_project_id]);
   useEffect(() => {
     let active = true;
-    const importId = resumeSessionRef.current ?? window.sessionStorage.getItem(activeSessionKey);
+    // A saved pointer is an offer to resume, never an implicit navigation.
+    const importId = resumeSessionRef.current;
     if (!importId || session) return;
     const controller = new AbortController();
     setSessionRestore({ phase: "loading", error: null });
@@ -235,8 +277,9 @@ export function ImportPanel({
 
   const adaptiveMutation = useMutation({
     mutationFn: (selectedFiles: File[]) => createAdaptiveImportSession(selectedFiles, repairProfileId, targetProjectId),
-    onSuccess: (result) => {
-      if (!current()) return;
+    onMutate: mutationOwner,
+    onSuccess: (result, _files, owner) => {
+      if (!ownsMutation(owner)) return;
       window.sessionStorage.setItem(activeSessionKey, result.import_id);
       targetSessionRef.current = result.import_id;
       setSession(result);
@@ -248,16 +291,19 @@ export function ImportPanel({
   });
   const cancelMutation = useMutation({
     mutationFn: cancelAdaptiveImportSession,
-    onSuccess: () => {
-      if (!current()) return;
+    onMutate: mutationOwner,
+    onSuccess: (_result, _id, owner) => {
+      if (!ownsMutation(owner)) return;
       window.sessionStorage.removeItem(activeSessionKey);
+      setSavedImportId(null);
       reset("adaptive");
       void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     },
   });
   const archiveMutation = useMutation({
     mutationFn: previewImport,
-    onSuccess: (result) => { if (current()) { setArchivePreview(result); setSession(null); } },
+    onMutate: mutationOwner,
+    onSuccess: (result, _files, owner) => { if (ownsMutation(owner)) { setArchivePreview(result); setSession(null); } },
   });
   const commitMutation = useMutation({
     mutationFn: ({ importId, policy }: { importId: string; policy: ImportDuplicatePolicy }) => {
@@ -267,8 +313,9 @@ export function ImportPanel({
       setImageLaneWidth(lane);
       return commitImport(importId, { duplicatePolicy: policy, projectId: targetProjectId, ...(mode === "adaptive" ? { imageLaneWidth: lane } : {}) });
     },
-    onSuccess: (result) => {
-      if (!current()) return;
+    onMutate: mutationOwner,
+    onSuccess: (result, _variables, owner) => {
+      if (!ownsMutation(owner)) return;
       setTerminalImportError(null);
       setCommitResult(result);
       if (result.status === "committed") finishCommittedImport(result);
@@ -278,21 +325,23 @@ export function ImportPanel({
   });
   const retryImportMutation = useMutation({
     mutationFn: (importId: string) => retryTask(importId),
-    onSuccess: (task) => {
-      if (!current()) return;
+    onMutate: mutationOwner,
+    onSuccess: (task, _id, owner) => {
+      if (!ownsMutation(owner)) return;
       setTerminalImportError(null);
       setTerminalImportId(null);
       setCommitResult(null);
       setPendingImportId(task.job_id);
       if (session) {
-        void getAdaptiveImportSession(task.job_id).then(next => { if (current()) setSession(next); }).catch(() => undefined);
+        void getAdaptiveImportSession(task.job_id).then(next => { if (ownsMutation(owner)) setSession(next); }).catch(() => undefined);
       }
     },
   });
   const retryAnalysisMutation = useMutation({
     mutationFn: (taskId: string) => retryTask(taskId),
-    onSuccess: task => {
-      if (!current()) return;
+    onMutate: mutationOwner,
+    onSuccess: (task, _id, owner) => {
+      if (!ownsMutation(owner)) return;
       setSession(previous => previous?.analysis_task_id === task.job_id
         ? { ...previous, state: "ANALYZING", phase: "queued", progress: 0, error_message: null, failure: null }
         : previous);
@@ -302,14 +351,98 @@ export function ImportPanel({
   });
   const destinationMutation = useMutation({
     mutationFn: ({ importId, projectId }: { importId: string; projectId: string | null }) => updateAdaptiveImportDestination(importId, projectId),
-    onSuccess: (updated) => {
-      if (!current()) return;
+    onMutate: mutationOwner,
+    onSuccess: (updated, _variables, owner) => {
+      if (!ownsMutation(owner)) return;
       setSession(updated);
       setTargetProjectId(updated.target_project_id ?? null);
       targetSessionRef.current = updated.import_id;
       void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
     },
   });
+  const stopMutation = useMutation({
+    mutationFn: (taskId: string) => cancelTask(taskId, undefined, "retain"),
+    onMutate: mutationOwner,
+    onSuccess: (task, _id, owner) => {
+      if (!ownsMutation(owner)) return;
+      if (["cancelling", "cancelled"].includes(task.status)) {
+        // Reconcile the retained session with GET; do not manufacture a
+        // PAUSED revision that could be used for a stale resume.
+        setSession(previous => previous?.analysis_task_id === task.job_id ? { ...previous, state: "CANCELING" } : previous);
+      }
+      void queryClient.invalidateQueries({ queryKey: ["adaptive-import-analysis", session?.import_id] });
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
+    },
+  });
+  const resumeMutation = useMutation({
+    mutationFn: (value: { importId: string; updatedAt: string }) => resumeAdaptiveImportSession(value.importId, value.updatedAt),
+    onMutate: mutationOwner,
+    onSuccess: (next, _value, owner) => {
+      if (!ownsMutation(owner)) return;
+      setSession(next);
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
+    },
+  });
+  const sourceRepairKey = useMemo(() => ["import-source-repair", generation.current, session?.import_id] as const, [session?.import_id]);
+  const sourceRepairControlQuery = useQuery<SourceRepairControl | null>({
+    queryKey: sourceRepairKey, queryFn: async () => null, enabled: false,
+    initialData: null, gcTime: Infinity, staleTime: Infinity,
+  });
+  const sourceRepairControl = sourceRepairControlQuery.data;
+  const sourceRepairMutation = useMutation({
+    mutationFn: (value: { importId: string; artifactId: string; file?: File; updatedAt: string; taskId: string | null; sourceRevision?: number }) =>
+      value.file ? replaceAdaptiveImportArtifact(value.importId, value.artifactId, value.file, value.updatedAt)
+        : excludeAdaptiveImportSource(value.importId, value.artifactId, value.updatedAt),
+    onMutate: mutationOwner,
+    onSuccess: (next, value, owner) => {
+      // Cache acknowledgement may outlive this pane, never its account.
+      if (owner?.generation === authenticationGeneration()) {
+        queryClient.setQueryData(["import-source-repair", owner.generation, value.importId], null);
+        // A pane reopened during this request must receive the acknowledgement,
+        // not merely lose its lock while still displaying the old revision.
+        queryClient.setQueryData(["adaptive-import-analysis", value.importId, owner.generation, value.taskId],
+          { value: next, generation: owner.generation, analysisTaskId: value.taskId });
+      }
+      if (!ownsMutation(owner)) return;
+      setExcludeSourceId(null);
+      setSession(next);
+      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
+    },
+    onError: (error, value, owner) => {
+      if (owner?.generation !== authenticationGeneration()) return;
+      // Only an explicit rejection proves that choosing another source is safe.
+      const rejected = error instanceof ApiRequestError && error.status >= 400 && error.status < 500
+        && ![408, 429].includes(error.status);
+      queryClient.setQueryData<SourceRepairControl | null>(["import-source-repair", owner.generation, value.importId],
+        (): SourceRepairControl | null => rejected ? null : { taskId: value.taskId, state: "unknown",
+          ...(!value.file ? { excludeArtifactId: value.artifactId }
+            : { replaceArtifactId: value.artifactId, sourceRevision: value.sourceRevision }) });
+    },
+  });
+  const sourceRepairUnknown = Boolean(sourceRepairControl && !sourceRepairMutation.isPending);
+  useEffect(() => {
+    if (!current() || !session || !sourceRepairControl) return;
+    const excluded = sourceRepairControl.excludeArtifactId && session.sources
+      && !session.sources.some(source => source.artifact_id === sourceRepairControl.excludeArtifactId);
+    const replaced = sourceRepairControl.replaceArtifactId && sourceRepairControl.sourceRevision !== undefined
+      && session.sources?.some(source => source.artifact_id === sourceRepairControl.replaceArtifactId
+        && (source.source_revision ?? 0) > sourceRepairControl.sourceRevision!);
+    if (!excluded && !replaced && (session.analysis_task_id ?? null) === sourceRepairControl.taskId) return;
+    queryClient.setQueryData(sourceRepairKey, null);
+    setExcludeSourceId(null);
+    sourceRepairMutation.reset();
+  }, [current, session, sourceRepairControl, queryClient, sourceRepairKey, sourceRepairMutation.reset]);
+  useEffect(() => {
+    const result = analysisSessionQuery.data;
+    if (!result || !current() || result.generation !== authenticationGeneration()
+      || result.value.import_id !== session?.import_id || result.analysisTaskId !== analysisTaskId) return;
+    const state = result.value.state;
+    if (stopMutation.isError && ["PAUSED", "CANCELED", "COMPLETED"].includes(state)) stopMutation.reset();
+    if (resumeMutation.isError && state !== "PAUSED") resumeMutation.reset();
+    if (cancelMutation.isError && state === "CANCELED") cancelMutation.reset();
+    if (retryAnalysisMutation.isError && ["ANALYZING", "READY", "RESOLVING"].includes(state)) retryAnalysisMutation.reset();
+  }, [analysisSessionQuery.data, analysisTaskId, current, session?.import_id, stopMutation.isError, stopMutation.reset,
+    resumeMutation.isError, resumeMutation.reset, cancelMutation.isError, cancelMutation.reset, retryAnalysisMutation.isError, retryAnalysisMutation.reset]);
   const busy = sessionRestore.phase === "loading" || adaptiveMutation.isPending || archiveMutation.isPending || commitMutation.isPending || retryImportMutation.isPending || Boolean(pendingImportId);
 
   const validationError = useMemo(() => {
@@ -322,14 +455,20 @@ export function ImportPanel({
       return null;
     }
     if (capabilities.data && files.some((file) => file.size > capabilities.data.maximum_import_size_mb * 1024 * 1024)) return tr("单个文件不能超过当前上限 {0} MiB。", capabilities.data.maximum_import_size_mb);
+    if (files.some(file => file.size === 0)) return zh ? "文件为空，请替换或移出待选列表。" : "This file is empty. Replace it or remove it from the selection.";
     const totalLimit = capabilities.data?.maximum_import_total_mb;
     if (totalLimit != null && files.reduce((bytes, file) => bytes + file.size, 0) > totalLimit * 1024 * 1024) return tr("本批文件合计不能超过 {0} MiB，请分批导入。", totalLimit);
     return validateFiles(files, mode, tr);
-  }, [activeFileBytes, activeTotalBytes, files, inputMethod, mode, pastedText, capabilities.data, tr]);
+  }, [activeFileBytes, activeTotalBytes, files, inputMethod, mode, pastedText, capabilities.data, tr, zh]);
+  const selectedFileErrors = useMemo(() => files.map(file => validateFiles([file], mode, tr)
+    ?? (file.size === 0 ? (zh ? "文件为空，请替换或移出待选列表。" : "This file is empty. Replace it or remove it from the selection.") : null)
+    ?? (capabilities.data && file.size > capabilities.data.maximum_import_size_mb * 1024 * 1024
+      ? tr("单个文件不能超过当前上限 {0} MiB。", capabilities.data.maximum_import_size_mb) : null)), [files, mode, tr, capabilities.data, zh]);
   const targetProject = projects.data?.find((project) => project.id === targetProjectId);
   const destinationUnavailable = Boolean(targetProjectId && projects.isSuccess && !targetProject);
 
   function reset(nextMode = mode) {
+    paneEpoch.current++;
     resumeSessionRef.current = null;
     setMode(nextMode);
     setInputMethod("files");
@@ -343,17 +482,34 @@ export function ImportPanel({
     setTerminalImportError(null);
     setTerminalImportId(null);
     setConversionOpen(false);
+    setDiscardConfirm(false);
+    setExcludeSourceId(null);
+    setWorkspaceEditState({ dirty: false, busy: false });
     setDuplicatePolicy("clone");
     completedImportRef.current = null;
     adaptiveMutation.reset();
     archiveMutation.reset();
     commitMutation.reset();
     retryImportMutation.reset();
+    retryAnalysisMutation.reset();
+    cancelMutation.reset();
+    stopMutation.reset();
+    resumeMutation.reset();
+    sourceRepairMutation.reset();
+    onMappingStateChange?.({ dirty: false, busy: false });
+  }
+
+  function leaveRetainedSession() {
+    setSavedImportId(session?.import_id ?? null);
+    reset("adaptive");
+    setSessionRestoreRetry(attempt => attempt + 1);
+    void queryClient.invalidateQueries({ queryKey: ["unfinished-imports"] });
   }
 
   function chooseFiles(nextFiles: File[], nextMode = mode) {
     if (busy) return;
     window.sessionStorage.removeItem(activeSessionKey);
+    setSavedImportId(null);
     reset(nextMode);
     setFiles(nextFiles);
   }
@@ -373,32 +529,90 @@ export function ImportPanel({
     setDragging(false);
     if (busy) return;
     const nextFiles = Array.from(event.dataTransfer.files);
-    chooseFiles(nextFiles);
+    if (nextFiles.length) chooseFiles(mode === "adaptive" ? [...files, ...nextFiles] : nextFiles);
   }
 
   if (session) {
     const analysisPending = ["COLLECTING", "ANALYZING", "CANCELING"].includes(session.state);
     const analysisFailed = session.state === "FAILED" && session.phase === "analysis_failed";
+    const repairBusy = sourceRepairMutation.isPending || Boolean(sourceRepairControl);
+    const repairDisabled = repairBusy || resumeMutation.isPending || resumeMutation.isError
+      || retryAnalysisMutation.isPending || retryAnalysisMutation.isError || destinationMutation.isPending
+      || workspaceEditState.dirty || workspaceEditState.busy || commitMutation.isPending || Boolean(pendingImportId)
+      || !session.updated_at;
+    const canRepairSources = ["FAILED", "PAUSED", "READY", "RESOLVING", "NEEDS_GROUPING", "BLOCKED"].includes(session.state)
+      && !["queued", "processing", "committed"].includes(session.status ?? "");
+    const changeSource = (artifactId: string, file?: File) => {
+      if (repairDisabled || !session.updated_at || !current() || queryClient.getQueryData(sourceRepairKey)) return;
+      const sourceRevision = session.sources?.find(source => source.artifact_id === artifactId)?.source_revision;
+      queryClient.setQueryData<SourceRepairControl>(sourceRepairKey, {
+        taskId: session.analysis_task_id ?? null, state: "uploading", ...(!file ? { excludeArtifactId: artifactId }
+          : { replaceArtifactId: artifactId, sourceRevision }),
+      });
+      sourceRepairMutation.mutate({ importId: session.import_id, artifactId, file,
+        updatedAt: session.updated_at, taskId: session.analysis_task_id ?? null, sourceRevision });
+    };
+    const sourceActions = canRepairSources && session.sources?.length ? <div data-testid="import-source-actions" className="divide-y divide-[var(--border)] border-y border-ui">
+      {session.sources.map((source, index) => <div key={source.artifact_id} className="space-y-2 py-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="min-w-0 flex-1 break-words text-sm text-primary"><span className="mr-2 tabular-nums text-secondary">{index + 1}.</span>{source.filename}</span>
+          <label className={`btn-secondary relative inline-flex min-h-11 items-center px-3 text-sm ${repairDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer focus-within:ring-2 focus-within:ring-[var(--focus)]"}`}>
+            {zh ? "替换来源" : "Replace source"}
+            <input type="file" className="sr-only" accept=".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,.zip"
+              aria-label={zh ? `替换来源：${source.filename}` : `Replace source: ${source.filename}`} disabled={repairDisabled}
+              onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; if (file) changeSource(source.artifact_id, file); }} />
+          </label>
+          {session.sources!.length > 1 ? <button type="button" disabled={repairDisabled}
+            aria-label={zh ? `移出本次导入：${source.filename}` : `Exclude from this import: ${source.filename}`}
+            className="min-h-11 px-3 text-sm text-secondary hover:text-primary disabled:opacity-50"
+            onClick={() => setExcludeSourceId(source.artifact_id)}>{zh ? "移出…" : "Exclude…"}</button> : null}
+        </div>
+        {excludeSourceId === source.artifact_id ? <div className="space-y-2 border-l-2 border-[var(--color-semantic-warning)] pl-3 text-sm">
+          <p>{zh ? "将整份来源及其中的对话移出本次导入，本机原文件不变。其余来源会重新检查，之后仍需确认导入。"
+            : "Exclude this entire source and its conversations from this import. Your local file is unchanged. Remaining sources will be checked again and still require confirmation."}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={repairDisabled} className="btn-secondary min-h-11 px-3" onClick={() => changeSource(source.artifact_id)}>{zh ? "确认移出" : "Confirm exclusion"}</button>
+            <button type="button" disabled={repairBusy} className="min-h-11 px-3 text-secondary" onClick={() => setExcludeSourceId(null)}>{zh ? "保留来源" : "Keep source"}</button>
+          </div>
+        </div> : null}
+      </div>)}
+      <p className="py-2 text-xs text-secondary">{zh ? "只调整选中的来源，其他文件保留；重新分析后仍需审阅并确认导入。" : "Only the selected source changes. Other files remain; review and confirm after analysis."}</p>
+    </div> : null;
+    const sourceFeedback = <>
+      {sourceRepairMutation.isPending ? <p role="status" className="text-sm text-secondary">{sourceRepairControl?.excludeArtifactId
+        ? (zh ? "正在提交移出请求…" : "Requesting source exclusion…")
+        : (zh ? "正在上传替换来源…" : "Uploading replacement source…")}</p> : null}
+      {sourceRepairUnknown ? <div role="status" className="space-y-2 border-l-2 border-[var(--color-semantic-warning)] pl-3 text-sm">
+        <p>{sourceRepairControl?.excludeArtifactId
+          ? (zh ? "移出结果尚未确认。请核对状态，不要重复提交。" : "The exclusion result is unconfirmed. Check its status before submitting again.")
+          : (zh ? "替换结果尚未确认。请核对状态，不要重复上传；其他文件仍保留。" : "The replacement result is unconfirmed. Check its status before uploading again; other files remain.")}</p>
+        <button type="button" className="btn-secondary min-h-11 px-3" disabled={analysisSessionQuery.isFetching} onClick={() => { void analysisSessionQuery.refetch(); }}>{tr("核对状态")}</button>
+      </div> : sourceRepairMutation.error ? <div className="space-y-2">
+        <ErrorLine message={sourceRepairMutation.error} />
+        <button type="button" className="btn-secondary min-h-11 px-3 text-sm" disabled={analysisSessionQuery.isFetching}
+          onClick={() => { void analysisSessionQuery.refetch(); }}>{tr("刷新会话状态")}</button>
+      </div> : null}
+    </>;
     const failure = typeof session.analysis_summary?.failure === "object" && session.analysis_summary.failure !== null
       ? session.analysis_summary.failure as Record<string, unknown>
       : null;
     const failureMessage = importFailureMessage(
       session.failure ?? failure, session.error_message, "analysis", zh,
     );
-    if (analysisPending || analysisFailed || session.state === "CANCELED") {
+    if (analysisPending || analysisFailed || session.state === "CANCELED" || session.state === "PAUSED") {
       return (
         <section className="space-y-4" aria-labelledby="import-analysis-title" data-testid="import-analysis-status">
           <ImportDestinationPicker
             projects={projects.data ?? []}
             projectId={targetProjectId}
             onChange={(projectId) => destinationMutation.mutate({ importId: session.import_id, projectId })}
-            disabled={destinationMutation.isPending || session.state === "CANCELING" || session.state === "CANCELED"}
+            disabled={repairBusy || destinationMutation.isPending || session.state === "CANCELING" || session.state === "CANCELED"}
             saving={destinationMutation.isPending}
             unavailable={destinationUnavailable}
             error={destinationMutation.error}
           />
           <h3 id="import-analysis-title" className="text-lg font-semibold text-primary">
-            {session.phase === "waiting_resources" ? (zh ? "正在等待可用资源" : "Waiting for available resources") : tr(analysisFailed ? "导入分析未完成" : session.state === "CANCELED" ? "导入分析已取消" : session.state === "CANCELING" ? "正在停止导入分析" : session.phase === "queued" ? "已加入后台分析队列" : "正在后台分析文件")}
+            {session.state === "PAUSED" ? tr("分析已停止，来源与设置已保留") : session.phase === "waiting_resources" ? (zh ? "正在等待可用资源" : "Waiting for available resources") : tr(analysisFailed ? "导入分析未完成" : session.state === "CANCELED" ? "导入分析已取消" : session.state === "CANCELING" ? "正在停止导入分析" : session.phase === "queued" ? "已加入后台分析队列" : "正在后台分析文件")}
           </h3>
           <p className="text-sm leading-6 text-secondary">{session.state === "CANCELED"
             ? tr("本次临时来源已移除，尚未导入对话。你可以重新选择文件。")
@@ -409,15 +623,37 @@ export function ImportPanel({
           {analysisPending ? <div role="progressbar" aria-label={tr("导入分析")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.max(0, Math.min(100, session.progress ?? 0))} className="h-1 overflow-hidden rounded-full bg-subtle">
             <div className="h-full bg-accent" style={{ width: `${Math.max(0, Math.min(100, session.progress ?? 0))}%` }} />
           </div> : null}
+          {analysisPending && session.analysis_progress ? <p role="status" className="text-xs tabular-nums text-secondary">
+            {({
+              archives: zh ? "检查 ZIP" : "Checking ZIP",
+              recognition: zh ? "识别格式" : "Recognizing format",
+              validation: zh ? "验证内容" : "Validating content",
+              draft: zh ? "生成预览" : "Building preview",
+            })[session.analysis_progress.stage]} · {session.analysis_progress.unit_index}/{session.analysis_progress.unit_total}
+            {zh ? " 个处理单元，按选择顺序逐个处理" : " units, processed in selection order"}
+          </p> : null}
           {analysisFailed ? <p role="alert" className="text-sm text-[var(--danger)]">{failureMessage
             ?? tr("首轮分析失败，尚未导入对话。源文件仍保留，可在任务中心重试或重新选择文件。")}</p> : null}
+          {sourceActions}
+          {sourceFeedback}
           {analysisSessionQuery.error ? <ErrorLine message={analysisSessionQuery.error} onRetry={() => { void analysisSessionQuery.refetch(); }} retrying={analysisSessionQuery.isFetching} /> : null}
-          {cancelMutation.error || retryAnalysisMutation.error ? <ErrorLine message={cancelMutation.error ?? retryAnalysisMutation.error} /> : null}
+          {stopUnconfirmed || stopMutation.error || resumeMutation.error || cancelMutation.error || retryAnalysisMutation.error ? <div role="status" className="space-y-2 border-l-2 border-[var(--warning)] pl-3 text-sm text-secondary">
+            <p>{tr(stopUnconfirmed ? "停止尚未确认，不代表已经结束。可以核对状态，或先离开处理其他文件；原任务不会被重复提交。" : "操作结果需要核对。请先读取原任务状态，不要重复提交；来源不会因关闭窗口而删除。")}</p>
+            <button type="button" className="btn-secondary min-h-11 px-3" disabled={analysisSessionQuery.isFetching} onClick={() => { void analysisSessionQuery.refetch(); }}>{tr("核对状态")}</button>
+          </div> : null}
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-primary min-h-11 px-4 text-sm" onClick={() => { onImportCommitted?.(); window.dispatchEvent(new Event("chat-reader:open-task-center")); }}>{tr("查看后台任务")}</button>
-            {analysisFailed && session.analysis_task_id ? <button type="button" disabled={retryAnalysisMutation.isPending} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => retryAnalysisMutation.mutate(session.analysis_task_id!)}>{tr(retryAnalysisMutation.isPending ? "正在提交重试…" : "重试分析")}</button> : null}
-            {session.state !== "CANCELING" ? <button type="button" disabled={cancelMutation.isPending || retryAnalysisMutation.isPending} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => cancelMutation.mutate(session.import_id)}>{tr(analysisFailed || session.state === "CANCELED" ? "重新选择文件" : "取消本次分析")}</button> : null}
+            {analysisFailed && session.analysis_task_id ? <button type="button" disabled={repairBusy || retryAnalysisMutation.isPending || retryAnalysisMutation.isError} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => { if (!queryClient.getQueryData(sourceRepairKey)) retryAnalysisMutation.mutate(session.analysis_task_id!); }}>{tr(retryAnalysisMutation.isPending ? "正在提交重试…" : "重试分析")}</button> : null}
+            {session.state === "PAUSED" ? <button type="button" disabled={repairBusy || resumeMutation.isPending || resumeMutation.isError || session.source_status === "missing" || !session.updated_at} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => { if (session.updated_at && !queryClient.getQueryData(sourceRepairKey)) resumeMutation.mutate({ importId: session.import_id, updatedAt: session.updated_at }); }}>{tr(resumeMutation.isPending ? "正在提交…" : "继续分析")}</button> : null}
+            {analysisPending && session.state !== "CANCELING" && session.analysis_task_id ? <button type="button" disabled={stopMutation.isPending || stopMutation.isError} className="btn-secondary min-h-11 px-4 text-sm" onClick={() => stopMutation.mutate(session.analysis_task_id!)}>{tr(stopMutation.isPending ? "正在请求停止…" : "停止并保留")}</button> : null}
+            <button type="button" className="btn-secondary min-h-11 px-4 text-sm" onClick={leaveRetainedSession}>{tr("返回文件选择")}</button>
+            {!analysisPending && session.state !== "CANCELED" ? <button type="button" disabled={repairBusy} className="min-h-11 px-3 text-sm text-secondary" onClick={() => setDiscardConfirm(true)}>{tr("放弃本次导入…")}</button> : null}
           </div>
+          {discardConfirm ? <div className="space-y-2 border-l-2 border-[var(--danger)] pl-3 text-sm">
+            <p>{tr("放弃将删除本次暂存来源和导入草稿。已导入的其他对话不会改变。")}</p>
+            <div className="flex gap-2"><button type="button" className="btn-secondary min-h-11 px-3 text-[var(--danger)]" disabled={cancelMutation.isPending || cancelMutation.isError} onClick={() => cancelMutation.mutate(session.import_id)}>{tr("确认放弃")}</button>
+              <button type="button" className="btn-secondary min-h-11 px-3" onClick={() => setDiscardConfirm(false)}>{tr("保留")}</button></div>
+          </div> : null}
         </section>
       );
     }
@@ -427,7 +663,7 @@ export function ImportPanel({
           projects={projects.data ?? []}
           projectId={targetProjectId}
           onChange={(projectId) => destinationMutation.mutate({ importId: session.import_id, projectId })}
-          disabled={destinationMutation.isPending || commitMutation.isPending || Boolean(pendingImportId)}
+          disabled={repairBusy || destinationMutation.isPending || commitMutation.isPending || Boolean(pendingImportId)}
           saving={destinationMutation.isPending}
           unavailable={destinationUnavailable}
           error={destinationMutation.error}
@@ -435,13 +671,19 @@ export function ImportPanel({
         <p className="text-xs text-secondary">{zh
           ? `新图片默认适应 ${shownImageLane ?? "…"}px 阅读栏；确认导入时记录一次，原图保留。无法安全转换时会提示。`
           : `New images fit the ${shownImageLane ?? "…"}px reading column once on import. Originals are kept; unsupported conversions are reported.`}</p>
+        {sourceActions ? <details open={repairBusy || excludeSourceId !== null ? true : undefined}>
+          <summary className="min-h-11 cursor-pointer content-center text-sm text-secondary">{zh ? `调整来源文件（${session.sources!.length}）` : `Adjust source files (${session.sources!.length})`}</summary>
+          {sourceActions}
+        </details> : null}
+        {sourceFeedback}
+        {sourceRepairUnknown && analysisSessionQuery.error ? <ErrorLine message={analysisSessionQuery.error} /> : null}
         <AdaptiveImportWorkspace
-          onMappingStateChange={onMappingStateChange}
+          onMappingStateChange={handleMappingStateChange}
           session={session}
           onSession={setSession}
-          onBack={() => cancelMutation.mutate(session.import_id)}
+          onBack={leaveRetainedSession}
           onImport={() => commitMutation.mutate({ importId: session.import_id, policy: duplicatePolicy })}
-          importing={commitMutation.isPending || Boolean(pendingImportId)}
+          importing={repairBusy || commitMutation.isPending || Boolean(pendingImportId)}
           error={retryImportMutation.error ?? cancelMutation.error ?? commitMutation.error ?? terminalImportError ?? importStatusQuery.data?.error_message ?? null}
           onRetryImport={terminalImportId ? () => retryImportMutation.mutate(terminalImportId) : undefined}
           retryingImport={retryImportMutation.isPending}
@@ -466,14 +708,17 @@ export function ImportPanel({
 
   return (
     <section className="space-y-5">
-      {mode === "adaptive" ? <section className="space-y-2 border-b border-ui pb-3" aria-label={zh ? "待完成导入" : "Unfinished imports"}>
+      {mode === "adaptive" && (!unfinished.isSuccess || Boolean(unfinished.data?.items?.length) || unfinishedOffset > 0) ? <section className="space-y-2 border-b border-ui pb-3" aria-label={zh ? "待完成导入" : "Unfinished imports"}>
         <h3 className="text-sm font-semibold text-primary">{zh ? "待完成导入" : "Unfinished imports"}</h3>
         {unfinished.isPending ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取…" : "Loading…"}</p> : unfinished.error ? <ErrorLine message={unfinished.error} onRetry={() => void unfinished.refetch()} /> : unfinished.data?.items?.length ? <ul className="divide-y divide-[var(--border)]">{unfinished.data.items.map(item => <li key={item.import_id} className="flex items-center gap-3 py-2">
-          <div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{item.title}</p><p className="text-xs text-secondary">{item.state} · {new Date(item.updated_at).toLocaleString()}{!item.source_available ? (zh ? " · 源文件不可用；仍可查看已保存配置" : " · Source unavailable; saved configuration is readable") : item.draft_status === "expired" ? (zh ? " · 原文件仍保留，预览已过期" : " · Source retained; preview expired") : ""}</p></div>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm text-primary">{item.title}</p><p className="text-xs text-secondary">{importStateLabel(item.state, zh)} · <time dateTime={item.updated_at} title={new Date(item.updated_at).toLocaleString(zh ? "zh-CN" : "en-US")}>{new Date(item.updated_at).toLocaleString(zh ? "zh-CN" : "en-US", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</time>{!item.source_available ? (zh ? " · 源文件不可用；仍可查看已保存配置" : " · Source unavailable; saved configuration is readable") : item.draft_status === "expired" ? (zh ? " · 原文件仍保留，预览已过期" : " · Source retained; preview expired") : ""}</p></div>
           <button type="button" disabled={sessionRestore.phase === "loading"} className="btn-secondary min-h-11 px-3 text-sm disabled:opacity-50" onClick={() => { resumeSessionRef.current = item.import_id; setSessionRestoreRetry(value => value + 1); }}>{zh ? "继续处理" : "Resume"}</button>
         </li>)}</ul> : <p className="text-sm text-secondary">{zh ? "没有待完成的导入。" : "No unfinished imports."}</p>}
-        <div className="flex gap-3">{unfinishedOffset > 0 ? <button type="button" className="min-h-10 text-sm text-accent" onClick={() => setUnfinishedOffset(value => Math.max(0, value - 20))}>{zh ? "上一页" : "Previous"}</button> : null}{unfinished.data?.has_more ? <button type="button" className="min-h-10 text-sm text-accent" onClick={() => setUnfinishedOffset(value => value + 20)}>{zh ? "下一页" : "Next"}</button> : null}</div>
+        <div className="flex gap-3">{unfinishedOffset > 0 ? <button type="button" className="min-h-11 min-w-11 text-sm text-accent" onClick={() => setUnfinishedOffset(value => Math.max(0, value - 20))}>{zh ? "上一页" : "Previous"}</button> : null}{unfinished.data?.has_more ? <button type="button" className="min-h-11 min-w-11 text-sm text-accent" onClick={() => setUnfinishedOffset(value => value + 20)}>{zh ? "下一页" : "Next"}</button> : null}</div>
       </section> : null}
+      {savedImportId && !unfinished.data?.items?.some(item => item.import_id === savedImportId) ? <button type="button" disabled={sessionRestore.phase === "loading"} className="min-h-11 text-sm text-accent underline" onClick={() => {
+        resumeSessionRef.current = savedImportId; setSessionRestoreRetry(attempt => attempt + 1);
+      }}>{tr("查看上次保留的导入")}</button> : null}
       {sessionRestore.phase === "loading" ? <p role="status" className="text-sm text-secondary">{tr("正在恢复已保存的导入会话…")}</p> : null}
       {sessionRestore.phase === "error" ? <ErrorLine message={sessionRestore.error} onRetry={() => { setSessionRestore({ phase: "loading", error: null }); setSessionRestoreRetry((attempt) => attempt + 1); }} /> : null}
       {repairProfileId ? <p className="text-sm leading-6 text-secondary">{tr("选择一组采用该格式的代表性源文件。验证成功后会保存新版本，旧版本继续可用。")}</p> : null}
@@ -485,8 +730,8 @@ export function ImportPanel({
         unavailable={destinationUnavailable}
       />
       {mode === "adaptive" && !repairProfileId ? <div className="flex flex-wrap gap-2" role="group" aria-label={tr("导入来源")}>
-        <button type="button" aria-pressed={inputMethod === "files"} className={inputMethod === "files" ? "btn-primary min-h-11 px-3 text-sm" : "btn-secondary min-h-11 px-3 text-sm"} onClick={() => setInputMethod("files")}>{tr("选择文件")}</button>
-        <button type="button" aria-pressed={inputMethod === "paste"} className={inputMethod === "paste" ? "btn-primary min-h-11 px-3 text-sm" : "btn-secondary min-h-11 px-3 text-sm"} onClick={() => setInputMethod("paste")}>{tr("粘贴文本")}</button>
+        <button type="button" disabled={busy} aria-pressed={inputMethod === "files"} className={inputMethod === "files" ? "btn-primary min-h-11 px-3 text-sm" : "btn-secondary min-h-11 px-3 text-sm"} onClick={() => setInputMethod("files")}>{tr("选择文件")}</button>
+        <button type="button" disabled={busy} aria-pressed={inputMethod === "paste"} className={inputMethod === "paste" ? "btn-primary min-h-11 px-3 text-sm" : "btn-secondary min-h-11 px-3 text-sm"} onClick={() => setInputMethod("paste")}>{tr("粘贴文本")}</button>
       </div> : null}
       {inputMethod === "paste" && mode === "adaptive" && !repairProfileId ? <div className="space-y-2">
         <label htmlFor="pasted-transcript" className="block text-sm font-medium text-primary">{tr("粘贴 Markdown 或纯文本对话")}</label>
@@ -508,18 +753,51 @@ export function ImportPanel({
         onDragOver={(event) => event.preventDefault()}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={`border border-dashed text-center transition-colors ${conversionOpen ? "px-4 py-3" : "px-6 py-8"} ${dragging ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-ui bg-subtle"}`}
+        className={`border border-dashed text-center transition-colors ${conversionOpen || files.length ? "px-4 py-3" : "px-6 py-8"} ${dragging ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-ui bg-subtle"}`}
       >
-        {!conversionOpen ? <><UploadCloud className="mx-auto h-6 w-6 text-secondary" aria-hidden="true" />
+        {!conversionOpen && !files.length ? <><UploadCloud className="mx-auto h-6 w-6 text-secondary" aria-hidden="true" />
         <p className="mt-3 text-sm font-medium text-primary">{tr("拖放文件到这里")}</p>
         <p className="my-2 text-xs text-secondary">{tr("或")}</p></> : null}
         <label className={`btn-secondary inline-flex min-h-11 focus-within:ring-2 focus-within:ring-[var(--focus)] items-center justify-center px-4 text-sm font-medium ${busy ? "cursor-wait opacity-50" : "cursor-pointer"}`}>
-          {mode === "adaptive" ? tr("选择 JSON / Markdown / ZIP 文件") : tr("选择 .cr 归档")}
-          <input ref={fileInputRef} disabled={busy} data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,.zip" : ".cr"} onChange={(event) => { const selected = Array.from(event.currentTarget.files ?? []); if (selected.length) chooseFiles(selected); }} />
+          {mode === "adaptive" ? (files.length ? (zh ? "添加文件" : "Add files") : tr("选择 JSON / Markdown / ZIP 文件")) : tr("选择 .cr 归档")}
+          <input ref={fileInputRef} disabled={busy} data-dialog-initial-focus="true" key={mode} type="file" data-testid="import-file-input" multiple={mode === "adaptive"} className="sr-only" accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,.zip" : ".cr"} onChange={(event) => {
+            const selected = Array.from(event.currentTarget.files ?? []); event.currentTarget.value = "";
+            const replace = replaceSelectionRef.current; replaceSelectionRef.current = false;
+            if (selected.length) chooseFiles(mode === "adaptive" && !replace ? [...files, ...selected] : selected);
+          }} />
         </label>
         {files.length ? <p className="mt-3 break-all text-sm text-secondary">{inputMethod === "files" ? selectedLabel : tr("已保留 {0} 个文件选项", files.length)}</p> : null}
       </div>}
-      {validationError ? <ErrorLine message={validationError} /> : null}
+      {inputMethod === "files" && files.length ? <ol ref={fileListRef} className="divide-y divide-[var(--border)] border-y border-ui" aria-label={zh ? "待分析文件，按显示顺序处理" : "Selected files, analyzed in this order"} data-testid="import-selected-files">
+        {files.map((file, index) => {
+          const issue = selectedFileErrors[index];
+          return <li key={`${index}-${file.name}`} className="py-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="w-5 shrink-0 text-xs tabular-nums text-secondary">{index + 1}.</span>
+              <div className="min-w-0 flex-1"><p className="break-words text-sm text-primary">{file.name}</p>
+                <p className="text-xs tabular-nums text-secondary">{file.size < 1024 ? `${file.size} B` : file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)} KiB` : `${(file.size / (1024 * 1024)).toFixed(1)} MiB`}</p></div>
+              <label className={`inline-flex min-h-11 items-center px-2 text-sm text-secondary ${busy ? "opacity-50" : "cursor-pointer hover:text-primary focus-within:ring-2 focus-within:ring-[var(--focus)]"}`}>
+                {zh ? "替换" : "Replace"}
+                <input type="file" disabled={busy} className="sr-only"
+                  aria-label={zh ? `替换文件：${file.name}` : `Replace file: ${file.name}`}
+                  accept={mode === "adaptive" ? ".json,.jsonl,.gz,.md,.markdown,.txt,.html,.htm,.zip" : ".cr"}
+                  onChange={event => {
+                    const replacement = event.currentTarget.files?.[0]; event.currentTarget.value = "";
+                    if (replacement && !busy) { nextFileFocus.current = index; chooseFiles(files.map((old, offset) => offset === index ? replacement : old)); }
+                  }} />
+              </label>
+              <button type="button" disabled={busy} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-subtle hover:text-primary focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-50"
+                title={zh ? "移出待选列表" : "Remove from selection"} aria-label={zh ? `移除文件：${file.name}` : `Remove file: ${file.name}`}
+                onClick={() => { if (!busy) { nextFileFocus.current = index; chooseFiles(files.filter((_file, offset) => offset !== index)); } }}>
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            {issue ? <p className="pl-7 text-xs text-[var(--danger)]">{issue}</p> : null}
+          </li>;
+        })}
+        {mode === "adaptive" && files.length > 1 ? <li className="py-2 text-xs text-secondary">{zh ? "按上方顺序逐个分析；审阅整批后再确认导入。" : "Analyzed in the order above; review the whole batch before confirming import."}</li> : null}
+      </ol> : null}
+      {validationError && (inputMethod !== "files" || !selectedFileErrors.includes(validationError)) ? <ErrorLine message={validationError} /> : null}
       {capabilities.data ? <SupportLimitAction capabilities={capabilities.data} limit="import_size_mb" active={Boolean(fileOverLimit || !capabilities.data.allow_user_import)} requestedValue={largestFileMiB} returnFocus={() => previewButtonRef.current} onReturn={() => { void capabilities.refetch(); }} /> : null}
       {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
       {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error} action="mutation" /> : null}
@@ -529,7 +807,7 @@ export function ImportPanel({
       {importStatusQuery.error ? <ErrorLine message={importStatusQuery.error} onRetry={() => { void importStatusQuery.refetch(); }} retrying={importStatusQuery.isFetching} /> : null}
       {showConversion ? <div className="border-y border-ui">
         <button type="button" disabled={busy} aria-expanded={conversionOpen} aria-controls={conversionId} onClick={() => setConversionOpen(open => !open)} className="flex min-h-11 w-full items-center justify-between gap-3 py-2 text-left text-sm text-secondary hover:text-primary disabled:opacity-50">{tr("格式不支持？")}<ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${conversionOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button>
-        {conversionOpen ? <div id={conversionId} className="pb-4 pt-2"><FormatConversionGuide resultAction={<button type="button" disabled={busy} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => fileInputRef.current?.click()}>{files.length > 1 ? tr("重新选择本批文件") : tr("选择转换后的文件")}</button>} /></div> : null}
+        {conversionOpen ? <div id={conversionId} className="pb-4 pt-2"><FormatConversionGuide resultAction={<button type="button" disabled={busy} className="btn-secondary min-h-11 px-3 text-sm" onClick={() => { replaceSelectionRef.current = true; fileInputRef.current?.click(); }}>{files.length > 1 ? tr("重新选择本批文件") : tr("选择转换后的文件")}</button>} /></div> : null}
       </div> : null}
       <div className="flex flex-wrap gap-3">
         <button ref={previewButtonRef} type="button" disabled={!(inputMethod === "paste" ? pastedText.trim() : files.length) || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={previewImportSource} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">

@@ -8,7 +8,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_db
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
-from app.schemas.task import BackgroundTaskRead, OfflineDownloadTarget
+from app.schemas.task import BackgroundTaskRead, OfflineDownloadTarget, TaskCancellationRequest
 from app.services.adaptive_import.contracts import AdaptiveImportError
 from app.services.editing.message_edit_service import MessageEditError
 from app.services.background_jobs import (
@@ -134,7 +134,11 @@ def retry_task(
             raise HTTPException(404, detail="Task not found.")
         if job.job_type == 'context_validation':
             raise HTTPException(410, detail={'code': 'CONTEXT_VALIDATION_RETIRED', 'next_action': 'update_files'})
-        retry_background_job(job)
+        try:
+            retry_background_job(job)
+        except MessageEditError as exc:
+            db.rollback()
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
         db.commit()
         return _job_task(job)
     record = get_owned(db, ImportRecord, job_id, ownership_scope)
@@ -154,6 +158,7 @@ def cancel_task(
     job_id: uuid.UUID,
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+    payload: TaskCancellationRequest | None = None,
 ) -> BackgroundTaskRead:
     job = db.query(BackgroundJob).filter(BackgroundJob.id == job_id, ownership_scope.predicate(BackgroundJob)).with_for_update().populate_existing().one_or_none()
     if job is None:
@@ -175,15 +180,18 @@ def cancel_task(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Import tasks cannot be cancelled here.")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
     try:
-        request_background_job_cancellation(job)
+        if payload is not None:
+            request_background_job_cancellation(job, source_disposition=payload.source_disposition)
+        else:
+            request_background_job_cancellation(job)
         if job.job_type == "adaptive_import_analysis":
             import_id = uuid.UUID(str((job.payload or {}).get("import_id")))
             record = db.get(ImportRecord, import_id)
             if record is not None and record.status != "committed":
                 if job.status == "cancelled":
-                    from app.services.adaptive_import.service import cancel_session
+                    from app.services.adaptive_import.service import finish_analysis_stop
 
-                    cancel_session(record)
+                    finish_analysis_stop(record, job)
                     record.completed_at = job.completed_at
         db.commit()
     except (MessageEditError, AdaptiveImportError) as exc:
@@ -258,6 +266,9 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
         started_at=job.started_at,
         heartbeat_at=job.heartbeat_at,
         completed_at=job.completed_at,
+        updated_at=job.updated_at,
+        cancellation_requested_at=payload.get("cancellation_requested_at"),
+        progress_updated_at=result.get("progress_updated_at"),
         cancellable=job.job_type in CANCELLABLE_JOB_TYPES and job.status in {"queued", "processing", "cancelling"},
         attempt_count=job.attempt_count,
     )
@@ -283,7 +294,7 @@ def _offline_download_target(job_type: str, payload: dict) -> OfflineDownloadTar
 def _task_export_format(job_type: str, payload: dict) -> str | None:
     if job_type == "conversation_export":
         value = payload.get("export_format", "cr_v2")
-        return value if value in {"cr_v2", "context_package", "markdown_bundle", "canjson_bundle"} else None
+        return value if value in {"cr_v2", "context_package", "markdown_bundle", "canjson_bundle", "markdown_v2", "canjson_v2"} else None
     return {
         "conversation_batch_export": "canjson_batch",
         "context_package_export": "context_package",

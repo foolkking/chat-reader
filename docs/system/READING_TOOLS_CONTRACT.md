@@ -7,6 +7,23 @@ and independent artifact/runtime checks. See
 Synthetic browser acceptance is not authenticated production or physical-device
 acceptance; the original November 8 implementation/audit records remain historical.
 
+## Unreleased image receipt presentation — 2026-11-10
+
+The working-tree candidate expires only a successful image-size receipt three
+seconds after its query-cache acknowledgement time. The scale trigger briefly
+shows Saved (or a check icon for compact images), retaining the normal label's
+geometry and accessible percentage. It adds no body row and covers neither the
+image nor the slider. Virtual unmount/remount does not restart the deadline.
+Expiration removes only that same receipt, never newer saving/error/unknown
+state, confirmed dimensions or public-image settings.
+
+Pending progress and unknown/error recovery do not auto-expire. The compact
+slider keeps its percentage; save/publication guidance is available through
+the trigger tooltip and group description rather than an added body paragraph.
+The existing six-case slider gate additionally tests three-second success,
+no receipt-driven geometry change, virtual remount and persistent uncertain/
+pending states with a controlled clock. This candidate is not yet released.
+
 ## Reading-interaction behavior — deployed 2026-11-09
 
 This section is deployed in `865b0a6`. Local synthetic verification is recorded in
@@ -221,3 +238,24 @@ Viewer rules in [the image contract](IMAGE_READING_STABILITY_CONTRACT.md) remain
 No migration, new image-processing dependency or replacement Viewer is added.
 Verification status and remaining limits belong in
 [the implementation record](../execution/READING_TOOLS_2026-11-08.md).
+# Unreleased feedback recovery — 2026-11-10
+
+Shared clipboard and citation success receipts expire after3seconds. Message
+Markdown preparation/success stays in the existing action plus live-region
+announcement, not a body-height-changing notice. Prepared text is retained;
+retry does not regenerate public image links. Copy errors/manual fallback
+remain visible until handled. Citation fallback actually focuses/selects the
+field, and late message-version/account/unmount results are fenced.
+
+A failed owner Markdown-copy preparation offers an explicit export of the
+complete current message through the existing ordinary Markdown serializer and
+new recoverable export control. It marks omitted attachments and does not
+publish images; it neither truncates content nor pretends to repair unsafe SVG.
+Previously created public links are not revoked by dismissing feedback.
+
+Saved reading-position notices expire after5seconds without deleting annotations.
+Keyboard focus pauses their remaining time; leaving the notice resumes it.
+Saving, unknown-result and failed-read notices never auto-expire. Re-saving an
+existing point refreshes only the success receipt. Notice controls remain44px;
+mobile prose uses available width rather than a shrink-to-fit narrow column.
+Local component checks are not full Reader/Share/Offline/Together acceptance.

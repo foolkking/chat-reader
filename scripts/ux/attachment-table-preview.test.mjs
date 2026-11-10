@@ -65,6 +65,32 @@ test("page size stays below both row and cell budgets for every supported width"
   for (let columns = 1; columns <= 256; columns++) { const size = policy.tablePreviewPageSize(columns); assert.ok(size <= limits.pageRows); assert.ok(size * columns <= limits.pageCells); }
 });
 
+test("inline CSV uses the same quote grammar; embedded newlines do not offer spurious expansion", () => {
+  const content = '\ufeffname,notes\r\nAlice,"has, comma"\r\nBob,"two ""quotes""\nnext\nand\nanother\nmultiline\nfield\nstill\none\nrow"\r\nLast,';
+  const preview = policy.parseInlineDelimitedPreview(content, ",");
+  assert.equal(preview.hasMoreRows, false);
+  assert.equal(preview.limited, false);
+  assert.deepEqual(preview.rows, parse(content, ",").rows);
+  assert.equal(preview.rows.length, 4);
+  assert.deepEqual(policy.parseInlineDelimitedPreview('h\tv\none\t"two\tthree"', "\t").rows, [["h", "v"], ["one", "two\tthree"]]);
+});
+test("inline expansion counts records, retains eight columns, and discloses remaining data", () => {
+  const content = csv(40, 12), collapsed = policy.parseInlineDelimitedPreview(content, ",");
+  assert.equal(collapsed.rows.length, 8); assert.equal(collapsed.hasMoreRows, true); assert.equal(collapsed.limited, true);
+  assert.equal(collapsed.rows[7][7], "r7c7");
+  const expanded = policy.parseInlineDelimitedPreview(content, ",", true);
+  assert.equal(expanded.rows.length, 28); assert.equal(expanded.rows[27][7], "r27c7"); assert.equal(expanded.limited, true);
+  assert.equal(policy.parseInlineDelimitedPreview(csv(8, 8), ",").limited, false);
+  assert.equal(policy.parseInlineDelimitedPreview(csv(8, 9), ",").limited, true);
+  assert.equal(policy.parseInlineDelimitedPreview('a,"unfinished\nnext', ",").limited, true);
+});
+test("smaller inline budgets cannot expand or bypass the existing Viewer limits", () => {
+  assert.equal(parse(csv(40, 2), ",", { rows: 3 }).rows.length, 3);
+  assert.equal(parse(csv(2, 300), ",", { columns: 50_000 }).columns, limits.columns);
+  assert.equal(parse("x".repeat(5000), ",", { fieldUnits: Infinity }).stoppedAt, "field");
+  assert.equal(parse(csv(200, 256), ",", { cells: 1_000_000 }).rows.flat().length, limits.cells);
+});
+
 // Actual viewer function with explicit React hook/element doubles; no DOM,
 // visual, CPU, or RSS measurement is claimed.
 const source = ts.createSourceFile("viewer.tsx", readFileSync(new URL("../../apps/web/features/attachments/attachment-viewer.tsx", import.meta.url), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);

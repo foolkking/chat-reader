@@ -667,6 +667,19 @@ export type AdaptiveArchiveIssue = {
   code: string;
   severity: "warning" | "error" | string;
   message: string;
+  examples?: Array<{ document_index: number; line: number; reason: string }>;
+};
+
+export type AdaptiveArchiveReference = {
+  reference_id: string;
+  document_member_id: string;
+  document_index: number;
+  reason: string;
+  target_display: string;
+  target_truncated: boolean;
+  reference_count: number;
+  lines: number[];
+  target_member_id: string | null;
 };
 
 export type AdaptiveArchiveMember = {
@@ -698,6 +711,7 @@ export type AdaptiveArchiveSummary = {
   document_count: number;
   attachment_count: number;
   missing_attachment_count?: number;
+  blocked_reference_count?: number;
   excluded_count: number;
   unreferenced_count: number;
   issue_count: number;
@@ -712,6 +726,8 @@ export type AdaptiveArchiveCatalog = Omit<AdaptiveArchiveSummary, "filename" | "
   issues: AdaptiveArchiveIssue[];
   manifest_message_count: number;
   members: AdaptiveArchiveMember[];
+  unresolved_references?: AdaptiveArchiveReference[];
+  reference_count?: number;
   member_count: number;
   offset: number;
   limit: number;
@@ -722,6 +738,7 @@ export type ImportFailure = {
   code: string;
   stage: string;
   retryable: boolean;
+  details?: { reason?: string; entry_index?: number };
 };
 
 export type ImportResourceWait = {
@@ -733,7 +750,7 @@ export type ImportResourceWait = {
 export type AdaptiveImportSession = {
   import_id: string;
   target_project_id?: string | null;
-  state: "COLLECTING" | "ANALYZING" | "CANCELING" | "NEEDS_GROUPING" | "RESOLVING" | "READY" | "IMPORTING" | "COMPLETED" | "BLOCKED" | "FAILED" | "CANCELED";
+  state: "COLLECTING" | "ANALYZING" | "CANCELING" | "PAUSED" | "NEEDS_GROUPING" | "RESOLVING" | "READY" | "IMPORTING" | "COMPLETED" | "BLOCKED" | "FAILED" | "CANCELED";
   status: string;
   phase?: string;
   progress?: number;
@@ -742,6 +759,7 @@ export type AdaptiveImportSession = {
   resource_wait?: ImportResourceWait | null;
   operation_task_id?: string;
   analysis_task_id?: string | null;
+  analysis_progress?: { stage: "archives" | "recognition" | "validation" | "draft"; unit_index: number; unit_total: number; completed: boolean } | null;
   file_count: number;
   total_bytes: number;
   group_count: number;
@@ -753,6 +771,7 @@ export type AdaptiveImportSession = {
   source_status?: "available" | "missing";
   draft_status?: "ready" | "expired" | "missing";
   allowed_actions?: Array<"resume" | "rebuild_preview">;
+  sources?: Array<{ artifact_id: string; filename: string; extension: string | null; byte_size: number; source_revision?: number }>;
   groups: AdaptiveImportGroup[];
   families: AdaptiveImportFamily[];
   archives?: AdaptiveArchiveSummary[];
@@ -875,6 +894,9 @@ export type BackgroundTaskRead = {
   started_at: string | null;
   heartbeat_at: string | null;
   completed_at: string | null;
+  updated_at?: string | null;
+  cancellation_requested_at?: string | null;
+  progress_updated_at?: string | null;
   cancellable: boolean;
   attempt_count: number;
 };

@@ -1,7 +1,46 @@
 import { useCallback } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 
+export function importStateLabel(state: string, zh: boolean): string {
+  const labels: Record<string, [string, string]> = {
+    COLLECTING: ["等待文件", "Waiting for files"], ANALYZING: ["正在分析", "Analyzing"],
+    CANCELING: ["正在停止", "Stopping"], PAUSED: ["已暂停 · 来源保留", "Paused · sources retained"],
+    NEEDS_GROUPING: ["需要配对", "Pairing needed"], RESOLVING: ["需要设置", "Configuration needed"],
+    READY: ["等待确认导入", "Ready for review"], IMPORTING: ["正在导入", "Importing"],
+    COMPLETED: ["已导入", "Imported"], BLOCKED: ["需要处理", "Needs attention"],
+    FAILED: ["处理失败 · 可查看原因", "Failed · review the cause"], CANCELED: ["已取消", "Cancelled"],
+  };
+  return labels[state]?.[zh ? 0 : 1] ?? (zh ? "状态待核对" : "Check status");
+}
+
 const english: Record<string, string> = {
+  "分析已停止，来源与设置已保留": "Analysis stopped; sources and settings are retained",
+  "停止尚未确认，不代表已经结束。可以核对状态，或先离开处理其他文件；原任务不会被重复提交。": "Stopping is not yet confirmed. Check the status or leave to work on other files; the original task will not be resubmitted.",
+  "操作结果需要核对。请先读取原任务状态，不要重复提交；来源不会因关闭窗口而删除。": "Check the original task's status before submitting again. Closing this window does not delete its sources.",
+  "核对状态": "Check status", "正在提交…": "Submitting…", "继续分析": "Continue analysis",
+  "正在请求停止…": "Requesting stop…", "停止并保留": "Stop and retain", "返回文件选择": "Back to file selection",
+  "放弃本次导入…": "Discard this import…",
+  "放弃将删除本次暂存来源和导入草稿。已导入的其他对话不会改变。": "Discarding deletes this import's staged sources and draft. Other imported conversations are unchanged.",
+  "确认放弃": "Confirm discard",
+  "会话状态已变化，请先刷新会话状态再调整来源。其他文件和设置仍保留。": "The session changed. Refresh its status before changing sources; other files and settings are retained.",
+  "保留的来源已变化，请替换来源并重新核对。旧预览不会被继续使用。": "A retained source changed. Replace it and review again; its old preview will not be reused.",
+  "查看上次保留的导入": "View the last retained import",
+  "有 {0} 处本地链接无法解析；文字保留，链接暂不可访问，其他内容可正常导入。": "{0} local links could not be resolved. Text is retained and these links are inactive; other content can be imported.",
+  "处理无法解析的链接（{0} 个目标）": "Review unresolved links ({0} targets)",
+  "仅关联本 ZIP 内已经核验的文件，不按同名猜测，不访问包外。没有对应文件时可保留文字继续；需要补充文件时替换 ZIP 后重新核对。": "Only verified files in this ZIP can be linked. Names are not guessed and nothing outside the ZIP is accessed. Continue with retained text, or replace the ZIP with the missing file included and review it again.",
+  "文档 {0}": "Document {0}", "行 {0}": "Line {0}", "{0} 次引用": "{0} references",
+  "关联包内文件": "Link to a file in this ZIP", "为 {0} 选择包内文件": "Select a ZIP file for {0}",
+  "保留文字，不访问此链接": "Retain text; keep this link inactive",
+  "当前关联目标未在此页或已排除，请重新核对": "The current target is not on this page or is excluded; review it",
+  "相对链接超出 ZIP 的目录范围": "The relative link points outside the ZIP",
+  "使用了绝对路径": "An absolute path was used",
+  "使用了反斜杠路径": "A backslash path was used",
+  "引用了本机路径或盘符": "A local filesystem path or drive was used",
+  "路径包含空字符": "The path contains a NUL character",
+  "链接地址格式无效": "The link address is malformed",
+  "路径经过多层编码，无法可靠解析": "The path has excessive encoding and cannot be resolved reliably",
+  "无法在 ZIP 内可靠解析该路径": "The path cannot be resolved reliably inside the ZIP",
+  "路径包含重复分隔符或不规范目录段": "The path contains repeated separators or noncanonical segments",
   "缺少 {0} 个附件，正文仍可导入；缺失引用将保留。": "{0} attachments are missing. Text can still be imported; missing references will be retained.",
   "文件缺失 · 保留引用": "File missing · reference retained",
   "已导入，部分附件缺失": "Imported with missing attachments",
@@ -159,7 +198,29 @@ export type ImportCopy = (key: string, ...values: Array<string | number>) => str
 
 export function importWarningMessage(warning: string, tr: ImportCopy): string {
   const missing = /^ZIP missing attachments: (\d+)\./.exec(warning);
+  const blocked = /^ZIP blocked references: (\d+)\./.exec(warning);
+  if (blocked) return tr("有 {0} 处本地链接无法解析；文字保留，链接暂不可访问，其他内容可正常导入。", blocked[1]);
   return missing ? tr("缺少 {0} 个附件；正文和缺失引用已保留。", missing[1]) : warning;
+}
+
+export function archivePathReason(reason: unknown, zh: boolean): string {
+  const reasons: Record<string, [string, string]> = {
+    outside_archive: ["相对链接超出 ZIP 的目录范围", "The relative link points outside the ZIP"],
+    absolute: ["使用了绝对路径", "An absolute path was used"],
+    parent_segment: ["ZIP 条目路径包含上级目录（..）", "A ZIP member path contains a parent segment (..)"],
+    backslash: ["使用了反斜杠路径", "A backslash path was used"],
+    local_filesystem: ["引用了本机路径或盘符", "A local filesystem path or drive was used"],
+    nul: ["路径包含空字符", "The path contains a NUL character"],
+    empty: ["条目路径为空", "The member path is empty"],
+    noncanonical: ["路径包含重复分隔符或不规范目录段", "The path contains repeated separators or noncanonical segments"],
+    duplicate: ["多个 ZIP 条目使用相同路径", "Multiple ZIP members use the same path"],
+    encrypted: ["ZIP 条目已加密", "The ZIP member is encrypted"],
+    special_file: ["ZIP 条目是链接或特殊文件，不是普通文件", "The ZIP member is a link or special file, not a regular file"],
+    invalid_url: ["链接地址格式无效", "The link address is malformed"],
+    excessive_encoding: ["路径经过多层编码，无法可靠解析", "The path has excessive encoding and cannot be resolved reliably"],
+  };
+  const pair = typeof reason === "string" ? reasons[reason] : undefined;
+  return pair ? pair[zh ? 0 : 1] : zh ? "无法在 ZIP 内可靠解析该路径" : "The path cannot be resolved reliably inside the ZIP";
 }
 
 export type ImportErrorAction = "read" | "mutation" | "commit";
@@ -215,9 +276,32 @@ export function importFailureMessage(
     return zh ? "ZIP 文件损坏或完整性校验失败，尚未导入对话。源文件仍保留，请重新导出后替换文件。"
       : "The ZIP is damaged or failed integrity validation. No conversations were imported. Source files are retained. Export it again and replace the file.";
   }
+  if (code === "ZIP_SOURCE_CHANGED" || code === "SOURCE_CHANGED") {
+    return zh ? "保留的来源已发生变化，旧预览和关联不能继续使用。请替换来源并重新核对；尚未导入对话。"
+      : "A retained source changed. Its old preview and bindings cannot be reused. Replace the source and review it again; no conversations were imported.";
+  }
+  if (code === "SOURCE_PATH_INVALID") {
+    return zh ? "服务器暂存来源的位置无法安全确认，处理已停止，未导入对话。请管理员检查暂存目录；不要通过关闭路径校验来重试。也可以返回文件选择，建立新的导入。"
+      : "The staged source location could not be verified safely. Processing stopped without importing conversations. Ask an administrator to check staging storage, or return to file selection for a new import. Do not disable path validation.";
+  }
   if (["ZIP_PATH_UNSAFE", "ZIP_PATH_DUPLICATE", "MANIFEST_ASSET_PATH_INVALID", "ZIP_MEMBER_UNSUPPORTED"].includes(code)) {
-    return zh ? "ZIP 包含不安全或不支持的资源路径，尚未导入对话。请重新导出标准 ZIP 后替换文件。"
-      : "The ZIP contains unsafe or unsupported resource paths. No conversations were imported. Export a standard ZIP and replace the file.";
+    const details = value?.details !== null && typeof value?.details === "object" ? value.details as Record<string, unknown> : null;
+    const index = typeof details?.entry_index === "number" && Number.isSafeInteger(details.entry_index) && details.entry_index > 0 ? details.entry_index : null;
+    const location = index ? zh ? `ZIP 第 ${index} 个条目：` : `ZIP entry ${index}: ` : "";
+    if (details?.reason) {
+      const repair = code === "ZIP_MEMBER_UNSUPPORTED"
+        ? zh ? "请将该条目改为未加密的普通文件后替换 ZIP。" : "Replace this ZIP after exporting that entry as an unencrypted regular file."
+        : code === "ZIP_PATH_DUPLICATE"
+          ? zh ? "请为重复条目使用不同路径，并同步正文链接后替换 ZIP。" : "Give duplicate entries distinct paths, update their links, and replace the ZIP."
+          : zh ? "请修正该条目的包内相对路径，并同步正文链接后替换 ZIP。" : "Correct that member's archive-relative path and its links, then replace the ZIP.";
+      return `${location}${archivePathReason(details.reason, zh)}。${zh ? "为防止读取错误文件，本文件分析已停止，来源仍保留。" : " Analysis stopped to avoid reading the wrong file; the source is retained. "}${repair}`;
+    }
+    if (code === "MANIFEST_ASSET_PATH_INVALID") {
+      return zh ? "附件清单声明了无法安全解析的资源路径。请检查 manifest.json 中 assets 的路径，改为 ZIP 内的相对路径后替换来源；正文中的普通失效链接不会按此错误阻断。"
+        : "The asset manifest declares a path that cannot be resolved safely. Correct assets paths in manifest.json to archive-relative paths, then replace the source. Ordinary unresolved body links do not cause this error.";
+    }
+    return zh ? "此前任务因 ZIP 路径问题停止，但未记录具体条目。来源仍保留，可显式重试以重新检查：正文失效链接将安全保留，实际条目风险仍会停止并说明原因。"
+      : "The earlier task stopped for a ZIP path issue without recording its entry. The source is retained. Retry explicitly to recheck: unresolved body links will be retained safely; unsafe actual members still stop analysis with a specific reason.";
   }
   return null;
 }
@@ -243,6 +327,8 @@ const importCodeCopy: Record<string, string> = {
   UPLOAD_QUEUE_TIMEOUT: "服务器仍在分析其他大文件，本次尚未开始。请稍后重试。",
   SESSION_TOO_LARGE: "替换后的文件会超过本次导入总容量限制。",
   SESSION_STATE_INVALID: "当前导入状态已变化，请返回概览后重试。",
+  SESSION_STATE_CHANGED: "会话状态已变化，请先刷新会话状态再调整来源。其他文件和设置仍保留。",
+  SOURCE_CHANGED: "保留的来源已变化，请替换来源并重新核对。旧预览不会被继续使用。",
   PREVIEW_STATE_CHANGED: "会话状态已变化，请先刷新会话状态再决定是否重新生成预览。已保存的配置仍保留。",
   PREVIEW_REBUILD_UNAVAILABLE: "请先完成已有映射，再重新生成预览。",
   SOURCE_MISSING: "源文件不可用，已保存的分组和映射仍保留。",

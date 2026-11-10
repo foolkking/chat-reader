@@ -1,0 +1,24 @@
+{
+  "checkpoint": "offline-recovery",
+  "recorded_at": "2026-11-10T10:47:00.3607574+08:00",
+  "base_head": "1fb091210c552ae88da3acea7bb33520c2035d7b",
+  "scope": "Working tree synthetic checkpoint; not CI or release. Hashes cover unchanged offline implementation, not subsequent export edits.",
+  "checks": {
+    "typecheck": "passed",
+    "web_node_passed": 2232,
+    "lint": "passed",
+    "browser_combinations": 12
+  },
+  "sources": {
+    "apps/web/lib/offline-downloads.ts": "19389f530f8420bb3f31ec0e182acd9878caa81e33a205121de02bbbf737f9ab",
+    "apps/web/lib/offline-download-progress.ts": "27639392c7ac1627b73ecb768a5749052e29e857dda8b90520ab5032dee6f564",
+    "apps/web/lib/offline-download-errors.ts": "c9e1af1139823233fbe8b3e36eec999a35e809e4589ec78079ed90b0e6fd0a1f",
+    "apps/web/lib/offline-db.ts": "3aeab20506383485c08cc738ccfc3df0757064662d07b17d43f3718438799531",
+    "apps/web/components/offline-download-recovery.tsx": "2f76c70fbb46ba38105d6e212315ac2681a835a16f2e4b7beb3f20dc5ce112c5",
+    "apps/web/components/offline-sync-center.tsx": "1dc9dd9281ce902c100f15ad435bc5bc67d61be396c40cc0663e6e9dba06e152",
+    "apps/web/features/offline/library-shell.tsx": "384d5df8ae18150aa70e4ff70356b419ad303018fa271f02f56ee83a434e71bb",
+    "scripts/ux/offline-download-recovery.test.mjs": "bba3bb740dc53a30040a0a92a9b90fa69354c07a10a598e62b4c551416e950e0",
+    "scripts/ux/offline-stream-recovery.test.mjs": "a59e22b3723a98b53abe856a34677b158574664575db7a60b31f918b38d7093d",
+    "scripts/ux/offline-recovery-browser.mjs": "8c6cb0a9bfb61e34ee721c0527b549120980b3d023462bea62cc63bef6d21adc"
+  }
+}

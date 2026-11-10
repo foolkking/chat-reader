@@ -13,10 +13,10 @@ from app.services.adaptive_import.contracts import AdaptiveImportError
 
 def queue_operation(db, record, operation, arguments=None):
     from app.services.adaptive_import.service import (
-        RECOVERABLE_SESSION_STATES, _require_session_state, queue_session_analysis, session_payload,
+        RECOVERABLE_SESSION_STATES, SOURCE_REPAIR_STATES, _require_session_state, queue_session_analysis, session_payload,
     )
     try:
-        _require_session_state(record, RECOVERABLE_SESSION_STATES)
+        _require_session_state(record, SOURCE_REPAIR_STATES if operation in {"replace", "exclude_source"} else RECOVERABLE_SESSION_STATES)
     except AdaptiveImportError as exc:
         raise HTTPException(status_code=409, detail={"code": exc.code, "message": str(exc)}) from exc
     previous = record.session_state
@@ -30,6 +30,14 @@ def queue_operation(db, record, operation, arguments=None):
 
 def prospective_record(record, payload):
     """Admission sees replacement bytes, never the old ZIP's qualification."""
+    if payload.get("operation") == "exclude_source":
+        removed = payload["arguments"]["artifact_id"]
+        return SimpleNamespace(id=record.id, artifacts=[
+            item for item in record.artifacts if str(item.id) != removed and not (
+                item.source_type == "adaptive_archive_document"
+                and str((item.parsed_summary or {}).get("archive_artifact_id")) == removed
+            )
+        ], draft_summary={})
     if payload.get("operation") != "replace":
         return record
     arguments = payload["arguments"]
@@ -44,10 +52,9 @@ def prospective_record(record, payload):
 
 @contextmanager
 def operation_admission(db, record, payload):
-    from app.services.adaptive_import.memory_budget import import_analysis_admission
+    from app.services.adaptive_import.memory_budget import sequential_analysis_admission
     candidate = prospective_record(record, payload)
-    with import_analysis_admission(db, candidate, stage="analysis", force_memory_check=True,
-                                   sizes=[max(0, int(item.byte_size or 0)) for item in candidate.artifacts]):
+    with sequential_analysis_admission(db, candidate):
         yield
 
 
@@ -74,11 +81,16 @@ def execute_operation(db, record, payload):
             # The worker admitted the prospective source set, not the old ZIP.
             service.replace_session_artifact(db, record, artifact, filename=arguments["filename"],
                                              stored_source=(stored, arguments["sha256"]))
+        elif operation == "exclude_source":
+            if artifact is None:
+                raise AdaptiveImportError("SOURCE_MISSING", "Source artifact is unavailable.", layer="file")
+            service.exclude_session_source(db, record, artifact)
         elif operation == "classification":
             if artifact is None:
                 raise AdaptiveImportError("SOURCE_MISSING", "Source artifact is unavailable.", layer="file")
             service.reclassify_archive(db, record, artifact,
-                                      expected_version=arguments["expected_version"], changes=arguments["changes"])
+                                      expected_version=arguments["expected_version"], changes=arguments["changes"],
+                                      reference_changes=arguments.get("reference_changes"))
         elif operation == "groups":
             service.resolve_grouping(db, record, arguments["groups"])
         elif operation == "exclude":

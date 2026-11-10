@@ -1,0 +1,79 @@
+{
+  "files": [
+    {
+      "sha256": "97dd0287463ae599998e50d5e315f251c375093ee7132269c2f9a5c41a2b024d",
+      "path": "apps/api/app/services/adaptive_import/archive_sources.py"
+    },
+    {
+      "sha256": "1ac6111b2b7de47242ff1605701b38075f8f312a3f1d48647a6664aeb55e3b16",
+      "path": "apps/api/app/services/adaptive_import/service.py"
+    },
+    {
+      "sha256": "c2c842fefe4e1d6589dc5d19180aa8394b9514f7b9a630c14eadd8b83ce91139",
+      "path": "apps/api/app/services/adaptive_import/memory_budget.py"
+    },
+    {
+      "sha256": "12332306c8de050fb535ac02cd0b9e5fe8fe804a998fe2b718a287ee0a07dcbf",
+      "path": "apps/api/app/services/background_jobs.py"
+    },
+    {
+      "sha256": "3fcefbd6c3603353de95f88831c2b0c46c865600478f2623ab573e4e246d1e06",
+      "path": "apps/api/app/services/task_worker.py"
+    },
+    {
+      "sha256": "517518d76994de9b4ebc457796917d3e29d1d78a3eecf0526111b96661036df8",
+      "path": "apps/api/app/services/worker_liveness.py"
+    },
+    {
+      "sha256": "936b3125847823391ee8c4bb327333012c074d66bea51d66b3dbb19d89a2c9fa",
+      "path": "apps/api/tests/test_import_analysis_postgres.py"
+    },
+    {
+      "sha256": "e7bd251ac87f5fc954df4469c90ff463c4888fccc38737097a743f14fd388885",
+      "path": "apps/api/tests/test_zip_reference_recovery.py"
+    },
+    {
+      "sha256": "4f8fa799af805c8fb6395207ce1c0c6410d4a1af47323d6ed8051fd463de6e18",
+      "path": "apps/api/tests/test_import_stop_resume.py"
+    },
+    {
+      "sha256": "467fd9bdf057bbb6e866f2799721c30f39e8c632b09ad413dec4877e1ca8339f",
+      "path": "apps/web/features/import/import-task-monitor.tsx"
+    },
+    {
+      "sha256": "526351a191bc968e111fb7f659198d8d13d39314d8372c9cd744a74bc9f4c677",
+      "path": "apps/web/features/import/import-panel.tsx"
+    },
+    {
+      "sha256": "e22748e8f1bdda8ee06ddadbe905680469a5ea0c2e48de634c8635ffdbe4193c",
+      "path": "apps/web/features/import/adaptive-import-workspace.tsx"
+    },
+    {
+      "sha256": "4d5b54509e4cb8c8ec213cb05db78b62905a86e99eca9745068e0eadcc213b84",
+      "path": "apps/web/features/import/import-workspace-copy.ts"
+    },
+    {
+      "sha256": "f68cf10e2e7e3dc46a09adaec386512d7d6b45ac7e7aec0eaaea150449ee7257",
+      "path": "apps/web/features/conversations/markdown-renderer.tsx"
+    },
+    {
+      "sha256": "1c43e0662d4601026c9b1804f471353bbd2e0ec879730664eb9142ddc7ea54f3",
+      "path": "apps/web/lib/request-deadline.ts"
+    },
+    {
+      "sha256": "f5a6e2bce23752d521ba5aecbf1b204b9a0cd97e9c5cc52a3d3ca46b35fd3162",
+      "path": "scripts/ux/import-recovery-browser.mjs"
+    },
+    {
+      "sha256": "bf7c0ef46750d96bab589b845ed5eb71c46c35d74f7659680c4877db80cabfe1",
+      "path": "scripts/ux/task-status-recovery.test.mjs"
+    },
+    {
+      "sha256": "08db71b9b2d13546294a9eda38bd35132b30153e5e3f7661a9613f7f16515fa1",
+      "path": ".github/workflows/build-release-images.yml"
+    }
+  ],
+  "recorded_at": "2026-11-10T02:31:06.0890304+08:00",
+  "source_base": "1fb091210c552ae88da3acea7bb33520c2035d7b",
+  "scope": "Uncommitted local checkpoint; not full-plan or release acceptance"
+}

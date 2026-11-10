@@ -37,6 +37,7 @@ MAX_BLOCKS = 2048
 MAX_REFERENCES = 1024
 _local_lane = threading.Lock()
 _active: ContextVar[SmallImportBudget | None] = ContextVar("small_import_budget", default=None)
+_sequential_record: ContextVar[str | None] = ContextVar("sequential_analysis_record", default=None)
 
 
 @dataclass
@@ -70,7 +71,47 @@ def current_budget() -> SmallImportBudget | None:
     return _active.get()
 
 
+_control_checkpoint: ContextVar = ContextVar("adaptive_import_control_checkpoint", default=None)
+_unit_progress: ContextVar = ContextVar("adaptive_import_unit_progress", default=None)
+
+
+@contextmanager
+def unit_progress_reporting(callback):
+    token = _unit_progress.set(callback)
+    try:
+        yield
+    finally:
+        _unit_progress.reset(token)
+
+
+@contextmanager
+def processing_unit(stage, index, total):
+    callback = _unit_progress.get()
+    checkpoint()
+    if callback:
+        callback(stage, index, total, False)
+    yield
+    checkpoint()
+    if callback:
+        callback(stage, index, total, True)
+
+
+@contextmanager
+def control_checkpoints(callback):
+    """Observe worker control at the existing bounded IO/parser checkpoints."""
+    token = _control_checkpoint.set(callback)
+    try:
+        callback()
+        yield
+        callback()
+    finally:
+        _control_checkpoint.reset(token)
+
+
 def checkpoint() -> None:
+    control = _control_checkpoint.get()
+    if control is not None:
+        control()
     budget = current_budget()
     if budget is not None:
         budget.checkpoint()
@@ -103,6 +144,43 @@ def bounded_zip_session(record) -> bool:
         return False
     originals = [item for item in record.artifacts if item.source_type != "adaptive_archive_document"]
     return bool(originals) and all(item.source_type == "adaptive_archive" for item in originals)
+
+
+@contextmanager
+def sequential_analysis_admission(db, record):
+    """Hold one parser lane; admit only bytes of the unit actually being read.
+
+    Bounded ZIPs retain their session-wide live workspace budget. Materializing
+    JSON/mixed imports retain the normal reserve and factor, but do not charge
+    independent, unopened sources as though they were all resident together.
+    """
+    originals = [item for item in record.artifacts if item.source_type != "adaptive_archive_document"]
+    if bounded_zip_session(record) or (
+        len(originals) == 1 and originals[0].source_type == "adaptive_archive"
+    ):
+        with import_analysis_admission(db, record, stage="analysis", force_memory_check=True):
+            yield
+        return
+    with uploads.bounded_analysis_admission_sync([0], force_memory_check=True, wait_for_slot=False, db=db):
+        token = _sequential_record.set(str(record.id))
+        try:
+            checkpoint()
+            yield
+            checkpoint()
+        finally:
+            _sequential_record.reset(token)
+
+
+@contextmanager
+def analysis_unit(record, artifacts):
+    """Call before reading a unit, and keep its objects inside this scope."""
+    checkpoint()
+    if _sequential_record.get() is not None and _sequential_record.get() == str(record.id):
+        uploads.require_analysis_memory_headroom(sum(
+            max(0, int(item.byte_size or 0)) for item in artifacts
+        ))
+    yield
+    checkpoint()
 
 
 def adaptive_reserve_bytes() -> int:
@@ -296,7 +374,8 @@ def import_analysis_admission(
             try:
                 checkpoint()
                 from app.services.adaptive_import.archive_sources import _artifact_path
-                for artifact in record.artifacts:
+                originals = [item for item in record.artifacts if item.source_type == "adaptive_archive"]
+                for artifact in originals if stage != "analysis" or len(originals) == 1 else []:
                     if artifact.source_type == "adaptive_archive":
                         with _artifact_path(record, artifact).open("rb") as source:
                             preflight_directory(source)

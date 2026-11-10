@@ -466,7 +466,7 @@ const renderer = compileComponent("../../apps/web/features/conversations/markdow
   "@assistant-ui/react": uiAdapter,
   "@assistant-ui/react-markdown": uiAdapter,
   "lucide-react": new Proxy({}, { get: () => () => null }),
-  "./markdown-table-export-actions": { ReaderMarkdownTable: ({ children }) =>
+  "./markdown-table-export-actions": { MarkdownTableSourceContext: React.createContext(null), ReaderMarkdownTable: ({ children }) =>
     React.createElement("div", { className: "markdown-table max-w-full overflow-x-auto rounded-lg border border-ui bg-surface" }, children) },
   "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: "en-US", resolvedTheme: "light" }) },
   "../../components/use-clipboard-copy": clipboardCopy,
@@ -816,6 +816,15 @@ test("excluded archive references stay visible but cannot navigate or load", () 
   }));
   assert.match(html, /Omitted image/);
   assert.match(html, /Omitted file/);
+  assert.doesNotMatch(html, /<img\b|<a\b|cr-archive-member:\/\//);
+});
+for (const source of [
+  `[Retained link][local]\n\n![Retained image][local]\n\n[local]: cr-archive-member://01234567-89ab-cdef-0123-456789abcdef`,
+  `<div><a href="cr-archive-member://01234567-89ab-cdef-0123-456789abcdef">Retained link</a><img alt="Retained image" src="cr-archive-member://01234567-89ab-cdef-0123-456789abcdef" /></div>`,
+]) test("unresolved reference-style and HTML archive links are inert and keep labels", () => {
+  const html = renderToStaticMarkup(React.createElement(renderer.MarkdownRenderer, { text: source, isAssistant: false }));
+  assert.match(html, /Retained link/);
+  assert.match(html, /Retained image/);
   assert.doesNotMatch(html, /<img\b|<a\b|cr-archive-member:\/\//);
 });
 for (const offline of [false, true]) {

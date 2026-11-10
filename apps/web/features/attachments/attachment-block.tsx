@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Download, ExternalLink, File, FileAudio, FileImage, FileText, FileVideo, Loader2, RotateCcw } from "lucide-react";
@@ -10,6 +10,8 @@ import type { AttachmentRead } from "../../lib/types";
 import { usePreferences } from "../../components/preferences-provider";
 import { MarkdownRenderer } from "../conversations/markdown-renderer";
 import { normalizeVisibleCaption } from "./attachment-caption-policy";
+import { parseInlineDelimitedPreview } from "./attachment-table-policy";
+import { readInlineTextPreview } from "./inline-text-preview";
 import { useAttachmentAccess } from "./attachment-access";
 import { ImageDisplayControls } from "./image-display-controls";
 import { useBodyImage } from "./image-presentation";
@@ -266,32 +268,36 @@ function InlineTextPreview({ attachment, kind, caption, onOpen, onRuntime, prese
   zh: boolean;
 }) {
   const [text, setText] = useState<string | null>(null);
+  const [limited, setLimited] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const attachmentIdentity = attachmentAssetIdentity(attachment);
   const visibleCaption = normalizeVisibleCaption(caption, attachment.display_name);
   useEffect(() => {
     setText(null);
+    setLimited(false);
     setExpanded(false);
     if (!attachment.content_url) return;
     const controller = new AbortController();
     const requestId = crypto.randomUUID();
     onRuntime({ status: "loading", requestId });
-    void fetch(attachment.content_url, { headers: { Range: "bytes=0-131071" }, signal: controller.signal })
-      .then((response) => { if (!response.ok && response.status !== 206) throw new Error("network"); return response.text(); })
-      .then((value) => { setText(value); onRuntime({ status: "ready", requestId }); })
-      .catch((error) => { if (error?.name !== "AbortError") onRuntime({ status: "failed", requestId, reason: "network" }); });
+    void readInlineTextPreview(attachment.content_url, controller.signal)
+      .then((value) => { if (!controller.signal.aborted) { setText(value.text); setLimited(value.limited); onRuntime({ status: "ready", requestId }); } })
+      .catch(() => { if (!controller.signal.aborted) onRuntime({ status: "failed", requestId, reason: "network" }); });
     return () => controller.abort();
   }, [attachment.content_url, attachmentIdentity, onRuntime]);
-  const isLong = Boolean(text && text.split(/\r?\n/).length > (presentation === "data" ? 8 : 10));
+  const tablePreview = useMemo(() => text !== null && kind === "table"
+    ? parseInlineDelimitedPreview(text, attachment.display_name.toLowerCase().endsWith(".tsv") ? "\t" : ",", expanded)
+    : null, [text, kind, attachment.display_name, expanded]);
+  const isLong = tablePreview ? expanded || tablePreview.hasMoreRows : Boolean(text && text.split(/\r?\n/).length > 10);
   return (
     <figure {...attachmentLocatorAttributes(attachment, locator)} className={`attachment-preview attachment-preview--${presentation}`} data-testid="attachment-block" data-attachment-mode="preview-panel">
-      <AttachmentMeta attachment={attachment} kind={kind} onOpen={onOpen} zh={zh} />
+      <AttachmentMeta attachment={attachment} kind={kind} zh={zh} />
       <div className={`attachment-preview-body ${expanded ? "attachment-preview-body--expanded" : ""}`}>
-        {text === null ? <div className="flex min-h-20 items-center justify-center text-secondary"><Loader2 className="h-4 w-4 animate-spin" /></div> : renderBoundedText(text, kind, attachment.display_name, attachment.id, expanded, zh)}
+        {text === null ? <div className="flex min-h-20 items-center justify-center text-secondary"><Loader2 className="h-4 w-4 animate-spin" /></div> : renderBoundedText(text, kind, attachment.id, expanded, zh, tablePreview)}
         {isLong && !expanded ? <div className="attachment-preview-fade" /> : null}
       </div>
       <footer className="attachment-preview-footer">
-        <span className="min-w-0 truncate text-xs text-secondary">{visibleCaption ?? ""}</span>
+        <span className="min-w-0 text-xs text-secondary">{visibleCaption}{limited || tablePreview?.limited ? <span className="block">{zh ? "部分内容预览" : "Partial content preview"}</span> : null}</span>
         <span className="flex shrink-0 items-center gap-1">
           {isLong ? <button type="button" onClick={() => setExpanded((value) => !value)} className="attachment-inline-action">{expanded ? (zh ? "收起预览" : "Collapse preview") : (zh ? "展开预览" : "Expand preview")}</button> : null}
           {onOpen ? <button type="button" onClick={onOpen} className="attachment-inline-action">{presentation === "data" ? (zh ? "打开完整表格" : "Open full table") : (zh ? "打开完整预览" : "Open full preview")}</button> : null}
@@ -377,8 +383,8 @@ function attachmentLocatorAttributes(attachment: AttachmentRead, props: Pick<Att
   };
 }
 
-function AttachmentMeta({ attachment, kind, onOpen, zh }: { attachment: AttachmentRead; kind: AttachmentViewerKind; onOpen?: () => void; zh: boolean }) {
-  return <header className="attachment-preview-header"><KindIcon kind={kind} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</p><p className="truncate text-xs text-secondary">{attachmentMeta(attachment, zh)}</p></div><span className="attachment-preview-actions">{onOpen ? <button type="button" onClick={onOpen} className="attachment-icon-action" aria-label={`${zh ? "打开" : "Open"} ${attachment.display_name}`} title={zh ? "打开" : "Open"}><ExternalLink className="h-4 w-4" /></button> : null}<DownloadButton attachment={attachment} zh={zh} /></span></header>;
+function AttachmentMeta({ attachment, kind, zh }: { attachment: AttachmentRead; kind: AttachmentViewerKind; zh: boolean }) {
+  return <header className="attachment-preview-header"><KindIcon kind={kind} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-primary" title={attachment.display_name}>{attachment.display_name}</p><p className="truncate text-xs text-secondary">{attachmentMeta(attachment, zh)}</p></div><DownloadButton attachment={attachment} zh={zh} /></header>;
 }
 
 function DownloadButton({ attachment, zh }: { attachment: AttachmentRead; zh: boolean }) {
@@ -393,16 +399,15 @@ function KindIcon({ kind, warning = false }: { kind: AttachmentViewerKind | null
   return <span className="attachment-kind-icon">{icon}</span>;
 }
 
-function renderBoundedText(text: string, kind: AttachmentViewerKind, filename: string, scopeId: string, expanded = false, zh = true): ReactNode {
+function renderBoundedText(text: string, kind: AttachmentViewerKind, scopeId: string, expanded = false, zh = true, tablePreview?: ReturnType<typeof parseInlineDelimitedPreview> | null): ReactNode {
   if (!text) return <p className="text-sm text-secondary">{zh ? "空文件 · 0 B" : "Empty file · 0 B"}</p>;
   if (kind === "markdown") return <MarkdownRenderer text={limitLines(text, expanded ? 28 : 14)} isAssistant={false} scopeId={`attachment-${scopeId}`} />;
-  if (kind === "table") return <DelimitedPreview text={text} delimiter={filename.toLowerCase().endsWith(".tsv") ? "\t" : ","} />;
+  if (kind === "table" && tablePreview) return <DelimitedPreview rows={tablePreview.rows} />;
   const lines = expanded ? 28 : kind === "text" ? 10 : 14;
   return <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-sm leading-6 text-primary">{limitLines(text, lines)}</pre>;
 }
 
-function DelimitedPreview({ text, delimiter }: { text: string; delimiter: string }) {
-  const rows = text.split(/\r?\n/).slice(0, 8).map((line) => line.split(delimiter).slice(0, 8));
+function DelimitedPreview({ rows }: { rows: string[][] }) {
   return <div className="max-w-full overflow-x-auto"><table className="w-max min-w-full border-collapse text-xs"><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex} className="max-w-52 truncate border border-ui px-2 py-1.5" title={cell}>{cell}</td>)}</tr>)}</tbody></table></div>;
 }
 

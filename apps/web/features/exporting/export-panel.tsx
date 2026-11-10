@@ -1,34 +1,30 @@
 "use client";
 
-import { batchExportError } from "../../lib/batch-export-errors";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, FileArchive, FileJson2, FileText } from "lucide-react";
-import { useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useEffect, useState, type MutableRefObject } from "react";
 import { MaintenanceHint } from "./maintenance-hint";
-import { ExportArtifactDelivery } from "./export-artifact-delivery";
-import { DirectExportDownload } from "./direct-export-download";
+import { RecoverableExportControl } from "./recoverable-export-control";
 import { captureOfflineAccess, assertOfflineAccess } from "../../lib/offline-access";
 import { usePreferences } from "../../components/preferences-provider";
 import { useClipboardCopy } from "../../components/use-clipboard-copy";
 import { ExportPresetsPanel } from "./export-presets-panel";
 import {
-  ApiRequestError,
   getConversationAttachments,
   continuationApi,
   getConversationExportUrl,
-  getTask,
-  queueConversationAttachmentBundleExport,
-  queueConversationContextPackageExport,
   resolveSkill,
+  type ConversationExportRequest,
 } from "../../lib/api";
 
 
 type ConversationExportFormat = "context" | "canjson" | "markdown";
 type SkillLocale = "zh-CN" | "en";
-export type ExportPanelState = { format: ConversationExportFormat; includeContinuation: boolean; includeAttachments: boolean; includeDescription: boolean; includeAnnotations: boolean; includeNotebook: boolean; includeSourceRefs: boolean; jobId: string | null; jobKey: string | null };
+export type ExportPanelState = { format: ConversationExportFormat; includeContinuation: boolean; includeAttachments: boolean; includeDescription: boolean; includeAnnotations: boolean; includeNotebook: boolean; includeSourceRefs: boolean; selectedScope?: boolean; jobId: string | null; jobKey: string | null };
 
 export function ExportPanel({
   conversationId,
+  selectedMessageIds,
   compact = false,
   maintenance = false,
   onOpenContinuation,
@@ -48,19 +44,17 @@ export function ExportPanel({
   const zh = resolvedLocale === "zh-CN";
   const [format, setFormat] = useState<ConversationExportFormat>(stateRef?.current?.format ?? "context");
   const [includeContinuation, setIncludeContinuation] = useState(stateRef?.current?.includeContinuation ?? true);
-  const submitLock = useRef(false);
-  const [submitting, setSubmitting] = useState(false);
   const [includeAttachments, setIncludeAttachments] = useState(stateRef?.current?.includeAttachments ?? false);
   const [includeDescription, setIncludeDescription] = useState(stateRef?.current?.includeDescription ?? false);
   const [includeAnnotations, setIncludeAnnotations] = useState(stateRef?.current?.includeAnnotations ?? false);
   const [includeNotebook, setIncludeNotebook] = useState(stateRef?.current?.includeNotebook ?? false);
   const [includeSourceRefs, setIncludeSourceRefs] = useState(stateRef?.current?.includeSourceRefs ?? true);
+  const [selectedScope, setSelectedScope] = useState(stateRef?.current?.selectedScope ?? false);
   const [jobId, setJobId] = useState<string | null>(stateRef?.current?.jobId ?? null);
   const [jobKey, setJobKey] = useState<string | null>(stateRef?.current?.jobKey ?? null);
   useEffect(() => {
-    if (stateRef) stateRef.current = { format, includeContinuation, includeAttachments, includeDescription, includeAnnotations, includeNotebook, includeSourceRefs, jobId, jobKey };
-  }, [stateRef, format, includeContinuation, includeAttachments, includeDescription, includeAnnotations, includeNotebook, includeSourceRefs, jobId, jobKey]);
-  const [queueError, setQueueError] = useState<string | null>(null);
+    if (stateRef) stateRef.current = { format, includeContinuation, includeAttachments, includeDescription, includeAnnotations, includeNotebook, includeSourceRefs, selectedScope, jobId, jobKey };
+  }, [stateRef, format, includeContinuation, includeAttachments, includeDescription, includeAnnotations, includeNotebook, includeSourceRefs, selectedScope, jobId, jobKey]);
   const continuationState = useQuery({
     queryKey: ["continuation", conversationId, "state"],
     queryFn: () => continuationApi.state(conversationId),
@@ -74,23 +68,15 @@ export function ExportPanel({
     queryFn: () => getConversationAttachments(conversationId),
     staleTime: 30_000,
   });
-  const taskQuery = useQuery({
-    queryKey: ["task", jobId],
-    queryFn: () => getTask(jobId!),
-    enabled: Boolean(jobId),
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      return status === "committed" || status === "failed" || status === "cancelled" ? false : 1500;
-    },
-  });
-
   const attachments = attachmentsQuery.data ?? [];
   const unavailableCount = attachments.filter((item) => item.resolution_status !== "resolved" || !item.asset_object).length;
   const exportOptions = { includeDescription, includeAnnotations, includeNotebook, includeSourceRefs };
-  const currentKey = JSON.stringify({ conversationId, sourceRevision, continuationGeneration: needsContinuationState ? continuationState.data?.generation : null, format, includeAttachments, includeContinuation, ...exportOptions });
+  const plain = format !== "context" && !includeAttachments;
+  const messageIds = plain && selectedScope ? selectedMessageIds : undefined;
+  const selectionEmpty = Boolean(plain && selectedScope && !selectedMessageIds.length);
+  const currentKey = JSON.stringify({ conversationId, sourceRevision, continuationGeneration: needsContinuationState ? continuationState.data?.generation : null, format, includeAttachments, includeContinuation, messageIds, ...exportOptions });
   // A background refresh with cached, unchanged generation must not repeatedly
   // unmount a valid immutable download. A changed generation still breaks the key.
-  const artifactId = jobKey === currentKey && !continuationUnavailable ? taskQuery.data?.result.artifact_id : null;
   const exportScope = `${maintenance ? "maintenance" : "export"}:${conversationId}`;
   const plainHref = getConversationExportUrl(conversationId, {
     format: format === "canjson" ? "canjson_v2" : "markdown_v2",
@@ -99,39 +85,46 @@ export function ExportPanel({
     includeAnnotations,
     includeNotebook,
     includeSourceRefs,
+    messageIds,
   });
   const output = format === "context" ? ".context.zip" : format === "canjson"
     ? includeAttachments ? ".context.zip" : ".canjsonl"
     : includeAttachments ? "-markdown.zip" : ".md";
 
-  const resetQueuedResult = () => setQueueError(null);
+  const request: ConversationExportRequest = format === "context" ? {
+    format: "context_package", context_scope: "full_conversation",
+    context_attachment_policy: includeAttachments ? "include" : "metadata_only",
+    continuation_policy: includeContinuation ? "auto" : "raw_only",
+  } : {
+    format: format === "canjson" ? includeAttachments ? "canjson_bundle" : "canjson_v2"
+      : includeAttachments ? "markdown_bundle" : "markdown_v2",
+    include_metadata: true, include_description: includeDescription,
+    annotation_scope: includeAnnotations ? "all" : "none",
+    notebook_scope: includeNotebook ? "current" : "none", include_source_refs: includeSourceRefs,
+    ...(messageIds ? { message_ids: messageIds } : {}),
+  };
 
   return (
     <section className="min-w-0 space-y-5">
-      {!maintenance ? <ExportPresetsPanel
-        current={{ format, include_continuation: includeContinuation, include_attachments: includeAttachments, include_description: includeDescription, include_annotations: includeAnnotations, include_notebook: includeNotebook, include_source_refs: includeSourceRefs }}
-        onApply={(preset) => {
-          setFormat(preset.format);
-          setIncludeContinuation(preset.include_continuation);
-          setIncludeAttachments(preset.include_attachments);
-          setIncludeDescription(preset.include_description);
-          setIncludeAnnotations(preset.include_annotations);
-          setIncludeNotebook(preset.include_notebook);
-          setIncludeSourceRefs(preset.include_source_refs);
-          resetQueuedResult();
-        }}
-      /> : null}
       {!maintenance ? <div className="grid grid-cols-3 rounded-lg bg-subtle p-1" role="group" aria-label={zh ? "导出格式" : "Export format"}>
-        <FormatButton active={format === "context"} onClick={() => { setFormat("context"); resetQueuedResult(); }} icon={<FileArchive className="h-4 w-4 shrink-0" />} label={zh ? "交给 AI" : "For AI"} />
-        <FormatButton active={format === "canjson"} onClick={() => { setFormat("canjson"); resetQueuedResult(); }} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />
-        <FormatButton active={format === "markdown"} onClick={() => { setFormat("markdown"); resetQueuedResult(); }} icon={<FileText className="h-4 w-4" />} label="Markdown" />
+        <FormatButton active={format === "context"} onClick={() => setFormat("context")} icon={<FileArchive className="h-4 w-4 shrink-0" />} label={zh ? "交给 AI" : "For AI"} />
+        <FormatButton active={format === "canjson"} onClick={() => setFormat("canjson")} icon={<FileJson2 className="h-4 w-4" />} label="CanJSON" />
+        <FormatButton active={format === "markdown"} onClick={() => setFormat("markdown")} icon={<FileText className="h-4 w-4" />} label="Markdown" />
       </div> : null}
 
       {!maintenance && format === "context" && onOpenContinuation ? <MaintenanceHint key={conversationId} conversationId={conversationId} onOpen={onOpenContinuation} /> : null}
 
+      {plain && (selectedMessageIds.length > 0 || selectedScope) ? <fieldset className="flex flex-wrap items-center gap-x-4 text-sm text-primary">
+        <legend className="sr-only">{zh ? "导出范围" : "Export scope"}</legend>
+        <label className="inline-flex min-h-11 items-center gap-2"><input type="radio" checked={!selectedScope} onChange={() => setSelectedScope(false)} />{zh ? "完整对话" : "Full conversation"}</label>
+        <label className="inline-flex min-h-11 items-center gap-2"><input type="radio" checked={selectedScope} onChange={() => setSelectedScope(true)} />{zh ? `所选 ${selectedMessageIds.length} 条消息` : `${selectedMessageIds.length} selected messages`}</label>
+      </fieldset> : null}
+      {selectionEmpty ? <p role="status" className="text-sm text-secondary">{zh ? "请在正文选择要导出的消息，或改为完整对话；不会自动扩大范围。" : "Select messages in the Reader or choose Full conversation. The scope will not expand automatically."}</p> : null}
+      {!plain && selectedScope ? <p className="text-xs text-secondary">{zh ? "附件包和上下文包使用完整对话；切回无附件文件可继续导出所选消息。" : "Attachment and Context packages use the full conversation. Switch back to a file without attachments to export the selection."}</p> : null}
+
       <OptionRow
         checked={includeAttachments}
-        onChange={(checked) => { setIncludeAttachments(checked); resetQueuedResult(); }}
+        onChange={setIncludeAttachments}
         label={zh ? "包含附件" : "Include attachments"}
         description={attachmentsQuery.isLoading
           ? (zh ? "正在检查当前对话文件" : "Checking conversation files")
@@ -177,75 +170,32 @@ export function ExportPanel({
         </p>
       </div> : null}
 
-      {jobKey === currentKey && taskQuery.isError ? <div role="alert" className="text-sm text-[var(--danger)]"><p>{zh ? "暂时无法获取导出进度，任务可能仍在运行。" : "Export status is unavailable. The task may still be running."}</p><button type="button" disabled={taskQuery.isFetching} onClick={() => void taskQuery.refetch()} className="min-h-10 underline">{zh ? "重新获取进度" : "Retry status"}</button></div> : null}
       {needsContinuationState && continuationState.isError ? <button type="button" className="min-h-11 text-sm text-[var(--danger)]" onClick={() => void continuationState.refetch()}>{zh ? "接续文件状态读取失败，重试" : "Could not read continuation status; retry"}</button> : null}
-      {format === "context" || includeAttachments ? (
-        artifactId && taskQuery.data?.status === "committed" ? (
-          format === "context" ? (
-            <ContextPackageDelivery downloadUrl="" downloadControl={<ExportArtifactDelivery artifactId={artifactId} scope={exportScope} label={zh ? "下载上下文包" : "Download Context Package"} onRegenerated={task => { setJobId(task.job_id); setJobKey(currentKey); }} />} defaultSkillLocale={zh ? "zh-CN" : "en"} purpose={maintenance ? "maintenance" : "acquisition"} />
-          ) : (
-            <ExportArtifactDelivery artifactId={artifactId} scope={exportScope} label={zh ? "下载导出包" : "Download export"} onRegenerated={task => { setJobId(task.job_id); setJobKey(currentKey); }} />
-          )
-        ) : (
-          <button
-            type="button"
-            disabled={submitting || continuationUnavailable || (needsContinuationState && continuationState.isFetching) || (jobKey === currentKey && Boolean(jobId) && !["failed", "cancelled", "committed"].includes(taskQuery.data?.status ?? "queued"))}
-            onClick={() => void (async () => {
-              if (submitLock.current) return;
-              submitLock.current = true;
-              setQueueError(null);
-              setSubmitting(true);
-              try {
-                const task = format === "context" ? await queueConversationContextPackageExport(conversationId, {
-                  scope: "full_conversation", attachmentPolicy: includeAttachments ? "include" : "metadata_only",
-                  continuationPolicy: includeContinuation ? "auto" : "raw_only",
-                }) : await queueConversationAttachmentBundleExport(
-                  conversationId,
-                  format === "canjson" ? "canjson_bundle" : "markdown_bundle",
-                  exportOptions,
-                );
-                setJobId(task.job_id);
-                setJobKey(currentKey);
-              } catch (error) {
-                setQueueError(exportQueueError(error, zh));
-              } finally {
-                submitLock.current = false;
-                setSubmitting(false);
-              }
-            })()}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"
-          >
-            <FileArchive className="h-4 w-4" />
-            {submitting ? (zh ? "正在创建任务…" : "Creating task…") : jobKey === currentKey && taskQuery.isError ? (zh ? "等待获取任务状态" : "Waiting for task status") : jobKey === currentKey && jobId && !["failed", "cancelled", "committed"].includes(taskQuery.data?.status ?? "queued")
-              ? (zh ? `正在生成 ${taskQuery.data?.progress ?? 0}%` : `Generating ${taskQuery.data?.progress ?? 0}%`)
-              : (zh ? "生成导出包" : "Generate export")}
-          </button>
-        )
-      ) : (
-        <DirectExportDownload href={plainHref} format={format === "canjson" ? "canjson" : "markdown"} />
-      )}
-
-      {jobKey === currentKey && taskQuery.data?.status === "cancelled" ? <p className="text-sm text-secondary">{zh ? "生成已取消，可以重新生成。" : "Export cancelled. You can generate it again."}</p> : null}
-      {queueError ? <p className="text-sm text-[var(--danger)]">{queueError}</p> : null}
-      {jobKey === currentKey && taskQuery.data?.status === "failed" ? <p className="text-sm text-[var(--danger)]">{batchExportError(taskQuery.data.error_message, zh)}</p> : null}
+      <RecoverableExportControl key={currentKey} conversationId={conversationId} identity={currentKey}
+        request={request} zh={zh} scope={exportScope}
+        disabled={selectionEmpty || continuationUnavailable || (needsContinuationState && continuationState.isFetching)}
+        deliveryDisabled={continuationUnavailable}
+        initialJobId={jobKey === currentKey ? jobId : null}
+        plainHref={format !== "context" && !includeAttachments ? plainHref : undefined}
+        onAccepted={task => { setJobId(task.job_id); setJobKey(currentKey); }}
+        renderDelivery={format === "context" ? control => <ContextPackageDelivery downloadUrl="" downloadControl={control}
+          defaultSkillLocale={zh ? "zh-CN" : "en"} purpose={maintenance ? "maintenance" : "acquisition"} /> : undefined}
+      />
       {!compact && unavailableCount > 0 ? <p className="text-xs leading-5 text-secondary">{zh ? "缺失文件仍保留在元数据中，附件完整性会标记为 partial。" : "Missing files remain in metadata and make asset completeness partial."}</p> : null}
+      {!maintenance ? <ExportPresetsPanel
+        current={{ format, include_continuation: includeContinuation, include_attachments: includeAttachments, include_description: includeDescription, include_annotations: includeAnnotations, include_notebook: includeNotebook, include_source_refs: includeSourceRefs }}
+        onApply={(preset) => {
+          setFormat(preset.format);
+          setIncludeContinuation(preset.include_continuation);
+          setIncludeAttachments(preset.include_attachments);
+          setIncludeDescription(preset.include_description);
+          setIncludeAnnotations(preset.include_annotations);
+          setIncludeNotebook(preset.include_notebook);
+          setIncludeSourceRefs(preset.include_source_refs);
+        }}
+      /> : null}
     </section>
   );
-}
-
-function exportQueueError(failure: unknown, zh: boolean): string {
-  if (failure instanceof ApiRequestError) {
-    if (failure.code) return batchExportError(failure.code, zh);
-    if (failure.status === 401) return zh ? "登录已过期，请重新登录后继续。" : "Your session expired. Sign in again to continue.";
-    if (failure.status === 403) return zh ? "当前权限不允许导出此内容。" : "Your current permissions do not allow this export.";
-    if (failure.status === 404) return zh ? "对话已删除或不可访问，请返回列表确认。" : "This conversation is no longer available. Check your conversation list.";
-    if (failure.status === 409) return zh ? "导出内容已发生变化，请刷新后重新生成。" : "The export source changed. Refresh and generate it again.";
-    if (failure.status === 413) return zh ? "导出超过大小限制，请减少内容或关闭附件后重试。" : "This export exceeds the size limit. Reduce the scope or omit attachments and retry.";
-    if (failure.status === 429) return zh ? "导出请求过于频繁，请稍后重试。" : "Too many export requests. Try again shortly.";
-  }
-  return zh
-    ? "导出任务创建结果尚未确认。请先到任务中心核对，再决定是否重试。"
-    : "The export task result is not confirmed. Check Tasks before deciding whether to retry.";
 }
 
 export function ContextPackageDelivery({ downloadUrl, downloadFilename, downloadControl, defaultSkillLocale, offline = false, purpose = "acquisition" }: { downloadUrl: string; downloadFilename?: string; downloadControl?: React.ReactNode; defaultSkillLocale: SkillLocale; offline?: boolean; purpose?: "acquisition" | "maintenance" }) {
@@ -291,7 +241,7 @@ function OptionRow({ checked, onChange, label, description }: { checked: boolean
 
 function CompactOption({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
   return (
-    <label className="flex min-h-10 items-center justify-between gap-3 rounded-md px-2 text-sm text-primary hover:bg-subtle">
+    <label className="flex min-h-11 items-center justify-between gap-3 rounded-md px-2 text-sm text-primary hover:bg-subtle">
       <span>{label}</span>
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-[var(--accent)]" />
     </label>

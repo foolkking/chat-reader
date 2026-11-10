@@ -236,9 +236,12 @@ def test_old_missing_analysis_waits_for_explicit_retry_of_original_zip(zip_clien
 
 
 @pytest.mark.parametrize("path", ["%2foutside.png", "assets/%00bad.png", "assets/%253abad.png", "../../outside.png"])
-def test_missing_index_rejects_encoded_or_escaping_reference_paths(path):
-    from app.services.adaptive_import.archive_sources import _document_references
+def test_missing_index_never_admits_encoded_or_escaping_reference_paths(path):
+    from app.services.adaptive_import.archive_sources import _document_references, _reference_candidate
     from app.services.adaptive_import.contracts import AdaptiveImportError
     with pytest.raises(AdaptiveImportError) as failure:
-        _document_references(f"![test]({path})", "nested/conversation.md", set())
+        _reference_candidate("nested/conversation.md", path)
     assert failure.value.code == "ZIP_PATH_UNSAFE"
+    # A body reference is now recoverable; it still must never acquire a
+    # missing-member identity or permission to read a file.
+    assert _document_references(f"![test]({path})", "nested/conversation.md", set()) == (set(), set())

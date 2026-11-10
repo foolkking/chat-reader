@@ -6,11 +6,13 @@ import uuid
 import zipfile
 from pathlib import Path
 from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from app.core.config import get_settings
 from app.models.import_record import ImportRecord
+from app.models.background_job import BackgroundJob
 from app.services.adaptive_import import memory_budget as budget
 from app.services.background_jobs import process_background_job
 from app.services import uploads
@@ -57,21 +59,26 @@ def test_runtime_fixture_preserves_actual_markdown_boundaries_and_attachment_sha
 
 
 @pytest.mark.parametrize("headroom", [None, 0, 191 * MIB])
-def test_small_zip_rejection_is_safe_before_parsing_and_original_job_retries(client, monkeypatch, headroom):
+def test_small_zip_wait_is_safe_before_parsing_and_original_job_resumes(client, monkeypatch, headroom):
     queued = queued_zip(client)
     job_id, factory = claim(queued)
     with monkeypatch.context() as patch:
         patch.setattr(uploads, "available_memory_bytes", lambda: headroom)
         patch.setattr("app.services.adaptive_import.service.analyze_documents", lambda *_: pytest.fail("Parser entered before admission."))
         process_background_job(job_id, session_factory=factory)
-    failed = client.get(f"/api/tasks/{job_id}").json()
-    expected = {"code": "UPLOAD_MEMORY_PRESSURE", "stage": "admission", "retryable": True}
-    assert failed["status"] == "failed" and failed["failure"] == expected
+    waiting = client.get(f"/api/tasks/{job_id}").json()
+    assert waiting["status"] == "queued" and waiting["failure"] is None
+    assert waiting["resource_wait"]["reason"] == "UPLOAD_MEMORY_PRESSURE"
     stored = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
-    assert stored["state"] == "FAILED" and stored["failure"] == expected
+    assert stored["state"] == "ANALYZING" and stored["phase"] == "waiting_resources"
     assert not stored["analysis_summary"].get("small_zip_profile")
     assert client.get("/api/conversations").json() == []
     assert client.post(f"/api/tasks/{job_id}/retry").json()["job_id"] == str(job_id)
+    with database() as db:
+        from app.services.background_jobs import claim_next_job
+        assert claim_next_job(db, job_type="adaptive_import_analysis") is None
+        db.get(BackgroundJob, job_id).next_run_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        db.commit()
     monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 192 * MIB)
     current = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
     ready = _complete_analysis(client, current)
@@ -91,7 +98,9 @@ def test_disabled_policy_or_unknown_rss_cannot_reduce_the_standard_reserve(clien
     job_id, factory = claim(queued)
     process_background_job(job_id, session_factory=factory)
     result = client.get(f"/api/tasks/{job_id}").json()
-    assert result["failure"]["code"] == "UPLOAD_MEMORY_PRESSURE"
+    assert result["status"] == "queued" and result["phase"] == "waiting_resources"
+    assert result["resource_wait"]["reason"] == "UPLOAD_MEMORY_PRESSURE"
+    assert client.get("/api/conversations").json() == []
 
 
 @pytest.mark.parametrize("kind", ["multi-document", "large-document", "many-entries", "expanded"])
@@ -111,7 +120,10 @@ def test_nonqualifying_zip_uses_unchanged_standard_admission(client, monkeypatch
     monkeypatch.setattr(uploads, "available_memory_bytes", lambda: 224 * MIB)
     job_id, factory = claim(queued)
     process_background_job(job_id, session_factory=factory)
-    assert client.get(f"/api/tasks/{job_id}").json()["failure"]["code"] == "UPLOAD_MEMORY_PRESSURE"
+    result = client.get(f"/api/tasks/{job_id}").json()
+    assert result["status"] == "queued" and result["phase"] == "waiting_resources"
+    assert result["resource_wait"]["reason"] == "UPLOAD_MEMORY_PRESSURE"
+    assert client.get("/api/conversations").json() == []
 
 
 def test_safe_entry_cap_allows_256_members_and_enforces_attachment_cap_after_classification(client, monkeypatch):

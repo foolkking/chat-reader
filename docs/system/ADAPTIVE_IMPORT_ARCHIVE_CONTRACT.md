@@ -1,5 +1,52 @@
 # Adaptive Import ZIP Contract
 
+## Unreleased recovery extension — 2026-11-10
+
+Working-tree behavior only; the deployed revision below is unchanged. Evidence
+and unfinished broader recovery work are in the
+[implementation ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
+
+Archive member paths and body links have different authority. Unsafe actual
+members and manifest declarations still fail validation; a body link which
+cannot resolve within the archive no longer aborts otherwise valid content.
+Safe parent-relative links are normalized against the containing document and
+accepted when they remain inside the archive. Escaping, absolute/local-drive,
+backslash, NUL, malformed and excessively encoded body references become opaque
+`cr-archive-member://` identities. Original source is retained; no external
+filesystem/network read, guessed basename match or fabricated attachment occurs.
+Reader/Share/Offline render their labels/alt text inertly, including reference
+definitions and supported sanitized HTML media/link forms.
+
+The server-owned catalog has optional `unresolved_references`, summary
+`blocked_reference_count`, and bounded warning examples with document ordinal,
+source line and reason. Repeated identical targets in one document share an
+identity/count and at most eight line examples. Labels are escaped and bounded;
+they are never navigation URLs. The member/read page also pages these records.
+PUT accepts optional `reference_changes` (`reference_id`, nullable
+`target_member_id`) under the existing exact `expected_version`. An explicit
+binding can select only an available, non-conversation member in the same
+owned catalog after source-SHA validation. It acquires real document ownership
+and uses normal occurrence, streaming, CRC, MIME and scanner validation at commit.
+Absent targets remain inactive, or the user supplies a replacement ZIP and
+reviews it again; this is not arbitrary local file access.
+
+Structured failure details project only safe reason codes and a bounded entry
+ordinal, not server paths or source text. Warnings identify the affected body
+references; actual archive failures identify their category and repair action.
+No catalog-version bump, migration, portable-format change or automatic retry
+of a failed historical task is involved.
+
+Multi-source preview can isolate an independent `ZIP_INVALID`,
+`ZIP_MARKDOWN_REQUIRED` or Markdown encoding failure as a **blocking invalid
+unit**, retaining its original source and allowing other independent units to
+be reviewed. Nothing from that archive is presented as successfully imported;
+the batch cannot commit until the failed unit is replaced or explicitly
+excluded. Single-source failure retains its failure/repair flow.
+Actual unsafe member/manifest paths, CRC, scanner, source-change, storage and
+resource exceptions are not swallowed by this isolation. All-ZIP directory
+preflight occurs immediately before each archive inspection; commit retains
+its source checks. JSON/mixed batches do not inherit the pure-ZIP memory lane.
+
 Status synchronized **2026-11-09**: exact source `865b0a6` passed full CI
 `42594459199` and independent artifact/runtime acceptance, and is deployed
 with single head/current `20261108_0060`. The disk-backed extension and retained

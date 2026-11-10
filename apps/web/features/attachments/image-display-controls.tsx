@@ -4,7 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DismissableLayer } from "@radix-ui/react-dismissable-layer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeftRight, ChevronUp, Expand, Loader2, SlidersHorizontal } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronUp, Expand, Loader2, SlidersHorizontal } from "lucide-react";
 import type { AttachmentRead } from "../../lib/types";
 import { ApiRequestError, getImageDisplay, setImageDisplay, uploadMessageCopyPreview, type ImageDisplayRead } from "../../lib/api";
 import { authenticationGeneration } from "../../lib/offline-access";
@@ -38,6 +38,8 @@ function SizeEditor({ attachment, zh, compact, laneWidth, onOpen, editable }: Pr
   // Read-only surfaces never inherit an owner's write recovery, even if their
   // attachment/source/authentication happen to match.
   const write = editable ? writeQuery.data : null;
+  const receiptDeadline = write?.phase === "saved" ? writeQuery.dataUpdatedAt + 3000 : 0;
+  const showSaved = receiptDeadline > Date.now();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<ImageDisplayRead | null>(null);
   const [draft, setDraft] = useState<number | null>(null);
@@ -51,6 +53,15 @@ function SizeEditor({ attachment, zh, compact, laneWidth, onOpen, editable }: Pr
   const pending = write?.phase === "saving";
   const blocked = Boolean(readError || write?.phase === "uncertain" || write?.phase === "error");
   const busy = pending || reading;
+  useEffect(() => {
+    if (!editable || write?.phase !== "saved") return;
+    // Expire only this acknowledged receipt, not confirmed image dimensions or
+    // a newer pending/error result. Absolute cache time survives virtual remounts.
+    const timer = window.setTimeout(() => {
+      client.setQueryData<WriteState | null>(writeKey, value => value === write ? null : value);
+    }, Math.max(0, receiptDeadline - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [client, editable, receiptDeadline, write, writeKey]);
   useEffect(() => {
     if (editable && open && !current && display && write?.phase === "saved") {
       setCurrent(display); setDraft(display.scale_percent);
@@ -171,13 +182,21 @@ function SizeEditor({ attachment, zh, compact, laneWidth, onOpen, editable }: Pr
     {editable ? <span className="image-display-actions">
       <button ref={trigger} type="button" aria-expanded={open} aria-controls={open ? panelId : undefined}
         aria-label={zh ? `图片展示比例：${unconfigured ? scaleLabel : `${effectivePercent}%`}` : `Image display scale: ${unconfigured ? scaleLabel : `${effectivePercent}%`}`}
-        className={`image-display-trigger${compact ? " image-display-trigger--compact" : ""}`} title={zh ? "松手即保存；同步更新已公开的图片链接，不会自动公开图片。" : "Release to save. Updates existing public image links; does not publish images."}
+        className={`image-display-trigger${compact ? " image-display-trigger--compact" : ""}`} title={zh
+          ? "松手即保存；同步更新已公开的图片链接，不会自动公开图片。" + (unconfigured ? " 默认适应只影响正文，旧公开图片和离线副本保持原样。" : "")
+          : "Release to save. Updates existing public image links; does not publish images." + (unconfigured ? " Default fit affects reading only; existing public images and offline copies are unchanged." : "")}
         onClick={() => {
           if (open) { dismiss(); return; }
           anchor.current = trigger.current?.getBoundingClientRect() ?? null; setOpen(true);
           if (!pending && write?.phase !== "uncertain") void read();
         }}>
-        {compact ? <SlidersHorizontal aria-hidden="true" className="h-4 w-4" /> : <><span>{scaleLabel}</span><ChevronUp className="h-3.5 w-3.5" /></>}
+        {compact ? (reading || pending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+          : showSaved ? <Check aria-hidden="true" className="h-4 w-4" /> : <SlidersHorizontal aria-hidden="true" className="h-4 w-4" />) : <>
+          <span className="relative"><span className={showSaved ? "invisible" : undefined}>{scaleLabel}</span>
+            {showSaved ? <span className="absolute inset-0 flex items-center justify-center" aria-hidden="true">{zh ? "已保存" : "Saved"}</span> : null}
+          </span>
+          {reading || pending ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin" /> : <ChevronUp aria-hidden="true" className="h-3.5 w-3.5" />}
+        </>}
       </button>
       <button type="button" className={compact ? "attachment-icon-action" : "attachment-inline-action"} aria-label={zh ? "适应栏宽" : "Fit column"} title={zh ? "适应栏宽" : "Fit column"} disabled={busy || blocked} onClick={() => void fitColumn()}>
         {compact ? <ArrowLeftRight aria-hidden="true" className="h-4 w-4" /> : zh ? "适应栏宽" : "Fit column"}
@@ -193,22 +212,22 @@ function SizeEditor({ attachment, zh, compact, laneWidth, onOpen, editable }: Pr
         const target = event.detail.originalEvent.target;
         if (!(target instanceof Node) || !trigger.current?.contains(target)) dismiss();
       }}>
-      <div ref={panel} id={panelId} role="group" aria-label={zh ? "图片比例" : "Image scale"}
+      <div ref={panel} id={panelId} role="group" aria-label={zh ? "图片比例" : "Image scale"} aria-describedby={`${panelId}-hint`}
         className="image-scale-disclosure" style={position} data-markdown-copy-ignore="true">
         <ImageScaleSlider value={shown} zh={zh} disabled={busy || blocked || !current} onChange={changeDraft}
           onCommit={percent => void save(percent)}
           onCancel={() => dismiss(true)} />
+        <span id={`${panelId}-hint`} className="sr-only">{zh
+          ? "松手即保存；同步更新已公开的图片链接，不会自动公开图片。"
+          : "Release to save. Updates existing public image links; does not publish images."}
+          {unconfigured ? (zh ? " 当前为正文默认适应，尚未保存比例；旧公开图片和离线副本保持原样。" : " Currently fitted for reading, not saved; existing public images and offline copies are unchanged.") : null}
+        </span>
       </div>
     </DismissableLayer>, document.body) : null}
-    {open && editable && !error ? <span className="image-display-feedback">{zh
-      ? "松手即保存；同步更新已公开的图片链接，不会自动公开图片。"
-      : "Release to save. Updates existing public image links; does not publish images."}
-      {unconfigured ? (zh ? " 当前为正文默认适应，尚未保存比例；旧公开图片和离线副本保持原样。" : " Currently fitted for reading, not saved; existing public images and offline copies are unchanged.") : null}
-    </span> : null}
     {error ? <span className="image-display-feedback"><span role="alert">{error}</span>
       <button type="button" className="attachment-inline-action" disabled={busy} onClick={() => void read()}>{zh ? "核对结果" : "Check result"}</button></span> : null}
-    {reading || pending || write?.phase === "saved" ? <span className="image-display-feedback" role="status">
-      {reading || pending ? <Loader2 className="inline h-3 w-3 animate-spin" /> : null} {reading ? (zh ? "读取尺寸…" : "Reading size…")
+    {reading || pending || showSaved ? <span className="sr-only" role="status">
+      {reading ? (zh ? "读取尺寸…" : "Reading size…")
         : pending ? (zh ? "正在保存；关闭不会取消提交" : "Saving; closing does not cancel the write") : (zh ? "已保存" : "Saved")}
     </span> : null}
   </span>;

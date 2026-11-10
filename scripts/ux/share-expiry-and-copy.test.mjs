@@ -132,7 +132,7 @@ test("clipboard success/failure belongs to the exact value and cannot publish af
   let cursor = 0, current, value = "synthetic-first", writes = 0, transport = async () => {};
   const hook = init => hooks[cursor++] ?? (hooks[cursor - 1] = init());
   const react = {
-    useState: init => { const state = hook(() => ({ value: init })); return [state.value, next => { writes++; state.value = next; }]; },
+    useState: init => { const state = hook(() => ({ value: init })); return [state.value, next => { writes++; state.value = typeof next === "function" ? next(state.value) : next; }]; },
     useRef: init => hook(() => ({ current: init })), useCallback: fn => fn,
     useEffect: (fn, deps) => { const state = hook(() => ({}));
       if (!state.deps || deps.some((value, index) => !Object.is(value, state.deps[index]))) {

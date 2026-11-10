@@ -219,6 +219,22 @@ def test_memory_rejection_retains_sources_and_explicit_retry_reuses_the_task(cli
     with monkeypatch.context() as patched:
         patched.setattr("app.services.uploads.bounded_analysis_admission_sync", rejected)
         process_background_job(job_id, session_factory=factory)
+    waiting = client.get(f"/api/tasks/{job_id}").json()
+    assert waiting["status"] == "queued" and waiting["phase"] == "waiting_resources"
+    assert waiting["resource_wait"]["reason"] == "UPLOAD_MEMORY_PRESSURE"
+    # Only exhausting the bounded wait requires a manual retry. The same task
+    # retains the sources throughout, rather than immediately failing JSON.
+    with database() as db:
+        from app.services.adaptive_import.resource_wait import defer_resource, finish_wait
+        row = db.get(BackgroundJob, job_id)
+        row.result = {**row.result, "resource_wait": {
+            "waiting_since": (datetime.now(timezone.utc) - timedelta(seconds=1801)).isoformat(),
+            "waited_seconds": 0, "checks": 1,
+        }}
+        finish_wait(row, "result")
+        record = db.get(ImportRecord, uuid.UUID(queued["import_id"]))
+        assert defer_resource(row, record, UploadLimitError("UPLOAD_MEMORY_PRESSURE", "low", status_code=429), stage="analysis")
+        db.commit()
     failed = client.get(f"/api/tasks/{job_id}").json()
     assert failed["status"] == "failed"
     stored = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
@@ -253,12 +269,13 @@ def test_even_small_queued_analysis_does_not_start_under_low_host_headroom(clien
     job_id, factory = claim(queued)
     process_background_job(job_id, session_factory=factory)
     task = client.get(f"/api/tasks/{job_id}").json()
-    assert task["status"] == "failed"
-    assert "memory headroom" in task["error_message"]
+    assert task["status"] == "queued"
+    assert task["phase"] == "waiting_resources"
+    assert task["resource_wait"]["reason"] == "UPLOAD_MEMORY_PRESSURE"
     assert (tmp_path / "storage" / "imports" / queued["import_id"] / "source-0.json").read_bytes() == source()
     stored = client.get(f"/api/adaptive-import/sessions/{queued['import_id']}").json()
-    assert stored["state"] == "FAILED"
-    assert stored["phase"] == "analysis_failed"
+    assert stored["state"] == "ANALYZING"
+    assert stored["phase"] == "waiting_resources"
 
 
 def test_small_conversation_zip_completes_analysis_and_commit_at_224_mib_headroom(

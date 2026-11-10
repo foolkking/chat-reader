@@ -22,6 +22,15 @@ const session = (state = "ANALYZING", phase = "queued") => ({
 const completion = { import_id: "synthetic-import", status: "committed", conversation_ids: ["synthetic-conversation"],
   conversation_count: 1, message_count: 2, warnings: [] };
 
+test("source repair has a required mounted CI gate and retained screenshots", () => {
+  const workflow = readFileSync(new URL("../../.github/workflows/build-release-images.yml", import.meta.url), "utf8");
+  const step = workflow.split("- name: Failed and paused import source repair")[1]?.split("- name:")[0];
+  assert.match(step ?? "", /run: node scripts\/ux\/import-source-repair-browser\.mjs/);
+  assert.doesNotMatch(step, /continue-on-error|if:/);
+  assert.match(workflow, /import-source-repair-browser\/result\.json/);
+  assert.match(workflow, /import-source-repair-browser\/\*\.png/);
+});
+
 // Execute actual component/formatter code with controlled hook scheduling and
 // transport. This does not substitute for the mounted browser/polling cases.
 function hooksRuntime() {
@@ -56,10 +65,13 @@ function load(path, mocks, window) {
   }, module.exports, window);
   return module.exports;
 }
-function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720 } = {}) {
+function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720, cache = new Map() } = {}) {
   const runtime = hooksRuntime(), calls = [], mutations = [], queries = new Map(), storage = new Map(), events = new EventTarget();
   if (storedId) storage.set("chat-reader:adaptive-import-session", storedId);
   let generation = 1, read = initialRead ?? (async () => session()), upload = async () => session(), tree, mutationCursor = 0;
+  let stop = async id => ({ job_id: id, status: "cancelling" });
+  let replace = async () => ({ ...session(), analysis_task_id: "replacement-analysis" });
+  let exclude = async () => ({ ...session(), analysis_task_id: "exclusion-analysis" });
   let commit = async id => ({ ...completion, import_id: id, status: "queued" });
   const window = { sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) },
     addEventListener: (...args) => events.addEventListener(...args),
@@ -69,6 +81,16 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
     createAdaptiveImportSession: files => { calls.push(["upload", files]); return upload(); },
     getAdaptiveImportSession: (id, signal) => { calls.push(["read", id, signal]); return read(id, signal); },
     cancelAdaptiveImportSession: async id => { calls.push(["cancel", id]); },
+    cancelTask: (id, signal, disposition) => { calls.push(["stop", id, disposition, signal]); return stop(id); },
+    resumeAdaptiveImportSession: async (id, updatedAt) => {
+      calls.push(["resume", id, updatedAt]); return { ...session(), analysis_task_id: "new-analysis" };
+    },
+    replaceAdaptiveImportArtifact: (id, artifact, file, updatedAt) => {
+      calls.push(["replace", id, artifact, file, updatedAt]); return replace(id, artifact, file, updatedAt);
+    },
+    excludeAdaptiveImportSource: (id, artifact, updatedAt) => {
+      calls.push(["exclude", id, artifact, updatedAt]); return exclude(id, artifact, updatedAt);
+    },
     retryTask: async id => { calls.push(["retry", id]); return { job_id: id, status: "queued" }; },
     getImportStatus: async id => { calls.push(["result", id]); return completion; },
     previewImport: noop,
@@ -100,18 +122,39 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
           data: { allow_user_import: true, maximum_import_size_mb: 500, maximum_import_total_mb: 512 },
         } : {});
         queries.set(key, { options, result });
-        return { ...result, refetch: async () => { calls.push(["refetch", key]); return options.queryFn({}); } };
+        return { ...result, ...(key === "import-source-repair" ? { data: cache.get(JSON.stringify(options.queryKey)) } : {}),
+          refetch: async () => { calls.push(["refetch", key]); return options.queryFn({}); } };
       },
       useMutation: options => {
-        const i = mutationCursor++, item = mutations[i] ??= { isPending: false, error: null, reset: noop };
+        const i = mutationCursor++, item = mutations[i] ??= { isPending: false, isError: false, error: null };
+        item.reset = () => { item.isPending = false; item.isError = false; item.error = null; };
         item.options = options;
-        item.run = async value => { const result = await item.options.mutationFn(value); item.options.onSuccess?.(result); return result; };
-        item.mutate = value => { void item.run(value); };
+        item.run = async value => {
+          item.variables = value;
+          const operation = item.options, context = operation.onMutate?.(value);
+          item.isPending = true; item.isError = false; item.error = null;
+          try {
+            const result = await operation.mutationFn(value);
+            operation.onSuccess?.(result, value, context);
+            return result;
+          } catch (error) {
+            item.error = error; item.isError = true;
+            operation.onError?.(error, value, context); throw error;
+          } finally { item.isPending = false; }
+        };
+        item.mutate = value => { void item.run(value).catch(noop); };
         return item;
       },
     },
   };
-  const queryClient = { invalidateQueries: options => { calls.push(["invalidate", options.queryKey]); return Promise.resolve(); } };
+  const queryClient = {
+    invalidateQueries: options => { calls.push(["invalidate", options.queryKey]); return Promise.resolve(); },
+    getQueryData: key => cache.get(JSON.stringify(key)),
+    setQueryData: (key, value) => {
+      const id = JSON.stringify(key);
+      cache.set(id, typeof value === "function" ? value(cache.get(id)) : value);
+    },
+  };
   mocks["./import-workspace-copy"] = load("features/import/import-workspace-copy.ts", mocks, window);
   const { ImportPanel } = load("features/import/import-panel.tsx", mocks, window);
   const props = { resumeImportId, onImportCommitted: () => calls.push(["close"]) };
@@ -119,6 +162,9 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
   render(); runtime.flush();
   return { calls, storage, mutations, queries, render, ...runtime,
     setRead: fn => { read = fn; }, setUpload: fn => { upload = fn; }, changeAccount: () => { generation++; },
+    setStop: fn => { stop = fn; },
+    setReplace: fn => { replace = fn; },
+    setExclude: fn => { exclude = fn; },
     setCommit: fn => { commit = fn; },
     resize: width => { laneWidth = width; window.dispatchEvent(new Event("resize")); },
     async settle() { for (let i = 0; i < 4; i++) { await setImmediate(); render(); runtime.flush(); } return render(); },
@@ -129,6 +175,144 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
     tree: () => tree,
   };
 }
+
+test("selected files can be removed and replaced without losing siblings or filename duplicates", async () => {
+  const f = fixture();
+  try {
+    const input = () => find(f.tree(), node => node.props?.["data-testid"] === "import-file-input");
+    const choose = files => input().props.onChange({ currentTarget: { files, value: "synthetic" } });
+    const first = { name: "02.json", size: 8 }, bad = { name: "bad.exe", size: 10 }, last = { name: "01.json", size: 12 };
+    choose([first, bad, last]); await f.settle();
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button").props.disabled, true);
+    find(f.tree(), node => node.props?.["aria-label"] === "Remove file: bad.exe").props.onClick();
+    await f.settle();
+    const duplicate = { name: last.name, size: 25 };
+    choose([duplicate]); await f.settle();
+    const replacement = { name: "replacement.json", size: 18 };
+    find(f.tree(), node => node.props?.["aria-label"] === "Replace file: 02.json").props.onChange({
+      currentTarget: { files: [replacement], value: "synthetic" },
+    });
+    await f.settle();
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
+    find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button").props.onClick();
+    await f.settle();
+    assert.deepEqual(f.calls.filter(row => row[0] === "upload"), [["upload", [replacement, last, duplicate]]]);
+  } finally { f.dispose(); }
+});
+
+test("source exclusion needs explicit confirmation and locks uncertain writes across remount", async () => {
+  const cache = new Map(), stopped = { ...session("PAUSED", "paused"), updated_at: "2026-11-10T00:00:00Z",
+    sources: [{ artifact_id: "one", filename: "one.zip" }, { artifact_id: "two", filename: "two.json" }] };
+  const f = fixture({ cache, resumeImportId: stopped.import_id, initialRead: async () => stopped });
+  await f.settle();
+  f.setExclude(async () => { throw Error("Unconfirmed"); });
+  find(f.tree(), node => node.props?.["aria-label"] === "Exclude from this import: one.zip").props.onClick();
+  await f.settle();
+  assert.equal(f.calls.filter(row => row[0] === "exclude").length, 0);
+  const confirm = find(f.tree(), node => node.type === "button" && text(node) === "Confirm exclusion");
+  confirm.props.onClick(); confirm.props.onClick();
+  await f.settle();
+  assert.match(text(f.tree()), /exclusion result is unconfirmed/);
+  assert.deepEqual(f.calls.filter(row => row[0] === "exclude"), [["exclude", stopped.import_id, "one", stopped.updated_at]]);
+  f.dispose();
+  const next = fixture({ cache, resumeImportId: stopped.import_id, initialRead: async () => stopped });
+  try {
+    await next.settle();
+    assert.equal(find(next.tree(), node => node.type === "button" && text(node) === "Continue analysis").props.disabled, true);
+    next.publish({ ...stopped, sources: stopped.sources.slice(1) });
+    await next.settle();
+    assert.doesNotMatch(text(next.tree()), /exclusion result is unconfirmed/);
+    assert.equal(find(next.tree(), node => node.type === "button" && text(node) === "Continue analysis").props.disabled, false);
+    assert.equal(next.calls.filter(row => ["exclude", "replace", "resume", "commit"].includes(row[0])).length, 0);
+  } finally { next.dispose(); }
+});
+
+test("legacy replacement acknowledgement can be checked by server source revision, not only task identity", async () => {
+  const stopped = { ...session("PAUSED", "paused"), updated_at: "2026-11-10T00:00:00Z",
+    sources: [{ artifact_id: "one", filename: "same.json", source_revision: 0 }] };
+  const f = fixture({ resumeImportId: stopped.import_id, initialRead: async () => stopped });
+  try {
+    await f.settle();
+    f.setReplace(async () => { throw Error("Lost acknowledgement"); });
+    find(f.tree(), node => node.type === "input" && node.props.type === "file").props.onChange({
+      currentTarget: { files: [{ name: "same.json", size: 20 }], value: "synthetic" },
+    });
+    await f.settle();
+    f.publish({ ...stopped, updated_at: "2026-11-10T00:01:00Z" });
+    await f.settle();
+    assert.match(text(f.tree()), /replacement result is unconfirmed/);
+    f.publish({ ...stopped, sources: [{ ...stopped.sources[0], source_revision: 1 }] });
+    await f.settle();
+    assert.doesNotMatch(text(f.tree()), /replacement result is unconfirmed/);
+    assert.equal(f.calls.filter(row => row[0] === "replace").length, 1);
+  } finally { f.dispose(); }
+});
+
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: failed source replacement preserves session and requires review`, async () => {
+  const paused = { ...session("PAUSED", "paused"), updated_at: "2026-11-10T00:00:00Z",
+    sources: [{ artifact_id: "source-one", filename: "Synthetic source.json", byte_size: 100, extension: ".json" }] };
+  const f = fixture({ locale, resumeImportId: paused.import_id, initialRead: async () => paused });
+  try {
+    await f.settle();
+    const input = find(f.tree(), node => node.type === "input" && node.props.type === "file");
+    assert.ok(input);
+    assert.match(input.props["aria-label"], /Synthetic source/);
+    const file = { name: "Replacement.json", size: 20 };
+    input.props.onChange({ currentTarget: { files: [file], value: "synthetic" } });
+    input.props.onChange({ currentTarget: { files: [file], value: "synthetic" } });
+    await f.settle();
+    assert.deepEqual(f.calls.filter(row => row[0] === "replace"), [
+      ["replace", paused.import_id, "source-one", file, paused.updated_at],
+    ]);
+    assert.equal(f.queries.get("adaptive-import-analysis").options.queryKey[3], "replacement-analysis");
+    assert.equal(f.calls.filter(row => ["commit", "cancel", "resume", "retry", "upload"].includes(row[0])).length, 0);
+  } finally { f.dispose(); }
+});
+
+test("unknown source replacement locks conflicting writes and offers only a status check", async () => {
+  const stopped = { ...session("FAILED", "analysis_failed"), updated_at: "2026-11-10T00:00:00Z",
+    sources: [{ artifact_id: "source-one", filename: "Synthetic source.json", byte_size: 100, extension: ".json" }] };
+  const f = fixture({ resumeImportId: stopped.import_id, initialRead: async () => stopped });
+  try {
+    await f.settle();
+    f.setReplace(async () => { throw Error("Transport interrupted"); });
+    find(f.tree(), node => node.type === "input" && node.props.type === "file").props.onChange({
+      currentTarget: { files: [{ name: "replacement.json", size: 20 }], value: "synthetic" },
+    });
+    await f.settle();
+    assert.match(text(f.tree()), /replacement result is unconfirmed/);
+    assert.equal(find(f.tree(), node => node.type === "input" && node.props.type === "file").props.disabled, true);
+    assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "Retry analysis").props.disabled, true);
+    find(f.tree(), node => node.type === "button" && text(node) === "Check status").props.onClick();
+    await f.settle();
+    assert.equal(f.calls.filter(row => row[0] === "replace").length, 1);
+    assert.equal(f.calls.filter(row => row[0] === "retry").length, 0);
+  } finally { f.dispose(); }
+});
+
+test("source replacement uncertainty survives closing and reopening without repeating the upload", async () => {
+  const cache = new Map();
+  const stopped = { ...session("PAUSED", "paused"), updated_at: "2026-11-10T00:00:00Z",
+    sources: [{ artifact_id: "source-one", filename: "Synthetic.json", byte_size: 100, extension: ".json" }] };
+  const first = fixture({ cache, resumeImportId: stopped.import_id, initialRead: async () => stopped });
+  await first.settle();
+  first.setReplace(async () => { throw Error("Unknown response"); });
+  find(first.tree(), node => node.type === "input" && node.props.type === "file").props.onChange({
+    currentTarget: { files: [{ name: "replacement.json", size: 20 }], value: "synthetic" },
+  });
+  await first.settle(); first.dispose();
+  const next = fixture({ cache, resumeImportId: stopped.import_id, initialRead: async () => stopped });
+  try {
+    await next.settle();
+    assert.match(text(next.tree()), /replacement result is unconfirmed/);
+    assert.equal(find(next.tree(), node => node.type === "input" && node.props.type === "file").props.disabled, true);
+    assert.equal(find(next.tree(), node => node.type === "button" && text(node) === "Continue analysis").props.disabled, true);
+    assert.equal(next.calls.filter(row => ["replace", "resume", "retry"].includes(row[0])).length, 0);
+    next.publish({ ...session(), analysis_task_id: "replacement-analysis" });
+    await next.settle();
+    assert.equal(cache.get(JSON.stringify(["import-source-repair", 1, stopped.import_id])), null);
+  } finally { next.dispose(); }
+});
 
 for (const locale of ["zh-CN", "en-US"]) test(`${locale}: upload acknowledgement releases files and offers background tasks, not premature import`, async () => {
   const f = fixture({ locale });
@@ -360,7 +544,7 @@ for (const locale of ["zh-CN", "en-US"]) test(`${locale}: reopening a memory fai
   } finally { f.dispose(); }
 });
 
-test("explicit cancellation resets this pane; closing/unmounting alone does not", async () => {
+test("explicit confirmed disposal resets this pane; closing/unmounting alone does not", async () => {
   const f = fixture();
   try {
     await f.mutations[0].run([]); await f.settle();
@@ -368,6 +552,72 @@ test("explicit cancellation resets this pane; closing/unmounting alone does not"
     assert.deepEqual(f.calls.find(row => row[0] === "cancel"), ["cancel", "synthetic-import"]);
     assert.equal(f.storage.size, 0);
     assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"), undefined);
+  } finally { f.dispose(); }
+});
+
+test("ordinary new import does not auto-resume a saved cancelling task", async () => {
+  const f = fixture({ storedId: "old-cancelling", initialRead: async () => session("CANCELING") });
+  try {
+    await f.settle();
+    assert.equal(f.calls.filter(row => row[0] === "read").length, 0);
+    assert.ok(find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button"));
+    const resume = find(f.tree(), node => node.type === "button" && text(node) === "View the last retained import");
+    assert.ok(resume);
+    resume.props.onClick(); await f.settle();
+    assert.equal(f.calls.find(row => row[0] === "read")[1], "old-cancelling");
+  } finally { f.dispose(); }
+});
+
+test("stopping retains sources and waits for acknowledgement before offering explicit resume", async () => {
+  const f = fixture();
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    find(f.tree(), node => node.type === "button" && text(node) === "Stop and retain").props.onClick();
+    await f.settle();
+    assert.deepEqual(f.calls.find(row => row[0] === "stop").slice(0, 3), ["stop", "synthetic-analysis", "retain"]);
+    assert.match(text(f.tree()), /Stopping import analysis/);
+    assert.equal(f.calls.filter(row => row[0] === "cancel").length, 0);
+    assert.equal(f.storage.get("chat-reader:adaptive-import-session"), "synthetic-import");
+    assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "Continue analysis"), undefined);
+    f.publish({ ...session("PAUSED", "paused"), source_status: "available", updated_at: "2026-11-10T00:00:00Z" });
+    const resume = find(f.tree(), node => node.type === "button" && text(node) === "Continue analysis");
+    assert.ok(resume);
+    assert.equal(f.calls.filter(row => row[0] === "resume").length, 0);
+    resume.props.onClick(); await f.settle();
+    assert.deepEqual(f.calls.find(row => row[0] === "resume"), ["resume", "synthetic-import", "2026-11-10T00:00:00Z"]);
+    assert.equal(f.calls.filter(row => row[0] === "commit").length, 0);
+  } finally { f.dispose(); }
+});
+
+test("an unknown stop has a read-only check and leaving does not let its late response reclaim the new pane", async () => {
+  const held = deferred(), f = fixture();
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    f.setStop(() => held.promise);
+    find(f.tree(), node => node.type === "button" && text(node) === "Stop and retain").props.onClick();
+    await f.settle();
+    find(f.tree(), node => node.type === "button" && text(node) === "Back to file selection").props.onClick();
+    await f.settle();
+    held.resolve({ job_id: "synthetic-analysis", status: "cancelled" }); await f.settle();
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"), undefined);
+    assert.ok(find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button"));
+    assert.equal(f.calls.filter(row => row[0] === "cancel").length, 0);
+  } finally { held.resolve({ status: "cancelled" }); f.dispose(); }
+});
+
+test("stop transport uncertainty never enables an automatic repeated write", async () => {
+  const f = fixture();
+  try {
+    await f.mutations[0].run([]); await f.settle();
+    f.setStop(async () => { throw Error("REQUEST_TIMEOUT"); });
+    find(f.tree(), node => node.type === "button" && text(node) === "Stop and retain").props.onClick();
+    await f.settle();
+    assert.match(text(f.tree()), /Check the original task/);
+    assert.equal(find(f.tree(), node => node.type === "button" && text(node) === "Stop and retain").props.disabled, true);
+    find(f.tree(), node => node.type === "button" && text(node) === "Check status").props.onClick();
+    await f.settle();
+    assert.equal(f.calls.filter(row => row[0] === "stop").length, 1);
+    assert.ok(f.calls.some(row => row[0] === "read"));
   } finally { f.dispose(); }
 });
 

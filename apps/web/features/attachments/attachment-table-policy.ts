@@ -4,12 +4,20 @@ export const TABLE_PREVIEW_LIMITS = {
 } as const;
 export type TablePreviewLimit = "rows" | "columns" | "cells" | "field" | "input" | "quotes";
 export type DelimitedPreview = { rows: string[][]; columns: number; stoppedAt: TablePreviewLimit | null };
+type PreviewBudget = { rows: number; columns: number; cells: number; fieldUnits: number; inputUnits: number };
 
 // A preview is an ordered prefix. Stop at the first exceeded budget; never
 // skip a wide row and accidentally promote a later data row to the header.
 // Limits count UTF-16 units/cells, not bytes or measured browser memory.
-export function parseDelimitedPreview(text: string, delimiter: string): DelimitedPreview {
+export function parseDelimitedPreview(text: string, delimiter: string, budget?: Partial<PreviewBudget>): DelimitedPreview {
   if (delimiter !== "," && delimiter !== "\t") throw new Error("Unsupported delimiter");
+  const limits: PreviewBudget = { ...TABLE_PREVIEW_LIMITS };
+  for (const key of ["rows", "columns", "cells", "fieldUnits", "inputUnits"] as const) {
+    const requested = budget?.[key];
+    if (requested !== undefined && Number.isFinite(requested)) {
+      limits[key] = Math.min(limits[key], Math.max(1, Math.floor(requested)));
+    }
+  }
   const rows: string[][] = [];
   let row: string[] = [], field = "", quoted = false, started = false, cells = 0, columns = 0;
   let stoppedAt: TablePreviewLimit | null = null;
@@ -17,10 +25,10 @@ export function parseDelimitedPreview(text: string, delimiter: string): Delimite
   const finishField = () => { row.push(field); cells++; field = ""; started = false; };
   let index = text.charCodeAt(0) === 0xfeff ? 1 : 0;
   for (; index < text.length; index++) {
-    if (index >= TABLE_PREVIEW_LIMITS.inputUnits) { stoppedAt = "input"; break; }
-    if (rows.length >= TABLE_PREVIEW_LIMITS.rows) { stoppedAt = "rows"; break; }
-    if (row.length >= TABLE_PREVIEW_LIMITS.columns) { stoppedAt = "columns"; break; }
-    if (cells >= TABLE_PREVIEW_LIMITS.cells) { stoppedAt = "cells"; break; }
+    if (index >= limits.inputUnits) { stoppedAt = "input"; break; }
+    if (rows.length >= limits.rows) { stoppedAt = "rows"; break; }
+    if (row.length >= limits.columns) { stoppedAt = "columns"; break; }
+    if (cells >= limits.cells) { stoppedAt = "cells"; break; }
     const char = text[index];
     let value = "";
     if (char === '"') {
@@ -38,18 +46,32 @@ export function parseDelimitedPreview(text: string, delimiter: string): Delimite
       if (pair) index++;
     }
     if (value) {
-      if (index >= TABLE_PREVIEW_LIMITS.inputUnits) { stoppedAt = "input"; break; }
-      if (field.length + value.length > TABLE_PREVIEW_LIMITS.fieldUnits) { stoppedAt = "field"; break; }
+      if (index >= limits.inputUnits) { stoppedAt = "input"; break; }
+      if (field.length + value.length > limits.fieldUnits) { stoppedAt = "field"; break; }
       field += value; started = true;
     }
   }
   if (!stoppedAt && quoted) stoppedAt = "quotes";
-  if (rows.length < TABLE_PREVIEW_LIMITS.rows) {
-    if ((started || field.length) && row.length < TABLE_PREVIEW_LIMITS.columns && cells < TABLE_PREVIEW_LIMITS.cells) finishField();
-    else if (!stoppedAt && started) stoppedAt = row.length >= TABLE_PREVIEW_LIMITS.columns ? "columns" : "cells";
+  if (rows.length < limits.rows) {
+    if ((started || field.length) && row.length < limits.columns && cells < limits.cells) finishField();
+    else if (!stoppedAt && started) stoppedAt = row.length >= limits.columns ? "columns" : "cells";
     finishRow();
   }
   return { rows, columns, stoppedAt };
+}
+
+/** Same quoted-field grammar as Viewer, with a smaller bounded reading prefix.
+ * One lookahead record decides expansion; embedded newlines are not new rows. */
+export function parseInlineDelimitedPreview(text: string, delimiter: string, expanded = false) {
+  const visibleRows = expanded ? 28 : 8;
+  const preview = parseDelimitedPreview(text, delimiter, {
+    rows: visibleRows + 1, cells: (visibleRows + 1) * TABLE_PREVIEW_LIMITS.columns, inputUnits: 131_072,
+  });
+  return {
+    rows: preview.rows.slice(0, visibleRows).map(row => row.slice(0, 8)),
+    hasMoreRows: preview.rows.length > visibleRows,
+    limited: preview.rows.length > visibleRows || preview.columns > 8 || preview.stoppedAt !== null,
+  };
 }
 
 // Retain the existing small-file parser contract for callers needing rows only.

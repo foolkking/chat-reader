@@ -1,0 +1,69 @@
+Local checkpoint only; counts overlap. No candidate CI or release acceptance.
+
+## final-web-full02.log
+  ...
+# Subtest: version comparison discloses text, line and quadratic-work bounds
+ok 2239 - version comparison discloses text, line and quadratic-work bounds
+  ---
+  duration_ms: 2.7718
+  ...
+1..2239
+# tests 2239
+# suites 0
+# pass 2239
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 22826.3475
+
+## final-lint02.log
+> chat-reader@0.0.0 lint E:\1project\chat-reader
+> corepack pnpm --filter web lint
+
+
+> web@0.0.0 lint E:\1project\chat-reader\apps\web
+> eslint . --max-warnings=0
+
+## final-typecheck02.log
+
+
+## export-api02.log
+........................................................................ [ 66%]
+....................................                                     [100%]
+108 passed in 289.54s (0:04:49)
+
+## export-postgres01.log
+.................                                                        [100%]
+17 passed in 78.61s (0:01:18)
+
+## final-api-boundaries.log
+....................................................................ssss [ 37%]
+........................................................................ [ 74%]
+..................................................                       [100%]
+190 passed, 4 skipped in 340.92s (0:05:40)
+
+## final-ci-contracts.log
+  ...
+# Subtest: settings-quality preserves separate evidence for each retry attempt
+ok 64 - settings-quality preserves separate evidence for each retry attempt
+  ---
+  duration_ms: 0.2407
+  ...
+1..64
+# tests 64
+# suites 0
+# pass 64
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3057.9805
+
+## recovery-reader-browser01.log
+{"status":"passed","cases":19,"out":"C:\\Users\\86182\\Desktop\\wkkk\\chat-reader-recovery-20261110\\reader-interaction-browser"}
+
+Full local build: capacity precheck stopped before source/dependency copy; no compilation.
+
+Later fresh capacity check admitted the isolated source-hashed build; full Next16.4.1/Webpack build passed (build-final02.log). Initial refusal is preserved above.
+Final-source Reader browser rerun: 19 groups passed; reader-final-local.json. Original64+12+4/full PWA still requires CI.

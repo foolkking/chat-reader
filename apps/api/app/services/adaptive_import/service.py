@@ -5,6 +5,7 @@ import logging
 import shutil
 import uuid
 from collections import defaultdict
+from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,7 @@ from app.models.import_record import ImportRecord
 from app.models.source_artifact import SourceArtifact
 from app.schemas.import_schema import SourceProfile
 from app.services.adaptive_import.analysis import analyze_documents, default_mapping, normalized_stem
+from app.services.adaptive_import.ordering import ImportOrder, ordered_artifacts, ordered_families, ordered_groups, remember_source
 from app.services.adaptive_import.archive_sources import (
     ARCHIVE_DOCUMENT_SOURCE_TYPE,
     ARCHIVE_SOURCE_TYPE,
@@ -32,7 +34,7 @@ from app.services.adaptive_import.archive_sources import (
     restore_archive_catalog,
     update_archive_classification,
 )
-from app.services.adaptive_import.memory_budget import small_zip_receipt
+from app.services.adaptive_import.memory_budget import analysis_unit, processing_unit, small_zip_receipt
 from app.services.adaptive_import.bounded_io import reraise_storage_failure
 from app.services.adaptive_import.contracts import AdaptiveImportError, AnalysisResult, SourceDocument
 from app.services.task_errors import public_import_failure, public_task_error
@@ -55,6 +57,7 @@ from app.services.uploads import UploadLimitError
 
 MAX_ADAPTIVE_FILES = 500
 RECOVERABLE_SESSION_STATES = {"NEEDS_GROUPING", "RESOLVING", "READY", "BLOCKED"}
+SOURCE_REPAIR_STATES = RECOVERABLE_SESSION_STATES | {"FAILED", "PAUSED"}
 _CANCELED_SESSION_CLEANUP_KEY = "adaptive_import_canceled_session_cleanup"
 logger = logging.getLogger(__name__)
 
@@ -125,14 +128,16 @@ def add_session_source(db: Session, record: ImportRecord, filename: str, content
         )
     digest = hashlib.sha256(content).hexdigest()
     stored = save_import_file(record.id, filename, content)
-    db.add(SourceArtifact(
+    artifact = SourceArtifact(
         id=uuid.uuid4(), import_id=record.id,
         source_type=ARCHIVE_SOURCE_TYPE if extension == ".zip" else "adaptive_source",
         source_profile=SourceProfile.unknown.value,
         filename=filename, safe_filename=stored.safe_filename, sha256=digest, byte_size=len(content),
         mime_guess="application/zip" if extension == ".zip" else "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
         file_extension=extension, raw_storage_uri=stored.raw_storage_uri, parsed_summary={},
-    ))
+    )
+    db.add(artifact)
+    remember_source(record, artifact.id)
     record.total_bytes += len(content)
     db.flush()
 
@@ -166,20 +171,23 @@ def add_session_source_stream(
             f"This import session exceeds the {settings.max_adaptive_import_total_mb} MB total limit.",
             layer="file",
         )
-    db.add(SourceArtifact(
+    artifact = SourceArtifact(
         id=uuid.uuid4(), import_id=record.id,
         source_type=ARCHIVE_SOURCE_TYPE if extension == ".zip" else "adaptive_source",
         source_profile=SourceProfile.unknown.value,
         filename=filename, safe_filename=stored.safe_filename, sha256=digest, byte_size=stored.byte_size,
         mime_guess="application/zip" if extension == ".zip" else "application/json" if extension in {".json", ".jsonl", ".gz"} else "text/plain",
         file_extension=extension, raw_storage_uri=stored.raw_storage_uri, parsed_summary={},
-    ))
+    )
+    db.add(artifact)
+    remember_source(record, artifact.id)
     record.total_bytes += stored.byte_size
     db.flush()
 
 
 def queue_session_analysis(db: Session, record: ImportRecord, *, rebuild_preview: bool = False) -> BackgroundJob:
     """Queue first-pass structure analysis after source files are safely staged."""
+    previous_state = record.session_state
     _refresh_source_fingerprint(record)
     record.session_state = "ANALYZING"
     record.status = "analyzing"
@@ -206,6 +214,7 @@ def queue_session_analysis(db: Session, record: ImportRecord, *, rebuild_preview
             "title": "分析导入文件",
             "source_label": f"{record.file_count} 个文件 · {record.total_bytes / (1024 * 1024):.1f} MiB",
             "rebuild_preview": rebuild_preview,
+            "previous_state": previous_state,
         },
         result={},
     )
@@ -241,6 +250,7 @@ def analyze_initial_session(
     )
     prepare_archive_sources(db, record)
     _build_initial_groups(db, record)
+    db.expire(record, ["input_groups"])
     analyze_session(db, record, progress_callback=progress_callback)
 
 
@@ -270,7 +280,7 @@ def analyze_session(
     db.query(ImportStructureFamily).filter(ImportStructureFamily.import_id == record.id).delete(synchronize_session=False)
     db.expire(record, ["structure_families"])
     unresolved_grouping = [group for group in record.input_groups if group.grouping_status != "RESOLVED"]
-    if unresolved_grouping:
+    if unresolved_grouping and len(unresolved_grouping) == len(record.input_groups):
         record.session_state = "NEEDS_GROUPING"
         record.status = "needs_grouping"
         record.phase = "grouping"
@@ -284,11 +294,15 @@ def analyze_session(
     # every AnalysisResult here makes a large multi-file upload hold duplicate
     # mapping metadata until the whole request finishes.
     buckets: dict[tuple[str, str], tuple[AnalysisResult, list[ImportInputGroup]]] = {}
-    invalid: list[tuple[ImportInputGroup, AdaptiveImportError]] = []
-    total_groups = len(record.input_groups)
-    for group_index, group in enumerate(record.input_groups, start=1):
+    # Retaining exception objects also retains parser tracebacks and source
+    # bodies. Only safe diagnostics survive the current processing unit.
+    invalid: list[tuple[ImportInputGroup, dict, dict]] = []
+    resolved_groups = [group for group in ordered_groups(record) if group.grouping_status == "RESOLVED"]
+    total_groups = len(resolved_groups)
+    for group_index, group in enumerate(resolved_groups, start=1):
         try:
-            analysis = analyze_documents(_group_documents(record, group))
+            with processing_unit("recognition", group_index, total_groups), analysis_unit(record, _group_artifacts(record, group)):
+                analysis = analyze_documents(_group_documents(record, group))
             group.profile_resolution = {
                 "analysis": {
                     "mode": analysis.mode,
@@ -304,7 +318,7 @@ def analyze_session(
             reraise_storage_failure(exc)
             group.diagnostics = [exc.diagnostic(group_id=str(group.id))]
             group.profile_resolution = {"status": "INVALID"}
-            invalid.append((group, exc))
+            invalid.append((group, exc.diagnostic(group_id=str(group.id)), _handling_reason_for_error(exc)))
         if progress_callback is not None:
             progress_callback(group_index, total_groups)
 
@@ -327,15 +341,15 @@ def analyze_session(
 
     for (mode, digest), entries in buckets.items():
         representative, family_groups = entries
-        documents = _group_documents(record, family_groups[0])
-        match = match_profile(
-            db,
-            representative,
-            documents,
-            owner_user_id=record.owner_user_id,
-            admitted_revision_ids=tuple(uuid.UUID(value) for value in admitted),
-        )
-        del documents
+        with analysis_unit(record, _group_artifacts(record, family_groups[0])):
+            documents = _group_documents(record, family_groups[0])
+            try:
+                match = match_profile(
+                    db, representative, documents, owner_user_id=record.owner_user_id,
+                    admitted_revision_ids=tuple(uuid.UUID(value) for value in admitted),
+                )
+            finally:
+                del documents
         if repair_profile is None and _family_is_dedicated_archive(record, family_groups):
             from app.services.adaptive_import.contracts import MatchResult
             match = MatchResult(
@@ -383,14 +397,14 @@ def analyze_session(
             group.family_id = family.id
             group.profile_resolution = {**group.profile_resolution, "status": match.status, "profile_name": match.profile_name}
 
-    for group, exc in invalid:
+    for group, diagnostic, handling_reason in invalid:
         family = ImportStructureFamily(
             import_id=record.id, source_mode=group.mode, signature={}, signature_digest=hashlib.sha256(str(group.id).encode()).hexdigest(),
             resolution_status="INVALID", display_name="Invalid source", mapping_draft={}, validation_result={},
             match_evidence={
-                "diagnostic": exc.diagnostic(group_id=str(group.id)),
+                "diagnostic": diagnostic,
                 "handling_class": "NOT_MAPPABLE",
-                "handling_reason": _handling_reason_for_error(exc),
+                "handling_reason": handling_reason,
             },
         )
         db.add(family)
@@ -415,6 +429,8 @@ def resolve_grouping(db: Session, record: ImportRecord, groups: list[dict[str, A
     for payload in groups:
         ids = [str(item) for item in payload["artifact_ids"]]
         artifacts = [artifact for artifact in record.artifacts if str(artifact.id) in ids]
+        if len(artifacts) > 1 and any(item.source_type in {ARCHIVE_SOURCE_TYPE, ARCHIVE_DOCUMENT_SOURCE_TYPE} for item in artifacts):
+            raise AdaptiveImportError("GROUP_AMBIGUOUS", "ZIP documents remain independent of loose JSON/Markdown pairs.", layer="grouping")
         mode = _mode_for_artifacts(artifacts)
         if mode is None:
             raise AdaptiveImportError("GROUP_AMBIGUOUS", "Each group needs at most one JSON and one Markdown file.", layer="grouping")
@@ -440,6 +456,7 @@ def reclassify_archive(
     *,
     expected_version: int,
     changes: list[dict[str, Any]],
+    reference_changes: list[dict[str, Any]] | None = None,
 ) -> list[Path]:
     _require_session_state(record, RECOVERABLE_SESSION_STATES)
     if artifact.source_type != ARCHIVE_SOURCE_TYPE:
@@ -448,13 +465,11 @@ def reclassify_archive(
     root = _session_root(record.id)
     before_paths = {path.resolve() for path in root.iterdir() if path.is_file()}
     try:
-        stale_paths = update_archive_classification(
-            db,
-            record,
-            artifact,
-            expected_version=expected_version,
-            changes=changes,
-        )
+        with analysis_unit(record, [artifact]):
+            stale_paths = update_archive_classification(
+                db, record, artifact, expected_version=expected_version,
+                changes=changes, reference_changes=reference_changes,
+            )
         db.query(ImportInputGroup).filter(ImportInputGroup.import_id == record.id).delete(synchronize_session=False)
         db.query(ImportStructureFamily).filter(ImportStructureFamily.import_id == record.id).delete(synchronize_session=False)
         db.flush()
@@ -479,7 +494,11 @@ def replace_session_artifact(
     content: bytes | None = None,
     stored_source=None,
 ) -> tuple[list[Path], Path]:
-    _require_session_state(record, RECOVERABLE_SESSION_STATES)
+    _require_session_state(record, SOURCE_REPAIR_STATES)
+    if record.committed_at is not None or record.status in {"queued", "processing", "committed"}:
+        raise AdaptiveImportError("SESSION_STATE_INVALID", "Canonical import has already started.", layer="session")
+    if artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE:
+        raise AdaptiveImportError("ARCHIVE_CLASSIFICATION_REQUIRED", "Replace the original ZIP rather than its derived document.", layer="archive")
     settings = get_settings()
     max_bytes = settings.max_import_file_size_mb * 1024 * 1024
     total_limit = settings.max_adaptive_import_total_mb * 1024 * 1024
@@ -499,7 +518,8 @@ def replace_session_artifact(
             layer="file",
         )
 
-    old_path = _source_path(record, artifact)
+    # A missing old source is a reason to offer replacement, not to reject it.
+    old_path = _source_location(record, artifact)
     was_archive = artifact.source_type == ARCHIVE_SOURCE_TYPE
     old_derived = [
         item
@@ -522,11 +542,12 @@ def replace_session_artifact(
         # classification must never be accepted against replacement bytes.
         artifact.parsed_summary = {
             "classification_version": int((artifact.parsed_summary or {}).get("classification_version") or 0),
+            "source_revision": int((artifact.parsed_summary or {}).get("source_revision") or 0) + 1,
         }
         artifact.source_type = ARCHIVE_SOURCE_TYPE if extension == ".zip" else "adaptive_source"
         record.total_bytes = projected_total
 
-        stale_paths: list[Path] = [old_path, *[_source_path(record, item) for item in old_derived]]
+        stale_paths: list[Path] = [old_path, *[_source_location(record, item) for item in old_derived]]
         if was_archive or extension == ".zip":
             db.query(ImportInputGroup).filter(ImportInputGroup.import_id == record.id).delete(synchronize_session=False)
             db.query(ImportStructureFamily).filter(ImportStructureFamily.import_id == record.id).delete(synchronize_session=False)
@@ -538,6 +559,9 @@ def replace_session_artifact(
                 stale_paths.extend(prepare_archive_sources(db, record))
             _build_initial_groups(db, record)
         else:
+            if not record.input_groups:
+                _build_initial_groups(db, record)
+                db.expire(record, ["input_groups"])
             artifacts_by_id = {str(item.id): item for item in record.artifacts}
             for group in record.input_groups:
                 if str(artifact.id) not in group.artifact_ids:
@@ -558,6 +582,9 @@ def replace_session_artifact(
                 }]
         _refresh_source_fingerprint(record)
         analyze_session(db, record)
+        record.error_message = None
+        record.analysis_summary = {key: value for key, value in (record.analysis_summary or {}).items()
+                                   if key not in {"pause", "failure", "resource_wait"}}
         return stale_paths, new_path
     except Exception:
         if stored_source is None:
@@ -600,6 +627,157 @@ def remove_input_group(db: Session, record: ImportRecord, group: ImportInputGrou
     _refresh_source_fingerprint(record)
     analyze_session(db, record)
     return paths
+
+
+def validate_source_exclusion(record: ImportRecord, artifact: SourceArtifact) -> None:
+    _require_session_state(record, SOURCE_REPAIR_STATES)
+    if record.committed_at is not None or record.status in {"queued", "processing", "committed"}:
+        raise AdaptiveImportError("SESSION_STATE_INVALID", "Canonical import has already started.", layer="session")
+    if artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE:
+        raise AdaptiveImportError(
+            "ARCHIVE_CLASSIFICATION_REQUIRED", "Exclude the original ZIP, not its generated document.", layer="archive",
+        )
+    if sum(item.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE for item in record.artifacts) <= 1:
+        raise AdaptiveImportError(
+            "SESSION_WOULD_BE_EMPTY",
+            "The last source cannot be excluded. Replace it or explicitly discard this import.",
+            layer="file",
+        )
+
+
+def exclude_session_source(db: Session, record: ImportRecord, artifact: SourceArtifact) -> None:
+    """Explicitly remove one original source from the batch, never a bad ZIP entry.
+
+    Staged bytes are removed only after the owning transaction commits.
+    A failed reanalysis can therefore roll back without losing the old source.
+    This action does not delete the user's local file or commit conversations.
+    """
+    validate_source_exclusion(record, artifact)
+    from app.services.adaptive_import.bounded_io import file_hash
+
+    excluded = {str(artifact.id), *(
+        str(item.id) for item in record.artifacts
+        if item.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
+        and str((item.parsed_summary or {}).get("archive_artifact_id")) == str(artifact.id)
+    )}
+    root = _session_root(record.id)
+    removed_paths = [root / item.safe_filename for item in record.artifacts if str(item.id) in excluded]
+    if any(path.parent != root or path.is_symlink() or path.resolve().parent != root for path in removed_paths):
+        raise AdaptiveImportError("SOURCE_PATH_INVALID", "The source cleanup path is invalid.", layer="file")
+    if artifact.source_type == ARCHIVE_SOURCE_TYPE:
+        from app.services.adaptive_import.archive_sources import _catalog_path
+        catalog_name = (artifact.parsed_summary or {}).get("catalog_file")
+        if catalog_name is not None and (not isinstance(catalog_name, str) or Path(catalog_name).name != catalog_name):
+            raise AdaptiveImportError("SOURCE_PATH_INVALID", "The source cleanup path is invalid.", layer="file")
+        removed_paths.append(root / catalog_name if catalog_name else _catalog_path(record.id, artifact.id))
+    previous_draft = record.draft_storage_uri
+    # The excluded source may be absent or unreadable. Only the remaining bytes
+    # can authorize the new preview; a changed sibling must still fail closed.
+    for item in ordered_artifacts(record):
+        if str(item.id) not in excluded and item.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE:
+            if file_hash(_source_path(record, item)) != item.sha256:
+                raise AdaptiveImportError("SOURCE_CHANGED", "A retained source changed. Replace it before continuing.",
+                                          layer="file", action="replace_source")
+    by_id = {str(item.id): item for item in record.artifacts}
+    for group in record.input_groups:
+        retained = [key for key in group.artifact_ids if key not in excluded]
+        if len(retained) == len(group.artifact_ids):
+            continue
+        if not retained:
+            db.delete(group)
+        else:
+            group.artifact_ids = retained
+            items = [by_id[key] for key in retained]
+            mode = _mode_for_artifacts(items)
+            group.mode = mode or "UNKNOWN"
+            group.display_name = " + ".join(item.filename for item in items)
+            group.grouping_status = "RESOLVED" if mode else "AMBIGUOUS"
+            group.profile_resolution = {}
+            group.diagnostics = []
+    for item in record.artifacts:
+        if str(item.id) in excluded:
+            db.delete(item)
+    record.file_count -= 1
+    record.total_bytes -= artifact.byte_size
+    db.flush()
+    db.expire(record, ["artifacts", "input_groups", "structure_families"])
+    _refresh_source_fingerprint(record)
+    # First-pass failure/stop may have no groups or catalog yet. Preserve
+    # unaffected explicit grouping and only create groups for uncovered inputs.
+    prepare_archive_sources(db, record)
+    grouped = {key for group in record.input_groups for key in group.artifact_ids}
+    ungrouped = [item for item in _groupable_artifacts(record) if str(item.id) not in grouped]
+    if ungrouped:
+        _build_initial_groups(db, record, artifacts=ungrouped)
+        db.expire(record, ["input_groups"])
+    # V1 normally overwrites canonical-draft.jsonl. This edit can still lose
+    # its final COMMIT/cancellation race after analysis, so keep both versions
+    # addressable until the owning transaction is known to have committed.
+    record._fresh_import_draft = True
+    try:
+        analyze_session(db, record)
+    finally:
+        del record._fresh_import_draft
+    record.error_message = None
+    record.analysis_summary = {
+        **{key: value for key, value in (record.analysis_summary or {}).items()
+           if key not in {"pause", "failure", "resource_wait"}},
+        "source_order": [str(item.id) for item in ordered_artifacts(record)
+                         if item.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE],
+    }
+    if previous_draft and previous_draft != record.draft_storage_uri:
+        old = Path(previous_draft)
+        old = old if old.is_absolute() else Path(get_settings().import_storage_dir).resolve() / old
+        if old.parent == root and not old.is_symlink() and old.suffix == ".jsonl":
+            removed_paths.append(old)
+    _schedule_source_cleanup(db, record, removed_paths)
+
+
+_SOURCE_CLEANUP_KEY = "adaptive_import_source_cleanup"
+
+
+def _schedule_source_cleanup(db: Session, record: ImportRecord, paths: list[Path]) -> None:
+    transaction = db.get_nested_transaction() or db.get_transaction()
+    if transaction is None:
+        raise RuntimeError("Source cleanup requires the owning transaction.")
+    root = _session_root(record.id)
+    checked = [path for path in paths if not path.is_symlink() and path.resolve().parent == root]
+    if len(checked) != len(paths):
+        raise AdaptiveImportError("SOURCE_PATH_INVALID", "The source cleanup path is invalid.", layer="file")
+    db.info.setdefault(_SOURCE_CLEANUP_KEY, {}).setdefault(transaction, []).append((root, checked))
+
+
+@event.listens_for(Session, "after_commit")
+def _source_cleanup_commit(db: Session) -> None:
+    transaction = db.get_nested_transaction() or db.get_transaction()
+    pending = db.info.get(_SOURCE_CLEANUP_KEY, {})
+    batches = pending.pop(transaction, [])
+    if transaction is not None and transaction.parent is not None:
+        pending.setdefault(transaction.parent, []).extend(batches)
+    else:
+        for root, paths in batches:
+            try:
+                if root.is_symlink() or root.resolve() != root:
+                    raise ValueError("Source directory changed.")
+                for path in paths:
+                    if path.is_symlink() or path.resolve().parent != root:
+                        raise ValueError("Source path changed.")
+                    path.unlink(missing_ok=True)
+            except (OSError, ValueError) as exc:
+                # The edit already committed; retain an orphan, not a false
+                # failed-write response or a private path in telemetry.
+                structured_event(logger, logging.WARNING, "adaptive_import_source_cleanup_failed",
+                                 error_class=type(exc).__name__)
+    if not pending:
+        db.info.pop(_SOURCE_CLEANUP_KEY, None)
+
+
+@event.listens_for(Session, "after_transaction_end")
+def _source_cleanup_transaction_ended(db: Session, transaction) -> None:
+    pending = db.info.get(_SOURCE_CLEANUP_KEY, {})
+    pending.pop(transaction, None)
+    if not pending:
+        db.info.pop(_SOURCE_CLEANUP_KEY, None)
 
 
 def verify_family_mapping(
@@ -682,10 +860,12 @@ def select_profile_revision(db: Session, record: ImportRecord, family: ImportStr
 
 def session_payload(record: ImportRecord) -> dict[str, Any]:
     from app.services.adaptive_import.resource_wait import public_wait
-    families = sorted(record.structure_families, key=lambda item: (item.display_name.casefold(), str(item.id)))
-    groups = sorted(record.input_groups, key=lambda item: (item.display_name.casefold(), str(item.id)))
+    families = ordered_families(record)
+    groups = ordered_groups(record)
+    artifacts = ordered_artifacts(record)
     return {
         "import_id": str(record.id),
+        "order_basis": ImportOrder(record).basis,
         "state": record.session_state,
         "status": record.status,
         "phase": record.phase,
@@ -711,6 +891,12 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
         "message_count": int((record.draft_summary or {}).get("message_count") or 0),
         **session_recovery_status(record),
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+        "sources": [
+            {"artifact_id": str(artifact.id), "filename": artifact.filename,
+             "extension": artifact.file_extension, "byte_size": artifact.byte_size,
+             "source_revision": int((artifact.parsed_summary or {}).get("source_revision") or 0)}
+            for artifact in artifacts if artifact.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE
+        ],
         "archives": [
             {
                 "artifact_id": str(artifact.id),
@@ -718,8 +904,8 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
                 "byte_size": artifact.byte_size,
                 **(artifact.parsed_summary or {}),
             }
-            for artifact in sorted(record.artifacts, key=lambda item: (item.filename.casefold(), str(item.id)))
-            if artifact.source_type == ARCHIVE_SOURCE_TYPE
+            for artifact in artifacts
+            if artifact.source_type == ARCHIVE_SOURCE_TYPE and not (artifact.parsed_summary or {}).get("source_failure")
         ],
         "groups": [
             {
@@ -729,7 +915,7 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
                 "profile_resolution": group.profile_resolution, "diagnostics": group.diagnostics,
                 "files": [
                     {"artifact_id": str(artifact.id), "filename": artifact.filename, "extension": artifact.file_extension, "byte_size": artifact.byte_size}
-                    for artifact in record.artifacts if str(artifact.id) in group.artifact_ids
+                    for artifact in artifacts if str(artifact.id) in group.artifact_ids
                 ],
             }
             for group in groups
@@ -738,7 +924,7 @@ def session_payload(record: ImportRecord) -> dict[str, Any]:
             {
                 "id": str(family.id), "source_mode": family.source_mode, "display_name": family.display_name,
                 "resolution_status": family.resolution_status, "group_count": len(family.groups),
-                "group_ids": [str(group.id) for group in family.groups],
+                "group_ids": [str(group.id) for group in ordered_groups(record, family.groups)],
                 "matched_profile_key": family.matched_profile_key,
                 "matched_profile_id": str(family.matched_profile_id) if family.matched_profile_id else None,
                 "matched_revision_id": str(family.matched_revision_id) if family.matched_revision_id else None,
@@ -799,6 +985,57 @@ def update_profile(db: Session, profile: ImportProfile, payload: dict[str, Any],
     db.flush()
 
 
+def finish_analysis_stop(record: ImportRecord, job: BackgroundJob) -> None:
+    """Apply acknowledged stop to its current session, never a newer analysis."""
+    if (record.owner_user_id != job.owner_user_id
+            or str((record.analysis_summary or {}).get("analysis_task_id")) != str(job.id)):
+        return
+    if record.session_state in {"CANCELED", "COMPLETED"}:
+        return
+    if (job.payload or {}).get("source_disposition") != "retain":
+        cancel_session(record)
+        return
+    if record.status in {"queued", "processing", "committed"} or record.committed_at is not None:
+        raise AdaptiveImportError("SESSION_STATE_INVALID", "Canonical import has already started.", layer="session")
+    previous = (job.payload or {}).get("previous_state", "COLLECTING")
+    if previous not in {"COLLECTING", "NEEDS_GROUPING", "RESOLVING", "READY", "BLOCKED", "FAILED"}:
+        previous = "COLLECTING"
+    record.session_state = "PAUSED"
+    record.status = "paused"
+    record.phase = "paused"
+    record.next_run_at = None
+    record.error_message = None
+    record.completed_at = job.completed_at
+    record.analysis_summary = {
+        **{key: value for key, value in (record.analysis_summary or {}).items()
+           if key not in {"resource_wait", "failure"}},
+        "pause": {"previous_state": previous, "task_id": str(job.id),
+                  "source_fingerprint": record.source_fingerprint},
+    }
+    job.result = {**(job.result or {}), "import_id": str(record.id), "source_retained": True}
+
+
+def resume_retained_analysis(db: Session, record: ImportRecord, *, previous_state: str,
+                             progress_callback=None) -> None:
+    """Verify retained bytes before reusing any saved grouping or configuration."""
+    from app.services.adaptive_import.bounded_io import file_hash
+    for artifact in ordered_artifacts(record):
+        if artifact.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE:
+            if file_hash(_source_path(record, artifact)) != artifact.sha256:
+                raise AdaptiveImportError("SOURCE_CHANGED", "The retained source changed. Replace it before continuing.",
+                                          layer="file", action="replace_source")
+    if not record.input_groups:
+        analyze_initial_session(db, record, progress_callback=progress_callback)
+    elif any(group.grouping_status != "RESOLVED" for group in record.input_groups):
+        record.session_state, record.status, record.phase = "NEEDS_GROUPING", "needs_grouping", "grouping"
+        record.progress = 20
+    elif record.structure_families and previous_state in {"READY", "RESOLVING", "BLOCKED"}:
+        _update_session_state(db, record)
+    else:
+        analyze_session(db, record, progress_callback=progress_callback)
+    record.analysis_summary = {key: value for key, value in (record.analysis_summary or {}).items() if key != "pause"}
+
+
 def cancel_session(record: ImportRecord) -> None:
     if record.status == "committed" or record.committed_at is not None:
         raise AdaptiveImportError("SESSION_ALREADY_COMMITTED", "A committed import session cannot be canceled.", layer="session")
@@ -852,8 +1089,18 @@ def _canceled_session_transaction_ended(db: Session, transaction) -> None:
         db.info.pop(_CANCELED_SESSION_CLEANUP_KEY, None)
 
 
-def _build_initial_groups(db: Session, record: ImportRecord) -> None:
-    artifacts = _groupable_artifacts(record)
+def _build_initial_groups(db: Session, record: ImportRecord, *, artifacts: list[SourceArtifact] | None = None) -> None:
+    artifacts = _groupable_artifacts(record) if artifacts is None else artifacts
+    # ZIP dependency groups never pair with an unrelated loose JSON source,
+    # even when a selected archive contains only one Markdown document.
+    independent = [item for item in artifacts if item.source_type in {ARCHIVE_SOURCE_TYPE, ARCHIVE_DOCUMENT_SOURCE_TYPE}]
+    for artifact in independent:
+        db.add(ImportInputGroup(
+            import_id=record.id, mode=_mode_for_artifacts([artifact]) or "UNKNOWN",
+            artifact_ids=[str(artifact.id)], display_name=artifact.filename,
+            grouping_status="RESOLVED", profile_resolution={}, diagnostics=[],
+        ))
+    artifacts = [item for item in artifacts if item not in independent]
     json_artifacts = [item for item in artifacts if (item.file_extension or "").casefold() in {".json", ".jsonl", ".gz"}]
     markdown_artifacts = [item for item in artifacts if (item.file_extension or "").casefold() in {".md", ".markdown"}]
     if len(artifacts) == 2 and len(json_artifacts) == 1 and len(markdown_artifacts) == 1:
@@ -885,7 +1132,7 @@ def _build_initial_groups(db: Session, record: ImportRecord) -> None:
     buckets: dict[str, list[SourceArtifact]] = defaultdict(list)
     for artifact in artifacts:
         buckets[normalized_stem(artifact.filename)].append(artifact)
-    for stem, artifacts in sorted(buckets.items()):
+    for stem, artifacts in buckets.items():
         mode = _mode_for_artifacts(artifacts)
         resolved = mode == "JSON_MARKDOWN"
         group = ImportInputGroup(
@@ -905,46 +1152,49 @@ def _build_initial_groups(db: Session, record: ImportRecord) -> None:
 
 
 def _resolve_known_families(db: Session, record: ImportRecord) -> None:
-    for family in record.structure_families:
-        if family.resolution_status not in {"EXACT_MATCH", "COMPATIBLE"}:
-            continue
+    families = {family.id: family for family in record.structure_families
+                if family.resolution_status in {"EXACT_MATCH", "COMPATIBLE"}}
+    groups = [group for group in ordered_groups(record) if group.family_id in families]
+    validated: dict[uuid.UUID, list[dict]] = defaultdict(list)
+    for index, group in enumerate(groups, 1):
+        family = families[group.family_id]
         try:
-            if family.matched_profile_key:
-                validation = evaluate_family(record, family, None, family.matched_profile_key, builtin_key=family.matched_profile_key)["validation"]
-            elif family.matched_revision_id:
-                revision = db.get(ImportProfileRevision, family.matched_revision_id)
-                if revision is None:
-                    raise AdaptiveImportError("PROFILE_NOT_FOUND", "Matched profile revision is missing.", layer="profile")
-                validation = evaluate_family(record, family, revision.mapping_spec, family.display_name, validation_spec=revision.validation_spec)["validation"]
-                profile = db.get(ImportProfile, revision.profile_id)
-                if profile:
-                    profile.last_used_at = datetime.now(timezone.utc)
-            else:
-                continue
-            family.validation_result = validation
-            if not validation["valid"]:
-                family.resolution_status = "DRIFTED"
-                family.match_evidence = {**(family.match_evidence or {}), "handling_class": "MAPPABLE", "handling_reason": _handling_reason_for_status("DRIFTED")}
-                by_group = {item["group_id"]: item for item in validation["groups"]}
-                for group in family.groups:
-                    group.diagnostics = by_group[str(group.id)]["issues"]
+            with processing_unit("validation", index, len(groups)):
+                if family.matched_profile_key:
+                    validation = evaluate_family(record, family, None, family.matched_profile_key,
+                        builtin_key=family.matched_profile_key, _groups=[group])["validation"]
+                elif family.matched_revision_id:
+                    revision = db.get(ImportProfileRevision, family.matched_revision_id)
+                    if revision is None:
+                        raise AdaptiveImportError("PROFILE_NOT_FOUND", "Matched profile revision is missing.", layer="profile")
+                    validation = evaluate_family(record, family, revision.mapping_spec, family.display_name,
+                        validation_spec=revision.validation_spec, _groups=[group])["validation"]
+                    profile = db.get(ImportProfile, revision.profile_id)
+                    if profile:
+                        profile.last_used_at = datetime.now(timezone.utc)
+                else:
+                    continue
+                validated[family.id].extend(validation["groups"])
         except UploadLimitError:
             raise
         except (AdaptiveImportError, ValueError) as exc:
             reraise_storage_failure(exc)
-            family.resolution_status = "DRIFTED"
-            family.validation_result = {"valid": False, "message": str(exc)}
-            family.match_evidence = {
-                **(family.match_evidence or {}),
-                "handling_class": "MAPPABLE",
-                "handling_reason": _handling_reason_for_status("DRIFTED"),
+            diagnostic = exc.diagnostic(group_id=str(group.id)) if isinstance(exc, AdaptiveImportError) else {
+                "code": "NORMALIZATION_FAILED", "layer": "normalization", "blocking": True,
+                "message": str(exc), "group_id": str(group.id), "action": "repair_mapping",
             }
+            validated[family.id].append({"group_id": str(group.id), "valid": False,
+                "conversation_count": 0, "message_count": 0, "issues": [diagnostic]})
+    for family_id, results in validated.items():
+        family = families[family_id]
+        family.validation_result = _combined_validation(results)
+        if not family.validation_result["valid"]:
+            family.resolution_status = "DRIFTED"
+            family.match_evidence = {**(family.match_evidence or {}), "handling_class": "MAPPABLE",
+                                    "handling_reason": _handling_reason_for_status("DRIFTED")}
+            by_group = {item["group_id"]: item for item in results}
             for group in family.groups:
-                diagnostic = exc.diagnostic(group_id=str(group.id)) if isinstance(exc, AdaptiveImportError) else {
-                    "code": "NORMALIZATION_FAILED", "layer": "normalization", "blocking": True,
-                    "message": str(exc), "group_id": str(group.id), "action": "repair_mapping",
-                }
-                group.diagnostics = [diagnostic]
+                group.diagnostics = by_group[str(group.id)]["issues"]
 
 
 def _validate_resolved_family(
@@ -962,30 +1212,34 @@ def _validate_resolved_family(
 
 def evaluate_family(record: ImportRecord, family: ImportStructureFamily, mapping_spec: dict | None,
                     profile_name: str, *, validation_spec: dict | None = None,
-                    builtin_key: str | None = None, sample_group_id: uuid.UUID | None = None) -> dict:
+                    builtin_key: str | None = None, sample_group_id: uuid.UUID | None = None,
+                    _groups: list[ImportInputGroup] | None = None) -> dict:
     """One validation authority for recognition, learning, preview and health.
 
     Normalize every group, retain only bounded preview text, and attribute each
     failure to its own group. A failed selected sample never shows another file.
     """
     groups = []
-    ordered_groups = sorted(family.groups, key=lambda item: (item.display_name.casefold(), str(item.id)))
-    sample_key = str(sample_group_id) if sample_group_id else str(ordered_groups[0].id) if ordered_groups else None
+    family_groups = ordered_groups(record, family.groups if _groups is None else _groups)
+    sample_key = str(sample_group_id) if sample_group_id else str(family_groups[0].id) if family_groups else None
     preview = None
-    for group in ordered_groups:
+    for group in family_groups:
+        documents = drafts = sample = None
         try:
-            documents = _group_documents(record, group)
-            drafts = normalize_builtin(builtin_key, documents) if builtin_key else normalize_group(documents, mapping_spec or {}, profile_name)
-            result = validate_drafts(drafts, validation_spec)
-            result["valid"] = result["valid"] and bool(drafts)
-            result["issues"] = [{**issue, "group_id": str(group.id)} for issue in result["issues"]]
-            if str(group.id) == sample_key and drafts:
-                from itertools import islice
-                sample = drafts[0]
-                preview = {"title": sample.title, "message_count": len(sample.messages), "messages": [
-                    {"role": message.role, "content": message.display_text[:2000],
-                     "content_truncated": len(message.display_text) > 2000, "timestamp": message.created_at}
-                    for message in islice(sample.messages, 12)]}
+            with analysis_unit(record, _group_artifacts(record, group)):
+                documents = _group_documents(record, group)
+                drafts = normalize_builtin(builtin_key, documents) if builtin_key else normalize_group(documents, mapping_spec or {}, profile_name)
+                result = validate_drafts(drafts, validation_spec)
+                result["valid"] = result["valid"] and bool(drafts)
+                result["issues"] = [{**issue, "group_id": str(group.id)} for issue in result["issues"]]
+                if str(group.id) == sample_key and drafts:
+                    from itertools import islice
+                    sample = drafts[0]
+                    preview = {"title": sample.title, "message_count": len(sample.messages), "messages": [
+                        {"role": message.role, "content": message.display_text[:2000],
+                         "content_truncated": len(message.display_text) > 2000, "timestamp": message.created_at}
+                        for message in islice(sample.messages, 12)]}
+                documents = drafts = sample = None
         except UploadLimitError:
             raise
         except (AdaptiveImportError, OSError, ValueError) as exc:
@@ -996,12 +1250,20 @@ def evaluate_family(record: ImportRecord, family: ImportStructureFamily, mapping
                 "message": "Source is unavailable. Upload the source again." if isinstance(exc, OSError) else "This group could not be normalized with the selected mapping.",
                 "action": "replace_source" if isinstance(exc, OSError) else "repair_mapping"}
             result = {"valid": False, "conversation_count": 0, "message_count": 0, "issues": [diagnostic]}
+        finally:
+            documents = drafts = sample = None
         groups.append({"group_id": str(group.id), **result})
-    validation = {"valid": bool(groups) and all(item["valid"] for item in groups),
+    validation = _combined_validation(groups)
+    if _groups is not None:
+        validation["verified_on_full_family"] = False
+    return {"validation": validation, "sample_group_id": sample_key if preview else None, "preview": preview}
+
+
+def _combined_validation(groups):
+    return {"valid": bool(groups) and all(item["valid"] for item in groups),
         "conversation_count": sum(item["conversation_count"] for item in groups),
         "message_count": sum(item["message_count"] for item in groups),
         "issues": [], "groups": groups, "verified_on_full_family": True}
-    return {"validation": validation, "sample_group_id": sample_key if preview else None, "preview": preview}
 
 
 def check_family_health(db: Session, record: ImportRecord, family: ImportStructureFamily) -> dict:
@@ -1023,7 +1285,12 @@ def check_family_health(db: Session, record: ImportRecord, family: ImportStructu
 
 def _update_session_state(db: Session, record: ImportRecord) -> None:
     statuses = {family.resolution_status for family in record.structure_families}
-    if statuses <= {"EXACT_MATCH", "COMPATIBLE"} and statuses:
+    if any(group.grouping_status != "RESOLVED" for group in record.input_groups):
+        record.session_state = "NEEDS_GROUPING"
+        record.status = "needs_grouping"
+        record.phase = "grouping"
+        record.progress = 20
+    elif statuses <= {"EXACT_MATCH", "COMPATIBLE"} and statuses:
         _prepare_plan(db, record)
     else:
         record.session_state = "RESOLVING"
@@ -1048,38 +1315,41 @@ def _prepare_plan(db: Session, record: ImportRecord, *, progress_callback=None) 
     counters = {"conversation_count": 0, "message_count": 0}
 
     def iter_drafts():
-        for family in record.structure_families:
+        families = {family.id: family for family in record.structure_families}
+        for index, group in enumerate(ordered_groups(record), 1):
+            family = families[group.family_id]
             revision = (
                 db.get(ImportProfileRevision, family.matched_revision_id)
                 if not family.matched_profile_key and family.matched_revision_id
                 else None
             )
             mapping = revision.mapping_spec if revision else family.mapping_draft
-            for group in family.groups:
-                documents = _group_documents(record, group)
-                drafts = (
-                    normalize_builtin(family.matched_profile_key, documents)
-                    if family.matched_profile_key
-                    else normalize_group(documents, mapping, family.display_name)
-                )
-                drafts = _enrich_archive_drafts(record, group, drafts)
-                # A group contains one file or one JSON/Markdown pair (a file
-                # can itself contain several conversations). Validate and
-                # write it before loading the next group, rather than retaining
-                # the complete import plan in Python memory.
-                result = validate_drafts(drafts)
-                if not result["valid"]:
-                    raise AdaptiveImportError("IMPORT_PLAN_INVALID", "The canonical import plan failed validation.", layer="validation")
-                for draft in drafts:
-                    counters["conversation_count"] += 1
-                    counters["message_count"] += len(draft.messages)
-                    yield draft
-                    del draft
-                del drafts
-                if progress_callback:
-                    progress_callback(counters["conversation_count"], max(len(record.input_groups), counters["conversation_count"]))
+            with processing_unit("draft", index, len(record.input_groups)), analysis_unit(record, _group_artifacts(record, group)):
+                documents = drafts = draft = None
+                try:
+                    documents = _group_documents(record, group)
+                    drafts = (
+                        normalize_builtin(family.matched_profile_key, documents)
+                        if family.matched_profile_key
+                        else normalize_group(documents, mapping, family.display_name)
+                    )
+                    drafts = _enrich_archive_drafts(record, group, drafts)
+                    result = validate_drafts(drafts)
+                    if not result["valid"]:
+                        raise AdaptiveImportError("IMPORT_PLAN_INVALID", "The canonical import plan failed validation.", layer="validation")
+                    for draft in drafts:
+                        counters["conversation_count"] += 1
+                        counters["message_count"] += len(draft.messages)
+                        yield draft
+                finally:
+                    # No previous unit body may overlap the next source read,
+                    # including when the downstream writer fails or closes.
+                    documents = drafts = draft = None
+            if progress_callback:
+                progress_callback(counters["conversation_count"], max(len(record.input_groups), counters["conversation_count"]))
 
-    attach_import_draft(record, iter_drafts())
+    with closing(iter_drafts()) as drafts:
+        attach_import_draft(record, drafts)
     record.session_state = "READY"
     record.status = "previewed"
     record.phase = "ready"
@@ -1101,19 +1371,31 @@ def rebuild_session_preview(db: Session, record: ImportRecord, *, progress_callb
 
 def _analysis_for_family(record: ImportRecord, family: ImportStructureFamily) -> AnalysisResult:
     group = family.groups[0]
-    analysis = analyze_documents(_group_documents(record, group))
+    with analysis_unit(record, _group_artifacts(record, group)):
+        analysis = analyze_documents(_group_documents(record, group))
     if analysis.signature_digest != family.signature_digest:
         raise AdaptiveImportError("ANALYSIS_CHANGED", "Source analysis changed; reanalyze before saving the mapping.", layer="analysis")
     return analysis
 
 
-def _group_documents(record: ImportRecord, group: ImportInputGroup) -> list[SourceDocument]:
-    result = []
+def _group_artifacts(record: ImportRecord, group: ImportInputGroup) -> list[SourceArtifact]:
     artifacts = {str(item.id): item for item in record.artifacts}
+    result = []
     for artifact_id in group.artifact_ids:
         artifact = artifacts.get(str(artifact_id))
         if artifact is None:
             raise AdaptiveImportError("SOURCE_MISSING", "An input group references a missing source file.", layer="grouping")
+        result.append(artifact)
+    return result
+
+
+def _group_documents(record: ImportRecord, group: ImportInputGroup) -> list[SourceDocument]:
+    result = []
+    for artifact in _group_artifacts(record, group):
+        failure = (artifact.parsed_summary or {}).get("source_failure")
+        if failure:
+            raise AdaptiveImportError(failure["code"], failure["message"], layer=failure["layer"],
+                                      action="replace_source", details=failure.get("details"))
         path = _source_path(record, artifact)
         from app.services.adaptive_import.memory_budget import streaming_budget
         streamed = streaming_budget() and artifact.source_type == ARCHIVE_DOCUMENT_SOURCE_TYPE
@@ -1147,6 +1429,7 @@ def _summary(record: ImportRecord) -> dict[str, Any]:
         **({"commit_options": record.analysis_summary["commit_options"]} if (record.analysis_summary or {}).get("commit_options") else {}),
         **({"failure": record.analysis_summary["failure"]} if (record.analysis_summary or {}).get("failure") else {}),
         "admitted_format_revisions": (record.analysis_summary or {}).get("admitted_format_revisions", []),
+        **({"source_order": record.analysis_summary["source_order"]} if "source_order" in (record.analysis_summary or {}) else {}),
         "group_count": len(record.input_groups), "family_count": len(record.structure_families),
         "resolution_counts": statuses, "ready": record.session_state == "READY",
     }
@@ -1223,8 +1506,8 @@ def _refresh_source_fingerprint(record: ImportRecord) -> None:
 def _groupable_artifacts(record: ImportRecord) -> list[SourceArtifact]:
     return [
         artifact
-        for artifact in record.artifacts
-        if artifact.source_type != ARCHIVE_SOURCE_TYPE
+        for artifact in ordered_artifacts(record)
+        if artifact.source_type != ARCHIVE_SOURCE_TYPE or (artifact.parsed_summary or {}).get("source_failure")
     ]
 
 
@@ -1377,9 +1660,16 @@ def _session_root(import_id: uuid.UUID) -> Path:
 
 
 def _source_path(record: ImportRecord, artifact: SourceArtifact) -> Path:
+    path = _source_location(record, artifact)
+    if not path.is_file():
+        raise AdaptiveImportError("SOURCE_MISSING", "A source file is missing from import storage.", layer="file")
+    return path
+
+
+def _source_location(record: ImportRecord, artifact: SourceArtifact) -> Path:
     session_root = _session_root(record.id)
     path = (session_root / artifact.safe_filename).resolve()
-    if not path.is_relative_to(session_root) or not path.is_file():
+    if not path.is_relative_to(session_root):
         raise AdaptiveImportError("SOURCE_MISSING", "A source file is missing from import storage.", layer="file")
     return path
 
@@ -1412,7 +1702,7 @@ def session_recovery_status(record: ImportRecord, artifacts=None) -> dict[str, A
                     draft_status = "ready"
             except (OSError, ValueError):
                 pass
-    unfinished = record.session_state in {"READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING"}
+    unfinished = record.session_state in {"READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING", "PAUSED"}
     can_rebuild = sources and draft_status != "ready" and record.session_state in {"READY", "FAILED"} and bool(record.structure_families) and all(
         family.resolution_status in {"EXACT_MATCH", "COMPATIBLE"} for family in record.structure_families
     )

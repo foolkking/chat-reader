@@ -1,5 +1,115 @@
 # Adaptive Import Contract
 
+## Unreleased retained-stop and task recovery — 2026-11-10
+
+The working tree adds explicit stop-with-retention, without changing the
+previously deployed no-body cancellation contract. The Import pane and Tasks
+send `source_disposition: "retain"` for adaptive analysis. Queued work stops
+immediately; processing first enters `cancelling`, then the worker acknowledges
+at safe boundaries. Acknowledgement changes its owned current session to
+`PAUSED`, preserving sources, grouping and settings. Separate confirmed session
+disposal retains the old cleanup behavior. No automatic canonical commit occurs.
+
+`POST /api/adaptive-import/sessions/{id}/resume` requires the paused session's
+`expected_updated_at`, owned retained sources and an explicit action. It queues
+a new analysis identity, verifies source hashes and reuses only valid saved
+configuration. The unfinished-session list includes paused sessions. A fresh
+Import entry offers, but never automatically restores, the previous session.
+Closing or choosing new files does not dispose of retained server work.
+
+Task control and status reads have a 20-second whole-response deadline, excluding
+file upload transport. Timeout is an unknown write, not proof of rejection.
+Import/Tasks offer read-only checking, no automatic re-send; a stop still
+unconfirmed after 30 seconds explains that state without locking new imports.
+Tasks have independent action locks and retain unconfirmed action state across
+closing/reopening within the same authentication generation. Heartbeat changes
+alone do not prove that a retry was accepted or that work advanced.
+
+Analysis claims carry a server-generated execution token. The worker captures
+the claim before commit and fences processor entry, progress publication,
+heartbeat, unstarted compensation and final publication against it. A live
+PostgreSQL transaction lease prevents time-only stale recovery from cancelling
+an active writer. Existing bounded IO checkpoints observe cancellation, while
+`progress_updated_at` advances only with meaningful progress rather than every
+heartbeat. This is cooperative stop, not forced parser interruption.
+
+Source selection order is stored separately from filenames and family grouping;
+old sessions have deterministic legacy order without claiming recovered user
+intent. Recognition, validation and draft passes visit units in that order,
+including interleaved format families. A unit is one loose file, an explicitly
+paired JSON/Markdown source, or an archive-derived document with its ZIP
+dependencies. ZIP documents do not implicitly pair with loose JSON. Ambiguous
+groups do not prevent analysis of independent resolved groups; they still block
+canonical commit until resolved.
+
+Worker JSON/mixed analysis and stored-source review actions hold one existing
+parser lane, then require the unchanged fixed reserve plus input factor for
+only the current materializing unit **before** reading it. Previous source/
+draft/sample objects and caught exception tracebacks are not retained into the
+next unit. The pure-ZIP lane retains its session-wide live 64-MiB workspace
+budget and source guards. Mixed JSON/ZIP still uses standard materialization
+admission, not the bounded-ZIP reserve. Legacy synchronous replacement retains
+its existing prospective-input admission. This is not a promise that an
+individual oversized JSON fits a small host or that all phases are resumable.
+
+Task/session GET may project optional `analysis_progress` with stage
+`archives|recognition|validation|draft`, one-based `unit_index`, `unit_total`
+and completion of that unit. The count describes the named pass, not imported
+conversations. No canonical write occurs until full review and explicit commit.
+Only memory/slot contention receives the existing 15/30/60-second bounded wait,
+now also for adaptive JSON/mixed work; 30 minutes accumulated waiting requires
+an explicit continuation. Format, workspace, scanning, storage and integrity
+failures are not automatically retried.
+
+Session GET also adds optional original `sources` metadata (identity, filename,
+extension, bytes and server-owned `source_revision`; no storage paths). Replacement accepts FAILED/PAUSED,
+requires `expected_updated_at` for those states and queues a new analysis when
+the worker path is enabled. Other actions do not inherit this expanded state
+permission. A missing old source can be replaced. Active/canonical/derived-ZIP
+edits are rejected before staging; old failed retries re-lock the ImportRecord
+and reject a newer task association with HTTP409 rather than HTTP500.
+Unknown replacement responses keep an authentication-scoped read-only check
+across pane close/reopen; they never auto-upload again. A confirmed new analysis
+identity or an increased revision of that exact source reconciles the lock.
+Changing only the session timestamp does not prove replacement. A late
+acknowledgement updates the same account's query cache, including an already
+reopened pane; old-account results are fenced.
+
+Before upload, the ordered source list supports append, per-file replacement
+in the same position and removal. Nothing is uploaded until Analyze is chosen.
+Same filenames are not silently deduplicated. Unsupported/empty/oversized files
+have row-local explanations; removing them leaves valid siblings selected.
+Inputs and source-method switching are disabled during upload.
+
+`DELETE /api/adaptive-import/sessions/{id}/artifacts/{artifact}` explicitly
+excludes one **original** source, including an entire ZIP and its derived
+groups; it never skips an unsafe ZIP entry and imports the rest of that ZIP.
+The request requires the observed `expected_updated_at`, ownership, editable
+state and at least one remaining source. FAILED/PAUSED are supported; active/
+canonical states and generated ZIP documents are rejected. The worker flag
+returns202/new analysis identity; legacy200 remains supported. Admission counts
+only remaining inputs, whose hashes are verified before a new preview. Unchanged
+group identities/order are retained; a retained half of a pair is analyzed under
+its remaining format, not falsely accepted under its old pairing. All still
+need whole-batch review and explicit canonical commit.
+
+Excluded staged files/catalogs are removed only after the owning outer
+transaction commits. Savepoint rollback, failed analysis or cancellation retain
+old bytes. This exclusion publishes v1 drafts to a fresh filename too, so a final
+commit/cancellation race cannot overwrite the old database revision's draft;
+the old v1 draft is cleaned only after successful outer commit. Unknown COMMIT
+acknowledgements preserve the potentially published new file and require a
+status read. Committed cleanup failure retains an orphan and emits safe telemetry
+without reporting a failed edit. Source/path checks reject symlink escapes or
+sibling indirection. This never changes the user's local original. An unknown
+exclusion response offers only a status check; a fresh read proving that exact
+source absent, or a new analysis identity, reconciles it. Remaining source/
+integrity failures still block, and no partial canonical import is introduced.
+
+Broader recovery, completion review and exact-source CI remain in the
+[implementation ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
+No schema migration or `.cr`/offline/Dexie format change is involved.
+
 Initial task shipped in source `f3b331a`; the body-retention and compressed-input
 bounds below ship in current source `50f6de4`. See the
 [accepted release and low-memory limits](../execution/OOM_RELEASE_2026-10-19.md).

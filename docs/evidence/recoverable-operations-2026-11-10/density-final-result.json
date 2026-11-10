@@ -1,0 +1,342 @@
+{
+  "scope": "Actual Reader renderer, math, table actions and CSS; synthetic clipboard/download faults and oversized AST; controlled clock, no real user data",
+  "results": [
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-375-zh-CN-light.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-375-zh-CN-dark.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-375-en-US-light.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 359
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-375-en-US-dark.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "light",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-800-zh-CN-light.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-800-zh-CN-dark.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "light",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-800-en-US-light.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "dark",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 744
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-800-en-US-dark.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "light",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-1440-zh-CN-light.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-1440-zh-CN-dark.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "light",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-1440-en-US-light.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "dark",
+      "geometry": {
+        "overflow": 0,
+        "buttons": [
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "outsideCells": true,
+            "right": 1064
+          }
+        ]
+      },
+      "hoverHeightChange": 0,
+      "screenshot": "table-1440-en-US-dark.png",
+      "code_hover_geometry": true,
+      "complete_code_manual_copy": true,
+      "single_attachment_open": true,
+      "partial_preview_disclosed": true
+    }
+  ],
+  "errors": []
+}

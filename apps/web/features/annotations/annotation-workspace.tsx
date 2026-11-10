@@ -135,8 +135,33 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   const [view, setView] = useState<"bookmarks" | "all" | "notebook">(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).has("notebookDraft") ? "notebook" : "all");
   const [exportScope, setExportScope] = useState<"all" | "filtered" | "selected">("filtered");
   const [currentMessageOnly, setCurrentMessageOnly] = useState(false);
-  const [bookmarkNotice, setBookmarkNotice] = useScopedState<string | null>(scopeKey, null);
+  const [bookmarkNotice, setBookmarkNotice] = useScopedState<{ id: string; acknowledgedAt: number } | null>(scopeKey, null);
   const [bookmarkReadError, setBookmarkReadError] = useScopedState<boolean>(scopeKey, false);
+  const bookmarkNoticeRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!bookmarkNotice || bookmarkReadError || creationFeedback) return;
+    const element = bookmarkNoticeRef.current;
+    let remaining = Math.max(0, 5000 - (Date.now() - bookmarkNotice.acknowledgedAt));
+    let started = Date.now(), timer: ReturnType<typeof setTimeout> | undefined, alive = true;
+    const pause = () => {
+      if (timer === undefined) return;
+      clearTimeout(timer); timer = undefined;
+      remaining = Math.max(0, remaining - (Date.now() - started));
+    };
+    const resume = () => {
+      if (!alive || timer !== undefined || element?.contains(document.activeElement)) return;
+      started = Date.now();
+      timer = setTimeout(() => setBookmarkNotice(current => current === bookmarkNotice ? null : current), remaining);
+    };
+    const blur = () => queueMicrotask(resume);
+    element?.addEventListener("focusin", pause);
+    element?.addEventListener("focusout", blur);
+    resume();
+    return () => {
+      alive = false;
+      clearTimeout(timer); element?.removeEventListener("focusin", pause); element?.removeEventListener("focusout", blur);
+    };
+  }, [bookmarkNotice, bookmarkReadError, creationFeedback, setBookmarkNotice]);
   const initialMarkTab = useRef<string | null>(null);
   const [annotationQuery, setAnnotationQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<AnnotationType | "all">("all");
@@ -440,7 +465,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
   };
   const revealBookmark = () => {
     resetFilters(); setView("bookmarks"); setReviewMode("continuous"); setReviewIndex(0);
-    setFocusedAnnotationId(bookmarkNotice); onOpenChange(true); setBookmarkNotice(null);
+    setFocusedAnnotationId(bookmarkNotice?.id ?? null); onOpenChange(true); setBookmarkNotice(null);
   };
   const openNotebookConflicts = async () => {
     if (!notebook || !canUseNotebook()) return;
@@ -679,7 +704,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       const saved = await repository.list(conversationId);
       if (!isCurrent()) return;
       const existing = saved.find(item => sameBookmark(item, input));
-      if (existing) { setBookmarkNotice(existing.id); return; }
+      if (existing) { setBookmarkNotice({ id: existing.id, acknowledgedAt: Date.now() }); return; }
       creationGate.busy = false;
       await submitCreation({ status: "saving", input });
     } catch {
@@ -704,7 +729,7 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
       }
       setView("all"); setFocusedAnnotationId(created.id);
     }
-    if (request.input.annotation_type === "bookmark") setBookmarkNotice(created.id);
+    if (request.input.annotation_type === "bookmark") setBookmarkNotice({ id: created.id, acknowledgedAt: Date.now() });
     publishCreation(null);
   }
 
@@ -1189,10 +1214,10 @@ export function AnnotationWorkspace({ conversationId, messages, activeMessageId,
 
   return <>
     {conflictKey ? <SettingsFocusedDialog category="offline" initialConflictKey={conflictKey} onClose={() => { setConflictKey(null); void reload(); }} restoreFocus={() => conflictOpener.current} /> : null}
-    {!open && (bookmarkReadError || bookmarkNotice || creationFeedback?.input.annotation_type === "bookmark") ? <div className="fixed bottom-4 left-1/2 z-[110] flex max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2 rounded-lg border border-ui bg-raised px-3 text-sm shadow-sm" role="status">
-      <span>{bookmarkReadError ? (zh ? "书签读取失败，尚未保存。请重试保存当前位置。" : "Bookmarks could not be read. Nothing saved; try Save reading position again.") : creationFeedback ? (zh ? "书签保存中或待核对" : "Bookmark saving or awaiting verification") : (zh ? "阅读位置已保存" : "Reading position saved")}</span>
-      <button type="button" className="min-h-11 px-2 text-accent" onClick={revealBookmark}>{zh ? "查看" : "View"}</button>
-      <button type="button" className="min-h-11 px-2" aria-label={zh ? "关闭提示" : "Dismiss notice"} onClick={() => { setBookmarkNotice(null); setBookmarkReadError(false); }} disabled={Boolean(creationFeedback)}><X className="h-4 w-4" /></button>
+    {!open && (bookmarkReadError || bookmarkNotice || creationFeedback?.input.annotation_type === "bookmark") ? <div ref={bookmarkNoticeRef} className="fixed bottom-4 left-1/2 z-[110] flex w-max max-w-[calc(100vw-32px)] -translate-x-1/2 items-center gap-2 rounded-lg border border-ui bg-raised px-3 text-sm shadow-sm" role="status">
+      <span className="min-w-0 py-2">{bookmarkReadError ? (zh ? "书签读取失败，尚未保存。请重试保存当前位置。" : "Bookmarks could not be read. Nothing saved; try Save reading position again.") : creationFeedback ? (zh ? "书签保存中或待核对" : "Bookmark saving or awaiting verification") : (zh ? "阅读位置已保存" : "Reading position saved")}</span>
+      <button type="button" className="min-h-11 min-w-11 shrink-0 px-2 text-accent" onClick={revealBookmark}>{zh ? "查看" : "View"}</button>
+      <button type="button" className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center px-2" aria-label={zh ? "关闭提示" : "Dismiss notice"} onClick={() => { setBookmarkNotice(null); setBookmarkReadError(false); }} disabled={Boolean(creationFeedback)}><X className="h-4 w-4" /></button>
     </div> : null}
     {selection ? <div className={`fixed z-[120] flex max-w-[min(92vw,34rem)] flex-wrap items-center gap-1 rounded-md border border-ui bg-raised p-1.5 shadow-xl ${desktop ? "" : "inset-x-2 bottom-[calc(.5rem+env(safe-area-inset-bottom))] justify-center"}`} style={desktop ? { left: clamp(selection.rect.left + selection.rect.width / 2 - 170, 8, window.innerWidth - 360), top: Math.max(8, selection.rect.top - 88) } : undefined} role="toolbar" aria-label="Create annotation">
       {creationTypes.map((type) => { const Icon = type.icon; const label = localizedAnnotationType(type.value, zh); return <button key={type.value} type="button" onClick={() => setSelectionType(type.value)} className={`inline-flex h-8 items-center gap-1 rounded px-2 text-xs ${effectiveSelectionType === type.value ? "bg-[var(--accent-soft)] text-accent" : "text-secondary hover:bg-subtle"}`} aria-label={label} title={label}><Icon className="h-3.5 w-3.5" />{label}</button>; })}

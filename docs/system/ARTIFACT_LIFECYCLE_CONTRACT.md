@@ -1,5 +1,47 @@
 # Artifact Lifecycle Contract
 
+## Unreleased recovery extension — 2026-11-10
+
+Owner conversation export POST accepts optional `background=true` for ordinary
+`markdown_v2` / `canjson_v2`. The request must carry a stable idempotency key;
+the original validated selection, metadata, versions, description, annotations,
+notebook, source references, TOC and compression options are retained in the
+existing `conversation_export` payload. The worker streams the same serializer
+into a **single-file ZIP**, not an attachment bundle. ZIP publication, owner-only
+delivery, transfer leases, expiry, regeneration, source/account rechecks,
+transaction-owned rollback cleanup and configured byte limits are reused.
+Expanded-byte admission precedes optional gzip. No schema/dependency change.
+
+Key admission now locks and compares the complete conversation-export intent,
+including terminal failed/cancelled receipts. A matching key returns the same
+task; changed options/sources conflict. Explicit new generation uses a new key.
+`GET .../exports/by-request/{key}` returns an owned matching task or `task:null`,
+with no-store headers and no mutation. Absence cannot prove a delayed POST was
+rejected. The UI offers read-only checking, followed by **explicit same-key**
+retry if no receipt is visible. Unknown requests survive panel remount in the
+account-generation-scoped query cache; this is not durable browser-restart
+recovery. Late account results cannot bind outputs into a new account.
+
+Direct-download budget/preparation failure offers the actual background path
+with the same options; it does not silently enable binaries, discard notes or
+expand scope. Ordinary files can explicitly use selected Reader messages.
+An empty chosen selection blocks export rather than expanding to the whole
+conversation; Context/attachment packages retain whole-conversation semantics
+with an explanation. Server-size errors do not offer an unchanged futile
+background retry. Users can adjust options/selection; backend limits remain.
+HTTP preparation and stream inactivity have30-second bounds, not a total
+deadline for a progressing stream. A timed-out preparation may still finish
+server-side; no direct download is falsely reported successful.
+
+Optional presets are a disclosure after the primary export action, retaining
+save/rename/delete and unknown-result recovery. An unresolved request or failed
+read remains indicated on the closed summary. Task Center size-limit failures
+route back to source/scope adjustment instead of unchanged generic retry.
+
+Local API/PG/browser checkpoints live in
+[the ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
+This candidate has not been submitted to CI or deployed.
+
 ## Task Center follow-up — 2026-10-06 (deployed)
 
 Same-generation background Continuation refresh keeps the existing immutable

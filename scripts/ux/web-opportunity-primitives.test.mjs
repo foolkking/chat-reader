@@ -1,11 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import { loadTableFixtureModule } from "./markdown-table-source-fixture.mjs";
 
 const tableExport = (await loadTableFixtureModule("../../apps/web/features/conversations/markdown-table-export.ts")).module;
 const pastedTranscript = (await loadTableFixtureModule("../../apps/web/features/import/pasted-transcript.ts")).module;
 const citation = (await loadTableFixtureModule("../../apps/web/features/conversations/reader-citation.ts")).module;
 const versionDiff = (await loadTableFixtureModule("../../apps/web/features/editing/version-diff.ts")).module;
+
+test("Reader table interaction matrix is a required CI gate with retained evidence", () => {
+  const workflow = readFileSync(new URL("../../.github/workflows/build-release-images.yml", import.meta.url), "utf8");
+  const step = workflow.split("- name: Reader table export and recovery controls")[1]?.split("- name:")[0];
+  assert.match(step ?? "", /run: node scripts\/ux\/reader-table-actions-browser\.mjs/);
+  assert.match(step ?? "", /PLAYWRIGHT_USE_BUNDLED_CHROMIUM: "1"/);
+  assert.doesNotMatch(step ?? "", /continue-on-error|if:/);
+  assert.match(workflow, /reader-table-actions-browser\/result\.json/);
+  assert.match(workflow, /reader-table-actions-browser\/\*\.png/);
+});
 
 test("table data export reads nested text, preserves empty cells, and escapes TSV/CSV", () => {
   const data = tableExport.readMarkdownTableData({
@@ -50,12 +61,33 @@ test("formula-like cells default to safe text while ordinary negative numbers re
 });
 
 test("table export refuses oversized table data without silently truncating", () => {
-  const cells = Array.from({ length: tableExport.MAX_EXPORTED_TABLE_CELLS + 1 }, () => ({ tagName: "td", children: [] }));
+  const cells = Array.from({ length: tableExport.MAX_EXPORTED_TABLE_CELLS + 1 }, () => ({
+    tagName: "td", get children() { throw Error("Oversized data must be counted before extracting cell text"); },
+  }));
   const result = tableExport.readMarkdownTableData({
     tagName: "table",
     children: [{ tagName: "tbody", children: [{ tagName: "tr", children: cells }] }],
   });
   assert.deepEqual(result, { tooLarge: true });
+});
+
+test("table math exports its TeX once rather than MathML, annotation and visual text concatenated", () => {
+  for (const className of [["katex"], "katex"]) {
+    const data = tableExport.readMarkdownTableData({
+      tagName: "table", children: [{ tagName: "tr", children: [{ tagName: "td", children: [
+        { type: "text", value: "before " },
+        { tagName: "span", properties: { className }, children: [
+          { tagName: "span", children: [{ tagName: "math", children: [{ tagName: "semantics", children: [
+            { tagName: "mrow", children: [{ type: "text", value: "visual fraction" }] },
+            { tagName: "annotation", properties: { encoding: "application/x-tex" }, children: [{ type: "text", value: "\\frac{a}{b}" }] },
+          ] }] }] },
+          { tagName: "span", properties: { className: ["katex-html"] }, children: [{ type: "text", value: "visual fraction" }] },
+        ] },
+        { type: "text", value: " after" },
+      ] }] }],
+    });
+    assert.deepEqual(data.rows, [["before \\frac{a}{b} after"]]);
+  }
 });
 
 test("pasted transcript becomes a named UTF-8 Markdown file only when explicitly requested", async () => {

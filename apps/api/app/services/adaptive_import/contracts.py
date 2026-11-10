@@ -50,6 +50,7 @@ class AdaptiveImportError(ValueError):
         pointer: str | None = None,
         blocking: bool = True,
         action: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
@@ -57,8 +58,11 @@ class AdaptiveImportError(ValueError):
         self.pointer = pointer
         self.blocking = blocking
         self.action = action
+        self.details = details
 
     def diagnostic(self, *, group_id: str | None = None) -> dict[str, Any]:
+        from app.services.task_errors import public_import_failure_details
+        details = public_import_failure_details(self.details)
         return {
             "code": self.code,
             "layer": self.layer,
@@ -67,4 +71,5 @@ class AdaptiveImportError(ValueError):
             "blocking": self.blocking,
             "action": self.action,
             "group_id": group_id,
+            **({"details": details} if details else {}),
         }

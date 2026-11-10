@@ -175,31 +175,51 @@ def queue_conversation_export(
     context_attachment_policy: str = "include",
     continuation_policy: str = "auto",
     start_message_id: uuid.UUID | None = None,
+    plain_options: dict | None = None,
     ownership_scope: OwnershipScope = LEGACY_OWNERSHIP_SCOPE,
 ) -> BackgroundJob:
     conversation = get_owned(db, Conversation, conversation_id, ownership_scope)
     if conversation is None or conversation.deleted_at is not None:
         raise MessageEditError("Conversation not found.", 404)
+    if export_format in {"markdown_v2", "canjson_v2"}:
+        from app.schemas.export import ExportRequest
+        from app.services.exporting.plain_export import _require_source
+        _require_source(db, conversation_id, ownership_scope)
+        if not idempotency_key or plain_options is None:
+            raise MessageEditError("A request key and original export options are required.", 422)
+        parsed = ExportRequest.model_validate(plain_options)
+        if parsed.format != export_format:
+            raise MessageEditError("Export options do not match the requested format.", 422)
+        plain_options = parsed.model_dump(mode="json")
+        include_description, include_annotations = parsed.include_description, parsed.annotation_scope == "all"
+        include_notebook, include_metadata = parsed.notebook_scope == "current", parsed.include_metadata
+        include_source_refs = parsed.include_source_refs
+    elif plain_options is not None:
+        raise MessageEditError("Plain export options require a plain format.", 422)
+    intent = {
+        "conversation_id": str(conversation.id),
+        "include_description": include_description,
+        "include_annotations": include_annotations,
+        "include_notebook": include_notebook,
+        "include_metadata": include_metadata,
+        "include_source_refs": include_source_refs,
+        "export_format": export_format,
+        "context_scope": context_scope,
+        "context_attachment_policy": context_attachment_policy,
+        "continuation_policy": continuation_policy,
+        "start_message_id": str(start_message_id) if start_message_id else None,
+        **({"plain_options": plain_options} if plain_options is not None else {}),
+    }
     if idempotency_key:
-        existing = (
-            db.query(BackgroundJob)
-            .filter(
-                ownership_scope.predicate(BackgroundJob),
-                BackgroundJob.job_type == "conversation_export",
-                BackgroundJob.idempotency_key == idempotency_key,
-                BackgroundJob.status.in_((*ACTIVE_JOB_STATUSES, "committed")),
-            )
-            .order_by(BackgroundJob.created_at.desc())
-            .first()
-        )
+        from app.services.exporting.archive_jobs import _existing
+        existing = _existing(db, ownership_scope.owner_user_id, "conversation_export", idempotency_key)
         if existing is not None:
-            if export_format == "context_package" or existing.payload.get("export_format") == "context_package":
-                expected = {"conversation_id": str(conversation_id), "export_format": export_format,
-                            "context_scope": context_scope, "start_message_id": str(start_message_id) if start_message_id else None,
-                            "context_attachment_policy": context_attachment_policy, "continuation_policy": continuation_policy}
-                defaults = {"context_attachment_policy": "include", "continuation_policy": "auto"}
-                if any(existing.payload.get(key, defaults.get(key)) != value for key, value in expected.items()):
-                    raise MessageEditError("This request key was already used for different Context export options.", 409)
+            defaults = {"export_format": "cr_v2", "include_metadata": True, "include_source_refs": True,
+                        "include_description": False, "include_annotations": False, "include_notebook": False,
+                        "context_scope": "full_conversation", "context_attachment_policy": "include",
+                        "continuation_policy": "auto"}
+            if any(existing.payload.get(key, defaults.get(key)) != value for key, value in intent.items()):
+                raise MessageEditError("This request key was already used for different export options.", 409)
             return existing
     job = BackgroundJob(
         id=uuid.uuid4(),
@@ -209,20 +229,10 @@ def queue_conversation_export(
         phase="queued",
         progress=0,
         processed_items=0,
-        total_items=conversation.message_count,
+        total_items=len(plain_options["message_ids"]) if plain_options and plain_options.get("message_ids") else conversation.message_count,
         payload={
-            "conversation_id": str(conversation.id),
+            **intent,
             "title": conversation.display_title,
-            "include_description": include_description,
-            "include_annotations": include_annotations,
-            "include_notebook": include_notebook,
-            "include_metadata": include_metadata,
-            "include_source_refs": include_source_refs,
-            "export_format": export_format,
-            "context_scope": context_scope,
-            "context_attachment_policy": context_attachment_policy,
-            "continuation_policy": continuation_policy,
-            "start_message_id": str(start_message_id) if start_message_id else None,
         },
         result={},
         idempotency_key=idempotency_key,
@@ -691,10 +701,17 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
             BackgroundJob.status.in_(("processing", "cancelling")),
             or_(BackgroundJob.heartbeat_at.is_(None), BackgroundJob.heartbeat_at < cutoff),
         )
-        .all()
+        .with_for_update(skip_locked=True).all()
     )
     now = datetime.now(timezone.utc)
+    recovered = 0
     for job in jobs:
+        # A missing heartbeat is not permission to cancel a still-live writer.
+        # PostgreSQL drops this transaction lease when its owning connection
+        # dies; only then may a stale analysis be recovered.
+        if job.job_type == "adaptive_import_analysis" and not _analysis_execution_lock(db, job.id):
+            continue
+        recovered += 1
         if job.job_type == "support_notification":
             from app.services.support_notifications import recover_notification
             recover_notification(db, job)
@@ -742,7 +759,14 @@ def recover_stale_jobs(db: Session, stale_after_seconds: int) -> int:
             attempt=job.attempt_count,
         )
     db.flush()
-    return len(jobs)
+    return recovered
+
+
+def _analysis_execution_lock(db: Session, job_id: uuid.UUID) -> bool:
+    if db.get_bind().dialect.name != "postgresql":
+        return True
+    key = int.from_bytes(hashlib.sha256(b"chat-reader:analysis:" + job_id.bytes).digest()[:8], "big", signed=True)
+    return bool(db.execute(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": key}).scalar())
 
 
 def claim_next_job(
@@ -774,9 +798,16 @@ def claim_next_job(
     job.heartbeat_at = now
     job.error_message = None
     job.attempt_count += 1
+    if job.job_type == "adaptive_import_analysis":
+        job.payload = {**(job.payload or {}), "execution_token": uuid.uuid4().hex}
     db.flush()
     if job.job_type in SYSTEM_JOB_TYPES:
         sync_system_archive_record(db, job, status="RUNNING")
+    # Capture the claim before COMMIT. A later read by the heartbeat/processor
+    # must not accidentally adopt an intervening execution of the same job.
+    db.info["claimed_background_execution"] = (
+        job.attempt_count, job.started_at, (job.payload or {}).get("execution_token"),
+    )
     structured_event(
         logger,
         logging.INFO,
@@ -791,7 +822,27 @@ def claim_next_job(
 def process_background_job(
     job_id: uuid.UUID,
     session_factory: sessionmaker = SessionLocal,
+    *,
+    expected_execution: tuple | None = None,
 ) -> None:
+    execution = None
+
+    def owns_execution(job) -> bool:
+        return execution is not None and execution == (
+            job.attempt_count, job.started_at, (job.payload or {}).get("execution_token"),
+        )
+
+    def progress_result(job, phase, progress, processed, total, result):
+        if job.job_type != "adaptive_import_analysis":
+            return result if result is not None else job.result
+        meaningful = (job.phase, job.progress, job.processed_items, job.total_items) != (phase, progress, processed, total)
+        value = dict(result if result is not None else job.result or {})
+        if meaningful or result is not None:
+            value["progress_updated_at"] = datetime.now(timezone.utc).isoformat()
+        elif (job.result or {}).get("progress_updated_at"):
+            value["progress_updated_at"] = job.result["progress_updated_at"]
+        return value
+
     def persist_report(
         phase: str,
         progress: int,
@@ -803,23 +854,35 @@ def process_background_job(
             job = progress_db.get(BackgroundJob, job_id)
             if job is None:
                 raise BackgroundJobCancelled("Background job no longer exists.")
+            if not owns_execution(job):
+                raise BackgroundJobCancelled("Background execution was superseded.")
             if job.status in {"cancelling", "cancelled"}:
                 raise BackgroundJobCancelled("Background job cancellation requested.")
             if job.status != "processing":
                 raise RuntimeError(f"Background job is no longer processing ({job.status}).")
-            job.phase = phase
-            job.progress = max(0, min(progress, 99))
-            job.processed_items = processed
-            job.total_items = total
-            if result is not None:
-                job.result = result
-            job.heartbeat_at = datetime.now(timezone.utc)
+            updated = progress_db.query(BackgroundJob).filter(
+                BackgroundJob.id == job_id, BackgroundJob.status == "processing",
+                BackgroundJob.attempt_count == execution[0], BackgroundJob.started_at == execution[1],
+                BackgroundJob.payload["execution_token"].as_string() == execution[2],
+            ).update({
+                BackgroundJob.result: progress_result(job, phase, progress, processed, total, result),
+                BackgroundJob.phase: phase, BackgroundJob.progress: max(0, min(progress, 99)),
+                BackgroundJob.processed_items: processed, BackgroundJob.total_items: total,
+                BackgroundJob.heartbeat_at: datetime.now(timezone.utc),
+            }, synchronize_session=False)
+            if updated != 1:
+                raise BackgroundJobCancelled("Background execution changed before progress publication.")
             progress_db.commit()
 
     try:
         with session_factory() as db:
             job = db.get(BackgroundJob, job_id)
             if job is None:
+                return
+            execution = (job.attempt_count, job.started_at, (job.payload or {}).get("execution_token"))
+            if expected_execution is not None and execution != expected_execution:
+                return
+            if job.job_type == "adaptive_import_analysis" and not _analysis_execution_lock(db, job.id):
                 return
             if job.status in {"cancelling", "cancelled"}:
                 if job.status == "cancelling":
@@ -882,12 +945,11 @@ def process_background_job(
                     raise BackgroundJobCancelled("Background job cancellation requested.")
                 if job.status != "processing":
                     raise RuntimeError(f"Background job is no longer processing ({job.status}).")
+                job.result = progress_result(job, phase, progress, processed, total, result)
                 job.phase = phase
                 job.progress = max(0, min(progress, 99))
                 job.processed_items = processed
                 job.total_items = total
-                if result is not None:
-                    job.result = result
                 job.heartbeat_at = datetime.now(timezone.utc)
 
             report("validating", 5, 0, job.total_items)
@@ -952,7 +1014,10 @@ def process_background_job(
                 processed_items = len(payload["conversation_ids"])
             elif job.job_type == "conversation_export":
                 conversation_id = uuid.UUID(payload["conversation_id"])
-                if payload.get("export_format") == "context_package":
+                if payload.get("export_format") in {"markdown_v2", "canjson_v2"}:
+                    from app.services.exporting.plain_export import create_plain_export
+                    artifact = create_plain_export(db, job=job, ownership_scope=job_scope, progress_callback=report)
+                elif payload.get("export_format") == "context_package":
                     artifact = create_context_package(
                         db,
                         ownership_scope=job_scope,
@@ -1177,7 +1242,11 @@ def process_background_job(
                 db.flush()
                 report("analyzing", 5, 0, max(import_record.file_count, 1))
 
+                unit_progress_seen = False
+
                 def report_analysis_progress(processed: int, total: int) -> None:
+                    if unit_progress_seen:
+                        return
                     progress = 10 + int(80 * processed / max(total, 1))
                     import_record.progress = min(progress, 95)
                     import_record.phase = "analyzing"
@@ -1185,11 +1254,50 @@ def process_background_job(
                     report("analyzing", progress, processed, total)
 
                 from app.services.adaptive_import.operations import operation_admission
-                with operation_admission(db, import_record, payload):
+                from app.services.adaptive_import.memory_budget import control_checkpoints, unit_progress_reporting
+                last_control_check = 0.0
+
+                def report_unit(stage, index, total, completed):
+                    nonlocal unit_progress_seen
+                    unit_progress_seen = True
+                    start, span = {"archives": (5, 15), "recognition": (20, 25),
+                                   "validation": (45, 25), "draft": (70, 25)}[stage]
+                    processed = index if completed else index - 1
+                    progress = start + int(span * processed / max(1, total))
+                    report("analyzing", progress, processed, total, {
+                        "analysis_progress": {"stage": stage, "unit_index": index,
+                                              "unit_total": total, "completed": completed},
+                    })
+
+                def check_analysis_control():
+                    nonlocal last_control_check
+                    now = time.monotonic()
+                    if now - last_control_check < 0.25:
+                        return
+                    last_control_check = now
+                    if is_sqlite:
+                        if job.status in {"cancelling", "cancelled"}:
+                            raise BackgroundJobCancelled("Import analysis stop requested.")
+                        return
+                    with session_factory() as control_db:
+                        state = control_db.query(
+                            BackgroundJob.status, BackgroundJob.attempt_count, BackgroundJob.started_at,
+                            BackgroundJob.payload["execution_token"].as_string(),
+                        ).filter(BackgroundJob.id == job_id).first()
+                    if state is None or state[0] != "processing" or tuple(state[1:]) != execution:
+                        raise BackgroundJobCancelled("Import analysis stop requested or superseded.")
+
+                with control_checkpoints(check_analysis_control), unit_progress_reporting(report_unit), operation_admission(db, import_record, payload):
                     operation_result = None
                     if payload.get("operation"):
                         from app.services.adaptive_import.operations import execute_operation
                         operation_result = execute_operation(db, import_record, payload)
+                    elif payload.get("resume_session"):
+                        from app.services.adaptive_import.service import resume_retained_analysis
+                        resume_retained_analysis(
+                            db, import_record, previous_state=payload.get("previous_state", "COLLECTING"),
+                            progress_callback=report_analysis_progress,
+                        )
                     else:
                         analyze = rebuild_session_preview if payload.get("rebuild_preview") else analyze_initial_session
                         analyze(db, import_record, progress_callback=report_analysis_progress)
@@ -1412,7 +1520,7 @@ def process_background_job(
                 "phase": "completed",
                 "progress": 100,
                 "processed_items": processed_items,
-                "result": job_result,
+                "result": {**job_result, **({"progress_updated_at": now.isoformat()} if job.job_type == "adaptive_import_analysis" else {})},
                 "heartbeat_at": now,
                 "completed_at": now,
                 "error_message": None,
@@ -1437,7 +1545,11 @@ def process_background_job(
             else:
                 updated = (
                     db.query(BackgroundJob)
-                    .filter(BackgroundJob.id == job_id, BackgroundJob.status == "processing")
+                    .filter(
+                        BackgroundJob.id == job_id, BackgroundJob.status == "processing",
+                        BackgroundJob.attempt_count == execution[0], BackgroundJob.started_at == execution[1],
+                        BackgroundJob.payload["execution_token"].as_string() == execution[2],
+                    )
                     .update(committed_values, synchronize_session=False)
                 )
                 if updated != 1:
@@ -1473,8 +1585,8 @@ def process_background_job(
     except BackgroundJobCancelled:
         structured_event(logger, logging.INFO, "background_job_cancelled", job_id=str(job_id))
         with session_factory() as db:
-            job = db.get(BackgroundJob, job_id)
-            if job is not None and job.status in {"processing", "cancelling"}:
+            job = db.query(BackgroundJob).filter_by(id=job_id).with_for_update().one_or_none()
+            if job is not None and owns_execution(job) and job.status in {"processing", "cancelling"}:
                 now = datetime.now(timezone.utc)
                 job.status = "cancelled"
                 job.phase = "cancelled"
@@ -1494,8 +1606,8 @@ def process_background_job(
             error_class=type(exc).__name__,
         )
         with session_factory() as db:
-            job = db.get(BackgroundJob, job_id)
-            if job is not None:
+            job = db.query(BackgroundJob).filter_by(id=job_id).with_for_update().one_or_none()
+            if job is not None and owns_execution(job):
                 if job.status == "committed":
                     return
                 if job.job_type == "adaptive_import_analysis" and job.status == "processing":
@@ -1553,6 +1665,10 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
         from app.models.import_record import ImportRecord
 
         analysis_record = db.get(ImportRecord, uuid.UUID(str((job.payload or {}).get("import_id"))))
+        if analysis_record is not None:
+            # Re-read after acquiring the record lock: a source replacement
+            # may have queued a new analysis while this old job was selected.
+            db.refresh(analysis_record, with_for_update=True)
         if (
             analysis_record is None
             or analysis_record.owner_user_id != job.owner_user_id
@@ -1595,10 +1711,22 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
     return job
 
 
-def request_background_job_cancellation(job: BackgroundJob) -> BackgroundJob:
+def request_background_job_cancellation(job: BackgroundJob, *, source_disposition: str | None = None) -> BackgroundJob:
     if job.job_type not in CANCELLABLE_JOB_TYPES:
         raise MessageEditError("This background task cannot be cancelled.", 409)
     now = datetime.now(timezone.utc)
+    if source_disposition is not None and job.job_type != "adaptive_import_analysis":
+        raise MessageEditError("Source retention applies only to import analysis.", 409)
+    if job.status in {"cancelling", "cancelled"}:
+        if source_disposition is not None and (job.payload or {}).get("source_disposition", "discard") != source_disposition:
+            raise MessageEditError("The stop request already has a different source-retention choice. Check its result first.", 409)
+        return job
+    if job.status in {"queued", "processing"}:
+        job.payload = {
+            **(job.payload or {}),
+            "cancellation_requested_at": now.isoformat(),
+            **({"source_disposition": source_disposition} if source_disposition is not None else {}),
+        }
     if job.status == "queued":
         job.status = "cancelled"
         job.phase = "cancelled"
@@ -1674,9 +1802,9 @@ def _sync_adaptive_import_record_after_job(
     record.completed_at = now
     record.heartbeat_at = now
     if status == "cancelled":
-        from app.services.adaptive_import.service import cancel_session
+        from app.services.adaptive_import.service import finish_analysis_stop
 
-        cancel_session(record)
+        finish_analysis_stop(record, job)
     else:
         record.status = "failed"
         record.phase = "analysis_failed"

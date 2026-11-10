@@ -1,0 +1,87 @@
+{
+  "files": [
+    {
+      "sha256": "ccdf56e8dc893f06d361a346f34f7d0cac6f8ce6190d6814ceb2f32d76ce3ed6",
+      "path": ".github/workflows/build-release-images.yml"
+    },
+    {
+      "sha256": "834b737a86a50e44ebc848ea28a38dbd902ac88f8c0986a980458143552fd09b",
+      "path": "apps/api/app/api/routes/adaptive_imports.py"
+    },
+    {
+      "sha256": "f60612ae6b7b3161ac478a429d878bbb611f8d6bfe0ef8992248f82a1094a60f",
+      "path": "apps/api/app/api/routes/tasks.py"
+    },
+    {
+      "sha256": "d7c9c08009d25536b3079c6d1f82b91cebe60b5af1bcec50813bab1729dfbce4",
+      "path": "apps/api/app/services/adaptive_import/memory_budget.py"
+    },
+    {
+      "sha256": "14117fdcd4fe9ce72f0d359a020d32ca133836736af5ed06bfff886462d1fa44",
+      "path": "apps/api/app/services/adaptive_import/operations.py"
+    },
+    {
+      "sha256": "5365fa4c7d67d3ea0065fbc7d64aed064910e2bccd9f89ec709a7403b3ec8f7c",
+      "path": "apps/api/app/services/adaptive_import/resource_wait.py"
+    },
+    {
+      "sha256": "2a1da6892ffcc4f7148f96a6834bee38f118242f271d2a2904ce40a9d1e35771",
+      "path": "apps/api/app/services/adaptive_import/archive_sources.py"
+    },
+    {
+      "sha256": "5d5009d760132cd0823cfb4e754a0d6055216195d1f35ab080008e4ccb969be0",
+      "path": "apps/api/app/services/adaptive_import/service.py"
+    },
+    {
+      "sha256": "93557651ef653cf38a6de2cfeb5d60d732818f3bcab6bee180e0ede23071d1ef",
+      "path": "apps/api/app/services/background_jobs.py"
+    },
+    {
+      "sha256": "170954e3d5cf0bdba2e694adc94f5bf905fc32b8e88c9b227d3b9bc730cf02a9",
+      "path": "apps/api/tests/test_import_unit_admission.py"
+    },
+    {
+      "sha256": "6cece8f2c04dcf3e18018f9c1538949ca703716552d697de913fe93fbbd9d30b",
+      "path": "apps/api/tests/test_import_independent_units.py"
+    },
+    {
+      "sha256": "4fffeb54fa8b552bc6b04f846ada873b2940959477f1d38f5fcb89921cc907bc",
+      "path": "apps/api/tests/test_import_source_repair.py"
+    },
+    {
+      "sha256": "de59e98ac66d536e7c06e109d4dce498b177cbdf8b722c2de864bfcf1cee6abd",
+      "path": "apps/api/tests/test_import_selection_order.py"
+    },
+    {
+      "sha256": "1193cd99104c746d77eae3b037fbde2b6f04ac0cc812a0fea9e6340537137334",
+      "path": "apps/api/tests/test_import_analysis_postgres.py"
+    },
+    {
+      "sha256": "5b379f9d5108de7c5f817175199b93feb703b6a749ce09ac37367508feb1c174",
+      "path": "apps/web/features/import/import-panel.tsx"
+    },
+    {
+      "sha256": "084df4dc159c3b94c70db60542488f644a4a158837f1f7f5d2687d806cd4da56",
+      "path": "apps/web/features/import/adaptive-import-workspace.tsx"
+    },
+    {
+      "sha256": "551fd1e4eb3de5280dfeeda228662b832b338947276836762469553bcfd133a6",
+      "path": "apps/web/lib/api.ts"
+    },
+    {
+      "sha256": "53104df33a07aa459b963ba00b425594760137e74781edbffb2999af5323eaaf",
+      "path": "apps/web/lib/types.ts"
+    },
+    {
+      "sha256": "8cfa36622665093859936cf214fdd0e27e24f07678bf6e0823322b20af9cddef",
+      "path": "scripts/ux/import-source-repair-browser.mjs"
+    },
+    {
+      "sha256": "8d6575661e50fc87eca5b86b8d29e1f75c93e0ff53aa6a9c1e397521963e05d4",
+      "path": "scripts/ux/import-background-analysis.test.mjs"
+    }
+  ],
+  "local_date": "2026-11-10",
+  "starting_head": "1fb091210c552ae88da3acea7bb33520c2035d7b",
+  "scope": "Sequential-unit admission and source-repair local checkpoint; synthetic data, not release acceptance"
+}

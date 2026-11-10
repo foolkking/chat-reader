@@ -1,5 +1,11 @@
 # 事实证据索引
 
+## 可恢复操作本地检查点 — 2026-11-10（实施中）
+
+[源码摘要、隔离测试、六组恢复矩阵各12组合及图片6/Reader19组合成证据](recoverable-operations-2026-11-10/README.md)。
+只含合成内容；不等于全计划验收或 CI/部署完成。
+未完成事项见[实施账本](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md)。
+
 ## 阅读交互 / 缺附件 ZIP 已发布 — 2026-11-09
 
 [脱敏机器回执](release-2026-11-09/reading-interaction-zip-deployment-summary.json)

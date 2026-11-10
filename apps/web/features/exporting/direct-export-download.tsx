@@ -1,24 +1,33 @@
 "use client";
 
 import { Download } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePreferences } from "../../components/preferences-provider";
 import { assertOfflineAccess, authenticationGeneration, captureOfflineAccess, notifyAuthenticationFailure, OFFLINE_ACCESS_LOCKED_EVENT } from "../../lib/offline-access";
 import { DirectDownloadSizeError, readBoundedDownload } from "../../lib/bounded-download";
+import { withRequestDeadline } from "../../lib/request-deadline";
 
-type DownloadProps = { href: string; format: "canjson" | "markdown"; label?: string; compact?: boolean; disabled?: boolean; requestBody?: unknown; prepareLocal?: () => Promise<Response> };
-export function DirectExportDownload({ href, format, label, compact = false, disabled, requestBody, prepareLocal }: DownloadProps) {
+type DownloadProps = { href: string; format: "canjson" | "markdown"; label?: string; compact?: boolean; disabled?: boolean; requestBody?: unknown; prepareLocal?: () => Promise<Response>; backgroundAction?: ReactNode };
+export function DirectExportDownload({ href, format, label, compact = false, disabled, requestBody, prepareLocal, backgroundAction }: DownloadProps) {
   const zh = usePreferences().resolvedLocale === "zh-CN";
-  return <DownloadButton key={`${href}:${zh}:${JSON.stringify(requestBody)}`} href={href} format={format} zh={zh} label={label} compact={compact} disabled={disabled} requestBody={requestBody} prepareLocal={prepareLocal} />;
+  return <DownloadButton key={`${href}:${zh}:${JSON.stringify(requestBody)}`} href={href} format={format} zh={zh} label={label} compact={compact} disabled={disabled} requestBody={requestBody} prepareLocal={prepareLocal} backgroundAction={backgroundAction} />;
 }
 
-function DownloadButton({ href, format, zh, label, compact, disabled, requestBody, prepareLocal }: DownloadProps & { zh: boolean }) {
+function DownloadButton({ href, format, zh, label, compact, disabled, requestBody, prepareLocal, backgroundAction }: DownloadProps & { zh: boolean }) {
   const active = useRef<AbortController | null>(null);
   const mounted = useRef(false);
+  const trigger = useRef<HTMLButtonElement>(null), cancelTrigger = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [serverLimited, setServerLimited] = useState(false);
+  const [backgroundEligible, setBackgroundEligible] = useState(false);
   const [started, setStarted] = useState(false);
   const [progress, setProgress] = useState<{ received: number; total: number | null } | null>(null);
+  useEffect(() => {
+    if (!started) return;
+    const timer = setTimeout(() => setStarted(false), 3000);
+    return () => clearTimeout(timer);
+  }, [started]);
 
   useEffect(() => {
     mounted.current = true;
@@ -32,18 +41,19 @@ function DownloadButton({ href, format, zh, label, compact, disabled, requestBod
   }, []);
 
   async function download() {
-    if (active.current || disabled) return;
+    if (active.current || disabled || serverLimited) return;
     const controller = new AbortController();
     const generation = authenticationGeneration();
     active.current = controller;
-    setBusy(true); setError(null); setStarted(false); setProgress(null);
+    setBusy(true); setError(null); setStarted(false); setProgress(null); setBackgroundEligible(false);
     let status: number | null = null;
+    let response: Response | undefined;
     try {
       const access = captureOfflineAccess();
-      const response = prepareLocal ? await prepareLocal() : await fetch(href, {
-        credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal,
+      response = prepareLocal ? await prepareLocal() : await withRequestDeadline(signal => fetch(href, {
+        credentials: "same-origin", cache: "no-store", redirect: "error", signal: AbortSignal.any([signal, controller.signal]),
         ...(requestBody === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }),
-      });
+      }), controller.signal, 30_000);
       status = response.status;
       if (status === 401) notifyAuthenticationFailure(access);
       assertOfflineAccess(access);
@@ -68,29 +78,45 @@ function DownloadButton({ href, format, zh, label, compact, disabled, requestBod
       }
     } catch (failure) {
       if (mounted.current && !controller.signal.aborted && generation === authenticationGeneration()) {
-        setError(failure instanceof DirectDownloadSizeError || status === 413
-          ? (zh ? "文件超过直接下载预算。请缩小消息范围，或使用导出任务生成制品后下载。" : "This file exceeds the direct-download budget. Select fewer messages or use an export task and download its artifact.")
+        setServerLimited(status === 413);
+        setBackgroundEligible(status === null || status === 408 || status >= 500 || (status >= 200 && status < 300));
+        setError(failure instanceof DirectDownloadSizeError
+          ? (backgroundAction
+            ? (zh ? "文件超过浏览器直接下载预算。可按下方原选项在后台生成，或减少导出内容。" : "This file exceeds the browser download budget. Generate it in the background below, or reduce the content.")
+            : (zh ? "文件超过浏览器直接下载预算。请缩小导出范围后重试。" : "This file exceeds the browser download budget. Reduce the scope and retry."))
+          : status === 413
+          ? (zh ? "超过服务器导出大小限制。后台生成也不能绕过此限制，请减少导出内容。" : "The server export limit was exceeded. Background generation cannot bypass it; reduce the export content.")
           : status === 404
-          ? (zh ? "对话已不可用，无法下载。" : "This conversation is no longer available.")
+          ? (zh ? "对话已不可用，请返回对话确认；后台生成无法解决此问题。" : "This conversation is unavailable. Check the conversation; background generation cannot resolve this.")
+          : status === 401 || status === 403
+          ? (zh ? "当前登录或权限不允许下载，请确认账户与对话权限后再试。" : "Your current session or permissions do not allow this download. Check your account and conversation access.")
+          : status !== null && status >= 400 && status < 500 && status !== 408
+          ? (zh ? "导出请求未被接受，请检查所选范围与内容后再试。" : "The export request was not accepted. Review the selected scope and content before retrying.")
           : status === 503
             ? (zh ? "暂时无法准备下载，请稍后重试。" : "The download could not be prepared. Please retry shortly.")
             : (zh ? "下载失败，请检查连接并重试。" : "Download failed. Check your connection and retry."));
       }
     } finally {
+      const restoreFocus = document.activeElement === cancelTrigger.current;
+      if (response?.body && !response.body.locked) void response.body.cancel().catch(() => undefined);
       if (active.current === controller) active.current = null;
       if (mounted.current) setBusy(false);
+      if (restoreFocus) requestAnimationFrame(() => {
+        if (mounted.current && document.activeElement === document.body) trigger.current?.focus({ preventScroll: true });
+      });
     }
   }
 
   return <div className="grid min-w-0 gap-2" data-testid="direct-export-download">
     <div className="flex gap-2">
-      <button type="button" disabled={busy || disabled} aria-busy={busy} onClick={() => void download()} className={compact ? "btn-secondary inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs disabled:opacity-60" : "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"}>
+      <button ref={trigger} type="button" disabled={busy || disabled || serverLimited} aria-busy={busy} onClick={() => void download()} className={compact ? "btn-secondary inline-flex min-h-11 items-center justify-center gap-2 px-3 text-xs disabled:opacity-60" : "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--text)] px-4 text-sm font-medium text-[var(--surface)] hover:opacity-85 disabled:cursor-wait disabled:opacity-60"}>
         <Download className="h-4 w-4 shrink-0" aria-hidden />
-        {busy ? (zh ? "正在准备下载…" : "Preparing download…") : error ? (zh ? "重试下载" : "Retry download") : label ?? (zh ? "下载文件" : "Download file")}
+        {busy ? (zh ? "正在准备下载…" : "Preparing download…") : serverLimited ? (zh ? "调整内容后再下载" : "Adjust content before downloading") : error ? (zh ? "重试下载" : "Retry download") : label ?? (zh ? "下载文件" : "Download file")}
       </button>
-      {busy ? <button type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => active.current?.abort()}>{zh ? "取消" : "Cancel"}</button> : null}
+      {busy ? <button ref={cancelTrigger} type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => active.current?.abort()}>{zh ? "取消" : "Cancel"}</button> : null}
     </div>
     {error ? <p role="alert" className="text-sm text-[var(--danger)]">{error}</p> : null}
+    {!busy && error && backgroundEligible && !serverLimited && backgroundAction}
     {busy && progress ? <p role="status" className="text-xs tabular-nums text-secondary">
       {zh ? "正在接收：" : "Receiving: "}{(progress.received / 1024 / 1024).toFixed(1)} MiB{progress.total !== null ? ` / ${(progress.total / 1024 / 1024).toFixed(1)} MiB` : ""}
     </p> : null}

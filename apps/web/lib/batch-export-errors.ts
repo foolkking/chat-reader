@@ -1,5 +1,9 @@
 import { ApiRequestError } from "./api";
 
+export function exportNeedsAdjustment(code: string | null | undefined): boolean {
+  return ["PLAIN_EXPORT_LIMIT", "ATTACHMENT_EXPORT_LIMIT", "CONTEXT_EXPORT_LIMIT", "BATCH_EXPORT_LIMIT"].includes(code ?? "");
+}
+
 export function batchExportFailureCode(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.code?.startsWith("BATCH_EXPORT_")) return error.code;
@@ -13,6 +17,10 @@ export function batchExportFailureCode(error: unknown): string {
 
 export function batchExportError(code: string | null | undefined, zh: boolean): string {
   switch (code) {
+    case "PLAIN_EXPORT_SOURCE_UNAVAILABLE": return zh ? "对话已删除或不可访问，请返回列表确认。" : "This conversation is no longer available. Check your list.";
+    case "PLAIN_EXPORT_ACCOUNT_UNAVAILABLE": return zh ? "账户不可用，请重新登录。" : "Your account is unavailable. Sign in again.";
+    case "PLAIN_EXPORT_LIMIT": return zh ? "内容超过服务器大小限制。原选项已保留，请减少附加内容或选择更小的范围；后台导出不会绕过上限。" : "The content exceeds the server limit. Your options are retained; reduce secondary content or select a smaller scope. Background export cannot bypass the limit.";
+    case "PLAIN_EXPORT_STORAGE_UNAVAILABLE": return zh ? "导出存储暂时不可用，未发布不完整文件。可稍后重试。" : "Export storage is temporarily unavailable. No incomplete file was published; try again later.";
     case "BATCH_EXPORT_SOURCE_UNAVAILABLE": return zh ? "部分对话已删除或不可访问，请刷新列表后重新选择。" : "Some conversations are unavailable. Refresh the list and select again.";
     case "BATCH_EXPORT_ACCOUNT_UNAVAILABLE": return zh ? "账户不可用，请重新登录。" : "Your account is unavailable. Sign in again.";
     case "BATCH_EXPORT_LIMIT": return zh ? "导出超过大小限制，请减少所选对话后重试。" : "This export exceeds the size limit. Select fewer conversations and retry.";

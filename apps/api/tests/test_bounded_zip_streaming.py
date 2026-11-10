@@ -346,7 +346,7 @@ def test_literal_resource_scanning_does_not_rewrite_nested_pre_code(tmp_path):
 
 
 def test_workspace_and_storage_failures_are_not_automatic_retries():
-    record = SimpleNamespace(artifacts=[SimpleNamespace(source_type="adaptive_archive")])
+    record = SimpleNamespace(source_profile="adaptive_json_markdown", artifacts=[SimpleNamespace(source_type="adaptive_archive")])
     row = SimpleNamespace(payload={}, result={}, attempt_count=1)
     for error in [uploads.UploadLimitError("IMPORT_WORKSPACE_EXCEEDED", "bounded", status_code=422),
                   OSError(errno.ENOSPC, "synthetic storage full")]:

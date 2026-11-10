@@ -64,7 +64,7 @@ def regenerate_export(db, artifact, ownership_scope, key):
     if original.job_type == "conversation_export":
         options = {name: payload[name] for name in (
             "include_description", "include_annotations", "include_notebook", "include_metadata", "include_source_refs",
-            "export_format", "context_scope", "context_attachment_policy", "continuation_policy",
+            "export_format", "context_scope", "context_attachment_policy", "continuation_policy", "plain_options",
         ) if name in payload}
         job = queue_conversation_export(db, conversation_id=uuid.UUID(payload["conversation_id"]),
             idempotency_key=request_key, ownership_scope=ownership_scope,

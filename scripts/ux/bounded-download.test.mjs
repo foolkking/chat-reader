@@ -4,8 +4,13 @@ import { createRequire } from "node:module";
 import { test } from "node:test";
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const ts = require("typescript"), exports = {};
-new Function("exports", ts.transpileModule(readFileSync(new URL("../../apps/web/lib/bounded-download.ts", import.meta.url), "utf8"),
-  { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText)(exports);
+const compile = name => ts.transpileModule(readFileSync(new URL(`../../apps/web/lib/${name}.ts`, import.meta.url), "utf8"),
+  { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+const deadline = {};
+new Function("exports", compile("request-deadline"))(deadline);
+new Function("exports", "require", compile("bounded-download"))(exports, name => {
+  assert.equal(name, "./request-deadline"); return deadline;
+});
 const { readBoundedDownload, DIRECT_DOWNLOAD_MAX_BYTES, DirectDownloadSizeError } = exports;
 test("bounded download reports received bytes and refuses truncated success", async () => {
   const progress = [], signal = new AbortController().signal;
@@ -50,4 +55,24 @@ test("NX-EXPORT-01 synthetic transfer records actual retained memory and cancell
   console.info(JSON.stringify({ fixture: "synthetic-bounded-download", bytes: result.size,
     transferMs: performance.now() - started, heapDelta: after.heapUsed - before.heapUsed,
     arrayBufferDelta: after.arrayBuffers - before.arrayBuffers, rss: after.rss }));
+});
+
+test("a stalled body times out without imposing a total duration on progressing chunks", async () => {
+  let timer = 0, cancelled = 0;
+  const timers = new Map(), controlledDeadline = {}, controlled = {};
+  new Function("exports", "setTimeout", "clearTimeout", compile("request-deadline"))(
+    controlledDeadline, (fn, ms) => { timers.set(++timer, { fn, ms }); return timer; }, id => timers.delete(id));
+  new Function("exports", "require", compile("bounded-download"))(controlled, () => controlledDeadline);
+  let writer;
+  const body = new ReadableStream({ start(controller) { writer = controller; }, cancel() { cancelled++; } });
+  const pending = assert.rejects(controlled.readBoundedDownload(new Response(body), new AbortController().signal, () => {}), /REQUEST_TIMEOUT/);
+  const drain = () => new Promise(resolve => setImmediate(resolve));
+  await drain();
+  const first = [...timers.keys()][0];
+  writer.enqueue(Uint8Array.of(1)); await drain();
+  assert.ok([...timers.keys()][0] > first);
+  assert.equal([...timers.values()][0].ms, 30_000);
+  [...timers.values()][0].fn();
+  await pending; await drain();
+  assert.equal(cancelled, 1); assert.equal(body.locked, false); assert.equal(timers.size, 0);
 });

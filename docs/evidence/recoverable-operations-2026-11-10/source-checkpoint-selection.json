@@ -1,0 +1,34 @@
+{
+  "checkpoint": "source-selection-exclusion",
+  "recorded_at": "2026-11-10T05:40:24.1443710+08:00",
+  "base_head": "1fb091210c552ae88da3acea7bb33520c2035d7b",
+  "scope": "Working tree only; synthetic isolated checks, not CI/release acceptance",
+  "checks": {
+    "source_draft_passed": 41,
+    "browser_combinations": 12,
+    "typecheck": "passed",
+    "source_draft_skipped": 2,
+    "web_node_passed": 2206,
+    "api_boundary_skipped": 4,
+    "lint": "passed",
+    "postgres_passed": 23,
+    "api_boundary_passed": 144
+  },
+  "sources": {
+    "scripts/ux/import-background-analysis.test.mjs": "3ac8e6b03088c5f5d61802d637a3635df70b1441bb1edd19e4d7dafc44055f86",
+    "scripts/ux/import-source-repair-browser.mjs": "2a3cabfd98af72541294f0a341ddacca6fd36b4447b308e583e82eb0b3cf3cea",
+    "apps/api/app/services/adaptive_import/operations.py": "6e50edfe86f1f361fe9f08f7c6c3845fe470f9a45ca3df68dc9837b1730db4db",
+    "apps/web/lib/api.ts": "c03039da80635ba643f7b7d2127f90e3b51ae3b358945a09242361c3ebccc110",
+    "apps/api/app/services/import_pipeline/draft_store.py": "3b2308ae0b403cb04589306d560fc3297696f45f9c8145f84ceaeba651d8edfc",
+    "apps/web/lib/types.ts": "4cf2aa902bf6bc4239bdb3d08e122397b92b3ef541417866b650ad6fd236b34d",
+    "apps/api/tests/test_import_analysis_postgres.py": "6769b94e19fbfe953b96e40699684beea17eaf68018ad59076c588bf707890aa",
+    "apps/web/features/import/import-panel.tsx": "d8d56971395d7b79d3b02f582dad9cf62c375f05c247caa262ab00775da82543",
+    "apps/api/app/services/adaptive_import/service.py": "577f9da9575aee7aaa068a3e6544ca23aec07c96459a90ffc03504a431ac1fb0",
+    "apps/web/features/import/import-workspace-copy.ts": "a4ef169b75d7450bf96f899b6eb74e629fbb6dce792d659aa2864267f1ce315e",
+    "apps/api/app/services/adaptive_import/archive_sources.py": "c308047927128271918a9072a7cbe26f0cf665a33ee119922488ec6f717c1d5f",
+    "apps/api/tests/test_import_source_repair.py": "a014b1916b0522be8acf63f6a9440e17475a2d36b02cb71d86e8996a57d2e4ef",
+    "apps/api/app/api/routes/adaptive_imports.py": "cf8fb7f15dbab5c6d09abb247f33ea947ede28c538f1b4e76819b62b6d3d5876",
+    "scripts/ux/request-deadline.test.mjs": "dea981834c7bb9f2ea83924d724dbea5004b84dad5c507f3a1d810500bb97289",
+    "apps/api/app/services/task_errors.py": "a379d02f2e9dcdfd8be0da31de65b9f0f282300a9e5e21e1f50bb03e5fb7fb14"
+  }
+}

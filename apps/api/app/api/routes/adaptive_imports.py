@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
@@ -25,7 +25,7 @@ from app.services.adaptive_import.archive_sources import (
     archive_file_recovery,
     remove_archive_sidecar,
 )
-from app.services.adaptive_import.memory_budget import import_analysis_admission, bounded_zip_session
+from app.services.adaptive_import.memory_budget import import_analysis_admission, bounded_zip_session, sequential_analysis_admission
 from app.services.adaptive_import.operations import queue_operation
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, publish_revision, related_profile_ids, revision_payload, visible_profile
 from app.services.administration import require_root_admin, record_admin_audit, request_id_from
@@ -35,6 +35,7 @@ from app.services.adaptive_import.service import (
     begin_session,
     cancel_session,
     check_family_health,
+    exclude_session_source,
     list_profiles,
     preview_family_mapping,
     reclassify_archive,
@@ -50,6 +51,7 @@ from app.services.adaptive_import.service import (
     session_recovery_status,
     update_profile,
     verify_family_mapping,
+    validate_source_exclusion,
 )
 from app.services.ownership import OwnershipScope, get_owned, ownership_scope_from_request
 from app.services.feature_policies import effective_import_size_mb, get_feature_policy
@@ -102,9 +104,24 @@ class ArchiveMemberChange(BaseModel):
     owner_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=500)
 
 
+class ArchiveReferenceChange(BaseModel):
+    reference_id: uuid.UUID
+    target_member_id: uuid.UUID | None
+
+
 class ArchiveClassificationRequest(BaseModel):
     expected_version: int = Field(ge=1)
-    changes: list[ArchiveMemberChange] = Field(min_length=1, max_length=5000)
+    changes: list[ArchiveMemberChange] = Field(default_factory=list, max_length=5000)
+    reference_changes: list[ArchiveReferenceChange] = Field(default_factory=list, max_length=5000)
+
+    @model_validator(mode="after")
+    def require_distinct_changes(self):
+        if not self.changes and not self.reference_changes:
+            raise ValueError("At least one classification or reference change is required.")
+        ids = [item.reference_id for item in self.reference_changes]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Each reference can only have one target.")
+        return self
 
 
 class RebuildPreviewRequest(BaseModel):
@@ -121,7 +138,7 @@ def list_unfinished_sessions(
     """Pending decisions are not terminal notifications and must remain discoverable."""
     query = db.query(ImportRecord).filter(
         ownership_scope.predicate(ImportRecord),
-        ImportRecord.session_state.in_(("READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING")),
+        ImportRecord.session_state.in_(("READY", "RESOLVING", "NEEDS_GROUPING", "FAILED", "COLLECTING", "ANALYZING", "PAUSED")),
         ImportRecord.status.notin_(("committed", "cancelled")),
     )
     rows = query.options(selectinload(ImportRecord.artifacts), selectinload(ImportRecord.structure_families)).order_by(
@@ -256,6 +273,7 @@ def get_adaptive_import_session(
         job = get_owned(db, BackgroundJob, uuid.UUID(str(task_id)), ownership_scope)
         if job is not None and job.job_type == "adaptive_import_analysis":
             result.update(phase=job.phase, progress=job.progress)
+            result["analysis_progress"] = (job.result or {}).get("analysis_progress")
             if job.status == "cancelling":
                 result["state"] = "CANCELING"
     return result
@@ -275,6 +293,28 @@ def rebuild_adaptive_preview(
     if actual != expected or "rebuild_preview" not in recovery["allowed_actions"]:
         raise HTTPException(status_code=409, detail={"code": "PREVIEW_STATE_CHANGED", "message": "Refresh this session before rebuilding its preview. Saved configuration is retained."})
     queue_session_analysis(db, record, rebuild_preview=True)
+    db.commit()
+    db.refresh(record)
+    return session_payload(record)
+
+
+@router.post("/api/adaptive-import/sessions/{import_id}/resume", status_code=202)
+def resume_adaptive_import_session(
+    import_id: uuid.UUID, payload: RebuildPreviewRequest, db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
+    if not get_feature_policy(db).allow_user_import:
+        raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled."})
+    expected = payload.expected_updated_at.replace(tzinfo=timezone.utc) if payload.expected_updated_at.tzinfo is None else payload.expected_updated_at
+    actual = record.updated_at.replace(tzinfo=timezone.utc) if record.updated_at.tzinfo is None else record.updated_at
+    if record.session_state != "PAUSED" or actual != expected:
+        raise HTTPException(status_code=409, detail={"code": "SESSION_STATE_CHANGED", "message": "Refresh this session before continuing. Saved files and configuration are retained."})
+    if not session_recovery_status(record)["source_available"]:
+        raise HTTPException(status_code=409, detail={"code": "SOURCE_MISSING", "message": "A retained source is unavailable. Replace it before continuing."})
+    previous = ((record.analysis_summary or {}).get("pause") or {}).get("previous_state", "COLLECTING")
+    job = queue_session_analysis(db, record)
+    job.payload = {**job.payload, "resume_session": True, "previous_state": previous}
     db.commit()
     db.refresh(record)
     return session_payload(record)
@@ -345,7 +385,7 @@ def update_adaptive_import_groups(
     if bounded_zip_session(record):
         return queue_operation(db, record, "groups", payload.model_dump(mode="json"))
     try:
-        with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
+        with sequential_analysis_admission(db, record):
             resolve_grouping(db, record, [item.model_dump(mode="json") for item in payload.groups])
         db.commit()
         db.refresh(record)
@@ -368,7 +408,7 @@ def reanalyze_adaptive_import_session(
     if bounded_zip_session(record):
         return queue_operation(db, record, "reanalyze")
     try:
-        with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
+        with sequential_analysis_admission(db, record):
             reanalyze_session(db, record)
         db.commit()
         db.refresh(record)
@@ -424,6 +464,7 @@ def replace_adaptive_import_artifact(
     import_id: uuid.UUID,
     artifact_id: uuid.UUID,
     file: UploadFile = File(...),
+    expected_updated_at: datetime | None = Form(default=None),
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
@@ -431,6 +472,22 @@ def replace_adaptive_import_artifact(
     artifact = _artifact(import_id, artifact_id, db)
     if not get_feature_policy(db).allow_user_import:
         raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
+    from app.services.adaptive_import.service import _require_session_state, SOURCE_REPAIR_STATES
+    try:
+        _require_session_state(record, SOURCE_REPAIR_STATES)
+    except AdaptiveImportError as exc:
+        raise _http_error(exc) from exc
+    if getattr(artifact, "source_type", None) == "adaptive_archive_document":
+        raise HTTPException(status_code=409, detail={"code": "ARCHIVE_CLASSIFICATION_REQUIRED", "message": "Replace the original ZIP rather than its derived document."})
+    if getattr(record, "committed_at", None) is not None or getattr(record, "status", None) in {"queued", "processing", "committed"}:
+        raise HTTPException(status_code=409, detail={"code": "SESSION_STATE_INVALID", "message": "Canonical import has already started."})
+    if record.session_state in {"FAILED", "PAUSED"} or isinstance(expected_updated_at, datetime):
+        actual = record.updated_at.replace(tzinfo=timezone.utc) if record.updated_at.tzinfo is None else record.updated_at
+        expected = (expected_updated_at.replace(tzinfo=timezone.utc)
+                    if isinstance(expected_updated_at, datetime) and expected_updated_at.tzinfo is None
+                    else expected_updated_at)
+        if actual != expected:
+            raise HTTPException(status_code=409, detail={"code": "SESSION_STATE_CHANGED", "message": "Refresh this session before replacing a source. Other files and settings are retained."})
     new_path = None
     mutation_committed = False
     # Keep the route testable with the minimal source artifact shape used by
@@ -442,9 +499,7 @@ def replace_adaptive_import_artifact(
         from dataclasses import asdict
         from app.services.storage.local_storage import save_import_file_stream
         maximum = effective_import_size_mb(db, ownership_scope.owner_user_id) * 1024 * 1024
-        from app.services.adaptive_import.service import _require_session_state, RECOVERABLE_SESSION_STATES
         try:
-            _require_session_state(record, RECOVERABLE_SESSION_STATES)
             size = upload_size(file)
             if size > maximum:
                 raise AdaptiveImportError("FILE_TOO_LARGE", "The replacement exceeds the per-file limit.", layer="file")
@@ -520,6 +575,53 @@ def replace_adaptive_import_artifact(
         ) from exc
 
 
+@router.delete("/api/adaptive-import/sessions/{import_id}/artifacts/{artifact_id}")
+def exclude_adaptive_import_source(
+    import_id: uuid.UUID,
+    artifact_id: uuid.UUID,
+    payload: RebuildPreviewRequest,
+    db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+) -> dict[str, Any]:
+    record = _record(import_id, db, ownership_scope)
+    artifact = _artifact(import_id, artifact_id, db)
+    if not get_feature_policy(db).allow_user_import:
+        raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled."})
+    actual = record.updated_at.replace(tzinfo=timezone.utc) if record.updated_at.tzinfo is None else record.updated_at
+    expected = payload.expected_updated_at
+    if expected.tzinfo is None:
+        expected = expected.replace(tzinfo=timezone.utc)
+    if actual != expected:
+        raise HTTPException(status_code=409, detail={"code": "SESSION_STATE_CHANGED", "message": "Refresh the session before excluding a source."})
+    try:
+        validate_source_exclusion(record, artifact)
+        arguments = {"artifact_id": str(artifact.id)}
+        if get_settings().import_bounded_zip_enabled:
+            return queue_operation(db, record, "exclude_source", arguments)
+        from app.services.adaptive_import.operations import operation_admission
+        # Admission must not reopen or charge the source being excluded.
+        with operation_admission(db, record, {"operation": "exclude_source", "arguments": arguments}):
+            with archive_file_recovery(record):
+                exclude_session_source(db, record, artifact)
+            # Do not erase newly published files on an uncertain COMMIT
+            # acknowledgement: the transaction may already reference them.
+            db.commit()
+        db.refresh(record)
+        return session_payload(record)
+    except AdaptiveImportError as exc:
+        db.rollback()
+        raise _http_error(exc) from exc
+    except UploadLimitError as exc:
+        db.rollback()
+        raise _upload_error(exc) from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail={
+            "code": "SOURCE_EXCLUSION_RESPONSE_UNCONFIRMED",
+            "message": "The exclusion result is unconfirmed. Refresh this session before another change.",
+        }) from exc
+
+
 @router.get("/api/adaptive-import/sessions/{import_id}/archives/{artifact_id}")
 def get_adaptive_import_archive(
     import_id: uuid.UUID,
@@ -533,16 +635,19 @@ def get_adaptive_import_archive(
     try:
         catalog = archive_catalog(record, artifact_id)
         members = [item for item in catalog.get("members") or [] if isinstance(item, dict)]
+        references = catalog.get("unresolved_references") or []
         return {
             key: value
             for key, value in catalog.items()
-            if key != "members"
+            if key not in {"members", "unresolved_references"}
         } | {
             "members": members[offset:offset + limit],
             "member_count": len(members),
+            "unresolved_references": references[offset:offset + limit],
+            "reference_count": len(references),
             "offset": offset,
             "limit": limit,
-            "has_more": offset + limit < len(members),
+            "has_more": offset + limit < max(len(members), len(references)),
         }
     except AdaptiveImportError as exc:
         raise _http_error(exc) from exc
@@ -572,13 +677,14 @@ def update_adaptive_import_archive(
     mutation_committed = False
     try:
         with archive_file_recovery(record):
-            with import_analysis_admission(db, record, stage="analysis", sizes=_analysis_sizes(record)):
+            with sequential_analysis_admission(db, record):
                 removed_paths = reclassify_archive(
                     db,
                     record,
                     artifact,
                     expected_version=payload.expected_version,
                     changes=[item.model_dump(mode="json") for item in payload.changes],
+                    reference_changes=[item.model_dump(mode="json") for item in payload.reference_changes],
                 )
             db.commit()
             mutation_committed = True
@@ -615,7 +721,7 @@ def exclude_adaptive_import_group(
     if bounded_zip_session(record):
         return queue_operation(db, record, "exclude", {"group_id": str(group.id)})
     try:
-        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
+        with sequential_analysis_admission(db, record):
             removed_paths = remove_input_group(db, record, group)
         db.commit()
         db.refresh(record)
@@ -642,7 +748,7 @@ def save_family_mapping(
     if bounded_zip_session(record):
         return queue_operation(db, record, "mapping", {"family_id": str(family.id), **payload.model_dump(mode="json")})
     try:
-        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
+        with sequential_analysis_admission(db, record):
             verify_family_mapping(
                 db, record, family, mapping_spec=payload.mapping_spec, profile_name=payload.profile_name.strip()
             )
@@ -671,7 +777,7 @@ def check_format_health(
     if bounded_zip_session(record):
         return queue_operation(db, record, "health", {"family_id": str(family.id)})
     try:
-        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
+        with sequential_analysis_admission(db, record):
             result = check_family_health(db, record, family)
         db.commit()
         return result
@@ -696,7 +802,7 @@ def preview_family_mapping_route(
     if bounded_zip_session(record):
         return queue_operation(db, record, "preview", {"family_id": str(family.id), **payload.model_dump(mode="json")})
     try:
-        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
+        with sequential_analysis_admission(db, record):
             return preview_family_mapping(
                 record,
                 family,
@@ -723,7 +829,7 @@ def choose_family_profile(
     if bounded_zip_session(record):
         return queue_operation(db, record, "profile", {"family_id": str(family.id), **payload.model_dump(mode="json")})
     try:
-        with import_analysis_admission(db, record, sizes=_analysis_sizes(record)):
+        with sequential_analysis_admission(db, record):
             select_profile_revision(db, record, family, payload.revision_id)
         db.commit()
         db.refresh(record)

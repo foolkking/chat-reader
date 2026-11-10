@@ -1,5 +1,85 @@
 # Testing
 
+## Unreleased recoverable-operation checks — 2026-11-10
+
+The [implementation ledger](execution/RECOVERABLE_OPERATIONS_2026-11-10.md)
+records targeted API/PostgreSQL and Web results; full release acceptance remains pending.
+`scripts/ux/export-recovery-browser.mjs` mounts actual ExportPanel/query cache,
+request client and artifact controls. Twelve width/locale/theme combinations
+exercise original-option/selection continuity, direct-budget recovery,
+read-only unknown-result checks, explicit same-key retry, panel remount,
+bundle/Context choices, empty-selection guards and account retirement. Actual
+preset save/reconciliation is now included;403/404 never recommend background
+generation, and413 never offers unchanged retry.
+`scripts/ux/reading-feedback-browser.mjs` mounts real message actions/copy
+parser and AnnotationWorkspace, with synthetic content/repository/HTTP and a
+controlled presentation clock. Its twelve combinations cover3s/5s expiry,
+zero success reflow, retained prepared/manual copy, explicit complete-message
+export, focus-paused bookmark receipts, persistent failures and pending states.
+Both are mandatory additional Web quality steps with result/failure JSON and
+screenshots, not replacements for original reading/performance gates.
+API tests `test_plain_export_recovery.py` and `test_plain_export_postgres.py`
+verify real serializer options/limits, worker publication/rollback/retention,
+owner lookup, advisory-lock deduplication and snapshot/fresh-authorization
+boundaries in disposable databases. No original user archive is replayed.
+`scripts/ux/import-recovery-browser.mjs` mounts the real Task Center and query
+cache with explicitly synthetic transport, identity and secondary-dialog adapters.
+It covers 375/800/1440px × Chinese/English × light/dark, per-row action isolation,
+retained stop, uncertain retry, close/reopen persistence, keyboard checking,
+30-second presentation timing, viewport bounds and44px targets. Deterministic
+export limits route to scope adjustment and nonretryable analysis to source
+review. It does not
+substitute for authenticated API/browser acceptance or full import recovery.
+The required Web quality step retains its result/failure JSON and screenshots.
+All existing gates, memory limits and reading-stability traces remain unchanged.
+`scripts/ux/import-source-repair-browser.mjs` additionally mounts the actual
+ImportPanel/query cache for FAILED/PAUSED source repair with synthetic transport.
+Its twelve width/locale/theme combinations cover keyboard/touch file choice,
+version-bound replacement, unconfirmed response, close/reopen, check-only
+reconciliation, unit progress, viewport geometry and 44px actions. This is
+a required separate Web quality gate with retained JSON/screenshots.
+API unit tests exercise per-unit admission with explicitly controlled sensors
+and object-lifetime probes; they are not real RSS acceptance. The original
+exact-image low-memory gates remain mandatory.
+The source-repair gate additionally verifies ordered append/replace/remove,
+same-name source preservation, row-local invalid selection, upload locks, explicit
+whole-source exclusion, no automatic retransmission, same-task source-revision
+reconciliation, late acknowledgement across remount and actual multipart order.
+API tests cover intact remaining ZIPs, unsafe/missing excluded originals,
+retained-half pairing, rollback, version/identity/active guards and excluded
+catalog cleanup. PostgreSQL separately verifies savepoint/outer commit visibility
+and filesystem cleanup timing. These use only synthetic sources; original user
+ZIPs are not replay material.
+
+`scripts/ux/reader-table-actions-browser.mjs` mounts the real Reader Markdown/
+math/table controls and CSS at all twelve width/locale/theme combinations.
+Explicit adapters supply assistant-ui context, preferences and controlled
+clipboard/download failures; the oversized AST is an export-boundary probe,
+not a 50,000-cell rendering benchmark. It verifies lazy helper calls, actual
+downloaded bytes, quoted CSV/TeX, focus/duplicate guards, manual copy, complete
+Markdown-segment recovery, 44px targets, no cell occlusion/hover reflow and
+three-second feedback with a controlled clock. It also exercises actual code
+rail/manual copying and inline text preview, adapting only the unrelated full
+Viewer. `inline-text-preview.test.mjs` executes the128KiB bounded reader with
+ignored ranges, UTF-8 splits, truncated/invalid replies, cancellation and
+inactivity. The required Web quality gate
+retains JSON/screenshots. The existing `image-scale-slider-browser.mjs` also
+checks absolute-cache-time success expiry, virtual remount, unchanged body
+geometry and persistent pending/unknown states. Full-plan stability/build/
+performance and exact-source CI remain outstanding.
+
+`scripts/ux/offline-recovery-browser.mjs` is a required12-combination recovery
+gate. It runs the actual API client, serial queue, Dexie, Web Locks, v1/v2/v3
+package reader, Sync Center and confirmation/focus. Synthetic HTTP supplies
+malformed/over-capacity bodies and a mid-batch network interruption; unrelated
+panels and preference/identity setup are adapters. It verifies old-copy retention,
+reload-persistent queue pause, successful sibling continuation, exact unfinished-
+only admissions and explicit reduced-asset confirmation, with screenshots/JSON.
+Node tests additionally execute the real coordinator with controlled I/O and
+the real bounded body reader with controlled deadlines/ReadableStreams.
+These do not replace full authenticated PWA-shell, original stability or
+real-memory gates. No original user archive is replayed.
+
 ## Current exact-source acceptance — reading interactions / missing ZIP — 2026-11-09
 
 Exact **865b0a6**, full CI **42594459199** attempt1: six jobs, five official

@@ -1,0 +1,287 @@
+// Actual ImportPanel/React Query with synthetic transport, account and secondary
+// surfaces. No application service, real import or canonical write is used.
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "../.."), web = join(root, "apps/web");
+const require = createRequire(join(web, "package.json"));
+const temp = resolve(process.env.RUNNER_TEMP ?? process.env.TEMP ?? "");
+if (process.platform === "win32") assert.match(temp.replaceAll("\\", "/").toLowerCase(), /^c:\/users\/86182\/desktop\/wkkk\/[^/]+/);
+else assert.ok(process.env.RUNNER_TEMP || process.env.TEMP);
+const out = join(temp, "import-source-repair-browser");
+mkdirSync(out, { recursive: true });
+const modulePath = file => JSON.stringify(join(web, file).replaceAll("\\", "/"));
+writeFileSync(join(out, "loader.cjs"), `const ts=require(${JSON.stringify(require.resolve("typescript"))});
+module.exports=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText;`);
+writeFileSync(join(out, "adapters.tsx"), `
+import React from "react";
+export const usePreferences=()=>({resolvedLocale:window.gateLocale,readerWidthMode:"standard",sectionTocMode:"visible"});
+export const authenticationGeneration=()=>window.authGeneration??1;
+export const getActiveOfflineStorageContext=()=>({userId:"synthetic-owner"});
+export const useRouter=()=>({push:path=>window.navigationAttempt=path});
+export const readAccountCapabilities=async()=>({allow_user_import:true,maximum_import_size_mb:500,maximum_import_total_mb:512});
+export const getProjects=async()=>[];
+export const getUnfinishedImports=async()=>({items:[],has_more:false});
+export class ApiRequestError extends Error{constructor(message,status){super(message);this.status=status}}
+async function request(url,init={}){
+ const response=await fetch(url,init);
+ if(!response.ok)throw new ApiRequestError("Synthetic response",response.status);
+ return response.json();
+}
+export const getAdaptiveImportSession=(id,signal)=>request("/api/adaptive-import/sessions/"+id,{signal});
+export const replaceAdaptiveImportArtifact=(id,artifact,file,revision)=>{
+ const body=new FormData();body.append("file",file);body.append("expected_updated_at",revision);
+ return request("/api/adaptive-import/sessions/"+id+"/artifacts/"+artifact,{method:"PUT",body});
+};
+export const excludeAdaptiveImportSource=(id,artifact,revision)=>request("/api/adaptive-import/sessions/"+id+"/artifacts/"+artifact,
+ {method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({expected_updated_at:revision})});
+export const createAdaptiveImportSession=files=>{
+ const body=new FormData();files.forEach(file=>body.append("files",file));
+ return request("/api/adaptive-import/sessions",{method:"POST",body});
+};
+const forbidden=()=>{throw Error("Unexpected mutation or secondary workflow")};
+export const cancelAdaptiveImportSession=forbidden,cancelTask=forbidden,commitImport=forbidden,
+getImportStatus=forbidden,previewImport=forbidden,
+resumeAdaptiveImportSession=forbidden,retryTask=forbidden,updateAdaptiveImportDestination=forbidden;
+export const SupportLimitAction=()=>null,ImportPreviewCard=()=>null,AdaptiveImportWorkspace=()=>null,
+FormatConversionGuide=()=>null,ImportNoiseReview=()=>null;
+export default ({href,children,...props})=><a href={href} {...props}>{children}</a>;
+`);
+writeFileSync(join(out, "entry.tsx"), `
+import React,{useState} from "react";
+import {createRoot} from "react-dom/client";
+import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
+import {ImportPanel} from ${modulePath("features/import/import-panel.tsx")};
+const client=new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}});
+function Fixture(){const[open,setOpen]=useState(true);return <main style={{maxWidth:720,margin:"24px auto",padding:12}}>
+ <button className="btn-secondary min-h-11 px-3 mb-4" onClick={()=>setOpen(!open)}>Toggle import</button>
+ {open&&<ImportPanel resumeImportId={location.search.includes("selection")?undefined:"synthetic-import"}/>}
+</main>}
+createRoot(document.getElementById("root")).render(<QueryClientProvider client={client}><Fixture/></QueryClientProvider>);
+`);
+const webpack = require("next/dist/compiled/webpack/webpack").webpack;
+const adapter = join(out, "adapters.tsx");
+await new Promise((yes, no) => webpack({
+  mode: "production", context: root, entry: join(out, "entry.tsx"), output: { path: out, filename: "bundle.js" },
+  optimization: { minimize: false },
+  resolve: {
+    extensions: [".tsx", ".ts", ".mjs", ".js"],
+    modules: ["node_modules", join(web, "node_modules"), join(root, "node_modules")],
+    alias: { "react$": require.resolve("react"), "react/jsx-runtime$": require.resolve("react/jsx-runtime"),
+      "react-dom/client$": require.resolve("react-dom/client"), "next/link$": adapter, "next/navigation$": adapter },
+  },
+  plugins: [
+    new webpack.ProvidePlugin({ process: require.resolve("next/dist/build/polyfills/process") }),
+    new webpack.NormalModuleReplacementPlugin(/(?:preferences-provider|auth-client|offline-access|offline-db|support-limit-action|import-preview-card|adaptive-import-workspace|format-conversion-guide|import-noise-review|\/lib\/api)$/, resource => { resource.request = adapter; }),
+  ],
+  module: { rules: [{ test: /\.tsx?$/, exclude: /node_modules/, use: join(out, "loader.cjs") }] },
+}, (error, stats) => error || stats.hasErrors() ? no(error ?? Error(stats.toString({ all: false, errors: true }))) : yes()));
+const styles = await require("postcss")([require("tailwindcss")({
+  content: [join(web, "components/**/*.tsx"), join(web, "features/**/*.tsx"), join(out, "entry.tsx")],
+})]).process(readFileSync(join(web, "app/globals.css"), "utf8"), { from: join(web, "app/globals.css") });
+const bundle = readFileSync(join(out, "bundle.js"));
+const html = '<!doctype html><html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"><body><div id="root"></div><script src="/bundle.js"></script></body></html>';
+const { chromium, expect } = require("@playwright/test");
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_USE_BUNDLED_CHROMIUM === "1" ? "chromium" : "chrome" });
+const results = [], errors = [];
+try {
+  for (const width of [375, 800, 1440]) for (const locale of ["zh-CN", "en-US"]) for (const theme of ["light", "dark"]) {
+    const page = await browser.newPage({ viewport: { width, height: 900 }, hasTouch: true });
+    page.on("pageerror", error => errors.push(error.stack ?? error.message));
+    await page.addInitScript(({ locale, theme }) => {
+      window.gateLocale = locale;
+      document.addEventListener("DOMContentLoaded", () => { document.documentElement.dataset.theme = theme; });
+    }, { locale, theme });
+    const session = { import_id: "synthetic-import", analysis_task_id: "old-analysis", updated_at: "2026-11-10T00:00:00Z",
+      state: theme === "light" ? "FAILED" : "PAUSED", phase: theme === "light" ? "analysis_failed" : "paused",
+      file_count: 2, total_bytes: 200, progress: 0, groups: [], families: [], warnings: [], analysis_summary: {},
+      sources: ["synthetic-report-with-a-long-file-name.zip", "synthetic-notes.json"].map((filename, index) =>
+        ({ artifact_id: "source-" + index, filename, byte_size: 100, extension: index ? ".json" : ".zip", source_revision: 0 })),
+      can_import: false, source_status: "available" };
+    const writes = []; let reads = 0, lateReplacement = null;
+    await page.route("http://source-repair.synthetic/**", async route => {
+      const path = new URL(route.request().url()).pathname;
+      if (["PUT", "DELETE"].includes(route.request().method())) {
+        writes.push({ path, body: route.request().postData(), method: route.request().method() });
+        if (lateReplacement) return route.fulfill({ json: await lateReplacement });
+        return route.abort("failed");
+      }
+      if (path.startsWith("/api/adaptive-import/sessions/")) { reads++; return route.fulfill({ json: session }); }
+      return route.fulfill({ contentType: path === "/bundle.js" ? "text/javascript" : path === "/style.css" ? "text/css" : "text/html",
+        body: path === "/bundle.js" ? bundle : path === "/style.css" ? styles.css : html });
+    });
+    try {
+      await page.goto("http://source-repair.synthetic/");
+      await page.bringToFront();
+      const pane = page.getByTestId("import-analysis-status"), input = pane.locator('input[type="file"]').first();
+      await expect(input).toBeEnabled();
+      await page.evaluate(() => {
+        window.chooserEvents = [];
+        for (const type of ["keydown", "keyup", "click", "focusin", "focusout"]) document.addEventListener(type, event => {
+          if (window.chooserEvents.length < 30) window.chooserEvents.push({
+            type, key: event.key, target: event.target.tagName, inputType: event.target.type,
+            focused: document.hasFocus(), disabled: event.target.disabled,
+          });
+        }, true);
+      });
+      await input.focus(); await expect(input).toBeFocused();
+      const chooserOpened = page.waitForEvent("filechooser");
+      if (width === 375) await pane.locator('label:has(input[type="file"])').first().tap();
+      else await input.press("Enter");
+      const chooser = await chooserOpened;
+      await chooser.setFiles({ name: "replacement.json", mimeType: "application/json", buffer: Buffer.from('{"synthetic":true}') });
+      const unknown = locale === "zh-CN" ? "替换结果尚未确认" : "The replacement result is unconfirmed";
+      await expect(pane).toContainText(unknown);
+      await expect(input).toBeDisabled();
+      assert.equal(writes.length, 1);
+      assert.ok(writes[0].path.endsWith("/source-0"));
+      assert.match(writes[0].body, /expected_updated_at/);
+      assert.match(writes[0].body, /2026-11-10T00:00:00Z/);
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      await expect(pane).toContainText(unknown);
+      await expect(pane.locator('input[type="file"]').first()).toBeDisabled();
+      const check = pane.getByRole("button", { name: /核对状态|Check status/ });
+      await check.focus(); await page.keyboard.press("Enter");
+      await expect(pane).toContainText(unknown);
+      assert.equal(writes.length, 1);
+      const geometry = await pane.evaluate(node => ({
+        overflow: document.documentElement.scrollWidth - innerWidth,
+        actions: [...node.querySelectorAll('button,label:has(input[type="file"])')].map(el => {
+          const r = el.getBoundingClientRect(); return { width: r.width, height: r.height, left: r.left, right: r.right };
+        }),
+      }));
+      assert.ok(geometry.overflow <= 1);
+      assert.ok(geometry.actions.every(action => action.width >= 44 && action.height >= 44 && action.left >= 0 && action.right <= width));
+      const filename = `source-repair-${width}-${locale}-${theme}.png`;
+      await page.screenshot({ path: join(out, filename), fullPage: true });
+      session.state = "ANALYZING"; session.phase = "analyzing"; session.analysis_task_id = "new-analysis";
+      session.analysis_progress = { stage: "validation", unit_index: 2, unit_total: 2, completed: false };
+      await check.click();
+      await expect(pane).toContainText(locale === "zh-CN" ? "验证内容" : "Validating content");
+      await expect(pane.locator('input[type="file"]')).toHaveCount(0);
+      assert.equal(writes.length, 1);
+      // Whole-source exclusion is explicit, versioned, and recoverable after
+      // a lost response. The real backend tests prove the transaction/security
+      // boundary; this mounted fixture proves presentation and request ownership.
+      session.state = "PAUSED"; session.phase = "paused"; session.updated_at = "2026-11-10T00:01:00Z";
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      const exclude = pane.getByRole("button", { name: /移出本次导入：|Exclude from this import:/ }).first();
+      await exclude.click();
+      assert.equal(writes.length, 1);
+      const confirm = pane.getByRole("button", { name: /确认移出|Confirm exclusion/ });
+      await confirm.focus(); await page.keyboard.press("Enter");
+      const excludeUnknown = locale === "zh-CN" ? "移出结果尚未确认" : "The exclusion result is unconfirmed";
+      await expect(pane).toContainText(excludeUnknown);
+      assert.equal(writes.length, 2);
+      assert.equal(writes[1].method, "DELETE");
+      assert.deepEqual(JSON.parse(writes[1].body), { expected_updated_at: session.updated_at });
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      await expect(pane).toContainText(excludeUnknown);
+      await expect(pane.locator('input[type="file"]').first()).toBeDisabled();
+      const exclusionScreenshot = `source-exclusion-${width}-${locale}-${theme}.png`;
+      await page.screenshot({ path: join(out, exclusionScreenshot), fullPage: true });
+      // A legacy synchronous operation keeps the job ID: absence of the exact
+      // excluded identity is also sufficient for a fresh read to release locks.
+      session.sources = session.sources.slice(1); session.file_count = 1;
+      await pane.getByRole("button", { name: /核对状态|Check status/ }).click();
+      await expect(pane).not.toContainText(excludeUnknown);
+      await expect(pane.locator('input[type="file"]')).toBeEnabled();
+      await expect(pane.getByRole("button", { name: /移出本次导入：|Exclude from this import:/ })).toHaveCount(0);
+      await pane.locator('input[type="file"]').setInputFiles({
+        name: "replacement.json", mimeType: "application/json", buffer: Buffer.from('{"synthetic":true}'),
+      });
+      await expect(pane).toContainText(unknown);
+      session.sources[0].source_revision++;
+      await pane.getByRole("button", { name: /核对状态|Check status/ }).click();
+      await expect(pane).not.toContainText(unknown);
+      await expect(pane.locator('input[type="file"]')).toBeEnabled();
+      assert.equal(writes.length, 3);
+      let acknowledge;
+      lateReplacement = new Promise(resolve => { acknowledge = resolve; });
+      await pane.locator('input[type="file"]').setInputFiles({
+        name: "late-replacement.json", mimeType: "application/json", buffer: Buffer.from('{"synthetic":true}'),
+      });
+      await expect(pane).toContainText(locale === "zh-CN" ? "正在上传替换来源" : "Uploading replacement source");
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      await page.getByRole("button", { name: "Toggle import" }).click();
+      await expect(pane).toContainText(unknown);
+      // No polling read happens here: the acknowledged response must reach
+      // the new pane through the existing, account-scoped query cache.
+      const acknowledged = { ...session, updated_at: "2026-11-10T00:02:00Z",
+        sources: [{ ...session.sources[0], filename: "late-replacement.json", source_revision: 2 }] };
+      acknowledge(acknowledged);
+      await expect(pane).toContainText("late-replacement.json");
+      await expect(pane).not.toContainText(unknown);
+      await expect(pane.locator('input[type="file"]')).toBeEnabled();
+      assert.equal(writes.length, 4);
+      // Independent entry: no private input, and no real upload or app service.
+      const selectionWrites = [];
+      let releaseUpload;
+      const uploadGate = new Promise(resolve => { releaseUpload = resolve; });
+      await page.unroute("http://source-repair.synthetic/**");
+      await page.route("http://source-repair.synthetic/**", async route => {
+        const path = new URL(route.request().url()).pathname;
+        if (route.request().method() === "POST") {
+          selectionWrites.push(route.request().postData());
+          await uploadGate;
+          return route.fulfill({ json: { ...session, state: "ANALYZING", phase: "queued", analysis_task_id: "selection-analysis" } });
+        }
+        if (path.startsWith("/api/")) return route.fulfill({ json: { ...session, state: "ANALYZING", phase: "queued", analysis_task_id: "selection-analysis" } });
+        return route.fulfill({ contentType: path === "/bundle.js" ? "text/javascript" : path === "/style.css" ? "text/css" : "text/html",
+          body: path === "/bundle.js" ? bundle : path === "/style.css" ? styles.css : html });
+      });
+      await page.goto("http://source-repair.synthetic/?selection");
+      const selectInput = page.getByTestId("import-file-input");
+      const selected = page.getByTestId("import-selected-files");
+      const selectedFiles = names => names.map((name, index) => ({ name, mimeType: "application/json", buffer: Buffer.from(`{"synthetic":${index}}`) }));
+      await selectInput.setInputFiles(selectedFiles(["02.json", "invalid.exe", "01.json"]));
+      await expect(page.getByTestId("preview-import-button")).toBeDisabled();
+      await selected.getByRole("button", { name: /(?:移除文件：|Remove file: )invalid.exe/ }).focus();
+      await page.keyboard.press("Enter");
+      await expect(selected.getByRole("button", { name: /(?:移除文件：|Remove file: )01.json/ })).toBeFocused();
+      await expect(page.getByTestId("preview-import-button")).toBeEnabled();
+      await selectInput.setInputFiles(selectedFiles(["01.json"])); // Same name ≠ same source.
+      await expect(selected.locator('input[type="file"]')).toHaveCount(3);
+      await selected.locator('input[type="file"]').first().setInputFiles(selectedFiles(["replacement.json"]));
+      const names = await selected.locator('li input[type="file"]').evaluateAll(inputs => inputs.map(input => input.getAttribute("aria-label")));
+      assert.deepEqual(names.map(name => name.split(/：|: /).at(-1)), ["replacement.json", "01.json", "01.json"]);
+      const selectionGeometry = await selected.evaluate(node => ({
+        overflow: document.documentElement.scrollWidth - innerWidth,
+        actions: [...node.querySelectorAll('button,label')].map(el => {
+          const r = el.getBoundingClientRect(); return { width: r.width, height: r.height, left: r.left, right: r.right };
+        }),
+      }));
+      assert.ok(selectionGeometry.overflow <= 1);
+      assert.ok(selectionGeometry.actions.every(action => action.width >= 44 && action.height >= 44 && action.left >= 0 && action.right <= width));
+      const selectionScreenshot = `source-selection-${width}-${locale}-${theme}.png`;
+      await page.screenshot({ path: join(out, selectionScreenshot), fullPage: true });
+      assert.equal(selectionWrites.length, 0);
+      await page.getByTestId("preview-import-button").click();
+      await expect(selectInput).toBeDisabled();
+      await expect(selected.getByRole("button").first()).toBeDisabled();
+      await expect(page.getByRole("button", { name: /粘贴文本|Paste text/, exact: true })).toBeDisabled();
+      assert.equal(selectionWrites.length, 1);
+      assert.deepEqual([...selectionWrites[0].matchAll(/filename="([^"]+)"/g)].map(match => match[1]), ["replacement.json", "01.json", "01.json"]);
+      releaseUpload();
+      await expect(page.getByTestId("import-analysis-status")).toBeVisible();
+      results.push({ width, locale, theme, state: theme === "light" ? "FAILED" : "PAUSED", writes: writes.length, reads, geometry,
+        screenshot: filename, exclusionScreenshot, selectionScreenshot, selectionGeometry, selectedUploadCount: selectionWrites.length });
+    } catch (error) {
+      await page.screenshot({ path: join(out, `failure-${width}-${locale}-${theme}.png`), fullPage: true }).catch(() => {});
+      const chooserEvents = await page.evaluate(() => window.chooserEvents).catch(() => null);
+      writeFileSync(join(out, "failure.json"), JSON.stringify({ width, locale, theme, error: String(error), errors, chooserEvents, completed: results }, null, 2));
+      throw error;
+    } finally { await page.close(); }
+  }
+  assert.deepEqual(errors, []);
+  writeFileSync(join(out, "result.json"), JSON.stringify({
+    scope: "Production ImportPanel/React Query; synthetic transport/account/secondary surfaces, no real import",
+    results, errors,
+  }, null, 2));
+  console.log(`Import source repair browser: ${results.length} passed; ${out}`);
+} finally { await browser.close(); }

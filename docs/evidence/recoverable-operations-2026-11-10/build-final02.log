@@ -1,0 +1,51 @@
+▲ Next.js 16.4.1 (webpack)
+✓ Running next.config.mjs took 68ms
+- Experiments (use with caution):
+  · cpus: 2
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 82s
+  Running TypeScript ...
+  Finished TypeScript in 49s ...
+  Collecting page data using 2 workers ...
+  Generating static pages using 2 workers (0/22) ...
+  Generating static pages using 2 workers (5/22)
+  Generating static pages using 2 workers (10/22)
+  Generating static pages using 2 workers (16/22)
+✓ Generating static pages using 2 workers (22/22) in 2.7s
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /account-upgrade
+├ ƒ /admin/users/[userId]/conversations/[conversationId]
+├ ƒ /annotations
+├ ƒ /archived
+├ ƒ /compare
+├ ƒ /conversations/[conversationId]
+├ ƒ /conversations/[conversationId]/print
+├ ƒ /duplicates
+├ ƒ /example
+├ ƒ /files
+├ ƒ /library
+├ ƒ /login
+├ ƒ /offline
+├ ƒ /projects/[projectId]
+├ ƒ /read-together
+├ ƒ /reading-list
+├ ƒ /recent
+├ ƒ /register
+├ ƒ /reset-password
+├ ƒ /search
+├ ƒ /share/[token]
+├ ƒ /tags
+└ ƒ /verify-email
+
+Route (pages)
+─ ƒ /api/imports/[importId]/commit
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand

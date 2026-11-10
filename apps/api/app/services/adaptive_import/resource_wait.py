@@ -23,11 +23,8 @@ def finish_wait(row, field):
 
 
 def defer_resource(row, record, exc, *, stage):
-    from app.services.adaptive_import.memory_budget import bounded_zip_session
-    from app.services.adaptive_import.operations import prospective_record
     failure = import_failure_from_exception(exc, stage=stage)
-    candidate = prospective_record(record, (row.payload or {})) if row is not record else record
-    if (not bounded_zip_session(candidate) or failure["code"] not in {
+    if (record.source_profile != "adaptive_json_markdown" or failure["code"] not in {
             "UPLOAD_MEMORY_PRESSURE", "UPLOAD_QUEUE_FULL", "UPLOAD_QUEUE_TIMEOUT"}):
         return False
     now = datetime.now(timezone.utc)

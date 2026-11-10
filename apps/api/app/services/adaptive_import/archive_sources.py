@@ -11,7 +11,7 @@ import uuid
 import zipfile
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import unquote, urlsplit
 
 from sqlalchemy.orm import Session
@@ -27,6 +27,7 @@ from app.services.storage.local_storage import save_import_file, save_import_fil
 CATALOG_VERSION = 1
 MAX_CATALOG_BYTES = 8 * 1024 * 1024
 MAX_CATALOG_LINKS = 32768
+MAX_REFERENCE_EXAMPLES = 20
 ARCHIVE_SOURCE_TYPE = "adaptive_archive"
 ARCHIVE_DOCUMENT_SOURCE_TYPE = "adaptive_archive_document"
 _MARKDOWN_EXTENSIONS = {".md", ".markdown"}
@@ -51,17 +52,35 @@ def prepare_archive_sources(db: Session, record: ImportRecord) -> list[Path]:
     """
 
     stale_paths: list[Path] = []
-    for artifact in list(record.artifacts):
-        if artifact.source_type != ARCHIVE_SOURCE_TYPE:
-            continue
+    from app.services.adaptive_import.ordering import ordered_artifacts
+    from app.services.adaptive_import.memory_budget import analysis_unit, processing_unit
+    archives = [artifact for artifact in ordered_artifacts(record) if artifact.source_type == ARCHIVE_SOURCE_TYPE]
+    original_count = sum(artifact.source_type != ARCHIVE_DOCUMENT_SOURCE_TYPE for artifact in record.artifacts)
+    for index, artifact in enumerate(archives, 1):
         summary = artifact.parsed_summary or {}
         if summary.get("archive_catalog_version") == CATALOG_VERSION:
             continue
-        catalog = inspect_archive(record, artifact)
-        _require_importable_catalog(catalog)
-        stale_paths.extend(_replace_materialized_documents(db, record, artifact, catalog))
-        _write_catalog(record.id, artifact.id, catalog)
-        artifact.parsed_summary = _artifact_summary(catalog)
+        try:
+            with processing_unit("archives", index, len(archives)), analysis_unit(record, [artifact]):
+                catalog = inspect_archive(record, artifact)
+                _require_importable_catalog(catalog)
+                stale_paths.extend(_replace_materialized_documents(db, record, artifact, catalog))
+                _write_catalog(record.id, artifact.id, catalog)
+                artifact.parsed_summary = {**_artifact_summary(catalog), "source_revision": int(summary.get("source_revision") or 0)}
+                del catalog
+        except AdaptiveImportError as exc:
+            # Isolate an unreadable *independent* source as a blocking unit.
+            # Never downgrade integrity, scanner, filesystem, resource or
+            # unsafe-member failures, nor publish a usable partial ZIP.
+            if original_count <= 1 or exc.code not in {
+                "ZIP_INVALID", "ZIP_MARKDOWN_REQUIRED", "MARKDOWN_ENCODING_INVALID",
+            }:
+                raise
+            artifact.parsed_summary = {
+                "source_failure": exc.diagnostic(),
+                "classification_version": int(summary.get("classification_version") or 0),
+                "source_revision": int(summary.get("source_revision") or 0),
+            }
     db.flush()
     db.expire(record, ["artifacts"])
     return stale_paths
@@ -182,10 +201,33 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                 missing_member(path)["owner_document_ids"] = [by_path[primary_path]["member_id"]]
         catalog_links = 0
         visible_messages = 0
+        unresolved: dict[str, dict[str, Any]] = {}
 
-        def register_references(text: str, document: dict[str, Any]) -> None:
+        def register_references(text: str, document: dict[str, Any], document_index: int, line_offset: int) -> None:
             nonlocal catalog_links
-            references, missing = _document_references(text, document["path"], set(by_path))
+
+            def blocked(line: int, reason: str, target: str) -> None:
+                identity = _unresolved_identity(document["member_id"], document["path"], target)
+                if identity not in unresolved:
+                    if len(unresolved) >= settings.bundle_max_entries:
+                        raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP reference index exceeds its bounded limit.", layer="archive")
+                    unresolved[identity] = {
+                        "reference_id": identity, "document_member_id": document["member_id"],
+                        "document_index": document_index, "reason": reason,
+                        # Display-only source text. It is NEVER an IO path or
+                        # the authority for mapping an attachment.
+                        "target_display": re.sub(r"[\x00-\x1f\x7f]", lambda m: f"\\u{ord(m[0]):04x}", target[:1024]),
+                        "target_truncated": len(target) > 1024,
+                        "reference_count": 0, "lines": [], "target_member_id": None,
+                    }
+                reference = unresolved[identity]
+                reference["reference_count"] += 1
+                if len(reference["lines"]) < 8:
+                    reference["lines"].append(line_offset + line)
+
+            references, missing = _document_references(
+                text, document["path"], set(by_path), on_blocked=blocked,
+            )
             for path in missing:
                 missing_member(path)
             for reference in references | missing:
@@ -203,15 +245,17 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                 if target["use"] == "attachment" and document["member_id"] not in target["owner_document_ids"]:
                     target["owner_document_ids"].append(document["member_id"])
 
-        for document in documents:
+        for document_index, document in enumerate(documents, 1):
             _small_import_checkpoint()
             if streaming_budget():
                 from app.services.adaptive_import.stream_markdown import resource_chunks
                 with _disk_member(record, archive, effective[document["path"]]) as text_path:
+                    line_offset = 0
                     for text in resource_chunks(text_path):
                         if dedicated and document["path"] == primary_path:
                             visible_messages += _visible_role_heading_count(text)
-                        register_references(text, document)
+                        register_references(text, document, document_index, line_offset)
+                        line_offset += text.count("\n")
                 continue
             raw = _read_member_bytes(archive, effective[document["path"]], settings.bundle_max_object_bytes)
             try:
@@ -225,7 +269,7 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
                 ) from exc
             if dedicated and document["path"] == primary_path:
                 visible_messages = _visible_role_heading_count(text)
-            register_references(text, document)
+            register_references(text, document, document_index, 0)
 
         issues: list[dict[str, Any]] = []
         if dedicated and manifest_messages:
@@ -268,6 +312,7 @@ def inspect_archive(record: ImportRecord, artifact: SourceArtifact) -> dict[str,
             "members": members,
             "issues": issues,
             "manifest_message_count": manifest_messages,
+            "unresolved_references": list(unresolved.values()),
         }
         _refresh_catalog_summary(catalog)
         from app.services.adaptive_import.memory_budget import validate_catalog_budget
@@ -304,6 +349,7 @@ def update_archive_classification(
     *,
     expected_version: int,
     changes: list[dict[str, Any]],
+    reference_changes: list[dict[str, Any]] | None = None,
 ) -> list[Path]:
     catalog = archive_catalog(record, artifact.id)
     if int(catalog.get("classification_version") or 0) != expected_version:
@@ -312,6 +358,13 @@ def update_archive_classification(
             "The ZIP preview changed. Refresh it before saving classifications.",
             layer="archive",
         )
+    if reference_changes:
+        # An explicit alias selects only a member of this verified generation;
+        # client-supplied filenames and source flags are never authority.
+        from app.services.adaptive_import.bounded_io import file_hash
+        digest = file_hash(_artifact_path(record, artifact))
+        if digest != artifact.sha256 or digest != catalog.get("source_sha256"):
+            raise AdaptiveImportError("ZIP_SOURCE_CHANGED", "The retained ZIP source changed; review a replacement.", layer="archive")
     members = {str(item.get("member_id")): item for item in catalog.get("members") or [] if isinstance(item, dict)}
     for change in changes:
         member = members.get(str(change.get("member_id") or ""))
@@ -332,6 +385,20 @@ def update_archive_classification(
         member["owner_document_ids"] = owners if use == "attachment" else []
 
     conversations = {member_id for member_id, member in members.items() if member.get("use") == "conversation"}
+    references = {item["reference_id"]: item for item in catalog.get("unresolved_references", [])}
+    for change in reference_changes or []:
+        reference = references.get(str(change.get("reference_id") or ""))
+        target_id = change.get("target_member_id")
+        if reference is None or reference["document_member_id"] not in conversations:
+            raise AdaptiveImportError("ARCHIVE_REFERENCE_INVALID", "The source reference is no longer available.", layer="archive")
+        if target_id is not None:
+            target = members.get(str(target_id))
+            if target is None or target.get("availability") == "missing" or target.get("use") == "conversation":
+                raise AdaptiveImportError("ARCHIVE_REFERENCE_TARGET_INVALID", "Choose an available file in this ZIP, not an imported conversation.", layer="archive")
+            target["use"] = "attachment"
+            if reference["document_member_id"] not in target["owner_document_ids"]:
+                target["owner_document_ids"].append(reference["document_member_id"])
+        reference["target_member_id"] = str(target_id) if target_id is not None else None
     from app.services.adaptive_import.memory_budget import streaming_budget
     if streaming_budget() and sum(len(member.get("owner_document_ids") or []) for member in members.values()) > MAX_CATALOG_LINKS:
         raise AdaptiveImportError("ZIP_METADATA_LIMIT", "The ZIP ownership index exceeds its bounded limit.", layer="archive")
@@ -356,7 +423,7 @@ def update_archive_classification(
     _require_importable_catalog(catalog)
     stale_paths = _replace_materialized_documents(db, record, artifact, catalog)
     _write_catalog(record.id, artifact.id, catalog)
-    artifact.parsed_summary = _artifact_summary(catalog)
+    artifact.parsed_summary = {**_artifact_summary(catalog), "source_revision": int((artifact.parsed_summary or {}).get("source_revision") or 0)}
     db.flush()
     db.expire(record, ["artifacts"])
     return stale_paths
@@ -555,7 +622,7 @@ def _replace_materialized_documents(
                 catalog.get("materialization_token")
                 or f"v{catalog.get('classification_version', 1)}"
             )[:12]
-            for member in importable:
+            for member_order, member in enumerate(importable):
                 _small_import_checkpoint()
                 filename = (
                         f"{archive_artifact.id.hex[:8]}-"
@@ -567,7 +634,7 @@ def _replace_materialized_documents(
                 if streaming_budget():
                     from app.services.adaptive_import.stream_markdown import resource_chunks
                     with _disk_member(record, archive, archive.getinfo(str(member["zip_path"]))) as text_path:
-                        chunks = (_rewrite_document_references(text, str(member["path"]), members).encode("utf-8")
+                        chunks = (_rewrite_document_references(text, str(member["path"]), members, catalog.get("unresolved_references")).encode("utf-8")
                                   for text in resource_chunks(text_path))
                         stored, digest = save_import_file_stream(
                             record.id, filename, _ChunkReader(chunks),
@@ -575,7 +642,9 @@ def _replace_materialized_documents(
                         )
                 else:
                     raw = _read_member_bytes(archive, archive.getinfo(str(member["zip_path"])), get_settings().bundle_max_object_bytes)
-                    rewritten = _rewrite_document_references(raw.decode("utf-8-sig"), str(member["path"]), members).encode("utf-8")
+                    rewritten = _rewrite_document_references(
+                        raw.decode("utf-8-sig"), str(member["path"]), members, catalog.get("unresolved_references"),
+                    ).encode("utf-8")
                     stored = save_import_file(record.id, filename, rewritten)
                     digest = hashlib.sha256(rewritten).hexdigest()
                 path = _session_root(record.id) / stored.safe_filename
@@ -596,6 +665,7 @@ def _replace_materialized_documents(
                         "archive_artifact_id": str(archive_artifact.id),
                         "archive_member_id": str(member["member_id"]),
                         "archive_kind": catalog["archive_kind"],
+                        "source_member_order": member_order,
                     },
                 )
                 db.add(derived)
@@ -620,6 +690,7 @@ def _rewrite_document_references(
     text: str,
     document_path: str,
     members: dict[str, dict[str, Any]],
+    unresolved_references: list[dict[str, Any]] | None = None,
 ) -> str:
     by_path = {str(item["path"]): item for item in members.values()}
     member_paths = set(by_path)
@@ -627,8 +698,24 @@ def _rewrite_document_references(
     cursor = 0
     document = by_path.get(document_path)
     document_id = str(document["member_id"]) if document else None
+    bindings = {item["reference_id"]: item.get("target_member_id") for item in unresolved_references or []}
     for match in archive_reference_matches(text):
-        resolved = _resolve_reference(document_path, match.group("target"), member_paths)
+        try:
+            resolved = _resolve_reference(document_path, match.group("target"), member_paths)
+        except AdaptiveImportError as exc:
+            if exc.code != "ZIP_PATH_UNSAFE":
+                raise
+            # This opaque identity is deliberately NOT an attachment or a path.
+            # The source remains untouched. Only derived display Markdown is
+            # made inert, using the Reader/Share/Offline exclusion contract.
+            identity = _unresolved_identity(document_id, document_path, match.group("target"))
+            bound = members.get(bindings.get(identity, ""))
+            if bound is None:
+                output.append(text[cursor:match.start("target")])
+                output.append(f"cr-archive-member://{identity}")
+                cursor = match.end("target")
+                continue
+            resolved = str(bound["path"])
         member = by_path.get(resolved or "")
         if member is None:
             continue
@@ -643,15 +730,33 @@ def _rewrite_document_references(
     return "".join(output)
 
 
+def _unresolved_identity(document_id: str | None, document_path: str, target: str) -> str:
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"{document_id}:{document_path}:{target}"))
+
+
 def _document_references(
     text: str,
     document_path: str,
     member_paths: set[str],
+    *,
+    on_blocked: Callable[[int, str, str], None] | None = None,
 ) -> tuple[set[str], set[str]]:
     result: set[str] = set()
     missing: set[str] = set()
+    line = 1
+    counted_until = 0
     for match in archive_reference_matches(text):
-        candidate = _reference_candidate(document_path, match.group("target"))
+        try:
+            candidate = _reference_candidate(document_path, match.group("target"))
+        except AdaptiveImportError as exc:
+            if exc.code != "ZIP_PATH_UNSAFE":
+                raise
+            if on_blocked:
+                # Disjoint ranges keep diagnostics linear even in dense text.
+                line += text.count("\n", counted_until, match.start("target"))
+                counted_until = match.start("target")
+                on_blocked(line, (exc.details or {}).get("reason", "noncanonical"), match.group("target"))
+            continue
         if candidate in member_paths:
             result.add(candidate)
         elif candidate:
@@ -778,25 +883,41 @@ def _resolve_reference(document_path: str, raw_target: str, member_paths: set[st
 
 
 def _reference_candidate(document_path: str, raw_target: str) -> str | None:
+    def rejected(reason: str) -> AdaptiveImportError:
+        return AdaptiveImportError(
+            "ZIP_PATH_UNSAFE", "A local resource reference cannot resolve inside this archive.",
+            layer="archive", details={"reason": reason},
+        )
+
+    if "\\" in raw_target:
+        raise rejected("backslash")
+    if "\x00" in raw_target:
+        raise rejected("nul")
+    if re.match(r"^[a-zA-Z]:", raw_target) or raw_target.casefold().startswith("file:"):
+        raise rejected("local_filesystem")
     try:
         split = urlsplit(raw_target)
     except ValueError:
-        return None
-    if split.scheme or split.netloc or raw_target.startswith(("#", "/", "\\")):
+        raise rejected("invalid_url") from None
+    if split.scheme or split.netloc or raw_target.startswith("#"):
         return None
     decoded = split.path
     # Missing-member identities must pass the same portability boundary as
     # real members. Decoding must not turn an absent relative asset into an
     # absolute/drive/NUL path that could later be mistaken for a readable file.
     for _ in range(3):
-        if decoded.startswith("/") or any(char in decoded for char in ("\\", ":", "\x00")):
-            raise AdaptiveImportError("ZIP_PATH_UNSAFE", "A ZIP resource reference uses an unsafe path.", layer="archive")
+        for invalid, reason in (
+            (decoded.startswith("/"), "absolute"), ("\\" in decoded, "backslash"),
+            (":" in decoded, "local_filesystem"), ("\x00" in decoded, "nul"),
+        ):
+            if invalid:
+                raise rejected(reason)
         unquoted = unquote(decoded)
         if unquoted == decoded:
             break
         decoded = unquoted
     else:
-        raise AdaptiveImportError("ZIP_PATH_UNSAFE", "A ZIP resource reference has excessive path encoding.", layer="archive")
+        raise rejected("excessive_encoding")
     if not decoded:
         return None
     base = PurePosixPath(document_path).parent
@@ -807,7 +928,7 @@ def _reference_candidate(document_path: str, raw_target: str) -> str | None:
             continue
         if part == "..":
             if not parts:
-                raise AdaptiveImportError("ZIP_PATH_UNSAFE", "A ZIP resource reference escapes its archive.", layer="archive")
+                raise rejected("outside_archive")
             parts.pop()
         else:
             parts.append(part)
@@ -826,24 +947,30 @@ def _validated_members(archive: zipfile.ZipFile) -> tuple[list[zipfile.ZipInfo],
         if member_index % 16 == 0:
             _small_import_checkpoint()
         path = PurePosixPath(info.filename)
-        if (
-            not info.filename
-            or info.orig_filename != info.filename
-            or path.is_absolute()
-            or ".." in path.parts
-            or "\\" in info.filename
-            or ":" in info.filename
-            or "\x00" in info.filename
-            or path.as_posix() != info.filename.rstrip("/")
-        ):
-            raise AdaptiveImportError("ZIP_PATH_UNSAFE", "The ZIP contains an unsafe path.", layer="archive")
+        reason = next((reason for invalid, reason in (
+            (not info.filename, "empty"),
+            (info.orig_filename != info.filename or "\x00" in info.filename, "nul"),
+            (path.is_absolute(), "absolute"), (".." in path.parts, "parent_segment"),
+            ("\\" in info.filename, "backslash"), (":" in info.filename, "local_filesystem"),
+            (path.as_posix() != info.filename.rstrip("/"), "noncanonical"),
+        ) if invalid), None)
+        details = {"entry_index": member_index + 1}
+        if reason:
+            raise AdaptiveImportError(
+                "ZIP_PATH_UNSAFE", "The ZIP contains an unsafe member path.", layer="archive",
+                details={**details, "reason": reason},
+            )
         normalized = path.as_posix()
         if normalized in names:
-            raise AdaptiveImportError("ZIP_PATH_DUPLICATE", "The ZIP contains duplicate normalized paths.", layer="archive")
+            raise AdaptiveImportError("ZIP_PATH_DUPLICATE", "The ZIP contains duplicate normalized paths.",
+                                      layer="archive", details={**details, "reason": "duplicate"})
         names.add(normalized)
         mode = stat.S_IFMT(info.external_attr >> 16)
         if info.flag_bits & 1 or mode not in {0, stat.S_IFREG, stat.S_IFDIR}:
-            raise AdaptiveImportError("ZIP_MEMBER_UNSUPPORTED", "The ZIP contains an encrypted or linked member.", layer="archive")
+            raise AdaptiveImportError(
+                "ZIP_MEMBER_UNSUPPORTED", "The ZIP contains an encrypted or linked member.", layer="archive",
+                details={**details, "reason": "encrypted" if info.flag_bits & 1 else "special_file"},
+            )
         if info.file_size > settings.bundle_max_object_bytes:
             raise AdaptiveImportError("ZIP_MEMBER_TOO_LARGE", "A ZIP member exceeds the configured object limit.", layer="archive")
         expanded += info.file_size
@@ -977,6 +1104,29 @@ def _visible_role_heading_count(text: str) -> int:
 
 def _refresh_catalog_summary(catalog: dict[str, Any]) -> None:
     members = [item for item in catalog.get("members") or [] if isinstance(item, dict)]
+    by_id = {item["member_id"]: item for item in members}
+    if "unresolved_references" in catalog:
+        unresolved = []
+        for reference in catalog["unresolved_references"]:
+            if by_id.get(reference["document_member_id"], {}).get("use") != "conversation":
+                continue
+            target = by_id.get(reference.get("target_member_id"))
+            if not target or target.get("use") != "attachment" or reference["document_member_id"] not in target.get("owner_document_ids", []):
+                unresolved.append(reference)
+        catalog["blocked_reference_count"] = sum(item["reference_count"] for item in unresolved)
+        catalog["issues"] = [item for item in catalog.get("issues", []) if item.get("code") != "ZIP_REFERENCE_BLOCKED"]
+        if unresolved:
+            catalog["issues"].append({
+                "code": "ZIP_REFERENCE_BLOCKED", "severity": "warning",
+                "message": (
+                    f"ZIP blocked references: {catalog['blocked_reference_count']}. Link text is retained; "
+                    "unresolved local targets cannot be opened. Other content can be imported."
+                ),
+                "examples": [
+                    {"document_index": item["document_index"], "line": line, "reason": item["reason"]}
+                    for item in unresolved[:MAX_REFERENCE_EXAMPLES] for line in item["lines"]
+                ][:MAX_REFERENCE_EXAMPLES],
+            })
     catalog["document_count"] = sum(item.get("use") == "conversation" for item in members)
     catalog["attachment_count"] = sum(item.get("use") == "attachment" for item in members)
     catalog["missing_attachment_count"] = sum(
@@ -1005,6 +1155,7 @@ def _artifact_summary(catalog: dict[str, Any]) -> dict[str, Any]:
         "document_count": catalog["document_count"],
         "attachment_count": catalog["attachment_count"],
         "missing_attachment_count": catalog.get("missing_attachment_count", 0),
+        "blocked_reference_count": catalog.get("blocked_reference_count", 0),
         "excluded_count": catalog["excluded_count"],
         "unreferenced_count": catalog["unreferenced_count"],
         "issue_count": len(catalog.get("issues") or []),

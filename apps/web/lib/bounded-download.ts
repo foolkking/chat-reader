@@ -1,3 +1,5 @@
+import { withRequestDeadline } from "./request-deadline";
+
 /** Blob fallback has an explicit device budget; no uncapped response.blob(). */
 export const DIRECT_DOWNLOAD_MAX_BYTES = 64 * 1024 * 1024;
 export class DirectDownloadSizeError extends Error {}
@@ -10,7 +12,7 @@ export async function readBoundedDownload(response: Response, signal: AbortSigna
   const declared = rawTotal && /^\d+$/.test(rawTotal) ? Number(rawTotal) : null;
   const total = declared !== null && Number.isSafeInteger(declared) ? declared : null;
   if (total !== null && total > DIRECT_DOWNLOAD_MAX_BYTES) {
-    await response.body?.cancel();
+    void response.body?.cancel().catch(() => undefined);
     throw new DirectDownloadSizeError("Direct download exceeds the browser budget.");
   }
   if (!response.body) throw new Error("Download stream unavailable.");
@@ -22,7 +24,8 @@ export async function readBoundedDownload(response: Response, signal: AbortSigna
   try {
     for (;;) {
       signal.throwIfAborted();
-      const next = await reader.read();
+      // Bound inactivity, not total duration: slow, progressing files can finish.
+      const next = await withRequestDeadline(() => reader.read(), signal, 30_000);
       signal.throwIfAborted();
       if (next.done) break;
       received += next.value.byteLength;
@@ -35,7 +38,7 @@ export async function readBoundedDownload(response: Response, signal: AbortSigna
     return new Blob(chunks, { type: response.headers.get("content-type") ?? "application/octet-stream" });
   } finally {
     signal.removeEventListener("abort", cancel);
-    if (!completed) await reader.cancel().catch(() => undefined);
+    if (!completed) void reader.cancel().catch(() => undefined);
     reader.releaseLock();
     chunks.length = 0;
   }

@@ -825,6 +825,30 @@ html[data-theme="dark"] .border-\[\#d1d5db\] { border-color: var(--border) !impo
   max-width: 100%;
 }
 
+/* A fixed, quiet rail outside the cells. Hover changes opacity only, never
+   table geometry or the hit-testing of selectable formula/text content. */
+.reader-table-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+}
+.reader-table-action:hover { background: var(--subtle); color: var(--text); }
+.reader-table-action:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.reader-table-action:disabled, .reader-table-action[aria-disabled="true"] { opacity: 0.5; cursor: wait; }
+@media (hover: hover) and (pointer: fine) {
+  .reader-table-actions { opacity: 0; pointer-events: none; }
+  .reader-table-export:hover > .reader-table-actions,
+  .reader-table-export:focus-within > .reader-table-actions { opacity: 1; pointer-events: auto; }
+  .reader-code-actions { opacity: 0; pointer-events: none; }
+  .reader-code-block:hover .reader-code-actions,
+  .reader-code-block:focus-within .reader-code-actions,
+  .reader-code-actions[data-active="true"] { opacity: 1; pointer-events: auto; }
+}
+
 @media (max-width: 639px) {
   .markdown-table-cell-content { max-width: 18rem; }
 }

@@ -2,6 +2,8 @@ import Dexie, { type DBCoreTransaction, type EntityTable } from "dexie";
 import { unzipSync, strFromU8 } from "fflate";
 import { assertOfflineAccess, captureOfflineAccess, lockOfflineAccess } from "./offline-access";
 import { assertOfflineWritable } from "./offline-write-guard";
+import { offlineDownloadBlocksCleanup } from "./offline-download-progress";
+import { withRequestDeadline } from "./request-deadline";
 import { ingestReadingPosition } from "./reading-position-sync";
 import { readOfflineContinuation, type OfflineContinuation } from "./offline-continuation";
 import { validatedImageDisplay, validatedImageGeometry, type ImageDisplay, type ImageGeometry } from "./image-display";
@@ -477,7 +479,7 @@ async function readOfflineArchiveBounded(response: Response, signal?: AbortSigna
     throw new OfflinePackageImportError("CAPACITY", "Offline package exceeds the safe per-conversation browser import limit.");
   }
   if (!response.body) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    const bytes = new Uint8Array(await withRequestDeadline(() => response.arrayBuffer(), signal, 30_000));
     if (bytes.byteLength > MAX_OFFLINE_ARCHIVE_COMPRESSED_BYTES) {
       throw new OfflinePackageImportError("CAPACITY", "Offline package exceeds the safe per-conversation browser import limit.");
     }
@@ -489,15 +491,19 @@ async function readOfflineArchiveBounded(response: Response, signal?: AbortSigna
   try {
     while (true) {
       signal?.throwIfAborted();
-      const { done, value } = await reader.read();
+      // Inactivity, not total transfer time: slow but progressing copies remain
+      // valid. A stalled body or cancellation cannot hold the queue forever.
+      const { done, value } = await withRequestDeadline(() => reader.read(), signal, 30_000);
       if (done) break;
       totalBytes += value.byteLength;
       if (totalBytes > MAX_OFFLINE_ARCHIVE_COMPRESSED_BYTES) {
-        await reader.cancel().catch(() => undefined);
         throw new OfflinePackageImportError("CAPACITY", "Offline package exceeds the safe per-conversation browser import limit.");
       }
       chunks.push(value);
     }
+  } catch (error) {
+    void reader.cancel().catch(() => undefined);
+    throw error;
   } finally {
     reader.releaseLock();
   }
@@ -865,9 +871,10 @@ export class OfflineDownloadInProgressError extends Error {
 }
 
 async function assertNoActiveOfflineDownload(db: OfflineLibraryDatabase): Promise<void> {
-  const active = await db.settings.where("key").startsWith("offline-download:").filter((row) =>
-    ["queued", "generating", "downloading", "writing"].includes((row.value as { state: string }).state)).count();
-  if (active) throw new OfflineDownloadInProgressError();
+  const records = await db.settings.where("key").startsWith("offline-download:").toArray();
+  if (offlineDownloadBlocksCleanup(records.map(row => row.value as import("./offline-downloads").OfflineDownload))) {
+    throw new OfflineDownloadInProgressError();
+  }
 }
 
 export async function removeOfflineConversations(conversationIds: string[], reviewedFingerprint?: string): Promise<void> {

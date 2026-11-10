@@ -24,7 +24,7 @@ import {
 } from "../rich-markdown/rich-markdown-config";
 import { normalizeDisplayMathForRenderer } from "../rich-markdown/remark-ai-math-compatibility";
 import { MarkdownTableCell, MarkdownTableContent } from "./markdown-table";
-import { ReaderMarkdownTable } from "./markdown-table-export-actions";
+import { MarkdownTableSourceContext, ReaderMarkdownTable } from "./markdown-table-export-actions";
 import { findOpeningThinkingSummary } from "./thinking-summary";
 import {
   detectChatGptRichText,
@@ -621,6 +621,7 @@ export function AssistantMarkdownPart({
   if (onTaskToggle && taskItems.length > 0) {
     return (
       <MarkdownAttachmentContext.Provider value={attachmentContext}>
+        <MarkdownTableSourceContext.Provider value={text}>
         <div className={`reader-prose ${className}`}>
           <ReactMarkdown
             components={interactiveComponents as Components}
@@ -633,16 +634,19 @@ export function AssistantMarkdownPart({
             {renderText}
           </ReactMarkdown>
         </div>
+        </MarkdownTableSourceContext.Provider>
       </MarkdownAttachmentContext.Provider>
     );
   }
   return (
     <MarkdownAttachmentContext.Provider value={attachmentContext}>
+      <MarkdownTableSourceContext.Provider value={text}>
       <div className={className}>
         <TextMessagePartProvider text={text}>
           {renderedMarkdown}
         </TextMessagePartProvider>
       </div>
+      </MarkdownTableSourceContext.Provider>
     </MarkdownAttachmentContext.Provider>
   );
 }
@@ -718,6 +722,7 @@ type MarkdownAstNode = {
   value?: string;
   url?: string;
   alt?: string;
+  identifier?: string;
   checked?: boolean | null;
   data?: {
     hProperties?: Record<string, unknown>;
@@ -732,6 +737,8 @@ type MarkdownAstNode = {
 };
 
 type SafeHtmlAttachmentNode = {
+  type?: string;
+  value?: string;
   tagName?: string;
   properties?: Record<string, unknown>;
   children?: SafeHtmlAttachmentNode[];
@@ -801,17 +808,39 @@ function remarkAttachmentOccurrences(occurrences: MarkdownAttachmentOccurrence[]
 
 function remarkExcludedArchiveReferences() {
   return (tree: MarkdownAstNode) => {
+    const excluded = (url: unknown) => typeof url === "string" && /^cr-archive-member:\/\/[0-9a-f-]{16,}$/i.test(url.trim());
+    const definitions = new Set<string>();
+    const findDefinitions = (node: MarkdownAstNode) => {
+      if (node.type === "definition" && node.identifier && excluded(node.url)) definitions.add(node.identifier.toLowerCase());
+      node.children?.forEach(findDefinitions);
+    };
+    findDefinitions(tree);
+    const walkHtml = (node: SafeHtmlAttachmentNode) => {
+      if (excluded(node.properties?.src) || excluded(node.properties?.href)) {
+        const label = node.properties?.alt;
+        const image = node.tagName === "img";
+        node.tagName = "span";
+        node.properties = {};
+        if (image) node.children = [{ type: "text", value: typeof label === "string" && label.trim() ? label : "Unavailable archive resource" }];
+      }
+      node.children?.forEach(walkHtml);
+    };
     const walk = (node: MarkdownAstNode) => {
-      if (node.type === "link" || node.type === "image") {
-        const url = node.url ?? "";
-        if (/^cr-archive-member:\/\/[0-9a-f-]{16,}$/i.test(url.trim())) {
-          const label = node.type === "image" ? node.alt : markdownNodeText(node);
+      if (["link", "image", "linkReference", "imageReference"].includes(node.type ?? "")) {
+        if (excluded(node.url) || (node.identifier && definitions.has(node.identifier.toLowerCase()))) {
+          const label = node.type === "image" || node.type === "imageReference" ? node.alt : markdownNodeText(node);
           node.type = "text";
           node.value = typeof label === "string" && label.trim() ? label : "Excluded archive resource";
           node.url = undefined;
           node.data = undefined;
           node.children = undefined;
         }
+      } else if (node.type === "safeHtml" && node.data) {
+        const html = { tagName: node.data.hName, properties: node.data.hProperties, children: node.data.hChildren };
+        walkHtml(html);
+        node.data.hName = html.tagName;
+        node.data.hProperties = html.properties;
+        node.data.hChildren = html.children;
       }
       node.children?.forEach(walk);
     };
@@ -1296,11 +1325,11 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
 
   return (
     <section ref={containerRef} className="reader-code-block max-w-full overflow-hidden rounded-lg border border-ui bg-[var(--code-bg)]">
-      <div data-markdown-copy-ignore="true" className="flex min-h-10 items-center justify-between gap-3 border-b border-ui bg-subtle px-3 text-xs text-secondary">
-        <span className="min-w-0 truncate font-mono">{language || "text"}</span>
-        <div className="flex items-center gap-1">
-          <CodeAction title={wrapped ? "Disable line wrapping" : "Wrap long lines"} onClick={() => setWrapped((value) => !value)}><WrapText className="h-3.5 w-3.5" /></CodeAction>
-          {longCode ? <CodeAction title={expanded ? "Collapse code" : "Expand code"} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}</CodeAction> : null}
+      <div data-markdown-copy-ignore="true" className="flex min-h-11 items-center justify-between gap-2 px-2 text-xs text-secondary">
+        <span className="min-w-0 truncate pl-2 font-mono">{language && !["text", "plaintext"].includes(language.toLowerCase()) ? language : null}</span>
+        <div className="reader-code-actions flex shrink-0 items-center" data-active={copying || copied || clipboard.state === "failed" ? "true" : undefined}>
+          <CodeAction title={wrapped ? (zh ? "关闭自动换行" : "Disable line wrapping") : (zh ? "自动换行" : "Wrap long lines")} pressed={wrapped} onClick={() => setWrapped((value) => !value)}><WrapText className="h-3.5 w-3.5" /></CodeAction>
+          {longCode ? <CodeAction title={expanded ? (zh ? "收起代码" : "Collapse code") : (zh ? "展开代码" : "Expand code")} pressed={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}</CodeAction> : null}
           <CodeAction title={copying ? (zh ? "正在复制代码…" : "Copying code…") : copied ? (zh ? "已复制" : "Copied") : (zh ? "复制代码" : "Copy code")} onClick={clipboard.copy} disabled={copying}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</CodeAction>
         </div>
       </div>
@@ -1328,8 +1357,8 @@ function ShikiCodeBlock({ language, code }: SyntaxHighlighterProps) {
   );
 }
 
-function CodeAction({ title, onClick, children, disabled = false }: { title: string; onClick: () => void | Promise<void>; children: React.ReactNode; disabled?: boolean }) {
-  return <button type="button" title={title} aria-label={title} disabled={disabled} aria-busy={disabled || undefined} onClick={() => void onClick()} className="flex h-7 w-7 items-center justify-center rounded-md text-secondary transition hover:bg-surface hover:text-primary disabled:opacity-40">{children}</button>;
+function CodeAction({ title, onClick, children, disabled = false, pressed }: { title: string; onClick: () => void | Promise<void>; children: React.ReactNode; disabled?: boolean; pressed?: boolean }) {
+  return <button type="button" title={title} aria-label={title} aria-pressed={pressed} aria-disabled={disabled || undefined} aria-busy={disabled || undefined} onClick={() => { if (!disabled) void onClick(); }} className="reader-table-action">{children}</button>;
 }
 
 async function getShikiTokens(language: BundledLanguage, code: string, resolvedTheme: "light" | "dark"): Promise<ThemedToken[][]> {

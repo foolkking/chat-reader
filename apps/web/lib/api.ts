@@ -1,6 +1,7 @@
 import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
 import { observeSessionResponse, serverSession } from "./server-session";
 import { archiveRequestSignal } from "./archive-task-state";
+import { withRequestDeadline } from "./request-deadline";
 import type {
   CommitImportResponse,
   CleanupApplyResult,
@@ -930,12 +931,12 @@ export async function getImportStatus(importId: string): Promise<ImportStatusRes
   return fetchJson<ImportStatusResponse>(`/api/imports/${importId}/status`);
 }
 
-export async function getActiveTasks(): Promise<BackgroundTaskRead[]> {
-  return fetchJson<BackgroundTaskRead[]>("/api/tasks/active");
+export async function getActiveTasks(signal?: AbortSignal): Promise<BackgroundTaskRead[]> {
+  return withRequestDeadline(deadline => fetchJson<BackgroundTaskRead[]>("/api/tasks/active", { signal: deadline }), signal);
 }
 
 export async function getTask(jobId: string, signal?: AbortSignal): Promise<BackgroundTaskRead> {
-  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`, { signal });
+  return withRequestDeadline(deadline => fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}`, { signal: deadline }), signal);
 }
 
 export async function queueConversationBatchExport(conversationIds: string[], idempotencyKey: string, signal: AbortSignal): Promise<BackgroundTaskRead> {
@@ -958,11 +959,14 @@ export const exportArtifactApi = {
 };
 
 export async function retryTask(jobId: string, signal?: AbortSignal): Promise<BackgroundTaskRead> {
-  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST", signal });
+  return withRequestDeadline(deadline => fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/retry`, { method: "POST", signal: deadline }), signal);
 }
 
-export async function cancelTask(jobId: string, signal?: AbortSignal): Promise<BackgroundTaskRead> {
-  return fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/cancel`, { method: "POST", signal });
+export async function cancelTask(jobId: string, signal?: AbortSignal, sourceDisposition?: "retain" | "discard"): Promise<BackgroundTaskRead> {
+  return withRequestDeadline(deadline => fetchJson<BackgroundTaskRead>(`/api/tasks/${jobId}/cancel`, {
+    method: "POST", signal: deadline,
+    ...(sourceDisposition ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source_disposition: sourceDisposition }) } : {}),
+  }), signal);
 }
 
 export async function getProjects(input: {
@@ -1203,6 +1207,35 @@ export async function queueConversationArchiveExport(
     method: "POST",
     headers: { "Idempotency-Key": `cr-export-${conversationId}-${Date.now()}` },
   });
+}
+
+export type ConversationExportRequest = {
+  format: "markdown_v2" | "canjson_v2" | "markdown_bundle" | "canjson_bundle" | "context_package";
+  message_ids?: string[];
+  version_scope?: "current" | "all";
+  include_metadata?: boolean;
+  include_description?: boolean;
+  annotation_scope?: "none" | "all";
+  notebook_scope?: "none" | "current";
+  include_source_refs?: boolean;
+  toc_mode?: "none" | "message_index" | "bounded_headings";
+  compression?: "none" | "gzip";
+  context_scope?: "full_conversation" | "reading_scope";
+  context_attachment_policy?: "include" | "metadata_only";
+  continuation_policy?: "auto" | "raw_only";
+  start_message_id?: string | null;
+};
+
+export function submitConversationExport(conversationId: string, options: ConversationExportRequest, key: string): Promise<BackgroundTaskRead> {
+  return withRequestDeadline(signal => fetchJson<BackgroundTaskRead>(`/api/conversations/${conversationId}/exports?background=true`, {
+    signal, method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+    body: JSON.stringify(options),
+  }));
+}
+
+export function readConversationExportRequest(conversationId: string, key: string): Promise<{ task: BackgroundTaskRead | null }> {
+  return withRequestDeadline(signal => fetchJson<{ task: BackgroundTaskRead | null }>(
+    `/api/conversations/${conversationId}/exports/by-request/${encodeURIComponent(key)}`, { signal, cache: "no-store" }));
 }
 
 export async function queueConversationContextPackageExport(
@@ -1612,9 +1645,16 @@ export async function createAdaptiveImportSession(
 }
 
 export async function getAdaptiveImportSession(importId: string, signal?: AbortSignal): Promise<AdaptiveImportSession> {
-  return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}`, { signal });
+  return withRequestDeadline(deadline => fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}`, { signal: deadline }), signal);
 }
 
+export async function resumeAdaptiveImportSession(importId: string, updatedAt: string): Promise<AdaptiveImportSession> {
+  return withRequestDeadline(signal => fetchJson<AdaptiveImportSession>(
+    `/api/adaptive-import/sessions/${importId}/resume`, {
+      ...jsonRequest("POST", { expected_updated_at: updatedAt }), signal,
+    },
+  ));
+}
 export async function updateAdaptiveImportDestination(
   importId: string,
   targetProjectId: string | null,
@@ -1627,7 +1667,7 @@ export async function updateAdaptiveImportDestination(
 }
 
 export async function cancelAdaptiveImportSession(importId: string): Promise<void> {
-  await fetchJson<void>(`/api/adaptive-import/sessions/${importId}`, { method: "DELETE" });
+  await withRequestDeadline(signal => fetchJson<void>(`/api/adaptive-import/sessions/${importId}`, { method: "DELETE", signal }));
 }
 
 export async function resolveAdaptiveImportGroups(
@@ -1649,13 +1689,22 @@ export async function replaceAdaptiveImportArtifact(
   importId: string,
   artifactId: string,
   file: File,
+  expectedUpdatedAt?: string,
 ): Promise<AdaptiveImportSession> {
   const formData = new FormData();
   formData.append("file", file);
+  if (expectedUpdatedAt) formData.append("expected_updated_at", expectedUpdatedAt);
   return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/artifacts/${artifactId}`, {
     method: "PUT",
     body: formData,
   });
+}
+
+export function excludeAdaptiveImportSource(importId: string, artifactId: string, expectedUpdatedAt: string): Promise<AdaptiveImportSession> {
+  return withRequestDeadline(signal => fetchJson(
+    `/api/adaptive-import/sessions/${importId}/artifacts/${artifactId}`,
+    { ...jsonRequest("DELETE", { expected_updated_at: expectedUpdatedAt }), signal },
+  ));
 }
 
 export async function mergeConversationTags(source: UserFeatureEntry<ConversationTagValue>, target: UserFeatureEntry<ConversationTagValue>) {
@@ -1681,7 +1730,9 @@ export function rebuildAdaptiveImportPreview(importId: string, updatedAt: string
   });
 }
 export function getUnfinishedImports(offset = 0, signal?: AbortSignal): Promise<{ items: UnfinishedImport[]; has_more: boolean }> {
-  return fetchJson(`/api/adaptive-import/sessions?limit=20&offset=${offset}`, { signal, headers: { "X-Chat-Reader-Background": "1" } });
+  return withRequestDeadline(deadline => fetchJson(`/api/adaptive-import/sessions?limit=20&offset=${offset}`, {
+    signal: deadline, headers: { "X-Chat-Reader-Background": "1" },
+  }), signal);
 }
 
 export async function getAdaptiveImportArchive(
@@ -1703,6 +1754,7 @@ export async function updateAdaptiveImportArchive(
   artifactId: string,
   expectedVersion: number,
   changes: Array<{ memberId: string; use: string; ownerDocumentIds: string[] }>,
+  referenceChanges: Array<{ referenceId: string; targetMemberId: string | null }> = [],
 ): Promise<AdaptiveImportSession> {
   return fetchJson<AdaptiveImportSession>(`/api/adaptive-import/sessions/${importId}/archives/${artifactId}`, {
     method: "PUT",
@@ -1714,6 +1766,9 @@ export async function updateAdaptiveImportArchive(
         use: change.use,
         owner_document_ids: change.ownerDocumentIds,
       })),
+      ...(referenceChanges.length ? { reference_changes: referenceChanges.map(change => ({
+        reference_id: change.referenceId, target_member_id: change.targetMemberId,
+      })) } : {}),
     }),
   });
 }

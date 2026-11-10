@@ -7,7 +7,18 @@ export function offlineGenerationFailureCode(message: string | null | undefined)
 }
 
 export function offlineFailureNeedsRebuild(code: string | null): boolean {
-  return ["GONE", "EXPIRED_ARTIFACT", "GENERATION", "MALFORMED", "OFFLINE_ASSET_INTEGRITY", "OFFLINE_ASSET_IO", "OFFLINE_CONTEXT_UNAVAILABLE", "OFFLINE_CONTEXT_INTEGRITY"].includes(code ?? "");
+  return ["GONE", "EXPIRED_ARTIFACT", "GENERATION", "MALFORMED", "PARTIAL", "OFFLINE_ASSET_INTEGRITY", "OFFLINE_ASSET_IO", "OFFLINE_CONTEXT_UNAVAILABLE", "OFFLINE_CONTEXT_INTEGRITY"].includes(code ?? "");
+}
+
+export function offlineFailurePausesQueue(code: string): boolean {
+  return ["NETWORK", "DOWNLOAD", "AUTH", "QUOTA", "STORAGE_WRITE", "OFFLINE_ASSET_IO", "SERVER_BUSY"].includes(code);
+}
+
+/** Only independent, known child failures may advance to the next conversation.
+ * Authorization/scope changes, unknown admissions and local I/O never do. */
+export function offlineFailureIsIndependent(code: string): boolean {
+  return ["CAPACITY", "GENERATION", "MALFORMED", "GONE", "EXPIRED_ARTIFACT", "OFFLINE_ASSET_INTEGRITY",
+    "OFFLINE_CONTEXT_UNAVAILABLE", "OFFLINE_CONTEXT_INTEGRITY"].includes(code);
 }
 
 export function offlineFailureCanRetry(code: string | null): boolean {
@@ -16,10 +27,13 @@ export function offlineFailureCanRetry(code: string | null): boolean {
 
 export function offlineDownloadFailureMessage(code: string | null, zh: boolean, hasExistingCopies: boolean): string {
   const retained = hasExistingCopies ? (zh ? "现有副本已保留。" : " Existing copies are retained.") : "";
+  if (code === "PARTIAL") return (zh ? "部分对话未完成。可查看逐项原因并只重试未完成项；失败项没有计入成功。" : "Some conversations did not finish. Review individual reasons and retry only unfinished items; failed items are not counted as completed.") + retained;
+  if (code === "AUTH") return (zh ? "账户授权需要重新确认，下载队列已暂停。确认账户后可继续未完成项。" : "Account authorization needs confirmation. Downloads are paused; confirm the account to continue unfinished items.") + retained;
+  if (code === "SERVER_BUSY") return (zh ? "服务器暂时繁忙，下载队列已暂停。稍后可继续，不会重复已完成项。" : "The server is busy. Downloads are paused; continue later without repeating completed items.") + retained;
   if (code === "OFFLINE_CONTEXT_UNAVAILABLE") return (zh ? "对话的 Current / Index 文件缺失或无法读取。请先联系管理员恢复文件，再重新生成离线包。" : "Saved Current / Index files are missing or unreadable. Ask your administrator to restore them before rebuilding.") + retained;
   if (code === "OFFLINE_CONTEXT_INTEGRITY") return (zh ? "对话的 Current / Index 文件校验失败。请先修复文件，再重新生成离线包。" : "Saved Current / Index files failed verification. Repair them before rebuilding.") + retained;
   if (code === "QUOTA") return (zh ? "浏览器空间不足，请释放空间后重试。" : "Browser storage is full. Free space and retry.") + retained;
-  if (code === "CAPACITY") return (zh ? "离线数据超过本机浏览器的安全导入上限。请新建下载并减少附件；若正文仍超限，需要管理员处理大对话，重复生成相同包无效。" : "The offline data exceeds this browser's safe import limit. Start a new download with fewer attachments. If the conversation text still exceeds the limit, an administrator must address the large conversation; rebuilding the same package will not help.") + retained;
+  if (code === "CAPACITY") return (zh ? "这个对话超过本机浏览器的安全导入上限。可以减少下载附件后重试；若仅正文仍超限，需要拆分对话，重复生成相同包无效。" : "This conversation exceeds the browser's safe import limit. Retry with fewer attachments. If text alone still exceeds the limit, split the conversation; rebuilding the same package will not help.") + retained;
   if (code === "MALFORMED") return (zh ? "离线包不完整或已损坏，重试将重新生成。" : "The offline package is incomplete or damaged. Retry to rebuild.") + retained;
   if (code === "STORAGE_WRITE") return (zh ? "浏览器未能完成写入，请检查本机空间后重试。" : "The browser could not finish writing. Check local storage and retry.") + retained;
   if (code === "GONE" || code === "EXPIRED_ARTIFACT") return (zh ? "离线下载凭据已过期，重试将只重新生成当前未完成的对话；已完成副本会保留。" : "The offline download artifact expired. Retry rebuilds only unfinished conversations; completed copies are retained.") + retained;

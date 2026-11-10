@@ -8,7 +8,9 @@ import { getOfflineCatalog } from "../lib/api";
 import { offlineLeaseExpiresAt } from "../lib/auth-client";
 import { clearOfflineAttachmentCache, inspectOfflineCopyAssets, offlineDb, OfflinePendingChangesError, OfflineDownloadInProgressError, removeOfflineConversations, type OfflineConversationRecord, type OfflineOutboxRecord } from "../lib/offline-db";
 import { cancelOfflineDownload, enqueueOfflineDownload, listOfflineDownloads, offlineDownloadFailureMessage, retryOfflineCancellation, retryOfflineDownloadWithReview, type OfflineAssetMode, type OfflineDownload } from "../lib/offline-downloads";
-import { offlineFailureCanRetry } from "../lib/offline-download-errors";
+import { offlineDownloadBlocksCleanup, offlineDownloadSummary, offlineQueueIsPaused } from "../lib/offline-download-progress";
+import { OfflineDownloadRecovery } from "./offline-download-recovery";
+import { assertOfflineAccess, captureOfflineAccess } from "../lib/offline-access";
 import { usePreferences } from "./preferences-provider";
 import { useInteractionDialog } from "./interaction-dialog-provider";
 import { OfflineConflictReview } from "./offline-conflict-review";
@@ -41,7 +43,12 @@ function downloadNeedsAttention(item: OfflineDownload): boolean {
 }
 
 function matchesTarget(item: OfflineDownload, target: OfflineDownloadTarget | null | undefined): boolean {
-  if (!target || item.scope !== target.scope || item.assetMode !== target.include_assets) return false;
+  if (!target) return false;
+  // A child server task can belong to an all/project local batch, including
+  // after that child's old receipt was replaced by an explicit retry. This
+  // resolves navigation only; it never changes scope or starts another job.
+  if (target.scope === "conversation" && target.conversation_id && item.targetConversationIds?.includes(target.conversation_id)) return true;
+  if (item.scope !== target.scope || item.assetMode !== target.include_assets) return false;
   return target.scope === "all" || item.scopeId === (target.scope === "conversation" ? target.conversation_id : target.project_id);
 }
 
@@ -89,7 +96,8 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
   const [cleanup, setCleanup] = useState<{ conversationId: string; attachmentsOnly: boolean; snapshot: OfflinePendingSnapshot } | null>(null);
   const catalog = useQuery({ queryKey: ["offline-catalog"], queryFn: getOfflineCatalog, enabled: online, retry: 1 });
   const [project, setProject] = useState("");
-  const activeDownload = downloads.some((item) => ["queued", "generating", "downloading", "writing"].includes(item.state));
+  const activeDownload = offlineDownloadBlocksCleanup(downloads);
+  const queuePaused = offlineQueueIsPaused(downloads);
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -188,7 +196,8 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
       if (data.downloadRead.ok && !entryResolved && initialJobId) {
         // An older task can lead to the latest local retry of the same scope.
         // This association only navigates; it never resumes work automatically.
-        const selected = downloadData.tasks.find(item => item.jobId === initialJobId)
+        const selected = downloadData.tasks.find(item => item.jobId === initialJobId
+          || Object.values(item.conversationResults ?? {}).some(result => result.jobId === initialJobId))
           ?? downloadData.tasks.find(item => matchesTarget(item, initialTarget));
         setEntryResolved(true);
         setEntryDownloadId(selected?.id ?? null);
@@ -253,6 +262,8 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
   }, [downloads, page, tab, loading, entryDownloadId]);
 
   const action = useCallback(async (work: () => Promise<unknown>) => {
+    const owner = document.activeElement as HTMLElement | null;
+    const downloadId = owner?.closest<HTMLElement>("[data-offline-download-id]")?.dataset.offlineDownloadId;
     setBusy(true); setError("");
     try { await work(); setRefresh((value) => value + 1); }
     catch (cause) {
@@ -264,10 +275,19 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
             ? (zh ? "当前可用范围没有需要更新的对话；现有离线副本已保留，未将不可用项目视为成功。" : "No available conversations in this scope need updating. Existing offline copies are retained; unavailable items are not marked complete.")
             : cause instanceof Error && cause.message === "OFFLINE_TARGET_SCOPE_CHANGED"
               ? (zh ? "确认期间下载范围发生变化，请重新核对后再试。" : "The download scope changed during confirmation. Review it again before retrying.")
-              : (zh ? "操作未完成，请检查连接或本地存储后重试。" : "The operation did not finish. Check the connection or local storage and retry.");
+              : cause instanceof Error && cause.message === "OFFLINE_RETRY_STATE_CHANGED"
+                ? (zh ? "任务在确认期间发生变化，请查看当前状态后再选择。" : "The task changed during confirmation. Review its current state before choosing again.")
+                : (zh ? "操作未完成，请检查连接或本地存储后重试。" : "The operation did not finish. Check the connection or local storage and retry.");
       setError(message);
     }
-    finally { setBusy(false); }
+    finally {
+      setBusy(false);
+      requestAnimationFrame(() => {
+        if (owner?.isConnected || document.activeElement !== document.body) return;
+        const row = downloadId ? rootRef.current?.querySelector<HTMLElement>(`[data-offline-download-id="${CSS.escape(downloadId)}"]`) : null;
+        (row ?? rootRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]'))?.focus({ preventScroll: true });
+      });
+    }
   }, [zh]);
   const download = (scope: OfflineDownload["scope"], scopeId?: string) => action(() => enqueueOfflineDownload({ scope, scopeId, assetMode: mode }));
   const runChecklist = (value: import("../lib/types").OfflineChecklistValue) => action(async () => {
@@ -378,7 +398,12 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
         {online && catalog.data?.projects.length ? <div className="flex flex-wrap gap-2"><select aria-label={zh ? "选择项目" : "Choose project"} className="min-h-11 min-w-0 flex-1 rounded-md border border-ui bg-surface px-3 text-sm" value={project} onChange={(event) => setProject(event.target.value)}><option value="">{zh ? "选择项目" : "Choose project"}</option>{catalog.data.projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="btn-secondary min-h-11 px-3 text-sm" disabled={!project || busy} onClick={() => void download("project", project)}>{zh ? "下载项目" : "Download project"}</button></div> : null}
         <OfflineChecklistsPanel catalog={catalog.data} online={online} busy={busy} onRun={runChecklist} />
         {catalog.isError && online ? <p className="text-xs text-secondary">{zh ? "服务器目录暂不可用；本地副本仍可访问。" : "Server catalog is unavailable; local copies remain accessible."}</p> : null}
-        {downloadsReady ? downloads.filter((item) => ["queued", "generating", "downloading", "writing"].includes(item.state)).map((item) => <div key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 border-y border-ui py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]" role="status"><div className="flex items-center gap-3"><span className="min-w-0 flex-1 break-words text-sm">{item.label || (zh ? "全部对话" : "All conversations")} · {item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : !online ? (zh ? "已暂停，联网后继续" : "Paused; resumes when online") : stateLabel(item.state)}</span><button className="btn-secondary min-h-9 px-3 text-xs" disabled={busy || item.cancelRequested} onClick={() => void action(() => cancelOfflineDownload(item.id))}>{item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : (zh ? "取消" : "Cancel")}</button></div><progress className="h-1.5 w-full accent-[var(--accent)]" max={100} value={item.progress} aria-label={zh ? "下载进度" : "Download progress"} /></div>) : null}
+        {downloadsReady && failures.length ? <button type="button" className="min-h-11 text-sm text-accent underline" onClick={() => { setTab("failures"); setPage(0); document.getElementById("offline-tab-failures")?.focus(); }}>{zh ? `${failures.length} 项下载需要处理${queuePaused ? "，队列已暂停" : ""}` : `${failures.length} downloads need attention${queuePaused ? "; queue paused" : ""}`}</button> : null}
+        {downloadsReady ? downloads.filter((item) => ["queued", "generating", "downloading", "writing"].includes(item.state)).map((item) => <div key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 border-y border-ui py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]" role="status">
+          <div className="flex items-center gap-3"><span className="min-w-0 flex-1 break-words text-sm">{item.label || (zh ? "全部对话" : "All conversations")} · {item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : queuePaused ? (zh ? "等待处理暂停项" : "Waiting for paused item") : !online ? (zh ? "已暂停，联网后继续" : "Paused; resumes when online") : stateLabel(item.state)}</span><button className="btn-secondary min-h-11 px-3 text-xs" disabled={busy || item.cancelRequested} onClick={() => void action(() => cancelOfflineDownload(item.id))}>{item.cancelRequested ? (zh ? "正在取消" : "Cancelling") : (zh ? "取消" : "Cancel")}</button></div>
+          <p className="text-xs text-secondary">{offlineDownloadSummary(item, zh)}</p>
+          <progress className="h-1.5 w-full accent-[var(--accent)]" max={100} value={item.progress} aria-label={zh ? "处理进度（不代表全部成功）" : "Processing progress (not a success count)"} />
+        </div>) : null}
         <ul className="divide-y divide-[var(--border)]">{copiesReady ? copies.map((copy) => <li key={copy.conversation.id} className="space-y-2 py-4">
           <a className="break-words text-sm font-semibold text-primary hover:text-accent" href={`/library?conversationId=${copy.conversation.id}`}>{copy.conversation.display_title}</a>
           <p className="text-xs text-secondary">{copy.conversation.message_count} {zh ? "条消息" : "messages"} · {zh ? "已缓存附件" : "Cached files"} {copy.assets.available}/{copy.assets.total} · {copy.assets.missing ? (zh ? `需补充 ${copy.assets.missing} 个附件` : `${copy.assets.missing} files missing`) : catalog.data?.conversations.some((row) => row.id === copy.conversation.id && row.revision !== copy.conversation.offline_revision) ? (zh ? "正文有更新" : "Content update available") : (zh ? "当前副本可用" : "Current copy available")}</p>
@@ -397,13 +422,24 @@ export function OfflineSyncCenter({ onDirtyChange, initialConflictKey, initialJo
         </> : null}
       </> : <>
         {downloadsReady || conflictsReady || failuresReady ? <>
-        <ul className="divide-y divide-[var(--border)]">{downloadsReady ? failures.slice(page * 20, page * 20 + 20).map((item) => <li key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]"><p className="text-sm font-medium">{item.label || (zh ? "全部对话" : "All conversations")} · {stateLabel(item.state)}</p><p className="text-xs text-secondary">{item.state === "cancelled" ? (zh ? `本机下载已取消。${retainedCopies[item.id] ? "现有副本已保留。" : ""}` : `The local download was cancelled.${retainedCopies[item.id] ? " Existing copies are retained." : ""}`) : item.state === "completed" ? (zh ? "离线副本已完成；之前的服务器取消请求仍需处理。" : "The offline copy is ready; an earlier server cancellation still needs attention.") : offlineDownloadFailureMessage(item.error, zh, retainedCopies[item.id] === true)}</p>{item.serverCancellation ? <p className="text-xs text-secondary">{item.serverCancellation === "pending" ? (zh ? "服务器取消请求待确认；联网后自动处理。" : "Server cancellation is awaiting confirmation; it resumes online.") : (zh ? "服务器取消请求未确认，本机不会继续下载。" : "Server cancellation was not confirmed. This device will not continue downloading.")}{item.serverCancellation === "failed" ? <button className="ml-2 min-h-9 text-accent underline" disabled={!online || busy} onClick={() => void action(() => retryOfflineCancellation(item.id))}>{zh ? "重试取消服务器任务" : "Retry server cancellation"}</button> : null}</p> : null}{item.state !== "completed" && (item.state === "cancelled" || offlineFailureCanRetry(item.error) || item.error === "UNAVAILABLE_TARGET") ? <button disabled={!online || busy} className="btn-secondary min-h-9 px-3 text-xs" onClick={() => void action(() => retryOfflineDownloadWithReview(item.id, review => confirm({
+        <ul className="divide-y divide-[var(--border)]">{downloadsReady ? failures.slice(page * 20, page * 20 + 20).map((item) => <li key={item.id} data-offline-download-id={item.id} tabIndex={-1} className="space-y-2 py-3 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
+          <p className="break-words text-sm font-medium">{item.label || (zh ? "全部对话" : "All conversations")} · {item.queuePaused ? (zh ? "已暂停" : "Paused") : item.state === "failed" && (item.conversationCursor ?? 0) > 0 ? (zh ? "有未完成项" : "Unfinished items") : stateLabel(item.state)}</p>
+          <p className="text-xs text-secondary">{item.state === "cancelled" ? (zh ? `本机下载已取消。${retainedCopies[item.id] ? "现有副本已保留。" : ""}` : `The local download was cancelled.${retainedCopies[item.id] ? " Existing copies are retained." : ""}`) : item.state === "completed" ? (zh ? "离线副本已完成；之前的服务器取消请求仍需处理。" : "The offline copy is ready; an earlier server cancellation still needs attention.") : offlineDownloadFailureMessage(item.error, zh, retainedCopies[item.id] === true)}</p>
+          {item.serverCancellation ? <p className="text-xs text-secondary">{item.serverCancellation === "pending" ? (zh ? "服务器取消请求待确认；联网后自动处理。" : "Server cancellation is awaiting confirmation; it resumes online.") : (zh ? "服务器取消请求未确认，本机不会继续下载。" : "Server cancellation was not confirmed. This device will not continue downloading.")}{item.serverCancellation === "failed" ? <button className="ml-2 min-h-11 text-accent underline" disabled={!online || busy} onClick={() => void action(() => retryOfflineCancellation(item.id))}>{zh ? "重试取消服务器任务" : "Retry server cancellation"}</button> : null}</p> : null}
+          <OfflineDownloadRecovery item={item} zh={zh} disabled={!online || busy} onAction={action} onRetry={() => void action(() => retryOfflineDownloadWithReview(item.id, review => confirm({
           title: zh ? "重新核对离线下载范围？" : "Review the offline download scope?",
           description: zh
             ? `原计划包含 ${review.previousTargetCount} 个待更新对话。当前范围有 ${review.currentScopeCount} 个对话，其中 ${review.unavailableCount} 个原目标已不可用、${review.newlyIncludedCount} 个为新加入范围；确认后仅下载当前需要更新的项目，已完成副本会保留。`
             : `The previous batch had ${review.previousTargetCount} conversations to update. The current scope contains ${review.currentScopeCount}; ${review.unavailableCount} previous targets are unavailable and ${review.newlyIncludedCount} are newly in scope. Confirm to download only items that need updating; completed copies are retained.`,
           confirmLabel: zh ? "确认新范围" : "Confirm new scope",
-        })))}>{item.error === "UNAVAILABLE_TARGET" ? (zh ? "重新核对范围" : "Review scope") : (zh ? "重试下载" : "Retry download")}</button> : null}</li>) : null}{conflictsReady ? conflicts.slice(page * 20, page * 20 + 20).map((item) => <li key={item.key} className="space-y-2 py-3"><p className="text-sm font-medium">{item.key.startsWith("sync-conflict:reading_position:") ? (zh ? "阅读位置存在冲突" : "Reading position conflict") : (zh ? "批注／笔记存在冲突" : "Annotation / notebook conflict")}</p><button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => setSelectedConflict(item.key)}>{zh ? "比较并解决" : "Compare and resolve"}</button><a className="ml-3 inline-flex min-h-9 items-center text-sm text-accent hover:underline" href={`/library?conversationId=${item.conversationId}&annotations=open`}>{zh ? "打开对话" : "Open conversation"}</a></li>) : null}</ul>
+        })))} />
+          {item.queuePaused ? <button type="button" className="min-h-11 px-3 text-xs text-secondary underline" disabled={busy} onClick={() => void action(async () => {
+            const access = captureOfflineAccess();
+            if (await confirm({ title: zh ? "停止此项，允许后续下载继续？" : "Stop this item and allow later downloads?",
+              description: zh ? "此项的已完成副本与失败记录会保留；没有完成的内容不会被记为成功。" : "Completed copies and the failure record remain. Unfinished content will not be marked successful.",
+              confirmLabel: zh ? "停止此项" : "Stop this item" })) { assertOfflineAccess(access); await cancelOfflineDownload(item.id, item.attemptRevision ?? 0); }
+          })}>{zh ? "停止此项" : "Stop this item"}</button> : null}
+        </li>) : null}{conflictsReady ? conflicts.slice(page * 20, page * 20 + 20).map((item) => <li key={item.key} className="space-y-2 py-3"><p className="text-sm font-medium">{item.key.startsWith("sync-conflict:reading_position:") ? (zh ? "阅读位置存在冲突" : "Reading position conflict") : (zh ? "批注／笔记存在冲突" : "Annotation / notebook conflict")}</p><button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => setSelectedConflict(item.key)}>{zh ? "比较并解决" : "Compare and resolve"}</button><a className="ml-3 inline-flex min-h-9 items-center text-sm text-accent hover:underline" href={`/library?conversationId=${item.conversationId}&annotations=open`}>{zh ? "打开对话" : "Open conversation"}</a></li>) : null}</ul>
         {failuresReady && syncFailures.length ? <section className="space-y-2 border-t border-ui pt-3"><h3 className="text-sm font-semibold">{zh ? "同步失败" : "Sync failures"}</h3><p className="text-xs text-secondary">{syncFailureCount} {zh ? "项修改仍保留在本机" : "edits retained on this device"}</p>{syncFailures.map((item) => <div key={item.operation_id} className="border-b border-ui py-2 last:border-b-0"><a className="block min-h-9 py-1 text-sm text-accent hover:underline" href={item.entity_type === "reading_position" && online ? `/conversations/${item.conversation_id}` : `/library?conversationId=${item.conversation_id}${item.entity_type === "reading_position" ? "" : "&annotations=open"}`}>{item.entity_type === "reading_position" ? (zh ? "查看未同步进度" : "View unsynced progress") : item.entity_type === "notebook" ? (zh ? "查看未同步笔记" : "View unsynced notebook") : (zh ? "查看未同步批注" : "View unsynced annotation")}</a><p className="text-xs text-secondary">{offlineOutboxFailureMessage(item.last_error, zh)} · {zh ? `已尝试 ${item.attempts} 次` : `${item.attempts} attempts`}</p></div>)}<button className="btn-secondary min-h-9 px-3 text-sm" disabled={!online || busy} onClick={() => void retrySync()}>{zh ? "重试同步" : "Retry sync"}</button></section> : null}
         {failureSectionsReady && !localLoading && !failures.length && !conflicts.length && !syncFailureCount ? <p className="py-6 text-center text-sm text-secondary">{zh ? "没有失败任务或已记录冲突。" : "No failed tasks or recorded conflicts."}</p> : null}
         </> : null}

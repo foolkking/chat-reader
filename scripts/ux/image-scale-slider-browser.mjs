@@ -41,11 +41,12 @@ window.reads=0;window.writes=[];window.writeResults=[];window.display={source_sh
 const attachment={id:"11111111-1111-4111-8111-111111111111",metadata:{image_display_v1:{...window.display}},asset_object:{sha256:"f".repeat(64),detected_mime_type:"image/png"}};
 function Controls(){
  const [surface,setSurface]=useState("owner");window.setSurface=setSurface;
+ const [visible,setVisible]=useState(true);window.setImageVisible=setVisible;
  const [legacy,setLegacy]=useState(false);
  window.useLegacy=()=>{window.display={source_sha256:"a".repeat(64),scale_percent:100,original_width:1200,original_height:800,width:1200,height:800,configured:false};setLegacy(true);};
  const shown=legacy?{...attachment,id:"22222222-2222-4222-8222-222222222222",metadata:{image_geometry_v1:{source_sha256:"a".repeat(64),original_width:1200,original_height:800}},asset_object:{...attachment.asset_object,sha256:"a".repeat(64)}}:attachment;
  const access=surface==="share"?{kind:"share",token:"synthetic-share"}:surface==="admin"?{kind:"admin",userId:"synthetic-admin"}:surface==="compare"?{kind:"owner",readOnly:true}:{kind:surface};
- return <AttachmentAccessProvider access={access}><ImageDisplayControls attachment={shown} zh={window.zh??false} compact={surface!=="owner"} laneWidth={720} bodySize={{width:400,height:240}}/></AttachmentAccessProvider>;
+ return <AttachmentAccessProvider access={access}>{visible&&<ImageDisplayControls attachment={shown} zh={window.zh??false} compact={surface!=="owner"} laneWidth={720} bodySize={{width:400,height:240}}/>}</AttachmentAccessProvider>;
 }
 createRoot(document.getElementById("root")).render(<QueryClientProvider client={new QueryClient()}>
  <style>{".synthetic-reader-toc{display:block!important}.synthetic-reader-content{padding:24px;box-sizing:border-box;width:calc(100% - 264px);transform:translate(12px,16px)}@media(max-width:639px){.synthetic-reader-toc{display:none!important}.synthetic-reader-content{width:calc(100% - 24px)}}"}</style>
@@ -81,6 +82,7 @@ const browser = await chromium.launch({ headless: true, channel: process.env.PLA
 try {
   for (const width of [1440, 800, 375]) for (const theme of ["light", "dark"]) {
     const page = await browser.newPage({ viewport: { width, height: 800 }, hasTouch: true });
+    await page.clock.install();
     activePage = page; activeCase = { width, theme };
     activeStep = "open disclosure";
     const errors = [];
@@ -119,6 +121,7 @@ try {
       assert.equal(await page.evaluate(() => window.writes.length), count, "one gesture must submit exactly once");
       assert.equal(await page.evaluate(() => window.display.scale_percent), percent);
       await expect(saveStatus).toHaveText(theme === "dark" ? "已保存" : "Saved");
+      await expect(trigger).toContainText(theme === "dark" ? "已保存" : "Saved");
       await expect(trigger).toHaveAccessibleName(theme === "dark" ? `图片展示比例：${percent}%` : `Image display scale: ${percent}%`);
     };
     const choose = async (percent, outcome = "acknowledged") => {
@@ -218,6 +221,7 @@ try {
     activeStep = "uncertain write and authority isolation";
     await page.evaluate(() => window.failNext = true);
     await choose(75, "unconfirmed");
+    await page.clock.runFor(3100);
     await expect(page.getByRole("alert")).toBeVisible();
     await expect(slider).toBeDisabled();
     const failedWrites = await page.evaluate(() => window.writes.length);
@@ -267,6 +271,8 @@ try {
     await page.evaluate(() => window.holdSave = true);
     const pendingWrites = await page.evaluate(() => window.writes.length);
     await choose(25, "pending");
+    await page.clock.runFor(3100);
+    await expect(saveStatus).toContainText(theme === "dark" ? "正在保存" : "Saving");
     await expect(slider).toBeDisabled();
     await trigger.click();
     await trigger.click();
@@ -301,8 +307,24 @@ try {
     await expect(trigger).toHaveAccessibleName(/59%/);
     assert.equal(await page.evaluate(() => window.writes.length), legacyWrites + 1);
     await page.screenshot({ path: join(out, `${width}-${theme}-legacy-default-fit.png`) });
+    activeStep = "success expiry without reflow or remount resurrection";
+    const receiptBox = await page.locator("figure").boundingBox();
+    await page.clock.runFor(3100);
+    await expect(saveStatus).toHaveCount(0);
+    const expiredBox = await page.locator("figure").boundingBox();
+    assert.ok(Math.abs(receiptBox.height - expiredBox.height) <= 1 && Math.abs(receiptBox.y - expiredBox.y) <= 1,
+      "success expiry must not move following reading content");
+    await choose(60);
+    await page.clock.runFor(2000);
+    await expect(saveStatus).toHaveText(theme === "dark" ? "已保存" : "Saved");
+    await page.evaluate(() => window.setImageVisible(false));
+    await expect(trigger).toHaveCount(0);
+    await page.clock.runFor(1100);
+    await page.evaluate(() => window.setImageVisible(true));
+    await expect(trigger).toHaveAccessibleName(/60%/);
+    await expect(saveStatus).toHaveCount(0);
     assert.deepEqual(errors, []);
-    results.push({ width, theme, status: "passed", checks: ["upward compact disclosure", "no dialog or numeric duplicate", "44px slider", "column fit beside trigger", "one keyboard gesture/one write", "consecutive acknowledged keyboard saves", "draft zero writes", "fast magnet", "one write on release", "slow adjustment", "Escape cancellation", "read-only authority isolation", "read-only unknown-write check", "trusted touch commit/cancel", "100% original", "pending close/reopen without resend", "no overflow/errors", "edge visibility", "legacy default fit reads without writes", "first legacy adjustment starts at fitted ratio"] });
+    results.push({ width, theme, status: "passed", checks: ["upward compact disclosure", "no dialog or numeric duplicate", "44px slider", "column fit beside trigger", "one keyboard gesture/one write", "consecutive acknowledged keyboard saves", "draft zero writes", "fast magnet", "one write on release", "slow adjustment", "Escape cancellation", "read-only authority isolation", "read-only unknown-write check", "trusted touch commit/cancel", "100% original", "pending close/reopen without resend", "no overflow/errors", "edge visibility", "legacy default fit reads without writes", "first legacy adjustment starts at fitted ratio", "success only expires at three seconds", "no receipt-driven body reflow", "unmount does not reset success expiry", "pending and unknown results do not expire"] });
     await page.close();
   }
   writeFileSync(join(out, "result.json"), JSON.stringify({ status: "passed", results, adapters: ["API persistence", "surrounding image/Reader"] }, null, 2));

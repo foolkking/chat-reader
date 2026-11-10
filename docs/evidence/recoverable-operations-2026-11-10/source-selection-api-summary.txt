@@ -1,0 +1,11 @@
+Synthetic API boundary: source-selection-api-06.log
+..........................ss...........................................s [ 48%]
+s....................................................................... [ 97%]
+....                                                                     [100%]
+144 passed, 4 skipped in 105.79s (0:01:45)
+Final source/draft uncertainty: source-selection-api-07.log
+..........................ss...............                              [100%]
+41 passed, 2 skipped in 80.86s (0:01:20)
+Final isolated PostgreSQL: postgres-selection-02.log
+.......................                                                  [100%]
+23 passed in 99.59s (0:01:39)

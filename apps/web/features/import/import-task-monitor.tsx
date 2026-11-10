@@ -2,12 +2,12 @@
 
 import { importFailureMessage } from "./import-workspace-copy";
 import { offlineDownloadFailureMessage, offlineGenerationFailureCode } from "../../lib/offline-download-errors";
-import { batchExportError } from "../../lib/batch-export-errors";
+import { batchExportError, exportNeedsAdjustment } from "../../lib/batch-export-errors";
 import { archiveUploadRecovery } from "../../lib/archive-recovery";
 import { archiveError } from "../../components/archive-ui";
 import { ExportArtifactDelivery } from "../exporting/export-artifact-delivery";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, RefreshCw, X, Eraser } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -23,6 +23,22 @@ import { fullActivityTime } from "../../lib/activity-time";
 import { authenticationGeneration } from "../../lib/offline-access";
 
 const taskReadRetryDelay = (attemptIndex: number) => Math.min(5000, 750 * 2 ** attemptIndex);
+type TaskControl = {
+  action: "retry" | "stop";
+  state: "pending" | "unknown" | "rejected" | "checking";
+  before: BackgroundTaskRead;
+  rejected?: boolean;
+};
+type TaskControls = Record<string, TaskControl>;
+
+function controlConfirmed(control: TaskControl, current: BackgroundTaskRead) {
+  if (control.action === "stop") return ["cancelling", "cancelled", "committed", "failed"].includes(current.status);
+  // A heartbeat/update alone is not evidence that a retry was accepted.
+  return current.status !== control.before.status
+    || current.attempt_count !== control.before.attempt_count
+    || current.queued_at !== control.before.queued_at
+    || current.started_at !== control.before.started_at;
+}
 
 export function ImportTaskMonitor({ placement, forceVisible = false }: { placement: "sidebar" | "mobile" | "center"; forceVisible?: boolean }) {
   const t = useTranslations();
@@ -31,7 +47,6 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const queryClient = useQueryClient();
   const previousTasks = useRef<BackgroundTaskRead[]>([]);
   const handledTerminalTaskIds = useRef<Set<string>>(new Set());
-  const [actionError, setActionError] = useState<string | null>(null);
   const [dismissFeedback, setDismissFeedback] = useState("");
   const dismissFeedbackRef = useRef<HTMLParagraphElement>(null);
   const pendingDismissFocus = useRef<{ row: HTMLElement; next: Element | null } | null>(null);
@@ -69,6 +84,14 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     setDismissFeedback(zh ? "本次审查已结束，正文保持不变。" : "This review has ended. Content is unchanged.");
   };
   const generation = authenticationGeneration();
+  const controlsKey = useMemo(() => ["task-controls", generation] as const, [generation]);
+  // Keep an unconfirmed command across closing/reopening Tasks, but never
+  // across an authentication generation. This cache never submits anything.
+  const controlsQuery = useQuery<TaskControls>({
+    queryKey: controlsKey, queryFn: async () => ({}), enabled: false,
+    initialData: {}, staleTime: Infinity, gcTime: Infinity,
+  });
+  const controls = controlsQuery.data ?? {};
   const tracking = useMemo(() => ({
     generation, active: true,
     unresolved: new Map<string, { task: BackgroundTaskRead; pending: boolean; failed: boolean }>(),
@@ -105,7 +128,7 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   };
   const tasksQuery = useQuery({
     queryKey: ["active-tasks"],
-    queryFn: getActiveTasks,
+    queryFn: ({ signal }) => getActiveTasks(signal),
     retry: 2,
     retryDelay: taskReadRetryDelay,
     refetchInterval: (query) =>
@@ -128,36 +151,65 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
       }));
     }
   }, [tasksQuery.data]);
-  const retryMutation = useMutation({
-    mutationFn: (jobId: string) => retryTask(jobId),
-    onMutate: () => { setActionError(null); return authenticationGeneration(); },
-    onError: (_error, _id, generation) => { if (generation === authenticationGeneration()) setActionError(zh ? "重试未成功，请再次重试。" : "Could not retry the task. Try again."); },
-    onSuccess: (task, _id, generation) => {
-      if (generation !== authenticationGeneration()) return;
-      queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
-        task,
-        ...current.filter((item) => item.job_id !== task.job_id),
-      ]);
-    },
-  });
-  const cancelMutation = useMutation({
-    mutationFn: (jobId: string) => cancelTask(jobId),
-    onMutate: () => { setActionError(null); return authenticationGeneration(); },
-    onError: (_error, _id, generation) => { if (generation === authenticationGeneration()) setActionError(zh ? "取消未成功，任务可能仍在运行，请重试。" : "Cancellation failed. The task may still be running; retry."); },
-    onSuccess: (task, _id, generation) => {
-      if (generation !== authenticationGeneration()) return;
-      if (task.status === "cancelled") {
-        setCompletedTask(task);
-        void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
-        window.setTimeout(() => setCompletedTask((value) => value?.job_id === task.job_id ? null : value), 6000);
-        return;
+  const publishControl = (id: string, value?: TaskControl) => {
+    if (generation !== authenticationGeneration()) return;
+    queryClient.setQueryData<TaskControls>(controlsKey, current => {
+      const next = { ...current };
+      if (value) next[id] = value; else delete next[id];
+      return next;
+    });
+  };
+  const publishTask = (task: BackgroundTaskRead) => {
+    if (generation !== authenticationGeneration()) return;
+    queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
+      task, ...current.filter(item => item.job_id !== task.job_id),
+    ]);
+  };
+  const runControl = async (task: BackgroundTaskRead, action: TaskControl["action"]) => {
+    if (generation !== authenticationGeneration()
+      || queryClient.getQueryData<TaskControls>(controlsKey)?.[task.job_id]) return;
+    const command: TaskControl = { action, before: task, state: "pending" };
+    // Synchronous cache lock also protects two clicks before React re-renders.
+    publishControl(task.job_id, command);
+    try {
+      const result = action === "retry" ? await retryTask(task.job_id)
+        : await cancelTask(task.job_id, undefined, task.job_type === "adaptive_import_analysis" ? "retain" : undefined);
+      publishTask(result);
+      publishControl(task.job_id);
+    } catch (error) {
+      const status = error && typeof error === "object" && "status" in error ? Number(error.status) : 0;
+      const rejected = status >= 400 && status < 500 && status !== 408;
+      publishControl(task.job_id, { ...command, state: rejected ? "rejected" : "unknown", rejected });
+    }
+  };
+  const checkControl = async (task: BackgroundTaskRead) => {
+    if (generation !== authenticationGeneration()) return;
+    const command = queryClient.getQueryData<TaskControls>(controlsKey)?.[task.job_id];
+    if (command?.state === "checking" || command?.state === "pending") return;
+    // A cancellation can be acknowledged but not finished. Checking it is
+    // still read-only, even when its original response was received normally.
+    const checking: TaskControl = command ?? { action: "stop", state: "unknown", before: task };
+    publishControl(task.job_id, { ...checking, state: "checking" });
+    try {
+      const result = await getTask(task.job_id);
+      publishTask(result);
+      publishControl(task.job_id, checking.rejected || controlConfirmed(checking, result) ? undefined
+        : { ...checking, state: "unknown" });
+    } catch {
+      publishControl(task.job_id, { ...checking, state: "unknown" });
+    }
+  };
+  useEffect(() => {
+    if (tasksQuery.isError || generation !== authenticationGeneration()) return;
+    for (const task of tasksQuery.data ?? []) {
+      const control = queryClient.getQueryData<TaskControls>(controlsKey)?.[task.job_id];
+      if (control?.state === "unknown" && controlConfirmed(control, task)) {
+        queryClient.setQueryData<TaskControls>(controlsKey, current => {
+          const next = { ...current }; delete next[task.job_id]; return next;
+        });
       }
-      queryClient.setQueryData<BackgroundTaskRead[]>(["active-tasks"], (current = []) => [
-        task,
-        ...current.filter((item) => item.job_id !== task.job_id),
-      ]);
-    },
-  });
+    }
+  }, [controlsKey, generation, queryClient, tasksQuery.data, tasksQuery.isError]);
 
   useEffect(() => {
     const generation = tracking.generation;
@@ -233,7 +285,10 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
     publishTracking();
   }, [queryClient, tasksQuery.data, tasksQuery.isError, tracking, trackingAttempt]);
 
-  const allTasks = (tasksQuery.data ?? []).filter((task) => !dismissedTaskIds.has(task.job_id) || (placement === "center" && needsAccountCleanup(task)));
+  const listedTasks = tasksQuery.data ?? [];
+  const retainedControls = Object.values(controls).map(control => control.before)
+    .filter(task => !listedTasks.some(current => current.job_id === task.job_id));
+  const allTasks = [...listedTasks, ...retainedControls].filter((task) => !dismissedTaskIds.has(task.job_id) || (placement === "center" && (needsAccountCleanup(task) || controls[task.job_id])));
   const noiseTasks = allTasks.filter((task) => task.job_type === "content_noise_scan" && !["committed", "cancelled"].includes(task.status));
   const tasks = allTasks.filter((task) => task.job_type !== "content_noise_scan" || task.result.cleanup_apply?.status === "COMPLETED");
   const taskRows = completedTask && !dismissedTaskIds.has(completedTask.job_id) && !tasks.some((task) => task.job_id === completedTask.job_id)
@@ -266,7 +321,6 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   const loading = tasksQuery.isLoading || scansQuery.isLoading || checkingTerminal;
   const retryLoading = () => { setTrackingAttempt(value => value + 1); void tasksQuery.refetch(); void scansQuery.refetch(); };
   const count = taskRows.length + scans.length + scanningScans.length + failedScans.length + unboundNoiseCount + (placement === "center" ? emptyScans.length + cancelledScans.length : 0);
-  const pending = retryMutation.isPending || cancelMutation.isPending;
   if (!visibleTask && !noiseTasks.length && !scans.length && !scanningScans.length && !failedScans.length && !loadUnavailable && !checkingTerminal && !forceVisible) return null;
 
   if (placement !== "center") {
@@ -281,10 +335,11 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
   if (placement === "center") {
     const taskRow = (task: BackgroundTaskRead) => (
       <div key={task.job_id} id={`task-row-${task.job_id}`} tabIndex={-1} data-task-row={task.job_type} className="px-4 py-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus)]">
-        <TaskContent task={task} busy={pending}
-          onRetry={() => { if (!pending) retryMutation.mutate(task.job_id); }}
-          onCancel={() => { if (!pending) cancelMutation.mutate(task.job_id); }}
-          onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) ? () => dismissTask(task.job_id) : undefined} />
+        <TaskContent task={task} busy={Boolean(controls[task.job_id])} control={controls[task.job_id]}
+          onCheck={() => { void checkControl(task); }}
+          onRetry={() => { void runControl(task, "retry"); }}
+          onCancel={() => { void runControl(task, "stop"); }}
+          onDismiss={isTerminalTask(task) && !needsAccountCleanup(task) && !controls[task.job_id] ? () => dismissTask(task.job_id) : undefined} />
       </div>
     );
     return (
@@ -309,17 +364,16 @@ export function ImportTaskMonitor({ placement, forceVisible = false }: { placeme
           <p>{trackingError ? (zh ? "有任务的最终结果尚未确认，请重新检查；不会重新提交任务。" : "A task's final result is unconfirmed. Retry checks its status without resubmitting it.") : loadFailed ? (zh ? "任务状态加载失败，已有任务可能仍在运行。" : "Could not load task status. Existing tasks may still be running.") : (zh ? "暂时无法刷新任务状态，当前显示上次结果；最新进度尚未确认。" : "Could not refresh task status. Previous results are shown; current progress is unconfirmed.")}</p>
           <button type="button" disabled={tasksQuery.isFetching || scansQuery.isFetching || checkingTerminal} onClick={retryLoading} className="min-h-11 underline">{zh ? "重试" : "Retry"}</button>
         </div> : null}
-        {actionError ? <p role="alert" className="text-sm text-[var(--danger)]">{actionError}</p> : null}
         {dismissFeedback ? <p ref={dismissFeedbackRef} tabIndex={-1} role="status" className="text-xs text-secondary outline-none">{dismissFeedback}</p> : null}
         {!loading && !loadUnavailable && !count ? <div className="rounded-lg border border-dashed border-ui px-4 py-8 text-center text-sm text-secondary">{t("noActiveTasks")}</div> : null}
-        <TaskSection title={zh ? "处理中" : "In progress"} count={processingTasks.length + Math.max(scanningScans.length, activeNoiseTasks.length)}>{processingTasks.map(taskRow)}<NoiseReviewSummary scans={scanningScans} tasks={activeNoiseTasks} onReview={setReviewScanId} busy={pending} onDismissed={reviewDismissed} /></TaskSection>
-        <TaskSection title={zh ? "失败" : "Failed"} count={failedTasks.length + Math.max(failedScans.length, failedNoiseTasks.length)}>{failedTasks.map(taskRow)}<NoiseReviewSummary scans={failedScans} tasks={failedNoiseTasks} onReview={setReviewScanId} busy={pending} onDismissed={reviewDismissed} /></TaskSection>
+        <TaskSection title={zh ? "处理中" : "In progress"} count={processingTasks.length + Math.max(scanningScans.length, activeNoiseTasks.length)}>{processingTasks.map(taskRow)}<NoiseReviewSummary scans={scanningScans} tasks={activeNoiseTasks} onReview={setReviewScanId} onDismissed={reviewDismissed} /></TaskSection>
+        <TaskSection title={zh ? "失败" : "Failed"} count={failedTasks.length + Math.max(failedScans.length, failedNoiseTasks.length)}>{failedTasks.map(taskRow)}<NoiseReviewSummary scans={failedScans} tasks={failedNoiseTasks} onReview={setReviewScanId} onDismissed={reviewDismissed} /></TaskSection>
         <TaskSection title={zh ? "需要处理" : "Needs attention"} count={scans.length + cleanupTasks.length}>
           {cleanupTasks.map(taskRow)}
-          <NoiseReviewSummary scans={scans} tasks={[]} onReview={setReviewScanId} busy={pending} onDismissed={reviewDismissed} />
+          <NoiseReviewSummary scans={scans} tasks={[]} onReview={setReviewScanId} onDismissed={reviewDismissed} />
         </TaskSection>
-        <TaskSection title={zh ? "已完成" : "Completed"} count={completedTasks.length + emptyScans.length}>{completedTasks.map(taskRow)}<NoiseReviewSummary scans={emptyScans} tasks={allTasks} onReview={setReviewScanId} onDismissed={reviewDismissed} busy={pending} resultsOnly /></TaskSection>
-        <TaskSection title={zh ? "已取消" : "Cancelled"} count={cancelledTasks.length + cancelledScans.length}>{cancelledTasks.map(taskRow)}<NoiseReviewSummary scans={cancelledScans} tasks={allTasks} onReview={setReviewScanId} busy={pending} onDismissed={reviewDismissed} resultsOnly /></TaskSection>
+        <TaskSection title={zh ? "已完成" : "Completed"} count={completedTasks.length + emptyScans.length}>{completedTasks.map(taskRow)}<NoiseReviewSummary scans={emptyScans} tasks={allTasks} onReview={setReviewScanId} onDismissed={reviewDismissed} resultsOnly /></TaskSection>
+        <TaskSection title={zh ? "已取消" : "Cancelled"} count={cancelledTasks.length + cancelledScans.length}>{cancelledTasks.map(taskRow)}<NoiseReviewSummary scans={cancelledScans} tasks={allTasks} onReview={setReviewScanId} onDismissed={reviewDismissed} resultsOnly /></TaskSection>
         {reviewScanId ? <NoiseReviewDialog scanId={reviewScanId} onClose={() => { setReviewScanId(null); void queryClient.invalidateQueries({ queryKey: ["content-cleanup-pending"] }); }} /> : null}
       </div>
     );
@@ -378,19 +432,30 @@ function hasItemFailures(task: BackgroundTaskRead): boolean {
   return Array.isArray(task.result.failed) && task.result.failed.length > 0;
 }
 
-function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy = false }: { busy?: boolean; task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void }) {
+function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCheck, control, busy = false }: { busy?: boolean; task: BackgroundTaskRead; compact?: boolean; onRetry?: () => void; onCancel?: () => void; onDismiss?: () => void; onCheck?: () => void; control?: TaskControl }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const { openImportDialog } = useImportDialog();
   const [userOpen, setUserOpen] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [offlineOpen, setOfflineOpen] = useState(false);
+  const [stopUnconfirmed, setStopUnconfirmed] = useState(false);
+  useEffect(() => {
+    setStopUnconfirmed(false);
+    if (task.status !== "cancelling") return;
+    const requested = task.cancellation_requested_at ? Date.parse(task.cancellation_requested_at) : Date.now();
+    const elapsed = Number.isFinite(requested) ? Math.max(0, Date.now() - requested) : 0;
+    const timer = window.setTimeout(() => setStopUnconfirmed(true), Math.max(0, 30_000 - elapsed));
+    return () => window.clearTimeout(timer);
+  }, [task.job_id, task.status, task.cancellation_requested_at]);
   const offlineTrigger = useRef<HTMLButtonElement>(null);
   const userTrigger = useRef<HTMLButtonElement>(null);
   const accountDelete = task.job_type === "user_account_delete";
   const accountDeleted = accountDelete && task.result.account_deleted === true;
   const cleanupPending = accountDeleted && Number(task.result.asset_cleanup_pending) > 0;
   const failed = task.status === "failed";
+  const exportAdjustment = failed && exportNeedsAdjustment(task.error_message);
+  const analysisAdjustment = task.job_type === "adaptive_import_analysis" && task.failure?.retryable === false;
   const archiveTask = /^(personal|system)_archive_/.test(task.job_type);
   const committed = task.status === "committed";
   const conversationId = taskConversationId(task);
@@ -418,7 +483,7 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
       {source ? <p className="mt-1 break-words text-sm text-primary">{source}</p> : null}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className={failed ? "text-[var(--danger)]" : partial || cleanupPending ? "text-[var(--warning)]" : ""}>{partial ? (zh ? "部分完成" : "Partially completed") : phaseLabel(task, zh)}</span>
-        {validTimestamp ? <time dateTime={timestamp} title={fullActivityTime(timestamp, resolvedLocale)} aria-label={`${zh ? "提交于" : "Submitted"} ${fullActivityTime(timestamp, resolvedLocale)}`} className="tabular-nums">{new Intl.DateTimeFormat(resolvedLocale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).format(new Date(timestamp))}</time> : null}
+        {validTimestamp ? <time dateTime={timestamp} title={fullActivityTime(timestamp, resolvedLocale)} aria-label={`${zh ? "提交于" : "Submitted"} ${fullActivityTime(timestamp, resolvedLocale)}`} className="tabular-nums">{new Intl.DateTimeFormat(resolvedLocale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(timestamp))}</time> : null}
         {task.total_items > 0 && (active || task.total_items > 1) ? <span className="tabular-nums">{task.processed_items} / {task.total_items}</span> : null}
       </div>
       {active ? <div role="progressbar" aria-label={taskTypeLabel(task, zh)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} aria-valuetext={`${phaseLabel(task, zh)} · ${progress}%`} className="mt-2 h-1 overflow-hidden rounded-full bg-subtle">
@@ -433,25 +498,39 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, busy
       {failed ? (
         <div className="mt-2">
           <p className="break-words whitespace-pre-wrap text-[var(--danger)]">{taskFailureMessage(task, zh)}</p>
-          {onRetry && task.job_type !== "context_validation" && task.job_type !== "offline_package" && !archiveUploadRecovery(task) ? (
-            <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex min-h-11 items-center gap-1 font-medium text-[var(--danger)] underline">
+          {onRetry && !exportAdjustment && !analysisAdjustment && task.job_type !== "context_validation" && task.job_type !== "offline_package" && !archiveUploadRecovery(task) ? (
+            <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex min-h-11 min-w-11 items-center gap-1 font-medium text-[var(--danger)] underline">
               <RefreshCw className="h-3.5 w-3.5" /> {zh ? "重试" : "Retry"}
             </button>
           ) : null}
         </div>
       ) : null}
+      {exportAdjustment ? <Link href={conversationId ? `/conversations/${conversationId}` : "/"} onClick={() => window.dispatchEvent(new Event("chat-reader:close-task-center"))} className="inline-flex min-h-11 items-center font-medium text-accent underline">
+        {conversationId ? (zh ? "返回对话调整导出" : "Return to the conversation to adjust export") : (zh ? "返回列表调整导出" : "Return to the list to adjust export")}
+      </Link> : null}
       {cleanupPending && !failed ? <div className="mt-2 text-[var(--warning)]" role="status"><p>{zh ? `账户已删除，仍有 ${Number(task.result.asset_cleanup_pending)} 个文件待清理。` : `Account deleted. ${Number(task.result.asset_cleanup_pending)} files still need cleanup.`}</p>{committed && onRetry ? <button type="button" disabled={busy} onClick={onRetry} className="min-h-11 font-medium underline">{zh ? "重试文件清理" : "Retry file cleanup"}</button> : null}</div> : null}
       {partial ? <p className="mt-2 text-[var(--warning)]" role="status">{zh ? `${completedItems} \u9879\u5b8c\u6210 \u00b7 ${itemFailures} \u9879\u5931\u8d25` : `${completedItems} completed \u00b7 ${itemFailures} failed`}</p> : null}
-      {task.status === "cancelling" ? <p className="mt-2 font-medium text-[var(--warning)]">{zh ? (task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在取消…") : "Cancelling…"}</p> : null}
+      {control ? <div className="mt-2 border-l-2 border-ui pl-3" role="status">
+        <p>{control.state === "pending" ? (zh ? "正在提交操作…" : "Submitting…")
+          : control.state === "checking" ? (zh ? "正在核对原任务…" : "Checking the original task…")
+          : control.state === "rejected" ? (zh ? "服务器未接受本次操作。请刷新任务状态后再选择。" : "The server did not accept this action. Check the current task before choosing again.")
+          : (zh ? "操作结果尚未确认；不会自动重发，也不影响其他任务。" : "The result is unconfirmed. Nothing is resubmitted and other tasks remain available.")}</p>
+        {onCheck && control.state !== "pending" ? <button type="button" disabled={control.state === "checking"} onClick={onCheck} className="min-h-11 font-medium text-accent underline">{zh ? "核对状态" : "Check status"}</button> : null}
+      </div> : null}
+      {task.status === "cancelling" ? <div className="mt-2 text-[var(--warning)]" role="status">
+        <p>{stopUnconfirmed ? (zh ? "停止尚未确认。可以核对状态或处理其他文件，不必退出账户。" : "Stopping is not yet confirmed. Check status or work on other files; signing out is unnecessary.")
+          : (zh ? (task.job_type === "conversation_batch_delete" ? "正在完成当前删除，随后停止后续项目…" : "正在等待安全停止…") : "Waiting for a safe stop…")}</p>
+        {stopUnconfirmed && onCheck && !control ? <button type="button" onClick={onCheck} className="min-h-11 font-medium underline">{zh ? "核对状态" : "Check status"}</button> : null}
+      </div> : null}
       {task.cancellable && task.status !== "cancelling" && onCancel ? (
-        <button type="button" disabled={busy} onClick={onCancel} className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
-          <Ban className="h-3.5 w-3.5" />{(task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? (zh ? "取消归档任务" : "Cancel archive task") : task.job_type === "conversation_batch_delete" ? (zh ? "停止后续删除" : "Stop remaining deletions") : task.job_type === "conversation_merge" ? (zh ? "取消合并" : "Cancel merge") : task.job_type === "offline_package" ? (zh ? "取消服务器生成" : "Cancel server generation") : (zh ? "取消任务" : "Cancel task")}
+        <button type="button" disabled={busy} onClick={onCancel} className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 font-medium text-[var(--danger)] hover:bg-[var(--danger-soft)]">
+          <Ban className="h-3.5 w-3.5" />{task.job_type === "adaptive_import_analysis" ? (zh ? "停止并保留" : "Stop and retain") : (task.job_type.startsWith("personal_archive_") || task.job_type.startsWith("system_archive_")) ? (zh ? "取消归档任务" : "Cancel archive task") : task.job_type === "conversation_batch_delete" ? (zh ? "停止后续删除" : "Stop remaining deletions") : task.job_type === "conversation_merge" ? (zh ? "取消合并" : "Cancel merge") : task.job_type === "offline_package" ? (zh ? "取消服务器生成" : "Cancel server generation") : (zh ? "取消任务" : "Cancel task")}
         </button>
       ) : null}
-      {task.job_type === "adaptive_import_analysis" && typeof task.result.import_id === "string" && task.status !== "cancelled" ? <button type="button" className="mt-2 min-h-11 font-medium text-accent underline underline-offset-2" onClick={() => {
+      {task.job_type === "adaptive_import_analysis" && typeof task.result.import_id === "string" && (task.status !== "cancelled" || task.result.source_retained === true) ? <button type="button" className="mt-2 min-h-11 font-medium text-accent underline underline-offset-2" onClick={() => {
         window.dispatchEvent(new Event("chat-reader:close-task-center"));
         openImportDialog({ resumeImportId: String(task.result.import_id) });
-      }}>{zh ? (committed ? "查看分析结果并继续导入" : "查看导入分析") : (committed ? "Review analysis & continue importing" : "View import analysis")}</button> : null}
+      }}>{task.result.source_retained === true ? (zh ? "查看保留来源并继续" : "Review retained sources & continue") : zh ? (committed ? "查看分析结果并继续导入" : "查看导入分析") : (committed ? "Review analysis & continue importing" : "View import analysis")}</button> : null}
       {accountDelete && !accountDeleted && !committed && typeof task.result.target_user_id === "string" ? <button ref={userTrigger} className="min-h-11 font-medium text-accent underline" onClick={() => setUserOpen(true)}>{zh ? "查看账户与删除状态" : "Review account deletion"}</button> : null}
       {userOpen ? <SettingsFocusedDialog category="admin-users" initialAdminUserId={String(task.result.target_user_id)} onClose={() => setUserOpen(false)} restoreFocus={() => userTrigger.current} /> : null}
       {task.job_type === "offline_package" ? <button ref={offlineTrigger} type="button" className="min-h-11 font-medium text-accent underline underline-offset-2" onClick={() => setOfflineOpen(true)}>{failed ? (zh ? "处理离线下载" : "Resolve offline download") : (zh ? "查看离线下载" : "View offline download")}</button> : null}
@@ -484,7 +563,7 @@ function taskFailureMessage(task: BackgroundTaskRead, zh: boolean): string {
   }
   if (task.job_type === "offline_package") return offlineDownloadFailureMessage(offlineGenerationFailureCode(raw), zh, false);
   if (task.job_type === "context_validation") return zh ? "此流程已停用，请在上下文接续中直接更新文件。" : "This workflow is retired. Update files directly in Context continuation.";
-  if (task.job_type === "conversation_batch_export" || /^(ATTACHMENT|CONTEXT)_EXPORT_/.test(raw)) return batchExportError(raw, zh);
+  if (task.job_type === "conversation_batch_export" || /^(PLAIN|ATTACHMENT|CONTEXT)_EXPORT_/.test(raw)) return batchExportError(raw, zh);
   if (/^(?:personal|system)_archive_/.test(task.job_type)) return archiveError(raw, zh);
 
   const detail = raw.toLocaleLowerCase();
@@ -553,6 +632,7 @@ function taskCompletedItems(task: BackgroundTaskRead): number {
 }
 
 function phaseLabel(task: BackgroundTaskRead, zh: boolean): string {
+  if (task.status === "cancelled" && task.result.source_retained === true) return zh ? "已停止 · 来源保留" : "Stopped · sources retained";
   if (task.phase === "waiting_resources") return zh ? "等待可用资源" : "Waiting for resources";
   if (task.phase === "resource_paused") return zh ? "资源等待已暂停" : "Resource wait paused";
   if (task.job_type === "conversation_batch_export" && task.status === "processing") {
@@ -662,6 +742,8 @@ function taskFormatLabel(task: BackgroundTaskRead, zh: boolean): string | null {
     cr_v2: ".cr",
     context_package: ".context.zip",
     markdown_bundle: zh ? "Markdown · 含附件" : "Markdown · attachments",
+    markdown_v2: zh ? "Markdown · 单文件 ZIP" : "Markdown · single-file ZIP",
+    canjson_v2: zh ? "CanJSON · 单文件 ZIP" : "CanJSON · single-file ZIP",
     canjson_bundle: zh ? "CanJSON · 含附件" : "CanJSON · attachments",
     canjson_batch: "CanJSON ZIP",
     attachments_zip: "ZIP",

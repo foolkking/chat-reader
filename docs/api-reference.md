@@ -1,5 +1,24 @@
 # API 参考
 
+## 来源调整与可恢复分析 — 2026-11-10 未发布候选
+
+Session GET 可选 `sources[]` 包含原始来源身份、文件名、扩展名、大小及
+服务端递增的 `source_revision`，不暴露存储路径；旧响应仍可读取。
+替换 PUT 在 FAILED/PAUSED 时要求 `expected_updated_at`。同一附件的版本
+增长可供旧同步路径核对丢失的响应，单纯会话时间变化不能证明替换成功。
+
+新增 `DELETE /api/adaptive-import/sessions/{id}/artifacts/{artifact}`：
+JSON `{expected_updated_at}`，明确从本次批次排除整份原始来源。
+允许可编辑审阅态及FAILED/PAUSED；拒绝最后一份、派生ZIP文档、过期版本、
+其他owner、活动分析及canonical提交状态。启用worker时返回202及新任务，
+旧同步路径返回200。剩余来源重新校验，仍需审阅整批并显式提交；不删除
+用户本机文件，不允许跳过ZIP中的危险条目后伪装完整导入。
+暂存文件在外层事务提交后才清理；失败/回滚保留旧数据。
+该排除操作的v1草稿也使用独立文件发布；旧草稿不被未提交操作覆盖，
+COMMIT回执丢失时保留可能已发布的文件并返回待核对结果。
+未知结果只读核对，不自动重发。详见
+[导入合同](system/ADAPTIVE_IMPORT_CONTRACT.md)；没有migration或发布动作。
+
 ## 有界 ZIP 后台操作 — 2026-11-09 已发布
 
 精确 `d61b9c6` / CI `42522644855` 已通过完整门禁与独立部署复核，
@@ -1479,3 +1498,16 @@ No production rollout is implied.
 - Attachment batch download: same key/normalized selection returns the original
   job across statuses; a different conversation/selection is 409. Retry failed
   tasks or regenerate expired artifacts through their existing explicit actions.
+# Unreleased ordinary-export recovery — 2026-11-10
+
+- `POST /api/conversations/{id}/exports?background=true`: existing
+  `ExportRequest` for `markdown_v2`/`canjson_v2` plus required stable
+  `Idempotency-Key`; returns202 task instead of a direct body. Output is a
+  single-file ZIP with the exact validated ordinary-file options. Without the
+  query flag, the existing synchronous contract remains.
+- `GET /api/conversations/{id}/exports/by-request/{key}`: owner-scoped no-store
+  `{task: BackgroundTaskRead | null}`; does not queue, retry or extend expiry.
+  A null receipt is not proof that an earlier in-flight request failed.
+- Same-key conversation exports compare original options and reuse terminal
+  as well as active receipts. Different intent returns409. Native artifact
+  delivery/regeneration/lease endpoints are unchanged; no migration.

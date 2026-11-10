@@ -1,0 +1,666 @@
+{
+  "scope": "Production Task Center + React Query; synthetic network/account/secondary-dialog adapters",
+  "results": [
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "light",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 48,
+            "height": 44,
+            "left": 29,
+            "right": 77
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 29,
+            "right": 101
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 29,
+            "right": 73
+          },
+          {
+            "width": 48,
+            "height": 44,
+            "left": 43,
+            "right": 91
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 29,
+            "right": 101
+          }
+        ]
+      },
+      "screenshot": "tasks-375-zh-CN-light.png"
+    },
+    {
+      "width": 375,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 48,
+            "height": 44,
+            "left": 29,
+            "right": 77
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 29,
+            "right": 101
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 29,
+            "right": 73
+          },
+          {
+            "width": 48,
+            "height": 44,
+            "left": 43,
+            "right": 91
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 29,
+            "right": 101
+          }
+        ]
+      },
+      "screenshot": "tasks-375-zh-CN-dark.png"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "light",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 29,
+            "right": 101.40625
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 29,
+            "right": 147.359375
+          },
+          {
+            "width": 48.21875,
+            "height": 44,
+            "left": 29,
+            "right": 77.21875
+          },
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 43,
+            "right": 115.40625
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 29,
+            "right": 147.359375
+          }
+        ]
+      },
+      "screenshot": "tasks-375-en-US-light.png"
+    },
+    {
+      "width": 375,
+      "locale": "en-US",
+      "theme": "dark",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 29,
+            "right": 101.40625
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 29,
+            "right": 147.359375
+          },
+          {
+            "width": 48.21875,
+            "height": 44,
+            "left": 29,
+            "right": 77.21875
+          },
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 43,
+            "right": 115.40625
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 302,
+            "right": 346
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 29,
+            "right": 147.359375
+          }
+        ]
+      },
+      "screenshot": "tasks-375-en-US-dark.png"
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "light",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 48,
+            "height": 44,
+            "left": 69,
+            "right": 117
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 69,
+            "right": 141
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 69,
+            "right": 113
+          },
+          {
+            "width": 48,
+            "height": 44,
+            "left": 83,
+            "right": 131
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 69,
+            "right": 141
+          }
+        ]
+      },
+      "screenshot": "tasks-800-zh-CN-light.png"
+    },
+    {
+      "width": 800,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 48,
+            "height": 44,
+            "left": 69,
+            "right": 117
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 69,
+            "right": 141
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 69,
+            "right": 113
+          },
+          {
+            "width": 48,
+            "height": 44,
+            "left": 83,
+            "right": 131
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 69,
+            "right": 141
+          }
+        ]
+      },
+      "screenshot": "tasks-800-zh-CN-dark.png"
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "light",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 69,
+            "right": 141.40625
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 69,
+            "right": 187.359375
+          },
+          {
+            "width": 48.21875,
+            "height": 44,
+            "left": 69,
+            "right": 117.21875
+          },
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 83,
+            "right": 155.40625
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 69,
+            "right": 187.359375
+          }
+        ]
+      },
+      "screenshot": "tasks-800-en-US-light.png"
+    },
+    {
+      "width": 800,
+      "locale": "en-US",
+      "theme": "dark",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 69,
+            "right": 141.40625
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 69,
+            "right": 187.359375
+          },
+          {
+            "width": 48.21875,
+            "height": 44,
+            "left": 69,
+            "right": 117.21875
+          },
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 83,
+            "right": 155.40625
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 687,
+            "right": 731
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 69,
+            "right": 187.359375
+          }
+        ]
+      },
+      "screenshot": "tasks-800-en-US-dark.png"
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "light",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 48,
+            "height": 44,
+            "left": 389,
+            "right": 437
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 389,
+            "right": 461
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 389,
+            "right": 433
+          },
+          {
+            "width": 48,
+            "height": 44,
+            "left": 403,
+            "right": 451
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 389,
+            "right": 461
+          }
+        ]
+      },
+      "screenshot": "tasks-1440-zh-CN-light.png"
+    },
+    {
+      "width": 1440,
+      "locale": "zh-CN",
+      "theme": "dark",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 48,
+            "height": 44,
+            "left": 389,
+            "right": 437
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 389,
+            "right": 461
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 389,
+            "right": 433
+          },
+          {
+            "width": 48,
+            "height": 44,
+            "left": 403,
+            "right": 451
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 72,
+            "height": 44,
+            "left": 389,
+            "right": 461
+          }
+        ]
+      },
+      "screenshot": "tasks-1440-zh-CN-dark.png"
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "light",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 389,
+            "right": 461.40625
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 389,
+            "right": 507.359375
+          },
+          {
+            "width": 48.21875,
+            "height": 44,
+            "left": 389,
+            "right": 437.21875
+          },
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 403,
+            "right": 475.40625
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 389,
+            "right": 507.359375
+          }
+        ]
+      },
+      "screenshot": "tasks-1440-en-US-light.png"
+    },
+    {
+      "width": 1440,
+      "locale": "en-US",
+      "theme": "dark",
+      "writes": 2,
+      "taskReads": 1,
+      "geometry": {
+        "overflow": 0,
+        "actions": [
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 389,
+            "right": 461.40625
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 389,
+            "right": 507.359375
+          },
+          {
+            "width": 48.21875,
+            "height": 44,
+            "left": 389,
+            "right": 437.21875
+          },
+          {
+            "width": 72.40625,
+            "height": 44,
+            "left": 403,
+            "right": 475.40625
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 44,
+            "height": 44,
+            "left": 1007,
+            "right": 1051
+          },
+          {
+            "width": 118.359375,
+            "height": 44,
+            "left": 389,
+            "right": 507.359375
+          }
+        ]
+      },
+      "screenshot": "tasks-1440-en-US-dark.png"
+    }
+  ],
+  "errors": []
+}

@@ -10,6 +10,17 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
 
+test("unfinished import states explain the next step in both locales without raw internal enums", () => {
+  const exports = {};
+  new Function("require", "exports", compiled)(() => ({}), exports);
+  for (const state of ["COLLECTING", "ANALYZING", "CANCELING", "PAUSED", "NEEDS_GROUPING", "RESOLVING", "READY", "IMPORTING", "COMPLETED", "BLOCKED", "FAILED", "CANCELED"]) {
+    for (const zh of [false, true]) assert.notEqual(exports.importStateLabel(state, zh), state);
+  }
+  assert.match(exports.importStateLabel("READY", false), /review/i);
+  assert.match(exports.importStateLabel("PAUSED", true), /来源保留/);
+  assert.equal(exports.importStateLabel("FUTURE_STATE", false), "Check status");
+});
+
 function formatter(locale) {
   const exports = {};
   new Function("require", "exports", compiled)(name => {
@@ -32,6 +43,26 @@ for (const locale of ["zh-CN", "en-US"]) test(`${locale}: missing ZIP warning re
   assert.equal(tr("已导入，部分附件缺失"), locale === "zh-CN" ? "已导入，部分附件缺失" : "Imported with missing attachments");
   assert.doesNotMatch(exports.importErrorMessage("MARKDOWN_RESOURCE_MISSING", tr), /已导入|Imported with/);
   assert.equal(exports.importWarningMessage("Unrelated preserved warning", tr), "Unrelated preserved warning");
+});
+
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: ZIP body-link warning and member errors explain different recovery paths`, () => {
+  const exports = {};
+  new Function("require", "exports", compiled)(name => name === "react"
+    ? { useCallback: callback => callback }
+    : { usePreferences: () => ({ resolvedLocale: locale }) }, exports);
+  const tr = exports.useImportCopy(), zh = locale === "zh-CN";
+  const warning = exports.importWarningMessage("ZIP blocked references: 2. Link text is retained.", tr);
+  assert.match(warning, /2/);
+  assert.match(warning, zh ? /可正常导入/ : /can be imported/);
+  const failure = exports.importFailureMessage({
+    code: "ZIP_PATH_UNSAFE", details: { entry_index: 4, reason: "parent_segment" },
+  }, null, "analysis", zh);
+  assert.match(failure, /4/);
+  assert.match(failure, zh ? /上级目录/ : /parent segment/);
+  assert.match(failure, zh ? /修正.*相对路径/ : /Correct.*relative path/);
+  assert.doesNotMatch(failure, zh ? /重新导出标准/ : /Export a standard ZIP/);
+  assert.match(exports.importFailureMessage({ code: "ZIP_MEMBER_UNSUPPORTED", details: { reason: "encrypted" } }, null, "analysis", zh),
+    zh ? /未加密/ : /unencrypted/);
 });
 
 const messages = {

@@ -1,5 +1,36 @@
 # Project State
 
+## Unreleased recovery work — 2026-11-10
+
+Working tree only: safe ZIP body-reference recovery with explicit verified-member
+bindings; retained analysis stop/resume; fresh import entry; finite control reads
+and per-task unknown-result reconciliation; execution/heartbeat/lease fencing.
+Selection order now covers recognition/validation/draft passes; JSON/mixed
+worker analysis admits the current unit rather than aggregate source bytes.
+Failed/paused sessions expose version-guarded source replacement; bounded
+resource waiting includes JSON. Independent format-invalid ZIPs remain blocking
+review units, while security/integrity failures still abort. Table actions now
+use a quiet icon rail, lazy safe export/Markdown recovery and correct inline
+CSV parsing; table/image success feedback is transient without body reflow.
+Editable pre-upload lists and explicit whole-source exclusion now preserve
+selection order and require a fresh review; source revisions reconcile legacy
+replacement acknowledgements too. Offline downloads now retain per-conversation
+outcomes, pause the queue for shared failures and offer unfinished-only retries
+or explicit reduced attachment choices. The real browser/Dexie recovery matrix
+passes locally. Ordinary exports now offer same-option background recovery and
+read-only receipt checks; copy/citation/bookmark success presentation expires
+without discarding recovery data. Export API/PostgreSQL and component-browser
+checks pass locally. Reading-density cleanup and scoped recovery review are
+implemented; lint/typecheck and 2,239 Web Node tests pass. The latest boundary
+API sweep passes 190 with 4 Windows-only skips. After an initial capacity
+refusal, a fresh capacity check admitted an isolated source-hashed Next build,
+which passed. Exact-source CI/PWA/stability/memory gates remain required
+before release.
+No CI/commit/push/deployment for this candidate.
+[Implementation and validation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
+[Scoped completion review](docs/execution/ux-audit-recoverable-operations-2026-11-10.md).
+The deployed source/schema and user-owned historical evidence below are unchanged.
+
 ## Current release — reading interaction / missing ZIP assets — 2026-11-09
 
 Application **`865b0a6e381bb3d5c2afba06b5c3aa4c59a61092`**, full CI
