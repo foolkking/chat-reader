@@ -114,6 +114,21 @@ failure cannot roll back proof that the process is alive. A replaced instance
 cannot overwrite the current instance row and stops claiming new tasks after
 detecting replacement.
 
+Worktree follow-up (2026-11-11, not deployed): housekeeping has one independent
+single-flight thread in that same worker process. Successful current-worker
+pulses request a pass; pulses while maintenance is running do not queue more
+work. Shutdown, known supersession or worker-heartbeat failure prevents new
+passes/items. Stopping uses a bounded join; an already-entered filesystem call
+can still finish. No second user job is admitted.
+
+Each pass has a 2-second cooperative budget and at most 20 export/20 expired
+frozen-Share rows. The first family alternates to avoid starvation; exceptions
+are isolated by family and log only category/class. PostgreSQL heartbeat and
+maintenance transactions use `SET LOCAL statement_timeout = '1500ms'` and
+`lock_timeout = '250ms'`; neither leaks to later pooled transactions. These are
+statement/cooperative limits, not promises to interrupt every OS or connection
+operation within two seconds. Expired Share selection skips locked Share rows.
+
 Diagnostics derives these server-time states:
 
 ```text
@@ -237,7 +252,8 @@ metrics database remain out of scope.
 Root-only `GET /api/admin/runtime-status` adds the bounded `export_cleanup`
 aggregate for expired/released temporary exports, including pending bytes/counts
 and retry failures. Unavailable metrics remain unavailable rather than zero.
-The existing worker heartbeat performs bounded reclamation while a user job runs;
+The existing worker requests bounded, single-flight reclamation independently
+of its heartbeat and one user job (2026-11-11 worktree follow-up);
 reading runtime status never deletes files or extends a download deadline.
 No filenames, artifact IDs or source content are exposed by this metric. The
 loopback diagnostics boundary remains unchanged.

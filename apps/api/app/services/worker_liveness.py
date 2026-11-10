@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -13,6 +14,7 @@ from app.core.observability import structured_event
 from app.models.background_job import BackgroundJob
 from app.models.import_record import ImportRecord
 from app.models.worker_runtime_state import WorkerRuntimeState
+from app.services.worker_maintenance import bound_worker_transaction
 
 PRIMARY_WORKER_KEY = "primary"
 ACTIVE_JOB_STATUSES = ("processing", "cancelling")
@@ -139,6 +141,10 @@ class WorkerHeartbeatReporter:
         self._stop_event = threading.Event()
         self._wait = wait or self._stop_event.wait
         self._maintenance = maintenance
+        self._maintenance_wake = threading.Event()
+        self._maintenance_lock = threading.Lock()
+        self._maintenance_running = False
+        self._maintenance_thread: threading.Thread | None = None
         self._state_lock = threading.Lock()
         self._publish_lock = threading.Lock()
         self._state = "idle"
@@ -156,7 +162,14 @@ class WorkerHeartbeatReporter:
         return self._superseded
 
     def start(self) -> None:
+        if self._thread is not None or self._stop_event.is_set():
+            return
         self.pulse()
+        if self._maintenance is not None and not self._superseded:
+            self._maintenance_thread = threading.Thread(
+                target=self._run_maintenance, name="worker-maintenance", daemon=True,
+            )
+            self._maintenance_thread.start()
         self._thread = threading.Thread(target=self._run, name="worker-heartbeat", daemon=True)
         self._thread.start()
         structured_event(
@@ -168,8 +181,16 @@ class WorkerHeartbeatReporter:
 
     def stop(self) -> None:
         self._stop_event.set()
-        if self._thread is not None:
-            self._thread.join(timeout=max(1.0, self.interval_seconds))
+        self._maintenance_wake.set()
+        deadline = time.monotonic() + max(1.0, self.interval_seconds)
+        for thread in (self._thread, self._maintenance_thread):
+            if thread is not None and thread is not threading.current_thread():
+                thread.join(timeout=max(0.0, deadline - time.monotonic()))
+
+    @property
+    def maintenance_allowed(self) -> bool:
+        return (self._registered and not self._superseded
+                and not self._worker_failure_active and not self._stop_event.is_set())
 
     def set_busy(self, task_kind: str, task_id: uuid.UUID, *, execution: TaskExecution | None = None) -> bool:
         with self._state_lock:
@@ -201,6 +222,7 @@ class WorkerHeartbeatReporter:
                 execution = self._execution
             try:
                 with self._session_factory() as db:
+                    bound_worker_transaction(db)
                     if not self._registered:
                         register_worker(db, instance_id=self.instance_id, now=now)
                         if state == "busy":
@@ -241,6 +263,7 @@ class WorkerHeartbeatReporter:
             if state == "busy" and task_kind is not None and task_id is not None:
                 try:
                     with self._session_factory() as task_db:
+                        bound_worker_transaction(task_db)
                         refresh_active_task_heartbeat(
                             task_db,
                             task_kind=task_kind,
@@ -269,8 +292,29 @@ class WorkerHeartbeatReporter:
                 if self._superseded:
                     return
                 continue
-            if self._maintenance is not None:
-                try:
+            if self._maintenance is not None and self.maintenance_allowed:
+                with self._maintenance_lock:
+                    # Coalesce idle requests; never queue another pass behind
+                    # a slow one or run filesystem work on the heartbeat lane.
+                    if not self._maintenance_running:
+                        self._maintenance_wake.set()
+
+    def _run_maintenance(self) -> None:
+        while True:
+            self._maintenance_wake.wait()
+            with self._maintenance_lock:
+                self._maintenance_wake.clear()
+                if self._stop_event.is_set() or self._superseded:
+                    return
+                if not self.maintenance_allowed:
+                    continue
+                self._maintenance_running = True
+            try:
+                if self._maintenance is not None and self.maintenance_allowed:
                     self._maintenance()
-                except Exception as exc:
-                    structured_event(logger, logging.WARNING, "worker_export_maintenance_failed", error_class=type(exc).__name__)
+            except Exception as exc:
+                structured_event(logger, logging.WARNING, "worker_export_maintenance_failed",
+                                 error_class=type(exc).__name__)
+            finally:
+                with self._maintenance_lock:
+                    self._maintenance_running = False

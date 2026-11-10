@@ -6,6 +6,7 @@ No archive upload or canonical/offline object is eligible for this lifecycle.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 import stat
 import uuid
@@ -252,12 +253,18 @@ def _safe_file(db, artifact, root: Path) -> Path:
     return path
 
 
-def reclaim_exports(factory, root: Path, *, now=None, limit=20) -> dict:
+def reclaim_exports(factory, root: Path, *, now=None, limit=20,
+                    should_continue: Callable[[], bool] | None = None) -> dict:
     """Bounded maintenance, callable while the worker is busy with a long job."""
     timestamp = now or now_utc()
     root = root.resolve()
     counts = {"reclaimed": 0, "bytes": 0, "failed": 0, "deferred": 0}
+    permitted = should_continue or (lambda: True)
+    if not permitted():
+        return counts
+    from app.services.worker_maintenance import bound_worker_transaction
     with factory() as db:
+        bound_worker_transaction(db)
         # Exclude occupied rows before LIMIT so large numbers of slow downloads
         # cannot starve other expired artifacts. _eligible rechecks under lock.
         active_download = select(ExportArtifactLease.id).where(
@@ -272,21 +279,34 @@ def reclaim_exports(factory, root: Path, *, now=None, limit=20) -> dict:
             or_(ExportArtifact.retry_at.is_(None), ExportArtifact.retry_at <= timestamp), ~active_download,
         ).order_by(ExportArtifact.expires_at, ExportArtifact.id).limit(min(max(limit, 1), 100))))
     for artifact_id in ids:
+        if not permitted():
+            break
         with factory() as db:
+            bound_worker_transaction(db)
             artifact = db.scalar(select(ExportArtifact).where(ExportArtifact.id == artifact_id).with_for_update(skip_locked=True))
             if artifact is None or not _eligible(db, artifact, timestamp):
                 counts["deferred"] += 1
                 continue
             artifact.lifecycle_state = "reclaiming"
             db.commit()
+        if not permitted():
+            counts["deferred"] += 1
+            break
         with factory() as db:
+            bound_worker_transaction(db)
             artifact = db.scalar(select(ExportArtifact).where(ExportArtifact.id == artifact_id).with_for_update(skip_locked=True))
             if artifact is None or not _eligible(db, artifact, timestamp):
                 counts["deferred"] += 1
                 continue
+            if not permitted():
+                counts["deferred"] += 1
+                break
             try:
                 path = _safe_file(db, artifact, root)
                 existed = path.exists()
+                if not permitted():
+                    counts["deferred"] += 1
+                    break
                 path.unlink(missing_ok=True)
             except (OSError, ValueError) as exc:
                 artifact.lifecycle_state = "retry"

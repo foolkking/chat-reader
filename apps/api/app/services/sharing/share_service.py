@@ -1243,10 +1243,17 @@ def resolve_frozen_locator(
     }
 
 
-def reclaim_expired_frozen_snapshots(session_factory, *, now: datetime | None = None, limit: int = 500) -> int:
+def reclaim_expired_frozen_snapshots(
+    session_factory, *, now: datetime | None = None, limit: int = 500, should_continue=None,
+) -> int:
     """Remove frozen payload bytes shortly after access expiry using a bounded batch."""
     current = now or _utc_now()
+    permitted = should_continue or (lambda: True)
+    if not permitted():
+        return 0
+    from app.services.worker_maintenance import bound_worker_transaction
     with session_factory() as db:
+        bound_worker_transaction(db)
         expired_ids = db.query(ShareSnapshot.share_id).join(
             Share,
             Share.id == ShareSnapshot.share_id,
@@ -1254,8 +1261,10 @@ def reclaim_expired_frozen_snapshots(session_factory, *, now: datetime | None = 
             Share.content_mode == "frozen",
             Share.expires_at.is_not(None),
             Share.expires_at <= current,
-        ).order_by(Share.expires_at.asc(), Share.id.asc()).limit(limit).with_for_update(of=Share).all()
+        ).order_by(Share.expires_at.asc(), Share.id.asc()).limit(min(max(limit, 1), 500)).with_for_update(of=Share, skip_locked=True).all()
         ids = [row[0] for row in expired_ids]
+        if not permitted():
+            return 0
         if ids:
             db.query(ShareSnapshot).filter(ShareSnapshot.share_id.in_(ids)).delete(synchronize_session=False)
         db.commit()

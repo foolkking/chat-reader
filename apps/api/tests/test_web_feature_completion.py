@@ -103,6 +103,12 @@ def test_expired_frozen_payload_is_reclaimed_and_cannot_be_reenabled(auth_client
         db.get(Share, UUID(created["id"])).expires_at = now - timedelta(seconds=1)
         db.commit()
     assert auth_client.get(f"/api/shared/{created['token']}").status_code == 410
+    permitted = iter([True, False])
+    assert reclaim_expired_frozen_snapshots(
+        auth_middleware.SessionLocal, now=now, should_continue=lambda: next(permitted),
+    ) == 0
+    with auth_middleware.SessionLocal() as db:
+        assert db.get(ShareSnapshot, UUID(created["id"])) is not None
     assert reclaim_expired_frozen_snapshots(auth_middleware.SessionLocal, now=now) == 1
     assert reclaim_expired_frozen_snapshots(auth_middleware.SessionLocal, now=now) == 0
     assert auth_client.patch(f"/api/shares/{created['id']}", json={"expires_at": (now + timedelta(days=1)).isoformat()}).status_code == 409

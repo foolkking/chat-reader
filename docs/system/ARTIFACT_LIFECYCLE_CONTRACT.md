@@ -144,8 +144,15 @@ accepts its optional `claim` parameter and upgrades it to an active transfer.
 Without a claim, the old authenticated download route still acquires a real
 transfer lease. No status request can keep an expired artifact alive.
 
-The existing worker's heartbeat runs bounded reclamation while its one user job
-may be busy. Rows transition active → reclaiming → reclaimed, or retry after an
+The existing worker runs bounded reclamation while its one user job may be busy.
+The 2026-11-11 worktree follow-up separates this single-flight housekeeping lane
+from heartbeat publication; it does not add user-task concurrency. A pass has a
+2-second cooperative budget, at most20 exports and20 expired frozen Shares,
+alternating priority, with transaction-local PostgreSQL statement/lock deadlines.
+Stop/budget checks before the next item/unlink leave durable `reclaiming` state
+for later reconciliation, not false success. In-flight OS calls cannot be
+forcibly canceled. See [liveness](OBSERVABILITY_CONTRACT.md#worker-liveness).
+Rows transition active → reclaiming → reclaimed, or retry after an
 unlink failure. Physical deletion only targets the checked job-owned export file;
 restore uploads and canonical/offline data are excluded. Task rows persist for
 regeneration. `POST .../regenerate` accepts Idempotency-Key and re-admits original

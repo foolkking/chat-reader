@@ -1,5 +1,17 @@
 # Project State
 
+## Ongoing small-host improvements — 2026-11-11 (not deployed)
+
+Block A separates single-flight housekeeping from worker heartbeats without
+increasing user-job concurrency. Local synthetic/real-PostgreSQL checks:
+121 passed, four Windows POSIX-signal skips; full exact-source CI pending.
+Queue/source-cleanup, Reader and minimal administrator follow-ups continue.
+[Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
+[execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
+The latest user instruction allows major-block commits/CI without waiting;
+inspect the preceding CI before each dispatch. No new deployment, schedule
+or production deletion is authorized. Production remains3564cbf below.
+
 ## Current release — recoverable operations — 2026-11-11
 
 Application **`3564cbfdc1157cddcec53e85462b8e0a410fc4a2`**, exact CI

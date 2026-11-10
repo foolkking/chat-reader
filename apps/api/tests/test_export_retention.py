@@ -45,6 +45,23 @@ def test_status_missing_file_offers_regeneration_without_claiming_reclaimed(expo
         assert row.lifecycle_state == "active"
 
 
+def test_interrupted_reclaim_leaves_durable_state_and_can_resume(exports):
+    factory, root, make, _ = exports
+    identity, path, _ = make(expires=NOW - timedelta(seconds=1))
+
+    def permitted():
+        with factory() as db:
+            return db.get(ExportArtifact, identity).lifecycle_state != "reclaiming"
+
+    result = reclaim_exports(factory, root, now=NOW, should_continue=permitted)
+    assert result == {"reclaimed": 0, "bytes": 0, "failed": 0, "deferred": 1}
+    assert path.read_bytes() == BODY
+    with factory() as db:
+        assert db.get(ExportArtifact, identity).lifecycle_state == "reclaiming"
+    assert reclaim_exports(factory, root, now=NOW)["reclaimed"] == 1
+    assert not path.exists()
+
+
 @pytest.fixture
 def exports(tmp_path, monkeypatch):
     root = tmp_path / "exports"
@@ -360,16 +377,27 @@ def test_real_slow_response_crosses_deadline_without_losing_download_bytes(expor
 
 
 def test_busy_worker_heartbeat_reclaims_exports_without_finishing_user_job(exports):
+    import threading
     from app.services.worker_liveness import WorkerHeartbeatReporter
     factory, root, make, _ = exports
     identity, path, _ = make()
     _, active_path, active_job = make(status="processing")
     waits = iter((False, True))
     results = []
+    completed = threading.Event()
+
+    def maintenance():
+        results.append(reclaim_exports(factory, root, now=NOW + timedelta(days=1)))
+        completed.set()
+
     reporter = WorkerHeartbeatReporter(interval_seconds=15, session_factory=factory,
-        wait=lambda _: next(waits), maintenance=lambda: results.append(reclaim_exports(factory, root, now=NOW + timedelta(days=1))))
+        wait=lambda _: next(waits), maintenance=maintenance)
     assert reporter.set_busy("job", active_job)
-    reporter._run()
+    reporter.start()
+    try:
+        assert completed.wait(3), "The worker did not run its independent cleanup lane."
+    finally:
+        reporter.stop()
     assert results[0]["reclaimed"] == 1 and not path.exists()
     assert active_path.is_file()
     with factory() as db:
