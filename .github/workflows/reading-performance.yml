@@ -61,7 +61,9 @@ jobs:
             git cat-file -e "$READER_DIAGNOSTIC_REF^{commit}"
             candidate="$READER_DIAGNOSTIC_REF"
             export E2E_READER_CAPACITY_PROFILE=1
-            diagnostic_args=(--grep '^plain 10000 messages:')
+            # Playwright grep matches the file-prefixed full title, not just
+            # the test title; a leading ^ would silently select no cases.
+            diagnostic_args=(--grep 'plain 10000 messages:')
             printf 'diagnostic-only; not release acceptance\n' > "$RUNNER_TEMP/reading-comparison/diagnostic-only.txt"
           fi
           baseline=43a714f2c13f6e6573eb02916c8ff8f78dd2d82e
@@ -87,6 +89,11 @@ jobs:
             git checkout --detach "$ref"
             # Apply only the identical measurement harness, never candidate app code.
             cp "$RUNNER_TEMP/reading-comparison/harness.ts" apps/web/e2e/reader-capacity.spec.ts
+            if [ -n "$READER_DIAGNOSTIC_REF" ]; then
+              pnpm --filter web exec playwright test --config=playwright.config.ts e2e/reader-capacity.spec.ts --list "${diagnostic_args[@]}" \
+                | tee "$RUNNER_TEMP/reading-comparison/$phase-selection.txt"
+              grep -q 'Total: 1 test in 1 file' "$RUNNER_TEMP/reading-comparison/$phase-selection.txt"
+            fi
             export IMPORT_STORAGE_DIR="$RUNNER_TEMP/perf-$phase/imports"
             export EXPORT_STORAGE_DIR="$RUNNER_TEMP/perf-$phase/exports"
             export OFFLINE_STORAGE_DIR="$RUNNER_TEMP/perf-$phase/offline"
