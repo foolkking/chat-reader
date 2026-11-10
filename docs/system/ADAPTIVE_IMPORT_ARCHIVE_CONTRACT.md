@@ -1,10 +1,12 @@
 # Adaptive Import ZIP Contract
 
-## Unreleased recovery extension — 2026-11-10
+## Recovery extension — released 2026-11-11
 
-Working-tree behavior only; the deployed revision below is unchanged. Evidence
-and unfinished broader recovery work are in the
-[implementation ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
+Exact `3564cbf` / CI `42828329240` is deployed with unchanged schema0060.
+The [release receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md)
+records independent artifact acceptance, all five real-memory cases and
+runtime verification limits. The [implementation ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md)
+retains earlier failed and pending checkpoints without relabelling them passes.
 
 Archive member paths and body links have different authority. Unsafe actual
 members and manifest declarations still fail validation; a body link which
@@ -47,8 +49,8 @@ resource exceptions are not swallowed by this isolation. All-ZIP directory
 preflight occurs immediately before each archive inspection; commit retains
 its source checks. JSON/mixed batches do not inherit the pure-ZIP memory lane.
 
-Status synchronized **2026-11-09**: exact source `865b0a6` passed full CI
-`42594459199` and independent artifact/runtime acceptance, and is deployed
+Historical acceptance **2026-11-09**: exact source `865b0a6` passed full CI
+`42594459199` and independent artifact/runtime acceptance, and was deployed
 with single head/current `20261108_0060`. The disk-backed extension and retained
 small-ZIP path passed all five real-memory synthetic cases without changing
 the 64-MiB workspace-growth limit. See the

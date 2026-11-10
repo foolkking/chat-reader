@@ -1,8 +1,10 @@
 # Task And Offline Retention Contract
 
-Last reviewed locally: 2026-10-09. Accepted production is 30a0d32/0050;
-see [Project State](../../PROJECT_STATE.md). The merge-admission addition below
-is local-only and not part of that production acceptance.
+Last reviewed: **2026-11-11**, deployed `3564cbf`, schema `20261108_0060`.
+See [Project State](../../PROJECT_STATE.md) and the
+[approved cleanup receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
+Task visibility, draft admission expiry and physical source retention are
+separate policies; none implies a general scheduled purge.
 
 ## Scope
 
@@ -16,9 +18,9 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 
 | Object | Current window | What expiry/replacement means |
 | --- | --- | --- |
-| Staged adaptive-import source (local-only) | Retained while initial analysis is queued/processing; retained after analysis failure for same-task retry; removed after explicit queued cancellation or worker-acknowledged processing cancellation | This is temporary source for the current import session, not a completed-task archive. Successful commit and existing import-session cleanup rules own later removal. Closing the Web dialog does not cancel the task or delete staged source. The generic BackgroundJob terminal result remains subject to the normal task visibility window. |
+| Staged adaptive-import source | Retained while queued/processing and after failure or an acknowledged retain-stop (`PAUSED`) | Explicit resume verifies source/version; separate confirmed disposal uses post-commit cleanup. Legacy cancellation without retention keeps its disposal behavior. Closing the dialog, choosing new files, a draft expiry or Task Center expiry does not delete retained sources. Successful imports currently retain their source files; there is no general automatic source-retention purge. |
 | Terminal Task Center result | `TASK_TERMINAL_RESULT_RETENTION_SECONDS`, default 600 seconds; accepted range 60 seconds to 24 hours | `/api/tasks/active` may return committed, failed, or cancelled jobs/imports completed inside this window so users can reopen a result after navigation or refresh. Falling outside the window removes it from this active-result view; it does not create or promise a permanent task history. |
-| Merge admission receipt (local-only) | While its owned `BackgroundJob` exists; not limited by the terminal-result window | Read-only request lookup and same-key replay return the original task across statuses, including failed/cancelled. This creates no permanent history UI, new retention promise or automatic retry. |
+| Merge admission receipt | While its owned `BackgroundJob` exists; not limited by the terminal-result window | Read-only request lookup and same-key replay return the original task across statuses, including failed/cancelled. This creates no permanent history UI, new retention promise or automatic retry. |
 | Completed account deletion with pending file cleanup | Until cleanup completes | Canonical deletion remains committed. `/api/tasks/active` includes a separate bounded window of up to 20 pending cleanup results beyond terminal retention, without consuming the active-job limit. Tasks groups them under Needs attention and retries only remaining cleanup; file keys stay in the worker payload. This is unfinished work, not a permanent completed-task history. |
 | Temporary user-facing Export | Successful publication pins the Root policy: default 180 seconds, allowed 1–60 minutes | Explicit close requests early release when enabled. Active downloads are protected; expired files are reclaimed by the worker, and retained task metadata allows regeneration from current owned data. Legacy deadlines remain unchanged. |
 | Current server Offline Package | No time-based expiry | One canonical `OfflinePackageArtifact` is retained per owner/scope. A successfully committed replacement becomes current; the prior row is removed in the same transaction and its file is eligible for best-effort post-commit cleanup. A failed replacement leaves the previous canonical package available. |
@@ -27,7 +29,7 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
 
 ## Re-entry contract
 
-- Local merge recovery (2026-10-09) checks the owned original request without
+- Merge recovery (implemented 2026-10-09) checks the owned original request without
   queueing work. Only an explicit missing receipt permits original-key resubmission;
   a failed read is not absence. Finding a failed/cancelled task does not restart it.
   A completed receipt can link to the merged conversation after active-result expiry,
@@ -36,7 +38,7 @@ boundary is unchanged. Server backup retention is defined in deployment.md.
   See [API semantics](../api-reference.md) and
   [the audit and verification limits](../execution/ux-audit-merge-admission-2026-10-09.md).
 
-- Local offline task recovery (2026-10-08) opens Offline & sync and finds this
+- Offline task recovery (implemented 2026-10-08) opens Offline & sync and finds this
   device's matching download; missing local records require an explicit download.
   It does not equate server completion with local import or automatically retry.
   A fresh recovery does not rewrite the earlier failed server job or extend its
@@ -102,11 +104,21 @@ or Offline Package contract:
   exports use the Root-controlled short lifetime above;
 - archive restore uploads have their separate 24-hour admission lifetime and remain
   protected while an accepted restore uses them;
-- Import drafts default to a 24-hour TTL;
+- Import drafts default to a 24-hour admission TTL, not automatic deletion of
+  their staged sources or completed canonical conversations;
 - attachment upload sessions default to a 24-hour TTL;
 - artifact cleanup grace defaults to 24 hours but grants no automatic deletion.
 
 Changing any one of these values does not implicitly change the others.
+
+Historical `session_state=COMPLETED` alone is not evidence of a committed
+import: a legacy migration populated that value. Operational cleanup must join
+the actual import status, canonical/source references, active jobs and verified
+owned files. The November10 approval removed only nineteen verified old
+unsuccessful sessions through the existing cancellation/disposal path, retained
+the recent failed source and all successful sources, and did not create a purge
+schedule. A missing source file or unknown state remains a reason for review,
+not permission to delete canonical data.
 
 ## Operational evidence
 

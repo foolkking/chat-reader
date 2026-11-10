@@ -1,6 +1,6 @@
 # Artifact Lifecycle Contract
 
-## Unreleased recovery extension — 2026-11-10
+## Recovery extension — released 2026-11-11
 
 Owner conversation export POST accepts optional `background=true` for ordinary
 `markdown_v2` / `canjson_v2`. The request must carry a stable idempotency key;
@@ -41,9 +41,9 @@ route back to source/scope adjustment instead of unchanged generic retry.
 Local API/PG/browser checkpoints live in
 [the ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
 The context-package delivery retains its explicit “Download Context Package”
-name; other export bundles use “Download export”. The first candidate CI failed;
-corrections and pending exact-source acceptance are recorded in the ledger.
-This candidate is not deployed.
+name; other export bundles use “Download export”. Earlier failed runs remain in
+the ledger. Exact `3564cbf` / CI `42828329240` passed and is deployed; see the
+[release receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
 
 ## Task Center follow-up — 2026-10-06 (deployed)
 

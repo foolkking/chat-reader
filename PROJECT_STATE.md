@@ -1,81 +1,30 @@
 # Project State
 
-## Unreleased recovery work — 2026-11-10
+## Current release — recoverable operations — 2026-11-11
 
-Unreleased candidate: safe ZIP body-reference recovery with explicit verified-member
-bindings; retained analysis stop/resume; fresh import entry; finite control reads
-and per-task unknown-result reconciliation; execution/heartbeat/lease fencing.
-Selection order now covers recognition/validation/draft passes; JSON/mixed
-worker analysis admits the current unit rather than aggregate source bytes.
-Failed/paused sessions expose version-guarded source replacement; bounded
-resource waiting includes JSON. Independent format-invalid ZIPs remain blocking
-review units, while security/integrity failures still abort. Table actions now
-use a quiet icon rail, lazy safe export/Markdown recovery and correct inline
-CSV parsing; table/image success feedback is transient without body reflow.
-Editable pre-upload lists and explicit whole-source exclusion now preserve
-selection order and require a fresh review; source revisions reconcile legacy
-replacement acknowledgements too. Offline downloads now retain per-conversation
-outcomes, pause the queue for shared failures and offer unfinished-only retries
-or explicit reduced attachment choices. The real browser/Dexie recovery matrix
-passes locally. Ordinary exports now offer same-option background recovery and
-read-only receipt checks; copy/citation/bookmark success presentation expires
-without discarding recovery data. Export API/PostgreSQL and component-browser
-checks pass locally. Reading-density cleanup and scoped recovery review are
-implemented; lint/typecheck and 2,239 Web Node tests pass. The latest boundary
-API sweep passes 190 with 4 Windows-only skips. After an initial capacity
-refusal, a fresh capacity check admitted an isolated source-hashed Next build,
-which passed. Exact-source CI/PWA/stability/memory gates remain required
-before release.
-Candidate `65db720` was committed/pushed and full CI `42764243257`
-dispatched on November10 at13:46+08:00; first read followed the50-minute gate.
-It failed API/Web and Settings hit its job limit after31 observed failures.
-Corrections cover offline confirmation focus, context-download naming, row-local
-error semantics and stale test contracts (explicit resume, exact timestamps,
-selected-file bytes and background-export URLs). Local2324 Node checks,
-lint/typecheck,108 API checks and pinned-Chromium recovery matrices pass;
-new exact-source CI remains required. Preliminary production capacity is below
-the unchanged backup budget; do not stop services or deploy without fresh
-successful admission.
-Second exact run `42775496659` (`b7b1102`) was first read at16:18:40+08:00,
-over50 minutes after dispatch. API6308 and reading-performance passed;
-Settings469/470 passed, while Web stopped at10 stale import-flow assertions.
-The remaining Settings failure was missing browser request-body telemetry,
-not proof of missing upload: its correction counts all upload requests and
-verifies stored synthetic source bytes/SHA in guarded CI-only PostgreSQL.
-Import tests now use explicit resume, ordered selection and explicit removal;
-the attachment test uses the retained full-preview action. Lint/typecheck and
-2324 Node checks pass with bounded local test concurrency; the initial
-unbounded sweep's one shell timeout is retained in the ledger. New full CI
-is still required; no release images or deployment from either failed run.
-Third run `42784946090` (`19a8253`), first read17:34:21+08:00 after50m16.7s:
-API6308, Settings470 plus independent restore1 and performance passed.
-Adaptive import12 and CSP4 passed; Context35 passed/1 failed at another
-implicit-resume assertion. It now resumes the exact saved import and checks
-one upload while retaining selected-Bundle revision/bytes and recovery tests.
-Static checks/2324 Node cases pass; next full CI and deployment remain pending.
-Fourth run `42792558409` (`5f0b1da`) passed all six jobs. Five artifact digests,
-377 embedded API source files, Web revision,14 Web gates, Settings470+restore1,
-35 stability cases/original64+12+4 traces/cold Viewer, six12-case recovery
-matrices and five real-memory cases independently verified. The diagnostic
-historical performance baseline failed1/9; the release-gating candidate passed9/9.
-Visual inspection found12 missing English import-source/paste labels; corrected
-copy now has actual-call coverage and12 browser combinations, with2326 Node
-checks/static checks passing. A new exact-source full CI is required.
-Read-only production capacity at18:32+08:00 is5,527,340KiB available versus
-6,147,100KiB backup-only budget, before images/headroom; no deployment/cleanup.
-[Implementation and validation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
-[Scoped completion review](docs/execution/ux-audit-recoverable-operations-2026-11-10.md).
-Fifth run42804546886 (`aa21ea9`) failed Web at one adaptive-import commit
-upstream ECONNRESET; API/Settings/performance passed, images skipped. The user
-waived waiting for this run; the actual first read was19:55:38+08:00.
-Follow-up corrects commit socket/body forwarding and explicit unknown-result
-recovery, reproduced touch-window edge starvation, and cross-device position
-handoff/coalesced revision safety. Final local2345 Node checks, lint/typecheck,
-Reader27, cross-device12 and import-source12 mounted cases pass. Exact-source
-replacement CI is the next gate; no deployment. Original64+12+4 thresholds remain.
-The deployed source/schema and user-owned historical evidence below are unchanged.
+Application **`3564cbfdc1157cddcec53e85462b8e0a410fc4a2`**, exact CI
+**42828329240**, six jobs/five official artifacts independently verified.
+Deployed **November11 00:08:06 +08:00**; schema **20261108_0060** unchanged.
+Ordered import recovery, retained stop/resume, source repair, quiet table/image
+feedback, touch-boundary loading and explicit cross-device handoff are released.
+Runtime health/images/config preservation passed; one later malformed static
+Server Action request produced a retained warning, not a clean-log claim.
 
-## Current release — reading interaction / missing ZIP assets — 2026-11-09
+The separately approved A–D cleanup is complete. **Exactly one** verified backup
+remains: **`chat-reader-20261110T155821Z`** (November10 23:58:21 +08:00).
+Current images and that backup's matching recovery images remain; no direct
+old-worker rollback, scheduled purge, production config replacement or user ZIP
+replay. Successful sources, the recent failed source and live data are protected.
+[Release, cleanup and eighteen-requirement receipt](docs/execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md) /
+[machine evidence](docs/evidence/release-2026-11-11/recoverable-operations-deployment-summary.json).
+Physical tablet/production authenticated UI and backup restore/off-site recovery
+remain unverified. Follow-up is a local documentation commit, not another CI or deployment.
+
+Earlier candidate runs are retained in the
+[implementation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
+All older release/backup counts below are historical; this section is authoritative.
+
+## Previous release — reading interaction / missing ZIP assets — 2026-11-09
 
 Application **`865b0a6e381bb3d5c2afba06b5c3aa4c59a61092`**, full CI
 **42594459199**: six jobs, five official artifacts and independent acceptance.

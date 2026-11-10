@@ -1,5 +1,32 @@
 # 已知风险与不确定性
 
+## Current verification boundaries — 2026-11-11
+
+Exact **3564cbf**, CI **42828329240**, five official artifacts and initial
+deployment acceptance passed. Required candidate performance9/9, original64+12+4
+traces and all five real-memory cases passed; the historical diagnostic baseline
+was6/9, with three failures retained rather than hidden.
+The approved cleanup leaves **one local five-component backup**, not redundant
+or off-site recovery. SHA/tar/PG TOC validation is not a restoration exercise.
+Current images and the sole backup's matching images remain; no direct rollback.
+
+The strict post-acceptance zero-error recheck failed on one malformed Server
+Reference ID (`x`) at a static-resource path. Its response was400; ordinary page
+method probes remained405, health/images/configs passed, and the same single
+warning remained without new categories at00:22 +08:00. Caller origin is not
+proved. The failure was preserved, not silently filtered into a pass; no
+production patch, restart or additional deployment was made for log noise.
+An optional metadata one-off was refused by its448MiB headroom guard; bounded
+host metadata/read-only SQL completed instead, without starting that container.
+
+Production authenticated UI, physical tablet/Safari/clipboard/screen readers,
+the original ZIP retry, real offline user workflows, sustained load and backup
+restore remain unverified. Post-resume offline bytes changed while64 packages
+remained present and DB/file totals matched; do not compare live writes with a
+stopped-writer snapshot or claim all post-release data stayed byte-identical.
+[Receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
+Earlier version/count/pending labels below are historical checkpoints.
+
 ## Current verification boundaries — reading interactions — 2026-11-09
 
 Exact **865b0a6**, CI **42594459199** and five official artifacts accepted;

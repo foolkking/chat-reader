@@ -1,10 +1,11 @@
 # AI Rich Markdown Renderer Contract
 
-Last synchronized: 2026-11-03
+Last synchronized: 2026-11-11
 
-## Unreleased reading-density extension — 2026-11-10
+## Reading-density extension — released 2026-11-11
 
-Working-tree candidate only; the release pointer remains in Project State.
+Exact `3564cbf` / CI `42828329240` is deployed; the release pointer is in
+[Project State](../../PROJECT_STATE.md).
 Normal reading tables now keep only two labelled 44px copy/download icons in
 a fixed-width side rail **outside** the cell scroller. Fine-pointer hover and
 keyboard focus reveal them using opacity only; coarse/no-hover devices retain
@@ -36,11 +37,12 @@ not newline characters inside a quoted value; partial previews retain the
 existing full-table action.
 
 The [recovery ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md) records
-local checks and outstanding full Reader/Share/Offline/stability acceptance.
+local checkpoints; the [release receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md)
+records exact CI Reader/Share/Offline/stability acceptance and its limits.
 
 ## Purpose and canonical source
 
-Unreleased November10 density follow-up: code actions occupy one fixed44px
+The November10 density follow-up, released November11: code actions occupy one fixed44px
 rail, visible on hover/focus or touch, without geometry changes. Meaningful
 language is retained; an empty/`text` default label is omitted. Full source copy,
 wrap/expand and persistent manual-copy recovery remain. Mermaid already omits

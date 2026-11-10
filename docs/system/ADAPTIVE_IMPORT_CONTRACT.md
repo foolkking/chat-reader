@@ -1,6 +1,10 @@
 # Adaptive Import Contract
 
-## Unreleased commit transport correction — 2026-11-10
+Release status: `3564cbf`, exact CI `42828329240`, deployed **2026-11-11**.
+See the [release and cleanup receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
+Earlier dated checkpoints below are historical, not pending release work.
+
+## Commit transport correction — released 2026-11-11
 
 The dedicated five-minute Pages API commit proxy now forwards the complete
 options body (bounded to16KiB), content type/length and existing origin/cookie.
@@ -21,9 +25,9 @@ than offering an unsafe repeated POST.
 Source/destination edits are blocked while submission is unresolved. This
 in-memory control is not a new durable server receipt or crash-proof client log.
 
-## Unreleased retained-stop and task recovery — 2026-11-10
+## Retained-stop and task recovery — released 2026-11-11
 
-The working tree adds explicit stop-with-retention, without changing the
+Explicit stop-with-retention is available, without changing the
 previously deployed no-body cancellation contract. The Import pane and Tasks
 send `source_disposition: "retain"` for adaptive analysis. Queued work stops
 immediately; processing first enters `cancelling`, then the worker acknowledges

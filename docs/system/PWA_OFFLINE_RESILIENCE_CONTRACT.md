@@ -1,6 +1,11 @@
 # PWA and Offline Resilience Contract
 
-## Per-conversation recovery — November 10 unreleased source
+## Per-conversation recovery — released 2026-11-11
+
+Exact `3564cbf` / CI `42828329240` is deployed. The full CI PWA gates and the
+separate twelve-combination recovery matrix passed; this does not establish
+physical-device or authenticated production-user acceptance. See the
+[release receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
 
 The existing account-scoped settings records optionally add child results,
 enqueue order and a shared-failure pause flag. No new table, Dexie version,
@@ -45,7 +50,7 @@ API client/queue, Dexie, Web Locks, package decoding and v1/v2 replacement with
 controlled HTTP/identity. This is not full authenticated PWA-shell or physical-
 device acceptance. See the [implementation ledger](../execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
 
-## Optional image geometry — 2026-11-07 source candidate
+## Optional image geometry — released 2026-11-07
 
 New v3 attachment snapshots may add `image_geometry_v1` (source SHA and
 orientation-corrected original width/height), separately from saved
@@ -55,7 +60,7 @@ not reject old packages. Existing v1/v2/v3 readers and Dexie v2 are unchanged.
 An old local copy keeps its snapshot until normal explicit update; online image
 caches never overwrite it. Browser decode can supply session-only fallback.
 See [image contract](IMAGE_READING_STABILITY_CONTRACT.md) and
-[candidate verification](../execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
+[implementation verification](../execution/IMAGE_NATURAL_FLOW_2026-11-07.md).
 
 ## Current contract — implemented 2026-11-05, deployed 2026-11-06
 
@@ -614,13 +619,13 @@ remain part of the full release gates.
 
 ## Settings completion: lock and sync (working tree, 2026-10-01)
 
-November10 unreleased handoff refinement: active observations retain the local
+The November10 handoff refinement, released November11: active observations retain the local
 working point and mark a newer remote point for explicit adoption; fresh entry
 may adopt a clean server copy. Pending/conflicted points remain protected.
 Coalescing never rebases onto a remote GET; an acknowledged predecessor is the
 only automatic base-revision advance. Optional `ReadingSyncState.incoming` lives
 in the existing settings store, with no database/package format change.
-Details and validation limits: [reading tools](READING_TOOLS_CONTRACT.md#unreleased-touch-boundaries-and-device-handoff--2026-11-10).
+Details and validation limits: [reading tools](READING_TOOLS_CONTRACT.md#touch-boundaries-and-device-handoff--released-2026-11-11).
 
 Reading positions use server revisions and account/operation-scoped receipts
 (`20261001_0040`). The existing readingPositions store holds the local working

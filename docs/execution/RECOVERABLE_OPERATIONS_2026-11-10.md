@@ -1,6 +1,10 @@
 # Recoverable operations and reading density — implementation ledger
 
-Status: implementation and scoped completion review complete; release acceptance pending.
+Status synchronized **2026-11-11**: `3564cbf` passed exact CI `42828329240`
+and was deployed. The [final release/cleanup receipt](RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md)
+closes the requirement-by-requirement release checklist and retains the
+post-acceptance malformed-request log warning. Pending labels in the dated
+checkpoints below describe their original time, not the final release status.
 Starting application: `865b0a6`; starting checkout: `1fb0912`, existing `master`.
 Existing documentation, tsbuildinfo and historical evidence edits are preserved.
 
@@ -67,11 +71,17 @@ adapter, not a second full-Reader stability measurement.
 
 ## Approved behavior and acceptance ledger
 
+This table preserves the pre-CI implementation review. Its release-pending
+entries are superseded by the eighteen-row final acceptance table in the
+[release receipt](RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
+
 The November 10 execution goal authorizes implementation, completion review,
 correction, commit/push, full exact-source CI and deployment after acceptance.
 Every CI dispatch has a fresh **50-minute minimum before its first status read**.
 No schedules, production-source replays, production configuration replacement or
-unrelated cleanup are authorized.
+unrelated cleanup are authorized by that original execution goal. The later
+explicit November10 storage approval separately authorized the reviewed A–D
+items and exactly one retained backup; its execution is in the final receipt.
 
 The final batch decision supersedes the briefly selected partial-import option:
 **ordered per-unit analysis, whole-batch review and explicit commit**. One independent

@@ -1,0 +1,715 @@
+{
+  "schema_version": 1,
+  "scope": "Explicit post-report approval: reviewed A-D cleanup, one latest backup, then exact-CI deployment; local documentation closeout only afterwards.",
+  "source_revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+  "production_schema": "20261108_0060",
+  "timezone": "Asia/Shanghai",
+  "status": "deployed; initial acceptance passed; independent core runtime and backup checks passed with a retained postacceptance log warning",
+  "ci": {
+    "run_id": 42828329240,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "api-quality",
+        "id": 129871414759,
+        "conclusion": "success"
+      },
+      {
+        "name": "web-quality",
+        "id": 129871415142,
+        "conclusion": "success"
+      },
+      {
+        "name": "settings-quality",
+        "id": 129871415258,
+        "conclusion": "success"
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "id": 129892561057,
+        "conclusion": "success"
+      },
+      {
+        "name": "build-images",
+        "id": 129901061148,
+        "conclusion": "success"
+      },
+      {
+        "name": "inspect-release-artifact",
+        "id": 129904817546,
+        "conclusion": "success"
+      }
+    ],
+    "accepted_dispatch_at": "2026-11-10T13:51:09.116214+00:00",
+    "not_before": "2026-11-10T14:41:11.116214+00:00",
+    "first_read_at": "2026-11-10T14:41:11.932983+00:00",
+    "minimum_first_read_minutes": 50,
+    "api_passed": 6308,
+    "api_optional_skipped": 3,
+    "web_node_passed": 2342,
+    "web_node_ux": 2260,
+    "local_broader_node_sweep": 2345,
+    "official_artifacts": [
+      {
+        "id": 13774925265,
+        "name": "settings-quality-evidence-3564cbfdc1157cddcec53e85462b8e0a410fc4a2-1",
+        "zip_sha256": "3b082dfc367d643fe345b2e364190bb8075de13f30875c4c7cbbc60ae30c38b9",
+        "zip_bytes": 15695606,
+        "expanded_bytes": 21062632,
+        "files": 209
+      },
+      {
+        "id": 13774891721,
+        "name": "small-zip-memory-3564cbfdc1157cddcec53e85462b8e0a410fc4a2-1",
+        "zip_sha256": "8f00e6be4d6977d014ce567e484aa24da75f1290e0e40a8ac24c74d419a45f12",
+        "zip_bytes": 3078,
+        "expanded_bytes": 6735,
+        "files": 6
+      },
+      {
+        "id": 13774302560,
+        "name": "chat-reader-images-3564cbfdc1157cddcec53e85462b8e0a410fc4a2-1",
+        "zip_sha256": "40d27a6c2301e28ffc0069feaf2ececf910caac0f336228d607560533ca3d5e0",
+        "zip_bytes": 177274128,
+        "expanded_bytes": 177224683,
+        "files": 6
+      },
+      {
+        "id": 13773887408,
+        "name": "release-a-quality-evidence-3564cbfdc1157cddcec53e85462b8e0a410fc4a2-1",
+        "zip_sha256": "5d33c937ce5f58d47900eeb52b5c7743e39ba5ac1a294d4931ba34e40ce4247d",
+        "zip_bytes": 29201880,
+        "expanded_bytes": 34125179,
+        "files": 648
+      },
+      {
+        "id": 13773736777,
+        "name": "reading-performance-comparison",
+        "zip_sha256": "9bfc066b3ebd25686fd1161d19e78007f58cf78ac770d21e9019a2faf088a1e1",
+        "zip_bytes": 161177,
+        "expanded_bytes": 670400,
+        "files": 89
+      }
+    ],
+    "web_gates": [
+      {
+        "gate_id": "adaptive-import-recovery",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 13,
+        "result_counts": {
+          "passed": 12,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 1,
+          "interrupted": 0
+        },
+        "duration_ms": 54832
+      },
+      {
+        "gate_id": "csp-enforcement",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 4,
+        "result_counts": {
+          "passed": 4,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 6364
+      },
+      {
+        "gate_id": "context-files",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 36,
+        "result_counts": {
+          "passed": 36,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 250344
+      },
+      {
+        "gate_id": "focused-online-security",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 45,
+        "result_counts": {
+          "passed": 45,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 118306
+      },
+      {
+        "gate_id": "share-focus",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 2,
+        "result_counts": {
+          "passed": 2,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 9127
+      },
+      {
+        "gate_id": "source-editor-mutation",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 121,
+        "result_counts": {
+          "passed": 121,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 622589
+      },
+      {
+        "gate_id": "source-editor-cleanup",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 6,
+        "result_counts": {
+          "passed": 6,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 40223
+      },
+      {
+        "gate_id": "upload-token-atomicity",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 18,
+        "result_counts": {
+          "passed": 18,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 55007
+      },
+      {
+        "gate_id": "markdown-image-viewer",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 31,
+        "result_counts": {
+          "passed": 31,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 112984
+      },
+      {
+        "gate_id": "reading-stability",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 35,
+        "result_counts": {
+          "passed": 35,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 162184
+      },
+      {
+        "gate_id": "pdfjs-maintained-line",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 13,
+        "result_counts": {
+          "passed": 13,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 60862
+      },
+      {
+        "gate_id": "default-pwa",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 1012,
+        "result_counts": {
+          "passed": 190,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 822,
+          "interrupted": 0
+        },
+        "duration_ms": 309488
+      },
+      {
+        "gate_id": "single-owner-auth",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 24,
+        "result_counts": {
+          "passed": 24,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 114788
+      },
+      {
+        "gate_id": "pwa-negative",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 28,
+        "result_counts": {
+          "passed": 28,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 84490
+      }
+    ],
+    "settings_gates": [
+      {
+        "gate_id": "settings-stages-1-4",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 470,
+        "result_counts": {
+          "passed": 470,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 2695585
+      },
+      {
+        "gate_id": "system-archive-new-instance",
+        "status": "PASS",
+        "evidence_status": "passed",
+        "test_count": 1,
+        "result_counts": {
+          "passed": 1,
+          "failed": 0,
+          "timedOut": 0,
+          "skipped": 0,
+          "interrupted": 0
+        },
+        "duration_ms": 35838
+      }
+    ],
+    "stability": {
+      "cases": 35,
+      "original_traces": 64,
+      "collapse": 12,
+      "passive": 4,
+      "cold_viewer": 1
+    },
+    "recovery_matrices": {
+      "import-recovery": 12,
+      "import-source-repair": 12,
+      "reader-table-actions": 12,
+      "offline-recovery": 12,
+      "export-recovery": 12,
+      "reading-feedback": 12,
+      "reading-position": 12
+    },
+    "reader": {
+      "groups": 27,
+      "touch_boundary_cases": 4,
+      "touch_virtual_cases": 4,
+      "formula_performance_cases": 6,
+      "max_p95_ms": 16.800000000000182,
+      "max_long_task_ms": 0
+    },
+    "image_slider_cases": 6,
+    "attachment_modal_cases": 12,
+    "performance_candidate": {
+      "schema_version": 2,
+      "gate_id": "reader-capacity-candidate",
+      "status": "passed",
+      "started_at": "2026-11-10T14:34:49.639Z",
+      "test_count": 9,
+      "completed_at": "2026-11-10T14:37:07.302Z",
+      "duration_ms": 138804,
+      "result_counts": {
+        "passed": 9,
+        "failed": 0,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    "performance_baseline_diagnostic": {
+      "schema_version": 2,
+      "gate_id": "reader-capacity-baseline",
+      "status": "failed",
+      "started_at": "2026-11-10T14:31:05.905Z",
+      "test_count": 9,
+      "completed_at": "2026-11-10T14:33:30.103Z",
+      "duration_ms": 145568,
+      "result_counts": {
+        "passed": 6,
+        "failed": 3,
+        "timedOut": 0,
+        "skipped": 0,
+        "interrupted": 0
+      }
+    },
+    "memory_cases": 5,
+    "memory_max_delta_bytes": 56434688,
+    "memory_workspace_limit_bytes": 67108864,
+    "thresholds_unchanged": true
+  },
+  "images": {
+    "archive_bytes": 177218442,
+    "archive_sha256": "1ba5d03868d52a7f99564edf2ec4e13ebcbab1be3c98cc871274f730c2cf96d1",
+    "oci_manifest_ids": {
+      "api": "sha256:aaed562ddf37683570631f70f813cddb9769074f4696d34c07c7cb7094a125b1",
+      "web": "sha256:23ca720fb4bee6802a5922234456651b9812680fd2e36c79d8158f67aaf47cd0"
+    },
+    "runtime_config_ids": {
+      "api": "sha256:deb0a217758d2f12a61ecab20aa5bb2cd9fb0e7542d9ed272bb13843b5f7b3ee",
+      "web": "sha256:dbd58f080ab26701f968a1133875be1b1dbe24f02b5f897dc859ec898ce828a3"
+    },
+    "blob_count": 35,
+    "api_source_files_verified": 377,
+    "web_embedded_revision_verified": true,
+    "forbidden_paths_present": false,
+    "unique_uncompressed_layer_bytes": 561423872,
+    "current_and_single_backup_source_generations_retained": true
+  },
+  "deployment": {
+    "maintenance_started_at": "2026-11-10T15:57:46Z",
+    "maintenance_ended_at": "2026-11-10T16:08:06Z",
+    "maintenance_seconds": 620,
+    "initial_acceptance_at": "2026-11-10T16:08:05.774178Z",
+    "fresh_space_admission": {
+      "available_kib": 10728648,
+      "required_kib": 7182482
+    },
+    "stopped_writer_attachment_audit": {
+      "applicable": true,
+      "clean": true,
+      "complete": true,
+      "issue_count": 0,
+      "issue_counts": {},
+      "orphan_classification_safe": true,
+      "read_only": true,
+      "scanned_active_attachment_count": 2904,
+      "scanned_asset_object_count": 2812,
+      "scanned_context_object_count": 14,
+      "scanned_file_count": 2826,
+      "scanned_skill_object_count": 0,
+      "sha256_verified_count": 2826,
+      "storage_backend": "local"
+    },
+    "migration": {
+      "after": "20261108_0060",
+      "backfill_at_migration": {
+        "has_error": false,
+        "present": true,
+        "processed": 52,
+        "progress": 100,
+        "status": "committed",
+        "total": 52
+      },
+      "before": "20261108_0060",
+      "canonical_row_counts_unchanged_while_stopped": true,
+      "operation": "read_only_current_and_head_verification",
+      "status": "passed"
+    },
+    "backfill": {
+      "job": {
+        "has_error": false,
+        "present": true,
+        "processed": 52,
+        "progress": 100,
+        "status": "committed",
+        "total": 52
+      },
+      "scope": "migration job completion, not authenticated search UI acceptance",
+      "status": "passed"
+    },
+    "services": {
+      "api": {
+        "image": "sha256:deb0a217758d2f12a61ecab20aa5bb2cd9fb0e7542d9ed272bb13843b5f7b3ee",
+        "revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+        "status": "running",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom_killed": false
+      },
+      "import-worker": {
+        "image": "sha256:deb0a217758d2f12a61ecab20aa5bb2cd9fb0e7542d9ed272bb13843b5f7b3ee",
+        "revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+        "status": "running",
+        "health": null,
+        "restart_count": 0,
+        "oom_killed": false
+      },
+      "postgres": {
+        "image": "sha256:de3a4eab8fdfa507ea92aac488b916b08089e515db49b055fe71dfa271ba3a28",
+        "revision": "",
+        "status": "running",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom_killed": false
+      },
+      "web": {
+        "image": "sha256:dbd58f080ab26701f968a1133875be1b1dbe24f02b5f897dc859ec898ce828a3",
+        "revision": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+        "status": "running",
+        "health": "healthy",
+        "restart_count": 0,
+        "oom_killed": false
+      }
+    },
+    "postgres_unchanged": true,
+    "production_env_compose_nginx_unchanged": true,
+    "canonical_counts_unchanged_while_writers_stopped": true,
+    "canonical_counts_after_writer_resume": "not compared as immutable; normal writes may occur",
+    "http": {
+      "anonymous_copy_plan": 401,
+      "anonymous_image_display": 401,
+      "anonymous_new_messages": 401,
+      "anonymous_tags": 401,
+      "http_https_redirect": 301,
+      "https_health": 200,
+      "https_login": 200,
+      "local_api_health": 200,
+      "local_web_health": 200,
+      "missing_image_capability": 404,
+      "page_method_denials_without_cookie_or_redirect": 50,
+      "public_diagnostics": 404,
+      "security_headers": "passed",
+      "unauthenticated_capabilities": 401
+    },
+    "initial_error_keyword_lines": 0,
+    "new_kernel_oom_lines": 0,
+    "host_oom_kill_delta": 0,
+    "direct_rollback_pointer": false,
+    "production_build_or_pull": false,
+    "independent_core_checks": [
+      {
+        "phase": "independent_runtime_check",
+        "at": "2026-11-10T16:22:46.047271+00:00",
+        "check": "verify_runtime_health.sh",
+        "status": "passed"
+      },
+      {
+        "phase": "independent_runtime_check",
+        "at": "2026-11-10T16:22:50.277042+00:00",
+        "check": "verify_runtime_images.sh",
+        "status": "passed"
+      },
+      {
+        "phase": "independent_runtime_check",
+        "at": "2026-11-10T16:22:50.401121+00:00",
+        "check": "verify_release_state.sh",
+        "status": "passed"
+      }
+    ],
+    "strict_postacceptance_zero_error_recheck": "failed; preserved rather than converted to a pass",
+    "log_warning": {
+      "phase": "postrelease_log_warning",
+      "at": "2026-11-10T16:22:51.450410+00:00",
+      "strict_zero_error_recheck": "failed_preserved",
+      "web_invalid_server_reference_lines": 1,
+      "new_unclassified_errors": 0,
+      "invalid_reference": "synthetic-shaped x; caller origin unproven",
+      "bounded_access_log_response": "POST static-resource path 400; not a successful action",
+      "raw_private_logs_retained": false
+    },
+    "premaintenance_transfer_preflight_failure": "Task-only CRLF checksum filenames; failed before maintenance, normalized to LF and reverified; original evidence retained"
+  },
+  "cleanup": {
+    "authorization": "User explicitly approved the already presented A-D set, deleting older backup images/data, and clarified exactly one backup.",
+    "first_host_pass": {
+      "phase": "host_cleanup_complete",
+      "at": "2026-11-10T15:38:13.196724+00:00",
+      "retained_backup": "chat-reader-20261109T104840Z",
+      "deleted_backups": 2,
+      "deleted_image_tags": 8,
+      "deleted_image_objects": 4,
+      "deleted_archives": 2,
+      "containers_unchanged": 11,
+      "config_and_volumes_unchanged": true,
+      "available_kib_before": 5505860,
+      "available_kib_after": 10734508
+    },
+    "deleted_backups": [
+      {
+        "phase": "backup_deleted",
+        "at": "2026-11-10T15:37:56.074767+00:00",
+        "backup": "chat-reader-20261107T133202Z",
+        "logical_bytes": 2206515957
+      },
+      {
+        "phase": "backup_deleted",
+        "at": "2026-11-10T15:37:56.103206+00:00",
+        "backup": "chat-reader-20261108T215622Z",
+        "logical_bytes": 2212762909
+      },
+      {
+        "phase": "old_backup_deleted",
+        "at": "2026-11-10T16:24:29.592584+00:00",
+        "backup": "chat-reader-20261109T104840Z",
+        "logical_bytes": 2317541129
+      }
+    ],
+    "old_image_objects_removed": 4,
+    "old_image_role_tags_removed": 8,
+    "old_image_generations_removed": [
+      "897ba788fd89e18c9634ca2271ba6146339939a0",
+      "d61b9c69004c3c482fd915fd6f77481fa1920ae7"
+    ],
+    "old_transfer_archives": [
+      {
+        "phase": "old_archive_deleted",
+        "at": "2026-11-10T15:38:05.851910+00:00",
+        "revision": "897ba788fd89e18c9634ca2271ba6146339939a0",
+        "bytes": 176761861,
+        "sha256": "a63b4df2c0a286217023d11a17adc3644aae578b8259c6edb9e10530ba0dd531"
+      },
+      {
+        "phase": "old_archive_deleted",
+        "at": "2026-11-10T15:38:07.667986+00:00",
+        "revision": "d61b9c69004c3c482fd915fd6f77481fa1920ae7",
+        "bytes": 177074442,
+        "sha256": "fc12a23ebe2874603172a43ba6edf68124e2e1b80c2259acab2125b89889501e"
+      }
+    ],
+    "old_unsuccessful_import_sessions": 19,
+    "import_files_removed": 51,
+    "import_logical_bytes_removed": 121712991,
+    "import_operation": "existing cancellation service, per-session row lock and postcommit cleanup; no direct SQL delete",
+    "orphan_export_result": {
+      "category": "ORPHAN_FINAL",
+      "requested_count": 36,
+      "deleted_count": 36,
+      "deleted_bytes": 50310085,
+      "already_absent_count": 0,
+      "skipped_changed_count": 0,
+      "failed_count": 0,
+      "failure_categories": {}
+    },
+    "protected_business_postcheck": {
+      "phase": "business_cleanup_complete",
+      "at": "2026-11-10T15:39:19.366274+00:00",
+      "old_sessions_cancelled": 19,
+      "old_exports_deleted": 36,
+      "recent_failed_source_preserved": true,
+      "successful_source_directories_unchanged": true,
+      "canonical_offline_files_unchanged": 64,
+      "active_jobs_interrupted": 0
+    },
+    "final_single_backup": {
+      "phase": "single_backup_cleanup_complete",
+      "at": "2026-11-10T16:25:28.108313+00:00",
+      "backup_count": 1,
+      "retained_backup": "chat-reader-20261110T155821Z",
+      "current_release": "3564cbfdc1157cddcec53e85462b8e0a410fc4a2",
+      "backup_source_release": "865b0a6e381bb3d5c2afba06b5c3aa4c59a61092",
+      "current_and_backup_matching_images_retained": true,
+      "unrelated_containers_configs_volumes_unchanged": true,
+      "containers_unchanged": 11,
+      "available_kib_before": 6896792,
+      "available_kib_after": 9160016
+    },
+    "retained_backup_integrity": {
+      "phase": "retained_backup_postdelete_verified",
+      "at": "2026-11-10T16:25:27.481634+00:00",
+      "backup": "chat-reader-20261110T155821Z",
+      "checksums": {
+        "postgres.dump": "d16b9feb8d72d36ed258338e227ea32a81d0a5604a1a6e9ccb016d543843fa01",
+        "imports.tar.gz": "a56fd6917f2df13f5c64e4ce8fc1242bb5a73826127e62a65a7ab84841c5cd80",
+        "exports.tar.gz": "9e63d6e38687ff6bed80e1e9627438900a35f9228eb7e3888273820e7ae04fde",
+        "offline.tar.gz": "ceb800a7bfef3608d19f6661f194c3fe28b48781f10c7cddc0b1afc14c19d953",
+        "assets.tar.gz": "8f1e680cbe03a29bfc7fe099568a4d5f1c826e0f84e37592751df4593b199ac6"
+      },
+      "logical_bytes": 3653483938
+    },
+    "retained_manifest_sha256": "58adf7d75c52cc859cc06ec502ea67aa61c0ef139af88db3a2ff5405c7559dd3",
+    "latest_backup_source_revision": "865b0a6e381bb3d5c2afba06b5c3aa4c59a61092",
+    "final_available_kib": 9160016,
+    "available_gain_from_precleanup_kib": 3654156,
+    "automatic_schedule_or_prune": false,
+    "volumes_deleted": false,
+    "release_helpers_and_audit_evidence_preserved": true
+  },
+  "postresume_metadata": {
+    "active_jobs": 0,
+    "assets": {
+      "available": {
+        "bytes": 1420680326,
+        "records": 2812
+      }
+    },
+    "audit_mode": "bounded host metadata and PostgreSQL read-only repeatable-read; no API interpreter",
+    "bounded_oneoff_not_admitted": "448MiB memory preflight not satisfied; no container started, limit not lowered",
+    "export_file_bytes": 0,
+    "export_files": 0,
+    "imports": {
+      "canceled|CANCELED": 44,
+      "committed|COMPLETED": 137,
+      "failed|FAILED": 1
+    },
+    "live_state_boundary": "Writers are running; current offline totals are not an unchanged-canonical assertion.",
+    "observed_at": "2026-11-10T16:35:09.226775+00:00",
+    "offline": {
+      "bytes": 1304580876,
+      "records": 64
+    },
+    "offline_file_bytes": 1304580876,
+    "offline_files": 64,
+    "offline_postresume_matches_premaintenance_snapshot": false,
+    "protected_source_directories": 138,
+    "protected_source_inventory_unchanged": true,
+    "read_only": true,
+    "scan_complete": true,
+    "scanned_entries": 1051,
+    "schema": "20261108_0060"
+  },
+  "limits": [
+    "One backup on the same host is neither redundancy nor off-site recovery.",
+    "SHA256, gzip/tar and PostgreSQL TOC verification are not a full restoration drill.",
+    "Backup snapshot predates the new application writers and does not include later live changes.",
+    "No direct rollback or automatic source retry; old worker compatibility cannot be assumed.",
+    "A malformed static-resource Server Action request yielded400 and a single retained format warning; caller origin unproven.",
+    "Physical tablet/Safari, production authenticated UX, real-user ZIP retry, screen-reader/clipboard and sustained-load acceptance were not performed.",
+    "A fresh bounded metadata one-off was not admitted at448MiB headroom; no container launched and no limit lowered. Host-only metadata/read-only SQL was used.",
+    "Live offline size changed by4080bytes after writers resumed;64packages remained and current filesystem/DB totals match. This is not asserted to be the same stopped snapshot.",
+    "The default two-snapshot helper was not changed; this latest-only cleanup is one explicitly authorized operation, not an automatic policy.",
+    "Follow-up commit is documentation only, local only; no new CI, push, deployment, schedule or workspace cleanup."
+  ],
+  "knowledge_closeout": {
+    "code": "verified-current",
+    "runtime": "verified-current with explicitly retained log warning",
+    "documentation": "changed-and-verified",
+    "rules": "verified-current, unchanged",
+    "agent_memory": "out-of-scope; generated-read-only",
+    "workspace": "preexisting dirty/untracked user content preserved; not cleaned"
+  }
+}

@@ -35,7 +35,15 @@ user-facing Export is not superseded merely because it is old.
 artifacts, successful retained Exports, unknown names, symlinks, paths outside
 managed roots and any ambiguous state. Unknown always means protected.
 
-AssetObject garbage collection is explicitly not implemented.
+AssetObject GC exists separately in `scripts/gc_assets.py` and
+`app/services/assets/lifecycle.py`: it defaults to a non-destructive report and
+a 30-day age threshold, excludes attachment references, active asset leases and
+both sides of derivative relationships, and requires explicit `--execute` to
+remove eligible unreferenced objects.
+It is not part of this Export/Offline cleanup engine or an enabled scheduler.
+No AssetObject apply was authorized by the November10 cleanup; its read-only
+candidate count was zero. Do not confuse implemented manual GC with automatic
+retention, or infer authority to delete assets from approval for orphan exports.
 
 ## Grace and stable evidence
 
@@ -136,5 +144,5 @@ the 24-hour grace window. It was not manually deleted. This is the intended
 publication/cleanup race behavior.
 
 Release J does not authorize future applies. Every later apply needs a new
-stable identity set and explicit approval. Automatic cleanup remains disabled
-and AssetObject GC remains unimplemented.
+stable identity set and explicit approval. Automatic cleanup remains disabled.
+The separate manual AssetObject GC described above is not enabled by Release J.

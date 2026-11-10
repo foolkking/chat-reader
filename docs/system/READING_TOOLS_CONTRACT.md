@@ -1,13 +1,13 @@
 # Reading tools and read-together workspace
 
-Released **2026-11-09** with exact source `865b0a6`, full CI `42594459199`
+Released **2026-11-11** with exact source `3564cbf`, full CI `42828329240`
 and independent artifact/runtime checks. See
 [Project State](../../PROJECT_STATE.md) and the
-[release receipt](../execution/READING_INTERACTION_ZIP_RELEASE_2026-11-09.md).
+[release receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
 Synthetic browser acceptance is not authenticated production or physical-device
 acceptance; the original November 8 implementation/audit records remain historical.
 
-## Unreleased touch boundaries and device handoff — 2026-11-10
+## Touch boundaries and device handoff — released 2026-11-11
 
 Touch movement and wheel input request the same guarded complete-turn edge
 load when its sentinel is already visible. Native panning is not classified as
@@ -38,12 +38,13 @@ automatic live scroll synchronization, new migration or Dexie version is added.
 Synthetic tests reproduce the original missing touch load and exercise both
 directions at375/800px, plus both directions within a dense virtualized formula
 reply with ≤2px reversal. Separate real Chromium/Dexie stores cover12 responsive/
-locale/theme handoff combinations. Exact full-app CI remains required; physical
+locale/theme handoff combinations. Exact full-app CI passed, including Reader27,
+the handoff12 matrix and unchanged original64+12+4 stability traces. Physical
 tablet/Safari acceptance has not been performed.
 
-## Unreleased image receipt presentation — 2026-11-10
+## Image receipt presentation — released 2026-11-11
 
-The working-tree candidate expires only a successful image-size receipt three
+The reader expires only a successful image-size receipt three
 seconds after its query-cache acknowledgement time. The scale trigger briefly
 shows Saved (or a check icon for compact images), retaining the normal label's
 geometry and accessible percentage. It adds no body row and covers neither the
@@ -56,7 +57,7 @@ slider keeps its percentage; save/publication guidance is available through
 the trigger tooltip and group description rather than an added body paragraph.
 The existing six-case slider gate additionally tests three-second success,
 no receipt-driven geometry change, virtual remount and persistent uncertain/
-pending states with a controlled clock. This candidate is not yet released.
+pending states with a controlled clock. This gate passed in exact-source CI.
 
 ## Reading-interaction behavior — deployed 2026-11-09
 
@@ -272,7 +273,7 @@ Viewer rules in [the image contract](IMAGE_READING_STABILITY_CONTRACT.md) remain
 No migration, new image-processing dependency or replacement Viewer is added.
 Verification status and remaining limits belong in
 [the implementation record](../execution/READING_TOOLS_2026-11-08.md).
-# Unreleased feedback recovery — 2026-11-10
+## Feedback recovery — released 2026-11-11
 
 Shared clipboard and citation success receipts expire after3seconds. Message
 Markdown preparation/success stays in the existing action plus live-region
@@ -292,4 +293,5 @@ Keyboard focus pauses their remaining time; leaving the notice resumes it.
 Saving, unknown-result and failed-read notices never auto-expire. Re-saving an
 existing point refreshes only the success receipt. Notice controls remain44px;
 mobile prose uses available width rather than a shrink-to-fit narrow column.
-Local component checks are not full Reader/Share/Offline/Together acceptance.
+The exact-source CI additionally passed Reader/Share/Offline/Together gates;
+local component checks alone are not a substitute for that acceptance.
