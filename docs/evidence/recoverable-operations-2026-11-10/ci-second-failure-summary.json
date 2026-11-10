@@ -1,0 +1,35 @@
+{
+  "revision": "b7b1102cd4761d554569891eb83104748239f5ce",
+  "run_id": 42775496659,
+  "attempt": 1,
+  "dispatch_acknowledged": "2026-11-10T15:28:11.5105884+08:00",
+  "first_read": "2026-11-10T16:18:40.2820804+08:00",
+  "first_read_after_seconds": 3028.771492,
+  "api": {
+    "passed": 6308,
+    "skipped": 3,
+    "failed": 0
+  },
+  "reading_performance_job": "success",
+  "settings": {
+    "total": 470,
+    "passed": 469,
+    "failed": 1,
+    "minutes": 42.1,
+    "failure": "multipart request body unavailable; upload counter incorrectly depended on it"
+  },
+  "web_adaptive_import": {
+    "passed": 2,
+    "failed": 10,
+    "skipped": 1,
+    "existing_skip": "private optional fixture not supplied",
+    "causes": {
+      "implicit_resume": 3,
+      "duplicate_filename_locators": 2,
+      "native_chooser_retention": 4,
+      "append_expected_to_replace": 1
+    }
+  },
+  "new_release_images": false,
+  "deployment": false
+}

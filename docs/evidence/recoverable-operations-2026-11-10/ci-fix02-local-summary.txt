@@ -1,0 +1,8 @@
+Second CI correction checkpoint (unreleased)
+Lint: passed
+Typecheck: passed; task-local build-info, user file preserved
+Initial Node sweep: 2323 passed / 1 failed (mocked shell 10-second subprocess timeout)
+Complete bounded rerun: 2324 passed / 0 failed / 0 skipped; --test-concurrency=4; no timeout changes
+Upload reader: Python syntax and six environment/database isolation guards passed; no DB/application started
+Real persisted-upload SHA and full-app recovery acceptance: required in next exact-source CI
+No new API/application changes, user source replay, deployment or cleanup

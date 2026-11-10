@@ -1,0 +1,6 @@
+{
+  "python_syntax": "passed",
+  "isolation_guards_passed": 6,
+  "database_or_application_started": false,
+  "positive_upload_check": "requires exact-source CI"
+}

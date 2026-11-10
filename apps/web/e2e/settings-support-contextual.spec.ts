@@ -1,5 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import path from "node:path";
 import { removeSyntheticAccount, settingsAdmin, settingsAppearance } from "./settings-test-helper";
 import { readLocal } from "./settings-offline-helper";
 
@@ -26,6 +28,52 @@ async function approve(admin: APIRequestContext, user: APIRequestContext) {
   return request;
 }
 
+function readSyntheticUpload(importId: string, userId: string): {
+  filename: string; byte_size: number; sha256: string; stored_bytes: number; stored_sha256: string;
+} {
+  // Chromium does not always expose multipart file bytes in request events.
+  // Verify the real upload on disk, not a mocked/intercepted replacement body.
+  return JSON.parse(execFileSync("python", ["-B", "-c", `
+import hashlib,json,os,re,sys,uuid
+from pathlib import Path
+from sqlalchemy.engine import make_url
+assert os.environ.get('CI')=='true' and os.environ.get('APP_ENV')=='test'
+assert os.environ.get('E2E_SETTINGS_MAILBOX')=='1'
+url=make_url(os.environ['DATABASE_URL'])
+assert url.host=='127.0.0.1' and url.port==65438 and url.database=='chat_reader'
+from app.core.config import get_settings
+from app.core.database import SessionLocal
+from app.models.import_record import ImportRecord
+from app.models.source_artifact import SourceArtifact
+from app.models.user import User
+root=Path(get_settings().import_storage_dir).resolve()
+assert root==Path('/tmp/chat-reader/imports').resolve()
+with SessionLocal() as db:
+ owner=db.get(User,uuid.UUID(sys.argv[2]))
+ assert owner and re.fullmatch(r'contextual-import-[0-9]+@example\\.test',owner.normalized_email or '')
+ record=db.get(ImportRecord,uuid.UUID(sys.argv[1]))
+ assert record and record.owner_user_id==owner.id and record.file_count==1
+ rows=db.query(SourceArtifact).filter(SourceArtifact.import_id==record.id).all()
+ assert len(rows)==1
+ row=rows[0]
+ assert row.filename=='synthetic-private-selection.json' and row.byte_size<=2*1024*1024
+ folder=(root/str(record.id)).resolve()
+ stored=(folder/row.safe_filename).resolve()
+ assert folder.parent==root and stored.parent==folder and stored.is_file()
+ digest=hashlib.sha256()
+ size=0
+ with stored.open('rb') as source:
+  while chunk:=source.read(65536):
+   size+=len(chunk)
+   assert size<=2*1024*1024
+   digest.update(chunk)
+ print(json.dumps({'filename':row.filename,'byte_size':row.byte_size,'sha256':row.sha256,
+ 'stored_bytes':size,'stored_sha256':digest.hexdigest()}))
+`, importId, userId], {
+    cwd: path.resolve(process.cwd(), "../api"), encoding: "utf8", timeout: 10_000, maxBuffer: 16 * 1024,
+  }));
+}
+
 test("import limit request preserves selected bytes and never uploads until the user continues", async ({ browser, playwright, baseURL }, info) => {
   test.setTimeout(180_000);
   const base = baseURL!, admin = await settingsAdmin(playwright.request, base);
@@ -40,11 +88,10 @@ test("import limit request preserves selected bytes and never uploads until the 
     expect(registered.status()).toBe(201); userId = (await registered.json()).user_id;
     await settingsAppearance(context.request, base, "en-US");
     const page = await context.newPage(); await page.goto(base);
-    const uploads: Array<{ body: Buffer; contentType: string }> = [];
+    let uploads = 0;
     page.on("request", request => {
       if (request.method() === "POST" && new URL(request.url()).pathname === "/api/adaptive-import/sessions") {
-        const body = request.postDataBuffer();
-        if (body) uploads.push({ body, contentType: request.headers()["content-type"] });
+        uploads += 1;
       }
     });
     await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
@@ -84,26 +131,22 @@ test("import limit request preserves selected bytes and never uploads until the 
     // The chooser resets after each append so the same filename can be chosen
     // again. The ordered selection owns the File objects, not input.files.
     await expect(page.getByTestId("import-selected-files").getByText("synthetic-private-selection.json", { exact: true })).toBeVisible();
-    expect(uploads).toHaveLength(0);
+    expect(uploads).toBe(0);
     await expect(page.getByTestId("preview-import-button")).toBeEnabled();
     await expect(page.getByTestId("preview-import-button")).toBeFocused();
     expect((await (await context.request.get("/api/conversations")).json())).toHaveLength(0);
     if (process.env.E2E_SETTINGS_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SETTINGS_SCREENSHOTS}/support-return-import-375.png` });
-    const preview = page.waitForResponse(response => response.url().includes("/api/adaptive-import/sessions") && response.request().method() === "POST");
+    const preview = page.waitForResponse(response => new URL(response.url()).pathname === "/api/adaptive-import/sessions" && response.request().method() === "POST");
     await page.getByTestId("preview-import-button").click();
-    expect((await preview).ok()).toBe(true);
-    expect(uploads).toHaveLength(1);
-    const submitted = await new Response(new Uint8Array(uploads[0].body), {
-      headers: { "Content-Type": uploads[0].contentType },
-    }).formData();
-    const files = submitted.getAll("files");
-    expect(files).toHaveLength(1);
-    const file = files[0];
-    if (typeof file === "string") throw new Error("The original source must be submitted as a file");
-    expect(file.name).toBe("synthetic-private-selection.json");
-    const bytes = Buffer.from(await file.arrayBuffer());
-    expect(bytes.length).toBe(source.length);
-    expect(createHash("sha256").update(bytes).digest("hex")).toBe(createHash("sha256").update(source).digest("hex"));
+    const response = await preview;
+    expect(response.status()).toBe(201);
+    expect(uploads).toBe(1);
+    const session = await response.json();
+    const digest = createHash("sha256").update(source).digest("hex");
+    expect(readSyntheticUpload(session.import_id, userId)).toEqual({
+      filename: "synthetic-private-selection.json", byte_size: source.length, sha256: digest,
+      stored_bytes: source.length, stored_sha256: digest,
+    });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   } catch (error) { failed = true; throw error; }
   finally {

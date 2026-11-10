@@ -1,0 +1,9 @@
+{
+  "base_revision": "b7b1102cd4761d554569891eb83104748239f5ce",
+  "scope": "Second CI correction; E2E only; no application changes",
+  "files": {
+    "apps/web/e2e/import-markdown.spec.ts": "5ffe02c47f2fb331a6a445470dced5cce2b4e9031b6f3b47ac386dccb7b2ee81",
+    "apps/web/e2e/ai-rich-markdown-attachment.spec.ts": "088bf137c249ade38b2cc2392855a06f941e1c0621b162a835cb7ac266ef69a4",
+    "apps/web/e2e/settings-support-contextual.spec.ts": "5e681b3ecd750c3cc51ebebe46dbe908342efb9b5bcf3e7ee30fb577cfd50ed7"
+  }
+}

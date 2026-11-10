@@ -65,7 +65,7 @@ test("Markdown and image attachments use the unified Viewer without weakening Ri
     await expect(markdownPreview).toBeVisible();
     await expect(markdownPreview.locator(".katex-display")).toHaveCount(1);
     await expect(markdownPreview.locator(".katex-mathml math")).toHaveCount(1);
-    await markdownPreview.locator("button.attachment-icon-action").first().click();
+    await markdownPreview.getByRole("button", { name: /^(打开完整预览|Open full preview)$/ }).click();
 
     const viewer = page.getByTestId("attachment-viewer-shell");
     await expect(viewer).toBeVisible();

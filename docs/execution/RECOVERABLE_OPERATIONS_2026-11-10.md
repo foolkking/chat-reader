@@ -469,3 +469,46 @@ existing resource limits.
 - No workflow timeout, per-case timeout, retry policy or existing performance/
   frame/memory threshold changed. The original failed run finished itself;
   no cancellation was sent. A corrected commit/new full run is the next step.
+
+## Second CI results and corrections — November 10
+
+- Candidate `b7b1102cd4761d554569891eb83104748239f5ce`, run42775496659:
+  dispatch acknowledgement15:28:11.5105884+08:00, first read
+  16:18:40.2820804+08:00 (50m28.8s). API6308 pass /3 skips and the
+  reading-performance comparison job passed. Settings469 pass /1 failure
+  completed in42.1m. Web stopped at the adaptive import flow:10 failed,
+  2 passed,1 existing private-fixture skip. Images/inspection did not run.
+- All10 Web failures referenced obsolete UI contracts:3 implicit reopening,
+  2 unscoped duplicate filename locators,4 native chooser/file-retention
+  assertions and1 successive chooser test that silently expected replacement.
+  Corrections require explicit retained-session reopening and use the actual
+  ordered selection list; independent invalid formats are explicitly removed.
+  Same-task retry counts, no reupload, real converted Markdown import and
+  valid mapping retention remain asserted. A later attachment test now uses
+  the retained single full-preview action instead of the removed header icon.
+- The remaining Settings failure counted only uploads for which Chromium
+  provided `postDataBuffer()`. Its real successful201 upload had no observed
+  body, so the test counted zero. The previous small intercepted multipart
+  probe did not establish observability on this real unintercepted transport.
+  Installed Playwright only populates this buffer from exposed protocol
+  `postDataEntries`; lack of telemetry is not lack of upload.
+- The corrected test counts every exact upload POST independently of its
+  body. Before explicit analysis it still requires zero. After the sole201
+  submission, a read-only Python helper verifies the sole saved artifact's
+  name, byte count and SHA plus the real stored file's complete length/SHA.
+  It requires CI/test/Settings flags, loopback65438/test database, fixed
+  synthetic storage root, the newly created synthetic owner and import,
+  one expected filename and a2MiB bounded read. No real user file is read,
+  no production path is permitted, no database/file writes are performed.
+  Python syntax and six rejection guards pass locally; its positive upload
+  integration must run in exact-source CI, not a local substitute.
+- Local lint/typecheck pass. The first all-tests Node sweep had2323 pass /
+  1 failure: the mocked PostgreSQL shell readiness case hit its unchanged
+  10-second subprocess limit under default concurrent load. A complete
+  bounded-concurrency rerun (`--test-concurrency=4`) passes2324/2324.
+  Neither the test timeout nor workflow concurrency/thresholds were changed.
+  Initial failure and bounded rerun are separate task-local transcripts.
+- No application source change in this correction, no local full-app launch,
+  no real-user source replay, no production modification and no automatic
+  cleanup. New exact-source CI is required before artifact acceptance and
+  a fresh successful deployment-capacity precheck.

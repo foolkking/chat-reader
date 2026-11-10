@@ -56,6 +56,8 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "zh-CN"]] 
     await page.getByTestId("import-dialog-close").click();
     await page.reload();
     await openImport();
+    await expect(panel).toHaveCount(0);
+    await page.getByRole("button", { name: /^(查看上次保留的导入|View the last retained import)$/ }).click();
     await expect(panel.getByRole("alert")).toContainText(locale === "zh-CN" ? "可用内存不足" : "not enough available memory");
     const retry = panel.getByRole("button", { name: /^(重试分析|Retry analysis)$/ });
     await expect(retry).toBeInViewport();
@@ -99,13 +101,13 @@ test("file drops capture the current unclassified or project destination", async
     await expect(page.getByTestId("workspace-file-drop-overlay")).toBeVisible();
     await dispatchFileDrop('[data-testid="workspace-import-drop-target"]', "unclassified-drop.md");
     await expect(page.getByTestId("import-destination-select")).toHaveValue("");
-    await expect(page.getByText("unclassified-drop.md")).toBeVisible();
+    await expect(page.getByTestId("import-selected-files").getByText("unclassified-drop.md", { exact: true })).toBeVisible();
     await page.getByTestId("import-dialog-close").click();
 
     await page.goto(`/projects/${projectId}`);
     await dispatchFileDrop('[data-testid="sidebar-import-button"]', "project-drop.md");
     await expect(page.getByTestId("import-destination-select")).toHaveValue(projectId);
-    await expect(page.getByText("project-drop.md")).toBeVisible();
+    await expect(page.getByTestId("import-selected-files").getByText("project-drop.md", { exact: true })).toBeVisible();
   } finally {
     await page.request.delete(`/api/projects/${projectId}`);
   }
@@ -305,9 +307,9 @@ test("keeps valid mapping work while invalid groups are excluded or replaced", a
     await page.getByRole("button", { name: /确认不导入|Confirm exclusion/ }).click();
     await expect(page.getByText(/暂不可映射 · 需要先转换|Not mappable · Convert the source first/)).toBeVisible();
     await expect(page.getByText(`broken-a-${suffix}.json`)).toHaveCount(0);
-    await expect(page.getByText(`broken-b-${suffix}.json`)).toBeVisible();
 
     const remainingGroup = page.getByRole("article").filter({ hasText: `broken-b-${suffix}.json` });
+    await expect(remainingGroup.getByText(`broken-b-${suffix}.json`, { exact: true })).toBeVisible();
     await expect(remainingGroup.getByRole("button", { name: new RegExp(`(?:替换|Replace) broken-b-${suffix}\\.json`) })).toBeEnabled();
     const requests: Array<{ method: string; path: string }> = [];
     const recordRequest = (request: Request) => {
@@ -386,7 +388,7 @@ for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "zh-CN"]] 
     await page.screenshot({ path: `${process.env.TEMP ?? "/tmp"}/normalizer-${width}.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await help.click();
-    expect(await input.evaluate((element: HTMLInputElement) => element.files?.[0]?.name)).toBe(source.name);
+    await expect(page.getByTestId("import-selected-files").getByText(source.name, { exact: true })).toBeVisible();
     await help.click();
     const chooserPromise = page.waitForEvent("filechooser");
     await guide.getByRole("button", { name: /选择转换后的文件|Choose the converted file/ }).click();
@@ -415,6 +417,9 @@ test("conversion is not offered as recovery for archives, Skills or a service fa
     await input.setInputFiles({ name, mimeType: "application/octet-stream", buffer: Buffer.from("Synthetic input") });
     await expect(help).toHaveCount(0);
     await expect(page.getByTestId("preview-import-button")).toBeDisabled();
+    // Adding another file appends; remove the invalid source explicitly before
+    // exercising the next independent format instead of silently replacing it.
+    await page.getByTestId("import-selected-files").getByRole("button", { name: `Remove file: ${name}`, exact: true }).click();
   }
   await input.setInputFiles({ name: "synthetic.json", mimeType: "application/json", buffer: Buffer.from("{}") });
   let analysisRequests = 0;
@@ -427,7 +432,7 @@ test("conversion is not offered as recovery for archives, Skills or a service fa
     "The request result is not confirmed. Check the current import state before deciding whether to retry.",
   );
   await expect(help).toHaveCount(0);
-  expect(await input.evaluate((element: HTMLInputElement) => element.files?.[0]?.name)).toBe("synthetic.json");
+  await expect(page.getByTestId("import-selected-files").getByText("synthetic.json", { exact: true })).toBeVisible();
   await expect(input).toBeEnabled();
   expect(analysisRequests).toBe(1);
 });
@@ -453,7 +458,7 @@ test("an in-flight analysis keeps its source while exit remains available", asyn
       transfer.items.add(new File(["not-json"], "synthetic-new.json", { type: "application/json" }));
       element.dispatchEvent(new DragEvent("drop", { bubbles: true, dataTransfer: transfer }));
     });
-    expect(await input.evaluate((element: HTMLInputElement) => element.files?.[0]?.name)).toBe("synthetic-original.json");
+    await expect(page.getByTestId("import-selected-files").getByText("synthetic-original.json", { exact: true })).toBeVisible();
   } finally { release(); }
   await expect(page.getByRole("article").filter({ hasText: "synthetic-original.json" })).toBeVisible();
   await expect(page.getByText("synthetic-new.json")).toHaveCount(0);

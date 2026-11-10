@@ -181,3 +181,20 @@ The real Settings/full-app/PWA suite must pass the next exact-source CI.
 No timeout, retry, frame or memory threshold was increased. Failed browser
 launches before installing/selecting the pinned fullChromium remain recorded
 in the implementation ledger rather than represented as passing executions.
+
+## Second CI failure corrections
+
+`ci-second-failure-summary.json` binds b7b1102/run42775496659 and its50m28.8s
+first-read boundary. API6308 and performance passed; Settings469 passed/1
+failed; Web adaptive import had10 failures/2 passes/1 pre-existing private
+fixture skip. No release images were created.
+`source-checkpoint-ci-fix02.json` records the three changed browser tests.
+No application behavior or timing/acceptance threshold changed here.
+
+`ci-fix02-local-summary.txt` separates the initial2323-pass/1-shell-timeout
+Node sweep from the full2324-pass bounded-concurrency rerun. Static checks
+pass. `ci-fix02-upload-guards.json` records Python syntax and six isolation
+rejections without launching the application/database. The helper's actual
+stored-upload SHA acceptance remains an exact-source Settings CI obligation.
+The earlier intercepted multipart probe is not presented as proof that a
+real unintercepted browser request always exposes its body.

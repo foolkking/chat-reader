@@ -36,6 +36,17 @@ lint/typecheck,108 API checks and pinned-Chromium recovery matrices pass;
 new exact-source CI remains required. Preliminary production capacity is below
 the unchanged backup budget; do not stop services or deploy without fresh
 successful admission.
+Second exact run `42775496659` (`b7b1102`) was first read at16:18:40+08:00,
+over50 minutes after dispatch. API6308 and reading-performance passed;
+Settings469/470 passed, while Web stopped at10 stale import-flow assertions.
+The remaining Settings failure was missing browser request-body telemetry,
+not proof of missing upload: its correction counts all upload requests and
+verifies stored synthetic source bytes/SHA in guarded CI-only PostgreSQL.
+Import tests now use explicit resume, ordered selection and explicit removal;
+the attachment test uses the retained full-preview action. Lint/typecheck and
+2324 Node checks pass with bounded local test concurrency; the initial
+unbounded sweep's one shell timeout is retained in the ledger. New full CI
+is still required; no release images or deployment from either failed run.
 [Implementation and validation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
 [Scoped completion review](docs/execution/ux-audit-recoverable-operations-2026-11-10.md).
 The deployed source/schema and user-owned historical evidence below are unchanged.
