@@ -53,6 +53,16 @@ Adaptive import12 and CSP4 passed; Context35 passed/1 failed at another
 implicit-resume assertion. It now resumes the exact saved import and checks
 one upload while retaining selected-Bundle revision/bytes and recovery tests.
 Static checks/2324 Node cases pass; next full CI and deployment remain pending.
+Fourth run `42792558409` (`5f0b1da`) passed all six jobs. Five artifact digests,
+377 embedded API source files, Web revision,14 Web gates, Settings470+restore1,
+35 stability cases/original64+12+4 traces/cold Viewer, six12-case recovery
+matrices and five real-memory cases independently verified. The diagnostic
+historical performance baseline failed1/9; the release-gating candidate passed9/9.
+Visual inspection found12 missing English import-source/paste labels; corrected
+copy now has actual-call coverage and12 browser combinations, with2326 Node
+checks/static checks passing. A new exact-source full CI is required.
+Read-only production capacity at18:32+08:00 is5,527,340KiB available versus
+6,147,100KiB backup-only budget, before images/headroom; no deployment/cleanup.
 [Implementation and validation ledger](docs/execution/RECOVERABLE_OPERATIONS_2026-11-10.md).
 [Scoped completion review](docs/execution/ux-audit-recoverable-operations-2026-11-10.md).
 The deployed source/schema and user-owned historical evidence below are unchanged.

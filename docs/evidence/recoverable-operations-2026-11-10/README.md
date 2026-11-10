@@ -207,3 +207,19 @@ passed; Context35 passed/1 implicit-resume test failed. No release images.
 `source-checkpoint-ci-fix03.json` and `ci-fix03-local-summary.txt` record the
 single E2E correction and passing static/2324 Node checks. Exact import ID,
 single-upload and complete revised Bundle bytes are required, not relaxed.
+
+## Fourth CI technical acceptance and visual correction
+
+`ci-fourth-independent-summary.json` binds5f0b1da/run42792558409, official
+artifact IDs/digests, complete gates, source/image chains, memory and original
+frame evidence. The diagnostic baseline failure remains explicit.
+`ci-fourth-run-summary.json` records first-read timing and all six job outcomes.
+`image-verifier-final-selftest.json` includes index/tag/attestation tampering;
+the ledger preserves initial OCI-index/Windows-newline verifier false rejections.
+`production-capacity-readonly.json` records the insufficient unchanged budget,
+not deployment admission.
+
+`ci-fix04-source-browser.json`, the corrected mobile English screenshot and
+`source-checkpoint-ci-fix04.json` bind the follow-up12-label translation fix.
+Static checks and2326 Node cases pass; source switches still submit nothing.
+This newer source requires new exact CI; the green prior source is not substituted.

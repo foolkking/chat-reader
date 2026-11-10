@@ -1,0 +1,52 @@
+{
+  "observed_at": "2026-11-10T10:32:48.678031+00:00",
+  "read_only": true,
+  "schema": "20261108_0060",
+  "database_bytes": 2010922007,
+  "business_components_kib": {
+    "imports": 1201476,
+    "exports": 49900,
+    "offline": 1274168,
+    "assets": 1395620
+  },
+  "active_or_queued_jobs": 0,
+  "active_imports": 0,
+  "available_kib": 5527340,
+  "backup_with_256MiB_headroom_kib": 6147100,
+  "space_after_backup_budget_kib": -619760,
+  "runtime": [
+    {
+      "service": "api",
+      "state": "running",
+      "health": "healthy",
+      "restarts": 0,
+      "oom": false,
+      "revision": "865b0a6e381bb3d5c2afba06b5c3aa4c59a61092"
+    },
+    {
+      "service": "web",
+      "state": "running",
+      "health": "healthy",
+      "restarts": 0,
+      "oom": false,
+      "revision": "865b0a6e381bb3d5c2afba06b5c3aa4c59a61092"
+    },
+    {
+      "service": "import-worker",
+      "state": "running",
+      "health": null,
+      "restarts": 4,
+      "oom": false,
+      "revision": "865b0a6e381bb3d5c2afba06b5c3aa4c59a61092"
+    },
+    {
+      "service": "postgres",
+      "state": "running",
+      "health": "healthy",
+      "restarts": 0,
+      "oom": false,
+      "revision": null
+    }
+  ],
+  "limits": "Not deployment admission: excludes candidate staging, expanded OCI and image/transfer headrooms; no services stopped or files changed."
+}

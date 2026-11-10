@@ -238,6 +238,13 @@ try {
       await page.goto("http://source-repair.synthetic/?selection");
       const selectInput = page.getByTestId("import-file-input");
       const selected = page.getByTestId("import-selected-files");
+      const sourceChoice = page.getByRole("group", { name: locale === "zh-CN" ? "导入来源" : "Import source", exact: true });
+      await expect(sourceChoice.getByRole("button", { name: locale === "zh-CN" ? "选择文件" : "Choose files", exact: true })).toBeVisible();
+      await sourceChoice.getByRole("button", { name: locale === "zh-CN" ? "粘贴文本" : "Paste text", exact: true }).click();
+      await expect(page.getByTestId("pasted-transcript-input")).toHaveAttribute("placeholder",
+        locale === "zh-CN" ? "在此处粘贴文本；点击“分析并继续”后才会上传。" : "Paste text here. It is uploaded only after you choose Analyze & continue.");
+      assert.equal(selectionWrites.length, 0);
+      await sourceChoice.getByRole("button", { name: locale === "zh-CN" ? "选择文件" : "Choose files", exact: true }).click();
       const selectedFiles = names => names.map((name, index) => ({ name, mimeType: "application/json", buffer: Buffer.from(`{"synthetic":${index}}`) }));
       await selectInput.setInputFiles(selectedFiles(["02.json", "invalid.exe", "01.json"]));
       await expect(page.getByTestId("preview-import-button")).toBeDisabled();

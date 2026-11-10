@@ -1,0 +1,50 @@
+{
+  "revision": "5f0b1daec1a0d265297bfd03098b14765d1809fa",
+  "run_id": 42792558409,
+  "attempt": 1,
+  "dispatch_acknowledged": "2026-11-10T17:39:34.5270794+08:00",
+  "first_read": "2026-11-10T18:30:35.6586041+08:00",
+  "first_read_after_seconds": 3061.131525,
+  "jobs": [
+    {
+      "name": "api-quality",
+      "id": 129749405455,
+      "conclusion": "success"
+    },
+    {
+      "name": "settings-quality",
+      "id": 129749405749,
+      "conclusion": "success"
+    },
+    {
+      "name": "web-quality",
+      "id": 129749405879,
+      "conclusion": "success"
+    },
+    {
+      "name": "reading-performance-comparison / compare",
+      "id": 129762569777,
+      "conclusion": "success"
+    },
+    {
+      "name": "build-images",
+      "id": 129772945921,
+      "conclusion": "success"
+    },
+    {
+      "name": "inspect-release-artifact",
+      "id": 129775807028,
+      "conclusion": "success"
+    }
+  ],
+  "api": {
+    "passed": 6308,
+    "skipped": 3,
+    "failed": 0
+  },
+  "web_node_passed": 2239,
+  "technical_artifact_acceptance": true,
+  "visual_followup": "12 missing English import source/paste labels fixed in newer source; fresh exact CI required",
+  "deployment": false,
+  "reason": "Backup capacity insufficient before image/transfer budgets"
+}

@@ -1,0 +1,14 @@
+{
+  "base_revision": "5f0b1daec1a0d265297bfd03098b14765d1809fa",
+  "scope": "English import-source/paste labels and actual-copy/browser checks",
+  "files": {
+    "apps/web/features/import/import-workspace-copy.ts": "806c03f80a76dee0c53894fd34c63951d3e88bc61188255b5a359588873ea678",
+    "scripts/ux/import-acknowledgement-copy.test.mjs": "9a82b0967d7d61d58f314c4ff1163db64ba5ab24da0e9eb83e787daad0dad10b",
+    "scripts/ux/import-source-repair-browser.mjs": "3573201e4afd31ac5b92dff1fb48efbb63cb5e4be17999de85ea9145c9088a16"
+  },
+  "task_verifier_sha256": {
+    "verify-release-image.py": "32f947991f9ae84eda2d9a99729089c12bd3cf655d0d18303000b4c0286715a9",
+    "test-image-verifier.py": "db707d82d6e801930c2b11ee7dd00bd6b7ddde4e65f26132857e52b00fea7a40",
+    "verify-ci-evidence.py": "5e3a6db749a4c7cd170a52601da78a90d9d944511b21c55d56854e91aca8999c"
+  }
+}

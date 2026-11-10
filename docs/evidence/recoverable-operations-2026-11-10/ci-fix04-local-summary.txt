@@ -1,0 +1,6 @@
+Visual correction after fourth green CI; unreleased
+Lint/typecheck: passed; user build-info preserved
+Node: 2326 passed, zero failures/skips, bounded concurrency=4
+Pinned fullChromium ImportPanel source repair/selection: 12 width/locale/theme cases passed
+Mobile English screenshot inspected: source controls translated, no overflow
+Fresh full exact-source CI required; no deployment, stop, cleanup or user-source replay

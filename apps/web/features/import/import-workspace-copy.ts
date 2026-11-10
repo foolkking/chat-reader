@@ -14,6 +14,18 @@ export function importStateLabel(state: string, zh: boolean): string {
 }
 
 const english: Record<string, string> = {
+  "导入来源": "Import source",
+  "选择文件": "Choose files",
+  "粘贴文本": "Paste text",
+  "粘贴 Markdown 或纯文本对话": "Paste a Markdown or plain-text conversation",
+  "在此处粘贴文本；点击“分析并继续”后才会上传。": "Paste text here. It is uploaded only after you choose Analyze & continue.",
+  "不会自动读取剪贴板。文本只保留在此页面内存中，只有你明确开始分析时才上传；请勿粘贴不打算导入的敏感内容。": "The clipboard is not read automatically. Text stays in this page's memory until you explicitly start analysis. Do not paste sensitive content you do not intend to import.",
+  "已准备一段粘贴文本": "Pasted text is ready",
+  "尚未粘贴文本": "No text pasted",
+  "输入大小：": "Input size: ",
+  "已保留 {0} 个文件选项": "{0} file selections retained",
+  "粘贴文本不能超过当前上限 {0} MiB。": "Pasted text must be within the current {0} MiB limit.",
+  "粘贴文本超过本批导入上限 {0} MiB。": "Pasted text exceeds this batch's {0} MiB import limit.",
   "分析已停止，来源与设置已保留": "Analysis stopped; sources and settings are retained",
   "停止尚未确认，不代表已经结束。可以核对状态，或先离开处理其他文件；原任务不会被重复提交。": "Stopping is not yet confirmed. Check the status or leave to work on other files; the original task will not be resubmitted.",
   "操作结果需要核对。请先读取原任务状态，不要重复提交；来源不会因关闭窗口而删除。": "Check the original task's status before submitting again. Closing this window does not delete its sources.",

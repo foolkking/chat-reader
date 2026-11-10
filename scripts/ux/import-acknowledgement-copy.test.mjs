@@ -10,6 +10,33 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
 
+for (const file of ["import-panel.tsx", "adaptive-import-workspace.tsx"]) {
+  test(`${file}: every literal import label and instruction has English copy with unchanged placeholders`, () => {
+    const exports = {};
+    new Function("require", "exports", compiled)(name => name === "react"
+      ? { useCallback: callback => callback }
+      : { usePreferences: () => ({ resolvedLocale: "en-US" }) }, exports);
+    const tr = exports.useImportCopy();
+    const content = readFileSync(new URL(`../../apps/web/features/import/${file}`, import.meta.url), "utf8");
+    const parsed = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const keys = new Set();
+    function visit(node) {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "tr"
+        && node.arguments[0] && ts.isStringLiteral(node.arguments[0])) keys.add(node.arguments[0].text);
+      ts.forEachChild(node, visit);
+    }
+    visit(parsed);
+    assert.ok(keys.size > 20, "Read actual production translation calls");
+    for (const key of keys) {
+      const values = Array.from({ length: 8 }, (_, index) => `VALUE_${index}`);
+      const translated = tr(key, ...values);
+      assert.doesNotMatch(translated, /[\u4e00-\u9fff]/, `Missing English copy: ${key}`);
+      assert.deepEqual([...translated.matchAll(/VALUE_\d+/g)].map(match => match[0]).sort(),
+        [...key.matchAll(/\{(\d+)\}/g)].map(match => values[Number(match[1])]).sort(), key);
+    }
+  });
+}
+
 test("unfinished import states explain the next step in both locales without raw internal enums", () => {
   const exports = {};
   new Function("require", "exports", compiled)(() => ({}), exports);

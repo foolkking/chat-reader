@@ -536,3 +536,46 @@ existing resource limits.
   format-health was corrected previously; no unrelated controls were rewritten.
   Lint/typecheck and full bounded2324 Node suite pass. No local full-app launch
   or replay of private sources; next exact full CI remains required.
+
+## Fourth CI acceptance, visual follow-up and capacity — November 10
+
+- Candidate `5f0b1daec1a0d265297bfd03098b14765d1809fa`, run42792558409,
+  acknowledged17:39:34.5270794+08:00; first read18:30:35.6586041+08:00
+  (51m1.1s). All six jobs ultimately passed. API6308/3 optional skips,
+  Web Node2239,14 full-app gates, Settings470+independent restore1.
+  No workflow timing, retries, source safety or frame/memory thresholds changed.
+- Five immutable artifacts were downloaded by ID, checked against official
+  digest/revision and bounded safe ZIP members. Independent inspection verified
+  377 API source files against exact Linux Git source, Web embedded revision,
+  tags/platform/config/layer hashes/diff-ID chains and no forbidden paths.
+  The task-only verifier initially rejected OCI-index image identity, then
+  Windows `git archive` CRLF normalization. Neither was ignored: it now binds
+  exact tagged index to its single linux/amd64 manifest/attestations and uses
+  command-local Linux checkout settings. Eleven synthetic valid/tampered
+  verifier checks pass; original failures are retained, no image/source mutated.
+- Independently rechecked35 reading-stability cases, original64 plus12 collapse
+  and4 passive traces/cold Viewer, six12-combination recovery matrices,
+  image slider6/modal12/Reader19, and five real cgroup/no-swap/no-OOM cases.
+  Maximum memory delta57,417,728bytes (<64MiB); Reader pointer cases reparse0,
+  maximum frame p95~16.8ms/no long tasks. Performance candidate9/9 passed;
+  immutable diagnostic baseline43a714f had8 pass/1 failure. That historical
+  failure is preserved, not represented as a clean baseline or speedup proof.
+  Default PWA's822 feature-gated skips and1 optional private-source import
+  skip remain distinct from the explicit14 gate executions.
+- Final screenshot inspection found12 missing English source/paste labels and
+  explanations in ImportPanel, including Choose files/Paste text and upload
+  privacy/size limits. Added the missing translations without changing upload
+  behavior. Two actual-production-call translation tests require all static
+  labels in ImportPanel/AdaptiveImportWorkspace to translate and retain their
+  placeholders. The real ImportPanel browser gate now checks localized source
+  choices/paste placeholder and zero submissions when switching input type.
+  Static checks,2326 Node cases and12 pinned Chromium combinations pass;
+  the corrected375px English selection screenshot was visually checked.
+  This changes source after the green run, so a new full CI is required.
+- Fresh read-only production check18:32:48+08:00: current865b0a6/schema0060,
+  no queued/active work, API/Web/PostgreSQL healthy. Worker running/no OOM,
+  existing restart counter4 (not evidence of a restart by this task).
+  Available5,527,340KiB vs backup-only6,147,100KiB: deficit619,760KiB
+  before the candidate archive, actual561,411,584 uncompressed layer bytes,
+  512MiB image and128MiB transfer headroom. No admission/stop/transfer/load,
+  cleanup, production data modification or deployment was attempted.

@@ -1,0 +1,58 @@
+{
+  "SELFTEST_ONLY": true,
+  "cases": [
+    {
+      "case": "valid",
+      "result": "accepted"
+    },
+    {
+      "case": "blob-corruption",
+      "result": "rejected",
+      "reason": "Blob digest mismatch"
+    },
+    {
+      "case": "source-substitution",
+      "result": "rejected",
+      "reason": "Embedded API source differs: app/app/main.py"
+    },
+    {
+      "case": "unreachable-manifest",
+      "result": "rejected",
+      "reason": "OCI manifest does not bind config/layers"
+    },
+    {
+      "case": "unsafe-member",
+      "result": "rejected",
+      "reason": "Unexpected archive path"
+    },
+    {
+      "case": "web-revision",
+      "result": "rejected",
+      "reason": "Web build revision mismatch"
+    },
+    {
+      "case": "valid-index",
+      "result": "accepted"
+    },
+    {
+      "case": "index-runtime-substitution",
+      "result": "rejected",
+      "reason": "OCI and Docker layer chains disagree"
+    },
+    {
+      "case": "index-attestation-substitution",
+      "result": "rejected",
+      "reason": "Unexpected index platform or attestation binding"
+    },
+    {
+      "case": "index-tag-substitution",
+      "result": "rejected",
+      "reason": "Release image index tag mismatch"
+    },
+    {
+      "case": "index-size-corruption",
+      "result": "rejected",
+      "reason": "Index descriptor missing or wrong size"
+    }
+  ]
+}
