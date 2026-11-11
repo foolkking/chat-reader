@@ -24,7 +24,13 @@ downloaded quality/memory summaries agree, without a production release.
 G retains private Context-upload cleanup receipts until confirmed removal,
 using the same bounded maintenance lane. Local API/PG93 and94 checks
 (overlapping, four Windows skips), Runtime12 and Node2279 pass;
-this additional work requires its own exact-source CI.
+G source11c872e subsequently passed all six jobs in CI42936789502;
+its artifacts have not been independently downloaded for release acceptance.
+H/I add actionable failed-return recovery, bounded private reads, retained
+drafts on failed navigation, short success feedback and same-Reader links.
+Local API186 / PG-and-recovery33 (overlapping), Node2321, Reader39 and
+Task/Continuation12 pass. H/I still require their own exact-source CI.
+Accumulate multiple related fixes per commit, as most recently requested.
 [Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
 [execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
 The latest user instruction allows major-block commits/CI without waiting;

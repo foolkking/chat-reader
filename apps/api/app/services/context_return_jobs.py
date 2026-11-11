@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import hashlib
+import stat
 import uuid
 
 from app.core.config import get_settings
@@ -13,6 +14,58 @@ from app.services.exporting.archive_transaction import track_archive_object
 from app.services.export_retention import CONTEXT_UPLOAD_FORMAT
 
 UPLOAD_FORMAT = CONTEXT_UPLOAD_FORMAT
+
+
+def context_return_recovery(db, job, *, now=None):
+    """A read-only, bounded recovery hint; admission and execution recheck it."""
+    from app.models.context_continuation import ContinuationState
+    from app.models.conversation import Conversation
+    from app.services.export_retention import utc
+
+    payload = job.payload or {}
+    try:
+        conversation_id = uuid.UUID(str(payload.get("conversation_id")))
+    except (ValueError, TypeError, AttributeError):
+        conversation_id = None
+    conversation = db.query(Conversation.id).filter(
+        Conversation.id == conversation_id, Conversation.owner_user_id == job.owner_user_id,
+        Conversation.deleted_at.is_(None),
+    ).first() if conversation_id is not None else None
+    if conversation is None:
+        return {"action": "open_list", "reason": "CONTEXT_NOT_FOUND", "conversation_id": None}
+
+    def outcome(reason, action="update_files"):
+        return {"action": action, "reason": reason, "conversation_id": str(conversation_id)}
+
+    artifact = db.query(ExportArtifact).filter_by(job_id=job.id, format=UPLOAD_FORMAT,
+        scope_type="archive_upload").populate_existing().one_or_none()
+    timestamp = now or datetime.now(timezone.utc)
+    if (artifact is None or artifact.lifecycle_state != "active" or artifact.release_requested_at is not None
+            or utc(artifact.expires_at) <= timestamp):
+        return outcome("CONTEXT_RETURN_EXPIRED")
+    state = db.query(ContinuationState.generation).filter_by(conversation_id=conversation_id).first()
+    generation = state.generation if state else 0
+    if type(payload.get("base_generation")) is not int or payload["base_generation"] != generation:
+        return outcome("CONTEXT_BASE_CHANGED")
+    # Only a single controlled input's metadata: no directory scan, decompression
+    # or full-package hash during task polling. The worker still verifies bytes.
+    try:
+        path = Path(artifact.storage_uri).absolute()
+        expected = Path(get_settings().export_storage_dir).resolve() / str(job.id) / "return.context.zip"
+        if path != expected or path != path.resolve():
+            return outcome("CONTEXT_RETURN_UNAVAILABLE")
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size != artifact.byte_size or info.st_nlink != 1:
+            return outcome("CONTEXT_RETURN_UNAVAILABLE")
+    except (OSError, ValueError):
+        return outcome("CONTEXT_RETURN_UNAVAILABLE")
+    if job.error_message in {
+        "CONTEXT_RETURN_INVALID", "CONTEXT_RETURN_TOO_LARGE", "CONTEXT_MEMBER_INVALID",
+        "CONTEXT_MEMBER_TOO_LARGE", "CONTEXT_MEMBERS_REQUIRED", "CONTEXT_BASE_CHANGED",
+        "CONTEXT_MEMBER_UNAVAILABLE",
+    }:
+        return outcome(job.error_message)
+    return outcome("CONTEXT_RETURN_FAILED", "retry")
 
 
 def receive_context_return(db, source, conversation_id, scope, *, base_generation, idempotency_key):

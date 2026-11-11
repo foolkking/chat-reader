@@ -249,6 +249,13 @@ def _job_task(job: BackgroundJob) -> BackgroundTaskRead:
     if job.job_type == "content_noise_scan" and isinstance(result.get("cleanup_apply"), dict):
         result["cleanup_apply"] = {key: value for key, value in result["cleanup_apply"].items() if key != "response"}
     from sqlalchemy.orm import object_session
+    if job.job_type == "context_return":
+        # A hint belongs to the current private source/target, not a stored
+        # earlier response. Never expose payload paths or foreign target IDs.
+        result.pop("context_return_recovery", None)
+        if job.status == "failed" and (db := object_session(job)) is not None:
+            from app.services.context_return_jobs import context_return_recovery
+            result["context_return_recovery"] = context_return_recovery(db, job)
     if job.job_type in {"personal_archive_preflight", "system_archive_preflight"} and (db := object_session(job)) is not None:
         from app.services.exporting.archive_jobs import archive_task_result
         result = archive_task_result(db, job)

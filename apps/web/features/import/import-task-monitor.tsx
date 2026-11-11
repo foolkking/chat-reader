@@ -12,6 +12,7 @@ import { Ban, RefreshCw, X, Eraser } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cancelTask, getActiveTasks, getPendingCleanupScans, getTask, retryTask } from "../../lib/api";
+import { contextReturnFailureMessage, contextReturnRecovery } from "../../lib/context-return-recovery";
 import type { BackgroundTaskRead, CleanupScanRead } from "../../lib/types";
 import { ContentCleanupDialog } from "../conversations/content-cleanup-panel";
 import { CleanupDismissAction } from "../conversations/cleanup-dismiss-action";
@@ -470,6 +471,8 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
   const failed = task.status === "failed";
   const exportAdjustment = failed && exportNeedsAdjustment(task.error_message);
   const analysisAdjustment = task.job_type === "adaptive_import_analysis" && task.failure?.retryable === false;
+  const contextRecovery = contextReturnRecovery(task);
+  const contextAdjustment = contextRecovery && contextRecovery.action !== "retry";
   const archiveTask = /^(personal|system)_archive_/.test(task.job_type);
   const committed = task.status === "committed";
   const conversationId = taskConversationId(task);
@@ -512,13 +515,27 @@ function TaskContent({ task, compact = false, onRetry, onCancel, onDismiss, onCh
       {failed ? (
         <div className="mt-2">
           <p className="break-words whitespace-pre-wrap text-[var(--danger)]">{taskFailureMessage(task, zh)}</p>
-          {onRetry && !exportAdjustment && !analysisAdjustment && task.job_type !== "context_validation" && task.job_type !== "offline_package" && !archiveUploadRecovery(task) ? (
+          {onRetry && !exportAdjustment && !analysisAdjustment && !contextAdjustment && task.job_type !== "context_validation" && task.job_type !== "offline_package" && !archiveUploadRecovery(task) ? (
             <button type="button" disabled={busy} onClick={onRetry} className="mt-1 inline-flex min-h-11 min-w-11 items-center gap-1 font-medium text-[var(--danger)] underline">
               <RefreshCw className="h-3.5 w-3.5" /> {zh ? "重试" : "Retry"}
             </button>
           ) : null}
         </div>
       ) : null}
+      {contextAdjustment ? <Link href={contextRecovery.conversation_id
+        ? `/conversations/${encodeURIComponent(contextRecovery.conversation_id)}?continuation=current` : "/"}
+        onClick={event => {
+          if (contextRecovery.conversation_id && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {
+            const request = new CustomEvent("chat-reader:open-continuation", {
+              cancelable: true, detail: { conversationId: contextRecovery.conversation_id },
+            });
+            if (!window.dispatchEvent(request)) event.preventDefault();
+          }
+          window.dispatchEvent(new Event("chat-reader:close-task-center"));
+        }}
+        className="inline-flex min-h-11 min-w-11 items-center font-medium text-accent underline">
+        {contextRecovery.conversation_id ? (zh ? "打开接续文件" : "Open continuation files") : (zh ? "返回对话列表" : "Return to conversations")}
+      </Link> : null}
       {exportAdjustment ? <Link href={conversationId ? `/conversations/${conversationId}` : "/"} onClick={() => window.dispatchEvent(new Event("chat-reader:close-task-center"))} className="inline-flex min-h-11 items-center font-medium text-accent underline">
         {conversationId ? (zh ? "返回对话调整导出" : "Return to the conversation to adjust export") : (zh ? "返回列表调整导出" : "Return to the list to adjust export")}
       </Link> : null}
@@ -614,7 +631,7 @@ function taskFailureMessage(task: BackgroundTaskRead, zh: boolean): string {
   }
   if (task.job_type === "conversation_auto_clean") return zh ? "对话清理未完成，请重新打开对话核对后重试。" : "Conversation cleanup did not finish. Reopen the conversation, review it, and retry.";
   if (task.job_type === "import") return zh ? "导入未完成，请检查源文件和任务状态后重试。" : "The import did not finish. Check the source files and task status, then retry.";
-  if (task.job_type === "context_return") return zh ? "接续文件更新未完成，请打开接续面板核对后重试。" : "The continuation update did not finish. Open Context continuation, review it, and retry.";
+  if (task.job_type === "context_return") return contextReturnFailureMessage(task, zh);
   if (task.job_type === "context_package_export") return zh ? "上下文包导出未完成，请核对附件和任务状态后重试。" : "The Context Package export did not finish. Check attachments and the task status, then retry.";
   if (task.job_type === "attachment_batch_download") return zh ? "附件下载未完成，请检查附件状态后重试。" : "The attachment download did not finish. Check the attachment status and retry.";
   return zh ? "后台任务未完成，请查看任务状态后重试。" : "The background task did not finish. Check its status and retry.";

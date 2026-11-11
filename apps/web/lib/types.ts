@@ -857,6 +857,11 @@ export type BackgroundTaskRead = {
   export_format?: string | null;
   offline_target?: OfflineDownloadTarget | null;
   result: {
+    context_return_recovery?: {
+      action: "retry" | "update_files" | "open_list";
+      reason: string;
+      conversation_id: string | null;
+    };
     source_cleanup?: { state: "pending" | "failed" | "blocked" | "completed"; revision: string; retryable: boolean };
     offline_failure?: {
       code: string;

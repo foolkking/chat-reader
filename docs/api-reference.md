@@ -927,6 +927,15 @@ reads a fresh snapshot. No partial-success artifact is published on corruption.
 | POST | `/api/tasks/{job_id}/retry` | 重试 failed 任务 |
 | POST | `/api/tasks/{job_id}/cancel` | 取消 queued/processing conversation merge；完成或不支持的任务返回 409 |
 
+Context回传恢复追加（2026-11-11工作区，未部署）：failed `context_return`
+可带`result.context_return_recovery={action,reason,conversation_id}`；
+action为`retry|update_files|open_list`，目标只在确认当前任务所有者仍拥有未删除
+对话时返回，否则null。GET不修改任务或扫描/解压来源，只核对现有代次、
+精确私有输入生命周期及单文件元数据。POST retry在任务锁内重新检查：
+过期/已释放410，其余需调整409；不重置attempt、延长TTL或覆盖更新后的文件。
+有效的临时失败仍显式重试同一任务。执行阶段的SHA/格式/权限/代次检查不省略。
+旧响应不含此可选字段仍可读；确定无效/超限/过期错误不推荐盲目重试。
+
 个人／系统归档预检的任务详情同时返回临时输入当前的 `artifact_available` 和
 `expires_at`，与归档历史使用相同服务；文件移除或过期不改变任务已完成的事实，
 但不再显示为可用于新的恢复。读取仍受当前账户归属限制，不返回物理存储路径。

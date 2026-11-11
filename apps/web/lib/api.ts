@@ -2213,20 +2213,33 @@ export function queueAttachmentDownload(conversationId: string, attachmentIds: s
   });
 }
 const continuationPath = (id: string) => `/api/conversations/${encodeURIComponent(id)}/continuation`;
+function readContinuation<T>(read: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  const generation = authenticationGeneration();
+  return withRequestDeadline(async deadline => {
+    const value = await read(deadline);
+    // Include response-body parsing: an old account's late read cannot refill
+    // the cache after authentication has already cleared it.
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    return value;
+  }, signal);
+}
 export const continuationApi = {
-  guidance: (id: string) => fetchJson<{ coverage: "none" | "declared" | "unknown"; index_digest: string | null; unindexed_messages: number | null; unindexed_characters: number | null; suggest_maintenance: boolean; message_threshold: number; character_threshold: number; source_revision: number }>(`${continuationPath(id)}/guidance`),
+  guidance: (id: string, signal?: AbortSignal) => readContinuation(deadline => fetchJson<{ coverage: "none" | "declared" | "unknown"; index_digest: string | null; unindexed_messages: number | null; unindexed_characters: number | null; suggest_maintenance: boolean; message_threshold: number; character_threshold: number; source_revision: number }>(`${continuationPath(id)}/guidance`, { signal: deadline }), signal),
   updateFiles: (id: string, form: FormData) => fetchJson<{ generation: number; revision_id: string }>(`${continuationPath(id)}/files`, { method: "PUT", body: form }),
-  state: (id: string) => fetchJson<{ generation: number; adopted_revision_id: string | null; pending_return_task_id?: string | null }>(continuationPath(id)),
-  revisions: (id: string, offset = 0) => fetchJson<ContinuationRevisionRead[]>(`${continuationPath(id)}/revisions?limit=30&offset=${offset}`),
+  state: (id: string, signal?: AbortSignal) => readContinuation(deadline => fetchJson<{ generation: number; adopted_revision_id: string | null; pending_return_task_id?: string | null }>(continuationPath(id), { signal: deadline }), signal),
+  revisions: (id: string, offset = 0, signal?: AbortSignal) => readContinuation(deadline => fetchJson<ContinuationRevisionRead[]>(`${continuationPath(id)}/revisions?limit=30&offset=${offset}`, { signal: deadline }), signal),
   returnPackage: (id: string, form: FormData) => fetchJson<{ task_id: string }>(`${continuationPath(id)}/returns`, { method: 'POST', body: form }),
-  member: async (id: string, kind: 'revisions', itemId: string, member: string) => {
+  member: (id: string, kind: 'revisions', itemId: string, member: string, signal?: AbortSignal) => readContinuation(async deadline => {
     const generation = authenticationGeneration();
     const path = `${continuationPath(id)}/${kind}/${encodeURIComponent(itemId)}/members/${encodeURIComponent(member)}`;
-    const response = await fetch(path, { cache: 'no-store' });
+    const session = serverSession();
+    if (session.status === "sign-in-required" || session.status === "unavailable") {
+      throw new ApiRequestError("Server access is paused. Your local data is retained.", session.status === "sign-in-required" ? 401 : 503, path);
+    }
+    const response = await fetch(path, { cache: 'no-store', signal: deadline });
+    if (generation === authenticationGeneration()) observeSessionResponse(response, session.userId);
     if (response.status === 401) notifyAuthenticationFailure(generation);
     if (!response.ok) throw await getApiRequestError(response, path);
-    const text = await response.text();
-    if (generation !== authenticationGeneration()) throw new Error('Account changed');
-    return text;
-  },
+    return response.text();
+  }, signal),
 };

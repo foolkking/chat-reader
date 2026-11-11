@@ -30,10 +30,10 @@ export const createHighlighter=()=>{throw Error("Code highlighting is outside th
 const noop=()=>{};
 const t=(key,values)=>translate(window.gateLocale??"en-US",key,values);
 export const usePreferences=()=>({t,resolvedLocale:window.gateLocale??"en-US",resolvedTheme:window.gateTheme??"light",
- readerWidthMode:"standard",readerDensityMode:"comfortable",readerFontSizePx:17,readerDefaultFocus:false,
+ readerWidthMode:"standard",readerDensityMode:"comfortable",readerFontSizePx:17,readerDefaultFocus:Boolean(window.fixtureDefaultFocus),
  annotationDefaultPosition:"floating",setAnnotationDefaultPosition:noop});
 export const useTranslations=()=>t;
-const params=new URLSearchParams();
+const params=new URLSearchParams(location.search);
 const router={push:noop,replace:noop,prefetch:noop};
 export const useRouter=()=>router,useSearchParams=()=>params,usePathname=()=>"/conversations/synthetic";
 const workspace={embedded:true,openMobileSidebar:noop,setReaderProjectContext:noop,setReaderFocus:noop};
@@ -77,7 +77,7 @@ window.syntheticTurn=turn;
 const index={conversation_id:id,items:messages.map(m=>({message_id:m.id,role:m.role,role_number:Math.floor((m.ordinal+1)/2),ordinal:m.ordinal,
   order_key:m.order_key,preview:"Synthetic message "+m.ordinal,turn_index:m.turn_index})),message_count:count,turn_count:count/2,limit:count,offset:0,total:count,has_previous:false,has_more:false};
 const toc={conversation_id:id,items:[],limit:100,offset:0,total:0,has_more:false};
-const source={mode:window.fixtureOffline?"offline":"remote",capabilities:{canonicalManagement:false,attachments:"read-only",share:false,export:false},
+const source={mode:window.fixtureOffline?"offline":"remote",capabilities:{canonicalManagement:Boolean(window.fixtureCanonical),attachments:"read-only",share:false,export:false},
  getConversation:async()=>conversation,getReaderTurn:async(_,anchor)=>window.fixtureRemoteRequests
    ?remoteReaderDataSource.getReaderTurn(id,anchor):turn(anchor),
  getDialogueIndex:async()=>index,getToc:async()=>toc,
@@ -544,6 +544,56 @@ try {
     for(let step=0;step<30;step++){await page.mouse.wheel(0,-120);await page.waitForTimeout(34);}
     await expect.poll(()=>scroller.locator("article[data-message-id]").evaluateAll(nodes=>Math.min(...nodes.map(n=>Number(n.dataset.messageId.slice(1)))))).toBeLessThan(oldest);
     await expect(page.locator("[data-reader-current-message]:visible")).toContainText("/"+count);
+    await page.close();
+  }
+  if(!touchOnly&&!requestOnly&&!retentionOnly) for(const [width,locale,theme] of [
+    [375,"en-US","light"],[800,"zh-CN","light"],[1440,"en-US","dark"],
+  ]) {
+    const page=await browser.newPage({viewport:{width,height:900},hasTouch:true});
+    current=page;page.on("pageerror",error=>errors.push(error.stack??error.message));
+    await page.addInitScript(({locale,theme})=>{
+      window.fixtureCanonical=true;window.gateLocale=locale;window.gateTheme=theme;
+      document.addEventListener("DOMContentLoaded",()=>document.documentElement.dataset.theme=theme);
+    },{locale,theme});
+    await page.route("https://reader.synthetic/**",route=>{
+      const p=new URL(route.request().url()).pathname;
+      if(p.startsWith("/api/"))return route.fulfill({json:p.endsWith("/continuation")
+        ?{generation:0,adopted_revision_id:null,pending_return_task_id:null}
+        :p.endsWith("/reading-position")?{position:null}:[]});
+      if(p.startsWith("/katex/"))return route.fulfill({body:readFileSync(join(katexRoot,p.slice(7))),contentType:p.endsWith(".css")?"text/css":"font/woff2"});
+      return route.fulfill({contentType:p==="/bundle.js"?"text/javascript":p==="/style.css"?"text/css":"text/html",body:p==="/bundle.js"?bundle:p==="/style.css"?styles.css:html});
+    });
+    await page.goto("https://reader.synthetic/");
+    const scroller=page.locator('[data-reader-scroll-root="true"]');
+    await expect(page.locator(".katex").first()).toBeVisible();await page.waitForTimeout(600);
+    const open=id=>page.evaluate(conversationId=>!window.dispatchEvent(new CustomEvent(
+      "chat-reader:open-continuation",{cancelable:true,detail:{conversationId}})),id);
+    const dialog=page.getByRole("dialog",{name:/上下文接续|Context continuation/});
+    assert.equal(await open("different-synthetic-conversation"),false);
+    await expect(dialog).toHaveCount(0);
+    await scroller.evaluate(node=>node.scrollTop=500);await page.waitForTimeout(400);
+    const before=await scroller.evaluate(node=>node.scrollTop);
+    for(let attempt=0;attempt<2;attempt++){
+      assert.equal(await open("synthetic"),true,"The mounted owner Reader must acknowledge repeated task navigation");
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("button",{name:/更新文件|Update files/})).toBeVisible();
+      if(!attempt) await page.screenshot({path:join(out,`context-task-${width}-${locale}-${theme}.png`)});
+      await dialog.getByRole("button",{name:/^关闭接续$|^Close continuation$/}).click();
+      await expect(dialog).toHaveCount(0);
+    }
+    assert.ok(Math.abs(await scroller.evaluate(node=>node.scrollTop)-before)<=1,"Opening the existing workspace cannot rebase Reader scroll");
+    await page.addInitScript(()=>{window.fixtureDefaultFocus=true;});
+    await page.goto("https://reader.synthetic/?continuation=current");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button",{name:/^关闭接续$|^Close continuation$/}).click();
+    await expect(dialog).toHaveCount(0);
+    await page.waitForTimeout(350);
+    await expect(dialog).toHaveCount(0);
+    await page.addInitScript(()=>{window.fixtureCanonical=false;});
+    await page.reload();await expect(page.locator(".katex").first()).toBeVisible();
+    assert.equal(await open("synthetic"),false,"Read-only Reader must not intercept a private recovery link");
+    await expect(dialog).toHaveCount(0);
+    results.push({contextTaskNavigation:true,width,locale,theme,reopened:true,coldFocusedLink:true,targetScoped:true,readOnlyExcluded:true,scrollRetained:true});
     await page.close();
   }
   assert.deepEqual(errors,[]);

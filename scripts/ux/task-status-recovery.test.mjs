@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import { setImmediate } from "node:timers/promises";
+import contextRecovery from "./fixtures/context-return-recovery.mjs";
 
 const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const React = require("react"), ts = require("typescript");
@@ -83,6 +84,7 @@ function fixture({ rows = [task()], locale = "en-US", placement = "center" } = {
         return observers.get(key).observer.getCurrentResult();
       } },
     "../../lib/api": api, "../../lib/offline-access": api,
+    "../../lib/context-return-recovery": contextRecovery,
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }),
       useTranslations: () => key => ({ tasks: "Tasks", noActiveTasks: "No active tasks" })[key] ?? key },
     "../../components/import-dialog-provider": { useImportDialog: () => ({ openImportDialog: noop }) },
@@ -385,7 +387,7 @@ const panelCode = ts.transpileModule(panelSource, { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX,
 } }).outputText;
 
-function packageStatus(locale, status) {
+function packageStatus(locale, status, reason = "CONTEXT_RETURN_FAILED") {
   let stateIndex = 0;
   const options = [], apiCalls = [];
   const module = { exports: {} };
@@ -394,7 +396,7 @@ function packageStatus(locale, status) {
       useState: initial => [stateNames[stateIndex++] === "taskId" ? "synthetic-package-task" : typeof initial === "function" ? initial() : initial, noop] },
     "@tanstack/react-query": { useQueryClient: () => ({ invalidateQueries: noop }), useQuery: value => {
       options.push(value);
-      return value.queryKey[0] === "task" ? { data: status ? { status } : undefined, isError: true }
+      return value.queryKey[0] === "task" ? { data: status ? { ...task("synthetic-package-task", status), job_type: "context_return", error_message: reason } : undefined, isError: true }
         : value.queryKey[2] === "state" ? { data: { generation: 1, adopted_revision_id: null } } : { data: [] };
     } },
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale }) },
@@ -402,6 +404,7 @@ function packageStatus(locale, status) {
     "./continuation-drop-target": { ContinuationDropTarget: "ContinuationDropTarget" },
     "./continuation-history": { ContinuationHistory: "ContinuationHistory" },
     "../../lib/api": { continuationApi: {}, getTask: id => { apiCalls.push(id); throw Error("Unexpected task GET in source-only rendering"); } },
+    "../../lib/context-return-recovery": contextRecovery,
   };
   new Function("require", "exports", panelCode)(name => {
     if (Object.hasOwn(mocks, name)) return mocks[name];
@@ -420,8 +423,15 @@ for (const locale of ["en-US", "zh-CN"]) test(`${locale}: failed package progres
 });
 for (const status of ["committed", "failed", "cancelled"]) test(`confirmed package ${status} remains visible through a later GET error`, () => {
   const f = packageStatus("en-US", status);
-  assert.match(textOf(f.tree), { committed: /Continuation files updated from package/, failed: /Update failed; previous files remain/, cancelled: /Update cancelled/ }[status]);
+  assert.match(textOf(f.tree), { committed: /Continuation files updated from package/, failed: /Saved content is unchanged/, cancelled: /Update cancelled/ }[status]);
   assert.doesNotMatch(textOf(f.tree), /latest state is unconfirmed/);
   const taskOptions = f.options.find(value => value.queryKey[0] === "task");
   assert.equal(taskOptions.refetchInterval({ state: { data: { status } } }), false);
+});
+
+for (const locale of ["en-US", "zh-CN"]) test(`${locale}: expired package explains reselection while leaving saved files alone`, () => {
+  const f = packageStatus(locale, "failed", "CONTEXT_RETURN_EXPIRED");
+  assert.match(textOf(f.tree), locale === "en-US" ? /temporary upload expired/ : /临时上传已过期/);
+  assert.ok(find(f.tree, node => node.type === "button" && textOf(node) === (locale === "en-US" ? "Select files again" : "重新选择文件")));
+  assert.deepEqual(f.apiCalls, []);
 });

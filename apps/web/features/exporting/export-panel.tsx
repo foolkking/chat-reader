@@ -57,7 +57,7 @@ export function ExportPanel({
   }, [stateRef, format, includeContinuation, includeAttachments, includeDescription, includeAnnotations, includeNotebook, includeSourceRefs, selectedScope, jobId, jobKey]);
   const continuationState = useQuery({
     queryKey: ["continuation", conversationId, "state"],
-    queryFn: () => continuationApi.state(conversationId),
+    queryFn: ({ signal }) => continuationApi.state(conversationId, signal),
     enabled: format === "context" && includeContinuation,
     staleTime: 0,
   });

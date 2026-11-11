@@ -1,0 +1,1636 @@
+{
+  "blocks": [
+    "H",
+    "I"
+  ],
+  "date": "2026-11-11",
+  "scope": "synthetic-only; not deployed",
+  "local": {
+    "api_boundaries": {
+      "passed": 186,
+      "sqlite_reflection_warnings": 4
+    },
+    "postgres_and_context_recovery": {
+      "passed": 33,
+      "overlaps_api_boundaries": true
+    },
+    "lint": "passed",
+    "typecheck": "passed; incremental disabled",
+    "ux_node": 2321,
+    "reader_groups": 39,
+    "reader_new_task_navigation": [
+      {
+        "contextTaskNavigation": true,
+        "width": 375,
+        "locale": "en-US",
+        "theme": "light",
+        "reopened": true,
+        "coldFocusedLink": true,
+        "targetScoped": true,
+        "readOnlyExcluded": true,
+        "scrollRetained": true
+      },
+      {
+        "contextTaskNavigation": true,
+        "width": 800,
+        "locale": "zh-CN",
+        "theme": "light",
+        "reopened": true,
+        "coldFocusedLink": true,
+        "targetScoped": true,
+        "readOnlyExcluded": true,
+        "scrollRetained": true
+      },
+      {
+        "contextTaskNavigation": true,
+        "width": 1440,
+        "locale": "en-US",
+        "theme": "dark",
+        "reopened": true,
+        "coldFocusedLink": true,
+        "targetScoped": true,
+        "readOnlyExcluded": true,
+        "scrollRetained": true
+      }
+    ],
+    "retention_trace_summary": [
+      {
+        "width": 375,
+        "count": 80,
+        "offline": false,
+        "protect": false,
+        "frames": 189,
+        "peak_css_px": 0,
+        "settled_css_px": 0,
+        "retained_messages": 6
+      },
+      {
+        "width": 800,
+        "count": 80,
+        "offline": false,
+        "protect": false,
+        "frames": 189,
+        "peak_css_px": 0.125,
+        "settled_css_px": 0.125,
+        "retained_messages": 6
+      },
+      {
+        "width": 1440,
+        "count": 80,
+        "offline": false,
+        "protect": false,
+        "frames": 189,
+        "peak_css_px": 0.125,
+        "settled_css_px": 0.125,
+        "retained_messages": 6
+      },
+      {
+        "width": 800,
+        "count": 80,
+        "offline": true,
+        "protect": false,
+        "frames": 190,
+        "peak_css_px": 0.125,
+        "settled_css_px": 0.125,
+        "retained_messages": 6
+      },
+      {
+        "width": 1440,
+        "count": 160,
+        "offline": false,
+        "protect": false,
+        "frames": 189,
+        "peak_css_px": 0.375,
+        "settled_css_px": 0.375,
+        "retained_messages": 6
+      },
+      {
+        "width": 1440,
+        "count": 80,
+        "offline": false,
+        "protect": true,
+        "frames": 190,
+        "peak_css_px": 0.125,
+        "settled_css_px": 0.125,
+        "retained_messages": 6
+      }
+    ],
+    "task_and_continuation_browser": {
+      "scope": "Production Task Center + ContinuationPanel + React Query; synthetic network/account/Reader-route/adjacent-document adapters; actual editor draft protection is covered separately",
+      "results": [
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "theme": "light",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 29,
+                "right": 77
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 43,
+                "right": 91
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 29,
+                "right": 125
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              }
+            ]
+          },
+          "screenshot": "tasks-375-zh-CN-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-zh-CN-light.png"
+        },
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 29,
+                "right": 77
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 43,
+                "right": 91
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 29,
+                "right": 125
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 29,
+                "right": 73
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 29,
+                "right": 101
+              }
+            ]
+          },
+          "screenshot": "tasks-375-zh-CN-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-zh-CN-dark.png"
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "theme": "light",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 29,
+                "right": 101.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 43,
+                "right": 115.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 29,
+                "right": 277.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 29,
+                "right": 165.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 29,
+                "right": 128.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-375-en-US-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-en-US-light.png"
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "theme": "dark",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 29,
+                "right": 101.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 43,
+                "right": 115.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 29,
+                "right": 277.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 29,
+                "right": 147.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 29,
+                "right": 163.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 29,
+                "right": 165.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 302,
+                "right": 346
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 29,
+                "right": 77.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 29,
+                "right": 128.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-375-en-US-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-375-en-US-dark.png"
+        },
+        {
+          "width": 800,
+          "locale": "zh-CN",
+          "theme": "light",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 69,
+                "right": 117
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 83,
+                "right": 131
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 69,
+                "right": 165
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              }
+            ]
+          },
+          "screenshot": "tasks-800-zh-CN-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-zh-CN-light.png"
+        },
+        {
+          "width": 800,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 69,
+                "right": 117
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 83,
+                "right": 131
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 69,
+                "right": 165
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 69,
+                "right": 113
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 69,
+                "right": 141
+              }
+            ]
+          },
+          "screenshot": "tasks-800-zh-CN-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-zh-CN-dark.png"
+        },
+        {
+          "width": 800,
+          "locale": "en-US",
+          "theme": "light",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 69,
+                "right": 141.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 83,
+                "right": 155.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 69,
+                "right": 317.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 69,
+                "right": 205.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 69,
+                "right": 168.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-800-en-US-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-en-US-light.png"
+        },
+        {
+          "width": 800,
+          "locale": "en-US",
+          "theme": "dark",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 69,
+                "right": 141.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 83,
+                "right": 155.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 69,
+                "right": 317.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 69,
+                "right": 187.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 69,
+                "right": 203.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 69,
+                "right": 205.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 687,
+                "right": 731
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 69,
+                "right": 117.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 69,
+                "right": 168.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-800-en-US-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-800-en-US-dark.png"
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "theme": "light",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 389,
+                "right": 437
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 403,
+                "right": 451
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 389,
+                "right": 485
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-zh-CN-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-zh-CN-light.png"
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 48,
+                "height": 44,
+                "left": 389,
+                "right": 437
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 48,
+                "height": 44,
+                "left": 403,
+                "right": 451
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 96,
+                "height": 44,
+                "left": 389,
+                "right": 485
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 389,
+                "right": 433
+              },
+              {
+                "width": 72,
+                "height": 44,
+                "left": 389,
+                "right": 461
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-zh-CN-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-zh-CN-dark.png"
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "theme": "light",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 389,
+                "right": 461.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 403,
+                "right": 475.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 389,
+                "right": 637.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 389,
+                "right": 525.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 389,
+                "right": 488.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-en-US-light.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-en-US-light.png"
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "theme": "dark",
+          "writes": 5,
+          "taskReads": 3,
+          "geometry": {
+            "overflow": 0,
+            "actions": [
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 389,
+                "right": 461.40625
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 72.40625,
+                "height": 44,
+                "left": 403,
+                "right": 475.40625
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 248.234375,
+                "height": 44,
+                "left": 389,
+                "right": 637.234375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 118.359375,
+                "height": 44,
+                "left": 389,
+                "right": 507.359375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 134.484375,
+                "height": 44,
+                "left": 389,
+                "right": 523.484375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 136.375,
+                "height": 44,
+                "left": 389,
+                "right": 525.375
+              },
+              {
+                "width": 44,
+                "height": 44,
+                "left": 1007,
+                "right": 1051
+              },
+              {
+                "width": 48.21875,
+                "height": 44,
+                "left": 389,
+                "right": 437.21875
+              },
+              {
+                "width": 99.78125,
+                "height": 44,
+                "left": 389,
+                "right": 488.78125
+              }
+            ]
+          },
+          "screenshot": "tasks-1440-en-US-dark.png",
+          "sourceCleanup": "cancelled → explicit cleanup retry → unknown response → read-only confirmation",
+          "contextRecovery": "expired/conflict/missing target never requeue; transient retry once; explicit reselection then save",
+          "contextRead": "failed navigation retains the old document; read-only retry works; confirmed save supersedes old failure; success clears after 3s, failure does not",
+          "contextScreenshot": "context-1440-en-US-dark.png"
+        }
+      ],
+      "errors": []
+    }
+  },
+  "predecessor_ci": {
+    "run": 42936789502,
+    "source": "11c872ec772feb2cb8c28fec7b217d2a2791da0e",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "web-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "settings-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "api-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "conclusion": "success"
+      },
+      {
+        "name": "build-images",
+        "conclusion": "success"
+      },
+      {
+        "name": "inspect-release-artifact",
+        "conclusion": "success"
+      }
+    ],
+    "independent_artifact_download": false,
+    "not_HI_acceptance": true
+  },
+  "limitations": [
+    "No local full Next build due to limited temporary disk capacity; exact CI required",
+    "No physical tablet/production authenticated UI acceptance",
+    "No production deploy, file purge or backup changes",
+    "HTTP/account/Reader-route/adjacent-document adapters in Task Center fixture; real Reader tested separately",
+    "Unknown write reconciliation outside H/I remains open",
+    "Original cc94de1 180ms CI long task remains causally unexplained; thresholds unchanged"
+  ],
+  "screenshots": {
+    "context-recovery-375-zh-light.png": "02e4e053b199bdea331398a7dff65086148a74d73f5640214995e2b13cca1f49",
+    "context-reader-375-en-light.png": "06715d934d76df831ddac81a23b3645694854ad890177340d21a39f891749097",
+    "context-reader-1440-en-dark.png": "dc9d4d310ee962202a03ebda201e66d1ac43331484c5b3ccd168931e3d17bc32"
+  },
+  "source_sha256": {
+    "apps/api/app/api/routes/tasks.py": "15314685e5b877630805d8cd71978029c35ef08a59fa703962cc436a9ac2af7a",
+    "apps/api/app/services/background_jobs.py": "c2473596c7aec599cc724e7b6a1e115f767e2b3cd099488f844e05239bb1f3e0",
+    "apps/api/app/services/context_return_jobs.py": "019b9da1c8a077e019ce8b18c2450c339e6f1fcaca423e60e98c40cb7e3389b3",
+    "apps/api/app/services/task_errors.py": "75d4327531cfe29af5d214ba8b3c3bca8edd0a96e94688ab17ef3602715e3c4d",
+    "apps/api/tests/test_context_recovery_postgres.py": "adee922caff66c3043157e71c499fe267df3d64d2ab56e27aac8763f58ffe01c",
+    "apps/api/tests/test_context_return_recovery.py": "f8ea1b17e42a4307d3142dc41a1b41e0f4044dbafa312e7c7e022c54cfa77314",
+    "apps/api/tests/test_task_error_projection.py": "27c2563bb1a18e72ac1f0fcc736c763ae220c2d08d2608b679232ef8fe01900d",
+    "apps/web/features/conversations/conversation-reader.tsx": "21e9cb74357590826b32ecda2ea21ac68f28b121f44e79f290df8c3db7c717c1",
+    "apps/web/features/exporting/continuation-document.tsx": "6a798de582443de3aa7090f4dbeead3a9e40e93b43588d4f8bbd721c641f1a8e",
+    "apps/web/features/exporting/continuation-panel.tsx": "7a023517413f4e4732fb68a526027f0666f1de0befe67ea0d2b97ae8dc284399",
+    "apps/web/features/exporting/export-panel.tsx": "72af4449855e141e199d4b567043d09c6ba48677950f896bf3d26680664f1bdf",
+    "apps/web/features/exporting/maintenance-hint.tsx": "d6b904df17e6d01726de5f80b7164db913e110597047113ca10e11fdf0d1df48",
+    "apps/web/features/import/import-task-monitor.tsx": "aa7e463a8a898a77c084bbccbd80072cba574db49ce1dd7a5d85aa31cb574e38",
+    "apps/web/lib/api.ts": "be0a42ac0253520fe248ce863dc53430c08c9790ef6f29232684542ed3576ea3",
+    "apps/web/lib/context-return-recovery.ts": "28314ef556b8ae897d9b08edcd6dd43e7efa163d23e8138dc7b3332a9f4549bc",
+    "apps/web/lib/types.ts": "5764dc3b750745214c47de275f4f2a64676fdc0df77f140d44317e4da94defe0",
+    "scripts/ux/context-return-recovery.test.mjs": "84ebb04beac56ae9fc5e5d61337ca1c421af286710a27052eca77b57978d1b47",
+    "scripts/ux/continuation-drop-guard.test.mjs": "4f644323fd6c2abf423f389a66a0a313fcf6484f1cd3868d1bbeb6b62fc6e3b6",
+    "scripts/ux/continuation-read-lifetime.test.mjs": "89d3e6b14e783f2838a8f701d283b3c7daa0c2c1d5117e0bc958ac95e5527044",
+    "scripts/ux/continuation-task-navigation.test.mjs": "4d4e9e852db5705aed0777745fc74ea5715b521287ca4439fb57772971df891e",
+    "scripts/ux/fixtures/context-return-recovery.mjs": "b7b408c47caf6ba7c234e0632b0cdde4a2c5d5e90f677f0311249b909a74f277",
+    "scripts/ux/import-recovery-browser.mjs": "bc5a66fc6923ad88406a9a6aa927bd2b659bf9b64be132cc4cfc34dbaef3dcbb",
+    "scripts/ux/reader-interaction-browser.mjs": "ed849d303ca4f557920ce497107aa1f96ba42e262ea9071a4b6524856099c0c1",
+    "scripts/ux/task-status-recovery.test.mjs": "ed4a2af8e02fcbe38ecaaa6c94ca207ba55e50dd78b1874343c8a8d609cc86ed"
+  },
+  "local_log_sha256": {
+    "context-recovery-before.log": "69e28582df99f2a1ceb3d2df65f41ebc72841047e5548f87c5268a26443d0b0c",
+    "context-read-before.log": "53aee3e83a072a640a90feace27743ddcb300b8f7d94fb01b422114fecee7893",
+    "context-recovery-locks.log": "6499ee90ef26bba680fbc97b9c64a2bba28123405393fa27264e19ca4de46edd",
+    "context-hi-boundaries.log": "4aab52385c2b531d43cec4a1df0a5f43b4382926a74684f0a9c57ba9d9809a0f",
+    "context-hi-lint-final.log": "f93e18b8c6f5782211b73e5c57b1548f14e3cb10323887a391df278ef8354274",
+    "context-hi-types-final.log": "8747eaad3fafe02aab4ea44e11f1b5a6ae00729cfbb52373ac273b503f5ee79f",
+    "context-hi-ux-final.log": "39d2c4ebb66e427559ee749e5c1c42155d0e13038809f0882f9c9f0fecc0e6ca",
+    "context-hi-reader-complete.log": "3e28bd7951dec3c7889916bc2f909353ca18020dc826acbdc8968f6e7e426282",
+    "context-hi-browser-final.log": "cc6224b66c4cc478a9a9c922c9fd94fbf0d74ebfb02bae1336475c8813bf3509"
+  }
+}

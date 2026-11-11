@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import { setImmediate } from "node:timers/promises";
+import contextRecovery from "./fixtures/context-return-recovery.mjs";
 
 const appRequire = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 const React = appRequire("react"), ts = appRequire("typescript");
@@ -59,16 +60,17 @@ function button(tree, label) {
   assert.ok(node, `Missing button: ${label}`); return node.props;
 }
 
-function fixture({ member = "index", accepted = false, reject = false, resume = false } = {}) {
+function fixture({ member = "index", accepted = false, reject = false, resume = false, failure = null, readFailure = false } = {}) {
   const original = member === "index" ? '{"note":"Saved index"}' : "# Saved current";
   const edited = member === "index" ? '{"note":"Unsaved draft"}' : "# Unsaved draft";
   const revision = { id: "synthetic-revision", created_at: "2026-10-12T00:00:00Z", members: { current: {}, index: {} } };
-  const state = { generation: 2, adopted_revision_id: revision.id };
+  const state = { generation: 2, adopted_revision_id: revision.id, pending_return_task_id: failure ? "synthetic-return" : null };
   const calls = { writes: [], confirms: [], discards: 0, closed: 0, drafts: [] };
   let hold = null, localText = null;
   const window = { confirm: message => { calls.confirms.push(message); return accepted; }, addEventListener: noop, removeEventListener: noop };
   const cache = { invalidateQueries: async () => {}, cancelQueries: async () => {}, setQueryData: noop };
-  const api = { updateFiles: async (id, form) => { calls.writes.push({ id, form }); if (hold) await hold;
+  const api = { state: async () => { if (readFailure) throw new Error("Synthetic read failure"); return state; }, revisions: async () => [revision],
+    updateFiles: async (id, form) => { calls.writes.push({ id, form }); if (hold) await hold;
     if (reject) throw new Error("Synthetic save failure"); return { generation: 3, revision_id: "synthetic-next" }; } };
   const preferences = { usePreferences: () => ({ resolvedLocale: "en-US" }) };
   const workspace = runtime("continuation-workspace", {
@@ -82,7 +84,9 @@ function fixture({ member = "index", accepted = false, reject = false, resume = 
   const panelProps = find(workspace.tree, item => item.type === "Panel").props;
   const panel = runtime("continuation-panel", {
     "../../components/preferences-provider": preferences,
-    "@tanstack/react-query": { useQueryClient: () => cache, useQuery: ({ queryKey }) => ({ data: queryKey[2] === "state" ? state : queryKey[2] === "history" ? [revision] : undefined }) },
+    "../../lib/context-return-recovery": contextRecovery,
+    "@tanstack/react-query": { useQueryClient: () => cache, useQuery: ({ queryKey }) => ({ data: queryKey[2] === "state" ? state : queryKey[2] === "history" ? [revision]
+      : failure ? { job_type: "context_return", status: "failed", error_message: failure, result: {} } : undefined }) },
     "../../lib/api": { continuationApi: api, getTask: noop },
     "./continuation-document": { ContinuationDocument: "Document" }, "./continuation-drop-target": { ContinuationDropTarget: "Drop" },
     "./continuation-history": { ContinuationHistory: "History" },
@@ -216,3 +220,44 @@ test("an older panel effect cannot restore a dirty flag after reverting the inpu
     assert.equal(f.calls.confirms.length, 0); assert.equal(f.calls.closed, 1); assert.equal(f.calls.discards, 0);
   } finally { f.dispose(); }
 });
+
+test("failed navigation reads keep the editor and local draft despite discard consent", async () => {
+  const f = fixture({ accepted: true, readFailure: true });
+  try {
+    f.edit(); f.input(f.edited); f.flush();
+    button(f.panel.tree, "Update files").onClick();
+    await setImmediate(); f.renderPanel();
+    assert.equal(f.calls.confirms.length, 1);
+    assert.equal(f.calls.discards, 0, "Do not destroy the draft before the destination is readable");
+    assert.equal(f.localText(), f.edited);
+    assert.equal(f.calls.writes.length, 0);
+    assert.ok(find(f.panel.tree, item => item.type === "Document"));
+    assert.match(text(f.panel.tree), /Could not load the latest file state/);
+  } finally { f.dispose(); }
+});
+
+for (const reason of ["CONTEXT_RETURN_EXPIRED", "CONTEXT_BASE_CHANGED"]) {
+  test(`${reason}: selecting a new file still protects an unsaved editor`, async () => {
+    const f = fixture({ failure: reason });
+    try {
+      f.edit(); f.input(f.edited); f.flush();
+      await button(f.panel.tree, "Select files again").onClick(); f.renderPanel();
+      assert.equal(f.calls.confirms.length, 1);
+      assert.equal(f.calls.discards, 0);
+      assert.equal(f.localText(), f.edited);
+      assert.equal(f.calls.writes.length, 0);
+      assert.ok(find(f.panel.tree, item => item.type === "Document"));
+    } finally { f.dispose(); }
+  });
+  test(`${reason}: recovery opens the existing upload surface without replaying the old input`, async () => {
+    const f = fixture({ failure: reason });
+    try {
+      button(f.panel.tree, "Select files again").onClick();
+      // The event starts navigation; wait for the existing state/history reads.
+      await setImmediate(); f.renderPanel();
+      assert.ok(find(f.panel.tree, item => item.type === "input" && item.props.type === "file"));
+      assert.equal(f.calls.writes.length, 0);
+      assert.equal(f.calls.confirms.length, 0);
+    } finally { f.dispose(); }
+  });
+}

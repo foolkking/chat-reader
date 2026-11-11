@@ -1,5 +1,40 @@
 # Context Package contract
 
+## Recovery follow-up — worktree 2026-11-11 (not deployed)
+
+Failed `context_return` task reads may add `result.context_return_recovery`:
+an action (`retry`, `update_files`, `open_list`), allowlisted reason and an
+owned, live conversation ID or null. The projection is read-only, checks the
+current saved generation/private artifact lifecycle and at most one controlled
+file's metadata. It neither hashes/decompresses the upload nor grants write
+permission. Expired/released inputs, deterministic format/size errors and newer
+saved files require review/reselection, not an unchanged retry loop.
+The existing retry endpoint repeats this check under the task lock before
+changing attempts or timestamps (410 expired; other adjustment cases409).
+A valid transient failure retains its task, input and original24-hour deadline.
+Worker ownership, SHA, member limits and generation checks remain authoritative.
+
+Task Center links to the existing Current workspace; the already-mounted owner
+Reader acknowledges a matching navigation without rebasing scroll. A different
+conversation or read-only surface does not intercept it. An active source
+editor uses its existing unsaved-edit confirmation before the workspace opens;
+decline preserves the editor without falling through to route navigation.
+The ordinary link does not bind a historical failure as a pending task. Current
+progress still comes from the actual pending task or this session's submission.
+The panel explains observed failures and exposes existing file selection; neither
+viewing the explanation nor selecting a file submits it.
+
+State/history/guidance/member reads have a20-second whole-response bound,
+forward query cancellation and fence late bodies by authentication generation.
+File-byte uploads do not inherit this short read deadline. Navigation obtains
+the latest state before discarding a consented draft; failed reads keep the
+editor, selections and old page. Loading is distinguished from saving.
+Confirmed replacement suppresses the superseded terminal status only in the
+current panel, not in task history. Pure success feedback lasts3seconds;
+errors, conflicts, uncertain state and failed draft cleanup remain visible.
+These changes do not claim complete unknown-write reconciliation or physical
+device acceptance. See the [verification ledger](../execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
+
 ## Current contract — released 2026-10-19
 
 This section describes Context export in accepted source `f3b331a` and

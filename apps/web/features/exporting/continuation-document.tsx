@@ -12,20 +12,21 @@ import type { SavedContinuationDraft } from "../../lib/continuation-drafts";
 export { IndexReading } from "./continuation-index";
 const action = "inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm text-secondary hover:bg-subtle disabled:opacity-50";
 
-export function ContinuationDocument({ conversationId: id, member, revision, generation, onDirtyChange, onUpload, locked = false, onSavingChange, onNavigate, viewState, onDiscardReady }: {
+export function ContinuationDocument({ conversationId: id, member, revision, generation, onDirtyChange, onUpload, locked = false, onSavingChange, onNavigate, viewState, onDiscardReady, onSaved }: {
   conversationId: string; member: "current" | "index"; revision?: ContinuationRevisionRead;
   generation?: number; onDirtyChange: (dirty: boolean) => void; onUpload: () => void;
   locked?: boolean; onSavingChange?: (saving: boolean) => void;
   onNavigate?: ContinuationNavigate;
   viewState?: ContinuationViewState;
   onDiscardReady?: (discard: (() => Promise<void>) | null) => void;
+  onSaved?: () => void;
 }) {
   const { resolvedLocale } = usePreferences();
   const zh = resolvedLocale === "zh-CN";
   const t = (a: string, b: string) => zh ? a : b;
   const cache = useQueryClient();
   const present = Boolean(revision?.members[member]);
-  const query = useQuery({ queryKey: ["continuation", id, "document", revision?.id, member], queryFn: () => api.member(id, "revisions", revision!.id, member), enabled: present });
+  const query = useQuery({ queryKey: ["continuation", id, "document", revision?.id, member], queryFn: ({ signal }) => api.member(id, "revisions", revision!.id, member, signal), enabled: present });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [original, setOriginal] = useState("");
@@ -34,6 +35,11 @@ export function ContinuationDocument({ conversationId: id, member, revision, gen
   const [raw, setRaw] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const [latest, setLatest] = useState<{ text: string; generation: number } | null>(null);
   const local = useContinuationDraft(id, member);
   useEffect(() => { onDiscardReady?.(local.discard); return () => onDiscardReady?.(null); }, [local.discard, onDiscardReady]);
@@ -84,7 +90,7 @@ export function ContinuationDocument({ conversationId: id, member, revision, gen
       const form = new FormData(); form.append("base_generation", String(compared?.generation ?? editGeneration));
       form.append(member, new File([draft], member === "current" ? "current.md" : "index.json", { type: "text/plain" }));
       await cache.cancelQueries({ queryKey: ["continuation", id] });
-      const saved = await api.updateFiles(id, form); onDirtyChange(false); setEditing(false); setOriginal(draft); setLatest(null);
+      const saved = await api.updateFiles(id, form); onSaved?.(); onDirtyChange(false); setEditing(false); setOriginal(draft); setLatest(null);
       try { await local.discard(); }
       catch { setError(t("文件已保存，但本机草稿未清除。可在草稿列表中删除。", "File saved, but the local draft was not cleared. Remove it from the draft list.")); }
       await local.list.refetch();

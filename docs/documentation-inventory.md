@@ -17,6 +17,10 @@ E/F同步Reading tools/Adaptive Import/API/测试合同：完整轮次保护回�
 G同步Artifact/Context/Observability/测试合同：精确私有回传输入的持久
 回收回执、同维护通道预算、活动任务保护、管理员单处异常摘要；不扩大
 导入源或一般archive_upload自动清理。08b5011六项CI通过与G待验分开记录。
+H/I同步Context/API/测试合同：失败回传的来源核对与恢复动作、20秒只读
+生命周期、失败导航草稿保留、3秒成功反馈及同页Reader精确目标入口。
+新增context-recovery-verification合成摘要/截图；G六项CI通过与H/I待验
+分开记录，原失败、未测完整写入核对和小机器资源边界保留。
 
 ## 可恢复操作发布及单份备份收尾 — 2026-11-11
 

@@ -200,6 +200,7 @@ export function ConversationReader({
   const [showUpdates, setShowUpdates] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const requestedContinuation = searchParams?.get("continuation");
+  const continuationRequestHandledRef = useRef<string | null>(null);
   const [continuationOpen, setContinuationOpen] = useState(requestedContinuation === "current" || requestedContinuation === "index");
   const [continuationGuideRequested, setContinuationGuideRequested] = useState(false);
   const exportPanelState = useMemo<{ current: ExportPanelState | null }>(() => ({ current: null }), [conversationId]);
@@ -519,6 +520,22 @@ export function ConversationReader({
       active = false;
     };
   }, [focusMode, onFocusModeChange, setUtilityPanel]);
+
+  useEffect(() => {
+    // A requested workspace is a deliberate destination, including a cold
+    // task link when focus mode is the saved default. Wait for its initial
+    // transition; otherwise that transition immediately closes the workspace.
+    if (requestedContinuation !== "current" && requestedContinuation !== "index") {
+      continuationRequestHandledRef.current = null; return;
+    }
+    if (!canManageCanonical || dataSource.mode !== "remote") return;
+    const request = `${conversationId}:${requestedContinuation}`;
+    if (continuationRequestHandledRef.current === request
+      || focusMode !== (requestedFilesOpen || requestedAnnotationsOpen ? false : readerDefaultFocus)) return;
+    continuationRequestHandledRef.current = request;
+    setContinuationOpen(true);
+  }, [canManageCanonical, conversationId, dataSource.mode, focusMode, readerDefaultFocus,
+    requestedAnnotationsOpen, requestedContinuation, requestedFilesOpen]);
 
   useEffect(() => {
     let pendingLayoutId: unknown;
@@ -3030,6 +3047,23 @@ export function ConversationReader({
     window.addEventListener("chat-reader:open-reader-search", openSearch);
     return () => window.removeEventListener("chat-reader:open-reader-search", openSearch);
   }, [openUtilityPanel]);
+
+  useEffect(() => {
+    const openContinuation = (event: Event) => {
+      if (!canManageCanonical || dataSource.mode !== "remote"
+        || (event as CustomEvent<{ conversationId?: string }>).detail?.conversationId !== conversationId) return;
+      // A task link into this already-mounted Reader need not navigate/rebase it.
+      event.preventDefault();
+      const access = authenticationGeneration();
+      void closeSourceEditorForWorkspace().then(allowed => {
+        if (allowed && authenticationGeneration() === access) {
+          setContinuationGuideRequested(false); setContinuationOpen(true);
+        }
+      });
+    };
+    window.addEventListener("chat-reader:open-continuation", openContinuation);
+    return () => window.removeEventListener("chat-reader:open-continuation", openContinuation);
+  }, [canManageCanonical, closeSourceEditorForWorkspace, conversationId, dataSource.mode]);
 
   useEffect(() => {
     const closeTopSurface = (event: KeyboardEvent) => {

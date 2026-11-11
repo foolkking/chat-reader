@@ -27,6 +27,23 @@ Original cancellation rollback, download leases and ordinary exports remain
 covered. The existing12-case administrator browser gate records normal and
 nonzero-cleanup screenshots. These checks do not apply production cleanup.
 
+H/I add actual API admission/projection tests for expired/unavailable/changed
+Context input, old generation fields, foreign/deleted targets and real byte
+validation after metadata-only polling. `test_context_recovery_postgres.py`
+uses competing transactions and `pg_blocking_pids` to verify retry-versus-
+cleanup locks and stale ORM state; no fake lock stands in for PostgreSQL.
+`continuation-read-lifetime.test.mjs` executes the actual API/deadline modules
+with controlled transport/timers/auth epochs. It covers headers, successful and
+error bodies, cancellation, late account results and unrestricted upload time.
+The real editor/panel callbacks test retaining a draft when navigation reads fail.
+`import-recovery-browser.mjs` extends its existing12 cases with actual
+ContinuationPanel, fresh-link versus just-completed pending-task behavior,
+explicit reselection/save, no blind retries, persistent failures and3s success.
+Its Reader routing/documents/transport remain explicit adapters, not end-to-end
+claim. The actual Reader gate separately adds three scoped task-open/reopen
+cases, read-only/foreign-target rejection and unchanged scroll. Original
+reading/performance/retention cases and CI thresholds remain required.
+
 ## Unreleased recoverable-operation checks — 2026-11-10
 
 The [implementation ledger](execution/RECOVERABLE_OPERATIONS_2026-11-10.md)

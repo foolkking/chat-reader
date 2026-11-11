@@ -1662,6 +1662,17 @@ def retry_background_job(job: BackgroundJob) -> BackgroundJob:
                     and bool((job.payload or {}).get("account_cleanup_keys")))
     if job.status != "failed" and not cleanup_only:
         return job
+    if job.job_type == "context_return":
+        from app.services.context_return_jobs import context_return_recovery
+        db = object_session(job)
+        if db is None:
+            raise MessageEditError("CONTEXT_RETURN_UNAVAILABLE", 409)
+        db.refresh(job, with_for_update=True)
+        if job.status != "failed":
+            return job
+        recovery = context_return_recovery(db, job)
+        if recovery["action"] != "retry":
+            raise MessageEditError(recovery["reason"], 410 if recovery["reason"] == "CONTEXT_RETURN_EXPIRED" else 409)
     analysis_record = None
     if job.job_type == "adaptive_import_analysis" and (db := object_session(job)) is not None:
         from app.models.import_record import ImportRecord

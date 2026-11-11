@@ -11,7 +11,7 @@ export function MaintenanceHint({ conversationId, onOpen }: { conversationId: st
   const { resolvedLocale } = usePreferences(), zh = resolvedLocale === "zh-CN";
   const setting = useGuidanceSetting<MaintenanceDismissal>(`maintenance:${conversationId}`);
   const [closed, setClosed] = useState(false);
-  const { data } = useQuery({ queryKey: ["continuation", conversationId, "guidance"], queryFn: () => continuationApi.guidance(conversationId), staleTime: 0 });
+  const { data } = useQuery({ queryKey: ["continuation", conversationId, "guidance"], queryFn: ({ signal }) => continuationApi.guidance(conversationId, signal), staleTime: 0 });
   const previous = setting.value;
   if (closed || !setting.ready || !data?.suggest_maintenance || data.unindexed_messages === null || data.unindexed_characters === null || previous?.muted) return null;
   if (previous && previous.index === data.index_digest && data.unindexed_messages - previous.messages < data.message_threshold && data.unindexed_characters - previous.characters < data.character_threshold) return null;
