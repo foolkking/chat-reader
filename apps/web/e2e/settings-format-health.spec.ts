@@ -1,9 +1,34 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { settingsAdmin, settingsAppearance } from "./settings-test-helper";
 import { waitForAdaptiveAnalysis } from "./import-test-helper";
 
 test.use({ trace: "off", actionTimeout: 20_000 });
 test.skip(process.env.E2E_SETTINGS_MAILBOX !== "1", "Requires isolated PostgreSQL settings fixture");
+
+// The small JSON fixture runs synchronously on the real server. Project its
+// real result through the existing202/task protocol to isolate an interrupted
+// result read. This is browser recovery evidence, not worker/queue acceptance.
+async function interruptedQueuedRead(page: Page, path: string) {
+  const taskId = `synthetic-result-${crypto.randomUUID()}`;
+  const taskPath = `**/api/tasks/${taskId}`;
+  let submissions = 0, reads = 0, operationResult: Record<string, unknown> | null = null;
+  await page.route(path, async route => {
+    submissions++;
+    const response = await route.fetch();
+    expect(response.status()).toBe(200);
+    operationResult = await response.json() as Record<string, unknown>;
+    await route.fulfill({ status: 202, json: { operation_task_id: taskId } });
+  });
+  await page.route(taskPath, route => {
+    reads++;
+    return route.fulfill(reads === 1 ? { status: 503, json: { detail: "Synthetic result read unavailable" } }
+      : { json: { job_id: taskId, status: "committed", phase: "done", result: { operation_result: operationResult } } });
+  });
+  return {
+    assertRecovered: () => { expect(submissions).toBe(1); expect(reads).toBe(2); },
+    close: async () => { await page.unroute(path); await page.unroute(taskPath); },
+  };
+}
 
 for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
   test(`${width}px ${locale}: full-batch health, retained results and real mapping repair`, async ({ browser, playwright, baseURL }) => {
@@ -54,6 +79,16 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       const health = page.getByRole("region", { name: /格式健康检查|Format health check/ });
       await health.getByRole("button", { name: /检查已保存格式|Check saved format/ }).click();
       await expect(health.getByRole("status")).toContainText(/1 组需要处理|1 group needs attention/);
+      const healthRead = await interruptedQueuedRead(page, "**/families/*/health");
+      await health.getByRole("button", { name: /检查已保存格式|Check saved format/ }).click();
+      await expect(health.getByRole("alert")).toBeVisible();
+      // A failed fresh check must not hide the previously confirmed result.
+      await expect(health.getByRole("status")).toContainText(/1 组需要处理|1 group needs attention/);
+      const continueHealth = health.getByRole("button", { name: /继续查看检查结果|Continue reading check result/, exact: true });
+      await expect(continueHealth).toBeEnabled();
+      await continueHealth.focus(); await page.keyboard.press("Enter");
+      await expect(health.getByRole("alert")).toHaveCount(0);
+      healthRead.assertRecovered(); await healthRead.close();
       if (groupCount > 20) {
         await health.getByRole("button", { name: /下一页|Next/, exact: true }).click();
         await expect(health.getByText("synthetic-22.json", { exact: false })).toBeVisible();
@@ -75,8 +110,14 @@ for (const width of [375, 768, 1440]) for (const locale of ["zh-CN", "en-US"]) {
       // and saving only learns a revision, without importing conversations.
       await expect(page.getByRole("region", { name: (locale === "zh-CN" ? "JSON 字段映射" : "JSON field mapping"), exact: true })).toBeVisible();
       await page.getByRole("combobox", { name: (locale === "zh-CN" ? "正文来源" : "Content source"), exact: true }).selectOption("$.alternate");
+      const previewRead = await interruptedQueuedRead(page, "**/families/*/mapping/preview");
       await page.getByRole("button", { name: (locale === "zh-CN" ? "验证映射" : "Validate mapping"), exact: true }).click();
+      const continuePreview = page.getByRole("button", { name: /继续查看验证结果|Continue reading validation result/, exact: true });
+      await expect(continuePreview).toBeEnabled();
+      await expect(page.getByRole("combobox", { name: (locale === "zh-CN" ? "正文来源" : "Content source"), exact: true })).toHaveValue("$.alternate");
+      await continuePreview.click();
       await expect(page.getByText((locale === "zh-CN" ? "全部对话通过" : "All conversations validated"), { exact: true })).toBeVisible();
+      previewRead.assertRecovered(); await previewRead.close();
       await page.getByRole("button", { name: (locale === "zh-CN" ? "保存新版本并继续" : "Save new version & continue"), exact: true }).click();
       await expect(page.getByTestId("commit-import-button")).toBeEnabled();
       const versionsResponse = await context.request.get(`${baseURL}/api/import-formats/${profileId}/revisions`);

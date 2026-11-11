@@ -49,6 +49,7 @@ test("source exclusion uses the actual JSON API contract and a bounded authentic
     "./offline-access": { authenticationGeneration: () => 1, notifyAuthenticationFailure: () => {} },
     "./server-session": { serverSession: () => ({ status: "online", userId: "synthetic-owner" }), observeSessionResponse: () => {} },
     "./archive-task-state": {},
+    "./upload-transport": {},
     "./request-deadline": { withRequestDeadline: f.run },
   };
   new Function("exports", "require", "fetch", compiled)(api, name => {

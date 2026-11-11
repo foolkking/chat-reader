@@ -1,5 +1,20 @@
 # API 参考
 
+## 初始上传请求回执 — 2026-11-11（未部署）
+
+`POST /api/adaptive-import/sessions`可选UUID请求头`Idempotency-Key`。
+同账户、同标识、同原始有序输入/选项返回原会话（含终态）；不同输入409
+`IMPORT_UPLOAD_REQUEST_CONFLICT`，同时尚未确认的请求409
+`IMPORT_UPLOAD_REQUEST_PENDING`。后者是待核对，不能当作确定未接收。
+旧无请求头调用兼容；既有格式/权限/大小/事务和显式commit边界不变。
+
+`GET /api/adaptive-import/requests/{UUID}`返回
+`{"receipt":{"import_id":"…","task_id":"…","status":"…"}}`或`{"receipt":null}`，
+`Cache-Control: no-store`，仅本人初始analysis job及仍属本人的导入身份。
+无效UUID422；已接收但原导入不可用410 `IMPORT_UPLOAD_RECEIPT_UNAVAILABLE`。
+不读取文件、不锁写者、不创建任务；null不证明晚到提交失败。
+详见[导入合同](system/ADAPTIVE_IMPORT_CONTRACT.md)。
+
 ## 接续写入回执核对 — 2026-11-11（未部署）
 
 新增`GET /api/conversations/{conversation_id}/continuation/returns/by-request/{request_key}`，

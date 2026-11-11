@@ -6,7 +6,7 @@ import { ChevronDown, LoaderCircle, ScanSearch, UploadCloud, X } from "lucide-re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent } from "react";
-import { ApiRequestError, cancelAdaptiveImportSession, cancelTask, commitImport, createAdaptiveImportSession, excludeAdaptiveImportSource, getAdaptiveImportSession, getImportStatus, getProjects, previewImport, replaceAdaptiveImportArtifact, resumeAdaptiveImportSession, retryTask, updateAdaptiveImportDestination } from "../../lib/api";
+import { ApiRequestError, cancelAdaptiveImportSession, cancelTask, commitImport, excludeAdaptiveImportSource, getAdaptiveImportSession, getImportStatus, getProjects, previewImport, replaceAdaptiveImportArtifact, resumeAdaptiveImportSession, retryTask, updateAdaptiveImportDestination } from "../../lib/api";
 import type { AdaptiveImportSession, CommitImportResponse, ImportDuplicatePolicy, ImportPreviewResponse } from "../../lib/types";
 import { readAccountCapabilities } from "../../lib/auth-client";
 import { authenticationGeneration } from "../../lib/offline-access";
@@ -20,6 +20,8 @@ import { createPastedTranscriptFile, pastedTranscriptByteLength } from "./pasted
 import { getUnfinishedImports } from "../../lib/api";
 import { getActiveOfflineStorageContext } from "../../lib/offline-db";
 import { measureImportImageLane } from "./image-import-lane";
+import { useImportUpload } from "./use-import-upload";
+import { ImportUploadFeedback } from "./import-upload-feedback";
 
 type ImportMode = "adaptive" | "archive";
 type ImportSessionRestoreState = {
@@ -164,8 +166,9 @@ export function ImportPanel({
     const timer = setTimeout(() => setStopUnconfirmed(true), 30_000);
     return () => clearTimeout(timer);
   }, [session?.import_id, session?.state]);
+  const pastedBytes = useMemo(() => pastedText ? pastedTranscriptByteLength(pastedText) : 0, [pastedText]);
   const activeFileBytes = inputMethod === "paste"
-    ? (pastedText ? pastedTranscriptByteLength(pastedText) : 0)
+    ? pastedBytes
     : files.reduce((largest, file) => Math.max(largest, file.size), 0);
   const activeTotalBytes = inputMethod === "paste" ? activeFileBytes : files.reduce((bytes, file) => bytes + file.size, 0);
   const largestFileMiB = Math.ceil(activeFileBytes / (1024 * 1024));
@@ -286,20 +289,31 @@ export function ImportPanel({
     else if (result.status === "failed" || result.status === "cancelled") finishTerminalImport(result);
   }, [finishCommittedImport, finishTerminalImport, importStatusQuery.data]);
 
-  const adaptiveMutation = useMutation({
-    mutationFn: (selectedFiles: File[]) => createAdaptiveImportSession(selectedFiles, repairProfileId, targetProjectId),
-    onMutate: mutationOwner,
-    onSuccess: (result, _files, owner) => {
-      if (!ownsMutation(owner)) return;
-      window.sessionStorage.setItem(activeSessionKey, result.import_id);
+  const upload = useImportUpload(mode === "adaptive" && !session && !resumeSessionRef.current, result => {
+    if (!current()) return;
+    setFiles([]); setPastedText(""); setArchivePreview(null);
+    // A disabled storage API must not turn a confirmed upload into failure.
+    try { window.sessionStorage.setItem(activeSessionKey, result.import_id); } catch { /* Query receipt remains usable. */ }
+    if (["COMPLETED", "CANCELED"].includes(result.state)) {
+      resumeSessionRef.current = result.import_id;
+      setSessionRestoreRetry(attempt => attempt + 1);
+    } else {
       targetSessionRef.current = result.import_id;
       setSession(result);
       setTargetProjectId(result.target_project_id !== undefined ? result.target_project_id : initialProjectId);
-      setFiles([]);
-      setArchivePreview(null);
-      void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
-    },
+    }
+    void queryClient.invalidateQueries({ queryKey: ["active-tasks"] });
   });
+  useEffect(() => {
+    if (mode !== "adaptive" || session) return;
+    if (upload.receipt?.phase === "confirmed") { setFiles([]); setPastedText(""); return; }
+    const intent = upload.receipt?.intent;
+    if (!intent) return;
+    setFiles(intent.pastedText === undefined ? intent.files : []);
+    setPastedText(intent.pastedText ?? "");
+    setTargetProjectId(intent.targetProjectId ?? null);
+    setInputMethod(intent.pastedText === undefined ? "files" : "paste");
+  }, [mode, session, upload.receipt?.intent, upload.receipt?.phase]);
   const cancelMutation = useMutation({
     mutationFn: cancelAdaptiveImportSession,
     onMutate: mutationOwner,
@@ -509,7 +523,7 @@ export function ImportPanel({
     if (retryAnalysisMutation.isError && ["ANALYZING", "READY", "RESOLVING"].includes(state)) retryAnalysisMutation.reset();
   }, [analysisSessionQuery.data, analysisTaskId, current, session?.import_id, stopMutation.isError, stopMutation.reset,
     resumeMutation.isError, resumeMutation.reset, cancelMutation.isError, cancelMutation.reset, retryAnalysisMutation.isError, retryAnalysisMutation.reset]);
-  const busy = sessionRestore.phase === "loading" || adaptiveMutation.isPending || archiveMutation.isPending || commitMutation.isPending || retryImportMutation.isPending || Boolean(pendingImportId);
+  const busy = sessionRestore.phase === "loading" || (mode === "adaptive" && upload.locked) || archiveMutation.isPending || commitMutation.isPending || retryImportMutation.isPending || Boolean(pendingImportId);
 
   const validationError = useMemo(() => {
     if (capabilities.data && !capabilities.data.allow_user_import) return tr("管理员已关闭导入功能。");
@@ -555,7 +569,6 @@ export function ImportPanel({
     setWorkspaceEditState({ dirty: false, busy: false });
     setDuplicatePolicy("clone");
     completedImportRef.current = null;
-    adaptiveMutation.reset();
     archiveMutation.reset();
     commitMutation.reset();
     retryImportMutation.reset();
@@ -576,6 +589,7 @@ export function ImportPanel({
 
   function chooseFiles(nextFiles: File[], nextMode = mode) {
     if (busy) return;
+    upload.clearRejected();
     window.sessionStorage.removeItem(activeSessionKey);
     setSavedImportId(null);
     reset(nextMode);
@@ -585,11 +599,11 @@ export function ImportPanel({
   function previewImportSource() {
     if (inputMethod === "paste") {
       const pastedFile = createPastedTranscriptFile(pastedText);
-      if (pastedFile) adaptiveMutation.mutate([pastedFile]);
+      if (pastedFile) void upload.submit({ files: [pastedFile], pastedText, repairProfileId, targetProjectId });
       return;
     }
     if (mode === "archive") archiveMutation.mutate(files);
-    else adaptiveMutation.mutate(files);
+    else void upload.submit({ files, repairProfileId, targetProjectId });
   }
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
@@ -769,14 +783,28 @@ export function ImportPanel({
     : files.length === 0 ? tr("尚未选择文件") : files.length === 1 ? files[0]?.name : tr("已选择 {0} 个文件", files.length);
   const archiveCanCommit = Boolean(archivePreview?.can_commit ?? archivePreview?.archive_summary);
   const totalOverLimit = capabilities.data?.maximum_import_total_mb != null && activeTotalBytes > capabilities.data.maximum_import_total_mb * 1024 * 1024;
-  const sourceError = adaptiveMutation.error;
+  const sourceError = upload.receipt?.error;
   const formatError = sourceError instanceof ApiRequestError && ["SOURCE_UNSUPPORTED", "JSON_INVALID", "NO_MESSAGE_STRUCTURE", "MARKDOWN_ENCODING_INVALID", "MARKDOWN_FENCE_UNCLOSED"].includes(sourceError.code ?? "");
-  const showConversion = inputMethod === "files" && mode === "adaptive" && !commitResult && capabilities.data?.allow_user_import && !fileOverLimit && !totalOverLimit && files.length <= 500
+  const showConversion = inputMethod === "files" && mode === "adaptive" && !upload.locked && !commitResult && capabilities.data?.allow_user_import && !fileOverLimit && !totalOverLimit && files.length <= 500
     && !files.some(file => /\.(?:cr|zip)$/i.test(file.name) || file.name.toLowerCase() === "skill.md")
     && (!sourceError || formatError);
 
   return (
     <section className="space-y-5">
+      {mode === "adaptive" && upload.retained.length ? <details className="border-b border-ui pb-3">
+        <summary className="min-h-11 cursor-pointer content-center text-sm text-secondary">{zh
+          ? `待核对上传（${upload.retained.length}）` : `Unconfirmed uploads (${upload.retained.length})`}</summary>
+        <p className="text-xs text-secondary">{zh ? "仅保留在当前页面会话，不会自动重传；刷新页面后请在任务中心核对。" : "Retained in this page session only; never resent automatically. After reloading, check Tasks."}</p>
+        <ul className="divide-y divide-[var(--border)]">{upload.retained.map(item => <li key={item.requestId} className="flex items-center gap-3 py-2">
+          <span className="min-w-0 flex-1 truncate text-sm" title={item.intent?.files.map(file => file.name).join(", ")}>
+            {item.intent?.files[0]?.name}{(item.intent?.files.length ?? 0) > 1 ? ` +${item.intent!.files.length - 1}` : ""}
+          </span>
+          <button type="button" className="btn-secondary min-h-11 px-3 text-sm disabled:opacity-50"
+            disabled={sessionRestore.phase === "loading" || upload.receipt?.checking
+              || upload.receipt?.phase === "uploading" || upload.receipt?.phase === "confirmed"}
+            onClick={() => upload.reopen(item.requestId)}>{zh ? "继续核对" : "Resume checking"}</button>
+        </li>)}</ul>
+      </details> : null}
       {mode === "adaptive" && (!unfinished.isSuccess || Boolean(unfinished.data?.items?.length) || unfinishedOffset > 0) ? <section className="space-y-2 border-b border-ui pb-3" aria-label={zh ? "待完成导入" : "Unfinished imports"}>
         <h3 className="text-sm font-semibold text-primary">{zh ? "待完成导入" : "Unfinished imports"}</h3>
         {unfinished.isPending ? <p role="status" className="text-sm text-secondary">{zh ? "正在读取…" : "Loading…"}</p> : unfinished.error ? <ErrorLine message={unfinished.error} onRetry={() => void unfinished.refetch()} /> : unfinished.data?.items?.length ? <ul className="divide-y divide-[var(--border)]">{unfinished.data.items.map(item => <li key={item.import_id} data-import-session-id={item.import_id} className="flex items-center gap-3 py-2">
@@ -808,12 +836,12 @@ export function ImportPanel({
           id="pasted-transcript"
           data-testid="pasted-transcript-input"
           value={pastedText}
-          onChange={(event) => setPastedText(event.currentTarget.value)}
-          disabled={busy}
+          onChange={(event) => { if (!busy) { upload.clearRejected(); setPastedText(event.currentTarget.value); } }}
+          readOnly={busy}
           spellCheck={false}
           rows={8}
           placeholder={tr("在此处粘贴文本；点击“分析并继续”后才会上传。")}
-          className="w-full resize-y rounded-lg border border-ui bg-surface p-3 text-sm leading-6 text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)] disabled:opacity-60"
+          className="w-full resize-y rounded-lg border border-ui bg-surface p-3 text-sm leading-6 text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus)]"
         />
         <p className="text-xs leading-5 text-secondary">{tr("不会自动读取剪贴板。文本只保留在此页面内存中，只有你明确开始分析时才上传；请勿粘贴不打算导入的敏感内容。")}</p>
         {pastedText.trim() ? <p className="text-xs text-secondary">{tr("输入大小：")}{(activeFileBytes / (1024 * 1024)).toFixed(2)} MiB</p> : null}
@@ -869,7 +897,13 @@ export function ImportPanel({
       {validationError && (inputMethod !== "files" || !selectedFileErrors.includes(validationError)) ? <ErrorLine message={validationError} /> : null}
       {capabilities.data ? <SupportLimitAction capabilities={capabilities.data} limit="import_size_mb" active={Boolean(fileOverLimit || !capabilities.data.allow_user_import)} requestedValue={largestFileMiB} returnFocus={() => previewButtonRef.current} onReturn={() => { void capabilities.refetch(); }} /> : null}
       {capabilities.data ? <p className="text-xs text-secondary">{tr("当前单文件上限：")}{capabilities.data.maximum_import_size_mb} MiB</p> : capabilities.isError ? <div role="alert" className="text-sm text-secondary">{tr("无法读取导入限制。")}<button type="button" className="btn-secondary ml-2 min-h-11 px-3" onClick={() => void capabilities.refetch()}>{tr("重试")}</button></div> : <p role="status" className="text-sm text-secondary">{tr("正在读取导入限制…")}</p>}
-      {adaptiveMutation.isError ? <ErrorLine message={adaptiveMutation.error} action="mutation" /> : null}
+      {mode === "adaptive" ? <ImportUploadFeedback key={upload.receipt?.requestId} control={upload} zh={zh} endCheck={() => {
+        if (upload.receipt && upload.dismiss(upload.receipt)) { nextFileFocus.current = 0; reset("adaptive"); }
+      }} leavePending={() => {
+        if (upload.detach()) { nextFileFocus.current = 0; reset("adaptive"); }
+      }} openTasks={() => {
+        onImportCommitted?.(); window.dispatchEvent(new Event("chat-reader:open-task-center"));
+      }} /> : null}
       {archiveMutation.isError ? <ErrorLine message={archiveMutation.error} action="mutation" /> : null}
       {commitRecovery}
       {commitMutation.isError && !commitControl ? <ErrorLine message={commitMutation.error} action="commit" /> : null}
@@ -881,7 +915,7 @@ export function ImportPanel({
       </div> : null}
       <div className="flex flex-wrap gap-3">
         <button ref={previewButtonRef} type="button" disabled={!(inputMethod === "paste" ? pastedText.trim() : files.length) || Boolean(validationError) || busy || !capabilities.data} data-testid="preview-import-button" onClick={previewImportSource} className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-sm font-medium">
-          {busy ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
+          {busy && !upload.locked ? <><LoaderCircle className="h-4 w-4 animate-spin" />{tr("正在识别格式")}</> : mode === "adaptive" ? <><ScanSearch className="h-4 w-4" />{tr("分析并继续")}</> : tr("检查归档")}
         </button>
         {archivePreview ? <button type="button" disabled={!archiveCanCommit || commitMutation.isPending || Boolean(commitControl)} data-testid="commit-import-button" onClick={() => commitMutation.mutate({ importId: archivePreview.import_id, policy: duplicatePolicy })} className="btn-secondary min-h-10 px-4 text-sm font-medium">{commitMutation.isPending ? tr("正在导入") : tr("恢复归档")}</button> : null}
       </div>

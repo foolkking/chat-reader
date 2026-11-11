@@ -53,11 +53,13 @@ export function FormatHealthCheck({ session, family, disabled = false, onRepair,
   const failedCount = health?.groups.filter((group) => !group.valid).length ?? 0;
   const groups = (health?.groups ?? []).filter((group) => !failedOnly || !group.valid);
   const unconfirmed = stopped || (check.error instanceof ApiRequestError && check.error.code === "IMPORT_OPERATION_UNCONFIRMED");
+  const canReadOriginal = request.current?.key === `${session.import_id}:${family.id}`
+    && Boolean(request.current.taskId) && !stopped;
   const title = zh ? "格式健康检查" : "Format health check";
   return <section aria-label={title} className="mt-4 space-y-3 border-t border-ui pt-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <p className="text-sm font-medium text-primary">{title}</p>
-      <button type="button" onClick={() => check.mutate()} disabled={disabled || check.isPending || unconfirmed} className="btn-secondary min-h-11 px-3 text-xs">{check.isPending ? (zh ? "正在检查全部分组…" : "Checking every group…") : (zh ? "检查已保存格式" : "Check saved format")}</button>
+      <button type="button" onClick={() => check.mutate()} disabled={disabled || check.isPending || unconfirmed} className="btn-secondary min-h-11 px-3 text-xs">{check.isPending ? (zh ? "正在检查全部分组…" : "Checking every group…") : canReadOriginal ? (zh ? "继续查看检查结果" : "Continue reading check result") : (zh ? "检查已保存格式" : "Check saved format")}</button>
     </div>
     <p className="text-xs leading-5 text-secondary">{zh ? `使用已保存版本检查本次来源的全部 ${family.group_count} 组。结果只针对这批来源；检查不会保存新格式或导入对话。` : `Check all ${family.group_count} groups in this batch against the saved version. Results apply to these sources; checking does not save a format or import conversations.`}</p>
     {check.isPending ? <p role="status" className="text-xs text-secondary">{waiting
@@ -65,7 +67,7 @@ export function FormatHealthCheck({ session, family, disabled = false, onRepair,
       : (zh ? "检查中，旧结果保留。" : "Checking; previous results are retained.")}</p> : null}
     {check.isError ? <div role="alert" className="text-xs text-[var(--danger)]"><p>{importErrorMessage(check.error, tr, "read")}</p>{unconfirmed
       ? <button type="button" className="btn-secondary mt-2 min-h-11 px-3" onClick={() => window.dispatchEvent(new Event("chat-reader:open-task-center"))}>{zh ? "查看后台任务" : "View background tasks"}</button>
-      : <button type="button" disabled={disabled} className="btn-secondary mt-2 min-h-11 px-3 disabled:opacity-50" onClick={() => check.mutate()}>{zh ? "重试" : "Retry"}</button>}</div> : null}
+      : null}</div> : null}
     {health ? <div ref={resultRef} tabIndex={-1} className="space-y-3 outline-none" aria-label={zh ? "健康检查结果" : "Health check results"}>
       <p role="status" className={`text-sm font-medium ${health.valid ? "text-accent" : "text-[var(--warning)]"}`}>{health.valid ? (zh ? "全部分组通过" : "All groups passed") : (zh ? `${failedCount} 组需要处理` : `${failedCount} ${failedCount === 1 ? "group needs" : "groups need"} attention`)} · {health.revision ? `v${health.revision}` : (zh ? "内置" : "Built-in")}</p>
       <p className="text-xs text-secondary">{new Date(health.checked_at).toLocaleString(zh ? "zh-CN" : "en-US")} · {health.message_count} {zh ? "条消息已验证" : "messages validated"}</p>

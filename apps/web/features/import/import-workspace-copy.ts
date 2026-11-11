@@ -167,7 +167,8 @@ const english: Record<string, string> = {
   "示例对话": "Sample conversation", "切换当前结构的示例对话": "Choose a sample with this structure", "示例：": "Sample: ", "当前文件": "Current file",
   "规范字段映射": "Field mapping", "只保存结构、字段映射与角色字典，不保存示例正文。": "Only the structure, field mapping and role dictionary are learned. Sample content is not saved.",
   "保存为导入格式": "Format name", "验证会运行此格式的全部": "Validation checks all ", "个对话，不只检查示例。": " conversations using this format, including those outside the preview.",
-  "正在验证": "Validating…", "验证映射": "Validate mapping", "正在保存": "Saving…", "保存新版本并继续": "Save new version & continue", "保存映射并继续": "Learn mapping & continue",
+  "正在验证": "Validating…", "验证映射": "Validate mapping", "继续查看验证结果": "Continue reading validation result", "正在保存": "Saving…", "保存新版本并继续": "Save new version & continue", "保存映射并继续": "Learn mapping & continue",
+  "读取结果超时，原文件和当前输入仍保留。可继续核对，没有重新提交。": "Reading the result timed out. Original files and current input are retained. Continue checking; nothing was resubmitted.",
   "来源结构": "Source structure", "结构分析": "Structure analysis", "个候选结构。点击诊断可定位到对应字段。": " candidate structures. Use a diagnostic to locate its field.",
   "JSON 字段映射": "JSON field mapping", "消息列表": "Message list", "角色来源": "Role source", "未设置": "Not set", "正文来源": "Content source", "标题来源": "Title source", "使用文件名": "Use filename",
   "Markdown 字段映射": "Markdown field mapping", "消息分界": "Message boundary", "H{0} 角色标题": "H{0} role headings", "角色标签行": "Role label lines", "Markdown 前置内容": "Markdown preamble",
@@ -371,6 +372,9 @@ const diagnosticCodes = new Set([
 ]);
 
 export function importErrorMessage(error: unknown, tr: ImportCopy, action: ImportErrorAction = "read"): string {
+  if (action === "read" && (error === "REQUEST_TIMEOUT" || (error instanceof Error && error.message === "REQUEST_TIMEOUT"))) {
+    return tr("读取结果超时，原文件和当前输入仍保留。可继续核对，没有重新提交。");
+  }
   const code = typeof error === "string" ? error : isApiRequestError(error) ? error.code : null;
   if (action === "commit" && ["UPLOAD_MEMORY_PRESSURE", "SMALL_IMPORT_BUDGET_EXCEEDED"].includes(code ?? "")) {
     return tr(code === "UPLOAD_MEMORY_PRESSURE"

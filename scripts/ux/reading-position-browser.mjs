@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const root=resolve(dirname(fileURLToPath(import.meta.url)),"../.."),web=join(root,"apps/web");
 const require=createRequire(join(web,"package.json"));
 const temp=resolve(process.env.RUNNER_TEMP??process.env.TEMP??"");
-if(process.platform==="win32")assert.match(temp.replaceAll("\\","/").toLowerCase(),/^c:\/users\/86182\/desktop\/wkkk\/[^/]+/);
+if(process.platform==="win32")assert.match(temp.replaceAll("\\","/").toLowerCase(),/^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
 else assert.ok(process.env.RUNNER_TEMP||process.env.TEMP);
 const out=join(temp,"reading-position-browser");mkdirSync(out,{recursive:true});
 const path=file=>JSON.stringify(join(web,file).replaceAll("\\","/"));

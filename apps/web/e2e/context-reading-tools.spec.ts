@@ -58,7 +58,8 @@ for (const width of [375, 768, 1440]) {
     await save(3, 'index', index + '\n');
     page.once('dialog', dialog => dialog.accept());
     await restore.click();
-    await expect(panel.getByRole('alert')).toContainText(/其他窗口|another window/);
+    await expect(panel.getByRole('alert')).toContainText(/其他窗口|另一个窗口|another window/i);
+    await expect(panel.getByRole('alert')).toContainText(/已保留|retained/i);
     expect((await (await page.request.get(endpoint)).json()).generation).toBe(4);
     // It currently equals the newest Current, so create a different Current,
     // reopen the retained history and restore its actual bytes.

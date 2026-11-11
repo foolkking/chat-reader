@@ -2,41 +2,34 @@
 
 ## Ongoing small-host improvements — 2026-11-11 (not deployed)
 
-Block A separates single-flight housekeeping from worker heartbeats without
-increasing user-job concurrency. Local synthetic/real-PostgreSQL checks:
-121 passed, four Windows POSIX-signal skips. Exact CI42868364815 passed API,
-Web and Settings but failed a plain-10000 Reader long task (180ms >150ms);
-release CI is paused pending diagnosis, not a threshold relaxation.
-Block B adds durable explicit-disposal receipts and original-task cleanup retry;
-paused/canceled/unknown runtime states are counted honestly. Local API/PG and
-12 mounted Task Center cases pass; no automatic source purge or migration.
-C adds bounded/auth-scoped turn reads; D makes runtime reads recoverable and
-labels application archive history honestly. Local Reader30/Runtime12,
-UX Node2269, API runtime11 and isolated production build pass.
-E reclaims protected complete-turn intervals without rebasing under active
-input; F bounds stale recovery and protects canonical writers/progress updates.
-Reader36/Node2279, targeted API/PG and the exact local production build pass.
-The unexplained full-CI 180ms task remains open: neither single-case nor full
-nine-case exact-failed-source diagnostics reproduced it. A new full release
-CI must validate each materially repaired candidate; no threshold is relaxed.
-E/F source08b5011 has now passed all six jobs in full CI42900162201;
-downloaded quality/memory summaries agree, without a production release.
-G retains private Context-upload cleanup receipts until confirmed removal,
-using the same bounded maintenance lane. Local API/PG93 and94 checks
-(overlapping, four Windows skips), Runtime12 and Node2279 pass;
-G source11c872e subsequently passed all six jobs in CI42936789502;
-its artifacts have not been independently downloaded for release acceptance.
-H/I add actionable failed-return recovery, bounded private reads, retained
-drafts on failed navigation, short success feedback and same-Reader links.
-Local API186 / PG-and-recovery33 (overlapping), Node2321, Reader39 and
-Task/Continuation12 pass. H/I CI42950539410 passed API/Web/Reader but
-failed one Settings locale-hydration timestamp assertion (469passed/1failed);
-image jobs did not run. J fixes that test without relaxing its contract and
-adds retained write intents, read-only receipt/byte checks, separate saved
-vs refresh failures and exact-byte historical restore. Local Node2360,
-API128/PG4, Reader39, mounted recovery12, lint/typecheck pass. New exact
-CI/PWA still required; File references do not survive full page reload.
-Accumulate multiple related fixes per commit, as most recently requested.
+Implemented A–L: bounded single-flight maintenance, durable cleanup receipts,
+protected complete-turn retention, recoverable private reads/writes and initial
+uploads. Existing source checks, canonical writer leases and single user-job
+concurrency remain. Earlier exact E/F and G CI passed; they were not deployed.
+
+The current K/L batch adds upload identity/read-only receipts, progress vs
+inactivity, retained selections/paste, explicit local-only release, and bounded
+known-task/catalog reads. Unknown writes are never automatically resubmitted.
+File references are page-session scoped, not persistent across a full reload.
+Latest local checks: UX2434, lint/typecheck, mounted12, upload API/real-PG25,
+expanded API112 (overlapping), CI-source harness23 and an isolated production
+build with544 byte-verified inputs. Dependency policy found3 nonblocking
+advisories, zero blocked/unapproved exceptions. Full-site tests remain pending:
+local application-service launch was policy-blocked and not worked around.
+
+Previous exact J CI42974972859 failed three outdated Web conflict-copy assertions
+and two Reader cold long tasks (223/331ms >150ms). Copy assertions are corrected
+without weakening retained-draft/generation checks. Diagnostic42987330765 did
+not reproduce the Reader tasks; their cause remains unproven. The warm harness
+now reports actual parser and render counters separately (measurement v3);
+an older baseline without parser evidence reports null, not a fabricated zero.
+No budget, cold run, wait or performance gate was weakened.
+
+User-authorized process-local temporary root:
+`E:\chat-reader-temp\chat-reader-small-host-20261111`. This task has not moved
+or deleted old C-drive data; both disposable local PostgreSQL instances are
+stopped with no task-owned data deletion. K/L is being prepared as one batch,
+not a sequence of small commits. Fresh full CI must validate the exact candidate.
 [Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
 [execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
 The latest user instruction allows major-block commits/CI without waiting;

@@ -1,5 +1,95 @@
 # Testing
 
+## Reader counter accuracy — 2026-11-11
+
+Capacity measurement v3 separates warm `parseDelta` (the actual remark
+pipeline's `markdownParseTotal`) from `renderDelta` (`markdownRenderTotal`).
+Historical baselines without a parser probe report null rather than render
+counts or zero. The test executes the actual warm measurement function and
+keeps its phase order, wheel steps and measured long tasks intact. This is a
+measurement correction, not a fix for the unresolved J223/331ms cold tasks.
+No cold fixture, wait, threshold or unfiltered failure changes.
+
+## Authorized E-drive temporary workspace — 2026-11-11
+
+After the C-drive browser-capacity preflight stopped execution, the user
+explicitly authorized `E:\chat-reader-temp`. This batch uses
+`E:\chat-reader-temp\chat-reader-small-host-20261111` and child directories;
+TEMP/TMP are process-local, not machine/user settings. Windows browser/source
+guards accept a task child of this root or the original `wkkk` root, not the
+system Temp or a volume root. Existing C-drive task data is not moved/deleted.
+The old disposable PostgreSQL stays stopped; the new local-only instance
+has its own E-drive data and port55463. Historical C-drive failure records stay.
+
+## Known-task and ZIP-catalog read recovery — 2026-11-11 (not deployed)
+
+`import-read-lifetime` executes the full API/deadline implementations with
+stalled headers, body and401/403/503 error bodies, non-cooperative transport,
+abort, account changes, pagination and same-task GET-only recovery. Unrelated
+upload/write requests do not acquire the20-second read deadline.
+`import-operation-recovery` retains normal queued work beyond20seconds and
+rejects wrong/missing task identity/status or malformed committed results
+instead of polling forever. `import-operation-controls` executes actual
+health/mapping TSX callbacks and copy in both languages with controlled hooks:
+busy releases, original task/draft persists, unknown POST stays protected,
+and retry is presented as continuing the result read rather than another job.
+
+The mandatory `settings-format-health` browser suite adds an interrupted
+known-task read for health and mapping at three widths/two languages. The
+small real JSON operation runs once; its actual result is projected through
+a synthetic202/task response to isolate UI/client recovery. This does not
+prove queue/worker execution. Existing real mapping persistence, health and
+zero-canonical-import assertions stay. Latest browser execution is pending
+exact CI: after the E-drive change, local complete app-service launch was
+policy-blocked before execution and was not retried through another path.
+Do not confuse authored cases with passes.
+
+## Initial upload and pending receipt — 2026-11-11 (not deployed)
+
+`test_import_upload_receipts` covers original identity, byte/name/order/options
+binding, terminal replay without restarting analysis, nullable metadata-only
+reads, foreign ownership, malformed keys, legacy calls and lost post-commit
+responses. `test_import_upload_postgres` holds a real uncommitted admission:
+GET remains nonblocking, a simultaneous duplicate gets409 without staging,
+and post-commit or rollback/retry yields one import/job. The first local run
+exposed fresh-instance feature-policy initialization preceding the request
+lock; request fencing now precedes it, retaining all policy checks.
+
+`upload-transport` runs actual XHR transport with controlled events/time,
+including slow byte progress beyond14minutes, stalled upload/response,
+abort/error, timer/listener cleanup and response progress. These are synthetic
+events, not measured throughput. `import-upload-api` checks auth epoch,
+ordered multipart, headers, paused-session prevention, structured errors,
+malformed success and finite read-only receipt lookup.
+`import-background-analysis` runs the retained hook with the actual component:
+unknown/rejection, double click, check-before-retry, original File identity,
+close/re-entry, late success, confirmed receipt with failed view read, account
+change and bounded parking/swapping of pending batches. It also distinguishes
+owned receipt410 / confirmed-import404 from a generic unknown receipt404,
+and checks explicit local-only release, stale confirmation fencing and
+preservation of other parked requests.
+Pasted-source regressions first failed in both locales and on remount.
+The actual component now verifies exact text and File/key retention,
+explicit-rejection editing/new identity, read-only unknown input, parking/
+local release and no repeated UTF-8 allocation on upload progress.
+
+The required12-way `import-source-repair-browser` now mounts the real upload
+hook/feedback/XHR too, preserving all earlier source/commit checks. Network
+interception holds outgoing requests before upload-complete events, so it
+asserts the true uploading state, not fabricated transport progress. It covers
+reopening pending transport, parked recovery, same-key ordered retry and a
+confirmed receipt followed by a failed GET. The final extension adds an
+unavailable import, two-step local release, remount without read looping,
+File release and focus return. After E-drive authorization the final12-way
+matrix passed, also covering pasted rejection/editing, selectable read-only
+text after remount and same-key explicit retry. The first visual check exposed
+a test adapter missing `ApiRequestError.name`; it was corrected to match the
+actual API error contract, and all12 cases were rerun with exact rejection
+copy assertions. Earlier screenshot output is not the final evidence.
+Production multipart receipt
+integration is added to the existing mandatory `import-markdown` E2E suite at
+375/1440px. Local mounted/synthetic success is not full-site/PWA acceptance.
+
 ## Continuation acknowledgement recovery — 2026-11-11 (not deployed)
 
 `continuation-write-recovery.test.mjs` executes the real intent/check functions

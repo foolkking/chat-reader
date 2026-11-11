@@ -33,7 +33,7 @@ for (const profile of profiles) {
       const warm = await measureWarmRevisit(page, conversationId);
       const payload = {
         fixture: { version: "release-d-reader-capacity-v1", seed: 20260814, profile, messages },
-        measurement: { version: 2, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34, diagnosticOnly: diagnostic },
+        measurement: { version: 3, trace: false, wheelSteps: 30, wheelDelta: 120, sampleDelayMs: 34, diagnosticOnly: diagnostic },
         runs, warm,
       };
       // The list/gate reporters do not materialize body-only attachments.
@@ -191,7 +191,13 @@ async function measureWarmRevisit(page: Page, conversationId: string) {
   const before = await page.evaluate(() => (window as typeof window & { __chatReaderPerfProbe?: Record<string, number> }).__chatReaderPerfProbe ?? {});
   const telemetry = await runWheelTelemetry(page, root, 12);
   const after = await page.evaluate(() => (window as typeof window & { __chatReaderPerfProbe?: Record<string, number> }).__chatReaderPerfProbe ?? {});
-  return { ...telemetry, parseDelta: (after.markdownRenderTotal ?? 0) - (before.markdownRenderTotal ?? 0), probe: after, conversationId };
+  // Older baselines have render probes only. Missing actual parser evidence
+  // is unknown, not zero and not interchangeable with component renders.
+  const parseDelta = typeof before.markdownParseTotal === "number" && typeof after.markdownParseTotal === "number"
+    ? after.markdownParseTotal - before.markdownParseTotal : null;
+  const renderDelta = typeof before.markdownRenderTotal === "number" && typeof after.markdownRenderTotal === "number"
+    ? after.markdownRenderTotal - before.markdownRenderTotal : null;
+  return { ...telemetry, parseDelta, renderDelta, probe: after, conversationId };
 }
 
 async function runWheelTelemetry(page: Page, root: ReturnType<Page["locator"]>, steps = 30, includeTiming = false) {

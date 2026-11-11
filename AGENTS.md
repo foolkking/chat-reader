@@ -35,12 +35,13 @@
 ## 临时文件与缓存
 
 - 本机任务临时目录统一使用 `C:\Users\86182\Desktop\wkkk`，每个任务或测试批次建立可辨认的独立子目录。
+- 2026-11-11 用户明确批准本轮改用 `E:\chat-reader-temp`；容量不足时使用其独立任务子目录，不搬动或删除 C 盘已有资料。浏览器测试允许这两个明确的根目录，不接受系统默认 Temp 或盘符根目录。
 - 运行会生成临时文件的命令前，在当前 PowerShell 进程设置 `TEMP` 和 `TMP`；启动的 API、worker、构建与测试进程继承该设置。不要修改机器或用户级全局环境变量。
 - pytest 的 `--basetemp`、浏览器测试临时配置、临时下载、解压文件及一次性脚本均放入此目录的任务子目录；不再使用系统默认 Temp 或项目 `.tmp` 新建这些临时内容。仓库要求保留的测试证据与交付文件仍按文档规则存放。
-- 清理时只处理可确认归属当前任务且不再使用的文件，不清空整个 `wkkk`，不清理其他任务或用户资料；递归删除前核验绝对路径和链接边界。
+- 清理时只处理可确认归属当前任务且不再使用的文件，不清空整个 `wkkk` 或 `chat-reader-temp`，不清理其他任务或用户资料；递归删除前核验绝对路径和链接边界。
 
 ```powershell
-$taskTempRoot = 'C:\Users\86182\Desktop\wkkk\chat-reader-task-name'
+$taskTempRoot = 'E:\chat-reader-temp\chat-reader-task-name'
 New-Item -ItemType Directory -Force -Path $taskTempRoot | Out-Null
 $env:TEMP = $taskTempRoot
 $env:TMP = $taskTempRoot

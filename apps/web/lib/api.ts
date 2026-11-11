@@ -1,7 +1,8 @@
-import { authenticationGeneration, notifyAuthenticationFailure } from "./offline-access";
+import { authenticationGeneration, notifyAuthenticationFailure, AUTH_GENERATION_CHANGED_EVENT } from "./offline-access";
 import { observeSessionResponse, serverSession } from "./server-session";
 import { archiveRequestSignal } from "./archive-task-state";
 import { withRequestDeadline } from "./request-deadline";
+import { sendUpload, type UploadProgress } from "./upload-transport";
 import type {
   CommitImportResponse,
   CleanupApplyResult,
@@ -1639,12 +1640,52 @@ export async function createAdaptiveImportSession(
   files: File[],
   repairProfileId?: string | null,
   targetProjectId?: string | null,
+  options?: { requestId: string; signal?: AbortSignal; onProgress?: (value: UploadProgress) => void },
 ): Promise<AdaptiveImportSession> {
   const formData = new FormData();
   for (const file of files) formData.append("files", file);
   if (repairProfileId) formData.append("repair_profile_id", repairProfileId);
   if (targetProjectId) formData.append("target_project_id", targetProjectId);
-  return fetchJson<AdaptiveImportSession>("/api/adaptive-import/sessions", { method: "POST", body: formData });
+  const path = "/api/adaptive-import/sessions";
+  if (!options) return fetchJson<AdaptiveImportSession>(path, { method: "POST", body: formData });
+  const generation = authenticationGeneration(), session = serverSession(), controller = new AbortController();
+  if (session.status === "sign-in-required" || session.status === "unavailable") {
+    throw new ApiRequestError("Server access is paused. Your local files are retained.", session.status === "sign-in-required" ? 401 : 503, path);
+  }
+  const changed = () => controller.abort();
+  window.addEventListener(AUTH_GENERATION_CHANGED_EVENT, changed);
+  try {
+    const response = await sendUpload(`${API_BASE_URL}${path}`, formData, {
+      headers: { Accept: "application/json", "Idempotency-Key": options.requestId },
+      signal: options.signal ? AbortSignal.any([controller.signal, options.signal]) : controller.signal,
+      onProgress: value => { if (generation === authenticationGeneration()) options.onProgress?.(value); },
+    });
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    observeSessionResponse(response, session.userId);
+    if (response.status === 401) notifyAuthenticationFailure(generation, response.headers.get("X-Chat-Reader-Auth-Reason"));
+    if (!response.ok) throw await getApiRequestError(response, path);
+    const result = await response.json() as AdaptiveImportSession;
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    if (!result || typeof result.import_id !== "string" || !result.import_id || typeof result.state !== "string") {
+      throw new Error("IMPORT_UPLOAD_RECEIPT_INVALID");
+    }
+    return result;
+  } finally { window.removeEventListener(AUTH_GENERATION_CHANGED_EVENT, changed); }
+}
+
+export type AdaptiveUploadReceipt = { import_id: string; task_id: string; status: string };
+export function getAdaptiveUploadReceipt(requestId: string, signal?: AbortSignal): Promise<{ receipt: AdaptiveUploadReceipt | null }> {
+  return withRequestDeadline(async deadline => {
+    const generation = authenticationGeneration();
+    const result = await fetchJson<{ receipt: AdaptiveUploadReceipt | null }>(
+      `/api/adaptive-import/requests/${encodeURIComponent(requestId)}`, { signal: deadline });
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    if (!result || !Object.hasOwn(result, "receipt") || (result.receipt !== null
+      && (!result.receipt || typeof result.receipt.import_id !== "string" || !result.receipt.import_id))) {
+      throw new Error("IMPORT_UPLOAD_RECEIPT_INVALID");
+    }
+    return result;
+  }, signal);
 }
 
 export async function getAdaptiveImportSession(importId: string, signal?: AbortSignal): Promise<AdaptiveImportSession> {
@@ -1746,10 +1787,15 @@ export async function getAdaptiveImportArchive(
   signal?: AbortSignal,
 ): Promise<AdaptiveArchiveCatalog> {
   const params = new URLSearchParams({ offset: String(offset), limit: String(limit) });
-  return fetchJson<AdaptiveArchiveCatalog>(
-    `/api/adaptive-import/sessions/${importId}/archives/${artifactId}?${params.toString()}`,
-    { signal },
-  );
+  const generation = authenticationGeneration();
+  return withRequestDeadline(async deadline => {
+    const catalog = await fetchJson<AdaptiveArchiveCatalog>(
+      `/api/adaptive-import/sessions/${importId}/archives/${artifactId}?${params.toString()}`,
+      { signal: deadline },
+    );
+    if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    return catalog;
+  }, signal);
 }
 
 export async function updateAdaptiveImportArchive(
@@ -1795,15 +1841,25 @@ export async function readAdaptiveOperationResult<T>(taskId: string, options: Ad
   for (;;) {
     options.signal?.throwIfAborted();
     if (generation !== authenticationGeneration()) throw new Error("Account changed");
-    const task = await fetchJson<BackgroundTaskRead>(path, {
-      signal: options.signal, headers: { "X-Chat-Reader-Background": "1" },
+    // A finite read, not a total deadline for legitimate background work.
+    // Keep the original task identity when a single read cannot finish.
+    const task = await withRequestDeadline(deadline => fetchJson<BackgroundTaskRead>(path, {
+      signal: deadline, headers: { "X-Chat-Reader-Background": "1" },
+    }), options.signal).catch((error: unknown) => {
+      if (error instanceof ApiRequestError && error.status === 404) {
+        throw new ApiRequestError("The original task is unavailable. Check Tasks; do not resubmit it.", 409, path, "IMPORT_OPERATION_UNCONFIRMED");
+      }
+      throw error;
     });
     options.signal?.throwIfAborted();
     if (generation !== authenticationGeneration()) throw new Error("Account changed");
+    if (!task || task.job_id !== taskId || !["queued", "processing", "cancelling", "committed", "failed", "cancelled"].includes(task.status)) {
+      throw new ApiRequestError("The original task could not be confirmed. Check Tasks before continuing.", 409, path, "IMPORT_OPERATION_UNCONFIRMED");
+    }
     options.onTask?.(task);
     if (task.status === "committed") {
-      const result = task.result as Record<string, unknown>;
-      if (result.operation_result === null || typeof result.operation_result !== "object") {
+      const result = task.result as Record<string, unknown> | null;
+      if (!result || !result.operation_result || typeof result.operation_result !== "object" || Array.isArray(result.operation_result)) {
         throw new ApiRequestError("The operation result is unavailable. Reopen the import session.", 409, path, "IMPORT_OPERATION_UNCONFIRMED");
       }
       return result.operation_result as T;

@@ -1,5 +1,23 @@
 # 事实证据索引
 
+## 首次上传恢复 / 阅读诊断 — 2026-11-11（未部署）
+
+[K源码及分层验证](small-host-2026-11-11/import-upload-verification.json)：
+身份绑定、慢上传、只读核对、暂放/原请求重试和明确本页释放。
+最终静态/Node与较早API/PG/mounted检查分列；C盘容量预检失败保留。
+用户批准E盘后[最新mounted12](small-host-2026-11-11/import-kl-mounted-final.json)
+含粘贴恢复通过，375中文/1440英文合成截图已检查；
+[精确隔离构建及扩展验证](small-host-2026-11-11/import-kl-build-final.json)
+记录544输入、API112（含重复）、来源测试23及新PG正常停止。
+本地整站服务启动策略拒绝未绕过，整站/精确CI仍待验。
+[J精确CPU诊断](small-host-2026-11-11/reader-diagnostic-j.json)保留原CI失败
+及诊断九组原始指标摘要；未复现不等于已修，不替代不带Profiler的发布门禁。
+[L已知任务/目录读取](small-host-2026-11-11/import-read-verification.json)记录
+有限等待、原任务恢复、畸形结果保护与真实TSX回调验证；Settings整站仍单独待验。
+[整批提交前核验](small-host-2026-11-11/import-kl-submission-audit.json)补充
+Node2434、静态、544输入精确构建、依赖策略与前轮CI失败核对。
+warm解析计数不再冒用渲染次数；这不证明Reader长任务已修复。
+
 ## 小机器接续写入恢复 — 2026-11-11（合成、未部署）
 
 [J整批源码/测试摘要](small-host-2026-11-11/context-write-verification.json)：

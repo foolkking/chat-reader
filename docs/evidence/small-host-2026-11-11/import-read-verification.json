@@ -1,0 +1,160 @@
+{
+  "recordedAt": "2026-11-11T18:08:11.080435+08:00",
+  "scope": "L finite reads and existing-task continuation; controlled transport/hooks, not mounted DOM",
+  "sourceSha256": {
+    "apps/web/lib/api.ts": "7584647956695e2378fc33840cc4514a0fa372123eaa8f89c1b7b7cbc631c536",
+    "apps/web/features/import/format-health-check.tsx": "9dad4b74e4956e3ee4aafafad3e37bcd666582154bece2377f5e3befe6605ea0",
+    "apps/web/features/import/mapping-workspace.tsx": "f4468522c8c24194833fe564b32e4bf92d95a234665ee1f02739f3d4a1d0661f",
+    "apps/web/features/import/import-workspace-copy.ts": "49b0d268b5a80707def27b7340944e5e1bb6cfe818ce4d9048c5a10b2b2d5df1",
+    "scripts/ux/import-read-lifetime.test.mjs": "8894a88bde76cb77e3a35e63121d63049745ddfb3f9879d989478ce54d5fc5bd",
+    "scripts/ux/import-operation-controls.test.mjs": "c25d2263ef0927b9b9a8c6c8595bcfc2b2ffa7bddf89c0cc423050113cd35075",
+    "scripts/ux/import-operation-recovery.test.mjs": "2714877e39eb5d960654c802a98b845c5c1621ebf3813f9a5987dbb6460d3c34",
+    "scripts/ux/import-acknowledgement-copy.test.mjs": "c36cfe1986d80172f0085f45e2504283006b1d687243b1601feccddd46b2c75b",
+    "apps/web/e2e/settings-format-health.spec.ts": "8cd726ab0db8009d0d42defb80ac306ff03b0769e838fe988d4ba96ddc687326"
+  },
+  "fullUxNode": {
+    "exitCode": 0,
+    "fileCount": 149,
+    "concurrency": 2,
+    "counts": {
+      "tests": "2425",
+      "pass": "2425",
+      "fail": "0",
+      "cancelled": "0",
+      "skipped": "0"
+    },
+    "outputSha256": "904eb77d69112f691b0b6298dd5a87254b58f3ca88cf99f4e596c09f1188c204"
+  },
+  "priorTargetedChecks": {
+    "passed": 40,
+    "scope": "Actual API/deadline, real component callbacks, existing archive/session contracts (overlaps full suite)"
+  },
+  "pending": [
+    "Full-site authored multipart/known-task browser cases: local service launch policy-blocked; mandatory CI authored",
+    "Fresh exact-source release CI",
+    "Reader223/331ms unproven root cause"
+  ],
+  "resourceBoundary": "C: free=0, no temp-producing browser/API/build run or deletion; Node output captured in memory, only required evidence written in repository",
+  "staticChecks": [
+    {
+      "name": "lint",
+      "command": [
+        "corepack.cmd",
+        "pnpm",
+        "run",
+        "lint"
+      ],
+      "exitCode": 0,
+      "outputSha256": "bc11745adf04c4857fecfd2b867113b7ed0363588f743c5aaf5d4fb000752fdb"
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "corepack.cmd",
+        "pnpm",
+        "run",
+        "typecheck",
+        "--incremental",
+        "false"
+      ],
+      "exitCode": 0,
+      "outputSha256": "38cfec68aa065baa7bf6fdea7f18aedc1898b1e9be9f37b574df6f3f2f04b58d"
+    }
+  ],
+  "finalPass": true,
+  "priorSourceSha256": {
+    "apps/web/lib/api.ts": "7584647956695e2378fc33840cc4514a0fa372123eaa8f89c1b7b7cbc631c536",
+    "apps/web/features/import/format-health-check.tsx": "9dad4b74e4956e3ee4aafafad3e37bcd666582154bece2377f5e3befe6605ea0",
+    "apps/web/features/import/mapping-workspace.tsx": "f4468522c8c24194833fe564b32e4bf92d95a234665ee1f02739f3d4a1d0661f",
+    "apps/web/features/import/import-workspace-copy.ts": "49b0d268b5a80707def27b7340944e5e1bb6cfe818ce4d9048c5a10b2b2d5df1",
+    "scripts/ux/import-read-lifetime.test.mjs": "8894a88bde76cb77e3a35e63121d63049745ddfb3f9879d989478ce54d5fc5bd",
+    "scripts/ux/import-operation-controls.test.mjs": "c25d2263ef0927b9b9a8c6c8595bcfc2b2ffa7bddf89c0cc423050113cd35075",
+    "scripts/ux/import-operation-recovery.test.mjs": "2714877e39eb5d960654c802a98b845c5c1621ebf3813f9a5987dbb6460d3c34",
+    "scripts/ux/import-acknowledgement-copy.test.mjs": "c36cfe1986d80172f0085f45e2504283006b1d687243b1601feccddd46b2c75b",
+    "apps/web/e2e/settings-format-health.spec.ts": "8cd726ab0db8009d0d42defb80ac306ff03b0769e838fe988d4ba96ddc687326"
+  },
+  "combinedFinalStaticAndUx": {
+    "recordedAt": "2026-11-11T18:29:24.153913+08:00",
+    "checks": [
+      {
+        "name": "ux",
+        "exitCode": 0,
+        "outputSha256": "18b7c8caad51aa6e7c46fbfd884175c0f1d2f9ba9079e37dc84329fe80518756",
+        "fileCount": 149,
+        "concurrency": 2,
+        "counts": {
+          "tests": "2426",
+          "pass": "2426",
+          "fail": "0",
+          "cancelled": "0",
+          "skipped": "0"
+        }
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "outputSha256": "bc11745adf04c4857fecfd2b867113b7ed0363588f743c5aaf5d4fb000752fdb"
+      },
+      {
+        "name": "typecheck",
+        "exitCode": 0,
+        "outputSha256": "38cfec68aa065baa7bf6fdea7f18aedc1898b1e9be9f37b574df6f3f2f04b58d"
+      }
+    ],
+    "complete": true
+  },
+  "authorizedEDriveFollowup": {
+    "recordedAt": "2026-11-11T19:47:40.939586+08:00",
+    "fullUxStatic": {
+      "recordedAt": "2026-11-11T19:37:50.204784+08:00",
+      "tempRoot": "E:\\chat-reader-temp\\chat-reader-small-host-20261111",
+      "checks": [
+        {
+          "name": "ux",
+          "exitCode": 0,
+          "outputSha256": "77a898b680569cf7b91d7a3c2717ec5aa57dbe412e32c03aeda3132e4deae26c",
+          "fileCount": 149,
+          "tail": "ration_ms: 22.9136\n  ...\n# Subtest: upload inactivity stops only transport\nok 2419 - upload inactivity stops only transport\n  ---\n  duration_ms: 2.9846\n  ...\n# Subtest: confirmation inactivity stops only transport\nok 2420 - confirmation inactivity stops only transport\n  ---\n  duration_ms: 0.484\n  ...\n# Subtest: duplicate progress events cannot extend a hung upload and progress renders only changed percentages\nok 2421 - duplicate progress events cannot extend a hung upload and progress renders only changed percentages\n  ---\n  duration_ms: 0.5385\n  ...\n# Subtest: manual stop, network failure and late loads never produce a success or a second send\nok 2422 - manual stop, network failure and late loads never produce a success or a second send\n  ---\n  duration_ms: 0.7721\n  ...\n# Subtest: actual response byte progress extends only the confirmation inactivity window\nok 2423 - actual response byte progress extends only the confirmation inactivity window\n  ---\n  duration_ms: 0.7774\n  ...\n# Subtest: Reader table interaction matrix is a required CI gate with retained evidence\nok 2424 - Reader table interaction matrix is a required CI gate with retained evidence\n  ---\n  duration_ms: 5.3575\n  ...\n# Subtest: table data export reads nested text, preserves empty cells, and escapes TSV/CSV\nok 2425 - table data export reads nested text, preserves empty cells, and escapes TSV/CSV\n  ---\n  duration_ms: 1.2067\n  ...\n# Subtest: formula-like cells default to safe text while ordinary negative numbers remain intact\nok 2426 - formula-like cells default to safe text while ordinary negative numbers remain intact\n  ---\n  duration_ms: 0.2356\n  ...\n# Subtest: table export refuses oversized table data without silently truncating\nok 2427 - table export refuses oversized table data without silently truncating\n  ---\n  duration_ms: 36.2271\n  ...\n# Subtest: table math exports its TeX once rather than MathML, annotation and visual text concatenated\nok 2428 - table math exports its TeX once rather than MathML, annotation and visual text concatenated\n  ---\n  duration_ms: 0.518\n  ...\n# Subtest: pasted transcript becomes a named UTF-8 Markdown file only when explicitly requested\nok 2429 - pasted transcript becomes a named UTF-8 Markdown file only when explicitly requested\n  ---\n  duration_ms: 1.079\n  ...\n# Subtest: citation uses a private message target and escapes source labels\nok 2430 - citation uses a private message target and escapes source labels\n  ---\n  duration_ms: 0.8781\n  ...\n# Subtest: read-only version difference preserves Unicode and orders insertions/deletions\nok 2431 - read-only version difference preserves Unicode and orders insertions/deletions\n  ---\n  duration_ms: 0.4168\n  ...\n# Subtest: version comparison discloses text, line and quadratic-work bounds\nok 2432 - version comparison discloses text, line and quadratic-work bounds\n  ---\n  duration_ms: 2.7766\n  ...\n1..2432\n# tests 2432\n# suites 0\n# pass 2432\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 62665.5279\n"
+        },
+        {
+          "name": "lint",
+          "exitCode": 0,
+          "outputSha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2",
+          "fileCount": null,
+          "tail": "\n> chat-reader@0.0.0 lint E:\\1project\\chat-reader\n> corepack pnpm --filter web lint\n\n\n> web@0.0.0 lint E:\\1project\\chat-reader\\apps\\web\n> eslint . --max-warnings=0\n\n"
+        },
+        {
+          "name": "typecheck",
+          "exitCode": 0,
+          "outputSha256": "47d1d43aa0ed101f57d22b06271e36e7f7a9a308d330b63bcf771a904b770165",
+          "fileCount": null,
+          "tail": "\n> chat-reader@0.0.0 typecheck E:\\1project\\chat-reader\n> corepack pnpm --filter web typecheck \"--incremental\" \"false\"\n\n\n> web@0.0.0 typecheck E:\\1project\\chat-reader\\apps\\web\n> tsc --noEmit \"--incremental\" \"false\"\n\n"
+        }
+      ]
+    },
+    "uploadApiPg": {
+      "passed": 25,
+      "logSha256": "c2aad2835a1608b575d61ac01ad406c1459a10b824d9c0f73287826c51211114"
+    },
+    "mountedUploadCases": 12,
+    "mountedEvidence": "import-kl-mounted-final.json",
+    "notClaimed": [
+      "Full-site/PWA acceptance",
+      "Exact release CI",
+      "Reader long-task root cause",
+      "Production release"
+    ],
+    "buildEvidence": "import-kl-build-final.json"
+  },
+  "priorBeforePasteSourceSha256": {
+    "apps/web/lib/api.ts": "7584647956695e2378fc33840cc4514a0fa372123eaa8f89c1b7b7cbc631c536",
+    "apps/web/features/import/format-health-check.tsx": "9dad4b74e4956e3ee4aafafad3e37bcd666582154bece2377f5e3befe6605ea0",
+    "apps/web/features/import/mapping-workspace.tsx": "f4468522c8c24194833fe564b32e4bf92d95a234665ee1f02739f3d4a1d0661f",
+    "apps/web/features/import/import-workspace-copy.ts": "49b0d268b5a80707def27b7340944e5e1bb6cfe818ce4d9048c5a10b2b2d5df1",
+    "scripts/ux/import-read-lifetime.test.mjs": "8894a88bde76cb77e3a35e63121d63049745ddfb3f9879d989478ce54d5fc5bd",
+    "scripts/ux/import-operation-controls.test.mjs": "c25d2263ef0927b9b9a8c6c8595bcfc2b2ffa7bddf89c0cc423050113cd35075",
+    "scripts/ux/import-operation-recovery.test.mjs": "2714877e39eb5d960654c802a98b845c5c1621ebf3813f9a5987dbb6460d3c34",
+    "scripts/ux/import-acknowledgement-copy.test.mjs": "c36cfe1986d80172f0085f45e2504283006b1d687243b1601feccddd46b2c75b",
+    "apps/web/e2e/settings-format-health.spec.ts": "8cd726ab0db8009d0d42defb80ac306ff03b0769e838fe988d4ba96ddc687326"
+  }
+}

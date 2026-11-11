@@ -13,7 +13,7 @@ const web = join(root, "apps/web");
 const appRequire = createRequire(join(web, "package.json"));
 const tempRoot = resolve(process.env.RUNNER_TEMP ?? process.env.TEMP ?? "");
 if (process.platform === "win32") {
-  assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^c:\/users\/86182\/desktop\/wkkk\/[^/]+/);
+  assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
 } else {
   assert.ok(process.env.RUNNER_TEMP || process.env.TEMP, "An explicit task temporary directory is required");
 }

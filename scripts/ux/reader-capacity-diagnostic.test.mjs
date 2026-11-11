@@ -1,10 +1,12 @@
 // Static workflow/harness boundaries, not capacity or Linux acceptance.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { test } from "node:test";
 const read = file => readFileSync(new URL("../../" + file, import.meta.url), "utf8");
 const workflow = read(".github/workflows/reading-performance.yml");
 const harness = read("apps/web/e2e/reader-capacity.spec.ts");
+const require = createRequire(new URL("../../apps/web/package.json", import.meta.url));
 
 test("CPU diagnostics select an explicitly validated failed SHA and cannot be requested by the reusable release workflow", () => {
   assert.match(workflow, /workflow_dispatch:\s+inputs:\s+diagnostic_ref:/);
@@ -32,4 +34,48 @@ test("all cold runs keep the frozen budgets and unfiltered failures while diagno
   assert.doesNotMatch(harness, /if \(!diagnostic\)[\s\S]{0,60}expect|frames\.filter|longTasks\.filter/);
   assert.match(harness, /test\.use\(\{ trace: "off" \}\)/);
   assert.match(harness, /finally \{\s+if \(cdp && profilePath\)/);
+});
+
+// Execute the actual warm measurement function, not a second implementation
+// of its counter arithmetic. This is not a browser performance claim.
+async function warmCounters(before, after) {
+  const ts = require("typescript");
+  const ast = ts.createSourceFile("reader-capacity.spec.ts", harness, ts.ScriptTarget.ES2022, true);
+  const fn = ast.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "measureWarmRevisit");
+  assert.ok(fn);
+  const compiled = ts.transpileModule(`export ${fn.getText(ast)}`, { compilerOptions: {
+    target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+  } }).outputText;
+  const exported = {}, phases = [], probes = [structuredClone(before), structuredClone(after)];
+  const root = { evaluate: async () => { phases.push("scroll"); } };
+  const page = {
+    locator: selector => { assert.equal(selector, "[data-reader-scroll-root='true']"); return root; },
+    waitForTimeout: async ms => { assert.equal(ms, 300); phases.push("settle"); },
+    evaluate: async () => { phases.push("probe"); return probes.shift(); },
+  };
+  new Function("exports", "waitForReaderEdgeIdle", "runWheelTelemetry", compiled)(
+    exported,
+    async target => { assert.equal(target, root); phases.push("edge"); },
+    async (target, element, steps) => {
+      assert.equal(target, page); assert.equal(element, root); assert.equal(steps, 12);
+      phases.push("measure"); return { scrollMonotonic: true, longestTask: 170 };
+    },
+  );
+  const result = await exported.measureWarmRevisit(page, "synthetic-counter-fixture");
+  assert.deepEqual(phases, ["scroll", "settle", "edge", "scroll", "settle", "edge", "probe", "measure", "probe"]);
+  assert.equal(result.longestTask, 170, "Counter reporting must not filter or modify measured performance.");
+  return result;
+}
+
+test("warm parser evidence counts the actual pipeline separately from component renders", async () => {
+  const result = await warmCounters({ markdownParseTotal: 3, markdownRenderTotal: 20 },
+    { markdownParseTotal: 5, markdownRenderTotal: 80 });
+  assert.equal(result.parseDelta, 2);
+  assert.equal(result.renderDelta, 60);
+});
+
+test("historical baseline without a real parse probe is unmeasured, not zero or render count", async () => {
+  const result = await warmCounters({ markdownRenderTotal: 10 }, { markdownRenderTotal: 30 });
+  assert.equal(result.parseDelta, null);
+  assert.equal(result.renderDelta, 20);
 });

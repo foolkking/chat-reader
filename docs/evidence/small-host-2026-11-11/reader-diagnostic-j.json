@@ -1,0 +1,3766 @@
+{
+  "scope": "Exact failed J source, full baseline/candidate CPU diagnostic; NOT release acceptance",
+  "run": 42987330765,
+  "source": "b5fb1bdf8d67e46773e60a44acfd7c21cf40d919",
+  "firstReadAt": "2026-11-11T17:19:09+08:00",
+  "dispatchedAt": "2026-11-11T16:28:34+08:00",
+  "artifact": {
+    "artifactSha256": "608acac81ec85382788bbc70d79b73e85edca1194f223b5dc8b35cdcfbd2d831",
+    "zipBytes": 4265750,
+    "unpackedBytes": 75904640
+  },
+  "baselineSource": "43a714f2c13f6e6573eb02916c8ff8f78dd2d82e",
+  "priorFailedReleaseRun": 42974972859,
+  "priorCandidateFailures": [
+    {
+      "profile": "plain",
+      "messages": 398,
+      "coldRun": 0,
+      "longestTaskMs": 223
+    },
+    {
+      "profile": "math",
+      "messages": 398,
+      "coldRun": 0,
+      "longestTaskMs": 331
+    }
+  ],
+  "conclusion": "Not reproduced; original long tasks remain unexplained. No threshold or assertion relaxed. Passing profiler runs do not repair or replace the unprofiled release gate.",
+  "cases": [
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "math",
+        "messages": 1000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1993,
+          "restoredReadingPosition": false,
+          "durationMs": 2442.899999999965,
+          "frameCount": 141,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000728,
+          "longestTask": 50,
+          "longTaskTotal": 50,
+          "diagnosticTiming": {
+            "startedAt": 2765.4000000000233,
+            "longTaskSpans": [
+              {
+                "startTime": 3800,
+                "duration": 50
+              }
+            ]
+          },
+          "domNodeCount": 2093,
+          "usedJSHeapBytes": 29334653,
+          "probe": {
+            "markdownRenderTotal": 624,
+            "mathSourceTotal": 89
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 874,
+          "restoredReadingPosition": false,
+          "durationMs": 1854.6999999999534,
+          "frameCount": 107,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1284.600000000035,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2101,
+          "usedJSHeapBytes": 41558062,
+          "probe": {
+            "markdownRenderTotal": 553,
+            "mathSourceTotal": 79
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 669,
+          "restoredReadingPosition": false,
+          "durationMs": 1811,
+          "frameCount": 107,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1079.7000000000116,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2096,
+          "usedJSHeapBytes": 63021732,
+          "probe": {
+            "markdownRenderTotal": 518,
+            "mathSourceTotal": 74
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 717.7999999999884,
+        "frameCount": 42,
+        "mountedMessagesMax": 14,
+        "mountedBlocksMax": 49,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.799999999999727,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 2094,
+        "usedJSHeapBytes": 48794752,
+        "probe": {
+          "markdownRenderTotal": 1106,
+          "mathSourceTotal": 158
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "math",
+        "messages": 10000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1815,
+          "restoredReadingPosition": false,
+          "durationMs": 2031.6999999999534,
+          "frameCount": 119,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2428.7000000000116,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2116,
+          "usedJSHeapBytes": 27786163,
+          "probe": {
+            "markdownRenderTotal": 532,
+            "mathSourceTotal": 76
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 914,
+          "restoredReadingPosition": false,
+          "durationMs": 2096.7999999999884,
+          "frameCount": 123,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1343.2999999999884,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2126,
+          "usedJSHeapBytes": 32375097,
+          "probe": {
+            "markdownRenderTotal": 616,
+            "mathSourceTotal": 88
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 905,
+          "restoredReadingPosition": false,
+          "durationMs": 2380.2999999999884,
+          "frameCount": 135,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 73,
+          "longTaskTotal": 73,
+          "diagnosticTiming": {
+            "startedAt": 1353.2000000000116,
+            "longTaskSpans": [
+              {
+                "startTime": 2390.7000000000116,
+                "duration": 73
+              }
+            ]
+          },
+          "domNodeCount": 2126,
+          "usedJSHeapBytes": 48995365,
+          "probe": {
+            "markdownRenderTotal": 694,
+            "mathSourceTotal": 99
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 809.6999999999534,
+        "frameCount": 47,
+        "mountedMessagesMax": 14,
+        "mountedBlocksMax": 49,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 2124,
+        "usedJSHeapBytes": 48106511,
+        "probe": {
+          "markdownRenderTotal": 1282,
+          "mathSourceTotal": 183
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "math",
+        "messages": 398
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1439,
+          "restoredReadingPosition": false,
+          "durationMs": 2046.7000000000116,
+          "frameCount": 119,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000728,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2137,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2077,
+          "usedJSHeapBytes": 28545840,
+          "probe": {
+            "markdownRenderTotal": 538,
+            "mathSourceTotal": 77
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 1111,
+          "restoredReadingPosition": false,
+          "durationMs": 1977.5,
+          "frameCount": 117,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1591.3000000000466,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2098,
+          "usedJSHeapBytes": 36650811,
+          "probe": {
+            "markdownRenderTotal": 611,
+            "mathSourceTotal": 87
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 900,
+          "restoredReadingPosition": false,
+          "durationMs": 2252.7000000000116,
+          "frameCount": 131,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 49,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1400.7000000000116,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2098,
+          "usedJSHeapBytes": 37632887,
+          "probe": {
+            "markdownRenderTotal": 567,
+            "mathSourceTotal": 81
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 875.7000000000116,
+        "frameCount": 51,
+        "mountedMessagesMax": 14,
+        "mountedBlocksMax": 49,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 2094,
+        "usedJSHeapBytes": 58611756,
+        "probe": {
+          "markdownRenderTotal": 1057,
+          "mathSourceTotal": 151
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "mixed",
+        "messages": 1000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1399,
+          "restoredReadingPosition": false,
+          "durationMs": 2279.1999999999534,
+          "frameCount": 132,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2335.9000000000233,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2267,
+          "usedJSHeapBytes": 46836443,
+          "probe": {
+            "markdownRenderTotal": 842,
+            "mathSourceTotal": 139
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 855,
+          "restoredReadingPosition": false,
+          "durationMs": 1922.899999999965,
+          "frameCount": 112,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1321,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2288,
+          "usedJSHeapBytes": 45155935,
+          "probe": {
+            "markdownRenderTotal": 699,
+            "mathSourceTotal": 115
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 769,
+          "restoredReadingPosition": false,
+          "durationMs": 1938.899999999965,
+          "frameCount": 112,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1237.100000000035,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2293,
+          "usedJSHeapBytes": 60252690,
+          "probe": {
+            "markdownRenderTotal": 733,
+            "mathSourceTotal": 121
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 666.5,
+        "frameCount": 39,
+        "mountedMessagesMax": 6,
+        "mountedBlocksMax": 24,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1283,
+        "usedJSHeapBytes": 62779571,
+        "probe": {
+          "markdownRenderTotal": 931,
+          "mathSourceTotal": 154
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "mixed",
+        "messages": 10000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1924,
+          "restoredReadingPosition": false,
+          "durationMs": 2527,
+          "frameCount": 146,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2595.100000000035,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2303,
+          "usedJSHeapBytes": 44332042,
+          "probe": {
+            "markdownRenderTotal": 753,
+            "mathSourceTotal": 124
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 1101,
+          "restoredReadingPosition": false,
+          "durationMs": 2421,
+          "frameCount": 140,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1754.9000000000233,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2327,
+          "usedJSHeapBytes": 58033447,
+          "probe": {
+            "markdownRenderTotal": 957,
+            "mathSourceTotal": 159
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 1190,
+          "restoredReadingPosition": false,
+          "durationMs": 2285.5999999999767,
+          "frameCount": 134,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1527.9000000000233,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2318,
+          "usedJSHeapBytes": 54542337,
+          "probe": {
+            "markdownRenderTotal": 751,
+            "mathSourceTotal": 124
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 760.9000000000233,
+        "frameCount": 44,
+        "mountedMessagesMax": 6,
+        "mountedBlocksMax": 24,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.799999999999272,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1308,
+        "usedJSHeapBytes": 35174400,
+        "probe": {
+          "markdownRenderTotal": 967,
+          "mathSourceTotal": 160
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "mixed",
+        "messages": 398
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1449,
+          "restoredReadingPosition": false,
+          "durationMs": 2383.7999999999884,
+          "frameCount": 140,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2383.100000000035,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2274,
+          "usedJSHeapBytes": 41404377,
+          "probe": {
+            "markdownRenderTotal": 850,
+            "mathSourceTotal": 141
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 951,
+          "restoredReadingPosition": false,
+          "durationMs": 2214.0999999999767,
+          "frameCount": 130,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1569.4000000000233,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2291,
+          "usedJSHeapBytes": 42698219,
+          "probe": {
+            "markdownRenderTotal": 825,
+            "mathSourceTotal": 136
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 947,
+          "restoredReadingPosition": false,
+          "durationMs": 2392.0999999999767,
+          "frameCount": 141,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1543.4000000000233,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2295,
+          "usedJSHeapBytes": 49368925,
+          "probe": {
+            "markdownRenderTotal": 865,
+            "mathSourceTotal": 143
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 789.1999999999534,
+        "frameCount": 46,
+        "mountedMessagesMax": 6,
+        "mountedBlocksMax": 24,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1283,
+        "usedJSHeapBytes": 55304722,
+        "probe": {
+          "markdownRenderTotal": 1081,
+          "mathSourceTotal": 179
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "plain",
+        "messages": 10000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1233,
+          "restoredReadingPosition": false,
+          "durationMs": 2011.600000000035,
+          "frameCount": 119,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1942.1999999999534,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1404,
+          "usedJSHeapBytes": 26050740,
+          "probe": {
+            "markdownRenderTotal": 177,
+            "mathSourceTotal": 0
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 877,
+          "restoredReadingPosition": false,
+          "durationMs": 2072.9000000000233,
+          "frameCount": 122,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1312.7999999999884,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1425,
+          "usedJSHeapBytes": 26373772,
+          "probe": {
+            "markdownRenderTotal": 276,
+            "mathSourceTotal": 0
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 778,
+          "restoredReadingPosition": false,
+          "durationMs": 2073.5,
+          "frameCount": 122,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1185.2000000000116,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1422,
+          "usedJSHeapBytes": 27904432,
+          "probe": {
+            "markdownRenderTotal": 219,
+            "mathSourceTotal": 0
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 805.6999999999534,
+        "frameCount": 47,
+        "mountedMessagesMax": 18,
+        "mountedBlocksMax": 27,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.700000000000728,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1714,
+        "usedJSHeapBytes": 29687668,
+        "probe": {
+          "markdownRenderTotal": 591,
+          "mathSourceTotal": 0
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "plain",
+        "messages": 1000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1320,
+          "restoredReadingPosition": false,
+          "durationMs": 1957.5999999999767,
+          "frameCount": 115,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1985.2000000000116,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1373,
+          "usedJSHeapBytes": 24603118,
+          "probe": {
+            "markdownRenderTotal": 251,
+            "mathSourceTotal": 0
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 747,
+          "restoredReadingPosition": false,
+          "durationMs": 1765,
+          "frameCount": 104,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1116.2999999999884,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1392,
+          "usedJSHeapBytes": 34417058,
+          "probe": {
+            "markdownRenderTotal": 162,
+            "mathSourceTotal": 0
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 676,
+          "restoredReadingPosition": false,
+          "durationMs": 1721.7000000000116,
+          "frameCount": 101,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1021.3999999999651,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1392,
+          "usedJSHeapBytes": 38835627,
+          "probe": {
+            "markdownRenderTotal": 162,
+            "mathSourceTotal": 0
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 758.5999999999767,
+        "frameCount": 44,
+        "mountedMessagesMax": 18,
+        "mountedBlocksMax": 27,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.799999999999727,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1684,
+        "usedJSHeapBytes": 43542274,
+        "probe": {
+          "markdownRenderTotal": 405,
+          "mathSourceTotal": 0
+        }
+      }
+    },
+    {
+      "phase": "baseline",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "plain",
+        "messages": 398
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1696,
+          "restoredReadingPosition": false,
+          "durationMs": 1886.5,
+          "frameCount": 111,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2329.0999999999767,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1366,
+          "usedJSHeapBytes": 23566337,
+          "probe": {
+            "markdownRenderTotal": 198,
+            "mathSourceTotal": 0
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 724,
+          "restoredReadingPosition": false,
+          "durationMs": 1843.2000000000116,
+          "frameCount": 109,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1054.2999999999884,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1382,
+          "usedJSHeapBytes": 25047180,
+          "probe": {
+            "markdownRenderTotal": 162,
+            "mathSourceTotal": 0
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 671,
+          "restoredReadingPosition": false,
+          "durationMs": 1678.4000000000233,
+          "frameCount": 99,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 21,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1023.5,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 1378,
+          "usedJSHeapBytes": 31777599,
+          "probe": {
+            "markdownRenderTotal": 162,
+            "mathSourceTotal": 0
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 793.2999999999884,
+        "frameCount": 46,
+        "mountedMessagesMax": 18,
+        "mountedBlocksMax": 27,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.799999999999727,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1670,
+        "usedJSHeapBytes": 48483518,
+        "probe": {
+          "markdownRenderTotal": 501,
+          "mathSourceTotal": 0
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "math",
+        "messages": 1000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1226,
+          "restoredReadingPosition": false,
+          "durationMs": 2332.5,
+          "frameCount": 131,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2002.3000000000466,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2869,
+          "usedJSHeapBytes": 35250596,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 809,
+          "restoredReadingPosition": false,
+          "durationMs": 2024.5999999999767,
+          "frameCount": 116,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1160.4000000000233,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2894,
+          "usedJSHeapBytes": 36341213,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 671,
+          "restoredReadingPosition": false,
+          "durationMs": 2107.4000000000233,
+          "frameCount": 119,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1020.5,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2896,
+          "usedJSHeapBytes": 44294628,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 684.5999999999767,
+        "frameCount": 39,
+        "mountedMessagesMax": 14,
+        "mountedBlocksMax": 49,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.799999999999272,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1940,
+        "usedJSHeapBytes": 46741468,
+        "probe": {
+          "markdownRenderTotal": 161,
+          "mathSourceTotal": 23,
+          "markdownParseTotal": 119
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "math",
+        "messages": 10000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1249,
+          "restoredReadingPosition": false,
+          "durationMs": 2436.4000000000233,
+          "frameCount": 136,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2048.6999999999534,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2880,
+          "usedJSHeapBytes": 30984783,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 825,
+          "restoredReadingPosition": false,
+          "durationMs": 2450.4000000000233,
+          "frameCount": 138,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 53,
+          "longTaskTotal": 53,
+          "diagnosticTiming": {
+            "startedAt": 1262.1999999999534,
+            "longTaskSpans": [
+              {
+                "startTime": 3301.899999999907,
+                "duration": 53
+              }
+            ]
+          },
+          "domNodeCount": 2902,
+          "usedJSHeapBytes": 32079033,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 907,
+          "restoredReadingPosition": false,
+          "durationMs": 2302,
+          "frameCount": 132,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1389.5999999999767,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2902,
+          "usedJSHeapBytes": 46540099,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 794.9000000000233,
+        "frameCount": 46,
+        "mountedMessagesMax": 10,
+        "mountedBlocksMax": 35,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1948,
+        "usedJSHeapBytes": 49767215,
+        "probe": {
+          "markdownRenderTotal": 161,
+          "mathSourceTotal": 23,
+          "markdownParseTotal": 119
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "math",
+        "messages": 398
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1265,
+          "restoredReadingPosition": false,
+          "durationMs": 2713.4000000000233,
+          "frameCount": 144,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 33.30000000000018,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2025,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2876,
+          "usedJSHeapBytes": 39557869,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 873,
+          "restoredReadingPosition": false,
+          "durationMs": 2494.4000000000233,
+          "frameCount": 138,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 51,
+          "longTaskTotal": 51,
+          "diagnosticTiming": {
+            "startedAt": 1359.8999999999069,
+            "longTaskSpans": [
+              {
+                "startTime": 3403.5999999999767,
+                "duration": 51
+              }
+            ]
+          },
+          "domNodeCount": 2902,
+          "usedJSHeapBytes": 57900474,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 829,
+          "restoredReadingPosition": false,
+          "durationMs": 2621.79999999993,
+          "frameCount": 146,
+          "mountedMessagesMax": 22,
+          "mountedBlocksMax": 77,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1317.4000000000233,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2902,
+          "usedJSHeapBytes": 34866910,
+          "probe": {
+            "markdownRenderTotal": 119,
+            "mathSourceTotal": 17,
+            "markdownParseTotal": 91
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 825.3000000000466,
+        "frameCount": 46,
+        "mountedMessagesMax": 14,
+        "mountedBlocksMax": 49,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1948,
+        "usedJSHeapBytes": 38907640,
+        "probe": {
+          "markdownRenderTotal": 161,
+          "mathSourceTotal": 23,
+          "markdownParseTotal": 119
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "mixed",
+        "messages": 1000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1324,
+          "restoredReadingPosition": false,
+          "durationMs": 2137.1999999999534,
+          "frameCount": 124,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2255.70000000007,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2059,
+          "usedJSHeapBytes": 37282418,
+          "probe": {
+            "markdownRenderTotal": 263,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 255
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 746,
+          "restoredReadingPosition": false,
+          "durationMs": 2076.8000000000466,
+          "frameCount": 120,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.700000000000273,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1269,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2084,
+          "usedJSHeapBytes": 55239598,
+          "probe": {
+            "markdownRenderTotal": 236,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 228
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 740,
+          "restoredReadingPosition": false,
+          "durationMs": 2050.9000000000233,
+          "frameCount": 121,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1169,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2084,
+          "usedJSHeapBytes": 31921252,
+          "probe": {
+            "markdownRenderTotal": 236,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 228
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 666,
+        "frameCount": 38,
+        "mountedMessagesMax": 10,
+        "mountedBlocksMax": 40,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1552,
+        "usedJSHeapBytes": 36538361,
+        "probe": {
+          "markdownRenderTotal": 310,
+          "mathSourceTotal": 14,
+          "markdownParseTotal": 298
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "mixed",
+        "messages": 10000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1701,
+          "restoredReadingPosition": false,
+          "durationMs": 2703.0999999999767,
+          "frameCount": 151,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 54,
+          "longTaskTotal": 105,
+          "diagnosticTiming": {
+            "startedAt": 2535.70000000007,
+            "longTaskSpans": [
+              {
+                "startTime": 4263.599999999977,
+                "duration": 54
+              },
+              {
+                "startTime": 4318.5,
+                "duration": 51
+              }
+            ]
+          },
+          "domNodeCount": 2067,
+          "usedJSHeapBytes": 46219716,
+          "probe": {
+            "markdownRenderTotal": 270,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 261
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 960,
+          "restoredReadingPosition": false,
+          "durationMs": 2281.79999999993,
+          "frameCount": 129,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1671.7000000000698,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2092,
+          "usedJSHeapBytes": 47721712,
+          "probe": {
+            "markdownRenderTotal": 251,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 243
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 779,
+          "restoredReadingPosition": false,
+          "durationMs": 2442.100000000093,
+          "frameCount": 140,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1438.0999999999767,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2092,
+          "usedJSHeapBytes": 55428308,
+          "probe": {
+            "markdownRenderTotal": 263,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 255
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 944.6999999999534,
+        "frameCount": 52,
+        "mountedMessagesMax": 10,
+        "mountedBlocksMax": 40,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1560,
+        "usedJSHeapBytes": 66129260,
+        "probe": {
+          "markdownRenderTotal": 346,
+          "mathSourceTotal": 14,
+          "markdownParseTotal": 334
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "mixed",
+        "messages": 398
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1304,
+          "restoredReadingPosition": false,
+          "durationMs": 2679.20000000007,
+          "frameCount": 152,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2212.899999999907,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2067,
+          "usedJSHeapBytes": 35576877,
+          "probe": {
+            "markdownRenderTotal": 265,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 257
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 925,
+          "restoredReadingPosition": false,
+          "durationMs": 2292.3000000000466,
+          "frameCount": 131,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1534.5,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2092,
+          "usedJSHeapBytes": 48620575,
+          "probe": {
+            "markdownRenderTotal": 242,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 234
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 786,
+          "restoredReadingPosition": false,
+          "durationMs": 2401.79999999993,
+          "frameCount": 139,
+          "mountedMessagesMax": 14,
+          "mountedBlocksMax": 56,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1386.7000000000698,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2092,
+          "usedJSHeapBytes": 45849436,
+          "probe": {
+            "markdownRenderTotal": 262,
+            "mathSourceTotal": 11,
+            "markdownParseTotal": 254
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 808.5,
+        "frameCount": 45,
+        "mountedMessagesMax": 10,
+        "mountedBlocksMax": 40,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1560,
+        "usedJSHeapBytes": 49542410,
+        "probe": {
+          "markdownRenderTotal": 339,
+          "mathSourceTotal": 14,
+          "markdownParseTotal": 327
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "plain",
+        "messages": 10000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1191,
+          "restoredReadingPosition": false,
+          "durationMs": 2953.9000000000233,
+          "frameCount": 159,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 33.30000000000018,
+          "longestTask": 75,
+          "longTaskTotal": 75,
+          "diagnosticTiming": {
+            "startedAt": 1951.4000000000233,
+            "longTaskSpans": [
+              {
+                "startTime": 3690.0999999999767,
+                "duration": 75
+              }
+            ]
+          },
+          "domNodeCount": 2567,
+          "usedJSHeapBytes": 29803950,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 853,
+          "restoredReadingPosition": false,
+          "durationMs": 2987.5,
+          "frameCount": 165,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 33.29999999999973,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1242.7999999999302,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2589,
+          "usedJSHeapBytes": 27186998,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 728,
+          "restoredReadingPosition": false,
+          "durationMs": 2858.5999999999767,
+          "frameCount": 164,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1163.5,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2589,
+          "usedJSHeapBytes": 49956664,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 839.1000000000931,
+        "frameCount": 49,
+        "mountedMessagesMax": 16,
+        "mountedBlocksMax": 24,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.799999999999272,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1433,
+        "usedJSHeapBytes": 32901580,
+        "probe": {
+          "markdownRenderTotal": 96,
+          "mathSourceTotal": 0,
+          "markdownParseTotal": 69
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "plain",
+        "messages": 1000
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 1144,
+          "restoredReadingPosition": false,
+          "durationMs": 2511.79999999993,
+          "frameCount": 144,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1848.7000000000698,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2558,
+          "usedJSHeapBytes": 35861778,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 709,
+          "restoredReadingPosition": false,
+          "durationMs": 2244.5,
+          "frameCount": 130,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1032.6000000000931,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2581,
+          "usedJSHeapBytes": 31107070,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 652,
+          "restoredReadingPosition": false,
+          "durationMs": 2217.70000000007,
+          "frameCount": 129,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999955,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 988,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2581,
+          "usedJSHeapBytes": 48228770,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 708.4000000000233,
+        "frameCount": 41,
+        "mountedMessagesMax": 16,
+        "mountedBlocksMax": 24,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.700000000000728,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1425,
+        "usedJSHeapBytes": 31576816,
+        "probe": {
+          "markdownRenderTotal": 96,
+          "mathSourceTotal": 0,
+          "markdownParseTotal": 69
+        }
+      }
+    },
+    {
+      "phase": "candidate",
+      "fixture": {
+        "version": "release-d-reader-capacity-v1",
+        "seed": 20260814,
+        "profile": "plain",
+        "messages": 398
+      },
+      "measurement": {
+        "version": 2,
+        "trace": false,
+        "wheelSteps": 30,
+        "wheelDelta": 120,
+        "sampleDelayMs": 34,
+        "diagnosticOnly": true
+      },
+      "cold": [
+        {
+          "run": 0,
+          "navigationElapsedMs": 2099,
+          "restoredReadingPosition": false,
+          "durationMs": 2520.3000000000466,
+          "frameCount": 145,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.800000000000182,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 2716.5,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2557,
+          "usedJSHeapBytes": 36478321,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        },
+        {
+          "run": 1,
+          "navigationElapsedMs": 794,
+          "restoredReadingPosition": false,
+          "durationMs": 2407,
+          "frameCount": 140,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1131.1999999999534,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2583,
+          "usedJSHeapBytes": 35787756,
+          "probe": {
+            "markdownRenderTotal": 78,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 57
+          }
+        },
+        {
+          "run": 2,
+          "navigationElapsedMs": 662,
+          "restoredReadingPosition": false,
+          "durationMs": 2326.79999999993,
+          "frameCount": 136,
+          "mountedMessagesMax": 32,
+          "mountedBlocksMax": 48,
+          "scrollMonotonic": true,
+          "scrollReversals": [],
+          "pageHorizontalOverflow": false,
+          "p95FrameInterval": 16.799999999999727,
+          "longestTask": 0,
+          "longTaskTotal": 0,
+          "diagnosticTiming": {
+            "startedAt": 1013.5,
+            "longTaskSpans": []
+          },
+          "domNodeCount": 2579,
+          "usedJSHeapBytes": 44668877,
+          "probe": {
+            "markdownRenderTotal": 69,
+            "mathSourceTotal": 0,
+            "markdownParseTotal": 51
+          }
+        }
+      ],
+      "warm": {
+        "durationMs": 679.4000000000233,
+        "frameCount": 39,
+        "mountedMessagesMax": 16,
+        "mountedBlocksMax": 24,
+        "scrollMonotonic": true,
+        "scrollReversals": [],
+        "pageHorizontalOverflow": false,
+        "p95FrameInterval": 16.800000000000182,
+        "longestTask": 0,
+        "longTaskTotal": 0,
+        "domNodeCount": 1437,
+        "usedJSHeapBytes": 47103519,
+        "probe": {
+          "markdownRenderTotal": 87,
+          "mathSourceTotal": 0,
+          "markdownParseTotal": 63
+        }
+      }
+    }
+  ],
+  "candidateCold0Profiles": [
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-math-1000--e8c73--cold-runs-and-warm-revisit/reader-cpu-math-1000-0.json",
+      "selfTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1072.98
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 801.3
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 33.33
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 32.26
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 31.1
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 27.1
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 26.0
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 21.44
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 16.53
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 11.37
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 11.26
+        },
+        {
+          "function": "",
+          "url": "8880-f20198de18b71e5b.js",
+          "line": 8,
+          "column": 5028,
+          "ms": 11.02
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1072.98
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 801.3
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 524.76
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 502.1
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 453.6
+        },
+        {
+          "function": "sS",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130464,
+          "ms": 201.69
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 200.6
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 172.14
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 166.73
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 150.81
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 106.59
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 86.91
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.02569,
+        "RecalcStyleDuration": 0.114966,
+        "ScriptDuration": 0.72555,
+        "TaskDuration": 1.343499,
+        "LayoutCount": 48,
+        "RecalcStyleCount": 144
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-math-10000-33dd2--cold-runs-and-warm-revisit/reader-cpu-math-10000-0.json",
+      "selfTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1143.34
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 759.7
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 58.81
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 40.16
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 26.72
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 24.97
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 23.45
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 19.69
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 18.94
+        },
+        {
+          "function": "fetch",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 18.52
+        },
+        {
+          "function": "caretRangeFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 16.97
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 13.72
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1143.34
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 759.7
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 561.4
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 542.53
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 489.08
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 213.15
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 200.63
+        },
+        {
+          "function": "sS",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130464,
+          "ms": 199.41
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 198.28
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 198.28
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 186.37
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 183.08
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.02456,
+        "RecalcStyleDuration": 0.127126,
+        "ScriptDuration": 0.742036,
+        "TaskDuration": 1.377342,
+        "LayoutCount": 50,
+        "RecalcStyleCount": 148
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-math-398-m-58a70--cold-runs-and-warm-revisit/reader-cpu-math-398-0.json",
+      "selfTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1096.42
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 902.06
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 42.48
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 39.3
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 33.93
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 33.18
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 27.12
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 1212,
+          "ms": 23.02
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 22.14
+        },
+        {
+          "function": "fetch",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 21.73
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 18.4
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 16.42
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1096.42
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 902.06
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 700.21
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 657.81
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 603.29
+        },
+        {
+          "function": "sS",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130464,
+          "ms": 263.69
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 259.83
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 230.67
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 222.72
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 204.7
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 135.99
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 121.19
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.030379,
+        "RecalcStyleDuration": 0.150777,
+        "ScriptDuration": 0.930597,
+        "TaskDuration": 1.711922,
+        "LayoutCount": 55,
+        "RecalcStyleCount": 153
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-mixed-1000-b54eb--cold-runs-and-warm-revisit/reader-cpu-mixed-1000-0.json",
+      "selfTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 995.81
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 731.7
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 25.65
+        },
+        {
+          "function": "get scrollTop",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 22.8
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 22.74
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 22.07
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 21.57
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 16.75
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 15.09
+        },
+        {
+          "function": "",
+          "url": "7307-89081c4ce8b80e2d.js",
+          "line": 0,
+          "column": 18365,
+          "ms": 12.62
+        },
+        {
+          "function": "caretRangeFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 10.79
+        },
+        {
+          "function": "",
+          "url": "8880-f20198de18b71e5b.js",
+          "line": 8,
+          "column": 5028,
+          "ms": 8.81
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 995.81
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 731.7
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 569.1
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 551.38
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 506.81
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 314.62
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 301.61
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 253.0
+        },
+        {
+          "function": "o5",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 74956,
+          "ms": 184.1
+        },
+        {
+          "function": "az",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 54379,
+          "ms": 172.16
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 136.63
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 136.63
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.041424,
+        "RecalcStyleDuration": 0.097627,
+        "ScriptDuration": 0.703449,
+        "TaskDuration": 1.216583,
+        "LayoutCount": 62,
+        "RecalcStyleCount": 136
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-mixed-1000-c5521--cold-runs-and-warm-revisit/reader-cpu-mixed-10000-0.json",
+      "selfTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1054.06
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 926.49
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 59.53
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 41.6
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 35.92
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 27.24
+        },
+        {
+          "function": "az",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 54379,
+          "ms": 26.49
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 26.32
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 23.18
+        },
+        {
+          "function": "get scrollTop",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 20.66
+        },
+        {
+          "function": "computeBox",
+          "url": "",
+          "line": 2977,
+          "column": 19,
+          "ms": 13.85
+        },
+        {
+          "function": "c",
+          "url": "8880-f20198de18b71e5b.js",
+          "line": 10,
+          "column": 20679,
+          "ms": 13.35
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1054.06
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 926.49
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 803.27
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 770.99
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 722.47
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 463.93
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 458.18
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 418.83
+        },
+        {
+          "function": "o5",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 74956,
+          "ms": 304.66
+        },
+        {
+          "function": "az",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 54379,
+          "ms": 297.03
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 178.92
+        },
+        {
+          "function": "sS",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130464,
+          "ms": 178.92
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.049865,
+        "RecalcStyleDuration": 0.14907,
+        "ScriptDuration": 0.99221,
+        "TaskDuration": 1.770637,
+        "LayoutCount": 65,
+        "RecalcStyleCount": 158
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-mixed-398--21584--cold-runs-and-warm-revisit/reader-cpu-mixed-398-0.json",
+      "selfTop": [
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 919.92
+        },
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 887.63
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 106.54
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 48.41
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 40.22
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 26.86
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 26.28
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 22.3
+        },
+        {
+          "function": "get scrollTop",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 19.85
+        },
+        {
+          "function": "o",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 135,
+          "ms": 19.42
+        },
+        {
+          "function": "az",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 54379,
+          "ms": 18.57
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 16.17
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 919.92
+        },
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 887.63
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 842.72
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 819.67
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 749.38
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 490.24
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 482.78
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 432.8
+        },
+        {
+          "function": "o5",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 74956,
+          "ms": 300.37
+        },
+        {
+          "function": "az",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 54379,
+          "ms": 296.17
+        },
+        {
+          "function": "tM",
+          "url": "1850-2fd413042f21667b.js",
+          "line": 3,
+          "column": 83997,
+          "ms": 175.57
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 174.81
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.048084,
+        "RecalcStyleDuration": 0.130039,
+        "ScriptDuration": 1.076765,
+        "TaskDuration": 1.879017,
+        "LayoutCount": 62,
+        "RecalcStyleCount": 143
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-plain-1000-0dc7a--cold-runs-and-warm-revisit/reader-cpu-plain-10000-0.json",
+      "selfTop": [
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1124.11
+        },
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 976.44
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 52.4
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 47.26
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 41.08
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 39.01
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 24.15
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 23.88
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 21.18
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 17.01
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 15.78
+        },
+        {
+          "function": "fetch",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 15.1
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1124.11
+        },
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 976.44
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 851.24
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 785.79
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 735.95
+        },
+        {
+          "function": "sS",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130464,
+          "ms": 314.19
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 312.9
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 297.86
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 287.48
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 272.82
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 217.4
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 200.84
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.035455,
+        "RecalcStyleDuration": 0.233899,
+        "ScriptDuration": 1.108867,
+        "TaskDuration": 2.094234,
+        "LayoutCount": 77,
+        "RecalcStyleCount": 222
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-plain-1000-a0eff--cold-runs-and-warm-revisit/reader-cpu-plain-1000-0.json",
+      "selfTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1004.16
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 914.52
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 39.37
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 34.54
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 28.3
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 26.08
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 20.82
+        },
+        {
+          "function": "",
+          "url": "",
+          "line": 0,
+          "column": 0,
+          "ms": 17.31
+        },
+        {
+          "function": "fetch",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 15.95
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 15.09
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 1212,
+          "ms": 13.78
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 1212,
+          "ms": 12.19
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1004.16
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 914.52
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 637.12
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 577.18
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 524.63
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 216.77
+        },
+        {
+          "function": "sS",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130464,
+          "ms": 216.77
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 215.44
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 193.54
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 185.01
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 183.04
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 167.4
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.030623,
+        "RecalcStyleDuration": 0.160789,
+        "ScriptDuration": 0.856995,
+        "TaskDuration": 1.60495,
+        "LayoutCount": 72,
+        "RecalcStyleCount": 204
+      }
+    },
+    {
+      "entry": "_temp/reading-comparison/candidate/reader-capacity-plain-398--09e12--cold-runs-and-warm-revisit/reader-cpu-plain-398-0.json",
+      "selfTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1036.49
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 841.46
+        },
+        {
+          "function": "getBoundingClientRect",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 54.41
+        },
+        {
+          "function": "(garbage collector)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 42.04
+        },
+        {
+          "function": "querySelectorAll",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 26.47
+        },
+        {
+          "function": "query",
+          "url": "",
+          "line": 5597,
+          "column": 20,
+          "ms": 24.85
+        },
+        {
+          "function": "elementsFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 22.52
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 17.74
+        },
+        {
+          "function": "",
+          "url": "5784-142541f02b9623dd.js",
+          "line": 0,
+          "column": 575,
+          "ms": 16.7
+        },
+        {
+          "function": "caretRangeFromPoint",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 11.18
+        },
+        {
+          "function": "az",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 54379,
+          "ms": 10.48
+        },
+        {
+          "function": "nk",
+          "url": "2234-58acadd8fe5e61f6.js",
+          "line": 0,
+          "column": 78273,
+          "ms": 9.93
+        }
+      ],
+      "inclusiveTop": [
+        {
+          "function": "(idle)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 1036.49
+        },
+        {
+          "function": "(program)",
+          "url": "",
+          "line": -1,
+          "column": -1,
+          "ms": 841.46
+        },
+        {
+          "function": "A",
+          "url": "4354-d8b403f89909c1e1.js",
+          "line": 0,
+          "column": 95856,
+          "ms": 654.37
+        },
+        {
+          "function": "s1",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 152310,
+          "ms": 609.71
+        },
+        {
+          "function": "sf",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 124992,
+          "ms": 559.31
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130803,
+          "ms": 246.6
+        },
+        {
+          "function": "sS",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130464,
+          "ms": 246.6
+        },
+        {
+          "function": "",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 125102,
+          "ms": 194.66
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 188.21
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 172.68
+        },
+        {
+          "function": "sE",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 130967,
+          "ms": 167.11
+        },
+        {
+          "function": "iy",
+          "url": "2739faa4-eaa35b43899b569d.js",
+          "line": 0,
+          "column": 84383,
+          "ms": 150.26
+        }
+      ],
+      "metricsDelta": {
+        "LayoutDuration": 0.031484,
+        "RecalcStyleDuration": 0.153085,
+        "ScriptDuration": 0.862758,
+        "TaskDuration": 1.59667,
+        "LayoutCount": 74,
+        "RecalcStyleCount": 215
+      }
+    }
+  ]
+}

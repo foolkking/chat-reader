@@ -4,6 +4,89 @@ Release status: `3564cbf`, exact CI `42828329240`, deployed **2026-11-11**.
 See the [release and cleanup receipt](../execution/RECOVERABLE_OPERATIONS_RELEASE_2026-11-11.md).
 Earlier dated checkpoints below are historical, not pending release work.
 
+## Initial-upload identity and interruption — worktree follow-up 2026-11-11
+
+The initial multipart POST optionally accepts a UUID `Idempotency-Key`; older
+clients remain compatible. New Web operations retain the original key, ordered
+File references, repair-profile and destination in the existing account-epoch
+query cache. The server stores a bounded digest of its own ordered filename,
+byte-count and SHA metadata plus the original request options in the initial
+analysis job. It does not trust a client hash or missing-resource marker.
+Same-owner/key admission takes a non-waiting PostgreSQL transaction lock before
+fresh-instance policy initialization. An in-flight repeat returns409
+`IMPORT_UPLOAD_REQUEST_PENDING`, not another task or an unbounded wait.
+Explicit repeats stream-hash the incoming spooled bytes in64-KiB chunks and
+return the original session only when the original binding matches. Different
+content/order/options return409 `IMPORT_UPLOAD_REQUEST_CONFLICT`. Analysis
+retry/canonical commit remain separate explicit actions; terminal admissions
+are not resubmitted. Existing upload/scanning/path/source/admission rules remain.
+
+`GET /api/adaptive-import/requests/{UUID}` returns a no-store nullable receipt
+containing only import ID, original task ID and task status. It queries indexed
+owner/type/key metadata plus owned import identity, without scanning files,
+loading source relationships, hashing, writing or locking the worker. Null
+does not prove that a late initial request failed. An owned receipt whose
+import is no longer available returns410; no foreign import ID is disclosed.
+
+Upload feedback distinguishes byte transfer from waiting for admission;
+100% transferred is not an import success. The XHR has no20-second total
+deadline:120seconds with no increasing upload bytes or300seconds with no
+response activity after sending ends only local waiting and creates an
+unconfirmed result. User stop has the same uncertainty, never implies server
+cancellation. Closing the panel keeps transport running; reopening shares its
+receipt. Unknown results offer an explicit read-only check then same-intent
+retry only after a missing receipt. A rejected repeated request cannot erase
+the earlier unknown write. Once an import ID is confirmed, subsequent read
+failure offers only opening that original import, never reuploading to refresh.
+
+An unresolved batch can explicitly be retained while selecting other files.
+At most three parked batches plus one current operation retain File references;
+switching checks swaps them rather than locking older recovery at the cap.
+Nothing is replayed/discarded by the switch. A410 owned receipt or a404 when
+reading a confirmed import is shown as unavailable, not a transient read loop.
+Confirmed admission releases both cached and picker File references. Failed/
+unavailable checks offer a collapsed, explicit local-release confirmation:
+it removes only the current page check and selection, never cancels server work
+or deletes sources. Stale confirmations, account changes, in-flight transport
+and active checks cannot release a newer/current operation. Other parked
+checks remain. The explanation advises checking Tasks before another import.
+Account changes retire transport,
+callbacks and private cache. Whole-document reload cannot preserve these File
+references: use Tasks/unfinished imports to find durable server work. No Blob
+database, migration, automatic source deletion, resumable-byte protocol, or
+changed `.cr`/source-replacement protocol is introduced.
+
+Pasted input retains its original immutable text reference with the same
+bounded intent, rather than switching to a file-only picker or re-decoding the
+generated File. Uploading/unknown text remains read-only but focusable and
+selectable for copying. A first explicit rejection permits editing; editing
+clears that rejection, and the next explicit analysis uses a new identity.
+An uncertain retry still uses the original File/key/bytes. Text references are
+released with confirmed/local-ended/account-retired intents, never persisted
+to a new draft database. Byte-length calculation is memoized by text, not
+repeated on every transfer progress event. A chosen file named
+`pasted-transcript.md` is still an ordinary file, not inferred pasted input.
+
+## Known-operation result and catalog reads — worktree follow-up 2026-11-11
+
+Each task-result GET and ZIP-catalog page GET has a20-second complete-response
+deadline, including error bodies and non-cooperative transport. Normal queued
+work can last longer: only the individual read is bounded, not the whole
+operation. The1500ms polling interval and worker resource-wait budgets remain.
+Cancellation retires the read, not the server job; authentication changes
+reject late task/catalog results. Catalog offset, version, loaded pages and
+unsaved classification ownership are unchanged.
+
+After an acknowledged health/preview task's read fails, the same-page control
+keeps its task identity and says “Continue reading … result”. It does not
+submit another POST; existing mapping values and previous health results stay.
+Timeout copy says input is retained and nothing was resubmitted. A missing
+task, unknown/mismatched task identity/status, or malformed committed result
+ends polling with the existing unconfirmed/Tasks recovery, not success or an
+infinite loop. Terminal failures and a lost initial POST acknowledgement still
+do not permit blind resubmission. No automatic retry, upload/write deadline or
+claim of task-ID/draft persistence across a full page reload is added here.
+
 ## Bounded stale recovery and canonical lease — worktree follow-up 2026-11-11
 
 Each worker iteration reads at most100 stale ImportRecords and100 stale

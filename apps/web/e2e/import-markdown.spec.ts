@@ -7,6 +7,55 @@ const runImportFlow = process.env.E2E_IMPORT_FLOW === "1";
 
 test.skip(!runImportFlow, "E2E_IMPORT_FLOW=1 is required");
 
+for (const width of [375, 1440]) test(`${width}px: lost initial upload receipt reopens its real session without another POST`, async ({ page, baseURL }) => {
+  await settingsAppearance(page.request, baseURL!, "en-US");
+  await page.setViewportSize({ width, height: 900 });
+  let writes = 0, importId: string | undefined, requestKey: string | undefined, receiptReads = 0;
+  await page.route("**/api/adaptive-import/sessions", async route => {
+    if (route.request().method() !== "POST") { await route.continue(); return; }
+    writes++;
+    requestKey = route.request().headers()["idempotency-key"];
+    const committed = await route.fetch();
+    expect(committed.status()).toBe(201);
+    importId = (await committed.json()).import_id as string;
+    await route.abort("failed"); // Real server committed; only its acknowledgement is lost.
+  });
+  await page.route("**/api/adaptive-import/requests/*", async route => { receiptReads++; await route.continue(); });
+  const open = async () => {
+    if (width < 768) await page.getByTestId("mobile-sidebar-button").filter({ visible: true }).click();
+    await page.locator("aside[data-reader-primary-sidebar]").filter({ visible: true }).getByTestId("sidebar-import-button").click();
+  };
+  try {
+    await page.goto("/"); await open();
+    await page.getByTestId("import-file-input").setInputFiles({
+      name: `synthetic-upload-receipt-${width}.md`, mimeType: "text/markdown",
+      buffer: Buffer.from("# Synthetic retained upload\n\nA small synthetic source, not a user archive."),
+    });
+    await page.getByTestId("preview-import-button").click();
+    const check = page.getByRole("button", { name: "Check upload receipt", exact: true });
+    await expect(check).toBeVisible();
+    expect(writes).toBe(1);
+    expect(requestKey).toMatch(/^[a-f0-9-]{36}$/);
+    await page.getByTestId("import-dialog-close").click();
+    await open();
+    await expect(check).toBeVisible();
+    await expect(page.getByTestId("preview-import-button")).toBeDisabled();
+    expect(writes).toBe(1);
+    await check.click();
+    await expect(page.getByTestId("import-upload-recovery")).toHaveCount(0);
+    expect(receiptReads).toBe(1); expect(writes).toBe(1);
+    const receipt = await page.request.get(`/api/adaptive-import/requests/${requestKey}`);
+    expect(receipt.status()).toBe(200);
+    expect((await receipt.json()).receipt.import_id).toBe(importId);
+    const stored = await page.request.get(`/api/adaptive-import/sessions/${importId}`);
+    expect(stored.status()).toBe(200);
+    expect((await stored.json()).state).not.toBe("COMPLETED");
+    await expect(page.getByTestId("import-file-input")).toHaveCount(0);
+  } finally {
+    if (importId) await page.request.delete(`/api/adaptive-import/sessions/${importId}`);
+  }
+});
+
 // Mounted UI/transport recovery, not a claim that mocked HTTP tests measure
 // memory. The separate exact-image Linux worker gate exercises real admission.
 for (const [width, locale] of [[375, "zh-CN"], [768, "en-US"], [1440, "zh-CN"]] as const) {
@@ -428,12 +477,18 @@ test("conversion is not offered as recovery for archives, Skills or a service fa
     return route.fulfill({ status: 503, contentType: "application/json", body: '{}' });
   });
   await page.getByTestId("preview-import-button").click();
-  await expect(page.getByRole("dialog", { name: "Import data", exact: true }).getByRole("alert")).toHaveText(
-    "The request result is not confirmed. Check the current import state before deciding whether to retry.",
-  );
+  await expect(page.getByTestId("import-upload-recovery")).toContainText(
+    "Upload receipt is unconfirmed. Selected files are retained and will not be uploaded again automatically.");
+  await expect(page.getByRole("button", { name: "Check upload receipt", exact: true })).toBeVisible();
   await expect(help).toHaveCount(0);
   await expect(page.getByTestId("import-selected-files").getByText("synthetic.json", { exact: true })).toBeVisible();
+  await expect(input).toBeDisabled();
+  await expect(page.getByTestId("preview-import-button")).toBeDisabled();
+  await page.getByRole("button", { name: "Keep pending; work on other files", exact: true }).click();
   await expect(input).toBeEnabled();
+  await expect(page.getByTestId("import-selected-files")).toHaveCount(0);
+  await page.locator("summary").filter({ hasText: "Unconfirmed uploads" }).click();
+  await expect(page.getByRole("button", { name: "Resume checking", exact: true })).toBeVisible();
   expect(analysisRequests).toBe(1);
 });
 

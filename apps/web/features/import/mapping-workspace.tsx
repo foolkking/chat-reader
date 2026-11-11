@@ -57,6 +57,8 @@ export function MappingWorkspace({ session, family, sessionAction, sessionAction
     }).finally(() => { if (previewRequest.current === request) sessionAction.finish(token); });
   }, onSuccess: data => { previewRequest.current = null; setPreview(data); } });
   const previewUnconfirmed = previewStopped || (previewMutation.error instanceof ApiRequestError && previewMutation.error.code === "IMPORT_OPERATION_UNCONFIRMED");
+  const canReadOriginalPreview = previewRequest.current?.key === JSON.stringify([session.import_id, family.id, profileName, mapping, sampleGroupId])
+    && Boolean(previewRequest.current.taskId) && !previewStopped;
   const saveMutation = useMutation({ mutationFn: () => saveAdaptiveFamilyMapping(session.import_id, family.id, { profileName, mappingSpec: mapping }) });
   const busy = previewMutation.isPending || saveMutation.isPending || sessionActionBusy;
   useEffect(() => { onMappingStateChange?.({ dirty, busy }); }, [busy, dirty, onMappingStateChange]);
@@ -98,10 +100,10 @@ export function MappingWorkspace({ session, family, sessionAction, sessionAction
         </div></fieldset>
         <CanonicalPreviewPane preview={preview} loading={previewMutation.isPending} />
       </div>
-      {previewMutation.isError ? <ErrorLine message={previewMutation.error} action="mutation" onBack={() => void requestBack()} /> : null}
+      {previewMutation.isError ? <ErrorLine message={previewMutation.error} action={canReadOriginalPreview ? "read" : "mutation"} onBack={() => void requestBack()} /> : null}
       {previewUnconfirmed ? <button type="button" className="btn-secondary min-h-11 px-3 text-sm" onClick={() => window.dispatchEvent(new Event("chat-reader:open-task-center"))}>{tr("查看后台任务")}</button> : null}
       {saveMutation.isError ? <ErrorLine message={saveMutation.error} action="mutation" onBack={() => void requestBack()} /> : null}
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4"><p className="text-xs text-secondary">{tr("验证会运行此格式的全部")}{family.group_count} {tr("个对话，不只检查示例。")}</p><div className="flex gap-2"><button type="button" disabled={busy || previewUnconfirmed || !profileName.trim()} onClick={() => previewMutation.mutate()} className="btn-secondary min-h-11 px-4 text-sm font-medium">{previewMutation.isPending ? tr("正在验证") : tr("验证映射")}</button><button type="button" disabled={!preview?.validation.valid || busy || !profileName.trim()} onClick={save} className="btn-primary min-h-11 px-4 text-sm font-medium">{saveMutation.isPending ? tr("正在保存") : family.resolution_status === "DRIFTED" ? tr("保存新版本并继续") : tr("保存映射并继续")}</button></div></footer>
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ui pt-4"><p className="text-xs text-secondary">{tr("验证会运行此格式的全部")}{family.group_count} {tr("个对话，不只检查示例。")}</p><div className="flex gap-2"><button type="button" disabled={busy || previewUnconfirmed || !profileName.trim()} onClick={() => previewMutation.mutate()} className="btn-secondary min-h-11 px-4 text-sm font-medium">{previewMutation.isPending ? tr("正在验证") : canReadOriginalPreview ? tr("继续查看验证结果") : tr("验证映射")}</button><button type="button" disabled={!preview?.validation.valid || busy || !profileName.trim()} onClick={save} className="btn-primary min-h-11 px-4 text-sm font-medium">{saveMutation.isPending ? tr("正在保存") : family.resolution_status === "DRIFTED" ? tr("保存新版本并继续") : tr("保存映射并继续")}</button></div></footer>
     </section>
   );
 }

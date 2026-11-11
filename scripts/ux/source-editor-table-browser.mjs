@@ -13,7 +13,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const web = join(root, "apps/web");
 const appRequire = createRequire(join(web, "package.json"));
 const tempRoot = resolve(process.env.TEMP ?? "");
-assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^c:\/users\/86182\/desktop\/wkkk\/[^/]+/);
+assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
 const out = join(tempRoot, "table-browser");
 mkdirSync(out, { recursive: true });
 const resultPath = join(out, "result.json");

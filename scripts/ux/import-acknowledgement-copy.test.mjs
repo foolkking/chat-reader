@@ -126,6 +126,15 @@ test("permission, validation, replacement and ordinary read failures retain thei
     "The request result is not confirmed. Check the current import state before deciding whether to retry.");
 });
 
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: stalled reads explain retained input, not a failed import or a repeated write`, () => {
+  const format = formatter(locale), expected = locale === "zh-CN"
+    ? "读取结果超时，原文件和当前输入仍保留。可继续核对，没有重新提交。"
+    : "Reading the result timed out. Original files and current input are retained. Continue checking; nothing was resubmitted.";
+  assert.equal(format(new Error("REQUEST_TIMEOUT"), "read"), expected);
+  assert.equal(format("REQUEST_TIMEOUT", "read"), expected);
+  assert.notEqual(format(new Error("REQUEST_TIMEOUT"), "mutation"), expected);
+});
+
 for (const locale of ["zh-CN", "en-US"]) test(`${locale}: bounded import errors never expose internals or claim success`, () => {
   const format = formatter(locale);
   for (const code of ["IMPORT_OPERATION_UNCONFIRMED", "IMPORT_RESOURCE_WAIT_EXPIRED",

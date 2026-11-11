@@ -1,0 +1,214 @@
+{
+  "recordedAt": "2026-11-11T20:57:26.839829+08:00",
+  "scope": "K/L batch: synthetic local gates and previous-CI inspection; not release acceptance",
+  "baseCommit": "b5fb1bdf8d67e46773e60a44acfd7c21cf40d919",
+  "sourceSha256": {
+    "apps/api/app/api/routes/adaptive_imports.py": "229adfca3a06183665de55f915d2a26080cbbe873574417a345bf973b9807897",
+    "apps/api/app/services/adaptive_import/upload_receipts.py": "e6c63ce18cacf00bc9227cde676ef1681aabccd04cfad74a6c87aea377fd2b6f",
+    "apps/api/tests/test_import_upload_postgres.py": "ac61ccab85f434a753433a878275fd00fd4d82b7bfd1f6de9acaff2aaceb8d99",
+    "apps/api/tests/test_import_upload_receipts.py": "b29bf0395392b512d252d2cd0f2991ad86125661b97eacd545a2c182bfa3dd94",
+    "apps/web/e2e/context-reading-tools.spec.ts": "38b747d6ece6393851f1e75b6e52b72653e27a8df1054c08708439fbe0f8ec3f",
+    "apps/web/e2e/import-markdown.spec.ts": "2d0818dae7ca19e13b3add7b4bf021359a6996f05fbfb75143ef13f2e11dd0f4",
+    "apps/web/e2e/reader-capacity.spec.ts": "80ac5643df6eb0329f550af4b60b3c2378dd4d3ffe0cb7e33adb8544046d0f1f",
+    "apps/web/e2e/settings-format-health.spec.ts": "8cd726ab0db8009d0d42defb80ac306ff03b0769e838fe988d4ba96ddc687326",
+    "apps/web/features/import/format-health-check.tsx": "9dad4b74e4956e3ee4aafafad3e37bcd666582154bece2377f5e3befe6605ea0",
+    "apps/web/features/import/import-panel.tsx": "64e43b8bc9e85edc59666bcfeb2775fb0713bc13af71b5b9ade3d742acffef50",
+    "apps/web/features/import/import-upload-feedback.tsx": "551191999b521aff002c179e69a0df5c6e5d349ce4309408f7ab15a5e4b79203",
+    "apps/web/features/import/import-workspace-copy.ts": "49b0d268b5a80707def27b7340944e5e1bb6cfe818ce4d9048c5a10b2b2d5df1",
+    "apps/web/features/import/mapping-workspace.tsx": "f4468522c8c24194833fe564b32e4bf92d95a234665ee1f02739f3d4a1d0661f",
+    "apps/web/features/import/use-import-upload.ts": "2391712bfd17a58bf5a2eb6d514b228af80490ceb0eadd58384975be4128f592",
+    "apps/web/lib/api.ts": "7584647956695e2378fc33840cc4514a0fa372123eaa8f89c1b7b7cbc631c536",
+    "apps/web/lib/upload-transport.ts": "11b63fb1c8b9ce237ef95453369ce5474fb8750fbc42445d8475ba2ee0fe25c6",
+    "scripts/ci/image-base-sources.test.mjs": "7c13b31c1b4bf7fcee274d236ec9f49fb9061c595b328e928e40c7cfe4d512c9",
+    "scripts/ux/import-acknowledgement-copy.test.mjs": "c36cfe1986d80172f0085f45e2504283006b1d687243b1601feccddd46b2c75b",
+    "scripts/ux/import-background-analysis.test.mjs": "95262f480483fc45af50c87d44438e580e96deb671cf65a8d6c79f0b6f9d5273",
+    "scripts/ux/import-operation-controls.test.mjs": "c25d2263ef0927b9b9a8c6c8595bcfc2b2ffa7bddf89c0cc423050113cd35075",
+    "scripts/ux/import-operation-recovery.test.mjs": "2714877e39eb5d960654c802a98b845c5c1621ebf3813f9a5987dbb6460d3c34",
+    "scripts/ux/import-read-lifetime.test.mjs": "8894a88bde76cb77e3a35e63121d63049745ddfb3f9879d989478ce54d5fc5bd",
+    "scripts/ux/import-source-repair-browser.mjs": "ee8e6f7f53ef59abd0f30cd641e7966a2f97edf1aea162105962256873818de0",
+    "scripts/ux/import-upload-api.test.mjs": "b63bb5f63f5b96847caf6334912f13a07dfca20b8f7921062192757d17480b6b",
+    "scripts/ux/reader-capacity-diagnostic.test.mjs": "9a85b8ef210e53b9b1c89ab0fc6f048c725b2674502d0fee8bd43da807564792",
+    "scripts/ux/upload-transport.test.mjs": "9821e2157603bf7394b6ff6632d1b1b5185d65e3fb8402afd25787abf97138e3"
+  },
+  "checks": [
+    {
+      "name": "ux-audit",
+      "exitCode": 0,
+      "outputSha256": "302463510042c41f1a9c5aa2f3b8189cc70b68c9b463c02c483318e8f1888b5f"
+    },
+    {
+      "name": "lint-audit",
+      "exitCode": 0,
+      "outputSha256": "12318e1458c77defc58b71801a46646387fd5cfc66f98359491f30888decd8f2"
+    },
+    {
+      "name": "types-audit",
+      "exitCode": 0,
+      "outputSha256": "47d1d43aa0ed101f57d22b06271e36e7f7a9a308d330b63bcf771a904b770165"
+    }
+  ],
+  "uxTests": {
+    "passed": 2434,
+    "failed": 0,
+    "skipped": 0
+  },
+  "build": {
+    "startedAt": "2026-11-11T20:49:33.329892+08:00",
+    "finishedAt": "2026-11-11T20:50:19.292271+08:00",
+    "exitCode": 0,
+    "sourceInputs": 544,
+    "modifiedInputs": [],
+    "logSha256": "8306a8ae1919a6bab592e62ebc697bd2ef262488ee17c4adf1ddae46ad16241f",
+    "snapshotSha256": "18efe90d78942d6627d092db77230cc0c77697004f597a7b8a7e35feafd2937b",
+    "notes": [
+      "A preceding build log completed, but its Python wrapper failed printing Unicode to GBK before recording an exit code. This run records the result explicitly.",
+      "No application service or production operation."
+    ]
+  },
+  "buildPreviousSnapshot": "import-kl-build-final.json",
+  "buildChangedInputHashes": {
+    "apps/web/e2e/reader-capacity.spec.ts": "80ac5643df6eb0329f550af4b60b3c2378dd4d3ffe0cb7e33adb8544046d0f1f"
+  },
+  "dependencyPolicy": {
+    "schema_version": 1,
+    "generated_at": "2026-11-11T12:42:37.344Z",
+    "audit_source": "https://registry.npmjs.org",
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 2,
+        "moderate": 2,
+        "high": 0,
+        "critical": 0
+      },
+      "dependencies": 658,
+      "devDependencies": 0,
+      "optionalDependencies": 0,
+      "totalDependencies": 658
+    },
+    "counts": {
+      "advisories": 3,
+      "blocked": 0,
+      "approved_exceptions": 0,
+      "unapproved": 0,
+      "policy_errors": 0
+    },
+    "approved_exceptions": [],
+    "unapproved": [],
+    "policy_errors": [],
+    "lower_severity_advisories": [
+      {
+        "advisory_id": "GHSA-238p-pmpm-9mq7",
+        "package": "katex",
+        "severity": "low",
+        "title": "KaTeX: Existing prototype pollution can bypass trust restrictions"
+      },
+      {
+        "advisory_id": "GHSA-rj75-hqrm-r3gf",
+        "package": "postcss-selector-parser",
+        "severity": "moderate",
+        "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion"
+      },
+      {
+        "advisory_id": "GHSA-g3hv-75wg-m249",
+        "package": "minimatch",
+        "severity": "moderate",
+        "title": "minimatch has potential denial of service via globparts amplification"
+      }
+    ]
+  },
+  "previousCiInspection": {
+    "at": "2026-11-11T20:26:11.121584+08:00",
+    "runs": {
+      "42974972859": {
+        "id": 42974972859,
+        "head_sha": "b5fb1bdf8d67e46773e60a44acfd7c21cf40d919",
+        "status": "completed",
+        "conclusion": "failure",
+        "created_at": "2026-11-11T06:48:09Z",
+        "updated_at": "2026-11-11T07:32:54Z",
+        "jobs": [
+          {
+            "name": "api-quality",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "name": "settings-quality",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "name": "web-quality",
+            "conclusion": "failure",
+            "failedSteps": [
+              "Context files, export and reader recovery"
+            ]
+          },
+          {
+            "name": "reading-performance-comparison / compare",
+            "conclusion": "failure",
+            "failedSteps": [
+              "Baseline then candidate on the same isolated runner"
+            ]
+          },
+          {
+            "name": "build-images",
+            "conclusion": "skipped",
+            "failedSteps": []
+          },
+          {
+            "name": "inspect-release-artifact",
+            "conclusion": "skipped",
+            "failedSteps": []
+          }
+        ]
+      },
+      "42987330765": {
+        "id": 42987330765,
+        "head_sha": "b5fb1bdf8d67e46773e60a44acfd7c21cf40d919",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2026-11-11T08:28:36Z",
+        "updated_at": "2026-11-11T08:40:12Z",
+        "jobs": [
+          {
+            "name": "compare",
+            "conclusion": "success",
+            "failedSteps": []
+          }
+        ]
+      }
+    }
+  },
+  "measurementCorrection": {
+    "version": 3,
+    "beforeFixFailed": 2,
+    "actualWarmFunctionCases": 2,
+    "diagnosticTestTotal": 4,
+    "parseCounter": "markdownParseTotal",
+    "renderCounter": "markdownRenderTotal",
+    "missingHistoricalCounter": null,
+    "unchanged": [
+      "cold runs",
+      "wheel sequence",
+      "settle waits",
+      "budgets",
+      "unfiltered long tasks"
+    ],
+    "readerPeakCauseProven": false
+  },
+  "relatedEvidence": {
+    "mounted": "import-kl-mounted-final.json",
+    "uploadApi": "import-upload-verification.json",
+    "knownOperationRead": "import-read-verification.json",
+    "readerDiagnostic": "reader-diagnostic-j.json"
+  },
+  "limits": [
+    "Local full-site service launch was policy-blocked and not worked around.",
+    "Added real-server multipart and Settings-result-read E2E cases await exact CI.",
+    "CPU diagnostic success does not reproduce or fix the J cold 223/331ms tasks.",
+    "Physical tablet and production UI are unverified.",
+    "No production deployment, deletion, backup change or schedule."
+  ]
+}

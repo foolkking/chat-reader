@@ -10,7 +10,7 @@ const bash = process.platform === "win32" ? "C:/Program Files/Git/bin/bash.exe" 
 const tempRoot = resolve(process.env.RUNNER_TEMP ?? process.env.TEMP ?? "");
 assert.ok(process.env.RUNNER_TEMP || process.env.TEMP, "Use the explicit task temporary directory");
 if (process.platform === "win32") {
-  assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^c:\/users\/86182\/desktop\/wkkk\/[^/]+/);
+  assert.match(tempRoot.toLowerCase().replaceAll("\\", "/"), /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
 }
 const pins = {
   python: "public.ecr.aws/docker/library/python:3.11-slim@sha256:e88e9763f943ec1834f992a4b51e0f24500486803e8bc534e5767af9ea65f6ce",
@@ -64,7 +64,7 @@ function run(env = {}, args = []) {
   const directory = mkdtempSync(join(tempRoot, "image-base-test-"));
   const envFile = join(directory, "github-env");
   const shellEnvFile = process.platform === "win32"
-    ? `/c/${envFile.slice(3).replaceAll("\\", "/")}`
+    ? `/${envFile[0].toLowerCase()}/${envFile.slice(3).replaceAll("\\", "/")}`
     : envFile;
   const original = "EXISTING=value\n";
   writeFileSync(envFile, original);

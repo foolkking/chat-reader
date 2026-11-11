@@ -38,7 +38,7 @@ function fixture({ realApi = false, hungLocator = false } = {}) {
     const mocks = {
       "./offline-access": { authenticationGeneration: () => generation, notifyAuthenticationFailure: () => {} },
       "./server-session": { serverSession: () => ({ status: "ready", userId: "synthetic" }), observeSessionResponse: () => {} },
-      "./archive-task-state": {}, "./request-deadline": deadline.exports,
+      "./archive-task-state": {}, "./request-deadline": deadline.exports, "./upload-transport": {},
     };
     const fetch = async (url, options) => {
       const body = deferred(); pending.push(body); reads.push({ url, ...options });

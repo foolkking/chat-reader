@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../.."), web = join(root, "apps/web");
 const require = createRequire(join(web, "package.json")), ts = require("typescript");
 const temp = resolve(process.env.TEMP ?? "");
-assert.match(temp.replaceAll("\\", "/").toLowerCase(), /^c:\/users\/86182\/desktop\/wkkk\/[^/]+/);
+assert.match(temp.replaceAll("\\", "/").toLowerCase(), /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
 const out = join(temp, "code-copy-browser"); mkdirSync(out, { recursive: true });
 writeFileSync(join(out, "result.json"), JSON.stringify({ status: "not_completed", date: "2026-10-24" }));
 const rendererPath = join(web, "features/conversations/markdown-renderer.tsx");

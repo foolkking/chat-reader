@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
@@ -27,6 +27,10 @@ from app.services.adaptive_import.archive_sources import (
 )
 from app.services.adaptive_import.memory_budget import import_analysis_admission, bounded_zip_session, sequential_analysis_admission
 from app.services.adaptive_import.operations import queue_operation
+from app.services.adaptive_import.upload_receipts import (
+    find_upload_request, lock_upload_request, request_import, request_key,
+    staged_binding, verify_repeated_upload,
+)
 from app.services.adaptive_import.profile_access import available_revisions, canonical_profile_id, publish_revision, related_profile_ids, revision_payload, visible_profile
 from app.services.administration import require_root_admin, record_admin_audit, request_id_from
 from app.services.adaptive_import.service import (
@@ -158,18 +162,47 @@ def list_unfinished_sessions(
     return {"items": items, "has_more": len(rows) > limit, "offset": offset, "limit": limit}
 
 
+@router.get("/api/adaptive-import/requests/{request_id}")
+def get_adaptive_upload_receipt(
+    request_id: uuid.UUID, response: Response, db: Session = Depends(get_db),
+    ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
+):
+    response.headers["Cache-Control"] = "no-store"
+    job = find_upload_request(db, ownership_scope, request_id)
+    if job is None:
+        return {"receipt": None}
+    try:
+        record = request_import(db, ownership_scope, job, identity_only=True)
+    except AdaptiveImportError as exc:
+        error = _http_error(exc)
+        error.headers = {"Cache-Control": "no-store"}
+        raise error from exc
+    return {"receipt": {"import_id": str(record.id), "task_id": str(job.id), "status": job.status}}
+
+
 @router.post("/api/adaptive-import/sessions", status_code=status.HTTP_201_CREATED)
 def create_adaptive_import_session(
     files: list[UploadFile] = File(...),
     repair_profile_id: uuid.UUID | None = Form(default=None),
     target_project_id: uuid.UUID | None = Form(default=None),
+    idempotency_key: uuid.UUID | None = Header(default=None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
     ownership_scope: OwnershipScope = Depends(ownership_scope_from_request),
 ) -> dict[str, Any]:
+    requested_target_project_id = target_project_id
     if not files:
         raise HTTPException(status_code=400, detail={"code": "FILES_REQUIRED", "message": "Choose at least one JSON, Markdown, or ZIP source file."})
     if len(files) > MAX_ADAPTIVE_FILES:
         raise HTTPException(status_code=422, detail={"code": "FILE_COUNT_LIMIT", "message": f"At most {MAX_ADAPTIVE_FILES} files can be analyzed at once."})
+    if idempotency_key is not None:
+        try:
+            # Before policy initialization: on a fresh instance the first
+            # request can hold its creation lock until this upload commits.
+            # A same-request repeat must still fail fast rather than queue.
+            lock_upload_request(db, ownership_scope, idempotency_key)
+        except AdaptiveImportError as exc:
+            db.rollback()
+            raise _http_error(exc) from exc
     if not get_feature_policy(db).allow_user_import:
         raise HTTPException(status_code=403, detail={"code": "IMPORT_DISABLED", "message": "User import is disabled by the system administrator."})
     if target_project_id is not None:
@@ -199,6 +232,11 @@ def create_adaptive_import_session(
     commit_attempted = False
     try:
         with bounded_upload_staging_sync(files):
+            previous = find_upload_request(db, ownership_scope, idempotency_key) if idempotency_key is not None else None
+            if previous is not None:
+                verify_repeated_upload(previous, files, repair_profile_id, requested_target_project_id,
+                    max_file_bytes=max_bytes, total_limit=total_limit)
+                return session_payload(request_import(db, ownership_scope, previous))
             record = begin_session(
                 db,
                 len(files),
@@ -215,7 +253,11 @@ def create_adaptive_import_session(
                     item.file,
                     max_file_bytes=max_bytes,
                 )
-            queue_session_analysis(db, record)
+            job = queue_session_analysis(db, record)
+            if idempotency_key is not None:
+                job.idempotency_key = request_key(idempotency_key)
+                job.payload = {**job.payload, "upload_binding":
+                    staged_binding(record, repair_profile_id, requested_target_project_id)}
             # Once COMMIT starts its outcome may be unknown to this request.
             # A refresh/response failure cannot revoke a durable queued job.
             commit_attempted = True
@@ -1014,7 +1056,7 @@ def _group(import_id: uuid.UUID, group_id: uuid.UUID, db: Session) -> ImportInpu
 
 
 def _http_error(exc: AdaptiveImportError) -> HTTPException:
-    status_code = 413 if exc.code in {
+    status_code = 410 if exc.code == "IMPORT_UPLOAD_RECEIPT_UNAVAILABLE" else 413 if exc.code in {
         "FILE_TOO_LARGE",
         "SESSION_TOO_LARGE",
         "ZIP_ENTRY_LIMIT",
@@ -1028,6 +1070,8 @@ def _http_error(exc: AdaptiveImportError) -> HTTPException:
         "GROUP_ARTIFACT_SHARED",
         "ARCHIVE_CLASSIFICATION_STALE",
         "ARCHIVE_CLASSIFICATION_REQUIRED",
+        "IMPORT_UPLOAD_REQUEST_PENDING",
+        "IMPORT_UPLOAD_REQUEST_CONFLICT",
     } else 422
     return HTTPException(status_code=status_code, detail={"code": exc.code, "message": str(exc), "diagnostic": exc.diagnostic()})
 

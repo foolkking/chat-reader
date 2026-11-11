@@ -68,7 +68,7 @@ function load(path, mocks, window) {
 function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, laneWidth = 720, cache = new Map(), initialMode = "adaptive" } = {}) {
   const runtime = hooksRuntime(), calls = [], mutations = [], queries = new Map(), storage = new Map(), events = new EventTarget();
   if (storedId) storage.set("chat-reader:adaptive-import-session", storedId);
-  let generation = 1, read = initialRead ?? (async () => session()), upload = async () => session(), tree, mutationCursor = 0;
+  let generation = 1, read = initialRead ?? (async () => session()), upload = async () => session(), receipt = async () => ({ receipt: null }), tree, mutationCursor = 0;
   let stop = async id => ({ job_id: id, status: "cancelling" });
   let replace = async () => ({ ...session(), analysis_task_id: "replacement-analysis" });
   let exclude = async () => ({ ...session(), analysis_task_id: "exclusion-analysis" });
@@ -78,8 +78,14 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
     addEventListener: (...args) => events.addEventListener(...args),
     removeEventListener: (...args) => events.removeEventListener(...args),
     dispatchEvent: event => { calls.push(["event", event.type]); return events.dispatchEvent(event); } };
-  const api = { ApiRequestError: class extends Error {},
-    createAdaptiveImportSession: files => { calls.push(["upload", files]); return upload(); },
+  const uploadOptions = [];
+  const api = { ApiRequestError: class extends Error {
+    constructor(message, status, path, code) { super(message); Object.assign(this, { status, path, code, name: "ApiRequestError" }); }
+  },
+    createAdaptiveImportSession: (files, profile, project, options) => {
+      calls.push(["upload", files]); uploadOptions.push({ profile, project, ...options }); return upload(options);
+    },
+    getAdaptiveUploadReceipt: key => { calls.push(["uploadReceipt", key]); return receipt(key); },
     getAdaptiveImportSession: (id, signal) => { calls.push(["read", id, signal]); return read(id, signal); },
     cancelAdaptiveImportSession: async id => { calls.push(["cancel", id]); },
     cancelTask: (id, signal, disposition) => { calls.push(["stop", id, disposition, signal]); return stop(id); },
@@ -99,7 +105,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
   };
   const mocks = { react: runtime.react,
     "../../components/preferences-provider": { usePreferences: () => ({ resolvedLocale: locale, readerWidthMode: "standard", sectionTocMode: "visible" }) },
-    "../../lib/api": api, "../../lib/offline-access": { authenticationGeneration: () => generation },
+    "../../lib/api": api, "../../lib/offline-access": { authenticationGeneration: () => generation, AUTH_GENERATION_CHANGED_EVENT: "synthetic-auth-change" },
     "../../lib/auth-client": { readAccountCapabilities: noop },
     "../../lib/offline-db": { getActiveOfflineStorageContext: () => ({ userId: null }) },
     "../../components/support-limit-action": { SupportLimitAction: "SupportLimitAction" },
@@ -109,10 +115,6 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
     "./import-noise-review": { ImportNoiseReview: "ImportNoiseReview" },
     // Geometry is an explicit adapter, not evidence of real DOM measurement.
     "./image-import-lane": { measureImportImageLane: options => { calls.push(["measure", options, laneWidth]); return laneWidth; } },
-    "./pasted-transcript": {
-      createPastedTranscriptFile: () => null,
-      pastedTranscriptByteLength: () => 0,
-    },
     "next/navigation": { useRouter: () => ({ push: value => calls.push(["navigate", value]) }) }, "next/link": { default: "a" },
     "@tanstack/react-query": {
       useQueryClient: () => queryClient,
@@ -123,7 +125,7 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
           data: { allow_user_import: true, maximum_import_size_mb: 500, maximum_import_total_mb: 512 },
         } : {});
         queries.set(key, { options, result });
-        return { ...result, ...(["import-source-repair", "import-commit-control"].includes(key) ? { data: cache.get(JSON.stringify(options.queryKey)) } : {}),
+        return { ...result, ...(["import-source-repair", "import-commit-control", "adaptive-import-upload", "adaptive-import-upload-retained"].includes(key) ? { data: cache.get(JSON.stringify(options.queryKey)) } : {}),
           refetch: async () => { calls.push(["refetch", key]); return options.queryFn({}); } };
       },
       useMutation: options => {
@@ -151,19 +153,30 @@ function fixture({ resumeImportId, storedId, locale = "en-US", initialRead, lane
   const queryClient = {
     invalidateQueries: options => { calls.push(["invalidate", options.queryKey]); return Promise.resolve(); },
     getQueryData: key => cache.get(JSON.stringify(key)),
+    removeQueries: ({ queryKey }) => cache.delete(JSON.stringify(queryKey)),
     setQueryData: (key, value) => {
       const id = JSON.stringify(key);
       cache.set(id, typeof value === "function" ? value(cache.get(id)) : value);
     },
   };
+  const pastedTranscript = load("features/import/pasted-transcript.ts", mocks, window);
+  mocks["./pasted-transcript"] = { ...pastedTranscript,
+    pastedTranscriptByteLength: value => { calls.push(["pasteBytes"]); return pastedTranscript.pastedTranscriptByteLength(value); } };
   mocks["./import-workspace-copy"] = load("features/import/import-workspace-copy.ts", mocks, window);
+  const uploadHook = load("features/import/use-import-upload.ts", mocks, window);
+  let actualUpload;
+  mocks["./use-import-upload"] = { useImportUpload: (...args) => actualUpload = uploadHook.useImportUpload(...args) };
+  mocks["./import-upload-feedback"] = { ImportUploadFeedback: "ImportUploadFeedback" };
   const { ImportPanel } = load("features/import/import-panel.tsx", mocks, window);
   const props = { resumeImportId, initialMode, onImportCommitted: () => calls.push(["close"]),
     onMappingStateChange: state => calls.push(["mapping", state]) };
   const render = () => { runtime.reset(); mutationCursor = 0; return tree = ImportPanel(props); };
   render(); runtime.flush();
   return { calls, storage, mutations, queries, render, ...runtime,
-    setRead: fn => { read = fn; }, setUpload: fn => { upload = fn; }, changeAccount: () => { generation++; },
+    setRead: fn => { read = fn; }, setUpload: fn => { upload = fn; }, changeAccount: () => { generation++; window.dispatchEvent(new Event("synthetic-auth-change")); },
+    setReceipt: fn => { receipt = fn; }, uploadOptions, api,
+    submitUpload: files => actualUpload.submit({ files }),
+    uploadControl: () => find(tree, node => node.type === "ImportUploadFeedback")?.props.control,
     setStop: fn => { stop = fn; },
     setReplace: fn => { replace = fn; },
     setExclude: fn => { exclude = fn; },
@@ -235,7 +248,7 @@ test("an uncertain commit locks only its original import, survives reopen and ch
 test("a previewed archive read is not proof that an unknown restoration can be safely replayed", async () => {
   const f = fixture({ initialMode: "archive" });
   try {
-    await f.mutations[2].run([]); await f.settle();
+    await f.mutations[1].run([]); await f.settle();
     f.setCommit(async () => { throw Error("CONNECTION_FAILED"); });
     find(f.tree(), node => node.props?.["data-testid"] === "commit-import-button").props.onClick();
     await f.settle();
@@ -365,7 +378,7 @@ test("source replacement uncertainty survives closing and reopening without repe
 for (const locale of ["zh-CN", "en-US"]) test(`${locale}: upload acknowledgement releases files and offers background tasks, not premature import`, async () => {
   const f = fixture({ locale });
   try {
-    await f.mutations[0].run([{ name: "synthetic-a.json", size: 10 }]); await f.settle();
+    await f.submitUpload([{ name: "synthetic-a.json", size: 10 }]); await f.settle();
     assert.ok(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"));
     assert.equal(find(f.tree(), node => node.type === "AdaptiveImportWorkspace"), undefined);
     assert.match(text(f.tree()), locale === "zh-CN" ? /3 个文件已保存在服务器/ : /batch of 3 files is saved on the server/);
@@ -380,7 +393,7 @@ for (const locale of ["zh-CN", "en-US"]) test(`${locale}: upload acknowledgement
 test("polling uses an abortable GET; a ready result opens the existing review, never canonical commit", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     const query = f.queries.get("adaptive-import-analysis").options;
     assert.equal(query.enabled, true);
     assert.equal(query.refetchInterval({ state: { data: { value: session() } } }), 1500);
@@ -400,7 +413,7 @@ for (const state of ["RESOLVING", "READY", "BLOCKED"]) test(`${state}: a queued 
   const f = fixture(), client = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: false } } });
   let observer, unsubscribe;
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     const previous = session(state, "input_recovery");
     const workspace = find(f.publish(previous), node => node.type === "AdaptiveImportWorkspace");
     assert.ok(workspace);
@@ -438,13 +451,13 @@ test("retry of the same failed task re-enables an immediate GET inside the provi
   const f = fixture(), client = new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: false } } });
   let observer, unsubscribe;
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     const failed = session("FAILED", "analysis_failed");
     f.publish(failed);
     const oldOptions = f.queries.get("adaptive-import-analysis").options;
     client.setQueryData(oldOptions.queryKey, { value: failed, generation: 1, analysisTaskId: failed.analysis_task_id });
     observer = new QueryObserver(client, oldOptions); unsubscribe = observer.subscribe(noop);
-    await f.mutations[5].run(failed.analysis_task_id); await f.settle();
+    await f.mutations[4].run(failed.analysis_task_id); await f.settle();
     const options = f.queries.get("adaptive-import-analysis").options;
     assert.deepEqual(options.queryKey, oldOptions.queryKey);
     f.setRead(async () => session());
@@ -461,7 +474,7 @@ test("retry of the same failed task re-enables an immediate GET inside the provi
 test("late completion of an older analysis cannot overwrite a queued replacement for the same import", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     const oldOptions = f.queries.get("adaptive-import-analysis").options, held = deferred();
     f.setRead(() => held.promise);
     const lateRead = oldOptions.queryFn({ signal: new AbortController().signal });
@@ -479,7 +492,7 @@ test("late completion of an older analysis cannot overwrite a queued replacement
 test("image-lane resize follows reader preferences and unsubscribes when the import pane closes", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     f.publish(session("READY", "ready"));
     assert.deepEqual(f.calls.filter(row => row[0] === "measure"), [
       ["measure", { readerWidthMode: "standard", sectionTocMode: "visible" }, 720],
@@ -497,11 +510,11 @@ test("image-lane resize follows reader preferences and unsubscribes when the imp
 test("explicit commit retry preserves its first lane snapshot after an unknown response and resize", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     f.publish(session("READY", "ready"));
     f.setCommit(async () => { throw new Error("Synthetic unknown commit response"); });
     const request = { importId: "synthetic-import", policy: "clone" };
-    await assert.rejects(f.mutations[3].run(request), /Synthetic unknown commit response/);
+    await assert.rejects(f.mutations[2].run(request), /Synthetic unknown commit response/);
     f.resize(960); await f.settle();
     assert.match(text(f.tree()), /720px reading column/);
     assert.equal(f.calls.filter(row => row[0] === "commit").length, 1, "resize/polling never replays the write");
@@ -526,7 +539,7 @@ test("a resumed commit uses its server-owned lane rather than the current viewpo
   try {
     await f.settle();
     assert.match(text(f.tree()), /512px reading column/);
-    await f.mutations[3].run({ importId: "synthetic-import", policy: "clone" }); await f.settle();
+    await f.mutations[2].run({ importId: "synthetic-import", policy: "clone" }); await f.settle();
     assert.deepEqual(f.calls.filter(row => row[0] === "commit"), [
       ["commit", "synthetic-import", { duplicatePolicy: "clone", projectId: null, imageLaneWidth: 512 }],
     ]);
@@ -537,17 +550,433 @@ test("a resumed commit uses its server-owned lane rather than the current viewpo
 test("closing while upload response is in flight cannot publish or implicitly cancel the queued task", async () => {
   const f = fixture(), held = deferred();
   f.setUpload(() => held.promise);
-  const pending = f.mutations[0].run([]);
+  const pending = f.submitUpload([]);
   f.dispose(); held.resolve(session()); await pending;
   assert.equal(f.retiredWrites(), 0);
   assert.equal(f.calls.filter(row => row[0] === "cancel").length, 0);
   assert.equal(f.storage.size, 0);
 });
 
+test("unknown initial upload survives remount, checks read-only then explicitly retries identical identity and File order", async () => {
+  const cache = new Map(), files = [new File(["first"], "same.json"), new File(["second"], "same.json")];
+  const first = fixture({ cache });
+  first.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+  await first.submitUpload(files); await first.settle();
+  const requestId = first.uploadOptions[0].requestId;
+  assert.equal(first.uploadControl().receipt.phase, "unknown");
+  first.dispose();
+  const second = fixture({ cache });
+  try {
+    await second.settle();
+    assert.equal(second.uploadControl().locked, true);
+    assert.equal(second.calls.filter(row => row[0] === "upload").length, 0);
+    await second.uploadControl().check(); await second.settle();
+    assert.deepEqual(second.calls.filter(row => row[0] === "uploadReceipt"), [["uploadReceipt", requestId]]);
+    assert.equal(second.calls.filter(row => row[0] === "upload").length, 0);
+    assert.equal(second.uploadControl().receipt.notFound, true);
+    await second.uploadControl().retry(); await second.settle();
+    const uploaded = second.calls.find(row => row[0] === "upload")[1];
+    assert.equal(uploaded[0], files[0]); assert.equal(uploaded[1], files[1]);
+    assert.equal(second.uploadOptions[0].requestId, requestId);
+    assert.ok(find(second.tree(), node => node.props?.["data-testid"] === "import-analysis-status"));
+  } finally { second.dispose(); }
+});
+
+test("two synchronous initial submissions share one upload and one saved operation", async () => {
+  const f = fixture(), held = deferred();
+  try {
+    f.setUpload(() => held.promise);
+    const one = f.submitUpload([]), two = f.submitUpload([]);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+    held.resolve(session()); await Promise.all([one, two]); await f.settle();
+    assert.equal(f.uploadOptions.length, 1);
+  } finally { f.dispose(); }
+});
+
+test("a late upload acknowledgement reaches a reopened pane without retaining File objects or replaying POST", async () => {
+  const cache = new Map(), held = deferred(), f = fixture({ cache });
+  f.setUpload(() => held.promise);
+  const pending = f.submitUpload([new File(["synthetic"], "sample.md")]);
+  await f.settle(); f.dispose();
+  const next = fixture({ cache });
+  try {
+    await next.settle();
+    assert.equal(next.uploadControl().receipt.phase, "uploading");
+    held.resolve(session()); await pending;
+    assert.equal(cache.get(JSON.stringify(["adaptive-import-upload", 1])).intent, undefined);
+    await next.settle();
+    assert.ok(find(next.tree(), node => node.props?.["data-testid"] === "import-analysis-status"));
+    assert.equal(next.calls.filter(row => row[0] === "upload").length, 0);
+    assert.equal(f.retiredWrites(), 0);
+  } finally { next.dispose(); }
+});
+
+test("late adaptive acknowledgement cannot erase a separate CR archive selection", async () => {
+  const cache = new Map(), held = deferred(), first = fixture({ cache });
+  first.setUpload(() => held.promise);
+  const uploading = first.submitUpload([new File(["synthetic"], "original.md")]);
+  await first.settle(); first.dispose();
+  const archive = fixture({ cache, initialMode: "archive" });
+  try {
+    const file = new File(["synthetic archive"], "saved.cr");
+    find(archive.tree(), node => node.props?.["data-testid"] === "import-file-input").props.onChange({
+      currentTarget: { files: [file], value: "synthetic" },
+    });
+    await archive.settle();
+    held.resolve(session()); await uploading; await archive.settle();
+    assert.match(text(find(archive.tree(), node => node.props?.["data-testid"] === "import-selected-files")), /saved\.cr/);
+    assert.equal(find(archive.tree(), node => node.props?.["data-testid"] === "preview-import-button").props.disabled, false);
+    assert.equal(archive.calls.filter(row => row[0] === "upload" || row[0] === "read").length, 0);
+    assert.equal(cache.get(JSON.stringify(["adaptive-import-upload", 1])).phase, "confirmed");
+    assert.equal(cache.get(JSON.stringify(["adaptive-import-upload", 1])).intent, undefined);
+  } finally { archive.dispose(); }
+});
+
+test("known upload receipt with a failed view read cannot enable another upload", async () => {
+  const f = fixture();
+  try {
+    f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+    await f.submitUpload([]); await f.settle();
+    f.setReceipt(async () => ({ receipt: { import_id: "synthetic-import", task_id: "synthetic-analysis", status: "queued" } }));
+    f.setRead(async () => { throw Error("synthetic view unavailable"); });
+    await f.uploadControl().check(); await f.settle();
+    assert.equal(f.uploadControl().receipt.phase, "confirmed");
+    assert.equal(f.uploadControl().receipt.intent, undefined);
+    assert.equal(f.uploadControl().receipt.checkFailed, true);
+    await f.uploadControl().retry();
+    f.setRead(async () => session());
+    await f.uploadControl().check(); await f.settle();
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+    assert.equal(f.calls.filter(row => row[0] === "uploadReceipt").length, 1);
+    assert.equal(f.calls.filter(row => row[0] === "read").length, 2);
+  } finally { f.dispose(); }
+});
+
+test("rejection of a repeated uncertain upload does not erase the first uncertain request", async () => {
+  const f = fixture();
+  try {
+    f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+    await f.submitUpload([]); await f.settle();
+    await f.uploadControl().check(); await f.settle();
+    f.setUpload(async () => { throw new f.api.ApiRequestError("synthetic limit", 413); });
+    await f.uploadControl().retry(); await f.settle();
+    assert.equal(f.uploadControl().receipt.phase, "unknown");
+    assert.equal(f.uploadControl().locked, true);
+    assert.equal(f.uploadControl().receipt.notFound, undefined);
+    assert.equal(f.uploadOptions[0].requestId, f.uploadOptions[1].requestId);
+  } finally { f.dispose(); }
+});
+
+test("stopping local transmission creates uncertainty, not a server cancellation or auto-retry", async () => {
+  const f = fixture();
+  try {
+    f.setUpload(options => new Promise((_resolve, reject) => options.signal.addEventListener("abort",
+      () => reject(Error("UPLOAD_STOPPED")), { once: true })));
+    const pending = f.submitUpload([]); await f.settle();
+    f.uploadControl().receipt.cancel(); await pending; await f.settle();
+    assert.equal(f.uploadControl().receipt.phase, "unknown");
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+    assert.equal(f.calls.filter(row => row[0] === "cancel" || row[0] === "stop").length, 0);
+  } finally { f.dispose(); }
+});
+
+test("authentication change aborts and retires an in-flight upload without refilling the old cache", async () => {
+  const cache = new Map(), f = fixture({ cache }), held = deferred();
+  try {
+    f.setUpload(() => held.promise);
+    const pending = f.submitUpload([]); await f.settle();
+    f.changeAccount();
+    assert.equal(f.uploadOptions[0].signal.aborted, true);
+    held.resolve(session()); await pending; await f.settle();
+    assert.equal(cache.has(JSON.stringify(["adaptive-import-upload", 1])), false);
+    assert.equal(f.uploadControl().receipt, null);
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"), undefined);
+  } finally { f.dispose(); }
+});
+
+test("only a first explicit rejection unlocks source adjustment; malformed success stays unconfirmed", async () => {
+  for (const malformed of [false, true]) {
+    const f = fixture();
+    try {
+      f.setUpload(async () => { if (malformed) return {}; throw new f.api.ApiRequestError("synthetic limit", 413); });
+      await f.submitUpload([]); await f.settle();
+      assert.equal(f.uploadControl().receipt.phase, malformed ? "unknown" : "rejected");
+      assert.equal(f.uploadControl().locked, malformed);
+    } finally { f.dispose(); }
+  }
+});
+
+async function selectPastedText(f, value) {
+  find(f.tree(), node => node.type === "button" && /^(Paste text|粘贴文本)$/.test(text(node))).props.onClick();
+  await f.settle();
+  find(f.tree(), node => node.props?.["data-testid"] === "pasted-transcript-input").props.onChange({
+    currentTarget: { value },
+  });
+  await f.settle();
+}
+const pasteInput = f => find(f.tree(), node => node.props?.["data-testid"] === "pasted-transcript-input");
+const analyzeInput = f => find(f.tree(), node => node.props?.["data-testid"] === "preview-import-button");
+
+for (const locale of ["zh-CN", "en-US"]) test(`${locale}: rejected pasted input remains editable and an explicit corrected submission uses a new identity`, async () => {
+  const f = fixture({ locale });
+  const original = "# Synthetic paste\r\n\r\n用户：修改前 & <safe>\r\n";
+  const corrected = "# Synthetic correction\n\n用户：修改后\n";
+  try {
+    f.setUpload(async () => { throw new f.api.ApiRequestError("synthetic limit", 413); });
+    await selectPastedText(f, original);
+    analyzeInput(f).props.onClick(); await f.settle();
+    assert.ok(pasteInput(f), "A rejected paste must not silently become a file-only input.");
+    assert.equal(pasteInput(f).props.value, original);
+    assert.equal(pasteInput(f).props.readOnly, false);
+    assert.equal(f.uploadControl().receipt.phase, "rejected");
+    assert.equal(await f.calls.find(row => row[0] === "upload")[1][0].text(), original);
+    const requestId = f.uploadOptions[0].requestId;
+    pasteInput(f).props.onChange({ currentTarget: { value: corrected } }); await f.settle();
+    assert.equal(f.uploadControl().receipt, null, "Editing retires the old explicit rejection, not an unknown write.");
+    assert.equal(pasteInput(f).props.value, corrected);
+    f.setUpload(async () => session());
+    analyzeInput(f).props.onClick(); await f.settle();
+    const posts = f.calls.filter(row => row[0] === "upload");
+    assert.equal(posts.length, 2);
+    assert.notEqual(f.uploadOptions[1].requestId, requestId);
+    assert.notEqual(posts[1][1][0], posts[0][1][0]);
+    assert.equal(await posts[1][1][0].text(), corrected);
+    assert.equal(f.uploadControl(), undefined, "Confirmed upload leaves the source input.");
+    assert.ok(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"));
+  } finally { f.dispose(); }
+});
+
+test("unknown pasted upload restores the exact text read-only after reopening and retries the original File only", async () => {
+  const cache = new Map(), original = "# Synthetic paste\n\n用户：不能丢失的输入\n";
+  const first = fixture({ cache });
+  first.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+  await selectPastedText(first, original);
+  analyzeInput(first).props.onClick(); await first.settle();
+  const file = first.calls.find(row => row[0] === "upload")[1][0], requestId = first.uploadOptions[0].requestId;
+  first.dispose();
+  const next = fixture({ cache });
+  try {
+    await next.settle();
+    assert.ok(pasteInput(next), "Reopening an unresolved paste preserves its source type.");
+    assert.equal(pasteInput(next).props.value, original);
+    assert.equal(pasteInput(next).props.readOnly, true);
+    assert.equal(analyzeInput(next).props.disabled, true);
+    assert.equal(next.calls.filter(row => row[0] === "upload").length, 0);
+    await next.uploadControl().check(); await next.settle();
+    assert.equal(pasteInput(next).props.value, original);
+    assert.equal(pasteInput(next).props.readOnly, true);
+    await next.uploadControl().retry(); await next.settle();
+    assert.equal(next.calls.find(row => row[0] === "upload")[1][0], file);
+    assert.equal(next.uploadOptions[0].requestId, requestId);
+    assert.equal(cache.get(JSON.stringify(["adaptive-import-upload", 1])), null);
+    assert.equal(next.calls.filter(row => row[0] === "upload").length, 1);
+  } finally { next.dispose(); }
+});
+
+test("upload progress does not re-encode retained paste or accept editing while its result is uncertain", async () => {
+  const f = fixture(), held = deferred(), original = "# Synthetic paste\n\n".repeat(1024);
+  try {
+    f.setUpload(() => held.promise);
+    await selectPastedText(f, original);
+    const edits = f.calls.filter(row => row[0] === "pasteBytes").length;
+    analyzeInput(f).props.onClick(); await f.settle();
+    assert.equal(pasteInput(f).props.value, original);
+    assert.equal(pasteInput(f).props.readOnly, true);
+    for (const percent of [10, 25, 50, 100]) {
+      f.uploadOptions[0].onProgress({ stage: "uploading", percent }); await f.settle();
+    }
+    assert.equal(f.calls.filter(row => row[0] === "pasteBytes").length, edits,
+      "A progress update must not allocate another UTF-8 copy of the paste.");
+    held.reject(Error("CONNECTION_FAILED")); await f.settle();
+    const requestId = f.uploadControl().receipt.requestId;
+    pasteInput(f).props.onChange({ currentTarget: { value: "synthetic attempted edit while locked" } });
+    await f.settle();
+    assert.equal(pasteInput(f).props.value, original);
+    assert.equal(f.uploadControl().receipt.requestId, requestId);
+    assert.equal(f.uploadControl().receipt.intent.pastedText, original);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+  } finally { held.resolve(session()); f.dispose(); }
+});
+
+test("parked pasted source reopens without decoding or resending and explicit local release drops its text", async () => {
+  const cache = new Map(), f = fixture({ cache }), original = "# Synthetic parked paste\n\n用户：保留\n";
+  try {
+    f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+    await selectPastedText(f, original);
+    analyzeInput(f).props.onClick(); await f.settle();
+    const requestId = f.uploadControl().receipt.requestId;
+    find(f.tree(), node => node.type === "ImportUploadFeedback").props.leavePending(); await f.settle();
+    assert.equal(pasteInput(f), undefined);
+    assert.equal(f.uploadControl().retained[0].intent.pastedText, original);
+    f.uploadControl().reopen(requestId); await f.settle();
+    assert.equal(pasteInput(f).props.value, original);
+    assert.equal(pasteInput(f).props.readOnly, true);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+    find(f.tree(), node => node.type === "ImportUploadFeedback").props.endCheck(); await f.settle();
+    assert.equal(pasteInput(f), undefined);
+    assert.equal(f.uploadControl().receipt, null);
+    assert.deepEqual(f.uploadControl().retained, []);
+    assert.equal(cache.get(JSON.stringify(["adaptive-import-upload", 1])), null);
+    assert.deepEqual(cache.get(JSON.stringify(["adaptive-import-upload-retained", 1])), []);
+    assert.equal(f.calls.filter(row => row[0] === "cancel" || row[0] === "stop").length, 0);
+  } finally { f.dispose(); }
+});
+
+test("a selected file named pasted-transcript is not treated as text pasted through the editor", async () => {
+  const f = fixture(), file = new File(["synthetic file only"], "pasted-transcript.md");
+  try {
+    f.setUpload(async () => { throw new f.api.ApiRequestError("synthetic limit", 413); });
+    await f.submitUpload([file]); await f.settle();
+    assert.equal(pasteInput(f), undefined);
+    assert.equal(f.uploadControl().receipt.intent.pastedText, undefined);
+    assert.match(text(find(f.tree(), node => node.props?.["data-testid"] === "import-selected-files")), /pasted-transcript\.md/);
+  } finally { f.dispose(); }
+});
+
+test("rate-limited or still-pending admission retains original request identity rather than inventing a new upload", async () => {
+  for (const [status, code] of [[429, undefined], [409, "IMPORT_UPLOAD_REQUEST_PENDING"]]) {
+    const f = fixture();
+    try {
+      f.setUpload(async () => { throw new f.api.ApiRequestError("synthetic temporary response", status, "", code); });
+      await f.submitUpload([]); await f.settle();
+      assert.equal(f.uploadControl().receipt.phase, "unknown");
+      assert.equal(f.uploadControl().locked, true);
+      assert.equal(f.uploadOptions.length, 1);
+    } finally { f.dispose(); }
+  }
+});
+
+test("an unconfirmed initial upload can be retained without blocking another batch and reopened without replay", async () => {
+  const f = fixture(), originalFile = new File(["synthetic first"], "first.md");
+  try {
+    f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+    await f.submitUpload([originalFile]); await f.settle();
+    const key = f.uploadControl().receipt.requestId;
+    find(f.tree(), node => node.type === "ImportUploadFeedback").props.leavePending();
+    await f.settle();
+    assert.equal(f.uploadControl().locked, false);
+    assert.equal(f.uploadControl().retained.length, 1);
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-selected-files"), undefined);
+    await f.submitUpload([new File(["synthetic second"], "second.md")]); await f.settle();
+    assert.notEqual(f.uploadControl().receipt.requestId, key);
+    f.uploadControl().reopen(key); await f.settle();
+    assert.equal(f.uploadControl().receipt.requestId, key);
+    assert.equal(f.uploadControl().receipt.intent.files[0], originalFile);
+    assert.equal(f.uploadControl().retained[0].intent.files[0].name, "second.md");
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 2);
+    await f.uploadControl().check(); await f.settle();
+    assert.deepEqual(f.calls.filter(row => row[0] === "uploadReceipt"), [["uploadReceipt", key]]);
+  } finally { f.dispose(); }
+});
+
+test("pending retention is bounded but older checks remain reachable by swapping, including at the cap", async () => {
+  const f = fixture();
+  try {
+    f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+    for (let i = 0; i < 3; i++) {
+      await f.submitUpload([new File(["synthetic"], `${i}.md`)]); await f.settle();
+      assert.equal(f.uploadControl().detach(), true); await f.settle();
+    }
+    await f.submitUpload([new File(["synthetic"], "current.md")]); await f.settle();
+    assert.equal(f.uploadControl().canDetach, false);
+    assert.equal(f.uploadControl().detach(), false);
+    const key = f.uploadControl().retained[0].requestId;
+    f.uploadControl().reopen(key); await f.settle();
+    assert.equal(f.uploadControl().receipt.requestId, key);
+    assert.equal(f.uploadControl().retained.length, 3);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 4);
+    f.changeAccount(); await f.settle();
+    assert.equal(f.uploadControl().retained.length, 0);
+  } finally { f.dispose(); }
+});
+
+test("an unavailable receipt or known missing import ends futile reads, drops File references, and offers local release", async () => {
+  for (const missingReceipt of [true, false]) {
+    const f = fixture();
+    try {
+      f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+      await f.submitUpload([new File(["synthetic"], "sample.md")]); await f.settle();
+      f.setReceipt(async () => {
+        if (missingReceipt) throw new f.api.ApiRequestError("Unavailable", 410, "", "IMPORT_UPLOAD_RECEIPT_UNAVAILABLE");
+        return { receipt: { import_id: "synthetic-import" } };
+      });
+      f.setRead(async () => { throw new f.api.ApiRequestError("Not found", 404); });
+      await f.uploadControl().check(); await f.settle();
+      assert.equal(f.uploadControl().receipt.phase, "confirmed");
+      assert.equal(f.uploadControl().receipt.unavailable, true);
+      assert.equal(f.uploadControl().receipt.intent, undefined);
+      assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-selected-files"), undefined);
+      await f.uploadControl().check(); await f.uploadControl().retry(); await f.settle();
+      assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+      assert.equal(f.calls.filter(row => row[0] === "uploadReceipt").length, 1);
+      assert.equal(f.calls.filter(row => row[0] === "read").length, missingReceipt ? 0 : 1);
+      find(f.tree(), node => node.type === "ImportUploadFeedback").props.endCheck(); await f.settle();
+      assert.equal(f.uploadControl().locked, false);
+      assert.equal(f.calls.filter(row => row[0] === "cancel" || row[0] === "stop").length, 0);
+    } finally { f.dispose(); }
+  }
+});
+
+test("a generic receipt 404 is still uncertain, not evidence of missing server work", async () => {
+  const f = fixture(), file = new File(["synthetic"], "sample.md");
+  try {
+    f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+    await f.submitUpload([file]); await f.settle();
+    f.setReceipt(async () => { throw new f.api.ApiRequestError("Not found", 404); });
+    await f.uploadControl().check(); await f.settle();
+    assert.equal(f.uploadControl().receipt.phase, "unknown");
+    assert.equal(f.uploadControl().receipt.intent.files[0], file);
+    assert.equal(f.uploadControl().receipt.unavailable, undefined);
+    assert.equal(f.uploadControl().receipt.checkFailed, true);
+  } finally { f.dispose(); }
+});
+
+test("local release cannot clear an in-flight upload, a changed receipt, or a retired account", async () => {
+  const f = fixture(), held = deferred(), checkHeld = deferred();
+  try {
+    f.setUpload(() => held.promise);
+    const pending = f.submitUpload([]); await f.settle();
+    assert.equal(f.uploadControl().dismiss(f.uploadControl().receipt), false);
+    held.reject(Error("CONNECTION_FAILED")); await pending; await f.settle();
+    const original = f.uploadControl().receipt;
+    f.setReceipt(() => checkHeld.promise);
+    const checking = f.uploadControl().check(); await f.settle();
+    assert.equal(f.uploadControl().dismiss(original), false);
+    assert.equal(f.uploadControl().dismiss(f.uploadControl().receipt), false);
+    checkHeld.resolve({ receipt: null }); await checking; await f.settle();
+    assert.equal(f.uploadControl().dismiss(original), false);
+    const fresh = f.uploadControl().receipt, oldControl = f.uploadControl();
+    f.changeAccount();
+    assert.equal(oldControl.dismiss(fresh), false);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 1);
+    assert.equal(f.calls.filter(row => row[0] === "cancel" || row[0] === "stop").length, 0);
+  } finally { f.dispose(); }
+});
+
+test("explicit local release frees only the current pending selection, preserving parked checks", async () => {
+  const f = fixture();
+  try {
+    f.setUpload(async () => { throw Error("CONNECTION_FAILED"); });
+    await f.submitUpload([new File(["synthetic"], "parked.md")]); await f.settle();
+    const parkedId = f.uploadControl().receipt.requestId;
+    f.uploadControl().detach(); await f.settle();
+    await f.submitUpload([new File(["synthetic"], "current.md")]); await f.settle();
+    const stale = find(f.tree(), node => node.type === "ImportUploadFeedback").props.endCheck;
+    stale(); await f.settle();
+    assert.equal(f.uploadControl().receipt, null);
+    assert.equal(f.uploadControl().retained[0].requestId, parkedId);
+    assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-selected-files"), undefined);
+    f.uploadControl().reopen(parkedId); await f.settle();
+    stale(); await f.settle();
+    assert.equal(f.uploadControl().receipt.requestId, parkedId);
+    assert.equal(f.calls.filter(row => row[0] === "upload").length, 2);
+  } finally { f.dispose(); }
+});
+
 test("old-account analysis reads cannot publish a workspace or result", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle(); f.changeAccount();
+    await f.submitUpload([]); await f.settle(); f.changeAccount();
     const tree = f.publish(session("READY", "ready"), 1);
     assert.equal(find(tree, node => node.type === "AdaptiveImportWorkspace"), undefined);
   } finally { f.dispose(); }
@@ -560,7 +989,7 @@ test("task resume outranks a local pointer; failure keeps the saved source reach
     await f.settle();
     assert.equal(f.calls.find(row => row[0] === "read")[1], "synthetic-import");
     assert.match(text(f.tree()), /Source files are retained/);
-    await f.mutations[5].run("synthetic-analysis"); await f.settle();
+    await f.mutations[4].run("synthetic-analysis"); await f.settle();
     assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
     assert.deepEqual(f.calls.find(row => row[0] === "retry"), ["retry", "synthetic-analysis"]);
     assert.equal(f.queries.get("adaptive-import-analysis").options.enabled, true);
@@ -571,7 +1000,7 @@ test("task resume outranks a local pointer; failure keeps the saved source reach
 test("canonical commit failure is not mislabelled as initial analysis failure", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     const tree = f.publish(session("FAILED", "failed"));
     assert.ok(find(tree, node => node.type === "AdaptiveImportWorkspace"));
     assert.doesNotMatch(text(tree), /Initial analysis failed/);
@@ -600,8 +1029,8 @@ for (const locale of ["zh-CN", "en-US"]) test(`${locale}: reopening a memory fai
 test("explicit confirmed disposal resets this pane; closing/unmounting alone does not", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
-    await f.mutations[1].run("synthetic-import"); await f.settle();
+    await f.submitUpload([]); await f.settle();
+    await f.mutations[0].run("synthetic-import"); await f.settle();
     assert.deepEqual(f.calls.find(row => row[0] === "cancel"), ["cancel", "synthetic-import"]);
     assert.equal(f.storage.size, 0);
     assert.equal(find(f.tree(), node => node.props?.["data-testid"] === "import-analysis-status"), undefined);
@@ -624,7 +1053,7 @@ test("ordinary new import does not auto-resume a saved cancelling task", async (
 test("stopping retains sources and waits for acknowledgement before offering explicit resume", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     find(f.tree(), node => node.type === "button" && text(node) === "Stop and retain").props.onClick();
     await f.settle();
     assert.deepEqual(f.calls.find(row => row[0] === "stop").slice(0, 3), ["stop", "synthetic-analysis", "retain"]);
@@ -645,7 +1074,7 @@ test("stopping retains sources and waits for acknowledgement before offering exp
 test("an unknown stop has a read-only check and leaving does not let its late response reclaim the new pane", async () => {
   const held = deferred(), f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     f.setStop(() => held.promise);
     find(f.tree(), node => node.type === "button" && text(node) === "Stop and retain").props.onClick();
     await f.settle();
@@ -661,7 +1090,7 @@ test("an unknown stop has a read-only check and leaving does not let its late re
 test("stop transport uncertainty never enables an automatic repeated write", async () => {
   const f = fixture();
   try {
-    await f.mutations[0].run([]); await f.settle();
+    await f.submitUpload([]); await f.settle();
     f.setStop(async () => { throw Error("REQUEST_TIMEOUT"); });
     find(f.tree(), node => node.type === "button" && text(node) === "Stop and retain").props.onClick();
     await f.settle();
@@ -697,7 +1126,7 @@ for (const locale of ["zh-CN", "en-US"]) test(`${locale}: exhausted resource wai
     assert.match(text(f.tree()), /30/);
     assert.match(text(f.tree()), locale === "zh-CN" ? /暂停/ : /paused/);
     assert.equal(f.calls.filter(row => row[0] === "retry").length, 0);
-    await f.mutations[5].run("synthetic-analysis"); await f.settle();
+    await f.mutations[4].run("synthetic-analysis"); await f.settle();
     assert.deepEqual(f.calls.filter(row => row[0] === "retry"), [["retry", "synthetic-analysis"]]);
     assert.equal(f.calls.filter(row => row[0] === "upload").length, 0);
   } finally { f.dispose(); }

@@ -12,7 +12,7 @@ import { createServer } from "node:http";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../.."), web = join(root, "apps/web");
 const require = createRequire(join(web, "package.json"));
 const task = resolve(process.env.TEMP ?? "");
-assert.match(task.replaceAll("\\", "/").toLowerCase(), /^c:\/users\/86182\/desktop\/wkkk\/[^/]+/);
+assert.match(task.replaceAll("\\", "/").toLowerCase(), /^(?:c:\/users\/86182\/desktop\/wkkk|e:\/chat-reader-temp)\/[^/]+/);
 const out = join(task, `copy-browser-${Date.now()}`); mkdirSync(out, { recursive: true });
 const normalized = path => path.replaceAll("\\", "/");
 writeFileSync(join(out, "loader.cjs"), `const ts=require(${JSON.stringify(require.resolve("typescript"))});

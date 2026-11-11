@@ -15,7 +15,7 @@ function fixture({ status = 200, hungHeaders = false, denied = false, streamChun
   const dependencies = {
     "./offline-access": { authenticationGeneration: () => generation, notifyAuthenticationFailure: value => failures.push(value) },
     "./server-session": { serverSession: () => ({ status: denied ? "sign-in-required" : "ready", userId: "synthetic" }), observeSessionResponse: () => {} },
-    "./archive-task-state": {}, "./request-deadline": deadline,
+    "./archive-task-state": {}, "./request-deadline": deadline, "./upload-transport": {},
   };
   new Function("require", "exports", "fetch", "window", compile("api"))(name => {
     assert.ok(Object.hasOwn(dependencies, name), name); return dependencies[name];

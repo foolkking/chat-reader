@@ -25,6 +25,24 @@ J同步Context/API/测试合同与context-write-verification合成证据：
 确认写入和刷新分离、原意图/只读回执及字节核对、历史原字节恢复，
 同时记录H/I Settings语言水合断言失败与修正。页面重启、整站CI及
 长时间上传/生产验收限制明确，不扩大备份或删除权限。
+K同步Adaptive Import/API/测试合同与import-upload-verification合成摘要：
+首次上传请求绑定、只读回执、传输进展/静默中断、账户内暂放/重入与明确
+本页释放；410不可用和临时读取失败分离。J完整CI失败与精确CPU诊断未复现
+分别保留，新增reader-diagnostic-j摘要不冒称性能根因已修复。最后浏览器扩展
+因本机临时空间容量预检未运行，不能由前一版12矩阵替代，原证据不覆盖。
+L同步Adaptive Import/测试合同：已知task与ZIP目录的完整响应时限、原task
+只读恢复、准确读取提示、缺失/畸形任务停止轮询；补真实组件双语回调与
+Settings实际JSON结果的队列协议投影测试，区分已运行Node与未运行浏览器。
+K末轮补粘贴编辑保留/只读复制/按内容缓存字节计数；Node2432、静态、
+完整上传API/真实PG25及最新mounted12通过，后续整站仍单独验收。
+用户随后明确批准E盘临时目录；AGENTS、测试路径守卫和Testing同步允许
+`E:\chat-reader-temp`独立任务子目录，保留C盘旧资料及失败记录，不改变全局环境。
+新增import-kl-mounted-final和import-kl-build-final机器摘要与两张合成截图；
+544输入精确构建、API112（重叠）及CI来源23通过，整站启动策略拒绝仍待验。
+提交前补reader实际解析/渲染计数分离（measurement v3）；新增
+import-kl-submission-audit记录Node2434、静态、重复精确构建和依赖策略核验，
+不把测量修正或未复现归结为卡顿根因。状态/导航只保留本轮当前摘要，
+各轮失败与容量限制继续完整保留在实施账本和原机器证据中。
 
 ## 可恢复操作发布及单份备份收尾 — 2026-11-11
 
@@ -4071,7 +4089,7 @@ No new documentation category, public API, migration or persisted Reader contrac
 | 路径 | 分类 | 长期职责 |
 | --- | --- | --- |
 | `README.md` | 压缩并更新 / 入口 | 人类入口、快速开始、常用命令 |
-| `AGENTS.md` | 新建 / 现行 | 最小开发和智能体约束；本机临时目录统一为 `C:\Users\86182\Desktop\wkkk`，按任务分隔 |
+| `AGENTS.md` | 新建 / 现行 | 最小开发和智能体约束；本机临时目录使用 `C:\Users\86182\Desktop\wkkk` 或2026-11-11明确批准的 `E:\chat-reader-temp`，按任务分隔 |
 | `PROJECT_STATE.md` | 更新 / 现行 | 当前 AI 可读项目快照 |
 | `docs/index.md` | 更新 / 入口 | 文档导航和生命周期说明 |
 | `docs/documentation-inventory.md` | 新建 / 现行 | 全部 Markdown 所有权与分类 |
