@@ -1,5 +1,31 @@
 # Artifact Lifecycle Contract
 
+## Private Context upload reclamation — worktree 2026-11-11
+
+Only the exact `archive_upload` / `context-return-upload` / `context_return`
+triple joins the existing temporary-export maintenance lane. Successful member
+publication marks `release_requested_at` in the same transaction; it does not
+delete the input receipt before unlinking. Inactive queued/failed/cancelled
+uploads retain their existing24-hour expiry. Processing/cancelling inputs are
+always protected, including expired ones; expired or already-releasing inputs
+cannot be applied to Continuation again.
+
+Reclamation shares the existing20-item budget, retry/backoff and two-phase
+`reclaiming` boundary. It locks the artifact and skips an occupied job lock,
+then rechecks both before unlinking. Controlled path, size/type/hardlink and
+shared-reference checks still apply. Failure retains the receipt; confirmed
+absence removes only this private artifact row, never the committed task or
+member versions. These inputs remain unavailable through export/download/
+regeneration routes, and cleanup does not add download fields to task results.
+The old main-worker expiry/unlink loop is removed, not duplicated.
+
+Other restore uploads, imports, canonical assets, offline copies and host
+backups do not become eligible. Historical missing receipts and files orphaned
+by account/conversation cascades remain under explicit manual cleanup/grace;
+this does not claim those paths have durable automatic disposal. No migration,
+new background task or general scheduled storage purge is introduced.
+See the [local verification ledger](../execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
+
 ## Recovery extension — released 2026-11-11
 
 Owner conversation export POST accepts optional `background=true` for ordinary
@@ -154,7 +180,8 @@ for later reconciliation, not false success. In-flight OS calls cannot be
 forcibly canceled. See [liveness](OBSERVABILITY_CONTRACT.md#worker-liveness).
 Rows transition active → reclaiming → reclaimed, or retry after an
 unlink failure. Physical deletion only targets the checked job-owned export file;
-restore uploads and canonical/offline data are excluded. Task rows persist for
+restore uploads (apart from the exact Context exception above) and
+canonical/offline data are excluded. Task rows persist for
 regeneration. `POST .../regenerate` accepts Idempotency-Key and re-admits original
 options against current owned sources; system archives additionally require Root.
 Runtime status exposes aggregate pending count/bytes and failure count.

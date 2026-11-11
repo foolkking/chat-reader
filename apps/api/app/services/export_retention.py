@@ -2,7 +2,8 @@
 
 All lease/reclamation transitions lock the artifact row first. A crashed download
 loses its renewable lease; a crashed unlink is retried from durable reclaiming.
-No archive upload or canonical/offline object is eligible for this lifecycle.
+Only the exact private Context-return upload joins exports in this lifecycle;
+other archive uploads and canonical/offline objects remain excluded.
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import HTTPException
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 
 from app.core.observability import structured_event
 from app.models.background_job import BackgroundJob
@@ -27,6 +28,22 @@ logger = logging.getLogger(__name__)
 EXPORT_JOB_TYPES = frozenset({"conversation_export", "conversation_batch_export", "system_archive_export", "personal_archive_export", "attachment_batch_download"})
 VIEWER_SECONDS = 45
 DOWNLOAD_SECONDS = 90
+CONTEXT_UPLOAD_FORMAT = "context-return-upload"
+CONTEXT_CLEANUP_STATUSES = ("queued", "committed", "failed", "cancelled", "canceled")
+
+
+def cleanup_job_clause():
+    """Only existing temporary exports and the exact private Context upload."""
+    return or_(
+        and_(ExportArtifact.scope_type != "archive_upload",
+             BackgroundJob.job_type.in_(EXPORT_JOB_TYPES), BackgroundJob.status == "committed"),
+        and_(ExportArtifact.scope_type == "archive_upload", ExportArtifact.format == CONTEXT_UPLOAD_FORMAT,
+             BackgroundJob.job_type == "context_return", BackgroundJob.status.in_(CONTEXT_CLEANUP_STATUSES)),
+    )
+
+
+def _context_upload(artifact) -> bool:
+    return artifact.scope_type == "archive_upload" and artifact.format == CONTEXT_UPLOAD_FORMAT
 
 
 def utc(value: datetime) -> datetime:
@@ -216,11 +233,21 @@ def release_download(factory, artifact_id, lease_id):
 
 
 def _eligible(db, artifact, timestamp):
-    if artifact.scope_type == "archive_upload" or artifact.lifecycle_state == "reclaimed":
+    if artifact.lifecycle_state == "reclaimed":
         return False
-    job = db.get(BackgroundJob, artifact.job_id)
-    if job is None or job.status != "committed" or job.job_type not in EXPORT_JOB_TYPES:
-        return False
+    if _context_upload(artifact):
+        # Retry/claim locks the job first. Skip rather than waiting while this
+        # reaper owns the artifact row, then hold both through the unlink.
+        job = db.scalar(select(BackgroundJob).where(BackgroundJob.id == artifact.job_id)
+            .with_for_update(skip_locked=True).execution_options(populate_existing=True))
+        if job is None or job.job_type != "context_return" or job.status not in CONTEXT_CLEANUP_STATUSES:
+            return False
+    else:
+        if artifact.scope_type == "archive_upload":
+            return False
+        job = db.get(BackgroundJob, artifact.job_id)
+        if job is None or job.status != "committed" or job.job_type not in EXPORT_JOB_TYPES:
+            return False
     if artifact.retry_at is not None and utc(artifact.retry_at) > timestamp:
         return False
     expired = utc(artifact.expires_at) <= timestamp
@@ -270,10 +297,8 @@ def reclaim_exports(factory, root: Path, *, now=None, limit=20,
         active_download = select(ExportArtifactLease.id).where(
             ExportArtifactLease.artifact_id == ExportArtifact.id,
             ExportArtifactLease.kind == "download", ExportArtifactLease.expires_at > timestamp).exists()
-        ids = list(db.scalars(select(ExportArtifact.id).where(
-            ExportArtifact.scope_type != "archive_upload", ExportArtifact.lifecycle_state != "reclaimed",
-            ExportArtifact.job_id.in_(select(BackgroundJob.id).where(
-                BackgroundJob.job_type.in_(EXPORT_JOB_TYPES), BackgroundJob.status == "committed")),
+        ids = list(db.scalars(select(ExportArtifact.id).join(BackgroundJob, BackgroundJob.id == ExportArtifact.job_id).where(
+            cleanup_job_clause(), ExportArtifact.lifecycle_state != "reclaimed",
             or_(ExportArtifact.expires_at <= timestamp, ExportArtifact.release_requested_at.is_not(None),
                 ExportArtifact.lifecycle_state.in_(["reclaiming", "retry"])),
             or_(ExportArtifact.retry_at.is_(None), ExportArtifact.retry_at <= timestamp), ~active_download,
@@ -322,9 +347,15 @@ def reclaim_exports(factory, root: Path, *, now=None, limit=20,
                 db.query(ExportArtifactLease).filter_by(artifact_id=artifact.id).delete(synchronize_session=False)
                 counts["reclaimed"] += 1
                 counts["bytes"] += artifact.byte_size if existed else 0
-            job = db.get(BackgroundJob, artifact.job_id)
-            job.result = {**(job.result or {}), "artifact_status": artifact.lifecycle_state, "download_url": None,
-                          "can_regenerate": True, "expires_at": utc(artifact.expires_at).isoformat()}
+            if _context_upload(artifact):
+                # Private inputs are never downloadable/regenerable exports.
+                # Keep failed cleanup receipts; remove only confirmed absence.
+                if artifact.lifecycle_state == "reclaimed":
+                    db.delete(artifact)
+            else:
+                job = db.get(BackgroundJob, artifact.job_id)
+                job.result = {**(job.result or {}), "artifact_status": artifact.lifecycle_state, "download_url": None,
+                              "can_regenerate": True, "expires_at": utc(artifact.expires_at).isoformat()}
             db.commit()
     if counts["reclaimed"] or counts["failed"]:
         structured_event(logger, logging.INFO, "export_reclamation", **counts)

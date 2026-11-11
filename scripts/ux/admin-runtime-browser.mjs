@@ -98,7 +98,7 @@ try {
     const refresh = panel.getByRole("button", { name: zh ? "刷新状态" : "Refresh status", exact: true });
     const queue = panel.getByRole("heading", { name: zh ? "任务队列" : "Task queues" });
     await expect(queue).toBeVisible();
-    await expect(panel.getByRole("heading", { name: zh ? "临时导出回收" : "Temporary export cleanup" })).toHaveCount(0);
+    await expect(panel.getByRole("heading", { name: zh ? "临时文件回收" : "Temporary file cleanup" })).toHaveCount(0);
     await expect(panel.getByText(zh ? "最近系统备份" : "Latest system backup", { exact: true })).toHaveCount(0);
     const details = panel.locator("details"), summary = details.locator("summary");
     await expect(details).not.toHaveAttribute("open");
@@ -117,10 +117,11 @@ try {
       window.snapshot.queue.imports.paused = 3; window.snapshot.storage.imports.complete = false; });
     await refresh.click();
     await expect(panel.getByRole("alert")).toHaveCount(0);
-    await expect(panel.getByRole("heading", { name: zh ? "临时导出回收" : "Temporary export cleanup" })).toBeVisible();
+    await expect(panel.getByRole("heading", { name: zh ? "临时文件回收" : "Temporary file cleanup" })).toBeVisible();
     await expect(panel).toContainText(zh ? "已暂停 3" : "Paused 3");
     await expect(panel).toContainText(zh ? "仅已统计部分" : "counted portion only");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.screenshot({ path: join(out, `runtime-attention-${width}-${locale}-${theme}.png`) });
     await page.evaluate(() => { window.runtimeMode = "denied"; });
     await refresh.click(); await expect(refresh).toBeEnabled(); await expect(panel.getByRole("alert")).toBeVisible(); await expect(queue).toHaveCount(0);
     await page.evaluate(() => { window.runtimeMode = "error"; });

@@ -283,3 +283,9 @@ of its heartbeat and one user job (2026-11-11 worktree follow-up);
 reading runtime status never deletes files or extends a download deadline.
 No filenames, artifact IDs or source content are exposed by this metric. The
 loopback diagnostics boundary remains unchanged.
+
+Worktree follow-up2026-11-11 includes released/expired inactive private
+Context-return uploads in the same `export_cleanup` aggregate. The single
+exception-only UI summary is labelled **Temporary file cleanup**, not a second
+panel. It is silent at zero, distinguishes pending and failed receipts, and
+does not report unrelated restore uploads or historical orphan files as covered.

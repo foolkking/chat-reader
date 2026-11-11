@@ -10,8 +10,9 @@ from app.models.export_artifact import ExportArtifact
 from app.services.assets.asset_store import LocalAssetStore
 from app.services.continuation_candidates import ContinuationError, owned_conversation
 from app.services.exporting.archive_transaction import track_archive_object
+from app.services.export_retention import CONTEXT_UPLOAD_FORMAT
 
-UPLOAD_FORMAT = 'context-return-upload'
+UPLOAD_FORMAT = CONTEXT_UPLOAD_FORMAT
 
 
 def receive_context_return(db, source, conversation_id, scope, *, base_generation, idempotency_key):
@@ -53,7 +54,7 @@ def process_context_return(db, job, scope, report):
     from app.services.continuation_files import update_files
     from app.services.context_return import extract_direct_files
     artifact = db.query(ExportArtifact).filter_by(job_id=job.id, format=UPLOAD_FORMAT, scope_type='archive_upload').one_or_none()
-    if artifact is None:
+    if artifact is None or artifact.lifecycle_state != "active" or artifact.release_requested_at is not None:
         raise ContinuationError('CONTEXT_RETURN_EXPIRED', 410)
     expiry = artifact.expires_at
     if expiry.tzinfo is None:
@@ -75,19 +76,8 @@ def process_context_return(db, job, scope, report):
     report('saving_files', 80, 0, 1)
     item, state = update_files(db, uuid.UUID(job.payload['conversation_id']), scope,
         members=members, base_generation=job.payload['base_generation'])
-    db.delete(artifact)
+    # Canonical members and disposal authorization commit together. The
+    # existing maintenance lane retains this receipt until physical removal.
+    artifact.release_requested_at = datetime.now(timezone.utc)
     return {'revision_id': str(item.id), 'generation': state.generation,
-            'updated_members': sorted(members), 'next_action': 'view_files'}, path
-
-
-
-def expire_context_returns(db, *, limit=25):
-    """Only expired temporary uploads; active workers retain their input lease."""
-    rows = db.query(ExportArtifact).join(BackgroundJob, BackgroundJob.id == ExportArtifact.job_id).filter(
-        ExportArtifact.format == UPLOAD_FORMAT, ExportArtifact.expires_at <= datetime.now(timezone.utc),
-        BackgroundJob.status.notin_(['processing', 'cancelling'])).order_by(ExportArtifact.expires_at).limit(limit).with_for_update(of=ExportArtifact, skip_locked=True).all()
-    paths = []
-    for artifact in rows:
-        paths.append(Path(artifact.storage_uri))
-        db.delete(artifact)
-    return paths
+            'updated_members': sorted(members), 'next_action': 'view_files'}

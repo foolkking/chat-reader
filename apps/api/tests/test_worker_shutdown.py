@@ -314,7 +314,6 @@ def test_shutdown_claim_boundaries_preserve_unstarted_work_and_drain_started_wor
         events.append("completed")
 
     monkeypatch.setattr(task_worker, "SessionLocal", Session)
-    monkeypatch.setattr("app.services.context_return_jobs.expire_context_returns", lambda db: [])
     monkeypatch.setattr(task_worker, "recover_stale_imports", lambda *args: 0)
     monkeypatch.setattr(task_worker, "recover_stale_jobs", lambda *args: 0)
     monkeypatch.setattr(task_worker, "_oldest_task_kind", oldest)

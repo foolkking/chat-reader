@@ -20,6 +20,7 @@ from app.services.background_jobs import (
 )
 from app.services.context_return_jobs import receive_context_return
 from app.services.continuation_candidates import read_object
+from app.services.export_retention import reclaim_exports
 from app.services.ownership import OwnershipScope
 from test_import_profile_postgres import isolated_schema  # noqa: F401
 
@@ -94,6 +95,7 @@ def test_return_interrupted_after_file_write_preserves_saved_pair_and_can_resume
                 store.resolve_key(key) for key in original_keys
             }
             assert db.query(ExportArtifact).filter_by(job_id=job_id).count() == 1
+            assert db.query(ExportArtifact).filter_by(job_id=job_id).one().release_requested_at is None
             assert upload_path.read_bytes() == package.getvalue()
             if interruption == "failure":
                 retry_background_job(job)
@@ -115,7 +117,14 @@ def test_return_interrupted_after_file_write_preserves_saved_pair_and_can_resume
             selected = db.get(ContinuationRevision, state.adopted_revision_id)
             assert read_object(db.get(ContextMemberObject, selected.current_sha256)) == b"# Returned Current"
             assert read_object(db.get(ContextMemberObject, selected.index_sha256)) == b'{"saved":"Index"}'
+            receipt = db.query(ExportArtifact).filter_by(job_id=resumed_id).one()
+            assert receipt.release_requested_at is not None
+            resumed_path = Path(receipt.storage_uri)
+            assert resumed_path.read_bytes() == package.getvalue()
+        assert reclaim_exports(factory, tmp_path / "exports")["reclaimed"] == 1
+        with Session(engine) as db:
             assert db.query(ExportArtifact).filter_by(job_id=resumed_id).count() == 0
+            assert not resumed_path.exists()
             # Cancelled input keeps its bounded retry/expiry lifecycle; a successful
             # retry of the original failed job consumes its input exactly once.
             assert upload_path.exists() == (interruption == "cancel")

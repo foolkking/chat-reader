@@ -137,6 +137,9 @@ def test_direct_status_resumes_only_this_conversations_pending_return(client, tm
 
 def test_return_worker_removes_original_zip_after_persisting_only_members(client, tmp_path):
     from pathlib import Path
+    from sqlalchemy.orm import sessionmaker
+    from app.services.export_retention import reclaim_exports
+    from app.core.config import get_settings
     from app.models.background_job import BackgroundJob
     from app.models.export_artifact import ExportArtifact
     path = root(client)
@@ -163,6 +166,11 @@ def test_return_worker_removes_original_zip_after_persisting_only_members(client
         assert job.result['generation'] == 1
         assert db.query(ContinuationCandidate).count() == 0
         assert db.query(ContextMemberObject).count() == 2
+        assert db.get(ExportArtifact, artifact_id).release_requested_at is not None
+        factory = sessionmaker(bind=db.get_bind())
+    assert private_path.exists(), "Canonical work must not block on filesystem cleanup."
+    assert reclaim_exports(factory, Path(get_settings().export_storage_dir))["reclaimed"] == 1
+    with database() as db:
         assert db.get(ExportArtifact, artifact_id) is None
     assert not private_path.exists()
 
@@ -172,8 +180,8 @@ def test_failed_return_has_bounded_retry_lifetime(client):
     from datetime import datetime, timedelta, timezone
     from app.models.background_job import BackgroundJob
     from app.models.export_artifact import ExportArtifact
-    from app.services.context_return_jobs import expire_context_returns
-    from app.services.artifact_lifecycle import cleanup_committed_artifacts
+    from sqlalchemy.orm import sessionmaker
+    from app.services.export_retention import reclaim_exports
     from app.core.config import get_settings
     path = root(client)
     response = client.post(path + '/returns', data={'base_generation': 0, 'idempotency_key': 'bad-return'},
@@ -186,15 +194,87 @@ def test_failed_return_has_bounded_retry_lifetime(client):
         upload = db.query(ExportArtifact).filter_by(job_id=uuid.UUID(task_id)).one()
         private_path = Path(upload.storage_uri)
         assert private_path.exists()
-        assert expire_context_returns(db) == []
+        factory = sessionmaker(bind=db.get_bind())
+        assert reclaim_exports(factory, Path(get_settings().export_storage_dir))["reclaimed"] == 0
         upload.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
         db.commit()
-        paths = expire_context_returns(db)
-        db.commit()
-        assert paths == [private_path]
-        cleanup_committed_artifacts(paths, root=Path(get_settings().export_storage_dir), category='export')
+        assert reclaim_exports(factory, Path(get_settings().export_storage_dir))["reclaimed"] == 1
         assert not private_path.exists()
         assert db.query(ContinuationCandidate).count() == 0
+
+
+def test_successful_return_unlink_failure_keeps_a_retryable_cleanup_receipt(client, tmp_path, monkeypatch):
+    from pathlib import Path
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy.orm import sessionmaker
+    from app.models.background_job import BackgroundJob
+    from app.models.export_artifact import ExportArtifact
+    from app.services.export_retention import reclaim_exports
+    from app.core.config import get_settings
+    path = root(client)
+    bundle = tmp_path / "synthetic-return.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr("manifest.json", "{}")
+        archive.writestr("conversation.canjsonl", "Synthetic raw is not imported")
+        archive.writestr("continuation/current.md", "# Synthetic returned member")
+    response = client.post(path + "/returns", data={"base_generation": 0, "idempotency_key": "cleanup-receipt"},
+        files={"file": ("synthetic.zip", bundle.read_bytes())})
+    assert response.status_code == 202
+    identity = uuid.UUID(response.json()["task_id"])
+    with database() as db:
+        artifact = db.query(ExportArtifact).filter_by(job_id=identity).one()
+        artifact_id, physical = artifact.id, Path(artifact.storage_uri)
+        factory = sessionmaker(bind=db.get_bind())
+    unlink = Path.unlink
+    def fail_original(file, *args, **kwargs):
+        if file == physical:
+            raise PermissionError("Synthetic cleanup failure")
+        return unlink(file, *args, **kwargs)
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, "unlink", fail_original)
+        run_job(str(identity))
+        with database() as db:
+            assert db.get(BackgroundJob, identity).status == "committed"
+            assert db.get(ExportArtifact, artifact_id) is not None, "Failure must not erase the only cleanup receipt."
+        result = reclaim_exports(factory, Path(get_settings().export_storage_dir))
+        assert result["failed"] == 1
+        with database() as db:
+            row = db.get(ExportArtifact, artifact_id)
+            assert row.lifecycle_state == "retry" and row.failure_code == "unlink_failed"
+            assert row.release_requested_at is not None
+    assert physical.exists()
+    result = reclaim_exports(factory, Path(get_settings().export_storage_dir),
+        now=datetime.now(timezone.utc) + timedelta(hours=2))
+    assert result["reclaimed"] == 1 and not physical.exists()
+    with database() as db:
+        assert db.get(ExportArtifact, artifact_id) is None
+        assert db.get(BackgroundJob, identity).status == "committed"
+
+
+def test_expired_return_cleanup_is_in_the_existing_bounded_maintenance_lane(client):
+    from pathlib import Path
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy.orm import sessionmaker
+    from app.models.background_job import BackgroundJob
+    from app.models.export_artifact import ExportArtifact
+    from app.services.export_retention import reclaim_exports
+    from app.core.config import get_settings
+    path = root(client)
+    response = client.post(path + "/returns", data={"base_generation": 0, "idempotency_key": "expired-maintenance"},
+        files={"file": ("synthetic.zip", b"synthetic invalid archive")})
+    identity = uuid.UUID(response.json()["task_id"])
+    run_job(str(identity))
+    with database() as db:
+        artifact = db.query(ExportArtifact).filter_by(job_id=identity).one()
+        artifact_id, physical = artifact.id, Path(artifact.storage_uri)
+        artifact.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        db.commit()
+        factory = sessionmaker(bind=db.get_bind())
+    assert reclaim_exports(factory, Path(get_settings().export_storage_dir))["reclaimed"] == 1
+    assert not physical.exists()
+    with database() as db:
+        assert db.get(ExportArtifact, artifact_id) is None
+        assert db.get(BackgroundJob, identity).status == "failed"
 
 
 def test_direct_return_accepts_plain_members_without_semantic_checks(client, tmp_path):

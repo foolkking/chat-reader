@@ -186,8 +186,14 @@ export uses the same projection when source refs are requested.
   idempotency key; processed by the existing worker. Manifest/Raw entrypoint presence
   distinguishes packages, but Raw is not compared or imported. Only the two
   standard Continuation members update storage. Missing members inherit saved files.
-  Successful uploads are removed; failed uploads retain the existing retry/expiry
-  lifecycle. Expiry processes at most 25 inactive uploads per iteration.
+  Successful uploads are removed; failed uploads retain a24-hour retry/expiry
+  lifecycle. Worktree follow-up2026-11-11: successful publication atomically
+  requests disposal, and the existing bounded maintenance lane removes private
+  input bytes before deleting their receipt. Failed unlink retains a retryable
+  cleanup record without changing member/task success. Expiry shares the
+  existing20-artifact batch; processing/cancelling uploads are protected.
+  Other archive uploads and user sources are excluded. See the
+  [artifact boundary](ARTIFACT_LIFECYCLE_CONTRACT.md#private-context-upload-reclamation--worktree-2026-11-11).
 - `GET /continuation`: generation, selected revision and owned
   `pending_return_task_id`, allowing reconnection after reopening.
   Revision/member reads are owner-scoped, no-store and nosniff. Absent members

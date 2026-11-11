@@ -18,7 +18,13 @@ input; F bounds stale recovery and protects canonical writers/progress updates.
 Reader36/Node2279, targeted API/PG and the exact local production build pass.
 The unexplained full-CI 180ms task remains open: neither single-case nor full
 nine-case exact-failed-source diagnostics reproduced it. A new full release
-CI must validate this materially repaired candidate; no threshold is relaxed.
+CI must validate each materially repaired candidate; no threshold is relaxed.
+E/F source08b5011 has now passed all six jobs in full CI42900162201;
+downloaded quality/memory summaries agree, without a production release.
+G retains private Context-upload cleanup receipts until confirmed removal,
+using the same bounded maintenance lane. Local API/PG93 and94 checks
+(overlapping, four Windows skips), Runtime12 and Node2279 pass;
+this additional work requires its own exact-source CI.
 [Plan](docs/planning/SMALL_HOST_OPERATIONS_2026-11-11.md) /
 [execution and limits](docs/execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
 The latest user instruction allows major-block commits/CI without waiting;

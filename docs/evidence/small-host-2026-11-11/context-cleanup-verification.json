@@ -1,0 +1,286 @@
+{
+  "block": "G",
+  "date": "2026-11-11",
+  "scope": "synthetic-only; not deployed",
+  "local": {
+    "api_context_cleanup_postgres": {
+      "passed": 93
+    },
+    "api_boundaries_worker_roundtrip": {
+      "passed": 94,
+      "skipped": 4,
+      "skip_reason": "Windows POSIX signal tests"
+    },
+    "counts_overlap": true,
+    "lint": "passed",
+    "typecheck": "passed",
+    "ux_node": 2279,
+    "runtime_browser": {
+      "status": "passed",
+      "results": [
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "theme": "light",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 375,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "theme": "light",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 375,
+          "locale": "en-US",
+          "theme": "dark",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 800,
+          "locale": "zh-CN",
+          "theme": "light",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 800,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 800,
+          "locale": "en-US",
+          "theme": "light",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 800,
+          "locale": "en-US",
+          "theme": "dark",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "theme": "light",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 1440,
+          "locale": "zh-CN",
+          "theme": "dark",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "theme": "light",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        },
+        {
+          "width": 1440,
+          "locale": "en-US",
+          "theme": "dark",
+          "staleSnapshot": true,
+          "accessRevocation": true,
+          "hungBody": true,
+          "hiddenPolling": true,
+          "authenticationFence": true,
+          "quietCleanup": true,
+          "archiveScope": true
+        }
+      ],
+      "errors": []
+    },
+    "production_build": "deferred locally: free capacity below 2GiB; exact new CI required"
+  },
+  "preceding_candidate_ci": {
+    "run": 42900162201,
+    "source_sha": "08b501127721543aa824ea6e625e27d594e098b1",
+    "jobs": [
+      {
+        "name": "web-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "api-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "settings-quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "reading-performance-comparison / compare",
+        "conclusion": "success"
+      },
+      {
+        "name": "build-images",
+        "conclusion": "success"
+      },
+      {
+        "name": "inspect-release-artifact",
+        "conclusion": "success"
+      }
+    ],
+    "web_gate_counts": {
+      "PASS": 14,
+      "FAIL": 0,
+      "NOT_VERIFIED": 0,
+      "SKIPPED": 0
+    },
+    "settings_gate_counts": {
+      "PASS": 2,
+      "FAIL": 0,
+      "NOT_VERIFIED": 0,
+      "SKIPPED": 0
+    },
+    "candidate_reader_performance": {
+      "passed": 9,
+      "failed": 0,
+      "timedOut": 0,
+      "skipped": 0,
+      "interrupted": 0
+    },
+    "independent_reading_stability": "64+12+4 traces and cold Viewer verified without modifying verifier",
+    "memory_cases": [
+      {
+        "revision": "08b501127721543aa824ea6e625e27d594e098b1",
+        "passed": true,
+        "real_sensor": true,
+        "peak_bytes": 143024128,
+        "memory_limit_bytes": 335544320,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "08b501127721543aa824ea6e625e27d594e098b1",
+        "passed": true,
+        "real_sensor": true,
+        "peak_bytes": 144207872,
+        "memory_limit_bytes": 335544320,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "08b501127721543aa824ea6e625e27d594e098b1",
+        "passed": true,
+        "real_sensor": true,
+        "peak_bytes": 143867904,
+        "memory_limit_bytes": 335544320,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "08b501127721543aa824ea6e625e27d594e098b1",
+        "passed": true,
+        "real_sensor": true,
+        "peak_bytes": 143171584,
+        "memory_limit_bytes": 671088640,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      },
+      {
+        "revision": "08b501127721543aa824ea6e625e27d594e098b1",
+        "passed": true,
+        "real_sensor": true,
+        "peak_bytes": 143917056,
+        "memory_limit_bytes": 335544320,
+        "oom": 0,
+        "oom_kill": 0,
+        "restarts": 0
+      }
+    ],
+    "limits": "Four quality artifacts read; image package not downloaded. Excludes G; no deployment. Prior cc94de1 180ms remains unexplained."
+  },
+  "source_sha256": {
+    "apps/api/app/services/export_retention.py": "8c3de381855b6263b126f76f87c82c613e489d14e75311efda70c1649eed745d",
+    "apps/api/app/services/context_return_jobs.py": "8b6d8f5c68f845539c018e3a314be1cf8cfd97180887e17623790cb69821e4d6",
+    "apps/api/app/services/background_jobs.py": "5d4c8ddd0286d02841bed30b46f44379f41c640d2394b24fc6b96494f7f254e5",
+    "apps/api/app/services/task_worker.py": "235541d52b1e6b09679a9b489d0533dcff190abf13d0c9b521af597279213d82",
+    "apps/api/app/services/admin_runtime.py": "55f2db9648f18507663f1a8cbb58878309ad6b2da0b1bc48a5f32257b9a1d4c9",
+    "apps/api/tests/test_context_upload_cleanup.py": "6ad347867a2e1bfb16c39ae6fef1f893d6befdfc7cadde59fb2b9a0be9599e98",
+    "apps/api/tests/test_context_return.py": "796d9a11091863b39169e8adedf422d9628960bdcb20d39c146affa84e6baf85",
+    "apps/api/tests/test_context_return_postgres.py": "ba83618415dba8bfedd35470866aac99d2f335f94cce8794b0f8872cc4c01a29",
+    "apps/api/tests/test_export_retention_postgres.py": "c653a064951b13e7210d9617d768a7125f9c6d9528ff4837b63da57d7c123fc5",
+    "apps/web/components/admin-runtime-panel.tsx": "feb5b9a869eec25bf53a0e311ae49458dbb63bdafc9154ae40caeaca46dae202",
+    "scripts/ux/admin-runtime-browser.mjs": "70dba43a62d7bb47fa2f664d997f0b64cb2802b122f2e11f4eb87d9a4d43dbd9"
+  }
+}

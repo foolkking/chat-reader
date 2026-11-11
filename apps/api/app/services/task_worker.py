@@ -70,8 +70,6 @@ def run_task_worker_iteration(
     task_id = None
     execution = None
     with SessionLocal() as db:
-        from app.services.context_return_jobs import expire_context_returns
-        expired_return_paths = expire_context_returns(db)
         recover_stale_imports(db, settings.import_stale_after_seconds)
         recover_stale_jobs(db, settings.import_stale_after_seconds)
         task_kind = _oldest_task_kind(db)
@@ -80,10 +78,6 @@ def run_task_worker_iteration(
             if task_kind in {"job", "noise"}:
                 execution = getattr(db, "info", {}).get("claimed_background_execution")
         db.commit()
-    if expired_return_paths:
-        from pathlib import Path
-        from app.services.artifact_lifecycle import cleanup_committed_artifacts
-        cleanup_committed_artifacts(expired_return_paths, root=Path(settings.export_storage_dir), category="export")
     if task_id is None or task_kind is None:
         reporter.set_idle()
         return False

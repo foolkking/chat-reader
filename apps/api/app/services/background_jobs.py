@@ -1434,7 +1434,7 @@ def process_background_job(
                 from app.services.context_return_jobs import process_context_return
                 from app.services.continuation_candidates import ContinuationError
                 try:
-                    job_result, return_upload_path = process_context_return(db, job, job_scope, report)
+                    job_result = process_context_return(db, job, job_scope, report)
                 except (ContinuationError, BackgroundJobCancelled):
                     raise
                 except Exception:
@@ -1537,8 +1537,6 @@ def process_background_job(
             elif job.job_type == "personal_search_backfill":
                 committed_values["total_items"] = processed_items
             post_commit_cleanup: list[tuple[str, list[Path], Path]] = []
-            if job.job_type == "context_return":
-                post_commit_cleanup.append(("export", [return_upload_path], Path(get_settings().export_storage_dir)))
             if job.job_type == "offline_package":
                 cleanup_paths = list(getattr(package, "_cleanup_paths", []))
                 if cleanup_paths:

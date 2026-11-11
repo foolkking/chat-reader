@@ -18,6 +18,15 @@ replayed, and Windows/small fixtures do not establish host-wide capacity.
 Exact results, intermediate failures and still-unexplained original CI timing
 remain in the [execution ledger](execution/SMALL_HOST_OPERATIONS_2026-11-11.md).
 
+`test_context_upload_cleanup.py` extends the existing export reaper with exact
+private-input eligibility,24-hour/processing guards, shared/changed-file safety,
+20-item batches, interrupted receipts, rollback visibility and aggregate privacy.
+Context worker/real-PostgreSQL tests inject unlink failure after canonical success
+and lock a competing claim; the input receipt survives until actual removal.
+Original cancellation rollback, download leases and ordinary exports remain
+covered. The existing12-case administrator browser gate records normal and
+nonzero-cleanup screenshots. These checks do not apply production cleanup.
+
 ## Unreleased recoverable-operation checks — 2026-11-10
 
 The [implementation ledger](execution/RECOVERABLE_OPERATIONS_2026-11-10.md)

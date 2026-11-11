@@ -64,11 +64,10 @@ def _local_storage(root: str) -> dict:
 
 
 def _export_cleanup(db: Session, now: datetime) -> dict:
-    from app.services.export_retention import EXPORT_JOB_TYPES
+    from app.services.export_retention import cleanup_job_clause
     rows = db.query(ExportArtifact.lifecycle_state, func.count(ExportArtifact.id), func.sum(ExportArtifact.byte_size)).join(
         BackgroundJob, BackgroundJob.id == ExportArtifact.job_id,
-    ).filter(ExportArtifact.scope_type != "archive_upload", ExportArtifact.lifecycle_state != "reclaimed",
-             BackgroundJob.job_type.in_(EXPORT_JOB_TYPES), BackgroundJob.status == "committed",
+    ).filter(cleanup_job_clause(), ExportArtifact.lifecycle_state != "reclaimed",
              (ExportArtifact.expires_at <= now) | ExportArtifact.release_requested_at.is_not(None),
     ).group_by(ExportArtifact.lifecycle_state).all()
     return {"pending_count": sum(int(count) for _, count, _ in rows),

@@ -61,6 +61,38 @@ def test_claim_lock_then_live_download_prevents_concurrent_unlink(isolated_schem
     assert not path.exists()
 
 
+@pytest.mark.parametrize("claimed", [False, True])
+def test_context_cleanup_skips_locked_job_and_rechecks_new_claim(isolated_schema, tmp_path, claimed):
+    from app.services.export_retention import CONTEXT_UPLOAD_FORMAT
+    engine, migrate = isolated_schema
+    migrate("head")
+    factory, root, path, identity, _, now = seed(engine, tmp_path)
+    with factory() as db:
+        row = db.get(ExportArtifact, identity)
+        row.scope_type = "archive_upload"; row.format = CONTEXT_UPLOAD_FORMAT
+        row.expires_at = now - timedelta(seconds=1)
+        job = db.get(BackgroundJob, row.job_id)
+        job.job_type = "context_return"; job.status = "queued"
+        job_id = job.id
+        db.commit()
+    with factory() as claimer:
+        job = claimer.scalar(sa.select(BackgroundJob).where(BackgroundJob.id == job_id).with_for_update())
+        if claimed:
+            job.status = "processing"; claimer.flush()
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            outcome = pool.submit(reclaim_exports, factory, root, now=now).result(timeout=5)
+        assert outcome["reclaimed"] == 0 and path.exists()
+        claimer.commit()
+    assert reclaim_exports(factory, root, now=now)["reclaimed"] == (0 if claimed else 1)
+    assert path.exists() is claimed
+    with factory() as db:
+        if claimed:
+            assert db.get(ExportArtifact, identity).lifecycle_state == "active"
+        else:
+            assert db.get(ExportArtifact, identity) is None
+        assert db.get(BackgroundJob, job_id).status == ("processing" if claimed else "queued")
+
+
 def test_two_reapers_commit_one_actual_removal(isolated_schema, tmp_path):
     engine, migrate = isolated_schema
     migrate("head")
